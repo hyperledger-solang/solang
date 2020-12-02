@@ -127,11 +127,18 @@ pub fn expression(
             Box::new(expression(left, cfg, contract_no, ns, vartab)),
             Box::new(expression(right, cfg, contract_no, ns, vartab)),
         ),
-        Expression::ConstantVariable(_, _, var_contract_no, var_no) => expression(
+        Expression::ConstantVariable(_, _, Some(var_contract_no), var_no) => expression(
             ns.contracts[*var_contract_no].variables[*var_no]
                 .initializer
                 .as_ref()
                 .unwrap(),
+            cfg,
+            contract_no,
+            ns,
+            vartab,
+        ),
+        Expression::ConstantVariable(_, _, None, var_no) => expression(
+            ns.constants[*var_no].initializer.as_ref().unwrap(),
             cfg,
             contract_no,
             ns,

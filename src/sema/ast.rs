@@ -316,7 +316,7 @@ pub struct ContractVariable {
 pub enum Symbol {
     Enum(pt::Loc, usize),
     Function(Vec<(pt::Loc, usize)>),
-    Variable(pt::Loc, usize, usize),
+    Variable(pt::Loc, Option<usize>, usize),
     Struct(pt::Loc, usize),
     Event(Vec<(pt::Loc, usize)>),
     Contract(pt::Loc, usize),
@@ -347,6 +347,8 @@ pub struct Namespace {
     pub contracts: Vec<Contract>,
     /// All functions
     pub functions: Vec<Function>,
+    /// Global constants
+    pub constants: Vec<ContractVariable>,
     /// address length in bytes
     pub address_length: usize,
     /// value length in bytes
@@ -469,7 +471,7 @@ pub enum Expression {
     ShiftLeft(pt::Loc, Type, Box<Expression>, Box<Expression>),
     ShiftRight(pt::Loc, Type, Box<Expression>, Box<Expression>, bool),
     Variable(pt::Loc, Type, usize),
-    ConstantVariable(pt::Loc, Type, usize, usize),
+    ConstantVariable(pt::Loc, Type, Option<usize>, usize),
     StorageVariable(pt::Loc, Type, usize, usize),
     Load(pt::Loc, Type, Box<Expression>),
     StorageLoad(pt::Loc, Type, Box<Expression>),

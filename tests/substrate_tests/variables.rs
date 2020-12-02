@@ -1,4 +1,4 @@
-use crate::{first_error, parse_and_resolve};
+use crate::{build_solidity, first_error, parse_and_resolve};
 use solang::Target;
 
 #[test]
@@ -82,4 +82,73 @@ fn test_variable_initializer_errors() {
     );
 
     assert_eq!(first_error(ns.diagnostics), "`x' is not found");
+}
+
+#[test]
+fn global_constants() {
+    let ns = parse_and_resolve("uint x = 102;", Target::Substrate);
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "global variable must be constant"
+    );
+
+    let ns = parse_and_resolve("uint constant public x = 102;", Target::Substrate);
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "‘public’: global variable cannot have visibility specifier"
+    );
+
+    let ns = parse_and_resolve("uint constant external x = 102;", Target::Substrate);
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "‘external’: global variable cannot have visibility specifier"
+    );
+
+    let ns = parse_and_resolve("uint constant x;", Target::Substrate);
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "missing initializer for constant"
+    );
+
+    let ns = parse_and_resolve(
+        "uint constant test = 5; contract test {}",
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "test is already defined as a contract name"
+    );
+
+    let mut runtime = build_solidity(
+        r##"
+        int32 constant foo = 102 + 104;
+        contract a {
+            function test() public payable {
+                assert(foo == 206);
+            }
+        }"##,
+    );
+
+    runtime.constructor(0, Vec::new());
+
+    runtime.function("test", Vec::new());
+
+    let mut runtime = build_solidity(
+        r##"
+        string constant foo = "FOO";
+        contract a {
+            function test() public payable {
+                assert(foo == "FOO");
+            }
+        }"##,
+    );
+
+    runtime.constructor(0, Vec::new());
+
+    runtime.function("test", Vec::new());
 }

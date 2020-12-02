@@ -26,6 +26,7 @@ use self::eval::eval_const_number;
 use self::expression::expression;
 use self::functions::{resolve_params, resolve_returns};
 use self::symtable::Symtable;
+use self::variables::var_decl;
 use crate::file_cache::{FileCache, ResolvedFile};
 
 pub type ArrayDimension = Option<(pt::Loc, BigInt)>;
@@ -88,14 +89,20 @@ pub fn sema(file: ResolvedFile, cache: &mut FileCache, ns: &mut ast::Namespace) 
         return;
     }
 
-    // resolve functions outside of contracts
+    // resolve functions/constants outside of contracts
     let mut resolve_bodies = Vec::new();
 
     for part in &pt.0 {
-        if let pt::SourceUnitPart::FunctionDefinition(func) = part {
-            if let Some(func_no) = functions::function(func, file_no, ns) {
-                resolve_bodies.push((func_no, func));
+        match part {
+            pt::SourceUnitPart::FunctionDefinition(func) => {
+                if let Some(func_no) = functions::function(func, file_no, ns) {
+                    resolve_bodies.push((func_no, func));
+                }
             }
+            pt::SourceUnitPart::VariableDefinition(var) => {
+                var_decl(None, var, file_no, None, ns, &mut Symtable::new());
+            }
+            _ => (),
         }
     }
 
@@ -263,6 +270,7 @@ impl ast::Namespace {
             events: Vec::new(),
             contracts: Vec::new(),
             functions: Vec::new(),
+            constants: Vec::new(),
             address_length,
             value_length,
             symbols: HashMap::new(),
@@ -629,7 +637,7 @@ impl ast::Namespace {
                     .get(&(file_no, Some(base.contract_no), id.name.to_owned()))
             {
                 if let ast::Symbol::Variable(_, var_contract_no, var_no) = sym {
-                    if *var_contract_no != base.contract_no {
+                    if *var_contract_no != Some(base.contract_no) {
                         return None;
                     }
 
@@ -1340,7 +1348,7 @@ impl ast::Symbol {
     /// Is this a private symbol
     pub fn is_private_variable(&self, ns: &ast::Namespace) -> bool {
         match self {
-            ast::Symbol::Variable(_, contract_no, var_no) => {
+            ast::Symbol::Variable(_, Some(contract_no), var_no) => {
                 let visibility = &ns.contracts[*contract_no].variables[*var_no].visibility;
 
                 matches!(visibility, pt::Visibility::Private(_))

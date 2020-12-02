@@ -125,10 +125,15 @@ fn print_expr(e: &Expression, func: Option<&Function>, ns: &Namespace) -> Tree {
             ty.to_string(ns),
             func.unwrap().symtable.vars[pos].id.name
         )),
-        Expression::ConstantVariable(_, ty, base_contract_no, var_no) => Tree::Leaf(format!(
+        Expression::ConstantVariable(_, ty, Some(base_contract_no), var_no) => Tree::Leaf(format!(
             "contract variable {} {}",
             ty.to_string(ns),
             ns.contracts[*base_contract_no].variables[*var_no].name
+        )),
+        Expression::ConstantVariable(_, ty, None, var_no) => Tree::Leaf(format!(
+            "contract variable {} {}",
+            ty.to_string(ns),
+            ns.constants[*var_no].name
         )),
         Expression::StorageVariable(_, ty, base_contract_no, var_no) => Tree::Leaf(format!(
             "storage variable {} {}",

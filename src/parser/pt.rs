@@ -29,6 +29,7 @@ pub enum SourceUnitPart {
     StructDefinition(Box<StructDefinition>),
     EventDefinition(Box<EventDefinition>),
     FunctionDefinition(Box<FunctionDefinition>),
+    VariableDefinition(Box<VariableDefinition>),
 }
 
 #[derive(Debug, PartialEq)]
@@ -125,7 +126,7 @@ pub enum ContractPart {
     StructDefinition(Box<StructDefinition>),
     EventDefinition(Box<EventDefinition>),
     EnumDefinition(Box<EnumDefinition>),
-    ContractVariableDefinition(Box<ContractVariableDefinition>),
+    VariableDefinition(Box<VariableDefinition>),
     FunctionDefinition(Box<FunctionDefinition>),
     Using(Box<Using>),
 }
@@ -205,7 +206,7 @@ pub enum VariableAttribute {
 }
 
 #[derive(Debug, PartialEq)]
-pub struct ContractVariableDefinition {
+pub struct VariableDefinition {
     pub doc: Vec<DocComment>,
     pub loc: Loc,
     pub ty: Expression,
