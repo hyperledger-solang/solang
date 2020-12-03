@@ -14,11 +14,6 @@ suite('Extension Test Suite', function () {
 	const docUri = getDocUri('applyedits.sol');
 
 	this.timeout(20000);
-	test('Testing for apply edit', async () => {
-		await testcommand(docUri);
-	});
-
-	this.timeout(20000);
 	const diagnosdoc1 = getDocUri('one.sol');
 	test('Testing for Row and Col pos.', async () => {
 		await testdiagnos(diagnosdoc1, [
@@ -112,21 +107,5 @@ async function testdiagnos(docUri: vscode.Uri, expecteddiag: vscode.Diagnostic[]
 	}
 	else {
 		console.error('the diagnostics are incorrect', actualDiagnostics);
-	}
-}
-
-async function testcommand(docUri: vscode.Uri) {
-
-	await activate(docUri);
-
-	let val = await vscode.commands.executeCommand('solang.applyedit');
-
-	let res = await getedits();
-
-	if (res) {
-		assert.equal(res.text, '42');
-	}
-	else {
-		console.error('failed to initialize apply edit');
 	}
 }

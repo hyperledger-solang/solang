@@ -137,9 +137,8 @@ jobs:
     - uses: actions/download-artifact@master
       with:
         name: solang_linux
-        path: bin
-    - run: chmod 755 ./bin/solang
-    - run: echo "$(pwd)/bin" >> $GITHUB_PATH
+        path: /home/runner/.cargo/bin/
+    - run: chmod 755 $HOME/.cargo/bin/solang
     - name: Install Node.js
       uses: actions/setup-node@v1
       with:
@@ -153,3 +152,7 @@ jobs:
       with:
         working-directory: ./vscode
         run: npm test
+    - run: npm install -g vsce
+      working-directory: ./vscode
+    - run: vsce package
+      working-directory: ./vscode

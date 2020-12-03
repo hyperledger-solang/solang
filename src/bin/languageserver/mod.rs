@@ -21,22 +21,18 @@ use solang::sema::tags::*;
 
 use solang::sema::builtin::get_prototype;
 
-#[derive(Debug)]
 pub struct SolangServer {
     client: Client,
-    state: Vec<usize>,
+    target: Target,
 }
 
-pub fn start_server() {
+pub fn start_server(target: Target) {
     let mut rt = tokio::runtime::Runtime::new().unwrap();
     rt.block_on(async {
         let stdin = tokio::io::stdin();
         let stdout = tokio::io::stdout();
 
-        let (service, messages) = LspService::new(|client| SolangServer {
-            client,
-            state: Vec::new(),
-        });
+        let (service, messages) = LspService::new(|client| SolangServer { client, target });
 
         Server::new(stdin, stdout)
             .interleave(messages)
@@ -1041,7 +1037,7 @@ impl LanguageServer for SolangServer {
 
             let os_str = path.file_name().unwrap();
 
-            let ns = parse_and_resolve(os_str.to_str().unwrap(), &mut filecache, Target::Ewasm);
+            let ns = parse_and_resolve(os_str.to_str().unwrap(), &mut filecache, self.target);
 
             let d = SolangServer::convert_to_diagnostics(ns, &mut filecache);
 
@@ -1077,7 +1073,7 @@ impl LanguageServer for SolangServer {
 
             let os_str = path.file_name().unwrap();
 
-            let ns = parse_and_resolve(os_str.to_str().unwrap(), &mut filecache, Target::Ewasm);
+            let ns = parse_and_resolve(os_str.to_str().unwrap(), &mut filecache, self.target);
 
             let d = SolangServer::convert_to_diagnostics(ns, &mut filecache);
 
@@ -1113,7 +1109,7 @@ impl LanguageServer for SolangServer {
 
             let os_str = path.file_name().unwrap();
 
-            let ns = parse_and_resolve(os_str.to_str().unwrap(), &mut filecache, Target::Ewasm);
+            let ns = parse_and_resolve(os_str.to_str().unwrap(), &mut filecache, self.target);
 
             let d = SolangServer::convert_to_diagnostics(ns, &mut filecache);
 
@@ -1157,7 +1153,7 @@ impl LanguageServer for SolangServer {
 
             let os_str = path.file_name().unwrap();
 
-            let ns = parse_and_resolve(os_str.to_str().unwrap(), &mut filecache, Target::Ewasm);
+            let ns = parse_and_resolve(os_str.to_str().unwrap(), &mut filecache, self.target);
 
             let mut lookup_tbl: Vec<(u64, u64, String)> = Vec::new();
             let mut fnc_map: HashMap<String, String> = HashMap::new();
