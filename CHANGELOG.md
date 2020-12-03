@@ -5,6 +5,8 @@ will be documented here.
 ## [Unreleased]
 
 ### Added
+- New Visual Studio Code extension developed under Hyperledger Mentorship
+  programme
 - Added language server for use in vscode extension
 - Implemented primitives types and operations for Solana
 - Functions can be declared outside of contracts
