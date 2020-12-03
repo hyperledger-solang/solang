@@ -33,7 +33,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 	// Use the console to output diagnostic information (console.log) and errors (console.error)
 	// This line of code will only be executed once when your extension is activated
-	console.log('Congratulations, your extension "slang-ex" is now active!');
+	console.log('Congratulations, your extension "solang" is now active!');
 
 	diagcollect = vscode.languages.createDiagnosticCollection('solidity');
 
@@ -42,11 +42,11 @@ export function activate(context: vscode.ExtensionContext) {
 	// The command has been defined in the package.json file
 	// Now provide the implementation of the command with registerCommand
 	// The commandId parameter must match the command field in package.json
-	let disposable = vscode.commands.registerCommand('slang-ex.helloWorld', () => {
+	let disposable = vscode.commands.registerCommand('solang.helloWorld', () => {
 		// The code you place here will be executed every time your command is executed
 
 		// Display a message box to the user
-		vscode.window.showInformationMessage('Hello World from slang_ex!');
+		vscode.window.showInformationMessage('Hello World from solang!');
 	});
 
 	context.subscriptions.push(disposable);
@@ -97,13 +97,13 @@ export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(clientdispos);
 
 
-	let disposable1 = vscode.commands.registerCommand('slang-ex.sendfirstcode', () => {
+	let disposable1 = vscode.commands.registerCommand('solang.sendfirstcode', () => {
 		connection.sendRequest(DefinitionRequest.type, params);
 		console.log('sent request\n');
 	});
 	context.subscriptions.push(disposable1);
 
-	let disposable2 = vscode.commands.registerCommand('slang-ex.applyedit', () => {
+	let disposable2 = vscode.commands.registerCommand('solang.applyedit', () => {
 
 		const { activeTextEditor } = vscode.window;
 

@@ -9,7 +9,7 @@ export let platformEol: string;
 export async function activate(docUri: vscode.Uri) {
 	// The extensionId is `publisher.name` from package.json
 
-	let ext: vscode.Extension<any> | undefined = vscode.extensions.getExtension('vscode.slang-ex');
+	let ext: vscode.Extension<any> | undefined = vscode.extensions.getExtension('solang.solang');
 
 	let extn_act;
 
