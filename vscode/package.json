@@ -13,12 +13,34 @@
 		"Other"
 	],
 	"activationEvents": [
-		"onLanguage:solidity",
-		"onCommand:solang.helloWorld",
-		"onCommand:solang.sendfirstcode"
+		"onLanguage:solidity"
 	],
 	"main": "./out/client/extension.js",
 	"contributes": {
+		"configuration": {
+			"type": "object",
+			"title:": "Solang Solidity Compiler",
+			"properties": {
+				"solang.languageServerExecutable": {
+					"scope": "resource",
+					"type": "string",
+					"default": "~/.cargo/bin/solang",
+					"description": "Executable for the Solang Solidity Compiler"
+				},
+				"solang.target": {
+					"scope": "window",
+					"type": "string",
+					"enum": [
+						"substrate",
+						"solana",
+						"ewasm",
+						"sawtooth"
+					],
+					"default": "substrate",
+					"description": "Chain to build for. The Solidity language changes in subtle ways depending on the target."
+				}
+			}
+		},
 		"capabilities": {
 			"hoverProvider": "true"
 		},
@@ -33,20 +55,6 @@
 					".sol"
 				],
 				"configuration": "./solidity.configuration.json"
-			}
-		],
-		"commands": [
-			{
-				"command": "solang.helloWorld",
-				"title": "Hello World... initial startup"
-			},
-			{
-				"command": "solang.sendfirstcode",
-				"title": "Send first code"
-			},
-			{
-				"command": "solang.applyedit",
-				"title": "Apply edit"
 			}
 		],
 		"snippets": [

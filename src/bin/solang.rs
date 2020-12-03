@@ -104,15 +104,6 @@ fn main() {
         )
         .get_matches();
 
-    if matches.is_present("LANGUAGESERVER") {
-        languageserver::start_server();
-    }
-
-    let mut json = JsonResult {
-        errors: Vec::new(),
-        contracts: HashMap::new(),
-    };
-
     let target = match matches.value_of("TARGET") {
         Some("substrate") => solang::Target::Substrate,
         Some("ewasm") => solang::Target::Ewasm,
@@ -120,6 +111,15 @@ fn main() {
         Some("generic") => solang::Target::Generic,
         Some("solana") => solang::Target::Solana,
         _ => unreachable!(),
+    };
+
+    if matches.is_present("LANGUAGESERVER") {
+        languageserver::start_server(target);
+    }
+
+    let mut json = JsonResult {
+        errors: Vec::new(),
+        contracts: HashMap::new(),
     };
 
     if matches.is_present("VERBOSE") {
