@@ -22,6 +22,8 @@ Both the Visual Studio Code extension code and the language server were develope
 Using the extension
 -------------------
 
+The extension can be found on the `Visual Studio Marketplace <https://marketplace.visualstudio.com/items?itemName=solang.solang>`_.
+
 First, install the extension and the solang compiler binary. The extension needs
 to know where to find the solang binary to start the language server, and also
 it needs to know what target you wish to compiler you solidity code for.
