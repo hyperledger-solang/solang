@@ -12,7 +12,7 @@ This extension provides syntax highlighting, diagnostics  (i.e. compiler warning
 Both the Visual Studio Code extension code and language server were developed under a
 [Hyperledger Mentorship programme](https://wiki.hyperledger.org/display/INTERN/Create+a+new+Solidity+Language+Server+%28SLS%29+using+Solang+Compiler).
 
-For more information on Solang, please go to the [documentation](https://solang.readthedocs.io/en/latest/).
+For more information on Solang itself and the extension, please go to the [documentation](https://solang.readthedocs.io/en/latest/).
 
 ## Dependencies
 
