@@ -119,7 +119,7 @@ async function testcommand(docUri: vscode.Uri) {
 
 	await activate(docUri);
 
-	let val = await vscode.commands.executeCommand('slang-ex.applyedit');
+	let val = await vscode.commands.executeCommand('solang.applyedit');
 
 	let res = await getedits();
 
