@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "tsc; ts-mocha *.spec.ts",
-    "build": "cargo run *.sol --target solana -v"
+    "build": "solang *.sol --target solana -v"
   },
   "author": "Sean Young <sean@mess.org>",
   "license": "MIT",

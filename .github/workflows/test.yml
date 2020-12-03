@@ -31,6 +31,10 @@ jobs:
       run: cargo build --verbose
     - name: Run tests
       run: cargo test --verbose
+    - uses: actions/upload-artifact@master
+      with:
+        name: solang_linux
+        path: ./target/debug/solang
 
   windows:
     name: Windows
@@ -51,6 +55,10 @@ jobs:
       run: cargo build --verbose
     - name: Run tests
       run: cargo test --verbose
+    - uses: actions/upload-artifact@master
+      with:
+        name: solang.exe
+        path: ./target/debug/solang.exe
 
   mac:
     name: Mac
@@ -71,6 +79,10 @@ jobs:
       run: cargo build --verbose
     - name: Run tests
       run: cargo test --verbose
+    - uses: actions/upload-artifact@master
+      with:
+        name: solang_mac
+        path: ./target/debug/solang
 
   docker:
     name: Docker
@@ -84,7 +96,8 @@ jobs:
   solana:
     name: Solana Integration test
     runs-on: ubuntu-18.04
-    container: hyperledgerlabs/solang:ci
+    container: ubuntu:18.04
+    needs: linux
     services:
       solana:
         image: solanalabs/solana:edge
@@ -97,16 +110,14 @@ jobs:
     - uses: actions/setup-node@v1
       with:
         node-version: '12'
-    - name: Rust stable
-      run: rustup default stable
-    - name: Install npm packages
-      run: npm install
+    - uses: actions/download-artifact@master
+      with:
+        name: solang_linux
+        path: bin
+    - run: chmod 755 ./bin/solang
+    - run: echo "$(pwd)/bin" >> $GITHUB_PATH
+    - run: npm install
       working-directory: ./integration/solana
-    - name: Compile stdlib
-      run: make
-      working-directory:  ./stdlib
-    - name: Build
-      run: cargo build --verbose
     - name: Build Solang contract
       run: npm run build
       working-directory: ./integration/solana
@@ -115,3 +126,30 @@ jobs:
     - name: Deploy and test contract
       run: npm run test
       working-directory: ./integration/solana
+
+  vscode:
+    name: Visual Code Extension
+    runs-on: ubuntu-18.04
+    needs: linux
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+    - uses: actions/download-artifact@master
+      with:
+        name: solang_linux
+        path: bin
+    - run: chmod 755 ./bin/solang
+    - run: echo "$(pwd)/bin" >> $GITHUB_PATH
+    - name: Install Node.js
+      uses: actions/setup-node@v1
+      with:
+        node-version: '12'
+    - run: npm install
+      working-directory: ./vscode
+    - run: npm run compile
+      working-directory: ./vscode
+    - name: Run headless test
+      uses: GabrielBB/xvfb-action@v1
+      with:
+        working-directory: ./vscode
+        run: npm test
