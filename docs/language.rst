@@ -43,47 +43,64 @@ as the file name.
 Imports
 _______
 
-The ``import`` directive is used to import types from other Solidity files;
-structs, enums, events, functions, contracts, abstract contract, libraries, and interfaces can be used from another
-Solidity file. This can be useful to keep a single definition in one file, which can be used
-in multiple files.
+The ``import`` directive is used to import from other Solidity files. This can be useful to
+keep a single definition in one file, which can be used in multiple other files. Solidity imports
+are somewhat similar to JavaScript ES6, however there is no export statement, or default export.
 
-There are a few different flavours of import. You can specify if you want all types imported,
-or a just a select few. You can also rename the types. The simplest form is:
+The following can be imported:
+
+- global constants
+- struct definitions
+- enums definitions
+- event definitions
+- global functions
+- contracts, including abstract contract, libraries, and interfaces
+
+There are a few different flavours of import. You can specify if you want everything imported,
+or a just a select few. You can also rename the types. In order to import only `foo` and `bar`,
+whatever they might be:
 
 .. code-block:: javascript
 
-    import "foo.sol";
+    import {foo, bar} from "defines.sol";
 
-Solang will look for the file `foo.sol` in the same directory as the current file. You can specify
+Solang will look for the file `defines.sol` in the same directory as the current file. You can specify
 more directories to search with the ``--importpath`` commandline option.
-
-Every type defined in `foo.sol` is now usable in your Solidity file, and in fact even before the
-import statement. However, if a type with the same name is defined
-in `foo.sol` and also in the current file, you will get a warning. Note that if the same file
-gets imported more than once, the duplicate types are removed.
-
-It is also possible to import only types with a specific name, or to rename them. In this case,
-only type `foo` will be imported, and `bar` will be imported as `baz`.
+Just like with ES6, ``import`` is hoisted to the top and both `foo` and `bar` are usuable
+even before the ``import`` statement. It is also possible to import everything from
+`defines.sol` by leaving the list out. Note that this is different than ES6, which would import nothing
+with this syntax.
 
 .. code-block:: javascript
 
-    import {bar as baz,foo} from "foo.sol";
+    import "defines.sol";
 
-Rather than renaming individual types, it is also possible to make all the types in a file
-available under a special import type. In this case, the `bar` defined in `foo.sol` can is
-now visible as `foo.bar`. As long as there is no previous type `foo`, there can be no naming
-conflicts.
+Everything defined in `defines.sol` is now usable in your Solidity file. However, if something with the
+same name is defined in `defines.sol` and also in the current file, you will get a warning. Note that
+that it is legal to import the same file more than once.
+
+It is also possible to rename an import. In this case, only type `foo` will be imported, and `bar`
+will be imported as `baz`. This is useful if you have already have a `bar` and you want to avoid
+a naming conflict.
 
 .. code-block:: javascript
 
-    import "foo.sol" as foo;
+    import {bar as baz,foo} from "defines.sol";
+
+Rather than renaming individual imports, it is also possible to make all the types in a file
+available under a special import object. In this case, the `bar` defined in `defines.sol` can is
+now visible as `defs.bar`, and `foo` is `defs.foo`. As long as there is no previous type `defs`,
+there can be no naming conflict.
+
+.. code-block:: javascript
+
+    import "defines.sol" as defs;
 
 This also has a slightly more baroque syntax, which does exactly the same.
 
 .. code-block:: javascript
 
-    import * as foo from "foo.sol";
+    import * as defs from "defines.sol";
 
 
 Pragmas
