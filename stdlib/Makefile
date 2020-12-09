@@ -1,11 +1,11 @@
 CC=clang
 CFLAGS=--target=$(TARGET) -emit-llvm -O3 -ffreestanding -fno-builtin -Wall -Wno-unused-function
 
-%.bc: %.c
+bpf/%.bc wasm/%.bc: %.c
 	$(CC) -c $(CFLAGS) $< -o $@
 
-SOLANA=solana.bc
-WASM=ripemd160.bc sha3.bc stdlib.bc substrate.bc
+SOLANA=$(addprefix bpf/,solana.bc bigint.bc)
+WASM=$(addprefix wasm/,ripemd160.bc sha3.bc stdlib.bc substrate.bc bigint.bc)
 
 all: $(SOLANA) $(WASM)
 
