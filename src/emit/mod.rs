@@ -1215,18 +1215,37 @@ pub trait TargetRuntime<'a> {
                 let left = self.expression(contract, l, vartab, function);
                 let right = self.expression(contract, r, vartab, function);
 
-                let bits = left.into_int_value().get_type().get_bit_width();
+                let mut bits = left.into_int_value().get_type().get_bit_width();
 
                 if bits > 64 {
-                    let f = self.udivmod(contract, bits);
+                    if bits <= 128 {
+                        bits = 128;
+                    } else {
+                        bits = 256;
+                    };
 
-                    let rem = contract.build_alloca(function, left.into_int_value().get_type(), "");
-                    let quotient =
-                        contract.build_alloca(function, left.into_int_value().get_type(), "");
+                    let name = format!("udivmod{}", bits);
+
+                    let f = contract
+                        .module
+                        .get_function(&name)
+                        .expect("div function missing");
+
+                    let dividend = contract.build_alloca(function, left.get_type(), "dividend");
+                    let divisor = contract.build_alloca(function, left.get_type(), "divisor");
+                    let rem = contract.build_alloca(function, left.get_type(), "remainder");
+                    let quotient = contract.build_alloca(function, left.get_type(), "quotient");
+
+                    contract.builder.build_store(dividend, left);
+                    contract.builder.build_store(divisor, right);
 
                     let ret = contract
                         .builder
-                        .build_call(f, &[left, right, rem.into(), quotient.into()], "udiv")
+                        .build_call(
+                            f,
+                            &[dividend.into(), divisor.into(), rem.into(), quotient.into()],
+                            "udiv",
+                        )
                         .try_as_basic_value()
                         .left()
                         .unwrap();
@@ -1246,7 +1265,17 @@ pub trait TargetRuntime<'a> {
 
                     contract.builder.position_at_end(bail_block);
 
-                    contract.builder.build_return(Some(&ret));
+                    // throw division by zero error should be an assert
+                    self.assert_failure(
+                        contract,
+                        contract
+                            .context
+                            .i8_type()
+                            .ptr_type(AddressSpace::Generic)
+                            .const_null(),
+                        contract.context.i32_type().const_zero(),
+                    );
+
                     contract.builder.position_at_end(success_block);
 
                     contract.builder.build_load(quotient, "quotient")
@@ -1261,17 +1290,37 @@ pub trait TargetRuntime<'a> {
                 let left = self.expression(contract, l, vartab, function);
                 let right = self.expression(contract, r, vartab, function);
 
-                let bits = left.into_int_value().get_type().get_bit_width();
+                let mut bits = left.into_int_value().get_type().get_bit_width();
 
                 if bits > 64 {
-                    let f = self.sdivmod(contract, bits);
+                    if bits <= 128 {
+                        bits = 128;
+                    } else {
+                        bits = 256;
+                    };
 
-                    let rem = contract.build_alloca(function, left.get_type(), "");
-                    let quotient = contract.build_alloca(function, left.get_type(), "");
+                    let name = format!("sdivmod{}", bits);
+
+                    let f = contract
+                        .module
+                        .get_function(&name)
+                        .expect("div function missing");
+
+                    let dividend = contract.build_alloca(function, left.get_type(), "dividend");
+                    let divisor = contract.build_alloca(function, left.get_type(), "divisor");
+                    let rem = contract.build_alloca(function, left.get_type(), "remainder");
+                    let quotient = contract.build_alloca(function, left.get_type(), "quotient");
+
+                    contract.builder.build_store(dividend, left);
+                    contract.builder.build_store(divisor, right);
 
                     let ret = contract
                         .builder
-                        .build_call(f, &[left, right, rem.into(), quotient.into()], "udiv")
+                        .build_call(
+                            f,
+                            &[dividend.into(), divisor.into(), rem.into(), quotient.into()],
+                            "udiv",
+                        )
                         .try_as_basic_value()
                         .left()
                         .unwrap();
@@ -1291,7 +1340,17 @@ pub trait TargetRuntime<'a> {
 
                     contract.builder.position_at_end(bail_block);
 
-                    contract.builder.build_return(Some(&ret));
+                    // throw division by zero error should be an assert
+                    self.assert_failure(
+                        contract,
+                        contract
+                            .context
+                            .i8_type()
+                            .ptr_type(AddressSpace::Generic)
+                            .const_null(),
+                        contract.context.i32_type().const_zero(),
+                    );
+
                     contract.builder.position_at_end(success_block);
 
                     contract.builder.build_load(quotient, "quotient")
@@ -1355,18 +1414,37 @@ pub trait TargetRuntime<'a> {
                 let left = self.expression(contract, l, vartab, function);
                 let right = self.expression(contract, r, vartab, function);
 
-                let bits = left.into_int_value().get_type().get_bit_width();
+                let mut bits = left.into_int_value().get_type().get_bit_width();
 
                 if bits > 64 {
-                    let f = self.udivmod(contract, bits);
+                    if bits <= 128 {
+                        bits = 128;
+                    } else {
+                        bits = 256;
+                    };
 
-                    let rem = contract.build_alloca(function, left.into_int_value().get_type(), "");
-                    let quotient =
-                        contract.build_alloca(function, left.into_int_value().get_type(), "");
+                    let name = format!("udivmod{}", bits);
+
+                    let f = contract
+                        .module
+                        .get_function(&name)
+                        .expect("div function missing");
+
+                    let dividend = contract.build_alloca(function, left.get_type(), "dividend");
+                    let divisor = contract.build_alloca(function, left.get_type(), "divisor");
+                    let rem = contract.build_alloca(function, left.get_type(), "remainder");
+                    let quotient = contract.build_alloca(function, left.get_type(), "quotient");
+
+                    contract.builder.build_store(dividend, left);
+                    contract.builder.build_store(divisor, right);
 
                     let ret = contract
                         .builder
-                        .build_call(f, &[left, right, rem.into(), quotient.into()], "udiv")
+                        .build_call(
+                            f,
+                            &[dividend.into(), divisor.into(), rem.into(), quotient.into()],
+                            "udiv",
+                        )
                         .try_as_basic_value()
                         .left()
                         .unwrap();
@@ -1386,7 +1464,17 @@ pub trait TargetRuntime<'a> {
 
                     contract.builder.position_at_end(bail_block);
 
-                    contract.builder.build_return(Some(&ret));
+                    // throw division by zero error should be an assert
+                    self.assert_failure(
+                        contract,
+                        contract
+                            .context
+                            .i8_type()
+                            .ptr_type(AddressSpace::Generic)
+                            .const_null(),
+                        contract.context.i32_type().const_zero(),
+                    );
+
                     contract.builder.position_at_end(success_block);
 
                     contract.builder.build_load(rem, "urem")
@@ -1401,16 +1489,37 @@ pub trait TargetRuntime<'a> {
                 let left = self.expression(contract, l, vartab, function);
                 let right = self.expression(contract, r, vartab, function);
 
-                let bits = left.into_int_value().get_type().get_bit_width();
+                let mut bits = left.into_int_value().get_type().get_bit_width();
 
                 if bits > 64 {
-                    let f = self.sdivmod(contract, bits);
-                    let rem = contract.build_alloca(function, left.get_type(), "");
-                    let quotient = contract.build_alloca(function, left.get_type(), "");
+                    if bits <= 128 {
+                        bits = 128;
+                    } else {
+                        bits = 256;
+                    };
+
+                    let name = format!("sdivmod{}", bits);
+
+                    let f = contract
+                        .module
+                        .get_function(&name)
+                        .expect("div function missing");
+
+                    let dividend = contract.build_alloca(function, left.get_type(), "dividend");
+                    let divisor = contract.build_alloca(function, left.get_type(), "divisor");
+                    let rem = contract.build_alloca(function, left.get_type(), "remainder");
+                    let quotient = contract.build_alloca(function, left.get_type(), "quotient");
+
+                    contract.builder.build_store(dividend, left);
+                    contract.builder.build_store(divisor, right);
 
                     let ret = contract
                         .builder
-                        .build_call(f, &[left, right, rem.into(), quotient.into()], "sdiv")
+                        .build_call(
+                            f,
+                            &[dividend.into(), divisor.into(), rem.into(), quotient.into()],
+                            "sdiv",
+                        )
                         .try_as_basic_value()
                         .left()
                         .unwrap();
@@ -1430,7 +1539,17 @@ pub trait TargetRuntime<'a> {
 
                     contract.builder.position_at_end(bail_block);
 
-                    contract.builder.build_return(Some(&ret));
+                    // throw division by zero error should be an assert
+                    self.assert_failure(
+                        contract,
+                        contract
+                            .context
+                            .i8_type()
+                            .ptr_type(AddressSpace::Generic)
+                            .const_null(),
+                        contract.context.i32_type().const_zero(),
+                    );
+
                     contract.builder.position_at_end(success_block);
 
                     contract.builder.build_load(rem, "srem")
@@ -2433,14 +2552,24 @@ pub trait TargetRuntime<'a> {
 
                 let divisor = contract.builder.build_int_z_extend(k, arith_ty, "wide_k");
 
+                let pdividend = contract.builder.build_alloca(arith_ty, "dividend");
+                let pdivisor = contract.builder.build_alloca(arith_ty, "divisor");
                 let rem = contract.builder.build_alloca(arith_ty, "remainder");
                 let quotient = contract.builder.build_alloca(arith_ty, "quotient");
+
+                contract.builder.build_store(pdividend, dividend);
+                contract.builder.build_store(pdivisor, divisor);
 
                 let ret = contract
                     .builder
                     .build_call(
-                        self.udivmod(contract, 512),
-                        &[dividend.into(), divisor.into(), rem.into(), quotient.into()],
+                        contract.module.get_function("udivmod512").unwrap(),
+                        &[
+                            pdividend.into(),
+                            pdivisor.into(),
+                            rem.into(),
+                            quotient.into(),
+                        ],
                         "quotient",
                     )
                     .try_as_basic_value()
@@ -2540,14 +2669,24 @@ pub trait TargetRuntime<'a> {
 
                 let divisor = contract.builder.build_int_z_extend(k, arith_ty, "wide_k");
 
+                let pdividend = contract.builder.build_alloca(arith_ty, "dividend");
+                let pdivisor = contract.builder.build_alloca(arith_ty, "divisor");
                 let rem = contract.builder.build_alloca(arith_ty, "remainder");
                 let quotient = contract.builder.build_alloca(arith_ty, "quotient");
+
+                contract.builder.build_store(pdividend, dividend);
+                contract.builder.build_store(pdivisor, divisor);
 
                 let ret = contract
                     .builder
                     .build_call(
-                        self.udivmod(contract, 512),
-                        &[dividend, divisor.into(), rem.into(), quotient.into()],
+                        contract.module.get_function("udivmod512").unwrap(),
+                        &[
+                            pdividend.into(),
+                            pdivisor.into(),
+                            rem.into(),
+                            quotient.into(),
+                        ],
                         "quotient",
                     )
                     .try_as_basic_value()
@@ -4451,501 +4590,6 @@ pub trait TargetRuntime<'a> {
             self.emit_cfg(contract, cfg, func_decl);
         }
     }
-
-    // Generate an unsigned divmod function for the given bitwidth. This is for int sizes which
-    // WebAssembly does not support, i.e. anything over 64.
-    // The builder position is maintained.
-    //
-    // inspired by https://github.com/calccrypto/uint256_t/blob/master/uint256_t.cpp#L397
-    fn udivmod(&self, contract: &Contract<'a>, bit: u32) -> FunctionValue<'a> {
-        let name = format!("__udivmod{}", bit);
-        let ty = contract.context.custom_width_int_type(bit);
-
-        if let Some(f) = contract.module.get_function(&name) {
-            return f;
-        }
-
-        let pos = contract.builder.get_insert_block().unwrap();
-
-        // __udivmod256(dividend, divisor, *rem, *quotient) = error
-        let function = contract.module.add_function(
-            &name,
-            contract.context.i32_type().fn_type(
-                &[
-                    ty.into(),
-                    ty.into(),
-                    ty.ptr_type(AddressSpace::Generic).into(),
-                    ty.ptr_type(AddressSpace::Generic).into(),
-                ],
-                false,
-            ),
-            None,
-        );
-
-        let entry = contract.context.append_basic_block(function, "entry");
-
-        contract.builder.position_at_end(entry);
-
-        let dividend = function.get_nth_param(0).unwrap().into_int_value();
-        let divisor = function.get_nth_param(1).unwrap().into_int_value();
-        let rem = function.get_nth_param(2).unwrap().into_pointer_value();
-        let quotient_result = function.get_nth_param(3).unwrap().into_pointer_value();
-
-        let error = contract.context.append_basic_block(function, "error");
-        let next = contract.context.append_basic_block(function, "next");
-        let is_zero = contract.builder.build_int_compare(
-            IntPredicate::EQ,
-            divisor,
-            ty.const_zero(),
-            "divisor_is_zero",
-        );
-        contract
-            .builder
-            .build_conditional_branch(is_zero, error, next);
-
-        contract.builder.position_at_end(error);
-        // throw division by zero error should be an assert
-        self.assert_failure(
-            contract,
-            contract
-                .context
-                .i8_type()
-                .ptr_type(AddressSpace::Generic)
-                .const_null(),
-            contract.context.i32_type().const_zero(),
-        );
-
-        contract.builder.position_at_end(next);
-        let is_one_block = contract
-            .context
-            .append_basic_block(function, "is_one_block");
-        let next = contract.context.append_basic_block(function, "next");
-        let is_one = contract.builder.build_int_compare(
-            IntPredicate::EQ,
-            divisor,
-            ty.const_int(1, false),
-            "divisor_is_one",
-        );
-        contract
-            .builder
-            .build_conditional_branch(is_one, is_one_block, next);
-
-        // return quotient: dividend, rem: 0
-        contract.builder.position_at_end(is_one_block);
-        contract.builder.build_store(rem, ty.const_zero());
-        contract.builder.build_store(quotient_result, dividend);
-        contract
-            .builder
-            .build_return(Some(&contract.context.i32_type().const_zero()));
-
-        contract.builder.position_at_end(next);
-        let is_eq_block = contract.context.append_basic_block(function, "is_eq_block");
-        let next = contract.context.append_basic_block(function, "next");
-        let is_eq =
-            contract
-                .builder
-                .build_int_compare(IntPredicate::EQ, dividend, divisor, "is_eq");
-        contract
-            .builder
-            .build_conditional_branch(is_eq, is_eq_block, next);
-
-        // return rem: 0, quotient: 1
-        contract.builder.position_at_end(is_eq_block);
-        contract.builder.build_store(rem, ty.const_zero());
-        contract.builder.build_store(rem, ty.const_zero());
-        contract
-            .builder
-            .build_store(quotient_result, ty.const_int(1, false));
-        contract
-            .builder
-            .build_return(Some(&contract.context.i32_type().const_zero()));
-
-        contract.builder.position_at_end(next);
-
-        let is_toobig_block = contract
-            .context
-            .append_basic_block(function, "is_toobig_block");
-        let next = contract.context.append_basic_block(function, "next");
-        let dividend_is_zero = contract.builder.build_int_compare(
-            IntPredicate::EQ,
-            dividend,
-            ty.const_zero(),
-            "dividend_is_zero",
-        );
-        let dividend_lt_divisor = contract.builder.build_int_compare(
-            IntPredicate::ULT,
-            dividend,
-            divisor,
-            "dividend_lt_divisor",
-        );
-        contract.builder.build_conditional_branch(
-            contract
-                .builder
-                .build_or(dividend_is_zero, dividend_lt_divisor, ""),
-            is_toobig_block,
-            next,
-        );
-
-        // return quotient: 0, rem: divisor
-        contract.builder.position_at_end(is_toobig_block);
-        contract.builder.build_store(rem, dividend);
-        contract
-            .builder
-            .build_store(quotient_result, ty.const_zero());
-        contract
-            .builder
-            .build_return(Some(&contract.context.i32_type().const_zero()));
-
-        contract.builder.position_at_end(next);
-
-        let ctlz = contract.llvm_ctlz(bit);
-
-        let dividend_bits = contract.builder.build_int_sub(
-            ty.const_int(bit as u64 - 1, false),
-            contract
-                .builder
-                .build_call(
-                    ctlz,
-                    &[
-                        dividend.into(),
-                        contract.context.bool_type().const_int(1, false).into(),
-                    ],
-                    "",
-                )
-                .try_as_basic_value()
-                .left()
-                .unwrap()
-                .into_int_value(),
-            "dividend_bits",
-        );
-
-        let divisor_bits = contract.builder.build_int_sub(
-            ty.const_int(bit as u64 - 1, false),
-            contract
-                .builder
-                .build_call(
-                    ctlz,
-                    &[
-                        divisor.into(),
-                        contract.context.bool_type().const_int(1, false).into(),
-                    ],
-                    "",
-                )
-                .try_as_basic_value()
-                .left()
-                .unwrap()
-                .into_int_value(),
-            "dividend_bits",
-        );
-
-        let copyd1 = contract.builder.build_left_shift(
-            divisor,
-            contract
-                .builder
-                .build_int_sub(dividend_bits, divisor_bits, ""),
-            "copyd",
-        );
-
-        let adder1 = contract.builder.build_left_shift(
-            ty.const_int(1, false),
-            contract
-                .builder
-                .build_int_sub(dividend_bits, divisor_bits, ""),
-            "adder",
-        );
-
-        let true_block = contract.context.append_basic_block(function, "true");
-        let while_cond_block = contract.context.append_basic_block(function, "while_cond");
-
-        let comp = contract
-            .builder
-            .build_int_compare(IntPredicate::UGT, copyd1, dividend, "");
-
-        contract
-            .builder
-            .build_conditional_branch(comp, true_block, while_cond_block);
-
-        contract.builder.position_at_end(true_block);
-
-        let copyd2 = contract
-            .builder
-            .build_right_shift(copyd1, ty.const_int(1, false), false, "");
-        let adder2 = contract
-            .builder
-            .build_right_shift(adder1, ty.const_int(1, false), false, "");
-        contract
-            .builder
-            .build_unconditional_branch(while_cond_block);
-
-        let while_body_block = contract.context.append_basic_block(function, "while_body");
-        let while_end_block = contract.context.append_basic_block(function, "while_post");
-
-        contract.builder.position_at_end(while_cond_block);
-
-        let quotient = contract.builder.build_phi(ty, "quotient");
-        quotient.add_incoming(&[(&ty.const_zero(), next)]);
-        quotient.add_incoming(&[(&ty.const_zero(), true_block)]);
-
-        let remainder = contract.builder.build_phi(ty, "remainder");
-        remainder.add_incoming(&[(&dividend, next)]);
-        remainder.add_incoming(&[(&dividend, true_block)]);
-
-        let copyd = contract.builder.build_phi(ty, "copyd");
-        copyd.add_incoming(&[(&copyd1, next), (&copyd2, true_block)]);
-        let adder = contract.builder.build_phi(ty, "adder");
-        adder.add_incoming(&[(&adder1, next), (&adder2, true_block)]);
-
-        let loop_cond = contract.builder.build_int_compare(
-            IntPredicate::UGE,
-            remainder.as_basic_value().into_int_value(),
-            divisor,
-            "loop_cond",
-        );
-        contract
-            .builder
-            .build_conditional_branch(loop_cond, while_body_block, while_end_block);
-
-        contract.builder.position_at_end(while_body_block);
-
-        let if_true_block = contract
-            .context
-            .append_basic_block(function, "if_true_block");
-        let post_if_block = contract
-            .context
-            .append_basic_block(function, "post_if_block");
-
-        contract.builder.build_conditional_branch(
-            contract.builder.build_int_compare(
-                IntPredicate::UGE,
-                remainder.as_basic_value().into_int_value(),
-                copyd.as_basic_value().into_int_value(),
-                "",
-            ),
-            if_true_block,
-            post_if_block,
-        );
-
-        contract.builder.position_at_end(if_true_block);
-
-        let remainder2 = contract.builder.build_int_sub(
-            remainder.as_basic_value().into_int_value(),
-            copyd.as_basic_value().into_int_value(),
-            "remainder",
-        );
-        let quotient2 = contract.builder.build_or(
-            quotient.as_basic_value().into_int_value(),
-            adder.as_basic_value().into_int_value(),
-            "quotient",
-        );
-
-        contract.builder.build_unconditional_branch(post_if_block);
-
-        contract.builder.position_at_end(post_if_block);
-
-        let quotient3 = contract.builder.build_phi(ty, "quotient3");
-        let remainder3 = contract.builder.build_phi(ty, "remainder");
-
-        let copyd3 = contract.builder.build_right_shift(
-            copyd.as_basic_value().into_int_value(),
-            ty.const_int(1, false),
-            false,
-            "copyd",
-        );
-        let adder3 = contract.builder.build_right_shift(
-            adder.as_basic_value().into_int_value(),
-            ty.const_int(1, false),
-            false,
-            "adder",
-        );
-        copyd.add_incoming(&[(&copyd3, post_if_block)]);
-        adder.add_incoming(&[(&adder3, post_if_block)]);
-
-        quotient3.add_incoming(&[
-            (&quotient2, if_true_block),
-            (&quotient.as_basic_value(), while_body_block),
-        ]);
-        remainder3.add_incoming(&[
-            (&remainder2, if_true_block),
-            (&remainder.as_basic_value(), while_body_block),
-        ]);
-
-        quotient.add_incoming(&[(&quotient3.as_basic_value(), post_if_block)]);
-        remainder.add_incoming(&[(&remainder3.as_basic_value(), post_if_block)]);
-
-        contract
-            .builder
-            .build_unconditional_branch(while_cond_block);
-
-        contract.builder.position_at_end(while_end_block);
-
-        contract
-            .builder
-            .build_store(rem, remainder.as_basic_value().into_int_value());
-        contract
-            .builder
-            .build_store(quotient_result, quotient.as_basic_value().into_int_value());
-        contract
-            .builder
-            .build_return(Some(&contract.context.i32_type().const_zero()));
-
-        contract.builder.position_at_end(pos);
-
-        function
-    }
-
-    fn sdivmod(&self, contract: &Contract<'a>, bit: u32) -> FunctionValue<'a> {
-        let name = format!("__sdivmod{}", bit);
-        let ty = contract.context.custom_width_int_type(bit);
-
-        if let Some(f) = contract.module.get_function(&name) {
-            return f;
-        }
-
-        let pos = contract.builder.get_insert_block().unwrap();
-
-        // __sdivmod256(dividend, divisor, *rem, *quotient) -> error
-        let function = contract.module.add_function(
-            &name,
-            contract.context.i32_type().fn_type(
-                &[
-                    ty.into(),
-                    ty.into(),
-                    ty.ptr_type(AddressSpace::Generic).into(),
-                    ty.ptr_type(AddressSpace::Generic).into(),
-                ],
-                false,
-            ),
-            None,
-        );
-
-        let entry = contract.context.append_basic_block(function, "entry");
-
-        contract.builder.position_at_end(entry);
-
-        let dividend = function.get_nth_param(0).unwrap().into_int_value();
-        let divisor = function.get_nth_param(1).unwrap().into_int_value();
-        let rem = function.get_nth_param(2).unwrap().into_pointer_value();
-        let quotient_result = function.get_nth_param(3).unwrap().into_pointer_value();
-
-        let dividend_negative = contract.builder.build_int_compare(
-            IntPredicate::SLT,
-            dividend,
-            ty.const_zero(),
-            "dividend_negative",
-        );
-        let divisor_negative = contract.builder.build_int_compare(
-            IntPredicate::SLT,
-            divisor,
-            ty.const_zero(),
-            "divisor_negative",
-        );
-
-        let dividend_abs = contract.builder.build_select(
-            dividend_negative,
-            contract.builder.build_int_neg(dividend, "dividen_neg"),
-            dividend,
-            "dividend_abs",
-        );
-
-        let divisor_abs = contract.builder.build_select(
-            divisor_negative,
-            contract.builder.build_int_neg(divisor, "divisor_neg"),
-            divisor,
-            "divisor_abs",
-        );
-
-        let ret = contract
-            .builder
-            .build_call(
-                self.udivmod(contract, bit),
-                &[
-                    dividend_abs,
-                    divisor_abs,
-                    rem.into(),
-                    quotient_result.into(),
-                ],
-                "quotient",
-            )
-            .try_as_basic_value()
-            .left()
-            .unwrap();
-
-        let success = contract.builder.build_int_compare(
-            IntPredicate::EQ,
-            ret.into_int_value(),
-            contract.context.i32_type().const_zero(),
-            "success",
-        );
-
-        let success_block = contract.context.append_basic_block(function, "success");
-        let bail_block = contract.context.append_basic_block(function, "bail");
-        contract
-            .builder
-            .build_conditional_branch(success, success_block, bail_block);
-
-        contract.builder.position_at_end(bail_block);
-
-        contract.builder.build_return(Some(&ret));
-        contract.builder.position_at_end(success_block);
-
-        let quotient = contract
-            .builder
-            .build_load(quotient_result, "quotient")
-            .into_int_value();
-
-        let quotient = contract.builder.build_select(
-            contract.builder.build_int_compare(
-                IntPredicate::NE,
-                dividend_negative,
-                divisor_negative,
-                "two_negatives",
-            ),
-            contract.builder.build_int_neg(quotient, "quotient_neg"),
-            quotient,
-            "quotient",
-        );
-
-        let negrem = contract
-            .context
-            .append_basic_block(function, "negative_rem");
-        let posrem = contract
-            .context
-            .append_basic_block(function, "positive_rem");
-
-        contract
-            .builder
-            .build_conditional_branch(dividend_negative, negrem, posrem);
-
-        contract.builder.position_at_end(posrem);
-
-        contract.builder.build_store(quotient_result, quotient);
-        contract
-            .builder
-            .build_return(Some(&contract.context.i32_type().const_zero()));
-
-        contract.builder.position_at_end(negrem);
-
-        let remainder = contract
-            .builder
-            .build_load(rem, "remainder")
-            .into_int_value();
-
-        contract.builder.build_store(
-            rem,
-            contract
-                .builder
-                .build_int_neg(remainder, "negative_remainder"),
-        );
-
-        contract.builder.build_store(quotient_result, quotient);
-        contract
-            .builder
-            .build_return(Some(&contract.context.i32_type().const_zero()));
-
-        contract.builder.position_at_end(pos);
-
-        function
-    }
 }
 
 pub struct Contract<'a> {
@@ -5828,11 +5472,13 @@ impl<'a> Contract<'a> {
     }
 }
 
-static STDLIB_IR: &[u8] = include_bytes!("../../stdlib/stdlib.bc");
-static SHA3_IR: &[u8] = include_bytes!("../../stdlib/sha3.bc");
-static RIPEMD160_IR: &[u8] = include_bytes!("../../stdlib/ripemd160.bc");
-static SUBSTRATE_IR: &[u8] = include_bytes!("../../stdlib/substrate.bc");
-static SOLANA_IR: &[u8] = include_bytes!("../../stdlib/solana.bc");
+static STDLIB_IR: &[u8] = include_bytes!("../../stdlib/wasm/stdlib.bc");
+static SHA3_IR: &[u8] = include_bytes!("../../stdlib/wasm/sha3.bc");
+static RIPEMD160_IR: &[u8] = include_bytes!("../../stdlib/wasm/ripemd160.bc");
+static SUBSTRATE_IR: &[u8] = include_bytes!("../../stdlib/wasm/substrate.bc");
+static BIGINT_WASM_IR: &[u8] = include_bytes!("../../stdlib/wasm/bigint.bc");
+static BIGINT_BPF_IR: &[u8] = include_bytes!("../../stdlib/bpf/bigint.bc");
+static SOLANA_IR: &[u8] = include_bytes!("../../stdlib/bpf/solana.bc");
 
 /// Return the stdlib as parsed llvm module. The solidity standard library is hardcoded into
 /// the solang library
@@ -5842,12 +5488,23 @@ fn load_stdlib<'a>(context: &'a Context, target: &Target) -> Module<'a> {
 
         let module = Module::parse_bitcode_from_buffer(&memory, context).unwrap();
 
+        let memory = MemoryBuffer::create_from_memory_range(BIGINT_BPF_IR, "bigint");
+
+        module
+            .link_in_module(Module::parse_bitcode_from_buffer(&memory, context).unwrap())
+            .unwrap();
         return module;
     }
 
     let memory = MemoryBuffer::create_from_memory_range(STDLIB_IR, "stdlib");
 
     let module = Module::parse_bitcode_from_buffer(&memory, context).unwrap();
+
+    let memory = MemoryBuffer::create_from_memory_range(BIGINT_WASM_IR, "bigint");
+
+    module
+        .link_in_module(Module::parse_bitcode_from_buffer(&memory, context).unwrap())
+        .unwrap();
 
     if Target::Substrate == *target {
         let memory = MemoryBuffer::create_from_memory_range(SUBSTRATE_IR, "substrate");
