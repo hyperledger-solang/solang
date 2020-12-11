@@ -2,7 +2,7 @@
 All notable changes to [Solang](https://github.com/hyperledger-labs/solang/)
 will be documented here.
 
-## [Unreleased]
+## [0.1.6]
 
 ### Added
 - New Visual Studio Code extension developed under Hyperledger Mentorship
@@ -11,6 +11,7 @@ will be documented here.
 - Implemented primitives types and operations for Solana
 - Functions can be declared outside of contracts
 - Constants can be declared outside of contracts
+- String formatting using python style "..{}..".format(n)
 
 ## [0.1.5]
 
