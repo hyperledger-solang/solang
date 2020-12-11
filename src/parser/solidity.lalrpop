@@ -24,6 +24,7 @@ SourceUnitPart: SourceUnitPart = {
     EventDefinition => SourceUnitPart::EventDefinition(<>),
     FunctionDefinition => SourceUnitPart::FunctionDefinition(<>),
     VariableDefinition => SourceUnitPart::VariableDefinition(<>),
+    <l:@L> ";" <r:@R> => SourceUnitPart::StraySemicolon(Loc(file_no, l, r)),
 }
 
 ImportDirective: Import = {
@@ -149,6 +150,7 @@ ContractPart: ContractPart = {
     FunctionDefinition => ContractPart::FunctionDefinition(<>),
     ModifierDefinition => ContractPart::FunctionDefinition(<>),
     ConstructorDefinition => ContractPart::FunctionDefinition(<>),
+    <l:@L> ";" <r:@R> => ContractPart::StraySemicolon(Loc(file_no, l, r)),
     Using => ContractPart::Using(<>),
 }
 

@@ -115,6 +115,25 @@ pub fn sema(file: ResolvedFile, cache: &mut FileCache, ns: &mut ast::Namespace) 
         let _ = statements::resolve_function_body(func, file_no, None, func_no, ns);
     }
 
+    // check for stray semi colons
+    for part in &pt.0 {
+        match part {
+            pt::SourceUnitPart::StraySemicolon(loc) => {
+                ns.diagnostics
+                    .push(ast::Diagnostic::error(*loc, "stray semicolon".to_string()));
+            }
+            pt::SourceUnitPart::ContractDefinition(contract) => {
+                for part in &contract.parts {
+                    if let pt::ContractPart::StraySemicolon(loc) = part {
+                        ns.diagnostics
+                            .push(ast::Diagnostic::error(*loc, "stray semicolon".to_string()));
+                    }
+                }
+            }
+            _ => (),
+        }
+    }
+
     // now check state mutability for all contracts
     mutability::mutablity(file_no, ns);
 }
