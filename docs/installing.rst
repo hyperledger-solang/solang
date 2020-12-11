@@ -8,22 +8,22 @@ Download release binaries
 
 For Linux x86-64, there is a binary available in the github releases:
 
-`<https://github.com/hyperledger-labs/solang/releases/download/v0.1.5/solang_linux>`_
+`<https://github.com/hyperledger-labs/solang/releases/download/v0.1.6/solang_linux>`_
 
 For Windows x64, there is a binary available:
 
-`<https://github.com/hyperledger-labs/solang/releases/download/v0.1.5/solang.exe>`_
+`<https://github.com/hyperledger-labs/solang/releases/download/v0.1.6/solang.exe>`_
 
 For MacOS, there is a binary available:
 
-`<https://github.com/hyperledger-labs/solang/releases/download/v0.1.5/solang_mac>`_
+`<https://github.com/hyperledger-labs/solang/releases/download/v0.1.6/solang_mac>`_
 
 Using hyperledgerlabs/solang docker hub images
 ----------------------------------------------
 
 New images are automatically made available on
 `docker hub <https://hub.docker.com/repository/docker/hyperledgerlabs/solang/>`_.
-There is a release `v0.1.5` tag and a `latest` tag:
+There is a release `v0.1.6` tag and a `latest` tag:
 
 .. code-block:: bash
 
