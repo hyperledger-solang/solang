@@ -85,6 +85,14 @@ pub fn contract_function(
         }
     }
 
+    if let Some(loc) = func.return_not_returns {
+        ns.diagnostics.push(Diagnostic::error(
+            loc,
+            "‘return’ unexpected. Did you mean ‘returns’?".to_string(),
+        ));
+        success = false;
+    }
+
     let mut mutability: Option<pt::StateMutability> = None;
     let mut visibility: Option<pt::Visibility> = None;
     let mut is_virtual: Option<pt::Loc> = None;

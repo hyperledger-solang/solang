@@ -476,14 +476,19 @@ BlockStatementOrSemiColon: Option<Statement> = {
     BlockStatement => Some(<>),
 }
 
+returns: Option<Loc> = {
+    "returns" => None,
+    <l:@L> "return" <r:@R> => Some(Loc(file_no, l, r)),
+}
+
 // Modifiers can't have attributes or return values, but we parse them anyway so we can give nice
 // error messages. The parameter list is optional
 ModifierDefinition: Box<FunctionDefinition> = {
     <doc:DocComments> <l:@L> "modifier" <nl:@L> <name:Identifier> <nr:@R> <params:ParameterList?>
     <attributes:FunctionAttribute*>
-    <returns:("returns" <ParameterList>)?> <body:BlockStatementOrSemiColon> <r:@R> => {
+    <returns:(returns ParameterList)?> <body:BlockStatementOrSemiColon> <r:@R> => {
         let params = params.unwrap_or(Vec::new());
-        let returns = returns.unwrap_or(Vec::new());
+        let (return_not_returns, returns) = returns.unwrap_or((None, Vec::new()));
 
         Box::new(FunctionDefinition{
             doc,
@@ -493,6 +498,7 @@ ModifierDefinition: Box<FunctionDefinition> = {
             name_loc: Loc(file_no, nl, nr),
             params,
             attributes,
+            return_not_returns,
             returns,
             body,
         })
@@ -502,8 +508,8 @@ ModifierDefinition: Box<FunctionDefinition> = {
 ConstructorDefinition: Box<FunctionDefinition> = {
     <doc:DocComments> <l:@L> <ty:FunctionTy> <nl:@L> <name:Identifier?> <nr:@R> <params:ParameterList>
     <attributes:FunctionAttribute*>
-    <returns:("returns" <ParameterList>)?> <body:BlockStatementOrSemiColon> <r:@R> => {
-        let returns = returns.unwrap_or(Vec::new());
+    <returns:(returns ParameterList)?> <body:BlockStatementOrSemiColon> <r:@R> => {
+        let (return_not_returns, returns) = returns.unwrap_or((None, Vec::new()));
 
         Box::new(FunctionDefinition{
             doc,
@@ -513,6 +519,7 @@ ConstructorDefinition: Box<FunctionDefinition> = {
             name_loc: Loc(file_no, nl, nr),
             params,
             attributes,
+            return_not_returns,
             returns,
             body,
         })
@@ -522,8 +529,8 @@ ConstructorDefinition: Box<FunctionDefinition> = {
 FunctionDefinition: Box<FunctionDefinition> = {
     <doc:DocComments> <l:@L> "function" <nl:@L> <name:Identifier> <nr:@R> <params:ParameterList>
     <attributes:FunctionAttribute*>
-    <returns:("returns" <ParameterList>)?> <body:BlockStatementOrSemiColon> <r:@R> => {
-        let returns = returns.unwrap_or(Vec::new());
+    <returns:(returns ParameterList)?> <body:BlockStatementOrSemiColon> <r:@R> => {
+        let (return_not_returns, returns) = returns.unwrap_or((None, Vec::new()));
 
         Box::new(FunctionDefinition{
             doc,
@@ -533,6 +540,7 @@ FunctionDefinition: Box<FunctionDefinition> = {
             name_loc: Loc(file_no, nl, nr),
             params,
             attributes,
+            return_not_returns,
             returns,
             body,
         })
@@ -552,6 +560,7 @@ FunctionDefinition: Box<FunctionDefinition> = {
                     name_loc: Loc(file_no, l, r),
                     params,
                     attributes,
+                    return_not_returns: None,
                     returns,
                     body,
                 })
