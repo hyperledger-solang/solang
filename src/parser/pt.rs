@@ -478,6 +478,7 @@ pub struct FunctionDefinition {
     pub name_loc: Loc,
     pub params: Vec<(Loc, Option<Parameter>)>,
     pub attributes: Vec<FunctionAttribute>,
+    pub return_not_returns: Option<Loc>,
     pub returns: Vec<(Loc, Option<Parameter>)>,
     pub body: Option<Statement>,
 }

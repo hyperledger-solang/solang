@@ -1188,3 +1188,20 @@ fn global_functions() {
 
     runtime.function("test", Vec::new());
 }
+
+#[test]
+fn return_not_returns() {
+    let ns = parse_and_resolve(
+        "contract test {
+            function bar() public pure return (int64) {
+                return 1;
+            }
+        }",
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "‘return’ unexpected. Did you mean ‘returns’?"
+    );
+}
