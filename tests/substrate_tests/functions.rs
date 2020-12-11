@@ -1205,3 +1205,14 @@ fn return_not_returns() {
         "‘return’ unexpected. Did you mean ‘returns’?"
     );
 }
+
+#[test]
+fn stray_semicolon() {
+    let ns = parse_and_resolve("struct a { uint32 f1; };", Target::Substrate);
+
+    assert_eq!(first_error(ns.diagnostics), "stray semicolon");
+
+    let ns = parse_and_resolve("contract x { struct a { uint32 f1; }; }", Target::Substrate);
+
+    assert_eq!(first_error(ns.diagnostics), "stray semicolon");
+}

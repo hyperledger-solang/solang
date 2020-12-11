@@ -30,6 +30,7 @@ pub enum SourceUnitPart {
     EventDefinition(Box<EventDefinition>),
     FunctionDefinition(Box<FunctionDefinition>),
     VariableDefinition(Box<VariableDefinition>),
+    StraySemicolon(Loc),
 }
 
 #[derive(Debug, PartialEq)]
@@ -128,6 +129,7 @@ pub enum ContractPart {
     EnumDefinition(Box<EnumDefinition>),
     VariableDefinition(Box<VariableDefinition>),
     FunctionDefinition(Box<FunctionDefinition>),
+    StraySemicolon(Loc),
     Using(Box<Using>),
 }
 
