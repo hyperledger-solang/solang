@@ -12,7 +12,7 @@ use super::doc::tags;
 grammar<'input>(input: &'input str, file_no: usize);
 
 pub SourceUnit: SourceUnit = {
-    SourceUnitPart+ => SourceUnit(<>)
+    SourceUnitPart* => SourceUnit(<>)
 }
 
 SourceUnitPart: SourceUnitPart = {
