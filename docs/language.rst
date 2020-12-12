@@ -3015,7 +3015,7 @@ Assuming `arg1` is 512 and `arg2` is 196, the output to the log will be ``foo en
 
     When formatting integers in to decimals, types larger than 64 bits require expensive division.
     Be mindful this will increase the gas cost. Larger values will incur a higher gas cost.
-    Alternatively,u se a hexadecimal ``{:x}`` format specifier to reduce the cost.
+    Alternatively, use a hexadecimal ``{:x}`` format specifier to reduce the cost.
 
 .. _tags:
 
