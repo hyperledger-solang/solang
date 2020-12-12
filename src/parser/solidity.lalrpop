@@ -120,7 +120,7 @@ StorageLocation: StorageLocation = {
 }
 
 Identifier: Identifier = {
-    <l:@L> <n:LexIdentifier> <r:@R> => Identifier{loc: Loc(file_no, l, r), name: n.to_string()}
+    <l:@L> <n:identifier> <r:@R> => Identifier{loc: Loc(file_no, l, r), name: n.to_string()}
 }
 
 VariableDeclaration: VariableDeclaration = {
@@ -371,7 +371,7 @@ NoFunctionTyPrecedence0: Expression = {
     },
     <Identifier> => Expression::Variable(<>),
     <l:@L> <e:Precedence0> <u:Unit> <r:@R> => Expression::Unit(Loc(file_no, l, r), Box::new(e), u),
-    <l:@L> <n:LexNumber> <r:@R> => {
+    <l:@L> <n:number> <r:@R> => {
         let base: String = n.0.chars().filter(|v| *v != '_').collect();
         let exp: String = n.1.chars().filter(|v| *v != '_').collect();
 
@@ -386,7 +386,7 @@ NoFunctionTyPrecedence0: Expression = {
 
         Expression::NumberLiteral(Loc(file_no, l, r), n)
     },
-    <l:@L> <n:LexHexNumber> <r:@R> => {
+    <l:@L> <n:hexnumber> <r:@R> => {
         Expression::HexNumberLiteral(Loc(file_no, l, r), n.to_owned())
     },
     <l:@L> <a:ParameterList> <r:@R> => {
@@ -415,13 +415,13 @@ Unit: Unit = {
 }
 
 StringLiteral: StringLiteral = {
-    <l:@L> <s:LexStringLiteral> <r:@R> => {
+    <l:@L> <s:string> <r:@R> => {
         StringLiteral{ loc: Loc(file_no, l, r), string: s.to_string() }
     }
 }
 
 HexLiteral: HexLiteral = {
-    <l:@L> <s:LexHexLiteral> <r:@R> => {
+    <l:@L> <s:hexstring> <r:@R> => {
         let v = s.to_string();
         let hex_len = v.len() - 5;
 
@@ -702,11 +702,11 @@ extern {
     type Error = LexicalError;
 
     enum Token<'input> {
-        LexIdentifier => Token::Identifier(<&'input str>),
-        LexStringLiteral => Token::StringLiteral(<&'input str>),
-        LexHexLiteral => Token::HexLiteral(<&'input str>),
-        LexNumber => Token::Number(<&'input str>, <&'input str>),
-        LexHexNumber => Token::HexNumber(<&'input str>),
+        identifier => Token::Identifier(<&'input str>),
+        string => Token::StringLiteral(<&'input str>),
+        hexstring => Token::HexLiteral(<&'input str>),
+        number => Token::Number(<&'input str>, <&'input str>),
+        hexnumber => Token::HexNumber(<&'input str>),
         ";" => Token::Semicolon,
         "{" => Token::OpenCurlyBrace,
         "}" => Token::CloseCurlyBrace,
