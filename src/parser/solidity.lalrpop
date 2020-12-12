@@ -488,7 +488,7 @@ returns: Option<Loc> = {
 ModifierDefinition: Box<FunctionDefinition> = {
     <doc:DocComments> <l:@L> "modifier" <nl:@L> <name:Identifier> <nr:@R> <params:ParameterList?>
     <attributes:FunctionAttribute*>
-    <returns:(returns ParameterList)?> <body:BlockStatementOrSemiColon> <r:@R> => {
+    <returns:(returns ParameterList)?> <r:@R> <body:BlockStatementOrSemiColon> => {
         let params = params.unwrap_or(Vec::new());
         let (return_not_returns, returns) = returns.unwrap_or((None, Vec::new()));
 
@@ -510,7 +510,7 @@ ModifierDefinition: Box<FunctionDefinition> = {
 ConstructorDefinition: Box<FunctionDefinition> = {
     <doc:DocComments> <l:@L> <ty:FunctionTy> <nl:@L> <name:Identifier?> <nr:@R> <params:ParameterList>
     <attributes:FunctionAttribute*>
-    <returns:(returns ParameterList)?> <body:BlockStatementOrSemiColon> <r:@R> => {
+    <returns:(returns ParameterList)?> <r:@R> <body:BlockStatementOrSemiColon> => {
         let (return_not_returns, returns) = returns.unwrap_or((None, Vec::new()));
 
         Box::new(FunctionDefinition{
@@ -531,7 +531,7 @@ ConstructorDefinition: Box<FunctionDefinition> = {
 FunctionDefinition: Box<FunctionDefinition> = {
     <doc:DocComments> <l:@L> "function" <nl:@L> <name:Identifier> <nr:@R> <params:ParameterList>
     <attributes:FunctionAttribute*>
-    <returns:(returns ParameterList)?> <body:BlockStatementOrSemiColon> <r:@R> => {
+    <returns:(returns ParameterList)?> <r:@R> <body:BlockStatementOrSemiColon> => {
         let (return_not_returns, returns) = returns.unwrap_or((None, Vec::new()));
 
         Box::new(FunctionDefinition{
@@ -549,7 +549,7 @@ FunctionDefinition: Box<FunctionDefinition> = {
     },
     // Old-style fallback function without name. Sema will give a nice error message
     // with some instructions how to update your syntax
-    <doc:DocComments> <l:@L> <ft:FunctionType> <body:BlockStatementOrSemiColon> <r:@R> => {
+    <doc:DocComments> <l:@L> <ft:FunctionType> <r:@R> <body:BlockStatementOrSemiColon> => {
         match ft {
             // we're dropping the trailing attributes, but this production is for
             // generating an error messages

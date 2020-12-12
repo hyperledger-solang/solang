@@ -27,7 +27,7 @@ suite('Extension Test Suite', function () {
 	test('Testing for diagnostic errors.', async () => {
 		await testdiagnos(diagnosdoc2, [
 			{
-				message: 'unrecognised token `}\', expected "!", "(", "+", "++", "-", "--", "[", "address", "bool", "bytes", "delete", "false", "function", "mapping", "new", "payable", "string", "this", "true", "~", Bytes, Int, LexHexLiteral, LexHexNumber, LexIdentifier, LexNumber, LexStringLiteral, Uint',
+				message: 'unrecognised token `}\', expected "!", "(", "+", "++", "-", "--", "[", "address", "bool", "bytes", "delete", "false", "function", "mapping", "new", "payable", "string", "this", "true", "~", Bytes, Int, Uint, hexnumber, hexstring, identifier, number, string',
 				range: toRange(13, 1, 13, 2), severity: vscode.DiagnosticSeverity.Error, source: 'solidity'
 			}
 		]
@@ -46,7 +46,7 @@ suite('Extension Test Suite', function () {
 	test('Testing for diagnostics warnings.', async () => {
 		await testdiagnos(diagnosdoc4, [
 			{ message: 'unknown pragma ‘foo’ with value ‘bar’ ignored', range: toRange(0, 7, 0, 14), severity: vscode.DiagnosticSeverity.Warning, source: `solidity` },
-			{ message: 'function declared ‘nonpayable’ can be declared ‘pure’', range: toRange(3, 5, 5, 6), severity: vscode.DiagnosticSeverity.Warning, source: `solidity` },
+			{ message: 'function declared ‘nonpayable’ can be declared ‘pure’', range: toRange(3, 5, 3, 40), severity: vscode.DiagnosticSeverity.Warning, source: `solidity` },
 		]);
 	});
 
