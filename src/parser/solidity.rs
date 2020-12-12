@@ -1,5 +1,5 @@
 // auto-generated: "lalrpop 0.19.1"
-// sha256: ba604e1850b0d87bc4ebf31b16ad764da09a97f698ff42635e3572ee2727acb
+// sha256: 301a78dcee7a1c40911379dbd9ba0fead851bbd638abbf920149fba1c7f64e8
 use std::str::FromStr;
 use num_bigint::BigInt;
 use num_bigint::BigUint;
@@ -16254,8 +16254,8 @@ fn __action183<
     (_, params, _): (usize, ::std::option::Option<Vec<(Loc, Option<Parameter>)>>, usize),
     (_, attributes, _): (usize, ::std::vec::Vec<FunctionAttribute>, usize),
     (_, returns, _): (usize, ::std::option::Option<(Option<Loc>, Vec<(Loc, Option<Parameter>)>)>, usize),
-    (_, body, _): (usize, Option<Statement>, usize),
     (_, r, _): (usize, usize, usize),
+    (_, body, _): (usize, Option<Statement>, usize),
 ) -> Box<FunctionDefinition>
 {
     {
@@ -16292,8 +16292,8 @@ fn __action184<
     (_, params, _): (usize, Vec<(Loc, Option<Parameter>)>, usize),
     (_, attributes, _): (usize, ::std::vec::Vec<FunctionAttribute>, usize),
     (_, returns, _): (usize, ::std::option::Option<(Option<Loc>, Vec<(Loc, Option<Parameter>)>)>, usize),
-    (_, body, _): (usize, Option<Statement>, usize),
     (_, r, _): (usize, usize, usize),
+    (_, body, _): (usize, Option<Statement>, usize),
 ) -> Box<FunctionDefinition>
 {
     {
@@ -16329,8 +16329,8 @@ fn __action185<
     (_, params, _): (usize, Vec<(Loc, Option<Parameter>)>, usize),
     (_, attributes, _): (usize, ::std::vec::Vec<FunctionAttribute>, usize),
     (_, returns, _): (usize, ::std::option::Option<(Option<Loc>, Vec<(Loc, Option<Parameter>)>)>, usize),
-    (_, body, _): (usize, Option<Statement>, usize),
     (_, r, _): (usize, usize, usize),
+    (_, body, _): (usize, Option<Statement>, usize),
 ) -> Box<FunctionDefinition>
 {
     {
@@ -16360,8 +16360,8 @@ fn __action186<
     (_, doc, _): (usize, Vec<DocComment>, usize),
     (_, l, _): (usize, usize, usize),
     (_, ft, _): (usize, Type, usize),
-    (_, body, _): (usize, Option<Statement>, usize),
     (_, r, _): (usize, usize, usize),
+    (_, body, _): (usize, Option<Statement>, usize),
 ) -> Box<FunctionDefinition>
 {
     {
@@ -20272,8 +20272,8 @@ fn __action397<
     __7: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
     __8: (usize, Option<Loc>, usize),
     __9: (usize, Vec<(Loc, Option<Parameter>)>, usize),
-    __10: (usize, Option<Statement>, usize),
-    __11: (usize, usize, usize),
+    __10: (usize, usize, usize),
+    __11: (usize, Option<Statement>, usize),
 ) -> Box<FunctionDefinition>
 {
     let __start0 = __8.0.clone();
@@ -20316,8 +20316,8 @@ fn __action398<
     __5: (usize, usize, usize),
     __6: (usize, Vec<(Loc, Option<Parameter>)>, usize),
     __7: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
-    __8: (usize, Option<Statement>, usize),
-    __9: (usize, usize, usize),
+    __8: (usize, usize, usize),
+    __9: (usize, Option<Statement>, usize),
 ) -> Box<FunctionDefinition>
 {
     let __start0 = __7.2.clone();
@@ -20362,8 +20362,8 @@ fn __action399<
     __7: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
     __8: (usize, Option<Loc>, usize),
     __9: (usize, Vec<(Loc, Option<Parameter>)>, usize),
-    __10: (usize, Option<Statement>, usize),
-    __11: (usize, usize, usize),
+    __10: (usize, usize, usize),
+    __11: (usize, Option<Statement>, usize),
 ) -> Box<FunctionDefinition>
 {
     let __start0 = __8.0.clone();
@@ -20406,8 +20406,8 @@ fn __action400<
     __5: (usize, usize, usize),
     __6: (usize, Vec<(Loc, Option<Parameter>)>, usize),
     __7: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
-    __8: (usize, Option<Statement>, usize),
-    __9: (usize, usize, usize),
+    __8: (usize, usize, usize),
+    __9: (usize, Option<Statement>, usize),
 ) -> Box<FunctionDefinition>
 {
     let __start0 = __7.2.clone();
@@ -20452,8 +20452,8 @@ fn __action401<
     __7: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
     __8: (usize, Option<Loc>, usize),
     __9: (usize, Vec<(Loc, Option<Parameter>)>, usize),
-    __10: (usize, Option<Statement>, usize),
-    __11: (usize, usize, usize),
+    __10: (usize, usize, usize),
+    __11: (usize, Option<Statement>, usize),
 ) -> Box<FunctionDefinition>
 {
     let __start0 = __8.0.clone();
@@ -20496,8 +20496,8 @@ fn __action402<
     __5: (usize, usize, usize),
     __6: (usize, ::std::option::Option<Vec<(Loc, Option<Parameter>)>>, usize),
     __7: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
-    __8: (usize, Option<Statement>, usize),
-    __9: (usize, usize, usize),
+    __8: (usize, usize, usize),
+    __9: (usize, Option<Statement>, usize),
 ) -> Box<FunctionDefinition>
 {
     let __start0 = __7.2.clone();
@@ -20858,8 +20858,8 @@ fn __action412<
     __5: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
     __6: (usize, Option<Loc>, usize),
     __7: (usize, Vec<(Loc, Option<Parameter>)>, usize),
-    __8: (usize, Option<Statement>, usize),
-    __9: (usize, usize, usize),
+    __8: (usize, usize, usize),
+    __9: (usize, Option<Statement>, usize),
 ) -> Box<FunctionDefinition>
 {
     let __start0 = __0.2.clone();
@@ -20910,8 +20910,8 @@ fn __action413<
     __3: (usize, usize, usize),
     __4: (usize, Vec<(Loc, Option<Parameter>)>, usize),
     __5: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
-    __6: (usize, Option<Statement>, usize),
-    __7: (usize, usize, usize),
+    __6: (usize, usize, usize),
+    __7: (usize, Option<Statement>, usize),
 ) -> Box<FunctionDefinition>
 {
     let __start0 = __0.2.clone();
@@ -21584,8 +21584,8 @@ fn __action433<
     __5: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
     __6: (usize, Option<Loc>, usize),
     __7: (usize, Vec<(Loc, Option<Parameter>)>, usize),
-    __8: (usize, Option<Statement>, usize),
-    __9: (usize, usize, usize),
+    __8: (usize, usize, usize),
+    __9: (usize, Option<Statement>, usize),
 ) -> Box<FunctionDefinition>
 {
     let __start0 = __0.2.clone();
@@ -21636,8 +21636,8 @@ fn __action434<
     __3: (usize, usize, usize),
     __4: (usize, Vec<(Loc, Option<Parameter>)>, usize),
     __5: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
-    __6: (usize, Option<Statement>, usize),
-    __7: (usize, usize, usize),
+    __6: (usize, usize, usize),
+    __7: (usize, Option<Statement>, usize),
 ) -> Box<FunctionDefinition>
 {
     let __start0 = __0.2.clone();
@@ -21682,8 +21682,8 @@ fn __action435<
     file_no: usize,
     __0: (usize, Vec<DocComment>, usize),
     __1: (usize, Type, usize),
-    __2: (usize, Option<Statement>, usize),
-    __3: (usize, usize, usize),
+    __2: (usize, usize, usize),
+    __3: (usize, Option<Statement>, usize),
 ) -> Box<FunctionDefinition>
 {
     let __start0 = __0.2.clone();
@@ -21804,8 +21804,8 @@ fn __action439<
     __5: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
     __6: (usize, Option<Loc>, usize),
     __7: (usize, Vec<(Loc, Option<Parameter>)>, usize),
-    __8: (usize, Option<Statement>, usize),
-    __9: (usize, usize, usize),
+    __8: (usize, usize, usize),
+    __9: (usize, Option<Statement>, usize),
 ) -> Box<FunctionDefinition>
 {
     let __start0 = __0.2.clone();
@@ -21856,8 +21856,8 @@ fn __action440<
     __3: (usize, usize, usize),
     __4: (usize, ::std::option::Option<Vec<(Loc, Option<Parameter>)>>, usize),
     __5: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
-    __6: (usize, Option<Statement>, usize),
-    __7: (usize, usize, usize),
+    __6: (usize, usize, usize),
+    __7: (usize, Option<Statement>, usize),
 ) -> Box<FunctionDefinition>
 {
     let __start0 = __0.2.clone();
@@ -25528,8 +25528,8 @@ fn __action556<
 {
     let __start0 = __2.2.clone();
     let __end0 = __3.0.clone();
-    let __start1 = __7.2.clone();
-    let __end1 = __7.2.clone();
+    let __start1 = __6.2.clone();
+    let __end1 = __7.0.clone();
     let __temp0 = __action282(
         input,
         file_no,
@@ -25555,8 +25555,8 @@ fn __action556<
         __4,
         __5,
         __6,
-        __7,
         __temp1,
+        __7,
     )
 }
 
@@ -25576,8 +25576,8 @@ fn __action557<
 {
     let __start0 = __2.2.clone();
     let __end0 = __3.0.clone();
-    let __start1 = __5.2.clone();
-    let __end1 = __5.2.clone();
+    let __start1 = __4.2.clone();
+    let __end1 = __5.0.clone();
     let __temp0 = __action282(
         input,
         file_no,
@@ -25601,8 +25601,8 @@ fn __action557<
         __temp0,
         __3,
         __4,
-        __5,
         __temp1,
+        __5,
     )
 }
 
@@ -26208,8 +26208,8 @@ fn __action577<
 {
     let __start0 = __2.2.clone();
     let __end0 = __3.0.clone();
-    let __start1 = __7.2.clone();
-    let __end1 = __7.2.clone();
+    let __start1 = __6.2.clone();
+    let __end1 = __7.0.clone();
     let __temp0 = __action282(
         input,
         file_no,
@@ -26235,8 +26235,8 @@ fn __action577<
         __4,
         __5,
         __6,
-        __7,
         __temp1,
+        __7,
     )
 }
 
@@ -26256,8 +26256,8 @@ fn __action578<
 {
     let __start0 = __2.2.clone();
     let __end0 = __3.0.clone();
-    let __start1 = __5.2.clone();
-    let __end1 = __5.2.clone();
+    let __start1 = __4.2.clone();
+    let __end1 = __5.0.clone();
     let __temp0 = __action282(
         input,
         file_no,
@@ -26281,8 +26281,8 @@ fn __action578<
         __temp0,
         __3,
         __4,
-        __5,
         __temp1,
+        __5,
     )
 }
 
@@ -26297,8 +26297,8 @@ fn __action579<
     __2: (usize, Option<Statement>, usize),
 ) -> Box<FunctionDefinition>
 {
-    let __start0 = __2.2.clone();
-    let __end0 = __2.2.clone();
+    let __start0 = __1.2.clone();
+    let __end0 = __2.0.clone();
     let __temp0 = __action282(
         input,
         file_no,
@@ -26311,8 +26311,8 @@ fn __action579<
         file_no,
         __0,
         __1,
-        __2,
         __temp0,
+        __2,
     )
 }
 
@@ -26412,8 +26412,8 @@ fn __action583<
 {
     let __start0 = __2.2.clone();
     let __end0 = __3.0.clone();
-    let __start1 = __7.2.clone();
-    let __end1 = __7.2.clone();
+    let __start1 = __6.2.clone();
+    let __end1 = __7.0.clone();
     let __temp0 = __action282(
         input,
         file_no,
@@ -26439,8 +26439,8 @@ fn __action583<
         __4,
         __5,
         __6,
-        __7,
         __temp1,
+        __7,
     )
 }
 
@@ -26460,8 +26460,8 @@ fn __action584<
 {
     let __start0 = __2.2.clone();
     let __end0 = __3.0.clone();
-    let __start1 = __5.2.clone();
-    let __end1 = __5.2.clone();
+    let __start1 = __4.2.clone();
+    let __end1 = __5.0.clone();
     let __temp0 = __action282(
         input,
         file_no,
@@ -26485,8 +26485,8 @@ fn __action584<
         __temp0,
         __3,
         __4,
-        __5,
         __temp1,
+        __5,
     )
 }
 
