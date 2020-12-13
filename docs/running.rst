@@ -3,18 +3,18 @@ Running Solang
 
 The Solang compiler is run on the command line. The solidity source file
 names are provided as command line arguments; the output is an optimized
-wasm or bpf ` file which is ready for deployment on a chain, and an abi file.
+wasm or bpf file which is ready for deployment on a chain, and an abi file.
 
 The following targets are supported right now:
-`Ethereum ewasm <https://github.com/ewasm/design>`_,
 `Parity Substrate <https://substrate.dev/>`_,
-`Solana <https://www.solana.com/>`_ and
+`Solana <https://www.solana.com/>`_
+`Ethereum ewasm <https://github.com/ewasm/design>`_, and
 `Sawtooth Sabre <https://github.com/hyperledger/sawtooth-sabre>`_.
 
 .. note::
 
   Depending on which target Solang is compiling for, different language
-  features are supported. For example, when compiling for substrate, the
+  features are supported. For example, when compiling for Parity Substrate, the
   constructor can be overloaded with different prototypes. When targetting
   ewasm or Sawtooth Sabre, only one constructor prototype is allowed.
 

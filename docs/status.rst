@@ -43,11 +43,10 @@ ______
 Solang has a new target for `Solana <https://www.solana.com/>`_. This is in early stages right now, however it is
 under active development.
 
-
 ewasm
 _____
 
-ewasm has been tested with `Hyperledeger Burrow <https://github.com/hyperledger/burrow>`_.
+ewasm has been tested with `Hyperledger Burrow <https://github.com/hyperledger/burrow>`_.
 Please use the latest master version of burrow, as ewasm support is still maturing in Burrow.
 
 Some language features have not been fully implemnented yet on ewasm:
