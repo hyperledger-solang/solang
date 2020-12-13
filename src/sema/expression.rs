@@ -18,7 +18,7 @@ use super::ast::{
     Builtin, CallTy, Diagnostic, Expression, Function, Namespace, StringLocation, Symbol, Type,
 };
 use super::builtin;
-use super::contracts::is_base;
+use super::contracts::{is_base, visit_bases};
 use super::eval::eval_const_number;
 use super::format::string_format;
 use super::symtable::Symtable;
@@ -3724,6 +3724,32 @@ pub fn available_functions(
     list
 }
 
+/// Create a list of functions that can be called via super
+pub fn available_super_functions(name: &str, contract_no: usize, ns: &Namespace) -> Vec<usize> {
+    let mut list = Vec::new();
+
+    for base_contract_no in visit_bases(contract_no, ns).into_iter().rev() {
+        if base_contract_no == contract_no {
+            continue;
+        }
+
+        list.extend(
+            ns.contracts[base_contract_no]
+                .all_functions
+                .keys()
+                .filter_map(|func_no| {
+                    if ns.functions[*func_no].name == name {
+                        Some(*func_no)
+                    } else {
+                        None
+                    }
+                }),
+        );
+    }
+
+    list
+}
+
 /// Resolve a function call with positional arguments
 pub fn call_position_args(
     loc: &pt::Loc,
@@ -4081,6 +4107,38 @@ fn method_call_pos_args(
                 ns,
                 symtable,
             );
+        }
+
+        // is it a call to super
+        if namespace.name == "super" {
+            if let Some(cur_contract_no) = contract_no {
+                if let Some(loc) = call_args_loc {
+                    ns.diagnostics.push(Diagnostic::error(
+                        loc,
+                        "call arguments not allowed on super calls".to_string(),
+                    ));
+                    return Err(());
+                }
+
+                return call_position_args(
+                    loc,
+                    func,
+                    pt::FunctionTy::Function,
+                    args,
+                    file_no,
+                    available_super_functions(&func.name, cur_contract_no, ns),
+                    false,
+                    contract_no,
+                    ns,
+                    symtable,
+                );
+            } else {
+                ns.diagnostics.push(Diagnostic::error(
+                    *loc,
+                    "super not available outside contracts".to_string(),
+                ));
+                return Err(());
+            }
         }
 
         // library or base contract call
@@ -4705,6 +4763,37 @@ fn method_call_named_args(
     symtable: &Symtable,
 ) -> Result<Expression, ()> {
     if let pt::Expression::Variable(namespace) = var {
+        // is it a call to super
+        if namespace.name == "super" {
+            if let Some(cur_contract_no) = contract_no {
+                if let Some(loc) = call_args_loc {
+                    ns.diagnostics.push(Diagnostic::error(
+                        loc,
+                        "call arguments not allowed on super calls".to_string(),
+                    ));
+                    return Err(());
+                }
+
+                return function_call_with_named_args(
+                    loc,
+                    func_name,
+                    args,
+                    file_no,
+                    available_super_functions(&func_name.name, cur_contract_no, ns),
+                    false,
+                    contract_no,
+                    ns,
+                    symtable,
+                );
+            } else {
+                ns.diagnostics.push(Diagnostic::error(
+                    *loc,
+                    "super not available outside contracts".to_string(),
+                ));
+                return Err(());
+            }
+        }
+
         // library or base contract call
         if let Some(call_contract_no) = ns.resolve_contract(file_no, &namespace) {
             if ns.contracts[call_contract_no].is_library() {
