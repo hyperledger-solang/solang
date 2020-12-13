@@ -26,9 +26,6 @@ jobs:
       uses: actions/checkout@v1
     - name: Rust stable
       run: rustup default stable
-    - name: Compile stdlib
-      run: make
-      working-directory:  ./stdlib
     - name: Build
       run: cargo build --verbose
     - name: Run tests
@@ -53,9 +50,6 @@ jobs:
       run: unzip c:\llvm.zip -d c:/
     - name: Add LLVM to Path
       run: echo "c:\llvm10.0\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8
-    - name: Compile stdlib
-      run: make
-      working-directory: ./stdlib
     - name: Build
       run: cargo build --verbose
     - name: Run tests
@@ -80,9 +74,6 @@ jobs:
       run: tar zxf llvm10.0-mac.tar.gz
     - name: Add LLVM to Path
       run: echo "$(pwd)/llvm10.0/bin" >> $GITHUB_PATH
-    - name: Compile stdlib
-      run: make
-      working-directory: ./stdlib
     - name: Build
       run: cargo build --verbose
     - name: Run tests
