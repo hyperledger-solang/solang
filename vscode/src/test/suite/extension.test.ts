@@ -46,7 +46,7 @@ suite('Extension Test Suite', function () {
 	test('Testing for diagnostics warnings.', async () => {
 		await testdiagnos(diagnosdoc4, [
 			{ message: 'unknown pragma ‘foo’ with value ‘bar’ ignored', range: toRange(0, 7, 0, 14), severity: vscode.DiagnosticSeverity.Warning, source: `solidity` },
-			{ message: 'function declared ‘nonpayable’ can be declared ‘pure’', range: toRange(3, 5, 3, 40), severity: vscode.DiagnosticSeverity.Warning, source: `solidity` },
+			{ message: 'function can be declared ‘pure’', range: toRange(3, 5, 3, 40), severity: vscode.DiagnosticSeverity.Warning, source: `solidity` },
 		]);
 	});
 
