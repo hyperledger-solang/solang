@@ -5,7 +5,7 @@ Solidity Language
 
 The Solidity language supported by Solang aims to be compatible with the latest
 `Ethereum Foundation Solidity Compiler <https://github.com/ethereum/solidity/>`_ with
-some caveats, please check out our :ref:`language_status` page.
+some caveats, please check out our :ref:`status` page.
 
 .. note::
 
