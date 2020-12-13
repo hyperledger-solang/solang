@@ -23,13 +23,12 @@ Solang wants to be compatible with the latest version of
 The project is under active development, and new language features are being added
 on a continuous basis.
 
-Missing features:
+Differences:
 
 - ``immutable`` is not supported. Note this is impossible to implement on any than chain other than Ethereum; this is purely an ethereum feature
 - libraries functions are always statically linked into the contract code
 - Solang generates WebAssembly or BPF rather than EVM. This means that the ``assembly {}``
   statement using EVM instructions is not supported
-- Calling parent contract via ``super``
 
 Unique features to Solang:
 

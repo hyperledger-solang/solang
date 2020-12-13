@@ -1110,6 +1110,14 @@ fn function_cfg(
         false
     };
 
+    // if a function is virtual, and it is overriden, do not make it public
+    // Otherwise the runtime function dispatch will have two identical functions to dispatch to
+    if func.is_virtual
+        && Some(ns.contracts[contract_no].virtual_functions[&func.signature]) != function_no
+    {
+        cfg.public = false;
+    }
+
     cfg.ty = func.ty;
     cfg.nonpayable = if ns.target == Target::Substrate {
         !func.is_constructor() && !func.is_payable()

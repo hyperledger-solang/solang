@@ -1874,3 +1874,127 @@ fn cast_contract() {
         "implicit conversion not allowed since contract foo is not a base contract of contract IFoo"
     );
 }
+
+#[test]
+fn test_super() {
+    let ns = parse_and_resolve(r#"contract super {}"#, Target::Substrate);
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "‘super’ shadows name of a builtin"
+    );
+
+    let ns = parse_and_resolve(
+        r#"
+        function f1() { super.a(); }
+        "#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "super not available outside contracts"
+    );
+
+    let ns = parse_and_resolve(
+        r#"
+        contract a {
+            function f1() public {}
+        }
+
+        contract b is a {
+            function f2() public {
+                super.f2();
+            }
+        }"#,
+        Target::Substrate,
+    );
+
+    assert_eq!(first_error(ns.diagnostics), "unknown function or type ‘f2’");
+
+    let mut runtime = build_solidity(
+        r##"
+        contract b is a {
+            function bar() public returns (uint64) {
+                super.foo();
+
+                return var;
+            }
+
+            function foo() internal override {
+                var = 103;
+            }
+        }
+
+        contract a {
+            uint64 var;
+
+            function foo() internal virtual {
+                var = 102;
+            }
+        }"##,
+    );
+
+    runtime.constructor(0, Vec::new());
+    runtime.function("bar", Vec::new());
+
+    assert_eq!(runtime.vm.output, 102u64.encode());
+
+    let mut runtime = build_solidity(
+        r##"
+        contract b is a {
+            function bar() public returns (uint64) {
+                super.foo({x: 10});
+
+                return var;
+            }
+
+            function foo2(uint64 x) internal {
+                var = 103 + x;
+            }
+        }
+
+        contract a {
+            uint64 var;
+
+            function foo(uint64 x) internal virtual {
+                var = 102 + x;
+            }
+        }"##,
+    );
+
+    runtime.constructor(0, Vec::new());
+    runtime.function("bar", Vec::new());
+
+    assert_eq!(runtime.vm.output, 112u64.encode());
+
+    let mut runtime = build_solidity(
+        r##"
+        contract b is a, aa {
+            function bar() public returns (uint64) {
+                return super.foo({x: 10});
+            }
+
+            function foo(uint64 x) public override(a, aa) returns (uint64) {
+                return 103 + x;
+            }
+        }
+
+        contract a {
+            function foo(uint64 x) public virtual returns (uint64) {
+                return 102 + x;
+            }
+        }
+
+        contract aa {
+            function foo(uint64 x) public virtual returns (uint64) {
+                return 202 + x;
+            }
+        }"##,
+    );
+
+    runtime.constructor(0, Vec::new());
+    runtime.function("bar", Vec::new());
+
+    assert_eq!(runtime.vm.output, 112u64.encode());
+}

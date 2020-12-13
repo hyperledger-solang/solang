@@ -396,7 +396,7 @@ pub fn builtin_var(
 
 /// Is name reserved for builtins
 pub fn is_reserved(fname: &str) -> bool {
-    if fname == "type" {
+    if fname == "type" || fname == "super" {
         return true;
     }
 
