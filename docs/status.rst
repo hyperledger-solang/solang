@@ -1,27 +1,16 @@
+.. _status:
+
 Status
 ======
 
-Solang is a very young project, and does not support all the features that the
+Solidity Language Status
+------------------------
+
+Solang is source compatible with the
 `Ethereum Foundation Solidity Compiler <https://github.com/ethereum/solidity/>`_
-supports. The majority of the features is supported and the project is ready
-for use.
-
-Testing Status
---------------
-
-Many language features have only recently been implemented, and have many unit
-tests. However, as with any new project, bugs are possible. Please report any
-issues you may find to github.
-
-.. _language_status:
-
-Solidity Language completeness
-------------------------------
-
-Solang wants to be compatible with the latest version of
-`Ethereum Foundation Solidity Compiler <https://github.com/ethereum/solidity/>`_, version 0.7.
-The project is under active development, and new language features are being added
-on a continuous basis.
+version 0.7, with some caveats. Many language features have only recently been
+implemented, and have many unit tests. As with any new project, bugs are possible.
+Please report any issues you may find to github.
 
 Differences:
 
