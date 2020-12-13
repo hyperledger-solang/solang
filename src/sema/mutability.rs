@@ -121,6 +121,12 @@ fn check_mutability(func: &Function, ns: &Namespace) -> Vec<Diagnostic> {
         if !state.does_write_state && !state.does_read_state {
             match func.mutability {
                 Some(pt::StateMutability::Payable(_)) | Some(pt::StateMutability::Pure(_)) => (),
+                None => {
+                    state.diagnostics.push(Diagnostic::warning(
+                        func.loc,
+                        "function can be declared ‘pure’".to_string(),
+                    ));
+                }
                 _ => {
                     state.diagnostics.push(Diagnostic::warning(
                         func.loc,
