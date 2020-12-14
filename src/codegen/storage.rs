@@ -99,47 +99,35 @@ pub fn array_push(
     );
 
     if args.len() == 2 {
-        let expr = expression(&args[1], cfg, contract_no, ns, vartab);
-
-        let pos = vartab.temp_anonymous(&elem_ty);
-
-        cfg.add(vartab, Instr::Set { res: pos, expr });
+        let value = expression(&args[1], cfg, contract_no, ns, vartab);
 
         cfg.add(
             vartab,
             Instr::SetStorage {
                 ty: elem_ty.clone(),
-                local: pos,
+                value,
                 storage: Expression::Variable(*loc, slot_ty.clone(), entry_pos),
             },
         );
     }
 
     // increase length
-    let new_length = vartab.temp_anonymous(&slot_ty);
-
-    cfg.add(
-        vartab,
-        Instr::Set {
-            res: new_length,
-            expr: Expression::Add(
-                *loc,
-                slot_ty.clone(),
-                Box::new(Expression::Variable(*loc, slot_ty.clone(), length_pos)),
-                Box::new(Expression::NumberLiteral(
-                    *loc,
-                    slot_ty.clone(),
-                    BigInt::one(),
-                )),
-            ),
-        },
+    let new_length = Expression::Add(
+        *loc,
+        slot_ty.clone(),
+        Box::new(Expression::Variable(*loc, slot_ty.clone(), length_pos)),
+        Box::new(Expression::NumberLiteral(
+            *loc,
+            slot_ty.clone(),
+            BigInt::one(),
+        )),
     );
 
     cfg.add(
         vartab,
         Instr::SetStorage {
             ty: slot_ty,
-            local: new_length,
+            value: new_length,
             storage: var_expr,
         },
     );
@@ -260,8 +248,8 @@ pub fn array_pop(
     cfg.add(
         vartab,
         Instr::SetStorage {
-            ty: slot_ty,
-            local: new_length,
+            ty: slot_ty.clone(),
+            value: Expression::Variable(*loc, slot_ty, new_length),
             storage: var_expr,
         },
     );

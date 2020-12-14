@@ -3108,8 +3108,8 @@ pub trait TargetRuntime<'a> {
 
                         self.storage_clear(contract, ty, &mut slot, slot_ptr, function);
                     }
-                    Instr::SetStorage { ty, local, storage } => {
-                        let value = w.vars[local].value;
+                    Instr::SetStorage { ty, value, storage } => {
+                        let value = self.expression(contract, value, &w.vars, function);
 
                         let mut slot = self
                             .expression(contract, storage, &w.vars, function)
@@ -3118,11 +3118,11 @@ pub trait TargetRuntime<'a> {
                         self.storage_store(contract, ty, &mut slot, value, function);
                     }
                     Instr::SetStorageBytes {
-                        local,
                         storage,
+                        value,
                         offset,
                     } => {
-                        let value = w.vars[local].value;
+                        let value = self.expression(contract, value, &w.vars, function);
 
                         let slot = self
                             .expression(contract, storage, &w.vars, function)
