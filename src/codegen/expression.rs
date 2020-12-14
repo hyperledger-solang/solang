@@ -508,8 +508,8 @@ pub fn expression(
                 vartab,
                 Instr::BranchCond {
                     cond: l,
-                    true_: end_or,
-                    false_: right_side,
+                    true_block: end_or,
+                    false_block: right_side,
                 },
             );
             cfg.set_basic_block(right_side);
@@ -523,7 +523,7 @@ pub fn expression(
 
             cfg.set_phis(end_or, phis);
 
-            cfg.add(vartab, Instr::Branch { bb: end_or });
+            cfg.add(vartab, Instr::Branch { block: end_or });
 
             cfg.set_basic_block(end_or);
 
@@ -555,8 +555,8 @@ pub fn expression(
                 vartab,
                 Instr::BranchCond {
                     cond: l,
-                    true_: right_side,
-                    false_: end_and,
+                    true_block: right_side,
+                    false_block: end_and,
                 },
             );
             cfg.set_basic_block(right_side);
@@ -570,7 +570,7 @@ pub fn expression(
 
             cfg.set_phis(end_and, phis);
 
-            cfg.add(vartab, Instr::Branch { bb: end_and });
+            cfg.add(vartab, Instr::Branch { block: end_and });
 
             cfg.set_basic_block(end_and);
 
@@ -624,8 +624,8 @@ pub fn expression(
                 vartab,
                 Instr::BranchCond {
                     cond,
-                    true_,
-                    false_,
+                    true_block: true_,
+                    false_block: false_,
                 },
             );
 
@@ -653,8 +653,8 @@ pub fn expression(
                 vartab,
                 Instr::BranchCond {
                     cond,
-                    true_,
-                    false_,
+                    true_block: true_,
+                    false_block: false_,
                 },
             );
 
@@ -1170,7 +1170,7 @@ pub fn emit_function_call(
                         Instr::AbiDecode {
                             res,
                             selector: None,
-                            exception: None,
+                            exception_block: None,
                             tys: ftype.returns.clone(),
                             data: Expression::ReturnData(*loc),
                         },
@@ -1231,7 +1231,7 @@ pub fn emit_function_call(
                         Instr::AbiDecode {
                             res,
                             selector: None,
-                            exception: None,
+                            exception_block: None,
                             tys,
                             data: Expression::ReturnData(*loc),
                         },
@@ -1262,7 +1262,7 @@ pub fn emit_function_call(
                 Instr::AbiDecode {
                     res,
                     selector: None,
-                    exception: None,
+                    exception_block: None,
                     tys: tys
                         .iter()
                         .map(|ty| Parameter {
@@ -1367,8 +1367,8 @@ fn array_subscript(
                     try_cast(&array.loc(), array_length.clone(), &coerced_ty, false, ns).unwrap(),
                 ),
             ),
-            true_: out_of_bounds,
-            false_: in_bounds,
+            true_block: out_of_bounds,
+            false_block: in_bounds,
         },
     );
 

@@ -179,8 +179,8 @@ pub fn array_pop(
                     BigInt::zero(),
                 )),
             ),
-            true_: empty_array,
-            false_: has_elements,
+            true_block: empty_array,
+            false_block: has_elements,
         },
     );
 

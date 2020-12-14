@@ -3075,7 +3075,7 @@ pub trait TargetRuntime<'a> {
 
                         w.vars.get_mut(res).unwrap().value = value_ref;
                     }
-                    Instr::Branch { bb: dest } => {
+                    Instr::Branch { block: dest } => {
                         let pos = contract.builder.get_insert_block().unwrap();
 
                         if !blocks.contains_key(&dest) {
@@ -3105,8 +3105,8 @@ pub trait TargetRuntime<'a> {
                     }
                     Instr::BranchCond {
                         cond,
-                        true_,
-                        false_,
+                        true_block: true_,
+                        false_block: false_,
                     } => {
                         let cond = self.expression(contract, cond, &w.vars, function);
 
@@ -4037,7 +4037,7 @@ pub trait TargetRuntime<'a> {
                     Instr::AbiDecode {
                         res,
                         selector,
-                        exception,
+                        exception_block: exception,
                         tys,
                         data,
                     } => {

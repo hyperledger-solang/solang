@@ -64,7 +64,7 @@ pub fn statement(
             cfg.add(
                 vartab,
                 Instr::Branch {
-                    bb: loops.do_break(),
+                    block: loops.do_break(),
                 },
             );
         }
@@ -72,7 +72,7 @@ pub fn statement(
             cfg.add(
                 vartab,
                 Instr::Branch {
-                    bb: loops.do_continue(),
+                    block: loops.do_continue(),
                 },
             );
         }
@@ -108,7 +108,7 @@ pub fn statement(
             let cond = cfg.new_basic_block("conf".to_string());
             let end = cfg.new_basic_block("enddowhile".to_string());
 
-            cfg.add(vartab, Instr::Branch { bb: body });
+            cfg.add(vartab, Instr::Branch { block: body });
 
             cfg.set_basic_block(body);
 
@@ -134,7 +134,7 @@ pub fn statement(
             }
 
             if body_reachable {
-                cfg.add(vartab, Instr::Branch { bb: cond });
+                cfg.add(vartab, Instr::Branch { block: cond });
             }
 
             cfg.set_basic_block(cond);
@@ -145,8 +145,8 @@ pub fn statement(
                 vartab,
                 Instr::BranchCond {
                     cond: cond_expr,
-                    true_: body,
-                    false_: end,
+                    true_block: body,
+                    false_block: end,
                 },
             );
 
@@ -162,7 +162,7 @@ pub fn statement(
             let body = cfg.new_basic_block("body".to_string());
             let end = cfg.new_basic_block("endwhile".to_string());
 
-            cfg.add(vartab, Instr::Branch { bb: cond });
+            cfg.add(vartab, Instr::Branch { block: cond });
 
             cfg.set_basic_block(cond);
 
@@ -172,8 +172,8 @@ pub fn statement(
                 vartab,
                 Instr::BranchCond {
                     cond: cond_expr,
-                    true_: body,
-                    false_: end,
+                    true_block: body,
+                    false_block: end,
                 },
             );
 
@@ -201,7 +201,7 @@ pub fn statement(
             }
 
             if body_reachable {
-                cfg.add(vartab, Instr::Branch { bb: cond });
+                cfg.add(vartab, Instr::Branch { block: cond });
             }
 
             loops.leave_scope();
@@ -236,7 +236,7 @@ pub fn statement(
                 );
             }
 
-            cfg.add(vartab, Instr::Branch { bb: body_block });
+            cfg.add(vartab, Instr::Branch { block: body_block });
 
             cfg.set_basic_block(body_block);
 
@@ -270,7 +270,7 @@ pub fn statement(
             }
 
             if body_reachable {
-                cfg.add(vartab, Instr::Branch { bb: next_block });
+                cfg.add(vartab, Instr::Branch { block: next_block });
             }
 
             loops.leave_scope();
@@ -296,7 +296,7 @@ pub fn statement(
                 }
 
                 if body_reachable {
-                    cfg.add(vartab, Instr::Branch { bb: body_block });
+                    cfg.add(vartab, Instr::Branch { block: body_block });
                 }
             }
 
@@ -334,7 +334,7 @@ pub fn statement(
                 );
             }
 
-            cfg.add(vartab, Instr::Branch { bb: cond_block });
+            cfg.add(vartab, Instr::Branch { block: cond_block });
 
             cfg.set_basic_block(cond_block);
 
@@ -344,8 +344,8 @@ pub fn statement(
                 vartab,
                 Instr::BranchCond {
                     cond: cond_expr,
-                    true_: body_block,
-                    false_: end_block,
+                    true_block: body_block,
+                    false_block: end_block,
                 },
             );
 
@@ -375,7 +375,7 @@ pub fn statement(
             }
 
             if body_reachable {
-                cfg.add(vartab, Instr::Branch { bb: next_block });
+                cfg.add(vartab, Instr::Branch { block: next_block });
             }
 
             loops.leave_scope();
@@ -401,7 +401,7 @@ pub fn statement(
             }
 
             if next_reachable {
-                cfg.add(vartab, Instr::Branch { bb: cond_block });
+                cfg.add(vartab, Instr::Branch { block: cond_block });
             }
 
             cfg.set_basic_block(end_block);
@@ -558,8 +558,8 @@ fn if_then(
         vartab,
         Instr::BranchCond {
             cond,
-            true_: then,
-            false_: endif,
+            true_block: then,
+            false_block: endif,
         },
     );
 
@@ -586,7 +586,7 @@ fn if_then(
     }
 
     if reachable {
-        cfg.add(vartab, Instr::Branch { bb: endif });
+        cfg.add(vartab, Instr::Branch { block: endif });
     }
 
     cfg.set_phis(endif, vartab.pop_dirty_tracker());
@@ -618,8 +618,8 @@ fn if_then_else(
         vartab,
         Instr::BranchCond {
             cond,
-            true_: then,
-            false_: else_,
+            true_block: then,
+            false_block: else_,
         },
     );
 
@@ -647,7 +647,7 @@ fn if_then_else(
     }
 
     if then_reachable {
-        cfg.add(vartab, Instr::Branch { bb: endif });
+        cfg.add(vartab, Instr::Branch { block: endif });
     }
 
     // else
@@ -672,7 +672,7 @@ fn if_then_else(
     }
 
     if else_reachable {
-        cfg.add(vartab, Instr::Branch { bb: endif });
+        cfg.add(vartab, Instr::Branch { block: endif });
     }
 
     cfg.set_phis(endif, vartab.pop_dirty_tracker());
@@ -749,8 +749,8 @@ fn try_catch(
                     vartab,
                     Instr::BranchCond {
                         cond: Expression::Variable(fcall.loc(), Type::Bool, success),
-                        true_: success_block,
-                        false_: catch_block,
+                        true_block: success_block,
+                        false_block: catch_block,
                     },
                 );
 
@@ -783,7 +783,7 @@ fn try_catch(
                         Instr::AbiDecode {
                             res,
                             selector: None,
-                            exception: None,
+                            exception_block: None,
                             tys,
                             data: Expression::ReturnData(pt::Loc(0, 0, 0)),
                         },
@@ -841,8 +841,8 @@ fn try_catch(
                 vartab,
                 Instr::BranchCond {
                     cond: Expression::Variable(fcall.loc(), Type::Bool, success),
-                    true_: success_block,
-                    false_: catch_block,
+                    true_block: success_block,
+                    false_block: catch_block,
                 },
             );
 
@@ -872,7 +872,12 @@ fn try_catch(
     }
 
     if finally_reachable {
-        cfg.add(vartab, Instr::Branch { bb: finally_block });
+        cfg.add(
+            vartab,
+            Instr::Branch {
+                block: finally_block,
+            },
+        );
     }
 
     cfg.set_basic_block(catch_block);
@@ -889,7 +894,7 @@ fn try_catch(
             vartab,
             Instr::AbiDecode {
                 selector: Some(0x08c3_79a0),
-                exception: Some(no_reason_block),
+                exception_block: Some(no_reason_block),
                 res: vec![error_var],
                 tys: vec![error_param.clone()],
                 data: Expression::ReturnData(pt::Loc(0, 0, 0)),
@@ -914,7 +919,12 @@ fn try_catch(
             reachable = stmt.reachable();
         }
         if reachable {
-            cfg.add(vartab, Instr::Branch { bb: finally_block });
+            cfg.add(
+                vartab,
+                Instr::Branch {
+                    block: finally_block,
+                },
+            );
         }
 
         cfg.set_basic_block(no_reason_block);
@@ -949,7 +959,12 @@ fn try_catch(
     }
 
     if reachable {
-        cfg.add(vartab, Instr::Branch { bb: finally_block });
+        cfg.add(
+            vartab,
+            Instr::Branch {
+                block: finally_block,
+            },
+        );
     }
 
     let set = vartab.pop_dirty_tracker();
