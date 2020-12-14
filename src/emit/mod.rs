@@ -2787,6 +2787,61 @@ pub trait TargetRuntime<'a> {
 
                 contract.builder.build_load(selector_member, "address")
             }
+            Expression::Builtin(_, _, hash @ Builtin::Ripemd160, args)
+            | Expression::Builtin(_, _, hash @ Builtin::Keccak256, args)
+            | Expression::Builtin(_, _, hash @ Builtin::Blake2_128, args)
+            | Expression::Builtin(_, _, hash @ Builtin::Blake2_256, args)
+            | Expression::Builtin(_, _, hash @ Builtin::Sha256, args) => {
+                let v = self
+                    .expression(contract, &args[0], vartab, function)
+                    .into_pointer_value();
+
+                let data = unsafe {
+                    contract.builder.build_gep(
+                        v,
+                        &[
+                            contract.context.i32_type().const_zero(),
+                            contract.context.i32_type().const_int(2, false),
+                        ],
+                        "data",
+                    )
+                };
+
+                let data_len = unsafe {
+                    contract.builder.build_gep(
+                        v,
+                        &[
+                            contract.context.i32_type().const_zero(),
+                            contract.context.i32_type().const_zero(),
+                        ],
+                        "data_len",
+                    )
+                };
+
+                let hash = match hash {
+                    Builtin::Ripemd160 => HashTy::Ripemd160,
+                    Builtin::Sha256 => HashTy::Sha256,
+                    Builtin::Keccak256 => HashTy::Keccak256,
+                    Builtin::Blake2_128 => HashTy::Blake2_128,
+                    Builtin::Blake2_256 => HashTy::Blake2_256,
+                    _ => unreachable!(),
+                };
+
+                self.hash(
+                    &contract,
+                    hash,
+                    contract.builder.build_pointer_cast(
+                        data,
+                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "data",
+                    ),
+                    contract
+                        .builder
+                        .build_load(data_len, "data_len")
+                        .into_int_value(),
+                )
+                .into()
+            }
             Expression::Builtin(_, _, _, _) => self.builtin(contract, e, vartab, function),
             Expression::InternalFunctionCfg(cfg_no) => contract.functions[cfg_no]
                 .as_global_value()
@@ -4127,49 +4182,6 @@ pub trait TargetRuntime<'a> {
                             .into_int_value();
 
                         self.selfdestruct(contract, recipient);
-                    }
-                    Instr::Hash { res, hash, expr } => {
-                        let v = self
-                            .expression(contract, expr, &w.vars, function)
-                            .into_pointer_value();
-
-                        let data = unsafe {
-                            contract.builder.build_gep(
-                                v,
-                                &[
-                                    contract.context.i32_type().const_zero(),
-                                    contract.context.i32_type().const_int(2, false),
-                                ],
-                                "data",
-                            )
-                        };
-
-                        let data_len = unsafe {
-                            contract.builder.build_gep(
-                                v,
-                                &[
-                                    contract.context.i32_type().const_zero(),
-                                    contract.context.i32_type().const_zero(),
-                                ],
-                                "data_len",
-                            )
-                        };
-
-                        w.vars.get_mut(res).unwrap().value = self
-                            .hash(
-                                &contract,
-                                hash.clone(),
-                                contract.builder.build_pointer_cast(
-                                    data,
-                                    contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                                    "data",
-                                ),
-                                contract
-                                    .builder
-                                    .build_load(data_len, "data_len")
-                                    .into_int_value(),
-                            )
-                            .into();
                     }
                     Instr::EmitEvent {
                         event_no,
