@@ -108,11 +108,6 @@ pub enum Instr {
     SelfDestruct {
         recipient: Expression,
     },
-    Hash {
-        res: usize,
-        hash: HashTy,
-        expr: Expression,
-    },
     EmitEvent {
         event_no: usize,
         data: Vec<Expression>,
@@ -879,12 +874,6 @@ impl ControlFlowGraph {
             Instr::SelfDestruct { recipient } => format!(
                 "selfdestruct {}",
                 self.expr_to_string(contract, ns, recipient)
-            ),
-            Instr::Hash { res, hash, expr } => format!(
-                "%{} = hash {} {}",
-                self.vars[res].id.name,
-                hash,
-                self.expr_to_string(contract, ns, expr)
             ),
             Instr::EmitEvent {
                 data,

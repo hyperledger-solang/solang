@@ -1,4 +1,4 @@
-use super::cfg::{ControlFlowGraph, HashTy, Instr, InternalCallTy, Vartable};
+use super::cfg::{ControlFlowGraph, Instr, InternalCallTy, Vartable};
 use super::storage::{array_offset, array_pop, array_push, bytes_pop, bytes_push};
 use crate::parser::pt;
 use crate::sema::ast::{Builtin, CallTy, Expression, Namespace, Parameter, StringLocation, Type};
@@ -694,81 +694,6 @@ pub fn expression(
 
             Expression::Poison
         }
-        Expression::Builtin(loc, tys, Builtin::Keccak256, args) => {
-            let res = vartab.temp_anonymous(&tys[0]);
-            let expr = expression(&args[0], cfg, contract_no, ns, vartab);
-
-            cfg.add(
-                vartab,
-                Instr::Hash {
-                    res,
-                    hash: HashTy::Keccak256,
-                    expr,
-                },
-            );
-
-            Expression::Variable(*loc, tys[0].clone(), res)
-        }
-        Expression::Builtin(loc, tys, Builtin::Ripemd160, args) => {
-            let res = vartab.temp_anonymous(&tys[0]);
-            let expr = expression(&args[0], cfg, contract_no, ns, vartab);
-
-            cfg.add(
-                vartab,
-                Instr::Hash {
-                    res,
-                    hash: HashTy::Ripemd160,
-                    expr,
-                },
-            );
-
-            Expression::Variable(*loc, tys[0].clone(), res)
-        }
-        Expression::Builtin(loc, tys, Builtin::Sha256, args) => {
-            let res = vartab.temp_anonymous(&tys[0]);
-            let expr = expression(&args[0], cfg, contract_no, ns, vartab);
-
-            cfg.add(
-                vartab,
-                Instr::Hash {
-                    res,
-                    hash: HashTy::Sha256,
-                    expr,
-                },
-            );
-
-            Expression::Variable(*loc, tys[0].clone(), res)
-        }
-        Expression::Builtin(loc, tys, Builtin::Blake2_128, args) => {
-            let res = vartab.temp_anonymous(&tys[0]);
-            let expr = expression(&args[0], cfg, contract_no, ns, vartab);
-
-            cfg.add(
-                vartab,
-                Instr::Hash {
-                    res,
-                    hash: HashTy::Blake2_128,
-                    expr,
-                },
-            );
-
-            Expression::Variable(*loc, tys[0].clone(), res)
-        }
-        Expression::Builtin(loc, tys, Builtin::Blake2_256, args) => {
-            let res = vartab.temp_anonymous(&tys[0]);
-            let expr = expression(&args[0], cfg, contract_no, ns, vartab);
-
-            cfg.add(
-                vartab,
-                Instr::Hash {
-                    res,
-                    hash: HashTy::Blake2_256,
-                    expr,
-                },
-            );
-
-            Expression::Variable(*loc, tys[0].clone(), res)
-        }
         Expression::Builtin(loc, _, Builtin::PayableSend, args) => {
             let address = expression(&args[0], cfg, contract_no, ns, vartab);
             let value = expression(&args[1], cfg, contract_no, ns, vartab);
@@ -947,6 +872,14 @@ pub fn expression(
             let units = expression(&expr[0], cfg, contract_no, ns, vartab);
 
             Expression::Multiply(*loc, ty, Box::new(units), Box::new(gasprice))
+        }
+        Expression::Builtin(loc, tys, builtin, args) => {
+            let args = args
+                .iter()
+                .map(|v| expression(&v, cfg, contract_no, ns, vartab))
+                .collect();
+
+            Expression::Builtin(*loc, tys.clone(), *builtin, args)
         }
         Expression::FormatString(loc, args) => {
             let args = args
