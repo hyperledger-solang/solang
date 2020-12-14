@@ -16,61 +16,55 @@ use crate::Target;
 
 #[derive(Clone)]
 pub enum Instr {
-    ClearStorage {
-        ty: Type,
-        storage: Expression,
+    /// Set variable
+    Set { res: usize, expr: Expression },
+    /// Call internal function, either static dispatch or dynamic dispatch
+    Call {
+        res: Vec<usize>,
+        call: InternalCallTy,
+        args: Vec<Expression>,
     },
+    /// Return
+    Return { value: Vec<Expression> },
+    /// Jump unconditionally
+    Branch { block: usize },
+    /// Jump conditionally
+    BranchCond {
+        cond: Expression,
+        true_block: usize,
+        false_block: usize,
+    },
+    /// Set array element in memory
+    Store { dest: Expression, pos: usize },
+    /// Abort execution
+    AssertFailure { expr: Option<Expression> },
+    /// Print to log message
+    Print { expr: Expression },
+    /// Clear storage at slot for ty (might span multiple slots)
+    ClearStorage { ty: Type, storage: Expression },
+    /// Set storage value at slot
     SetStorage {
         ty: Type,
         value: Expression,
         storage: Expression,
     },
+    /// In storage slot, set the value at the offset
     SetStorageBytes {
         value: Expression,
         storage: Box<Expression>,
         offset: Box<Expression>,
     },
+    /// Push element on memory array
     PushMemory {
         res: usize,
         ty: Type,
         array: usize,
         value: Box<Expression>,
     },
-    PopMemory {
-        res: usize,
-        ty: Type,
-        array: usize,
-    },
-    Set {
-        res: usize,
-        expr: Expression,
-    },
-    Call {
-        res: Vec<usize>,
-        call: InternalCallTy,
-        args: Vec<Expression>,
-    },
-    Return {
-        value: Vec<Expression>,
-    },
-    Branch {
-        bb: usize,
-    },
-    BranchCond {
-        cond: Expression,
-        true_: usize,
-        false_: usize,
-    },
-    Store {
-        dest: Expression,
-        pos: usize,
-    },
-    AssertFailure {
-        expr: Option<Expression>,
-    },
-    Print {
-        expr: Expression,
-    },
+    /// Pop element on memory array
+    PopMemory { res: usize, ty: Type, array: usize },
+    /// Create contract and call constructor. If creating the contract fails,
+    /// either store the result in success or abort success.
     Constructor {
         success: Option<usize>,
         res: usize,
@@ -81,6 +75,8 @@ pub enum Instr {
         gas: Expression,
         salt: Option<Expression>,
     },
+    /// Call external functions. If the call fails, set the success failure
+    /// or abort if this is None
     ExternalCall {
         success: Option<usize>,
         address: Option<Expression>,
@@ -90,13 +86,16 @@ pub enum Instr {
         gas: Expression,
         callty: CallTy,
     },
+    /// ABI decoder encoded data. If decoding fails, either jump to exception
+    /// or abort if this is None.
     AbiDecode {
         res: Vec<usize>,
         selector: Option<u32>,
-        exception: Option<usize>,
+        exception_block: Option<usize>,
         tys: Vec<Parameter>,
         data: Expression,
     },
+    /// ABI encode data, and store the result
     AbiEncodeVector {
         res: usize,
         tys: Vec<Type>,
@@ -104,10 +103,11 @@ pub enum Instr {
         selector: Option<Expression>,
         args: Vec<Expression>,
     },
+    /// Insert unreachable instruction after e.g. self-destruct
     Unreachable,
-    SelfDestruct {
-        recipient: Expression,
-    },
+    /// Self destruct
+    SelfDestruct { recipient: Expression },
+    /// Emit event
     EmitEvent {
         event_no: usize,
         data: Vec<Expression>,
@@ -647,16 +647,16 @@ impl ControlFlowGraph {
                 self.vars[res].id.name,
                 self.expr_to_string(contract, ns, expr)
             ),
-            Instr::Branch { bb } => format!("branch bb{}", bb),
+            Instr::Branch { block } => format!("branch block{}", block),
             Instr::BranchCond {
                 cond,
-                true_,
-                false_,
+                true_block,
+                false_block,
             } => format!(
-                "branchcond {}, bb{}, bb{}",
+                "branchcond {}, block{}, block{}",
                 self.expr_to_string(contract, ns, cond),
-                true_,
-                false_
+                true_block,
+                false_block,
             ),
             Instr::ClearStorage { ty, storage } => format!(
                 "clear storage slot({}) ty:{}",
@@ -791,7 +791,7 @@ impl ControlFlowGraph {
                 res,
                 tys,
                 selector,
-                exception,
+                exception_block: exception,
                 data,
             } => format!(
                 "{} = (abidecode:(%{}, {} {} ({}))",
