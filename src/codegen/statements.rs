@@ -43,11 +43,7 @@ pub fn statement(
             }
         }
         Statement::Expression(_, reachable, expr) => {
-            let expr = expression(expr, cfg, contract_no, ns, vartab);
-
-            if expr != Expression::Poison {
-                cfg.add(vartab, Instr::Eval { expr });
-            }
+            let _ = expression(expr, cfg, contract_no, ns, vartab);
 
             if !reachable {
                 cfg.add(vartab, Instr::Unreachable);
