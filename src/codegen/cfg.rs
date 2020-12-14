@@ -14,7 +14,6 @@ use crate::sema::contracts::{collect_base_args, visit_bases};
 use crate::sema::symtable::Symtable;
 use crate::Target;
 
-#[allow(clippy::large_enum_variant)]
 #[derive(Clone)]
 pub enum Instr {
     ClearStorage {
@@ -23,11 +22,11 @@ pub enum Instr {
     },
     SetStorage {
         ty: Type,
-        local: usize,
+        value: Expression,
         storage: Expression,
     },
     SetStorageBytes {
-        local: usize,
+        value: Expression,
         storage: Box<Expression>,
         offset: Box<Expression>,
     },
@@ -669,21 +668,21 @@ impl ControlFlowGraph {
                 self.expr_to_string(contract, ns, storage),
                 ty.to_string(ns),
             ),
-            Instr::SetStorage { ty, local, storage } => format!(
+            Instr::SetStorage { ty, value, storage } => format!(
                 "set storage slot({}) ty:{} = %{}",
                 self.expr_to_string(contract, ns, storage),
                 ty.to_string(ns),
-                self.vars[local].id.name
+                self.expr_to_string(contract, ns, value),
             ),
             Instr::SetStorageBytes {
-                local,
+                value,
                 storage,
                 offset,
             } => format!(
                 "set storage slot({}) offset:{} = %{}",
                 self.expr_to_string(contract, ns, storage),
                 self.expr_to_string(contract, ns, offset),
-                self.vars[local].id.name
+                self.expr_to_string(contract, ns, value),
             ),
             Instr::PushMemory {
                 res,

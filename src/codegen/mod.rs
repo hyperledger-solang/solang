@@ -69,13 +69,12 @@ fn storage_initializer(contract_no: usize, ns: &Namespace) -> ControlFlowGraph {
             let storage =
                 ns.contracts[contract_no].get_storage_slot(layout.contract_no, layout.var_no, ns);
 
-            let pos = vartab.temp_name(&var.name, &var.ty);
-            let expr = expression(&init, &mut cfg, contract_no, ns, &mut vartab);
-            cfg.add(&mut vartab, Instr::Set { res: pos, expr });
+            let value = expression(&init, &mut cfg, contract_no, ns, &mut vartab);
+
             cfg.add(
                 &mut vartab,
                 Instr::SetStorage {
-                    local: pos,
+                    value,
                     ty: var.ty.clone(),
                     storage,
                 },

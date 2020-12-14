@@ -211,7 +211,7 @@ pub fn expression(
                             cfg.add(
                                 vartab,
                                 Instr::SetStorage {
-                                    local: res,
+                                    value: Expression::Variable(*loc, ty.clone(), res),
                                     ty: ty.clone(),
                                     storage: dest,
                                 },
@@ -271,7 +271,7 @@ pub fn expression(
                             cfg.add(
                                 vartab,
                                 Instr::SetStorage {
-                                    local: res,
+                                    value: Expression::Variable(*loc, ty.clone(), res),
                                     ty: ty.clone(),
                                     storage: dest,
                                 },
@@ -999,7 +999,7 @@ pub fn assign_single(
                         cfg.add(
                             vartab,
                             Instr::SetStorageBytes {
-                                local: pos,
+                                value: Expression::Variable(left.loc(), ty.clone(), pos),
                                 storage: array,
                                 offset: index,
                             },
@@ -1008,7 +1008,7 @@ pub fn assign_single(
                         cfg.add(
                             vartab,
                             Instr::SetStorage {
-                                local: pos,
+                                value: Expression::Variable(left.loc(), ty.clone(), pos),
                                 ty: ty.deref_any().clone(),
                                 storage: dest,
                             },
