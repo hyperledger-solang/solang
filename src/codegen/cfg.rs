@@ -49,10 +49,6 @@ pub enum Instr {
     Eval {
         expr: Expression,
     },
-    Constant {
-        res: usize,
-        constant: usize,
-    },
     Call {
         res: Vec<usize>,
         call: InternalCallTy,
@@ -661,15 +657,6 @@ impl ControlFlowGraph {
                 self.expr_to_string(contract, ns, expr)
             ),
             Instr::Eval { expr } => format!("_ = {}", self.expr_to_string(contract, ns, expr)),
-            Instr::Constant { res, constant } => format!(
-                "%{} = const {}",
-                self.vars[res].id.name,
-                self.expr_to_string(
-                    contract,
-                    ns,
-                    &contract.variables[*constant].initializer.as_ref().unwrap()
-                )
-            ),
             Instr::Branch { bb } => format!("branch bb{}", bb),
             Instr::BranchCond {
                 cond,

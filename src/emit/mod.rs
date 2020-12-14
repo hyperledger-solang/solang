@@ -3023,15 +3023,6 @@ pub trait TargetRuntime<'a> {
                     Instr::Eval { expr } => {
                         self.expression(contract, expr, &w.vars, function);
                     }
-                    Instr::Constant { res, constant } => {
-                        let const_expr = contract.contract.variables[*constant]
-                            .initializer
-                            .as_ref()
-                            .unwrap();
-                        let value_ref = self.expression(contract, const_expr, &w.vars, function);
-
-                        w.vars.get_mut(res).unwrap().value = value_ref;
-                    }
                     Instr::Branch { bb: dest } => {
                         let pos = contract.builder.get_insert_block().unwrap();
 
