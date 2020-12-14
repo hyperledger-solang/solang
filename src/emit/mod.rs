@@ -3020,9 +3020,6 @@ pub trait TargetRuntime<'a> {
 
                         w.vars.get_mut(res).unwrap().value = value_ref;
                     }
-                    Instr::Eval { expr } => {
-                        self.expression(contract, expr, &w.vars, function);
-                    }
                     Instr::Branch { bb: dest } => {
                         let pos = contract.builder.get_insert_block().unwrap();
 
