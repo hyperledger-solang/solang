@@ -2983,19 +2983,19 @@ pub trait TargetRuntime<'a> {
         }
 
         struct Work<'b> {
-            bb_no: usize,
+            block_no: usize,
             vars: HashMap<usize, Variable<'b>>,
         }
 
         let mut blocks: HashMap<usize, BasicBlock> = HashMap::new();
 
-        fn create_bb<'a>(
-            bb_no: usize,
+        fn create_block<'a>(
+            block_no: usize,
             contract: &Contract<'a>,
             cfg: &ControlFlowGraph,
             function: FunctionValue,
         ) -> BasicBlock<'a> {
-            let cfg_bb = &cfg.bb[bb_no];
+            let cfg_bb = &cfg.blocks[block_no];
             let mut phis = HashMap::new();
 
             let bb = contract.context.append_basic_block(function, &cfg_bb.name);
@@ -3015,7 +3015,7 @@ pub trait TargetRuntime<'a> {
 
         let mut work = VecDeque::new();
 
-        blocks.insert(0, create_bb(0, contract, cfg, function));
+        blocks.insert(0, create_block(0, contract, cfg, function));
 
         // On Solana, the last argument is the accounts
         if contract.ns.target == Target::Solana {
@@ -3095,10 +3095,10 @@ pub trait TargetRuntime<'a> {
             }
         }
 
-        work.push_back(Work { bb_no: 0, vars });
+        work.push_back(Work { block_no: 0, vars });
 
         while let Some(mut w) = work.pop_front() {
-            let bb = blocks.get(&w.bb_no).unwrap();
+            let bb = blocks.get(&w.block_no).unwrap();
 
             contract.builder.position_at_end(bb.bb);
 
@@ -3106,7 +3106,7 @@ pub trait TargetRuntime<'a> {
                 w.vars.get_mut(v).unwrap().value = (*phi).as_basic_value();
             }
 
-            for ins in &cfg.bb[w.bb_no].instr {
+            for ins in &cfg.blocks[w.block_no].instr {
                 match ins {
                     Instr::Return { value } if value.is_empty() => {
                         contract
@@ -3136,9 +3136,9 @@ pub trait TargetRuntime<'a> {
                         let pos = contract.builder.get_insert_block().unwrap();
 
                         if !blocks.contains_key(&dest) {
-                            blocks.insert(*dest, create_bb(*dest, contract, cfg, function));
+                            blocks.insert(*dest, create_block(*dest, contract, cfg, function));
                             work.push_back(Work {
-                                bb_no: *dest,
+                                block_no: *dest,
                                 vars: w.vars.clone(),
                             });
                         }
@@ -3171,9 +3171,10 @@ pub trait TargetRuntime<'a> {
 
                         let bb_true = {
                             if !blocks.contains_key(&true_) {
-                                blocks.insert(*true_, create_bb(*true_, contract, cfg, function));
+                                blocks
+                                    .insert(*true_, create_block(*true_, contract, cfg, function));
                                 work.push_back(Work {
-                                    bb_no: *true_,
+                                    block_no: *true_,
                                     vars: w.vars.clone(),
                                 });
                             }
@@ -3189,9 +3190,12 @@ pub trait TargetRuntime<'a> {
 
                         let bb_false = {
                             if !blocks.contains_key(&false_) {
-                                blocks.insert(*false_, create_bb(*false_, contract, cfg, function));
+                                blocks.insert(
+                                    *false_,
+                                    create_block(*false_, contract, cfg, function),
+                                );
                                 work.push_back(Work {
-                                    bb_no: *false_,
+                                    block_no: *false_,
                                     vars: w.vars.clone(),
                                 });
                             }
@@ -4136,11 +4140,11 @@ pub trait TargetRuntime<'a> {
 
                             blocks.entry(exception).or_insert({
                                 work.push_back(Work {
-                                    bb_no: exception,
+                                    block_no: exception,
                                     vars: w.vars.clone(),
                                 });
 
-                                create_bb(exception, contract, cfg, function)
+                                create_block(exception, contract, cfg, function)
                             });
 
                             contract.builder.position_at_end(pos);

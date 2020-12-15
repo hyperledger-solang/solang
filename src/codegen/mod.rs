@@ -1,6 +1,7 @@
 pub mod cfg;
 mod expression;
 mod external_functions;
+mod reaching_definitions;
 mod statements;
 mod storage;
 
@@ -85,6 +86,8 @@ fn storage_initializer(contract_no: usize, ns: &Namespace) -> ControlFlowGraph {
     cfg.add(&mut vartab, Instr::Return { value: Vec::new() });
 
     cfg.vars = vartab.drain();
+
+    reaching_definitions::find(&mut cfg);
 
     cfg
 }
