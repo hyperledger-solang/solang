@@ -5,6 +5,7 @@ use std::fmt;
 use std::str;
 
 use super::expression::expression;
+use super::reaching_definitions;
 use super::statements::{statement, LoopScopes};
 use crate::parser::pt;
 use crate::sema::ast::{
@@ -61,7 +62,8 @@ pub enum Instr {
         array: usize,
         value: Box<Expression>,
     },
-    /// Pop element on memory array
+    /// Pop element from memory array. The push builtin returns a reference
+    /// to the new element which is stored in res.
     PopMemory { res: usize, ty: Type, array: usize },
     /// Create contract and call constructor. If creating the contract fails,
     /// either store the result in success or abort success.
@@ -150,6 +152,8 @@ pub struct BasicBlock {
     pub phis: Option<HashSet<usize>>,
     pub name: String,
     pub instr: Vec<Instr>,
+    pub defs: reaching_definitions::VarDefs,
+    pub transfers: Vec<Vec<reaching_definitions::Transfer>>,
 }
 
 impl BasicBlock {
@@ -164,7 +168,7 @@ pub struct ControlFlowGraph {
     pub params: Vec<Parameter>,
     pub returns: Vec<Parameter>,
     pub vars: HashMap<usize, Variable>,
-    pub bb: Vec<BasicBlock>,
+    pub blocks: Vec<BasicBlock>,
     pub nonpayable: bool,
     pub public: bool,
     pub ty: pt::FunctionTy,
@@ -179,7 +183,7 @@ impl ControlFlowGraph {
             params: Vec::new(),
             returns: Vec::new(),
             vars: HashMap::new(),
-            bb: Vec::new(),
+            blocks: Vec::new(),
             nonpayable: false,
             public: false,
             ty: pt::FunctionTy::Function,
@@ -199,7 +203,7 @@ impl ControlFlowGraph {
             params: Vec::new(),
             returns: Vec::new(),
             vars: HashMap::new(),
-            bb: Vec::new(),
+            blocks: Vec::new(),
             nonpayable: false,
             public: false,
             ty: pt::FunctionTy::Function,
@@ -210,24 +214,26 @@ impl ControlFlowGraph {
 
     /// Is this a placeholder
     pub fn is_placeholder(&self) -> bool {
-        self.bb.is_empty()
+        self.blocks.is_empty()
     }
 
     pub fn new_basic_block(&mut self, name: String) -> usize {
-        let pos = self.bb.len();
+        let pos = self.blocks.len();
 
-        self.bb.push(BasicBlock {
+        self.blocks.push(BasicBlock {
             name,
             instr: Vec::new(),
             phis: None,
+            transfers: Vec::new(),
+            defs: HashMap::new(),
         });
 
         pos
     }
 
-    pub fn set_phis(&mut self, bb: usize, phis: HashSet<usize>) {
+    pub fn set_phis(&mut self, block: usize, phis: HashSet<usize>) {
         if !phis.is_empty() {
-            self.bb[bb].phis = Some(phis);
+            self.blocks[block].phis = Some(phis);
         }
     }
 
@@ -239,7 +245,7 @@ impl ControlFlowGraph {
         if let Instr::Set { res, .. } = ins {
             vartab.set_dirty(res);
         }
-        self.bb[self.current].add(ins);
+        self.blocks[self.current].add(ins);
     }
 
     pub fn expr_to_string(&self, contract: &Contract, ns: &Namespace, expr: &Expression) -> String {
@@ -798,7 +804,7 @@ impl ControlFlowGraph {
                     .collect::<String>(),
                 exception
                     .iter()
-                    .map(|bb| format!("exception:bb{} ", bb))
+                    .map(|block| format!("exception: block{} ", block))
                     .collect::<String>(),
                 tys.iter()
                     .map(|ty| ty.ty.to_string(ns))
@@ -889,11 +895,11 @@ impl ControlFlowGraph {
     }
 
     pub fn basic_block_to_string(&self, contract: &Contract, ns: &Namespace, pos: usize) -> String {
-        let mut s = format!("bb{}: # {}\n", pos, self.bb[pos].name);
+        let mut s = format!("block{}: # {}\n", pos, self.blocks[pos].name);
 
-        if let Some(ref phis) = self.bb[pos].phis {
+        if let Some(ref phis) = self.blocks[pos].phis {
             s.push_str(&format!(
-                "# phis: {}\n",
+                "\t# phis: {}\n",
                 phis.iter()
                     .map(|p| -> &str { &self.vars[p].id.name })
                     .collect::<Vec<&str>>()
@@ -901,7 +907,26 @@ impl ControlFlowGraph {
             ));
         }
 
-        for ins in &self.bb[pos].instr {
+        let defs = &self.blocks[pos].defs;
+
+        if !defs.is_empty() {
+            s.push_str(&format!(
+                "\t# reaching:{}\n",
+                defs.iter()
+                    .map(|(var_no, defs)| format!(
+                        " {}:[{}]",
+                        &self.vars[var_no].id.name,
+                        defs.iter()
+                            .map(|d| format!("{}:{}", d.block_no, d.instr_no))
+                            .collect::<Vec<String>>()
+                            .join(", ")
+                    ))
+                    .collect::<Vec<String>>()
+                    .join(", ")
+            ));
+        }
+
+        for ins in &self.blocks[pos].instr {
             s.push_str(&format!("\t{}\n", self.instr_to_string(contract, ns, ins)));
         }
 
@@ -911,7 +936,7 @@ impl ControlFlowGraph {
     pub fn to_string(&self, contract: &Contract, ns: &Namespace) -> String {
         let mut s = String::from("");
 
-        for i in 0..self.bb.len() {
+        for i in 0..self.blocks.len() {
             s.push_str(&self.basic_block_to_string(contract, ns, i));
         }
 
@@ -986,6 +1011,8 @@ pub fn generate_cfg(
         cfg.nonpayable = nonpayable;
         cfg.selector = func.selector();
     }
+
+    reaching_definitions::find(&mut cfg);
 
     all_cfgs[cfg_no] = cfg;
 }
