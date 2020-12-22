@@ -242,7 +242,6 @@ impl Abi {
     }
 
     /// Returns index to builtin type in registry. Type is added if not already present
-    #[allow(dead_code)]
     fn builtin_enum_type(&mut self, e: &ast::EnumDecl) -> usize {
         self.register_ty(Type::Enum {
             path: vec![e.name.to_owned()],
@@ -512,22 +511,10 @@ fn gen_abi(contract_no: usize, ns: &ast::Namespace) -> Abi {
 
 fn ty_to_abi(ty: &ast::Type, ns: &ast::Namespace, registry: &mut Abi) -> ParamType {
     match ty {
-        ast::Type::Enum(n) => {
-            /* clike_enums are broken in polkadot. Use u8 for now.
+        ast::Type::Enum(n) => ParamType {
             ty: registry.builtin_enum_type(&ns.enums[*n]),
             display_name: vec![ns.enums[*n].name.to_owned()],
-            */
-            let mut display_name = vec![ns.enums[*n].name.to_owned()];
-
-            if let Some(contract_name) = &ns.enums[*n].contract {
-                display_name.insert(0, contract_name.to_owned());
-            }
-
-            ParamType {
-                ty: registry.builtin_type("u8"),
-                display_name,
-            }
-        }
+        },
         ast::Type::Bytes(n) => {
             let elem = registry.builtin_type("u8");
             ParamType {
