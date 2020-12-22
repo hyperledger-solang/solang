@@ -335,6 +335,7 @@ impl SubstrateTarget {
                     u8_ptr, u32_val, // input ptr and len
                     u8_ptr, u32_ptr, // address ptr and len
                     u8_ptr, u32_ptr, // output ptr and len
+                    u8_ptr, u32_val, // salt ptr and len
                 ],
                 false,
             ),
@@ -3012,8 +3013,8 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             None => &resolver_contract.default_constructor.as_ref().unwrap().0,
         };
 
-        let mut args = args.to_vec();
-        let mut params = constructor.params.to_vec();
+        let args = args.to_vec();
+        let params = constructor.params.to_vec();
         let scratch_buf = contract.builder.build_pointer_cast(
             contract.scratch.unwrap().as_pointer_value(),
             contract.context.i8_type().ptr_type(AddressSpace::Generic),
@@ -3022,52 +3023,37 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         let scratch_len = contract.scratch_len.unwrap().as_pointer_value();
 
         // salt
-        let salt_ty = ast::Type::Uint(256);
+        let salt_buf =
+            contract.build_alloca(function, contract.context.i8_type().array_type(32), "salt");
+        let salt_buf = contract.builder.build_pointer_cast(
+            salt_buf,
+            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+            "salt_buf",
+        );
+        let salt_len = contract.context.i32_type().const_int(32, false);
 
         if let Some(salt) = salt {
-            args.push(salt.into());
+            let salt_ty = ast::Type::Uint(256);
+
+            contract.builder.build_store(
+                contract.builder.build_pointer_cast(
+                    salt_buf,
+                    contract.llvm_type(&salt_ty).ptr_type(AddressSpace::Generic),
+                    "salt",
+                ),
+                salt,
+            );
         } else {
             let (ptr, len) = self.contract_unique_salt(contract, contract_no);
 
-            contract.builder.build_store(
-                scratch_len,
-                contract.context.i32_type().const_int(32, false),
-            );
+            contract.builder.build_store(scratch_len, salt_len);
 
             contract.builder.build_call(
                 contract.module.get_function("seal_random").unwrap(),
-                &[
-                    ptr.into(),
-                    len.into(),
-                    scratch_buf.into(),
-                    scratch_len.into(),
-                ],
+                &[ptr.into(), len.into(), salt_buf.into(), scratch_len.into()],
                 "random",
             );
-
-            args.push(
-                contract.builder.build_load(
-                    contract.builder.build_pointer_cast(
-                        scratch_buf,
-                        contract
-                            .context
-                            .custom_width_int_type(256)
-                            .ptr_type(AddressSpace::Generic),
-                        "salt_buf",
-                    ),
-                    "salt",
-                ),
-            );
         }
-
-        params.push(ast::Parameter {
-            loc: pt::Loc(0, 0, 0),
-            ty: salt_ty,
-            ty_loc: pt::Loc(0, 0, 0),
-            name: "salt".to_string(),
-            name_loc: None,
-            indexed: false,
-        });
 
         // input
         let (input, input_len) = self.abi_encode(
@@ -3187,6 +3173,8 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                     address_len_ptr.into(),
                     scratch_buf.into(),
                     scratch_len.into(),
+                    salt_buf.into(),
+                    salt_len.into(),
                 ],
                 "",
             )
