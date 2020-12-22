@@ -3020,8 +3020,6 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             None => &resolver_contract.default_constructor.as_ref().unwrap().0,
         };
 
-        let args = args.to_vec();
-        let params = constructor.params.to_vec();
         let scratch_buf = contract.builder.build_pointer_cast(
             contract.scratch.unwrap().as_pointer_value(),
             contract.context.i8_type().ptr_type(AddressSpace::Generic),
@@ -3074,7 +3072,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             false,
             function,
             &args,
-            &params,
+            &constructor.params,
         );
 
         let value_ptr = contract
@@ -3153,10 +3151,6 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                 .const_int(SCRATCH_SIZE as u64, false),
         );
 
-        // seal_instantiate returns 0x0100 if the contract cannot be instantiated
-        // due to insufficient funds, etc. If the return value is < 0x100, then
-        // this is return value from the constructor (or deploy function) of
-        // the contract
         let ret = contract
             .builder
             .build_call(
@@ -3197,27 +3191,18 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             "success",
         );
 
-        let success_block = contract.context.append_basic_block(function, "success");
-        let bail_block = contract.context.append_basic_block(function, "bail");
-        contract
-            .builder
-            .build_conditional_branch(is_success, success_block, bail_block);
-
-        contract.builder.position_at_end(success_block);
-
         if let Some(success) = success {
-            // we're in the try path. This means:
-            // return success or not in success variable
-            // do not abort execution
-            //
+            // we're in a try statement. This means:
+            // return success or not in success variable; do not abort execution
             *success = is_success.into();
-
-            let done_block = contract.context.append_basic_block(function, "done");
-            contract.builder.build_unconditional_branch(done_block);
-            contract.builder.position_at_end(bail_block);
-            contract.builder.build_unconditional_branch(done_block);
-            contract.builder.position_at_end(done_block);
         } else {
+            let success_block = contract.context.append_basic_block(function, "success");
+            let bail_block = contract.context.append_basic_block(function, "bail");
+
+            contract
+                .builder
+                .build_conditional_branch(is_success, success_block, bail_block);
+
             contract.builder.position_at_end(bail_block);
 
             self.assert_failure(
@@ -3312,27 +3297,18 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             "success",
         );
 
-        let success_block = contract.context.append_basic_block(function, "success");
-        let bail_block = contract.context.append_basic_block(function, "bail");
-        contract
-            .builder
-            .build_conditional_branch(is_success, success_block, bail_block);
-
-        contract.builder.position_at_end(success_block);
-
         if let Some(success) = success {
-            // we're in the try path. This means:
-            // return success or not in success variable
-            // do not abort execution
-            //
+            // we're in a try statement. This means:
+            // do not abort execution; return success or not in success variable
             *success = is_success.into();
-
-            let done_block = contract.context.append_basic_block(function, "done");
-            contract.builder.build_unconditional_branch(done_block);
-            contract.builder.position_at_end(bail_block);
-            contract.builder.build_unconditional_branch(done_block);
-            contract.builder.position_at_end(done_block);
         } else {
+            let success_block = contract.context.append_basic_block(function, "success");
+            let bail_block = contract.context.append_basic_block(function, "bail");
+
+            contract
+                .builder
+                .build_conditional_branch(is_success, success_block, bail_block);
+
             contract.builder.position_at_end(bail_block);
 
             self.assert_failure(
