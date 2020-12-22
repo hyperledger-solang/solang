@@ -149,8 +149,9 @@ directory. Write this to flipper.sol and run:
 
   solang --target substrate flipper.sol
 
-Now you should have ``flipper.wasm`` and ``flipper.json``. This can be used
-directly in the `Polkadot UI <https://substrate.dev/substrate-contracts-workshop/#/0/deploying-your-contract?id=putting-your-code-on-the-blockchain>`_, as if the contract was written in ink!.
+Now you should have ``flipper.contract``. The file contains both the ABI and contract wasm.
+It can be used directly in the
+`Polkadot UI <https://substrate.dev/substrate-contracts-workshop/#/0/deploying-your-contract?id=putting-your-code-on-the-blockchain>`_, as if the contract was written in ink!.
 
 Using solang with Solana
 ------------------------

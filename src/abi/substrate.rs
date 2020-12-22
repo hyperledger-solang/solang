@@ -295,7 +295,10 @@ pub fn metadata(contract_no: usize, code: &[u8], ns: &ast::Namespace) -> Value {
     let version = Version::parse(env!("CARGO_PKG_VERSION")).unwrap();
     let language = SourceLanguage::new(Language::Solidity, version.clone());
     let compiler = SourceCompiler::new(Compiler::Solang, version);
-    let source = Source::new(hash.as_bytes().try_into().unwrap(), language, compiler);
+    let code_hash: [u8; 32] = hash.as_bytes().try_into().unwrap();
+    let source_wasm = SourceWasm::new(code.to_vec());
+
+    let source = Source::new(Some(source_wasm), CodeHash(code_hash), language, compiler);
     let mut builder = Contract::builder();
 
     // Add our name and tags

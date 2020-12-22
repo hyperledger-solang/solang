@@ -21,7 +21,7 @@ pub fn generate_abi(
 
             let abi = substrate::metadata(contract_no, code, ns);
 
-            (serde_json::to_string_pretty(&abi).unwrap(), "json")
+            (serde_json::to_string_pretty(&abi).unwrap(), "contract")
         }
         _ => {
             if verbose {

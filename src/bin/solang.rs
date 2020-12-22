@@ -391,32 +391,50 @@ fn process_filename(
                 },
             );
         } else {
-            let bin_filename = output_file(&contract.name, target.file_extension());
+            // Substrate has a single contact file
+            if target == solang::Target::Substrate {
+                let (contract_bs, contract_ext) =
+                    abi::generate_abi(contract_no, &ns, &code, verbose);
+                let contract_filename = output_file(&contract.name, contract_ext);
 
-            if verbose {
-                eprintln!(
-                    "info: Saving binary {} for contract {}",
-                    bin_filename.display(),
-                    contract.name
-                );
+                if verbose {
+                    eprintln!(
+                        "info: Saving {} for contract {}",
+                        contract_filename.display(),
+                        contract.name
+                    );
+                }
+
+                let mut file = File::create(contract_filename).unwrap();
+                file.write_all(&contract_bs.as_bytes()).unwrap();
+            } else {
+                let bin_filename = output_file(&contract.name, target.file_extension());
+
+                if verbose {
+                    eprintln!(
+                        "info: Saving binary {} for contract {}",
+                        bin_filename.display(),
+                        contract.name
+                    );
+                }
+
+                let mut file = File::create(bin_filename).unwrap();
+                file.write_all(&code).unwrap();
+
+                let (abi_bytes, abi_ext) = abi::generate_abi(contract_no, &ns, &code, verbose);
+                let abi_filename = output_file(&contract.name, abi_ext);
+
+                if verbose {
+                    eprintln!(
+                        "info: Saving ABI {} for contract {}",
+                        abi_filename.display(),
+                        contract.name
+                    );
+                }
+
+                file = File::create(abi_filename).unwrap();
+                file.write_all(&abi_bytes.as_bytes()).unwrap();
             }
-
-            let mut file = File::create(bin_filename).unwrap();
-            file.write_all(&code).unwrap();
-
-            let (abi_bytes, abi_ext) = abi::generate_abi(contract_no, &ns, &code, verbose);
-            let abi_filename = output_file(&contract.name, abi_ext);
-
-            if verbose {
-                eprintln!(
-                    "info: Saving ABI {} for contract {}",
-                    abi_filename.display(),
-                    contract.name
-                );
-            }
-
-            file = File::create(abi_filename).unwrap();
-            file.write_all(&abi_bytes.as_bytes()).unwrap();
         }
     }
 

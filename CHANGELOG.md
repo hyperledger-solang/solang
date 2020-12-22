@@ -2,6 +2,11 @@
 All notable changes to [Solang](https://github.com/hyperledger-labs/solang/)
 will be documented here.
 
+## [Unreleased]
+
+### Changed
+- The Substrate target produces a single .contract file
+
 ## [0.1.6]
 
 ### Added
