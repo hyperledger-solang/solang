@@ -248,7 +248,7 @@ fn using() {
     );
 
     runtime.constructor(0, Vec::new());
-    runtime.function("foo", Val(102).encode());
+    runtime.function("foo", 102u32.encode());
 
     assert_eq!(runtime.vm.output, Val(65536).encode());
 
