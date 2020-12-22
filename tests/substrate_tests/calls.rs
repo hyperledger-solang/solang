@@ -217,8 +217,8 @@ fn input_wrong_size() {
 
     runtime.function_expect_return("test", b"A".to_vec(), 1);
 
-    // the decoder does not check if there is too much data
-    runtime.function_expect_return("test", b"ABCDE".to_vec(), 0);
+    // the decoder does check if there is too much data
+    runtime.function_expect_return("test", b"ABCDE".to_vec(), 1);
 }
 
 #[test]

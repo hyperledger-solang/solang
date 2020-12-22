@@ -1587,7 +1587,7 @@ fn base_contract_on_constructor() {
         }"##,
     );
 
-    runtime.constructor(0, Val64(0xbffe).encode());
+    runtime.constructor(0, Vec::new());
     runtime.function("get_x", Vec::new());
 
     assert_eq!(runtime.vm.output, Val(104).encode());

@@ -619,17 +619,22 @@ impl SubstrateTarget {
         }
     }
 
-    /// Check that data has not overrun end. We do not check if we have more data than provided;
-    /// there could be a salt there for the constructor.
+    /// Check that data has not overrun end, and whether end == data to check we do not have
+    /// trailing data
     fn check_overrun(
         &self,
         contract: &Contract,
         function: FunctionValue,
         data: PointerValue,
         end: PointerValue,
+        end_is_data: bool,
     ) {
         let in_bounds = contract.builder.build_int_compare(
-            IntPredicate::ULE,
+            if end_is_data {
+                IntPredicate::EQ
+            } else {
+                IntPredicate::ULE
+            },
             contract
                 .builder
                 .build_ptr_to_int(data, contract.context.i32_type(), "args"),
@@ -686,7 +691,7 @@ impl SubstrateTarget {
                     )
                 };
 
-                self.check_overrun(contract, function, *data, end);
+                self.check_overrun(contract, function, *data, end, false);
 
                 arg
             }
@@ -908,7 +913,7 @@ impl SubstrateTarget {
                     .build_load(from, "data")
                     .into_pointer_value();
 
-                self.check_overrun(contract, function, *data, end);
+                self.check_overrun(contract, function, *data, end, false);
 
                 contract
                     .builder
@@ -2690,6 +2695,8 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         for param in spec {
             args.push(self.decode_ty(contract, function, &param.ty, &mut argsdata, argsend));
         }
+
+        self.check_overrun(contract, function, argsdata, argsend, true);
     }
 
     /// ABI encode into a vector for abi.encode* style builtin functions

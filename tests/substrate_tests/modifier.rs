@@ -308,7 +308,7 @@ fn chain() {
 
     assert_eq!(runtime.store.get(&(runtime.vm.address, slot)), None);
 
-    runtime.function("test", 11u16.encode());
+    runtime.function("test", Vec::new());
 
     assert_eq!(
         runtime.store.get(&(runtime.vm.address, slot)).unwrap(),
