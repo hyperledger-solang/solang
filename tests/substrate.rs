@@ -532,6 +532,8 @@ impl Externals for TestRuntime {
                 let address_len_ptr: u32 = args.nth_checked(8)?;
                 let output_ptr: u32 = args.nth_checked(9)?;
                 let output_len_ptr: u32 = args.nth_checked(10)?;
+                let salt_ptr: u32 = args.nth_checked(11)?;
+                let salt_len: u32 = args.nth_checked(12)?;
 
                 let mut codehash = [0u8; 32];
 
@@ -562,15 +564,26 @@ impl Externals for TestRuntime {
                     panic!("seal_instantiate: {}", e);
                 }
 
+                let mut salt = Vec::new();
+                salt.resize(salt_len as usize, 0u8);
+
+                if let Err(e) = self.vm.memory.get_into(salt_ptr, &mut salt) {
+                    panic!("seal_instantiate: {}", e);
+                }
+
                 println!(
-                    "seal_instantiate value:{} input={}",
+                    "seal_instantiate value:{} input={} salt={}",
                     value,
-                    hex::encode(&input)
+                    hex::encode(&input),
+                    hex::encode(&salt),
                 );
 
                 let mut address = [0u8; 32];
 
-                address.copy_from_slice(blake2_rfc::blake2b::blake2b(32, &[], &input).as_bytes());
+                let hash_data: Vec<u8> = input.iter().chain(salt.iter()).cloned().collect();
+
+                address
+                    .copy_from_slice(blake2_rfc::blake2b::blake2b(32, &[], &hash_data).as_bytes());
 
                 if self.accounts.contains_key(&address) {
                     // substrate would return TRAP_RETURN_CODE (0x0100)
