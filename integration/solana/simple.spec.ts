@@ -26,7 +26,7 @@ describe('Deploy solang contract and test', () => {
     });
 
     it('primitives', async function () {
-        this.timeout(50000);
+        this.timeout(100000);
 
         let conn = await establishConnection();
 
