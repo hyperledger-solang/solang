@@ -425,7 +425,7 @@ HexLiteral: HexLiteral = {
         let v = s.to_string();
         let hex_len = v.len() - 5;
 
-        HexLiteral{ loc: Loc(file_no, l, r), hex: v.chars().skip(4).filter(|c| *c != '_' && *c != '"').collect() }
+        HexLiteral{ loc: Loc(file_no, l, r), hex: v.chars().skip(4).filter(|c| *c != '_' && *c != '"' && *c != '\'').collect() }
     }
 }
 

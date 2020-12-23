@@ -598,10 +598,11 @@ impl<'input> Lexer<'input> {
         Some(Ok((start, Token::Number(base, exp), end + 1)))
     }
 
-    fn lex_string(
+    fn string(
         &mut self,
         token_start: usize,
         string_start: usize,
+        quote_char: char,
     ) -> Option<Result<(usize, Token<'input>, usize), LexicalError>> {
         let mut end;
 
@@ -611,7 +612,7 @@ impl<'input> Lexer<'input> {
             if let Some((i, ch)) = self.chars.next() {
                 end = i;
                 if !last_was_escape {
-                    if ch == '"' {
+                    if ch == quote_char {
                         break;
                     }
                     last_was_escape = ch == '\\';
@@ -655,44 +656,54 @@ impl<'input> Lexer<'input> {
                     let id = &self.input[start..end];
 
                     if id == "unicode" {
-                        if let Some((_, '"')) = self.chars.peek() {
-                            self.chars.next();
+                        match self.chars.peek() {
+                            Some((_, quote_char @ '"')) | Some((_, quote_char @ '\'')) => {
+                                let quote_char = *quote_char;
 
-                            return self.lex_string(start, start + 8);
+                                self.chars.next();
+
+                                return self.string(start, start + 8, quote_char);
+                            }
+                            _ => (),
                         }
                     }
 
                     if id == "hex" {
-                        if let Some((_, '"')) = self.chars.peek() {
-                            self.chars.next();
+                        match self.chars.peek() {
+                            Some((_, quote_char @ '"')) | Some((_, quote_char @ '\'')) => {
+                                let quote_char = *quote_char;
 
-                            while let Some((i, ch)) = self.chars.next() {
-                                if ch == '"' {
-                                    return Some(Ok((
-                                        start,
-                                        Token::HexLiteral(&self.input[start..=i]),
-                                        i + 1,
-                                    )));
-                                }
+                                self.chars.next();
 
-                                if !ch.is_ascii_hexdigit() && ch != '_' {
-                                    // Eat up the remainer of the string
-                                    while let Some((_, ch)) = self.chars.next() {
-                                        if ch == '"' {
-                                            break;
-                                        }
+                                while let Some((i, ch)) = self.chars.next() {
+                                    if ch == quote_char {
+                                        return Some(Ok((
+                                            start,
+                                            Token::HexLiteral(&self.input[start..=i]),
+                                            i + 1,
+                                        )));
                                     }
 
-                                    return Some(Err(LexicalError::InvalidCharacterInHexLiteral(
-                                        i, ch,
-                                    )));
-                                }
-                            }
+                                    if !ch.is_ascii_hexdigit() && ch != '_' {
+                                        // Eat up the remainer of the string
+                                        while let Some((_, ch)) = self.chars.next() {
+                                            if ch == quote_char {
+                                                break;
+                                            }
+                                        }
 
-                            return Some(Err(LexicalError::EndOfFileInString(
-                                start,
-                                self.input.len(),
-                            )));
+                                        return Some(Err(
+                                            LexicalError::InvalidCharacterInHexLiteral(i, ch),
+                                        ));
+                                    }
+                                }
+
+                                return Some(Err(LexicalError::EndOfFileInString(
+                                    start,
+                                    self.input.len(),
+                                )));
+                            }
+                            _ => (),
                         }
                     }
 
@@ -702,8 +713,8 @@ impl<'input> Lexer<'input> {
                         Some(Ok((start, Token::Identifier(id), end)))
                     };
                 }
-                Some((start, '"')) => {
-                    return self.lex_string(start, start + 1);
+                Some((start, quote_char @ '"')) | Some((start, quote_char @ '\'')) => {
+                    return self.string(start, start + 1, quote_char);
                 }
                 Some((start, '/')) => {
                     match self.chars.peek() {

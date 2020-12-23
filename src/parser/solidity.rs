@@ -1,5 +1,5 @@
 // auto-generated: "lalrpop 0.19.1"
-// sha256: 301a78dcee7a1c40911379dbd9ba0fead851bbd638abbf920149fba1c7f64e8
+// sha256: d824f953338687a3744ed9d105f23e9a8beceb63c77096a3b451dbd91283a1
 use std::str::FromStr;
 use num_bigint::BigInt;
 use num_bigint::BigUint;
@@ -15932,7 +15932,7 @@ fn __action160<
         let v = s.to_string();
         let hex_len = v.len() - 5;
 
-        HexLiteral{ loc: Loc(file_no, l, r), hex: v.chars().skip(4).filter(|c| *c != '_' && *c != '"').collect() }
+        HexLiteral{ loc: Loc(file_no, l, r), hex: v.chars().skip(4).filter(|c| *c != '_' && *c != '"' && *c != '\'').collect() }
     }
 }
 
