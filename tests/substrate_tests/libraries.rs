@@ -112,6 +112,19 @@ fn restrictions() {
         first_error(ns.diagnostics),
         "library ‘c’ cannot be used as base contract for contract ‘a’"
     );
+
+    let ns = parse_and_resolve(
+        r#"
+        library c {
+            int x;
+        }"#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "library ‘c’ is not allowed to have state variable ‘x’"
+    );
 }
 
 #[test]
@@ -125,11 +138,21 @@ fn simple() {
             function foo(uint64 x) public pure returns (uint64) {
                 return ints.max(x, 65536);
             }
+
+            function bar() public pure returns (uint64) {
+                return ints.bar();
+            }
         }
 
         library ints {
+            uint64 constant CONSTANT_BAR = 102;
+
             function max(uint64 a, uint64 b) internal pure returns (uint64) {
                 return a > b ? a : b;
+            }
+
+            function bar() internal pure returns (uint64) {
+                return CONSTANT_BAR;
             }
         }"##,
     );
@@ -138,6 +161,10 @@ fn simple() {
     runtime.function("foo", Val(102).encode());
 
     assert_eq!(runtime.vm.output, Val(65536).encode());
+
+    runtime.function("bar", Vec::new());
+
+    assert_eq!(runtime.vm.output, Val(102).encode());
 }
 
 #[test]
@@ -332,6 +359,8 @@ fn using() {
         }
 
         library ints {
+            uint64 constant nada = 0;
+
             function max(uint64 a, uint64 b) internal pure returns (uint64) {
                 return a > b ? a : b;
             }

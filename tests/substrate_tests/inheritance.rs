@@ -273,6 +273,34 @@ fn test_interface() {
         first_warning(ns.diagnostics),
         "functions in an interface are implicitly virtual"
     );
+
+    let ns = parse_and_resolve(
+        r#"
+        interface bar {
+            int x;
+        }
+        "#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "interface ‘bar’ is not allowed to have contract variable ‘x’"
+    );
+
+    let ns = parse_and_resolve(
+        r#"
+        interface bar {
+            int constant x = 1;
+        }
+        "#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "interface ‘bar’ is not allowed to have contract variable ‘x’"
+    );
 }
 
 #[test]
