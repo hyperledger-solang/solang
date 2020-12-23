@@ -12,21 +12,36 @@ pub fn contract_variables(
 ) -> bool {
     let mut broken = false;
     let mut symtable = Symtable::new();
-    let may_have_state = !matches!(def.ty,
-        pt::ContractTy::Interface(_) | pt::ContractTy::Library(_));
 
     for parts in &def.parts {
         if let pt::ContractPart::VariableDefinition(ref s) = parts {
-            if !may_have_state {
+            // don't even attempt to parse contract variables for interfaces, they are never allowed
+            if matches!(def.ty, pt::ContractTy::Interface(_)) {
                 ns.diagnostics.push(Diagnostic::error(
                     s.loc,
                     format!(
-                        "{} ‘{}’ is not allowed to have state variable ‘{}’",
+                        "{} ‘{}’ is not allowed to have contract variable ‘{}’",
                         def.ty, def.name.name, s.name.name
                     ),
                 ));
-            } else if !var_decl(Some(def), s, file_no, Some(contract_no), ns, &mut symtable) {
                 broken = true;
+                continue;
+            }
+
+            match var_decl(Some(def), s, file_no, Some(contract_no), ns, &mut symtable) {
+                None => {
+                    broken = true;
+                }
+                Some(false) if matches!(def.ty, pt::ContractTy::Library(_)) => {
+                    ns.diagnostics.push(Diagnostic::error(
+                        s.loc,
+                        format!(
+                            "{} ‘{}’ is not allowed to have state variable ‘{}’",
+                            def.ty, def.name.name, s.name.name
+                        ),
+                    ));
+                }
+                _ => (),
             }
         }
     }
@@ -41,7 +56,7 @@ pub fn var_decl(
     contract_no: Option<usize>,
     ns: &mut Namespace,
     symtable: &mut Symtable,
-) -> bool {
+) -> Option<bool> {
     let mut attrs = s.attrs.clone();
     let mut ty = s.ty.clone();
 
@@ -72,7 +87,7 @@ pub fn var_decl(
     let ty = match ns.resolve_type(file_no, contract_no, false, &ty) {
         Ok(s) => s,
         Err(()) => {
-            return false;
+            return None;
         }
     };
 
@@ -95,14 +110,14 @@ pub fn var_decl(
                     v.loc(),
                     format!("‘{}’: global variable cannot have visibility specifier", v),
                 ));
-                return false;
+                return None;
             }
             pt::VariableAttribute::Visibility(pt::Visibility::External(loc)) => {
                 ns.diagnostics.push(Diagnostic::error(
                     *loc,
                     "variable cannot be declared external".to_string(),
                 ));
-                return false;
+                return None;
             }
             pt::VariableAttribute::Visibility(v) => {
                 if let Some(e) = &visibility {
@@ -112,7 +127,7 @@ pub fn var_decl(
                         e.loc(),
                         format!("location of previous declaration of `{}'", e.to_string()),
                     ));
-                    return false;
+                    return None;
                 }
 
                 visibility = Some(v.clone());
@@ -131,14 +146,14 @@ pub fn var_decl(
                 s.ty.loc(),
                 "global variable must be constant".to_string(),
             ));
-            return false;
+            return None;
         }
         if ty.contains_internal_function(ns) {
             ns.diagnostics.push(Diagnostic::error(
                 s.ty.loc(),
                 "global variable cannot be of type internal function".to_string(),
             ));
-            return false;
+            return None;
         }
     } else if ty.contains_internal_function(ns)
         && matches!(visibility, pt::Visibility::Public(_) | pt::Visibility::External(_))
@@ -150,7 +165,7 @@ pub fn var_decl(
                 visibility
             ),
         ));
-        return false;
+        return None;
     }
 
     let initializer = if let Some(initializer) = &s.initializer {
@@ -163,13 +178,13 @@ pub fn var_decl(
             is_constant,
         ) {
             Ok(res) => res,
-            Err(()) => return false,
+            Err(()) => return None,
         };
 
         // implicitly conversion to correct ty
         let res = match cast(&s.loc, res, &ty, true, ns) {
             Ok(res) => res,
-            Err(_) => return false,
+            Err(_) => return None,
         };
 
         Some(res)
@@ -179,7 +194,7 @@ pub fn var_decl(
                 s.loc,
                 "missing initializer for constant".to_string(),
             ));
-            return false;
+            return None;
         }
 
         None
@@ -238,5 +253,8 @@ pub fn var_decl(
         contract_no,
         &s.name,
         Symbol::Variable(s.loc, contract_no, pos),
-    )
+    );
+
+    // Return true if the value is constant
+    Some(is_constant)
 }
