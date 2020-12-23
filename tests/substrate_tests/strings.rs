@@ -168,9 +168,9 @@ fn string_compare() {
         r##"
         contract foo {
             function test() public {
-                assert(hex"414243" == "ABC");
+                assert(hex"414243" == 'ABC');
 
-                assert(hex"414243" != "ABD");
+                assert(hex'414243' != "ABD");
             }
         }"##,
     );
@@ -181,11 +181,11 @@ fn string_compare() {
         r##"
         contract foo {
             function lets_compare1(string s) private returns (bool) {
-                return s == "the quick brown fox jumps over the lazy dog";
+                return s == unicode'the quick brown fox jumps over the lazy dog';
             }
 
             function lets_compare2(string s) private returns (bool) {
-                return "the quick brown fox jumps over the lazy dog" == s;
+                return unicode"the quick brown fox jumps over the lazy dog" == s;
             }
 
             function test() public {
