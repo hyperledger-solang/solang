@@ -365,6 +365,12 @@ NoFunctionTyPrecedence0: Expression = {
     <a:@L> "false" <b:@R> => Expression::BoolLiteral(Loc(file_no, a, b), false),
     <StringLiteral+> => Expression::StringLiteral(<>),
     <HexLiteral+> => Expression::HexLiteral(<>),
+    <l:@L> <a:address> <r:@R> => {
+        let v = a.to_string();
+        let address_len = a.len() - 9;
+
+        Expression::AddressLiteral(Loc(file_no, l, r), a.chars().skip(8).filter(|c|  *c != '"' && *c != '\'').collect() )
+    },
     <l:@L> <ty:NoFunctionType> <r:@R> => Expression::Type(Loc(file_no, l, r), ty),
     <a:@L> "[" <v:CommaOne<Expression>> "]" <b:@R> => {
         Expression::ArrayLiteral(Loc(file_no, a, b), v)
@@ -705,6 +711,7 @@ extern {
         identifier => Token::Identifier(<&'input str>),
         string => Token::StringLiteral(<&'input str>),
         hexstring => Token::HexLiteral(<&'input str>),
+        address => Token::AddressLiteral(<&'input str>),
         number => Token::Number(<&'input str>, <&'input str>),
         hexnumber => Token::HexNumber(<&'input str>),
         ";" => Token::Semicolon,

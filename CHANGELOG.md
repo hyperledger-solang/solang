@@ -6,6 +6,8 @@ will be documented here.
 
 ### Changed
 - The Substrate target produces a single .contract file
+- For Substrate and Solana, address literals can specified with their base58 notation, e.g.
+  `address foo = address"5GBWmgdFAMqm8ZgAHGobqDqX6tjLxJhv53ygjNtaaAn3sjeZ";`
 
 ## [0.1.6]
 

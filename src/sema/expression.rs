@@ -24,6 +24,7 @@ use super::format::string_format;
 use super::symtable::Symtable;
 use crate::parser::pt;
 use crate::Target;
+use base58::{FromBase58, FromBase58Error};
 
 impl Expression {
     /// Return the location for this expression
@@ -1244,12 +1245,10 @@ pub fn expression(
         pt::Expression::NumberLiteral(loc, b) => bigint_to_expression(loc, b, ns),
         pt::Expression::HexNumberLiteral(loc, n) => {
             // ns.address_length is in bytes; double for hex and two for the leading 0x
-            if n.starts_with("0x") && !n.chars().any(|c| c == '_') && (n.len() % 2) == 0 {
-                let length_bytes = (n.len() - 2) / 2;
+            if n.starts_with("0x") && !n.chars().any(|c| c == '_') && n.len() == 42 {
+                let address = to_hexstr_eip55(n);
 
-                if length_bytes == ns.address_length {
-                    let address = to_hexstr_eip55(n);
-
+                if ns.target == Target::Ewasm {
                     return if address == *n {
                         let s: String = address.chars().skip(2).collect();
 
@@ -1268,17 +1267,16 @@ pub fn expression(
                         ));
                         Err(())
                     };
-                } else if length_bytes == 20 {
-                    let address = to_hexstr_eip55(n);
-
-                    if address == *n {
-                        // looks like ethereum address
-                        ns.diagnostics.push(Diagnostic::error(
-                            *loc,
-                            format!("address literal ‘{}’ has length of ethereum address (20 bytes). Addresses are {} bytes on target {}", n, ns.address_length, ns.target),
-                        ));
-                        return Err(());
-                    }
+                } else if address == *n {
+                    // looks like ethereum address
+                    ns.diagnostics.push(Diagnostic::error(
+                        *loc,
+                        format!(
+                            "ethereum address literal ‘{}’ not supported on target {}",
+                            n, ns.target
+                        ),
+                    ));
+                    return Err(());
                 }
             }
 
@@ -1286,6 +1284,107 @@ pub fn expression(
             let s: String = n.chars().filter(|v| *v != 'x' && *v != '_').collect();
 
             bigint_to_expression(loc, &BigInt::from_str_radix(&s, 16).unwrap(), ns)
+        }
+        pt::Expression::AddressLiteral(loc, address) => {
+            if ns.target == Target::Substrate {
+                match address.from_base58() {
+                    Ok(v) => {
+                        if v.len() != 35 {
+                            ns.diagnostics.push(Diagnostic::error(
+                                *loc,
+                                format!(
+                                    "address literal {} incorrect length of {}",
+                                    address,
+                                    v.len()
+                                ),
+                            ));
+                            return Err(());
+                        }
+
+                        let hash_data: Vec<u8> =
+                            b"SS58PRE".iter().chain(v[..=32].iter()).cloned().collect();
+
+                        let hash = blake2_rfc::blake2b::blake2b(64, &[], &hash_data);
+                        let hash = hash.as_bytes();
+
+                        if v[33] != hash[0] || v[34] != hash[1] {
+                            ns.diagnostics.push(Diagnostic::error(
+                                *loc,
+                                format!("address literal {} hash incorrect checksum", address,),
+                            ));
+                            return Err(());
+                        }
+
+                        Ok(Expression::NumberLiteral(
+                            *loc,
+                            Type::Address(false),
+                            BigInt::from_bytes_be(Sign::Plus, &v[1..33]),
+                        ))
+                    }
+                    Err(FromBase58Error::InvalidBase58Length) => {
+                        ns.diagnostics.push(Diagnostic::error(
+                            *loc,
+                            format!("address literal {} invalid base58 length", address),
+                        ));
+                        Err(())
+                    }
+                    Err(FromBase58Error::InvalidBase58Character(ch, pos)) => {
+                        let mut loc = *loc;
+                        loc.1 += pos;
+                        loc.2 = loc.1;
+                        ns.diagnostics.push(Diagnostic::error(
+                            loc,
+                            format!("address literal {} invalid character '{}'", address, ch),
+                        ));
+                        Err(())
+                    }
+                }
+            } else if ns.target == Target::Solana {
+                match address.from_base58() {
+                    Ok(v) => {
+                        if v.len() != 32 {
+                            ns.diagnostics.push(Diagnostic::error(
+                                *loc,
+                                format!(
+                                    "address literal {} incorrect length of {}",
+                                    address,
+                                    v.len()
+                                ),
+                            ));
+                            Err(())
+                        } else {
+                            Ok(Expression::NumberLiteral(
+                                *loc,
+                                Type::Address(false),
+                                BigInt::from_bytes_be(Sign::Plus, &v),
+                            ))
+                        }
+                    }
+                    Err(FromBase58Error::InvalidBase58Length) => {
+                        ns.diagnostics.push(Diagnostic::error(
+                            *loc,
+                            format!("address literal {} invalid base58 length", address),
+                        ));
+                        Err(())
+                    }
+                    Err(FromBase58Error::InvalidBase58Character(ch, pos)) => {
+                        let mut loc = *loc;
+                        loc.1 += pos;
+                        loc.2 = loc.1;
+                        ns.diagnostics.push(Diagnostic::error(
+                            loc,
+                            format!("address literal {} invalid character '{}'", address, ch),
+                        ));
+                        Err(())
+                    }
+                }
+            } else {
+                ns.diagnostics.push(Diagnostic::error(
+                    *loc,
+                    format!("address literal {} not supported on {}", address, ns.target),
+                ));
+                Err(())
+            }
         }
         pt::Expression::Variable(id) => {
             if let Some(v) = symtable.find(&id.name) {
