@@ -1971,6 +1971,42 @@ fn external_call() {
                 x = a;
             }
 
+            function get_x() public returns (int32) {
+                return 200 * x;
+            }
+        }
+
+        contract c {
+            b x;
+
+            constructor() public {
+                x = new b(102);
+            }
+
+            function test() public returns (int32) {
+                return x.get_x();
+            }
+        }"##,
+    );
+
+    runtime.constructor(&[]);
+
+    let ret = runtime.function("test", &[]);
+
+    assert_eq!(
+        ret,
+        vec!(ethabi::Token::Int(ethereum_types::U256::from(20400)))
+    );
+
+    let mut runtime = build_solidity(
+        r##"
+        contract b {
+            int32 x;
+
+            constructor(int32 a) public {
+                x = a;
+            }
+
             function get_x(int32 t) public returns (int32) {
                 return x * t;
             }
