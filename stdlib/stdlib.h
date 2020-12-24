@@ -8,7 +8,7 @@ struct vector
     uint8_t data[];
 };
 
-void *__malloc(size_t size);
-void __memset(void *dest, uint8_t val, size_t length);
-void __memcpy(void *dest, const void *src, size_t length);
-void __memcpy8(void *_dest, void *_src, size_t length);
+extern void *__malloc(size_t size);
+extern void __memset(void *dest, uint8_t val, size_t length);
+extern void __memcpy(void *dest, const void *src, uint32_t length);
+extern void __memcpy8(void *_dest, void *_src, uint32_t length);

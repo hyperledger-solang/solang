@@ -7,7 +7,7 @@
 
 /*
  */
-void __memset8(void *_dest, uint64_t val, size_t length)
+void __memset8(void *_dest, uint64_t val, uint32_t length)
 {
 	uint64_t *dest = _dest;
 
@@ -26,11 +26,12 @@ void __memset(void *_dest, uint8_t val, size_t length)
 		*dest++ = val;
 	} while (--length);
 }
+
 /*
  * Our memcpy can only deal with multiples of 8 bytes. This is enough for
  * simple allocator below.
  */
-void __memcpy8(void *_dest, void *_src, size_t length)
+void __memcpy8(void *_dest, void *_src, uint32_t length)
 {
 	uint64_t *dest = _dest;
 	uint64_t *src = _src;
@@ -41,7 +42,7 @@ void __memcpy8(void *_dest, void *_src, size_t length)
 	} while (--length);
 }
 
-void __memcpy(void *_dest, const void *_src, size_t length)
+void __memcpy(void *_dest, const void *_src, uint32_t length)
 {
 	uint8_t *dest = _dest;
 	const uint8_t *src = _src;
@@ -55,7 +56,7 @@ void __memcpy(void *_dest, const void *_src, size_t length)
 /*
  * Fast-ish clear, 8 bytes at a time.
  */
-void __bzero8(void *_dest, size_t length)
+void __bzero8(void *_dest, uint32_t length)
 {
 	uint64_t *dest = _dest;
 
