@@ -303,6 +303,7 @@ pub enum Expression {
     StringLiteral(Vec<StringLiteral>),
     Type(Loc, Type),
     HexLiteral(Vec<HexLiteral>),
+    AddressLiteral(Loc, String),
     Variable(Identifier),
     List(Loc, Vec<(Loc, Option<Parameter>)>),
     ArrayLiteral(Loc, Vec<Expression>),
@@ -367,7 +368,8 @@ impl Expression {
             | Expression::Type(loc, _)
             | Expression::Unit(loc, _, _)
             | Expression::This(loc)
-            | Expression::Variable(Identifier { loc, .. }) => *loc,
+            | Expression::Variable(Identifier { loc, .. })
+            | Expression::AddressLiteral(loc, _) => *loc,
             Expression::StringLiteral(v) => v[0].loc,
             Expression::HexLiteral(v) => v[0].loc,
         }

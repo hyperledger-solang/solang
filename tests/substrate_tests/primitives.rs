@@ -281,23 +281,59 @@ fn address() {
         Target::Substrate,
     );
 
-    assert_eq!(first_error(ns.diagnostics), "address literal has incorrect checksum, expected ‘0xA368dF6DFCD5Ba7b0BC108AF09e98E4655e35A2c3B2e2D5E3Eae6c6f7CD8D2D4’");
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "implicit conversion from uint256 to address not allowed"
+    );
 
     let ns = parse_and_resolve(
-        "contract test {
-            uint256 foo = 0xA368dF6DFCD5Ba7b0BC108AF09e98E4655e35A2c3B2e2D5E3Eae6c6f7CD8D2D4;
-        }",
+        r#"contract test {
+            address foo = address"5GBWmgdFAMqm8ZgAHGobqDqX6tjLxJhv53ygjNtaaAn3sje";
+        }"#,
         Target::Substrate,
     );
 
     assert_eq!(
         first_error(ns.diagnostics),
-        "implicit conversion would truncate from address to uint256"
+        "address literal 5GBWmgdFAMqm8ZgAHGobqDqX6tjLxJhv53ygjNtaaAn3sje incorrect length of 34"
     );
 
     let ns = parse_and_resolve(
+        r#"contract test {
+            address foo = address"5GBWmgdFAMqm8ZgAHGobqDqX6tjLxJhv53ygjNtaaAn3sj%Z";
+        }"#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "address literal 5GBWmgdFAMqm8ZgAHGobqDqX6tjLxJhv53ygjNtaaAn3sj%Z invalid character \'%\'"
+    );
+
+    let ns = parse_and_resolve(
+        r#"contract test {
+            address foo = address"5GBWmgdFAMqm8ZgAHGobqDqX6tjLxJhv53ygjNtaaAn3sjZZ";
+        }"#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "address literal 5GBWmgdFAMqm8ZgAHGobqDqX6tjLxJhv53ygjNtaaAn3sjZZ hash incorrect checksum"
+    );
+
+    let ns = parse_and_resolve(
+        r#"contract test {
+            address foo = address"5GBWmgdFAMqm8ZgAHGobqDqX6tjLxJhv53ygjNtaaAn3sjeZ";
+        }"#,
+        Target::Substrate,
+    );
+
+    no_errors(ns.diagnostics);
+
+    let ns = parse_and_resolve(
         "contract test {
-            address foo = 0xA368dF6DFCD5Ba7b0BC108AF09e98E4655e35A2c3B2e2D5E3Eae6c6f7CD8D2D4;
+            address foo = address(0xA368dF6DFCD5Ba7b0BC108AF09e98E4655e35A2c3B2e2D5E3Eae6c6f7CD8D2D4);
 
             function bar() private returns (bool) {
                 return foo > address(0);
@@ -313,7 +349,7 @@ fn address() {
 
     let ns = parse_and_resolve(
         "contract test {
-            address foo = 0xA368dF6DFCD5Ba7b0BC108AF09e98E4655e35A2c3B2e2D5E3Eae6c6f7CD8D2D4;
+            address foo = address(0xA368dF6DFCD5Ba7b0BC108AF09e98E4655e35A2c3B2e2D5E3Eae6c6f7CD8D2D4);
 
             function bar() private returns (address) {
                 return foo + address(1);
@@ -329,7 +365,7 @@ fn address() {
 
     let ns = parse_and_resolve(
         "contract test {
-            address foo = 0xA368dF6DFCD5Ba7b0BC108AF09e98E4655e35A2c3B2e2D5E3Eae6c6f7CD8D2D4;
+            address foo = address(0xA368dF6DFCD5Ba7b0BC108AF09e98E4655e35A2c3B2e2D5E3Eae6c6f7CD8D2D4);
 
             function bar() private returns (address) {
                 return foo | address(1);
@@ -352,7 +388,7 @@ fn address() {
 
     assert_eq!(
         first_error(ns.diagnostics),
-        "address literal ‘0x5b0Ddf2835f0A76c96D6113D47F6482e51a55487’ has length of ethereum address (20 bytes). Addresses are 32 bytes on target Substrate"
+        "ethereum address literal ‘0x5b0Ddf2835f0A76c96D6113D47F6482e51a55487’ not supported on target Substrate"
     );
 
     #[derive(Debug, PartialEq, Encode, Decode)]
@@ -363,11 +399,11 @@ fn address() {
         "
         contract test {
             function check_return() public returns (address) {
-                return 0x7d5839e24ACaDa338c257643a7d2e025453F77D058b8335C1c3791Bc6742b320;
+                return address(0x7d5839e24ACaDa338c257643a7d2e025453F77D058b8335C1c3791Bc6742b320);
             }
 
             function check_param(address a) public {
-                assert(a == 0x8D166E028f3148854F2427d29B8755F617EED0651Bc6C8809b189200A4E3aaa9);
+                assert(a == address(0x8D166E028f3148854F2427d29B8755F617EED0651Bc6C8809b189200A4E3aaa9));
             }
         }",
     );

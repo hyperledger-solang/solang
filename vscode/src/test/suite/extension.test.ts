@@ -27,7 +27,7 @@ suite('Extension Test Suite', function () {
 	test('Testing for diagnostic errors.', async () => {
 		await testdiagnos(diagnosdoc2, [
 			{
-				message: 'unrecognised token `}\', expected "!", "(", "+", "++", "-", "--", "[", "address", "bool", "bytes", "delete", "false", "function", "mapping", "new", "payable", "string", "this", "true", "~", Bytes, Int, Uint, hexnumber, hexstring, identifier, number, string',
+				message: 'unrecognised token `}\', expected "!", "(", "+", "++", "-", "--", "[", "address", "bool", "bytes", "delete", "false", "function", "mapping", "new", "payable", "string", "this", "true", "~", Bytes, Int, Uint, address, hexnumber, hexstring, identifier, number, string',
 				range: toRange(13, 1, 13, 2), severity: vscode.DiagnosticSeverity.Error, source: 'solidity'
 			}
 		]

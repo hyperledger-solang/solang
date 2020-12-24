@@ -40,6 +40,7 @@ libc = "0.2"
 tower-lsp = "0.13"
 lsp-types = "0.81"
 tokio = { version = "0.2", features = ["rt-core", "io-std"] }
+base58 = "0.1.0"
 
 [dev-dependencies]
 parity-scale-codec-derive = "1.2"

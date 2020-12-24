@@ -23,6 +23,7 @@ pub enum CommentType {
 pub enum Token<'input> {
     Identifier(&'input str),
     StringLiteral(&'input str),
+    AddressLiteral(&'input str),
     HexLiteral(&'input str),
     Number(&'input str, &'input str),
     HexNumber(&'input str),
@@ -178,6 +179,7 @@ impl<'input> fmt::Display for Token<'input> {
             Token::Identifier(id) => write!(f, "{}", id),
             Token::StringLiteral(s) => write!(f, "\"{}\"", s),
             Token::HexLiteral(hex) => write!(f, "{}", hex),
+            Token::AddressLiteral(address) => write!(f, "{}", address),
             Token::Number(base, exp) if exp.is_empty() => write!(f, "{}", base),
             Token::Number(base, exp) => write!(f, "{}e{}", base, exp),
             Token::HexNumber(n) => write!(f, "{}", n),
@@ -695,6 +697,32 @@ impl<'input> Lexer<'input> {
                                         return Some(Err(
                                             LexicalError::InvalidCharacterInHexLiteral(i, ch),
                                         ));
+                                    }
+                                }
+
+                                return Some(Err(LexicalError::EndOfFileInString(
+                                    start,
+                                    self.input.len(),
+                                )));
+                            }
+                            _ => (),
+                        }
+                    }
+
+                    if id == "address" {
+                        match self.chars.peek() {
+                            Some((_, quote_char @ '"')) | Some((_, quote_char @ '\'')) => {
+                                let quote_char = *quote_char;
+
+                                self.chars.next();
+
+                                while let Some((i, ch)) = self.chars.next() {
+                                    if ch == quote_char {
+                                        return Some(Ok((
+                                            start,
+                                            Token::AddressLiteral(&self.input[start..=i]),
+                                            i + 1,
+                                        )));
                                     }
                                 }
 

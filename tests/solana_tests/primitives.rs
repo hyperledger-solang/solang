@@ -97,11 +97,11 @@ fn address() {
         r#"
         contract foo {
             function return_address() public returns (address) {
-                return 0x7d5839e24ACaDa338c257643a7d2e025453F77D058b8335C1c3791Bc6742b320;
+                return address'CXQw5tfeRKKzV4hk6PcdyKyANSvFxoZCKwHkVXAhAYSJ';
             }
 
             function address_arg(address a) public {
-                assert(a == 0x8D166E028f3148854F2427d29B8755F617EED0651Bc6C8809b189200A4E3aaa9);
+                assert(a == address'66Eh1STPJgabub73TP8YbN7VNCwjaVTEJGHRxCLeBJ4A');
             }
         }"#,
     );
@@ -113,18 +113,16 @@ fn address() {
     assert_eq!(
         returns,
         vec![ethabi::Token::FixedBytes(vec![
-            0x7d, 0x58, 0x39, 0xe2, 0x4a, 0xca, 0xda, 0x33, 0x8c, 0x25, 0x76, 0x43, 0xa7, 0xd2,
-            0xe0, 0x25, 0x45, 0x3f, 0x77, 0xd0, 0x58, 0xb8, 0x33, 0x5c, 0x1c, 0x37, 0x91, 0xbc,
-            0x67, 0x42, 0xb3, 0x20,
+            171, 59, 10, 127, 211, 122, 217, 123, 53, 213, 159, 40, 54, 36, 50, 52, 196, 144, 17,
+            226, 97, 168, 69, 213, 79, 14, 6, 232, 165, 44, 58, 31
         ]),]
     );
 
     vm.function(
         "address_arg",
         &[ethabi::Token::FixedBytes(vec![
-            0x8d, 0x16, 0x6e, 0x2, 0x8f, 0x31, 0x48, 0x85, 0x4f, 0x24, 0x27, 0xd2, 0x9b, 0x87,
-            0x55, 0xf6, 0x17, 0xee, 0xd0, 0x65, 0x1b, 0xc6, 0xc8, 0x80, 0x9b, 0x18, 0x92, 0x0,
-            0xa4, 0xe3, 0xaa, 0xa9,
+            75, 161, 209, 89, 47, 84, 50, 13, 23, 127, 94, 21, 50, 249, 250, 185, 117, 49, 186,
+            134, 82, 130, 112, 97, 218, 24, 157, 198, 40, 105, 118, 27,
         ])],
     );
 }

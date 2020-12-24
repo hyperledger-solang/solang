@@ -253,8 +253,8 @@ ________________________________
 
 The ``address`` type holds the address of an account. The length of an ``address`` type depends on
 the target being compiled for. On ewasm, an address is 20 bytes. Substrate has an address length
-of 32 bytes. It can be initialized with a particular
-hexadecimal number, called an address literal. Here is an example on ewasm:
+of 32 bytes. The format of an address literal depends on what target you are building for. On ewasm,
+ethereum addresses can be specified with a particular hexadecimal number.
 
 .. code-block:: javascript
 
@@ -278,6 +278,13 @@ In order to fix the address literal, copy the address literal from the compiler 
 .. code-block:: none
 
   error: address literal has incorrect checksum, expected ‘0xE9430d8C01C4E4Bb33E44fd7748942085D82fC91’
+
+Substrate or Solana addresses are base58 encoded, not hexadecimal. An address literal can be specified with
+the special syntax ``address"<account>"``.
+
+.. code-block:: javascript
+
+    address foo = address"5GBWmgdFAMqm8ZgAHGobqDqX6tjLxJhv53ygjNtaaAn3sjeZ";
 
 An address can be payable or not. An payable address can used with the
 :ref:`.send() and .transfer() functions <send_transfer>`, and
