@@ -6066,61 +6066,54 @@ impl<'a> Contract<'a> {
     }
 }
 
-static STDLIB_IR: &[u8] = include_bytes!("../../stdlib/wasm/stdlib.bc");
+static BPF_IR: [&[u8]; 4] = [
+    include_bytes!("../../stdlib/bpf/stdlib.bc"),
+    include_bytes!("../../stdlib/bpf/bigint.bc"),
+    include_bytes!("../../stdlib/bpf/format.bc"),
+    include_bytes!("../../stdlib/bpf/solana.bc"),
+];
+
+static WASM_IR: [&[u8]; 4] = [
+    include_bytes!("../../stdlib/wasm/stdlib.bc"),
+    include_bytes!("../../stdlib/wasm/wasmheap.bc"),
+    include_bytes!("../../stdlib/wasm/bigint.bc"),
+    include_bytes!("../../stdlib/wasm/format.bc"),
+];
+
 static SHA3_IR: &[u8] = include_bytes!("../../stdlib/wasm/sha3.bc");
 static RIPEMD160_IR: &[u8] = include_bytes!("../../stdlib/wasm/ripemd160.bc");
 static SUBSTRATE_IR: &[u8] = include_bytes!("../../stdlib/wasm/substrate.bc");
-static WASMHEAP_IR: &[u8] = include_bytes!("../../stdlib/wasm/wasmheap.bc");
-static BIGINT_WASM_IR: &[u8] = include_bytes!("../../stdlib/wasm/bigint.bc");
-static BIGINT_BPF_IR: &[u8] = include_bytes!("../../stdlib/bpf/bigint.bc");
-static FORMAT_WASM_IR: &[u8] = include_bytes!("../../stdlib/wasm/format.bc");
-static FORMAT_BPF_IR: &[u8] = include_bytes!("../../stdlib/bpf/format.bc");
-static SOLANA_IR: &[u8] = include_bytes!("../../stdlib/bpf/solana.bc");
 
 /// Return the stdlib as parsed llvm module. The solidity standard library is hardcoded into
 /// the solang library
 fn load_stdlib<'a>(context: &'a Context, target: &Target) -> Module<'a> {
     if *target == Target::Solana {
-        let memory = MemoryBuffer::create_from_memory_range(SOLANA_IR, "solana");
+        let memory = MemoryBuffer::create_from_memory_range(&BPF_IR[0], "bpf_bc");
 
         let module = Module::parse_bitcode_from_buffer(&memory, context).unwrap();
 
-        let memory = MemoryBuffer::create_from_memory_range(BIGINT_BPF_IR, "bigint");
+        for bc in BPF_IR.iter().skip(1) {
+            let memory = MemoryBuffer::create_from_memory_range(bc, "bpf_bc");
 
-        module
-            .link_in_module(Module::parse_bitcode_from_buffer(&memory, context).unwrap())
-            .unwrap();
-
-        let memory = MemoryBuffer::create_from_memory_range(FORMAT_BPF_IR, "format");
-
-        module
-            .link_in_module(Module::parse_bitcode_from_buffer(&memory, context).unwrap())
-            .unwrap();
+            module
+                .link_in_module(Module::parse_bitcode_from_buffer(&memory, context).unwrap())
+                .unwrap();
+        }
 
         return module;
     }
 
-    let memory = MemoryBuffer::create_from_memory_range(STDLIB_IR, "stdlib");
+    let memory = MemoryBuffer::create_from_memory_range(&WASM_IR[0], "wasm_bc");
 
     let module = Module::parse_bitcode_from_buffer(&memory, context).unwrap();
 
-    let memory = MemoryBuffer::create_from_memory_range(BIGINT_WASM_IR, "bigint");
+    for bc in WASM_IR.iter().skip(1) {
+        let memory = MemoryBuffer::create_from_memory_range(bc, "wasm_bc");
 
-    module
-        .link_in_module(Module::parse_bitcode_from_buffer(&memory, context).unwrap())
-        .unwrap();
-
-    let memory = MemoryBuffer::create_from_memory_range(FORMAT_WASM_IR, "format");
-
-    module
-        .link_in_module(Module::parse_bitcode_from_buffer(&memory, context).unwrap())
-        .unwrap();
-
-    let memory = MemoryBuffer::create_from_memory_range(WASMHEAP_IR, "wasmheap");
-
-    module
-        .link_in_module(Module::parse_bitcode_from_buffer(&memory, context).unwrap())
-        .unwrap();
+        module
+            .link_in_module(Module::parse_bitcode_from_buffer(&memory, context).unwrap())
+            .unwrap();
+    }
 
     if Target::Substrate == *target {
         let memory = MemoryBuffer::create_from_memory_range(SUBSTRATE_IR, "substrate");
