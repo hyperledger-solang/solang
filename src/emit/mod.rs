@@ -6070,6 +6070,7 @@ static STDLIB_IR: &[u8] = include_bytes!("../../stdlib/wasm/stdlib.bc");
 static SHA3_IR: &[u8] = include_bytes!("../../stdlib/wasm/sha3.bc");
 static RIPEMD160_IR: &[u8] = include_bytes!("../../stdlib/wasm/ripemd160.bc");
 static SUBSTRATE_IR: &[u8] = include_bytes!("../../stdlib/wasm/substrate.bc");
+static WASMHEAP_IR: &[u8] = include_bytes!("../../stdlib/wasm/wasmheap.bc");
 static BIGINT_WASM_IR: &[u8] = include_bytes!("../../stdlib/wasm/bigint.bc");
 static BIGINT_BPF_IR: &[u8] = include_bytes!("../../stdlib/bpf/bigint.bc");
 static FORMAT_WASM_IR: &[u8] = include_bytes!("../../stdlib/wasm/format.bc");
@@ -6110,6 +6111,12 @@ fn load_stdlib<'a>(context: &'a Context, target: &Target) -> Module<'a> {
         .unwrap();
 
     let memory = MemoryBuffer::create_from_memory_range(FORMAT_WASM_IR, "format");
+
+    module
+        .link_in_module(Module::parse_bitcode_from_buffer(&memory, context).unwrap())
+        .unwrap();
+
+    let memory = MemoryBuffer::create_from_memory_range(WASMHEAP_IR, "wasmheap");
 
     module
         .link_in_module(Module::parse_bitcode_from_buffer(&memory, context).unwrap())
