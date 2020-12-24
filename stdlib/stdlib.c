@@ -59,21 +59,10 @@ void __bzero8(void *_dest, size_t length)
 {
 	uint64_t *dest = _dest;
 
-	do
+	while (length--)
+	{
 		*dest++ = 0;
-	while (--length);
-}
-
-/*
- * Fast-ish set, 8 bytes at a time.
- */
-void __bset8(void *_dest, size_t length)
-{
-	int64_t *dest = _dest;
-
-	do
-		*dest++ = -1;
-	while (--length);
+	}
 }
 
 /*

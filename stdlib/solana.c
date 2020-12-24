@@ -41,9 +41,10 @@ void __bzero8(void *_dest, uint32_t length)
 {
     uint64_t *dest = _dest;
 
-    do
+    while (length--)
+    {
         *dest++ = 0;
-    while (--length);
+    }
 }
 
 void __memset8(void *_dest, uint64_t val, uint32_t length)
