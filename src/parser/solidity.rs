@@ -1,5 +1,5 @@
 // auto-generated: "lalrpop 0.19.1"
-// sha256: b4ebd3a9fc2db0b519691bda3845e4ffc25268e7429f2e715bb4bd9a87b72
+// sha256: c1a758427bd0bd88a580a61f4a19cb7d57b966a8fb335e8e9b2170878113d21d
 use std::str::FromStr;
 use num_bigint::BigInt;
 use num_bigint::BigUint;
@@ -14402,10 +14402,10 @@ fn __action59<
     (_, ty, _): (usize, ContractTy, usize),
     (_, name, _): (usize, Identifier, usize),
     (_, base, _): (usize, Vec<Base>, usize),
+    (_, r, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, parts, _): (usize, ::std::vec::Vec<ContractPart>, usize),
     (_, _, _): (usize, Token<'input>, usize),
-    (_, r, _): (usize, usize, usize),
 ) -> Box<ContractDefinition>
 {
     {
@@ -20077,13 +20077,13 @@ fn __action391<
     __2: (usize, ContractTy, usize),
     __3: (usize, Identifier, usize),
     __4: (usize, Vec<Base>, usize),
-    __5: (usize, Token<'input>, usize),
+    __5: (usize, usize, usize),
     __6: (usize, Token<'input>, usize),
-    __7: (usize, usize, usize),
+    __7: (usize, Token<'input>, usize),
 ) -> Box<ContractDefinition>
 {
-    let __start0 = __5.2.clone();
-    let __end0 = __6.0.clone();
+    let __start0 = __6.2.clone();
+    let __end0 = __7.0.clone();
     let __temp0 = __action261(
         input,
         file_no,
@@ -20100,8 +20100,8 @@ fn __action391<
         __3,
         __4,
         __5,
-        __temp0,
         __6,
+        __temp0,
         __7,
     )
 }
@@ -20117,18 +20117,18 @@ fn __action392<
     __2: (usize, ContractTy, usize),
     __3: (usize, Identifier, usize),
     __4: (usize, Vec<Base>, usize),
-    __5: (usize, Token<'input>, usize),
-    __6: (usize, ::std::vec::Vec<ContractPart>, usize),
-    __7: (usize, Token<'input>, usize),
-    __8: (usize, usize, usize),
+    __5: (usize, usize, usize),
+    __6: (usize, Token<'input>, usize),
+    __7: (usize, ::std::vec::Vec<ContractPart>, usize),
+    __8: (usize, Token<'input>, usize),
 ) -> Box<ContractDefinition>
 {
-    let __start0 = __6.0.clone();
-    let __end0 = __6.2.clone();
+    let __start0 = __7.0.clone();
+    let __end0 = __7.2.clone();
     let __temp0 = __action262(
         input,
         file_no,
-        __6,
+        __7,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action59(
@@ -20140,8 +20140,8 @@ fn __action392<
         __3,
         __4,
         __5,
+        __6,
         __temp0,
-        __7,
         __8,
     )
 }
@@ -21004,9 +21004,9 @@ fn __action415<
     __1: (usize, ContractTy, usize),
     __2: (usize, Identifier, usize),
     __3: (usize, Vec<Base>, usize),
-    __4: (usize, Token<'input>, usize),
+    __4: (usize, usize, usize),
     __5: (usize, Token<'input>, usize),
-    __6: (usize, usize, usize),
+    __6: (usize, Token<'input>, usize),
 ) -> Box<ContractDefinition>
 {
     let __start0 = __0.2.clone();
@@ -21042,10 +21042,10 @@ fn __action416<
     __1: (usize, ContractTy, usize),
     __2: (usize, Identifier, usize),
     __3: (usize, Vec<Base>, usize),
-    __4: (usize, Token<'input>, usize),
-    __5: (usize, ::std::vec::Vec<ContractPart>, usize),
-    __6: (usize, Token<'input>, usize),
-    __7: (usize, usize, usize),
+    __4: (usize, usize, usize),
+    __5: (usize, Token<'input>, usize),
+    __6: (usize, ::std::vec::Vec<ContractPart>, usize),
+    __7: (usize, Token<'input>, usize),
 ) -> Box<ContractDefinition>
 {
     let __start0 = __0.2.clone();
@@ -25694,8 +25694,8 @@ fn __action560<
     __5: (usize, Token<'input>, usize),
 ) -> Box<ContractDefinition>
 {
-    let __start0 = __5.2.clone();
-    let __end0 = __5.2.clone();
+    let __start0 = __3.2.clone();
+    let __end0 = __4.0.clone();
     let __temp0 = __action283(
         input,
         file_no,
@@ -25710,9 +25710,9 @@ fn __action560<
         __1,
         __2,
         __3,
+        __temp0,
         __4,
         __5,
-        __temp0,
     )
 }
 
@@ -25731,8 +25731,8 @@ fn __action561<
     __6: (usize, Token<'input>, usize),
 ) -> Box<ContractDefinition>
 {
-    let __start0 = __6.2.clone();
-    let __end0 = __6.2.clone();
+    let __start0 = __3.2.clone();
+    let __end0 = __4.0.clone();
     let __temp0 = __action283(
         input,
         file_no,
@@ -25747,10 +25747,10 @@ fn __action561<
         __1,
         __2,
         __3,
+        __temp0,
         __4,
         __5,
         __6,
-        __temp0,
     )
 }
 

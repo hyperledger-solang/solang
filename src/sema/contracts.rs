@@ -594,16 +594,27 @@ fn layout_contract(contract_no: usize, ns: &mut ast::Namespace) {
 
         // virtual functions without a body
         if list.len() == 1 {
+            let loc = ns.contracts[contract_no].loc;
             match func.ty {
                 pt::FunctionTy::Fallback | pt::FunctionTy::Receive => {
-                    ns.diagnostics.push(ast::Diagnostic::error(
+                    ns.diagnostics.push(ast::Diagnostic::error_with_note(
+                        loc,
+                        format!(
+                            "contract ‘{}’ missing override for ‘{}’ function",
+                            ns.contracts[contract_no].name, func.ty
+                        ),
                         func.loc,
-                        format!("missing override for ‘{}’ function", func.ty),
+                        format!("declaration of ‘{}’ function", func.ty),
                     ));
                 }
-                _ => ns.diagnostics.push(ast::Diagnostic::error(
+                _ => ns.diagnostics.push(ast::Diagnostic::error_with_note(
+                    loc,
+                    format!(
+                        "contract ‘{}’ missing override for function ‘{}’",
+                        ns.contracts[contract_no].name, func.name
+                    ),
                     func.loc,
-                    format!("missing override for function ‘{}’", func.name),
+                    format!("declaration of function ‘{}’", func.name),
                 )),
             }
 
