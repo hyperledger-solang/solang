@@ -6,6 +6,7 @@ use tower_lsp::{LspService, Server};
 
 use solang::file_cache::FileCache;
 use solang::parse_and_resolve;
+use solang::parser::pt;
 use solang::Target;
 
 use lsp_types::{Diagnostic, DiagnosticSeverity, HoverProviderCapability, Position, Range};
@@ -45,74 +46,84 @@ pub fn start_server(target: Target) {
 impl SolangServer {
     // Calculate the line and coloumn from the Loc offset recieved from the parser
     // Do a linear search till the correct offset location is matched
-    fn file_offset_to_line_column(data: &str, loc: usize) -> (usize, usize) {
-        let mut line_no = 0;
-        let mut past_ch = 0;
+    fn file_offset_to_range(
+        loc: &pt::Loc,
+        offset_converter: &[diagnostics::OffsetToLineColumn],
+    ) -> Range {
+        let (line, column) = offset_converter[loc.0].convert(loc.1);
+        let start = Position::new(line as u64 - 1, column as u64 - 1);
+        let (line, column) = offset_converter[loc.0].convert(loc.2);
+        let end = Position::new(line as u64 - 1, column as u64 - 1);
 
-        for (ind, c) in data.char_indices() {
-            if c == '\n' {
-                if ind == loc {
-                    break;
-                } else {
-                    past_ch = ind + 1;
-                    line_no += 1;
-                }
-            }
-            if ind == loc {
-                break;
-            }
-        }
-
-        (line_no, loc - past_ch)
+        Range::new(start, end)
     }
 
     // Convert the diagnostic messages recieved from the solang to lsp diagnostics types.
     // Returns a vector of diagnostic messages for the client.
     fn convert_to_diagnostics(ns: ast::Namespace, filecache: &mut FileCache) -> Vec<Diagnostic> {
-        let mut diagnostics_vec: Vec<Diagnostic> = Vec::new();
+        let offset_converter: Vec<diagnostics::OffsetToLineColumn> = ns
+            .files
+            .iter()
+            .map(|filename| {
+                diagnostics::OffsetToLineColumn::new(&*filecache.get_file_contents(filename))
+            })
+            .collect();
 
-        for diag in ns.diagnostics {
-            let pos = diag.pos.unwrap();
+        ns.diagnostics
+            .iter()
+            .filter_map(|diag| {
+                let related_information = if diag.notes.is_empty() {
+                    None
+                } else {
+                    Some(
+                        diag.notes
+                            .iter()
+                            .map(|note| {
+                                let range = SolangServer::file_offset_to_range(
+                                    &note.pos,
+                                    &offset_converter,
+                                );
 
-            let diagnostic = &diag;
+                                DiagnosticRelatedInformation {
+                                    message: note.message.to_string(),
+                                    location: Location {
+                                        uri: Url::parse(&format!(
+                                            "file://{}",
+                                            ns.files[note.pos.0].display()
+                                        ))
+                                        .unwrap(),
+                                        range,
+                                    },
+                                }
+                            })
+                            .collect(),
+                    )
+                };
 
-            let sev = match diagnostic.level {
-                ast::Level::Info => DiagnosticSeverity::Information,
-                ast::Level::Warning => DiagnosticSeverity::Warning,
-                ast::Level::Error => DiagnosticSeverity::Error,
-                ast::Level::Debug => continue,
-            };
+                let pos = diag.pos.unwrap();
 
-            let mut file_str = "".to_owned();
-            for fils in ns.files.iter() {
-                let file_cont = filecache.get_file_contents(fils);
-                file_str.push_str(&file_cont);
-            }
+                let sev = match diag.level {
+                    ast::Level::Info => DiagnosticSeverity::Information,
+                    ast::Level::Warning => DiagnosticSeverity::Warning,
+                    ast::Level::Error => DiagnosticSeverity::Error,
+                    ast::Level::Debug => {
+                        return None;
+                    }
+                };
 
-            let l1 = SolangServer::file_offset_to_line_column(&file_str, pos.1);
+                let range = SolangServer::file_offset_to_range(&pos, &offset_converter);
 
-            let l2 = SolangServer::file_offset_to_line_column(&file_str, pos.2);
-
-            let p1 = Position::new(l1.0 as u64, l1.1 as u64);
-
-            let p2 = Position::new(l2.0 as u64, l2.1 as u64);
-
-            let range = Range::new(p1, p2);
-
-            let message_slice = &diag.message[..];
-
-            diagnostics_vec.push(Diagnostic {
-                range,
-                message: message_slice.to_string(),
-                severity: Some(sev),
-                source: Some("solidity".to_string()),
-                code: None,
-                related_information: None,
-                tags: None,
-            });
-        }
-
-        diagnostics_vec
+                Some(Diagnostic {
+                    range,
+                    message: diag.message.to_string(),
+                    severity: Some(sev),
+                    source: Some("solidity".to_string()),
+                    code: None,
+                    related_information,
+                    tags: None,
+                })
+            })
+            .collect()
     }
 
     fn construct_builtins(
