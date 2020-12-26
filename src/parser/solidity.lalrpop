@@ -168,8 +168,8 @@ Base: Base = {
 }
 
 ContractDefinition: Box<ContractDefinition> = {
-    <doc:DocComments> <l:@L> <ty:ContractTy> <name:Identifier> <base:Bases>
-    "{" <parts:(<ContractPart>)*> "}" <r:@R> => {
+    <doc:DocComments> <l:@L> <ty:ContractTy> <name:Identifier> <base:Bases> <r:@R>
+    "{" <parts:(<ContractPart>)*> "}" => {
         Box::new(ContractDefinition{doc, loc: Loc(file_no, l, r), ty, name, base, parts})
     }
 }

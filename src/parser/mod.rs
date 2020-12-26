@@ -88,7 +88,7 @@ mod test {
         let a = SourceUnit(vec![SourceUnitPart::ContractDefinition(Box::new(
             ContractDefinition {
                 doc: vec![],
-                loc: Loc(0, 0, 325),
+                loc: Loc(0, 0, 13),
                 ty: ContractTy::Contract(Loc(0, 0, 8)),
                 name: Identifier {
                     loc: Loc(0, 9, 12),

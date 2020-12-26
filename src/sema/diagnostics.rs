@@ -2,7 +2,6 @@ use super::ast::{Diagnostic, ErrorType, Level, Namespace, Note};
 use crate::file_cache::FileCache;
 use crate::parser::pt::Loc;
 use serde::Serialize;
-use std::path::PathBuf;
 
 impl Level {
     pub fn to_string(&self) -> &'static str {
@@ -132,13 +131,10 @@ impl Diagnostic {
         }
     }
 
-    fn formated_message(
-        &self,
-        filename: &PathBuf,
-        offset_converter: &OffsetToLineColumn,
-    ) -> String {
+    fn formated_message(&self, offset_converter: &[OffsetToLineColumn], ns: &Namespace) -> String {
         let mut s = if let Some(pos) = self.pos {
-            let loc = offset_converter.to_string(pos);
+            let loc = offset_converter[pos.0].to_string(pos);
+            let filename = &ns.files[pos.0];
 
             format!(
                 "{}:{}: {}: {}",
@@ -152,7 +148,8 @@ impl Diagnostic {
         };
 
         for note in &self.notes {
-            let loc = offset_converter.to_string(note.pos);
+            let loc = offset_converter[note.pos.0].to_string(note.pos);
+            let filename = &ns.files[note.pos.0];
 
             s.push_str(&format!(
                 "\n\t{}:{}: {}: {}",
@@ -168,25 +165,18 @@ impl Diagnostic {
 }
 
 pub fn print_messages(cache: &mut FileCache, ns: &Namespace, debug: bool) {
-    let mut current_file_no = None;
-    let mut offset_converter = OffsetToLineColumn(Vec::new());
-    let mut filename = &PathBuf::new();
+    let offset_converter: Vec<OffsetToLineColumn> = ns
+        .files
+        .iter()
+        .map(|filename| OffsetToLineColumn::new(&*cache.get_file_contents(filename)))
+        .collect();
 
     for msg in &ns.diagnostics {
         if !debug && msg.level == Level::Debug {
             continue;
         }
 
-        let file_no = msg.pos.map(|pos| pos.0);
-
-        if file_no != current_file_no {
-            filename = &ns.files[file_no.unwrap()];
-
-            offset_converter = OffsetToLineColumn::new(&*cache.get_file_contents(filename));
-            current_file_no = file_no;
-        }
-
-        eprintln!("{}", msg.formated_message(filename, &offset_converter));
+        eprintln!("{}", msg.formated_message(&offset_converter, ns));
     }
 }
 
@@ -217,9 +207,11 @@ pub struct OutputJson {
 pub fn message_as_json(cache: &mut FileCache, ns: &Namespace) -> Vec<OutputJson> {
     let mut json = Vec::new();
 
-    let mut current_file_no = None;
-    let mut offset_converter = OffsetToLineColumn(Vec::new());
-    let mut filename = &PathBuf::new();
+    let offset_converter: Vec<OffsetToLineColumn> = ns
+        .files
+        .iter()
+        .map(|filename| OffsetToLineColumn::new(&*cache.get_file_contents(filename)))
+        .collect();
 
     for msg in &ns.diagnostics {
         if msg.level == Level::Info {
@@ -227,13 +219,7 @@ pub fn message_as_json(cache: &mut FileCache, ns: &Namespace) -> Vec<OutputJson>
         }
 
         let file_no = msg.pos.map(|pos| pos.0);
-
-        if file_no != current_file_no {
-            filename = &ns.files[file_no.unwrap()];
-
-            offset_converter = OffsetToLineColumn::new(&*cache.get_file_contents(filename));
-            current_file_no = file_no;
-        }
+        let filename = &ns.files[file_no.unwrap()];
 
         let loc_json = if let Some(pos) = msg.pos {
             Some(LocJson {
@@ -251,7 +237,7 @@ pub fn message_as_json(cache: &mut FileCache, ns: &Namespace) -> Vec<OutputJson>
             component: "general".to_owned(),
             severity: msg.level.to_string().to_owned(),
             message: msg.message.to_owned(),
-            formattedMessage: msg.formated_message(filename, &offset_converter),
+            formattedMessage: msg.formated_message(&offset_converter, ns),
         });
     }
 

@@ -1140,7 +1140,7 @@ fn test_override() {
 
     assert_eq!(
         first_error(ns.diagnostics),
-        "missing override for function ‘bar’"
+        "contract ‘a’ missing override for function ‘bar’"
     );
 
     let ns = parse_and_resolve(
