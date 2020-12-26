@@ -539,13 +539,27 @@ pub fn try_cast(
     match (&expr, &from, to) {
         (&Expression::NumberLiteral(_, _, ref n), p, &Type::Uint(to_len)) if p.is_primitive() => {
             return if n.sign() == Sign::Minus {
-                Err(Diagnostic::type_error(
-                    *loc,
-                    format!(
-                        "implicit conversion cannot change negative number to {}",
-                        to.to_string(ns)
-                    ),
-                ))
+                if implicit {
+                    Err(Diagnostic::type_error(
+                        *loc,
+                        format!(
+                            "implicit conversion cannot change negative number to {}",
+                            to.to_string(ns)
+                        ),
+                    ))
+                } else {
+                    // Convert to little endian so most significant bytes are at the end; that way
+                    // we can simply resize the vector to the right size
+                    let mut bs = n.to_signed_bytes_le();
+
+                    bs.resize(to_len as usize / 8, 0xff);
+
+                    Ok(Expression::NumberLiteral(
+                        *loc,
+                        Type::Uint(to_len),
+                        BigInt::from_bytes_le(Sign::Plus, &bs),
+                    ))
+                }
             } else if n.bits() >= to_len as u64 {
                 Err(Diagnostic::type_error(
                     *loc,
@@ -561,7 +575,7 @@ pub fn try_cast(
                     Type::Uint(to_len),
                     n.clone(),
                 ))
-            }
+            };
         }
         (&Expression::NumberLiteral(_, _, ref n), p, &Type::Int(to_len)) if p.is_primitive() => {
             return if n.bits() >= to_len as u64 {

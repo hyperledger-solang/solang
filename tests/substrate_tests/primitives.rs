@@ -808,3 +808,20 @@ fn implicit_bytes_cast_incompatible_size() {
 
     runtime.function("test", Vec::new());
 }
+
+#[test]
+fn signed_literal_unsigned_cast() {
+    let mut runtime = build_solidity(
+        r##"
+        contract test {
+            function foo() public {
+                assert(uint16(-1) == 0xffff);
+                assert(uint8(-2) == 0xfe);
+                assert(uint32(-3) == 0xffff_fffd);
+                assert(uint8(-4000) == 96);
+            }
+        }"##,
+    );
+
+    runtime.function("foo", Vec::new());
+}
