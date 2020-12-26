@@ -1143,7 +1143,7 @@ fn bytes_bitwise() {
             }
 
             function xor(bytes5 x) public returns (bytes5) {
-                x ^= hex\"FF00\";
+                x ^= 0xFF00000000;
 
                 return x;
             }

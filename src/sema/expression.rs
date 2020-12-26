@@ -581,6 +581,31 @@ pub fn try_cast(
                 ))
             }
         }
+        // conversion from constant number to bytesN allowed as long as byte length match
+        (&Expression::NumberLiteral(_, _, ref n), p, &Type::Bytes(to_len)) if p.is_primitive() => {
+            let (sign, bs) = n.to_bytes_be();
+
+            return if sign == Sign::Minus {
+                Err(Diagnostic::type_error(
+                    *loc,
+                    format!(
+                        "implicit conversion cannot change negative number to {}",
+                        to.to_string(ns)
+                    ),
+                ))
+            } else if to_len as usize != bs.len() {
+                Err(Diagnostic::type_error(
+                    *loc,
+                    format!(
+                        "implicit conversion from constant {} bytes to {} not possible",
+                        bs.len(),
+                        to.to_string(ns)
+                    ),
+                ))
+            } else {
+                Ok(Expression::BytesLiteral(*loc, to.clone(), bs))
+            };
+        }
         // Literal strings can be implicitly lengthened
         (&Expression::BytesLiteral(_, _, ref bs), p, &Type::Bytes(to_len)) if p.is_primitive() => {
             return if bs.len() > to_len as usize && implicit {
