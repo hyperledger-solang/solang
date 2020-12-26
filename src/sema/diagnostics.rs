@@ -131,9 +131,9 @@ impl Diagnostic {
         }
     }
 
-    fn formated_message(&self, offset_converter: &[OffsetToLineColumn], ns: &Namespace) -> String {
+    fn formated_message(&self, file_offsets: &FileOffsets, ns: &Namespace) -> String {
         let mut s = if let Some(pos) = self.pos {
-            let loc = offset_converter[pos.0].to_string(pos);
+            let loc = file_offsets.to_string(pos);
             let filename = &ns.files[pos.0];
 
             format!(
@@ -148,7 +148,7 @@ impl Diagnostic {
         };
 
         for note in &self.notes {
-            let loc = offset_converter[note.pos.0].to_string(note.pos);
+            let loc = file_offsets.to_string(note.pos);
             let filename = &ns.files[note.pos.0];
 
             s.push_str(&format!(
@@ -165,18 +165,14 @@ impl Diagnostic {
 }
 
 pub fn print_messages(cache: &mut FileCache, ns: &Namespace, debug: bool) {
-    let offset_converter: Vec<OffsetToLineColumn> = ns
-        .files
-        .iter()
-        .map(|filename| OffsetToLineColumn::new(&*cache.get_file_contents(filename)))
-        .collect();
+    let file_offsets = ns.file_offset(cache);
 
     for msg in &ns.diagnostics {
         if !debug && msg.level == Level::Debug {
             continue;
         }
 
-        eprintln!("{}", msg.formated_message(&offset_converter, ns));
+        eprintln!("{}", msg.formated_message(&file_offsets, ns));
     }
 }
 
@@ -207,11 +203,7 @@ pub struct OutputJson {
 pub fn message_as_json(cache: &mut FileCache, ns: &Namespace) -> Vec<OutputJson> {
     let mut json = Vec::new();
 
-    let offset_converter: Vec<OffsetToLineColumn> = ns
-        .files
-        .iter()
-        .map(|filename| OffsetToLineColumn::new(&*cache.get_file_contents(filename)))
-        .collect();
+    let file_offsets = ns.file_offset(cache);
 
     for msg in &ns.diagnostics {
         if msg.level == Level::Info {
@@ -237,34 +229,22 @@ pub fn message_as_json(cache: &mut FileCache, ns: &Namespace) -> Vec<OutputJson>
             component: "general".to_owned(),
             severity: msg.level.to_string().to_owned(),
             message: msg.message.to_owned(),
-            formattedMessage: msg.formated_message(&offset_converter, ns),
+            formattedMessage: msg.formated_message(&file_offsets, ns),
         });
     }
 
     json
 }
 
-/// Convert byte offset in file to line and column number
-pub struct OffsetToLineColumn(Vec<usize>);
+pub struct FileOffsets {
+    files: Vec<Vec<usize>>,
+}
 
-impl OffsetToLineColumn {
-    /// Create a new mapping for offset to position.
-    pub fn new(src: &str) -> Self {
-        let mut line_starts = Vec::new();
-
-        for (ind, c) in src.char_indices() {
-            if c == '\n' {
-                line_starts.push(ind);
-            }
-        }
-
-        OffsetToLineColumn(line_starts)
-    }
-
+impl FileOffsets {
     /// Give a position as a human readable position
     pub fn to_string(&self, loc: Loc) -> String {
-        let (from_line, from_column) = self.convert(loc.1);
-        let (to_line, to_column) = self.convert(loc.2);
+        let (from_line, from_column) = self.convert(loc.0, loc.1);
+        let (to_line, to_column) = self.convert(loc.0, loc.2);
 
         if from_line == to_line && from_column == to_column {
             format!("{}:{}", from_line, from_column)
@@ -276,12 +256,12 @@ impl OffsetToLineColumn {
     }
 
     /// Convert an offset to line and column number
-    pub fn convert(&self, loc: usize) -> (usize, usize) {
+    pub fn convert(&self, file_no: usize, loc: usize) -> (usize, usize) {
         let mut line_no = 1;
         let mut col_no = loc + 1;
 
         // Here we do a linear scan. It should be possible to do binary search
-        for l in &self.0 {
+        for l in &self.files[file_no] {
             if loc < *l {
                 break;
             }
@@ -291,5 +271,29 @@ impl OffsetToLineColumn {
         }
 
         (line_no, col_no)
+    }
+}
+
+impl Namespace {
+    pub fn file_offset(&self, filecache: &mut FileCache) -> FileOffsets {
+        FileOffsets {
+            files: self
+                .files
+                .iter()
+                .map(|filename| {
+                    let source_code = &*filecache.get_file_contents(filename);
+
+                    let mut line_starts = Vec::new();
+
+                    for (ind, c) in source_code.char_indices() {
+                        if c == '\n' {
+                            line_starts.push(ind);
+                        }
+                    }
+
+                    line_starts
+                })
+                .collect(),
+        }
     }
 }
