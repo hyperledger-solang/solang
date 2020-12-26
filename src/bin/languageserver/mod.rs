@@ -46,13 +46,10 @@ pub fn start_server(target: Target) {
 impl SolangServer {
     // Calculate the line and coloumn from the Loc offset recieved from the parser
     // Do a linear search till the correct offset location is matched
-    fn file_offset_to_range(
-        loc: &pt::Loc,
-        offset_converter: &[diagnostics::OffsetToLineColumn],
-    ) -> Range {
-        let (line, column) = offset_converter[loc.0].convert(loc.1);
+    fn file_offset_to_range(loc: &pt::Loc, file_offsets: &diagnostics::FileOffsets) -> Range {
+        let (line, column) = file_offsets.convert(loc.0, loc.1);
         let start = Position::new(line as u64 - 1, column as u64 - 1);
-        let (line, column) = offset_converter[loc.0].convert(loc.2);
+        let (line, column) = file_offsets.convert(loc.0, loc.2);
         let end = Position::new(line as u64 - 1, column as u64 - 1);
 
         Range::new(start, end)
@@ -61,13 +58,7 @@ impl SolangServer {
     // Convert the diagnostic messages recieved from the solang to lsp diagnostics types.
     // Returns a vector of diagnostic messages for the client.
     fn convert_to_diagnostics(ns: ast::Namespace, filecache: &mut FileCache) -> Vec<Diagnostic> {
-        let offset_converter: Vec<diagnostics::OffsetToLineColumn> = ns
-            .files
-            .iter()
-            .map(|filename| {
-                diagnostics::OffsetToLineColumn::new(&*filecache.get_file_contents(filename))
-            })
-            .collect();
+        let file_offsets = ns.file_offset(filecache);
 
         ns.diagnostics
             .iter()
@@ -79,10 +70,8 @@ impl SolangServer {
                         diag.notes
                             .iter()
                             .map(|note| {
-                                let range = SolangServer::file_offset_to_range(
-                                    &note.pos,
-                                    &offset_converter,
-                                );
+                                let range =
+                                    SolangServer::file_offset_to_range(&note.pos, &file_offsets);
 
                                 DiagnosticRelatedInformation {
                                     message: note.message.to_string(),
@@ -111,7 +100,7 @@ impl SolangServer {
                     }
                 };
 
-                let range = SolangServer::file_offset_to_range(&pos, &offset_converter);
+                let range = SolangServer::file_offset_to_range(&pos, &file_offsets);
 
                 Some(Diagnostic {
                     range,
