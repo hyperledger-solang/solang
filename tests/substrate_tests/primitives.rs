@@ -173,6 +173,30 @@ fn test_literal_overflow() {
         first_error(ns.diagnostics),
         "implicit conversion would truncate from uint72 to int64"
     );
+
+    let ns = parse_and_resolve(
+        "contract test {
+            bytes4 foo = 0xf12233;
+        }",
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "implicit conversion from constant 3 bytes to bytes4 not possible"
+    );
+
+    let ns = parse_and_resolve(
+        "contract test {
+            bytes4 foo = 0x0122334455;
+        }",
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "implicit conversion from constant 5 bytes to bytes4 not possible"
+    );
 }
 
 #[test]
