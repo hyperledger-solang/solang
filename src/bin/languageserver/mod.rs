@@ -46,11 +46,11 @@ pub fn start_server(target: Target) {
 impl SolangServer {
     // Calculate the line and coloumn from the Loc offset recieved from the parser
     // Do a linear search till the correct offset location is matched
-    fn file_offset_to_range(loc: &pt::Loc, file_offsets: &diagnostics::FileOffsets) -> Range {
+    fn loc_to_range(loc: &pt::Loc, file_offsets: &diagnostics::FileOffsets) -> Range {
         let (line, column) = file_offsets.convert(loc.0, loc.1);
-        let start = Position::new(line as u64 - 1, column as u64 - 1);
+        let start = Position::new(line as u64, column as u64);
         let (line, column) = file_offsets.convert(loc.0, loc.2);
-        let end = Position::new(line as u64 - 1, column as u64 - 1);
+        let end = Position::new(line as u64, column as u64);
 
         Range::new(start, end)
     }
@@ -69,21 +69,16 @@ impl SolangServer {
                     Some(
                         diag.notes
                             .iter()
-                            .map(|note| {
-                                let range =
-                                    SolangServer::file_offset_to_range(&note.pos, &file_offsets);
-
-                                DiagnosticRelatedInformation {
-                                    message: note.message.to_string(),
-                                    location: Location {
-                                        uri: Url::parse(&format!(
-                                            "file://{}",
-                                            ns.files[note.pos.0].display()
-                                        ))
-                                        .unwrap(),
-                                        range,
-                                    },
-                                }
+                            .map(|note| DiagnosticRelatedInformation {
+                                message: note.message.to_string(),
+                                location: Location {
+                                    uri: Url::parse(&format!(
+                                        "file://{}",
+                                        ns.files[note.pos.0].display()
+                                    ))
+                                    .unwrap(),
+                                    range: SolangServer::loc_to_range(&note.pos, &file_offsets),
+                                },
                             })
                             .collect(),
                     )
@@ -100,7 +95,7 @@ impl SolangServer {
                     }
                 };
 
-                let range = SolangServer::file_offset_to_range(&pos, &file_offsets);
+                let range = SolangServer::loc_to_range(&pos, &file_offsets);
 
                 Some(Diagnostic {
                     range,

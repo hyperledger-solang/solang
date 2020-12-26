@@ -210,21 +210,18 @@ pub fn message_as_json(cache: &mut FileCache, ns: &Namespace) -> Vec<OutputJson>
             continue;
         }
 
-        let file_no = msg.pos.map(|pos| pos.0);
-        let filename = &ns.files[file_no.unwrap()];
-
-        let loc_json = if let Some(pos) = msg.pos {
+        let location = if let Some(pos) = msg.pos {
             Some(LocJson {
-                file: format!("{}", filename.display()),
-                start: pos.1,
-                end: pos.2,
+                file: format!("{}", ns.files[pos.0].display()),
+                start: pos.1 + 1,
+                end: pos.2 + 1,
             })
         } else {
             None
         };
 
         json.push(OutputJson {
-            sourceLocation: loc_json,
+            sourceLocation: location,
             ty: format!("{:?}", msg.ty),
             component: "general".to_owned(),
             severity: msg.level.to_string().to_owned(),
@@ -247,18 +244,24 @@ impl FileOffsets {
         let (to_line, to_column) = self.convert(loc.0, loc.2);
 
         if from_line == to_line && from_column == to_column {
-            format!("{}:{}", from_line, from_column)
+            format!("{}:{}", from_line + 1, from_column + 1)
         } else if from_line == to_line {
-            format!("{}:{}-{}", from_line, from_column, to_column)
+            format!("{}:{}-{}", from_line + 1, from_column + 1, to_column + 1)
         } else {
-            format!("{}:{}-{}:{}", from_line, from_column, to_line, to_column)
+            format!(
+                "{}:{}-{}:{}",
+                from_line + 1,
+                from_column + 1,
+                to_line + 1,
+                to_column + 1
+            )
         }
     }
 
-    /// Convert an offset to line and column number
+    /// Convert an offset to line and column number, based zero
     pub fn convert(&self, file_no: usize, loc: usize) -> (usize, usize) {
-        let mut line_no = 1;
-        let mut col_no = loc + 1;
+        let mut line_no = 0;
+        let mut col_no = loc;
 
         // Here we do a linear scan. It should be possible to do binary search
         for l in &self.files[file_no] {
@@ -287,7 +290,7 @@ impl Namespace {
 
                     for (ind, c) in source_code.char_indices() {
                         if c == '\n' {
-                            line_starts.push(ind);
+                            line_starts.push(ind + 1);
                         }
                     }
 
