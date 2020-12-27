@@ -892,20 +892,19 @@ impl SolangServer {
     }
 
     // Searches the respective hover message from lookup table for the given mouse pointer.
-    fn get_hover_msg(
+    fn get_hover_msg<'a>(
         offset: &u64,
-        mut lookup_tbl: Vec<(u64, u64, String)>,
-        _fnc_map: &HashMap<String, String>,
-    ) -> String {
+        lookup_tbl: &'a mut Vec<(u64, u64, String)>,
+    ) -> Option<&'a (u64, u64, String)> {
         lookup_tbl.sort_by_key(|k| k.0);
 
-        for entry in &lookup_tbl {
+        for entry in lookup_tbl {
             if entry.0 <= *offset && *offset <= entry.1 {
-                return entry.2.to_string();
+                return Some(entry);
             }
         }
 
-        String::new()
+        None
     }
 }
 
@@ -1086,25 +1085,17 @@ impl LanguageServer for SolangServer {
             let offset =
                 file_offsets.get_offset(0, pos.line as usize, pos.character as usize) as u64;
 
-            let msg = SolangServer::get_hover_msg(&offset, lookup_tbl, &fnc_map);
+            if let Some(msg) = SolangServer::get_hover_msg(&offset, &mut lookup_tbl) {
+                let loc = pt::Loc(0, msg.0 as usize, msg.1 as usize);
+                let range = SolangServer::loc_to_range(&loc, &file_offsets);
 
-            let new_pos = (pos.line, pos.character);
-
-            let p1 = Position::new(pos.line as u64, pos.character as u64);
-            let p2 = Position::new(new_pos.0 as u64, new_pos.1 as u64);
-            let new_rng = Range::new(p1, p2);
-
-            Ok(Some(Hover {
-                contents: HoverContents::Scalar(MarkedString::String(msg)),
-                range: Some(new_rng),
-            }))
-        } else {
-            Ok(Some(Hover {
-                contents: HoverContents::Scalar(MarkedString::String(
-                    "Failed to render hover".to_string(),
-                )),
-                range: None,
-            }))
+                return Ok(Some(Hover {
+                    contents: HoverContents::Scalar(MarkedString::String(msg.2.to_string())),
+                    range: Some(range),
+                }));
+            }
         }
+
+        Ok(None)
     }
 }
