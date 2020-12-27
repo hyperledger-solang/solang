@@ -13,6 +13,8 @@ use lsp_types::{Diagnostic, DiagnosticSeverity, HoverProviderCapability, Positio
 use solang::sema::*;
 
 use std::collections::HashMap;
+use std::path::PathBuf;
+use std::sync::Mutex;
 
 use solang::*;
 
@@ -21,9 +23,15 @@ use solang::sema::tags::*;
 
 use solang::sema::builtin::get_prototype;
 
+pub struct Hovers {
+    offsets: sema::diagnostics::FileOffsets,
+    lookup: Vec<(usize, usize, String)>,
+}
+
 pub struct SolangServer {
     client: Client,
     target: Target,
+    files: Mutex<HashMap<PathBuf, Hovers>>,
 }
 
 pub fn start_server(target: Target) {
@@ -32,7 +40,11 @@ pub fn start_server(target: Target) {
         let stdin = tokio::io::stdin();
         let stdout = tokio::io::stdout();
 
-        let (service, messages) = LspService::new(|client| SolangServer { client, target });
+        let (service, messages) = LspService::new(|client| SolangServer {
+            client,
+            target,
+            files: Mutex::new(HashMap::new()),
+        });
 
         Server::new(stdin, stdout)
             .interleave(messages)
@@ -43,6 +55,91 @@ pub fn start_server(target: Target) {
 }
 
 impl SolangServer {
+    /// Parse file
+    async fn parse_file(&self, uri: Url) {
+        if let Ok(path) = uri.to_file_path() {
+            let mut filecache = FileCache::new();
+
+            let dir = path.parent().unwrap();
+
+            if let Ok(dir) = dir.canonicalize() {
+                filecache.add_import_path(dir);
+            }
+
+            let os_str = path.file_name().unwrap();
+
+            let ns = parse_and_resolve(os_str.to_str().unwrap(), &mut filecache, self.target);
+
+            let offsets = ns.file_offset(&mut filecache);
+
+            let diags = ns
+                .diagnostics
+                .iter()
+                .filter_map(|diag| {
+                    let pos = diag.pos.unwrap();
+
+                    if pos.0 != 0 {
+                        // The first file is the one we wanted to parse; others are imported
+                        return None;
+                    }
+
+                    let related_information = if diag.notes.is_empty() {
+                        None
+                    } else {
+                        Some(
+                            diag.notes
+                                .iter()
+                                .map(|note| DiagnosticRelatedInformation {
+                                    message: note.message.to_string(),
+                                    location: Location {
+                                        uri: Url::from_file_path(&ns.files[note.pos.0]).unwrap(),
+                                        range: SolangServer::loc_to_range(&note.pos, &offsets),
+                                    },
+                                })
+                                .collect(),
+                        )
+                    };
+
+                    let sev = match diag.level {
+                        ast::Level::Info => DiagnosticSeverity::Information,
+                        ast::Level::Warning => DiagnosticSeverity::Warning,
+                        ast::Level::Error => DiagnosticSeverity::Error,
+                        ast::Level::Debug => {
+                            return None;
+                        }
+                    };
+
+                    let range = SolangServer::loc_to_range(&pos, &offsets);
+
+                    Some(Diagnostic {
+                        range,
+                        message: diag.message.to_string(),
+                        severity: Some(sev),
+                        source: Some("solidity".to_string()),
+                        code: None,
+                        related_information,
+                        tags: None,
+                    })
+                })
+                .collect();
+
+            let res = self.client.publish_diagnostics(uri, diags, None);
+
+            let mut lookup: Vec<(usize, usize, String)> = Vec::new();
+            let mut fnc_map: HashMap<String, String> = HashMap::new();
+
+            SolangServer::traverse(&ns, &mut lookup, &mut fnc_map);
+
+            lookup.sort_by_key(|k| k.0);
+
+            if let Ok(mut files) = self.files.lock() {
+                files.insert(path, Hovers { offsets, lookup });
+            }
+
+            res.await;
+        }
+    }
+
     /// Calculate the line and column from the Loc offset received from the parser
     fn loc_to_range(loc: &pt::Loc, file_offsets: &diagnostics::FileOffsets) -> Range {
         let (line, column) = file_offsets.convert(loc.0, loc.1);
@@ -51,62 +148,6 @@ impl SolangServer {
         let end = Position::new(line as u64, column as u64);
 
         Range::new(start, end)
-    }
-
-    /// Convert the diagnostic messages recieved from the solang to lsp diagnostics types.
-    /// Returns a vector of diagnostic messages for the client.
-    fn convert_to_diagnostics(ns: ast::Namespace, filecache: &mut FileCache) -> Vec<Diagnostic> {
-        let file_offsets = ns.file_offset(filecache);
-
-        ns.diagnostics
-            .iter()
-            .filter_map(|diag| {
-                let pos = diag.pos.unwrap();
-
-                if pos.0 != 0 {
-                    // The first file is the one we wanted to parse; others are imported
-                    return None;
-                }
-
-                let related_information = if diag.notes.is_empty() {
-                    None
-                } else {
-                    Some(
-                        diag.notes
-                            .iter()
-                            .map(|note| DiagnosticRelatedInformation {
-                                message: note.message.to_string(),
-                                location: Location {
-                                    uri: Url::from_file_path(&ns.files[note.pos.0]).unwrap(),
-                                    range: SolangServer::loc_to_range(&note.pos, &file_offsets),
-                                },
-                            })
-                            .collect(),
-                    )
-                };
-
-                let sev = match diag.level {
-                    ast::Level::Info => DiagnosticSeverity::Information,
-                    ast::Level::Warning => DiagnosticSeverity::Warning,
-                    ast::Level::Error => DiagnosticSeverity::Error,
-                    ast::Level::Debug => {
-                        return None;
-                    }
-                };
-
-                let range = SolangServer::loc_to_range(&pos, &file_offsets);
-
-                Some(Diagnostic {
-                    range,
-                    message: diag.message.to_string(),
-                    severity: Some(sev),
-                    source: Some("solidity".to_string()),
-                    code: None,
-                    related_information,
-                    tags: None,
-                })
-            })
-            .collect()
     }
 
     fn construct_builtins(
@@ -866,22 +907,6 @@ impl SolangServer {
 
         def
     }
-
-    // Searches the respective hover message from lookup table for the given mouse pointer.
-    fn get_hover_msg<'a>(
-        offset: usize,
-        lookup_tbl: &'a mut Vec<(usize, usize, String)>,
-    ) -> Option<&'a (usize, usize, String)> {
-        lookup_tbl.sort_by_key(|k| k.0);
-
-        for entry in lookup_tbl {
-            if entry.0 <= offset && offset <= entry.1 {
-                return Some(entry);
-            }
-        }
-
-        None
-    }
 }
 
 #[tower_lsp::async_trait]
@@ -961,76 +986,33 @@ impl LanguageServer for SolangServer {
     async fn did_open(&self, params: DidOpenTextDocumentParams) {
         let uri = params.text_document.uri;
 
-        if let Ok(path) = uri.to_file_path() {
-            let mut filecache = FileCache::new();
-
-            let dir = path.parent().unwrap();
-
-            if let Ok(dir) = dir.canonicalize() {
-                filecache.add_import_path(dir);
-            }
-
-            let os_str = path.file_name().unwrap();
-
-            let ns = parse_and_resolve(os_str.to_str().unwrap(), &mut filecache, self.target);
-
-            let d = SolangServer::convert_to_diagnostics(ns, &mut filecache);
-
-            self.client.publish_diagnostics(uri, d, None).await;
-        }
+        self.parse_file(uri).await;
     }
 
     async fn did_change(&self, params: DidChangeTextDocumentParams) {
         let uri = params.text_document.uri;
 
-        if let Ok(path) = uri.to_file_path() {
-            let mut filecache = FileCache::new();
-
-            let dir = path.parent().unwrap();
-
-            if let Ok(dir) = dir.canonicalize() {
-                filecache.add_import_path(dir);
-            }
-
-            let os_str = path.file_name().unwrap();
-
-            let ns = parse_and_resolve(os_str.to_str().unwrap(), &mut filecache, self.target);
-
-            let d = SolangServer::convert_to_diagnostics(ns, &mut filecache);
-
-            self.client.publish_diagnostics(uri, d, None).await;
-        }
+        self.parse_file(uri).await;
     }
 
     async fn did_save(&self, params: DidSaveTextDocumentParams) {
         let uri = params.text_document.uri;
 
+        self.parse_file(uri).await;
+    }
+
+    async fn did_close(&self, params: DidCloseTextDocumentParams) {
+        let uri = params.text_document.uri;
+
         if let Ok(path) = uri.to_file_path() {
-            let mut filecache = FileCache::new();
-
-            let dir = path.parent().unwrap();
-
-            if let Ok(dir) = dir.canonicalize() {
-                filecache.add_import_path(dir);
+            if let Ok(mut files) = self.files.lock() {
+                files.remove(&path);
             }
-
-            let os_str = path.file_name().unwrap();
-
-            let ns = parse_and_resolve(os_str.to_str().unwrap(), &mut filecache, self.target);
-
-            let d = SolangServer::convert_to_diagnostics(ns, &mut filecache);
-
-            self.client.publish_diagnostics(uri, d, None).await;
         }
     }
 
-    async fn did_close(&self, _: DidCloseTextDocumentParams) {}
-
     async fn completion(&self, _: CompletionParams) -> Result<Option<CompletionResponse>> {
-        Ok(Some(CompletionResponse::Array(vec![
-            CompletionItem::new_simple("Hello".to_string(), "Some detail".to_string()),
-            CompletionItem::new_simple("Bye".to_string(), "More detail".to_string()),
-        ])))
+        Ok(None)
     }
 
     async fn hover(&self, hverparam: HoverParams) -> Result<Option<Hover>> {
@@ -1040,34 +1022,29 @@ impl LanguageServer for SolangServer {
         let uri = txtdoc.uri;
 
         if let Ok(path) = uri.to_file_path() {
-            let mut filecache = FileCache::new();
+            if let Ok(files) = self.files.lock() {
+                if let Some(hovers) = files.get(&path) {
+                    let offset =
+                        hovers
+                            .offsets
+                            .get_offset(0, pos.line as usize, pos.character as usize);
 
-            let dir = path.parent().unwrap();
+                    if let Some(msg) = hovers
+                        .lookup
+                        .iter()
+                        .find(|entry| entry.0 <= offset && offset <= entry.1)
+                    {
+                        let loc = pt::Loc(0, msg.0, msg.1);
+                        let range = SolangServer::loc_to_range(&loc, &hovers.offsets);
 
-            if let Ok(dir) = dir.canonicalize() {
-                filecache.add_import_path(dir);
-            }
-
-            let os_str = path.file_name().unwrap();
-
-            let ns = parse_and_resolve(os_str.to_str().unwrap(), &mut filecache, self.target);
-            let file_offsets = ns.file_offset(&mut filecache);
-
-            let mut lookup_tbl: Vec<(usize, usize, String)> = Vec::new();
-            let mut fnc_map: HashMap<String, String> = HashMap::new();
-
-            SolangServer::traverse(&ns, &mut lookup_tbl, &mut fnc_map);
-
-            let offset = file_offsets.get_offset(0, pos.line as usize, pos.character as usize);
-
-            if let Some(msg) = SolangServer::get_hover_msg(offset, &mut lookup_tbl) {
-                let loc = pt::Loc(0, msg.0, msg.1);
-                let range = SolangServer::loc_to_range(&loc, &file_offsets);
-
-                return Ok(Some(Hover {
-                    contents: HoverContents::Scalar(MarkedString::String(msg.2.to_string())),
-                    range: Some(range),
-                }));
+                        return Ok(Some(Hover {
+                            contents: HoverContents::Scalar(MarkedString::String(
+                                msg.2.to_string(),
+                            )),
+                            range: Some(range),
+                        }));
+                    }
+                }
             }
         }
 
