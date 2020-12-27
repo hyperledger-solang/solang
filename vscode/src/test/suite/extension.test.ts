@@ -81,7 +81,7 @@ async function testhover(docUri: vscode.Uri) {
 
 	let contentarr2 = actualhover2[0].contents as vscode.MarkdownString[];
 
-	assert.equal(contentarr2[0].value, ' event HighestBidIncreased ( address bidder, \n\n uint256 amount, \n\n )');
+	assert.equal(contentarr2[0].value, '```\nevent SimpleAuction.HighestBidIncreased {\n\taddress bidder,\n\tuint256 amount\n};\n```\n');
 
 	var pos3 = new vscode.Position(53, 13);
 
