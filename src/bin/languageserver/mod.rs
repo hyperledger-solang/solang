@@ -256,27 +256,35 @@ impl SolangServer {
                 }
             }
             Statement::Emit {
-                loc,
                 event_no,
-                event_loc: _,
+                event_loc,
                 args,
+                ..
             } => {
-                let evntdcl = &ns.events[*event_no];
+                let event = &ns.events[*event_no];
 
-                let tag_msg = render(&evntdcl.tags[..]);
+                let mut msg = render(&event.tags);
 
-                let mut temp_tbl: Vec<(usize, usize, String)> = Vec::new();
-                let mut evnt_msg = format!("{} event {} (", tag_msg, evntdcl.name);
+                msg.push_str(&format!("```\nevent {} {{\n", event));
 
-                for filds in &evntdcl.fields {
-                    SolangServer::construct_strct(&filds, &mut temp_tbl, ns);
+                let len = event.fields.len();
+                for i in 0..len {
+                    let field = &event.fields[i];
+                    msg.push_str(&format!(
+                        "\t{}{}{}{}\n",
+                        field.ty.to_string(ns),
+                        if field.indexed { " indexed " } else { " " },
+                        field.name,
+                        if i + 1 < len { "," } else { "" }
+                    ));
                 }
-                for entries in temp_tbl {
-                    evnt_msg = format!("{} {}, \n\n", evnt_msg, entries.2);
-                }
 
-                evnt_msg = format!("{} )", evnt_msg);
-                lookup_tbl.push((loc.1, (loc.1 + ns.events[*event_no].name.len()), evnt_msg));
+                msg.push_str(&format!(
+                    "}}{};\n```\n",
+                    if event.anonymous { " anonymous" } else { "" }
+                ));
+
+                lookup_tbl.push((event_loc.1, event_loc.2, msg));
 
                 for arg in args {
                     SolangServer::construct_expr(arg, lookup_tbl, symtab, fnc_map, ns);
