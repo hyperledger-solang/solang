@@ -13,7 +13,6 @@ use lsp_types::{Diagnostic, DiagnosticSeverity, HoverProviderCapability, Positio
 use solang::sema::*;
 
 use std::collections::HashMap;
-use std::path::PathBuf;
 
 use solang::*;
 
@@ -892,26 +891,6 @@ impl SolangServer {
         def
     }
 
-    // Converts line, char position in a respective file to a file offset position of the same file.
-    fn line_char_to_offset(ln: u64, chr: u64, data: &str) -> u64 {
-        let mut line_no = 0;
-        let mut past_ch = 0;
-        let mut ofst = 0;
-        for (_ind, c) in data.char_indices() {
-            if line_no == ln && chr == past_ch {
-                ofst = _ind;
-                break;
-            }
-            if c == '\n' {
-                line_no += 1;
-                past_ch = 0;
-            } else {
-                past_ch += 1;
-            }
-        }
-        ofst as u64
-    }
-
     // Searches the respective hover message from lookup table for the given mouse pointer.
     fn get_hover_msg(
         offset: &u64,
@@ -1088,34 +1067,26 @@ impl LanguageServer for SolangServer {
         if let Ok(path) = uri.to_file_path() {
             let mut filecache = FileCache::new();
 
-            let filecachepath = path.parent().unwrap();
+            let dir = path.parent().unwrap();
 
-            let tostrpath = filecachepath.to_str().unwrap();
-
-            let mut p = PathBuf::new();
-
-            p.push(tostrpath.to_string());
-
-            filecache.add_import_path(p);
+            if let Ok(dir) = dir.canonicalize() {
+                filecache.add_import_path(dir);
+            }
 
             let os_str = path.file_name().unwrap();
 
             let ns = parse_and_resolve(os_str.to_str().unwrap(), &mut filecache, self.target);
+            let file_offsets = ns.file_offset(&mut filecache);
 
             let mut lookup_tbl: Vec<(u64, u64, String)> = Vec::new();
             let mut fnc_map: HashMap<String, String> = HashMap::new();
 
             SolangServer::traverse(&ns, &mut lookup_tbl, &mut fnc_map);
 
-            let mut file_str = "".to_owned();
-            for fils in ns.files.iter() {
-                let file_cont = filecache.get_file_contents(fils);
-                file_str.push_str(&file_cont);
-            }
+            let offset =
+                file_offsets.get_offset(0, pos.line as usize, pos.character as usize) as u64;
 
-            let offst = SolangServer::line_char_to_offset(pos.line, pos.character, &file_str); // 0 based offset
-
-            let msg = SolangServer::get_hover_msg(&offst, lookup_tbl, &fnc_map);
+            let msg = SolangServer::get_hover_msg(&offset, lookup_tbl, &fnc_map);
 
             let new_pos = (pos.line, pos.character);
 

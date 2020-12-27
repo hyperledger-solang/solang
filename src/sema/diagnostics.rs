@@ -275,6 +275,15 @@ impl FileOffsets {
 
         (line_no, col_no)
     }
+
+    /// Convert line + char to offset
+    pub fn get_offset(&self, file_no: usize, line_no: usize, column_no: usize) -> usize {
+        if line_no == 0 {
+            column_no
+        } else {
+            self.files[file_no][line_no - 1] + column_no
+        }
+    }
 }
 
 impl Namespace {
