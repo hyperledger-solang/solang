@@ -134,7 +134,7 @@ impl SolangServer {
     // statements and traversing inside the contents of the statements.
     fn construct_stmt(
         stmt: &Statement,
-        lookup_tbl: &mut Vec<(u64, u64, String)>,
+        lookup_tbl: &mut Vec<(usize, usize, String)>,
         symtab: &sema::symtable::Symtable,
         fnc_map: &HashMap<String, String>,
         ns: &ast::Namespace,
@@ -146,7 +146,7 @@ impl SolangServer {
                 }
                 let mut msg = SolangServer::construct_defs(&_param.ty, ns, fnc_map);
                 msg = format!("{} {}", msg, _param.name);
-                lookup_tbl.push((_param.loc.1 as u64, _param.loc.2 as u64, msg));
+                lookup_tbl.push((_param.loc.1, _param.loc.2, msg));
             }
             Statement::If(_locs, _, expr, stat1, stat2) => {
                 SolangServer::construct_expr(expr, lookup_tbl, symtab, fnc_map, ns);
@@ -224,7 +224,7 @@ impl SolangServer {
 
                 let tag_msg = render(&evntdcl.tags[..]);
 
-                let mut temp_tbl: Vec<(u64, u64, String)> = Vec::new();
+                let mut temp_tbl: Vec<(usize, usize, String)> = Vec::new();
                 let mut evnt_msg = format!("{} event {} (", tag_msg, evntdcl.name);
 
                 for filds in &evntdcl.fields {
@@ -235,11 +235,7 @@ impl SolangServer {
                 }
 
                 evnt_msg = format!("{} )", evnt_msg);
-                lookup_tbl.push((
-                    loc.1 as u64,
-                    (loc.1 + ns.events[*event_no].name.len()) as u64,
-                    evnt_msg,
-                ));
+                lookup_tbl.push((loc.1, (loc.1 + ns.events[*event_no].name.len()), evnt_msg));
 
                 for arg in args {
                     SolangServer::construct_expr(arg, lookup_tbl, symtab, fnc_map, ns);
@@ -277,7 +273,7 @@ impl SolangServer {
     // the respective expression type messages in the table.
     fn construct_expr(
         expr: &Expression,
-        lookup_tbl: &mut Vec<(u64, u64, String)>,
+        lookup_tbl: &mut Vec<(usize, usize, String)>,
         symtab: &sema::symtable::Symtable,
         fnc_map: &HashMap<String, String>,
         ns: &ast::Namespace,
@@ -285,25 +281,25 @@ impl SolangServer {
         match expr {
             Expression::FunctionArg(locs, typ, _sample_sz) => {
                 let msg = SolangServer::construct_defs(typ, ns, fnc_map);
-                lookup_tbl.push((locs.1 as u64, locs.2 as u64, msg));
+                lookup_tbl.push((locs.1, locs.2, msg));
             }
 
             // Variable types expression
             Expression::BoolLiteral(locs, vl) => {
                 let msg = format!("(bool) {}", vl);
-                lookup_tbl.push((locs.1 as u64, locs.2 as u64, msg));
+                lookup_tbl.push((locs.1, locs.2, msg));
             }
             Expression::BytesLiteral(locs, typ, _vec_lst) => {
                 let msg = format!("({})", typ.to_string(ns));
-                lookup_tbl.push((locs.1 as u64, locs.2 as u64, msg));
+                lookup_tbl.push((locs.1, locs.2, msg));
             }
             Expression::CodeLiteral(locs, _val, _) => {
                 let msg = format!("({})", _val);
-                lookup_tbl.push((locs.1 as u64, locs.2 as u64, msg));
+                lookup_tbl.push((locs.1, locs.2, msg));
             }
             Expression::NumberLiteral(locs, typ, _bgit) => {
                 let msg = format!("({})", typ.to_string(ns));
-                lookup_tbl.push((locs.1 as u64, locs.2 as u64, msg));
+                lookup_tbl.push((locs.1, locs.2, msg));
             }
             Expression::StructLiteral(_locs, _typ, expr) => {
                 for expp in expr {
@@ -372,18 +368,18 @@ impl SolangServer {
             // Variable expression
             Expression::Variable(locs, typ, _val) => {
                 let msg = format!("({})", SolangServer::construct_defs(typ, ns, fnc_map));
-                lookup_tbl.push((locs.1 as u64, locs.2 as u64, msg));
+                lookup_tbl.push((locs.1, locs.2, msg));
             }
             Expression::ConstantVariable(locs, typ, _val1, _val2) => {
                 let msg = format!(
                     "constant ({})",
                     SolangServer::construct_defs(typ, ns, fnc_map)
                 );
-                lookup_tbl.push((locs.1 as u64, locs.2 as u64, msg));
+                lookup_tbl.push((locs.1, locs.2, msg));
             }
             Expression::StorageVariable(locs, typ, _val1, _val2) => {
                 let msg = format!("({})", SolangServer::construct_defs(typ, ns, fnc_map));
-                lookup_tbl.push((locs.1 as u64, locs.2 as u64, msg));
+                lookup_tbl.push((locs.1, locs.2, msg));
             }
 
             // Load expression
@@ -572,7 +568,7 @@ impl SolangServer {
                     }
 
                     param_msg = format!("{})", param_msg);
-                    lookup_tbl.push((loc.1 as u64, loc.2 as u64, param_msg));
+                    lookup_tbl.push((loc.1, loc.2, param_msg));
                 }
 
                 for arg in args {
@@ -619,7 +615,7 @@ impl SolangServer {
                     }
 
                     param_msg = format!("{})", param_msg);
-                    lookup_tbl.push((loc.1 as u64, loc.2 as u64, param_msg));
+                    lookup_tbl.push((loc.1, loc.2, param_msg));
 
                     SolangServer::construct_expr(address, lookup_tbl, symtab, fnc_map, ns);
                     for expp in args {
@@ -669,20 +665,16 @@ impl SolangServer {
                 for expp in expr {
                     SolangServer::construct_expr(expp, lookup_tbl, symtab, fnc_map, ns);
                 }
-                lookup_tbl.push((
-                    _locs.1 as u64,
-                    _locs.2 as u64,
-                    String::from("Keccak256 hash"),
-                ));
+                lookup_tbl.push((_locs.1, _locs.2, String::from("Keccak256 hash")));
             }
 
             Expression::ReturnData(locs) => {
                 let msg = String::from("Return");
-                lookup_tbl.push((locs.1 as u64, locs.2 as u64, msg));
+                lookup_tbl.push((locs.1, locs.2, msg));
             }
             Expression::Builtin(_locs, _typ, _builtin, expr) => {
                 let msg = SolangServer::construct_builtins(_builtin, ns, fnc_map);
-                lookup_tbl.push((_locs.1 as u64, _locs.2 as u64, msg));
+                lookup_tbl.push((_locs.1, _locs.2, msg));
                 for expp in expr {
                     SolangServer::construct_expr(expp, lookup_tbl, symtab, fnc_map, ns);
                 }
@@ -699,14 +691,14 @@ impl SolangServer {
     // Constructs contract fields and stores it in the lookup table.
     fn construct_cont(
         contvar: &Variable,
-        lookup_tbl: &mut Vec<(u64, u64, String)>,
+        lookup_tbl: &mut Vec<(usize, usize, String)>,
         samptb: &sema::symtable::Symtable,
         fnc_map: &HashMap<String, String>,
         ns: &ast::Namespace,
     ) {
         let msg_typ = SolangServer::construct_defs(&contvar.ty, ns, fnc_map);
         let msg = format!("{} {}", msg_typ, contvar.name);
-        lookup_tbl.push((contvar.loc.1 as u64, contvar.loc.2 as u64, msg));
+        lookup_tbl.push((contvar.loc.1, contvar.loc.2, msg));
         if let Some(expr) = &contvar.initializer {
             SolangServer::construct_expr(&expr, lookup_tbl, samptb, fnc_map, ns);
         }
@@ -715,32 +707,28 @@ impl SolangServer {
     // Constructs struct fields and stores it in the lookup table.
     fn construct_strct(
         strfld: &Parameter,
-        lookup_tbl: &mut Vec<(u64, u64, String)>,
+        lookup_tbl: &mut Vec<(usize, usize, String)>,
         ns: &ast::Namespace,
     ) {
         let msg_typ = &strfld.ty.to_string(ns);
         let msg = format!("{} {}", msg_typ, strfld.name);
-        lookup_tbl.push((strfld.loc.1 as u64, strfld.loc.2 as u64, msg));
+        lookup_tbl.push((strfld.loc.1, strfld.loc.2, msg));
     }
 
     // Traverses namespace to build messages stored in the lookup table for hover feature.
     fn traverse(
         ns: &ast::Namespace,
-        lookup_tbl: &mut Vec<(u64, u64, String)>,
+        lookup_tbl: &mut Vec<(usize, usize, String)>,
         fnc_map: &mut HashMap<String, String>,
     ) {
         for enm in &ns.enums {
             for (nam, vals) in &enm.values {
                 let evnt_msg = format!("{} {}, \n\n", nam, vals.1);
-                lookup_tbl.push((vals.0 .1 as u64, vals.0 .2 as u64, evnt_msg));
+                lookup_tbl.push((vals.0 .1, vals.0 .2, evnt_msg));
             }
 
             let msg_tg = render(&enm.tags[..]);
-            lookup_tbl.push((
-                enm.loc.1 as u64,
-                (enm.loc.1 + enm.name.len()) as u64,
-                msg_tg,
-            ));
+            lookup_tbl.push((enm.loc.1, (enm.loc.1 + enm.name.len()), msg_tg));
         }
 
         for strct in &ns.structs {
@@ -749,22 +737,18 @@ impl SolangServer {
             }
 
             let msg_tg = render(&strct.tags[..]);
-            lookup_tbl.push((
-                strct.loc.1 as u64,
-                (strct.loc.1 + strct.name.len()) as u64,
-                msg_tg,
-            ));
+            lookup_tbl.push((strct.loc.1, (strct.loc.1 + strct.name.len()), msg_tg));
         }
 
         for fnc in &ns.functions {
             for parm in &fnc.params {
                 let msg = SolangServer::construct_defs(&parm.ty, ns, fnc_map);
-                lookup_tbl.push((parm.loc.1 as u64, parm.loc.2 as u64, msg));
+                lookup_tbl.push((parm.loc.1, parm.loc.2, msg));
             }
 
             for ret in &fnc.returns {
                 let msg = SolangServer::construct_defs(&ret.ty, ns, fnc_map);
-                lookup_tbl.push((ret.loc.1 as u64, ret.loc.2 as u64, msg));
+                lookup_tbl.push((ret.loc.1, ret.loc.2, msg));
             }
 
             for stmt in &fnc.body {
@@ -778,19 +762,15 @@ impl SolangServer {
 
             let msg_tg = render(&constant.tags[..]);
             lookup_tbl.push((
-                constant.loc.1 as u64,
-                (constant.loc.1 + constant.name.len()) as u64,
+                constant.loc.1,
+                (constant.loc.1 + constant.name.len()),
                 msg_tg,
             ));
         }
 
         for contrct in &ns.contracts {
             let msg_tg = render(&contrct.tags[..]);
-            lookup_tbl.push((
-                contrct.loc.1 as u64,
-                (contrct.loc.1 + msg_tg.len()) as u64,
-                msg_tg,
-            ));
+            lookup_tbl.push((contrct.loc.1, (contrct.loc.1 + msg_tg.len()), msg_tg));
 
             for varscont in &contrct.variables {
                 let samptb = symtable::Symtable::new();
@@ -798,8 +778,8 @@ impl SolangServer {
 
                 let msg_tg = render(&varscont.tags[..]);
                 lookup_tbl.push((
-                    varscont.loc.1 as u64,
-                    (varscont.loc.1 + varscont.name.len()) as u64,
+                    varscont.loc.1,
+                    (varscont.loc.1 + varscont.name.len()),
                     msg_tg,
                 ));
             }
@@ -810,11 +790,7 @@ impl SolangServer {
                 SolangServer::construct_strct(&filds, lookup_tbl, ns);
             }
             let msg_tg = render(&entdcl.tags[..]);
-            lookup_tbl.push((
-                entdcl.loc.1 as u64,
-                (entdcl.loc.1 + entdcl.name.len()) as u64,
-                msg_tg,
-            ));
+            lookup_tbl.push((entdcl.loc.1, (entdcl.loc.1 + entdcl.name.len()), msg_tg));
         }
     }
 
@@ -856,7 +832,7 @@ impl SolangServer {
 
                 let tag_msg = render(&strct.tags[..]);
 
-                let mut temp_tbl: Vec<(u64, u64, String)> = Vec::new();
+                let mut temp_tbl: Vec<(usize, usize, String)> = Vec::new();
                 let mut evnt_msg = format!("{} struct {} `{{` \n\n", tag_msg, strct.name);
 
                 for filds in &strct.fields {
@@ -893,13 +869,13 @@ impl SolangServer {
 
     // Searches the respective hover message from lookup table for the given mouse pointer.
     fn get_hover_msg<'a>(
-        offset: &u64,
-        lookup_tbl: &'a mut Vec<(u64, u64, String)>,
-    ) -> Option<&'a (u64, u64, String)> {
+        offset: usize,
+        lookup_tbl: &'a mut Vec<(usize, usize, String)>,
+    ) -> Option<&'a (usize, usize, String)> {
         lookup_tbl.sort_by_key(|k| k.0);
 
         for entry in lookup_tbl {
-            if entry.0 <= *offset && *offset <= entry.1 {
+            if entry.0 <= offset && offset <= entry.1 {
                 return Some(entry);
             }
         }
@@ -1077,16 +1053,15 @@ impl LanguageServer for SolangServer {
             let ns = parse_and_resolve(os_str.to_str().unwrap(), &mut filecache, self.target);
             let file_offsets = ns.file_offset(&mut filecache);
 
-            let mut lookup_tbl: Vec<(u64, u64, String)> = Vec::new();
+            let mut lookup_tbl: Vec<(usize, usize, String)> = Vec::new();
             let mut fnc_map: HashMap<String, String> = HashMap::new();
 
             SolangServer::traverse(&ns, &mut lookup_tbl, &mut fnc_map);
 
-            let offset =
-                file_offsets.get_offset(0, pos.line as usize, pos.character as usize) as u64;
+            let offset = file_offsets.get_offset(0, pos.line as usize, pos.character as usize);
 
-            if let Some(msg) = SolangServer::get_hover_msg(&offset, &mut lookup_tbl) {
-                let loc = pt::Loc(0, msg.0 as usize, msg.1 as usize);
+            if let Some(msg) = SolangServer::get_hover_msg(offset, &mut lookup_tbl) {
+                let loc = pt::Loc(0, msg.0, msg.1);
                 let range = SolangServer::loc_to_range(&loc, &file_offsets);
 
                 return Ok(Some(Hover {
