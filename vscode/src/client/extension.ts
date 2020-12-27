@@ -87,7 +87,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 	let clientdispos = new LanguageClient(
 		'solidity',
-		'Soliditiy language server extension',
+		'Solang Solidity Compiler',
 		serverOptions,
 		clientoptions).start();
 
