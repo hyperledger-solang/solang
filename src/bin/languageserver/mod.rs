@@ -44,8 +44,7 @@ pub fn start_server(target: Target) {
 }
 
 impl SolangServer {
-    // Calculate the line and coloumn from the Loc offset recieved from the parser
-    // Do a linear search till the correct offset location is matched
+    /// Calculate the line and column from the Loc offset received from the parser
     fn loc_to_range(loc: &pt::Loc, file_offsets: &diagnostics::FileOffsets) -> Range {
         let (line, column) = file_offsets.convert(loc.0, loc.1);
         let start = Position::new(line as u64, column as u64);
@@ -55,14 +54,21 @@ impl SolangServer {
         Range::new(start, end)
     }
 
-    // Convert the diagnostic messages recieved from the solang to lsp diagnostics types.
-    // Returns a vector of diagnostic messages for the client.
+    /// Convert the diagnostic messages recieved from the solang to lsp diagnostics types.
+    /// Returns a vector of diagnostic messages for the client.
     fn convert_to_diagnostics(ns: ast::Namespace, filecache: &mut FileCache) -> Vec<Diagnostic> {
         let file_offsets = ns.file_offset(filecache);
 
         ns.diagnostics
             .iter()
             .filter_map(|diag| {
+                let pos = diag.pos.unwrap();
+
+                if pos.0 != 0 {
+                    // The first file is the one we wanted to parse; others are imported
+                    return None;
+                }
+
                 let related_information = if diag.notes.is_empty() {
                     None
                 } else {
@@ -72,19 +78,13 @@ impl SolangServer {
                             .map(|note| DiagnosticRelatedInformation {
                                 message: note.message.to_string(),
                                 location: Location {
-                                    uri: Url::parse(&format!(
-                                        "file://{}",
-                                        ns.files[note.pos.0].display()
-                                    ))
-                                    .unwrap(),
+                                    uri: Url::from_file_path(&ns.files[note.pos.0]).unwrap(),
                                     range: SolangServer::loc_to_range(&note.pos, &file_offsets),
                                 },
                             })
                             .collect(),
                     )
                 };
-
-                let pos = diag.pos.unwrap();
 
                 let sev = match diag.level {
                     ast::Level::Info => DiagnosticSeverity::Information,
@@ -1005,30 +1005,16 @@ impl LanguageServer for SolangServer {
     }
 
     async fn did_open(&self, params: DidOpenTextDocumentParams) {
-        self.client
-            .log_message(MessageType::Info, "file opened!")
-            .await;
-
         let uri = params.text_document.uri;
 
         if let Ok(path) = uri.to_file_path() {
             let mut filecache = FileCache::new();
 
-            let filecachepath = path.parent().unwrap();
+            let dir = path.parent().unwrap();
 
-            let tostrpath = filecachepath.to_str().unwrap();
-
-            let mut p = PathBuf::new();
-
-            p.push(tostrpath.to_string());
-
-            filecache.add_import_path(p);
-
-            let uri_string = uri.to_string();
-
-            self.client
-                .log_message(MessageType::Info, &uri_string)
-                .await;
+            if let Ok(dir) = dir.canonicalize() {
+                filecache.add_import_path(dir);
+            }
 
             let os_str = path.file_name().unwrap();
 
@@ -1041,30 +1027,16 @@ impl LanguageServer for SolangServer {
     }
 
     async fn did_change(&self, params: DidChangeTextDocumentParams) {
-        self.client
-            .log_message(MessageType::Info, "file changed!")
-            .await;
-
         let uri = params.text_document.uri;
 
         if let Ok(path) = uri.to_file_path() {
             let mut filecache = FileCache::new();
 
-            let filecachepath = path.parent().unwrap();
+            let dir = path.parent().unwrap();
 
-            let tostrpath = filecachepath.to_str().unwrap();
-
-            let mut p = PathBuf::new();
-
-            p.push(tostrpath.to_string());
-
-            filecache.add_import_path(p);
-
-            let uri_string = uri.to_string();
-
-            self.client
-                .log_message(MessageType::Info, &uri_string)
-                .await;
+            if let Ok(dir) = dir.canonicalize() {
+                filecache.add_import_path(dir);
+            }
 
             let os_str = path.file_name().unwrap();
 
@@ -1077,30 +1049,16 @@ impl LanguageServer for SolangServer {
     }
 
     async fn did_save(&self, params: DidSaveTextDocumentParams) {
-        self.client
-            .log_message(MessageType::Info, "file saved!")
-            .await;
-
         let uri = params.text_document.uri;
 
         if let Ok(path) = uri.to_file_path() {
             let mut filecache = FileCache::new();
 
-            let filecachepath = path.parent().unwrap();
+            let dir = path.parent().unwrap();
 
-            let tostrpath = filecachepath.to_str().unwrap();
-
-            let mut p = PathBuf::new();
-
-            p.push(tostrpath.to_string());
-
-            filecache.add_import_path(p);
-
-            let uri_string = uri.to_string();
-
-            self.client
-                .log_message(MessageType::Info, &uri_string)
-                .await;
+            if let Ok(dir) = dir.canonicalize() {
+                filecache.add_import_path(dir);
+            }
 
             let os_str = path.file_name().unwrap();
 
@@ -1112,11 +1070,7 @@ impl LanguageServer for SolangServer {
         }
     }
 
-    async fn did_close(&self, _: DidCloseTextDocumentParams) {
-        self.client
-            .log_message(MessageType::Info, "file closed!")
-            .await;
-    }
+    async fn did_close(&self, _: DidCloseTextDocumentParams) {}
 
     async fn completion(&self, _: CompletionParams) -> Result<Option<CompletionResponse>> {
         Ok(Some(CompletionResponse::Array(vec![
@@ -1143,8 +1097,6 @@ impl LanguageServer for SolangServer {
             p.push(tostrpath.to_string());
 
             filecache.add_import_path(p);
-
-            let _uri_string = uri.to_string();
 
             let os_str = path.file_name().unwrap();
 
