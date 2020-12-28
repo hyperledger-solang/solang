@@ -2763,14 +2763,14 @@ uint128 ``tx.gasprice(uint64 gas)``
     To avoid rounding errors, pass the total amount of gas into ``tx.gasprice(uint64 gas)`` rather than
     doing arithmetic on the result. As an example, **replace** this bad example:
 
-    .. code-block::
+    .. code-block:: solidity
 
         // BAD example
         uint128 cost = num_items * tx.gasprice(gas_per_item);
 
     with:
 
-    .. code-block::
+    .. code-block:: solidity
 
         uint128 cost = tx.gasprice(num_items * gas_per_item);
 
