@@ -12,11 +12,11 @@ use solang::Target;
 use lsp_types::{Diagnostic, DiagnosticSeverity, HoverProviderCapability, Position, Range};
 use solang::sema::*;
 
+use solang::*;
+use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Mutex;
-
-use solang::*;
 
 use solang::sema::ast::*;
 use solang::sema::tags::*;
@@ -1037,11 +1037,16 @@ impl LanguageServer for SolangServer {
                             .offsets
                             .get_offset(0, pos.line as usize, pos.character as usize);
 
-                    if let Some(msg) = hovers
-                        .lookup
-                        .iter()
-                        .find(|entry| entry.0 <= offset && offset <= entry.1)
-                    {
+                    if let Ok(pos) = hovers.lookup.binary_search_by(|entry| {
+                        if entry.0 > offset {
+                            Ordering::Greater
+                        } else if entry.1 < offset {
+                            Ordering::Less
+                        } else {
+                            Ordering::Equal
+                        }
+                    }) {
+                        let msg = &hovers.lookup[pos];
                         let loc = pt::Loc(0, msg.0, msg.1);
                         let range = SolangServer::loc_to_range(&loc, &hovers.offsets);
 
