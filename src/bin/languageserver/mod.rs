@@ -150,21 +150,17 @@ impl SolangServer {
         Range::new(start, end)
     }
 
-    fn construct_builtins(
-        bltn: &sema::ast::Builtin,
-        ns: &ast::Namespace,
-        fnc_map: &HashMap<String, String>,
-    ) -> String {
+    fn construct_builtins(bltn: &sema::ast::Builtin, ns: &ast::Namespace) -> String {
         let mut msg = "[built-in] ".to_string();
         let prot = get_prototype(*bltn);
 
         if let Some(protval) = prot {
             for ret in protval.ret {
-                msg = format!("{} {}", msg, SolangServer::construct_defs(ret, ns, fnc_map));
+                msg = format!("{} {}", msg, SolangServer::expanded_ty(ret, ns));
             }
             msg = format!("{} {} (", msg, protval.name);
             for arg in protval.args {
-                msg = format!("{}{}", msg, SolangServer::construct_defs(arg, ns, fnc_map));
+                msg = format!("{}{}", msg, SolangServer::expanded_ty(arg, ns));
             }
             msg = format!("{}): {}", msg, protval.doc.to_string());
         }
@@ -185,7 +181,7 @@ impl SolangServer {
                 if let Some(exp) = expr {
                     SolangServer::construct_expr(exp, lookup_tbl, symtab, fnc_map, ns);
                 }
-                let mut msg = SolangServer::construct_defs(&_param.ty, ns, fnc_map);
+                let mut msg = SolangServer::expanded_ty(&_param.ty, ns);
                 msg = format!("{} {}", msg, _param.name);
                 lookup_tbl.push((_param.loc.1, _param.loc.2, msg));
             }
@@ -267,15 +263,14 @@ impl SolangServer {
 
                 msg.push_str(&format!("```\nevent {} {{\n", event));
 
-                let len = event.fields.len();
-                for i in 0..len {
-                    let field = &event.fields[i];
+                let mut iter = event.fields.iter().peekable();
+                while let Some(field) = iter.next() {
                     msg.push_str(&format!(
                         "\t{}{}{}{}\n",
                         field.ty.to_string(ns),
                         if field.indexed { " indexed " } else { " " },
                         field.name,
-                        if i + 1 < len { "," } else { "" }
+                        if iter.peek().is_some() { "," } else { "" }
                     ));
                 }
 
@@ -329,7 +324,7 @@ impl SolangServer {
     ) {
         match expr {
             Expression::FunctionArg(locs, typ, _sample_sz) => {
-                let msg = SolangServer::construct_defs(typ, ns, fnc_map);
+                let msg = SolangServer::expanded_ty(typ, ns);
                 lookup_tbl.push((locs.1, locs.2, msg));
             }
 
@@ -416,18 +411,15 @@ impl SolangServer {
 
             // Variable expression
             Expression::Variable(locs, typ, _val) => {
-                let msg = format!("({})", SolangServer::construct_defs(typ, ns, fnc_map));
+                let msg = format!("({})", SolangServer::expanded_ty(typ, ns));
                 lookup_tbl.push((locs.1, locs.2, msg));
             }
             Expression::ConstantVariable(locs, typ, _val1, _val2) => {
-                let msg = format!(
-                    "constant ({})",
-                    SolangServer::construct_defs(typ, ns, fnc_map)
-                );
+                let msg = format!("constant ({})", SolangServer::expanded_ty(typ, ns,));
                 lookup_tbl.push((locs.1, locs.2, msg));
             }
             Expression::StorageVariable(locs, typ, _val1, _val2) => {
-                let msg = format!("({})", SolangServer::construct_defs(typ, ns, fnc_map));
+                let msg = format!("({})", SolangServer::expanded_ty(typ, ns));
                 lookup_tbl.push((locs.1, locs.2, msg));
             }
 
@@ -600,7 +592,7 @@ impl SolangServer {
                         let msg = format!(
                             "{}:{}, \n\n",
                             parm.name,
-                            SolangServer::construct_defs(&parm.ty, ns, fnc_map)
+                            SolangServer::expanded_ty(&parm.ty, ns)
                         );
                         param_msg = format!("{} {}", param_msg, msg);
                     }
@@ -608,11 +600,8 @@ impl SolangServer {
                     param_msg = format!("{} ) returns (", param_msg);
 
                     for ret in &fnc.returns {
-                        let msg = format!(
-                            "{}:{}, ",
-                            ret.name,
-                            SolangServer::construct_defs(&ret.ty, ns, fnc_map)
-                        );
+                        let msg =
+                            format!("{}:{}, ", ret.name, SolangServer::expanded_ty(&ret.ty, ns));
                         param_msg = format!("{} {}", param_msg, msg);
                     }
 
@@ -647,7 +636,7 @@ impl SolangServer {
                         let msg = format!(
                             "{}:{}, \n\n",
                             parm.name,
-                            SolangServer::construct_defs(&parm.ty, ns, fnc_map)
+                            SolangServer::expanded_ty(&parm.ty, ns)
                         );
                         param_msg = format!("{} {}", param_msg, msg);
                     }
@@ -655,11 +644,8 @@ impl SolangServer {
                     param_msg = format!("{} ) \n\n returns (", param_msg);
 
                     for ret in &fnc.returns {
-                        let msg = format!(
-                            "{}:{}, ",
-                            ret.name,
-                            SolangServer::construct_defs(&ret.ty, ns, fnc_map)
-                        );
+                        let msg =
+                            format!("{}:{}, ", ret.name, SolangServer::expanded_ty(&ret.ty, ns));
                         param_msg = format!("{} {}", param_msg, msg);
                     }
 
@@ -722,7 +708,7 @@ impl SolangServer {
                 lookup_tbl.push((locs.1, locs.2, msg));
             }
             Expression::Builtin(_locs, _typ, _builtin, expr) => {
-                let msg = SolangServer::construct_builtins(_builtin, ns, fnc_map);
+                let msg = SolangServer::construct_builtins(_builtin, ns);
                 lookup_tbl.push((_locs.1, _locs.2, msg));
                 for expp in expr {
                     SolangServer::construct_expr(expp, lookup_tbl, symtab, fnc_map, ns);
@@ -745,7 +731,7 @@ impl SolangServer {
         fnc_map: &HashMap<String, String>,
         ns: &ast::Namespace,
     ) {
-        let msg_typ = SolangServer::construct_defs(&contvar.ty, ns, fnc_map);
+        let msg_typ = SolangServer::expanded_ty(&contvar.ty, ns);
         let msg = format!("{} {}", msg_typ, contvar.name);
         lookup_tbl.push((contvar.loc.1, contvar.loc.2, msg));
         if let Some(expr) = &contvar.initializer {
@@ -791,12 +777,12 @@ impl SolangServer {
 
         for fnc in &ns.functions {
             for parm in &fnc.params {
-                let msg = SolangServer::construct_defs(&parm.ty, ns, fnc_map);
+                let msg = SolangServer::expanded_ty(&parm.ty, ns);
                 lookup_tbl.push((parm.loc.1, parm.loc.2, msg));
             }
 
             for ret in &fnc.returns {
-                let msg = SolangServer::construct_defs(&ret.ty, ns, fnc_map);
+                let msg = SolangServer::expanded_ty(&ret.ty, ns);
                 lookup_tbl.push((ret.loc.1, ret.loc.2, msg));
             }
 
@@ -843,77 +829,63 @@ impl SolangServer {
         }
     }
 
-    fn construct_defs(
-        typ: &sema::ast::Type,
-        ns: &ast::Namespace,
-        _fnc_map: &HashMap<String, String>,
-    ) -> String {
-        let def;
-
-        match typ {
-            sema::ast::Type::Ref(r) => {
-                def = SolangServer::construct_defs(r, ns, _fnc_map);
-            }
-            sema::ast::Type::StorageRef(r) => {
-                def = SolangServer::construct_defs(r, ns, _fnc_map);
-            }
-            sema::ast::Type::Mapping(k, v) => {
-                def = format!(
-                    "mapping({} => {})",
-                    SolangServer::construct_defs(k, ns, _fnc_map),
-                    SolangServer::construct_defs(v, ns, _fnc_map)
-                );
-            }
-            sema::ast::Type::Array(ty, len) => {
-                def = format!(
-                    "{}{}",
-                    SolangServer::construct_defs(ty, ns, _fnc_map),
-                    len.iter()
-                        .map(|l| match l {
-                            None => "[]".to_string(),
-                            Some(l) => format!("[{}]", l),
-                        })
-                        .collect::<String>()
-                );
-            }
+    /// Render the type with struct/enum fields expanded
+    fn expanded_ty(ty: &sema::ast::Type, ns: &ast::Namespace) -> String {
+        match ty {
+            sema::ast::Type::Ref(ty) => SolangServer::expanded_ty(ty, ns),
+            sema::ast::Type::StorageRef(ty) => SolangServer::expanded_ty(ty, ns),
             sema::ast::Type::Struct(n) => {
                 let strct = &ns.structs[*n];
 
-                let tag_msg = render(&strct.tags[..]);
+                let mut msg = render(&strct.tags);
 
-                let mut temp_tbl: Vec<(usize, usize, String)> = Vec::new();
-                let mut evnt_msg = format!("{} struct {} `{{` \n\n", tag_msg, strct.name);
+                msg.push_str(&format!("```\nstruct {} {{\n", strct));
 
-                for filds in &strct.fields {
-                    SolangServer::construct_strct(&filds, &mut temp_tbl, ns);
+                let mut iter = strct.fields.iter().peekable();
+                while let Some(field) = iter.next() {
+                    msg.push_str(&format!(
+                        "\t{} {}{}\n",
+                        field.ty.to_string(ns),
+                        field.name,
+                        if iter.peek().is_some() { "," } else { "" }
+                    ));
                 }
-                for entries in temp_tbl {
-                    evnt_msg = format!("{} {}, \n\n", evnt_msg, entries.2);
-                }
 
-                evnt_msg = format!("{} \n\n`}}`", evnt_msg);
+                msg.push_str("};\n```\n");
 
-                def = evnt_msg;
+                msg
             }
             sema::ast::Type::Enum(n) => {
                 let enm = &ns.enums[*n];
 
-                let tag_msg = render(&enm.tags[..]);
+                let mut msg = render(&enm.tags);
 
-                let mut evnt_msg = format!("{} enum {} `{{` \n\n", tag_msg, enm.name);
+                msg.push_str(&format!("```\nenum {} {{\n", enm));
 
-                for (nam, vals) in &enm.values {
-                    evnt_msg = format!("{} {} {}, \n\n", evnt_msg, nam, vals.1);
+                // display the enum values in-order
+                let mut values = Vec::new();
+                values.resize(enm.values.len(), "");
+
+                for (name, value) in &enm.values {
+                    values[value.1] = name;
                 }
 
-                def = format!("{} \n\n`}}`", evnt_msg);
-            }
-            _ => {
-                def = typ.to_string(ns);
-            }
-        }
+                let mut iter = values.iter().peekable();
 
-        def
+                while let Some(value) = iter.next() {
+                    msg.push_str(&format!(
+                        "\t{}{}\n",
+                        value,
+                        if iter.peek().is_some() { "," } else { "" }
+                    ));
+                }
+
+                msg.push_str("};\n```\n");
+
+                msg
+            }
+            _ => ty.to_string(ns),
+        }
     }
 }
 
