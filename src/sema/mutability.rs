@@ -142,7 +142,7 @@ fn check_mutability(func: &Function, ns: &Namespace) -> Vec<Diagnostic> {
         if !state.does_write_state && state.does_read_state && func.mutability.is_none() {
             state.diagnostics.push(Diagnostic::warning(
                 func.loc,
-                "function declared can be declared ‘view’".to_string(),
+                "function can be declared ‘view’".to_string(),
             ));
         }
     }
