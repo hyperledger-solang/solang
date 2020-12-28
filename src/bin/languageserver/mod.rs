@@ -115,7 +115,7 @@ impl SolangServer {
                         range,
                         message: diag.message.to_string(),
                         severity: Some(sev),
-                        source: Some("solidity".to_string()),
+                        source: None,
                         code: None,
                         related_information,
                         tags: None,
