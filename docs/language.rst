@@ -2792,7 +2792,7 @@ uint128 ``tx.gasprice(uint64 gas)``
 
     Note this function is not available on the Ethereum Foundation Solidity compiler.
 
-adddress ``tx.origin``
+address ``tx.origin``
     The address that started this transaction. Not available on Parity Substrate
 
 
