@@ -233,6 +233,11 @@ fn process_filename(
     // resolve phase
     let mut ns = solang::parse_and_resolve(filename, cache, target);
 
+    // codegen all the contracts; some additional errors/warnings will be detected here
+    for contract_no in 0..ns.contracts.len() {
+        codegen(contract_no, &mut ns);
+    }
+
     if matches.is_present("STD-JSON") {
         let mut out = diagnostics::message_as_json(cache, &ns);
         json.errors.append(&mut out);
@@ -243,11 +248,6 @@ fn process_filename(
     if ns.contracts.is_empty() || diagnostics::any_errors(&ns.diagnostics) {
         eprintln!("{}: error: no valid contracts found", filename);
         std::process::exit(1);
-    }
-
-    // codegen all the contracts
-    for contract_no in 0..ns.contracts.len() {
-        codegen(contract_no, &mut ns);
     }
 
     if let Some("ast") = matches.value_of("EMIT") {
