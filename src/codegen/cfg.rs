@@ -4,6 +4,7 @@ use std::collections::HashSet;
 use std::fmt;
 use std::str;
 
+use super::constant_folding;
 use super::expression::expression;
 use super::reaching_definitions;
 use super::statements::{statement, LoopScopes};
@@ -1013,6 +1014,8 @@ pub fn generate_cfg(
     }
 
     reaching_definitions::find(&mut cfg);
+    let diags = constant_folding::constant_folding(&mut cfg);
+    ns.diagnostics.extend(diags);
 
     all_cfgs[cfg_no] = cfg;
 }

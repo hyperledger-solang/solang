@@ -821,6 +821,7 @@ impl Type {
             Type::Bytes(n) => *n as u16 * 8,
             Type::Enum(n) => ns.enums[*n].ty.bits(ns),
             Type::Value => ns.value_length as u16 * 8,
+            Type::StorageRef(_) => ns.storage_type().bits(ns),
             _ => panic!("type not allowed"),
         }
     }
