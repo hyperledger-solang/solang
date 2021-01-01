@@ -159,7 +159,7 @@ fn storage_arrays() {
     let mut vals = Vec::new();
 
     for _ in 0..100 {
-        let index = rng.gen::<u64>() % 0x2_000_000;
+        let index = rng.gen::<u64>() % 0x200_0000;
         let val = rng.gen::<i32>();
 
         runtime.function("set", SetArg(index, val).encode());

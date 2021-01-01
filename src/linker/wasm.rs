@@ -126,10 +126,7 @@ pub fn link(input: &[u8], name: &str, target: Target) -> Vec<u8> {
     // set stack pointer to 64k (there is only one global)
     for global in module.global_section_mut().unwrap().entries_mut() {
         let init_expr = global.init_expr_mut();
-        *init_expr = InitExpr::new(vec![
-            Instruction::I32Const(0x10000 as i32),
-            Instruction::End,
-        ]);
+        *init_expr = InitExpr::new(vec![Instruction::I32Const(0x10000), Instruction::End]);
     }
 
     let linked = builder::module().with_module(module);

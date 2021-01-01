@@ -4,7 +4,6 @@ use num_bigint::BigInt;
 use num_traits::Zero;
 use std::collections::HashMap;
 use std::collections::HashSet;
-use std::iter::FromIterator;
 
 use super::ast;
 use super::expression::{expression, match_constructor_to_args};
@@ -241,7 +240,7 @@ fn resolve_base_args(
 pub fn visit_bases(contract_no: usize, ns: &ast::Namespace) -> Vec<usize> {
     let mut order = Vec::new();
 
-    fn base<'a>(contract_no: usize, order: &mut Vec<usize>, ns: &'a ast::Namespace) {
+    fn base(contract_no: usize, order: &mut Vec<usize>, ns: &ast::Namespace) {
         for b in ns.contracts[contract_no].bases.iter().rev() {
             base(b.contract_no, order, ns);
         }
@@ -379,9 +378,9 @@ fn layout_contract(contract_no: usize, ns: &mut ast::Namespace) {
                         ));
                     } else {
                         let override_specified: HashSet<usize> =
-                            HashSet::from_iter(override_specified.iter().cloned());
+                            override_specified.iter().cloned().collect();
                         let override_needed: HashSet<usize> =
-                            HashSet::from_iter(entry.iter().map(|(contract_no, _)| *contract_no));
+                            entry.iter().map(|(contract_no, _)| *contract_no).collect();
 
                         // List of contract which should have been specified
                         let missing: Vec<String> = override_needed
