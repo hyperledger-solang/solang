@@ -1076,7 +1076,7 @@ impl TestRuntime {
                         }
                         let b = buf[offset + i];
                         hex.push_str(&format!(" {:02x}", b));
-                        if b >= 0x20 && b <= 0x7e {
+                        if b.is_ascii() && !b.is_ascii_control() {
                             chars.push_str(&format!("  {}", b as char));
                         } else {
                             chars.push_str("   ");

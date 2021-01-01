@@ -4,6 +4,11 @@ mod emit;
 pub mod file_cache;
 pub mod linker;
 pub mod parser;
+
+// In Sema, we use result unit for returning early
+// when code-misparses. The error will be added to the namespace diagnostics, no need to have anything but unit
+// as error.
+#[allow(clippy::result_unit_err)]
 pub mod sema;
 
 use file_cache::FileCache;
