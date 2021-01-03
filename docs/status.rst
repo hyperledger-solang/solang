@@ -15,7 +15,7 @@ Please report any issues you may find to github.
 Differences:
 
 - ``immutable`` is not supported. Note this is impossible to implement on any than chain other than Ethereum; this is purely an ethereum feature
-- libraries functions are always statically linked into the contract code
+- libraries are always statically linked into the contract code
 - Solang generates WebAssembly or BPF rather than EVM. This means that the ``assembly {}``
   statement using EVM instructions is not supported
 

@@ -26,7 +26,7 @@ The extension can be found on the `Visual Studio Marketplace <https://marketplac
 
 First, install the extension and the solang compiler binary. The extension needs
 to know where to find the solang binary to start the language server, and also
-it needs to know what target you wish to compiler you solidity code for.
+it needs to know what target you wish to compile your solidity code for.
 
 .. image:: extension-config.png
 

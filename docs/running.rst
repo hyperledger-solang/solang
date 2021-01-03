@@ -11,13 +11,6 @@ The following targets are supported right now:
 `Ethereum ewasm <https://github.com/ewasm/design>`_, and
 `Sawtooth Sabre <https://github.com/hyperledger/sawtooth-sabre>`_.
 
-.. note::
-
-  Depending on which target Solang is compiling for, different language
-  features are supported. For example, when compiling for Parity Substrate, the
-  constructor can be overloaded with different prototypes. When targetting
-  ewasm or Sawtooth Sabre, only one constructor prototype is allowed.
-
 Using Solang on the command line
 --------------------------------
 
@@ -40,7 +33,7 @@ Options:
   or ``substrate``. The default is substrate.
 
 \\-\\-doc
-  Generate documentation for the given Solidity as a simple html page. This uses the
+  Generate documentation for the given Solidity files as a single html page. This uses the
   doccomment tags. The result is saved in ``soldoc.html``. See :ref:`tags` for
   further information.
 
@@ -55,7 +48,7 @@ Options:
 \\-\\-importpath *directory*
   When resolving ``import`` directives, search this directory. By default ``import``
   will only search the current directory. This option can be specified multiple times
-  and they will be searched in-order.
+  and the directories will be searched in the order specified.
 
 \\-\\-help, -h
   This displays a short description of all the options
@@ -79,10 +72,10 @@ Options:
   cfg
     Output control flow graph.
 
-  llvm
+  llvm-ir
     Output llvm IR as text.
 
-  bc
+  llvm-bc
     Output llvm bitcode as binary file.
 
   object
@@ -149,7 +142,7 @@ directory. Write this to flipper.sol and run:
 
   solang --target substrate flipper.sol
 
-Now you should have ``flipper.contract``. The file contains both the ABI and contract wasm.
+Now you should have a file called ``flipper.contract``. The file contains both the ABI and contract wasm.
 It can be used directly in the
 `Polkadot UI <https://substrate.dev/substrate-contracts-workshop/#/0/deploying-your-contract?id=putting-your-code-on-the-blockchain>`_, as if the contract was written in ink!.
 
