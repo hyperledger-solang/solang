@@ -47,7 +47,7 @@ fn main() {
                 .help("Emit compiler state at early stage")
                 .long("emit")
                 .takes_value(true)
-                .possible_values(&["ast", "cfg", "llvm", "bc", "object"]),
+                .possible_values(&["ast", "cfg", "llvm-ir", "llvm-bc", "object"]),
         )
         .arg(
             Arg::with_name("OPT")
@@ -262,7 +262,7 @@ fn process_filename(
 
         let contract = resolved_contract.emit(&ns, &context, &filename, opt);
 
-        if let Some("llvm") = matches.value_of("EMIT") {
+        if let Some("llvm-ir") = matches.value_of("EMIT") {
             if let Some(runtime) = &contract.runtime {
                 // In Ethereum, an ewasm contract has two parts, deployer and runtime. The deployer code returns the runtime wasm
                 // as a byte string
@@ -294,7 +294,7 @@ fn process_filename(
 
                 if verbose {
                     eprintln!(
-                        "info: Saving LLVM {} for contract {}",
+                        "info: Saving LLVM IR {} for contract {}",
                         llvm_filename.display(),
                         contract.name
                     );
@@ -305,7 +305,7 @@ fn process_filename(
             continue;
         }
 
-        if let Some("bc") = matches.value_of("EMIT") {
+        if let Some("llvm-bc") = matches.value_of("EMIT") {
             // In Ethereum, an ewasm contract has two parts, deployer and runtime. The deployer code returns the runtime wasm
             // as a byte string
             if let Some(runtime) = &contract.runtime {

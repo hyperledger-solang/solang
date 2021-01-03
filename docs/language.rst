@@ -4,8 +4,8 @@ Solidity Language
 =================
 
 The Solidity language supported by Solang aims to be compatible with the latest
-`Ethereum Foundation Solidity Compiler <https://github.com/ethereum/solidity/>`_ with
-some caveats, please check out our :ref:`status` page.
+`Ethereum Foundation Solidity Compiler <https://github.com/ethereum/solidity/>`_,
+version 0.7 with some caveats, please check out our :ref:`status` page.
 
 .. note::
 
@@ -57,8 +57,8 @@ The following can be imported:
 - contracts, including abstract contract, libraries, and interfaces
 
 There are a few different flavours of import. You can specify if you want everything imported,
-or a just a select few. You can also rename the types. In order to import only `foo` and `bar`,
-whatever they might be:
+or a just a select few. You can also rename the imports. The following directive imports only
+`foo` and `bar`:
 
 .. code-block:: javascript
 
@@ -472,12 +472,12 @@ and memory is expensive; code has to be generated for each field and executed.
 
 Note that struct variables are references. When contract struct variables or normal struct variables
 are passed around, just the memory address or storage slot is passed around internally. This makes
-it very cheap, but it does mean that if the called function modifies the struct, then this is
+it very cheap, but it does mean that if a called function modifies the struct, then this is
 visible in the caller as well.
 
 .. code-block:: javascript
 
-  context foo {
+  contract foo {
       struct bar {
           bytes32 f1;
           bytes32 f2;
@@ -485,17 +485,17 @@ visible in the caller as well.
           bytes32 f4;
       }
 
-      function f(struct bar b) public {
-          b.f4 = hex"foobar";
+      function f(bar b) public {
+          b.f4 = "foobar";
       }
 
       function example() public {
           bar bar1;
 
-          // bar1 is passed by reference; just its address is passed
+          // bar1 is passed by reference; just its pointer is passed
           f(bar1);
 
-          assert(bar.f4 == hex"foobar");
+          assert(bar1.f4 == "foobar");
       }
   }
 
@@ -611,7 +611,7 @@ expression requires a single unsigned integer argument. The length can be read u
 
     There is experimental support for `push()` and `pop()` on memory arrays.
 
-Storage dynamic memory arrays do not have to be allocated. By default, the have a
+Storage dynamic memory arrays do not have to be allocated. By default, they have a
 length of zero and elements can be added and removed using the ``push()`` and ``pop()``
 methods.
 
@@ -639,7 +639,7 @@ methods.
 Calling the method ``pop()`` on an empty array is an error and contract execution will abort,
 just like when you access an element beyond the end of an array.
 
-``push()`` without any arguments return a storage reference. This is only available for types
+``push()`` without any arguments returns a storage reference. This is only available for types
 that support storage references (see below).
 
 .. code-block:: javascript
@@ -666,16 +666,20 @@ memory, and then clear storage.
 String
 ______
 
-Strings can be initialized with a string literal or a hex literal. Strings can be
-concatenated and compared; no other operations are allowed on them.
+Strings can be initialized with a string literal or a hex literal. Strings can be concatenated and
+compared, and formatted using `.format()`; no other operations are allowed on strings.
 
 .. code-block:: javascript
 
     contract example {
-        function test(string s) public returns (bool) {
+        function test1(string s) public returns (bool) {
             string str = "Hello, " + s + "!";
 
             return (str == "Hello, World!");
+        }
+
+        function test2(string s, int64 n) public returns (string res) {
+            res = "Hello, {}! #{}".format(s, n);
         }
     }
 
@@ -692,7 +696,8 @@ Dynamic Length Bytes
 ____________________
 
 The ``bytes`` datatype is a dynamic length array of bytes. It can be created with
-the ``new`` operator, or from an string or hex initializer.
+the ``new`` operator, or from an string or hex initializer. Unlike the ``string`` type,
+it is possible to index the ``bytes`` datatype like an array.
 
 .. code-block:: javascript
 
@@ -803,7 +808,7 @@ ______________
 
 In Solidity, other smart contracts can be called and created. So, there is a type to hold the
 address of a contract. This is in fact simply the address of the contract, with some syntax
-sugar for calling functions on the contract.
+sugar for calling functions it.
 
 A contract can be created with the new statement, followed by the name of the contract. The
 arguments to the constructor must be provided.
@@ -843,7 +848,7 @@ Function Types
 ______________
 
 Function types are references to functions. You can use function types to pass functions
-for callbacks for example. Function types come in two flavours, ``internal`` and ``external``.
+for callbacks, for example. Function types come in two flavours, ``internal`` and ``external``.
 An internal function is a reference to a function in the same contract or one of its base contracts.
 An external function is a reference to a public or external function on any contract.
 
@@ -967,7 +972,7 @@ demonstrated in function all_pumas().
 Expressions
 -----------
 
-Solidity resembles the C family of languages. Expressions can have the following operators.
+Solidity resembles the C family of languages. Expressions can use the following operators.
 
 Arithmetic operators
 ____________________
@@ -986,7 +991,7 @@ Parentheses can be used too, of course:
 
  	uint32 celcius = (fahrenheit - 32) * 5 / 9;
 
-The assignment operator:
+Operators can also come in the assignment form.
 
 .. code-block:: javascript
 
@@ -1009,7 +1014,7 @@ Bitwise operators
 _________________
 
 The ``|``, ``&``, ``^`` are supported, as are the shift operators ``<<``
-and ``>>``. There are also available in the assignment form ``|=``, ``&=``,
+and ``>>``. These are also available in the assignment form ``|=``, ``&=``,
 ``^=``, ``<<=``, and ``>>=``. Lastly there is a unary operator ``~`` to
 invert all the bits in a value.
 
@@ -1029,21 +1034,20 @@ the return value of bar(). Similarly, the right hand expressions of ``&&`` will 
 evaluated if the left hand expression evaluates to ``false``; in this case, whatever
 ever the outcome of the right hand expression, the ``&&`` will result in ``false``.
 
-
 .. code-block:: javascript
 
   bool foo = x > 0 && bar();
 
 Now ``bar()`` will only be called if x *is* greater than 0. If x is 0 then the ``&&``
-will result in false, irrespective of what bar() would returns, so bar() is not
+will result in false, irrespective of what bar() would return, so bar() is not
 called at all. The expression elides execution of the right hand side, which is also
 called *short-circuit*.
 
 
-Ternary operator
-________________
+Conditional operator
+____________________
 
-The ternary operator ``? :`` is supported:
+The ternary conditional operator ``? :`` is supported:
 
 .. code-block:: javascript
 
@@ -1107,7 +1111,7 @@ this only works with public functions.
 type(..) operators
 __________________
 
-For integer values, the minimum and maximum values the types are available using the
+For integer values, the minimum and maximum values the types can hold are available using the
 ``type(...).min`` and ``type(...).max`` operators. For unsigned integers, ``type(..).min``
 will always be 0.
 
@@ -1125,10 +1129,10 @@ will always be 0.
         }
     }
 
-The contract code for a contract, i.e. the binary WebAssembly, can be retrieved using the
+The contract code for a contract, i.e. the binary WebAssembly or BOF, can be retrieved using the
 ``type(c).creationCode`` and ``type(c).runtimeCode`` fields, as ``bytes``. In Ethereum,
 the constructor code is in the ``creationCode`` WebAssembly and all the functions are in
-the ``runtimeCode`` WebAssembly. Parity Substrate has a single WebAssembly code for both,
+the ``runtimeCode`` WebAssembly or BPF. Parity Substrate has a single WebAssembly code for both,
 so both fields will evaluate to the same value.
 
 .. code-block:: javascript
@@ -1178,9 +1182,7 @@ Casting
 _______
 
 Solidity is very strict about the sign of operations, and whether an assignment can truncate a
-value. You can force the compiler to accept truncations or differences in sign by adding a cast,
-but this is best avoided. Often changing the parameters or return value of a function will avoid
-the need for casting.
+value. You can force the compiler to accept truncations or differences in sign by adding a cast.
 
 Some examples:
 
@@ -1201,8 +1203,8 @@ The compiler will say:
    implicit conversion would truncate from int256 to int64
 
 Now you can work around this by adding a cast to the argument to return ``return int64(bar);``,
-however it would be much nicer if the return value matched the argument. Multiple abs() could exists
-with overloaded functions, so that there is an ``abs()`` for each type.
+however it would be much nicer if the return value matched the argument. Instead, implement
+multiple overloaded abs() functions, so that there is an ``abs()`` for each type.
 
 It is allowed to cast from a ``bytes`` type to ``int`` or ``uint`` (or vice versa), only if the length
 of the type is the same. This requires an explicit cast.
@@ -1258,15 +1260,16 @@ retain their values between calls. These are declared so:
   }
 
 The ``counter`` is maintained for each deployed ``hitcount`` contract. When the contract is deployed,
-the contract storage is set to 1. The ``= 1`` initializer is not required; when it is not present, it
-is initialized to 0, or ``false`` if it is a ``bool``.
+the contract storage is set to 1. Contract storage variable do not need an initializer; when
+it is not present, it is initialized to 0, or ``false`` if it is a ``bool``.
 
 How to clear Contract Storage
 _____________________________
 
 Any contract storage variable can have its underlying contract storage cleared with the ``delete``
 operator. This can be done on any type; a simple integer, an array element, or the entire
-array itself. Note this can be costly.
+array itself. Contract storage has to be cleared slot (i.e. primitive) at a time, so if there are
+many primitives, this can be costly.
 
 .. code-block:: javascript
 
@@ -1308,22 +1311,23 @@ contract could emit a `Deposit` event, or `BetPlaced` in a poker game. These eve
 in the blockchain transaction log, so they become part of the permanent record. From Solidity's perspective,
 you can emit events but you cannot access events on the chain.
 
-Once those events are added to the chain, an application can listen for events. For example, the Web3.js
-interface has a `subscribe()` function. `Hyperledger Burrow <https://hyperledger.github.io/burrow/#/reference/vent>`_
-has a vent command to commit events to the Postgres database.
+Once those events are added to the chain, an off-chain application can listen for events. For example, the Web3.js
+interface has a `subscribe()` function. Another is example is
+`Hyperledger Burrow <https://hyperledger.github.io/burrow/#/reference/vent>`_
+which has a vent command which listens to events and inserts them into a Postgres database.
 
 An event has two parts. First, there is a limited set of topics. Usually there are no more than 3 topics,
 and each of those has a fixed length of 32 bytes. They are there so that an application listening for events
-can easily filter for particular types of events. There is also an data section of variable length bytes, which
-is ABI encoded. To decode this part, the ABI for the event must be known.
+can easily filter for particular types of events, without needing to do any decoding. There is also a data
+section of variable length bytes, which is ABI encoded. To decode this part, the ABI for the event must be known.
 
-From Solidity's perspective, an event has a name, and one or more fields. The fields can either be ``indexed`` or
-not. ``indexed`` are stored as topics, so there can only be a limited number of ``indexed`` fields. The other
+From Solidity's perspective, an event has a name, and zero or more fields. The fields can either be ``indexed`` or
+not. ``indexed`` fields are stored as topics, so there can only be a limited number of ``indexed`` fields. The other
 fields are stored in the data section of the event. The event name does not need to be unique; just like
 functions, they can be overloaded as long as the fields are of different types, or the event has
 a different number of arguments.
 In Parity Substrate, the topic fields are always the hash of the value of the field. Ethereum only hashes fields
-which do not fit in the 32 bytes. When fields are hashed, it is only possible to compare the topic against a
+which do not fit in the 32 bytes. Since a cryptographic hash is used, it is only possible to compare the topic against a
 known value.
 
 An event can be declared in a contract, or outside.
@@ -1396,7 +1400,7 @@ like so:
 A constructor does not have a name and may have any number of arguments. If a constructor has arguments,
 then when the contract is deployed then those arguments must be supplied.
 
-If a contract is expected to hold receive value on instantiation, the constructor should be declares ``payable``.
+If a contract is expected to hold receive value on instantiation, the constructor should be declared ``payable``.
 
 .. note::
 
@@ -1430,7 +1434,7 @@ constructor arguments, which need to be provided.
     }
 
 The constructor might fail for various reasons, for example ``require()`` might fail here. This can
-be handled using the :ref:`try-catch` statement, else errors are passed on the caller.
+be handled using the :ref:`try-catch` statement, else errors cause the transaction to fail.
 
 Sending value to the new contract
 _________________________________
@@ -1501,7 +1505,7 @@ Functions
 ---------
 
 A function can be declared inside a contract, in which case it has access to the contracts
-contract storage variables, other functions etc. Functions can be also be declared outside
+contract storage variables, other contract functions etc. Functions can be also be declared outside
 a contract.
 
 .. code-block:: javascript
@@ -1535,11 +1539,11 @@ if they do not have names then they cannot be used in the function body, but the
 be present in the public interface.
 
 The return values may have names as demonstrated in the get_initial_bound() function.
-When at least one of the return values has a name, then the return statement is no
+When at all of the return values have a name, then the return statement is no
 longer required at the end of a function body. In stead of returning the values
 which are provided in the return statement, the values of the return variables at the end
 of the function is returned. It is still possible to explicitly return some values
-with a return statement with some values.
+with a return statement.
 
 Functions which are declared ``public`` will be present in the ABI and are callable
 externally. If a function is declared ``private`` then it is not callable externally,
@@ -1559,13 +1563,17 @@ by name, arguments can be in any order. However, functions with anonymous argume
 .. code-block:: javascript
 
     contract foo {
-        function bar(uint32 x, bool y) public {
-            // ...
+        function bar(uint32 x, bool y) public returns (uint32) {
+            if (y) {
+                return 2;
+            }
+
+            return 3;
         }
 
         function test() public {
-            bar(102, false);
-            bar({ y: true, x: 302 });
+            uint32 a = bar(102, false);
+            a = bar({ y: true, x: 302 });
         }
     }
 
@@ -1591,7 +1599,7 @@ assignment statement:
     }
 
 It is also possible to call functions on other contracts, which is also known as calling
-external functions. The called function must be declared public, else the call will fail.
+external functions. The called function must be declared public.
 Calling external functions requires ABI encoding the arguments, and ABI decoding the
 return values. This much more costly than an internal function call.
 
@@ -1662,10 +1670,11 @@ constructor.
 
 .. note::
     If value is sent to a non-payable function on Parity Substrate, the call will be
-    reverted. However there is no refund preformed, so value will remain with the callee.
+    reverted. However there is no refund performed, so value will remain with the callee.
 
     ``payable`` on constructors is not enforced on Parity Substrate. Funds are needed
-    for storage rent and there is a minimum deposit needed for the contract.
+    for storage rent and there is a minimum deposit needed for the contract. As a result,
+    constructors always receive value on Parity Substrate.
 
 Function overloading
 ____________________
@@ -1712,7 +1721,7 @@ Function Modifiers
 __________________
 
 Function modifiers are used to check pre-conditions or post-conditions for a function call. First a
-new modifier must be declared which declared much like a function, but uses the ``modifier``
+new modifier must be declared which looks much like a function, but uses the ``modifier``
 keyword rather than ``function``.
 
 .. code-block:: javascript
@@ -1723,7 +1732,7 @@ keyword rather than ``function``.
         modifier only_owner() {
             require(msg.sender == owner);
             _;
-            // post conditions would be checked here
+            // insert post conditions here
         }
 
         function foo() only_owner public {
@@ -1741,7 +1750,8 @@ to functions.
 
 A modifier can have arguments, just like regular functions. Here if the price is less
 than 50, `foo()` itself will never be executed, and execution will return to the caller with
-nothing done since ``_;`` is not reached in the modifier.
+nothing done since ``_;`` is not reached in the modifier and as result foo() is never
+executed.
 
 .. code-block:: javascript
 
@@ -1758,7 +1768,7 @@ nothing done since ``_;`` is not reached in the modifier.
     }
 
 Multiple modifiers can be applied to single function. The modifiers are executed in the
-order of the modifiers on the function declaration. Execution will continue to the next modifier
+order of the modifiers specified on the function declaration. Execution will continue to the next modifier
 when the ``_;`` is reached. In
 this example, the `only_owner` modifier is run first, and if that reaches ``_;``, then
 `check_price` is executed. The body of function `foo()` is only reached once `check_price()`
@@ -1822,9 +1832,9 @@ functions can be.
 Calling an external function using ``call()``
 _____________________________________________
 
-If you call a function on contract, then the function selector and any arguments
+If you call a function on a contract, then the function selector and any arguments
 are ABI encoded for you, and any return values are decoded. Sometimes it is useful
-to call a function with raw encoded arguments.
+to call a function without abi encoding the arguments.
 
 You can call a contract directly by using the ``call()`` method on the address type.
 This takes a single argument, which should be the ABI encoded arguments. The return
@@ -1838,7 +1848,10 @@ return value in ``bytes``.
             b v = new b();
 
             // the following four lines are equivalent to "uint32 res = v.foo(3,5);"
-            bytes data = abi.encodeWithSignature("foo(uint32,uint32)", uint32(3) + uint32(5));
+
+            // Note that the signature is only hashed and not parsed. So, ensure that the
+            // arguments are of the correct type.
+            bytes data = abi.encodeWithSignature("foo(uint32,uint32)", uint32(3), uint32(5));
 
             (bool success, bytes rawresult) = address(v).call(data);
 
@@ -1877,7 +1890,7 @@ _________________________________
 When a function is called externally, either via an transaction or when one contract
 call a function on another contract, the correct function is dispatched based on the
 function selector in the raw encoded ABI call data. If there is no match, the call
-reverts, unless there is a ``fallback()`` and ``receive()`` function defined.
+reverts, unless there is a ``fallback()`` or ``receive()`` function defined.
 
 If the call comes with value, then ``receive()`` is executed, otherwise ``fallback()``
 is executed. This made clear in the declarations; ``receive()`` must be declared
@@ -2234,13 +2247,13 @@ functions prototypes for a contract. This is useful as a generic interface.
 - Interfaces can only have other interfaces as a base contract
 - All functions must the ``external`` visibilty
 - No constructor can be declared
-- No contract storage variables can exist
+- No contract storage variables can exist (however constants are allowed)
 - No function can have a body or implementation
 
 Libraries
 _________
 
-Libraries are a special type of contract which can be reused in contract. Functions declared in a library can
+Libraries are a special type of contract which can be reused in multiple contracts. Functions declared in a library can
 be called with the ``library.function()`` syntax. When the library has been imported or declared, any contract
 can use its functions simply by using its name.
 
@@ -2597,7 +2610,7 @@ Try Catch Statement
 ___________________
 
 Sometimes execution gets reverted due to a ``revert()`` or ``require()``. These types of problems
-usually cause the entire chain of execution to be aborted. However, it is possible to catch
+usually cause the entire transaction to be aborted. However, it is possible to catch
 some of these problems and continue execution.
 
 This is only possible for contract instantiation through new, and external function calls.

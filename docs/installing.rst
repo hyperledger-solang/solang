@@ -1,7 +1,7 @@
 Installing Solang
 =================
 
-The Solang compiler is a single binary. It can be used in different ways.
+The Solang compiler is a single binary. It can be installed in different ways.
 
 Download release binaries
 -------------------------
