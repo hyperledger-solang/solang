@@ -1238,268 +1238,294 @@ A similar example for truncation:
 
 Since ``byte`` is array of one byte, a conversion from ``byte`` to ``uint8`` requires a cast.
 
-Contract Storage
-----------------
+Statements
+----------
 
-Any variables declared at the contract level (so not declared in a function or constructor),
-will automatically become contract storage. Contract storage is maintained on chain, so they
-retain their values between calls. These are declared so:
+In functions, you can declare variables in code blocks. If the name is the same as
+an existing function, enum type, or another variable, then the compiler will generate a
+warning as the original item is no longer accessible.
 
 .. code-block:: javascript
 
-  contract hitcount {
-      uint counter = 1;
+  contract test {
+      uint foo = 102;
+      uint bar;
 
-      function hit() public {
-          counters++;
-      }
-
-      function count() public view returns (uint) {
-          return counter;
+      function foobar() private {
+          // AVOID: this shadows the contract storage variable foo
+          uint foo = 5;
       }
   }
 
-The ``counter`` is maintained for each deployed ``hitcount`` contract. When the contract is deployed,
-the contract storage is set to 1. Contract storage variable do not need an initializer; when
-it is not present, it is initialized to 0, or ``false`` if it is a ``bool``.
-
-How to clear Contract Storage
-_____________________________
-
-Any contract storage variable can have its underlying contract storage cleared with the ``delete``
-operator. This can be done on any type; a simple integer, an array element, or the entire
-array itself. Contract storage has to be cleared slot (i.e. primitive) at a time, so if there are
-many primitives, this can be costly.
+Scoping rules apply as you would expect, so if you declare a variable in a block, then it is not
+accessible outside that block. For example:
 
 .. code-block:: javascript
 
-    contract s {
-        struct user {
-            address f1;
-            int[] list;
-        }
-        user[1000] users;
+   function foo() public {
+      // new block is introduced with { and ends with }
+      {
+          uint a;
 
-        function clear() public {
-            // delete has to iterate over 1000 users, and for each of those clear the
-            // f1 field, read the length of the list, and iterate over each of those
-            delete users;
-        }
-    }
+          a = 102;
+      }
 
-Constants
----------
+      // ERROR: a is out of scope
+      uint b = a + 5;
+  }
 
-Constants can be declared at the global level or at the contract level, just like contract
-storage variables. They do not use any contract storage and cannot be modified.
-The variable must have an initializer, which must be a constant expression. It is
-not allowed to call functions or read variables in the initializer:
+If statement
+____________
+
+Conditional execution of a block can be achieved using an ``if (condition) { }`` statement. The
+condition must evaluate to a ``bool`` value.
 
 .. code-block:: javascript
 
-    string constant greeting = "Hello, World!";
+  function foo(uint32 n) private {
+      if (n > 10) {
+          // do something
+      }
 
-    contract ethereum {
-        uint constant byzantium_block = 4_370_000;
-    }
-
-Events
-------
-
-In Solidity, contracts can emit events that signal that changes have occurred. For example, a Solidity
-contract could emit a `Deposit` event, or `BetPlaced` in a poker game. These events are stored
-in the blockchain transaction log, so they become part of the permanent record. From Solidity's perspective,
-you can emit events but you cannot access events on the chain.
-
-Once those events are added to the chain, an off-chain application can listen for events. For example, the Web3.js
-interface has a `subscribe()` function. Another is example is
-`Hyperledger Burrow <https://hyperledger.github.io/burrow/#/reference/vent>`_
-which has a vent command which listens to events and inserts them into a Postgres database.
-
-An event has two parts. First, there is a limited set of topics. Usually there are no more than 3 topics,
-and each of those has a fixed length of 32 bytes. They are there so that an application listening for events
-can easily filter for particular types of events, without needing to do any decoding. There is also a data
-section of variable length bytes, which is ABI encoded. To decode this part, the ABI for the event must be known.
-
-From Solidity's perspective, an event has a name, and zero or more fields. The fields can either be ``indexed`` or
-not. ``indexed`` fields are stored as topics, so there can only be a limited number of ``indexed`` fields. The other
-fields are stored in the data section of the event. The event name does not need to be unique; just like
-functions, they can be overloaded as long as the fields are of different types, or the event has
-a different number of arguments.
-In Parity Substrate, the topic fields are always the hash of the value of the field. Ethereum only hashes fields
-which do not fit in the 32 bytes. Since a cryptographic hash is used, it is only possible to compare the topic against a
-known value.
-
-An event can be declared in a contract, or outside.
-
-.. code-block:: javascript
-
-    event CounterpartySigned (
-        address indexed party,
-        address counter_party,
-        uint contract_no
-    );
-
-    contract Signer {
-        funtion sign(address counter_party, uint contract_no) internal {
-            emit CounterpartySigned(address(this), counter_party, contract_no);
-        }
-    }
-
-Like function calls, the emit statement can have the fields specified by position, or by field name. Using
-field names rather than position may be useful in case the event name is overloaded, since the field names
-make it clearer which exact event is being emitted.
-
-
-.. code-block:: javascript
-
-    event UserModified(
-        address user,
-        string name
-    ) anonymous;
-
-    event UserModified(
-        address user,
-        uint64 groupid
-    );
-
-    contract user {
-        function set_name(string name) public {
-            emit UserModified({ user: msg.sender, name: name });
-        }
-
-        function set_groupid(uint64 id) public {
-            emit UserModified({ user: msg.sender, groupid: id });
-        }
-    }
-
-In the transaction log, the first topic of an event is the keccak256 hash of the signature of the
-event. The signature is the event name, followed by the fields types in a comma separated list in parentheses. So
-the first topic for the second UserModified event would be the keccak256 hash of ``UserModified(address,uint64)``.
-You can leave this topic out by declaring the event ``anonymous``. This makes the event slightly smaller (32 bytes
-less) and makes it possible to have 4 ``indexed`` fields rather than 3.
-
-
-Constructors and contract instantiation
----------------------------------------
-
-When a contract is deployed, the contract storage is initialized to the initializer values provided,
-and any constructor is called. A constructor is not required for a contract. A constructor is defined
-like so:
-
-.. code-block:: javascript
-
-  contract mycontract {
-      uint foo;
-
-      constructor(uint foo_value) {
-          foo = foo_value;
+      // ERROR: unlike C integers can not be used as a condition
+      if (n) {
+            // ...
       }
   }
 
-A constructor does not have a name and may have any number of arguments. If a constructor has arguments,
-then when the contract is deployed then those arguments must be supplied.
+The statements enclosed by ``{`` and ``}`` (commonly known as a *block*) are executed only if
+the condition evaluates to true.
 
-If a contract is expected to hold receive value on instantiation, the constructor should be declared ``payable``.
+While statement
+_______________
 
-.. note::
+Repeated execution of a block can be achieved using ``while``. It syntax is similar to ``if``,
+however the block is repeatedly executed until the condition evaluates to false.
+If the condition is not true on first execution, then the loop is never executed:
 
-  Parity Substrate allows multiple constructors to be defined, which is not true for
-  ewasm. So, when building for Substrate, multiple constructors can be
-  defined as long as their argument list is different (i.e. overloaded).
+.. code-block:: javascript
 
-  When the contract is deployed in the Polkadot UI, the user can select the constructor to be used.
+  function foo(uint n) private {
+      while (n >= 10) {
+          n -= 9;
+      }
+  }
 
-Instantiation using new
+It is possible to terminate execution of the while statement by using the ``break`` statement.
+Execution will continue to next statement in the function. Alternatively, ``continue`` will
+cease execution of the block, but repeat the loop if the condition still holds:
+
+.. code-block:: javascript
+
+  function foo(uint n) private {
+      while (n >= 10) {
+          n--;
+
+          if (n >= 100) {
+              // do not execute the if statement below, but loop again
+              continue;
+          }
+
+          if (bar(n)) {
+              // cease execution of this while loop and jump to the "n = 102" statement
+              break;
+          }
+      }
+
+      n = 102;
+  }
+
+Do While statement
+__________________
+
+A ``do { ... } while (condition);`` statement is much like the ``while (condition) { ... }`` except
+that the condition is evaluated after execution the block. This means that the block is executed
+at least once, which is not true for ``while`` statements:
+
+.. code-block:: javascript
+
+  function foo(uint n) private {
+      do {
+          n--;
+
+          if (n >= 100) {
+              // do not execute the if statement below, but loop again
+              continue;
+          }
+
+          if (bar(n)) {
+              // cease execution of this while loop and jump to the "n = 102" statement
+              break;
+          }
+      }
+      while (n > 10);
+
+      n = 102;
+  }
+
+For statements
+______________
+
+For loops are like ``while`` loops with added syntaxic sugar. To execute a loop, we often
+need to declare a loop variable, set its initial variable, have a loop condition, and then
+adjust the loop variable for the next loop iteration.
+
+For example, to loop from 0 to 1000 by steps of 100:
+
+.. code-block:: javascript
+
+  function foo() private {
+      for (uint i = 0; i <= 1000; i += 100) {
+          // ...
+      }
+  }
+
+The declaration ``uint i = 0`` can be omitted if no new variable needs to be declared, and
+similarly the post increment ``i += 100`` can be omitted if not necessary. The loop condition
+must evaluate to a boolean, or it can be omitted completely. If it is ommited the block must
+contain a ``break`` or ``return`` statement, else execution will
+repeat infinitely (or until all gas is spent):
+
+.. code-block:: javascript
+
+  function foo(uint n) private {
+      // all three omitted
+      for (;;) {
+          // there must be a way out
+          if (n == 0) {
+              break;
+          }
+      }
+  }
+
+.. _destructuring:
+
+Destructuring Statement
 _______________________
 
-Contracts can be created using the ``new`` keyword. The contract that is being created might have
-constructor arguments, which need to be provided.
+The destructuring statement can be used for making function calls to functions that have
+multiple return values. The list can contain either:
+
+1. The name of an existing variable. The type must match the type of the return value.
+2. A new variable declaration with a type. Again, the type must match the type of the return value.
+3. Empty; this return value is ignored and not accessible.
 
 .. code-block:: javascript
 
-    contact hatchling {
-        string name;
-
-        constructor(string id) {
-            require(id != "", "name must be provided");
-            name = id;
+    contract destructure {
+        function func() internal returns (bool, int32, string) {
+            return (true, 5, "abcd")
         }
-    }
 
-    contract adult {
         function test() public {
-            hatchling h = new hatchling("luna");
+            string s;
+            (bool b, , s) = func();
         }
     }
 
-The constructor might fail for various reasons, for example ``require()`` might fail here. This can
-be handled using the :ref:`try-catch` statement, else errors cause the transaction to fail.
-
-Sending value to the new contract
-_________________________________
-
-It is possible to send value to the new contract. This can be done with the ``{value: 500}``
-syntax, like so:
+The right hand side may also be a list of expressions. This type can be useful for swapping
+values, for example.
 
 .. code-block:: javascript
 
-    contact hatchling {
-        string name;
+    function test() public {
+        (int32 a, int32 b, int32 c) = (1, 2, 3);
 
-        constructor(string id) payable {
-            require(id != "", "name must be provided");
-            name = id;
-        }
+        (b, , a) = (a, 5, b);
     }
 
-    contract adult {
-        function test() public {
-            hatchling h = new hatchling{value: 500}("luna");
-        }
-    }
+.. _try-catch:
 
-The constructor should be declared ``payable`` for this to work.
+Try Catch Statement
+___________________
 
-.. note::
-    If no value is specified, then on Parity Substrate the minimum balance (also know as the
-    existential deposit) is sent.
+Sometimes execution gets reverted due to a ``revert()`` or ``require()``. These types of problems
+usually cause the entire transaction to be aborted. However, it is possible to catch
+some of these problems and continue execution.
 
-Setting the salt and gas for the new contract
-_____________________________________________
-
-.. note::
-    `ewasm <https://github.com/ewasm/design/blob/master/eth_interface.md>`_ does not
-    yet provide a method for setting the salt or gas for the new contract, so
-    these values are ignored.
-
-When a new contract is created, the address for the new contract is a hash of the input
-(the constructor arguments) to the new contract. So, a contract cannot be created twice
-with the same input. This is why the salt is concatenated to the input. The salt is
-either a random value or it can be explicitly set using the ``{salt: 2}`` syntax. A
-constant will remove the need for the runtime random generation, however creating
-a contract twice with the same salt and arguments will fail. The salt is of type
-``uint256``.
-
-If gas is specified, this limits the amount gas the constructor for the new contract
-can use. gas is a ``uint64``.
+This is only possible for contract instantiation through new, and external function calls.
+An internal function cannot be called from a try catch statement. Not all problems can be handled,
+for example, out of gas cannot be caught. The ``revert()`` and ``require()`` builtins may
+be passed a reason code, which can be inspected using the ``catch Error(string)`` syntax.
 
 .. code-block:: javascript
 
-    contact hatchling {
-        string name;
-
-        constructor(string id) payable {
-            require(id != "", "name must be provided");
-            name = id;
+    contract aborting {
+        constructor() {
+            revert("bar");
         }
     }
 
-    contract adult {
+    contract runner {
         function test() public {
-            hatchling h = new hatchling{salt: 0, gas: 10000}("luna");
+            try new aborting() returns (aborting a) {
+                // new succeeded; a holds the a reference to the new contract
+            }
+            catch Error(string x) {
+                if (x == "bar") {
+                    // "bar" revert or require was executed
+                }
+            }
+            catch (bytes raw) {
+                // if no error string could decoding, we end up here with the raw data
+            }
         }
     }
+
+The same statement can be used for calling external functions. The ``returns (...)``
+part must match the return types for the function. If no name is provided, that
+return value is not accessible.
+
+.. code-block:: javascript
+
+    contract aborting {
+        function abort() public returns (int32, bool) {
+            revert("bar");
+        }
+    }
+
+    contract runner {
+        function test() public {
+            aborting abort = new aborting();
+
+            try abort.abort() returns (int32 a, bool b) {
+                // call succeeded; return values are in a and b
+            }
+            catch Error(string x) {
+                if (x == "bar") {
+                    // "bar" reason code was provided through revert() or require()
+                }
+            }
+            catch (bytes raw) {
+                // if no error string could decoding, we end up here with the raw data
+            }
+        }
+    }
+
+There is an alternate syntax which avoids the abi decoding by leaving the `catch Error(…)` out.
+This might be useful when no error string is expected, and will generate shorter code.
+
+.. code-block:: javascript
+
+    contract aborting {
+        function abort() public returns (int32, bool) {
+            revert("bar");
+        }
+    }
+
+    contract runner {
+        function test() public {
+            aborting abort = new aborting();
+
+            try new abort.abort() returns (int32 a, bool b) {
+                // call succeeded; return values are in a and b
+            }
+            catch (bytes raw) {
+                // call failed with raw error in raw
+            }
+        }
+    }
+
 
 Functions
 ---------
@@ -1917,6 +1943,270 @@ Both functions must be declared ``external``.
             // execute if function selector does not match "foo(uint32)" and value sent
         }
     }
+
+Constants
+---------
+
+Constants can be declared at the global level or at the contract level, just like contract
+storage variables. They do not use any contract storage and cannot be modified.
+The variable must have an initializer, which must be a constant expression. It is
+not allowed to call functions or read variables in the initializer:
+
+.. code-block:: javascript
+
+    string constant greeting = "Hello, World!";
+
+    contract ethereum {
+        uint constant byzantium_block = 4_370_000;
+    }
+
+Contract Storage
+----------------
+
+Any variables declared at the contract level (so not declared in a function or constructor),
+will automatically become contract storage. Contract storage is maintained on chain, so they
+retain their values between calls. These are declared so:
+
+.. code-block:: javascript
+
+  contract hitcount {
+      uint counter = 1;
+
+      function hit() public {
+          counters++;
+      }
+
+      function count() public view returns (uint) {
+          return counter;
+      }
+  }
+
+The ``counter`` is maintained for each deployed ``hitcount`` contract. When the contract is deployed,
+the contract storage is set to 1. Contract storage variable do not need an initializer; when
+it is not present, it is initialized to 0, or ``false`` if it is a ``bool``.
+
+How to clear Contract Storage
+_____________________________
+
+Any contract storage variable can have its underlying contract storage cleared with the ``delete``
+operator. This can be done on any type; a simple integer, an array element, or the entire
+array itself. Contract storage has to be cleared slot (i.e. primitive) at a time, so if there are
+many primitives, this can be costly.
+
+.. code-block:: javascript
+
+    contract s {
+        struct user {
+            address f1;
+            int[] list;
+        }
+        user[1000] users;
+
+        function clear() public {
+            // delete has to iterate over 1000 users, and for each of those clear the
+            // f1 field, read the length of the list, and iterate over each of those
+            delete users;
+        }
+    }
+
+Events
+------
+
+In Solidity, contracts can emit events that signal that changes have occurred. For example, a Solidity
+contract could emit a `Deposit` event, or `BetPlaced` in a poker game. These events are stored
+in the blockchain transaction log, so they become part of the permanent record. From Solidity's perspective,
+you can emit events but you cannot access events on the chain.
+
+Once those events are added to the chain, an off-chain application can listen for events. For example, the Web3.js
+interface has a `subscribe()` function. Another is example is
+`Hyperledger Burrow <https://hyperledger.github.io/burrow/#/reference/vent>`_
+which has a vent command which listens to events and inserts them into a Postgres database.
+
+An event has two parts. First, there is a limited set of topics. Usually there are no more than 3 topics,
+and each of those has a fixed length of 32 bytes. They are there so that an application listening for events
+can easily filter for particular types of events, without needing to do any decoding. There is also a data
+section of variable length bytes, which is ABI encoded. To decode this part, the ABI for the event must be known.
+
+From Solidity's perspective, an event has a name, and zero or more fields. The fields can either be ``indexed`` or
+not. ``indexed`` fields are stored as topics, so there can only be a limited number of ``indexed`` fields. The other
+fields are stored in the data section of the event. The event name does not need to be unique; just like
+functions, they can be overloaded as long as the fields are of different types, or the event has
+a different number of arguments.
+In Parity Substrate, the topic fields are always the hash of the value of the field. Ethereum only hashes fields
+which do not fit in the 32 bytes. Since a cryptographic hash is used, it is only possible to compare the topic against a
+known value.
+
+An event can be declared in a contract, or outside.
+
+.. code-block:: javascript
+
+    event CounterpartySigned (
+        address indexed party,
+        address counter_party,
+        uint contract_no
+    );
+
+    contract Signer {
+        funtion sign(address counter_party, uint contract_no) internal {
+            emit CounterpartySigned(address(this), counter_party, contract_no);
+        }
+    }
+
+Like function calls, the emit statement can have the fields specified by position, or by field name. Using
+field names rather than position may be useful in case the event name is overloaded, since the field names
+make it clearer which exact event is being emitted.
+
+
+.. code-block:: javascript
+
+    event UserModified(
+        address user,
+        string name
+    ) anonymous;
+
+    event UserModified(
+        address user,
+        uint64 groupid
+    );
+
+    contract user {
+        function set_name(string name) public {
+            emit UserModified({ user: msg.sender, name: name });
+        }
+
+        function set_groupid(uint64 id) public {
+            emit UserModified({ user: msg.sender, groupid: id });
+        }
+    }
+
+In the transaction log, the first topic of an event is the keccak256 hash of the signature of the
+event. The signature is the event name, followed by the fields types in a comma separated list in parentheses. So
+the first topic for the second UserModified event would be the keccak256 hash of ``UserModified(address,uint64)``.
+You can leave this topic out by declaring the event ``anonymous``. This makes the event slightly smaller (32 bytes
+less) and makes it possible to have 4 ``indexed`` fields rather than 3.
+
+
+Constructors and contract instantiation
+---------------------------------------
+
+When a contract is deployed, the contract storage is initialized to the initializer values provided,
+and any constructor is called. A constructor is not required for a contract. A constructor is defined
+like so:
+
+.. code-block:: javascript
+
+  contract mycontract {
+      uint foo;
+
+      constructor(uint foo_value) {
+          foo = foo_value;
+      }
+  }
+
+A constructor does not have a name and may have any number of arguments. If a constructor has arguments,
+then when the contract is deployed then those arguments must be supplied.
+
+If a contract is expected to hold receive value on instantiation, the constructor should be declared ``payable``.
+
+.. note::
+
+  Parity Substrate allows multiple constructors to be defined, which is not true for
+  ewasm. So, when building for Substrate, multiple constructors can be
+  defined as long as their argument list is different (i.e. overloaded).
+
+  When the contract is deployed in the Polkadot UI, the user can select the constructor to be used.
+
+Instantiation using new
+_______________________
+
+Contracts can be created using the ``new`` keyword. The contract that is being created might have
+constructor arguments, which need to be provided.
+
+.. code-block:: javascript
+
+    contact hatchling {
+        string name;
+
+        constructor(string id) {
+            require(id != "", "name must be provided");
+            name = id;
+        }
+    }
+
+    contract adult {
+        function test() public {
+            hatchling h = new hatchling("luna");
+        }
+    }
+
+The constructor might fail for various reasons, for example ``require()`` might fail here. This can
+be handled using the :ref:`try-catch` statement, else errors cause the transaction to fail.
+
+Sending value to the new contract
+_________________________________
+
+It is possible to send value to the new contract. This can be done with the ``{value: 500}``
+syntax, like so:
+
+.. code-block:: javascript
+
+    contact hatchling {
+        string name;
+
+        constructor(string id) payable {
+            require(id != "", "name must be provided");
+            name = id;
+        }
+    }
+
+    contract adult {
+        function test() public {
+            hatchling h = new hatchling{value: 500}("luna");
+        }
+    }
+
+The constructor should be declared ``payable`` for this to work.
+
+.. note::
+    If no value is specified, then on Parity Substrate the minimum balance (also know as the
+    existential deposit) is sent.
+
+Setting the salt and gas for the new contract
+_____________________________________________
+
+.. note::
+    `ewasm <https://github.com/ewasm/design/blob/master/eth_interface.md>`_ does not
+    yet provide a method for setting the salt or gas for the new contract, so
+    these values are ignored.
+
+When a new contract is created, the address for the new contract is a hash of the input
+(the constructor arguments) to the new contract. So, a contract cannot be created twice
+with the same input. This is why the salt is concatenated to the input. The salt is
+either a random value or it can be explicitly set using the ``{salt: 2}`` syntax. A
+constant will remove the need for the runtime random generation, however creating
+a contract twice with the same salt and arguments will fail. The salt is of type
+``uint256``.
+
+If gas is specified, this limits the amount gas the constructor for the new contract
+can use. gas is a ``uint64``.
+
+.. code-block:: javascript
+
+    contact hatchling {
+        string name;
+
+        constructor(string id) payable {
+            require(id != "", "name must be provided");
+            name = id;
+        }
+    }
+
+    contract adult {
+        function test() public {
+            hatchling h = new hatchling{salt: 0, gas: 10000}("luna");
+        }
+    }
+
 
 Base contracts, abstract contracts and interfaces
 -------------------------------------------------
@@ -2408,293 +2698,6 @@ Here is an example:
     This uses the ``seal_call()`` mechanism rather than ``seal_transfer()``, since
     Solidity expects the ``receive()`` function to be called on receipt.
 
-Statements
-----------
-
-In functions, you can declare variables in code blocks. If the name is the same as
-an existing function, enum type, or another variable, then the compiler will generate a
-warning as the original item is no longer accessible.
-
-.. code-block:: javascript
-
-  contract test {
-      uint foo = 102;
-      uint bar;
-
-      function foobar() private {
-          // AVOID: this shadows the contract storage variable foo
-          uint foo = 5;
-      }
-  }
-
-Scoping rules apply as you would expect, so if you declare a variable in a block, then it is not
-accessible outside that block. For example:
-
-.. code-block:: javascript
-
-   function foo() public {
-      // new block is introduced with { and ends with }
-      {
-          uint a;
-
-          a = 102;
-      }
-
-      // ERROR: a is out of scope
-      uint b = a + 5;
-  }
-
-If statement
-____________
-
-Conditional execution of a block can be achieved using an ``if (condition) { }`` statement. The
-condition must evaluate to a ``bool`` value.
-
-.. code-block:: javascript
-
-  function foo(uint32 n) private {
-      if (n > 10) {
-          // do something
-      }
-
-      // ERROR: unlike C integers can not be used as a condition
-      if (n) {
-            // ...
-      }
-  }
-
-The statements enclosed by ``{`` and ``}`` (commonly known as a *block*) are executed only if
-the condition evaluates to true.
-
-While statement
-_______________
-
-Repeated execution of a block can be achieved using ``while``. It syntax is similar to ``if``,
-however the block is repeatedly executed until the condition evaluates to false.
-If the condition is not true on first execution, then the loop is never executed:
-
-.. code-block:: javascript
-
-  function foo(uint n) private {
-      while (n >= 10) {
-          n -= 9;
-      }
-  }
-
-It is possible to terminate execution of the while statement by using the ``break`` statement.
-Execution will continue to next statement in the function. Alternatively, ``continue`` will
-cease execution of the block, but repeat the loop if the condition still holds:
-
-.. code-block:: javascript
-
-  function foo(uint n) private {
-      while (n >= 10) {
-          n--;
-
-          if (n >= 100) {
-              // do not execute the if statement below, but loop again
-              continue;
-          }
-
-          if (bar(n)) {
-              // cease execution of this while loop and jump to the "n = 102" statement
-              break;
-          }
-      }
-
-      n = 102;
-  }
-
-Do While statement
-__________________
-
-A ``do { ... } while (condition);`` statement is much like the ``while (condition) { ... }`` except
-that the condition is evaluated after execution the block. This means that the block is executed
-at least once, which is not true for ``while`` statements:
-
-.. code-block:: javascript
-
-  function foo(uint n) private {
-      do {
-          n--;
-
-          if (n >= 100) {
-              // do not execute the if statement below, but loop again
-              continue;
-          }
-
-          if (bar(n)) {
-              // cease execution of this while loop and jump to the "n = 102" statement
-              break;
-          }
-      }
-      while (n > 10);
-
-      n = 102;
-  }
-
-For statements
-______________
-
-For loops are like ``while`` loops with added syntaxic sugar. To execute a loop, we often
-need to declare a loop variable, set its initial variable, have a loop condition, and then
-adjust the loop variable for the next loop iteration.
-
-For example, to loop from 0 to 1000 by steps of 100:
-
-.. code-block:: javascript
-
-  function foo() private {
-      for (uint i = 0; i <= 1000; i += 100) {
-          // ...
-      }
-  }
-
-The declaration ``uint i = 0`` can be omitted if no new variable needs to be declared, and
-similarly the post increment ``i += 100`` can be omitted if not necessary. The loop condition
-must evaluate to a boolean, or it can be omitted completely. If it is ommited the block must
-contain a ``break`` or ``return`` statement, else execution will
-repeat infinitely (or until all gas is spent):
-
-.. code-block:: javascript
-
-  function foo(uint n) private {
-      // all three omitted
-      for (;;) {
-          // there must be a way out
-          if (n == 0) {
-              break;
-          }
-      }
-  }
-
-.. _destructuring:
-
-Destructuring Statement
-_______________________
-
-The destructuring statement can be used for making function calls to functions that have
-multiple return values. The list can contain either:
-
-1. The name of an existing variable. The type must match the type of the return value.
-2. A new variable declaration with a type. Again, the type must match the type of the return value.
-3. Empty; this return value is ignored and not accessible.
-
-.. code-block:: javascript
-
-    contract destructure {
-        function func() internal returns (bool, int32, string) {
-            return (true, 5, "abcd")
-        }
-
-        function test() public {
-            string s;
-            (bool b, , s) = func();
-        }
-    }
-
-The right hand side may also be a list of expressions. This type can be useful for swapping
-values, for example.
-
-.. code-block:: javascript
-
-    function test() public {
-        (int32 a, int32 b, int32 c) = (1, 2, 3);
-
-        (b, , a) = (a, 5, b);
-    }
-
-.. _try-catch:
-
-Try Catch Statement
-___________________
-
-Sometimes execution gets reverted due to a ``revert()`` or ``require()``. These types of problems
-usually cause the entire transaction to be aborted. However, it is possible to catch
-some of these problems and continue execution.
-
-This is only possible for contract instantiation through new, and external function calls.
-An internal function cannot be called from a try catch statement. Not all problems can be handled,
-for example, out of gas cannot be caught. The ``revert()`` and ``require()`` builtins may
-be passed a reason code, which can be inspected using the ``catch Error(string)`` syntax.
-
-.. code-block:: javascript
-
-    contract aborting {
-        constructor() {
-            revert("bar");
-        }
-    }
-
-    contract runner {
-        function test() public {
-            try new aborting() returns (aborting a) {
-                // new succeeded; a holds the a reference to the new contract
-            }
-            catch Error(string x) {
-                if (x == "bar") {
-                    // "bar" revert or require was executed
-                }
-            }
-            catch (bytes raw) {
-                // if no error string could decoding, we end up here with the raw data
-            }
-        }
-    }
-
-The same statement can be used for calling external functions. The ``returns (...)``
-part must match the return types for the function. If no name is provided, that
-return value is not accessible.
-
-.. code-block:: javascript
-
-    contract aborting {
-        function abort() public returns (int32, bool) {
-            revert("bar");
-        }
-    }
-
-    contract runner {
-        function test() public {
-            aborting abort = new aborting();
-
-            try abort.abort() returns (int32 a, bool b) {
-                // call succeeded; return values are in a and b
-            }
-            catch Error(string x) {
-                if (x == "bar") {
-                    // "bar" reason code was provided through revert() or require()
-                }
-            }
-            catch (bytes raw) {
-                // if no error string could decoding, we end up here with the raw data
-            }
-        }
-    }
-
-There is an alternate syntax which avoids the abi decoding by leaving the `catch Error(…)` out.
-This might be useful when no error string is expected, and will generate shorter code.
-
-.. code-block:: javascript
-
-    contract aborting {
-        function abort() public returns (int32, bool) {
-            revert("bar");
-        }
-    }
-
-    contract runner {
-        function test() public {
-            aborting abort = new aborting();
-
-            try new abort.abort() returns (int32 a, bool b) {
-                // call succeeded; return values are in a and b
-            }
-            catch (bytes raw) {
-                // call failed with raw error in raw
-            }
-        }
-    }
 
 Builtin Functions and Variables
 -------------------------------
