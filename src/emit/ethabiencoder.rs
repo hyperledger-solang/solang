@@ -1720,4 +1720,160 @@ impl EthAbiEncoder {
 
         (length, offset)
     }
+
+    /// ABI encode into a vector for abi.encode* style builtin functions
+    pub fn encode_to_vector<'b>(
+        &self,
+        contract: &Contract<'b>,
+        selector: Option<IntValue<'b>>,
+        function: FunctionValue<'b>,
+        packed: bool,
+        args: &[BasicValueEnum<'b>],
+        tys: &[ast::Type],
+    ) -> PointerValue<'b> {
+        if packed {
+            unimplemented!();
+        }
+
+        let (length, mut offset) =
+            EthAbiEncoder::total_encoded_length(contract, selector, false, function, args, tys);
+
+        let malloc_length = contract.builder.build_int_add(
+            length,
+            contract
+                .module
+                .get_struct_type("struct.vector")
+                .unwrap()
+                .size_of()
+                .unwrap()
+                .const_cast(contract.context.i32_type(), false),
+            "size",
+        );
+
+        let p = contract
+            .builder
+            .build_call(
+                contract.module.get_function("__malloc").unwrap(),
+                &[malloc_length.into()],
+                "",
+            )
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_pointer_value();
+
+        let v = contract.builder.build_pointer_cast(
+            p,
+            contract
+                .module
+                .get_struct_type("struct.vector")
+                .unwrap()
+                .ptr_type(AddressSpace::Generic),
+            "string",
+        );
+
+        let data_len = unsafe {
+            contract.builder.build_gep(
+                v,
+                &[
+                    contract.context.i32_type().const_zero(),
+                    contract.context.i32_type().const_zero(),
+                ],
+                "data_len",
+            )
+        };
+
+        contract.builder.build_store(data_len, length);
+
+        let data_size = unsafe {
+            contract.builder.build_gep(
+                v,
+                &[
+                    contract.context.i32_type().const_zero(),
+                    contract.context.i32_type().const_int(1, false),
+                ],
+                "data_size",
+            )
+        };
+
+        contract.builder.build_store(data_size, length);
+
+        let data = unsafe {
+            contract.builder.build_gep(
+                v,
+                &[
+                    contract.context.i32_type().const_zero(),
+                    contract.context.i32_type().const_int(2, false),
+                ],
+                "data",
+            )
+        };
+
+        let mut data = contract.builder.build_pointer_cast(
+            data,
+            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+            "",
+        );
+
+        if let Some(selector) = selector {
+            contract.builder.build_store(
+                contract.builder.build_pointer_cast(
+                    data,
+                    contract.context.i32_type().ptr_type(AddressSpace::Generic),
+                    "",
+                ),
+                selector,
+            );
+
+            data = unsafe {
+                contract.builder.build_gep(
+                    data,
+                    &[contract
+                        .context
+                        .i32_type()
+                        .const_int(std::mem::size_of::<u32>() as u64, false)],
+                    "",
+                )
+            };
+        }
+
+        let mut data = contract.builder.build_pointer_cast(
+            data,
+            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+            "",
+        );
+
+        contract.builder.build_call(
+            contract.module.get_function("__bzero8").unwrap(),
+            &[
+                data.into(),
+                contract
+                    .builder
+                    .build_int_unsigned_div(
+                        length,
+                        contract.context.i32_type().const_int(8, false),
+                        "",
+                    )
+                    .into(),
+            ],
+            "",
+        );
+
+        let mut dynamic = unsafe { contract.builder.build_gep(data, &[offset], "") };
+
+        for (i, ty) in tys.iter().enumerate() {
+            self.encode_ty(
+                contract,
+                false,
+                function,
+                ty,
+                args[i],
+                &mut data,
+                &mut offset,
+                &mut dynamic,
+            );
+        }
+
+        v
+    }
 }

@@ -77,7 +77,7 @@ pub trait TargetRuntime<'a> {
         &self,
         contract: &Contract<'b>,
         selector: Option<IntValue<'b>>,
-        function: FunctionValue,
+        function: FunctionValue<'b>,
         packed: bool,
         args: &[BasicValueEnum<'b>],
         tys: &[ast::Type],
