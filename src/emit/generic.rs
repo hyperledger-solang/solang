@@ -528,7 +528,7 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
         &self,
         _contract: &Contract<'b>,
         _selector: Option<IntValue<'b>>,
-        _function: FunctionValue,
+        _function: FunctionValue<'b>,
         _packed: bool,
         _args: &[BasicValueEnum<'b>],
         _spec: &[ast::Type],

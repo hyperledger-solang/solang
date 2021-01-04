@@ -1136,14 +1136,15 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
     /// ABI encode into a vector for abi.encode* style builtin functions
     fn abi_encode_to_vector<'b>(
         &self,
-        _contract: &Contract<'b>,
-        _selector: Option<IntValue<'b>>,
-        _function: FunctionValue,
-        _packed: bool,
-        _args: &[BasicValueEnum<'b>],
-        _spec: &[ast::Type],
+        contract: &Contract<'b>,
+        selector: Option<IntValue<'b>>,
+        function: FunctionValue<'b>,
+        packed: bool,
+        args: &[BasicValueEnum<'b>],
+        tys: &[ast::Type],
     ) -> PointerValue<'b> {
-        unimplemented!();
+        self.abi
+            .encode_to_vector(contract, selector, function, packed, args, tys)
     }
 
     fn abi_encode<'b>(
