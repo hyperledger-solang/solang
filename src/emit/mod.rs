@@ -69,7 +69,7 @@ pub trait TargetRuntime<'a> {
         load: bool,
         function: FunctionValue<'a>,
         args: &[BasicValueEnum<'a>],
-        spec: &[ast::Parameter],
+        tys: &[ast::Type],
     ) -> (PointerValue<'a>, IntValue<'a>);
 
     /// ABI encode into a vector for abi.encode* style builtin functions
@@ -80,7 +80,7 @@ pub trait TargetRuntime<'a> {
         function: FunctionValue,
         packed: bool,
         args: &[BasicValueEnum<'b>],
-        spec: &[ast::Type],
+        tys: &[ast::Type],
     ) -> PointerValue<'b>;
 
     // Access storage
@@ -3512,14 +3512,7 @@ pub trait TargetRuntime<'a> {
                             false,
                             function,
                             &[v],
-                            &[ast::Parameter {
-                                loc: pt::Loc(0, 0, 0),
-                                name: "error".to_owned(),
-                                name_loc: None,
-                                ty: ast::Type::String,
-                                ty_loc: pt::Loc(0, 0, 0),
-                                indexed: false,
-                            }],
+                            &[ast::Type::String],
                         );
 
                         self.assert_failure(contract, data, len);
@@ -3809,6 +3802,9 @@ pub trait TargetRuntime<'a> {
                                         .i32_type()
                                         .const_int(selector as u64, false);
 
+                                    let tys: Vec<ast::Type> =
+                                        dest_func.params.iter().map(|p| p.ty.clone()).collect();
+
                                     let (payload, payload_len) = self.abi_encode(
                                         contract,
                                         Some(selector),
@@ -3820,7 +3816,7 @@ pub trait TargetRuntime<'a> {
                                                 self.expression(contract, &a, &w.vars, function)
                                             })
                                             .collect::<Vec<BasicValueEnum>>(),
-                                        &dest_func.params,
+                                        &tys,
                                     );
 
                                     let address = self
@@ -3863,6 +3859,9 @@ pub trait TargetRuntime<'a> {
                                         })
                                         .collect::<Vec<ast::Parameter>>();
 
+                                    let tys: Vec<ast::Type> =
+                                        params.iter().map(|p| p.ty.clone()).collect();
+
                                     let (payload, payload_len) = self.abi_encode(
                                         contract,
                                         Some(selector),
@@ -3874,7 +3873,7 @@ pub trait TargetRuntime<'a> {
                                                 self.expression(contract, &a, &w.vars, function)
                                             })
                                             .collect::<Vec<BasicValueEnum>>(),
-                                        &params,
+                                        &tys,
                                     );
 
                                     let address_member = unsafe {
@@ -4190,6 +4189,9 @@ pub trait TargetRuntime<'a> {
                         topics,
                         topic_tys,
                     } => {
+                        let data_tys: Vec<ast::Type> =
+                            data_tys.iter().map(|p| p.ty.clone()).collect();
+
                         let (data_ptr, data_len) = self.abi_encode(
                             contract,
                             self.event_id(contract, *event_no),
@@ -4199,7 +4201,7 @@ pub trait TargetRuntime<'a> {
                                 .iter()
                                 .map(|a| self.expression(contract, &a, &w.vars, function))
                                 .collect::<Vec<BasicValueEnum>>(),
-                            data_tys,
+                            &data_tys,
                         );
 
                         let mut encoded = Vec::new();
@@ -4211,7 +4213,7 @@ pub trait TargetRuntime<'a> {
                                 false,
                                 function,
                                 &[self.expression(contract, topic, &w.vars, function)],
-                                &[topic_tys[i].clone()],
+                                &[topic_tys[i].ty.clone()],
                             ));
                         }
 
@@ -4472,13 +4474,15 @@ pub trait TargetRuntime<'a> {
             // return ABI of length 0
             self.return_empty_abi(&contract);
         } else {
+            let tys: Vec<ast::Type> = f.returns.iter().map(|p| p.ty.clone()).collect();
+
             let (data, length) = self.abi_encode(
                 &contract,
                 None,
                 true,
                 function,
                 &args[f.params.len()..],
-                &f.returns,
+                &tys,
             );
 
             self.return_abi(&contract, data, length);

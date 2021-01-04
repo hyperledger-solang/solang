@@ -537,12 +537,12 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         load: bool,
         function: FunctionValue<'a>,
         args: &[BasicValueEnum<'a>],
-        spec: &[ast::Parameter],
+        tys: &[ast::Type],
     ) -> (PointerValue<'a>, IntValue<'a>) {
         let (output_len, mut output) = self.return_buffer(contract);
 
         let (length, mut offset) = ethabiencoder::EthAbiEncoder::total_encoded_length(
-            contract, selector, load, function, args, spec,
+            contract, selector, load, function, args, tys,
         );
 
         let length64 =
@@ -596,12 +596,12 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
 
         let mut dynamic = unsafe { contract.builder.build_gep(output, &[offset], "") };
 
-        for (i, arg) in spec.iter().enumerate() {
+        for (i, ty) in tys.iter().enumerate() {
             self.abi.encode_ty(
                 contract,
                 load,
                 function,
-                &arg.ty,
+                ty,
                 args[i],
                 &mut output,
                 &mut offset,

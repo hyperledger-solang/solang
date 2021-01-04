@@ -1687,11 +1687,11 @@ impl EthAbiEncoder {
         load: bool,
         function: FunctionValue,
         args: &[BasicValueEnum<'b>],
-        spec: &[ast::Parameter],
+        tys: &[ast::Type],
     ) -> (IntValue<'b>, IntValue<'b>) {
         let offset = contract.context.i32_type().const_int(
-            spec.iter()
-                .map(|arg| EthAbiEncoder::encoded_fixed_length(&arg.ty, contract.ns))
+            tys.iter()
+                .map(|ty| EthAbiEncoder::encoded_fixed_length(ty, contract.ns))
                 .sum(),
             false,
         );
@@ -1699,10 +1699,10 @@ impl EthAbiEncoder {
         let mut length = offset;
 
         // now add the dynamic lengths
-        for (i, s) in spec.iter().enumerate() {
+        for (i, ty) in tys.iter().enumerate() {
             length = contract.builder.build_int_add(
                 length,
-                EthAbiEncoder::encoded_dynamic_length(args[i], load, &s.ty, function, contract),
+                EthAbiEncoder::encoded_dynamic_length(args[i], load, ty, function, contract),
                 "",
             );
         }
