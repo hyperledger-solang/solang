@@ -2704,7 +2704,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         &self,
         contract: &Contract<'b>,
         selector: Option<IntValue<'b>>,
-        function: FunctionValue,
+        function: FunctionValue<'b>,
         packed: bool,
         args: &[BasicValueEnum<'b>],
         tys: &[ast::Type],
@@ -2904,16 +2904,16 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         load: bool,
         function: FunctionValue,
         args: &[BasicValueEnum<'b>],
-        spec: &[ast::Parameter],
+        tys: &[ast::Type],
     ) -> (PointerValue<'b>, IntValue<'b>) {
         // first calculate how much memory we need to allocate
         let mut length = contract.context.i32_type().const_zero();
 
         // note that encoded_length overestimates how data we need
-        for (i, field) in spec.iter().enumerate() {
+        for (i, ty) in tys.iter().enumerate() {
             length = contract.builder.build_int_add(
                 length,
-                self.encoded_length(args[i], load, false, &field.ty, function, contract),
+                self.encoded_length(args[i], load, false, ty, function, contract),
                 "",
             );
         }
@@ -2966,16 +2966,8 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             };
         }
 
-        for (i, arg) in spec.iter().enumerate() {
-            self.encode_ty(
-                contract,
-                load,
-                false,
-                function,
-                &arg.ty,
-                args[i],
-                &mut argsdata,
-            );
+        for (i, ty) in tys.iter().enumerate() {
+            self.encode_ty(contract, load, false, function, ty, args[i], &mut argsdata);
         }
 
         // we cannot use the length returned by encoded_length; calculate actual length
@@ -3060,6 +3052,8 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             );
         }
 
+        let tys: Vec<ast::Type> = constructor.params.iter().map(|p| p.ty.clone()).collect();
+
         // input
         let (input, input_len) = self.abi_encode(
             contract,
@@ -3072,7 +3066,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             false,
             function,
             &args,
-            &constructor.params,
+            &tys,
         );
 
         let value_ptr = contract

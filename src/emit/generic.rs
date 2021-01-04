@@ -543,10 +543,10 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
         load: bool,
         function: FunctionValue<'b>,
         args: &[BasicValueEnum<'b>],
-        spec: &[ast::Parameter],
+        tys: &[ast::Type],
     ) -> (PointerValue<'b>, IntValue<'b>) {
         let (length, mut offset) = ethabiencoder::EthAbiEncoder::total_encoded_length(
-            contract, selector, load, function, args, spec,
+            contract, selector, load, function, args, tys,
         );
 
         let encoded_data = contract
@@ -607,12 +607,12 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
 
         let mut dynamic = unsafe { contract.builder.build_gep(data, &[offset], "") };
 
-        for (i, arg) in spec.iter().enumerate() {
+        for (i, ty) in tys.iter().enumerate() {
             self.abi.encode_ty(
                 contract,
                 load,
                 function,
-                &arg.ty,
+                ty,
                 args[i],
                 &mut data,
                 &mut offset,

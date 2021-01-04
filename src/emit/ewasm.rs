@@ -674,10 +674,10 @@ impl EwasmTarget {
         load: bool,
         function: FunctionValue<'b>,
         args: &[BasicValueEnum<'b>],
-        spec: &[ast::Parameter],
+        tys: &[ast::Type],
     ) -> (PointerValue<'b>, IntValue<'b>) {
         let (mut length, mut offset) = ethabiencoder::EthAbiEncoder::total_encoded_length(
-            contract, selector, load, function, args, spec,
+            contract, selector, load, function, args, tys,
         );
 
         if let Some((_, len)) = constant {
@@ -777,12 +777,12 @@ impl EwasmTarget {
 
         let mut dynamic = unsafe { contract.builder.build_gep(data, &[offset], "") };
 
-        for (i, arg) in spec.iter().enumerate() {
+        for (i, ty) in tys.iter().enumerate() {
             self.abi.encode_ty(
                 contract,
                 load,
                 function,
-                &arg.ty,
+                ty,
                 args[i],
                 &mut data,
                 &mut offset,
@@ -1153,9 +1153,9 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
         load: bool,
         function: FunctionValue<'b>,
         args: &[BasicValueEnum<'b>],
-        spec: &[ast::Parameter],
+        tys: &[ast::Type],
     ) -> (PointerValue<'b>, IntValue<'b>) {
-        self.encode(contract, selector, None, load, function, args, spec)
+        self.encode(contract, selector, None, load, function, args, tys)
     }
 
     fn abi_decode<'b>(
@@ -1211,9 +1211,13 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
             true,
         );
 
-        let params = match constructor_no {
-            Some(function_no) => contract.ns.functions[function_no].params.as_slice(),
-            None => &[],
+        let tys: Vec<ast::Type> = match constructor_no {
+            Some(function_no) => contract.ns.functions[function_no]
+                .params
+                .iter()
+                .map(|p| p.ty.clone())
+                .collect(),
+            None => Vec::new(),
         };
 
         // input
@@ -1224,7 +1228,7 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
             false,
             function,
             args,
-            params,
+            &tys,
         );
 
         // value is a u128
