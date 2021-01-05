@@ -133,6 +133,7 @@ pub struct Function {
     pub symtable: Symtable,
     // What events are emitted by the body of this function
     pub emits_events: Vec<usize>,
+    pub target: Target,
 }
 
 impl Function {
@@ -173,11 +174,20 @@ impl Function {
             body: Vec::new(),
             symtable: Symtable::new(),
             emits_events: Vec::new(),
+            target: ns.target,
         }
     }
 
     /// Generate selector for this function
     pub fn selector(&self) -> u32 {
+        match self.target {
+            Target::Substrate => self.selector_blake2(),
+            _ => self.selector_keccak(),
+        }
+    }
+
+    /// Generate selector for this function signature for ewasm
+    pub fn selector_keccak(&self) -> u32 {
         let mut res = [0u8; 32];
 
         let mut hasher = Keccak::v256();
@@ -185,6 +195,17 @@ impl Function {
         hasher.finalize(&mut res);
 
         u32::from_le_bytes([res[0], res[1], res[2], res[3]])
+    }
+
+    /// Generate selector with this function name for substrate
+    pub fn selector_blake2(&self) -> u32 {
+        let name= if self.name.is_empty() {
+             "new".as_bytes()
+        } else {
+            self.name.as_bytes()
+        };
+        let hash = <blake2::Blake2b as blake2::Digest>::digest(name);
+        u32::from_le_bytes([hash[0], hash[1], hash[2], hash[3]])
     }
 
     /// Is this a constructor

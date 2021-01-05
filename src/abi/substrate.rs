@@ -18,7 +18,7 @@ pub struct Abi {
 
 impl Abi {
     pub fn get_function(&self, name: &str) -> Option<&Message> {
-        self.spec.messages.iter().find(|m| name == m.name)
+        self.spec.messages.iter().find(|m| name == m.name[0])
     }
 }
 
@@ -102,7 +102,7 @@ struct StructField {
 
 #[derive(Deserialize, Serialize)]
 pub struct Constructor {
-    pub name: String,
+    pub name: Vec<String>,
     pub selector: String,
     pub docs: Vec<String>,
     args: Vec<Param>,
@@ -117,7 +117,7 @@ impl Constructor {
 
 #[derive(Deserialize, Serialize)]
 pub struct Message {
-    pub name: String,
+    pub name: Vec<String>,
     pub selector: String,
     pub docs: Vec<String>,
     mutates: bool,
@@ -393,7 +393,7 @@ fn gen_abi(contract_no: usize, ns: &ast::Namespace) -> Abi {
             let f = &ns.functions[*function_no];
             if f.is_constructor() {
                 Some(Constructor {
-                    name: String::from("new"),
+                    name: vec![String::from("new")],
                     selector: render_selector(f),
                     args: f
                         .params
@@ -410,7 +410,7 @@ fn gen_abi(contract_no: usize, ns: &ast::Namespace) -> Abi {
 
     if let Some((f, _)) = &ns.contracts[contract_no].default_constructor {
         constructors.push(Constructor {
-            name: String::from("new"),
+            name: vec![String::from("new")],
             selector: render_selector(f),
             args: f
                 .params
@@ -445,7 +445,7 @@ fn gen_abi(contract_no: usize, ns: &ast::Namespace) -> Abi {
             let payable = matches!(f.mutability, Some(pt::StateMutability::Payable(_)));
 
             Message {
-                name: f.name.to_owned(),
+                name: vec![f.name.to_owned()],
                 mutates: f.mutability.is_none() || payable,
                 payable,
                 return_type: match f.returns.len() {
