@@ -217,6 +217,9 @@ impl Externals for TestRuntime {
                 } else {
                     &[0u8; 32]
                 };
+
+                println!("storageLoad {} -> {}", hex::encode(&key), hex::encode(&res));
+
                 self.vm
                     .memory
                     .set(data_ptr, res)
@@ -240,6 +243,12 @@ impl Externals for TestRuntime {
                     .memory
                     .get_into(data_ptr, &mut data)
                     .expect("copy key from wasm memory");
+
+                println!(
+                    "storageStore {} <- {}",
+                    hex::encode(&key),
+                    hex::encode(&data)
+                );
 
                 if data.iter().any(|n| *n != 0) {
                     self.store.insert((self.vm.cur, key), data);
