@@ -549,16 +549,31 @@ fn expression(
             if !matches!(ty, Type::Ref(_) | Type::StorageRef(_)) {
                 if let Some(vars) = vars {
                     if let Some(defs) = vars.get(var) {
-                        if defs.len() == 1 {
-                            for def in defs {
-                                if let Some(expr) = get_definition(def, cfg) {
-                                    let expr = expression(expr, None, diags, pos, cfg);
+                        // There must be at least one definition, and all should evaluate to the same value
+                        let mut v = None;
 
-                                    if expr.1 {
-                                        return expr;
+                        for def in defs {
+                            if let Some(expr) = get_definition(def, cfg) {
+                                let expr = expression(expr, None, diags, pos, cfg);
+
+                                if expr.1 {
+                                    if let Some(last) = &v {
+                                        if !constants_equal(last, &expr.0) {
+                                            v = None;
+                                            break;
+                                        }
                                     }
+
+                                    v = Some(expr.0);
+                                } else {
+                                    v = None;
+                                    break;
                                 }
                             }
+                        }
+
+                        if let Some(expr) = v {
+                            return (expr, true);
                         }
                     }
                 }
@@ -1037,5 +1052,22 @@ fn get_definition<'a>(
         Some(expr)
     } else {
         None
+    }
+}
+
+/// Are these two expressions the same constant-folded value?
+fn constants_equal(left: &Expression, right: &Expression) -> bool {
+    match left {
+        Expression::NumberLiteral(_, _, left) => match right {
+            Expression::NumberLiteral(_, _, right) => left == right,
+            _ => false,
+        },
+        Expression::BytesLiteral(_, _, left)
+        | Expression::AllocDynamicArray(_, _, _, Some(left)) => match right {
+            Expression::BytesLiteral(_, _, right)
+            | Expression::AllocDynamicArray(_, _, _, Some(right)) => left == right,
+            _ => false,
+        },
+        _ => false,
     }
 }
