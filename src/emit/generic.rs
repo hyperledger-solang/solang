@@ -478,7 +478,7 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
         dest: PointerValue,
     ) {
         contract.builder.build_call(
-            contract.module.get_function("sha3").unwrap(),
+            contract.module.get_function("keccak256").unwrap(),
             &[
                 contract
                     .builder
@@ -497,7 +497,6 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
                         "dest",
                     )
                     .into(),
-                contract.context.i32_type().const_int(32, false).into(),
             ],
             "",
         );

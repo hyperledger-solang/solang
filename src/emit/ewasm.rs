@@ -1061,7 +1061,7 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
         dest: PointerValue,
     ) {
         contract.builder.build_call(
-            contract.module.get_function("sha3").unwrap(),
+            contract.module.get_function("keccak256").unwrap(),
             &[
                 contract
                     .builder
@@ -1080,7 +1080,6 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
                         "dest",
                     )
                     .into(),
-                contract.context.i32_type().const_int(32, false).into(),
             ],
             "",
         );
@@ -1570,13 +1569,8 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
 
         if hash == HashTy::Keccak256 {
             contract.builder.build_call(
-                contract.module.get_function("sha3").unwrap(),
-                &[
-                    input.into(),
-                    input_len.into(),
-                    res.into(),
-                    contract.context.i32_type().const_int(hashlen, false).into(),
-                ],
+                contract.module.get_function("keccak256").unwrap(),
+                &[input.into(), input_len.into(), res.into()],
                 "",
             );
         } else {

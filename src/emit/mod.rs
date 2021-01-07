@@ -6257,7 +6257,7 @@ static WASM_IR: [&[u8]; 4] = [
     include_bytes!("../../stdlib/wasm/format.bc"),
 ];
 
-static SHA3_IR: &[u8] = include_bytes!("../../stdlib/wasm/sha3.bc");
+static KECCAK256_IR: &[u8] = include_bytes!("../../stdlib/wasm/keccak256.bc");
 static RIPEMD160_IR: &[u8] = include_bytes!("../../stdlib/wasm/ripemd160.bc");
 static SUBSTRATE_IR: &[u8] = include_bytes!("../../stdlib/wasm/substrate.bc");
 
@@ -6307,7 +6307,7 @@ fn load_stdlib<'a>(context: &'a Context, target: &Target) -> Module<'a> {
             .unwrap();
     } else {
         // Substrate provides a keccak256 (sha3) host function, others do not
-        let memory = MemoryBuffer::create_from_memory_range(SHA3_IR, "sha3");
+        let memory = MemoryBuffer::create_from_memory_range(KECCAK256_IR, "sha3");
 
         module
             .link_in_module(Module::parse_bitcode_from_buffer(&memory, context).unwrap())
