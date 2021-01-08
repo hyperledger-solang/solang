@@ -296,6 +296,7 @@ impl ast::Namespace {
             symbols: HashMap::new(),
             diagnostics: Vec::new(),
             next_id: 0,
+            var_constants: HashMap::new(),
         }
     }
 

@@ -19,7 +19,11 @@ use crate::Target;
 #[derive(Clone)]
 pub enum Instr {
     /// Set variable
-    Set { res: usize, expr: Expression },
+    Set {
+        loc: pt::Loc,
+        res: usize,
+        expr: Expression,
+    },
     /// Call internal function, either static dispatch or dynamic dispatch
     Call {
         res: Vec<usize>,
@@ -640,7 +644,7 @@ impl ControlFlowGraph {
                     .collect::<Vec<String>>()
                     .join(", ")
             ),
-            Instr::Set { res, expr } => format!(
+            Instr::Set { res, expr, .. } => format!(
                 "ty:{} %{} = {}",
                 self.vars[res].ty.to_string(ns),
                 self.vars[res].id.name,
@@ -1014,8 +1018,7 @@ pub fn generate_cfg(
     }
 
     reaching_definitions::find(&mut cfg);
-    let diags = constant_folding::constant_folding(&mut cfg);
-    ns.diagnostics.extend(diags);
+    constant_folding::constant_folding(&mut cfg, ns);
 
     all_cfgs[cfg_no] = cfg;
 }
@@ -1123,6 +1126,7 @@ fn function_cfg(
             cfg.add(
                 &mut vartab,
                 Instr::Set {
+                    loc: func.params[i].name_loc.unwrap(),
                     res: *pos,
                     expr: Expression::FunctionArg(var.id.loc, var.ty.clone(), i),
                 },
@@ -1194,7 +1198,14 @@ fn function_cfg(
                             let ty = expr.ty();
                             let loc = expr.loc();
 
-                            cfg.add(&mut vartab, Instr::Set { res: *id, expr });
+                            cfg.add(
+                                &mut vartab,
+                                Instr::Set {
+                                    loc: func.params[i].name_loc.unwrap_or(pt::Loc(0, 0, 0)),
+                                    res: *id,
+                                    expr,
+                                },
+                            );
                             Expression::Variable(loc, ty, *id)
                         } else {
                             Expression::Poison
@@ -1244,6 +1255,7 @@ fn function_cfg(
             cfg.add(
                 &mut vartab,
                 Instr::Set {
+                    loc: func.returns[i].name_loc.unwrap(),
                     res: *pos,
                     expr: func.returns[i].ty.default(ns),
                 },
@@ -1304,6 +1316,7 @@ pub fn generate_modifier_dispatch(
             cfg.add(
                 &mut vartab,
                 Instr::Set {
+                    loc: pt::Loc(0, 0, 0),
                     res: *pos,
                     expr: Expression::FunctionArg(var.id.loc, var.ty.clone(), i),
                 },
@@ -1315,7 +1328,14 @@ pub fn generate_modifier_dispatch(
     for (i, arg) in modifier.symtable.arguments.iter().enumerate() {
         if let Some(pos) = arg {
             let expr = expression(&args[i], &mut cfg, contract_no, ns, &mut vartab);
-            cfg.add(&mut vartab, Instr::Set { res: *pos, expr });
+            cfg.add(
+                &mut vartab,
+                Instr::Set {
+                    loc: pt::Loc(0, 0, 0),
+                    res: *pos,
+                    expr,
+                },
+            );
         }
     }
 

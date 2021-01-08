@@ -295,7 +295,7 @@ fn statement(
             let initializer = if let Some(init) = initializer {
                 let expr = expression(init, file_no, contract_no, ns, symtable, false)?;
 
-                Some(cast(&decl.name.loc, expr, &var_ty, true, ns)?)
+                Some(cast(&expr.loc(), expr, &var_ty, true, ns)?)
             } else {
                 None
             };

@@ -4,6 +4,7 @@ use tower_lsp::lsp_types::*;
 use tower_lsp::{Client, LanguageServer};
 use tower_lsp::{LspService, Server};
 
+use solang::codegen::codegen;
 use solang::file_cache::FileCache;
 use solang::parse_and_resolve;
 use solang::parser::pt;
@@ -68,7 +69,12 @@ impl SolangServer {
 
             let os_str = path.file_name().unwrap();
 
-            let ns = parse_and_resolve(os_str.to_str().unwrap(), &mut filecache, self.target);
+            let mut ns = parse_and_resolve(os_str.to_str().unwrap(), &mut filecache, self.target);
+
+            // codegen all the contracts; some additional errors/warnings will be detected here
+            for contract_no in 0..ns.contracts.len() {
+                codegen(contract_no, &mut ns);
+            }
 
             let offsets = ns.file_offset(&mut filecache);
 
@@ -177,12 +183,28 @@ impl SolangServer {
         ns: &ast::Namespace,
     ) {
         match stmt {
-            Statement::VariableDecl(_locs, _, _param, expr) => {
+            Statement::VariableDecl(loc, _, _param, expr) => {
                 if let Some(exp) = expr {
                     SolangServer::construct_expr(exp, lookup_tbl, symtab, fnc_map, ns);
                 }
                 let mut msg = SolangServer::expanded_ty(&_param.ty, ns);
                 msg = format!("{} {}", msg, _param.name);
+                if let Some(expr) = ns.var_constants.get(loc) {
+                    match expr {
+                        Expression::BytesLiteral(_, ast::Type::Bytes(_), bs)
+                        | Expression::BytesLiteral(_, ast::Type::DynamicBytes, bs) => {
+                            msg.push_str(&format!(" = hex\"{}\"", hex::encode(&bs)));
+                        }
+                        Expression::BytesLiteral(_, ast::Type::String, bs) => {
+                            msg.push_str(&format!(" = \"{}\"", String::from_utf8_lossy(&bs)));
+                        }
+                        Expression::NumberLiteral(_, ast::Type::Uint(_), n)
+                        | Expression::NumberLiteral(_, ast::Type::Int(_), n) => {
+                            msg.push_str(&format!(" = {}", n));
+                        }
+                        _ => (),
+                    }
+                }
                 lookup_tbl.push((_param.loc.1, _param.loc.2, msg));
             }
             Statement::If(_locs, _, expr, stat1, stat2) => {
@@ -341,8 +363,8 @@ impl SolangServer {
                 let msg = format!("({})", _val);
                 lookup_tbl.push((locs.1, locs.2, msg));
             }
-            Expression::NumberLiteral(locs, typ, _bgit) => {
-                let msg = format!("({})", typ.to_string(ns));
+            Expression::NumberLiteral(locs, typ, _) => {
+                let msg = typ.to_string(ns);
                 lookup_tbl.push((locs.1, locs.2, msg));
             }
             Expression::StructLiteral(_locs, _typ, expr) => {
@@ -410,9 +432,27 @@ impl SolangServer {
             }
 
             // Variable expression
-            Expression::Variable(locs, typ, _val) => {
-                let msg = format!("({})", SolangServer::expanded_ty(typ, ns));
-                lookup_tbl.push((locs.1, locs.2, msg));
+            Expression::Variable(loc, typ, _val) => {
+                let mut msg = SolangServer::expanded_ty(typ, ns);
+
+                if let Some(expr) = ns.var_constants.get(loc) {
+                    match expr {
+                        Expression::BytesLiteral(_, ast::Type::Bytes(_), bs)
+                        | Expression::BytesLiteral(_, ast::Type::DynamicBytes, bs) => {
+                            msg.push_str(&format!(" hex\"{}\"", hex::encode(&bs)));
+                        }
+                        Expression::BytesLiteral(_, ast::Type::String, bs) => {
+                            msg.push_str(&format!(" \"{}\"", String::from_utf8_lossy(&bs)));
+                        }
+                        Expression::NumberLiteral(_, ast::Type::Uint(_), n)
+                        | Expression::NumberLiteral(_, ast::Type::Int(_), n) => {
+                            msg.push_str(&format!(" {}", n));
+                        }
+                        _ => (),
+                    }
+                }
+
+                lookup_tbl.push((loc.1, loc.2, msg));
             }
             Expression::ConstantVariable(locs, typ, _val1, _val2) => {
                 let msg = format!("constant ({})", SolangServer::expanded_ty(typ, ns,));

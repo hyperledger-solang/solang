@@ -22,10 +22,17 @@ pub fn statement(
     return_override: Option<&Instr>,
 ) {
     match stmt {
-        Statement::VariableDecl(_, pos, _, Some(init)) => {
+        Statement::VariableDecl(loc, pos, _, Some(init)) => {
             let expr = expression(init, cfg, contract_no, ns, vartab);
 
-            cfg.add(vartab, Instr::Set { res: *pos, expr });
+            cfg.add(
+                vartab,
+                Instr::Set {
+                    loc: *loc,
+                    res: *pos,
+                    expr,
+                },
+            );
         }
         Statement::VariableDecl(_, _, _, None) => {
             // nothing to do
@@ -423,7 +430,7 @@ pub fn statement(
 
                         let res = vartab.temp_anonymous(&ty);
 
-                        cfg.add(vartab, Instr::Set { res, expr });
+                        cfg.add(vartab, Instr::Set { loc, res, expr });
 
                         values.push(Expression::Variable(loc, ty, res));
                     }
@@ -448,7 +455,14 @@ pub fn statement(
                         let expr = try_cast(&param.loc, right, &param.ty, true, ns)
                             .expect("sema should have checked cast");
 
-                        cfg.add(vartab, Instr::Set { res: *res, expr });
+                        cfg.add(
+                            vartab,
+                            Instr::Set {
+                                loc: param.name_loc.unwrap_or(pt::Loc(0, 0, 0)),
+                                res: *res,
+                                expr,
+                            },
+                        );
                     }
                     DestructureField::Expression(left) => {
                         // the resolver did not cast the expression
@@ -934,6 +948,7 @@ fn try_catch(
         cfg.add(
             vartab,
             Instr::Set {
+                loc: pt::Loc(0, 0, 0),
                 res: *pos,
                 expr: Expression::ReturnData(pt::Loc(0, 0, 0)),
             },

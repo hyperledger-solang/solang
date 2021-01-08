@@ -3127,7 +3127,7 @@ pub trait TargetRuntime<'a> {
                             .builder
                             .build_return(Some(&contract.context.i32_type().const_zero()));
                     }
-                    Instr::Set { res, expr } => {
+                    Instr::Set { res, expr, .. } => {
                         let value_ref = self.expression(contract, expr, &w.vars, function);
 
                         w.vars.get_mut(res).unwrap().value = value_ref;

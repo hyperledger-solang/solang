@@ -358,6 +358,9 @@ pub struct Namespace {
     pub symbols: HashMap<(usize, Option<usize>, String), Symbol>,
     // each variable in the symbol table should have a unique number
     pub next_id: usize,
+    /// For a variable reference at a location, give the constant value
+    /// This for use by the language server to show the value of a variable at a location
+    pub var_constants: HashMap<pt::Loc, Expression>,
 }
 
 pub struct Layout {
