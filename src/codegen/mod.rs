@@ -60,7 +60,7 @@ pub fn codegen(contract_no: usize, ns: &mut Namespace) {
 }
 
 /// This function will set all contract storage initializers and should be called from the constructor
-fn storage_initializer(contract_no: usize, ns: &Namespace) -> ControlFlowGraph {
+fn storage_initializer(contract_no: usize, ns: &mut Namespace) -> ControlFlowGraph {
     let mut cfg = ControlFlowGraph::new(String::from("storage_initializer"));
     let mut vartab = Vartable::new(ns.next_id);
 
@@ -89,7 +89,7 @@ fn storage_initializer(contract_no: usize, ns: &Namespace) -> ControlFlowGraph {
     cfg.vars = vartab.drain();
 
     reaching_definitions::find(&mut cfg);
-    constant_folding::constant_folding(&mut cfg);
+    constant_folding::constant_folding(&mut cfg, ns);
 
     cfg
 }

@@ -191,13 +191,21 @@ pub fn expression(
                 _ => unreachable!(),
             };
 
-            cfg.add(vartab, Instr::Set { res, expr });
+            cfg.add(
+                vartab,
+                Instr::Set {
+                    loc: pt::Loc(0, 0, 0),
+                    res,
+                    expr,
+                },
+            );
 
             match var.as_ref() {
-                Expression::Variable(_, _, pos) => {
+                Expression::Variable(loc, _, pos) => {
                     cfg.add(
                         vartab,
                         Instr::Set {
+                            loc: *loc,
                             res: *pos,
                             expr: Expression::Variable(*loc, ty.clone(), res),
                         },
@@ -238,7 +246,14 @@ pub fn expression(
                 _ => v,
             };
 
-            cfg.add(vartab, Instr::Set { res, expr: v });
+            cfg.add(
+                vartab,
+                Instr::Set {
+                    loc: pt::Loc(0, 0, 0),
+                    res,
+                    expr: v,
+                },
+            );
 
             let one = Box::new(Expression::NumberLiteral(*loc, ty.clone(), BigInt::one()));
             let expr = match expr {
@@ -258,13 +273,27 @@ pub fn expression(
             };
 
             match var.as_ref() {
-                Expression::Variable(_, _, pos) => {
-                    cfg.add(vartab, Instr::Set { res: *pos, expr });
+                Expression::Variable(loc, _, pos) => {
+                    cfg.add(
+                        vartab,
+                        Instr::Set {
+                            loc: *loc,
+                            res: *pos,
+                            expr,
+                        },
+                    );
                 }
                 _ => {
                     let dest = expression(var, cfg, contract_no, ns, vartab);
                     let res = vartab.temp_anonymous(ty);
-                    cfg.add(vartab, Instr::Set { res, expr });
+                    cfg.add(
+                        vartab,
+                        Instr::Set {
+                            loc: pt::Loc(0, 0, 0),
+                            res,
+                            expr,
+                        },
+                    );
 
                     match var.ty() {
                         Type::StorageRef(_) => {
@@ -500,6 +529,7 @@ pub fn expression(
             cfg.add(
                 vartab,
                 Instr::Set {
+                    loc: pt::Loc(0, 0, 0),
                     res: pos,
                     expr: Expression::BoolLiteral(*loc, true),
                 },
@@ -516,7 +546,14 @@ pub fn expression(
 
             let r = expression(right, cfg, contract_no, ns, vartab);
 
-            cfg.add(vartab, Instr::Set { res: pos, expr: r });
+            cfg.add(
+                vartab,
+                Instr::Set {
+                    loc: pt::Loc(0, 0, 0),
+                    res: pos,
+                    expr: r,
+                },
+            );
 
             let mut phis = HashSet::new();
             phis.insert(pos);
@@ -547,6 +584,7 @@ pub fn expression(
             cfg.add(
                 vartab,
                 Instr::Set {
+                    loc: pt::Loc(0, 0, 0),
                     res: pos,
                     expr: Expression::BoolLiteral(*loc, false),
                 },
@@ -563,7 +601,14 @@ pub fn expression(
 
             let r = expression(right, cfg, contract_no, ns, vartab);
 
-            cfg.add(vartab, Instr::Set { res: pos, expr: r });
+            cfg.add(
+                vartab,
+                Instr::Set {
+                    loc: pt::Loc(0, 0, 0),
+                    res: pos,
+                    expr: r,
+                },
+            );
 
             let mut phis = HashSet::new();
             phis.insert(pos);
@@ -902,9 +947,16 @@ pub fn assign_single(
     vartab: &mut Vartable,
 ) -> Expression {
     match left {
-        Expression::Variable(_, _, pos) => {
+        Expression::Variable(loc, _, pos) => {
             let expr = expression(right, cfg, contract_no, ns, vartab);
-            cfg.add(vartab, Instr::Set { res: *pos, expr });
+            cfg.add(
+                vartab,
+                Instr::Set {
+                    loc: *loc,
+                    res: *pos,
+                    expr,
+                },
+            );
 
             left.clone()
         }
@@ -920,6 +972,7 @@ pub fn assign_single(
             cfg.add(
                 vartab,
                 Instr::Set {
+                    loc: pt::Loc(0, 0, 0),
                     res: pos,
                     expr: right,
                 },
@@ -1347,6 +1400,7 @@ fn array_subscript(
     cfg.add(
         vartab,
         Instr::Set {
+            loc: pt::Loc(0, 0, 0),
             res: pos,
             expr: try_cast(&index.loc(), index, &coerced_ty, false, ns).unwrap(),
         },

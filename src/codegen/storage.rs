@@ -75,6 +75,7 @@ pub fn array_push(
     cfg.add(
         vartab,
         Instr::Set {
+            loc: pt::Loc(0, 0, 0),
             res: length_pos,
             expr: Expression::StorageLoad(*loc, slot_ty.clone(), Box::new(var_expr.clone())),
         },
@@ -87,6 +88,7 @@ pub fn array_push(
     cfg.add(
         vartab,
         Instr::Set {
+            loc: pt::Loc(0, 0, 0),
             res: entry_pos,
             expr: array_offset(
                 loc,
@@ -159,6 +161,7 @@ pub fn array_pop(
     cfg.add(
         vartab,
         Instr::Set {
+            loc: pt::Loc(0, 0, 0),
             res: length_pos,
             expr: Expression::StorageLoad(*loc, length_ty.clone(), Box::new(var_expr.clone())),
         },
@@ -193,6 +196,7 @@ pub fn array_pop(
     cfg.add(
         vartab,
         Instr::Set {
+            loc: pt::Loc(0, 0, 0),
             res: new_length,
             expr: Expression::Subtract(
                 *loc,
@@ -211,6 +215,7 @@ pub fn array_pop(
     cfg.add(
         vartab,
         Instr::Set {
+            loc: pt::Loc(0, 0, 0),
             res: entry_pos,
             expr: array_offset(
                 loc,
@@ -227,6 +232,7 @@ pub fn array_pop(
     cfg.add(
         vartab,
         Instr::Set {
+            loc: *loc,
             res: res_pos,
             expr: Expression::StorageLoad(
                 *loc,

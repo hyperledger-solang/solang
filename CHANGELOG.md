@@ -4,10 +4,14 @@ will be documented here.
 
 ## [Unreleased]
 
-### Changed
-- The Substrate target produces a single .contract file
+### Added
+- Added a constant folding optimization pass to improve codegen. When variables fold
+  to constant values, they are visible in the hover in the extension
 - For Substrate and Solana, address literals can specified with their base58 notation, e.g.
   `address foo = address"5GBWmgdFAMqm8ZgAHGobqDqX6tjLxJhv53ygjNtaaAn3sjeZ";`
+
+### Changed
+- The Substrate target produces a single .contract file
 
 ## [0.1.6]
 
