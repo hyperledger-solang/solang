@@ -1,7 +1,9 @@
 use parity_scale_codec::{Decode, Encode};
 use parity_scale_codec_derive::{Decode, Encode};
 
-use crate::{build_solidity, first_error, no_errors, parse_and_resolve};
+use crate::{
+    build_solidity, build_solidity_with_overflow_check, first_error, no_errors, parse_and_resolve,
+};
 use num_bigint::BigInt;
 use num_bigint::Sign;
 use rand::Rng;
@@ -1493,4 +1495,64 @@ fn destructure() {
     );
 
     runtime.function("test", Vec::new());
+}
+
+#[test]
+#[should_panic]
+fn addition_overflow() {
+    let mut runtime = build_solidity_with_overflow_check(
+        r#"
+        contract overflow {
+            function foo(uint8 x) internal {
+                uint8 y = x + 1;
+            }
+
+            function bar() public {
+                foo(255);
+            }
+        }
+        "#,
+    );
+
+    runtime.function("bar", Vec::new());
+}
+
+#[test]
+#[should_panic]
+fn subtraction_underflow() {
+    let mut runtime = build_solidity_with_overflow_check(
+        r#"
+        contract underflow {
+            function foo(uint64 x) internal {
+                uint64 y = x - 1;
+            }
+
+            function bar() public {
+                foo(0);
+            }
+        }
+        "#,
+    );
+
+    runtime.function("bar", Vec::new());
+}
+
+#[test]
+#[should_panic]
+fn multiplication_overflow() {
+    let mut runtime = build_solidity_with_overflow_check(
+        r#"
+        contract overflow {
+            function foo(int8 x) internal {
+                int8 y = x * int8(64);
+            }
+
+            function bar() public {
+                foo(8);
+            }
+        }
+        "#,
+    );
+
+    runtime.function("bar", Vec::new());
 }

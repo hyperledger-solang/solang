@@ -2,6 +2,7 @@ use crate::parser::pt;
 use crate::sema::ast;
 use crate::sema::ast::{Builtin, Expression, FormatArg, StringLocation};
 use std::cell::RefCell;
+use std::fmt;
 use std::path::Path;
 use std::str;
 
@@ -47,6 +48,27 @@ lazy_static::lazy_static! {
 #[derive(Clone)]
 pub struct Variable<'a> {
     value: BasicValueEnum<'a>,
+}
+
+#[derive(Clone, Copy)]
+pub enum BinaryOp {
+    Add,
+    Subtract,
+    Multiply,
+}
+
+impl fmt::Display for BinaryOp {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                Self::Add => "add",
+                Self::Subtract => "sub",
+                Self::Multiply => "mul",
+            }
+        )
+    }
 }
 
 pub trait TargetRuntime<'a> {
@@ -1141,7 +1163,19 @@ pub trait TargetRuntime<'a> {
                     .expression(contract, r, vartab, function)
                     .into_int_value();
 
-                contract.builder.build_int_add(left, right, "").into()
+                if contract.math_overflow_check {
+                    let signed = l.ty().is_signed_int();
+                    self.build_binary_op_with_overflow_check(
+                        contract,
+                        function,
+                        left,
+                        right,
+                        BinaryOp::Add,
+                        signed,
+                    )
+                } else {
+                    contract.builder.build_int_add(left, right, "").into()
+                }
             }
             Expression::Subtract(_, _, l, r) => {
                 let left = self
@@ -1151,7 +1185,19 @@ pub trait TargetRuntime<'a> {
                     .expression(contract, r, vartab, function)
                     .into_int_value();
 
-                contract.builder.build_int_sub(left, right, "").into()
+                if contract.math_overflow_check {
+                    let signed = l.ty().is_signed_int();
+                    self.build_binary_op_with_overflow_check(
+                        contract,
+                        function,
+                        left,
+                        right,
+                        BinaryOp::Subtract,
+                        signed,
+                    )
+                } else {
+                    contract.builder.build_int_sub(left, right, "").into()
+                }
             }
             Expression::Multiply(_, _, l, r) => {
                 let left = self
@@ -1208,6 +1254,16 @@ pub trait TargetRuntime<'a> {
                     );
 
                     contract.builder.build_load(o, "mul")
+                } else if contract.math_overflow_check {
+                    let signed = l.ty().is_signed_int();
+                    self.build_binary_op_with_overflow_check(
+                        contract,
+                        function,
+                        left,
+                        right,
+                        BinaryOp::Multiply,
+                        signed,
+                    )
                 } else {
                     contract.builder.build_int_mul(left, right, "").into()
                 }
@@ -5116,6 +5172,71 @@ pub trait TargetRuntime<'a> {
 
         vector.into()
     }
+
+    /// Convenience function for generating binary operations with overflow checking.
+    fn build_binary_op_with_overflow_check(
+        &self,
+        contract: &Contract<'a>,
+        function: FunctionValue,
+        left: IntValue<'a>,
+        right: IntValue<'a>,
+        op: BinaryOp,
+        signed: bool,
+    ) -> BasicValueEnum<'a> {
+        let ret_ty = contract.context.struct_type(
+            &[
+                left.get_type().into(),
+                contract.context.custom_width_int_type(1).into(),
+            ],
+            false,
+        );
+        let binop = contract.llvm_overflow(ret_ty.into(), left.get_type(), signed, op);
+        let op_res = contract
+            .builder
+            .build_call(binop, &[left.into(), right.into()], "")
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_struct_value();
+
+        let slot = contract.builder.build_alloca(op_res.get_type(), "");
+        contract.builder.build_store(slot, op_res);
+        let overflow_ptr = contract
+            .builder
+            .build_struct_gep(slot, 1, "overflow bit")
+            .unwrap();
+        let overflow = contract.builder.build_load(overflow_ptr, "");
+
+        let success = contract.builder.build_int_compare(
+            IntPredicate::EQ,
+            overflow.into_int_value(),
+            contract.context.custom_width_int_type(1).const_zero(),
+            "success",
+        );
+
+        let success_block = contract.context.append_basic_block(function, "success");
+        let error_block = contract.context.append_basic_block(function, "error");
+        contract
+            .builder
+            .build_conditional_branch(success, success_block, error_block);
+
+        contract.builder.position_at_end(error_block);
+
+        self.assert_failure(
+            contract,
+            contract
+                .context
+                .i8_type()
+                .ptr_type(AddressSpace::Generic)
+                .const_null(),
+            contract.context.i32_type().const_zero(),
+        );
+
+        contract.builder.position_at_end(success_block);
+
+        let res_ptr = contract.builder.build_struct_gep(slot, 0, "").unwrap();
+        contract.builder.build_load(res_ptr, "")
+    }
 }
 pub struct Contract<'a> {
     pub name: String,
@@ -5901,6 +6022,30 @@ impl<'a> Contract<'a> {
 
         self.module
             .add_function(&name, ty.fn_type(&[ty.into()], false), None)
+    }
+
+    // Create the llvm intrinsic for overflows
+    pub fn llvm_overflow(
+        &self,
+        ret_ty: BasicTypeEnum<'a>,
+        ty: IntType<'a>,
+        signed: bool,
+        op: BinaryOp,
+    ) -> FunctionValue<'a> {
+        let bit = ty.get_bit_width();
+        let name = format!(
+            "llvm.{}{}.with.overflow.i{}",
+            if signed { "s" } else { "u" },
+            op,
+            bit,
+        );
+
+        if let Some(f) = self.module.get_function(&name) {
+            return f;
+        }
+
+        self.module
+            .add_function(&name, ret_ty.fn_type(&[ty.into(), ty.into()], false), None)
     }
 
     /// Return the llvm type for a variable holding the type, not the type itself
