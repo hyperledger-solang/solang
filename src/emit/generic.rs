@@ -243,35 +243,11 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
 
     fn set_storage_string(
         &self,
-        contract: &Contract,
-        _function: FunctionValue,
-        slot: PointerValue,
-        dest: PointerValue,
+        contract: &Contract<'a>,
+        _function: FunctionValue<'a>,
+        slot: PointerValue<'a>,
+        dest: BasicValueEnum<'a>,
     ) {
-        let len = unsafe {
-            contract.builder.build_gep(
-                dest,
-                &[
-                    contract.context.i32_type().const_zero(),
-                    contract.context.i32_type().const_zero(),
-                ],
-                "ptr.string.len",
-            )
-        };
-
-        let len = contract.builder.build_load(len, "string.len");
-
-        let data = unsafe {
-            contract.builder.build_gep(
-                dest,
-                &[
-                    contract.context.i32_type().const_zero(),
-                    contract.context.i32_type().const_int(2, false),
-                ],
-                "ptr.string.data",
-            )
-        };
-
         // TODO: check for non-zero
         contract.builder.build_call(
             contract.module.get_function("solang_storage_set").unwrap(),
@@ -284,15 +260,8 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
                         "",
                     )
                     .into(),
-                contract
-                    .builder
-                    .build_pointer_cast(
-                        data,
-                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                        "",
-                    )
-                    .into(),
-                len,
+                contract.vector_bytes(dest).into(),
+                contract.vector_len(dest).into(),
             ],
             "",
         );

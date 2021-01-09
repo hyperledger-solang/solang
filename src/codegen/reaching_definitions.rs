@@ -1,4 +1,5 @@
 use super::cfg::{BasicBlock, ControlFlowGraph, Instr};
+use crate::sema::ast::Expression;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 
@@ -11,6 +12,8 @@ pub struct Def {
 #[derive(Clone, Copy, PartialEq)]
 pub enum Transfer {
     Gen { def: Def, var_no: usize },
+    Mod { var_no: usize },
+    Copy { var_no: usize, src: usize },
     Kill { var_no: usize },
 }
 
@@ -20,6 +23,12 @@ impl fmt::Display for Transfer {
             Transfer::Gen { def, var_no } => {
                 write!(f, "Gen %{} = ({}, {})", var_no, def.block_no, def.instr_no)
             }
+            Transfer::Mod { var_no } => {
+                write!(f, "Mod %{}", var_no)
+            }
+            Transfer::Copy { var_no, src } => {
+                write!(f, "Copy %{} from %{}", var_no, src)
+            }
             Transfer::Kill { var_no } => {
                 write!(f, "Kill %{}", var_no)
             }
@@ -27,7 +36,7 @@ impl fmt::Display for Transfer {
     }
 }
 
-pub type VarDefs = HashMap<usize, HashSet<Def>>;
+pub type VarDefs = HashMap<usize, HashMap<Def, bool>>;
 
 /// Calculate all the reaching definitions for the contract. This is a flow
 /// analysis which is used for further optimizations
@@ -56,7 +65,13 @@ pub fn find(cfg: &mut ControlFlowGraph) {
                 // merge incoming set
                 for (var_no, defs) in &vars {
                     if let Some(entry) = cfg.blocks[edge].defs.get_mut(var_no) {
-                        entry.extend(defs);
+                        for (incoming_def, incoming_modified) in defs {
+                            if let Some(e) = entry.get_mut(incoming_def) {
+                                *e |= *incoming_modified;
+                            } else {
+                                entry.insert(*incoming_def, *incoming_modified);
+                            }
+                        }
                     } else {
                         cfg.blocks[edge].defs.insert(*var_no, defs.clone());
                     }
@@ -89,17 +104,50 @@ fn instr_transfers(block_no: usize, block: &BasicBlock) -> Vec<Vec<Transfer>> {
         };
 
         transfers.push(match instr {
+            Instr::Set {
+                res,
+                expr: Expression::Variable(_, _, src),
+                ..
+            } => {
+                vec![
+                    Transfer::Kill { var_no: *res },
+                    Transfer::Copy {
+                        var_no: *res,
+                        src: *src,
+                    },
+                ]
+            }
             Instr::Set { res, .. } => set_var(&[*res]),
             Instr::Call { res, .. } => set_var(res),
             Instr::AbiDecode { res, .. } => set_var(res),
-            Instr::PushMemory { res, .. }
-            | Instr::AbiEncodeVector { res, .. }
+            Instr::PushMemory { array, res, .. } => {
+                let mut v = set_var(&[*res]);
+                v.push(Transfer::Mod { var_no: *array });
+
+                v
+            }
+            Instr::PopMemory { array, .. } => {
+                vec![Transfer::Mod { var_no: *array }]
+            }
+            Instr::AbiEncodeVector { res, .. }
             | Instr::ExternalCall {
                 success: Some(res), ..
             }
             | Instr::Constructor {
                 success: None, res, ..
             } => set_var(&[*res]),
+            Instr::ClearStorage { storage: dest, .. }
+            | Instr::SetStorageBytes { storage: dest, .. }
+            | Instr::SetStorage { storage: dest, .. }
+            | Instr::Store { dest, .. } => {
+                let mut v = Vec::new();
+
+                if let Some(var_no) = array_var(dest) {
+                    v.push(Transfer::Mod { var_no });
+                }
+
+                v
+            }
             Instr::Constructor {
                 success: Some(success),
                 res,
@@ -112,18 +160,42 @@ fn instr_transfers(block_no: usize, block: &BasicBlock) -> Vec<Vec<Transfer>> {
     transfers
 }
 
-pub fn apply_transfers(transfers: &[Transfer], vars: &mut HashMap<usize, HashSet<Def>>) {
+fn array_var(expr: &Expression) -> Option<usize> {
+    match expr {
+        Expression::Variable(_, _, var_no) => Some(*var_no),
+        Expression::DynamicArraySubscript(_, _, expr, _)
+        | Expression::ArraySubscript(_, _, expr, _)
+        | Expression::StructMember(_, _, expr, _) => array_var(expr),
+        _ => None,
+    }
+}
+
+pub fn apply_transfers(transfers: &[Transfer], vars: &mut HashMap<usize, HashMap<Def, bool>>) {
     for transfer in transfers {
         match transfer {
             Transfer::Kill { var_no } => {
                 vars.remove(var_no);
             }
+            Transfer::Mod { var_no } => {
+                if let Some(entry) = vars.get_mut(var_no) {
+                    for e in entry.values_mut() {
+                        *e = true;
+                    }
+                }
+            }
+            Transfer::Copy { var_no, src } => {
+                if let Some(defs) = vars.get(src) {
+                    let defs = defs.clone();
+
+                    vars.insert(*var_no, defs);
+                }
+            }
             Transfer::Gen { var_no, def } => {
                 if let Some(entry) = vars.get_mut(var_no) {
-                    entry.insert(*def);
+                    entry.insert(*def, false);
                 } else {
-                    let mut v = HashSet::new();
-                    v.insert(*def);
+                    let mut v = HashMap::new();
+                    v.insert(*def, false);
                     vars.insert(*var_no, v);
                 }
             }

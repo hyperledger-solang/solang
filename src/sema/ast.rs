@@ -38,6 +38,8 @@ pub enum Type {
     Value,
     Void,
     Unreachable,
+    /// DynamicBytes and String are lowered to a vector.
+    Slice,
 }
 
 #[derive(PartialEq, Clone, Debug)]

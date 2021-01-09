@@ -16,6 +16,12 @@ fn testcases() {
     }
 }
 
+#[derive(Debug)]
+enum Test {
+    Check(String),
+    Rewind,
+}
+
 fn testcase(path: PathBuf) {
     // find the args to run.
     println!("testcase: {}", path.display());
@@ -31,7 +37,10 @@ fn testcase(path: PathBuf) {
 
             command_line = Some(String::from(args));
         } else if let Some(check) = line.strip_prefix("// CHECK:") {
-            checks.push(check.trim().to_string());
+            checks.push(Test::Check(check.trim().to_string()));
+        } else if let Some(check) = line.strip_prefix("// BEGIN-CHECK:") {
+            checks.push(Test::Rewind);
+            checks.push(Test::Check(check.trim().to_string()));
         }
     }
 
@@ -48,16 +57,33 @@ fn testcase(path: PathBuf) {
 
     let stdout = String::from_utf8_lossy(&output.stdout);
 
-    let mut check_done = 0;
+    let mut current_check = 0;
+    let mut current_line = 0;
+    let lines: Vec<&str> = stdout.split('\n').collect();
 
-    for line in stdout.split('\n') {
-        // have we done all checks
-        if check_done < checks.len() && line.find(&checks[check_done]).is_some() {
-            check_done += 1;
+    while current_line < lines.len() {
+        let line = lines[current_line];
+
+        match checks.get(current_check) {
+            Some(Test::Check(needle)) => {
+                if line.find(needle).is_some() {
+                    current_check += 1;
+                }
+            }
+            Some(Test::Rewind) => {
+                current_line = 0;
+                current_check += 1;
+                continue;
+            }
+            None => (),
         }
+
+        current_line += 1;
     }
 
-    if check_done < checks.len() {
-        panic!("NOT FOUND CHECK: {}", checks[check_done]);
+    if current_check < checks.len() {
+        println!("OUTPUT: \n===8<===8<===\n{}===8<===8<===\n", stdout);
+
+        panic!("NOT FOUND CHECK: {:?}", checks[current_check]);
     }
 }

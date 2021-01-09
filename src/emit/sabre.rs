@@ -379,10 +379,10 @@ impl<'a> TargetRuntime<'a> for SabreTarget {
 
     fn set_storage_string(
         &self,
-        _contract: &Contract,
-        _function: FunctionValue,
-        _slot: PointerValue,
-        _dest: PointerValue,
+        _contract: &Contract<'a>,
+        _function: FunctionValue<'a>,
+        _slot: PointerValue<'a>,
+        _dest: BasicValueEnum<'a>,
     ) {
         unimplemented!();
     }
