@@ -8,6 +8,7 @@ use super::constant_folding;
 use super::expression::expression;
 use super::reaching_definitions;
 use super::statements::{statement, LoopScopes};
+use super::vector_to_slice;
 use crate::parser::pt;
 use crate::sema::ast::{
     CallTy, Contract, Expression, Function, Namespace, Parameter, StringLocation, Type,
@@ -57,8 +58,8 @@ pub enum Instr {
     /// In storage slot, set the value at the offset
     SetStorageBytes {
         value: Expression,
-        storage: Box<Expression>,
-        offset: Box<Expression>,
+        storage: Expression,
+        offset: Expression,
     },
     /// Push element on memory array
     PushMemory {
@@ -921,7 +922,7 @@ impl ControlFlowGraph {
                     .map(|(var_no, defs)| format!(
                         " {}:[{}]",
                         &self.vars[var_no].id.name,
-                        defs.iter()
+                        defs.keys()
                             .map(|d| format!("{}:{}", d.block_no, d.instr_no))
                             .collect::<Vec<String>>()
                             .join(", ")
@@ -1019,6 +1020,7 @@ pub fn generate_cfg(
 
     reaching_definitions::find(&mut cfg);
     constant_folding::constant_folding(&mut cfg, ns);
+    vector_to_slice::vector_to_slice(&mut cfg, ns);
 
     all_cfgs[cfg_no] = cfg;
 }

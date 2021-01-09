@@ -128,10 +128,10 @@ pub trait TargetRuntime<'a> {
     // Bytes and string have special storage layout
     fn set_storage_string(
         &self,
-        contract: &Contract,
-        function: FunctionValue,
-        slot: PointerValue,
-        dest: PointerValue,
+        contract: &Contract<'a>,
+        function: FunctionValue<'a>,
+        slot: PointerValue<'a>,
+        dest: BasicValueEnum<'a>,
     );
     fn get_storage_string(
         &self,
@@ -859,7 +859,7 @@ pub trait TargetRuntime<'a> {
             ast::Type::String | ast::Type::DynamicBytes => {
                 contract.builder.build_store(slot_ptr, *slot);
 
-                self.set_storage_string(contract, function, slot_ptr, dest.into_pointer_value());
+                self.set_storage_string(contract, function, slot_ptr, dest);
             }
             ast::Type::ExternalFunction { .. } => {
                 contract.builder.build_store(slot_ptr, *slot);
@@ -1898,23 +1898,9 @@ pub trait TargetRuntime<'a> {
                     .into()
             }
             Expression::BytesCast(_, ast::Type::DynamicBytes, ast::Type::Bytes(n), e) => {
-                let array = self
-                    .expression(contract, e, vartab, function)
-                    .into_pointer_value();
-                let len_ptr = unsafe {
-                    contract.builder.build_gep(
-                        array,
-                        &[
-                            contract.context.i32_type().const_zero(),
-                            contract.context.i32_type().const_zero(),
-                        ],
-                        "array_len",
-                    )
-                };
-                let len = contract
-                    .builder
-                    .build_load(len_ptr, "array_len")
-                    .into_int_value();
+                let array = self.expression(contract, e, vartab, function);
+
+                let len = contract.vector_len(array);
 
                 // Check if equal to n
                 let is_equal_to_n = contract.builder.build_int_compare(
@@ -1941,24 +1927,9 @@ pub trait TargetRuntime<'a> {
                 );
 
                 contract.builder.position_at_end(cast);
-                let bytes_ptr = unsafe {
-                    contract.builder.build_gep(
-                        array,
-                        &[
-                            contract.context.i32_type().const_zero(),
-                            contract.context.i32_type().const_int(2, false),
-                        ],
-                        "data",
-                    )
-                };
+                let bytes_ptr = contract.vector_bytes(array);
 
                 // Switch byte order
-                let bytes_ptr = contract.builder.build_pointer_cast(
-                    bytes_ptr,
-                    contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                    "bytes_ptr",
-                );
-
                 let ty = contract.context.custom_width_int_type(*n as u32 * 8);
                 let le_bytes_ptr = contract.builder.build_alloca(ty, "le_bytes");
 
@@ -2132,9 +2103,7 @@ pub trait TargetRuntime<'a> {
                     .into()
             }
             Expression::DynamicArraySubscript(_, elem_ty, a, i) => {
-                let array = self
-                    .expression(contract, a, vartab, function)
-                    .into_pointer_value();
+                let array = self.expression(contract, a, vartab, function);
 
                 let ty = contract.llvm_var(elem_ty);
 
@@ -2163,12 +2132,8 @@ pub trait TargetRuntime<'a> {
 
                 let elem = unsafe {
                     contract.builder.build_gep(
-                        array,
-                        &[
-                            contract.context.i32_type().const_zero(),
-                            contract.context.i32_type().const_int(2, false),
-                            index,
-                        ],
+                        contract.vector_bytes(array),
+                        &[index],
                         "index_access",
                     )
                 };
@@ -2314,27 +2279,46 @@ pub trait TargetRuntime<'a> {
                 array.into()
             }
             Expression::AllocDynamicArray(_, ty, size, init) => {
-                let elem = match ty {
-                    ast::Type::String | ast::Type::DynamicBytes => ast::Type::Bytes(1),
-                    _ => ty.array_elem(),
-                };
+                if *ty == ast::Type::Slice {
+                    let init = init.as_ref().unwrap();
 
-                let size = self
-                    .expression(contract, size, vartab, function)
-                    .into_int_value();
+                    let data = contract.emit_global_string("const_string", init, true);
 
-                let elem_size = contract
-                    .llvm_type(&elem)
-                    .size_of()
-                    .unwrap()
-                    .const_cast(contract.context.i32_type(), false);
+                    contract
+                        .llvm_type(ty)
+                        .into_struct_type()
+                        .const_named_struct(&[
+                            data.into(),
+                            contract
+                                .context
+                                .i32_type()
+                                .const_int(init.len() as u64, false)
+                                .into(),
+                        ])
+                        .into()
+                } else {
+                    let elem = match ty {
+                        ast::Type::Slice | ast::Type::String | ast::Type::DynamicBytes => {
+                            ast::Type::Bytes(1)
+                        }
+                        _ => ty.array_elem(),
+                    };
 
-                contract.vector_new(size, elem_size, init.as_ref()).into()
+                    let size = self
+                        .expression(contract, size, vartab, function)
+                        .into_int_value();
+
+                    let elem_size = contract
+                        .llvm_type(&elem)
+                        .size_of()
+                        .unwrap()
+                        .const_cast(contract.context.i32_type(), false);
+
+                    contract.vector_new(size, elem_size, init.as_ref()).into()
+                }
             }
             Expression::DynamicArrayLength(_, a) => {
-                let array = self
-                    .expression(contract, a, vartab, function)
-                    .into_pointer_value();
+                let array = self.expression(contract, a, vartab, function);
 
                 contract.vector_len(array).into()
             }
@@ -2849,31 +2833,7 @@ pub trait TargetRuntime<'a> {
             | Expression::Builtin(_, _, hash @ Builtin::Blake2_128, args)
             | Expression::Builtin(_, _, hash @ Builtin::Blake2_256, args)
             | Expression::Builtin(_, _, hash @ Builtin::Sha256, args) => {
-                let v = self
-                    .expression(contract, &args[0], vartab, function)
-                    .into_pointer_value();
-
-                let data = unsafe {
-                    contract.builder.build_gep(
-                        v,
-                        &[
-                            contract.context.i32_type().const_zero(),
-                            contract.context.i32_type().const_int(2, false),
-                        ],
-                        "data",
-                    )
-                };
-
-                let data_len = unsafe {
-                    contract.builder.build_gep(
-                        v,
-                        &[
-                            contract.context.i32_type().const_zero(),
-                            contract.context.i32_type().const_zero(),
-                        ],
-                        "data_len",
-                    )
-                };
+                let v = self.expression(contract, &args[0], vartab, function);
 
                 let hash = match hash {
                     Builtin::Ripemd160 => HashTy::Ripemd160,
@@ -2887,15 +2847,8 @@ pub trait TargetRuntime<'a> {
                 self.hash(
                     &contract,
                     hash,
-                    contract.builder.build_pointer_cast(
-                        data,
-                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                        "data",
-                    ),
-                    contract
-                        .builder
-                        .build_load(data_len, "data_len")
-                        .into_int_value(),
+                    contract.vector_bytes(v),
+                    contract.vector_len(v),
                 )
                 .into()
             }
@@ -2928,43 +2881,9 @@ pub trait TargetRuntime<'a> {
                     .const_int(literal.len() as u64, false),
             ),
             StringLocation::RunTime(e) => {
-                let v = self
-                    .expression(contract, e, vartab, function)
-                    .into_pointer_value();
+                let v = self.expression(contract, e, vartab, function);
 
-                let data = unsafe {
-                    contract.builder.build_gep(
-                        v,
-                        &[
-                            contract.context.i32_type().const_zero(),
-                            contract.context.i32_type().const_int(2, false),
-                        ],
-                        "data",
-                    )
-                };
-
-                let data_len = unsafe {
-                    contract.builder.build_gep(
-                        v,
-                        &[
-                            contract.context.i32_type().const_zero(),
-                            contract.context.i32_type().const_zero(),
-                        ],
-                        "data_len",
-                    )
-                };
-
-                (
-                    contract.builder.build_pointer_cast(
-                        data,
-                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                        "data",
-                    ),
-                    contract
-                        .builder
-                        .build_load(data_len, "data_len")
-                        .into_int_value(),
-                )
+                (contract.vector_bytes(v), contract.vector_len(v))
             }
         }
     }
@@ -3579,43 +3498,12 @@ pub trait TargetRuntime<'a> {
                         self.assert_failure(contract, data, len);
                     }
                     Instr::Print { expr } => {
-                        let v = self
-                            .expression(contract, expr, &w.vars, function)
-                            .into_pointer_value();
-
-                        let data = unsafe {
-                            contract.builder.build_gep(
-                                v,
-                                &[
-                                    contract.context.i32_type().const_zero(),
-                                    contract.context.i32_type().const_int(2, false),
-                                ],
-                                "data",
-                            )
-                        };
-
-                        let data_len = unsafe {
-                            contract.builder.build_gep(
-                                v,
-                                &[
-                                    contract.context.i32_type().const_zero(),
-                                    contract.context.i32_type().const_zero(),
-                                ],
-                                "data_len",
-                            )
-                        };
+                        let expr = self.expression(contract, expr, &w.vars, function);
 
                         self.print(
                             &contract,
-                            contract.builder.build_pointer_cast(
-                                data,
-                                contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                                "data",
-                            ),
-                            contract
-                                .builder
-                                .build_load(data_len, "data_len")
-                                .into_int_value(),
+                            contract.vector_bytes(expr),
+                            contract.vector_len(expr),
                         );
                     }
                     Instr::Call {
@@ -4659,7 +4547,7 @@ pub trait TargetRuntime<'a> {
 
                         evaluated_arg[i] = Some(val);
 
-                        contract.vector_len(val.into_pointer_value())
+                        contract.vector_len(val)
                     }
                     ast::Type::DynamicBytes => {
                         let val = self.expression(contract, arg, vartab, function);
@@ -4667,7 +4555,7 @@ pub trait TargetRuntime<'a> {
                         evaluated_arg[i] = Some(val);
 
                         // will be hex encoded, so double
-                        let len = contract.vector_len(val.into_pointer_value());
+                        let len = contract.vector_len(val);
 
                         contract.builder.build_int_add(len, len, "hex_len")
                     }
@@ -4714,7 +4602,7 @@ pub trait TargetRuntime<'a> {
             None,
         );
 
-        let output_start = contract.vector_bytes(vector);
+        let output_start = contract.vector_bytes(vector.into());
 
         // now encode each of the arguments
         let mut output = output_start;
@@ -4770,8 +4658,8 @@ pub trait TargetRuntime<'a> {
                         output = unsafe { contract.builder.build_gep(output, &[len], "") };
                     }
                     ast::Type::String => {
-                        let s = contract.vector_bytes(val.into_pointer_value());
-                        let len = contract.vector_len(val.into_pointer_value());
+                        let s = contract.vector_bytes(val);
+                        let len = contract.vector_len(val);
 
                         contract.builder.build_call(
                             contract.module.get_function("__memcpy").unwrap(),
@@ -4782,8 +4670,8 @@ pub trait TargetRuntime<'a> {
                         output = unsafe { contract.builder.build_gep(output, &[len], "") };
                     }
                     ast::Type::DynamicBytes => {
-                        let s = contract.vector_bytes(val.into_pointer_value());
-                        let len = contract.vector_len(val.into_pointer_value());
+                        let s = contract.vector_bytes(val);
+                        let len = contract.vector_len(val);
 
                         contract.builder.build_call(
                             contract.module.get_function("hex_encode").unwrap(),
@@ -6137,6 +6025,18 @@ impl<'a> Contract<'a> {
                         .ptr_type(AddressSpace::Generic),
                 )
             }
+            ast::Type::Slice => BasicTypeEnum::StructType(
+                self.context.struct_type(
+                    &[
+                        self.context
+                            .i8_type()
+                            .ptr_type(AddressSpace::Generic)
+                            .into(),
+                        self.context.i32_type().into(),
+                    ],
+                    false,
+                ),
+            ),
             _ => unreachable!(),
         }
     }
@@ -6205,40 +6105,60 @@ impl<'a> Contract<'a> {
     }
 
     /// Number of element in a vector
-    fn vector_len(&self, vector: PointerValue<'a>) -> IntValue<'a> {
-        // field 0 is the length
-        let len = unsafe {
-            self.builder.build_gep(
-                vector,
-                &[
-                    self.context.i32_type().const_zero(),
-                    self.context.i32_type().const_zero(),
-                ],
-                "vector_len",
-            )
-        };
+    fn vector_len(&self, vector: BasicValueEnum<'a>) -> IntValue<'a> {
+        if vector.is_struct_value() {
+            // slice
+            let slice = vector.into_struct_value();
 
-        self.builder.build_load(len, "vector_len").into_int_value()
+            self.builder
+                .build_extract_value(slice, 1, "slice_len")
+                .unwrap()
+                .into_int_value()
+        } else {
+            // field 0 is the length
+            let len = unsafe {
+                self.builder.build_gep(
+                    vector.into_pointer_value(),
+                    &[
+                        self.context.i32_type().const_zero(),
+                        self.context.i32_type().const_zero(),
+                    ],
+                    "vector_len",
+                )
+            };
+
+            self.builder.build_load(len, "vector_len").into_int_value()
+        }
     }
 
     /// Return the pointer to the actual bytes in the vector
-    fn vector_bytes(&self, vector: PointerValue<'a>) -> PointerValue<'a> {
-        let data = unsafe {
-            self.builder.build_gep(
-                vector,
-                &[
-                    self.context.i32_type().const_zero(),
-                    self.context.i32_type().const_int(2, false),
-                ],
+    fn vector_bytes(&self, vector: BasicValueEnum<'a>) -> PointerValue<'a> {
+        if vector.is_struct_value() {
+            // slice
+            let slice = vector.into_struct_value();
+
+            self.builder
+                .build_extract_value(slice, 0, "slice_data")
+                .unwrap()
+                .into_pointer_value()
+        } else {
+            let data = unsafe {
+                self.builder.build_gep(
+                    vector.into_pointer_value(),
+                    &[
+                        self.context.i32_type().const_zero(),
+                        self.context.i32_type().const_int(2, false),
+                    ],
+                    "data",
+                )
+            };
+
+            self.builder.build_pointer_cast(
+                data,
+                self.context.i8_type().ptr_type(AddressSpace::Generic),
                 "data",
             )
-        };
-
-        self.builder.build_pointer_cast(
-            data,
-            self.context.i8_type().ptr_type(AddressSpace::Generic),
-            "data",
-        )
+        }
     }
 }
 

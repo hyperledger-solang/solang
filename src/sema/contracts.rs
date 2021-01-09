@@ -59,6 +59,23 @@ impl ast::Contract {
                     cfg.ty, cfg.name, cfg.public, cfg.nonpayable
                 );
 
+                out += &format!(
+                    "# params: {}\n",
+                    cfg.params
+                        .iter()
+                        .map(|p| p.ty.to_string(ns))
+                        .collect::<Vec<String>>()
+                        .join(",")
+                );
+                out += &format!(
+                    "# returns: {}\n",
+                    cfg.returns
+                        .iter()
+                        .map(|p| p.ty.to_string(ns))
+                        .collect::<Vec<String>>()
+                        .join(",")
+                );
+
                 out += &cfg.to_string(self, ns);
             }
         }

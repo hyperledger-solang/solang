@@ -117,9 +117,9 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
                     let (offset, _) = expression(offset, Some(&vars), &cur, cfg, ns);
 
                     cfg.blocks[block_no].instr[instr_no] = Instr::SetStorageBytes {
-                        storage: Box::new(storage),
+                        storage,
                         value,
-                        offset: Box::new(offset),
+                        offset,
                     };
                 }
                 Instr::PushMemory {
@@ -558,7 +558,7 @@ fn expression(
                         // There must be at least one definition, and all should evaluate to the same value
                         let mut v = None;
 
-                        for def in defs {
+                        for def in defs.keys() {
                             if let Some(expr) = get_definition(def, cfg) {
                                 let expr = expression(expr, None, pos, cfg, ns);
 
@@ -575,6 +575,9 @@ fn expression(
                                     v = None;
                                     break;
                                 }
+                            } else {
+                                v = None;
+                                break;
                             }
                         }
 

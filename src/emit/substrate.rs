@@ -1289,6 +1289,10 @@ impl SubstrateTarget {
                     arg
                 };
 
+                let string_len = contract.vector_len(arg);
+
+                let string_data = contract.vector_bytes(arg);
+
                 if !packed {
                     let function = contract.module.get_function("scale_encode_string").unwrap();
 
@@ -1296,19 +1300,7 @@ impl SubstrateTarget {
                         .builder
                         .build_call(
                             function,
-                            &[
-                                (*data).into(),
-                                // when we call LinkModules2() some types like vector get renamed to vector.1
-                                contract
-                                    .builder
-                                    .build_pointer_cast(
-                                        arg.into_pointer_value(),
-                                        function.get_type().get_param_types()[1]
-                                            .into_pointer_type(),
-                                        "vector",
-                                    )
-                                    .into(),
-                            ],
+                            &[(*data).into(), string_data.into(), string_len.into()],
                             "",
                         )
                         .try_as_basic_value()
@@ -1316,33 +1308,6 @@ impl SubstrateTarget {
                         .unwrap()
                         .into_pointer_value();
                 } else {
-                    let len = unsafe {
-                        contract.builder.build_gep(
-                            arg.into_pointer_value(),
-                            &[
-                                contract.context.i32_type().const_zero(),
-                                contract.context.i32_type().const_zero(),
-                            ],
-                            "string.len",
-                        )
-                    };
-
-                    let p = unsafe {
-                        contract.builder.build_gep(
-                            arg.into_pointer_value(),
-                            &[
-                                contract.context.i32_type().const_zero(),
-                                contract.context.i32_type().const_int(2, false),
-                            ],
-                            "string.data",
-                        )
-                    };
-
-                    let len = contract
-                        .builder
-                        .build_load(len, "array.len")
-                        .into_int_value();
-
                     contract.builder.build_call(
                         contract.module.get_function("__memcpy").unwrap(),
                         &[
@@ -1350,17 +1315,17 @@ impl SubstrateTarget {
                             contract
                                 .builder
                                 .build_pointer_cast(
-                                    p,
+                                    string_data,
                                     contract.context.i8_type().ptr_type(AddressSpace::Generic),
                                     "",
                                 )
                                 .into(),
-                            len.into(),
+                            string_len.into(),
                         ],
                         "",
                     );
 
-                    *data = unsafe { contract.builder.build_gep(*data, &[len], "") };
+                    *data = unsafe { contract.builder.build_gep(*data, &[string_len], "") };
                 }
             }
             ast::Type::ExternalFunction { .. } => {
@@ -1653,21 +1618,7 @@ impl SubstrateTarget {
                 // A string or bytes type has to be encoded by: one compact integer for
                 // the length, followed by the bytes themselves. Here we assume that the
                 // length requires 5 bytes.
-                let len = unsafe {
-                    contract.builder.build_gep(
-                        arg.into_pointer_value(),
-                        &[
-                            contract.context.i32_type().const_zero(),
-                            contract.context.i32_type().const_zero(),
-                        ],
-                        "string.len",
-                    )
-                };
-
-                let len = contract
-                    .builder
-                    .build_load(len, "string.len")
-                    .into_int_value();
+                let len = contract.vector_len(arg);
 
                 if packed {
                     len
@@ -1870,34 +1821,13 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
     fn set_storage_string(
         &self,
-        contract: &Contract,
-        _function: FunctionValue,
-        slot: PointerValue,
-        dest: PointerValue,
+        contract: &Contract<'a>,
+        _function: FunctionValue<'a>,
+        slot: PointerValue<'a>,
+        dest: BasicValueEnum<'a>,
     ) {
-        let len = unsafe {
-            contract.builder.build_gep(
-                dest,
-                &[
-                    contract.context.i32_type().const_zero(),
-                    contract.context.i32_type().const_zero(),
-                ],
-                "ptr.string.len",
-            )
-        };
-
-        let len = contract.builder.build_load(len, "string.len");
-
-        let data = unsafe {
-            contract.builder.build_gep(
-                dest,
-                &[
-                    contract.context.i32_type().const_zero(),
-                    contract.context.i32_type().const_int(2, false),
-                ],
-                "ptr.string.data",
-            )
-        };
+        let len = contract.vector_len(dest);
+        let data = contract.vector_bytes(dest);
 
         // TODO: check for non-zero
         contract.builder.build_call(
@@ -1919,7 +1849,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                         "",
                     )
                     .into(),
-                len,
+                len.into(),
             ],
             "",
         );

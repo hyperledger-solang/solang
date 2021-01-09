@@ -986,8 +986,8 @@ pub fn assign_single(
                             vartab,
                             Instr::SetStorageBytes {
                                 value: Expression::Variable(left.loc(), ty.clone(), pos),
-                                storage: array,
-                                offset: index,
+                                storage: *array,
+                                offset: *index,
                             },
                         );
                     } else {

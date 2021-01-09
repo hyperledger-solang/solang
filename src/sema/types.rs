@@ -682,6 +682,7 @@ impl Type {
             Type::StorageRef(ty) => format!("{} storage", ty.to_string(ns)),
             Type::Void => "void".to_owned(),
             Type::Unreachable => "unreachable".to_owned(),
+            Type::Slice => "slice".to_owned(),
         }
     }
 
