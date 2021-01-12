@@ -5195,34 +5195,27 @@ pub trait TargetRuntime<'a> {
             false,
         );
         let binop = contract.llvm_overflow(ret_ty.into(), left.get_type(), signed, op);
+
         let op_res = contract
             .builder
-            .build_call(binop, &[left.into(), right.into()], "")
+            .build_call(binop, &[left.into(), right.into()], "res")
             .try_as_basic_value()
             .left()
             .unwrap()
             .into_struct_value();
 
-        let slot = contract.builder.build_alloca(op_res.get_type(), "");
-        contract.builder.build_store(slot, op_res);
-        let overflow_ptr = contract
+        let overflow = contract
             .builder
-            .build_struct_gep(slot, 1, "overflow bit")
-            .unwrap();
-        let overflow = contract.builder.build_load(overflow_ptr, "");
-
-        let success = contract.builder.build_int_compare(
-            IntPredicate::EQ,
-            overflow.into_int_value(),
-            contract.context.custom_width_int_type(1).const_zero(),
-            "success",
-        );
+            .build_extract_value(op_res, 1, "overflow")
+            .unwrap()
+            .into_int_value();
 
         let success_block = contract.context.append_basic_block(function, "success");
         let error_block = contract.context.append_basic_block(function, "error");
+
         contract
             .builder
-            .build_conditional_branch(success, success_block, error_block);
+            .build_conditional_branch(overflow, error_block, success_block);
 
         contract.builder.position_at_end(error_block);
 
@@ -5238,8 +5231,10 @@ pub trait TargetRuntime<'a> {
 
         contract.builder.position_at_end(success_block);
 
-        let res_ptr = contract.builder.build_struct_gep(slot, 0, "").unwrap();
-        contract.builder.build_load(res_ptr, "")
+        contract
+            .builder
+            .build_extract_value(op_res, 0, "res")
+            .unwrap()
     }
 }
 pub struct Contract<'a> {
