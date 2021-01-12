@@ -11,6 +11,7 @@ pub struct Variable {
     pub id: pt::Identifier,
     pub ty: Type,
     pub pos: usize,
+    pub slice: bool,
 }
 
 struct VarScope(HashMap<String, usize>, Option<HashSet<usize>>);
@@ -45,6 +46,7 @@ impl Symtable {
                 id: id.clone(),
                 ty,
                 pos,
+                slice: false,
             },
         );
 

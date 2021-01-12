@@ -17,6 +17,8 @@ use crate::sema::contracts::{collect_base_args, visit_bases};
 use crate::sema::symtable::Symtable;
 use crate::Target;
 
+pub type Vars = HashMap<usize, Variable>;
+
 #[derive(Clone)]
 pub enum Instr {
     /// Set variable
@@ -171,9 +173,10 @@ impl BasicBlock {
 #[derive(Clone)]
 pub struct ControlFlowGraph {
     pub name: String,
+    pub function_no: Option<usize>,
     pub params: Vec<Parameter>,
     pub returns: Vec<Parameter>,
-    pub vars: HashMap<usize, Variable>,
+    pub vars: Vars,
     pub blocks: Vec<BasicBlock>,
     pub nonpayable: bool,
     pub public: bool,
@@ -183,9 +186,10 @@ pub struct ControlFlowGraph {
 }
 
 impl ControlFlowGraph {
-    pub fn new(name: String) -> Self {
+    pub fn new(name: String, function_no: Option<usize>) -> Self {
         let mut cfg = ControlFlowGraph {
             name,
+            function_no,
             params: Vec::new(),
             returns: Vec::new(),
             vars: HashMap::new(),
@@ -206,6 +210,7 @@ impl ControlFlowGraph {
     pub fn placeholder() -> Self {
         ControlFlowGraph {
             name: String::new(),
+            function_no: None,
             params: Vec::new(),
             returns: Vec::new(),
             vars: HashMap::new(),
@@ -1091,7 +1096,7 @@ fn function_cfg(
         _ => format!("sol{}::{}", contract_name, func.ty),
     };
 
-    let mut cfg = ControlFlowGraph::new(name);
+    let mut cfg = ControlFlowGraph::new(name, function_no);
 
     cfg.params = func.params.clone();
     cfg.returns = func.returns.clone();
@@ -1300,7 +1305,7 @@ pub fn generate_modifier_dispatch(
         func.llvm_symbol(ns),
         modifier.llvm_symbol(ns)
     );
-    let mut cfg = ControlFlowGraph::new(name);
+    let mut cfg = ControlFlowGraph::new(name, None);
 
     cfg.params = func.params.clone();
     cfg.returns = func.returns.clone();
@@ -1402,7 +1407,7 @@ pub struct Variable {
 
 #[derive(Default)]
 pub struct Vartable {
-    vars: HashMap<usize, Variable>,
+    vars: Vars,
     next_id: usize,
     dirty: Vec<DirtyTracker>,
 }
@@ -1536,7 +1541,7 @@ impl Vartable {
         pos
     }
 
-    pub fn drain(self) -> HashMap<usize, Variable> {
+    pub fn drain(self) -> Vars {
         self.vars
     }
 
