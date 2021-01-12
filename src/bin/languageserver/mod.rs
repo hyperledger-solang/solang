@@ -183,7 +183,7 @@ impl SolangServer {
         ns: &ast::Namespace,
     ) {
         match stmt {
-            Statement::VariableDecl(loc, _, _param, expr) => {
+            Statement::VariableDecl(loc, var_no, _param, expr) => {
                 if let Some(exp) = expr {
                     SolangServer::construct_expr(exp, lookup_tbl, symtab, fnc_map, ns);
                 }
@@ -205,6 +205,13 @@ impl SolangServer {
                         _ => (),
                     }
                 }
+
+                if let Some(var) = symtab.vars.get(var_no) {
+                    if var.slice {
+                        msg.push_str("\nreadonly: compiled to slice\n")
+                    }
+                }
+
                 lookup_tbl.push((_param.loc.1, _param.loc.2, msg));
             }
             Statement::If(_locs, _, expr, stat1, stat2) => {
@@ -432,7 +439,7 @@ impl SolangServer {
             }
 
             // Variable expression
-            Expression::Variable(loc, typ, _val) => {
+            Expression::Variable(loc, typ, var_no) => {
                 let mut msg = SolangServer::expanded_ty(typ, ns);
 
                 if let Some(expr) = ns.var_constants.get(loc) {
@@ -449,6 +456,12 @@ impl SolangServer {
                             msg.push_str(&format!(" {}", n));
                         }
                         _ => (),
+                    }
+                }
+
+                if let Some(var) = symtab.vars.get(var_no) {
+                    if var.slice {
+                        msg.push_str("\nreadonly: compiles to slice\n")
                     }
                 }
 

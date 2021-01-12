@@ -9,7 +9,7 @@ use std::collections::{HashMap, HashSet};
 /// Codegen generates vectors. Here we walk the cfg to find all vectors which can be converted
 /// to slices. In addition, we add some notes to the namespace so the language server can display
 /// some information when hovering over a variable.
-pub fn vector_to_slice(cfg: &mut ControlFlowGraph, _ns: &mut Namespace) {
+pub fn vector_to_slice(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
     // first, we need to find all the defs which have modified their referent
     // note that variables can aliases
     let mut writable = HashSet::new();
@@ -24,7 +24,7 @@ pub fn vector_to_slice(cfg: &mut ControlFlowGraph, _ns: &mut Namespace) {
 
     // walk the cfg and expressions and update the type of vectors
     for block_no in 0..cfg.blocks.len() {
-        update_vectors_to_slice(block_no, &writable, cfg);
+        update_vectors_to_slice(block_no, &writable, cfg, ns);
     }
 }
 
@@ -141,7 +141,12 @@ fn apply_transfers(
     }
 }
 
-fn update_vectors_to_slice(block_no: usize, writable: &HashSet<Def>, cfg: &mut ControlFlowGraph) {
+fn update_vectors_to_slice(
+    block_no: usize,
+    writable: &HashSet<Def>,
+    cfg: &mut ControlFlowGraph,
+    ns: &mut Namespace,
+) {
     for instr_no in 0..cfg.blocks[block_no].instr.len() {
         let cur = Def { block_no, instr_no };
 
@@ -152,9 +157,11 @@ fn update_vectors_to_slice(block_no: usize, writable: &HashSet<Def>, cfg: &mut C
         } = &cfg.blocks[block_no].instr[instr_no]
         {
             if !writable.contains(&cur) {
+                let res = *res;
+
                 cfg.blocks[block_no].instr[instr_no] = Instr::Set {
                     loc: *loc,
-                    res: *res,
+                    res,
                     expr: Expression::AllocDynamicArray(
                         *loc,
                         Type::Slice,
@@ -162,6 +169,12 @@ fn update_vectors_to_slice(block_no: usize, writable: &HashSet<Def>, cfg: &mut C
                         Some(bs.clone()),
                     ),
                 };
+
+                if let Some(function_no) = cfg.function_no {
+                    if let Some(var) = ns.functions[function_no].symtable.vars.get_mut(&res) {
+                        var.slice = true;
+                    }
+                }
             }
         }
     }
