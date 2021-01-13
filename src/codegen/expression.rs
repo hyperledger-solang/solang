@@ -636,11 +636,19 @@ pub fn expression(
             ty.clone(),
             Box::new(expression(e, cfg, contract_no, ns, vartab)),
         ),
-        Expression::Cast(loc, ty, e) => Expression::Cast(
-            *loc,
-            ty.clone(),
-            Box::new(expression(e, cfg, contract_no, ns, vartab)),
-        ),
+        Expression::Cast(loc, ty, e) => {
+            if matches!(ty, Type::String | Type::DynamicBytes)
+                && matches!(expr.ty(), Type::String | Type::DynamicBytes)
+            {
+                expression(e, cfg, contract_no, ns, vartab)
+            } else {
+                Expression::Cast(
+                    *loc,
+                    ty.clone(),
+                    Box::new(expression(e, cfg, contract_no, ns, vartab)),
+                )
+            }
+        }
         Expression::Load(loc, ty, e) => Expression::Load(
             *loc,
             ty.clone(),

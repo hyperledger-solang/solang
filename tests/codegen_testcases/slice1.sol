@@ -74,4 +74,15 @@ contract c {
 		// x modified via y
 // CHECK: alloc bytes uint32 4 "foo7"
 	}
+
+// BEGIN-CHECK: c::test8
+	function test8() public pure {
+		string x = "foo8";
+
+		bytes y = bytes(x);
+		y[1] = 0;
+
+		// x modified via y
+// CHECK: alloc string uint32 4 "foo8"
+	}
 }
