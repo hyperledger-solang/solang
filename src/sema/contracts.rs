@@ -11,7 +11,7 @@ use super::functions;
 use super::statements;
 use super::symtable::Symtable;
 use super::variables;
-use crate::emit;
+use crate::{emit, Target};
 
 impl ast::Contract {
     /// Create a new contract, abstract contract, interface or library
@@ -23,6 +23,7 @@ impl ast::Contract {
             bases: Vec::new(),
             using: Vec::new(),
             layout: Vec::new(),
+            fixed_layout_size: BigInt::zero(),
             tags,
             functions: Vec::new(),
             all_functions: HashMap::new(),
@@ -291,7 +292,12 @@ fn layout_contract(contract_no: usize, ns: &mut ast::Namespace) {
     let mut syms: HashMap<String, ast::Symbol> = HashMap::new();
     let mut override_needed: HashMap<String, Vec<(usize, usize)>> = HashMap::new();
 
-    let mut slot = BigInt::zero();
+    let mut slot = if ns.target == Target::Solana {
+        // The first 8 bytes of contract storage is magic value and offset to the heap
+        BigInt::from(8)
+    } else {
+        BigInt::zero()
+    };
 
     for base_contract_no in visit_bases(contract_no, ns) {
         // find file number where contract is defined
@@ -600,6 +606,9 @@ fn layout_contract(contract_no: usize, ns: &mut ast::Namespace) {
                 .insert(function_no, usize::MAX);
         }
     }
+
+    // FIXME should be aligned (along with the other fields!
+    ns.contracts[contract_no].fixed_layout_size = slot;
 
     for list in override_needed.values() {
         let func = &ns.functions[list[0].1];

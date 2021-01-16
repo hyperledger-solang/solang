@@ -165,7 +165,7 @@ fn flipper() {
 
     assert_eq!(
         vm.data[0..9].to_vec(),
-        hex::decode("6fc90ec5ae05628b01").unwrap()
+        hex::decode("6fc90ec50900000001").unwrap()
     );
 
     let returns = vm.function("get", &[]);
@@ -176,7 +176,7 @@ fn flipper() {
 
     assert_eq!(
         vm.data[0..9].to_vec(),
-        hex::decode("6fc90ec5ae05628b00").unwrap()
+        hex::decode("6fc90ec50900000000").unwrap()
     );
 
     let returns = vm.function("get", &[]);

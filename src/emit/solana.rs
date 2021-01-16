@@ -7,8 +7,8 @@ use std::str;
 use inkwell::context::Context;
 use inkwell::types::{BasicType, IntType};
 use inkwell::values::{BasicValueEnum, FunctionValue, IntValue, PointerValue, UnnamedAddress};
-use inkwell::AddressSpace;
-use inkwell::OptimizationLevel;
+use inkwell::{AddressSpace, IntPredicate, OptimizationLevel};
+use num_traits::ToPrimitive;
 use tiny_keccak::{Hasher, Keccak};
 
 use super::ethabiencoder;
@@ -16,7 +16,7 @@ use super::{Contract, TargetRuntime, Variable};
 
 pub struct SolanaTarget {
     abi: ethabiencoder::EthAbiEncoder,
-    magic: u64,
+    magic: u32,
 }
 
 // Implement the Solana target which uses BPF
@@ -35,13 +35,13 @@ impl SolanaTarget {
         let mut hash = [0u8; 32];
         hasher.update(contract.name.as_bytes());
         hasher.finalize(&mut hash);
-        let mut magic = [0u8; 8];
+        let mut magic = [0u8; 4];
 
-        magic.copy_from_slice(&hash[0..8]);
+        magic.copy_from_slice(&hash[0..4]);
 
         let mut target = SolanaTarget {
             abi: ethabiencoder::EthAbiEncoder { bswap: true },
-            magic: u64::from_le_bytes(magic),
+            magic: u32::from_le_bytes(magic),
         };
 
         let mut con = Contract::new(
@@ -123,7 +123,7 @@ impl SolanaTarget {
 
         let magic_value_ptr = contract.builder.build_pointer_cast(
             contract_data,
-            contract.context.i64_type().ptr_type(AddressSpace::Generic),
+            contract.context.i32_type().ptr_type(AddressSpace::Generic),
             "magic_value_ptr",
         );
 
@@ -147,9 +147,12 @@ impl SolanaTarget {
             magic_value,
             badmagic_block,
             &[
-                (contract.context.i64_type().const_zero(), constructor_block),
+                (contract.context.i32_type().const_zero(), constructor_block),
                 (
-                    contract.context.i64_type().const_int(self.magic, false),
+                    contract
+                        .context
+                        .i32_type()
+                        .const_int(self.magic as u64, false),
                     function_block,
                 ),
             ],
@@ -169,7 +172,27 @@ impl SolanaTarget {
         // write our magic value to the contract
         contract.builder.build_store(
             magic_value_ptr,
-            contract.context.i64_type().const_int(self.magic, false),
+            contract
+                .context
+                .i32_type()
+                .const_int(self.magic as u64, false),
+        );
+
+        // write heap_offset.
+        let heap_offset_ptr = unsafe {
+            contract.builder.build_gep(
+                magic_value_ptr,
+                &[contract.context.i64_type().const_int(1, false)],
+                "heap_offset",
+            )
+        };
+
+        contract.builder.build_store(
+            heap_offset_ptr,
+            contract
+                .context
+                .i32_type()
+                .const_int(contract.contract.fixed_layout_size.to_u64().unwrap(), false),
         );
 
         contract
@@ -348,6 +371,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
     ) -> IntValue<'a> {
         unimplemented!();
     }
+
     fn storage_string_length(
         &self,
         _contract: &Contract<'a>,
@@ -375,12 +399,21 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         slot: &mut IntValue<'a>,
         _function: FunctionValue,
     ) -> BasicValueEnum<'a> {
-        // contract storage is in 2nd account (3rd member is data pointer)
-        let data = unsafe {
+        // contract storage is in 2nd account
+        let account = unsafe {
             contract.builder.build_gep(
                 contract.accounts.unwrap(),
+                &[contract.context.i32_type().const_int(1, false)],
+                "account",
+            )
+        };
+
+        // 3rd member of account is data pointer
+        let data = unsafe {
+            contract.builder.build_gep(
+                account,
                 &[
-                    contract.context.i32_type().const_int(1, false),
+                    contract.context.i32_type().const_zero(),
                     contract.context.i32_type().const_int(3, false),
                 ],
                 "data",
@@ -393,41 +426,84 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             .into_pointer_value();
 
         // the slot is simply the offset after the magic
-        let offset = contract.builder.build_int_add(
+        let member = unsafe { contract.builder.build_gep(data, &[*slot], "data") };
+
+        if *ty == ast::Type::String {
+            let offset = contract
+                .builder
+                .build_load(
+                    contract.builder.build_pointer_cast(
+                        member,
+                        contract.context.i32_type().ptr_type(AddressSpace::Generic),
+                        "",
+                    ),
+                    "offset",
+                )
+                .into_int_value();
+
+            let string_length = contract
+                .builder
+                .build_call(
+                    contract.module.get_function("account_data_len").unwrap(),
+                    &[account.into(), offset.into()],
+                    "free",
+                )
+                .try_as_basic_value()
+                .left()
+                .unwrap()
+                .into_int_value();
+
+            let string_data = unsafe { contract.builder.build_gep(data, &[offset], "string_data") };
+
             contract
-                .context
-                .i32_type()
-                .const_int(std::mem::size_of::<u64>() as u64, false),
-            *slot,
-            "offset",
-        );
-
-        let member = unsafe { contract.builder.build_gep(data, &[offset], "data") };
-
-        contract.builder.build_load(
-            contract.builder.build_pointer_cast(
-                member,
-                contract.llvm_type(ty).ptr_type(AddressSpace::Generic),
+                .builder
+                .build_call(
+                    contract.module.get_function("vector_new").unwrap(),
+                    &[
+                        string_length.into(),
+                        contract.context.i32_type().const_int(1, false).into(),
+                        string_data.into(),
+                    ],
+                    "",
+                )
+                .try_as_basic_value()
+                .left()
+                .unwrap()
+        } else {
+            contract.builder.build_load(
+                contract.builder.build_pointer_cast(
+                    member,
+                    contract.llvm_type(ty).ptr_type(AddressSpace::Generic),
+                    "",
+                ),
                 "",
-            ),
-            "",
-        )
+            )
+        }
     }
 
     fn storage_store(
         &self,
         contract: &Contract<'a>,
-        _ty: &ast::Type,
+        ty: &ast::Type,
         slot: &mut IntValue<'a>,
         val: BasicValueEnum<'a>,
-        _function: FunctionValue<'a>,
+        function: FunctionValue<'a>,
     ) {
-        // contract storage is in 2nd account (3rd member is data pointer)
-        let data = unsafe {
+        // contract storage is in 2nd account
+        let account = unsafe {
             contract.builder.build_gep(
                 contract.accounts.unwrap(),
+                &[contract.context.i32_type().const_int(1, false)],
+                "account",
+            )
+        };
+
+        // 3rd member of account is data pointer
+        let data = unsafe {
+            contract.builder.build_gep(
+                account,
                 &[
-                    contract.context.i32_type().const_int(1, false),
+                    contract.context.i32_type().const_zero(),
                     contract.context.i32_type().const_int(3, false),
                 ],
                 "data",
@@ -440,25 +516,111 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             .into_pointer_value();
 
         // the slot is simply the offset after the magic
-        let offset = contract.builder.build_int_add(
-            contract
-                .context
-                .i32_type()
-                .const_int(std::mem::size_of::<u64>() as u64, false),
-            *slot,
-            "offset",
-        );
+        let member = unsafe { contract.builder.build_gep(data, &[*slot], "data") };
 
-        let member = unsafe { contract.builder.build_gep(data, &[offset], "data") };
-
-        contract.builder.build_store(
-            contract.builder.build_pointer_cast(
+        if *ty == ast::Type::String {
+            let offset_ptr = contract.builder.build_pointer_cast(
                 member,
-                val.get_type().ptr_type(AddressSpace::Generic),
-                "",
-            ),
-            val,
-        );
+                contract.context.i32_type().ptr_type(AddressSpace::Generic),
+                "offset_ptr",
+            );
+
+            let offset = contract
+                .builder
+                .build_load(offset_ptr, "offset")
+                .into_int_value();
+
+            let existing_string_length = contract
+                .builder
+                .build_call(
+                    contract.module.get_function("account_data_len").unwrap(),
+                    &[account.into(), offset.into()],
+                    "length",
+                )
+                .try_as_basic_value()
+                .left()
+                .unwrap()
+                .into_int_value();
+
+            let new_string_length = contract.vector_len(val);
+
+            let allocation_necessary = contract.builder.build_int_compare(
+                IntPredicate::NE,
+                existing_string_length,
+                new_string_length,
+                "allocation_necessary",
+            );
+
+            let entry = contract.builder.get_insert_block().unwrap();
+
+            let realloc = contract.context.append_basic_block(function, "realloc");
+            let memcpy = contract.context.append_basic_block(function, "memcpy");
+
+            contract
+                .builder
+                .build_conditional_branch(allocation_necessary, realloc, memcpy);
+
+            contract.builder.position_at_end(realloc);
+
+            // do not realloc since we're copying everything
+            contract.builder.build_call(
+                contract.module.get_function("account_data_free").unwrap(),
+                &[account.into(), offset.into()],
+                "free",
+            );
+
+            // account_data_alloc will return 0 if the string is length 0
+            let new_offset = contract
+                .builder
+                .build_call(
+                    contract.module.get_function("account_data_alloc").unwrap(),
+                    &[account.into(), new_string_length.into()],
+                    "alloc",
+                )
+                .try_as_basic_value()
+                .left()
+                .unwrap()
+                .into_int_value();
+
+            contract.builder.build_store(offset_ptr, new_offset);
+
+            contract.builder.build_unconditional_branch(memcpy);
+
+            contract.builder.position_at_end(memcpy);
+
+            let offset_phi = contract
+                .builder
+                .build_phi(contract.context.i32_type(), "offset");
+
+            offset_phi.add_incoming(&[(&new_offset, realloc), (&offset, entry)]);
+
+            let dest_string_data = unsafe {
+                contract.builder.build_gep(
+                    data,
+                    &[offset_phi.as_basic_value().into_int_value()],
+                    "dest_string_data",
+                )
+            };
+
+            contract.builder.build_call(
+                contract.module.get_function("__memcpy").unwrap(),
+                &[
+                    dest_string_data.into(),
+                    contract.vector_bytes(val).into(),
+                    new_string_length.into(),
+                ],
+                "copied",
+            );
+        } else {
+            contract.builder.build_store(
+                contract.builder.build_pointer_cast(
+                    member,
+                    val.get_type().ptr_type(AddressSpace::Generic),
+                    "",
+                ),
+                val,
+            );
+        }
     }
 
     /// sabre has no keccak256 host function, so call our implementation
