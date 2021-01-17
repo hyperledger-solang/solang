@@ -156,14 +156,14 @@ pub trait TargetRuntime<'a> {
         &self,
         contract: &Contract<'a>,
         function: FunctionValue,
-        slot: PointerValue<'a>,
+        slot: IntValue<'a>,
         index: IntValue<'a>,
     ) -> IntValue<'a>;
     fn set_storage_bytes_subscript(
         &self,
         contract: &Contract<'a>,
         function: FunctionValue,
-        slot: PointerValue<'a>,
+        slot: IntValue<'a>,
         index: IntValue<'a>,
         value: IntValue<'a>,
     );
@@ -184,7 +184,7 @@ pub trait TargetRuntime<'a> {
         &self,
         contract: &Contract<'a>,
         function: FunctionValue,
-        slot: PointerValue<'a>,
+        slot: IntValue<'a>,
     ) -> IntValue<'a>;
 
     /// keccak256 hash
@@ -2067,9 +2067,7 @@ pub trait TargetRuntime<'a> {
                 let slot = self
                     .expression(contract, a, vartab, function)
                     .into_int_value();
-                let slot_ptr = contract.builder.build_alloca(slot.get_type(), "slot");
-                contract.builder.build_store(slot_ptr, slot);
-                self.get_storage_bytes_subscript(&contract, function, slot_ptr, index)
+                self.get_storage_bytes_subscript(&contract, function, slot, index)
                     .into()
             }
             Expression::StorageBytesPush(_, a, v) => {
@@ -2097,10 +2095,8 @@ pub trait TargetRuntime<'a> {
                 let slot = self
                     .expression(contract, a, vartab, function)
                     .into_int_value();
-                let slot_ptr = contract.builder.build_alloca(slot.get_type(), "slot");
-                contract.builder.build_store(slot_ptr, slot);
-                self.storage_string_length(&contract, function, slot_ptr)
-                    .into()
+
+                self.storage_string_length(&contract, function, slot).into()
             }
             Expression::DynamicArraySubscript(_, elem_ty, a, i) => {
                 let array = self.expression(contract, a, vartab, function);
@@ -3165,13 +3161,11 @@ pub trait TargetRuntime<'a> {
                         let offset = self
                             .expression(contract, offset, &w.vars, function)
                             .into_int_value();
-                        let slot_ptr = contract.builder.build_alloca(slot.get_type(), "slot");
-                        contract.builder.build_store(slot_ptr, slot);
 
                         self.set_storage_bytes_subscript(
                             contract,
                             function,
-                            slot_ptr,
+                            slot,
                             offset,
                             value.into_int_value(),
                         );

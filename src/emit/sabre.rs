@@ -399,7 +399,7 @@ impl<'a> TargetRuntime<'a> for SabreTarget {
         &self,
         _contract: &Contract<'a>,
         _function: FunctionValue,
-        _slot: PointerValue<'a>,
+        _slot: IntValue<'a>,
         _index: IntValue<'a>,
     ) -> IntValue<'a> {
         unimplemented!();
@@ -408,7 +408,7 @@ impl<'a> TargetRuntime<'a> for SabreTarget {
         &self,
         _contract: &Contract,
         _function: FunctionValue,
-        _slot: PointerValue,
+        _slot: IntValue,
         _index: IntValue,
         _val: IntValue,
     ) {
@@ -435,7 +435,7 @@ impl<'a> TargetRuntime<'a> for SabreTarget {
         &self,
         _contract: &Contract<'a>,
         _function: FunctionValue,
-        _slot: PointerValue<'a>,
+        _slot: IntValue<'a>,
     ) -> IntValue<'a> {
         unimplemented!();
     }
