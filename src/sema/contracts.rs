@@ -50,7 +50,7 @@ impl ast::Contract {
     }
 
     /// Print the entire contract; storage initializers, constructors and functions and their CFGs
-    pub fn print_to_string(&self, ns: &ast::Namespace) -> String {
+    pub fn print_cfg(&self, ns: &ast::Namespace) -> String {
         let mut out = format!("#\n# Contract: {}\n#\n\n", self.name);
 
         for cfg in &self.cfg {

@@ -264,7 +264,7 @@ fn process_filename(
         }
 
         if let Some("cfg") = matches.value_of("EMIT") {
-            println!("{}", resolved_contract.print_to_string(&ns));
+            println!("{}", resolved_contract.print_cfg(&ns));
             continue;
         }
 
