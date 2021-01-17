@@ -369,6 +369,7 @@ pub struct Layout {
     pub slot: BigInt,
     pub contract_no: usize,
     pub var_no: usize,
+    pub ty: Type,
 }
 
 pub struct Base {

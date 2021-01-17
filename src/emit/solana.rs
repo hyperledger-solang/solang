@@ -187,12 +187,14 @@ impl SolanaTarget {
             )
         };
 
+        let fixed_fields_size = contract.contract.fixed_layout_size.to_u64().unwrap();
+
+        // align heap to 8 bytes
+        let heap_offset = (fixed_fields_size + 7) & !7;
+
         contract.builder.build_store(
             heap_offset_ptr,
-            contract
-                .context
-                .i32_type()
-                .const_int(contract.contract.fixed_layout_size.to_u64().unwrap(), false),
+            contract.context.i32_type().const_int(heap_offset, false),
         );
 
         contract
