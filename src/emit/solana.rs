@@ -324,7 +324,8 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         _slot: PointerValue<'a>,
         _dest: BasicValueEnum<'a>,
     ) {
-        unimplemented!();
+        // unused
+        unreachable!();
     }
 
     fn get_storage_string(
@@ -333,27 +334,191 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         _function: FunctionValue,
         _slot: PointerValue<'a>,
     ) -> PointerValue<'a> {
-        unimplemented!();
+        // unused
+        unreachable!();
     }
+
     fn get_storage_bytes_subscript(
         &self,
-        _contract: &Contract<'a>,
-        _function: FunctionValue,
-        _slot: PointerValue<'a>,
-        _index: IntValue<'a>,
+        contract: &Contract<'a>,
+        function: FunctionValue,
+        slot: IntValue<'a>,
+        index: IntValue<'a>,
     ) -> IntValue<'a> {
-        unimplemented!();
+        // contract storage is in 2nd account
+        let account = unsafe {
+            contract.builder.build_gep(
+                contract.accounts.unwrap(),
+                &[contract.context.i32_type().const_int(1, false)],
+                "account",
+            )
+        };
+
+        // 3rd member of account is data pointer
+        let data = unsafe {
+            contract.builder.build_gep(
+                account,
+                &[
+                    contract.context.i32_type().const_zero(),
+                    contract.context.i32_type().const_int(3, false),
+                ],
+                "data",
+            )
+        };
+
+        let data = contract
+            .builder
+            .build_load(data, "data")
+            .into_pointer_value();
+
+        let member = unsafe { contract.builder.build_gep(data, &[slot], "data") };
+        let offset_ptr = contract.builder.build_pointer_cast(
+            member,
+            contract.context.i32_type().ptr_type(AddressSpace::Generic),
+            "offset_ptr",
+        );
+
+        let offset = contract
+            .builder
+            .build_load(offset_ptr, "offset")
+            .into_int_value();
+
+        let length = contract
+            .builder
+            .build_call(
+                contract.module.get_function("account_data_len").unwrap(),
+                &[account.into(), offset.into()],
+                "length",
+            )
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_int_value();
+
+        // do bounds check on index
+        let in_range =
+            contract
+                .builder
+                .build_int_compare(IntPredicate::ULT, index, length, "index_in_range");
+
+        let get_block = contract.context.append_basic_block(function, "in_range");
+        let bang_block = contract.context.append_basic_block(function, "bang_block");
+
+        contract
+            .builder
+            .build_conditional_branch(in_range, get_block, bang_block);
+
+        contract.builder.position_at_end(bang_block);
+        self.assert_failure(
+            contract,
+            contract
+                .context
+                .i8_type()
+                .ptr_type(AddressSpace::Generic)
+                .const_null(),
+            contract.context.i32_type().const_zero(),
+        );
+
+        contract.builder.position_at_end(get_block);
+
+        let offset = contract.builder.build_int_add(offset, index, "offset");
+
+        let member = unsafe { contract.builder.build_gep(data, &[offset], "data") };
+
+        contract.builder.build_load(member, "val").into_int_value()
     }
+
     fn set_storage_bytes_subscript(
         &self,
-        _contract: &Contract,
-        _function: FunctionValue,
-        _slot: PointerValue,
-        _index: IntValue,
-        _val: IntValue,
+        contract: &Contract,
+        function: FunctionValue,
+        slot: IntValue,
+        index: IntValue,
+        val: IntValue,
     ) {
-        unimplemented!();
+        // contract storage is in 2nd account
+        let account = unsafe {
+            contract.builder.build_gep(
+                contract.accounts.unwrap(),
+                &[contract.context.i32_type().const_int(1, false)],
+                "account",
+            )
+        };
+
+        // 3rd member of account is data pointer
+        let data = unsafe {
+            contract.builder.build_gep(
+                account,
+                &[
+                    contract.context.i32_type().const_zero(),
+                    contract.context.i32_type().const_int(3, false),
+                ],
+                "data",
+            )
+        };
+
+        let data = contract
+            .builder
+            .build_load(data, "data")
+            .into_pointer_value();
+
+        let member = unsafe { contract.builder.build_gep(data, &[slot], "data") };
+        let offset_ptr = contract.builder.build_pointer_cast(
+            member,
+            contract.context.i32_type().ptr_type(AddressSpace::Generic),
+            "offset_ptr",
+        );
+
+        let offset = contract
+            .builder
+            .build_load(offset_ptr, "offset")
+            .into_int_value();
+
+        let length = contract
+            .builder
+            .build_call(
+                contract.module.get_function("account_data_len").unwrap(),
+                &[account.into(), offset.into()],
+                "length",
+            )
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_int_value();
+
+        // do bounds check on index
+        let in_range =
+            contract
+                .builder
+                .build_int_compare(IntPredicate::ULT, index, length, "index_in_range");
+
+        let set_block = contract.context.append_basic_block(function, "in_range");
+        let bang_block = contract.context.append_basic_block(function, "bang_block");
+
+        contract
+            .builder
+            .build_conditional_branch(in_range, set_block, bang_block);
+
+        contract.builder.position_at_end(bang_block);
+        self.assert_failure(
+            contract,
+            contract
+                .context
+                .i8_type()
+                .ptr_type(AddressSpace::Generic)
+                .const_null(),
+            contract.context.i32_type().const_zero(),
+        );
+
+        contract.builder.position_at_end(set_block);
+
+        let offset = contract.builder.build_int_add(offset, index, "offset");
+
+        let member = unsafe { contract.builder.build_gep(data, &[offset], "data") };
+
+        contract.builder.build_store(member, val);
     }
+
     fn storage_bytes_push(
         &self,
         _contract: &Contract,
@@ -374,12 +539,64 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
 
     fn storage_string_length(
         &self,
-        _contract: &Contract<'a>,
+        contract: &Contract<'a>,
         _function: FunctionValue,
-        _slot: PointerValue<'a>,
+        slot: IntValue<'a>,
     ) -> IntValue<'a> {
-        unimplemented!();
+        // contract storage is in 2nd account
+        let account = unsafe {
+            contract.builder.build_gep(
+                contract.accounts.unwrap(),
+                &[contract.context.i32_type().const_int(1, false)],
+                "account",
+            )
+        };
+
+        // 3rd member of account is data pointer
+        let data = unsafe {
+            contract.builder.build_gep(
+                account,
+                &[
+                    contract.context.i32_type().const_zero(),
+                    contract.context.i32_type().const_int(3, false),
+                ],
+                "data",
+            )
+        };
+
+        let data = contract
+            .builder
+            .build_load(data, "data")
+            .into_pointer_value();
+
+        // the slot is simply the offset after the magic
+        let member = unsafe { contract.builder.build_gep(data, &[slot], "data") };
+
+        let offset = contract
+            .builder
+            .build_load(
+                contract.builder.build_pointer_cast(
+                    member,
+                    contract.context.i32_type().ptr_type(AddressSpace::Generic),
+                    "",
+                ),
+                "offset",
+            )
+            .into_int_value();
+
+        contract
+            .builder
+            .build_call(
+                contract.module.get_function("account_data_len").unwrap(),
+                &[account.into(), offset.into()],
+                "length",
+            )
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_int_value()
     }
+
     fn get_storage_int(
         &self,
         _contract: &Contract<'a>,
@@ -428,7 +645,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         // the slot is simply the offset after the magic
         let member = unsafe { contract.builder.build_gep(data, &[*slot], "data") };
 
-        if *ty == ast::Type::String {
+        if *ty == ast::Type::String || *ty == ast::Type::DynamicBytes {
             let offset = contract
                 .builder
                 .build_load(
@@ -518,7 +735,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         // the slot is simply the offset after the magic
         let member = unsafe { contract.builder.build_gep(data, &[*slot], "data") };
 
-        if *ty == ast::Type::String {
+        if *ty == ast::Type::String || *ty == ast::Type::DynamicBytes {
             let offset_ptr = contract.builder.build_pointer_cast(
                 member,
                 contract.context.i32_type().ptr_type(AddressSpace::Generic),

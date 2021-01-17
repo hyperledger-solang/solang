@@ -279,7 +279,7 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
         &self,
         _contract: &Contract<'a>,
         _function: FunctionValue,
-        _slot: PointerValue<'a>,
+        _slot: IntValue<'a>,
         _index: IntValue<'a>,
     ) -> IntValue<'a> {
         unimplemented!();
@@ -305,7 +305,7 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
         &self,
         _contract: &Contract,
         _function: FunctionValue,
-        _slot: PointerValue,
+        _slot: IntValue,
         _index: IntValue,
         _val: IntValue,
     ) {
@@ -332,8 +332,11 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
         &self,
         contract: &Contract<'a>,
         _function: FunctionValue,
-        slot: PointerValue<'a>,
+        slot: IntValue<'a>,
     ) -> IntValue<'a> {
+        let slot_ptr = contract.builder.build_alloca(slot.get_type(), "slot");
+        contract.builder.build_store(slot_ptr, slot);
+
         contract
             .builder
             .build_call(
@@ -341,7 +344,7 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
                 &[contract
                     .builder
                     .build_pointer_cast(
-                        slot,
+                        slot_ptr,
                         contract.context.i8_type().ptr_type(AddressSpace::Generic),
                         "",
                     )
