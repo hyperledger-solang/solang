@@ -406,6 +406,20 @@ fn process_filename(
                 },
             );
         } else {
+            if verbose && target == solang::Target::Solana {
+                if resolved_contract.dynamic_storage {
+                    eprintln!(
+                        "info: contract {} uses at least {} bytes account data",
+                        contract.name, resolved_contract.fixed_layout_size,
+                    );
+                } else {
+                    eprintln!(
+                        "info: contract {} uses exactly {} bytes account data",
+                        contract.name, resolved_contract.fixed_layout_size,
+                    );
+                }
+            }
+
             // Substrate has a single contact file
             if target == solang::Target::Substrate {
                 let (contract_bs, contract_ext) =
