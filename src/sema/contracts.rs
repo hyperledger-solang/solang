@@ -24,6 +24,7 @@ impl ast::Contract {
             using: Vec::new(),
             layout: Vec::new(),
             fixed_layout_size: BigInt::zero(),
+            dynamic_storage: false,
             tags,
             functions: Vec::new(),
             all_functions: HashMap::new(),
@@ -339,6 +340,10 @@ fn layout_contract(contract_no: usize, ns: &mut ast::Namespace) {
                     var_no,
                     ty: ty.clone(),
                 });
+
+                if ty.is_dynamic(ns) {
+                    ns.contracts[contract_no].dynamic_storage = true;
+                }
 
                 slot += ty.storage_slots(ns);
             }
