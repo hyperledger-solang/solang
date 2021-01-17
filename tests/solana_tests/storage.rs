@@ -21,7 +21,7 @@ fn string() {
 
     assert_eq!(
         vm.data[0..12].to_vec(),
-        vec![65, 177, 160, 100, 12, 0, 0, 0, 0, 0, 0, 0]
+        vec![65, 177, 160, 100, 16, 0, 0, 0, 0, 0, 0, 0]
     );
 
     let returns = vm.function("get", &[]);
@@ -35,10 +35,10 @@ fn string() {
 
     assert_eq!(
         vm.data[0..12].to_vec(),
-        vec![65, 177, 160, 100, 12, 0, 0, 0, 28, 0, 0, 0]
+        vec![65, 177, 160, 100, 16, 0, 0, 0, 32, 0, 0, 0]
     );
 
-    assert_eq!(vm.data[28..41].to_vec(), b"Hello, World!");
+    assert_eq!(vm.data[32..45].to_vec(), b"Hello, World!");
 
     let returns = vm.function("get", &[]);
 
@@ -63,7 +63,7 @@ fn string() {
 
     assert_eq!(
         vm.data[0..12].to_vec(),
-        vec![65, 177, 160, 100, 12, 0, 0, 0, 28, 0, 0, 0]
+        vec![65, 177, 160, 100, 16, 0, 0, 0, 32, 0, 0, 0]
     );
 
     // Try setting this to an empty string. This is also a special case where
@@ -76,7 +76,7 @@ fn string() {
 
     assert_eq!(
         vm.data[0..12].to_vec(),
-        vec![65, 177, 160, 100, 12, 0, 0, 0, 0, 0, 0, 0]
+        vec![65, 177, 160, 100, 16, 0, 0, 0, 0, 0, 0, 0]
     );
 }
 
@@ -109,7 +109,7 @@ fn bytes() {
 
     assert_eq!(
         vm.data[0..12].to_vec(),
-        vec![11, 66, 182, 57, 12, 0, 0, 0, 0, 0, 0, 0]
+        vec![11, 66, 182, 57, 16, 0, 0, 0, 0, 0, 0, 0]
     );
 
     let returns = vm.function("foo_length", &[]);
@@ -128,7 +128,7 @@ fn bytes() {
 
     assert_eq!(
         vm.data[0..12].to_vec(),
-        vec![11, 66, 182, 57, 12, 0, 0, 0, 28, 0, 0, 0]
+        vec![11, 66, 182, 57, 16, 0, 0, 0, 32, 0, 0, 0]
     );
 
     for (i, b) in b"The shoemaker always wears the worst shoes"
@@ -251,5 +251,26 @@ fn bytes_get_subscript_range() {
         &[ethabi::Token::Uint(ethereum_types::U256::from(
             0x80000000u64,
         ))],
+    );
+}
+
+#[test]
+fn storage_alignment() {
+    let mut vm = build_solidity(
+        r#"
+        contract c {
+            bool f1 = true;
+            uint8 f2 = 2;
+            uint16 f3 = 0x304;
+            uint32 f4 = 0x5060708;
+            uint64 f5 = 0x90a0b0c0d0e0f10;
+        }"#,
+    );
+
+    vm.constructor(&[]);
+
+    assert_eq!(
+        vm.data[0..24].to_vec(),
+        vec![11, 66, 182, 57, 24, 0, 0, 0, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 1, 2,]
     );
 }
