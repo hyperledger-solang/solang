@@ -606,7 +606,8 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         _slot: PointerValue<'a>,
         _ty: IntType<'a>,
     ) -> IntValue<'a> {
-        unimplemented!();
+        // unused
+        unreachable!();
     }
 
     /// Recursively load a type from contract storage. This overrides the default method

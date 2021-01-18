@@ -114,8 +114,8 @@ class TestConnection {
 
         console.log('Program loaded to account', programId.toBase58());
 
-        const returnDataAccount = await this.createStorageAccount(programId, 100);
-        const contractStorageAccount = await this.createStorageAccount(programId, 10);
+        const returnDataAccount = await this.createStorageAccount(programId, 1024);
+        const contractStorageAccount = await this.createStorageAccount(programId, 512);
 
         return new Program(programId, returnDataAccount, contractStorageAccount, abi);
     }
