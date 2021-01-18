@@ -147,4 +147,72 @@ describe('Deploy solang contract and test', () => {
         res = await prog.call_function(conn, "address_passthrough", [address]);
         expect(res["0"]).toBe(address);
     });
+
+    it('store', async function () {
+        this.timeout(50000);
+
+        let conn = await establishConnection();
+
+        let prog = await conn.loadProgram("store.so", "store.abi");
+
+        // call the constructor
+        await prog.call_constructor(conn, []);
+
+        function returns_to_array(res: Object) {
+            let arr = Object.values(res);
+            let length = arr.pop()
+            expect(arr.length).toEqual(length);
+            return arr;
+        }
+
+        let res = returns_to_array(await prog.call_function(conn, "get_values1", []));
+
+        expect(res).toStrictEqual(["0", "0", "0", "0"]);
+
+        res = returns_to_array(await prog.call_function(conn, "get_values2", []));
+
+        expect(res).toStrictEqual(["0", "", "0xb00b1e", "0x00000000", "0"]);
+
+        await prog.call_function(conn, "set_values", []);
+
+        res = returns_to_array(await prog.call_function(conn, "get_values1", []));
+
+        expect(res).toStrictEqual([
+            "18446744073709551615",
+            "3671129839",
+            "32766",
+            "57896044618658097711785492504343953926634992332820282019728792003956564819967"
+        ]);
+
+        res = returns_to_array(await prog.call_function(conn, "get_values2", []));
+
+        expect(res).toStrictEqual([
+            "102",
+            "the course of true love never did run smooth",
+            "0xb00b1e",
+            "0x41424344",
+            "1",
+        ]);
+
+        await prog.call_function(conn, "do_ops", []);
+
+        res = returns_to_array(await prog.call_function(conn, "get_values1", []));
+
+        expect(res).toStrictEqual([
+            "1",
+            "65263",
+            "32767",
+            "57896044618658097711785492504343953926634992332820282019728792003956564819966",
+        ]);
+
+        res = returns_to_array(await prog.call_function(conn, "get_values2", []));
+
+        expect(res).toStrictEqual([
+            "61200",
+            "",
+            "0xb0ff1e",
+            "0x61626364",
+            "3",
+        ]);
+    });
 });
