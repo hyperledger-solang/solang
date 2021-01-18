@@ -200,7 +200,7 @@ pub trait TargetRuntime<'a> {
     fn return_empty_abi(&self, contract: &Contract);
 
     /// Return failure code
-    fn return_u32<'b>(&self, contract: &'b Contract, ret: IntValue<'b>);
+    fn return_code<'b>(&self, contract: &'b Contract, ret: IntValue<'b>);
 
     /// Return success with the ABI encoded result
     fn return_abi<'b>(&self, contract: &'b Contract, data: PointerValue<'b>, length: IntValue);
@@ -3028,7 +3028,7 @@ pub trait TargetRuntime<'a> {
                     Instr::Return { value } if value.is_empty() => {
                         contract
                             .builder
-                            .build_return(Some(&contract.context.i32_type().const_zero()));
+                            .build_return(Some(&contract.return_values[&ReturnCode::Success]));
                     }
                     Instr::Return { value } => {
                         let returns_offset = cfg.params.len();
@@ -3042,7 +3042,7 @@ pub trait TargetRuntime<'a> {
                         }
                         contract
                             .builder
-                            .build_return(Some(&contract.context.i32_type().const_zero()));
+                            .build_return(Some(&contract.return_values[&ReturnCode::Success]));
                     }
                     Instr::Set { res, expr, .. } => {
                         let value_ref = self.expression(contract, expr, &w.vars, function);
@@ -3557,7 +3557,7 @@ pub trait TargetRuntime<'a> {
                         let success = contract.builder.build_int_compare(
                             IntPredicate::EQ,
                             ret.into_int_value(),
-                            contract.context.i32_type().const_zero(),
+                            contract.return_values[&ReturnCode::Success],
                             "success",
                         );
 
@@ -4301,7 +4301,10 @@ pub trait TargetRuntime<'a> {
 
         if fallback.is_none() && receive.is_none() {
             // no need to check value transferred; we will abort either way
-            self.return_u32(contract, contract.context.i32_type().const_int(2, false));
+            self.return_code(
+                contract,
+                contract.return_values[&ReturnCode::FunctionSelectorInvalid],
+            );
 
             return;
         }
@@ -4337,7 +4340,7 @@ pub trait TargetRuntime<'a> {
                 self.return_empty_abi(contract);
             }
             None => {
-                self.return_u32(contract, contract.context.i32_type().const_int(2, false));
+                self.return_code(contract, contract.context.i32_type().const_int(2, false));
             }
         }
 
@@ -4352,7 +4355,7 @@ pub trait TargetRuntime<'a> {
                 self.return_empty_abi(contract);
             }
             None => {
-                self.return_u32(contract, contract.context.i32_type().const_int(2, false));
+                self.return_code(contract, contract.context.i32_type().const_int(2, false));
             }
         }
     }
@@ -4420,7 +4423,7 @@ pub trait TargetRuntime<'a> {
         let success = contract.builder.build_int_compare(
             IntPredicate::EQ,
             ret.into_int_value(),
-            contract.context.i32_type().const_zero(),
+            contract.return_values[&ReturnCode::Success],
             "success",
         );
 
@@ -4453,7 +4456,7 @@ pub trait TargetRuntime<'a> {
 
         contract.builder.position_at_end(bail_block);
 
-        self.return_u32(contract, ret.into_int_value());
+        self.return_code(contract, ret.into_int_value());
 
         cases.push((
             contract
@@ -5161,6 +5164,14 @@ pub struct Contract<'a> {
     scratch_len: Option<GlobalValue<'a>>,
     scratch: Option<GlobalValue<'a>>,
     accounts: Option<PointerValue<'a>>,
+    return_values: HashMap<ReturnCode, IntValue<'a>>,
+}
+
+#[derive(PartialEq, Eq, Hash)]
+enum ReturnCode {
+    Success,
+    FunctionSelectorInvalid,
+    AbiEncodingInvalid,
 }
 
 impl<'a> Contract<'a> {
@@ -5372,6 +5383,18 @@ impl<'a> Contract<'a> {
                 .const_zero(),
         );
 
+        let mut return_values = HashMap::new();
+
+        return_values.insert(ReturnCode::Success, context.i32_type().const_zero());
+        return_values.insert(
+            ReturnCode::FunctionSelectorInvalid,
+            context.i32_type().const_int(3, false),
+        );
+        return_values.insert(
+            ReturnCode::AbiEncodingInvalid,
+            context.i32_type().const_int(2, false),
+        );
+
         Contract {
             name: contract.name.to_owned(),
             module,
@@ -5394,6 +5417,7 @@ impl<'a> Contract<'a> {
             scratch: None,
             scratch_len: None,
             accounts: None,
+            return_values,
         }
     }
 
@@ -5696,7 +5720,10 @@ impl<'a> Contract<'a> {
             );
         }
 
-        self.context.i32_type().fn_type(&args, false)
+        // Solana return type should be 64 bit, 32 bit on wasm
+        self.return_values[&ReturnCode::Success]
+            .get_type()
+            .fn_type(&args, false)
     }
 
     pub fn upower(&self, bit: u32) -> FunctionValue<'a> {

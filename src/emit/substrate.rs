@@ -2553,7 +2553,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         contract.builder.build_unreachable();
     }
 
-    fn return_u32<'b>(&self, contract: &'b Contract, _ret: IntValue<'b>) {
+    fn return_code<'b>(&self, contract: &'b Contract, _ret: IntValue<'b>) {
         // we can't return specific errors
         self.assert_failure(
             contract,

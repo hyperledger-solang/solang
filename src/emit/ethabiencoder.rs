@@ -5,7 +5,7 @@ use inkwell::AddressSpace;
 use inkwell::IntPredicate;
 use num_traits::ToPrimitive;
 
-use super::Contract;
+use super::{Contract, ReturnCode};
 
 pub struct EthAbiEncoder {
     pub bswap: bool,
@@ -1786,9 +1786,9 @@ impl EthAbiEncoder {
 
         contract.builder.position_at_end(bail_block);
 
-        contract
-            .builder
-            .build_return(Some(&contract.context.i32_type().const_int(3, false)));
+        contract.builder.build_return(Some(
+            &contract.return_values[&ReturnCode::AbiEncodingInvalid],
+        ));
 
         contract.builder.position_at_end(success_block);
     }

@@ -166,6 +166,15 @@ be used for different purposes. In Solang's case, each time the contract is exec
 The first account is for the `return data`, i.e. either the ABI encoded
 return values or the revert buffer. The second account is to hold the contract storage variables.
 
+The output of the compiler will tell you how large the second account needs to be. For the `flipper.sol` example,
+the output contains *"info: contract flipper uses exactly 9 bytes account data"*. This means the second account
+should be exactly 9 bytes; anything larger is wasted. If the output is
+*"info: contract store uses at least 168 bytes account data"* then some storage elements are dynamic, so the size
+depends on the data stored. For example there could be a ``string`` type, and storage depends on the length of
+the string. The minimum is 168 bytes, but storing any non-zero-length dynamic types will fail.
+
+If either account is too small, the transaction will fail with the error *account data too small for instruction*.
+
 Before any function on a smart contract can be used, the constructor must be first be called. This ensures that
 the constructor as declared in the solidity code is executed, and that the contract storage account is
 correctly initialized. To call the constructor, abi encode (using ethereum abi encoding) the constructor

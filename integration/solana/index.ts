@@ -94,7 +94,7 @@ class TestConnection {
         return account;
     }
 
-    async loadProgram(sopath: string, abipath: string): Promise<Program> {
+    async loadProgram(sopath: string, abipath: string, returnDataSize: number = 2048, contractStorageSize: number = 512): Promise<Program> {
         console.log(`Loading ${sopath} ...`)
 
         const data: Buffer = fs.readFileSync(sopath);
@@ -114,8 +114,8 @@ class TestConnection {
 
         console.log('Program loaded to account', programId.toBase58());
 
-        const returnDataAccount = await this.createStorageAccount(programId, 2048);
-        const contractStorageAccount = await this.createStorageAccount(programId, 512);
+        const returnDataAccount = await this.createStorageAccount(programId, returnDataSize);
+        const contractStorageAccount = await this.createStorageAccount(programId, contractStorageSize);
 
         return new Program(programId, returnDataAccount, contractStorageAccount, abi);
     }
