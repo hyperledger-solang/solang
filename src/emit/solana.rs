@@ -12,7 +12,7 @@ use num_traits::ToPrimitive;
 use tiny_keccak::{Hasher, Keccak};
 
 use super::ethabiencoder;
-use super::{Contract, TargetRuntime, Variable};
+use super::{Contract, ReturnCode, TargetRuntime, Variable};
 
 pub struct SolanaTarget {
     abi: ethabiencoder::EthAbiEncoder,
@@ -52,6 +52,17 @@ impl SolanaTarget {
             opt,
             math_overflow_check,
             None,
+        );
+
+        con.return_values
+            .insert(ReturnCode::Success, context.i64_type().const_zero());
+        con.return_values.insert(
+            ReturnCode::FunctionSelectorInvalid,
+            context.i64_type().const_int(2u64 << 32, false),
+        );
+        con.return_values.insert(
+            ReturnCode::AbiEncodingInvalid,
+            context.i64_type().const_int(2u64 << 32, false),
         );
 
         // externals
@@ -160,14 +171,59 @@ impl SolanaTarget {
 
         contract.builder.position_at_end(badmagic_block);
 
-        contract
-            .builder
-            .build_return(Some(&contract.context.i32_type().const_int(7, false)));
+        contract.builder.build_return(Some(
+            &contract.context.i64_type().const_int(4u64 << 32, false),
+        ));
 
         contract.accounts = Some(accounts);
 
         // generate constructor code
         contract.builder.position_at_end(constructor_block);
+
+        // do we have enough contract data
+        let contract_data_len = contract
+            .builder
+            .build_load(
+                unsafe {
+                    contract.builder.build_gep(
+                        accounts,
+                        &[
+                            contract.context.i32_type().const_int(1, false),
+                            contract.context.i32_type().const_int(2, false),
+                        ],
+                        "contract_data_len_ptr",
+                    )
+                },
+                "contract_data_len",
+            )
+            .into_int_value();
+
+        let fixed_fields_size = contract.contract.fixed_layout_size.to_u64().unwrap();
+
+        let is_enough = contract.builder.build_int_compare(
+            IntPredicate::UGE,
+            contract_data_len,
+            contract
+                .context
+                .i64_type()
+                .const_int(fixed_fields_size, false),
+            "is_enough",
+        );
+
+        let not_enough = contract.context.append_basic_block(function, "not_enough");
+        let enough = contract.context.append_basic_block(function, "enough");
+
+        contract
+            .builder
+            .build_conditional_branch(is_enough, enough, not_enough);
+
+        contract.builder.position_at_end(not_enough);
+
+        contract.builder.build_return(Some(
+            &contract.context.i64_type().const_int(5u64 << 32, false),
+        ));
+
+        contract.builder.position_at_end(enough);
 
         // write our magic value to the contract
         contract.builder.build_store(
@@ -186,8 +242,6 @@ impl SolanaTarget {
                 "heap_offset",
             )
         };
-
-        let fixed_fields_size = contract.contract.fixed_layout_size.to_u64().unwrap();
 
         // align heap to 8 bytes
         let heap_offset = (fixed_fields_size + 7) & !7;
@@ -225,7 +279,7 @@ impl SolanaTarget {
                 .unwrap()
         } else {
             // return 0 for success
-            contract.context.i32_type().const_int(0, false).into()
+            contract.context.i64_type().const_int(0, false).into()
         };
 
         contract.builder.build_return(Some(&ret));
@@ -253,7 +307,10 @@ impl SolanaTarget {
     }
 
     // Returns the pointer to the length of the return buffer, and the buffer itself
-    fn return_buffer<'b>(&self, contract: &Contract<'b>) -> (PointerValue<'b>, PointerValue<'b>) {
+    fn return_buffer<'b>(
+        &self,
+        contract: &Contract<'b>,
+    ) -> (PointerValue<'b>, PointerValue<'b>, IntValue<'b>) {
         // the first account passed in is the return buffer; 3 field of account is "data"
         let data = contract
             .builder
@@ -271,6 +328,23 @@ impl SolanaTarget {
                 "data",
             )
             .into_pointer_value();
+
+        let length = contract
+            .builder
+            .build_load(
+                unsafe {
+                    contract.builder.build_gep(
+                        contract.accounts.unwrap(),
+                        &[
+                            contract.context.i32_type().const_zero(),
+                            contract.context.i32_type().const_int(2, false),
+                        ],
+                        "data_len",
+                    )
+                },
+                "data_len",
+            )
+            .into_int_value();
 
         // First we have the 64 bit length field
         let data_len_ptr = contract.builder.build_pointer_cast(
@@ -292,7 +366,7 @@ impl SolanaTarget {
             "data_ptr",
         );
 
-        (data_len_ptr, data_ptr)
+        (data_len_ptr, data_ptr, length)
     }
 }
 
@@ -603,7 +677,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
     fn storage_bytes_push(
         &self,
         contract: &Contract,
-        _function: FunctionValue,
+        function: FunctionValue,
         slot: IntValue,
         val: IntValue,
     ) {
@@ -663,14 +737,19 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             "new_length",
         );
 
-        let new_offset = contract
+        let rc = contract
             .builder
             .build_call(
                 contract
                     .module
                     .get_function("account_data_realloc")
                     .unwrap(),
-                &[account.into(), offset.into(), new_length.into()],
+                &[
+                    account.into(),
+                    offset.into(),
+                    new_length.into(),
+                    offset_ptr.into(),
+                ],
                 "new_offset",
             )
             .try_as_basic_value()
@@ -678,7 +757,33 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             .unwrap()
             .into_int_value();
 
-        contract.builder.build_store(offset_ptr, new_offset);
+        let is_rc_zero = contract.builder.build_int_compare(
+            IntPredicate::EQ,
+            rc,
+            contract.context.i64_type().const_zero(),
+            "is_rc_zero",
+        );
+
+        let rc_not_zero = contract.context.append_basic_block(function, "rc_not_zero");
+        let rc_zero = contract.context.append_basic_block(function, "rc_zero");
+
+        contract
+            .builder
+            .build_conditional_branch(is_rc_zero, rc_zero, rc_not_zero);
+
+        contract.builder.position_at_end(rc_not_zero);
+
+        self.return_code(
+            contract,
+            contract.context.i64_type().const_int(5u64 << 32, false),
+        );
+
+        contract.builder.position_at_end(rc_zero);
+
+        let new_offset = contract
+            .builder
+            .build_load(offset_ptr, "offset")
+            .into_int_value();
 
         let index = contract.builder.build_int_add(new_offset, length, "index");
         let member = unsafe { contract.builder.build_gep(data, &[index], "data") };
@@ -784,7 +889,12 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                 .module
                 .get_function("account_data_realloc")
                 .unwrap(),
-            &[account.into(), offset.into(), new_length.into()],
+            &[
+                account.into(),
+                offset.into(),
+                new_length.into(),
+                offset_ptr.into(),
+            ],
             "new_offset",
         );
 
@@ -1094,12 +1204,12 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                 "free",
             );
 
-            // account_data_alloc will return 0 if the string is length 0
-            let new_offset = contract
+            // account_data_alloc will return offset = 0 if the string is length 0
+            let rc = contract
                 .builder
                 .build_call(
                     contract.module.get_function("account_data_alloc").unwrap(),
-                    &[account.into(), new_string_length.into()],
+                    &[account.into(), new_string_length.into(), offset_ptr.into()],
                     "alloc",
                 )
                 .try_as_basic_value()
@@ -1107,7 +1217,30 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                 .unwrap()
                 .into_int_value();
 
-            contract.builder.build_store(offset_ptr, new_offset);
+            let is_rc_zero = contract.builder.build_int_compare(
+                IntPredicate::EQ,
+                rc,
+                contract.context.i64_type().const_zero(),
+                "is_rc_zero",
+            );
+
+            let rc_not_zero = contract.context.append_basic_block(function, "rc_not_zero");
+            let rc_zero = contract.context.append_basic_block(function, "rc_zero");
+
+            contract
+                .builder
+                .build_conditional_branch(is_rc_zero, rc_zero, rc_not_zero);
+
+            contract.builder.position_at_end(rc_not_zero);
+
+            self.return_code(
+                contract,
+                contract.context.i64_type().const_int(5u64 << 32, false),
+            );
+
+            contract.builder.position_at_end(rc_zero);
+
+            let new_offset = contract.builder.build_load(offset_ptr, "new_offset");
 
             contract.builder.build_unconditional_branch(memcpy);
 
@@ -1117,7 +1250,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                 .builder
                 .build_phi(contract.context.i32_type(), "offset");
 
-            offset_phi.add_incoming(&[(&new_offset, realloc), (&offset, entry)]);
+            offset_phi.add_incoming(&[(&new_offset, rc_zero), (&offset, entry)]);
 
             let dest_string_data = unsafe {
                 contract.builder.build_gep(
@@ -1211,7 +1344,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
     }
 
     fn return_empty_abi(&self, contract: &Contract) {
-        let (data_len_ptr, _) = self.return_buffer(contract);
+        let (data_len_ptr, _, _) = self.return_buffer(contract);
 
         contract
             .builder
@@ -1220,7 +1353,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         // return 0 for success
         contract
             .builder
-            .build_return(Some(&contract.context.i32_type().const_int(0, false)));
+            .build_return(Some(&contract.context.i64_type().const_int(0, false)));
     }
 
     fn return_abi<'b>(&self, contract: &'b Contract, _data: PointerValue<'b>, _length: IntValue) {
@@ -1229,16 +1362,16 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         // return 0 for success
         contract
             .builder
-            .build_return(Some(&contract.context.i32_type().const_int(0, false)));
+            .build_return(Some(&contract.context.i64_type().const_int(0, false)));
     }
 
     fn assert_failure<'b>(&self, contract: &'b Contract, _data: PointerValue, _length: IntValue) {
         // the reason code should be null (and already printed)
 
         // return 1 for failure
-        contract
-            .builder
-            .build_return(Some(&contract.context.i32_type().const_int(1, false)));
+        contract.builder.build_return(Some(
+            &contract.context.i64_type().const_int(1u64 << 32, false),
+        ));
     }
 
     /// ABI encode into a vector for abi.encode* style builtin functions
@@ -1263,7 +1396,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         args: &[BasicValueEnum<'a>],
         tys: &[ast::Type],
     ) -> (PointerValue<'a>, IntValue<'a>) {
-        let (output_len, mut output) = self.return_buffer(contract);
+        let (output_len, mut output, output_size) = self.return_buffer(contract);
 
         let (length, mut offset) = ethabiencoder::EthAbiEncoder::total_encoded_length(
             contract, selector, load, function, args, tys,
@@ -1274,7 +1407,37 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                 .builder
                 .build_int_z_extend(length, contract.context.i64_type(), "length64");
 
-        // FIXME ensure we have enough space for our return data
+        // check the return data account is big enough
+        let encoded_length_with_length = contract.builder.build_int_add(
+            length64,
+            contract.context.i64_type().const_int(8, false),
+            "encoded_length_with_length",
+        );
+
+        // do bounds check on index
+        let is_enough_space = contract.builder.build_int_compare(
+            IntPredicate::UGE,
+            output_size,
+            encoded_length_with_length,
+            "is_enough_space",
+        );
+
+        let not_enough = contract.context.append_basic_block(function, "not_enough");
+        let enough = contract.context.append_basic_block(function, "enough");
+
+        contract
+            .builder
+            .build_conditional_branch(is_enough_space, enough, not_enough);
+
+        contract.builder.position_at_end(not_enough);
+
+        self.return_code(
+            contract,
+            contract.context.i64_type().const_int(5u64 << 32, false),
+        );
+
+        contract.builder.position_at_end(enough);
+
         contract.builder.build_store(output_len, length64);
 
         if let Some(selector) = selector {
@@ -1400,7 +1563,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         unimplemented!();
     }
 
-    fn return_u32<'b>(&self, contract: &'b Contract, ret: IntValue<'b>) {
+    fn return_code<'b>(&self, contract: &'b Contract, ret: IntValue<'b>) {
         contract.builder.build_return(Some(&ret));
     }
 

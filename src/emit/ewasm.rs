@@ -1123,7 +1123,7 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
     }
 
     // ewasm main cannot return any value
-    fn return_u32<'b>(&self, contract: &'b Contract, _ret: IntValue<'b>) {
+    fn return_code<'b>(&self, contract: &'b Contract, _ret: IntValue<'b>) {
         self.assert_failure(
             contract,
             contract

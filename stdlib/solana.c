@@ -4,7 +4,7 @@
 #include "stdlib.h"
 #include "solana_sdk.h"
 
-extern int solang_dispatch(const uint8_t *input, uint64_t input_len, SolAccountInfo *ka);
+extern uint64_t solang_dispatch(const uint8_t *input, uint64_t input_len, SolAccountInfo *ka);
 
 uint64_t
 entrypoint(const uint8_t *input)
@@ -46,13 +46,16 @@ struct chunk
 
 #define ROUND_UP(n, d) (((n) + (d)-1) & ~(d - 1))
 
-uint32_t account_data_alloc(SolAccountInfo *ai, uint32_t size)
+uint64_t account_data_alloc(SolAccountInfo *ai, uint32_t size, uint32_t *res)
 {
     void *data = ai->data;
     struct account_data_header *hdr = data;
 
     if (!size)
+    {
+        *res = 0;
         return 0;
+    }
 
     uint32_t offset = hdr->heap_offset;
 
@@ -70,12 +73,9 @@ uint32_t account_data_alloc(SolAccountInfo *ai, uint32_t size)
             {
                 offset += sizeof(struct chunk);
 
-                uint32_t length = ai->data_len - offset;
-
-                if (length < alloc_size)
+                if (offset + alloc_size + sizeof(struct chunk) >= ai->data_len)
                 {
-                    sol_log("account does not have enough storage");
-                    sol_panic();
+                    return ERROR_ACCOUNT_DATA_TOO_SMALL;
                 }
 
                 chunk->offset_next = offset + alloc_size;
@@ -90,7 +90,8 @@ uint32_t account_data_alloc(SolAccountInfo *ai, uint32_t size)
                 next->offset_next = 0;
                 next->allocated = false;
 
-                return offset;
+                *res = offset;
+                return 0;
             }
             else if (chunk->length < alloc_size)
             {
@@ -102,7 +103,8 @@ uint32_t account_data_alloc(SolAccountInfo *ai, uint32_t size)
                 chunk->allocated = true;
                 chunk->length = size;
 
-                return offset + sizeof(struct chunk);
+                *res = offset + sizeof(struct chunk);
+                return 0;
             }
             else
             {
@@ -128,7 +130,8 @@ uint32_t account_data_alloc(SolAccountInfo *ai, uint32_t size)
                     chunk->offset_prev = next_offset;
                 }
 
-                return offset + sizeof(struct chunk);
+                *res = offset + sizeof(struct chunk);
+                return 0;
             }
         }
 
@@ -222,7 +225,7 @@ void account_data_free(SolAccountInfo *ai, uint32_t offset)
     }
 }
 
-uint32_t account_data_realloc(SolAccountInfo *ai, uint32_t offset, uint32_t size)
+uint64_t account_data_realloc(SolAccountInfo *ai, uint32_t offset, uint32_t size, uint32_t *res)
 {
     if (!size)
     {
@@ -232,7 +235,7 @@ uint32_t account_data_realloc(SolAccountInfo *ai, uint32_t offset, uint32_t size
 
     if (!offset)
     {
-        return account_data_alloc(ai, size);
+        return account_data_alloc(ai, size, res);
     }
 
     void *data = ai->data;
@@ -301,7 +304,8 @@ uint32_t account_data_realloc(SolAccountInfo *ai, uint32_t offset, uint32_t size
             }
         }
 
-        return offset;
+        *res = offset;
+        return 0;
     }
 
     // 2. Can we use the next chunk to expand our chunk to fit
@@ -342,7 +346,8 @@ uint32_t account_data_realloc(SolAccountInfo *ai, uint32_t offset, uint32_t size
                     next->offset_prev = offset_next;
                 }
 
-                return offset;
+                *res = offset;
+                return 0;
             }
         }
         else
@@ -359,17 +364,23 @@ uint32_t account_data_realloc(SolAccountInfo *ai, uint32_t offset, uint32_t size
                 next->allocated = false;
                 next->length = 0;
 
-                return offset;
+                *res = offset;
+                return 0;
             }
         }
     }
 
     uint32_t old_length = account_data_len(ai, offset);
-    uint32_t new_offset = account_data_alloc(ai, size);
+    uint32_t new_offset;
+    uint64_t rc = account_data_alloc(ai, size, &new_offset);
+    if (rc)
+        return rc;
+
     __memcpy(data + new_offset, data + offset, old_length);
     account_data_free(ai, offset);
 
-    return new_offset;
+    *res = new_offset;
+    return 0;
 }
 
 #ifdef TEST

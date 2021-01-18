@@ -391,4 +391,77 @@ describe('Deploy solang contract and test', () => {
             ]
         ]));
     });
+
+
+    it('account storage too small constructor', async function () {
+        this.timeout(50000);
+
+        let conn = await establishConnection();
+
+        // storage.sol needs 168 byes
+        let prog = await conn.loadProgram("store.so", "store.abi", 512, 100);
+
+        await expect(prog.call_constructor(conn, []))
+            .rejects
+            .toThrowError(new Error('failed to send transaction: Transaction simulation failed: Error processing Instruction 0: account data too small for instruction'));
+    });
+
+    it('returndata too small', async function () {
+        this.timeout(50000);
+
+        let conn = await establishConnection();
+
+        // storage.sol needs 168 byes
+        let prog = await conn.loadProgram("store.so", "store.abi", 512);
+
+        await prog.call_constructor(conn, []);
+
+        await prog.call_function(conn, "set_foo1", []);
+
+        // get foo1
+        await expect(prog.call_function(conn, "get_both_foos", []))
+            .rejects
+            .toThrowError(new Error('failed to send transaction: Transaction simulation failed: Error processing Instruction 0: account data too small for instruction'));
+    });
+
+    it('account storage too small dynamic alloc', async function () {
+        this.timeout(50000);
+
+        let conn = await establishConnection();
+
+        // storage.sol needs 168 bytes on constructor, more for string data
+        let prog = await conn.loadProgram("store.so", "store.abi", 512, 180);
+
+        await prog.call_constructor(conn, []);
+
+        // set a load of string which will overflow
+        await expect(prog.call_function(conn, "set_foo1", []))
+            .rejects
+            .toThrowError(new Error('failed to send transaction: Transaction simulation failed: Error processing Instruction 0: account data too small for instruction'));
+    });
+
+
+    it('account storage too small dynamic realloc', async function () {
+        this.timeout(50000);
+
+        let conn = await establishConnection();
+
+        // storage.sol needs 168 bytes on constructor, more for string data
+        let prog = await conn.loadProgram("store.so", "store.abi", 512, 210);
+
+        await prog.call_constructor(conn, []);
+
+        async function push_until_bang() {
+            for (let i = 0; i < 100; i++) {
+                await prog.call_function(conn, "push", ["0x01"]);
+                console.log("pushed one byte");
+            }
+        }
+
+        // do realloc until failure
+        await expect(push_until_bang())
+            .rejects
+            .toThrowError(new Error('failed to send transaction: Transaction simulation failed: Error processing Instruction 0: account data too small for instruction'));
+    });
 });
+

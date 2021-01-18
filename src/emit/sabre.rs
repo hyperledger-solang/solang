@@ -764,7 +764,7 @@ impl<'a> TargetRuntime<'a> for SabreTarget {
         panic!("Sabre cannot call other contracts");
     }
 
-    fn return_u32<'b>(&self, contract: &'b Contract, ret: IntValue<'b>) {
+    fn return_code<'b>(&self, contract: &'b Contract, ret: IntValue<'b>) {
         contract.builder.build_return(Some(&ret));
     }
 
