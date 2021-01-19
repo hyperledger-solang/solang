@@ -83,13 +83,10 @@ fn testcase(path: PathBuf) {
             _ => (),
         }
 
-        match fails.get(current_fail) {
-            Some(Test::Fail(needle)) => {
-                if line.find(needle).is_some() {
-                    current_fail += 1;
-                }
+        if let Some(Test::Fail(needle)) = fails.get(current_fail) {
+            if line.find(needle).is_some() {
+                current_fail += 1;
             }
-            _ => (),
         }
 
         current_line += 1;
