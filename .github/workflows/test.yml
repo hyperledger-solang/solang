@@ -12,7 +12,7 @@ jobs:
         run: rustup default stable
       - name: Run cargo fmt
         run: cargo fmt --all -- --check
-      - name: Run cargo clippy
+      - name: Run cargo clippy --tests --bins
         run: cargo clippy -- -D warnings
 
   linux:
