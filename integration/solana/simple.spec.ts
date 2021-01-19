@@ -214,5 +214,34 @@ describe('Deploy solang contract and test', () => {
             "0x61626364",
             "3",
         ]);
+
+        await prog.call_function(conn, "push_zero", []);
+
+        let bs = "0xb0ff1e00";
+
+        for (let i = 0; i < 20; i++) {
+            res = returns_to_array(await prog.call_function(conn, "get_bs", []));
+
+            expect(res).toStrictEqual([bs]);
+
+            if (bs.length <= 4 || Math.random() >= 0.5) {
+                let val = ((Math.random() * 256) | 0).toString(16);
+
+                val = val.length == 1 ? "0" + val : val;
+
+                await prog.call_function(conn, "push", ["0x" + val]);
+
+                bs += val;
+            } else {
+                res = returns_to_array(await prog.call_function(conn, "pop", []));
+
+                let last = bs.slice(-2);
+
+                expect(res).toStrictEqual(["0x" + last]);
+
+                bs = bs.slice(0, -2);
+            }
+
+        }
     });
 });

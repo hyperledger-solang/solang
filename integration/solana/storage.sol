@@ -44,4 +44,20 @@ contract store {
         fixedbytes |= 0x20202020;
         bar = enum_bar.bar4;
     }
+
+    function push_zero() public {
+        bs.push();
+    }
+
+    function push(byte b) public {
+        bs.push(b);
+    }
+
+    function pop() public returns (byte) {
+        return bs.pop();
+    }
+
+    function get_bs() public view returns (bytes) {
+        return bs;
+    }
 }
