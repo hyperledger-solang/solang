@@ -1,7 +1,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-
+#include "stdlib.h"
 #include "solana_sdk.h"
 
 extern int solang_dispatch(const uint8_t *input, uint64_t input_len, SolAccountInfo *ka);
@@ -222,12 +222,162 @@ void account_data_free(SolAccountInfo *ai, uint32_t offset)
     }
 }
 
+uint32_t account_data_realloc(SolAccountInfo *ai, uint32_t offset, uint32_t size)
+{
+    if (!size)
+    {
+        account_data_free(ai, offset);
+        return 0;
+    }
+
+    if (!offset)
+    {
+        return account_data_alloc(ai, size);
+    }
+
+    void *data = ai->data;
+
+    uint32_t chunk_offset = offset - sizeof(struct chunk);
+
+    struct chunk *chunk = data + chunk_offset;
+    struct chunk *next = data + chunk->offset_next;
+
+    uint32_t existing_size = chunk->offset_next - offset;
+    uint32_t alloc_size = ROUND_UP(size, 8);
+
+    // 1. Is the existing chunk big enough
+    if (size <= existing_size)
+    {
+        chunk->length = size;
+
+        // can we free up some space
+        if (existing_size >= alloc_size + sizeof(struct chunk) + 8)
+        {
+            uint32_t new_next_offset = offset + alloc_size;
+
+            if (!next->allocated)
+            {
+                // merge with next chunk
+                if (!next->offset_next)
+                {
+                    // the trailing free chunk
+                    chunk->offset_next = new_next_offset;
+                    next = data + new_next_offset;
+                    next->offset_prev = chunk_offset;
+                    next->offset_next = 0;
+                    next->allocated = false;
+                    next->length = 0;
+                }
+                else
+                {
+                    // merge with next chunk
+                    chunk->offset_next = new_next_offset;
+                    uint32_t offset_next_next = next->offset_next;
+
+                    next = data + new_next_offset;
+                    next->offset_prev = chunk_offset;
+                    next->offset_next = offset_next_next;
+                    next->allocated = false;
+                    next->length = offset_next_next - new_next_offset - sizeof(struct chunk);
+
+                    next = data + offset_next_next;
+                    next->offset_prev = new_next_offset;
+                }
+            }
+            else
+            {
+                // insert a new chunk
+                uint32_t offset_next_next = chunk->offset_next;
+
+                chunk->offset_next = new_next_offset;
+                next = data + new_next_offset;
+                next->offset_prev = chunk_offset;
+                next->offset_next = offset_next_next;
+                next->allocated = false;
+                next->length = offset_next_next - new_next_offset - sizeof(struct chunk);
+
+                next = data + offset_next_next;
+                next->offset_prev = new_next_offset;
+            }
+        }
+
+        return offset;
+    }
+
+    // 2. Can we use the next chunk to expand our chunk to fit
+    // Note because we always merge neighbours, free chunks do not have free
+    // neighbours.
+    if (!next->allocated)
+    {
+        if (next->offset_next)
+        {
+            uint32_t merged_size = next->offset_next - offset;
+
+            if (size < merged_size)
+            {
+                if (merged_size - alloc_size < 8 + sizeof(struct chunk))
+                {
+                    // merge the two chunks
+                    chunk->offset_next = next->offset_next;
+                    chunk->length = size;
+                    next = data + chunk->offset_next;
+                    next->offset_prev = chunk_offset;
+                }
+                else
+                {
+                    // expand our chunk to fit and shrink the next chunk
+                    uint32_t offset_next = offset + alloc_size;
+                    uint32_t offset_next_next = next->offset_next;
+
+                    chunk->offset_next = offset_next;
+                    chunk->length = size;
+
+                    next = data + offset_next;
+                    next->offset_prev = chunk_offset;
+                    next->offset_next = offset_next_next;
+                    next->length = offset_next_next - offset_next - sizeof(struct chunk);
+                    next->allocated = false;
+
+                    next = data + offset_next_next;
+                    next->offset_prev = offset_next;
+                }
+
+                return offset;
+            }
+        }
+        else
+        {
+            if (offset + alloc_size + sizeof(struct chunk) < ai->data_len)
+            {
+                chunk->offset_next = offset + alloc_size;
+                chunk->length = size;
+
+                next = data + chunk->offset_next;
+
+                next->offset_prev = chunk_offset;
+                next->offset_next = 0;
+                next->allocated = false;
+                next->length = 0;
+
+                return offset;
+            }
+        }
+    }
+
+    uint32_t old_length = account_data_len(ai, offset);
+    uint32_t new_offset = account_data_alloc(ai, size);
+    __memcpy(data + new_offset, data + offset, old_length);
+    account_data_free(ai, offset);
+
+    return new_offset;
+}
+
 #ifdef TEST
 // To run the test:
-// clang -DTEST -DSOL_TEST -O3 -Wall solana.c -o test && ./test
+// clang -DTEST -DSOL_TEST -O3 -Wall solana.c stdlib.c -o test && ./test
 #include <assert.h>
 
-void validate_heap(void *data, uint32_t offs[100])
+void validate_heap(void *data, uint32_t offs[100], uint32_t lens[100])
 {
     uint32_t offset = ((uint32_t *)data)[1];
 
@@ -264,7 +414,7 @@ void validate_heap(void *data, uint32_t offs[100])
 
                     uint8_t *mem = data + off;
 
-                    for (int x = 0; x < 100; x++)
+                    for (int x = 0; x < lens[i]; x++)
                     {
                         assert(mem[x] == i);
                     }
@@ -293,7 +443,7 @@ int main()
     SolAccountInfo ai;
     ai.data = data;
     ai.data_len = sizeof(data);
-    uint32_t offs[100];
+    uint32_t offs[100], lens[100];
     uint32_t allocs = 0;
 
     memset(data, 0, sizeof(data));
@@ -308,7 +458,7 @@ int main()
 
     for (;;)
     {
-        validate_heap(data, offs);
+        validate_heap(data, offs, lens);
 
         int n = rand() % 100;
         if (offs[n] == 0)
@@ -316,12 +466,22 @@ int main()
             //printf("STEP: alloc %d\n", n);
             offs[n] = account_data_alloc(&ai, 100);
             memset(data + offs[n], n, 100);
+            lens[n] = 100;
         }
-        else
+        else if (rand() % 2)
         {
             //printf("STEP: free %d (0x%x)\n", n, offs[n]);
             account_data_free(&ai, offs[n]);
             offs[n] = 0;
+        }
+        else
+        {
+            int size = (rand() % 200) + 10;
+            int old_size = account_data_len(&ai, offs[n]);
+            offs[n] = account_data_realloc(&ai, offs[n], size);
+            if (size > old_size)
+                memset(data + offs[n] + old_size, n, size - old_size);
+            lens[n] = size;
         }
     }
 }
