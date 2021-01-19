@@ -274,3 +274,72 @@ fn storage_alignment() {
         vec![11, 66, 182, 57, 24, 0, 0, 0, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 1, 2,]
     );
 }
+
+#[test]
+fn bytes_push_pop() {
+    let mut vm = build_solidity(
+        r#"
+        contract c {
+            bytes bs = hex"0eda";
+
+            function get_bs() public view returns (bytes) {
+                return bs;
+            }
+
+            function push(byte v) public {
+                bs.push(v);
+            }
+
+            function pop() public returns (byte) {
+                return bs.pop();
+            }
+        }"#,
+    );
+
+    vm.constructor(&[]);
+
+    let returns = vm.function("get_bs", &[]);
+
+    assert_eq!(returns, vec![ethabi::Token::Bytes(vec!(0x0e, 0xda))]);
+
+    let returns = vm.function("pop", &[]);
+
+    assert_eq!(returns, vec![ethabi::Token::FixedBytes(vec!(0xda))]);
+
+    let returns = vm.function("get_bs", &[]);
+
+    assert_eq!(returns, vec![ethabi::Token::Bytes(vec!(0x0e))]);
+
+    vm.function("push", &[ethabi::Token::FixedBytes(vec![0x41])]);
+
+    println!("data:{}", hex::encode(&vm.data));
+
+    let returns = vm.function("get_bs", &[]);
+
+    assert_eq!(returns, vec![ethabi::Token::Bytes(vec!(0x0e, 0x41))]);
+
+    vm.function("push", &[ethabi::Token::FixedBytes(vec![0x01])]);
+
+    let returns = vm.function("get_bs", &[]);
+
+    assert_eq!(returns, vec![ethabi::Token::Bytes(vec!(0x0e, 0x41, 0x01))]);
+}
+
+#[test]
+#[should_panic]
+fn bytes_empty_pop() {
+    let mut vm = build_solidity(
+        r#"
+        contract c {
+            bytes bs;
+
+            function pop() public returns (byte) {
+                return bs.pop();
+            }
+        }"#,
+    );
+
+    vm.constructor(&[]);
+
+    vm.function("pop", &[]);
+}

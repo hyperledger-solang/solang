@@ -2237,9 +2237,12 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         &self,
         contract: &Contract,
         _function: FunctionValue,
-        slot: PointerValue,
+        slot: IntValue,
         val: IntValue,
     ) {
+        let slot_ptr = contract.builder.build_alloca(slot.get_type(), "slot");
+        contract.builder.build_store(slot_ptr, slot);
+
         let scratch_buf = contract.builder.build_pointer_cast(
             contract.scratch.unwrap().as_pointer_value(),
             contract.context.i8_type().ptr_type(AddressSpace::Generic),
@@ -2265,7 +2268,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                     contract
                         .builder
                         .build_pointer_cast(
-                            slot,
+                            slot_ptr,
                             contract.context.i8_type().ptr_type(AddressSpace::Generic),
                             "",
                         )
@@ -2320,7 +2323,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                 contract
                     .builder
                     .build_pointer_cast(
-                        slot,
+                        slot_ptr,
                         contract.context.i8_type().ptr_type(AddressSpace::Generic),
                         "",
                     )
@@ -2337,8 +2340,11 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         &self,
         contract: &Contract<'a>,
         function: FunctionValue,
-        slot: PointerValue<'a>,
+        slot: IntValue<'a>,
     ) -> IntValue<'a> {
+        let slot_ptr = contract.builder.build_alloca(slot.get_type(), "slot");
+        contract.builder.build_store(slot_ptr, slot);
+
         let scratch_buf = contract.builder.build_pointer_cast(
             contract.scratch.unwrap().as_pointer_value(),
             contract.context.i8_type().ptr_type(AddressSpace::Generic),
@@ -2362,7 +2368,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                     contract
                         .builder
                         .build_pointer_cast(
-                            slot,
+                            slot_ptr,
                             contract.context.i8_type().ptr_type(AddressSpace::Generic),
                             "",
                         )
@@ -2444,7 +2450,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                 contract
                     .builder
                     .build_pointer_cast(
-                        slot,
+                        slot_ptr,
                         contract.context.i8_type().ptr_type(AddressSpace::Generic),
                         "",
                     )

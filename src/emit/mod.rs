@@ -171,14 +171,14 @@ pub trait TargetRuntime<'a> {
         &self,
         contract: &Contract<'a>,
         function: FunctionValue,
-        slot: PointerValue<'a>,
+        slot: IntValue<'a>,
         val: IntValue<'a>,
     );
     fn storage_bytes_pop(
         &self,
         contract: &Contract<'a>,
         function: FunctionValue,
-        slot: PointerValue<'a>,
+        slot: IntValue<'a>,
     ) -> IntValue<'a>;
     fn storage_string_length(
         &self,
@@ -3157,20 +3157,14 @@ pub trait TargetRuntime<'a> {
                             .expression(contract, storage, &w.vars, function)
                             .into_int_value();
 
-                        let slot_ptr = contract.builder.build_alloca(slot.get_type(), "slot");
-                        contract.builder.build_store(slot_ptr, slot);
-
-                        self.storage_bytes_push(&contract, function, slot_ptr, val);
+                        self.storage_bytes_push(&contract, function, slot, val);
                     }
                     Instr::PopStorageBytes { res, storage } => {
                         let slot = self
                             .expression(contract, storage, &w.vars, function)
                             .into_int_value();
 
-                        let slot_ptr = contract.builder.build_alloca(slot.get_type(), "slot");
-                        contract.builder.build_store(slot_ptr, slot);
-
-                        let value = self.storage_bytes_pop(&contract, function, slot_ptr);
+                        let value = self.storage_bytes_pop(&contract, function, slot);
 
                         w.vars.get_mut(res).unwrap().value = value.into();
                     }
