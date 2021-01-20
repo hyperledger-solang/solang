@@ -63,6 +63,13 @@ pub enum Instr {
         storage: Expression,
         offset: Expression,
     },
+    /// Push an element onto a bytes in storage
+    PushStorageBytes {
+        value: Expression,
+        storage: Expression,
+    },
+    /// Pop an element from a bytes in storage
+    PopStorageBytes { res: usize, storage: Expression },
     /// Push element on memory array
     PushMemory {
         res: usize,
@@ -429,15 +436,6 @@ impl ControlFlowGraph {
                 self.expr_to_string(contract, ns, a),
                 self.expr_to_string(contract, ns, i)
             ),
-            Expression::StorageBytesPush(_, a, i) => format!(
-                "(storage bytes push {} {})",
-                self.expr_to_string(contract, ns, a),
-                self.expr_to_string(contract, ns, i)
-            ),
-            Expression::StorageBytesPop(_, a) => format!(
-                "(storage bytes pop {})",
-                self.expr_to_string(contract, ns, a),
-            ),
             Expression::StorageBytesLength(_, a) => format!(
                 "(storage bytes length {})",
                 self.expr_to_string(contract, ns, a),
@@ -683,11 +681,25 @@ impl ControlFlowGraph {
                 storage,
                 offset,
             } => format!(
-                "set storage slot({}) offset:{} = %{}",
+                "set storage slot({}) offset:{} = {}",
                 self.expr_to_string(contract, ns, storage),
                 self.expr_to_string(contract, ns, offset),
                 self.expr_to_string(contract, ns, value),
             ),
+            Instr::PushStorageBytes { storage, value } => {
+                format!(
+                    "push bytes slot({}) = {}",
+                    self.expr_to_string(contract, ns, storage),
+                    self.expr_to_string(contract, ns, value),
+                )
+            }
+            Instr::PopStorageBytes { res, storage } => {
+                format!(
+                    "%{} = pop bytes slot({})",
+                    self.vars[res].id.name,
+                    self.expr_to_string(contract, ns, storage),
+                )
+            }
             Instr::PushMemory {
                 res,
                 ty,

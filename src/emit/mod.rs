@@ -2070,27 +2070,6 @@ pub trait TargetRuntime<'a> {
                 self.get_storage_bytes_subscript(&contract, function, slot, index)
                     .into()
             }
-            Expression::StorageBytesPush(_, a, v) => {
-                let val = self
-                    .expression(contract, v, vartab, function)
-                    .into_int_value();
-                let slot = self
-                    .expression(contract, a, vartab, function)
-                    .into_int_value();
-                let slot_ptr = contract.builder.build_alloca(slot.get_type(), "slot");
-                contract.builder.build_store(slot_ptr, slot);
-                self.storage_bytes_push(&contract, function, slot_ptr, val);
-
-                val.into()
-            }
-            Expression::StorageBytesPop(_, a) => {
-                let slot = self
-                    .expression(contract, a, vartab, function)
-                    .into_int_value();
-                let slot_ptr = contract.builder.build_alloca(slot.get_type(), "slot");
-                contract.builder.build_store(slot_ptr, slot);
-                self.storage_bytes_pop(&contract, function, slot_ptr).into()
-            }
             Expression::StorageBytesLength(_, a) => {
                 let slot = self
                     .expression(contract, a, vartab, function)
@@ -3169,6 +3148,31 @@ pub trait TargetRuntime<'a> {
                             offset,
                             value.into_int_value(),
                         );
+                    }
+                    Instr::PushStorageBytes { storage, value } => {
+                        let val = self
+                            .expression(contract, value, &w.vars, function)
+                            .into_int_value();
+                        let slot = self
+                            .expression(contract, storage, &w.vars, function)
+                            .into_int_value();
+
+                        let slot_ptr = contract.builder.build_alloca(slot.get_type(), "slot");
+                        contract.builder.build_store(slot_ptr, slot);
+
+                        self.storage_bytes_push(&contract, function, slot_ptr, val);
+                    }
+                    Instr::PopStorageBytes { res, storage } => {
+                        let slot = self
+                            .expression(contract, storage, &w.vars, function)
+                            .into_int_value();
+
+                        let slot_ptr = contract.builder.build_alloca(slot.get_type(), "slot");
+                        contract.builder.build_store(slot_ptr, slot);
+
+                        let value = self.storage_bytes_pop(&contract, function, slot_ptr);
+
+                        w.vars.get_mut(res).unwrap().value = value.into();
                     }
                     Instr::PushMemory {
                         res,

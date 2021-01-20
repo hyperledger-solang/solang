@@ -522,8 +522,6 @@ pub enum Expression {
     DynamicArrayPush(pt::Loc, Box<Expression>, Type, Box<Expression>),
     DynamicArrayPop(pt::Loc, Box<Expression>, Type),
     StorageBytesSubscript(pt::Loc, Box<Expression>, Box<Expression>),
-    StorageBytesPush(pt::Loc, Box<Expression>, Box<Expression>),
-    StorageBytesPop(pt::Loc, Box<Expression>),
     StorageBytesLength(pt::Loc, Box<Expression>),
     StringCompare(pt::Loc, StringLocation, StringLocation),
     StringConcat(pt::Loc, Type, StringLocation, StringLocation),
@@ -650,13 +648,11 @@ impl Expression {
                 | Expression::DynamicArrayLength(_, expr) => expr.recurse(cx, f),
                 Expression::DynamicArraySubscript(_, _, left, right)
                 | Expression::StorageBytesSubscript(_, left, right)
-                | Expression::StorageBytesPush(_, left, right)
                 | Expression::DynamicArrayPush(_, left, _, right) => {
                     left.recurse(cx, f);
                     right.recurse(cx, f);
                 }
-                Expression::StorageBytesPop(_, expr)
-                | Expression::StorageBytesLength(_, expr)
+                Expression::StorageBytesLength(_, expr)
                 | Expression::DynamicArrayPop(_, expr, _) => expr.recurse(cx, f),
                 Expression::StringCompare(_, left, right)
                 | Expression::StringConcat(_, _, left, right) => {

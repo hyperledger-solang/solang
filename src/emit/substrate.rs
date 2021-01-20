@@ -2395,7 +2395,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
         // do bounds check on index
         let in_range = contract.builder.build_int_compare(
-            IntPredicate::EQ,
+            IntPredicate::NE,
             contract.context.i32_type().const_zero(),
             length,
             "index_in_range",
@@ -2421,22 +2421,22 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
         contract.builder.position_at_end(retrieve_block);
 
-        let offset = unsafe {
-            contract.builder.build_gep(
-                contract.scratch.unwrap().as_pointer_value(),
-                &[contract.context.i32_type().const_zero(), length],
-                "data_offset",
-            )
-        };
-
-        let val = contract.builder.build_load(offset, "popped_value");
-
         // Set the new length
         let new_length = contract.builder.build_int_sub(
             length,
             contract.context.i32_type().const_int(1, false),
             "new_length",
         );
+
+        let offset = unsafe {
+            contract.builder.build_gep(
+                contract.scratch.unwrap().as_pointer_value(),
+                &[contract.context.i32_type().const_zero(), new_length],
+                "data_offset",
+            )
+        };
+
+        let val = contract.builder.build_load(offset, "popped_value");
 
         contract.builder.build_call(
             contract.module.get_function("seal_set_storage").unwrap(),
