@@ -236,9 +236,6 @@ fn read_expression(expr: &Expression, state: &mut StateCheck) -> bool {
         | Expression::StorageVariable(loc, _, _, _)
         | Expression::StorageLoad(loc, _, _) => state.read(loc),
         Expression::Variable(loc, ty, _) if ty.is_contract_storage() => state.read(loc),
-        Expression::StorageBytesPush(loc, _, _) | Expression::StorageBytesPop(loc, _) => {
-            state.write(loc);
-        }
         Expression::Builtin(loc, _, Builtin::GetAddress, _)
         | Expression::Builtin(loc, _, Builtin::BlockNumber, _)
         | Expression::Builtin(loc, _, Builtin::Timestamp, _)

@@ -78,8 +78,6 @@ impl Expression {
             | Expression::DynamicArrayPush(loc, _, _, _)
             | Expression::DynamicArrayPop(loc, _, _)
             | Expression::StorageBytesSubscript(loc, _, _)
-            | Expression::StorageBytesPush(loc, _, _)
-            | Expression::StorageBytesPop(loc, _)
             | Expression::StorageBytesLength(loc, _)
             | Expression::StringCompare(loc, _, _)
             | Expression::StringConcat(loc, _, _, _)
@@ -192,9 +190,6 @@ impl Expression {
             Expression::FormatString(_, _) => Type::String,
             // codegen Expressions
             Expression::ReturnData(_) => Type::DynamicBytes,
-            Expression::StorageBytesPush(_, _, _) | Expression::StorageBytesPop(_, _) => {
-                unreachable!()
-            }
             Expression::InternalFunction { ty, .. } => ty.clone(),
             Expression::ExternalFunction { ty, .. } => ty.clone(),
             Expression::InternalFunctionCfg(_) => unreachable!(),

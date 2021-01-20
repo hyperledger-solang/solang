@@ -122,6 +122,19 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
                         offset,
                     };
                 }
+                Instr::PushStorageBytes { storage, value } => {
+                    let (storage, _) = expression(storage, Some(&vars), &cur, cfg, ns);
+                    let (value, _) = expression(value, Some(&vars), &cur, cfg, ns);
+
+                    cfg.blocks[block_no].instr[instr_no] =
+                        Instr::PushStorageBytes { storage, value };
+                }
+                Instr::PopStorageBytes { res, storage } => {
+                    let (storage, _) = expression(storage, Some(&vars), &cur, cfg, ns);
+
+                    cfg.blocks[block_no].instr[instr_no] =
+                        Instr::PopStorageBytes { res: *res, storage };
+                }
                 Instr::PushMemory {
                     res,
                     ty,
@@ -1020,8 +1033,7 @@ fn expression(
         Expression::AllocDynamicArray(_, _, _, _)
         | Expression::ReturnData(_)
         | Expression::FormatString { .. }
-        | Expression::InternalFunctionCfg(_)
-        | Expression::StorageBytesPush(_, _, _) => (expr.clone(), false),
+        | Expression::InternalFunctionCfg(_) => (expr.clone(), false),
         // nothing else is permitted in cfg
         _ => unreachable!(),
     }

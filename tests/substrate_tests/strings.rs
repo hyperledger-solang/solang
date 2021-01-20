@@ -474,10 +474,40 @@ fn bytes_storage() {
                 bytes1 x = bar.push();
                 assert(bar.length == 1);
             }
+
+            function push(byte x) public {
+                bar.push(x);
+            }
+
+            function pop() public returns (byte) {
+                return bar.pop();
+            }
+
+            function get_bar() public returns (bytes) {
+                return bar;
+            }
         }"##,
     );
 
     runtime.function("push_test", Vec::new());
+
+    runtime.function("get_bar", Vec::new());
+
+    assert_eq!(runtime.vm.output, vec!(0u8).encode());
+
+    runtime.function("push", 0xe8u8.encode());
+
+    runtime.function("get_bar", Vec::new());
+
+    assert_eq!(runtime.vm.output, vec!(0u8, 0xe8u8).encode());
+
+    runtime.function("pop", Vec::new());
+
+    assert_eq!(runtime.vm.output, 0xe8u8.encode());
+
+    runtime.function("get_bar", Vec::new());
+
+    assert_eq!(runtime.vm.output, vec!(0u8).encode());
 }
 
 #[test]

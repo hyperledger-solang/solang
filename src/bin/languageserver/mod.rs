@@ -590,13 +590,6 @@ impl SolangServer {
                 SolangServer::construct_expr(expr1, lookup_tbl, symtab, fnc_map, ns);
                 SolangServer::construct_expr(expr2, lookup_tbl, symtab, fnc_map, ns);
             }
-            Expression::StorageBytesPush(_locs, expr1, expr2) => {
-                SolangServer::construct_expr(expr1, lookup_tbl, symtab, fnc_map, ns);
-                SolangServer::construct_expr(expr2, lookup_tbl, symtab, fnc_map, ns);
-            }
-            Expression::StorageBytesPop(_locs, expr1) => {
-                SolangServer::construct_expr(expr1, lookup_tbl, symtab, fnc_map, ns);
-            }
             Expression::StorageBytesLength(_locs, expr1) => {
                 SolangServer::construct_expr(expr1, lookup_tbl, symtab, fnc_map, ns);
             }

@@ -272,23 +272,34 @@ pub fn bytes_push(
     ns: &Namespace,
     vartab: &mut Vartable,
 ) -> Expression {
-    let var_expr = expression(&args[0], cfg, contract_no, ns, vartab);
+    let ty = Type::Bytes(1);
+    let res = vartab.temp_anonymous(&ty);
 
-    if args.len() > 1 {
-        let val = expression(&args[1], cfg, contract_no, ns, vartab);
+    let storage = expression(&args[0], cfg, contract_no, ns, vartab);
 
-        Expression::StorageBytesPush(*loc, Box::new(var_expr), Box::new(val))
+    let expr = if args.len() > 1 {
+        expression(&args[1], cfg, contract_no, ns, vartab)
     } else {
-        Expression::StorageBytesPush(
-            *loc,
-            Box::new(var_expr),
-            Box::new(Expression::NumberLiteral(
-                *loc,
-                Type::Bytes(1),
-                BigInt::zero(),
-            )),
-        )
-    }
+        Expression::NumberLiteral(*loc, ty.clone(), BigInt::zero())
+    };
+
+    cfg.add(
+        vartab,
+        Instr::Set {
+            loc: *loc,
+            res,
+            expr,
+        },
+    );
+    cfg.add(
+        vartab,
+        Instr::PushStorageBytes {
+            storage,
+            value: Expression::Variable(*loc, ty.clone(), res),
+        },
+    );
+
+    Expression::Variable(*loc, ty, res)
 }
 
 /// Pop() method on dynamic bytes in storage
@@ -300,7 +311,11 @@ pub fn bytes_pop(
     ns: &Namespace,
     vartab: &mut Vartable,
 ) -> Expression {
-    let var_expr = expression(&args[0], cfg, contract_no, ns, vartab);
+    let storage = expression(&args[0], cfg, contract_no, ns, vartab);
 
-    Expression::StorageBytesPop(*loc, Box::new(var_expr))
+    let res = vartab.temp_anonymous(&Type::Bytes(1));
+
+    cfg.add(vartab, Instr::PopStorageBytes { res, storage });
+
+    Expression::Variable(*loc, Type::Bytes(1), res)
 }
