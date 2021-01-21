@@ -781,7 +781,17 @@ impl Type {
             ),
             Type::Ref(r) => r.to_string(ns),
             Type::StorageRef(r) => r.to_string(ns),
-            Type::Struct(_) => "tuple".to_owned(),
+            Type::Struct(struct_no) => {
+                format!(
+                    "({})",
+                    ns.structs[*struct_no]
+                        .fields
+                        .iter()
+                        .map(|f| f.ty.to_signature_string(ns))
+                        .collect::<Vec<String>>()
+                        .join(",")
+                )
+            }
             Type::InternalFunction { .. } | Type::ExternalFunction { .. } => "function".to_owned(),
             _ => unreachable!(),
         }
