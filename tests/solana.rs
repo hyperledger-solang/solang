@@ -258,12 +258,6 @@ impl VM {
         let output = accounts.remove(0);
         let data = accounts.remove(0);
 
-        println!(
-            "output: {} \ndata: {}",
-            hex::encode(&output),
-            hex::encode(&data)
-        );
-
         let len = LittleEndian::read_u64(&output);
         self.output = output[8..len as usize + 8].to_vec();
         self.data = data;
@@ -291,9 +285,13 @@ impl VM {
             Err(x) => panic!(format!("{}", x)),
         };
 
+        println!("input: {}", hex::encode(&calldata));
+
         let mut buf = String::new();
         self.execute(&mut buf, &calldata);
         self.printbuf = buf;
+
+        println!("output: {}", hex::encode(&self.output));
 
         self.abi.functions[name][0]
             .decode_output(&self.output)

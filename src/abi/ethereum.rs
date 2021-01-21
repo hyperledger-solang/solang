@@ -59,9 +59,15 @@ pub fn gen_abi(contract_no: usize, ns: &Namespace) -> Vec<ABI> {
             Vec::new()
         };
 
+        let ty = if let Type::Struct(_) = param.ty {
+            String::from("tuple")
+        } else {
+            param.ty.to_signature_string(ns)
+        };
+
         ABIParam {
             name: param.name.to_string(),
-            ty: param.ty.to_signature_string(ns),
+            ty,
             internal_ty: param.ty.to_string(ns),
             components,
             indexed: param.indexed,

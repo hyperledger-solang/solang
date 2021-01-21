@@ -790,7 +790,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         contract: &Contract<'a>,
         ty: &ast::Type,
         slot: &mut IntValue<'a>,
-        _function: FunctionValue,
+        function: FunctionValue,
     ) -> BasicValueEnum<'a> {
         // contract storage is in 2nd account
         let account = unsafe {
@@ -862,6 +862,59 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                 .try_as_basic_value()
                 .left()
                 .unwrap()
+        } else if let ast::Type::Struct(struct_no) = ty {
+            let llvm_ty = contract.llvm_type(ty.deref_any());
+            // LLVMSizeOf() produces an i64
+            let size = contract.builder.build_int_truncate(
+                llvm_ty.size_of().unwrap(),
+                contract.context.i32_type(),
+                "size_of",
+            );
+
+            let new = contract
+                .builder
+                .build_call(
+                    contract.module.get_function("__malloc").unwrap(),
+                    &[size.into()],
+                    "",
+                )
+                .try_as_basic_value()
+                .left()
+                .unwrap()
+                .into_pointer_value();
+
+            let dest = contract.builder.build_pointer_cast(
+                new,
+                llvm_ty.ptr_type(AddressSpace::Generic),
+                "dest",
+            );
+
+            for (i, field) in contract.ns.structs[*struct_no].fields.iter().enumerate() {
+                let field_offset = contract.ns.structs[*struct_no].offsets[i].to_u64().unwrap();
+
+                let mut offset = contract.builder.build_int_add(
+                    *slot,
+                    contract.context.i32_type().const_int(field_offset, false),
+                    "field_offset",
+                );
+
+                let val = self.storage_load(contract, &field.ty, &mut offset, function);
+
+                let elem = unsafe {
+                    contract.builder.build_gep(
+                        dest,
+                        &[
+                            contract.context.i32_type().const_zero(),
+                            contract.context.i32_type().const_int(i as u64, false),
+                        ],
+                        &field.name,
+                    )
+                };
+
+                contract.builder.build_store(elem, val);
+            }
+
+            dest.into()
         } else {
             contract.builder.build_load(
                 contract.builder.build_pointer_cast(
@@ -1004,6 +1057,35 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                 ],
                 "copied",
             );
+        } else if let ast::Type::Struct(struct_no) = ty {
+            for (i, field) in contract.ns.structs[*struct_no].fields.iter().enumerate() {
+                let field_offset = contract.ns.structs[*struct_no].offsets[i].to_u64().unwrap();
+
+                let mut offset = contract.builder.build_int_add(
+                    *slot,
+                    contract.context.i32_type().const_int(field_offset, false),
+                    "field_offset",
+                );
+
+                let elem = unsafe {
+                    contract.builder.build_gep(
+                        val.into_pointer_value(),
+                        &[
+                            contract.context.i32_type().const_zero(),
+                            contract.context.i32_type().const_int(i as u64, false),
+                        ],
+                        &field.name,
+                    )
+                };
+
+                self.storage_store(
+                    contract,
+                    &field.ty,
+                    &mut offset,
+                    contract.builder.build_load(elem, &field.name),
+                    function,
+                );
+            }
         } else {
             contract.builder.build_store(
                 contract.builder.build_pointer_cast(
