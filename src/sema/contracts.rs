@@ -293,7 +293,11 @@ fn layout_contract(contract_no: usize, ns: &mut ast::Namespace) {
     let mut syms: HashMap<String, ast::Symbol> = HashMap::new();
     let mut override_needed: HashMap<String, Vec<(usize, usize)>> = HashMap::new();
 
-    let mut slot = BigInt::zero();
+    let mut slot = if ns.target == Target::Solana {
+        BigInt::from(8)
+    } else {
+        BigInt::zero()
+    };
 
     for base_contract_no in visit_bases(contract_no, ns) {
         // find file number where contract is defined
@@ -333,6 +337,17 @@ fn layout_contract(contract_no: usize, ns: &mut ast::Namespace) {
         for var_no in 0..ns.contracts[base_contract_no].variables.len() {
             if !ns.contracts[base_contract_no].variables[var_no].constant {
                 let ty = ns.contracts[base_contract_no].variables[var_no].ty.clone();
+
+                if ns.target == Target::Solana {
+                    // elements need to be aligned on solana
+                    let alignment = ty.align_of(ns);
+
+                    let offset = slot.clone() % alignment;
+
+                    if offset > BigInt::zero() {
+                        slot += alignment - offset;
+                    }
+                }
 
                 ns.contracts[contract_no].layout.push(ast::Layout {
                     slot: slot.clone(),
@@ -608,11 +623,7 @@ fn layout_contract(contract_no: usize, ns: &mut ast::Namespace) {
         }
     }
 
-    if ns.target == Target::Solana {
-        align_solana_contract_storage(contract_no, ns);
-    } else {
-        ns.contracts[contract_no].fixed_layout_size = slot;
-    }
+    ns.contracts[contract_no].fixed_layout_size = slot;
 
     for list in override_needed.values() {
         let func = &ns.functions[list[0].1];
@@ -968,23 +979,4 @@ fn check_base_args(contract_no: usize, ns: &mut ast::Namespace) {
     }
 
     ns.diagnostics.extend(diagnostics.into_iter());
-}
-
-/// Align all the primitives in fixed contract storage
-fn align_solana_contract_storage(contract_no: usize, ns: &mut ast::Namespace) {
-    let mut ordering: Vec<usize> = (0..ns.contracts[contract_no].layout.len()).collect();
-    let layout = &ns.contracts[contract_no].layout;
-
-    ordering.sort_by(|l, r| layout[*r].ty.size_of(ns).cmp(&layout[*l].ty.size_of(ns)));
-
-    // The first 8 bytes of contract storage is magic value and offset to the heap
-    let mut slot = BigInt::from(8);
-
-    for i in ordering.into_iter() {
-        ns.contracts[contract_no].layout[i].slot = slot.clone();
-
-        slot += ns.contracts[contract_no].layout[i].ty.size_of(ns);
-    }
-
-    ns.contracts[contract_no].fixed_layout_size = slot;
 }

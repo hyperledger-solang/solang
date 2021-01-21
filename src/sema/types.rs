@@ -1,11 +1,12 @@
 use super::ast::{
     Contract, Diagnostic, EnumDecl, EventDecl, Namespace, Parameter, StructDecl, Symbol, Tag, Type,
 };
+use super::diagnostics::any_errors;
 use super::tags::resolve_tags;
 use crate::parser::pt;
 use crate::Target;
 use num_bigint::BigInt;
-use num_traits::One;
+use num_traits::{One, Zero};
 use std::collections::HashMap;
 use std::ops::Mul;
 
@@ -51,6 +52,7 @@ pub fn resolve_typenames<'a>(
                         loc: def.name.loc,
                         contract: None,
                         fields: Vec::new(),
+                        offsets: Vec::new(),
                     };
 
                     delay.structs.push((s, def, None));
@@ -131,6 +133,11 @@ pub fn resolve_fields(delay: ResolveFields, file_no: usize, ns: &mut Namespace) 
         };
 
         check(s, file_no, &mut vec![s], ns);
+    }
+
+    // Do not attempt to call struct offsets if there are any infinitely recursive structs
+    if !any_errors(&ns.diagnostics) {
+        struct_offsets(ns);
     }
 
     // now we can resolve the fields for the events
@@ -242,6 +249,7 @@ fn resolve_contract<'a>(
                         loc: s.name.loc,
                         contract: Some(def.name.name.to_owned()),
                         fields: Vec::new(),
+                        offsets: Vec::new(),
                     };
 
                     delay.structs.push((decl, s, Some(contract_no)));
@@ -564,6 +572,54 @@ fn enum_decl(
     valid
 }
 
+/// Calculate the offsets for the fields in structs, and also the size of a struct overall.
+///
+/// Structs can be recursive, and we may not know the size of a field if the field is a struct
+/// and we have not calculated yet. In this case we will get size 0. So, loop over all the structs
+/// until all the offsets are unchanged.
+fn struct_offsets(ns: &mut Namespace) {
+    let mut changes;
+
+    while {
+        changes = false;
+        for struct_no in 0..ns.structs.len() {
+            let mut offsets = Vec::new();
+            let mut offset = BigInt::zero();
+            let mut largest_alignment = 0;
+
+            for field in &ns.structs[struct_no].fields {
+                let alignment = field.ty.align_of(ns);
+                largest_alignment = std::cmp::max(alignment, largest_alignment);
+                let remainder = offset.clone() % alignment;
+
+                if remainder > BigInt::zero() {
+                    offset += alignment - remainder;
+                }
+
+                offsets.push(offset.clone());
+
+                offset += field.ty.size_of(ns);
+            }
+
+            // add entry for overall size
+            let remainder = offset.clone() % largest_alignment;
+
+            if remainder > BigInt::zero() {
+                offset += largest_alignment - remainder;
+            }
+
+            offsets.push(offset.clone());
+
+            if ns.structs[struct_no].offsets != offsets {
+                ns.structs[struct_no].offsets = offsets;
+                changes = true;
+            }
+        }
+
+        changes
+    } {}
+}
+
 #[test]
 fn enum_256values_is_uint8() {
     let mut e = pt::EnumDefinition {
@@ -802,14 +858,37 @@ impl Type {
                         .product::<BigInt>(),
                 )
             }
-            Type::Struct(n) => ns.structs[*n].fields.iter().map(|f| f.ty.size_of(ns)).sum(),
+            Type::Struct(n) => ns.structs[*n]
+                .offsets
+                .last()
+                .cloned()
+                .unwrap_or_else(BigInt::zero),
             Type::String | Type::DynamicBytes => BigInt::from(4),
             Type::InternalFunction { .. } => BigInt::from(ns.target.ptr_size()),
             Type::ExternalFunction { .. } => {
                 // Address and selector
                 Type::Address(false).size_of(ns) + Type::Uint(32).size_of(ns)
             }
+            Type::Mapping(_, _) => BigInt::zero(),
             _ => unimplemented!(),
+        }
+    }
+
+    /// Calculate the alignment
+    pub fn align_of(&self, ns: &Namespace) -> usize {
+        match self {
+            Type::Uint(8) | Type::Int(8) => 1,
+            Type::Uint(n) | Type::Int(n) if *n <= 16 => 2,
+            Type::Uint(n) | Type::Int(n) if *n <= 32 => 4,
+            Type::Uint(_) | Type::Int(_) => 8,
+            Type::Struct(n) => ns.structs[*n]
+                .fields
+                .iter()
+                .map(|f| f.ty.align_of(ns))
+                .max()
+                .unwrap(),
+            Type::InternalFunction { .. } => ns.target.ptr_size(),
+            _ => 1,
         }
     }
 

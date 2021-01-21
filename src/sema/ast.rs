@@ -49,6 +49,8 @@ pub struct StructDecl {
     pub loc: pt::Loc,
     pub contract: Option<String>,
     pub fields: Vec<Parameter>,
+    // List of offsets of the fields, last entry is the offset for the struct overall size
+    pub offsets: Vec<BigInt>,
 }
 
 #[derive(PartialEq, Clone, Debug)]
