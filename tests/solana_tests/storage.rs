@@ -260,8 +260,8 @@ fn storage_alignment() {
         r#"
         contract c {
             bool f1 = true;
-            uint8 f2 = 2;
-            uint16 f3 = 0x304;
+            uint16 f3 = 0x203;
+            uint8 f2 = 4;
             uint32 f4 = 0x5060708;
             uint64 f5 = 0x90a0b0c0d0e0f10;
         }"#,
@@ -270,8 +270,11 @@ fn storage_alignment() {
     vm.constructor(&[]);
 
     assert_eq!(
-        vm.data[0..24].to_vec(),
-        vec![11, 66, 182, 57, 24, 0, 0, 0, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 1, 2,]
+        vm.data[0..32].to_vec(),
+        vec![
+            11, 66, 182, 57, 32, 0, 0, 0, 1, 0, 3, 2, 4, 0, 0, 0, 8, 7, 6, 5, 0, 0, 0, 0, 16, 15,
+            14, 13, 12, 11, 10, 9
+        ]
     );
 }
 
