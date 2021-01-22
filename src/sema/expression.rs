@@ -3365,35 +3365,28 @@ fn member_access(
         }
         Type::StorageRef(r) => match *r {
             Type::Struct(n) => {
-                let mut slot = BigInt::zero();
-
-                for (i, field) in ns.structs[n].fields.iter().enumerate() {
-                    if id.name == field.name {
-                        let slot = if ns.target == Target::Solana {
-                            ns.structs[n].offsets[i].clone()
-                        } else {
-                            slot
-                        };
-
-                        return Ok(Expression::Add(
-                            *loc,
-                            Type::StorageRef(Box::new(field.ty.clone())),
-                            Box::new(expr),
-                            Box::new(Expression::NumberLiteral(*loc, ns.storage_type(), slot)),
-                        ));
-                    }
-
-                    slot += field.ty.storage_slots(ns);
+                return if let Some((field_no, field)) = ns.structs[n]
+                    .fields
+                    .iter()
+                    .enumerate()
+                    .find(|(_, field)| id.name == field.name)
+                {
+                    Ok(Expression::StructMember(
+                        *loc,
+                        Type::StorageRef(Box::new(field.ty.clone())),
+                        Box::new(expr),
+                        field_no,
+                    ))
+                } else {
+                    ns.diagnostics.push(Diagnostic::error(
+                        id.loc,
+                        format!(
+                            "struct ‘{}’ does not have a field called ‘{}’",
+                            ns.structs[n].name, id.name
+                        ),
+                    ));
+                    Err(())
                 }
-
-                ns.diagnostics.push(Diagnostic::error(
-                    id.loc,
-                    format!(
-                        "struct ‘{}’ does not have a field called ‘{}’",
-                        ns.structs[n].name, id.name
-                    ),
-                ));
-                return Err(());
             }
             Type::Bytes(n) => {
                 if id.name == "length" {
