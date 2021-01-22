@@ -426,6 +426,27 @@ pub fn expression(
         Expression::ArraySubscript(loc, ty, array, index) => {
             array_subscript(loc, ty, array, index, cfg, contract_no, ns, vartab)
         }
+        Expression::StructMember(loc, ty, var, field_no) if ty.is_contract_storage() => {
+            if let Type::Struct(struct_no) = var.ty().deref_any() {
+                let offset = if ns.target == Target::Solana {
+                    ns.structs[*struct_no].offsets[*field_no].clone()
+                } else {
+                    ns.structs[*struct_no].fields[..*field_no]
+                        .iter()
+                        .map(|field| field.ty.storage_slots(ns))
+                        .sum()
+                };
+
+                Expression::Add(
+                    *loc,
+                    ty.clone(),
+                    Box::new(expression(var, cfg, contract_no, ns, vartab)),
+                    Box::new(Expression::NumberLiteral(*loc, ns.storage_type(), offset)),
+                )
+            } else {
+                unreachable!();
+            }
+        }
         Expression::StructMember(loc, ty, var, member) => Expression::StructMember(
             *loc,
             ty.clone(),

@@ -239,7 +239,7 @@ fn print_expr(e: &Expression, func: Option<&Function>, ns: &Namespace) -> Tree {
             ],
         ),
         Expression::StructMember(_, ty, struct_expr, member) => {
-            if let Type::Struct(struct_no) = struct_expr.ty() {
+            if let Type::Struct(struct_no) = struct_expr.ty().deref_any() {
                 Tree::Branch(
                     format!("struct member {}", ty.to_string(ns)),
                     vec![
@@ -248,9 +248,9 @@ fn print_expr(e: &Expression, func: Option<&Function>, ns: &Namespace) -> Tree {
                             vec![print_expr(struct_expr, func, ns)],
                         ),
                         Tree::Branch(
-                            String::from("member"),
+                            String::from("field"),
                             vec![Tree::Leaf(
-                                ns.structs[struct_no].fields[*member].name.to_owned(),
+                                ns.structs[*struct_no].fields[*member].name.to_owned(),
                             )],
                         ),
                     ],
