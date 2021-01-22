@@ -3367,8 +3367,14 @@ fn member_access(
             Type::Struct(n) => {
                 let mut slot = BigInt::zero();
 
-                for field in &ns.structs[n].fields {
+                for (i, field) in ns.structs[n].fields.iter().enumerate() {
                     if id.name == field.name {
+                        let slot = if ns.target == Target::Solana {
+                            ns.structs[n].offsets[i].clone()
+                        } else {
+                            slot
+                        };
+
                         return Ok(Expression::Add(
                             *loc,
                             Type::StorageRef(Box::new(field.ty.clone())),

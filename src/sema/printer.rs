@@ -241,7 +241,7 @@ fn print_expr(e: &Expression, func: Option<&Function>, ns: &Namespace) -> Tree {
         Expression::StructMember(_, ty, struct_expr, member) => {
             if let Type::Struct(struct_no) = struct_expr.ty() {
                 Tree::Branch(
-                    format!("array subscript {}", ty.to_string(ns)),
+                    format!("struct member {}", ty.to_string(ns)),
                     vec![
                         Tree::Branch(
                             String::from("struct"),
