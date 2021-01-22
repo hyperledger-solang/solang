@@ -231,28 +231,101 @@ impl EthAbiEncoder {
                     arg
                 };
 
-                for (i, field) in contract.ns.structs[*n].fields.iter().enumerate() {
-                    let elem = unsafe {
+                let has_dynamic_fields = ty.is_dynamic(contract.ns);
+
+                if has_dynamic_fields {
+                    // write the current offset to fixed
+                    self.encode_primitive(
+                        contract,
+                        false,
+                        function,
+                        &ast::Type::Uint(32),
+                        *fixed,
+                        (*offset).into(),
+                    );
+
+                    *fixed = unsafe {
                         contract.builder.build_gep(
-                            arg.into_pointer_value(),
-                            &[
-                                contract.context.i32_type().const_zero(),
-                                contract.context.i32_type().const_int(i as u64, false),
-                            ],
-                            &field.name,
+                            *fixed,
+                            &[contract.context.i32_type().const_int(32, false)],
+                            "",
                         )
                     };
 
-                    self.encode_ty(
-                        contract,
-                        true,
-                        function,
-                        &field.ty,
-                        elem.into(),
-                        fixed,
-                        offset,
-                        dynamic,
-                    );
+                    let mut struct_fields_dynamic = *dynamic;
+
+                    // add size of fixed fields to dynamic
+                    let fixed_field_length = contract.ns.structs[*n]
+                        .fields
+                        .iter()
+                        .map(|f| EthAbiEncoder::encoded_fixed_length(&f.ty, contract.ns))
+                        .sum();
+
+                    *dynamic = unsafe {
+                        contract.builder.build_gep(
+                            *dynamic,
+                            &[contract
+                                .context
+                                .i32_type()
+                                .const_int(fixed_field_length, false)],
+                            "",
+                        )
+                    };
+
+                    let mut temp_offset = contract
+                        .context
+                        .i32_type()
+                        .const_int(fixed_field_length, false);
+
+                    for (i, field) in contract.ns.structs[*n].fields.iter().enumerate() {
+                        let elem = unsafe {
+                            contract.builder.build_gep(
+                                arg.into_pointer_value(),
+                                &[
+                                    contract.context.i32_type().const_zero(),
+                                    contract.context.i32_type().const_int(i as u64, false),
+                                ],
+                                &field.name,
+                            )
+                        };
+
+                        self.encode_ty(
+                            contract,
+                            true,
+                            function,
+                            &field.ty,
+                            elem.into(),
+                            &mut struct_fields_dynamic,
+                            &mut temp_offset,
+                            dynamic,
+                        );
+                    }
+
+                    *offset = contract.builder.build_int_add(*offset, temp_offset, "");
+                } else {
+                    for (i, field) in contract.ns.structs[*n].fields.iter().enumerate() {
+                        let elem = unsafe {
+                            contract.builder.build_gep(
+                                arg.into_pointer_value(),
+                                &[
+                                    contract.context.i32_type().const_zero(),
+                                    contract.context.i32_type().const_int(i as u64, false),
+                                ],
+                                &field.name,
+                            )
+                        };
+
+                        self.encode_ty(
+                            contract,
+                            true,
+                            function,
+                            &field.ty,
+                            elem.into(),
+                            fixed,
+                            offset,
+                            dynamic,
+                        );
+                    }
                 }
             }
             ast::Type::Ref(ty) => {
@@ -300,7 +373,7 @@ impl EthAbiEncoder {
                     .build_load(len, "array.len")
                     .into_int_value();
 
-                // write the current offset to fixed
+                // write the length to dynamic
                 self.encode_primitive(
                     contract,
                     false,
@@ -796,9 +869,23 @@ impl EthAbiEncoder {
                     arg
                 };
 
+                let has_dynamic_fields = ty.is_dynamic(contract.ns);
+
                 let mut sum = contract.context.i32_type().const_zero();
 
                 for (i, field) in contract.ns.structs[*n].fields.iter().enumerate() {
+                    // a struct with dynamic fields gets stored in the dynamic part
+                    if has_dynamic_fields {
+                        sum = contract.builder.build_int_add(
+                            sum,
+                            contract.context.i32_type().const_int(
+                                EthAbiEncoder::encoded_fixed_length(&field.ty, contract.ns),
+                                false,
+                            ),
+                            "",
+                        );
+                    }
+
                     let elem = unsafe {
                         contract.builder.build_gep(
                             arg.into_pointer_value(),
@@ -984,7 +1071,11 @@ impl EthAbiEncoder {
             | ast::Type::Bytes(_)
             | ast::Type::ExternalFunction { .. } => 32,
             // String and Dynamic bytes use 32 bytes for the offset into dynamic encoded
-            ast::Type::String | ast::Type::DynamicBytes => 32,
+            ast::Type::String | ast::Type::DynamicBytes | ast::Type::Struct(_)
+                if ty.is_dynamic(ns) =>
+            {
+                32
+            }
             ast::Type::Enum(_) => 32,
             ast::Type::Struct(n) => ns.structs[*n]
                 .fields
@@ -1300,6 +1391,7 @@ impl EthAbiEncoder {
         ty: &ast::Type,
         to: Option<PointerValue<'b>>,
         offset: &mut IntValue<'b>,
+        base_offset: IntValue<'b>,
         data: PointerValue<'b>,
         length: IntValue,
     ) -> BasicValueEnum<'b> {
@@ -1356,6 +1448,7 @@ impl EthAbiEncoder {
                                 &ty,
                                 Some(elem),
                                 offset,
+                                base_offset,
                                 data,
                                 length,
                             );
@@ -1455,6 +1548,7 @@ impl EthAbiEncoder {
                                 &ty,
                                 Some(elem),
                                 offset,
+                                base_offset,
                                 data,
                                 length,
                             );
@@ -1494,6 +1588,39 @@ impl EthAbiEncoder {
                     &contract.ns.structs[*n].name,
                 );
 
+                // if the struct has dynamic fields, read offset from dynamic section and
+                // read fields from there
+                let mut dataoffset = if ty.is_dynamic(contract.ns) {
+                    let dataoffset = contract.builder.build_int_z_extend(
+                        self.decode_primitive(
+                            contract,
+                            function,
+                            &ast::Type::Uint(32),
+                            None,
+                            offset,
+                            data,
+                            length,
+                        )
+                        .into_int_value(),
+                        contract.context.i64_type(),
+                        "rel_struct_offset",
+                    );
+
+                    contract
+                        .builder
+                        .build_int_add(dataoffset, base_offset, "abs_struct_offset")
+                } else {
+                    *offset
+                };
+
+                // In dynamic struct sections, the offsets are relative to the start of the section.
+                // Ethereum ABI encoding is just insane.
+                let base_offset = if ty.is_dynamic(contract.ns) {
+                    dataoffset
+                } else {
+                    base_offset
+                };
+
                 for (i, field) in contract.ns.structs[*n].fields.iter().enumerate() {
                     let elem = unsafe {
                         contract.builder.build_gep(
@@ -1511,10 +1638,16 @@ impl EthAbiEncoder {
                         function,
                         &field.ty,
                         Some(elem),
-                        offset,
+                        &mut dataoffset,
+                        base_offset,
                         data,
                         length,
                     );
+                }
+
+                // if the struct is not dynamic, we have read the fields from fixed section so update
+                if !ty.is_dynamic(contract.ns) {
+                    *offset = dataoffset;
                 }
 
                 if let Some(to) = to {
@@ -1523,7 +1656,16 @@ impl EthAbiEncoder {
 
                 struct_pointer.into()
             }
-            ast::Type::Ref(ty) => self.decode_ty(contract, function, ty, to, offset, data, length),
+            ast::Type::Ref(ty) => self.decode_ty(
+                contract,
+                function,
+                ty,
+                to,
+                offset,
+                base_offset,
+                data,
+                length,
+            ),
             ast::Type::String | ast::Type::DynamicBytes => {
                 // we read the offset and the length as 32 bits. Since we are in 32 bits wasm,
                 // we cannot deal with more than 4GB of abi encoded data.
@@ -1541,6 +1683,10 @@ impl EthAbiEncoder {
                     contract.context.i64_type(),
                     "data_offset",
                 );
+
+                dataoffset = contract
+                    .builder
+                    .build_int_add(dataoffset, base_offset, "data_offset");
 
                 let string_len = contract.builder.build_int_z_extend(
                     self.decode_primitive(
@@ -1674,6 +1820,7 @@ impl EthAbiEncoder {
                 &arg.ty,
                 None,
                 &mut offset,
+                contract.context.i64_type().const_zero(),
                 data,
                 data_length,
             ));

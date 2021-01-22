@@ -484,5 +484,203 @@ fn struct_in_struct() {
     );
 }
 
-// string in struct
+#[test]
+fn string_in_struct() {
+    let mut vm = build_solidity(
+        r#"
+            contract c {
+                struct s {
+                    uint8 f1;
+                    string f2;
+                    uint64 f3;
+                }
+
+                uint32 s2 = 0xdead;
+                s s1;
+
+                function get_s1() public returns (s) {
+                    return s1;
+                }
+
+                function set_s1(s v) public {
+                    s1 = v;
+                }
+
+                function set_s2() public {
+                    s1 = s({f1: 254, f2: "foobar", f3: 1234567890});
+                }
+            }"#,
+    );
+
+    vm.constructor(&[]);
+
+    vm.function("set_s2", &[]);
+
+    assert_eq!(
+        vm.data[0..56].to_vec(),
+        vec![
+            11, 66, 182, 57, 32, 0, 0, 0, 173, 222, 0, 0, 0, 0, 0, 0, 254, 48, 0, 0, 0, 0, 0, 0,
+            210, 2, 150, 73, 0, 0, 0, 0, 56, 0, 0, 0, 0, 0, 0, 0, 6, 0, 0, 0, 1, 0, 0, 0, 102, 111,
+            111, 98, 97, 114, 0, 0
+        ]
+    );
+
+    let returns = vm.function("get_s1", &[]);
+
+    assert_eq!(
+        returns,
+        vec![Token::Tuple(vec![
+            Token::Uint(ethereum_types::U256::from(254)),
+            Token::String(String::from("foobar")),
+            Token::Uint(ethereum_types::U256::from(1234567890))
+        ])]
+    );
+
+    vm.function(
+        "set_s1",
+        &[Token::Tuple(vec![
+            Token::Uint(ethereum_types::U256::from(127)),
+            Token::String(String::from("foobar foobar foobar foobar foobar foobar")),
+            Token::Uint(ethereum_types::U256::from(12345678901234567890u64)),
+        ])],
+    );
+
+    let returns = vm.function("get_s1", &[]);
+
+    assert_eq!(
+        returns,
+        vec![Token::Tuple(vec![
+            Token::Uint(ethereum_types::U256::from(127)),
+            Token::String(String::from("foobar foobar foobar foobar foobar foobar")),
+            Token::Uint(ethereum_types::U256::from(12345678901234567890u64)),
+        ])]
+    );
+}
+
+#[test]
+fn complex_struct() {
+    let mut vm = build_solidity(
+        r#"
+        contract c {
+            struct s {
+                uint8 f1;
+                string f2;
+                ss f3;
+                uint64 f4;
+                sss f5;
+                string f6;
+            }
+            struct ss {
+                bool ss1;
+                bytes3 ss2;
+            }
+            struct sss {
+                uint256 sss1;
+                bytes sss2;
+            }
+
+            s s1;
+            uint32 s2 = 0xdead;
+            string s3;
+
+            function get_s1() public returns (s, string) {
+                return (s1, s3);
+            }
+
+            function set_s1(s v, string v2) public {
+                s1 = v;
+                s3 = v2;
+            }
+
+            function set_s2() public {
+                s1.f1 = 254;
+                s1.f2 = "foobar";
+                s1.f3.ss1 = true;
+                s1.f3.ss2 = hex"edaeda";
+                s1.f4 = 1234567890;
+                s1.f5.sss1 = 12123131321312;
+                s1.f5.sss2 = "jasldajldjaldjlads";
+                s1.f6 = "as nervous as a long-tailed cat in a room full of rocking chairs";
+            }
+        }"#,
+    );
+
+    vm.constructor(&[]);
+
+    vm.function("set_s2", &[]);
+
+    let returns = vm.function("get_s1", &[]);
+
+    assert_eq!(
+        returns,
+        vec![
+            Token::Tuple(vec![
+                Token::Uint(ethereum_types::U256::from(254)),
+                Token::String(String::from("foobar")),
+                Token::Tuple(vec!(
+                    Token::Bool(true),
+                    Token::FixedBytes(vec!(0xed, 0xae, 0xda))
+                )),
+                Token::Uint(ethereum_types::U256::from(1234567890)),
+                Token::Tuple(vec!(
+                    Token::Uint(ethereum_types::U256::from(12123131321312u128)),
+                    Token::Bytes(b"jasldajldjaldjlads".to_vec())
+                )),
+                Token::String(String::from(
+                    "as nervous as a long-tailed cat in a room full of rocking chairs"
+                ))
+            ]),
+            Token::String(String::from("")),
+        ]
+    );
+
+    vm.function(
+        "set_s1",
+        &[
+            Token::Tuple(vec![
+                Token::Uint(ethereum_types::U256::from(127)),
+                Token::String(String::from("foobar foobar foobar foobar foobar foobar")),
+                Token::Tuple(vec![
+                    Token::Bool(false),
+                    Token::FixedBytes(vec![0xc3, 0x9a, 0xfd]),
+                ]),
+                Token::Uint(ethereum_types::U256::from(12345678901234567890u64)),
+                Token::Tuple(vec![
+                    Token::Uint(ethereum_types::U256::from(
+                        97560097522392203078545981438598778247u128,
+                    )),
+                    Token::Bytes(b"jasldajldjaldjlads".to_vec()),
+                ]),
+                Token::String(String::from("be as honest as the day is long")),
+            ]),
+            Token::String(String::from("yadayada")),
+        ],
+    );
+
+    let returns = vm.function("get_s1", &[]);
+
+    assert_eq!(
+        returns,
+        vec![
+            Token::Tuple(vec![
+                Token::Uint(ethereum_types::U256::from(127)),
+                Token::String(String::from("foobar foobar foobar foobar foobar foobar")),
+                Token::Tuple(vec![
+                    Token::Bool(false),
+                    Token::FixedBytes(vec![0xc3, 0x9a, 0xfd]),
+                ]),
+                Token::Uint(ethereum_types::U256::from(12345678901234567890u64)),
+                Token::Tuple(vec![
+                    Token::Uint(ethereum_types::U256::from(
+                        97560097522392203078545981438598778247u128,
+                    )),
+                    Token::Bytes(b"jasldajldjaldjlads".to_vec()),
+                ]),
+                Token::String(String::from("be as honest as the day is long")),
+            ]),
+            Token::String(String::from("yadayada")),
+        ]
+    );
+}
+
 // dereference struct storage member (read/write)
