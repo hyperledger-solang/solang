@@ -114,7 +114,7 @@ class TestConnection {
 
         console.log('Program loaded to account', programId.toBase58());
 
-        const returnDataAccount = await this.createStorageAccount(programId, 1024);
+        const returnDataAccount = await this.createStorageAccount(programId, 2048);
         const contractStorageAccount = await this.createStorageAccount(programId, 512);
 
         return new Program(programId, returnDataAccount, contractStorageAccount, abi);
@@ -153,7 +153,7 @@ class Program {
         );
     }
 
-    async call_function(test: TestConnection, name: string, params: string[]): Promise<{ [key: string]: any }> {
+    async call_function(test: TestConnection, name: string, params: any[]): Promise<{ [key: string]: any }> {
         let abi: AbiItem = JSON.parse(this.abi).find((e: AbiItem) => e.name == name);
 
         const input: string = Web3EthAbi.encodeFunctionCall(abi, params);

@@ -244,4 +244,151 @@ describe('Deploy solang contract and test', () => {
 
         }
     });
+
+    it('structs', async function () {
+        this.timeout(50000);
+
+        let conn = await establishConnection();
+
+        let prog = await conn.loadProgram("store.so", "store.abi");
+
+        // call the constructor
+        await prog.call_constructor(conn, []);
+
+        function returns(res: Object) {
+            let arr = Object.values(res);
+            let length = arr.pop()
+            expect(arr.length).toEqual(length);
+            return JSON.stringify(arr);
+        }
+
+        await prog.call_function(conn, "set_foo1", []);
+
+        // get foo1
+        let res = returns(await prog.call_function(conn, "get_both_foos", []));
+
+        // compare without JSON.stringify() results in "Received: serializes to the same string" error.
+        // I have no idea why
+        expect(res).toStrictEqual(JSON.stringify([
+            [
+                "1",
+                "0x446f6e277420636f756e7420796f757220636869636b656e73206265666f72652074686579206861746368",
+                "-102",
+                "0xedaeda",
+                "You can't have your cake and eat it too",
+                [true, "There are other fish in the sea"]
+            ],
+            [
+                "0",
+                "0x",
+                "0",
+                "0x000000",
+                "",
+                [false, ""]
+            ]
+        ]));
+
+        await prog.call_function(conn, "set_foo2", [
+            [
+                "1",
+                "0xb52b073595ccb35eaebb87178227b779",
+                "-123112321",
+                "0x123456",
+                "Barking up the wrong tree",
+                [true, "Drive someone up the wall"]
+            ],
+            "nah"
+        ]);
+
+        res = returns(await prog.call_function(conn, "get_both_foos", []));
+
+        expect(res).toStrictEqual(JSON.stringify([
+            [
+                "1",
+                "0x446f6e277420636f756e7420796f757220636869636b656e73206265666f72652074686579206861746368",
+                "-102",
+                "0xedaeda",
+                "You can't have your cake and eat it too",
+                [true, "There are other fish in the sea"]
+            ],
+            [
+                "1",
+                "0xb52b073595ccb35eaebb87178227b779",
+                "-123112321",
+                "0x123456",
+                "Barking up the wrong tree",
+                [true, "nah"]
+            ]
+        ]));
+
+        await prog.call_function(conn, "delete_foo", [true]);
+
+        res = returns(await prog.call_function(conn, "get_foo", [false]));
+
+        expect(res).toStrictEqual(JSON.stringify([
+            [
+                "1",
+                "0xb52b073595ccb35eaebb87178227b779",
+                "-123112321",
+                "0x123456",
+                "Barking up the wrong tree",
+                [true, "nah"]
+            ],
+        ]));
+
+        res = returns(await prog.call_function(conn, "get_foo", [true]));
+
+        expect(res).toStrictEqual(JSON.stringify([
+            [
+                "0",
+                "0x",
+                "0",
+                "0x000000",
+                "",
+                [false, ""]
+            ],
+        ]));
+
+        await prog.call_function(conn, "delete_foo", [false]);
+
+        res = returns(await prog.call_function(conn, "get_both_foos", []));
+
+        // compare without JSON.stringify() results in "Received: serializes to the same string" error.
+        // I have no idea why
+        expect(res).toStrictEqual(JSON.stringify([
+            [
+                "0",
+                "0x",
+                "0",
+                "0x000000",
+                "",
+                [false, ""]
+            ],
+            [
+                "0",
+                "0x",
+                "0",
+                "0x000000",
+                "",
+                [false, ""]
+            ]
+        ]));
+
+        await prog.call_function(conn, "struct_literal", []);
+
+        res = returns(await prog.call_function(conn, "get_foo", [true]));
+
+        // compare without JSON.stringify() results in "Received: serializes to the same string" error.
+        // I have no idea why
+        expect(res).toStrictEqual(JSON.stringify([
+            [
+                "3",
+                "0x537570657263616c6966726167696c697374696365787069616c69646f63696f7573",
+                "64927",
+                "0xe282ac",
+                "Antidisestablishmentarianism",
+                [true, "Pseudopseudohypoparathyroidism"],
+            ]
+        ]));
+    });
 });
