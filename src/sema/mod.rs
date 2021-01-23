@@ -268,6 +268,11 @@ fn resolve_pragma(name: &pt::Identifier, value: &pt::StringLiteral, ns: &mut ast
             pt::Loc(name.loc.0, name.loc.1, value.loc.2),
             "pragma ‘experimental’ with value ‘ABIEncoderV2’ is ignored".to_string(),
         ));
+    } else if name.name == "abicoder" && value.string == "v2" {
+        ns.diagnostics.push(ast::Diagnostic::debug(
+            pt::Loc(name.loc.0, name.loc.1, value.loc.2),
+            "pragma ‘abicoder’ with value ‘v2’ is ignored".to_string(),
+        ));
     } else {
         ns.diagnostics.push(ast::Diagnostic::warning(
             pt::Loc(name.loc.0, name.loc.1, value.loc.2),

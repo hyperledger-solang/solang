@@ -6019,9 +6019,7 @@ impl<'a> Contract<'a> {
                 .llvm_type(r)
                 .ptr_type(AddressSpace::Generic)
                 .as_basic_type_enum(),
-            ast::Type::StorageRef(_) => {
-                BasicTypeEnum::IntType(self.context.custom_width_int_type(256))
-            }
+            ast::Type::StorageRef(_) => self.llvm_type(&self.ns.storage_type()),
             ast::Type::InternalFunction {
                 params, returns, ..
             } => {
