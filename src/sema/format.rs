@@ -1,5 +1,5 @@
 use super::ast::{Diagnostic, Expression, FormatArg, Namespace, Type};
-use super::expression::expression;
+use super::expression::{expression, try_cast};
 use super::symtable::Symtable;
 use crate::parser::pt;
 
@@ -25,7 +25,9 @@ pub fn string_format(
 
     for arg in args {
         let expr = expression(arg, file_no, contract_no, ns, symtable, false)?;
-        resolved_args.push(expr);
+        let ty = expr.ty();
+
+        resolved_args.push(try_cast(&arg.loc(), expr, ty.deref_any(), true, ns).unwrap());
     }
 
     let mut format_iterator = FormatIterator::new(literals).peekable();
