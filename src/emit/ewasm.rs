@@ -805,7 +805,12 @@ impl EwasmTarget {
 }
 
 impl<'a> TargetRuntime<'a> for EwasmTarget {
-    fn clear_storage(&self, contract: &Contract, _function: FunctionValue, slot: PointerValue) {
+    fn storage_delete_single_slot(
+        &self,
+        contract: &Contract,
+        _function: FunctionValue,
+        slot: PointerValue,
+    ) {
         let value = contract
             .builder
             .build_alloca(contract.context.custom_width_int_type(256), "value");
