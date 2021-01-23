@@ -602,6 +602,10 @@ fn complex_struct() {
                 s1.f5.sss2 = "jasldajldjaldjlads";
                 s1.f6 = "as nervous as a long-tailed cat in a room full of rocking chairs";
             }
+
+            function rm() public {
+                delete s1;
+            }
         }"#,
     );
 
@@ -677,6 +681,28 @@ fn complex_struct() {
                     Token::Bytes(b"jasldajldjaldjlads".to_vec()),
                 ]),
                 Token::String(String::from("be as honest as the day is long")),
+            ]),
+            Token::String(String::from("yadayada")),
+        ]
+    );
+
+    vm.function("rm", &[]);
+
+    let returns = vm.function("get_s1", &[]);
+
+    assert_eq!(
+        returns,
+        vec![
+            Token::Tuple(vec![
+                Token::Uint(ethereum_types::U256::from(0)),
+                Token::String(String::from("")),
+                Token::Tuple(vec![Token::Bool(false), Token::FixedBytes(vec![0, 0, 0]),]),
+                Token::Uint(ethereum_types::U256::from(0)),
+                Token::Tuple(vec![
+                    Token::Uint(ethereum_types::U256::from(0)),
+                    Token::Bytes(Vec::new()),
+                ]),
+                Token::String(String::from("")),
             ]),
             Token::String(String::from("yadayada")),
         ]

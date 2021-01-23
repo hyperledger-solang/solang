@@ -1666,7 +1666,12 @@ impl SubstrateTarget {
 }
 
 impl<'a> TargetRuntime<'a> for SubstrateTarget {
-    fn clear_storage(&self, contract: &Contract, _function: FunctionValue, slot: PointerValue) {
+    fn storage_delete_single_slot(
+        &self,
+        contract: &Contract,
+        _function: FunctionValue,
+        slot: PointerValue,
+    ) {
         contract.builder.build_call(
             contract.module.get_function("seal_clear_storage").unwrap(),
             &[contract

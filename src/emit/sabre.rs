@@ -229,7 +229,12 @@ impl SabreTarget {
 }
 
 impl<'a> TargetRuntime<'a> for SabreTarget {
-    fn clear_storage(&self, contract: &Contract, _function: FunctionValue, slot: PointerValue) {
+    fn storage_delete_single_slot(
+        &self,
+        contract: &Contract,
+        _function: FunctionValue,
+        slot: PointerValue,
+    ) {
         let address = contract
             .builder
             .build_call(

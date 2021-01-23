@@ -105,9 +105,6 @@ pub trait TargetRuntime<'a> {
         tys: &[ast::Type],
     ) -> PointerValue<'b>;
 
-    // Access storage
-    fn clear_storage(&self, contract: &Contract, function: FunctionValue, slot: PointerValue);
-
     fn set_storage(
         &self,
         _contract: &Contract,
@@ -335,11 +332,11 @@ pub trait TargetRuntime<'a> {
         // to store it
         let slot_ptr = contract.builder.build_alloca(slot.get_type(), "slot");
 
-        self.storage_load_slot_ptr(contract, ty, slot, slot_ptr, function)
+        self.storage_load_slot(contract, ty, slot, slot_ptr, function)
     }
 
-    /// Recursively load a type from contract storage
-    fn storage_load_slot_ptr(
+    /// Recursively load a type from contract storage for slot based contract storage
+    fn storage_load_slot(
         &self,
         contract: &Contract<'a>,
         ty: &ast::Type,
@@ -348,9 +345,7 @@ pub trait TargetRuntime<'a> {
         function: FunctionValue,
     ) -> BasicValueEnum<'a> {
         match ty {
-            ast::Type::Ref(ty) => {
-                self.storage_load_slot_ptr(contract, ty, slot, slot_ptr, function)
-            }
+            ast::Type::Ref(ty) => self.storage_load_slot(contract, ty, slot, slot_ptr, function),
             ast::Type::Array(_, dim) => {
                 if let Some(d) = &dim[0] {
                     let llvm_ty = contract.llvm_type(ty.deref_any());
@@ -398,7 +393,7 @@ pub trait TargetRuntime<'a> {
                             };
 
                             let val =
-                                self.storage_load_slot_ptr(contract, &ty, slot, slot_ptr, function);
+                                self.storage_load_slot(contract, &ty, slot, slot_ptr, function);
 
                             contract.builder.build_store(elem, val);
                         },
@@ -410,7 +405,7 @@ pub trait TargetRuntime<'a> {
                     let slot_ty = ast::Type::Uint(256);
 
                     let size = contract.builder.build_int_truncate(
-                        self.storage_load_slot_ptr(contract, &slot_ty, slot, slot_ptr, function)
+                        self.storage_load_slot(contract, &slot_ty, slot, slot_ptr, function)
                             .into_int_value(),
                         contract.context.i32_type(),
                         "size",
@@ -464,7 +459,7 @@ pub trait TargetRuntime<'a> {
                         |elem_no: IntValue<'a>, slot: &mut IntValue<'a>| {
                             let index = contract.builder.build_int_mul(elem_no, elem_size, "");
 
-                            let entry = self.storage_load_slot_ptr(
+                            let entry = self.storage_load_slot(
                                 contract,
                                 &ty.array_elem(),
                                 slot,
@@ -526,8 +521,7 @@ pub trait TargetRuntime<'a> {
                 );
 
                 for (i, field) in contract.ns.structs[*n].fields.iter().enumerate() {
-                    let val =
-                        self.storage_load_slot_ptr(contract, &field.ty, slot, slot_ptr, function);
+                    let val = self.storage_load_slot(contract, &field.ty, slot, slot_ptr, function);
 
                     let elem = unsafe {
                         contract.builder.build_gep(
@@ -621,11 +615,11 @@ pub trait TargetRuntime<'a> {
     ) {
         let slot_ptr = contract.builder.build_alloca(slot.get_type(), "slot");
 
-        self.storage_store_slot_ptr(contract, ty, slot, slot_ptr, dest, function)
+        self.storage_store_slot(contract, ty, slot, slot_ptr, dest, function)
     }
 
-    /// Recursively store a type to contract storage with a buffer for the slot
-    fn storage_store_slot_ptr(
+    /// Recursively store a type to contract storage for slot-based contract storage
+    fn storage_store_slot(
         &self,
         contract: &Contract<'a>,
         ty: &ast::Type,
@@ -660,7 +654,7 @@ pub trait TargetRuntime<'a> {
                                 elem = contract.builder.build_load(elem, "").into_pointer_value();
                             }
 
-                            self.storage_store_slot_ptr(
+                            self.storage_store_slot(
                                 contract,
                                 &ty,
                                 slot,
@@ -710,7 +704,7 @@ pub trait TargetRuntime<'a> {
                     // the previous length of the storage array
                     // we need this to clear any elements
                     let previous_size = contract.builder.build_int_truncate(
-                        self.storage_load_slot_ptr(contract, &slot_ty, slot, slot_ptr, function)
+                        self.storage_load_slot(contract, &slot_ty, slot, slot_ptr, function)
                             .into_int_value(),
                         contract.context.i32_type(),
                         "previous_size",
@@ -778,7 +772,7 @@ pub trait TargetRuntime<'a> {
                                 elem = contract.builder.build_load(elem, "").into_pointer_value();
                             }
 
-                            self.storage_store_slot_ptr(
+                            self.storage_store_slot(
                                 contract,
                                 &ty,
                                 slot,
@@ -805,7 +799,7 @@ pub trait TargetRuntime<'a> {
                         previous_size,
                         &mut elem_slot,
                         |_: IntValue<'a>, slot: &mut IntValue<'a>| {
-                            self.storage_clear(contract, &ty, slot, slot_ptr, function);
+                            self.storage_delete_slot(contract, &ty, slot, slot_ptr, function);
 
                             if !ty.is_reference_type() {
                                 *slot = contract.builder.build_int_add(
@@ -838,7 +832,7 @@ pub trait TargetRuntime<'a> {
                             .into_pointer_value();
                     }
 
-                    self.storage_store_slot_ptr(
+                    self.storage_store_slot(
                         contract,
                         &field.ty,
                         slot,
@@ -906,8 +900,31 @@ pub trait TargetRuntime<'a> {
         }
     }
 
-    /// Recursively clear contract storage
-    fn storage_clear(
+    // Clear a particlar storage slot (slot-based storage chains should implement)
+    fn storage_delete_single_slot(
+        &self,
+        _contract: &Contract,
+        _function: FunctionValue,
+        _slot: PointerValue,
+    ) {
+        unimplemented!();
+    }
+
+    /// Recursively clear contract storage. The default implementation is for slot-based contract storage
+    fn storage_delete(
+        &self,
+        contract: &Contract<'a>,
+        ty: &ast::Type,
+        slot: &mut IntValue<'a>,
+        function: FunctionValue<'a>,
+    ) {
+        let slot_ptr = contract.builder.build_alloca(slot.get_type(), "slot");
+
+        self.storage_delete_slot(contract, ty, slot, slot_ptr, function);
+    }
+
+    /// Recursively clear contract storage for slot-based contract storage
+    fn storage_delete_slot(
         &self,
         contract: &Contract<'a>,
         ty: &ast::Type,
@@ -929,7 +946,7 @@ pub trait TargetRuntime<'a> {
                             .const_int(d.to_u64().unwrap(), false),
                         slot,
                         |_index: IntValue<'a>, slot: &mut IntValue<'a>| {
-                            self.storage_clear(contract, &ty, slot, slot_ptr, function);
+                            self.storage_delete_slot(contract, &ty, slot, slot_ptr, function);
 
                             if !ty.is_reference_type() {
                                 *slot = contract.builder.build_int_add(
@@ -974,7 +991,7 @@ pub trait TargetRuntime<'a> {
                         length,
                         &mut entry_slot,
                         |_index: IntValue<'a>, slot: &mut IntValue<'a>| {
-                            self.storage_clear(contract, &ty, slot, slot_ptr, function);
+                            self.storage_delete_slot(contract, &ty, slot, slot_ptr, function);
 
                             if !ty.is_reference_type() {
                                 *slot = contract.builder.build_int_add(
@@ -987,12 +1004,18 @@ pub trait TargetRuntime<'a> {
                     );
 
                     // clear length itself
-                    self.storage_clear(contract, &ast::Type::Uint(256), slot, slot_ptr, function);
+                    self.storage_delete_slot(
+                        contract,
+                        &ast::Type::Uint(256),
+                        slot,
+                        slot_ptr,
+                        function,
+                    );
                 }
             }
             ast::Type::Struct(n) => {
                 for (_, field) in contract.ns.structs[*n].fields.iter().enumerate() {
-                    self.storage_clear(contract, &field.ty, slot, slot_ptr, function);
+                    self.storage_delete_slot(contract, &field.ty, slot, slot_ptr, function);
 
                     if !field.ty.is_reference_type() {
                         *slot = contract.builder.build_int_add(
@@ -1009,7 +1032,7 @@ pub trait TargetRuntime<'a> {
             _ => {
                 contract.builder.build_store(slot_ptr, *slot);
 
-                self.clear_storage(contract, function, slot_ptr);
+                self.storage_delete_single_slot(contract, function, slot_ptr);
             }
         }
     }
@@ -3114,9 +3137,8 @@ pub trait TargetRuntime<'a> {
                         let mut slot = self
                             .expression(contract, storage, &w.vars, function)
                             .into_int_value();
-                        let slot_ptr = contract.builder.build_alloca(slot.get_type(), "slot");
 
-                        self.storage_clear(contract, ty, &mut slot, slot_ptr, function);
+                        self.storage_delete(contract, ty, &mut slot, function);
                     }
                     Instr::SetStorage { ty, value, storage } => {
                         let value = self.expression(contract, value, &w.vars, function);

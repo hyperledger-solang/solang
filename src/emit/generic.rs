@@ -192,7 +192,12 @@ impl GenericTarget {
 }
 
 impl<'a> TargetRuntime<'a> for GenericTarget {
-    fn clear_storage(&self, contract: &Contract, _function: FunctionValue, slot: PointerValue) {
+    fn storage_delete_single_slot(
+        &self,
+        contract: &Contract,
+        _function: FunctionValue,
+        slot: PointerValue,
+    ) {
         contract.builder.build_call(
             contract
                 .module

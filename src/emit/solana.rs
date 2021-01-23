@@ -297,8 +297,87 @@ impl SolanaTarget {
 }
 
 impl<'a> TargetRuntime<'a> for SolanaTarget {
-    fn clear_storage(&self, _contract: &Contract, _function: FunctionValue, _slot: PointerValue) {
-        unimplemented!();
+    /// Solana does not use slot based-storage so override
+    fn storage_delete(
+        &self,
+        contract: &Contract<'a>,
+        ty: &ast::Type,
+        slot: &mut IntValue<'a>,
+        function: FunctionValue<'a>,
+    ) {
+        // contract storage is in 2nd account
+        let account = unsafe {
+            contract.builder.build_gep(
+                contract.accounts.unwrap(),
+                &[contract.context.i32_type().const_int(1, false)],
+                "account",
+            )
+        };
+
+        // 3rd member of account is data pointer
+        let data = unsafe {
+            contract.builder.build_gep(
+                account,
+                &[
+                    contract.context.i32_type().const_zero(),
+                    contract.context.i32_type().const_int(3, false),
+                ],
+                "data",
+            )
+        };
+
+        let data = contract
+            .builder
+            .build_load(data, "data")
+            .into_pointer_value();
+
+        // the slot is simply the offset after the magic
+        let member = unsafe { contract.builder.build_gep(data, &[*slot], "data") };
+
+        if *ty == ast::Type::String || *ty == ast::Type::DynamicBytes {
+            let offset_ptr = contract.builder.build_pointer_cast(
+                member,
+                contract.context.i32_type().ptr_type(AddressSpace::Generic),
+                "offset_ptr",
+            );
+
+            let offset = contract
+                .builder
+                .build_load(offset_ptr, "offset")
+                .into_int_value();
+
+            contract.builder.build_call(
+                contract.module.get_function("account_data_free").unwrap(),
+                &[account.into(), offset.into()],
+                "",
+            );
+
+            // account_data_alloc will return 0 if the string is length 0
+            let new_offset = contract.context.i32_type().const_zero();
+
+            contract.builder.build_store(offset_ptr, new_offset);
+        } else if let ast::Type::Struct(struct_no) = ty {
+            for (i, field) in contract.ns.structs[*struct_no].fields.iter().enumerate() {
+                let field_offset = contract.ns.structs[*struct_no].offsets[i].to_u64().unwrap();
+
+                let mut offset = contract.builder.build_int_add(
+                    *slot,
+                    contract.context.i32_type().const_int(field_offset, false),
+                    "field_offset",
+                );
+
+                self.storage_delete(contract, &field.ty, &mut offset, function);
+            }
+        } else {
+            let ty = contract.llvm_type(ty);
+
+            contract.builder.build_store(
+                contract
+                    .builder
+                    .build_pointer_cast(member, ty.ptr_type(AddressSpace::Generic), ""),
+                ty.into_int_type().const_zero(),
+            );
+        }
     }
 
     fn set_storage_extfunc(
