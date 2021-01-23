@@ -282,17 +282,25 @@ fn read_expression(expr: &Expression, state: &mut StateCheck) -> bool {
 }
 
 fn write_expression(expr: &Expression, state: &mut StateCheck) -> bool {
-    if let Expression::StorageVariable(loc, _, _, _) = expr {
-        state.write(loc);
-        false
-    } else if let Expression::Variable(loc, ty, _) = expr {
-        if ty.is_contract_storage() {
-            state.write(loc);
-            false
-        } else {
-            true
+    match expr {
+        Expression::StructMember(loc, _, expr, _) | Expression::ArraySubscript(loc, _, expr, _) => {
+            if expr.ty().is_contract_storage() {
+                state.write(loc);
+                return false;
+            }
         }
-    } else {
-        true
+        Expression::Variable(loc, ty, _) => {
+            if ty.is_contract_storage() && !expr.ty().is_contract_storage() {
+                state.write(loc);
+                return false;
+            }
+        }
+        Expression::StorageVariable(loc, _, _, _) => {
+            state.write(loc);
+            return false;
+        }
+        _ => (),
     }
+
+    true
 }
