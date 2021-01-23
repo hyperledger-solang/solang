@@ -51,6 +51,14 @@ impl EthAbiEncoder {
                     *fixed,
                     arg,
                 );
+
+                *fixed = unsafe {
+                    contract.builder.build_gep(
+                        *fixed,
+                        &[contract.context.i32_type().const_int(32, false)],
+                        "",
+                    )
+                };
             }
             ast::Type::Array(_, dim) => {
                 let arg = if load {
