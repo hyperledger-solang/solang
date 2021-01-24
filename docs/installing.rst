@@ -30,7 +30,7 @@ There is a release `v0.1.6` tag and a `latest` tag:
 	docker pull hyperledgerlabs/solang
 
 The Solang binary is stored at ``/usr/bin/solang`` in this image. The `latest` tag
-gets updated each time there is a commit to the master branch of the solang
+gets updated each time there is a commit to the main branch of the solang
 git repository.
 
 Build Solang using Dockerfile
@@ -71,7 +71,7 @@ ________________________
 
 A pre-built version of llvm, specifically configured for Solang, is available at
 `<https://solang.io/download/llvm10.0-linux.tar.gz>`_. This version is built using the
-`dockerfile for building llvm on linux <https://github.com/hyperledger-labs/solang/blob/master/scripts/build-llvm-linux.dockerfile>`_.
+`dockerfile for building llvm on linux <https://github.com/hyperledger-labs/solang/blob/main/scripts/build-llvm-linux.dockerfile>`_.
 After downloading, untar the file in a terminal and add it to your path.
 
 .. code-block:: bash
@@ -84,7 +84,7 @@ __________________________
 
 A pre-built version of llvm, specifically configured for Solang, is available at
 `<https://solang.io/download/llvm10.0-win.zip>`_. This version is built using the
-`dockerfile for building llvm on Windows <https://github.com/hyperledger-labs/solang/blob/master/scripts/build-llvm-windows.dockerfile>`_.
+`dockerfile for building llvm on Windows <https://github.com/hyperledger-labs/solang/blob/main/scripts/build-llvm-windows.dockerfile>`_.
 
 If you want to use the dockerfile yourself rather than download the binaries above, then this
 requires `Docker Desktop <https://www.docker.com/products/docker-desktop>`_ installed, and then switched to

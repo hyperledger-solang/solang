@@ -135,7 +135,7 @@ Using Solang with Substrate
 ---------------------------
 
 Solang builds contracts for Substrate by default. There is an solidity example
-which can be found in the `examples <https://github.com/hyperledger-labs/solang/tree/master/examples>`_
+which can be found in the `examples <https://github.com/hyperledger-labs/solang/tree/main/examples>`_
 directory. Write this to flipper.sol and run:
 
 .. code-block:: bash
@@ -151,7 +151,7 @@ Using solang with Solana
 
 The `Solana <https://www.solana.com/>`_ target is new and is limited right now, not all types are implemented
 and other functionality is incomplete. However, the
-`flipper example <https://github.com/hyperledger-labs/solang/tree/master/examples/flipper.sol>`_
+`flipper example <https://github.com/hyperledger-labs/solang/tree/main/examples/flipper.sol>`_
 can be used.
 
 .. code-block:: bash
@@ -186,7 +186,7 @@ storage account as used in the constructor. If there are any return values for t
 are stored in the first return data account. The first 8 bytes is a 64 bits length, followed by the
 data itself. You can pass this into an ethereum abi decoder to get the expected return values.
 
-There is `an example of this written in node <https://github.com/hyperledger-labs/solang/tree/master/integration/solana>`_.
+There is `an example of this written in node <https://github.com/hyperledger-labs/solang/tree/main/integration/solana>`_.
 
 Using Solang with Sawtooth Sabre
 --------------------------------
