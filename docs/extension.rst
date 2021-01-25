@@ -24,8 +24,8 @@ Using the extension
 
 The extension can be found on the `Visual Studio Marketplace <https://marketplace.visualstudio.com/items?itemName=solang.solang>`_.
 
-First, install the extension and the solang compiler binary. The extension needs
-to know where to find the solang binary to start the language server, and also
+First, install the extension and the Solang compiler binary. The extension needs
+to know where to find the Solang binary to start the language server, and also
 it needs to know what target you wish to compile your solidity code for.
 
 .. image:: extension-config.png
@@ -35,7 +35,7 @@ Development
 
 The code is spread over two parts. The first part the vscode extension client code,
 `written in TypeScript <https://github.com/hyperledger-labs/solang/tree/main/vscode>`_.
-This part deals with syntax highlighting, and calling out to the solang language server when
+This part deals with syntax highlighting, and calling out to the Solang language server when
 needed. The client needs `npm and node installed <https://docs.npmjs.com/downloading-and-installing-node-js-and-npm>`_.
 The client implementation is present in
 `src/client <https://github.com/hyperledger-labs/solang/tree/main/vscode/src/client>`_.
@@ -43,7 +43,7 @@ The extension client code is in
 `src/client/extension.ts <https://github.com/hyperledger-labs/solang/tree/main/vscode/src/client/extension.ts>`_.
 
 Secondly, there is the language server which is written in Rust.
-The solang binary has an option ``--language-server``, which start the
+The Solang binary has an option ``--language-server``, which start the
 `built-in language server <https://github.com/hyperledger-labs/solang/blob/main/src/bin/languageserver/mod.rs>`_.
 
 Once you have node and npm installed, you can build the extension like so:

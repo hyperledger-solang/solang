@@ -30,8 +30,7 @@ There is a release `v0.1.6` tag and a `latest` tag:
 	docker pull hyperledgerlabs/solang
 
 The Solang binary is stored at ``/usr/bin/solang`` in this image. The `latest` tag
-gets updated each time there is a commit to the main branch of the solang
-git repository.
+gets updated each time there is a commit to the main branch of the Solang git repository.
 
 Build Solang using Dockerfile
 -----------------------------
@@ -51,7 +50,7 @@ Then you can build the image using:
 Building Solang from source
 ---------------------------
 
-In order to build solang from source, you will need rust 1.43.0 or higher,
+In order to build Solang from source, you will need rust 1.43.0 or higher,
 and a build of llvm based on our tree. There are a few patches which are not upstream yet
 First, follow the steps below for installing llvm and then proceed from there.
 
@@ -157,7 +156,7 @@ And on Windows, assuming *installdir* was ``C:\Users\User\solang-llvm``:
 Building Solang from crates.io
 ------------------------------
 
-The latest solang release is  on `crates.io <https://crates.io/crates/solang>`_. Once you have the
+The latest Solang release is  on `crates.io <https://crates.io/crates/solang>`_. Once you have the
 correct llvm version in your path, simply run:
 
 .. code-block:: bash
