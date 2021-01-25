@@ -9,9 +9,18 @@ will be documented here.
   to constant values, they are visible in the hover in the extension
 - For Substrate and Solana, address literals can specified with their base58 notation, e.g.
   `address foo = address"5GBWmgdFAMqm8ZgAHGobqDqX6tjLxJhv53ygjNtaaAn3sjeZ";`
+- Solana account storage implemented for ``bytes``, ``string``, and structs
+- Implemented ``delete`` for Solana
 
 ### Changed
 - The Substrate target produces a single .contract file
+- The Substrate target now uses the salt argument for seal\_instantiate()
+
+### Fixed
+- Libraries are allowed to have constant variables
+- Fixed ethereum abi encoding/decoding of structs and enums
+- Solana now returns an error if account data is not large enough
+- Fixed storage bytes push() and pop()
 
 ## [0.1.6]
 
