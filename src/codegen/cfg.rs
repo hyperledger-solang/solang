@@ -103,6 +103,12 @@ pub enum Instr {
         gas: Expression,
         callty: CallTy,
     },
+    /// Value transfer; either <address>.send() or <address>.transfer()
+    ValueTransfer {
+        success: Option<usize>,
+        address: Expression,
+        value: Expression,
+    },
     /// ABI decoder encoded data. If decoding fails, either jump to exception
     /// or abort if this is None.
     AbiDecode {
@@ -807,6 +813,21 @@ impl ControlFlowGraph {
                         self.expr_to_string(contract, ns, value),
                     )
                 }
+            }
+            Instr::ValueTransfer {
+                success,
+                address,
+                value,
+            } => {
+                format!(
+                    "{} = value transfer address:{} value:{}",
+                    match success {
+                        Some(i) => format!("%{}", self.vars[i].id.name),
+                        None => "_".to_string(),
+                    },
+                    self.expr_to_string(contract, ns, address),
+                    self.expr_to_string(contract, ns, value),
+                )
             }
             Instr::AbiDecode {
                 res,

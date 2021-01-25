@@ -840,7 +840,8 @@ fn send_and_transfer() {
 
     runtime.function("step1", Vec::new());
 
-    assert_eq!(runtime.vm.output, false.encode());
+    // no receive() required for send/transfer
+    assert_eq!(runtime.vm.output, true.encode());
 
     for (address, account) in runtime.accounts {
         if address == runtime.vm.address {
@@ -906,7 +907,7 @@ fn send_and_transfer() {
 
     runtime.constructor(0, Vec::new());
 
-    runtime.function_expect_return("step1", Vec::new(), 1);
+    runtime.function("step1", Vec::new());
 
     for (address, account) in runtime.accounts {
         if address == runtime.vm.address {

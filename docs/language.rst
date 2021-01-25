@@ -2695,8 +2695,10 @@ Here is an example:
     }
 
 .. note::
-    This uses the ``seal_call()`` mechanism rather than ``seal_transfer()``, since
-    Solidity expects the ``receive()`` function to be called on receipt.
+    On Subtrate, this uses the ``seal_transfer()`` mechanism rather than ``seal_call()``, since this
+    does not come with gas overhead. This means the ``receive()`` function is not required in the
+    receiving contract, and it will not be called if it is present. If you want the ``receive()``
+    function to be called, use ``address.call{value: 100}("")`` instead.
 
 
 Builtin Functions and Variables

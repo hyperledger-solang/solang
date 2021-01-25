@@ -80,6 +80,7 @@ enum SubstrateExternal {
     seal_caller,
     seal_tombstone_deposit,
     seal_deposit_event,
+    seal_transfer,
 }
 
 pub struct Event {
@@ -520,6 +521,45 @@ impl Externals for TestRuntime {
 
                 Ok(ret)
             }
+            Some(SubstrateExternal::seal_transfer) => {
+                let address_ptr: u32 = args.nth_checked(0)?;
+                let address_len: u32 = args.nth_checked(1)?;
+                let value_ptr: u32 = args.nth_checked(2)?;
+                let value_len: u32 = args.nth_checked(3)?;
+
+                let mut address = [0u8; 32];
+
+                if address_len != 32 {
+                    panic!("seal_transfer: len = {}", address_len);
+                }
+
+                if let Err(e) = self.vm.memory.get_into(address_ptr, &mut address) {
+                    panic!("seal_transfer: {}", e);
+                }
+
+                let mut value = [0u8; 16];
+
+                if value_len != 16 {
+                    panic!("seal_transfer: len = {}", value_len);
+                }
+
+                if let Err(e) = self.vm.memory.get_into(value_ptr, &mut value) {
+                    panic!("seal_transfer: {}", e);
+                }
+
+                let value = u128::from_le_bytes(value);
+
+                if !self.accounts.contains_key(&address) {
+                    // substrate would return TransferFailed
+                    return Ok(Some(RuntimeValue::I32(0x5)));
+                }
+
+                if let Some(acc) = self.accounts.get_mut(&address) {
+                    acc.1 += value;
+                }
+
+                Ok(Some(RuntimeValue::I32(0)))
+            }
             Some(SubstrateExternal::seal_instantiate) => {
                 let codehash_ptr: u32 = args.nth_checked(0)?;
                 let codehash_len: u32 = args.nth_checked(1)?;
@@ -856,6 +896,7 @@ impl ModuleImportResolver for TestRuntime {
             "seal_caller" => SubstrateExternal::seal_caller,
             "seal_tombstone_deposit" => SubstrateExternal::seal_tombstone_deposit,
             "seal_deposit_event" => SubstrateExternal::seal_deposit_event,
+            "seal_transfer" => SubstrateExternal::seal_transfer,
             _ => {
                 panic!("{} not implemented", field_name);
             }
