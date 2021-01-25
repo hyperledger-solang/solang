@@ -146,7 +146,7 @@ Now you should have a file called ``flipper.contract``. The file contains both t
 It can be used directly in the
 `Polkadot UI <https://substrate.dev/substrate-contracts-workshop/#/0/deploying-your-contract?id=putting-your-code-on-the-blockchain>`_, as if the contract was written in ink!.
 
-Using solang with Solana
+Using Solang with Solana
 ------------------------
 
 The `Solana <https://www.solana.com/>`_ target is new and is limited right now, not all types are implemented

@@ -3097,7 +3097,7 @@ Tags
 
 Any contract, interface, library, event definition, struct definition, function, or contract variable
 may have tags associated with them. These are used for generating documentation for the contracts,
-when solang is run with the ``--doc`` command line option. This option generates some html which
+when Solang is run with the ``--doc`` command line option. This option generates some html which
 lists all the types, contracts, functions, and state variables along with their tags.
 
 The tags use a special comment format. They can either be specified in block comments or single
