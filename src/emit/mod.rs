@@ -237,6 +237,18 @@ pub trait TargetRuntime<'a> {
         ty: ast::CallTy,
     );
 
+    /// send value to address
+    fn value_transfer<'b>(
+        &self,
+        _contract: &Contract<'b>,
+        _function: FunctionValue,
+        _success: Option<&mut BasicValueEnum<'b>>,
+        _address: PointerValue<'b>,
+        _value: IntValue<'b>,
+    ) {
+        unimplemented!();
+    }
+
     /// builtin expressions
     fn builtin<'b>(
         &self,
@@ -3971,6 +3983,42 @@ pub trait TargetRuntime<'a> {
                             value,
                             callty.clone(),
                         );
+                    }
+                    Instr::ValueTransfer {
+                        success,
+                        address,
+                        value,
+                    } => {
+                        let value = self
+                            .expression(contract, value, &w.vars, function)
+                            .into_int_value();
+                        let address = self
+                            .expression(contract, address, &w.vars, function)
+                            .into_int_value();
+
+                        let addr = contract.builder.build_array_alloca(
+                            contract.context.i8_type(),
+                            contract
+                                .context
+                                .i32_type()
+                                .const_int(contract.ns.address_length as u64, false),
+                            "address",
+                        );
+
+                        contract.builder.build_store(
+                            contract.builder.build_pointer_cast(
+                                addr,
+                                address.get_type().ptr_type(AddressSpace::Generic),
+                                "address",
+                            ),
+                            address,
+                        );
+                        let success = match success {
+                            Some(n) => Some(&mut w.vars.get_mut(n).unwrap().value),
+                            None => None,
+                        };
+
+                        self.value_transfer(contract, function, success, addr, value);
                     }
                     Instr::AbiEncodeVector {
                         res,

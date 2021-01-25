@@ -780,18 +780,29 @@ pub fn expression(
                 &Type::Bool,
             );
 
-            cfg.add(
-                vartab,
-                Instr::ExternalCall {
-                    success: Some(success),
-                    address: Some(address),
-                    payload: Expression::BytesLiteral(*loc, Type::DynamicBytes, vec![]),
-                    args: Vec::new(),
-                    value,
-                    gas: Expression::NumberLiteral(*loc, Type::Uint(64), BigInt::zero()),
-                    callty: CallTy::Regular,
-                },
-            );
+            if ns.target == Target::Substrate {
+                cfg.add(
+                    vartab,
+                    Instr::ValueTransfer {
+                        success: Some(success),
+                        address,
+                        value,
+                    },
+                );
+            } else {
+                cfg.add(
+                    vartab,
+                    Instr::ExternalCall {
+                        success: Some(success),
+                        address: Some(address),
+                        payload: Expression::BytesLiteral(*loc, Type::DynamicBytes, vec![]),
+                        args: Vec::new(),
+                        value,
+                        gas: Expression::NumberLiteral(*loc, Type::Uint(64), BigInt::zero()),
+                        callty: CallTy::Regular,
+                    },
+                );
+            }
 
             Expression::Variable(*loc, Type::Bool, success)
         }
@@ -799,18 +810,29 @@ pub fn expression(
             let address = expression(&args[0], cfg, contract_no, ns, vartab);
             let value = expression(&args[1], cfg, contract_no, ns, vartab);
 
-            cfg.add(
-                vartab,
-                Instr::ExternalCall {
-                    success: None,
-                    address: Some(address),
-                    payload: Expression::BytesLiteral(*loc, Type::DynamicBytes, vec![]),
-                    args: Vec::new(),
-                    value,
-                    gas: Expression::NumberLiteral(*loc, Type::Uint(64), BigInt::zero()),
-                    callty: CallTy::Regular,
-                },
-            );
+            if ns.target == Target::Substrate {
+                cfg.add(
+                    vartab,
+                    Instr::ValueTransfer {
+                        success: None,
+                        address,
+                        value,
+                    },
+                );
+            } else {
+                cfg.add(
+                    vartab,
+                    Instr::ExternalCall {
+                        success: None,
+                        address: Some(address),
+                        payload: Expression::BytesLiteral(*loc, Type::DynamicBytes, vec![]),
+                        args: Vec::new(),
+                        value,
+                        gas: Expression::NumberLiteral(*loc, Type::Uint(64), BigInt::zero()),
+                        callty: CallTy::Regular,
+                    },
+                );
+            }
 
             Expression::Poison
         }

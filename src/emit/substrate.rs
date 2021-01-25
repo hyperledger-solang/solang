@@ -97,6 +97,7 @@ impl SubstrateTarget {
             "seal_tombstone_deposit",
             "seal_terminate",
             "seal_deposit_event",
+            "seal_transfer",
         ]);
 
         c
@@ -360,6 +361,18 @@ impl SubstrateTarget {
                     u8_ptr, u32_val, // value ptr and len
                     u8_ptr, u32_val, // input ptr and len
                     u8_ptr, u32_ptr, // output ptr and len
+                ],
+                false,
+            ),
+            Some(Linkage::External),
+        );
+
+        contract.module.add_function(
+            "seal_transfer",
+            contract.context.i32_type().fn_type(
+                &[
+                    u8_ptr, u32_val, // address ptr and len
+                    u8_ptr, u32_val, // value ptr and len
                 ],
                 false,
             ),
@@ -3236,6 +3249,103 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                     payload_len.into(),
                     scratch_buf.into(),
                     scratch_len.into(),
+                ],
+                "",
+            )
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_int_value();
+
+        let is_success = contract.builder.build_int_compare(
+            IntPredicate::EQ,
+            ret,
+            contract.context.i32_type().const_zero(),
+            "success",
+        );
+
+        if let Some(success) = success {
+            // we're in a try statement. This means:
+            // do not abort execution; return success or not in success variable
+            *success = is_success.into();
+        } else {
+            let success_block = contract.context.append_basic_block(function, "success");
+            let bail_block = contract.context.append_basic_block(function, "bail");
+
+            contract
+                .builder
+                .build_conditional_branch(is_success, success_block, bail_block);
+
+            contract.builder.position_at_end(bail_block);
+
+            self.assert_failure(
+                contract,
+                scratch_buf,
+                contract
+                    .builder
+                    .build_load(scratch_len, "string_len")
+                    .into_int_value(),
+            );
+
+            contract.builder.position_at_end(success_block);
+        }
+    }
+
+    /// Send value to address
+    fn value_transfer<'b>(
+        &self,
+        contract: &Contract<'b>,
+        function: FunctionValue,
+        success: Option<&mut BasicValueEnum<'b>>,
+        address: PointerValue<'b>,
+        value: IntValue<'b>,
+    ) {
+        // balance is a u128
+        let value_ptr = contract
+            .builder
+            .build_alloca(contract.value_type(), "balance");
+        contract.builder.build_store(value_ptr, value);
+
+        let scratch_buf = contract.builder.build_pointer_cast(
+            contract.scratch.unwrap().as_pointer_value(),
+            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+            "scratch_buf",
+        );
+        let scratch_len = contract.scratch_len.unwrap().as_pointer_value();
+
+        contract.builder.build_store(
+            scratch_len,
+            contract
+                .context
+                .i32_type()
+                .const_int(SCRATCH_SIZE as u64, false),
+        );
+
+        // do the actual call
+        let ret = contract
+            .builder
+            .build_call(
+                contract.module.get_function("seal_transfer").unwrap(),
+                &[
+                    address.into(),
+                    contract
+                        .context
+                        .i32_type()
+                        .const_int(contract.ns.address_length as u64, false)
+                        .into(),
+                    contract
+                        .builder
+                        .build_pointer_cast(
+                            value_ptr,
+                            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                            "value_transfer",
+                        )
+                        .into(),
+                    contract
+                        .context
+                        .i32_type()
+                        .const_int(contract.ns.value_length as u64, false)
+                        .into(),
                 ],
                 "",
             )

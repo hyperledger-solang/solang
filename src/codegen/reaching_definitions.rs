@@ -136,6 +136,9 @@ fn instr_transfers(block_no: usize, block: &BasicBlock) -> Vec<Vec<Transfer>> {
             }
             | Instr::Constructor {
                 success: None, res, ..
+            }
+            | Instr::ValueTransfer {
+                success: Some(res), ..
             } => set_var(&[*res]),
             Instr::ClearStorage { storage: dest, .. }
             | Instr::SetStorageBytes { storage: dest, .. }
