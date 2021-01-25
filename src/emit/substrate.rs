@@ -3624,9 +3624,20 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                     .left()
                     .unwrap();
 
+                // vector_new should return vector* but after llvm module merging, this can be vector.1*
+                let v = contract.builder.build_pointer_cast(
+                    v.into_pointer_value(),
+                    contract
+                        .module
+                        .get_struct_type("struct.vector")
+                        .unwrap()
+                        .ptr_type(AddressSpace::Generic),
+                    "calldata",
+                );
+
                 let data = unsafe {
                     contract.builder.build_gep(
-                        v.into_pointer_value(),
+                        v,
                         &[
                             contract.context.i32_type().const_zero(),
                             contract.context.i32_type().const_int(2, false),
@@ -3663,7 +3674,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                     "",
                 );
 
-                v
+                v.into()
             }
             ast::Expression::Builtin(_, _, ast::Builtin::BlockNumber, _) => {
                 let block_number =
