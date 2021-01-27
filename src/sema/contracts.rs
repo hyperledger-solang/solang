@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 
 use super::ast;
-use super::expression::{expression, match_constructor_to_args};
+use super::expression::match_constructor_to_args;
 use super::functions;
 use super::statements;
 use super::symtable::Symtable;
@@ -233,29 +233,17 @@ fn resolve_base_args(
                     .position(|e| e.contract_no == base_no)
                 {
                     if let Some(args) = &base.args {
-                        let mut resolved_args = Vec::new();
                         let symtable = Symtable::new();
-
-                        for arg in args {
-                            if let Ok(e) = expression(
-                                &arg,
-                                file_no,
-                                Some(*contract_no),
-                                ns,
-                                &symtable,
-                                true,
-                                &mut diagnostics,
-                            ) {
-                                resolved_args.push(e);
-                            }
-                        }
 
                         // find constructor which matches this
                         if let Ok((Some(constructor_no), args)) = match_constructor_to_args(
                             &base.loc,
-                            resolved_args,
+                            args,
+                            file_no,
                             base_no,
+                            *contract_no,
                             ns,
+                            &symtable,
                             &mut diagnostics,
                         ) {
                             ns.contracts[*contract_no].bases[pos].constructor =

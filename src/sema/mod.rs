@@ -1344,6 +1344,7 @@ impl ast::Namespace {
             &symtable,
             true,
             diagnostics,
+            Some(&ast::Type::Uint(256)),
         )?;
 
         match size_expr.ty() {

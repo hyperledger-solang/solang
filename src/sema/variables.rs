@@ -182,6 +182,7 @@ pub fn var_decl(
             &symtable,
             is_constant,
             &mut diagnostics,
+            Some(&ty),
         ) {
             Ok(res) => res,
             Err(()) => {

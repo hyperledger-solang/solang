@@ -65,42 +65,24 @@ pub fn resolve_function_body(
                             ));
                             all_ok = false;
                         } else if let Some(args) = &base.args {
-                            let mut resolved_args = Vec::new();
                             let mut diagnostics = Vec::new();
-                            let mut ok = true;
-
-                            for arg in args {
-                                if let Ok(e) = expression(
-                                    &arg,
-                                    file_no,
-                                    Some(contract_no),
-                                    ns,
-                                    &symtable,
-                                    false,
-                                    &mut diagnostics,
-                                ) {
-                                    resolved_args.push(e);
-                                } else {
-                                    ok = false;
-                                    all_ok = false;
-                                }
-                            }
 
                             // find constructor which matches this
-                            if ok {
-                                if let Ok((Some(constructor_no), args)) = match_constructor_to_args(
-                                    &base.loc,
-                                    resolved_args,
-                                    base_no,
-                                    ns,
-                                    &mut diagnostics,
-                                ) {
-                                    ns.functions[function_no]
-                                        .bases
-                                        .insert(base_no, (base.loc, constructor_no, args));
+                            if let Ok((Some(constructor_no), args)) = match_constructor_to_args(
+                                &base.loc,
+                                args,
+                                file_no,
+                                base_no,
+                                contract_no,
+                                ns,
+                                &symtable,
+                                &mut diagnostics,
+                            ) {
+                                ns.functions[function_no]
+                                    .bases
+                                    .insert(base_no, (base.loc, constructor_no, args));
 
-                                    resolve_bases.insert(base_no, base.loc);
-                                }
+                                resolve_bases.insert(base_no, base.loc);
                             }
 
                             ns.diagnostics.extend(diagnostics);
@@ -317,8 +299,16 @@ fn statement(
             )?;
 
             let initializer = if let Some(init) = initializer {
-                let expr =
-                    expression(init, file_no, contract_no, ns, symtable, false, diagnostics)?;
+                let expr = expression(
+                    init,
+                    file_no,
+                    contract_no,
+                    ns,
+                    symtable,
+                    false,
+                    diagnostics,
+                    Some(&var_ty),
+                )?;
 
                 Some(cast(&expr.loc(), expr, &var_ty, true, ns, diagnostics)?)
             } else {
@@ -407,6 +397,7 @@ fn statement(
                 symtable,
                 false,
                 diagnostics,
+                Some(&Type::Bool),
             )?;
 
             let cond = cast(&expr.loc(), expr, &Type::Bool, true, ns, diagnostics)?;
@@ -441,6 +432,7 @@ fn statement(
                 symtable,
                 false,
                 diagnostics,
+                Some(&Type::Bool),
             )?;
 
             let cond = cast(&expr.loc(), expr, &Type::Bool, true, ns, diagnostics)?;
@@ -474,6 +466,7 @@ fn statement(
                 symtable,
                 false,
                 diagnostics,
+                Some(&Type::Bool),
             )?;
 
             let cond = cast(&expr.loc(), expr, &Type::Bool, true, ns, diagnostics)?;
@@ -621,6 +614,7 @@ fn statement(
                 symtable,
                 false,
                 diagnostics,
+                Some(&Type::Bool),
             )?;
 
             let cond = cast(&cond_expr.loc(), expr, &Type::Bool, true, ns, diagnostics)?;
@@ -724,8 +718,16 @@ fn statement(
         pt::Statement::Expression(loc, expr) => {
             // delete statement
             if let pt::Expression::Delete(_, expr) = expr {
-                let expr =
-                    expression(expr, file_no, contract_no, ns, symtable, false, diagnostics)?;
+                let expr = expression(
+                    expr,
+                    file_no,
+                    contract_no,
+                    ns,
+                    symtable,
+                    false,
+                    diagnostics,
+                    None,
+                )?;
 
                 return if let Type::StorageRef(ty) = expr.ty() {
                     if expr.ty().is_mapping() {
@@ -786,7 +788,16 @@ fn statement(
             }
 
             // the rest
-            let expr = expression(expr, file_no, contract_no, ns, symtable, false, diagnostics)?;
+            let expr = expression(
+                expr,
+                file_no,
+                contract_no,
+                ns,
+                symtable,
+                false,
+                diagnostics,
+                None,
+            )?;
 
             let reachable = expr.ty() != Type::Unreachable;
 
@@ -848,25 +859,18 @@ fn emit_event(
             let event_loc = ty.loc();
             let event_nos = ns.resolve_event(file_no, contract_no, ty, diagnostics)?;
 
-            let mut resolved_args = Vec::new();
-
-            for arg in args {
-                let expr = expression(arg, file_no, contract_no, ns, symtable, false, diagnostics)?;
-                resolved_args.push(expr);
-            }
-
             let mut temp_diagnostics = Vec::new();
 
             for event_no in &event_nos {
                 let event = &ns.events[*event_no];
-                if resolved_args.len() != event.fields.len() {
+                if args.len() != event.fields.len() {
                     temp_diagnostics.push(Diagnostic::error(
                         *loc,
                         format!(
                             "event type ‘{}’ has {} fields, {} provided",
                             event.name,
                             event.fields.len(),
-                            resolved_args.len()
+                            args.len()
                         ),
                     ));
                     continue;
@@ -875,11 +879,30 @@ fn emit_event(
 
                 let mut matches = true;
                 // check if arguments can be implicitly casted
-                for (i, arg) in resolved_args.iter().enumerate() {
+                for (i, arg) in args.iter().enumerate() {
+                    let ty = ns.events[*event_no].fields[i].ty.clone();
+
+                    let arg = match expression(
+                        arg,
+                        file_no,
+                        contract_no,
+                        ns,
+                        symtable,
+                        false,
+                        &mut temp_diagnostics,
+                        Some(&ty),
+                    ) {
+                        Ok(e) => e,
+                        Err(()) => {
+                            matches = false;
+                            break;
+                        }
+                    };
+
                     match cast(
                         &arg.loc(),
                         arg.clone(),
-                        &event.fields[i].ty,
+                        &ty,
                         true,
                         ns,
                         &mut temp_diagnostics,
@@ -928,18 +951,7 @@ fn emit_event(
                     ));
                     return Err(());
                 }
-                arguments.insert(
-                    arg.name.name.to_string(),
-                    expression(
-                        &arg.expr,
-                        file_no,
-                        contract_no,
-                        ns,
-                        symtable,
-                        false,
-                        diagnostics,
-                    )?,
-                );
+                arguments.insert(&arg.name.name, &arg.expr);
             }
 
             let mut temp_diagnostics = Vec::new();
@@ -965,14 +977,14 @@ fn emit_event(
 
                 // check if arguments can be implicitly casted
                 for i in 0..params_len {
-                    let param = event.fields[i].clone();
+                    let param = ns.events[*event_no].fields[i].clone();
 
                     if param.name.is_empty() {
                         temp_diagnostics.push(Diagnostic::error(
                         *loc,
                         format!(
                             "event ‘{}’ cannot emitted by argument name since argument {} has no name",
-                            event.name, i,
+                            ns.events[*event_no].name, i,
                         ),
                     ));
                         matches = false;
@@ -987,20 +999,31 @@ fn emit_event(
                                 *loc,
                                 format!(
                                     "missing argument ‘{}’ to event ‘{}’",
-                                    param.name, event.name,
+                                    param.name, ns.events[*event_no].name,
                                 ),
                             ));
                             break;
                         }
                     };
-                    match cast(
-                        &arg.loc(),
-                        arg.clone(),
-                        &param.ty,
-                        true,
+
+                    let arg = match expression(
+                        arg,
+                        file_no,
+                        contract_no,
                         ns,
+                        symtable,
+                        false,
                         &mut temp_diagnostics,
+                        Some(&param.ty),
                     ) {
+                        Ok(e) => e,
+                        Err(()) => {
+                            matches = false;
+                            break;
+                        }
+                    };
+
+                    match cast(&arg.loc(), arg, &param.ty, true, ns, &mut temp_diagnostics) {
                         Ok(expr) => cast_args.push(expr),
                         Err(_) => {
                             matches = false;
@@ -1056,76 +1079,14 @@ fn destructure(
     ns: &mut Namespace,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Result<Statement, ()> {
-    let expr = match expr {
-        pt::Expression::FunctionCall(loc, ty, args) => function_call_expr(
-            loc,
-            ty,
-            args,
-            file_no,
-            contract_no,
-            ns,
-            symtable,
-            diagnostics,
-        )?,
-        pt::Expression::NamedFunctionCall(loc, ty, args) => named_function_call_expr(
-            loc,
-            ty,
-            args,
-            file_no,
-            contract_no,
-            ns,
-            symtable,
-            diagnostics,
-        )?,
-        _ => {
-            let mut list = Vec::new();
-
-            for e in parameter_list_to_expr_list(expr, diagnostics)? {
-                let e = expression(e, file_no, contract_no, ns, symtable, false, diagnostics)?;
-
-                match e.ty() {
-                    Type::Void | Type::Unreachable => {
-                        diagnostics.push(Diagnostic::error(
-                            e.loc(),
-                            "function does not return a value".to_string(),
-                        ));
-                        return Err(());
-                    }
-                    _ => (),
-                }
-
-                list.push(e);
-            }
-
-            Expression::List(*loc, list)
-        }
-    };
-
-    let mut tys = expr.tys();
-
-    // Return type void or unreachable are synthetic
-    if tys.len() == 1 && (tys[0] == Type::Unreachable || tys[0] == Type::Void) {
-        tys.truncate(0);
-    }
-
-    if vars.len() != tys.len() {
-        diagnostics.push(Diagnostic::error(
-            *loc,
-            format!(
-                "destructuring assignment has {} elements on the left and {} on the right",
-                vars.len(),
-                tys.len()
-            ),
-        ));
-        return Err(());
-    }
-
-    // first resolve the fields
+    // first resolve the fields so we know the types
     let mut fields = Vec::new();
+    let mut left_tys = Vec::new();
 
-    for (i, e) in vars.iter().enumerate() {
-        match &e.1 {
+    for (_, param) in vars {
+        match param {
             None => {
+                left_tys.push(None);
                 fields.push(DestructureField::None);
             }
             Some(pt::Parameter {
@@ -1143,7 +1104,16 @@ fn destructure(
                 }
 
                 // ty will just be a normal expression, not a type
-                let e = expression(ty, file_no, contract_no, ns, symtable, false, diagnostics)?;
+                let e = expression(
+                    ty,
+                    file_no,
+                    contract_no,
+                    ns,
+                    symtable,
+                    false,
+                    diagnostics,
+                    None,
+                )?;
 
                 match &e {
                     Expression::ConstantVariable(_, _, Some(contract_no), var_no) => {
@@ -1175,17 +1145,7 @@ fn destructure(
                         }
                     },
                 }
-
-                // here we only CHECK if we can cast the type
-                let _ = cast(
-                    &loc,
-                    Expression::FunctionArg(*loc, tys[i].clone(), i),
-                    e.ty().deref_any(),
-                    true,
-                    ns,
-                    diagnostics,
-                )?;
-
+                left_tys.push(Some(e.ty()));
                 fields.push(DestructureField::Expression(e));
             }
             Some(pt::Parameter {
@@ -1197,18 +1157,10 @@ fn destructure(
                 let (ty, ty_loc) =
                     resolve_var_decl_ty(&ty, &storage, file_no, contract_no, ns, diagnostics)?;
 
-                // here we only CHECK if we can cast the type
-                let _ = cast(
-                    loc,
-                    Expression::FunctionArg(e.0, tys[i].clone(), i),
-                    ty.deref_any(),
-                    true,
-                    ns,
-                    diagnostics,
-                )?;
-
                 if let Some(pos) = symtable.add(&name, ty.clone(), ns) {
                     ns.check_shadowing(file_no, contract_no, &name);
+
+                    left_tys.push(Some(ty.clone()));
 
                     fields.push(DestructureField::VariableDecl(
                         pos,
@@ -1223,6 +1175,108 @@ fn destructure(
                     ));
                 }
             }
+        }
+    }
+
+    let expr = match expr {
+        pt::Expression::FunctionCall(loc, ty, args) => function_call_expr(
+            loc,
+            ty,
+            args,
+            file_no,
+            contract_no,
+            ns,
+            symtable,
+            diagnostics,
+        )?,
+        pt::Expression::NamedFunctionCall(loc, ty, args) => named_function_call_expr(
+            loc,
+            ty,
+            args,
+            file_no,
+            contract_no,
+            ns,
+            symtable,
+            diagnostics,
+        )?,
+        _ => {
+            let mut list = Vec::new();
+
+            let exprs = parameter_list_to_expr_list(expr, diagnostics)?;
+
+            if exprs.len() != vars.len() {
+                diagnostics.push(Diagnostic::error(
+                    *loc,
+                    format!(
+                        "destructuring assignment has {} elements on the left and {} on the right",
+                        vars.len(),
+                        exprs.len(),
+                    ),
+                ));
+                return Err(());
+            }
+
+            for (i, e) in exprs.iter().enumerate() {
+                let e = expression(
+                    e,
+                    file_no,
+                    contract_no,
+                    ns,
+                    symtable,
+                    false,
+                    diagnostics,
+                    left_tys[i].as_ref(),
+                )?;
+
+                match e.ty() {
+                    Type::Void | Type::Unreachable => {
+                        diagnostics.push(Diagnostic::error(
+                            e.loc(),
+                            "function does not return a value".to_string(),
+                        ));
+                        return Err(());
+                    }
+                    _ => (),
+                }
+
+                list.push(e);
+            }
+
+            Expression::List(*loc, list)
+        }
+    };
+
+    let mut right_tys = expr.tys();
+
+    // Return type void or unreachable are synthetic
+    if right_tys.len() == 1 && (right_tys[0] == Type::Unreachable || right_tys[0] == Type::Void) {
+        right_tys.truncate(0);
+    }
+
+    if vars.len() != right_tys.len() {
+        diagnostics.push(Diagnostic::error(
+            *loc,
+            format!(
+                "destructuring assignment has {} elements on the left and {} on the right",
+                vars.len(),
+                right_tys.len()
+            ),
+        ));
+        return Err(());
+    }
+
+    // check that the values can be cast
+    for (i, field) in fields.iter().enumerate() {
+        if let Some(left_ty) = &left_tys[i] {
+            let loc = field.loc().unwrap();
+            let _ = cast(
+                &loc,
+                Expression::FunctionArg(loc, right_tys[i].clone(), i),
+                left_ty,
+                true,
+                ns,
+                diagnostics,
+            )?;
         }
     }
 
@@ -1330,16 +1384,20 @@ fn return_with_values(
     let mut exprs = Vec::new();
 
     for (i, r) in returns.iter().enumerate() {
-        let e = expression(r, file_no, contract_no, ns, symtable, false, diagnostics)?;
+        let ty = ns.functions[function_no].returns[i].ty.clone();
 
-        exprs.push(cast(
-            &r.loc(),
-            e,
-            &ns.functions[function_no].returns[i].ty.clone(),
-            true,
+        let e = expression(
+            r,
+            file_no,
+            contract_no,
             ns,
+            symtable,
+            false,
             diagnostics,
-        )?);
+            Some(&ty),
+        )?;
+
+        exprs.push(cast(&r.loc(), e, &ty, true, ns, diagnostics)?);
     }
 
     Ok(exprs)

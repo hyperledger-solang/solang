@@ -1415,7 +1415,8 @@ fn array_subscript(
 
     let array_length = match array_ty.deref_any() {
         Type::Bytes(n) => {
-            bigint_to_expression(&array.loc(), &BigInt::from(*n), &mut Vec::new()).unwrap()
+            bigint_to_expression(&array.loc(), &BigInt::from(*n), ns, &mut Vec::new(), None)
+                .unwrap()
         }
         Type::Array(_, _) => match array_ty.array_length() {
             None => {
@@ -1430,7 +1431,7 @@ fn array_subscript(
                     Expression::DynamicArrayLength(*loc, Box::new(array.clone()))
                 }
             }
-            Some(l) => bigint_to_expression(loc, l, &mut Vec::new()).unwrap(),
+            Some(l) => bigint_to_expression(loc, l, ns, &mut Vec::new(), None).unwrap(),
         },
         Type::DynamicBytes => Expression::DynamicArrayLength(*loc, Box::new(array.clone())),
         _ => {

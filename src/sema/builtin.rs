@@ -430,14 +430,6 @@ pub fn resolve_call(
         .filter(|p| p.name == id && p.namespace == namespace)
         .collect::<Vec<&Prototype>>();
 
-    let mut resolved_args = Vec::new();
-
-    for arg in args {
-        let expr = expression(arg, file_no, contract_no, ns, symtable, false, diagnostics)?;
-
-        resolved_args.push(expr);
-    }
-
     let marker = diagnostics.len();
 
     for func in &matches {
@@ -458,7 +450,24 @@ pub fn resolve_call(
         let mut cast_args = Vec::new();
 
         // check if arguments can be implicitly casted
-        for (i, arg) in resolved_args.iter().enumerate() {
+        for (i, arg) in args.iter().enumerate() {
+            let arg = match expression(
+                arg,
+                file_no,
+                contract_no,
+                ns,
+                symtable,
+                false,
+                diagnostics,
+                Some(&func.args[i]),
+            ) {
+                Ok(e) => e,
+                Err(()) => {
+                    matches = false;
+                    continue;
+                }
+            };
+
             match cast(
                 &pt::Loc(0, 0, 0),
                 arg.clone(),
@@ -470,7 +479,7 @@ pub fn resolve_call(
                 Ok(expr) => cast_args.push(expr),
                 Err(()) => {
                     matches = false;
-                    break;
+                    continue;
                 }
             }
         }
@@ -572,6 +581,7 @@ pub fn resolve_method_call(
                 symtable,
                 false,
                 diagnostics,
+                Some(&Type::DynamicBytes),
             )?,
             &Type::DynamicBytes,
             true,
@@ -663,6 +673,7 @@ pub fn resolve_method_call(
                     symtable,
                     false,
                     diagnostics,
+                    Some(&Type::Bytes(4)),
                 )?;
 
                 resolved_args.insert(
@@ -696,6 +707,7 @@ pub fn resolve_method_call(
                     symtable,
                     false,
                     diagnostics,
+                    Some(&Type::String),
                 )?;
 
                 resolved_args.insert(
@@ -722,7 +734,16 @@ pub fn resolve_method_call(
     }
 
     for arg in args_iter {
-        let mut expr = expression(arg, file_no, contract_no, ns, symtable, false, diagnostics)?;
+        let mut expr = expression(
+            arg,
+            file_no,
+            contract_no,
+            ns,
+            symtable,
+            false,
+            diagnostics,
+            None,
+        )?;
         let ty = expr.ty();
 
         if ty.is_mapping() {

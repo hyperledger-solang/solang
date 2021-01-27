@@ -756,6 +756,7 @@ impl Type {
             Type::Int(_) => true,
             Type::Uint(_) => true,
             Type::Bytes(_) => true,
+            Type::Value => true,
             Type::Ref(r) => r.is_primitive(),
             Type::StorageRef(r) => r.is_primitive(),
             _ => false,
@@ -935,8 +936,7 @@ impl Type {
         match self {
             Type::Int(_) => true,
             Type::Uint(_) => true,
-            Type::Struct(_) => unreachable!(),
-            Type::Array(_, _) => unreachable!(),
+            Type::Value => true,
             Type::Ref(r) => r.ordered(),
             Type::StorageRef(r) => r.ordered(),
             _ => false,

@@ -25,7 +25,17 @@ pub fn string_format(
     let mut resolved_args = Vec::new();
 
     for arg in args {
-        let expr = expression(arg, file_no, contract_no, ns, symtable, false, diagnostics)?;
+        let expr = expression(
+            arg,
+            file_no,
+            contract_no,
+            ns,
+            symtable,
+            false,
+            diagnostics,
+            None,
+        )?;
+
         let ty = expr.ty();
 
         resolved_args.push(cast(&arg.loc(), expr, ty.deref_any(), true, ns, diagnostics).unwrap());
