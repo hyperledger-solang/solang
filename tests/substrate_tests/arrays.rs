@@ -522,7 +522,10 @@ fn array_dimensions() {
         Target::Substrate,
     );
 
-    assert_eq!(first_error(ns.diagnostics), "zero size array not permitted");
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "negative literal -10 not allowed for unsigned type ‘uint256’"
+    );
 
     let ns = parse_and_resolve(
         r#"
@@ -775,7 +778,7 @@ fn memory_dynamic_array_new() {
 
     assert_eq!(
         first_error(ns.diagnostics),
-        "new size argument must be unsigned integer, not ‘int8’"
+        "negative literal -1 not allowed for unsigned type ‘uint32’"
     );
 
     let ns = parse_and_resolve(
@@ -839,7 +842,7 @@ fn memory_dynamic_array_deref() {
 
     assert_eq!(
         first_error(ns.diagnostics),
-        "array subscript must be an unsigned integer, not ‘int8’"
+        "negative literal -1 not allowed for unsigned type ‘uint32’"
     );
 
     let ns = parse_and_resolve(

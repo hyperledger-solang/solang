@@ -108,6 +108,7 @@ pub fn eval_const_number(
         Expression::NumberLiteral(loc, _, n) => Ok((*loc, n.clone())),
         Expression::ZeroExt(loc, _, n) => Ok((*loc, eval_const_number(n, contract_no, ns)?.1)),
         Expression::SignExt(loc, _, n) => Ok((*loc, eval_const_number(n, contract_no, ns)?.1)),
+        Expression::Cast(loc, _, n) => Ok((*loc, eval_const_number(n, contract_no, ns)?.1)),
         Expression::Not(loc, n) => Ok((*loc, !eval_const_number(n, contract_no, ns)?.1)),
         Expression::Complement(loc, _, n) => Ok((*loc, !eval_const_number(n, contract_no, ns)?.1)),
         Expression::UnaryMinus(loc, _, n) => Ok((*loc, -eval_const_number(n, contract_no, ns)?.1)),

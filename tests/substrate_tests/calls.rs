@@ -1,7 +1,7 @@
 use parity_scale_codec::Encode;
 use parity_scale_codec_derive::{Decode, Encode};
 
-use crate::{build_solidity, first_error, no_errors, parse_and_resolve};
+use crate::{build_solidity, first_error, parse_and_resolve};
 use solang::Target;
 
 #[derive(Debug, PartialEq, Encode, Decode)]
@@ -91,118 +91,6 @@ fn require() {
     runtime.function("test2", Vec::new());
 
     assert_eq!(runtime.vm.output.len(), 0);
-}
-
-#[test]
-fn contract_type() {
-    let ns = parse_and_resolve(
-        r#"
-        contract printer {
-            function test() public {
-                print("In f.test()");
-            }
-        }
-
-        contract foo {
-            function test1(printer x) public {
-                address y = x;
-            }
-
-            function test2(address x) public {
-                printer y = printer(x);
-            }
-        }"#,
-        Target::Substrate,
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "implicit conversion to address from contract printer not allowed"
-    );
-
-    let ns = parse_and_resolve(
-        r#"
-        contract printer {
-            function test() public {
-                printer x = printer(address(102));
-            }
-        }"#,
-        Target::Substrate,
-    );
-
-    no_errors(ns.diagnostics);
-
-    let ns = parse_and_resolve(
-        r#"
-        contract printer {
-            function test() public {
-                print("In f.test()");
-            }
-        }
-
-        contract foo {
-            function test1(printer x) public {
-                address y = 102;
-            }
-        }"#,
-        Target::Substrate,
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "implicit conversion from uint8 to address not allowed"
-    );
-
-    let ns = parse_and_resolve(
-        r#"
-        contract printer {
-            function test() public {
-                print("In f.test()");
-            }
-        }
-
-        contract foo {
-            function test1() public {
-                printer y = 102;
-            }
-        }"#,
-        Target::Substrate,
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "conversion from uint8 to contract printer not possible"
-    );
-
-    let ns = parse_and_resolve(
-        r#"
-        contract printer {
-            function test() public returns (printer) {
-                return new printer();
-            }
-        }"#,
-        Target::Substrate,
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "new cannot construct current contract ‘printer’"
-    );
-
-    let ns = parse_and_resolve(
-        r#"
-        contract printer {
-            function test() public returns (printer) {
-                return new printer({});
-            }
-        }"#,
-        Target::Substrate,
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "new cannot construct current contract ‘printer’"
-    );
 }
 
 #[test]

@@ -177,8 +177,7 @@ The largest value an ``uint8`` can hold is (2 :superscript:`8`) - 1 = 255. So, t
 
 .. code-block:: none
 
-    implicit conversion would truncate from uint16 to uint8
-
+    literal 300 is too large to fit into type ‘uint8’
 
 .. tip::
 
@@ -533,14 +532,13 @@ known as arrays of arrays). For example:
     }
 
 Note the length of the array can be read with the ``.length`` member. The length is readonly.
-Arrays can be initialized with an array literal. The first element of the array should be
-cast to the correct element type. For example:
+Arrays can be initialized with an array literal. For example:
 
 .. code-block:: javascript
 
     contract primes {
         function primenumber(uint32 n) public pure returns (uint64) {
-            uint64[10] primes = [ uint64(2), 3, 5, 7, 11, 13, 17, 19, 23, 29 ];
+            uint64[10] primes = [ 2, 3, 5, 7, 11, 13, 17, 19, 23, 29 ];
 
             return primes[n];
         }

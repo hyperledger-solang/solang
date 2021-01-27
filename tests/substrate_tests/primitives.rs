@@ -96,7 +96,7 @@ fn test_literal_overflow() {
 
     assert_eq!(
         first_error(ns.diagnostics),
-        "implicit conversion would truncate from uint16 to uint8"
+        "literal 300 is too large to fit into type ‘uint8’"
     );
 
     let ns = parse_and_resolve(
@@ -108,7 +108,7 @@ fn test_literal_overflow() {
 
     assert_eq!(
         first_error(ns.diagnostics),
-        "implicit conversion would truncate from uint24 to uint16"
+        "literal 65536 is too large to fit into type ‘uint16’"
     );
 
     let ns = parse_and_resolve(
@@ -120,7 +120,19 @@ fn test_literal_overflow() {
 
     assert_eq!(
         first_error(ns.diagnostics),
-        "implicit conversion would truncate from uint8 to int8"
+        "literal 128 is too large to fit into type ‘int8’"
+    );
+
+    let ns = parse_and_resolve(
+        "contract test {
+            int8 foo = -129;
+        }",
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "literal -129 is too large to fit into type ‘int8’"
     );
 
     let ns = parse_and_resolve(
@@ -159,7 +171,7 @@ fn test_literal_overflow() {
 
     assert_eq!(
         first_error(ns.diagnostics),
-        "implicit conversion cannot change negative number to uint8"
+        "negative literal -130 not allowed for unsigned type ‘uint8’"
     );
 
     let ns = parse_and_resolve(
@@ -171,7 +183,7 @@ fn test_literal_overflow() {
 
     assert_eq!(
         first_error(ns.diagnostics),
-        "implicit conversion would truncate from uint72 to int64"
+        "literal 18446744073709551616 is too large to fit into type ‘int64’"
     );
 
     let ns = parse_and_resolve(
@@ -183,7 +195,7 @@ fn test_literal_overflow() {
 
     assert_eq!(
         first_error(ns.diagnostics),
-        "implicit conversion from constant 3 bytes to bytes4 not possible"
+        "hex literal 0xf12233 must be 8 digits for type ‘bytes4’"
     );
 
     let ns = parse_and_resolve(
@@ -195,8 +207,17 @@ fn test_literal_overflow() {
 
     assert_eq!(
         first_error(ns.diagnostics),
-        "implicit conversion from constant 5 bytes to bytes4 not possible"
+        "hex literal 0x0122334455 must be 8 digits for type ‘bytes4’"
     );
+
+    let ns = parse_and_resolve(
+        "contract test {
+            bytes4 foo = 0x00223344;
+        }",
+        Target::Substrate,
+    );
+
+    no_errors(ns.diagnostics);
 }
 
 #[test]
@@ -295,7 +316,7 @@ fn address() {
 
     assert_eq!(
         first_error(ns.diagnostics),
-        "implicit conversion from uint80 to address not allowed"
+        "expected ‘address’, found integer"
     );
 
     let ns = parse_and_resolve(
@@ -307,7 +328,7 @@ fn address() {
 
     assert_eq!(
         first_error(ns.diagnostics),
-        "implicit conversion from uint256 to address not allowed"
+        "expected ‘address’, found integer"
     );
 
     let ns = parse_and_resolve(

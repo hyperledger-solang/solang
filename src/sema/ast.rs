@@ -874,6 +874,16 @@ pub enum DestructureField {
     VariableDecl(usize, Parameter),
 }
 
+impl DestructureField {
+    pub fn loc(&self) -> Option<pt::Loc> {
+        match self {
+            DestructureField::None => None,
+            DestructureField::Expression(e) => Some(e.loc()),
+            DestructureField::VariableDecl(_, p) => Some(p.loc),
+        }
+    }
+}
+
 impl Statement {
     /// recurse over the statement
     pub fn recurse<T>(&self, cx: &mut T, f: fn(stmt: &Statement, ctx: &mut T) -> bool) {

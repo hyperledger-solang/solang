@@ -206,7 +206,7 @@ fn contract_type() {
 
     assert_eq!(
         first_error(ns.diagnostics),
-        "implicit conversion from uint8 to address not allowed"
+        "expected ‘address’, found integer"
     );
 
     let ns = parse_and_resolve(
@@ -227,7 +227,7 @@ fn contract_type() {
 
     assert_eq!(
         first_error(ns.diagnostics),
-        "conversion from uint8 to contract printer not possible"
+        "expected ‘contract printer’, found integer"
     );
 
     let ns = parse_and_resolve(
@@ -335,6 +335,32 @@ fn external_call() {
         first_error(ns.diagnostics),
         "duplicate argument with name ‘t’"
     );
+
+    let ns = parse_and_resolve(
+        r##"
+        contract c {
+            b x;
+            constructor() public {
+                x = new b({ a: 1, a: 2 });
+            }
+            function test() public returns (int32) {
+                return x.get_x({ t: 10 });
+            }
+        }
+
+        contract b {
+            int32 x;
+            constructor(int32 a) public {
+                x = a;
+            }
+            function get_x(int32 t) public returns (int32) {
+                return x * t;
+            }
+        }"##,
+        Target::Substrate,
+    );
+
+    assert_eq!(first_error(ns.diagnostics), "duplicate argument name ‘a’");
 
     #[derive(Debug, PartialEq, Encode, Decode)]
     struct Ret(u32);

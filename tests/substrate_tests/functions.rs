@@ -798,7 +798,7 @@ fn positional_argument_call() {
 
     assert_eq!(
         first_error(ns.diagnostics),
-        "conversion from uint8 to bool not possible"
+        "expected ‘bool’, found integer"
     );
 
     let mut runtime = build_solidity(
