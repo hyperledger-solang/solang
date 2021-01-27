@@ -281,12 +281,15 @@ pub fn contract_function(
         }
     };
 
+    let mut diagnostics = Vec::new();
+
     let (params, params_success) = resolve_params(
         &func.params,
         storage_allowed,
         file_no,
         Some(contract_no),
         ns,
+        &mut diagnostics,
     );
 
     let (returns, returns_success) = resolve_returns(
@@ -295,7 +298,10 @@ pub fn contract_function(
         file_no,
         Some(contract_no),
         ns,
+        &mut diagnostics,
     );
+
+    ns.diagnostics.extend(diagnostics);
 
     if ns.contracts[contract_no].is_interface() {
         if func.ty == pt::FunctionTy::Constructor {
@@ -679,9 +685,16 @@ pub fn function(
             }
         }
     }
-    let (params, params_success) = resolve_params(&func.params, true, file_no, None, ns);
 
-    let (returns, returns_success) = resolve_returns(&func.returns, true, file_no, None, ns);
+    let mut diagnostics = Vec::new();
+
+    let (params, params_success) =
+        resolve_params(&func.params, true, file_no, None, ns, &mut diagnostics);
+
+    let (returns, returns_success) =
+        resolve_returns(&func.returns, true, file_no, None, ns, &mut diagnostics);
+
+    ns.diagnostics.extend(diagnostics);
 
     if func.body.is_none() {
         ns.diagnostics.push(Diagnostic::error(
@@ -764,6 +777,7 @@ pub fn resolve_params(
     file_no: usize,
     contract_no: Option<usize>,
     ns: &mut Namespace,
+    diagnostics: &mut Vec<Diagnostic>,
 ) -> (Vec<Parameter>, bool) {
     let mut params = Vec::new();
     let mut success = true;
@@ -772,8 +786,7 @@ pub fn resolve_params(
         let p = match p {
             Some(p) => p,
             None => {
-                ns.diagnostics
-                    .push(Diagnostic::error(*loc, "missing parameter type".to_owned()));
+                diagnostics.push(Diagnostic::error(*loc, "missing parameter type".to_owned()));
                 success = false;
                 continue;
             }
@@ -781,10 +794,10 @@ pub fn resolve_params(
 
         let mut ty_loc = p.ty.loc();
 
-        match ns.resolve_type(file_no, contract_no, false, &p.ty) {
+        match ns.resolve_type(file_no, contract_no, false, &p.ty, diagnostics) {
             Ok(ty) => {
                 if !is_internal && ty.contains_internal_function(ns) {
-                    ns.diagnostics.push(Diagnostic::error(
+                    diagnostics.push(Diagnostic::error(
                         p.ty.loc(),
                         "parameter of type ‘function internal’ not allowed public or external functions".to_string(),
                     ));
@@ -793,7 +806,7 @@ pub fn resolve_params(
 
                 let ty = if !ty.can_have_data_location() {
                     if let Some(storage) = &p.storage {
-                        ns.diagnostics.push(Diagnostic::error(
+                        diagnostics.push(Diagnostic::error(
                             *storage.loc(),
                                 format!("data location ‘{}’ can only be specified for array, struct or mapping",
                                 storage)
@@ -804,7 +817,7 @@ pub fn resolve_params(
                     ty
                 } else if let Some(pt::StorageLocation::Storage(loc)) = p.storage {
                     if !is_internal {
-                        ns.diagnostics.push(Diagnostic::error(
+                        diagnostics.push(Diagnostic::error(
                             loc,
                             "parameter of type ‘storage’ not allowed public or external functions"
                                 .to_string(),
@@ -817,7 +830,7 @@ pub fn resolve_params(
                     Type::StorageRef(Box::new(ty))
                 } else {
                     if ty.contains_mapping(ns) {
-                        ns.diagnostics.push(Diagnostic::error(
+                        diagnostics.push(Diagnostic::error(
                             p.ty.loc(),
                             "parameter with mapping type must be of type ‘storage’".to_string(),
                         ));
@@ -853,6 +866,7 @@ pub fn resolve_returns(
     file_no: usize,
     contract_no: Option<usize>,
     ns: &mut Namespace,
+    diagnostics: &mut Vec<Diagnostic>,
 ) -> (Vec<Parameter>, bool) {
     let mut resolved_returns = Vec::new();
     let mut success = true;
@@ -861,8 +875,7 @@ pub fn resolve_returns(
         let r = match r {
             Some(r) => r,
             None => {
-                ns.diagnostics
-                    .push(Diagnostic::error(*loc, "missing return type".to_owned()));
+                diagnostics.push(Diagnostic::error(*loc, "missing return type".to_owned()));
                 success = false;
                 continue;
             }
@@ -870,10 +883,10 @@ pub fn resolve_returns(
 
         let mut ty_loc = r.ty.loc();
 
-        match ns.resolve_type(file_no, contract_no, false, &r.ty) {
+        match ns.resolve_type(file_no, contract_no, false, &r.ty, diagnostics) {
             Ok(ty) => {
                 if !is_internal && ty.contains_internal_function(ns) {
-                    ns.diagnostics.push(Diagnostic::error(
+                    diagnostics.push(Diagnostic::error(
                         r.ty.loc(),
                         "return type ‘function internal’ not allowed public or external functions"
                             .to_string(),
@@ -883,7 +896,7 @@ pub fn resolve_returns(
 
                 let ty = if !ty.can_have_data_location() {
                     if let Some(storage) = &r.storage {
-                        ns.diagnostics.push(Diagnostic::error(
+                        diagnostics.push(Diagnostic::error(
                             *storage.loc(),
                                 format!("data location ‘{}’ can only be specified for array, struct or mapping",
                                 storage)
@@ -895,7 +908,7 @@ pub fn resolve_returns(
                 } else {
                     match r.storage {
                         Some(pt::StorageLocation::Calldata(loc)) => {
-                            ns.diagnostics.push(Diagnostic::error(
+                            diagnostics.push(Diagnostic::error(
                                 loc,
                                 "data location ‘calldata’ can not be used for return types"
                                     .to_string(),
@@ -908,7 +921,7 @@ pub fn resolve_returns(
                         }
                         Some(pt::StorageLocation::Storage(loc)) => {
                             if !is_internal {
-                                ns.diagnostics.push(Diagnostic::error(
+                                diagnostics.push(Diagnostic::error(
                                     loc,
                                     "return type of type ‘storage’ not allowed public or external functions"
                                         .to_string(),
@@ -922,7 +935,7 @@ pub fn resolve_returns(
                         }
                         _ => {
                             if ty.contains_mapping(ns) {
-                                ns.diagnostics.push(Diagnostic::error(
+                                diagnostics.push(Diagnostic::error(
                                     r.ty.loc(),
                                     "return type containing mapping must be of type ‘storage’"
                                         .to_string(),

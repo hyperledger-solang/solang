@@ -1,5 +1,5 @@
 use super::ast::{Diagnostic, Expression, FormatArg, Namespace, Type};
-use super::expression::{expression, try_cast};
+use super::expression::{cast, expression};
 use super::symtable::Symtable;
 use crate::parser::pt;
 
@@ -19,15 +19,16 @@ pub fn string_format(
     contract_no: Option<usize>,
     ns: &mut Namespace,
     symtable: &Symtable,
+    diagnostics: &mut Vec<Diagnostic>,
 ) -> Result<Expression, ()> {
     // first resolve the arguments. We can't say anything about the format string if the args are broken
     let mut resolved_args = Vec::new();
 
     for arg in args {
-        let expr = expression(arg, file_no, contract_no, ns, symtable, false)?;
+        let expr = expression(arg, file_no, contract_no, ns, symtable, false, diagnostics)?;
         let ty = expr.ty();
 
-        resolved_args.push(try_cast(&arg.loc(), expr, ty.deref_any(), true, ns).unwrap());
+        resolved_args.push(cast(&arg.loc(), expr, ty.deref_any(), true, ns, diagnostics).unwrap());
     }
 
     let mut format_iterator = FormatIterator::new(literals).peekable();
@@ -41,8 +42,7 @@ pub fn string_format(
                 // ok, let's skip over it
                 format_iterator.next();
             } else {
-                ns.diagnostics
-                    .push(Diagnostic::error(loc, String::from("unmatched ‘}’")));
+                diagnostics.push(Diagnostic::error(loc, String::from("unmatched ‘}’")));
                 return Err(());
             }
         }
@@ -60,10 +60,10 @@ pub fn string_format(
                     string_literal = String::new();
                 }
 
-                let specifier = parse_format_specifier(loc, &mut format_iterator, ns)?;
+                let specifier = parse_format_specifier(loc, &mut format_iterator, diagnostics)?;
 
                 if resolved_args.is_empty() {
-                    ns.diagnostics.push(Diagnostic::error(
+                    diagnostics.push(Diagnostic::error(
                         loc,
                         String::from("missing argument to format"),
                     ));
@@ -76,7 +76,7 @@ pub fn string_format(
 
                 if matches!(specifier, FormatArg::Binary | FormatArg::Hex) {
                     if !matches!(arg_ty, Type::Uint(_) | Type::Int(_)) {
-                        ns.diagnostics.push(Diagnostic::error(
+                        diagnostics.push(Diagnostic::error(
                             arg.loc(),
                             String::from("argument must be signed or unsigned integer type"),
                         ));
@@ -84,7 +84,7 @@ pub fn string_format(
                     }
                 } else if !matches!(arg_ty, Type::Uint(_) | Type::Int(_) | Type::Bytes(_) | Type::Enum(_) | Type::Address(_) | Type::Contract(_) | Type::String | Type::DynamicBytes | Type::Bool)
                 {
-                    ns.diagnostics.push(Diagnostic::error(
+                    diagnostics.push(Diagnostic::error(
                         arg.loc(),
                         String::from(
                             "argument must be a bool, enum, address, contract, string, or bytes",
@@ -101,7 +101,7 @@ pub fn string_format(
     }
 
     if !resolved_args.is_empty() {
-        ns.diagnostics.push(Diagnostic::error(
+        diagnostics.push(Diagnostic::error(
             *loc,
             String::from("too many argument for format string"),
         ));
@@ -121,7 +121,7 @@ pub fn string_format(
 fn parse_format_specifier(
     loc: pt::Loc,
     format_iterator: &mut Peekable<FormatIterator>,
-    ns: &mut Namespace,
+    diagnostics: &mut Vec<Diagnostic>,
 ) -> Result<FormatArg, ()> {
     let mut last_loc = loc;
     let arg;
@@ -143,14 +143,14 @@ fn parse_format_specifier(
                     return Ok(FormatArg::Default);
                 }
                 Some((loc, ch)) => {
-                    ns.diagnostics.push(Diagnostic::error(
+                    diagnostics.push(Diagnostic::error(
                         loc,
                         format!("unexpected format char ‘{}’", ch),
                     ));
                     return Err(());
                 }
                 None => {
-                    ns.diagnostics.push(Diagnostic::error(
+                    diagnostics.push(Diagnostic::error(
                         last_loc,
                         String::from("missing format specifier"),
                     ));
@@ -161,14 +161,14 @@ fn parse_format_specifier(
             match format_iterator.next() {
                 Some((_, '}')) => Ok(arg),
                 Some((loc, ch)) => {
-                    ns.diagnostics.push(Diagnostic::error(
+                    diagnostics.push(Diagnostic::error(
                         loc,
                         format!("unexpected format char ‘{:}’, expected closing ‘}}’", ch),
                     ));
                     Err(())
                 }
                 None => {
-                    ns.diagnostics.push(Diagnostic::error(
+                    diagnostics.push(Diagnostic::error(
                         last_loc,
                         String::from("missing closing ‘}’"),
                     ));
@@ -177,14 +177,14 @@ fn parse_format_specifier(
             }
         }
         Some((loc, ch)) => {
-            ns.diagnostics.push(Diagnostic::error(
+            diagnostics.push(Diagnostic::error(
                 loc,
                 format!("unexpected format char ‘{}’", ch),
             ));
             Err(())
         }
         None => {
-            ns.diagnostics.push(Diagnostic::error(
+            diagnostics.push(Diagnostic::error(
                 last_loc,
                 String::from("missing closing ‘}’"),
             ));

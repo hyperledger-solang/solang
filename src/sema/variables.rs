@@ -84,9 +84,12 @@ pub fn var_decl(
         }
     }
 
-    let ty = match ns.resolve_type(file_no, contract_no, false, &ty) {
+    let mut diagnostics = Vec::new();
+
+    let ty = match ns.resolve_type(file_no, contract_no, false, &ty, &mut diagnostics) {
         Ok(s) => s,
         Err(()) => {
+            ns.diagnostics.extend(diagnostics);
             return None;
         }
     };
@@ -169,6 +172,8 @@ pub fn var_decl(
     }
 
     let initializer = if let Some(initializer) = &s.initializer {
+        let mut diagnostics = Vec::new();
+
         let res = match expression(
             &initializer,
             file_no,
@@ -176,15 +181,22 @@ pub fn var_decl(
             ns,
             &symtable,
             is_constant,
+            &mut diagnostics,
         ) {
             Ok(res) => res,
-            Err(()) => return None,
+            Err(()) => {
+                ns.diagnostics.extend(diagnostics);
+                return None;
+            }
         };
 
         // implicitly conversion to correct ty
-        let res = match cast(&s.loc, res, &ty, true, ns) {
+        let res = match cast(&s.loc, res, &ty, true, ns, &mut diagnostics) {
             Ok(res) => res,
-            Err(_) => return None,
+            Err(_) => {
+                ns.diagnostics.extend(diagnostics);
+                return None;
+            }
         };
 
         Some(res)

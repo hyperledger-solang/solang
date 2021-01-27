@@ -1,5 +1,6 @@
 use crate::parser::{parse, pt};
 use crate::Target;
+use ast::Diagnostic;
 use num_bigint::BigInt;
 use num_traits::Signed;
 use num_traits::Zero;
@@ -532,11 +533,13 @@ impl ast::Namespace {
         file_no: usize,
         contract_no: Option<usize>,
         expr: &pt::Expression,
+        diagnostics: &mut Vec<ast::Diagnostic>,
     ) -> Result<Vec<usize>, ()> {
-        let (namespace, id, dimensions) = self.expr_to_type(file_no, contract_no, expr)?;
+        let (namespace, id, dimensions) =
+            self.expr_to_type(file_no, contract_no, expr, diagnostics)?;
 
         if !dimensions.is_empty() {
-            self.diagnostics.push(ast::Diagnostic::decl_error(
+            diagnostics.push(ast::Diagnostic::decl_error(
                 expr.loc(),
                 "array type found where event type expected".to_string(),
             ));
@@ -546,7 +549,7 @@ impl ast::Namespace {
         let id = match id {
             pt::Expression::Variable(id) => id,
             _ => {
-                self.diagnostics.push(ast::Diagnostic::decl_error(
+                diagnostics.push(ast::Diagnostic::decl_error(
                     expr.loc(),
                     "expression found where event type expected".to_string(),
                 ));
@@ -575,7 +578,7 @@ impl ast::Namespace {
                         sym => {
                             let error = ast::Namespace::wrong_symbol(sym, &id);
 
-                            self.diagnostics.push(error);
+                            diagnostics.push(error);
 
                             return Err(());
                         }
@@ -585,7 +588,7 @@ impl ast::Namespace {
 
             return match self.symbols.get(&(file_no, None, id.name.to_owned())) {
                 None if events.is_empty() => {
-                    self.diagnostics.push(ast::Diagnostic::decl_error(
+                    diagnostics.push(ast::Diagnostic::decl_error(
                         id.loc,
                         format!("event ‘{}’ not found", id.name),
                     ));
@@ -601,21 +604,21 @@ impl ast::Namespace {
                 sym => {
                     let error = ast::Namespace::wrong_symbol(sym, &id);
 
-                    self.diagnostics.push(error);
+                    diagnostics.push(error);
 
                     Err(())
                 }
             };
         }
 
-        let s = self.resolve_namespace(namespace, file_no, contract_no, &id)?;
+        let s = self.resolve_namespace(namespace, file_no, contract_no, &id, diagnostics)?;
 
         if let Some(ast::Symbol::Event(events)) = s {
             Ok(events.iter().map(|(_, event_no)| *event_no).collect())
         } else {
             let error = ast::Namespace::wrong_symbol(s, &id);
 
-            self.diagnostics.push(error);
+            diagnostics.push(error);
 
             Err(())
         }
@@ -689,7 +692,7 @@ impl ast::Namespace {
 
     /// Resolve contract variable
     pub fn resolve_var(
-        &mut self,
+        &self,
         file_no: usize,
         contract_no: Option<usize>,
         id: &pt::Identifier,
@@ -819,23 +822,24 @@ impl ast::Namespace {
         contract_no: Option<usize>,
         casting: bool,
         id: &pt::Expression,
+        diagnostics: &mut Vec<ast::Diagnostic>,
     ) -> Result<ast::Type, ()> {
         fn resolve_dimensions(
             ast_dimensions: &[Option<(pt::Loc, BigInt)>],
-            ns: &mut ast::Namespace,
+            diagnostics: &mut Vec<Diagnostic>,
         ) -> Result<Vec<Option<BigInt>>, ()> {
             let mut dimensions = Vec::new();
 
             for d in ast_dimensions.iter().rev() {
                 if let Some((loc, n)) = d {
                     if n.is_zero() {
-                        ns.diagnostics.push(ast::Diagnostic::decl_error(
+                        diagnostics.push(ast::Diagnostic::decl_error(
                             *loc,
                             "zero size array not permitted".to_string(),
                         ));
                         return Err(());
                     } else if n.is_negative() {
-                        ns.diagnostics.push(ast::Diagnostic::decl_error(
+                        diagnostics.push(ast::Diagnostic::decl_error(
                             *loc,
                             "negative size of array declared".to_string(),
                         ));
@@ -850,33 +854,34 @@ impl ast::Namespace {
             Ok(dimensions)
         }
 
-        let (namespace, id, dimensions) = self.expr_to_type(file_no, contract_no, &id)?;
+        let (namespace, id, dimensions) =
+            self.expr_to_type(file_no, contract_no, &id, diagnostics)?;
 
         if let pt::Expression::Type(_, ty) = &id {
             assert!(namespace.is_empty());
 
             let ty = match ty {
                 pt::Type::Mapping(_, k, v) => {
-                    let key = self.resolve_type(file_no, contract_no, false, k)?;
-                    let value = self.resolve_type(file_no, contract_no, false, v)?;
+                    let key = self.resolve_type(file_no, contract_no, false, k, diagnostics)?;
+                    let value = self.resolve_type(file_no, contract_no, false, v, diagnostics)?;
 
                     match key {
                         ast::Type::Mapping(_, _) => {
-                            self.diagnostics.push(ast::Diagnostic::decl_error(
+                            diagnostics.push(ast::Diagnostic::decl_error(
                                 k.loc(),
                                 "key of mapping cannot be another mapping type".to_string(),
                             ));
                             return Err(());
                         }
                         ast::Type::Struct(_) => {
-                            self.diagnostics.push(ast::Diagnostic::decl_error(
+                            diagnostics.push(ast::Diagnostic::decl_error(
                                 k.loc(),
                                 "key of mapping cannot be struct type".to_string(),
                             ));
                             return Err(());
                         }
                         ast::Type::Array(_, _) => {
-                            self.diagnostics.push(ast::Diagnostic::decl_error(
+                            diagnostics.push(ast::Diagnostic::decl_error(
                                 k.loc(),
                                 "key of mapping cannot be array type".to_string(),
                             ));
@@ -900,7 +905,7 @@ impl ast::Namespace {
                         match a {
                             pt::FunctionAttribute::StateMutability(m) => {
                                 if let Some(e) = &mutability {
-                                    self.diagnostics.push(ast::Diagnostic::error_with_note(
+                                    diagnostics.push(ast::Diagnostic::error_with_note(
                                         m.loc(),
                                         format!(
                                             "function type mutability redeclared `{}'",
@@ -917,7 +922,7 @@ impl ast::Namespace {
                                 }
 
                                 if let pt::StateMutability::Constant(loc) = m {
-                                    self.diagnostics.push(ast::Diagnostic::warning(
+                                    diagnostics.push(ast::Diagnostic::warning(
                                         *loc,
                                         "‘constant’ is deprecated. Use ‘view’ instead".to_string(),
                                     ));
@@ -929,7 +934,7 @@ impl ast::Namespace {
                             }
                             pt::FunctionAttribute::Visibility(v) => {
                                 if let Some(e) = &visibility {
-                                    self.diagnostics.push(ast::Diagnostic::error_with_note(
+                                    diagnostics.push(ast::Diagnostic::error_with_note(
                                         v.loc(),
                                         format!(
                                             "function type visibility redeclared `{}'",
@@ -955,7 +960,7 @@ impl ast::Namespace {
                         None | Some(pt::Visibility::Internal(_)) => false,
                         Some(pt::Visibility::External(_)) => true,
                         Some(v) => {
-                            self.diagnostics.push(ast::Diagnostic::error(
+                            diagnostics.push(ast::Diagnostic::error(
                                 v.loc(),
                                 format!("function type cannot have visibility attribute `{}'", v),
                             ));
@@ -964,18 +969,30 @@ impl ast::Namespace {
                         }
                     };
 
-                    let (params, params_success) =
-                        resolve_params(params, is_external, file_no, contract_no, self);
+                    let (params, params_success) = resolve_params(
+                        params,
+                        is_external,
+                        file_no,
+                        contract_no,
+                        self,
+                        diagnostics,
+                    );
 
-                    let (returns, returns_success) =
-                        resolve_returns(returns, is_external, file_no, contract_no, self);
+                    let (returns, returns_success) = resolve_returns(
+                        returns,
+                        is_external,
+                        file_no,
+                        contract_no,
+                        self,
+                        diagnostics,
+                    );
 
                     // trailing attribute should not be there
                     // trailing visibility for contract variables should be removed already
                     for a in trailing_attributes {
                         match a {
                             pt::FunctionAttribute::StateMutability(m) => {
-                                self.diagnostics.push(ast::Diagnostic::error(
+                                diagnostics.push(ast::Diagnostic::error(
                                     m.loc(),
                                     format!(
                                         "mutability `{}' cannot be declared after returns",
@@ -985,7 +1002,7 @@ impl ast::Namespace {
                                 success = false;
                             }
                             pt::FunctionAttribute::Visibility(v) => {
-                                self.diagnostics.push(ast::Diagnostic::error(
+                                diagnostics.push(ast::Diagnostic::error(
                                     v.loc(),
                                     format!(
                                         "visibility `{}' cannot be declared after returns",
@@ -1006,7 +1023,7 @@ impl ast::Namespace {
                         .into_iter()
                         .map(|p| {
                             if !p.name.is_empty() {
-                                self.diagnostics.push(ast::Diagnostic::error(
+                                diagnostics.push(ast::Diagnostic::error(
                                     p.name_loc.unwrap(),
                                     "function type parameters cannot be named".to_string(),
                                 ));
@@ -1020,7 +1037,7 @@ impl ast::Namespace {
                         .into_iter()
                         .map(|p| {
                             if !p.name.is_empty() {
-                                self.diagnostics.push(ast::Diagnostic::error(
+                                diagnostics.push(ast::Diagnostic::error(
                                     p.name_loc.unwrap(),
                                     "function type returns cannot be named".to_string(),
                                 ));
@@ -1046,7 +1063,7 @@ impl ast::Namespace {
                 }
                 pt::Type::Payable => {
                     if !casting {
-                        self.diagnostics.push(ast::Diagnostic::decl_error(
+                        diagnostics.push(ast::Diagnostic::decl_error(
                             id.loc(),
                             "‘payable’ cannot be used for type declarations, only casting. use ‘address payable’"
                                 .to_string(),
@@ -1064,7 +1081,7 @@ impl ast::Namespace {
             } else {
                 Ok(ast::Type::Array(
                     Box::new(ty),
-                    resolve_dimensions(&dimensions, self)?,
+                    resolve_dimensions(&dimensions, diagnostics)?,
                 ))
             };
         }
@@ -1074,11 +1091,11 @@ impl ast::Namespace {
             _ => unreachable!(),
         };
 
-        let s = self.resolve_namespace(namespace, file_no, contract_no, &id)?;
+        let s = self.resolve_namespace(namespace, file_no, contract_no, &id, diagnostics)?;
 
         match s {
             None => {
-                self.diagnostics.push(ast::Diagnostic::decl_error(
+                diagnostics.push(ast::Diagnostic::decl_error(
                     id.loc,
                     format!("type ‘{}’ not found", id.name),
                 ));
@@ -1087,43 +1104,43 @@ impl ast::Namespace {
             Some(ast::Symbol::Enum(_, n)) if dimensions.is_empty() => Ok(ast::Type::Enum(*n)),
             Some(ast::Symbol::Enum(_, n)) => Ok(ast::Type::Array(
                 Box::new(ast::Type::Enum(*n)),
-                resolve_dimensions(&dimensions, self)?,
+                resolve_dimensions(&dimensions, diagnostics)?,
             )),
             Some(ast::Symbol::Struct(_, n)) if dimensions.is_empty() => Ok(ast::Type::Struct(*n)),
             Some(ast::Symbol::Struct(_, n)) => Ok(ast::Type::Array(
                 Box::new(ast::Type::Struct(*n)),
-                resolve_dimensions(&dimensions, self)?,
+                resolve_dimensions(&dimensions, diagnostics)?,
             )),
             Some(ast::Symbol::Contract(_, n)) if dimensions.is_empty() => {
                 Ok(ast::Type::Contract(*n))
             }
             Some(ast::Symbol::Contract(_, n)) => Ok(ast::Type::Array(
                 Box::new(ast::Type::Contract(*n)),
-                resolve_dimensions(&dimensions, self)?,
+                resolve_dimensions(&dimensions, diagnostics)?,
             )),
             Some(ast::Symbol::Event(_)) => {
-                self.diagnostics.push(ast::Diagnostic::decl_error(
+                diagnostics.push(ast::Diagnostic::decl_error(
                     id.loc,
                     format!("‘{}’ is an event", id.name),
                 ));
                 Err(())
             }
             Some(ast::Symbol::Function(_)) => {
-                self.diagnostics.push(ast::Diagnostic::decl_error(
+                diagnostics.push(ast::Diagnostic::decl_error(
                     id.loc,
                     format!("‘{}’ is a function", id.name),
                 ));
                 Err(())
             }
             Some(ast::Symbol::Variable(_, _, _)) => {
-                self.diagnostics.push(ast::Diagnostic::decl_error(
+                diagnostics.push(ast::Diagnostic::decl_error(
                     id.loc,
                     format!("‘{}’ is a contract variable", id.name),
                 ));
                 Err(())
             }
             Some(ast::Symbol::Import(_, _)) => {
-                self.diagnostics.push(ast::Diagnostic::decl_error(
+                diagnostics.push(ast::Diagnostic::decl_error(
                     id.loc,
                     format!("‘{}’ is an import variable", id.name),
                 ));
@@ -1134,11 +1151,12 @@ impl ast::Namespace {
 
     /// Resolve the type name with the namespace to a symbol
     fn resolve_namespace(
-        &mut self,
+        &self,
         mut namespace: Vec<&pt::Identifier>,
         file_no: usize,
         mut contract_no: Option<usize>,
         id: &pt::Identifier,
+        diagnostics: &mut Vec<Diagnostic>,
     ) -> Result<Option<&ast::Symbol>, ()> {
         // The leading part of the namespace can be import variables
         let mut import_file_no = file_no;
@@ -1163,7 +1181,7 @@ impl ast::Namespace {
                     .get(&(import_file_no, None, contract_name.name.clone()))
                 {
                     None => {
-                        self.diagnostics.push(ast::Diagnostic::decl_error(
+                        diagnostics.push(ast::Diagnostic::decl_error(
                             id.loc,
                             format!("contract type ‘{}’ not found", id.name),
                         ));
@@ -1171,7 +1189,7 @@ impl ast::Namespace {
                     }
                     Some(ast::Symbol::Contract(_, n)) => {
                         if namespace.len() > 1 {
-                            self.diagnostics.push(ast::Diagnostic::decl_error(
+                            diagnostics.push(ast::Diagnostic::decl_error(
                                 id.loc,
                                 format!("‘{}’ not found", namespace[1].name),
                             ));
@@ -1180,35 +1198,35 @@ impl ast::Namespace {
                         Some(*n)
                     }
                     Some(ast::Symbol::Function(_)) => {
-                        self.diagnostics.push(ast::Diagnostic::decl_error(
+                        diagnostics.push(ast::Diagnostic::decl_error(
                             id.loc,
                             format!("‘{}’ is a function", id.name),
                         ));
                         return Err(());
                     }
                     Some(ast::Symbol::Variable(_, _, _)) => {
-                        self.diagnostics.push(ast::Diagnostic::decl_error(
+                        diagnostics.push(ast::Diagnostic::decl_error(
                             id.loc,
                             format!("‘{}’ is a contract variable", id.name),
                         ));
                         return Err(());
                     }
                     Some(ast::Symbol::Event(_)) => {
-                        self.diagnostics.push(ast::Diagnostic::decl_error(
+                        diagnostics.push(ast::Diagnostic::decl_error(
                             id.loc,
                             format!("‘{}’ is an event", id.name),
                         ));
                         return Err(());
                     }
                     Some(ast::Symbol::Struct(_, _)) => {
-                        self.diagnostics.push(ast::Diagnostic::decl_error(
+                        diagnostics.push(ast::Diagnostic::decl_error(
                             id.loc,
                             format!("‘{}’ is a struct", id.name),
                         ));
                         return Err(());
                     }
                     Some(ast::Symbol::Enum(_, _)) => {
-                        self.diagnostics.push(ast::Diagnostic::decl_error(
+                        diagnostics.push(ast::Diagnostic::decl_error(
                             id.loc,
                             format!("‘{}’ is an enum variable", id.name),
                         ));
@@ -1249,6 +1267,7 @@ impl ast::Namespace {
         file_no: usize,
         contract_no: Option<usize>,
         expr: &'a pt::Expression,
+        diagnostics: &mut Vec<ast::Diagnostic>,
     ) -> Result<(Vec<&'a pt::Identifier>, pt::Expression, Vec<ArrayDimension>), ()> {
         let mut expr = expr;
         let mut dimensions = Vec::new();
@@ -1261,7 +1280,12 @@ impl ast::Namespace {
                     r.as_ref()
                 }
                 pt::Expression::ArraySubscript(_, r, Some(index)) => {
-                    dimensions.push(self.resolve_array_dimension(file_no, contract_no, index)?);
+                    dimensions.push(self.resolve_array_dimension(
+                        file_no,
+                        contract_no,
+                        index,
+                        diagnostics,
+                    )?);
 
                     r.as_ref()
                 }
@@ -1284,7 +1308,7 @@ impl ast::Namespace {
 
                         return Ok((names, pt::Expression::Variable(id.clone()), dimensions));
                     } else {
-                        self.diagnostics.push(ast::Diagnostic::decl_error(
+                        diagnostics.push(ast::Diagnostic::decl_error(
                             namespace.loc(),
                             "expression found where type expected".to_string(),
                         ));
@@ -1292,7 +1316,7 @@ impl ast::Namespace {
                     }
                 }
                 _ => {
-                    self.diagnostics.push(ast::Diagnostic::decl_error(
+                    diagnostics.push(ast::Diagnostic::decl_error(
                         expr.loc(),
                         "expression found where type expected".to_string(),
                     ));
@@ -1308,15 +1332,24 @@ impl ast::Namespace {
         file_no: usize,
         contract_no: Option<usize>,
         expr: &pt::Expression,
+        diagnostics: &mut Vec<ast::Diagnostic>,
     ) -> Result<ArrayDimension, ()> {
         let symtable = Symtable::new();
 
-        let size_expr = expression(&expr, file_no, contract_no, self, &symtable, true)?;
+        let size_expr = expression(
+            &expr,
+            file_no,
+            contract_no,
+            self,
+            &symtable,
+            true,
+            diagnostics,
+        )?;
 
         match size_expr.ty() {
             ast::Type::Uint(_) | ast::Type::Int(_) => {}
             _ => {
-                self.diagnostics.push(ast::Diagnostic::decl_error(
+                diagnostics.push(ast::Diagnostic::decl_error(
                     expr.loc(),
                     "expression is not a number".to_string(),
                 ));
@@ -1327,7 +1360,7 @@ impl ast::Namespace {
         match eval_const_number(&size_expr, contract_no, self) {
             Ok(n) => Ok(Some(n)),
             Err(d) => {
-                self.diagnostics.push(d);
+                diagnostics.push(d);
 
                 Err(())
             }
