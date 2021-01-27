@@ -7,7 +7,7 @@ use crate::parser::pt;
 use crate::sema::ast::{
     CallTy, DestructureField, Expression, Function, Namespace, Parameter, Statement, Type,
 };
-use crate::sema::expression::try_cast;
+use crate::sema::expression::cast;
 
 /// Resolve a statement, which might be a block of statements or an entire body of a function
 pub fn statement(
@@ -452,7 +452,7 @@ pub fn statement(
                     }
                     DestructureField::VariableDecl(res, param) => {
                         // the resolver did not cast the expression
-                        let expr = try_cast(&param.loc, right, &param.ty, true, ns)
+                        let expr = cast(&param.loc, right, &param.ty, true, ns, &mut Vec::new())
                             .expect("sema should have checked cast");
 
                         cfg.add(
@@ -468,8 +468,15 @@ pub fn statement(
                         // the resolver did not cast the expression
                         let loc = left.loc();
 
-                        let expr = try_cast(&loc, right, left.ty().deref_any(), true, ns)
-                            .expect("sema should have checked cast");
+                        let expr = cast(
+                            &loc,
+                            right,
+                            left.ty().deref_any(),
+                            true,
+                            ns,
+                            &mut Vec::new(),
+                        )
+                        .expect("sema should have checked cast");
 
                         assign_single(left, &expr, cfg, contract_no, ns, vartab);
                     }

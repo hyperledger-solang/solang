@@ -3,7 +3,7 @@ use super::storage::{array_offset, array_pop, array_push, bytes_pop, bytes_push}
 use crate::parser::pt;
 use crate::sema::ast::{Builtin, CallTy, Expression, Namespace, Parameter, StringLocation, Type};
 use crate::sema::eval::eval_const_number;
-use crate::sema::expression::{cast_shift_arg, try_bigint_to_expression, try_cast};
+use crate::sema::expression::{bigint_to_expression, cast, cast_shift_arg};
 use crate::Target;
 use num_bigint::BigInt;
 use num_traits::FromPrimitive;
@@ -933,7 +933,7 @@ pub fn expression(
                 vec![args_iter.next().unwrap().clone()],
             );
             let hash = expression(&hash, cfg, contract_no, ns, vartab);
-            let selector = try_cast(loc, hash, &Type::Bytes(4), false, ns).unwrap();
+            let selector = cast(loc, hash, &Type::Bytes(4), false, ns, &mut Vec::new()).unwrap();
             let args = args_iter
                 .map(|v| expression(&v, cfg, contract_no, ns, vartab))
                 .collect();
@@ -1414,7 +1414,9 @@ fn array_subscript(
     let index_width = index_ty.bits(ns);
 
     let array_length = match array_ty.deref_any() {
-        Type::Bytes(n) => try_bigint_to_expression(&array.loc(), &BigInt::from(*n)).unwrap(),
+        Type::Bytes(n) => {
+            bigint_to_expression(&array.loc(), &BigInt::from(*n), &mut Vec::new()).unwrap()
+        }
         Type::Array(_, _) => match array_ty.array_length() {
             None => {
                 if let Type::StorageRef(_) = array_ty {
@@ -1428,7 +1430,7 @@ fn array_subscript(
                     Expression::DynamicArrayLength(*loc, Box::new(array.clone()))
                 }
             }
-            Some(l) => try_bigint_to_expression(loc, l).unwrap(),
+            Some(l) => bigint_to_expression(loc, l, &mut Vec::new()).unwrap(),
         },
         Type::DynamicBytes => Expression::DynamicArrayLength(*loc, Box::new(array.clone())),
         _ => {
@@ -1453,7 +1455,7 @@ fn array_subscript(
         Instr::Set {
             loc: pt::Loc(0, 0, 0),
             res: pos,
-            expr: try_cast(&index.loc(), index, &coerced_ty, false, ns).unwrap(),
+            expr: cast(&index.loc(), index, &coerced_ty, false, ns, &mut Vec::new()).unwrap(),
         },
     );
 
@@ -1469,7 +1471,15 @@ fn array_subscript(
                 *loc,
                 Box::new(Expression::Variable(index_loc, coerced_ty.clone(), pos)),
                 Box::new(
-                    try_cast(&array.loc(), array_length.clone(), &coerced_ty, false, ns).unwrap(),
+                    cast(
+                        &array.loc(),
+                        array_length.clone(),
+                        &coerced_ty,
+                        false,
+                        ns,
+                        &mut Vec::new(),
+                    )
+                    .unwrap(),
                 ),
             ),
             true_block: out_of_bounds,
@@ -1502,12 +1512,13 @@ fn array_subscript(
                             *loc,
                             Type::Uint(64),
                             Box::new(
-                                try_cast(
+                                cast(
                                     &index_loc,
                                     Expression::Variable(index_loc, coerced_ty, pos),
                                     &Type::Uint(64),
                                     false,
                                     ns,
+                                    &mut Vec::new(),
                                 )
                                 .unwrap(),
                             ),
@@ -1521,12 +1532,13 @@ fn array_subscript(
         array_offset(
             loc,
             array,
-            try_cast(
+            cast(
                 &index_loc,
                 Expression::Variable(index_loc, coerced_ty, pos),
                 &ns.storage_type(),
                 false,
                 ns,
+                &mut Vec::new(),
             )
             .unwrap(),
             elem_ty,

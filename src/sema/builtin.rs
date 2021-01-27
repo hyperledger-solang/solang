@@ -372,7 +372,8 @@ pub fn builtin_var(
     loc: &pt::Loc,
     namespace: Option<&str>,
     fname: &str,
-    ns: &mut Namespace,
+    ns: &Namespace,
+    diagnostics: &mut Vec<Diagnostic>,
 ) -> Option<(Builtin, Type)> {
     if let Some(p) = BUILTIN_VARIABLE
         .iter()
@@ -380,7 +381,7 @@ pub fn builtin_var(
     {
         if p.target.is_none() || p.target == Some(ns.target) {
             if ns.target == Target::Substrate && p.builtin == Builtin::Gasprice {
-                ns.diagnostics.push(Diagnostic::error(
+                diagnostics.push(Diagnostic::error(
                     *loc,
                     String::from(
                         "use the function ‘tx.gasprice(gas)’ in stead, as ‘tx.gasprice’ may round down to zero. See https://solang.readthedocs.io/en/latest/language.html#gasprice",
@@ -422,6 +423,7 @@ pub fn resolve_call(
     contract_no: Option<usize>,
     ns: &mut Namespace,
     symtable: &Symtable,
+    diagnostics: &mut Vec<Diagnostic>,
 ) -> Result<Expression, ()> {
     let matches = BUILTIN_FUNCTIONS
         .iter()
@@ -431,15 +433,16 @@ pub fn resolve_call(
     let mut resolved_args = Vec::new();
 
     for arg in args {
-        let expr = expression(arg, file_no, contract_no, ns, symtable, false)?;
+        let expr = expression(arg, file_no, contract_no, ns, symtable, false, diagnostics)?;
 
         resolved_args.push(expr);
     }
 
-    let marker = ns.diagnostics.len();
+    let marker = diagnostics.len();
+
     for func in &matches {
         if func.args.len() != args.len() {
-            ns.diagnostics.push(Diagnostic::error(
+            diagnostics.push(Diagnostic::error(
                 *loc,
                 format!(
                     "builtin function ‘{}’ expects {} arguments, {} provided",
@@ -456,7 +459,14 @@ pub fn resolve_call(
 
         // check if arguments can be implicitly casted
         for (i, arg) in resolved_args.iter().enumerate() {
-            match cast(&pt::Loc(0, 0, 0), arg.clone(), &func.args[i], true, ns) {
+            match cast(
+                &pt::Loc(0, 0, 0),
+                arg.clone(),
+                &func.args[i],
+                true,
+                ns,
+                diagnostics,
+            ) {
                 Ok(expr) => cast_args.push(expr),
                 Err(()) => {
                     matches = false;
@@ -466,13 +476,13 @@ pub fn resolve_call(
         }
 
         if matches {
-            ns.diagnostics.truncate(marker);
+            diagnostics.truncate(marker);
 
             // tx.gasprice(1) is a bad idea, just like tx.gasprice. Warn about this
             if ns.target == Target::Substrate && func.builtin == Builtin::Gasprice {
                 if let Ok((_, val)) = eval_const_number(&cast_args[0], contract_no, ns) {
                     if val == BigInt::one() {
-                        ns.diagnostics.push(Diagnostic::warning(
+                        diagnostics.push(Diagnostic::warning(
                             *loc,
                             String::from(
                                 "the function call ‘tx.gasprice(1)’ may round down to zero. See https://solang.readthedocs.io/en/latest/language.html#gasprice",
@@ -492,8 +502,8 @@ pub fn resolve_call(
     }
 
     if matches.len() != 1 {
-        ns.diagnostics.truncate(marker);
-        ns.diagnostics.push(Diagnostic::error(
+        diagnostics.truncate(marker);
+        diagnostics.push(Diagnostic::error(
             *loc,
             "cannot find overloaded function which matches signature".to_string(),
         ));
@@ -515,6 +525,7 @@ pub fn resolve_method_call(
     contract_no: Option<usize>,
     ns: &mut Namespace,
     symtable: &Symtable,
+    diagnostics: &mut Vec<Diagnostic>,
 ) -> Result<Expression, ()> {
     // The abi.* functions need special handling, others do not
     if namespace != "abi" {
@@ -527,6 +538,7 @@ pub fn resolve_method_call(
             contract_no,
             ns,
             symtable,
+            diagnostics,
         );
     }
 
@@ -541,7 +553,7 @@ pub fn resolve_method_call(
 
     if builtin == Builtin::AbiDecode {
         if args.len() != 2 {
-            ns.diagnostics.push(Diagnostic::error(
+            diagnostics.push(Diagnostic::error(
                 *loc,
                 format!("function expects {} arguments, {} provided", 2, args.len()),
             ));
@@ -552,10 +564,19 @@ pub fn resolve_method_call(
         // first args
         let data = cast(
             &args[0].loc(),
-            expression(&args[0], file_no, contract_no, ns, symtable, false)?,
+            expression(
+                &args[0],
+                file_no,
+                contract_no,
+                ns,
+                symtable,
+                false,
+                diagnostics,
+            )?,
             &Type::DynamicBytes,
             true,
             ns,
+            diagnostics,
         )?;
 
         let mut tys = Vec::new();
@@ -565,10 +586,11 @@ pub fn resolve_method_call(
             pt::Expression::List(_, list) => {
                 for (loc, param) in list {
                     if let Some(param) = param {
-                        let ty = ns.resolve_type(file_no, contract_no, false, &param.ty)?;
+                        let ty =
+                            ns.resolve_type(file_no, contract_no, false, &param.ty, diagnostics)?;
 
                         if let Some(storage) = &param.storage {
-                            ns.diagnostics.push(Diagnostic::error(
+                            diagnostics.push(Diagnostic::error(
                                 *storage.loc(),
                                 format!("storage modifier ‘{}’ not allowed", storage),
                             ));
@@ -576,7 +598,7 @@ pub fn resolve_method_call(
                         }
 
                         if let Some(name) = &param.name {
-                            ns.diagnostics.push(Diagnostic::error(
+                            diagnostics.push(Diagnostic::error(
                                 name.loc,
                                 format!("unexpected identifier ‘{}’ in type", name.name),
                             ));
@@ -584,7 +606,7 @@ pub fn resolve_method_call(
                         }
 
                         if ty.is_mapping() {
-                            ns.diagnostics.push(Diagnostic::error(
+                            diagnostics.push(Diagnostic::error(
                                 *loc,
                                 "mapping cannot be abi decoded or encoded".to_string(),
                             ));
@@ -593,18 +615,17 @@ pub fn resolve_method_call(
 
                         tys.push(ty);
                     } else {
-                        ns.diagnostics
-                            .push(Diagnostic::error(*loc, "missing type".to_string()));
+                        diagnostics.push(Diagnostic::error(*loc, "missing type".to_string()));
 
                         broken = true;
                     }
                 }
             }
             _ => {
-                let ty = ns.resolve_type(file_no, contract_no, false, &args[1])?;
+                let ty = ns.resolve_type(file_no, contract_no, false, &args[1], diagnostics)?;
 
                 if ty.is_mapping() {
-                    ns.diagnostics.push(Diagnostic::error(
+                    diagnostics.push(Diagnostic::error(
                         *loc,
                         "mapping cannot be abi decoded or encoded".to_string(),
                     ));
@@ -634,14 +655,29 @@ pub fn resolve_method_call(
         Builtin::AbiEncodeWithSelector => {
             // first argument is selector
             if let Some(selector) = args_iter.next() {
-                let selector = expression(selector, file_no, contract_no, ns, symtable, false)?;
+                let selector = expression(
+                    selector,
+                    file_no,
+                    contract_no,
+                    ns,
+                    symtable,
+                    false,
+                    diagnostics,
+                )?;
 
                 resolved_args.insert(
                     0,
-                    cast(&selector.loc(), selector, &Type::Bytes(4), true, ns)?,
+                    cast(
+                        &selector.loc(),
+                        selector,
+                        &Type::Bytes(4),
+                        true,
+                        ns,
+                        diagnostics,
+                    )?,
                 );
             } else {
-                ns.diagnostics.push(Diagnostic::error(
+                diagnostics.push(Diagnostic::error(
                     *loc,
                     "function requires one ‘bytes4’ selector argument".to_string(),
                 ));
@@ -652,14 +688,29 @@ pub fn resolve_method_call(
         Builtin::AbiEncodeWithSignature => {
             // first argument is signature
             if let Some(signature) = args_iter.next() {
-                let signature = expression(signature, file_no, contract_no, ns, symtable, false)?;
+                let signature = expression(
+                    signature,
+                    file_no,
+                    contract_no,
+                    ns,
+                    symtable,
+                    false,
+                    diagnostics,
+                )?;
 
                 resolved_args.insert(
                     0,
-                    cast(&signature.loc(), signature, &Type::String, true, ns)?,
+                    cast(
+                        &signature.loc(),
+                        signature,
+                        &Type::String,
+                        true,
+                        ns,
+                        diagnostics,
+                    )?,
                 );
             } else {
-                ns.diagnostics.push(Diagnostic::error(
+                diagnostics.push(Diagnostic::error(
                     *loc,
                     "function requires one ‘string’ signature argument".to_string(),
                 ));
@@ -671,11 +722,11 @@ pub fn resolve_method_call(
     }
 
     for arg in args_iter {
-        let mut expr = expression(arg, file_no, contract_no, ns, symtable, false)?;
+        let mut expr = expression(arg, file_no, contract_no, ns, symtable, false, diagnostics)?;
         let ty = expr.ty();
 
         if ty.is_mapping() {
-            ns.diagnostics.push(Diagnostic::error(
+            diagnostics.push(Diagnostic::error(
                 arg.loc(),
                 "mapping type not permitted".to_string(),
             ));
@@ -683,11 +734,11 @@ pub fn resolve_method_call(
             return Err(());
         }
 
-        expr = cast(&arg.loc(), expr, ty.deref_any(), true, ns)?;
+        expr = cast(&arg.loc(), expr, ty.deref_any(), true, ns, diagnostics)?;
 
         // A string or hex literal should be encoded as a string
         if let Expression::BytesLiteral(_, _, _) = &expr {
-            expr = cast(&arg.loc(), expr, &Type::String, true, ns)?;
+            expr = cast(&arg.loc(), expr, &Type::String, true, ns, diagnostics)?;
         }
 
         resolved_args.push(expr);

@@ -220,6 +220,8 @@ fn resolve_base_args(
     file_no: usize,
     ns: &mut ast::Namespace,
 ) {
+    let mut diagnostics = Vec::new();
+
     // for every contract, if we have a base which resolved successfully, resolve any constructor args
     for (contract_no, def) in contracts {
         for base in &def.base {
@@ -235,17 +237,27 @@ fn resolve_base_args(
                         let symtable = Symtable::new();
 
                         for arg in args {
-                            if let Ok(e) =
-                                expression(&arg, file_no, Some(*contract_no), ns, &symtable, true)
-                            {
+                            if let Ok(e) = expression(
+                                &arg,
+                                file_no,
+                                Some(*contract_no),
+                                ns,
+                                &symtable,
+                                true,
+                                &mut diagnostics,
+                            ) {
                                 resolved_args.push(e);
                             }
                         }
 
                         // find constructor which matches this
-                        if let Ok((Some(constructor_no), args)) =
-                            match_constructor_to_args(&base.loc, resolved_args, base_no, ns)
-                        {
+                        if let Ok((Some(constructor_no), args)) = match_constructor_to_args(
+                            &base.loc,
+                            resolved_args,
+                            base_no,
+                            ns,
+                            &mut diagnostics,
+                        ) {
                             ns.contracts[*contract_no].bases[pos].constructor =
                                 Some((constructor_no, args));
                         }
@@ -254,6 +266,8 @@ fn resolve_base_args(
             }
         }
     }
+
+    ns.diagnostics.extend(diagnostics);
 }
 
 /// Visit base contracts in depth-first post-order
@@ -770,7 +784,15 @@ fn resolve_using(
                     }
 
                     let ty = if let Some(expr) = &using.ty {
-                        match ns.resolve_type(file_no, Some(*contract_no), false, expr) {
+                        let mut diagnostics = Vec::new();
+
+                        match ns.resolve_type(
+                            file_no,
+                            Some(*contract_no),
+                            false,
+                            expr,
+                            &mut diagnostics,
+                        ) {
                             Ok(ast::Type::Contract(contract_no)) => {
                                 ns.diagnostics.push(ast::Diagnostic::error(
                                     using.library.loc,
@@ -782,7 +804,10 @@ fn resolve_using(
                                 continue;
                             }
                             Ok(ty) => Some(ty),
-                            Err(_) => continue,
+                            Err(_) => {
+                                ns.diagnostics.extend(diagnostics);
+                                continue;
+                            }
                         }
                     } else {
                         None

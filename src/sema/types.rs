@@ -306,9 +306,12 @@ pub fn struct_decl(
     let mut fields: Vec<Parameter> = Vec::new();
 
     for field in &def.fields {
-        let ty = match ns.resolve_type(file_no, contract_no, false, &field.ty) {
+        let mut diagnostics = Vec::new();
+
+        let ty = match ns.resolve_type(file_no, contract_no, false, &field.ty, &mut diagnostics) {
             Ok(s) => s,
             Err(()) => {
+                ns.diagnostics.extend(diagnostics);
                 valid = false;
                 continue;
             }
@@ -396,9 +399,12 @@ pub fn event_decl(
     let mut indexed_fields = 0;
 
     for field in &def.fields {
-        let ty = match ns.resolve_type(file_no, contract_no, false, &field.ty) {
+        let mut diagnostics = Vec::new();
+
+        let ty = match ns.resolve_type(file_no, contract_no, false, &field.ty, &mut diagnostics) {
             Ok(s) => s,
             Err(()) => {
+                ns.diagnostics.extend(diagnostics);
                 valid = false;
                 continue;
             }
