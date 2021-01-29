@@ -3536,6 +3536,7 @@ pub trait TargetRuntime<'a> {
                         res,
                         call: InternalCallTy::Static(cfg_no),
                         args,
+                        ..
                     } => {
                         let f = &contract.contract.cfg[*cfg_no];
 
@@ -3611,6 +3612,7 @@ pub trait TargetRuntime<'a> {
                         res,
                         call: InternalCallTy::Dynamic(call_expr),
                         args,
+                        ..
                     } => {
                         let ty = call_expr.ty();
 

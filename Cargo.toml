@@ -43,6 +43,8 @@ tokio = { version = "0.2", features = ["rt-core", "io-std"] }
 base58 = "0.1.0"
 sha2 = "0.9"
 ripemd160 = "0.9"
+bitvec = "0.20"
+itertools = "0.10"
 
 [dev-dependencies]
 parity-scale-codec-derive = "2.0.0"

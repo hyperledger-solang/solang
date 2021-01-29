@@ -34,7 +34,12 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
                         expr,
                     };
                 }
-                Instr::Call { res, call, args } => {
+                Instr::Call {
+                    res,
+                    call,
+                    args,
+                    return_tys,
+                } => {
                     let args = args
                         .iter()
                         .map(|e| expression(e, Some(&vars), &cur, cfg, ns).0)
@@ -44,6 +49,7 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
                         res: res.clone(),
                         call: call.clone(),
                         args,
+                        return_tys: return_tys.clone(),
                     };
                 }
                 Instr::Return { value } => {
