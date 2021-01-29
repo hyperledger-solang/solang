@@ -20,15 +20,15 @@ use std::fmt;
 /// The target chain you want to compile Solidity for.
 #[derive(PartialEq, Clone, Copy)]
 pub enum Target {
-    /// Parity Substrate, see https://substrate.dev/
+    /// Parity Substrate, see <https://substrate.dev/>
     Substrate,
-    /// Ethereum ewasm, see https://github.com/ewasm/design
+    /// Ethereum ewasm, see <https://github.com/ewasm/design>
     Ewasm,
-    /// Sawtooth Sabre, see https://github.com/hyperledger/sawtooth-sabre
+    /// Sawtooth Sabre, see <https://github.com/hyperledger/sawtooth-sabre>
     Sabre,
     /// Generate a generic object file for linking
     Generic,
-    /// Solana, see https://solana.com/
+    /// Solana, see <https://solana.com/>
     Solana,
 }
 
