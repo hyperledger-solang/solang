@@ -4,11 +4,10 @@ use std::collections::HashSet;
 use std::fmt;
 use std::str;
 
-use super::constant_folding;
 use super::expression::expression;
-use super::reaching_definitions;
 use super::statements::{statement, LoopScopes};
 use super::vector_to_slice;
+use super::{constant_folding, reaching_definitions, strength_reduce};
 use crate::parser::pt;
 use crate::sema::ast::{
     CallTy, Contract, Expression, Function, Namespace, Parameter, StringLocation, Type,
@@ -30,6 +29,7 @@ pub enum Instr {
     /// Call internal function, either static dispatch or dynamic dispatch
     Call {
         res: Vec<usize>,
+        return_tys: Vec<Type>,
         call: InternalCallTy,
         args: Vec<Expression>,
     },
@@ -732,6 +732,7 @@ impl ControlFlowGraph {
                 res,
                 call: InternalCallTy::Static(cfg_no),
                 args,
+                ..
             } => format!(
                 "{} = call {} {}",
                 res.iter()
@@ -748,6 +749,7 @@ impl ControlFlowGraph {
                 res,
                 call: InternalCallTy::Dynamic(cfg),
                 args,
+                ..
             } => format!(
                 "{} = call {} {}",
                 res.iter()
@@ -1059,6 +1061,7 @@ pub fn generate_cfg(
     reaching_definitions::find(&mut cfg);
     constant_folding::constant_folding(&mut cfg, ns);
     vector_to_slice::vector_to_slice(&mut cfg, ns);
+    strength_reduce::strength_reduce(&mut cfg, ns);
 
     all_cfgs[cfg_no] = cfg;
 }
@@ -1270,6 +1273,7 @@ fn function_cfg(
                     &mut vartab,
                     Instr::Call {
                         res: Vec::new(),
+                        return_tys: Vec::new(),
                         call: InternalCallTy::Static(cfg_no),
                         args,
                     },
@@ -1281,6 +1285,7 @@ fn function_cfg(
                     &mut vartab,
                     Instr::Call {
                         res: Vec::new(),
+                        return_tys: Vec::new(),
                         call: InternalCallTy::Static(cfg_no),
                         args: Vec::new(),
                     },
@@ -1382,12 +1387,15 @@ pub fn generate_modifier_dispatch(
     // modifiers do not have return values in their syntax, but the return values from the function
     // need to be passed on. So, we need to create some var
     let mut value = Vec::new();
+    let mut return_tys = Vec::new();
+
     for (i, arg) in func.returns.iter().enumerate() {
         value.push(Expression::Variable(
             arg.loc,
             arg.ty.clone(),
             func.symtable.returns[i],
         ));
+        return_tys.push(arg.ty.clone());
     }
 
     let return_instr = Instr::Return { value };
@@ -1396,6 +1404,7 @@ pub fn generate_modifier_dispatch(
     let placeholder = Instr::Call {
         res: func.symtable.returns.clone(),
         call: InternalCallTy::Static(cfg_no),
+        return_tys,
         args: func
             .params
             .iter()

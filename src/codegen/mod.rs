@@ -5,6 +5,7 @@ mod external_functions;
 mod reaching_definitions;
 mod statements;
 mod storage;
+mod strength_reduce;
 mod vector_to_slice;
 
 use self::cfg::{ControlFlowGraph, Instr, Vartable};
@@ -92,6 +93,7 @@ fn storage_initializer(contract_no: usize, ns: &mut Namespace) -> ControlFlowGra
     reaching_definitions::find(&mut cfg);
     constant_folding::constant_folding(&mut cfg, ns);
     vector_to_slice::vector_to_slice(&mut cfg, ns);
+    strength_reduce::strength_reduce(&mut cfg, ns);
 
     cfg
 }

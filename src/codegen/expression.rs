@@ -1104,6 +1104,7 @@ pub fn emit_function_call(
                 if !ftype.returns.is_empty() {
                     let mut res = Vec::new();
                     let mut returns = Vec::new();
+                    let mut return_tys = Vec::new();
 
                     for ret in &ftype.returns {
                         let id = pt::Identifier {
@@ -1112,6 +1113,7 @@ pub fn emit_function_call(
                         };
 
                         let temp_pos = vartab.temp(&id, &ret.ty);
+                        return_tys.push(ret.ty.clone());
                         res.push(temp_pos);
                         returns.push(Expression::Variable(id.loc, ret.ty.clone(), temp_pos));
                     }
@@ -1122,6 +1124,7 @@ pub fn emit_function_call(
                             res,
                             call: InternalCallTy::Static(cfg_no),
                             args,
+                            return_tys,
                         },
                     );
 
@@ -1131,6 +1134,7 @@ pub fn emit_function_call(
                         vartab,
                         Instr::Call {
                             res: Vec::new(),
+                            return_tys: Vec::new(),
                             call: InternalCallTy::Static(cfg_no),
                             args,
                         },
@@ -1149,6 +1153,7 @@ pub fn emit_function_call(
                 if !returns.is_empty() {
                     let mut res = Vec::new();
                     let mut return_values = Vec::new();
+                    let mut return_tys = Vec::new();
 
                     for ty in returns {
                         let id = pt::Identifier {
@@ -1158,6 +1163,7 @@ pub fn emit_function_call(
 
                         let temp_pos = vartab.temp(&id, &ty);
                         res.push(temp_pos);
+                        return_tys.push(ty.clone());
                         return_values.push(Expression::Variable(id.loc, ty.clone(), temp_pos));
                     }
 
@@ -1166,6 +1172,7 @@ pub fn emit_function_call(
                         Instr::Call {
                             res,
                             call: InternalCallTy::Dynamic(cfg_expr),
+                            return_tys,
                             args,
                         },
                     );
@@ -1176,6 +1183,7 @@ pub fn emit_function_call(
                         vartab,
                         Instr::Call {
                             res: Vec::new(),
+                            return_tys: Vec::new(),
                             call: InternalCallTy::Dynamic(cfg_expr),
                             args,
                         },

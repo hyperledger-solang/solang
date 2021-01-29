@@ -384,7 +384,7 @@ pub struct Parameter {
     pub name: Option<Identifier>,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Hash, Eq, Clone)]
 pub enum StateMutability {
     Pure(Loc),
     View(Loc),

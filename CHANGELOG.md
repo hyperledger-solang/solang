@@ -4,6 +4,11 @@ will be documented here.
 
 ## [Unreleased]
 
+=======
+### Added
+- Added a strength reduce pass to eliminate 256/128 bit multiply, division,
+  and modulo where possible.
+
 ### Fixed
 - ewasm: staticcall() and delegatecall() cannot take value argument
 
