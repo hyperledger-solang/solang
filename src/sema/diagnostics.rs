@@ -206,7 +206,7 @@ pub fn message_as_json(cache: &mut FileCache, ns: &Namespace) -> Vec<OutputJson>
     let file_offsets = ns.file_offset(cache);
 
     for msg in &ns.diagnostics {
-        if msg.level == Level::Info {
+        if msg.level == Level::Info || msg.level == Level::Debug {
             continue;
         }
 
