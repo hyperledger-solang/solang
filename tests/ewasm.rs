@@ -355,7 +355,7 @@ impl Externals for TestRuntime {
                 let mut addr = [0u8; 20];
 
                 if let Err(e) = self.vm.memory.get_into(address_ptr, &mut addr) {
-                    panic!("call: {}", e);
+                    panic!("address: {}", e);
                 }
 
                 println!(

@@ -1260,6 +1260,11 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
             },
         );
 
+        // address needs its bytes reordered
+        let be_address = contract
+            .builder
+            .build_alloca(contract.address_type(), "be_address");
+
         // call create
         let ret = contract
             .builder
@@ -1276,7 +1281,14 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
                         .into(),
                     input.into(),
                     input_len.into(),
-                    address.into(),
+                    contract
+                        .builder
+                        .build_pointer_cast(
+                            be_address,
+                            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                            "be_address",
+                        )
+                        .into(),
                 ],
                 "",
             )
@@ -1284,6 +1296,30 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
             .left()
             .unwrap()
             .into_int_value();
+
+        contract.builder.build_call(
+            contract.module.get_function("__beNtoleN").unwrap(),
+            &[
+                contract
+                    .builder
+                    .build_pointer_cast(
+                        be_address,
+                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "",
+                    )
+                    .into(),
+                contract
+                    .builder
+                    .build_pointer_cast(
+                        address,
+                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "",
+                    )
+                    .into(),
+                contract.context.i32_type().const_int(20, false).into(),
+            ],
+            "",
+        );
 
         let is_success = contract.builder.build_int_compare(
             IntPredicate::EQ,
@@ -1335,6 +1371,35 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
             .build_alloca(contract.value_type(), "balance");
         contract.builder.build_store(value_ptr, value);
 
+        // address needs its bytes reordered
+        let be_address = contract
+            .builder
+            .build_alloca(contract.address_type(), "be_address");
+
+        contract.builder.build_call(
+            contract.module.get_function("__leNtobeN").unwrap(),
+            &[
+                contract
+                    .builder
+                    .build_pointer_cast(
+                        address,
+                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "",
+                    )
+                    .into(),
+                contract
+                    .builder
+                    .build_pointer_cast(
+                        be_address,
+                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "",
+                    )
+                    .into(),
+                contract.context.i32_type().const_int(20, false).into(),
+            ],
+            "",
+        );
+
         // call create
         let ret = contract
             .builder
@@ -1349,7 +1414,14 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
                     .unwrap(),
                 &[
                     gas.into(),
-                    address.into(),
+                    contract
+                        .builder
+                        .build_pointer_cast(
+                            be_address,
+                            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                            "address",
+                        )
+                        .into(),
                     contract
                         .builder
                         .build_pointer_cast(
