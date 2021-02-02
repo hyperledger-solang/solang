@@ -32,7 +32,7 @@ jobs:
       run: cargo test --verbose
     - uses: actions/upload-artifact@master
       with:
-        name: solang_linux
+        name: solang-linux
         path: ./target/debug/solang
 
   windows:
@@ -80,7 +80,7 @@ jobs:
       run: cargo test --verbose
     - uses: actions/upload-artifact@master
       with:
-        name: solang_mac
+        name: solang-mac
         path: ./target/debug/solang
 
   docker:
@@ -111,7 +111,7 @@ jobs:
         node-version: '12'
     - uses: actions/download-artifact@master
       with:
-        name: solang_linux
+        name: solang-linux
         path: bin
     - run: chmod 755 ./bin/solang
     - run: echo "$(pwd)/bin" >> $GITHUB_PATH
@@ -135,7 +135,7 @@ jobs:
       uses: actions/checkout@v2
     - uses: actions/download-artifact@master
       with:
-        name: solang_linux
+        name: solang-linux
         path: /home/runner/.cargo/bin/
     - run: chmod 755 $HOME/.cargo/bin/solang
     - name: Install Node.js

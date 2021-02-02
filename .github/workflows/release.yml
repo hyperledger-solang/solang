@@ -24,7 +24,7 @@ jobs:
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
         file: target/release/solang
-        asset_name: solang_linux
+        asset_name: solang-linux
         tag: ${{ github.ref }}
 
   windows:
@@ -72,5 +72,5 @@ jobs:
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
         file: target/release/solang
-        asset_name: solang_mac
+        asset_name: solang-mac
         tag: ${{ github.ref }}
