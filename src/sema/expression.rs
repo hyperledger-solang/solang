@@ -6627,7 +6627,12 @@ fn parse_call_args(
         gas: Box::new(Expression::NumberLiteral(
             pt::Loc(0, 0, 0),
             Type::Uint(64),
-            BigInt::zero(),
+            // See EIP150
+            if ns.target == Target::Ewasm {
+                BigInt::from(i64::MAX)
+            } else {
+                BigInt::zero()
+            },
         )),
         value: None,
         salt: None,
