@@ -9,7 +9,6 @@ use num_bigint::BigInt;
 use num_traits::FromPrimitive;
 use num_traits::One;
 use num_traits::ToPrimitive;
-use num_traits::Zero;
 use std::collections::HashSet;
 use std::ops::Mul;
 
@@ -798,7 +797,11 @@ pub fn expression(
                         payload: Expression::BytesLiteral(*loc, Type::DynamicBytes, vec![]),
                         args: Vec::new(),
                         value,
-                        gas: Expression::NumberLiteral(*loc, Type::Uint(64), BigInt::zero()),
+                        gas: Expression::NumberLiteral(
+                            *loc,
+                            Type::Uint(64),
+                            BigInt::from(i64::MAX),
+                        ),
                         callty: CallTy::Regular,
                     },
                 );
@@ -828,7 +831,11 @@ pub fn expression(
                         payload: Expression::BytesLiteral(*loc, Type::DynamicBytes, vec![]),
                         args: Vec::new(),
                         value,
-                        gas: Expression::NumberLiteral(*loc, Type::Uint(64), BigInt::zero()),
+                        gas: Expression::NumberLiteral(
+                            *loc,
+                            Type::Uint(64),
+                            BigInt::from(i64::MAX),
+                        ),
                         callty: CallTy::Regular,
                     },
                 );
