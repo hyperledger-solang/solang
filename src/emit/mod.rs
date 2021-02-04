@@ -6311,8 +6311,8 @@ fn load_stdlib<'a>(context: &'a Context, target: &Target) -> Module<'a> {
         module
             .link_in_module(Module::parse_bitcode_from_buffer(&memory, context).unwrap())
             .unwrap();
-    } else {
-        // Substrate provides a keccak256 (sha3) host function, others do not
+    } else if Target::Ewasm != *target {
+        // Substrate and Ewasm provides a keccak256 (sha3) host function, others do not
         let memory = MemoryBuffer::create_from_memory_range(KECCAK256_IR, "sha3");
 
         module

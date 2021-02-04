@@ -21,6 +21,8 @@ will be documented here.
 - Fixed ethereum abi encoding/decoding of structs and enums
 - Solana now returns an error if account data is not large enough
 - Fixed storage bytes push() and pop()
+- Ewasm uses precompiles for keccak hashing
+- Various ewasm fixes for Hyperledger Burrow
 
 ## [0.1.6]
 

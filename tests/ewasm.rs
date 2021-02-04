@@ -2,8 +2,11 @@ use ethabi::{decode, RawLog, Token};
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 use rand::Rng;
+use ripemd160::Ripemd160;
+use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::fmt;
+use tiny_keccak::{Hasher, Keccak};
 use wasmi::memory_units::Pages;
 use wasmi::*;
 
@@ -363,6 +366,35 @@ impl Externals for TestRuntime {
                     hex::encode(&addr),
                     hex::encode(&buf)
                 );
+
+                // if the first 19 bytes are 0, it's a precompile
+                if addr[0..19].iter().all(|v| *v == 0) {
+                    match addr[19] {
+                        20 => {
+                            let mut hasher = Keccak::v256();
+                            let mut hash = [0u8; 32];
+                            hasher.update(&buf);
+                            hasher.finalize(&mut hash);
+                            self.vm.returndata = hash.to_vec();
+                            return Ok(Some(RuntimeValue::I32(0)));
+                        }
+                        2 => {
+                            let mut hasher = Sha256::new();
+                            hasher.update(&buf);
+                            self.vm.returndata = hasher.finalize().to_vec();
+                            return Ok(Some(RuntimeValue::I32(0)));
+                        }
+                        3 => {
+                            let mut hasher = Ripemd160::new();
+                            hasher.update(&buf);
+                            self.vm.returndata = hasher.finalize().to_vec();
+                            return Ok(Some(RuntimeValue::I32(0)));
+                        }
+                        n => {
+                            panic!("unknown precompile {}", n);
+                        }
+                    }
+                }
 
                 // when ewasm creates a contract, the abi encoded args are concatenated to the
                 // code. So, find which code is was and use that instead. Otherwise, the
