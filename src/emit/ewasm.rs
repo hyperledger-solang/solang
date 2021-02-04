@@ -1065,18 +1065,65 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
         length: IntValue,
         dest: PointerValue,
     ) {
+        let balance = contract
+            .builder
+            .build_alloca(contract.value_type(), "balance");
+
+        contract
+            .builder
+            .build_store(balance, contract.value_type().const_zero());
+
+        let keccak256_pre_compile_address: [u8; 20] =
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 20];
+
+        let address = contract.emit_global_string(
+            "keccak256_precompile",
+            &keccak256_pre_compile_address,
+            true,
+        );
+
         contract.builder.build_call(
-            contract.module.get_function("keccak256").unwrap(),
+            contract.module.get_function("call").unwrap(),
             &[
+                contract
+                    .context
+                    .i64_type()
+                    .const_int(i64::MAX as u64, false)
+                    .into(),
+                contract
+                    .builder
+                    .build_pointer_cast(
+                        address,
+                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "address",
+                    )
+                    .into(),
+                contract
+                    .builder
+                    .build_pointer_cast(
+                        balance,
+                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "balance",
+                    )
+                    .into(),
                 contract
                     .builder
                     .build_pointer_cast(
                         src,
                         contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                        "src",
+                        "source",
                     )
                     .into(),
                 length.into(),
+            ],
+            "",
+        );
+
+        // We're not checking return value or returnDataSize;
+        // assuming precompiles always succeed
+        contract.builder.build_call(
+            contract.module.get_function("returnDataCopy").unwrap(),
+            &[
                 contract
                     .builder
                     .build_pointer_cast(
@@ -1085,6 +1132,8 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
                         "dest",
                     )
                     .into(),
+                contract.context.i32_type().const_zero().into(),
+                contract.context.i32_type().const_int(32, false).into(),
             ],
             "",
         );
@@ -1632,9 +1681,18 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
         input_len: IntValue<'b>,
     ) -> IntValue<'b> {
         let (precompile, hashlen) = match hash {
-            HashTy::Keccak256 => (0, 32),
-            HashTy::Ripemd160 => (3, 20),
-            HashTy::Sha256 => (2, 32),
+            HashTy::Keccak256 => (
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 20],
+                32,
+            ),
+            HashTy::Ripemd160 => (
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3],
+                20,
+            ),
+            HashTy::Sha256 => (
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2],
+                32,
+            ),
             _ => unreachable!(),
         };
 
@@ -1644,69 +1702,59 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
             "res",
         );
 
-        if hash == HashTy::Keccak256 {
-            contract.builder.build_call(
-                contract.module.get_function("keccak256").unwrap(),
-                &[input.into(), input_len.into(), res.into()],
-                "",
-            );
-        } else {
-            let balance = contract
-                .builder
-                .build_alloca(contract.value_type(), "balance");
+        let balance = contract
+            .builder
+            .build_alloca(contract.value_type(), "balance");
 
-            contract
-                .builder
-                .build_store(balance, contract.value_type().const_zero());
+        contract
+            .builder
+            .build_store(balance, contract.value_type().const_zero());
 
-            let address = contract
-                .builder
-                .build_alloca(contract.address_type(), "address");
+        let address =
+            contract.emit_global_string(&format!("precompile_{}", hash), &precompile, true);
 
-            contract.builder.build_store(
-                address,
-                contract.address_type().const_int(precompile, false),
-            );
+        contract.builder.build_call(
+            contract.module.get_function("call").unwrap(),
+            &[
+                contract
+                    .context
+                    .i64_type()
+                    .const_int(i64::MAX as u64, false)
+                    .into(),
+                contract
+                    .builder
+                    .build_pointer_cast(
+                        address,
+                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "address",
+                    )
+                    .into(),
+                contract
+                    .builder
+                    .build_pointer_cast(
+                        balance,
+                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "balance",
+                    )
+                    .into(),
+                input.into(),
+                input_len.into(),
+            ],
+            "",
+        );
 
-            contract.builder.build_call(
-                contract.module.get_function("call").unwrap(),
-                &[
-                    contract.context.i64_type().const_zero().into(),
-                    contract
-                        .builder
-                        .build_pointer_cast(
-                            address,
-                            contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                            "address",
-                        )
-                        .into(),
-                    contract
-                        .builder
-                        .build_pointer_cast(
-                            balance,
-                            contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                            "balance",
-                        )
-                        .into(),
-                    input.into(),
-                    input_len.into(),
-                ],
-                "",
-            );
+        // We're not checking return value or returnDataSize;
+        // assuming precompiles always succeed
 
-            // We're not checking return value or returnDataSize;
-            // assuming precompiles always succeed
-
-            contract.builder.build_call(
-                contract.module.get_function("returnDataCopy").unwrap(),
-                &[
-                    res.into(),
-                    contract.context.i32_type().const_zero().into(),
-                    contract.context.i32_type().const_int(hashlen, false).into(),
-                ],
-                "",
-            );
-        }
+        contract.builder.build_call(
+            contract.module.get_function("returnDataCopy").unwrap(),
+            &[
+                res.into(),
+                contract.context.i32_type().const_zero().into(),
+                contract.context.i32_type().const_int(hashlen, false).into(),
+            ],
+            "",
+        );
 
         // bytes32 needs to reverse bytes
         let temp = contract
