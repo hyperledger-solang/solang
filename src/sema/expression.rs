@@ -5855,6 +5855,15 @@ fn method_call_pos_args(
                 diagnostics,
             )?;
 
+            if ty != CallTy::Regular && call_args.value.is_some() {
+                diagnostics.push(Diagnostic::error(
+                    *loc,
+                    format!("‘{}’ cannot have value specifed", func.name,),
+                ));
+
+                return Err(());
+            }
+
             if args.len() != 1 {
                 diagnostics.push(Diagnostic::error(
                     *loc,
