@@ -387,7 +387,6 @@ impl EwasmTarget {
                 &[
                     u64_ty.into(),    // gas
                     u8_ptr_ty.into(), // address
-                    u8_ptr_ty.into(), // valueOffset
                     u8_ptr_ty.into(), // input offset
                     u32_ty.into(),    // input length
                 ],
@@ -401,7 +400,6 @@ impl EwasmTarget {
                 &[
                     u64_ty.into(),    // gas
                     u8_ptr_ty.into(), // address
-                    u8_ptr_ty.into(), // valueOffset
                     u8_ptr_ty.into(), // input offset
                     u32_ty.into(),    // input length
                 ],
@@ -1414,12 +1412,6 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
         value: IntValue<'b>,
         callty: ast::CallTy,
     ) {
-        // value is a u128
-        let value_ptr = contract
-            .builder
-            .build_alloca(contract.value_type(), "balance");
-        contract.builder.build_store(value_ptr, value);
-
         // address needs its bytes reordered
         let be_address = contract
             .builder
@@ -1449,45 +1441,81 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
             "",
         );
 
-        // call create
-        let ret = contract
-            .builder
-            .build_call(
-                contract
-                    .module
-                    .get_function(match callty {
-                        ast::CallTy::Regular => "call",
-                        ast::CallTy::Static => "callStatic",
-                        ast::CallTy::Delegate => "callDelegate",
-                    })
-                    .unwrap(),
-                &[
-                    gas.into(),
+        let ret;
+
+        if callty == ast::CallTy::Regular {
+            // needs value
+
+            // value is a u128
+            let value_ptr = contract
+                .builder
+                .build_alloca(contract.value_type(), "balance");
+            contract.builder.build_store(value_ptr, value);
+
+            // call create
+            ret = contract
+                .builder
+                .build_call(
+                    contract.module.get_function("call").unwrap(),
+                    &[
+                        gas.into(),
+                        contract
+                            .builder
+                            .build_pointer_cast(
+                                be_address,
+                                contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                                "address",
+                            )
+                            .into(),
+                        contract
+                            .builder
+                            .build_pointer_cast(
+                                value_ptr,
+                                contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                                "value_transfer",
+                            )
+                            .into(),
+                        payload.into(),
+                        payload_len.into(),
+                    ],
+                    "",
+                )
+                .try_as_basic_value()
+                .left()
+                .unwrap()
+                .into_int_value();
+        } else {
+            ret = contract
+                .builder
+                .build_call(
                     contract
-                        .builder
-                        .build_pointer_cast(
-                            be_address,
-                            contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                            "address",
-                        )
-                        .into(),
-                    contract
-                        .builder
-                        .build_pointer_cast(
-                            value_ptr,
-                            contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                            "value_transfer",
-                        )
-                        .into(),
-                    payload.into(),
-                    payload_len.into(),
-                ],
-                "",
-            )
-            .try_as_basic_value()
-            .left()
-            .unwrap()
-            .into_int_value();
+                        .module
+                        .get_function(match callty {
+                            ast::CallTy::Regular => "call",
+                            ast::CallTy::Static => "callStatic",
+                            ast::CallTy::Delegate => "callDelegate",
+                        })
+                        .unwrap(),
+                    &[
+                        gas.into(),
+                        contract
+                            .builder
+                            .build_pointer_cast(
+                                be_address,
+                                contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                                "address",
+                            )
+                            .into(),
+                        payload.into(),
+                        payload_len.into(),
+                    ],
+                    "",
+                )
+                .try_as_basic_value()
+                .left()
+                .unwrap()
+                .into_int_value();
+        }
 
         let is_success = contract.builder.build_int_compare(
             IntPredicate::EQ,

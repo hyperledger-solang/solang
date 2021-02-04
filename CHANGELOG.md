@@ -2,6 +2,11 @@
 All notable changes to [Solang](https://github.com/hyperledger-labs/solang/)
 will be documented here.
 
+## [Unreleased]
+
+### Fixed
+- ewasm: staticcall() and delegatecall() cannot take value argument
+
 ## [0.1.7]
 
 ### Added
