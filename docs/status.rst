@@ -51,8 +51,8 @@ Please use the latest master version of burrow, as ewasm support is still maturi
 
 Some language features have not been fully implemnented yet on ewasm:
 
-- The built in function ``abi.encode()``, ``abi.encodeWithSelector()``, ``abi.encodeWithSignature()``, and ``abi.encodePacked()``
-- Contract storage variables types ``string`` and ``bytes`` are not implemented
+- The built in function ``abi.encodePacked()``
+- Contract storage variables types ``string``, ``bytes`` and function types are not implemented
 
 Hyperledger Sawtooth
 ____________________
