@@ -283,9 +283,9 @@ pub fn statement(
             loops.leave_scope();
 
             if body_reachable {
-                if !next.is_empty() {
-                    cfg.set_basic_block(next_block);
+                cfg.set_basic_block(next_block);
 
+                if !next.is_empty() {
                     for stmt in next {
                         statement(
                             stmt,

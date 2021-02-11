@@ -1,4 +1,5 @@
-use crate::{first_error, parse_and_resolve};
+use crate::{build_solidity, first_error, parse_and_resolve};
+use parity_scale_codec::Encode;
 use solang::Target;
 
 #[test]
@@ -18,4 +19,22 @@ fn test_infinite_loop() {
     );
 
     assert_eq!(first_error(ns.diagnostics), "unreachable statement");
+}
+
+#[test]
+fn for_loop_no_cond_or_next() {
+    let mut runtime = build_solidity(
+        r##"
+        contract test {
+            function foo(bool x) public {
+                for (;;) {
+                    if (x)
+                        break;
+                }
+            }
+        }"##,
+    );
+
+    runtime.constructor(0, Vec::new());
+    runtime.function("foo", true.encode());
 }
