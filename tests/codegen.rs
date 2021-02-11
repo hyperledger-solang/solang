@@ -71,7 +71,7 @@ fn testcase(path: PathBuf) {
 
         match checks.get(current_check) {
             Some(Test::Check(needle)) => {
-                if line.find(needle).is_some() {
+                if line.contains(needle) {
                     current_check += 1;
                 }
             }
@@ -84,7 +84,7 @@ fn testcase(path: PathBuf) {
         }
 
         if let Some(Test::Fail(needle)) = fails.get(current_fail) {
-            if line.find(needle).is_some() {
+            if line.contains(needle) {
                 current_fail += 1;
             }
         }

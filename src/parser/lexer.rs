@@ -534,7 +534,7 @@ impl<'input> Lexer<'input> {
         start: usize,
         end: usize,
         ch: char,
-    ) -> Option<Result<(usize, Token<'input>, usize), LexicalError>> {
+    ) -> Result<(usize, Token<'input>, usize), LexicalError> {
         if ch == '0' {
             if let Some((_, 'x')) = self.chars.peek() {
                 // hex number
@@ -543,10 +543,10 @@ impl<'input> Lexer<'input> {
                 let mut end = match self.chars.next() {
                     Some((end, ch)) if ch.is_ascii_hexdigit() => end,
                     Some((_, _)) => {
-                        return Some(Err(LexicalError::MissingNumber(start, start + 1)));
+                        return Err(LexicalError::MissingNumber(start, start + 1));
                     }
                     None => {
-                        return Some(Err(LexicalError::EndofFileInHex(start, self.input.len())));
+                        return Err(LexicalError::EndofFileInHex(start, self.input.len()));
                     }
                 };
 
@@ -558,11 +558,7 @@ impl<'input> Lexer<'input> {
                     self.chars.next();
                 }
 
-                return Some(Ok((
-                    start,
-                    Token::HexNumber(&self.input[start..=end]),
-                    end + 1,
-                )));
+                return Ok((start, Token::HexNumber(&self.input[start..=end]), end + 1));
             }
         }
 
@@ -591,13 +587,13 @@ impl<'input> Lexer<'input> {
             }
 
             if exp_start > end {
-                return Some(Err(LexicalError::MissingExponent(start, self.input.len())));
+                return Err(LexicalError::MissingExponent(start, self.input.len()));
             }
         }
 
         let exp = &self.input[exp_start..=end];
 
-        Some(Ok((start, Token::Number(base, exp), end + 1)))
+        Ok((start, Token::Number(base, exp), end + 1))
     }
 
     fn string(
@@ -605,7 +601,7 @@ impl<'input> Lexer<'input> {
         token_start: usize,
         string_start: usize,
         quote_char: char,
-    ) -> Option<Result<(usize, Token<'input>, usize), LexicalError>> {
+    ) -> Result<(usize, Token<'input>, usize), LexicalError> {
         let mut end;
 
         let mut last_was_escape = false;
@@ -622,18 +618,18 @@ impl<'input> Lexer<'input> {
                     last_was_escape = false;
                 }
             } else {
-                return Some(Err(LexicalError::EndOfFileInString(
+                return Err(LexicalError::EndOfFileInString(
                     token_start,
                     self.input.len(),
-                )));
+                ));
             }
         }
 
-        Some(Ok((
+        Ok((
             token_start,
             Token::StringLiteral(&self.input[string_start..end]),
             end + 1,
-        )))
+        ))
     }
 
     fn next(&mut self) -> Option<Result<(usize, Token<'input>, usize), LexicalError>> {
@@ -664,7 +660,7 @@ impl<'input> Lexer<'input> {
 
                                 self.chars.next();
 
-                                return self.string(start, start + 8, quote_char);
+                                return Some(self.string(start, start + 8, quote_char));
                             }
                             _ => (),
                         }
@@ -742,7 +738,7 @@ impl<'input> Lexer<'input> {
                     };
                 }
                 Some((start, quote_char @ '"')) | Some((start, quote_char @ '\'')) => {
-                    return self.string(start, start + 1, quote_char);
+                    return Some(self.string(start, start + 1, quote_char));
                 }
                 Some((start, '/')) => {
                     match self.chars.peek() {
@@ -827,7 +823,7 @@ impl<'input> Lexer<'input> {
                     }
                 }
                 Some((start, ch)) if ch.is_ascii_digit() => {
-                    return self.parse_number(start, start, ch)
+                    return Some(self.parse_number(start, start, ch))
                 }
                 Some((i, ';')) => return Some(Ok((i, Token::Semicolon, i + 1))),
                 Some((i, ',')) => return Some(Ok((i, Token::Comma, i + 1))),

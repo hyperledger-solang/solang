@@ -80,7 +80,10 @@ pub fn gen_abi(contract_no: usize, ns: &Namespace) -> Vec<ABI> {
         .filter_map(|function_no| {
             let func = &ns.functions[*function_no];
 
-            if matches!(func.visibility, pt::Visibility::Public(_) | pt::Visibility::External(_)) {
+            if matches!(
+                func.visibility,
+                pt::Visibility::Public(_) | pt::Visibility::External(_)
+            ) {
                 Some(ABI {
                     name: func.name.to_owned(),
                     mutability: func.print_mutability(),

@@ -203,8 +203,10 @@ impl Function {
 
     /// Is this function accessable externally
     pub fn is_public(&self) -> bool {
-        matches!(self.visibility,
-            pt::Visibility::Public(_) | pt::Visibility::External(_))
+        matches!(
+            self.visibility,
+            pt::Visibility::Public(_) | pt::Visibility::External(_)
+        )
     }
 
     /// Is this function accessable only from same contract

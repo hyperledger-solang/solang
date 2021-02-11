@@ -92,8 +92,18 @@ pub fn string_format(
                         ));
                         return Err(());
                     }
-                } else if !matches!(arg_ty, Type::Uint(_) | Type::Int(_) | Type::Bytes(_) | Type::Enum(_) | Type::Address(_) | Type::Contract(_) | Type::String | Type::DynamicBytes | Type::Bool)
-                {
+                } else if !matches!(
+                    arg_ty,
+                    Type::Uint(_)
+                        | Type::Int(_)
+                        | Type::Bytes(_)
+                        | Type::Enum(_)
+                        | Type::Address(_)
+                        | Type::Contract(_)
+                        | Type::String
+                        | Type::DynamicBytes
+                        | Type::Bool
+                ) {
                     diagnostics.push(Diagnostic::error(
                         arg.loc(),
                         String::from(
