@@ -31,6 +31,7 @@ and we have a `channel on chat.hyperledger.org <https://chat.hyperledger.org/cha
    status
    running
    language
+   optimizer
    extension
    examples
    contributing
