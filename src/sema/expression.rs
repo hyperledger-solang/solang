@@ -6765,7 +6765,7 @@ pub fn function_call_expr(
             if builtin::is_builtin_call(None, &id.name, ns) {
                 return {
                     let expr = builtin::resolve_call(
-                        loc,
+                        &id.loc,
                         file_no,
                         None,
                         &id.name,

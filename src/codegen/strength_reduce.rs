@@ -80,7 +80,12 @@ pub fn strength_reduce(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
 
 /// Walk through all the expressions in a block, and find any expressions which can be
 /// replaced with cheaper ones.
-fn block_reduce(block_no: usize, cfg: &mut ControlFlowGraph, mut vars: Variables, ns: &Namespace) {
+fn block_reduce(
+    block_no: usize,
+    cfg: &mut ControlFlowGraph,
+    mut vars: Variables,
+    ns: &mut Namespace,
+) {
     for instr in &mut cfg.blocks[block_no].instr {
         match instr {
             Instr::Set { expr, .. } => {
@@ -211,53 +216,117 @@ fn block_reduce(block_no: usize, cfg: &mut ControlFlowGraph, mut vars: Variables
 }
 
 /// Walk through an expression, and do the replacements for the expensive operations
-fn expression_reduce(expr: &Expression, vars: &Variables, ns: &Namespace) -> Expression {
-    expr.copy_filter(|expr| match expr {
-        Expression::Multiply(loc, ty, left, right) => {
-            let bits = ty.bits(ns) as usize;
+fn expression_reduce(expr: &Expression, vars: &Variables, ns: &mut Namespace) -> Expression {
+    let filter = |expr: &Expression, ns: &mut Namespace| -> Expression {
+        match expr {
+            Expression::Multiply(loc, ty, left, right) => {
+                let bits = ty.bits(ns) as usize;
 
-            if bits >= 128 {
-                let left_values = expression_values(&left, vars, ns);
-                let right_values = expression_values(&right, vars, ns);
+                if bits >= 128 {
+                    let left_values = expression_values(&left, vars, ns);
+                    let right_values = expression_values(&right, vars, ns);
 
-                if let Some(right) = is_single_constant(&right_values) {
-                    // is it a power of two
-                    // replace with a shift
-                    let mut shift = BigInt::one();
-                    let mut cmp = BigInt::from(2);
+                    if let Some(right) = is_single_constant(&right_values) {
+                        // is it a power of two
+                        // replace with a shift
+                        let mut shift = BigInt::one();
+                        let mut cmp = BigInt::from(2);
 
-                    for _ in 1..bits {
-                        if cmp == right {
-                            return Expression::ShiftLeft(
-                                *loc,
-                                ty.clone(),
-                                left.clone(),
-                                Box::new(Expression::NumberLiteral(*loc, ty.clone(), shift)),
-                            );
+                        for _ in 1..bits {
+                            if cmp == right {
+                                ns.hover_overrides.insert(
+                                    *loc,
+                                    format!(
+                                        "{} multiply optimized to shift left {}",
+                                        ty.to_string(ns),
+                                        shift
+                                    ),
+                                );
+
+                                return Expression::ShiftLeft(
+                                    *loc,
+                                    ty.clone(),
+                                    left.clone(),
+                                    Box::new(Expression::NumberLiteral(*loc, ty.clone(), shift)),
+                                );
+                            }
+
+                            cmp *= 2;
+                            shift += 1;
                         }
-
-                        cmp *= 2;
-                        shift += 1;
                     }
-                }
 
-                if ty.is_signed_int() {
-                    if let (Some(left_max), Some(right_max)) =
-                        (set_max_signed(&left_values), set_max_signed(&right_values))
-                    {
+                    if ty.is_signed_int() {
+                        if let (Some(left_max), Some(right_max)) =
+                            (set_max_signed(&left_values), set_max_signed(&right_values))
+                        {
+                            // We can safely replace this with a 64 bit multiply which can be encoded in a single wasm/bpf instruction
+                            if (left_max * right_max).to_i64().is_some() {
+                                ns.hover_overrides.insert(
+                                    *loc,
+                                    format!(
+                                        "{} multiply optimized to int64 multiply",
+                                        ty.to_string(ns),
+                                    ),
+                                );
+
+                                return Expression::SignExt(
+                                    *loc,
+                                    ty.clone(),
+                                    Box::new(Expression::Multiply(
+                                        *loc,
+                                        Type::Int(64),
+                                        Box::new(
+                                            cast(
+                                                loc,
+                                                left.as_ref().clone(),
+                                                &Type::Int(64),
+                                                false,
+                                                ns,
+                                                &mut Vec::new(),
+                                            )
+                                            .unwrap(),
+                                        ),
+                                        Box::new(
+                                            cast(
+                                                loc,
+                                                right.as_ref().clone(),
+                                                &Type::Int(64),
+                                                false,
+                                                ns,
+                                                &mut Vec::new(),
+                                            )
+                                            .unwrap(),
+                                        ),
+                                    )),
+                                );
+                            }
+                        }
+                    } else {
+                        let left_max = set_max_unsigned(&left_values);
+                        let right_max = set_max_unsigned(&right_values);
+
                         // We can safely replace this with a 64 bit multiply which can be encoded in a single wasm/bpf instruction
-                        if (left_max * right_max).to_i64().is_some() {
-                            return Expression::SignExt(
+                        if left_max * right_max <= BigInt::from(u64::MAX) {
+                            ns.hover_overrides.insert(
+                                *loc,
+                                format!(
+                                    "{} multiply optimized to uint64 multiply",
+                                    ty.to_string(ns),
+                                ),
+                            );
+
+                            return Expression::ZeroExt(
                                 *loc,
                                 ty.clone(),
                                 Box::new(Expression::Multiply(
                                     *loc,
-                                    Type::Int(64),
+                                    Type::Uint(64),
                                     Box::new(
                                         cast(
                                             loc,
                                             left.as_ref().clone(),
-                                            &Type::Int(64),
+                                            &Type::Uint(64),
                                             false,
                                             ns,
                                             &mut Vec::new(),
@@ -268,7 +337,7 @@ fn expression_reduce(expr: &Expression, vars: &Variables, ns: &Namespace) -> Exp
                                         cast(
                                             loc,
                                             right.as_ref().clone(),
-                                            &Type::Int(64),
+                                            &Type::Uint(64),
                                             false,
                                             ns,
                                             &mut Vec::new(),
@@ -279,93 +348,115 @@ fn expression_reduce(expr: &Expression, vars: &Variables, ns: &Namespace) -> Exp
                             );
                         }
                     }
-                } else {
-                    let left_max = set_max_unsigned(&left_values);
-                    let right_max = set_max_unsigned(&right_values);
-
-                    // We can safely replace this with a 64 bit multiply which can be encoded in a single wasm/bpf instruction
-                    if left_max * right_max <= BigInt::from(u64::MAX) {
-                        return Expression::ZeroExt(
-                            *loc,
-                            ty.clone(),
-                            Box::new(Expression::Multiply(
-                                *loc,
-                                Type::Uint(64),
-                                Box::new(
-                                    cast(
-                                        loc,
-                                        left.as_ref().clone(),
-                                        &Type::Uint(64),
-                                        false,
-                                        ns,
-                                        &mut Vec::new(),
-                                    )
-                                    .unwrap(),
-                                ),
-                                Box::new(
-                                    cast(
-                                        loc,
-                                        right.as_ref().clone(),
-                                        &Type::Uint(64),
-                                        false,
-                                        ns,
-                                        &mut Vec::new(),
-                                    )
-                                    .unwrap(),
-                                ),
-                            )),
-                        );
-                    }
                 }
+
+                expr.clone()
             }
+            Expression::Divide(loc, ty, left, right) => {
+                let bits = ty.bits(ns) as usize;
 
-            expr.clone()
-        }
-        Expression::Divide(loc, ty, left, right) => {
-            let bits = ty.bits(ns) as usize;
+                if bits >= 128 {
+                    let left_values = expression_values(&left, vars, ns);
+                    let right_values = expression_values(&right, vars, ns);
 
-            if bits >= 128 {
-                let left_values = expression_values(&left, vars, ns);
-                let right_values = expression_values(&right, vars, ns);
+                    if let Some(right) = is_single_constant(&right_values) {
+                        // is it a power of two
+                        // replace with a shift
+                        let mut shift = BigInt::one();
+                        let mut cmp = BigInt::from(2);
 
-                if let Some(right) = is_single_constant(&right_values) {
-                    // is it a power of two
-                    // replace with a shift
-                    let mut shift = BigInt::one();
-                    let mut cmp = BigInt::from(2);
+                        for _ in 1..bits {
+                            if cmp == right {
+                                ns.hover_overrides.insert(
+                                    *loc,
+                                    format!(
+                                        "{} divide optimized to shift right {}",
+                                        ty.to_string(ns),
+                                        shift
+                                    ),
+                                );
 
-                    for _ in 1..bits {
-                        if cmp == right {
-                            return Expression::ShiftRight(
-                                *loc,
-                                ty.clone(),
-                                left.clone(),
-                                Box::new(Expression::NumberLiteral(*loc, ty.clone(), shift)),
-                                ty.is_signed_int(),
-                            );
+                                return Expression::ShiftRight(
+                                    *loc,
+                                    ty.clone(),
+                                    left.clone(),
+                                    Box::new(Expression::NumberLiteral(*loc, ty.clone(), shift)),
+                                    ty.is_signed_int(),
+                                );
+                            }
+
+                            cmp *= 2;
+                            shift += 1;
                         }
-
-                        cmp *= 2;
-                        shift += 1;
                     }
-                }
 
-                if ty.is_signed_int() {
-                    if let (Some(left_max), Some(right_max)) =
-                        (set_max_signed(&left_values), set_max_signed(&right_values))
-                    {
-                        if left_max.to_i64().is_some() && right_max.to_i64().is_some() {
-                            return Expression::SignExt(
+                    if ty.is_signed_int() {
+                        if let (Some(left_max), Some(right_max)) =
+                            (set_max_signed(&left_values), set_max_signed(&right_values))
+                        {
+                            if left_max.to_i64().is_some() && right_max.to_i64().is_some() {
+                                ns.hover_overrides.insert(
+                                    *loc,
+                                    format!(
+                                        "{} divide optimized to int64 divide",
+                                        ty.to_string(ns),
+                                    ),
+                                );
+
+                                return Expression::SignExt(
+                                    *loc,
+                                    ty.clone(),
+                                    Box::new(Expression::Divide(
+                                        *loc,
+                                        Type::Int(64),
+                                        Box::new(
+                                            cast(
+                                                loc,
+                                                left.as_ref().clone(),
+                                                &Type::Int(64),
+                                                false,
+                                                ns,
+                                                &mut Vec::new(),
+                                            )
+                                            .unwrap(),
+                                        ),
+                                        Box::new(
+                                            cast(
+                                                loc,
+                                                right.as_ref().clone(),
+                                                &Type::Int(64),
+                                                false,
+                                                ns,
+                                                &mut Vec::new(),
+                                            )
+                                            .unwrap(),
+                                        ),
+                                    )),
+                                );
+                            }
+                        }
+                    } else {
+                        let left_max = set_max_unsigned(&left_values);
+                        let right_max = set_max_unsigned(&right_values);
+
+                        // If both values fit into u64, then the result must too
+                        if left_max.to_u64().is_some() && right_max.to_u64().is_some() {
+                            ns.hover_overrides.insert(
+                                *loc,
+                                format!("{} divide optimized to uint64 divide", ty.to_string(ns),),
+                            );
+
+                            return Expression::ZeroExt(
                                 *loc,
                                 ty.clone(),
                                 Box::new(Expression::Divide(
                                     *loc,
-                                    Type::Int(64),
+                                    Type::Uint(64),
                                     Box::new(
                                         cast(
                                             loc,
                                             left.as_ref().clone(),
-                                            &Type::Int(64),
+                                            &Type::Uint(64),
                                             false,
                                             ns,
                                             &mut Vec::new(),
@@ -376,7 +467,7 @@ fn expression_reduce(expr: &Expression, vars: &Variables, ns: &Namespace) -> Exp
                                         cast(
                                             loc,
                                             right.as_ref().clone(),
-                                            &Type::Int(64),
+                                            &Type::Uint(64),
                                             false,
                                             ns,
                                             &mut Vec::new(),
@@ -387,91 +478,113 @@ fn expression_reduce(expr: &Expression, vars: &Variables, ns: &Namespace) -> Exp
                             );
                         }
                     }
-                } else {
-                    let left_max = set_max_unsigned(&left_values);
-                    let right_max = set_max_unsigned(&right_values);
-
-                    // If both values fit into u64, then the result must too
-                    if left_max.to_u64().is_some() && right_max.to_u64().is_some() {
-                        return Expression::ZeroExt(
-                            *loc,
-                            ty.clone(),
-                            Box::new(Expression::Divide(
-                                *loc,
-                                Type::Uint(64),
-                                Box::new(
-                                    cast(
-                                        loc,
-                                        left.as_ref().clone(),
-                                        &Type::Uint(64),
-                                        false,
-                                        ns,
-                                        &mut Vec::new(),
-                                    )
-                                    .unwrap(),
-                                ),
-                                Box::new(
-                                    cast(
-                                        loc,
-                                        right.as_ref().clone(),
-                                        &Type::Uint(64),
-                                        false,
-                                        ns,
-                                        &mut Vec::new(),
-                                    )
-                                    .unwrap(),
-                                ),
-                            )),
-                        );
-                    }
                 }
+
+                expr.clone()
             }
+            Expression::Modulo(loc, ty, left, right) => {
+                let bits = ty.bits(ns) as usize;
 
-            expr.clone()
-        }
-        Expression::Modulo(loc, ty, left, right) => {
-            let bits = ty.bits(ns) as usize;
+                if bits >= 128 {
+                    let left_values = expression_values(&left, vars, ns);
+                    let right_values = expression_values(&right, vars, ns);
 
-            if bits >= 128 {
-                let left_values = expression_values(&left, vars, ns);
-                let right_values = expression_values(&right, vars, ns);
+                    if let Some(right) = is_single_constant(&right_values) {
+                        // is it a power of two
+                        // replace with an bitwise and
+                        // e.g. (foo % 16) becomes (foo & 15)
+                        let mut cmp = BigInt::one();
 
-                if let Some(right) = is_single_constant(&right_values) {
-                    // is it a power of two
-                    // replace with an bitwise and
-                    // e.g. (foo % 16) becomes (foo & 15)
-                    let mut cmp = BigInt::one();
+                        for _ in 1..bits {
+                            if cmp == right {
+                                ns.hover_overrides.insert(
+                                    *loc,
+                                    format!(
+                                        "{} modulo optimized to bitwise and {}",
+                                        ty.to_string(ns),
+                                        cmp.clone() - 1
+                                    ),
+                                );
 
-                    for _ in 1..bits {
-                        if cmp == right {
-                            return Expression::BitwiseAnd(
-                                *loc,
-                                ty.clone(),
-                                left.clone(),
-                                Box::new(Expression::NumberLiteral(*loc, ty.clone(), cmp - 1)),
-                            );
+                                return Expression::BitwiseAnd(
+                                    *loc,
+                                    ty.clone(),
+                                    left.clone(),
+                                    Box::new(Expression::NumberLiteral(*loc, ty.clone(), cmp - 1)),
+                                );
+                            }
+
+                            cmp *= 2;
                         }
-
-                        cmp *= 2;
                     }
-                }
 
-                if ty.is_signed_int() {
-                    if let (Some(left_max), Some(right_max)) =
-                        (set_max_signed(&left_values), set_max_signed(&right_values))
-                    {
-                        if left_max.to_i64().is_some() && right_max.to_i64().is_some() {
-                            return Expression::SignExt(
+                    if ty.is_signed_int() {
+                        if let (Some(left_max), Some(right_max)) =
+                            (set_max_signed(&left_values), set_max_signed(&right_values))
+                        {
+                            if left_max.to_i64().is_some() && right_max.to_i64().is_some() {
+                                ns.hover_overrides.insert(
+                                    *loc,
+                                    format!(
+                                        "{} modulo optimized to int64 modulo",
+                                        ty.to_string(ns),
+                                    ),
+                                );
+
+                                return Expression::SignExt(
+                                    *loc,
+                                    ty.clone(),
+                                    Box::new(Expression::Modulo(
+                                        *loc,
+                                        Type::Int(64),
+                                        Box::new(
+                                            cast(
+                                                loc,
+                                                left.as_ref().clone(),
+                                                &Type::Int(64),
+                                                false,
+                                                ns,
+                                                &mut Vec::new(),
+                                            )
+                                            .unwrap(),
+                                        ),
+                                        Box::new(
+                                            cast(
+                                                loc,
+                                                right.as_ref().clone(),
+                                                &Type::Int(64),
+                                                false,
+                                                ns,
+                                                &mut Vec::new(),
+                                            )
+                                            .unwrap(),
+                                        ),
+                                    )),
+                                );
+                            }
+                        }
+                    } else {
+                        let left_max = set_max_unsigned(&left_values);
+                        let right_max = set_max_unsigned(&right_values);
+
+                        // If both values fit into u64, then the result must too
+                        if left_max.to_u64().is_some() && right_max.to_u64().is_some() {
+                            ns.hover_overrides.insert(
+                                *loc,
+                                format!("{} modulo optimized to uint64 modulo", ty.to_string(ns)),
+                            );
+
+                            return Expression::ZeroExt(
                                 *loc,
                                 ty.clone(),
                                 Box::new(Expression::Modulo(
                                     *loc,
-                                    Type::Int(64),
+                                    Type::Uint(64),
                                     Box::new(
                                         cast(
                                             loc,
                                             left.as_ref().clone(),
-                                            &Type::Int(64),
+                                            &Type::Uint(64),
                                             false,
                                             ns,
                                             &mut Vec::new(),
@@ -482,7 +595,7 @@ fn expression_reduce(expr: &Expression, vars: &Variables, ns: &Namespace) -> Exp
                                         cast(
                                             loc,
                                             right.as_ref().clone(),
-                                            &Type::Int(64),
+                                            &Type::Uint(64),
                                             false,
                                             ns,
                                             &mut Vec::new(),
@@ -493,50 +606,15 @@ fn expression_reduce(expr: &Expression, vars: &Variables, ns: &Namespace) -> Exp
                             );
                         }
                     }
-                } else {
-                    let left_max = set_max_unsigned(&left_values);
-                    let right_max = set_max_unsigned(&right_values);
-
-                    // If both values fit into u64, then the result must too
-                    if left_max.to_u64().is_some() && right_max.to_u64().is_some() {
-                        return Expression::ZeroExt(
-                            *loc,
-                            ty.clone(),
-                            Box::new(Expression::Modulo(
-                                *loc,
-                                Type::Uint(64),
-                                Box::new(
-                                    cast(
-                                        loc,
-                                        left.as_ref().clone(),
-                                        &Type::Uint(64),
-                                        false,
-                                        ns,
-                                        &mut Vec::new(),
-                                    )
-                                    .unwrap(),
-                                ),
-                                Box::new(
-                                    cast(
-                                        loc,
-                                        right.as_ref().clone(),
-                                        &Type::Uint(64),
-                                        false,
-                                        ns,
-                                        &mut Vec::new(),
-                                    )
-                                    .unwrap(),
-                                ),
-                            )),
-                        );
-                    }
                 }
-            }
 
-            expr.clone()
+                expr.clone()
+            }
+            _ => expr.clone(),
         }
-        _ => expr.clone(),
-    })
+    };
+
+    expr.copy_filter(ns, filter)
 }
 
 /// Step through a block, and calculate the reaching values for all the variables

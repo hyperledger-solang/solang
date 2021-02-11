@@ -391,27 +391,39 @@ impl SolangServer {
             }
 
             // Arithmetic expression
-            Expression::Add(_locs, _typ, expr1, expr2) => {
+            Expression::Add(locs, ty, expr1, expr2) => {
+                lookup_tbl.push((locs.1, locs.2, format!("{} addition", ty.to_string(ns))));
+
                 SolangServer::construct_expr(expr1, lookup_tbl, symtab, fnc_map, ns);
                 SolangServer::construct_expr(expr2, lookup_tbl, symtab, fnc_map, ns);
             }
-            Expression::Subtract(_locs, _typ, expr1, expr2) => {
+            Expression::Subtract(locs, ty, expr1, expr2) => {
+                lookup_tbl.push((locs.1, locs.2, format!("{} subtraction", ty.to_string(ns))));
+
                 SolangServer::construct_expr(expr1, lookup_tbl, symtab, fnc_map, ns);
                 SolangServer::construct_expr(expr2, lookup_tbl, symtab, fnc_map, ns);
             }
-            Expression::Multiply(_locs, _typ, expr1, expr2) => {
+            Expression::Multiply(locs, ty, expr1, expr2) => {
+                lookup_tbl.push((locs.1, locs.2, format!("{} multiply", ty.to_string(ns))));
+
                 SolangServer::construct_expr(expr1, lookup_tbl, symtab, fnc_map, ns);
                 SolangServer::construct_expr(expr2, lookup_tbl, symtab, fnc_map, ns);
             }
-            Expression::Divide(_locs, _typ, expr1, expr2) => {
+            Expression::Divide(locs, ty, expr1, expr2) => {
+                lookup_tbl.push((locs.1, locs.2, format!("{} divide", ty.to_string(ns))));
+
                 SolangServer::construct_expr(expr1, lookup_tbl, symtab, fnc_map, ns);
                 SolangServer::construct_expr(expr2, lookup_tbl, symtab, fnc_map, ns);
             }
-            Expression::Modulo(_locs, _typ, expr1, expr2) => {
+            Expression::Modulo(locs, ty, expr1, expr2) => {
+                lookup_tbl.push((locs.1, locs.2, format!("{} modulo", ty.to_string(ns))));
+
                 SolangServer::construct_expr(expr1, lookup_tbl, symtab, fnc_map, ns);
                 SolangServer::construct_expr(expr2, lookup_tbl, symtab, fnc_map, ns);
             }
-            Expression::Power(_locs, _typ, expr1, expr2) => {
+            Expression::Power(locs, ty, expr1, expr2) => {
+                lookup_tbl.push((locs.1, locs.2, format!("{} power", ty.to_string(ns))));
+
                 SolangServer::construct_expr(expr1, lookup_tbl, symtab, fnc_map, ns);
                 SolangServer::construct_expr(expr2, lookup_tbl, symtab, fnc_map, ns);
             }
@@ -760,6 +772,11 @@ impl SolangServer {
                     SolangServer::construct_expr(expp, lookup_tbl, symtab, fnc_map, ns);
                 }
             }
+            Expression::FormatString(_, sections) => {
+                for (_, e) in sections {
+                    SolangServer::construct_expr(e, lookup_tbl, symtab, fnc_map, ns);
+                }
+            }
             Expression::List(_locs, expr) => {
                 for expp in expr {
                     SolangServer::construct_expr(expp, lookup_tbl, symtab, fnc_map, ns);
@@ -872,6 +889,12 @@ impl SolangServer {
             }
             let msg_tg = render(&entdcl.tags[..]);
             lookup_tbl.push((entdcl.loc.1, (entdcl.loc.1 + entdcl.name.len()), msg_tg));
+        }
+
+        for lookup in lookup_tbl.iter_mut() {
+            if let Some(msg) = ns.hover_overrides.get(&pt::Loc(0, lookup.0, lookup.1)) {
+                lookup.2 = msg.clone();
+            }
         }
     }
 
