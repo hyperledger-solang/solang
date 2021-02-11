@@ -77,7 +77,7 @@ static void shrink_chunk(struct chunk *cur, size_t size)
     }
 }
 
-void *__attribute__((noinline)) __malloc(size_t size)
+void *__attribute__((noinline)) __malloc(uint32_t size)
 {
     struct chunk *cur = (struct chunk *)0x10000;
 
