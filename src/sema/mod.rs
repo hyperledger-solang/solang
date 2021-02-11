@@ -303,6 +303,7 @@ impl ast::Namespace {
             diagnostics: Vec::new(),
             next_id: 0,
             var_constants: HashMap::new(),
+            hover_overrides: HashMap::new(),
         }
     }
 

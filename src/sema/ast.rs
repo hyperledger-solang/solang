@@ -367,6 +367,8 @@ pub struct Namespace {
     /// For a variable reference at a location, give the constant value
     /// This for use by the language server to show the value of a variable at a location
     pub var_constants: HashMap<pt::Loc, Expression>,
+    /// Overrides for hover in the language server
+    pub hover_overrides: HashMap<pt::Loc, String>,
 }
 
 pub struct Layout {
@@ -588,330 +590,358 @@ pub enum Expression {
 impl Expression {
     // Recurse over expression and copy each element through a filter. This allows the optimizer passes to create
     // copies of expressions while modifying the results slightly
-    pub fn copy_filter<F>(&self, filter: F) -> Self
+    pub fn copy_filter<T, F>(&self, ctx: &mut T, filter: F) -> Expression
     where
-        F: Fn(&Self) -> Self,
+        F: Fn(&Expression, &mut T) -> Expression,
     {
-        filter(&match self {
-            Expression::StructLiteral(loc, ty, args) => Expression::StructLiteral(
-                *loc,
-                ty.clone(),
-                args.iter().map(|e| filter(e)).collect(),
-            ),
-            Expression::ArrayLiteral(loc, ty, lengths, args) => Expression::ArrayLiteral(
-                *loc,
-                ty.clone(),
-                lengths.clone(),
-                args.iter().map(|e| filter(e)).collect(),
-            ),
-            Expression::ConstArrayLiteral(loc, ty, lengths, args) => Expression::ConstArrayLiteral(
-                *loc,
-                ty.clone(),
-                lengths.clone(),
-                args.iter().map(|e| filter(e)).collect(),
-            ),
-            Expression::Add(loc, ty, left, right) => Expression::Add(
-                *loc,
-                ty.clone(),
-                Box::new(filter(left)),
-                Box::new(filter(right)),
-            ),
-            Expression::Subtract(loc, ty, left, right) => Expression::Subtract(
-                *loc,
-                ty.clone(),
-                Box::new(filter(left)),
-                Box::new(filter(right)),
-            ),
-            Expression::Multiply(loc, ty, left, right) => Expression::Multiply(
-                *loc,
-                ty.clone(),
-                Box::new(filter(left)),
-                Box::new(filter(right)),
-            ),
-            Expression::Divide(loc, ty, left, right) => Expression::Divide(
-                *loc,
-                ty.clone(),
-                Box::new(filter(left)),
-                Box::new(filter(right)),
-            ),
-            Expression::Power(loc, ty, left, right) => Expression::Power(
-                *loc,
-                ty.clone(),
-                Box::new(filter(left)),
-                Box::new(filter(right)),
-            ),
-            Expression::BitwiseOr(loc, ty, left, right) => Expression::BitwiseOr(
-                *loc,
-                ty.clone(),
-                Box::new(filter(left)),
-                Box::new(filter(right)),
-            ),
-            Expression::BitwiseAnd(loc, ty, left, right) => Expression::BitwiseAnd(
-                *loc,
-                ty.clone(),
-                Box::new(filter(left)),
-                Box::new(filter(right)),
-            ),
-            Expression::BitwiseXor(loc, ty, left, right) => Expression::BitwiseXor(
-                *loc,
-                ty.clone(),
-                Box::new(filter(left)),
-                Box::new(filter(right)),
-            ),
-            Expression::ShiftLeft(loc, ty, left, right) => Expression::ShiftLeft(
-                *loc,
-                ty.clone(),
-                Box::new(filter(left)),
-                Box::new(filter(right)),
-            ),
-            Expression::ShiftRight(loc, ty, left, right, sign_extend) => Expression::ShiftRight(
-                *loc,
-                ty.clone(),
-                Box::new(filter(left)),
-                Box::new(filter(right)),
-                *sign_extend,
-            ),
-            Expression::Load(loc, ty, expr) => {
-                Expression::Load(*loc, ty.clone(), Box::new(filter(expr)))
-            }
-            Expression::StorageLoad(loc, ty, expr) => {
-                Expression::StorageLoad(*loc, ty.clone(), Box::new(filter(expr)))
-            }
-            Expression::ZeroExt(loc, ty, expr) => {
-                Expression::ZeroExt(*loc, ty.clone(), Box::new(filter(expr)))
-            }
-            Expression::SignExt(loc, ty, expr) => {
-                Expression::SignExt(*loc, ty.clone(), Box::new(filter(expr)))
-            }
-            Expression::Trunc(loc, ty, expr) => {
-                Expression::Trunc(*loc, ty.clone(), Box::new(filter(expr)))
-            }
-            Expression::Cast(loc, ty, expr) => {
-                Expression::Cast(*loc, ty.clone(), Box::new(filter(expr)))
-            }
-            Expression::BytesCast(loc, ty, from, expr) => {
-                Expression::BytesCast(*loc, ty.clone(), from.clone(), Box::new(filter(expr)))
-            }
-            Expression::PreIncrement(loc, ty, expr) => {
-                Expression::PreIncrement(*loc, ty.clone(), Box::new(filter(expr)))
-            }
-            Expression::PreDecrement(loc, ty, expr) => {
-                Expression::PreDecrement(*loc, ty.clone(), Box::new(filter(expr)))
-            }
-            Expression::PostIncrement(loc, ty, expr) => {
-                Expression::PostIncrement(*loc, ty.clone(), Box::new(filter(expr)))
-            }
-            Expression::PostDecrement(loc, ty, expr) => {
-                Expression::PostDecrement(*loc, ty.clone(), Box::new(filter(expr)))
-            }
-            Expression::Assign(loc, ty, left, right) => Expression::Assign(
-                *loc,
-                ty.clone(),
-                Box::new(filter(left)),
-                Box::new(filter(right)),
-            ),
-            Expression::More(loc, left, right) => {
-                Expression::More(*loc, Box::new(filter(left)), Box::new(filter(right)))
-            }
-            Expression::Less(loc, left, right) => {
-                Expression::Less(*loc, Box::new(filter(left)), Box::new(filter(right)))
-            }
-            Expression::MoreEqual(loc, left, right) => {
-                Expression::MoreEqual(*loc, Box::new(filter(left)), Box::new(filter(right)))
-            }
-            Expression::LessEqual(loc, left, right) => {
-                Expression::LessEqual(*loc, Box::new(filter(left)), Box::new(filter(right)))
-            }
-            Expression::Equal(loc, left, right) => {
-                Expression::Equal(*loc, Box::new(filter(left)), Box::new(filter(right)))
-            }
-            Expression::NotEqual(loc, left, right) => {
-                Expression::NotEqual(*loc, Box::new(filter(left)), Box::new(filter(right)))
-            }
-            Expression::Not(loc, expr) => Expression::Not(*loc, Box::new(filter(expr))),
-            Expression::Complement(loc, ty, expr) => {
-                Expression::Complement(*loc, ty.clone(), Box::new(filter(expr)))
-            }
-            Expression::UnaryMinus(loc, ty, expr) => {
-                Expression::UnaryMinus(*loc, ty.clone(), Box::new(filter(expr)))
-            }
-            Expression::Ternary(loc, ty, cond, left, right) => Expression::Ternary(
-                *loc,
-                ty.clone(),
-                Box::new(filter(cond)),
-                Box::new(filter(left)),
-                Box::new(filter(right)),
-            ),
-            Expression::ArraySubscript(loc, ty, left, right) => Expression::ArraySubscript(
-                *loc,
-                ty.clone(),
-                Box::new(filter(left)),
-                Box::new(filter(right)),
-            ),
-            Expression::StructMember(loc, ty, expr, field) => {
-                Expression::StructMember(*loc, ty.clone(), Box::new(filter(expr)), *field)
-            }
-            Expression::AllocDynamicArray(loc, ty, expr, initializer) => {
-                Expression::AllocDynamicArray(
+        filter(
+            &match self {
+                Expression::StructLiteral(loc, ty, args) => Expression::StructLiteral(
                     *loc,
                     ty.clone(),
-                    Box::new(filter(expr)),
-                    initializer.clone(),
-                )
-            }
-            Expression::DynamicArrayLength(loc, expr) => {
-                Expression::DynamicArrayLength(*loc, Box::new(filter(expr)))
-            }
-            Expression::DynamicArraySubscript(loc, ty, left, right) => {
-                Expression::DynamicArraySubscript(
+                    args.iter().map(|e| filter(e, ctx)).collect(),
+                ),
+                Expression::ArrayLiteral(loc, ty, lengths, args) => Expression::ArrayLiteral(
                     *loc,
                     ty.clone(),
-                    Box::new(filter(left)),
-                    Box::new(filter(right)),
-                )
-            }
-            Expression::DynamicArrayPush(loc, array, ty, value) => Expression::DynamicArrayPush(
-                *loc,
-                Box::new(filter(array)),
-                ty.clone(),
-                Box::new(filter(value)),
-            ),
-            Expression::DynamicArrayPop(loc, array, ty) => {
-                Expression::DynamicArrayPop(*loc, Box::new(filter(array)), ty.clone())
-            }
-            Expression::StorageBytesSubscript(loc, storage, index) => {
-                Expression::StorageBytesSubscript(
+                    lengths.clone(),
+                    args.iter().map(|e| filter(e, ctx)).collect(),
+                ),
+                Expression::ConstArrayLiteral(loc, ty, lengths, args) => {
+                    Expression::ConstArrayLiteral(
+                        *loc,
+                        ty.clone(),
+                        lengths.clone(),
+                        args.iter().map(|e| filter(e, ctx)).collect(),
+                    )
+                }
+                Expression::Add(loc, ty, left, right) => Expression::Add(
                     *loc,
-                    Box::new(filter(storage)),
-                    Box::new(filter(index)),
-                )
-            }
-            Expression::StorageBytesLength(loc, expr) => {
-                Expression::StorageBytesLength(*loc, Box::new(filter(expr)))
-            }
-            Expression::StringCompare(loc, left, right) => Expression::StringCompare(
-                *loc,
-                match left {
-                    StringLocation::CompileTime(_) => left.clone(),
-                    StringLocation::RunTime(expr) => {
-                        StringLocation::RunTime(Box::new(filter(expr)))
-                    }
+                    ty.clone(),
+                    Box::new(filter(left, ctx)),
+                    Box::new(filter(right, ctx)),
+                ),
+                Expression::Subtract(loc, ty, left, right) => Expression::Subtract(
+                    *loc,
+                    ty.clone(),
+                    Box::new(filter(left, ctx)),
+                    Box::new(filter(right, ctx)),
+                ),
+                Expression::Multiply(loc, ty, left, right) => Expression::Multiply(
+                    *loc,
+                    ty.clone(),
+                    Box::new(filter(left, ctx)),
+                    Box::new(filter(right, ctx)),
+                ),
+                Expression::Divide(loc, ty, left, right) => Expression::Divide(
+                    *loc,
+                    ty.clone(),
+                    Box::new(filter(left, ctx)),
+                    Box::new(filter(right, ctx)),
+                ),
+                Expression::Power(loc, ty, left, right) => Expression::Power(
+                    *loc,
+                    ty.clone(),
+                    Box::new(filter(left, ctx)),
+                    Box::new(filter(right, ctx)),
+                ),
+                Expression::BitwiseOr(loc, ty, left, right) => Expression::BitwiseOr(
+                    *loc,
+                    ty.clone(),
+                    Box::new(filter(left, ctx)),
+                    Box::new(filter(right, ctx)),
+                ),
+                Expression::BitwiseAnd(loc, ty, left, right) => Expression::BitwiseAnd(
+                    *loc,
+                    ty.clone(),
+                    Box::new(filter(left, ctx)),
+                    Box::new(filter(right, ctx)),
+                ),
+                Expression::BitwiseXor(loc, ty, left, right) => Expression::BitwiseXor(
+                    *loc,
+                    ty.clone(),
+                    Box::new(filter(left, ctx)),
+                    Box::new(filter(right, ctx)),
+                ),
+                Expression::ShiftLeft(loc, ty, left, right) => Expression::ShiftLeft(
+                    *loc,
+                    ty.clone(),
+                    Box::new(filter(left, ctx)),
+                    Box::new(filter(right, ctx)),
+                ),
+                Expression::ShiftRight(loc, ty, left, right, sign_extend) => {
+                    Expression::ShiftRight(
+                        *loc,
+                        ty.clone(),
+                        Box::new(filter(left, ctx)),
+                        Box::new(filter(right, ctx)),
+                        *sign_extend,
+                    )
+                }
+                Expression::Load(loc, ty, expr) => {
+                    Expression::Load(*loc, ty.clone(), Box::new(filter(expr, ctx)))
+                }
+                Expression::StorageLoad(loc, ty, expr) => {
+                    Expression::StorageLoad(*loc, ty.clone(), Box::new(filter(expr, ctx)))
+                }
+                Expression::ZeroExt(loc, ty, expr) => {
+                    Expression::ZeroExt(*loc, ty.clone(), Box::new(filter(expr, ctx)))
+                }
+                Expression::SignExt(loc, ty, expr) => {
+                    Expression::SignExt(*loc, ty.clone(), Box::new(filter(expr, ctx)))
+                }
+                Expression::Trunc(loc, ty, expr) => {
+                    Expression::Trunc(*loc, ty.clone(), Box::new(filter(expr, ctx)))
+                }
+                Expression::Cast(loc, ty, expr) => {
+                    Expression::Cast(*loc, ty.clone(), Box::new(filter(expr, ctx)))
+                }
+                Expression::BytesCast(loc, ty, from, expr) => Expression::BytesCast(
+                    *loc,
+                    ty.clone(),
+                    from.clone(),
+                    Box::new(filter(expr, ctx)),
+                ),
+                Expression::PreIncrement(loc, ty, expr) => {
+                    Expression::PreIncrement(*loc, ty.clone(), Box::new(filter(expr, ctx)))
+                }
+                Expression::PreDecrement(loc, ty, expr) => {
+                    Expression::PreDecrement(*loc, ty.clone(), Box::new(filter(expr, ctx)))
+                }
+                Expression::PostIncrement(loc, ty, expr) => {
+                    Expression::PostIncrement(*loc, ty.clone(), Box::new(filter(expr, ctx)))
+                }
+                Expression::PostDecrement(loc, ty, expr) => {
+                    Expression::PostDecrement(*loc, ty.clone(), Box::new(filter(expr, ctx)))
+                }
+                Expression::Assign(loc, ty, left, right) => Expression::Assign(
+                    *loc,
+                    ty.clone(),
+                    Box::new(filter(left, ctx)),
+                    Box::new(filter(right, ctx)),
+                ),
+                Expression::More(loc, left, right) => Expression::More(
+                    *loc,
+                    Box::new(filter(left, ctx)),
+                    Box::new(filter(right, ctx)),
+                ),
+                Expression::Less(loc, left, right) => Expression::Less(
+                    *loc,
+                    Box::new(filter(left, ctx)),
+                    Box::new(filter(right, ctx)),
+                ),
+                Expression::MoreEqual(loc, left, right) => Expression::MoreEqual(
+                    *loc,
+                    Box::new(filter(left, ctx)),
+                    Box::new(filter(right, ctx)),
+                ),
+                Expression::LessEqual(loc, left, right) => Expression::LessEqual(
+                    *loc,
+                    Box::new(filter(left, ctx)),
+                    Box::new(filter(right, ctx)),
+                ),
+                Expression::Equal(loc, left, right) => Expression::Equal(
+                    *loc,
+                    Box::new(filter(left, ctx)),
+                    Box::new(filter(right, ctx)),
+                ),
+                Expression::NotEqual(loc, left, right) => Expression::NotEqual(
+                    *loc,
+                    Box::new(filter(left, ctx)),
+                    Box::new(filter(right, ctx)),
+                ),
+                Expression::Not(loc, expr) => Expression::Not(*loc, Box::new(filter(expr, ctx))),
+                Expression::Complement(loc, ty, expr) => {
+                    Expression::Complement(*loc, ty.clone(), Box::new(filter(expr, ctx)))
+                }
+                Expression::UnaryMinus(loc, ty, expr) => {
+                    Expression::UnaryMinus(*loc, ty.clone(), Box::new(filter(expr, ctx)))
+                }
+                Expression::Ternary(loc, ty, cond, left, right) => Expression::Ternary(
+                    *loc,
+                    ty.clone(),
+                    Box::new(filter(cond, ctx)),
+                    Box::new(filter(left, ctx)),
+                    Box::new(filter(right, ctx)),
+                ),
+                Expression::ArraySubscript(loc, ty, left, right) => Expression::ArraySubscript(
+                    *loc,
+                    ty.clone(),
+                    Box::new(filter(left, ctx)),
+                    Box::new(filter(right, ctx)),
+                ),
+                Expression::StructMember(loc, ty, expr, field) => {
+                    Expression::StructMember(*loc, ty.clone(), Box::new(filter(expr, ctx)), *field)
+                }
+                Expression::AllocDynamicArray(loc, ty, expr, initializer) => {
+                    Expression::AllocDynamicArray(
+                        *loc,
+                        ty.clone(),
+                        Box::new(filter(expr, ctx)),
+                        initializer.clone(),
+                    )
+                }
+                Expression::DynamicArrayLength(loc, expr) => {
+                    Expression::DynamicArrayLength(*loc, Box::new(filter(expr, ctx)))
+                }
+                Expression::DynamicArraySubscript(loc, ty, left, right) => {
+                    Expression::DynamicArraySubscript(
+                        *loc,
+                        ty.clone(),
+                        Box::new(filter(left, ctx)),
+                        Box::new(filter(right, ctx)),
+                    )
+                }
+                Expression::DynamicArrayPush(loc, array, ty, value) => {
+                    Expression::DynamicArrayPush(
+                        *loc,
+                        Box::new(filter(array, ctx)),
+                        ty.clone(),
+                        Box::new(filter(value, ctx)),
+                    )
+                }
+                Expression::DynamicArrayPop(loc, array, ty) => {
+                    Expression::DynamicArrayPop(*loc, Box::new(filter(array, ctx)), ty.clone())
+                }
+                Expression::StorageBytesSubscript(loc, storage, index) => {
+                    Expression::StorageBytesSubscript(
+                        *loc,
+                        Box::new(filter(storage, ctx)),
+                        Box::new(filter(index, ctx)),
+                    )
+                }
+                Expression::StorageBytesLength(loc, expr) => {
+                    Expression::StorageBytesLength(*loc, Box::new(filter(expr, ctx)))
+                }
+                Expression::StringCompare(loc, left, right) => Expression::StringCompare(
+                    *loc,
+                    match left {
+                        StringLocation::CompileTime(_) => left.clone(),
+                        StringLocation::RunTime(expr) => {
+                            StringLocation::RunTime(Box::new(filter(expr, ctx)))
+                        }
+                    },
+                    match right {
+                        StringLocation::CompileTime(_) => right.clone(),
+                        StringLocation::RunTime(expr) => {
+                            StringLocation::RunTime(Box::new(filter(expr, ctx)))
+                        }
+                    },
+                ),
+                Expression::StringConcat(loc, ty, left, right) => Expression::StringConcat(
+                    *loc,
+                    ty.clone(),
+                    match left {
+                        StringLocation::CompileTime(_) => left.clone(),
+                        StringLocation::RunTime(expr) => {
+                            StringLocation::RunTime(Box::new(filter(expr, ctx)))
+                        }
+                    },
+                    match right {
+                        StringLocation::CompileTime(_) => right.clone(),
+                        StringLocation::RunTime(expr) => {
+                            StringLocation::RunTime(Box::new(filter(expr, ctx)))
+                        }
+                    },
+                ),
+                Expression::Or(loc, left, right) => Expression::Or(
+                    *loc,
+                    Box::new(filter(left, ctx)),
+                    Box::new(filter(right, ctx)),
+                ),
+                Expression::And(loc, left, right) => Expression::And(
+                    *loc,
+                    Box::new(filter(left, ctx)),
+                    Box::new(filter(right, ctx)),
+                ),
+                Expression::ExternalFunction {
+                    loc,
+                    ty,
+                    address,
+                    function_no,
+                } => Expression::ExternalFunction {
+                    loc: *loc,
+                    ty: ty.clone(),
+                    address: Box::new(filter(address, ctx)),
+                    function_no: *function_no,
                 },
-                match right {
-                    StringLocation::CompileTime(_) => right.clone(),
-                    StringLocation::RunTime(expr) => {
-                        StringLocation::RunTime(Box::new(filter(expr)))
-                    }
+                Expression::InternalFunctionCall {
+                    loc,
+                    returns,
+                    function,
+                    args,
+                } => Expression::InternalFunctionCall {
+                    loc: *loc,
+                    returns: returns.clone(),
+                    function: Box::new(filter(function, ctx)),
+                    args: args.iter().map(|e| filter(e, ctx)).collect(),
                 },
-            ),
-            Expression::StringConcat(loc, ty, left, right) => Expression::StringConcat(
-                *loc,
-                ty.clone(),
-                match left {
-                    StringLocation::CompileTime(_) => left.clone(),
-                    StringLocation::RunTime(expr) => {
-                        StringLocation::RunTime(Box::new(filter(expr)))
-                    }
+                Expression::ExternalFunctionCall {
+                    loc,
+                    returns,
+                    function,
+                    args,
+                    value,
+                    gas,
+                } => Expression::ExternalFunctionCall {
+                    loc: *loc,
+                    returns: returns.clone(),
+                    function: Box::new(filter(function, ctx)),
+                    args: args.iter().map(|e| filter(e, ctx)).collect(),
+                    value: Box::new(filter(value, ctx)),
+                    gas: Box::new(filter(gas, ctx)),
                 },
-                match right {
-                    StringLocation::CompileTime(_) => right.clone(),
-                    StringLocation::RunTime(expr) => {
-                        StringLocation::RunTime(Box::new(filter(expr)))
-                    }
+                Expression::ExternalFunctionCallRaw {
+                    loc,
+                    ty,
+                    address,
+                    args,
+                    value,
+                    gas,
+                } => Expression::ExternalFunctionCallRaw {
+                    loc: *loc,
+                    ty: ty.clone(),
+                    address: Box::new(filter(address, ctx)),
+                    args: Box::new(filter(args, ctx)),
+                    value: Box::new(filter(value, ctx)),
+                    gas: Box::new(filter(gas, ctx)),
                 },
-            ),
-            Expression::Or(loc, left, right) => {
-                Expression::Or(*loc, Box::new(filter(left)), Box::new(filter(right)))
-            }
-            Expression::And(loc, left, right) => {
-                Expression::And(*loc, Box::new(filter(left)), Box::new(filter(right)))
-            }
-            Expression::ExternalFunction {
-                loc,
-                ty,
-                address,
-                function_no,
-            } => Expression::ExternalFunction {
-                loc: *loc,
-                ty: ty.clone(),
-                address: Box::new(filter(address)),
-                function_no: *function_no,
-            },
-            Expression::InternalFunctionCall {
-                loc,
-                returns,
-                function,
-                args,
-            } => Expression::InternalFunctionCall {
-                loc: *loc,
-                returns: returns.clone(),
-                function: Box::new(filter(function)),
-                args: args.iter().map(|e| filter(e)).collect(),
-            },
-            Expression::ExternalFunctionCall {
-                loc,
-                returns,
-                function,
-                args,
-                value,
-                gas,
-            } => Expression::ExternalFunctionCall {
-                loc: *loc,
-                returns: returns.clone(),
-                function: Box::new(filter(function)),
-                args: args.iter().map(|e| filter(e)).collect(),
-                value: Box::new(filter(value)),
-                gas: Box::new(filter(gas)),
-            },
-            Expression::ExternalFunctionCallRaw {
-                loc,
-                ty,
-                address,
-                args,
-                value,
-                gas,
-            } => Expression::ExternalFunctionCallRaw {
-                loc: *loc,
-                ty: ty.clone(),
-                address: Box::new(filter(address)),
-                args: Box::new(filter(args)),
-                value: Box::new(filter(value)),
-                gas: Box::new(filter(gas)),
-            },
-            Expression::Constructor {
-                loc,
-                contract_no,
-                constructor_no,
-                args,
-                gas,
-                value,
-                salt,
-            } => Expression::Constructor {
-                loc: *loc,
-                contract_no: *contract_no,
-                constructor_no: *constructor_no,
-                args: args.iter().map(|e| filter(e)).collect(),
-                value: value.as_ref().map(|e| Box::new(filter(e))),
-                gas: Box::new(filter(gas)),
-                salt: salt.as_ref().map(|e| Box::new(filter(e))),
-            },
-            Expression::Keccak256(loc, ty, args) => {
-                let args = args.iter().map(|e| filter(e)).collect();
+                Expression::Constructor {
+                    loc,
+                    contract_no,
+                    constructor_no,
+                    args,
+                    gas,
+                    value,
+                    salt,
+                } => Expression::Constructor {
+                    loc: *loc,
+                    contract_no: *contract_no,
+                    constructor_no: *constructor_no,
+                    args: args.iter().map(|e| filter(e, ctx)).collect(),
+                    value: value.as_ref().map(|e| Box::new(filter(e, ctx))),
+                    gas: Box::new(filter(gas, ctx)),
+                    salt: salt.as_ref().map(|e| Box::new(filter(e, ctx))),
+                },
+                Expression::Keccak256(loc, ty, args) => {
+                    let args = args.iter().map(|e| filter(e, ctx)).collect();
 
-                Expression::Keccak256(*loc, ty.clone(), args)
-            }
-            Expression::FormatString(loc, args) => {
-                let args = args.iter().map(|(f, e)| (*f, filter(e))).collect();
+                    Expression::Keccak256(*loc, ty.clone(), args)
+                }
+                Expression::FormatString(loc, args) => {
+                    let args = args.iter().map(|(f, e)| (*f, filter(e, ctx))).collect();
 
-                Expression::FormatString(*loc, args)
-            }
-            Expression::Builtin(loc, tys, builtin, args) => {
-                let args = args.iter().map(|e| filter(e)).collect();
+                    Expression::FormatString(*loc, args)
+                }
+                Expression::Builtin(loc, tys, builtin, args) => {
+                    let args = args.iter().map(|e| filter(e, ctx)).collect();
 
-                Expression::Builtin(*loc, tys.clone(), *builtin, args)
-            }
-            _ => self.clone(),
-        })
+                    Expression::Builtin(*loc, tys.clone(), *builtin, args)
+                }
+                _ => self.clone(),
+            },
+            ctx,
+        )
     }
 
     /// recurse over the expression
