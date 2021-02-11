@@ -1161,6 +1161,7 @@ pub fn build_solidity(src: &'static str) -> TestRuntime {
     );
 
     diagnostics::print_messages(&mut cache, &ns, false);
+    no_errors(ns.diagnostics);
 
     assert!(!res.is_empty());
 
