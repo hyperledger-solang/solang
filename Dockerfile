@@ -18,6 +18,4 @@ RUN cargo build --release
 FROM ubuntu:18.04
 COPY --from=builder /src/target/release/solang /usr/bin/solang
 
-ENV PATH="/llvm10.0/bin:${PATH}"
-
 ENTRYPOINT ["/usr/bin/solang"]

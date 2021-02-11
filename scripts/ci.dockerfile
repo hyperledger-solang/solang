@@ -25,7 +25,7 @@ RUN apt-get clean
 RUN apt-get autoclean
 
 # Get Rust
-RUN curl https://sh.rustup.rs -sSf | bash -s -- -y
+RUN curl https://sh.rustup.rs -sSf | bash -s -- -y --default-toolchain 1.48.0
 
 COPY --from=builder /llvm10.0 /llvm10.0/
 
