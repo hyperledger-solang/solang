@@ -1018,12 +1018,14 @@ impl Type {
     /// compatible with ethereum solidity. Opinions on whether other types should be
     /// allowed be storage are welcome.
     pub fn can_have_data_location(&self) -> bool {
-        matches!(self,
+        matches!(
+            self,
             Type::Array(_, _)
-            | Type::Struct(_)
-            | Type::Mapping(_, _)
-            | Type::String
-            | Type::DynamicBytes)
+                | Type::Struct(_)
+                | Type::Mapping(_, _)
+                | Type::String
+                | Type::DynamicBytes
+        )
     }
 
     /// Is this a reference to contract storage?

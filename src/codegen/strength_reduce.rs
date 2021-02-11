@@ -737,9 +737,7 @@ fn transfer(instr: &Instr, vars: &mut Variables, ns: &Namespace) {
 /// Other types (e.g. bytes) is not relevant for strength reduce. Bools are only
 /// tracked so we can following branching after integer compare.
 fn track(ty: &Type) -> bool {
-    matches!(ty,
-        Type::Uint(_) | Type::Int(_) | Type::Bool | Type::Value
-    )
+    matches!(ty, Type::Uint(_) | Type::Int(_) | Type::Bool | Type::Value)
 }
 
 #[derive(Eq, Hash, Debug, Clone, PartialEq)]

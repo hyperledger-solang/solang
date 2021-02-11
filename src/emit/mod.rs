@@ -3599,7 +3599,7 @@ pub trait TargetRuntime<'a> {
 
                                 if dest.is_pointer_value()
                                     && !(v.ty.is_reference_type()
-                                        || matches!(v.ty, ast::Type::ExternalFunction{ .. }))
+                                        || matches!(v.ty, ast::Type::ExternalFunction { .. }))
                                 {
                                     contract.builder.build_store(dest.into_pointer_value(), val);
                                 } else {

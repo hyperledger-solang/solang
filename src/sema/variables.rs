@@ -159,7 +159,10 @@ pub fn var_decl(
             return None;
         }
     } else if ty.contains_internal_function(ns)
-        && matches!(visibility, pt::Visibility::Public(_) | pt::Visibility::External(_))
+        && matches!(
+            visibility,
+            pt::Visibility::Public(_) | pt::Visibility::External(_)
+        )
     {
         ns.diagnostics.push(Diagnostic::error(
             s.ty.loc(),

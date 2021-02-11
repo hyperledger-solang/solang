@@ -1279,9 +1279,10 @@ pub fn compatible_mutability(
     left: &Option<pt::StateMutability>,
     right: &Option<pt::StateMutability>,
 ) -> bool {
-    matches!((left, right),
-            // only payable is compatible with payable
-            (Some(pt::StateMutability::Payable(_)), Some(pt::StateMutability::Payable(_)))
+    matches!(
+        (left, right),
+        // only payable is compatible with payable
+        (Some(pt::StateMutability::Payable(_)), Some(pt::StateMutability::Payable(_)))
             // default is compatible with anything but pure and view
             | (None, Some(pt::StateMutability::Payable(_))) | (None, None)
             // view is compatible with anything but pure
@@ -1289,8 +1290,7 @@ pub fn compatible_mutability(
             | (Some(pt::StateMutability::View(_)), None)
             | (Some(pt::StateMutability::View(_)), Some(pt::StateMutability::View(_)))
             // pure is compatible with anything
-            | (Some(pt::StateMutability::Pure(_)), _)
-            // everything else is not compatible
+            | (Some(pt::StateMutability::Pure(_)), _) // everything else is not compatible
     )
 }
 
@@ -3782,9 +3782,10 @@ fn assign_expr(
     )?;
     let var_ty = var.ty();
 
-    let resolve_to = if matches!(expr,
-        pt::Expression::AssignShiftLeft(_, _, _) | pt::Expression::AssignShiftRight(_, _, _))
-    {
+    let resolve_to = if matches!(
+        expr,
+        pt::Expression::AssignShiftLeft(_, _, _) | pt::Expression::AssignShiftRight(_, _, _)
+    ) {
         None
     } else {
         Some(var_ty.deref_any())
