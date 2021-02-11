@@ -396,14 +396,14 @@ fn expression(
                 )
             }
         }
-        Expression::ShiftLeft(loc, ty, left, right) => {
-            let left = expression(left, vars, pos, cfg, ns);
-            let right = expression(right, vars, pos, cfg, ns);
+        Expression::ShiftLeft(loc, ty, left_expr, right_expr) => {
+            let left = expression(left_expr, vars, pos, cfg, ns);
+            let right = expression(right_expr, vars, pos, cfg, ns);
 
             if let (Expression::NumberLiteral(_, _, left), Expression::NumberLiteral(_, _, right)) =
                 (&left.0, &right.0)
             {
-                if right.sign() == Sign::Minus || right >= &BigInt::from(left.bits()) {
+                if right.sign() == Sign::Minus || right >= &BigInt::from(left_expr.ty().bits(ns)) {
                     ns.diagnostics.push(Diagnostic::error(
                         *loc,
                         format!("left shift by {} is not possible", right),
@@ -419,14 +419,14 @@ fn expression(
                 left.1 && right.1,
             )
         }
-        Expression::ShiftRight(loc, ty, left, right, signed) => {
-            let left = expression(left, vars, pos, cfg, ns);
-            let right = expression(right, vars, pos, cfg, ns);
+        Expression::ShiftRight(loc, ty, left_expr, right_expr, signed) => {
+            let left = expression(left_expr, vars, pos, cfg, ns);
+            let right = expression(right_expr, vars, pos, cfg, ns);
 
             if let (Expression::NumberLiteral(_, _, left), Expression::NumberLiteral(_, _, right)) =
                 (&left.0, &right.0)
             {
-                if right.sign() == Sign::Minus || right >= &BigInt::from(left.bits()) {
+                if right.sign() == Sign::Minus || right >= &BigInt::from(left_expr.ty().bits(ns)) {
                     ns.diagnostics.push(Diagnostic::error(
                         *loc,
                         format!("right shift by {} is not possible", right),
