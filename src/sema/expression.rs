@@ -20,6 +20,7 @@ use super::ast::{
 use super::builtin;
 use super::contracts::{is_base, visit_bases};
 use super::eval::eval_const_number;
+use super::eval::eval_const_rational;
 use super::format::string_format;
 use super::symtable::Symtable;
 use crate::parser::pt;
@@ -28,6 +29,7 @@ use crate::sema::unused_variable::{
 };
 use crate::Target;
 use base58::{FromBase58, FromBase58Error};
+use num_rational::BigRational;
 
 impl Expression {
     /// Return the type for this expression. This assumes the expression has a single value,
@@ -50,6 +52,7 @@ impl Expression {
             | Expression::FunctionArg(_, ty, _)
             | Expression::BytesLiteral(_, ty, _)
             | Expression::NumberLiteral(_, ty, _)
+            | Expression::RationalNumberLiteral(_, ty, _)
             | Expression::StructLiteral(_, ty, _)
             | Expression::ArrayLiteral(_, ty, _, _)
             | Expression::ConstArrayLiteral(_, ty, _, _)
@@ -296,7 +299,7 @@ fn coerce(
         return Ok(Type::Address(false));
     }
 
-    coerce_int(l, l_loc, r, r_loc, true, false, ns, diagnostics)
+    coerce_number(l, l_loc, r, r_loc, true, false, ns, diagnostics)
 }
 
 fn get_int_length(
@@ -344,7 +347,7 @@ fn get_int_length(
     }
 }
 
-fn coerce_int(
+fn coerce_number(
     l: &Type,
     l_loc: &pt::Loc,
     r: &Type,
@@ -374,6 +377,21 @@ fn coerce_int(
         }
         (Type::Bytes(left_length), Type::Bytes(right_length)) if allow_bytes => {
             return Ok(Type::Bytes(std::cmp::max(*left_length, *right_length)));
+        }
+        (Type::Rational, Type::Int(_)) => {
+            return Ok(Type::Rational);
+        }
+        (Type::Rational, Type::Rational) => {
+            return Ok(Type::Rational);
+        }
+        (Type::Rational, Type::Uint(_)) => {
+            return Ok(Type::Rational);
+        }
+        (Type::Uint(_), Type::Rational) => {
+            return Ok(Type::Rational);
+        }
+        (Type::Int(_), Type::Rational) => {
+            return Ok(Type::Rational);
         }
         _ => (),
     }
@@ -490,6 +508,33 @@ pub fn bigint_to_expression(
     }
 }
 
+/// Try to convert a Bigfloat into a Expression::RationalNumberLiteral. This checks for sign,
+/// width and creates to correct Type.
+pub fn bigdecimal_to_expression(
+    loc: &pt::Loc,
+    n: &BigRational,
+    ns: &Namespace,
+    diagnostics: &mut Vec<Diagnostic>,
+    resolve_to: Option<&Type>,
+) -> Result<Expression, ()> {
+    if let Some(resolve_to) = resolve_to {
+        if !resolve_to.is_rational() {
+            diagnostics.push(Diagnostic::error(
+                *loc,
+                format!("expected ‘{}’, found rational", resolve_to.to_string(ns)),
+            ));
+            return Err(());
+        } else {
+            return Ok(Expression::RationalNumberLiteral(
+                *loc,
+                resolve_to.clone(),
+                n.clone(),
+            ));
+        };
+    }
+    Err(())
+}
+
 /// Cast from one type to another, which also automatically derefs any Type::Ref() type.
 /// if the cast is explicit (e.g. bytes32(bar) then implicit should be set to false.
 pub fn cast(
@@ -553,7 +598,6 @@ pub fn cast(
                     let mut bs = n.to_signed_bytes_le();
 
                     bs.resize(to_len as usize / 8, 0xff);
-
                     Ok(Expression::NumberLiteral(
                         *loc,
                         Type::Uint(to_len),
@@ -595,12 +639,11 @@ pub fn cast(
                     Type::Int(to_len),
                     n.clone(),
                 ))
-            }
+            };
         }
         (&Expression::NumberLiteral(_, _, ref n), p, &Type::Bytes(to_len)) if p.is_primitive() => {
             // round up the number of bits to bytes
             let bytes = (n.bits() + 7) / 8;
-
             return if n.sign() == Sign::Minus {
                 diagnostics.push(Diagnostic::type_error(
                     *loc,
@@ -660,6 +703,13 @@ pub fn cast(
                     BigInt::from(init.len()),
                 )),
                 Some(init.clone()),
+            ));
+        }
+        (&Expression::NumberLiteral(_, _, ref n), _, &Type::Rational) => {
+            return Ok(Expression::RationalNumberLiteral(
+                *loc,
+                Type::Rational,
+                BigRational::from(n.clone()),
             ));
         }
         _ => (),
@@ -992,6 +1042,39 @@ fn cast_types(
                 ))
             }
         }
+        (Type::Rational, Type::Uint(_) | Type::Int(_) | Type::Value) => {
+            match eval_const_rational(&expr, None, ns) {
+                Ok((_, big_number)) => {
+                    if big_number.is_integer() {
+                        let expr = Expression::NumberLiteral(
+                            expr.loc(),
+                            to.clone(),
+                            big_number.to_integer(),
+                        );
+
+                        return cast(loc, expr, &to, true, ns, diagnostics);
+                    }
+
+                    diagnostics.push(Diagnostic::type_error(
+                        *loc,
+                        format!(
+                            "conversion to {} from {} not allowed",
+                            to.to_string(ns),
+                            from.to_string(ns)
+                        ),
+                    ));
+
+                    Err(())
+                }
+                Err(diag) => {
+                    diagnostics.push(diag);
+                    Err(())
+                }
+            }
+        }
+        (Type::Uint(_) | Type::Int(_) | Type::Value, Type::Rational) => {
+            Ok(Expression::Cast(*loc, to.clone(), Box::new(expr)))
+        }
         (Type::Bytes(_), Type::DynamicBytes) | (Type::DynamicBytes, Type::Bytes(_)) => Ok(
             Expression::BytesCast(*loc, from.clone(), to.clone(), Box::new(expr)),
         ),
@@ -1302,6 +1385,11 @@ pub fn expression(
         pt::Expression::NumberLiteral(loc, b) => {
             bigint_to_expression(loc, b, ns, diagnostics, resolve_to)
         }
+        pt::Expression::RationalNumberLiteral(loc, b) => Ok(Expression::RationalNumberLiteral(
+            *loc,
+            Type::Rational,
+            b.clone(),
+        )),
         pt::Expression::HexNumberLiteral(loc, n) => {
             hex_number_literal(loc, n, ns, diagnostics, resolve_to)
         }
@@ -1500,7 +1588,7 @@ pub fn expression(
             )?;
 
             check_var_usage_expression(ns, &left, &right, symtable);
-            let ty = coerce_int(
+            let ty = coerce_number(
                 &left.ty(),
                 &l.loc(),
                 &right.ty(),
@@ -1544,7 +1632,7 @@ pub fn expression(
             )?;
 
             check_var_usage_expression(ns, &left, &right, symtable);
-            let ty = coerce_int(
+            let ty = coerce_number(
                 &left.ty(),
                 &l.loc(),
                 &right.ty(),
@@ -1588,7 +1676,7 @@ pub fn expression(
             )?;
             check_var_usage_expression(ns, &left, &right, symtable);
 
-            let ty = coerce_int(
+            let ty = coerce_number(
                 &left.ty(),
                 &l.loc(),
                 &right.ty(),
@@ -1632,7 +1720,7 @@ pub fn expression(
             )?;
             check_var_usage_expression(ns, &left, &right, symtable);
 
-            let ty = coerce_int(
+            let ty = coerce_number(
                 &left.ty(),
                 &l.loc(),
                 &right.ty(),
@@ -1733,6 +1821,9 @@ pub fn expression(
 
                 bigint_to_expression(loc, &-n, ns, diagnostics, resolve_to)
             }
+            pt::Expression::RationalNumberLiteral(_, r) => {
+                bigdecimal_to_expression(loc, &-r, ns, diagnostics, resolve_to)
+            }
             e => {
                 let expr = expression(
                     e,
@@ -1752,6 +1843,8 @@ pub fn expression(
 
                 if let Expression::NumberLiteral(_, _, n) = expr {
                     bigint_to_expression(loc, &-n, ns, diagnostics, resolve_to)
+                } else if let Expression::RationalNumberLiteral(_, _, r) = expr {
+                    bigdecimal_to_expression(loc, &-r, ns, diagnostics, resolve_to)
                 } else {
                     get_int_length(&expr_type, loc, false, ns, diagnostics)?;
 
@@ -2626,7 +2719,7 @@ fn subtract(
 
     check_var_usage_expression(ns, &left, &right, symtable);
 
-    let ty = coerce_int(
+    let ty = coerce_number(
         &left.ty(),
         &l.loc(),
         &right.ty(),
@@ -2636,6 +2729,18 @@ fn subtract(
         ns,
         diagnostics,
     )?;
+
+    if ty.is_rational() {
+        let expr = Expression::Subtract(*loc, ty, false, Box::new(left), Box::new(right));
+
+        return match eval_const_rational(&expr, contract_no, ns) {
+            Ok(_) => Ok(expr),
+            Err(diag) => {
+                diagnostics.push(diag);
+                Err(())
+            }
+        };
+    }
 
     Ok(Expression::Subtract(
         *loc,
@@ -2687,7 +2792,7 @@ fn bitwise_or(
 
     check_var_usage_expression(ns, &left, &right, symtable);
 
-    let ty = coerce_int(
+    let ty = coerce_number(
         &left.ty(),
         &l.loc(),
         &right.ty(),
@@ -2747,7 +2852,7 @@ fn bitwise_and(
 
     check_var_usage_expression(ns, &left, &right, symtable);
 
-    let ty = coerce_int(
+    let ty = coerce_number(
         &left.ty(),
         &l.loc(),
         &right.ty(),
@@ -2807,7 +2912,7 @@ fn bitwise_xor(
 
     check_var_usage_expression(ns, &left, &right, symtable);
 
-    let ty = coerce_int(
+    let ty = coerce_number(
         &left.ty(),
         &l.loc(),
         &right.ty(),
@@ -2978,7 +3083,7 @@ fn multiply(
 
     check_var_usage_expression(ns, &left, &right, symtable);
 
-    let ty = coerce_int(
+    let ty = coerce_number(
         &left.ty(),
         &l.loc(),
         &right.ty(),
@@ -2988,6 +3093,18 @@ fn multiply(
         ns,
         diagnostics,
     )?;
+
+    if ty.is_rational() {
+        let expr = Expression::Multiply(*loc, ty, false, Box::new(left), Box::new(right));
+
+        return match eval_const_rational(&expr, contract_no, ns) {
+            Ok(_) => Ok(expr),
+            Err(diag) => {
+                diagnostics.push(diag);
+                Err(())
+            }
+        };
+    }
 
     // If we don't know what type the result is going to be, make any possible result fit.
     if resolve_to.is_none() {
@@ -3076,7 +3193,7 @@ fn divide(
 
     check_var_usage_expression(ns, &left, &right, symtable);
 
-    let ty = coerce_int(
+    let ty = coerce_number(
         &left.ty(),
         &l.loc(),
         &right.ty(),
@@ -3136,7 +3253,7 @@ fn modulo(
 
     check_var_usage_expression(ns, &left, &right, symtable);
 
-    let ty = coerce_int(
+    let ty = coerce_number(
         &left.ty(),
         &l.loc(),
         &right.ty(),
@@ -3241,7 +3358,7 @@ fn power(
         return Err(());
     }
 
-    let ty = coerce_int(
+    let ty = coerce_number(
         &base_type,
         &b.loc(),
         &exp_type,
@@ -4146,7 +4263,7 @@ fn addition(
         _ => {}
     }
 
-    let ty = coerce_int(
+    let ty = coerce_number(
         &left_type,
         &l.loc(),
         &right_type,

@@ -402,6 +402,9 @@ impl ControlFlowGraph {
             Expression::NumberLiteral(_, ty, n) => {
                 format!("{} {}", ty.to_string(ns), n.to_str_radix(10))
             }
+            Expression::RationalNumberLiteral(_, ty, n) => {
+                format!("{} {}", ty.to_string(ns), n)
+            }
             Expression::StructLiteral(_, _, expr) => format!(
                 "struct {{ {} }}",
                 expr.iter()

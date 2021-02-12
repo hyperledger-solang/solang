@@ -1077,6 +1077,7 @@ fn expression(
             )
         }
         Expression::NumberLiteral(_, _, _)
+        | Expression::RationalNumberLiteral(_, _, _)
         | Expression::BoolLiteral(_, _)
         | Expression::BytesLiteral(_, _, _)
         | Expression::CodeLiteral(_, _, _)

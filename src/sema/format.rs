@@ -111,7 +111,7 @@ pub fn string_format(
                     diagnostics.push(Diagnostic::error(
                         arg.loc(),
                         String::from(
-                            "argument must be a bool, enum, address, contract, string, or bytes",
+                            "argument must be a bool, enum, address, contract, string, or bytes, int, uint",
                         ),
                     ));
                     return Err(());

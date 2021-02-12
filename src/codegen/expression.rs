@@ -7,7 +7,7 @@ use crate::parser::pt;
 use crate::sema::ast::{
     Builtin, CallTy, Expression, Function, Namespace, Parameter, StringLocation, Type,
 };
-use crate::sema::eval::eval_const_number;
+use crate::sema::eval::{eval_const_number, eval_const_rational};
 use crate::sema::expression::{bigint_to_expression, cast, cast_shift_arg};
 use crate::Target;
 use num_bigint::BigInt;
@@ -47,13 +47,21 @@ pub fn expression(
             Box::new(expression(left, cfg, contract_no, func, ns, vartab)),
             Box::new(expression(right, cfg, contract_no, func, ns, vartab)),
         ),
-        Expression::Multiply(loc, ty, unchecked, left, right) => Expression::Multiply(
-            *loc,
-            ty.clone(),
-            *unchecked,
-            Box::new(expression(left, cfg, contract_no, func, ns, vartab)),
-            Box::new(expression(right, cfg, contract_no, func, ns, vartab)),
-        ),
+        Expression::Multiply(loc, ty, unchecked, left, right) => {
+            if ty.is_rational() {
+                let (_, r) = eval_const_rational(expr, Some(contract_no), ns).unwrap();
+
+                Expression::NumberLiteral(*loc, ty.clone(), r.to_integer())
+            } else {
+                Expression::Multiply(
+                    *loc,
+                    ty.clone(),
+                    *unchecked,
+                    Box::new(expression(left, cfg, contract_no, func, ns, vartab)),
+                    Box::new(expression(right, cfg, contract_no, func, ns, vartab)),
+                )
+            }
+        }
         Expression::Divide(loc, ty, left, right) => Expression::Divide(
             *loc,
             ty.clone(),
