@@ -1,106 +1,106 @@
 {
-	"name": "solang",
-	"displayName": "Solang Solidity Compiler",
-	"description": "Use the solang compiler for syntax highlighting, compiler warnings and errors, and hovers",
-	"publisher": "solang",
-	"author": "Shivam Balikondwar <shivambalikondwar@icloud.com>",
-	"version": "0.0.2",
-	"repository": "github.com/hyperledger-labs/solang",
-	"engines": {
-		"vscode": "^1.43.0"
-	},
-	"categories": [
-		"Other"
-	],
-	"activationEvents": [
-		"onLanguage:solidity"
-	],
-	"main": "./out/client/extension.js",
-	"contributes": {
-		"configuration": {
-			"type": "object",
-			"title:": "Solang Solidity Compiler",
-			"properties": {
-				"solang.languageServerExecutable": {
-					"scope": "resource",
-					"type": "string",
-					"default": "~/.cargo/bin/solang",
-					"description": "Executable for the Solang Solidity Compiler"
-				},
-				"solang.target": {
-					"scope": "window",
-					"type": "string",
-					"enum": [
-						"substrate",
-						"solana",
-						"ewasm",
-						"sawtooth"
-					],
-					"default": "substrate",
-					"description": "Chain to build for. The Solidity language changes in subtle ways depending on the target."
-				}
-			}
-		},
-		"capabilities": {
-			"hoverProvider": "true"
-		},
-		"languages": [
-			{
-				"id": "solidity",
-				"aliases": [
-					"Solidity",
-					"solidity"
-				],
-				"extensions": [
-					".sol"
-				],
-				"configuration": "./solidity.configuration.json"
-			}
-		],
-		"snippets": [
-			{
-				"language": "solidity",
-				"path": "./snippets/solidity.json"
-			}
-		],
-		"grammars": [
-			{
-				"language": "solidity",
-				"scopeName": "source.solidity",
-				"path": "./syntaxes/solidity.json"
-			}
-		]
-	},
-	"scripts": {
-		"vscode:prepublish": "npm run compile",
-		"compile": "tsc -p ./",
-		"lint": "eslint src --ext ts",
-		"watch": "tsc -watch -p ./",
-		"pretest": "npm run compile && npm run lint",
-		"test": "node ./out/test/runTest.js"
-	},
-	"dependencies": {
-		"@octokit/rest": "^0.0.0-development",
-		"bluebird": "^3.4.7",
-		"lodash": "^4.17.20",
-		"vscode-languageclient": "^6.1.3",
-		"vscode-languageserver": "^6.1.1",
-		"vscode-languageserver-protocol": "=3.15.3"
-	},
-	"devDependencies": {
-		"@octokit/types": "^6.8.3",
-		"@types/bluebird": "^3.5.33",
-		"@types/lodash": "^4.14.168",
-		"@types/glob": "^7.1.1",
-		"@types/mocha": "^7.0.2",
-		"@types/node": "^12.12.0",
-		"@types/vscode": "^1.43.0",
-		"@typescript-eslint/eslint-plugin": "^2.30.0",
-		"@typescript-eslint/parser": "^2.30.0",
-		"eslint": "^6.8.0",
-		"glob": "^7.1.6",
-		"mocha": "^7.1.2",
-		"typescript": "^3.8.3",
-		"vscode-test": "^1.3.0"
-	}
+  "name": "solang",
+  "displayName": "Solang Solidity Compiler",
+  "description": "Use the solang compiler for syntax highlighting, compiler warnings and errors, and hovers",
+  "publisher": "solang",
+  "author": "Shivam Balikondwar <shivambalikondwar@icloud.com>",
+  "version": "0.0.2",
+  "repository": "github.com/hyperledger-labs/solang",
+  "engines": {
+    "vscode": "^1.43.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onLanguage:solidity"
+  ],
+  "main": "./out/client/extension.js",
+  "contributes": {
+    "configuration": {
+      "type": "object",
+      "title:": "Solang Solidity Compiler",
+      "properties": {
+        "solang.languageServerExecutable": {
+          "scope": "resource",
+          "type": "string",
+          "default": "~/.cargo/bin/solang",
+          "description": "Executable for the Solang Solidity Compiler"
+        },
+        "solang.target": {
+          "scope": "window",
+          "type": "string",
+          "enum": [
+            "substrate",
+            "solana",
+            "ewasm",
+            "sawtooth"
+          ],
+          "default": "substrate",
+          "description": "Chain to build for. The Solidity language changes in subtle ways depending on the target."
+        }
+      }
+    },
+    "capabilities": {
+      "hoverProvider": "true"
+    },
+    "languages": [
+      {
+        "id": "solidity",
+        "aliases": [
+          "Solidity",
+          "solidity"
+        ],
+        "extensions": [
+          ".sol"
+        ],
+        "configuration": "./solidity.configuration.json"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "solidity",
+        "path": "./snippets/solidity.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "solidity",
+        "scopeName": "source.solidity",
+        "path": "./syntaxes/solidity.json"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "lint": "eslint src --ext ts",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "test": "node ./out/test/runTest.js"
+  },
+  "dependencies": {
+    "@octokit/rest": "^0.0.0-development",
+    "bluebird": "^3.4.7",
+    "lodash": "^4.17.20",
+    "vscode-languageclient": "^6.1.3",
+    "vscode-languageserver": "^6.1.1",
+    "vscode-languageserver-protocol": "=3.15.3"
+  },
+  "devDependencies": {
+    "@octokit/types": "^6.8.3",
+    "@types/bluebird": "^3.5.33",
+    "@types/lodash": "^4.14.168",
+    "@types/glob": "^7.1.1",
+    "@types/mocha": "^7.0.2",
+    "@types/node": "^12.12.0",
+    "@types/vscode": "^1.43.0",
+    "@typescript-eslint/eslint-plugin": "^2.30.0",
+    "@typescript-eslint/parser": "^2.30.0",
+    "eslint": "^6.8.0",
+    "glob": "^7.1.6",
+    "mocha": "^7.1.2",
+    "typescript": "^3.8.3",
+    "vscode-test": "^1.3.0"
+  }
 }
