@@ -2956,6 +2956,20 @@ pub trait TargetRuntime<'a> {
 
         for (no, v) in &cfg.vars {
             match v.storage {
+                Storage::Local if v.ty == ast::Type::String || v.ty == ast::Type::DynamicBytes => {
+                    vars.insert(
+                        *no,
+                        Variable {
+                            value: contract
+                                .module
+                                .get_struct_type("struct.vector")
+                                .unwrap()
+                                .ptr_type(AddressSpace::Generic)
+                                .const_null()
+                                .into(),
+                        },
+                    );
+                }
                 Storage::Local if v.ty.is_reference_type() && !v.ty.is_contract_storage() => {
                     let ty = contract.llvm_type(&v.ty);
 
@@ -6163,6 +6177,17 @@ impl<'a> Contract<'a> {
         elem_size: IntValue<'a>,
         init: Option<&Vec<u8>>,
     ) -> PointerValue<'a> {
+        if let Some(init) = init {
+            if init.is_empty() {
+                return self
+                    .module
+                    .get_struct_type("struct.vector")
+                    .unwrap()
+                    .ptr_type(AddressSpace::Generic)
+                    .const_null();
+            }
+        }
+
         let init = match init {
             None => self.builder.build_int_to_ptr(
                 self.context.i32_type().const_all_ones(),
@@ -6205,9 +6230,11 @@ impl<'a> Contract<'a> {
                 .into_int_value()
         } else {
             // field 0 is the length
+            let vector = vector.into_pointer_value();
+
             let len = unsafe {
                 self.builder.build_gep(
-                    vector.into_pointer_value(),
+                    vector,
                     &[
                         self.context.i32_type().const_zero(),
                         self.context.i32_type().const_zero(),
@@ -6216,7 +6243,14 @@ impl<'a> Contract<'a> {
                 )
             };
 
-            self.builder.build_load(len, "vector_len").into_int_value()
+            self.builder
+                .build_select(
+                    self.builder.build_is_null(vector, "vector_is_null"),
+                    self.context.i32_type().const_zero(),
+                    self.builder.build_load(len, "vector_len").into_int_value(),
+                    "length",
+                )
+                .into_int_value()
         }
     }
 

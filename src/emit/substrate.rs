@@ -1840,14 +1840,36 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
     fn set_storage_string(
         &self,
         contract: &Contract<'a>,
-        _function: FunctionValue<'a>,
+        function: FunctionValue<'a>,
         slot: PointerValue<'a>,
         dest: BasicValueEnum<'a>,
     ) {
         let len = contract.vector_len(dest);
         let data = contract.vector_bytes(dest);
 
-        // TODO: check for non-zero
+        let exists = contract.builder.build_int_compare(
+            IntPredicate::NE,
+            len,
+            contract.context.i32_type().const_zero(),
+            "exists",
+        );
+
+        let delete_block = contract
+            .context
+            .append_basic_block(function, "delete_block");
+
+        let set_block = contract.context.append_basic_block(function, "set_block");
+
+        let done_storage = contract
+            .context
+            .append_basic_block(function, "done_storage");
+
+        contract
+            .builder
+            .build_conditional_branch(exists, set_block, delete_block);
+
+        contract.builder.position_at_end(set_block);
+
         contract.builder.build_call(
             contract.module.get_function("seal_set_storage").unwrap(),
             &[
@@ -1871,6 +1893,27 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             ],
             "",
         );
+
+        contract.builder.build_unconditional_branch(done_storage);
+
+        contract.builder.position_at_end(delete_block);
+
+        contract.builder.build_call(
+            contract.module.get_function("seal_clear_storage").unwrap(),
+            &[contract
+                .builder
+                .build_pointer_cast(
+                    slot,
+                    contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                    "",
+                )
+                .into()],
+            "",
+        );
+
+        contract.builder.build_unconditional_branch(done_storage);
+
+        contract.builder.position_at_end(done_storage);
     }
 
     /// Read from substrate storage
@@ -1954,7 +1997,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
     fn get_storage_string(
         &self,
         contract: &Contract<'a>,
-        _function: FunctionValue,
+        function: FunctionValue,
         slot: PointerValue<'a>,
     ) -> PointerValue<'a> {
         let scratch_buf = contract.builder.build_pointer_cast(
@@ -2001,14 +2044,31 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             "storage_exists",
         );
 
-        let length = contract.builder.build_select(
-            exists,
-            contract.builder.build_load(scratch_len, "string_len"),
-            contract.context.i32_type().const_zero().into(),
-            "string_length",
-        );
+        let ty = contract
+            .module
+            .get_struct_type("struct.vector")
+            .unwrap()
+            .ptr_type(AddressSpace::Generic);
+
+        let entry = contract.builder.get_insert_block().unwrap();
+
+        let retrieve_block = contract
+            .context
+            .append_basic_block(function, "retrieve_block");
+
+        let done_storage = contract
+            .context
+            .append_basic_block(function, "done_storage");
 
         contract
+            .builder
+            .build_conditional_branch(exists, retrieve_block, done_storage);
+
+        contract.builder.position_at_end(retrieve_block);
+
+        let length = contract.builder.build_load(scratch_len, "string_len");
+
+        let loaded_string = contract
             .builder
             .build_call(
                 contract.module.get_function("vector_new").unwrap(),
@@ -2022,7 +2082,28 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             .try_as_basic_value()
             .left()
             .unwrap()
-            .into_pointer_value()
+            .into_pointer_value();
+
+        contract.builder.build_unconditional_branch(done_storage);
+
+        contract.builder.position_at_end(done_storage);
+
+        let res = contract.builder.build_phi(ty, "storage_res");
+
+        res.add_incoming(&[
+            (&loaded_string, retrieve_block),
+            (
+                &contract
+                    .module
+                    .get_struct_type("struct.vector")
+                    .unwrap()
+                    .ptr_type(AddressSpace::Generic)
+                    .const_null(),
+                entry,
+            ),
+        ]);
+
+        res.as_basic_value().into_pointer_value()
     }
 
     /// Read string from substrate storage

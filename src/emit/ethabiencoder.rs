@@ -364,22 +364,7 @@ impl EthAbiEncoder {
                     arg
                 };
 
-                // Now, write the length to dynamic
-                let len = unsafe {
-                    contract.builder.build_gep(
-                        arg.into_pointer_value(),
-                        &[
-                            contract.context.i32_type().const_zero(),
-                            contract.context.i32_type().const_zero(),
-                        ],
-                        "array.len",
-                    )
-                };
-
-                let len = contract
-                    .builder
-                    .build_load(len, "array.len")
-                    .into_int_value();
+                let len = contract.vector_len(arg);
 
                 // write the length to dynamic
                 self.encode_primitive(
@@ -406,16 +391,7 @@ impl EthAbiEncoder {
                 );
 
                 // now copy the string data
-                let string_start = unsafe {
-                    contract.builder.build_gep(
-                        arg.into_pointer_value(),
-                        &[
-                            contract.context.i32_type().const_zero(),
-                            contract.context.i32_type().const_int(2, false),
-                        ],
-                        "string_start",
-                    )
-                };
+                let string_start = contract.vector_bytes(arg);
 
                 contract.builder.build_call(
                     contract.module.get_function("__memcpy").unwrap(),
@@ -1037,26 +1013,12 @@ impl EthAbiEncoder {
                     arg
                 };
 
-                let len = unsafe {
-                    contract.builder.build_gep(
-                        arg.into_pointer_value(),
-                        &[
-                            contract.context.i32_type().const_zero(),
-                            contract.context.i32_type().const_zero(),
-                        ],
-                        "string.len",
-                    )
-                };
-
                 // The dynamic part is the length (=32 bytes) and the string
                 // data itself. Length 0 occupies no space, length 1-32 occupies
                 // 32 bytes, etc
                 contract.builder.build_and(
                     contract.builder.build_int_add(
-                        contract
-                            .builder
-                            .build_load(len, "string.len")
-                            .into_int_value(),
+                        contract.vector_len(arg),
                         contract.context.i32_type().const_int(32 + 31, false),
                         "",
                     ),
@@ -1711,6 +1673,7 @@ impl EthAbiEncoder {
                     "string_len",
                 );
 
+                // Special case string_len == 0 => null pointer?
                 let string_end =
                     contract
                         .builder
