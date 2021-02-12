@@ -1,13 +1,14 @@
 use std::str::FromStr;
-use num_bigint::BigInt;
-use num_bigint::BigUint;
+use num_bigint::{BigUint, BigInt};
 use num_traits::Pow;
+use num_traits::Zero;
 use std::ops::Mul;
 use lalrpop_util::ParseError;
 use super::pt::*;
 use super::box_option;
 use super::lexer::{Token, LexicalError, CommentType};
 use super::doc::tags;
+use num_rational::BigRational;
 
 grammar<'input>(input: &'input str, file_no: usize);
 
@@ -393,6 +394,60 @@ NoFunctionTyPrecedence0: Expression = {
         };
 
         Expression::NumberLiteral(Loc(file_no, l, r), n)
+    },
+    <l:@L> <n:rational> <r:@R> => {
+        let mut significand: String = n.0.to_string();
+        let mantissa: String = n.1.to_string();
+        let exp: String = n.2.to_string();
+        let len = if mantissa.is_empty() {
+            0
+        } else {
+            mantissa.len()
+        };
+        let mut test = false;
+        if exp.starts_with("-") {
+            test = true;
+        }
+
+        let denominator = BigInt::from_str("10").unwrap().pow(BigUint::from(len as u64));
+        let zero_index = mantissa.chars().position(|c| c != '0').unwrap_or(usize::MAX);
+        let n =  if exp.is_empty() {
+            if significand.is_empty() || significand == "0" {
+                if zero_index < usize::MAX {
+                    BigRational::new(BigInt::from_str(&mantissa[zero_index..]).unwrap(), denominator)
+                } else {
+                    BigRational::from(BigInt::zero())
+                }
+            } else {
+                significand.push_str(&mantissa);
+                BigRational::new(BigInt::from_str(&significand).unwrap(), denominator)
+            }
+        } else {
+            if significand.is_empty() || significand == "0" {
+                if zero_index < usize::MAX {
+                    if test {
+                        let exp_result = BigInt::from_str("10").unwrap().pow(BigUint::from_str(&exp[1..]).unwrap());
+                        BigRational::new(BigInt::from_str(&mantissa[zero_index..]).unwrap(), denominator.mul(exp_result))
+                    } else {
+                        let exp_result = BigInt::from_str("10").unwrap().pow(BigUint::from_str(&exp).unwrap());
+                        BigRational::new(BigInt::from_str(&mantissa[zero_index..]).unwrap().mul(exp_result), denominator)
+                    }
+                } else {
+                    BigRational::from(BigInt::zero())
+                }
+            } else {
+                significand.push_str(&mantissa);
+                if test {
+                    let exp_result = BigInt::from_str("10").unwrap().pow(BigUint::from_str(&exp[1..]).unwrap());
+                    BigRational::new(BigInt::from_str(&significand).unwrap(), denominator.mul(exp_result))
+                } else {
+                    let exp_result = BigInt::from_str("10").unwrap().pow(BigUint::from_str(&exp).unwrap());
+                    BigRational::new(BigInt::from_str(&significand).unwrap().mul(exp_result), denominator)
+                }
+            }
+        };
+
+        Expression::RationalNumberLiteral(Loc(file_no, l, r), n)
     },
     <l:@L> <n:hexnumber> <r:@R> => {
         Expression::HexNumberLiteral(Loc(file_no, l, r), n.to_owned())
@@ -785,6 +840,7 @@ extern {
         hexstring => Token::HexLiteral(<&'input str>),
         address => Token::AddressLiteral(<&'input str>),
         number => Token::Number(<&'input str>, <&'input str>),
+        rational => Token::RationalNumber(<&'input str>, <&'input str>, <&'input str>),
         hexnumber => Token::HexNumber(<&'input str>),
         ";" => Token::Semicolon,
         "{" => Token::OpenCurlyBrace,

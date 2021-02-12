@@ -26,6 +26,7 @@ pub enum Token<'input> {
     AddressLiteral(&'input str),
     HexLiteral(&'input str),
     Number(&'input str, &'input str),
+    RationalNumber(&'input str, &'input str, &'input str),
     HexNumber(&'input str),
     DocComment(CommentType, &'input str),
     Divide,
@@ -187,6 +188,12 @@ impl<'input> fmt::Display for Token<'input> {
             Token::AddressLiteral(address) => write!(f, "{}", address),
             Token::Number(base, exp) if exp.is_empty() => write!(f, "{}", base),
             Token::Number(base, exp) => write!(f, "{}e{}", base, exp),
+            Token::RationalNumber(significand, mantissa, exp) if exp.is_empty() => {
+                write!(f, "{}.{}", significand, mantissa)
+            }
+            Token::RationalNumber(significand, mantissa, exp) => {
+                write!(f, "{}.{}e{}", significand, mantissa, exp)
+            }
             Token::HexNumber(n) => write!(f, "{}", n),
             Token::Uint(w) => write!(f, "uint{}", w),
             Token::Int(w) => write!(f, "int{}", w),
@@ -325,6 +332,8 @@ pub enum LexicalError {
     InvalidCharacterInHexLiteral(usize, char),
     UnrecognisedToken(usize, usize, String),
     MissingExponent(usize, usize),
+    DoublePoints(usize, usize),
+    UnrecognisedDecimal(usize, usize),
     ExpectedFrom(usize, usize, String),
 }
 
@@ -345,6 +354,10 @@ impl fmt::Display for LexicalError {
             LexicalError::UnrecognisedToken(_, _, t) => write!(f, "unrecognised token ‘{}’", t),
             LexicalError::ExpectedFrom(_, _, t) => write!(f, "‘{}’ found where ‘from’ expected", t),
             LexicalError::MissingExponent(_, _) => write!(f, "missing number"),
+            LexicalError::DoublePoints(_, _) => write!(f, "found two dots in number"),
+            LexicalError::UnrecognisedDecimal(_, _) => {
+                write!(f, "expected number after decimal point")
+            }
         }
     }
 }
@@ -360,6 +373,8 @@ impl LexicalError {
             LexicalError::UnrecognisedToken(start, end, _) => Loc(file_no, *start, *end),
             LexicalError::ExpectedFrom(start, end, _) => Loc(file_no, *start, *end),
             LexicalError::MissingExponent(start, end) => Loc(file_no, *start, *end),
+            LexicalError::DoublePoints(start, end) => Loc(file_no, *start, *end),
+            LexicalError::UnrecognisedDecimal(start, end) => Loc(file_no, *start, *end),
         }
     }
 }
@@ -549,6 +564,7 @@ impl<'input> Lexer<'input> {
         end: usize,
         ch: char,
     ) -> Result<(usize, Token<'input>, usize), LexicalError> {
+        let mut is_rational = false;
         if ch == '0' {
             if let Some((_, 'x')) = self.chars.peek() {
                 // hex number
@@ -576,6 +592,12 @@ impl<'input> Lexer<'input> {
             }
         }
 
+        let mut start = start;
+        if ch == '.' {
+            is_rational = true;
+            start -= 1;
+        }
+
         let mut end = end;
         while let Some((i, ch)) = self.chars.peek() {
             if !ch.is_ascii_digit() && *ch != '_' {
@@ -584,16 +606,48 @@ impl<'input> Lexer<'input> {
             end = *i;
             self.chars.next();
         }
+        let mut rational_end = end;
+        let mut end_before_rational = end;
+        let mut rational_start = end;
+        if is_rational {
+            end_before_rational = start - 1;
+            rational_start = start + 1;
+        }
 
-        let base = &self.input[start..=end];
+        if let Some((i, '.')) = self.chars.peek() {
+            if is_rational {
+                return Err(LexicalError::DoublePoints(start, self.input.len()));
+            }
+            rational_start = *i + 1;
+            rational_end = *i + 1;
+            let mut has_number = false;
+            is_rational = true;
+            self.chars.next();
+            while let Some((i, ch)) = self.chars.peek() {
+                if *ch == '.' {
+                    return Err(LexicalError::DoublePoints(start, self.input.len()));
+                }
+                if !ch.is_ascii_digit() {
+                    break;
+                }
+                has_number = true;
+                rational_end = *i;
+                end = *i;
+                self.chars.next();
+            }
+            if !has_number {
+                return Err(LexicalError::UnrecognisedDecimal(start, self.input.len()));
+            }
+        }
 
+        let old_end = end;
         let mut exp_start = end + 1;
 
         if let Some((i, 'e')) = self.chars.peek() {
-            exp_start = i + 1;
+            exp_start = *i + 1;
             self.chars.next();
             while let Some((i, ch)) = self.chars.peek() {
-                if !ch.is_ascii_digit() && *ch != '_' {
+                if !ch.is_ascii_digit() && *ch != '_' && *ch != '-' {
                     break;
                 }
                 end = *i;
@@ -605,6 +659,22 @@ impl<'input> Lexer<'input> {
             }
         }
 
+        if is_rational {
+            let significand = &self.input[start..=end_before_rational];
+            let mantissa = &self.input[rational_start..=rational_end];
+
+            if mantissa.is_empty() {
+                return Err(LexicalError::UnrecognisedDecimal(start, self.input.len()));
+            }
+            let exp = &self.input[exp_start..=end];
+            return Ok((
+                start,
+                Token::RationalNumber(significand, mantissa, exp),
+                end + 1,
+            ));
+        }
+
+        let base = &self.input[start..=old_end];
         let exp = &self.input[exp_start..=end];
 
         Ok((start, Token::Number(base, exp), end + 1))
@@ -986,7 +1056,14 @@ impl<'input> Lexer<'input> {
                         _ => Some(Ok((i, Token::More, i + 1))),
                     };
                 }
-                Some((i, '.')) => return Some(Ok((i, Token::Member, i + 1))),
+                Some((i, '.')) => {
+                    if let Some((_, a)) = self.chars.peek() {
+                        if a.is_ascii_digit() {
+                            return Some(self.parse_number(i + 1, i + 1, '.'));
+                        }
+                    }
+                    return Some(Ok((i, Token::Member, i + 1)));
+                }
                 Some((i, '[')) => return Some(Ok((i, Token::OpenBracket, i + 1))),
                 Some((i, ']')) => return Some(Ok((i, Token::CloseBracket, i + 1))),
                 Some((i, ':')) => {
@@ -1125,6 +1202,42 @@ fn lexertest() {
             Ok((11, Token::HexNumber("0x00fead0_12"), 23)),
             Ok((24, Token::Number("00090", ""), 29)),
             Ok((30, Token::Number("0_0", ""), 33))
+        )
+    );
+
+    let tokens = Lexer::new("// foo bar\n0x00fead0_12 9.0008 0_0")
+        .collect::<Vec<Result<(usize, Token, usize), LexicalError>>>();
+
+    assert_eq!(
+        tokens,
+        vec!(
+            Ok((11, Token::HexNumber("0x00fead0_12"), 23)),
+            Ok((24, Token::RationalNumber("9", "0008", ""), 30)),
+            Ok((31, Token::Number("0_0", ""), 34))
+        )
+    );
+
+    let tokens = Lexer::new("// foo bar\n0x00fead0_12 .0008 0.9e2")
+        .collect::<Vec<Result<(usize, Token, usize), LexicalError>>>();
+
+    assert_eq!(
+        tokens,
+        vec!(
+            Ok((11, Token::HexNumber("0x00fead0_12"), 23)),
+            Ok((24, Token::RationalNumber("", "0008", ""), 29)),
+            Ok((30, Token::RationalNumber("0", "9", "2"), 35))
+        )
+    );
+
+    let tokens = Lexer::new("// foo bar\n0x00fead0_12 .0008 0.9e-2")
+        .collect::<Vec<Result<(usize, Token, usize), LexicalError>>>();
+
+    assert_eq!(
+        tokens,
+        vec!(
+            Ok((11, Token::HexNumber("0x00fead0_12"), 23)),
+            Ok((24, Token::RationalNumber("", "0008", ""), 29)),
+            Ok((30, Token::RationalNumber("0", "9", "-2"), 36))
         )
     );
 

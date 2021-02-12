@@ -1,4 +1,5 @@
 use num_bigint::BigInt;
+use num_rational::BigRational;
 use std::fmt;
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
@@ -61,6 +62,7 @@ pub enum Type {
     Int(u16),
     Uint(u16),
     Bytes(u8),
+    Rational,
     DynamicBytes,
     Mapping(Loc, Box<Expression>, Box<Expression>),
     Function {
@@ -294,6 +296,7 @@ pub enum Expression {
     AssignModulo(Loc, Box<Expression>, Box<Expression>),
     BoolLiteral(Loc, bool),
     NumberLiteral(Loc, BigInt),
+    RationalNumberLiteral(Loc, BigRational),
     HexNumberLiteral(Loc, String),
     StringLiteral(Vec<StringLiteral>),
     Type(Loc, Type),
@@ -357,6 +360,7 @@ impl Expression {
             | Expression::AssignModulo(loc, _, _)
             | Expression::BoolLiteral(loc, _)
             | Expression::NumberLiteral(loc, _)
+            | Expression::RationalNumberLiteral(loc, _)
             | Expression::HexNumberLiteral(loc, _)
             | Expression::ArrayLiteral(loc, _)
             | Expression::List(loc, _)

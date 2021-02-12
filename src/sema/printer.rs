@@ -2,6 +2,7 @@ use super::ast::*;
 use super::builtin::{get_prototype, Prototype};
 use crate::parser::pt;
 use crate::Target;
+use num_traits::ToPrimitive;
 
 #[derive(Clone)]
 enum Tree {
@@ -79,6 +80,11 @@ fn print_expr(e: &Expression, func: Option<&Function>, ns: &Namespace) -> Tree {
         Expression::NumberLiteral(_, ty, b) => {
             Tree::Leaf(format!("literal {} {}", ty.to_string(ns), b))
         }
+        Expression::RationalNumberLiteral(_, ty, b) => Tree::Leaf(format!(
+            "literal {} {}",
+            ty.to_string(ns),
+            b.to_f64().unwrap()
+        )),
         Expression::StructLiteral(_, ty, fields) => {
             let fields = fields.iter().map(|e| print_expr(e, func, ns)).collect();
 
