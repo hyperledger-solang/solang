@@ -1826,12 +1826,81 @@ pub trait TargetRuntime<'a> {
                     .into()
             }
             Expression::Variable(_, _, s) => vartab[s].value,
-            Expression::Load(_, _, e) => {
-                let expr = self
+            Expression::Load(_, ty, e) => {
+                let ptr = self
                     .expression(contract, e, vartab, function)
                     .into_pointer_value();
 
-                contract.builder.build_load(expr, "")
+                let value = contract.builder.build_load(ptr, "");
+
+                if ty.is_reference_type() {
+                    // if the pointer is null, it needs to be allocated
+                    let allocation_needed = contract
+                        .builder
+                        .build_is_null(value.into_pointer_value(), "allocation_needed");
+
+                    let allocate = contract.context.append_basic_block(function, "allocate");
+                    let already_allocated = contract
+                        .context
+                        .append_basic_block(function, "already_allocated");
+
+                    contract.builder.build_conditional_branch(
+                        allocation_needed,
+                        allocate,
+                        already_allocated,
+                    );
+
+                    let entry = contract.builder.get_insert_block().unwrap();
+
+                    contract.builder.position_at_end(allocate);
+
+                    // allocate a new struct
+                    let ty = e.ty();
+
+                    let llvm_ty = contract.llvm_type(&ty.deref_memory());
+
+                    let new_struct = contract
+                        .builder
+                        .build_call(
+                            contract.module.get_function("__malloc").unwrap(),
+                            &[llvm_ty
+                                .size_of()
+                                .unwrap()
+                                .const_cast(contract.context.i32_type(), false)
+                                .into()],
+                            "",
+                        )
+                        .try_as_basic_value()
+                        .left()
+                        .unwrap()
+                        .into_pointer_value();
+
+                    let new_struct = contract.builder.build_pointer_cast(
+                        new_struct,
+                        llvm_ty.ptr_type(AddressSpace::Generic),
+                        &format!("new_{}", ty.to_string(contract.ns)),
+                    );
+
+                    contract.builder.build_store(ptr, new_struct);
+
+                    contract
+                        .builder
+                        .build_unconditional_branch(already_allocated);
+
+                    contract.builder.position_at_end(already_allocated);
+
+                    // insert phi node
+                    let combined_struct_ptr = contract.builder.build_phi(
+                        llvm_ty.ptr_type(AddressSpace::Generic),
+                        &format!("ptr_{}", ty.to_string(contract.ns)),
+                    );
+
+                    combined_struct_ptr.add_incoming(&[(&value, entry), (&new_struct, allocate)]);
+
+                    combined_struct_ptr.as_basic_value()
+                } else {
+                    value
+                }
             }
             Expression::StorageLoad(_, ty, e) => {
                 let mut slot = self
@@ -2154,7 +2223,7 @@ pub trait TargetRuntime<'a> {
                     .into()
             }
             Expression::StructMember(_, _, a, i) => {
-                let array = self
+                let struct_ptr = self
                     .expression(contract, a, vartab, function)
                     .into_pointer_value();
 
@@ -2162,7 +2231,7 @@ pub trait TargetRuntime<'a> {
                     contract
                         .builder
                         .build_gep(
-                            array,
+                            struct_ptr,
                             &[
                                 contract.context.i32_type().const_zero(),
                                 contract.context.i32_type().const_int(*i as u64, false),
@@ -2956,58 +3025,23 @@ pub trait TargetRuntime<'a> {
 
         for (no, v) in &cfg.vars {
             match v.storage {
-                Storage::Local if v.ty == ast::Type::String || v.ty == ast::Type::DynamicBytes => {
-                    vars.insert(
-                        *no,
-                        Variable {
-                            value: contract
-                                .module
-                                .get_struct_type("struct.vector")
-                                .unwrap()
-                                .ptr_type(AddressSpace::Generic)
-                                .const_null()
-                                .into(),
-                        },
-                    );
-                }
                 Storage::Local if v.ty.is_reference_type() && !v.ty.is_contract_storage() => {
-                    let ty = contract.llvm_type(&v.ty);
+                    // a null pointer means an empty, zero'ed thing, be it string, struct or array
+                    let value = contract
+                        .llvm_type(&v.ty)
+                        .ptr_type(AddressSpace::Generic)
+                        .const_null()
+                        .into();
 
-                    let p = contract
-                        .builder
-                        .build_call(
-                            contract.module.get_function("__malloc").unwrap(),
-                            &[ty.size_of()
-                                .unwrap()
-                                .const_cast(contract.context.i32_type(), false)
-                                .into()],
-                            &v.id.name,
-                        )
-                        .try_as_basic_value()
-                        .left()
-                        .unwrap();
-
-                    vars.insert(
-                        *no,
-                        Variable {
-                            value: contract
-                                .builder
-                                .build_pointer_cast(
-                                    p.into_pointer_value(),
-                                    ty.ptr_type(AddressSpace::Generic),
-                                    &v.id.name,
-                                )
-                                .into(),
-                        },
-                    );
+                    vars.insert(*no, Variable { value });
                 }
                 Storage::Local if v.ty.is_contract_storage() => {
                     vars.insert(
                         *no,
                         Variable {
                             value: contract
-                                .context
-                                .custom_width_int_type(256)
+                                .llvm_type(&contract.ns.storage_type())
+                                .into_int_type()
                                 .const_zero()
                                 .into(),
                         },
@@ -6049,6 +6083,18 @@ impl<'a> Contract<'a> {
             | ast::Type::DynamicBytes
             | ast::Type::String => llvm_ty.ptr_type(AddressSpace::Generic).as_basic_type_enum(),
             _ => llvm_ty,
+        }
+    }
+
+    /// Default empty value
+    fn default_value(&self, ty: &ast::Type) -> BasicValueEnum<'a> {
+        let llvm_ty = self.llvm_var(ty);
+
+        // const_zero() on BasicTypeEnum yet. Should be coming to inkwell soon
+        if llvm_ty.is_pointer_type() {
+            llvm_ty.into_pointer_type().const_null().into()
+        } else {
+            llvm_ty.into_int_type().const_zero().into()
         }
     }
 
