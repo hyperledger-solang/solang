@@ -1,5 +1,6 @@
-use parity_scale_codec::Encode;
+use parity_scale_codec::{Decode, Encode};
 use parity_scale_codec_derive::{Decode, Encode};
+use serde_derive::Deserialize;
 
 use crate::{build_solidity, first_error, parse_and_resolve};
 use solang::Target;
@@ -392,6 +393,104 @@ fn structs_decode() {
             f2: 0xfd7f,
         }
         .encode(),
+    );
+
+    // allocate an array of structs. On dereference, the
+    // struct elements are allocated. Here we are testing
+    // the allocation and also that the abi encoder can
+    // an struct when the pointer is still null
+    let mut runtime = build_solidity(
+        r##"
+        contract test_struct_parsing {
+            struct foo {
+                bytes3 f1;
+                int32 f2;
+            }
+
+            function test() public returns (foo[]) {
+                foo[] f = new foo[](3);
+
+                f[1].f1 = hex"f33ec3";
+                f[1].f2 = 0xfd7f;
+
+                return f;
+            }
+        }"##,
+    );
+
+    runtime.constructor(0, Vec::new());
+    runtime.function("test", Vec::new());
+
+    assert_eq!(
+        runtime.vm.output,
+        vec![
+            Foo {
+                f1: [0, 0, 0],
+                f2: 0,
+            },
+            Foo {
+                f1: [0xf3, 0x3e, 0xc3],
+                f2: 0xfd7f,
+            },
+            Foo {
+                f1: [0, 0, 0],
+                f2: 0,
+            },
+        ]
+        .encode(),
+    );
+
+    #[derive(Debug, PartialEq, Encode, Decode, Deserialize)]
+    struct Foo2 {
+        f1: [u8; 3],
+        f2: i32,
+        f3: String,
+        f4: Vec<i64>,
+        f5: [bool; 4],
+    };
+
+    let mut runtime = build_solidity(
+        r##"
+        contract test_struct_parsing {
+            struct foo {
+                bytes3 f1;
+                int32 f2;
+                string f3;
+                int64[] f4;
+                bool[4] f5;
+            }
+
+            function test() public returns (foo[] f) {
+                f = new foo[](1);
+            }
+
+            function test_zero() public returns (foo[] f) { }
+        }"##,
+    );
+
+    runtime.constructor(0, Vec::new());
+    runtime.function("test", Vec::new());
+
+    let mut output: &[u8] = &runtime.vm.output;
+
+    assert_eq!(
+        Vec::<Foo2>::decode(&mut output).expect("decode failed"),
+        vec![Foo2 {
+            f1: [0, 0, 0],
+            f2: 0,
+            f3: String::from(""),
+            f4: Vec::new(),
+            f5: [false; 4],
+        }]
+    );
+
+    runtime.function("test_zero", Vec::new());
+
+    let mut output: &[u8] = &runtime.vm.output;
+
+    assert_eq!(
+        Vec::<Foo2>::decode(&mut output).expect("decode failed"),
+        vec![]
     );
 }
 

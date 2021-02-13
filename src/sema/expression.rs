@@ -5596,7 +5596,7 @@ fn method_call_pos_args(
                 _ => unreachable!(),
             };
             let val = match args.len() {
-                0 => elem_ty.default(ns),
+                0 => elem_ty.default(ns).unwrap(),
                 1 => {
                     let val_expr = expression(
                         &args[0],

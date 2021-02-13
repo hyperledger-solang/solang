@@ -1297,14 +1297,16 @@ fn function_cfg(
     // named returns should be populated
     for (i, pos) in func.symtable.returns.iter().enumerate() {
         if !func.returns[i].name.is_empty() {
-            cfg.add(
-                &mut vartab,
-                Instr::Set {
-                    loc: func.returns[i].name_loc.unwrap(),
-                    res: *pos,
-                    expr: func.returns[i].ty.default(ns),
-                },
-            );
+            if let Some(expr) = func.returns[i].ty.default(ns) {
+                cfg.add(
+                    &mut vartab,
+                    Instr::Set {
+                        loc: func.returns[i].name_loc.unwrap(),
+                        res: *pos,
+                        expr,
+                    },
+                );
+            }
         }
     }
 

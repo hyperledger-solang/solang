@@ -1112,6 +1112,10 @@ impl SubstrateTarget {
 
     /// recursively encode argument. The encoded data is written to the data pointer,
     /// and the pointer is updated point after the encoded data.
+    ///
+    /// FIXME: this function takes a "load" arguments, which tells the encoded whether the data should be
+    /// dereferenced. However, this is already encoded by the fact it is a Type::Ref(..) type. So, the load
+    /// argument should be removed from this function.
     pub fn encode_ty<'x>(
         &self,
         contract: &Contract<'x>,
@@ -1142,137 +1146,204 @@ impl SubstrateTarget {
             ast::Type::Enum(n) => {
                 self.encode_primitive(contract, load, &contract.ns.enums[*n].ty, *data, arg);
             }
-            ast::Type::Array(_, dim) => {
+            ast::Type::Array(_, dim) if dim[0].is_some() => {
+                let arg = if load {
+                    contract
+                        .builder
+                        .build_load(arg.into_pointer_value(), "")
+                        .into_pointer_value()
+                } else {
+                    arg.into_pointer_value()
+                };
+
+                let null_array = contract.context.append_basic_block(function, "null_array");
+                let normal_array = contract
+                    .context
+                    .append_basic_block(function, "normal_array");
+                let done_array = contract.context.append_basic_block(function, "done_array");
+
+                let dim = dim[0].as_ref().unwrap().to_u64().unwrap();
+
+                let elem_ty = ty.array_deref();
+
+                let is_null = contract.builder.build_is_null(arg, "is_null");
+
+                contract
+                    .builder
+                    .build_conditional_branch(is_null, null_array, normal_array);
+
+                contract.builder.position_at_end(normal_array);
+
+                let mut normal_data = *data;
+
+                contract.emit_static_loop_with_pointer(
+                    function,
+                    contract.context.i64_type().const_zero(),
+                    contract.context.i64_type().const_int(dim, false),
+                    &mut normal_data,
+                    |index, elem_data| {
+                        let elem = unsafe {
+                            contract.builder.build_gep(
+                                arg,
+                                &[contract.context.i32_type().const_zero(), index],
+                                "index_access",
+                            )
+                        };
+
+                        self.encode_ty(
+                            contract,
+                            true,
+                            packed,
+                            function,
+                            &elem_ty,
+                            elem.into(),
+                            elem_data,
+                        );
+                    },
+                );
+
+                contract.builder.build_unconditional_branch(done_array);
+
+                let normal_array = contract.builder.get_insert_block().unwrap();
+
+                contract.builder.position_at_end(null_array);
+
+                let mut null_data = *data;
+
+                let elem = contract.default_value(&elem_ty.deref_any());
+
+                contract.emit_static_loop_with_pointer(
+                    function,
+                    contract.context.i64_type().const_zero(),
+                    contract.context.i64_type().const_int(dim, false),
+                    &mut null_data,
+                    |_, elem_data| {
+                        self.encode_ty(
+                            contract, false, packed, function, &elem_ty, elem, elem_data,
+                        );
+                    },
+                );
+
+                contract.builder.build_unconditional_branch(done_array);
+
+                let null_array = contract.builder.get_insert_block().unwrap();
+
+                contract.builder.position_at_end(done_array);
+
+                let either_data = contract.builder.build_phi(
+                    contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                    "either_data",
+                );
+
+                either_data.add_incoming(&[(&normal_data, normal_array), (&null_data, null_array)]);
+
+                *data = either_data.as_basic_value().into_pointer_value()
+            }
+            ast::Type::Array(_, _) => {
                 let arg = if load {
                     contract.builder.build_load(arg.into_pointer_value(), "")
                 } else {
                     arg
                 };
 
-                if let Some(d) = &dim[0] {
-                    contract.emit_static_loop_with_pointer(
-                        function,
-                        contract.context.i64_type().const_zero(),
-                        contract
-                            .context
-                            .i64_type()
-                            .const_int(d.to_u64().unwrap(), false),
-                        data,
-                        |index, data| {
-                            let elem = unsafe {
-                                contract.builder.build_gep(
-                                    arg.into_pointer_value(),
-                                    &[contract.context.i32_type().const_zero(), index],
-                                    "index_access",
-                                )
-                            };
+                let len = contract.vector_len(arg);
 
-                            let ty = ty.array_deref();
-
-                            self.encode_ty(
-                                contract,
-                                true,
-                                packed,
-                                function,
-                                &ty.deref_any(),
-                                elem.into(),
-                                data,
-                            );
-                        },
-                    );
-                } else {
-                    let len = unsafe {
-                        contract.builder.build_gep(
-                            arg.into_pointer_value(),
-                            &[
-                                contract.context.i32_type().const_zero(),
-                                contract.context.i32_type().const_zero(),
-                            ],
-                            "array.len",
-                        )
-                    };
-
-                    let len = contract
+                if !packed {
+                    *data = contract
                         .builder
-                        .build_load(len, "array.len")
-                        .into_int_value();
-
-                    if !packed {
-                        *data = contract
-                            .builder
-                            .build_call(
-                                contract.module.get_function("compact_encode_u32").unwrap(),
-                                &[(*data).into(), len.into()],
-                                "",
-                            )
-                            .try_as_basic_value()
-                            .left()
-                            .unwrap()
-                            .into_pointer_value();
-                    }
-
-                    // details about our array elements
-                    let elem_ty = ty.array_deref();
-                    let llvm_elem_ty = contract.llvm_var(&elem_ty);
-                    let elem_size = llvm_elem_ty
-                        .into_pointer_type()
-                        .get_element_type()
-                        .size_of()
+                        .build_call(
+                            contract.module.get_function("compact_encode_u32").unwrap(),
+                            &[(*data).into(), len.into()],
+                            "",
+                        )
+                        .try_as_basic_value()
+                        .left()
                         .unwrap()
-                        .const_cast(contract.context.i32_type(), false);
-
-                    contract.emit_static_loop_with_pointer(
-                        function,
-                        contract.context.i32_type().const_zero(),
-                        len,
-                        data,
-                        |elem_no, data| {
-                            let index = contract.builder.build_int_mul(elem_no, elem_size, "");
-
-                            let element_start = unsafe {
-                                contract.builder.build_gep(
-                                    arg.into_pointer_value(),
-                                    &[
-                                        contract.context.i32_type().const_zero(),
-                                        contract.context.i32_type().const_int(2, false),
-                                        index,
-                                    ],
-                                    "data",
-                                )
-                            };
-
-                            let elem = contract.builder.build_pointer_cast(
-                                element_start,
-                                llvm_elem_ty.into_pointer_type(),
-                                "entry",
-                            );
-
-                            let ty = ty.array_deref();
-
-                            self.encode_ty(
-                                contract,
-                                true,
-                                packed,
-                                function,
-                                &ty.deref_any(),
-                                elem.into(),
-                                data,
-                            );
-                        },
-                    );
+                        .into_pointer_value();
                 }
+
+                // details about our array elements
+                let elem_ty = ty.array_deref();
+                let llvm_elem_ty = contract.llvm_var(&elem_ty);
+                let elem_size = llvm_elem_ty
+                    .into_pointer_type()
+                    .get_element_type()
+                    .size_of()
+                    .unwrap()
+                    .const_cast(contract.context.i32_type(), false);
+
+                contract.emit_loop_cond_first_with_pointer(
+                    function,
+                    contract.context.i32_type().const_zero(),
+                    len,
+                    data,
+                    |elem_no, data| {
+                        let index = contract.builder.build_int_mul(elem_no, elem_size, "");
+
+                        let element_start = unsafe {
+                            contract.builder.build_gep(
+                                arg.into_pointer_value(),
+                                &[
+                                    contract.context.i32_type().const_zero(),
+                                    contract.context.i32_type().const_int(2, false),
+                                    index,
+                                ],
+                                "data",
+                            )
+                        };
+
+                        let elem = contract.builder.build_pointer_cast(
+                            element_start,
+                            llvm_elem_ty.into_pointer_type(),
+                            "entry",
+                        );
+
+                        let ty = ty.array_deref();
+
+                        self.encode_ty(
+                            contract,
+                            true,
+                            packed,
+                            function,
+                            &ty.deref_any(),
+                            elem.into(),
+                            data,
+                        );
+                    },
+                );
             }
             ast::Type::Struct(n) => {
                 let arg = if load {
-                    contract.builder.build_load(arg.into_pointer_value(), "")
+                    contract
+                        .builder
+                        .build_load(
+                            arg.into_pointer_value(),
+                            &format!("encode_{}", contract.ns.structs[*n].name),
+                        )
+                        .into_pointer_value()
                 } else {
-                    arg
+                    arg.into_pointer_value()
                 };
 
+                let null_struct = contract.context.append_basic_block(function, "null_struct");
+                let normal_struct = contract
+                    .context
+                    .append_basic_block(function, "normal_struct");
+                let done_struct = contract.context.append_basic_block(function, "done_struct");
+
+                let is_null = contract.builder.build_is_null(arg, "is_null");
+
+                contract
+                    .builder
+                    .build_conditional_branch(is_null, null_struct, normal_struct);
+
+                contract.builder.position_at_end(normal_struct);
+
+                let mut normal_data = *data;
                 for (i, field) in contract.ns.structs[*n].fields.iter().enumerate() {
                     let elem = unsafe {
                         contract.builder.build_gep(
-                            arg.into_pointer_value(),
+                            arg,
                             &[
                                 contract.context.i32_type().const_zero(),
                                 contract.context.i32_type().const_int(i as u64, false),
@@ -1288,9 +1359,47 @@ impl SubstrateTarget {
                         function,
                         &field.ty,
                         elem.into(),
-                        data,
+                        &mut normal_data,
                     );
                 }
+
+                contract.builder.build_unconditional_branch(done_struct);
+
+                let normal_struct = contract.builder.get_insert_block().unwrap();
+
+                contract.builder.position_at_end(null_struct);
+
+                let mut null_data = *data;
+
+                for field in &contract.ns.structs[*n].fields {
+                    let elem = contract.default_value(&field.ty);
+
+                    self.encode_ty(
+                        contract,
+                        false,
+                        packed,
+                        function,
+                        &field.ty,
+                        elem,
+                        &mut null_data,
+                    );
+                }
+
+                contract.builder.build_unconditional_branch(done_struct);
+
+                let null_struct = contract.builder.get_insert_block().unwrap();
+
+                contract.builder.position_at_end(done_struct);
+
+                let either_data = contract.builder.build_phi(
+                    contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                    "either_data",
+                );
+
+                either_data
+                    .add_incoming(&[(&normal_data, normal_struct), (&null_data, null_struct)]);
+
+                *data = either_data.as_basic_value().into_pointer_value()
             }
             ast::Type::Ref(ty) => {
                 self.encode_ty(contract, load, packed, function, ty, arg, data);
@@ -1402,6 +1511,10 @@ impl SubstrateTarget {
     /// allocating enough space to do abi encoding. The length for vectors is always
     /// assumed to be five, even when it can be encoded in less bytes. The overhead
     /// of calculating the exact size is not worth reducing the malloc by a few bytes.
+    ///
+    /// FIXME: this function takes a "load" arguments, which tells the encoded whether the data should be
+    /// dereferenced. However, this is already encoded by the fact it is a Type::Ref(..) type. So, the load
+    /// argument should be removed from this function.
     pub fn encoded_length<'x>(
         &self,
         arg: BasicValueEnum<'x>,
@@ -1431,17 +1544,38 @@ impl SubstrateTarget {
             ),
             ast::Type::Struct(n) => {
                 let arg = if load {
-                    contract.builder.build_load(arg.into_pointer_value(), "")
+                    contract
+                        .builder
+                        .build_load(
+                            arg.into_pointer_value(),
+                            &format!("encoded_length_struct_{}", contract.ns.structs[*n].name),
+                        )
+                        .into_pointer_value()
                 } else {
-                    arg
+                    arg.into_pointer_value()
                 };
 
-                let mut sum = contract.context.i32_type().const_zero();
+                let normal_struct = contract
+                    .context
+                    .append_basic_block(function, "normal_struct");
+                let null_struct = contract.context.append_basic_block(function, "null_struct");
+                let done_struct = contract.context.append_basic_block(function, "done_struct");
 
+                let is_null = contract.builder.build_is_null(arg, "is_null");
+
+                contract
+                    .builder
+                    .build_conditional_branch(is_null, null_struct, normal_struct);
+
+                contract.builder.position_at_end(normal_struct);
+
+                let mut normal_sum = contract.context.i32_type().const_zero();
+
+                // avoid generating load instructions for structs with only fixed fields
                 for (i, field) in contract.ns.structs[*n].fields.iter().enumerate() {
                     let elem = unsafe {
                         contract.builder.build_gep(
-                            arg.into_pointer_value(),
+                            arg,
                             &[
                                 contract.context.i32_type().const_zero(),
                                 contract.context.i32_type().const_int(i as u64, false),
@@ -1450,8 +1584,8 @@ impl SubstrateTarget {
                         )
                     };
 
-                    sum = contract.builder.build_int_add(
-                        sum,
+                    normal_sum = contract.builder.build_int_add(
+                        normal_sum,
                         self.encoded_length(
                             elem.into(),
                             true,
@@ -1464,96 +1598,212 @@ impl SubstrateTarget {
                     );
                 }
 
-                sum
+                contract.builder.build_unconditional_branch(done_struct);
+
+                let normal_struct = contract.builder.get_insert_block().unwrap();
+
+                contract.builder.position_at_end(null_struct);
+
+                let mut null_sum = contract.context.i32_type().const_zero();
+
+                for field in &contract.ns.structs[*n].fields {
+                    null_sum = contract.builder.build_int_add(
+                        null_sum,
+                        self.encoded_length(
+                            contract.default_value(&field.ty),
+                            false,
+                            packed,
+                            &field.ty,
+                            function,
+                            contract,
+                        ),
+                        "",
+                    );
+                }
+
+                contract.builder.build_unconditional_branch(done_struct);
+
+                let null_struct = contract.builder.get_insert_block().unwrap();
+
+                contract.builder.position_at_end(done_struct);
+
+                let sum = contract
+                    .builder
+                    .build_phi(contract.context.i32_type(), "sum");
+
+                sum.add_incoming(&[(&normal_sum, normal_struct), (&null_sum, null_struct)]);
+
+                sum.as_basic_value().into_int_value()
             }
-            ast::Type::Array(_, dims) => {
+            ast::Type::Array(_, dims) if dims[0].is_some() => {
+                let array_length = contract
+                    .context
+                    .i32_type()
+                    .const_int(dims[0].as_ref().unwrap().to_u64().unwrap(), false);
+
+                let elem_ty = ty.array_deref();
+
+                if elem_ty.is_dynamic(contract.ns) {
+                    let arg = if load {
+                        contract
+                            .builder
+                            .build_load(arg.into_pointer_value(), "")
+                            .into_pointer_value()
+                    } else {
+                        arg.into_pointer_value()
+                    };
+
+                    let normal_array = contract
+                        .context
+                        .append_basic_block(function, "normal_array");
+                    let null_array = contract.context.append_basic_block(function, "null_array");
+                    let done_array = contract.context.append_basic_block(function, "done_array");
+
+                    let is_null = contract.builder.build_is_null(arg, "is_null");
+
+                    contract
+                        .builder
+                        .build_conditional_branch(is_null, null_array, normal_array);
+
+                    contract.builder.position_at_end(normal_array);
+
+                    let mut normal_length = contract.context.i32_type().const_zero();
+
+                    // if the array contains dynamic elements, we have to iterate over
+                    // every one and calculate its length
+                    contract.emit_static_loop_with_int(
+                        function,
+                        contract.context.i32_type().const_zero(),
+                        array_length,
+                        &mut normal_length,
+                        |index, sum| {
+                            let elem = unsafe {
+                                contract.builder.build_gep(
+                                    arg,
+                                    &[contract.context.i32_type().const_zero(), index],
+                                    "index_access",
+                                )
+                            };
+
+                            *sum = contract.builder.build_int_add(
+                                self.encoded_length(
+                                    elem.into(),
+                                    true,
+                                    packed,
+                                    &elem_ty,
+                                    function,
+                                    contract,
+                                ),
+                                *sum,
+                                "",
+                            );
+                        },
+                    );
+
+                    contract.builder.build_unconditional_branch(done_array);
+
+                    let normal_array = contract.builder.get_insert_block().unwrap();
+
+                    contract.builder.position_at_end(null_array);
+
+                    let elem = contract.default_value(&elem_ty.deref_any());
+
+                    let null_length = contract.builder.build_int_mul(
+                        self.encoded_length(
+                            elem,
+                            false,
+                            packed,
+                            &elem_ty.deref_any(),
+                            function,
+                            contract,
+                        ),
+                        array_length,
+                        "",
+                    );
+
+                    contract.builder.build_unconditional_branch(done_array);
+
+                    let null_array = contract.builder.get_insert_block().unwrap();
+
+                    contract.builder.position_at_end(done_array);
+
+                    let encoded_length = contract
+                        .builder
+                        .build_phi(contract.context.i32_type(), "encoded_length");
+
+                    encoded_length.add_incoming(&[
+                        (&normal_length, normal_array),
+                        (&null_length, null_array),
+                    ]);
+
+                    encoded_length.as_basic_value().into_int_value()
+                } else {
+                    // elements have static length
+                    let elem = contract.default_value(&elem_ty.deref_any());
+
+                    contract.builder.build_int_mul(
+                        self.encoded_length(
+                            elem,
+                            false,
+                            packed,
+                            &elem_ty.deref_any(),
+                            function,
+                            contract,
+                        ),
+                        array_length,
+                        "",
+                    )
+                }
+            }
+            ast::Type::Array(_, dims) if dims[0].is_none() => {
                 let arg = if load {
                     contract.builder.build_load(arg.into_pointer_value(), "")
                 } else {
                     arg
                 };
 
-                let mut dynamic_array = false;
-                let mut encoded_length = contract.context.i32_type().const_zero();
+                let mut encoded_length = contract.context.i32_type().const_int(5, false);
 
-                let array_length = match dims.last().unwrap() {
-                    None => {
-                        let len = unsafe {
-                            contract.builder.build_gep(
-                                arg.into_pointer_value(),
-                                &[
-                                    contract.context.i32_type().const_zero(),
-                                    contract.context.i32_type().const_zero(),
-                                ],
-                                "array.len",
-                            )
-                        };
-
-                        dynamic_array = true;
-
-                        // dynamic length array needs length if not packed
-                        if !packed {
-                            encoded_length = contract.context.i32_type().const_int(5, false);
-                        }
-
-                        contract
-                            .builder
-                            .build_load(len, "array.len")
-                            .into_int_value()
-                    }
-                    Some(d) => contract
-                        .context
-                        .i32_type()
-                        .const_int(d.to_u64().unwrap(), false),
-                };
+                let array_length = contract.vector_len(arg);
 
                 let elem_ty = ty.array_deref();
                 let llvm_elem_ty = contract.llvm_var(&elem_ty);
 
                 if elem_ty.is_dynamic(contract.ns) {
-                    contract.emit_static_loop_with_int(
+                    // if the array contains elements of dynamic length, we have to iterate over all of them
+                    contract.emit_loop_cond_first_with_int(
                         function,
                         contract.context.i32_type().const_zero(),
                         array_length,
                         &mut encoded_length,
                         |index, sum| {
-                            let elem = if dynamic_array {
-                                let index = contract.builder.build_int_mul(
-                                    index,
-                                    llvm_elem_ty
-                                        .into_pointer_type()
-                                        .get_element_type()
-                                        .size_of()
-                                        .unwrap()
-                                        .const_cast(contract.context.i32_type(), false),
-                                    "",
-                                );
+                            let index = contract.builder.build_int_mul(
+                                index,
+                                llvm_elem_ty
+                                    .into_pointer_type()
+                                    .get_element_type()
+                                    .size_of()
+                                    .unwrap()
+                                    .const_cast(contract.context.i32_type(), false),
+                                "",
+                            );
 
-                                let p = unsafe {
-                                    contract.builder.build_gep(
-                                        arg.into_pointer_value(),
-                                        &[
-                                            contract.context.i32_type().const_zero(),
-                                            contract.context.i32_type().const_int(2, false),
-                                            index,
-                                        ],
-                                        "index_access",
-                                    )
-                                };
-                                contract.builder.build_pointer_cast(
-                                    p,
-                                    llvm_elem_ty.into_pointer_type(),
-                                    "elem",
+                            let p = unsafe {
+                                contract.builder.build_gep(
+                                    arg.into_pointer_value(),
+                                    &[
+                                        contract.context.i32_type().const_zero(),
+                                        contract.context.i32_type().const_int(2, false),
+                                        index,
+                                    ],
+                                    "index_access",
                                 )
-                            } else {
-                                unsafe {
-                                    contract.builder.build_gep(
-                                        arg.into_pointer_value(),
-                                        &[contract.context.i32_type().const_zero(), index],
-                                        "index_access",
-                                    )
-                                }
                             };
+                            let elem = contract.builder.build_pointer_cast(
+                                p,
+                                llvm_elem_ty.into_pointer_type(),
+                                "elem",
+                            );
 
                             *sum = contract.builder.build_int_add(
                                 self.encoded_length(
@@ -1572,44 +1822,17 @@ impl SubstrateTarget {
 
                     encoded_length
                 } else {
-                    let elem = if dynamic_array {
-                        let p = unsafe {
-                            contract.builder.build_gep(
-                                arg.into_pointer_value(),
-                                &[
-                                    contract.context.i32_type().const_zero(),
-                                    contract.context.i32_type().const_int(2, false),
-                                ],
-                                "index_access",
-                            )
-                        };
-
-                        contract.builder.build_pointer_cast(
-                            p,
-                            llvm_elem_ty.into_pointer_type(),
-                            "elem",
-                        )
-                    } else {
-                        unsafe {
-                            contract.builder.build_gep(
-                                arg.into_pointer_value(),
-                                &[
-                                    contract.context.i32_type().const_zero(),
-                                    contract.context.i32_type().const_zero(),
-                                ],
-                                "index_access",
-                            )
-                        }
-                    };
+                    // elements have static length
+                    let elem = contract.default_value(&elem_ty.deref_any());
 
                     contract.builder.build_int_add(
                         encoded_length,
                         contract.builder.build_int_mul(
                             self.encoded_length(
-                                elem.into(),
-                                true,
+                                elem,
+                                false,
                                 packed,
-                                &elem_ty,
+                                &elem_ty.deref_any(),
                                 function,
                                 contract,
                             ),

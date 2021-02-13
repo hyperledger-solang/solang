@@ -8,6 +8,7 @@ use crate::sema::ast::{
     CallTy, DestructureField, Expression, Function, Namespace, Parameter, Statement, Type,
 };
 use crate::sema::expression::cast;
+use num_traits::Zero;
 
 /// Resolve a statement, which might be a block of statements or an entire body of a function
 pub fn statement(
@@ -34,8 +35,18 @@ pub fn statement(
                 },
             );
         }
-        Statement::VariableDecl(_, _, _, None) => {
-            // nothing to do
+        Statement::VariableDecl(loc, pos, param, None) => {
+            // Set it to a default value
+            if let Some(expr) = param.ty.default(ns) {
+                cfg.add(
+                    vartab,
+                    Instr::Set {
+                        loc: *loc,
+                        res: *pos,
+                        expr,
+                    },
+                );
+            }
         }
         Statement::Return(_, values) => {
             if let Some(return_instr) = return_override {
@@ -1028,25 +1039,58 @@ impl LoopScopes {
 }
 
 impl Type {
-    pub fn default(&self, ns: &Namespace) -> Expression {
+    pub fn default(&self, ns: &Namespace) -> Option<Expression> {
         match self {
-            Type::Address(_) | Type::Uint(_) | Type::Int(_) => {
-                Expression::NumberLiteral(pt::Loc(0, 0, 0), self.clone(), BigInt::from(0))
-            }
-            Type::Bool => Expression::BoolLiteral(pt::Loc(0, 0, 0), false),
+            Type::Address(_) | Type::Uint(_) | Type::Int(_) => Some(Expression::NumberLiteral(
+                pt::Loc(0, 0, 0),
+                self.clone(),
+                BigInt::from(0),
+            )),
+            Type::Bool => Some(Expression::BoolLiteral(pt::Loc(0, 0, 0), false)),
             Type::Bytes(n) => {
                 let mut l = Vec::new();
                 l.resize(*n as usize, 0);
-                Expression::BytesLiteral(pt::Loc(0, 0, 0), self.clone(), l)
+                Some(Expression::BytesLiteral(pt::Loc(0, 0, 0), self.clone(), l))
             }
             Type::Enum(e) => ns.enums[*e].ty.default(ns),
-            Type::Struct(_) => {
-                Expression::StructLiteral(pt::Loc(0, 0, 0), self.clone(), Vec::new())
-            }
+            Type::Struct(_) => Some(Expression::StructLiteral(
+                pt::Loc(0, 0, 0),
+                self.clone(),
+                Vec::new(),
+            )),
             Type::Ref(_) => unreachable!(),
-            Type::StorageRef(_) => Expression::Poison,
-            Type::String | Type::DynamicBytes => {
-                Expression::BytesLiteral(pt::Loc(0, 0, 0), self.clone(), vec![])
+            Type::StorageRef(_) => None,
+            Type::String | Type::DynamicBytes => Some(Expression::AllocDynamicArray(
+                pt::Loc(0, 0, 0),
+                self.clone(),
+                Box::new(Expression::NumberLiteral(
+                    pt::Loc(0, 0, 0),
+                    Type::Uint(32),
+                    BigInt::zero(),
+                )),
+                None,
+            )),
+            Type::InternalFunction { .. } | Type::ExternalFunction { .. } => None,
+            Type::Array(_, dims) => {
+                if dims[0].is_none() {
+                    Some(Expression::AllocDynamicArray(
+                        pt::Loc(0, 0, 0),
+                        self.clone(),
+                        Box::new(Expression::NumberLiteral(
+                            pt::Loc(0, 0, 0),
+                            Type::Uint(32),
+                            BigInt::zero(),
+                        )),
+                        None,
+                    ))
+                } else {
+                    Some(Expression::ArrayLiteral(
+                        pt::Loc(0, 0, 0),
+                        self.clone(),
+                        Vec::new(),
+                        Vec::new(),
+                    ))
+                }
             }
             _ => unreachable!(),
         }
