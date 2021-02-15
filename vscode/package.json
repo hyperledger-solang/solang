@@ -21,12 +21,6 @@
 			"type": "object",
 			"title:": "Solang Solidity Compiler",
 			"properties": {
-				"solang.languageServerExecutable": {
-					"scope": "resource",
-					"type": "string",
-					"default": "~/.cargo/bin/solang",
-					"description": "Executable for the Solang Solidity Compiler"
-				},
 				"solang.target": {
 					"scope": "window",
 					"type": "string",
@@ -38,6 +32,11 @@
 					],
 					"default": "substrate",
 					"description": "Chain to build for. The Solidity language changes in subtle ways depending on the target."
+				},
+				"solang.updates.askBeforeDownload": {
+					"type": "boolean",
+					"default": true,
+					"description": "Whether to ask for permission before downloading any files from the Internet,"
 				}
 			}
 		},
@@ -75,11 +74,12 @@
 		"vscode:prepublish": "npm run compile",
 		"compile": "tsc -p ./",
 		"lint": "eslint src --ext ts",
+		"lint:fix": "eslint src --ext ts --fix",
 		"watch": "tsc -watch -p ./",
-		"pretest": "npm run compile && npm run lint",
-		"test": "node ./out/test/runTest.js"
+		"test": "NODE_ENV=test node ./out/test/runTest.js"
 	},
 	"dependencies": {
+		"node-fetch": "^2.6.1",
 		"vscode-languageclient": "^6.1.3",
 		"vscode-languageserver": "^6.1.1",
 		"vscode-languageserver-protocol": "=3.15.3"
@@ -88,10 +88,11 @@
 		"@types/glob": "^7.1.1",
 		"@types/mocha": "^7.0.2",
 		"@types/node": "^12.12.0",
+		"@types/node-fetch": "^2.5.8",
 		"@types/vscode": "^1.43.0",
-		"@typescript-eslint/eslint-plugin": "^2.30.0",
-		"@typescript-eslint/parser": "^2.30.0",
-		"eslint": "^6.8.0",
+		"@typescript-eslint/eslint-plugin": "^4.15.0",
+		"@typescript-eslint/parser": "^4.15.0",
+		"eslint": ">=7.0.0",
 		"glob": "^7.1.6",
 		"mocha": "^7.1.2",
 		"typescript": "^3.8.3",
