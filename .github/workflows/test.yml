@@ -136,8 +136,8 @@ jobs:
     - uses: actions/download-artifact@master
       with:
         name: solang-linux
-        path: /home/runner/.cargo/bin/
-    - run: chmod 755 $HOME/.cargo/bin/solang
+        path: /home/runner/.config/Code/User/globalStorage/solang.solang/
+    - run: chmod 755 $HOME/.config/Code/User/globalStorage/solang.solang/solang
     - name: Install Node.js
       uses: actions/setup-node@v1
       with:

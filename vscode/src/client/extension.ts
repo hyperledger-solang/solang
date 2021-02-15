@@ -1,98 +1,90 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
-import * as path from 'path';
-import { homedir } from 'os';
-import * as cp from 'child_process';
 import * as rpc from 'vscode-jsonrpc';
-
-import {
-	LanguageClient,
-	LanguageClientOptions,
-	ServerOptions,
-	TransportKind,
-	InitializeRequest,
-	InitializeParams,
-	DefinitionRequest,
-	Executable,
-	ExecutableOptions
-} from 'vscode-languageclient';
-
-import {
-	workspace,
-	WorkspaceFolder
-} from 'vscode';
-
-
-let diagcollect: vscode.DiagnosticCollection;
-
-
-function expandPathResolving(path: string) {
-	if (path.startsWith('~/')) {
-		return path.replace('~', homedir());
-	}
-	return path;
-}
+import { promises as fs } from 'fs';
+import { join } from 'path';
+import { LanguageClient, LanguageClientOptions, ServerOptions, Executable } from 'vscode-languageclient';
+import expandPathResolving from '../utils/expandPathResolving';
+import getServer from '../utils/getServer';
+import isValidExecutable from '../utils/isValidExecutable';
+import { setServerPath } from '../utils/serverPath';
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
-export function activate(context: vscode.ExtensionContext) {
+export async function activate(context: vscode.ExtensionContext) {
+  await tryActivate(context).catch((err) => {
+    void vscode.window.showErrorMessage(`Cannot activate solang: ${err.message}`);
+    throw err;
+  });
+}
 
-	const config = workspace.getConfiguration('solang');
+async function tryActivate(context: vscode.ExtensionContext) {
+  await fs.mkdir(context.globalStoragePath, { recursive: true });
 
-	let command: string = config.get('languageServerExecutable') || '~/.cargo/bin/solang';
-	let target: string = config.get('target') || 'substrate';
+  const path = await bootstrapServer(context);
+  await bootstrapExtension(context, path);
+}
 
-	// Use the console to output diagnostic information (console.log) and errors (console.error)
-	// This line of code will only be executed once when your extension is activated
-	console.log('Congratulations, your extension "solang" is now active!');
+async function bootstrapExtension(context: vscode.ExtensionContext, serverpath: string) {
+  const config = vscode.workspace.getConfiguration('solang');
+  const target: string = config.get('target') || 'substrate';
 
-	diagcollect = vscode.languages.createDiagnosticCollection('solidity');
+  // Use the console to output diagnostic information (console.log) and errors (console.error)
+  // This line of code will only be executed once when your extension is activated
+  console.log('Congratulations, your extension "solang" is now active!');
 
-	context.subscriptions.push(diagcollect);
+  const diagnosticCollection = vscode.languages.createDiagnosticCollection('solidity');
 
-	let connection = rpc.createMessageConnection(
-		new rpc.StreamMessageReader(process.stdout),
-		new rpc.StreamMessageWriter(process.stdin)
-	);
+  context.subscriptions.push(diagnosticCollection);
 
-	connection.listen();
+  const connection = rpc.createMessageConnection(
+    new rpc.StreamMessageReader(process.stdout),
+    new rpc.StreamMessageWriter(process.stdin)
+  );
 
-	const sop: Executable = {
-		command: expandPathResolving(command),
-		args: ['--language-server', '--target', target],
-	};
+  connection.listen();
 
-	const serverOptions: ServerOptions = sop;
+  const sop: Executable = {
+    command: expandPathResolving(serverpath),
+    args: ['--language-server', '--target', target],
+  };
 
-	const clientoptions: LanguageClientOptions = {
-		documentSelector: [
-			{ language: 'solidity', scheme: 'file' },
-			{ language: 'solidity', scheme: 'untitled' },
-		]
-	};
+  const serverOptions: ServerOptions = sop;
 
-	const init: InitializeParams = {
-		rootUri: null,
-		processId: 1,
-		capabilities: {},
-		workspaceFolders: null,
-	};
+  const clientOptions: LanguageClientOptions = {
+    documentSelector: [
+      { language: 'solidity', scheme: 'file' },
+      { language: 'solidity', scheme: 'untitled' },
+    ],
+  };
 
-	const params = {
-		"textDocument": { "uri": "file://temp" },
-		"position": { "line": 1, "character": 1 }
-	};
+  const client = new LanguageClient('solidity', 'Solang Solidity Compiler', serverOptions, clientOptions).start();
 
+  context.subscriptions.push(client);
+}
 
-	let clientdispos = new LanguageClient(
-		'solidity',
-		'Solang Solidity Compiler',
-		serverOptions,
-		clientoptions).start();
+async function bootstrapServer(context: vscode.ExtensionContext) {
+  let path
+  if (process.env.NODE_ENV === 'test') {
+    path = join(context.globalStoragePath, 'solang')
+  } else {
+    path = await getServer(context);
+  }
+  
+  if (!path) {
+    throw new Error('Solang Language Server is not available.');
+  }
 
-	context.subscriptions.push(clientdispos);
+  console.log('Using server binary at', path);
+
+  if (!isValidExecutable(path)) {
+    setServerPath(context, undefined);
+    throw new Error(`Failed to execute ${path} --version`);
+  }
+
+  return path;
 }
 
 // this method is called when your extension is deactivated
-export function deactivate() { }
+export function deactivate() {}
