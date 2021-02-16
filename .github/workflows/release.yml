@@ -12,7 +12,9 @@ jobs:
     container: hyperledgerlabs/solang:ci
     steps:
     - name: Checkout sources
-      uses: actions/checkout@v2
+      # Make sure "git describe --tags" works for solang --version
+      # checkout@v2 requires git 2.18 or higher, which is not in our image
+      uses: actions/checkout@v1
     - name: Rust stable
       run: rustup default stable
     - name: Build
@@ -33,6 +35,9 @@ jobs:
     steps:
     - name: Checkout sources
       uses: actions/checkout@v2
+      with:
+        # Make sure "git describe --tags" works for solang --version
+        fetch-depth: 0
     - name: Download LLVM
       run: curl -sS -o c:\llvm.zip https://solang.io/download/llvm10.0-win.zip
     - name: Extract LLVM
@@ -57,6 +62,9 @@ jobs:
     steps:
     - name: Checkout sources
       uses: actions/checkout@v2
+      with:
+        # Make sure "git describe --tags" works for solang --version
+        fetch-depth: 0
     - name: Download LLVM
       run: curl -sS -o llvm10.0-mac.tar.gz https://solang.io/download/llvm10.0-mac.tar.gz
     - name: Extract LLVM
