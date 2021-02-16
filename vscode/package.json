@@ -36,7 +36,7 @@
 				"solang.updates.askBeforeDownload": {
 					"type": "boolean",
 					"default": true,
-					"description": "Whether to ask for permission before downloading any files from the Internet,"
+					"description": "Whether to ask for permission before downloading any files from the Internet"
 				}
 			}
 		},

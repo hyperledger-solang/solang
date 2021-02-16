@@ -24,9 +24,9 @@ Using the extension
 
 The extension can be found on the `Visual Studio Marketplace <https://marketplace.visualstudio.com/items?itemName=solang.solang>`_.
 
-First, install the extension and the Solang compiler binary. The extension needs
-to know where to find the Solang binary to start the language server, and also
-it needs to know what target you wish to compile your solidity code for.
+On first start, the extension will ask to download the Solang binary. Once this is done, it should just automatically work.
+However, you should set the blockchain target in the extension settings. The Solidity language differs in subtle ways depending on which target you are
+building for. Different blockchains offer different builtins, for example. See the :ref:`language documentation <language>`.
 
 .. image:: extension-config.png
 
