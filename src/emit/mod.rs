@@ -31,6 +31,7 @@ use inkwell::OptimizationLevel;
 mod ethabiencoder;
 mod ewasm;
 mod generic;
+mod loop_builder;
 mod sabre;
 mod solana;
 mod substrate;
@@ -6327,6 +6328,59 @@ impl<'a> Contract<'a> {
                 self.context.i8_type().ptr_type(AddressSpace::Generic),
                 "data",
             )
+        }
+    }
+
+    /// Dereference an array
+    fn array_subscript(
+        &self,
+        array_ty: &ast::Type,
+        array: PointerValue<'a>,
+        index: IntValue<'a>,
+    ) -> PointerValue<'a> {
+        match array_ty {
+            ast::Type::Array(elem_ty, dim) => {
+                if dim[0].is_some() {
+                    // fixed size array
+                    unsafe {
+                        self.builder.build_gep(
+                            array,
+                            &[self.context.i32_type().const_zero(), index],
+                            "index_access",
+                        )
+                    }
+                } else {
+                    let llvm_elem_ty = self.llvm_var(&elem_ty);
+
+                    // dynamic length array or vector
+                    let index = self.builder.build_int_mul(
+                        index,
+                        llvm_elem_ty
+                            .into_pointer_type()
+                            .get_element_type()
+                            .size_of()
+                            .unwrap()
+                            .const_cast(self.context.i32_type(), false),
+                        "",
+                    );
+
+                    let elem = unsafe {
+                        self.builder.build_gep(
+                            array,
+                            &[
+                                self.context.i32_type().const_zero(),
+                                self.context.i32_type().const_int(2, false),
+                                index,
+                            ],
+                            "index_access",
+                        )
+                    };
+
+                    self.builder
+                        .build_pointer_cast(elem, llvm_elem_ty.into_pointer_type(), "elem")
+                }
+            }
+            _ => unreachable!(),
         }
     }
 }
