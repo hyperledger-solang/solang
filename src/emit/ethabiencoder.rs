@@ -61,80 +61,43 @@ impl EthAbiEncoder {
                     )
                 };
             }
-            ast::Type::Array(_, dim) => {
+            ast::Type::Array(elem_ty, dim) if ty.is_dynamic(contract.ns) => {
                 let arg = if load {
                     contract.builder.build_load(arg.into_pointer_value(), "")
                 } else {
                     arg
                 };
 
-                if let Some(d) = &dim[0] {
-                    contract.emit_static_loop_with_pointer(
-                        function,
-                        contract.context.i64_type().const_zero(),
-                        contract
-                            .context
-                            .i64_type()
-                            .const_int(d.to_u64().unwrap(), false),
-                        fixed,
-                        |index, data| {
-                            let elem = unsafe {
-                                contract.builder.build_gep(
-                                    arg.into_pointer_value(),
-                                    &[contract.context.i32_type().const_zero(), index],
-                                    "index_access",
-                                )
-                            };
+                // if the array is of dynamic length, or has dynamic array elements, then it is written to
+                // the dynamic section.
 
-                            let ty = ty.array_deref();
+                // write the current offset to fixed
+                self.encode_primitive(
+                    contract,
+                    false,
+                    function,
+                    &ast::Type::Uint(32),
+                    *fixed,
+                    (*offset).into(),
+                );
 
-                            self.encode_ty(
-                                contract,
-                                true,
-                                function,
-                                &ty.deref_any(),
-                                elem.into(),
-                                data,
-                                offset,
-                                dynamic,
-                            );
-                        },
-                    );
-                } else {
-                    // write the current offset to fixed
-                    self.encode_primitive(
-                        contract,
-                        false,
-                        function,
-                        &ast::Type::Uint(32),
+                *fixed = unsafe {
+                    contract.builder.build_gep(
                         *fixed,
-                        (*offset).into(),
-                    );
+                        &[contract.context.i32_type().const_int(32, false)],
+                        "",
+                    )
+                };
 
-                    *fixed = unsafe {
-                        contract.builder.build_gep(
-                            *fixed,
-                            &[contract.context.i32_type().const_int(32, false)],
-                            "",
-                        )
-                    };
-
+                let array_length = if let Some(d) = &dim[0] {
+                    // fixed length
+                    contract
+                        .context
+                        .i32_type()
+                        .const_int(d.to_u64().unwrap(), false)
+                } else {
                     // Now, write the length to dynamic
-                    let len = unsafe {
-                        contract.builder.build_gep(
-                            arg.into_pointer_value(),
-                            &[
-                                contract.context.i32_type().const_zero(),
-                                contract.context.i32_type().const_zero(),
-                            ],
-                            "array.len",
-                        )
-                    };
-
-                    let len = contract
-                        .builder
-                        .build_load(len, "array.len")
-                        .into_int_value();
+                    let len = contract.vector_len(arg);
 
                     // write the current offset to fixed
                     self.encode_primitive(
@@ -160,78 +123,370 @@ impl EthAbiEncoder {
                         "",
                     );
 
-                    // details about our array elements
-                    let elem_ty = ty.array_deref();
-                    let llvm_elem_ty = contract.llvm_var(&elem_ty);
-                    let elem_size = llvm_elem_ty
-                        .into_pointer_type()
-                        .get_element_type()
-                        .size_of()
-                        .unwrap()
-                        .const_cast(contract.context.i32_type(), false);
+                    len
+                };
 
-                    let mut fixed = *dynamic;
+                let array_data_offset = contract.builder.build_int_mul(
+                    contract.context.i32_type().const_int(
+                        EthAbiEncoder::encoded_fixed_length(&elem_ty, contract.ns),
+                        false,
+                    ),
+                    array_length,
+                    "array_data_offset",
+                );
 
-                    let fixed_elems_length = contract.builder.build_int_add(
-                        len,
-                        contract.context.i32_type().const_int(
-                            EthAbiEncoder::encoded_fixed_length(&elem_ty, contract.ns),
-                            false,
-                        ),
-                        "",
-                    );
+                let normal_fixed = *dynamic;
+                let null_fixed = *dynamic;
 
-                    *offset = contract
+                *dynamic = unsafe {
+                    contract
                         .builder
-                        .build_int_add(*offset, fixed_elems_length, "");
+                        .build_gep(*dynamic, &[array_data_offset], "")
+                };
 
-                    *dynamic = unsafe {
-                        contract
-                            .builder
-                            .build_gep(*dynamic, &[fixed_elems_length], "")
-                    };
+                let normal_array = contract
+                    .context
+                    .append_basic_block(function, "normal_array");
+                let null_array = contract.context.append_basic_block(function, "null_array");
+                let done_array = contract.context.append_basic_block(function, "done_array");
 
-                    contract.emit_static_loop_with_pointer(
-                        function,
-                        contract.context.i32_type().const_zero(),
-                        len,
-                        &mut fixed,
-                        |elem_no, data| {
-                            let index = contract.builder.build_int_mul(elem_no, elem_size, "");
+                let is_null = contract
+                    .builder
+                    .build_is_null(arg.into_pointer_value(), "is_null");
 
-                            let element_start = unsafe {
-                                contract.builder.build_gep(
-                                    arg.into_pointer_value(),
-                                    &[
-                                        contract.context.i32_type().const_zero(),
-                                        contract.context.i32_type().const_int(2, false),
-                                        index,
-                                    ],
-                                    "data",
-                                )
-                            };
+                contract
+                    .builder
+                    .build_conditional_branch(is_null, null_array, normal_array);
 
-                            let elem = contract.builder.build_pointer_cast(
-                                element_start,
-                                llvm_elem_ty.into_pointer_type(),
-                                "entry",
-                            );
+                contract.builder.position_at_end(normal_array);
 
-                            let ty = ty.array_deref();
+                let mut builder = LoopBuilder::new(contract, function);
 
-                            self.encode_ty(
-                                contract,
-                                true,
-                                function,
-                                &ty.deref_any(),
-                                elem.into(),
-                                data,
-                                offset,
-                                dynamic,
-                            );
-                        },
-                    );
-                }
+                let mut normal_fixed = builder
+                    .add_loop_phi(
+                        contract,
+                        "fixed",
+                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        normal_fixed.into(),
+                    )
+                    .into_pointer_value();
+
+                let mut normal_array_data_offset = builder
+                    .add_loop_phi(
+                        contract,
+                        "offset",
+                        contract.context.i32_type(),
+                        array_data_offset.into(),
+                    )
+                    .into_int_value();
+
+                let mut normal_dynamic = builder
+                    .add_loop_phi(
+                        contract,
+                        "dynamic",
+                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        (*dynamic).into(),
+                    )
+                    .into_pointer_value();
+
+                let index = builder.over(
+                    contract,
+                    contract.context.i32_type().const_zero(),
+                    array_length,
+                );
+
+                // loop body
+                let elem = contract.array_subscript(ty, arg.into_pointer_value(), index);
+
+                self.encode_ty(
+                    contract,
+                    true,
+                    function,
+                    &elem_ty.deref_any(),
+                    elem.into(),
+                    &mut normal_fixed,
+                    &mut normal_array_data_offset,
+                    &mut normal_dynamic,
+                );
+
+                builder.set_loop_phi_value(contract, "fixed", normal_fixed.into());
+                builder.set_loop_phi_value(contract, "offset", normal_array_data_offset.into());
+                builder.set_loop_phi_value(contract, "dynamic", normal_dynamic.into());
+
+                builder.finish(contract);
+
+                let normal_dynamic = builder.get_loop_phi("dynamic");
+
+                contract.builder.build_unconditional_branch(done_array);
+
+                let normal_array = contract.builder.get_insert_block().unwrap();
+
+                contract.builder.position_at_end(null_array);
+
+                let mut builder = LoopBuilder::new(contract, function);
+
+                let mut null_fixed = builder
+                    .add_loop_phi(
+                        contract,
+                        "fixed",
+                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        null_fixed.into(),
+                    )
+                    .into_pointer_value();
+
+                let mut null_array_data_offset = builder
+                    .add_loop_phi(
+                        contract,
+                        "offset",
+                        contract.context.i32_type(),
+                        array_data_offset.into(),
+                    )
+                    .into_int_value();
+
+                let mut null_dynamic = builder
+                    .add_loop_phi(
+                        contract,
+                        "dynamic",
+                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        (*dynamic).into(),
+                    )
+                    .into_pointer_value();
+
+                let _ = builder.over(
+                    contract,
+                    contract.context.i32_type().const_zero(),
+                    array_length,
+                );
+
+                // loop body
+                let elem = contract.default_value(&elem_ty.deref_any());
+
+                self.encode_ty(
+                    contract,
+                    false,
+                    function,
+                    &elem_ty.deref_any(),
+                    elem,
+                    &mut null_fixed,
+                    &mut null_array_data_offset,
+                    &mut null_dynamic,
+                );
+
+                builder.set_loop_phi_value(contract, "fixed", null_fixed.into());
+                builder.set_loop_phi_value(contract, "offset", null_array_data_offset.into());
+                builder.set_loop_phi_value(contract, "dynamic", null_dynamic.into());
+
+                builder.finish(contract);
+
+                let null_dynamic = builder.get_loop_phi("dynamic");
+
+                contract.builder.build_unconditional_branch(done_array);
+
+                let null_array = contract.builder.get_insert_block().unwrap();
+
+                contract.builder.position_at_end(done_array);
+
+                let dynamic_phi = contract.builder.build_phi(
+                    contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                    "dynamic",
+                );
+
+                dynamic_phi
+                    .add_incoming(&[(&normal_dynamic, normal_array), (&null_dynamic, null_array)]);
+
+                *dynamic = dynamic_phi.as_basic_value().into_pointer_value();
+            }
+            ast::Type::Array(elem_ty, dim) => {
+                let arg = if load {
+                    contract.builder.build_load(arg.into_pointer_value(), "")
+                } else {
+                    arg
+                };
+
+                let dim = dim[0].as_ref().unwrap().to_u64().unwrap();
+
+                let normal_array = contract
+                    .context
+                    .append_basic_block(function, "normal_array");
+                let null_array = contract.context.append_basic_block(function, "null_array");
+                let done_array = contract.context.append_basic_block(function, "done_array");
+
+                let is_null = contract
+                    .builder
+                    .build_is_null(arg.into_pointer_value(), "is_null");
+
+                contract
+                    .builder
+                    .build_conditional_branch(is_null, null_array, normal_array);
+
+                contract.builder.position_at_end(normal_array);
+
+                let mut builder = LoopBuilder::new(contract, function);
+
+                let mut normal_fixed = builder
+                    .add_loop_phi(
+                        contract,
+                        "fixed",
+                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        (*fixed).into(),
+                    )
+                    .into_pointer_value();
+
+                let mut normal_offset = builder
+                    .add_loop_phi(
+                        contract,
+                        "offset",
+                        contract.context.i32_type(),
+                        (*offset).into(),
+                    )
+                    .into_int_value();
+
+                let mut normal_dynamic = builder
+                    .add_loop_phi(
+                        contract,
+                        "dynamic",
+                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        (*dynamic).into(),
+                    )
+                    .into_pointer_value();
+
+                let index = builder.over(
+                    contract,
+                    contract.context.i64_type().const_zero(),
+                    contract.context.i64_type().const_int(dim, false),
+                );
+
+                // loop body
+                let elem = unsafe {
+                    contract.builder.build_gep(
+                        arg.into_pointer_value(),
+                        &[contract.context.i32_type().const_zero(), index],
+                        "index_access",
+                    )
+                };
+
+                self.encode_ty(
+                    contract,
+                    true,
+                    function,
+                    &elem_ty.deref_any(),
+                    elem.into(),
+                    &mut normal_fixed,
+                    &mut normal_offset,
+                    &mut normal_dynamic,
+                );
+
+                builder.set_loop_phi_value(contract, "fixed", normal_fixed.into());
+                builder.set_loop_phi_value(contract, "offset", normal_offset.into());
+                builder.set_loop_phi_value(contract, "dynamic", normal_dynamic.into());
+
+                builder.finish(contract);
+
+                let normal_fixed = builder.get_loop_phi("fixed");
+                let normal_offset = builder.get_loop_phi("offset");
+                let normal_dynamic = builder.get_loop_phi("dynamic");
+
+                contract.builder.build_unconditional_branch(done_array);
+
+                let normal_array = contract.builder.get_insert_block().unwrap();
+
+                contract.builder.position_at_end(null_array);
+
+                // Create a loop for generating an array of empty values
+                // FIXME: all fixed-length types are encoded as zeros, and the memory has
+                // already been zero'ed out, so this is pointless. Just step over it.
+                let elem = contract.default_value(&elem_ty.deref_any());
+
+                let mut builder = LoopBuilder::new(contract, function);
+
+                let mut null_fixed = builder
+                    .add_loop_phi(
+                        contract,
+                        "fixed",
+                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        (*fixed).into(),
+                    )
+                    .into_pointer_value();
+
+                let mut null_offset = builder
+                    .add_loop_phi(
+                        contract,
+                        "offset",
+                        contract.context.i32_type(),
+                        (*offset).into(),
+                    )
+                    .into_int_value();
+
+                let mut null_dynamic = builder
+                    .add_loop_phi(
+                        contract,
+                        "dynamic",
+                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        (*dynamic).into(),
+                    )
+                    .into_pointer_value();
+
+                builder.over(
+                    contract,
+                    contract.context.i64_type().const_zero(),
+                    contract.context.i64_type().const_int(dim, false),
+                );
+
+                // loop body
+                self.encode_ty(
+                    contract,
+                    false,
+                    function,
+                    &elem_ty.deref_any(),
+                    elem,
+                    &mut null_fixed,
+                    &mut null_offset,
+                    &mut null_dynamic,
+                );
+
+                builder.set_loop_phi_value(contract, "fixed", null_fixed.into());
+                builder.set_loop_phi_value(contract, "offset", null_offset.into());
+                builder.set_loop_phi_value(contract, "dynamic", null_dynamic.into());
+
+                builder.finish(contract);
+
+                let null_fixed = builder.get_loop_phi("fixed");
+                let null_offset = builder.get_loop_phi("offset");
+                let null_dynamic = builder.get_loop_phi("dynamic");
+
+                contract.builder.build_unconditional_branch(done_array);
+
+                let null_array = contract.builder.get_insert_block().unwrap();
+
+                contract.builder.position_at_end(done_array);
+
+                let fixed_phi = contract.builder.build_phi(
+                    contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                    "fixed",
+                );
+
+                fixed_phi.add_incoming(&[(&normal_fixed, normal_array), (&null_fixed, null_array)]);
+
+                *fixed = fixed_phi.as_basic_value().into_pointer_value();
+
+                let offset_phi = contract
+                    .builder
+                    .build_phi(contract.context.i32_type(), "offset");
+
+                offset_phi
+                    .add_incoming(&[(&normal_offset, normal_array), (&null_offset, null_array)]);
+
+                *offset = offset_phi.as_basic_value().into_int_value();
+
+                let dynamic_phi = contract.builder.build_phi(
+                    contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                    "dynamic",
+                );
+
+                dynamic_phi
+                    .add_incoming(&[(&normal_dynamic, normal_array), (&null_dynamic, null_array)]);
+
+                *dynamic = dynamic_phi.as_basic_value().into_pointer_value();
             }
             ast::Type::Struct(n) if ty.is_dynamic(contract.ns) => {
                 let arg = if load {
@@ -450,6 +705,7 @@ impl EthAbiEncoder {
                 let mut null_offset = *offset;
                 let mut null_dynamic = *dynamic;
 
+                // FIXME: abi encoding fixed length fields with default values. This should always be 0
                 for field in &contract.ns.structs[*n].fields {
                     let elem = contract.default_value(&field.ty);
 
@@ -1599,7 +1855,7 @@ impl EthAbiEncoder {
         length: IntValue,
     ) -> BasicValueEnum<'b> {
         match &ty {
-            ast::Type::Array(_, dim) => {
+            ast::Type::Array(elem_ty, dim) => {
                 let llvm_ty = contract.llvm_type(ty.deref_any());
 
                 let size = llvm_ty
@@ -1607,27 +1863,60 @@ impl EthAbiEncoder {
                     .unwrap()
                     .const_cast(contract.context.i32_type(), false);
 
-                let ty = ty.array_deref();
-
-                let new = contract
-                    .builder
-                    .build_call(
-                        contract.module.get_function("__malloc").unwrap(),
-                        &[size.into()],
-                        "",
-                    )
-                    .try_as_basic_value()
-                    .left()
-                    .unwrap()
-                    .into_pointer_value();
-
-                let dest = contract.builder.build_pointer_cast(
-                    new,
-                    llvm_ty.ptr_type(AddressSpace::Generic),
-                    "dest",
-                );
+                let dest;
 
                 if let Some(d) = &dim[0] {
+                    let new = contract
+                        .builder
+                        .build_call(
+                            contract.module.get_function("__malloc").unwrap(),
+                            &[size.into()],
+                            "",
+                        )
+                        .try_as_basic_value()
+                        .left()
+                        .unwrap()
+                        .into_pointer_value();
+
+                    dest = contract.builder.build_pointer_cast(
+                        new,
+                        llvm_ty.ptr_type(AddressSpace::Generic),
+                        "dest",
+                    );
+
+                    // if the struct has dynamic fields, read offset from dynamic section and
+                    // read fields from there
+                    let mut dataoffset = if ty.is_dynamic(contract.ns) {
+                        let dataoffset = contract.builder.build_int_z_extend(
+                            self.decode_primitive(
+                                contract,
+                                function,
+                                &ast::Type::Uint(32),
+                                None,
+                                offset,
+                                data,
+                                length,
+                            )
+                            .into_int_value(),
+                            contract.context.i64_type(),
+                            "rel_struct_offset",
+                        );
+
+                        contract
+                            .builder
+                            .build_int_add(dataoffset, base_offset, "abs_struct_offset")
+                    } else {
+                        *offset
+                    };
+
+                    // In dynamic struct sections, the offsets are relative to the start of the section.
+                    // Ethereum ABI encoding is just insane.
+                    let base_offset = if ty.is_dynamic(contract.ns) {
+                        dataoffset
+                    } else {
+                        base_offset
+                    };
+
                     contract.emit_loop_cond_first_with_int(
                         function,
                         contract.context.i64_type().const_zero(),
@@ -1635,7 +1924,7 @@ impl EthAbiEncoder {
                             .context
                             .i64_type()
                             .const_int(d.to_u64().unwrap(), false),
-                        offset,
+                        &mut dataoffset,
                         |index: IntValue<'b>, offset: &mut IntValue<'b>| {
                             let elem = unsafe {
                                 contract.builder.build_gep(
@@ -1648,7 +1937,7 @@ impl EthAbiEncoder {
                             self.decode_ty(
                                 contract,
                                 function,
-                                &ty,
+                                &elem_ty,
                                 Some(elem),
                                 offset,
                                 base_offset,
@@ -1657,21 +1946,31 @@ impl EthAbiEncoder {
                             );
                         },
                     );
+
+                    // if the struct is not dynamic, we have read the fields from fixed section so update
+                    if !ty.is_dynamic(contract.ns) {
+                        *offset = dataoffset;
+                    }
                 } else {
-                    let mut dataoffset = contract.builder.build_int_z_extend(
-                        self.decode_primitive(
-                            contract,
-                            function,
-                            &ast::Type::Uint(32),
-                            None,
-                            offset,
-                            data,
-                            length,
-                        )
-                        .into_int_value(),
-                        contract.context.i64_type(),
-                        "data_offset",
+                    let mut dataoffset = contract.builder.build_int_add(
+                        contract.builder.build_int_z_extend(
+                            self.decode_primitive(
+                                contract,
+                                function,
+                                &ast::Type::Uint(32),
+                                None,
+                                offset,
+                                data,
+                                length,
+                            )
+                            .into_int_value(),
+                            contract.context.i64_type(),
+                            "data_offset",
+                        ),
+                        base_offset,
+                        "array_data_offset",
                     );
+
                     let array_len = self
                         .decode_primitive(
                             contract,
@@ -1684,8 +1983,11 @@ impl EthAbiEncoder {
                         )
                         .into_int_value();
 
-                    let elem_ty = contract.llvm_var(&ty.deref_any());
-                    let elem_size = elem_ty
+                    // in dynamic arrays, offsets are counted from after the array length
+                    let base_offset = dataoffset;
+
+                    let llvm_elem_ty = contract.llvm_var(&elem_ty.deref_any());
+                    let elem_size = llvm_elem_ty
                         .size_of()
                         .unwrap()
                         .const_cast(contract.context.i32_type(), false);
@@ -1696,7 +1998,7 @@ impl EthAbiEncoder {
                         "invalid",
                     );
 
-                    let v = contract
+                    dest = contract
                         .builder
                         .build_call(
                             contract.module.get_function("vector_new").unwrap(),
@@ -1729,7 +2031,7 @@ impl EthAbiEncoder {
 
                             let element_start = unsafe {
                                 contract.builder.build_gep(
-                                    v,
+                                    dest,
                                     &[
                                         contract.context.i32_type().const_zero(),
                                         contract.context.i32_type().const_int(2, false),
@@ -1741,14 +2043,14 @@ impl EthAbiEncoder {
 
                             let elem = contract.builder.build_pointer_cast(
                                 element_start,
-                                elem_ty.ptr_type(AddressSpace::Generic),
+                                llvm_elem_ty.ptr_type(AddressSpace::Generic),
                                 "entry",
                             );
 
                             self.decode_ty(
                                 contract,
                                 function,
-                                &ty,
+                                &elem_ty,
                                 Some(elem),
                                 offset,
                                 base_offset,
