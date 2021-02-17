@@ -6339,7 +6339,7 @@ impl<'a> Contract<'a> {
         index: IntValue<'a>,
     ) -> PointerValue<'a> {
         match array_ty {
-            ast::Type::Array(elem_ty, dim) => {
+            ast::Type::Array(_, dim) => {
                 if dim[0].is_some() {
                     // fixed size array
                     unsafe {
@@ -6350,6 +6350,7 @@ impl<'a> Contract<'a> {
                         )
                     }
                 } else {
+                    let elem_ty = array_ty.array_deref();
                     let llvm_elem_ty = self.llvm_var(&elem_ty);
 
                     // dynamic length array or vector

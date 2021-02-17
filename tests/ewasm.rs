@@ -1579,8 +1579,7 @@ fn struct_dynamic_array_encode() {
 
                 return x;
             }
-        }
-        "##,
+        }"##,
     );
 
     runtime.constructor(&[]);
