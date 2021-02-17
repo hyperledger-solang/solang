@@ -5,6 +5,7 @@ use inkwell::AddressSpace;
 use inkwell::IntPredicate;
 use num_traits::ToPrimitive;
 
+use super::loop_builder::LoopBuilder;
 use super::{Contract, ReturnCode};
 
 pub struct EthAbiEncoder {
@@ -1117,7 +1118,7 @@ impl EthAbiEncoder {
 
                 sum.as_basic_value().into_int_value()
             }
-            ast::Type::Array(_, dims) if ty.is_dynamic(contract.ns) => {
+            ast::Type::Array(elem_ty, dims) if ty.is_dynamic(contract.ns) => {
                 let arg = if load {
                     contract.builder.build_load(arg.into_pointer_value(), "")
                 } else {
@@ -1125,7 +1126,6 @@ impl EthAbiEncoder {
                 };
 
                 let mut sum = contract.context.i32_type().const_zero();
-                let elem_ty = ty.array_deref();
 
                 let len = match dims.last().unwrap() {
                     None => {
@@ -1160,43 +1160,36 @@ impl EthAbiEncoder {
                     "",
                 );
 
-                let llvm_elem_ty = contract.llvm_var(&elem_ty);
+                let normal_array = contract
+                    .context
+                    .append_basic_block(function, "normal_array");
+                let null_array = contract.context.append_basic_block(function, "null_array");
+                let done_array = contract.context.append_basic_block(function, "done_array");
 
+                let is_null = contract
+                    .builder
+                    .build_is_null(arg.into_pointer_value(), "is_null");
+
+                contract
+                    .builder
+                    .build_conditional_branch(is_null, null_array, normal_array);
+
+                contract.builder.position_at_end(normal_array);
+
+                let mut normal_length = sum;
+
+                contract.builder.position_at_end(normal_array);
+
+                // the element of the array are dynamic; we need to iterate over the array to find the encoded length
                 if elem_ty.is_dynamic(contract.ns) {
                     contract.emit_loop_cond_first_with_int(
                         function,
                         contract.context.i32_type().const_zero(),
                         len,
-                        &mut sum,
+                        &mut normal_length,
                         |index, sum| {
-                            let index = contract.builder.build_int_mul(
-                                index,
-                                llvm_elem_ty
-                                    .into_pointer_type()
-                                    .get_element_type()
-                                    .size_of()
-                                    .unwrap()
-                                    .const_cast(contract.context.i32_type(), false),
-                                "",
-                            );
-
-                            let elem = unsafe {
-                                contract.builder.build_gep(
-                                    arg.into_pointer_value(),
-                                    &[
-                                        contract.context.i32_type().const_zero(),
-                                        contract.context.i32_type().const_int(2, false),
-                                        index,
-                                    ],
-                                    "index_access",
-                                )
-                            };
-
-                            let elem = contract.builder.build_pointer_cast(
-                                elem,
-                                llvm_elem_ty.into_pointer_type(),
-                                "elem",
-                            );
+                            let elem =
+                                contract.array_subscript(ty, arg.into_pointer_value(), index);
 
                             *sum = contract.builder.build_int_add(
                                 EthAbiEncoder::encoded_dynamic_length(
@@ -1213,7 +1206,40 @@ impl EthAbiEncoder {
                     );
                 }
 
-                sum
+                contract.builder.build_unconditional_branch(done_array);
+
+                let normal_array = contract.builder.get_insert_block().unwrap();
+
+                contract.builder.position_at_end(null_array);
+
+                let elem = contract.default_value(&elem_ty.deref_any());
+
+                let null_length = contract.builder.build_int_add(
+                    contract.builder.build_int_mul(
+                        EthAbiEncoder::encoded_dynamic_length(
+                            elem, false, elem_ty, function, contract,
+                        ),
+                        len,
+                        "",
+                    ),
+                    sum,
+                    "",
+                );
+
+                contract.builder.build_unconditional_branch(done_array);
+
+                let null_array = contract.builder.get_insert_block().unwrap();
+
+                contract.builder.position_at_end(done_array);
+
+                let encoded_length = contract
+                    .builder
+                    .build_phi(contract.context.i32_type(), "encoded_length");
+
+                encoded_length
+                    .add_incoming(&[(&normal_length, normal_array), (&null_length, null_array)]);
+
+                encoded_length.as_basic_value().into_int_value()
             }
             ast::Type::String | ast::Type::DynamicBytes => {
                 let arg = if load {
@@ -1265,7 +1291,7 @@ impl EthAbiEncoder {
                 .map(|f| EthAbiEncoder::encoded_fixed_length(&f.ty, ns))
                 .sum(),
             ast::Type::Array(ty, dims) => {
-                // The array must be fixed, dynamic arrays are handled abo
+                // The array must be fixed, dynamic arrays are handled above
                 let product: u64 = dims
                     .iter()
                     .map(|d| d.as_ref().unwrap().to_u64().unwrap())
