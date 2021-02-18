@@ -4,13 +4,15 @@ will be documented here.
 
 ## [Unreleased]
 
-=======
 ### Added
 - Added a strength reduce pass to eliminate 256/128 bit multiply, division,
   and modulo where possible.
+- Visual Studio Code extension can download the Solang binary from github
+  releases, so the user is not required to download it themselves
 
 ### Fixed
 - ewasm: staticcall() and delegatecall() cannot take value argument
+- Fixed array support in the ethereum abi encoder and decoder
 
 ## [0.1.7]
 
