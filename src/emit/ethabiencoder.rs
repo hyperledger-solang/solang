@@ -13,8 +13,9 @@ pub struct EthAbiEncoder {
 }
 
 impl EthAbiEncoder {
-    /// recursively encode argument. The encoded data is written to the data pointer,
-    /// and the pointer is updated point after the encoded data.
+    /// Recursively encode a value in arg. The load argument specifies if the arg is a pointer
+    /// to the value, or the value itself. The fixed pointer points to the fixed, non-dynamic part
+    /// of the encoded data. The offset is current offset for dynamic fields.
     pub fn encode_ty<'a>(
         &self,
         contract: &Contract<'a>,
