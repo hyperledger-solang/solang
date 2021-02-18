@@ -1039,6 +1039,8 @@ impl LoopScopes {
 }
 
 impl Type {
+    /// Default value for a type, e.g. an empty string. Some types cannot have a default value,
+    /// for example a reference to a variable in storage.
     pub fn default(&self, ns: &Namespace) -> Option<Expression> {
         match self {
             Type::Address(_) | Type::Uint(_) | Type::Int(_) => Some(Expression::NumberLiteral(
