@@ -217,6 +217,7 @@ impl EthAbiEncoder {
                 builder.finish(contract);
 
                 let normal_dynamic = builder.get_loop_phi("dynamic");
+                let normal_array_data_offset = builder.get_loop_phi("offset");
 
                 contract.builder.build_unconditional_branch(done_array);
 
@@ -280,6 +281,7 @@ impl EthAbiEncoder {
                 builder.finish(contract);
 
                 let null_dynamic = builder.get_loop_phi("dynamic");
+                let null_array_data_offset = builder.get_loop_phi("offset");
 
                 contract.builder.build_unconditional_branch(done_array);
 
@@ -296,6 +298,21 @@ impl EthAbiEncoder {
                     .add_incoming(&[(&normal_dynamic, normal_array), (&null_dynamic, null_array)]);
 
                 *dynamic = dynamic_phi.as_basic_value().into_pointer_value();
+
+                let array_array_offset_phi = contract
+                    .builder
+                    .build_phi(contract.context.i32_type(), "array_data_offset");
+
+                array_array_offset_phi.add_incoming(&[
+                    (&normal_array_data_offset, normal_array),
+                    (&null_array_data_offset, null_array),
+                ]);
+
+                *offset = contract.builder.build_int_add(
+                    array_array_offset_phi.as_basic_value().into_int_value(),
+                    *offset,
+                    "new_offset",
+                );
             }
             ast::Type::Array(elem_ty, dim) => {
                 let arg = if load {

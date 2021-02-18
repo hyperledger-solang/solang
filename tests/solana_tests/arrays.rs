@@ -162,11 +162,11 @@ fn dynamic_array_fixed_elements() {
                 return sum;
             }
 
-            function set() public returns (uint x, uint32[] f, uint g) {
+            function set() public returns (uint x, uint32[] f, string g) {
                 x = 12123123;
                 f = new uint32[](4);
                 f[0] = 3; f[1] = 5; f[2] = 7; f[3] = 11;
-                g = 102;
+                g = "abcd";
             }
         }"#,
     );
@@ -202,7 +202,7 @@ fn dynamic_array_fixed_elements() {
                 Token::Uint(ethereum_types::U256::from(7)),
                 Token::Uint(ethereum_types::U256::from(11)),
             ]),
-            Token::Uint(ethereum_types::U256::from(102)),
+            Token::String(String::from("abcd")),
         ]
     );
 }
@@ -293,14 +293,14 @@ fn dynamic_array_dynamic_elements() {
                 return sum;
             }
 
-            function set() public returns (uint x, bytes[] f, uint g) {
+            function set() public returns (uint x, bytes[] f, string g) {
                 x = 12123123;
                 f = new bytes[](4);
                 f[0] = hex"030507";
                 f[1] = hex"0b0d11";
                 f[2] = hex"1317";
                 f[3] = hex"1d";
-                g = 102;
+                g = "feh";
             }
         }"#,
     );
@@ -335,7 +335,7 @@ fn dynamic_array_dynamic_elements() {
                 Token::Bytes(vec![19, 23]),
                 Token::Bytes(vec![29]),
             ]),
-            Token::Uint(ethereum_types::U256::from(102)),
+            Token::String(String::from("feh")),
         ]
     );
 }
