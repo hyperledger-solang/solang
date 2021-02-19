@@ -1510,56 +1510,87 @@ fn array_subscript(
 
     if let Type::StorageRef(ty) = array_ty {
         let elem_ty = ty.storage_array_elem();
-        let elem_size = elem_ty.storage_slots(ns);
-        let slot_ty = Type::Uint(256);
+        let slot_ty = ns.storage_type();
 
-        if let Ok(array_length) = eval_const_number(&array_length, Some(contract_no), ns) {
-            if array_length.1.mul(elem_size.clone()).to_u64().is_some() {
-                // we need to calculate the storage offset. If this can be done with 64 bit
-                // arithmetic it will be much more efficient on wasm
-                return Expression::Add(
+        if ns.target == Target::Solana {
+            let elem_size = elem_ty.deref_any().size_of(ns);
+
+            Expression::Add(
+                *loc,
+                elem_ty,
+                Box::new(array),
+                Box::new(Expression::Multiply(
                     *loc,
-                    elem_ty,
-                    Box::new(array),
-                    Box::new(Expression::ZeroExt(
-                        *loc,
-                        slot_ty,
-                        Box::new(Expression::Multiply(
-                            *loc,
-                            Type::Uint(64),
-                            Box::new(
-                                cast(
-                                    &index_loc,
-                                    Expression::Variable(index_loc, coerced_ty, pos),
-                                    &Type::Uint(64),
-                                    false,
-                                    ns,
-                                    &mut Vec::new(),
-                                )
-                                .unwrap(),
-                            ),
-                            Box::new(Expression::NumberLiteral(*loc, Type::Uint(64), elem_size)),
-                        )),
-                    )),
-                );
-            }
-        }
-
-        array_offset(
-            loc,
-            array,
-            cast(
-                &index_loc,
-                Expression::Variable(index_loc, coerced_ty, pos),
-                &ns.storage_type(),
-                false,
-                ns,
-                &mut Vec::new(),
+                    slot_ty.clone(),
+                    Box::new(
+                        cast(
+                            &index_loc,
+                            Expression::Variable(index_loc, coerced_ty, pos),
+                            &slot_ty,
+                            false,
+                            ns,
+                            &mut Vec::new(),
+                        )
+                        .unwrap(),
+                    ),
+                    Box::new(Expression::NumberLiteral(*loc, slot_ty, elem_size)),
+                )),
             )
-            .unwrap(),
-            elem_ty,
-            ns,
-        )
+        } else {
+            let elem_size = elem_ty.storage_slots(ns);
+
+            if let Ok(array_length) = eval_const_number(&array_length, Some(contract_no), ns) {
+                if array_length.1.mul(elem_size.clone()).to_u64().is_some() {
+                    // we need to calculate the storage offset. If this can be done with 64 bit
+                    // arithmetic it will be much more efficient on wasm
+                    return Expression::Add(
+                        *loc,
+                        elem_ty,
+                        Box::new(array),
+                        Box::new(Expression::ZeroExt(
+                            *loc,
+                            slot_ty,
+                            Box::new(Expression::Multiply(
+                                *loc,
+                                Type::Uint(64),
+                                Box::new(
+                                    cast(
+                                        &index_loc,
+                                        Expression::Variable(index_loc, coerced_ty, pos),
+                                        &Type::Uint(64),
+                                        false,
+                                        ns,
+                                        &mut Vec::new(),
+                                    )
+                                    .unwrap(),
+                                ),
+                                Box::new(Expression::NumberLiteral(
+                                    *loc,
+                                    Type::Uint(64),
+                                    elem_size,
+                                )),
+                            )),
+                        )),
+                    );
+                }
+            }
+
+            array_offset(
+                loc,
+                array,
+                cast(
+                    &index_loc,
+                    Expression::Variable(index_loc, coerced_ty, pos),
+                    &ns.storage_type(),
+                    false,
+                    ns,
+                    &mut Vec::new(),
+                )
+                .unwrap(),
+                elem_ty,
+                ns,
+            )
+        }
     } else {
         match array_ty.deref_memory() {
             Type::Bytes(array_length) => {

@@ -339,3 +339,210 @@ fn dynamic_array_dynamic_elements() {
         ]
     );
 }
+
+#[test]
+fn fixed_array_fixed_elements_storage() {
+    let mut vm = build_solidity(
+        r#"
+        contract foo {
+            int64[4] store;
+
+            function set_elem(uint index, int64 val) public {
+                store[index] = val;
+            }
+
+            function get_elem(uint index) public returns (int64) {
+                return store[index];
+            }
+
+            function set(int64[4] x) public {
+                store = x;
+            }
+
+            function get() public returns (int64[4]) {
+                return store;
+            }
+
+            function del() public {
+                delete store;
+            }
+        }"#,
+    );
+
+    vm.constructor(&[]);
+
+    vm.function(
+        "set_elem",
+        &[
+            Token::Uint(ethereum_types::U256::from(2)),
+            Token::Int(ethereum_types::U256::from(12123123)),
+        ],
+    );
+
+    vm.function(
+        "set_elem",
+        &[
+            Token::Uint(ethereum_types::U256::from(3)),
+            Token::Int(ethereum_types::U256::from(123456789)),
+        ],
+    );
+
+    let returns = vm.function("get_elem", &[Token::Uint(ethereum_types::U256::from(2))]);
+
+    assert_eq!(
+        returns,
+        vec![Token::Int(ethereum_types::U256::from(12123123)),],
+    );
+
+    let returns = vm.function("get", &[]);
+
+    assert_eq!(
+        returns,
+        vec![Token::FixedArray(vec![
+            Token::Int(ethereum_types::U256::from(0)),
+            Token::Int(ethereum_types::U256::from(0)),
+            Token::Int(ethereum_types::U256::from(12123123)),
+            Token::Int(ethereum_types::U256::from(123456789)),
+        ]),],
+    );
+
+    vm.function(
+        "set",
+        &[Token::FixedArray(vec![
+            Token::Int(ethereum_types::U256::from(1)),
+            Token::Int(ethereum_types::U256::from(2)),
+            Token::Int(ethereum_types::U256::from(3)),
+            Token::Int(ethereum_types::U256::from(4)),
+        ])],
+    );
+
+    let returns = vm.function("get", &[]);
+
+    assert_eq!(
+        returns,
+        vec![Token::FixedArray(vec![
+            Token::Int(ethereum_types::U256::from(1)),
+            Token::Int(ethereum_types::U256::from(2)),
+            Token::Int(ethereum_types::U256::from(3)),
+            Token::Int(ethereum_types::U256::from(4)),
+        ]),],
+    );
+
+    vm.function("del", &[]);
+
+    let returns = vm.function("get", &[]);
+
+    assert_eq!(
+        returns,
+        vec![Token::FixedArray(vec![
+            Token::Int(ethereum_types::U256::from(0)),
+            Token::Int(ethereum_types::U256::from(0)),
+            Token::Int(ethereum_types::U256::from(0)),
+            Token::Int(ethereum_types::U256::from(0)),
+        ]),],
+    );
+}
+
+#[test]
+fn fixed_array_dynamic_elements_storage() {
+    let mut vm = build_solidity(
+        r#"
+        contract foo {
+            string[4] store;
+
+            function set_elem(uint index, string val) public {
+                store[index] = val;
+            }
+
+            function get_elem(uint index) public returns (string) {
+                return store[index];
+            }
+
+            function set(string[4] x) public {
+                store = x;
+            }
+
+            function get() public returns (string[4]) {
+                return store;
+            }
+
+            function del() public {
+                delete store;
+            }
+        }"#,
+    );
+
+    vm.constructor(&[]);
+
+    vm.function(
+        "set_elem",
+        &[
+            Token::Uint(ethereum_types::U256::from(2)),
+            Token::String(String::from("abcd")),
+        ],
+    );
+
+    vm.function(
+        "set_elem",
+        &[
+            Token::Uint(ethereum_types::U256::from(3)),
+            Token::String(String::from(
+                "you can lead a horse to water but you can’t make him drink",
+            )),
+        ],
+    );
+
+    let returns = vm.function("get_elem", &[Token::Uint(ethereum_types::U256::from(2))]);
+
+    assert_eq!(returns, vec![Token::String(String::from("abcd"))]);
+
+    let returns = vm.function("get", &[]);
+
+    assert_eq!(
+        returns,
+        vec![Token::FixedArray(vec![
+            Token::String(String::from("")),
+            Token::String(String::from("")),
+            Token::String(String::from("abcd")),
+            Token::String(String::from(
+                "you can lead a horse to water but you can’t make him drink"
+            )),
+        ]),],
+    );
+
+    vm.function(
+        "set",
+        &[Token::FixedArray(vec![
+            Token::String(String::from("a")),
+            Token::String(String::from("b")),
+            Token::String(String::from("c")),
+            Token::String(String::from("d")),
+        ])],
+    );
+
+    let returns = vm.function("get", &[]);
+
+    assert_eq!(
+        returns,
+        vec![Token::FixedArray(vec![
+            Token::String(String::from("a")),
+            Token::String(String::from("b")),
+            Token::String(String::from("c")),
+            Token::String(String::from("d")),
+        ]),],
+    );
+
+    vm.function("del", &[]);
+
+    let returns = vm.function("get", &[]);
+
+    assert_eq!(
+        returns,
+        vec![Token::FixedArray(vec![
+            Token::String(String::from("")),
+            Token::String(String::from("")),
+            Token::String(String::from("")),
+            Token::String(String::from("")),
+        ]),],
+    );
+}
