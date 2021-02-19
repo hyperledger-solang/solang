@@ -12,6 +12,7 @@ use num_traits::ToPrimitive;
 use tiny_keccak::{Hasher, Keccak};
 
 use super::ethabiencoder;
+use super::loop_builder::LoopBuilder;
 use super::{Contract, ReturnCode, TargetRuntime, Variable};
 
 pub struct SolanaTarget {
@@ -430,6 +431,40 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             let new_offset = contract.context.i32_type().const_zero();
 
             contract.builder.build_store(offset_ptr, new_offset);
+        } else if let ast::Type::Array(elem_ty, dim) = ty {
+            let dim = dim[0].as_ref().unwrap().to_u64().unwrap();
+            let elem_size = elem_ty.size_of(contract.ns).to_u64().unwrap();
+
+            // loop over the array
+            let mut builder = LoopBuilder::new(contract, function);
+
+            // we need a phi for the offset
+            let offset_phi =
+                builder.add_loop_phi(contract, "offset", slot.get_type(), (*slot).into());
+
+            let _ = builder.over(
+                contract,
+                contract.context.i64_type().const_zero(),
+                contract.context.i64_type().const_int(dim, false),
+            );
+
+            let mut offset_val = offset_phi.into_int_value();
+
+            let elem_ty = ty.array_deref();
+
+            self.storage_delete(contract, &elem_ty.deref_any(), &mut offset_val, function);
+
+            offset_val = contract.builder.build_int_add(
+                offset_val,
+                contract.context.i32_type().const_int(elem_size, false),
+                "new_offset",
+            );
+
+            // set the offset for the next iteration of the loop
+            builder.set_loop_phi_value(contract, "offset", offset_val.into());
+
+            // done
+            builder.finish(contract);
         } else if let ast::Type::Struct(struct_no) = ty {
             for (i, field) in contract.ns.structs[*struct_no].fields.iter().enumerate() {
                 let field_offset = contract.ns.structs[*struct_no].offsets[i].to_u64().unwrap();
@@ -1104,6 +1139,78 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             }
 
             dest.into()
+        } else if let ast::Type::Array(elem_ty, dim) = ty {
+            let llvm_ty = contract.llvm_type(ty.deref_any());
+            // LLVMSizeOf() produces an i64 and malloc takes i32
+            let size = contract.builder.build_int_truncate(
+                llvm_ty.size_of().unwrap(),
+                contract.context.i32_type(),
+                "size_of",
+            );
+
+            let new = contract
+                .builder
+                .build_call(
+                    contract.module.get_function("__malloc").unwrap(),
+                    &[size.into()],
+                    "",
+                )
+                .try_as_basic_value()
+                .left()
+                .unwrap()
+                .into_pointer_value();
+
+            let dest = contract.builder.build_pointer_cast(
+                new,
+                llvm_ty.ptr_type(AddressSpace::Generic),
+                "dest",
+            );
+
+            let dim = dim[0].as_ref().unwrap().to_u64().unwrap();
+            let elem_size = elem_ty.size_of(contract.ns).to_u64().unwrap();
+
+            // loop over the array
+            let mut builder = LoopBuilder::new(contract, function);
+
+            // we need a phi for the offset
+            let offset_phi =
+                builder.add_loop_phi(contract, "offset", slot.get_type(), (*slot).into());
+
+            let index = builder.over(
+                contract,
+                contract.context.i64_type().const_zero(),
+                contract.context.i64_type().const_int(dim, false),
+            );
+
+            let elem = unsafe {
+                contract.builder.build_gep(
+                    dest,
+                    &[contract.context.i64_type().const_zero(), index],
+                    "array_member",
+                )
+            };
+            let elem_ty = ty.array_deref();
+
+            let mut offset_val = offset_phi.into_int_value();
+
+            let val =
+                self.storage_load(contract, &elem_ty.deref_memory(), &mut offset_val, function);
+
+            contract.builder.build_store(elem, val);
+
+            offset_val = contract.builder.build_int_add(
+                offset_val,
+                contract.context.i32_type().const_int(elem_size, false),
+                "new_offset",
+            );
+
+            // set the offset for the next iteration of the loop
+            builder.set_loop_phi_value(contract, "offset", offset_val.into());
+
+            // done
+            builder.finish(contract);
+
+            dest.into()
         } else {
             contract.builder.build_load(
                 contract.builder.build_pointer_cast(
@@ -1269,7 +1376,57 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                 ],
                 "copied",
             );
+        } else if let ast::Type::Array(elem_ty, dim) = ty {
+            // FIXME call delete if pointer null
+            let dim = dim[0].as_ref().unwrap().to_u64().unwrap();
+            let elem_size = elem_ty.size_of(contract.ns).to_u64().unwrap();
+
+            // loop over the array
+            let mut builder = LoopBuilder::new(contract, function);
+
+            // we need a phi for the offset
+            let offset_phi =
+                builder.add_loop_phi(contract, "offset", slot.get_type(), (*slot).into());
+
+            let index = builder.over(
+                contract,
+                contract.context.i64_type().const_zero(),
+                contract.context.i64_type().const_int(dim, false),
+            );
+
+            let elem = unsafe {
+                contract.builder.build_gep(
+                    val.into_pointer_value(),
+                    &[contract.context.i64_type().const_zero(), index],
+                    "array_member",
+                )
+            };
+
+            let mut offset_val = offset_phi.into_int_value();
+
+            let elem_ty = ty.array_deref();
+
+            self.storage_store(
+                contract,
+                &elem_ty.deref_any(),
+                &mut offset_val,
+                contract.builder.build_load(elem, "array_elem"),
+                function,
+            );
+
+            offset_val = contract.builder.build_int_add(
+                offset_val,
+                contract.context.i32_type().const_int(elem_size, false),
+                "new_offset",
+            );
+
+            // set the offset for the next iteration of the loop
+            builder.set_loop_phi_value(contract, "offset", offset_val.into());
+
+            // done
+            builder.finish(contract);
         } else if let ast::Type::Struct(struct_no) = ty {
+            // FIXME call delete if pointer null
             for (i, field) in contract.ns.structs[*struct_no].fields.iter().enumerate() {
                 let field_offset = contract.ns.structs[*struct_no].offsets[i].to_u64().unwrap();
 
