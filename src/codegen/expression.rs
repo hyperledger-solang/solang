@@ -368,6 +368,53 @@ pub fn expression(
 
             Expression::InternalFunctionCfg(ns.contracts[contract_no].all_functions[function_no])
         }
+        Expression::StorageArrayLength {
+            loc,
+            ty,
+            array,
+            elem_ty,
+        } => {
+            let array_ty = array.ty().deref_into();
+            let array = expression(array, cfg, contract_no, ns, vartab);
+
+            match array_ty {
+                Type::Bytes(length) => bigint_to_expression(
+                    loc,
+                    &BigInt::from_u8(length).unwrap(),
+                    ns,
+                    &mut Vec::new(),
+                    Some(ty),
+                )
+                .unwrap(),
+                Type::DynamicBytes => Expression::StorageArrayLength {
+                    loc: *loc,
+                    ty: ty.clone(),
+                    array: Box::new(array),
+                    elem_ty: elem_ty.clone(),
+                },
+                Type::Array(_, dim) => match dim.last().unwrap() {
+                    None => {
+                        if ns.target == Target::Solana {
+                            Expression::StorageArrayLength {
+                                loc: *loc,
+                                ty: ty.clone(),
+                                array: Box::new(array),
+                                elem_ty: elem_ty.clone(),
+                            }
+                        } else {
+                            Expression::StorageLoad(*loc, ns.storage_type(), Box::new(array))
+                        }
+                    }
+                    Some(length) => {
+                        bigint_to_expression(loc, length, ns, &mut Vec::new(), Some(ty)).unwrap()
+                    }
+                },
+                ty => {
+                    println!("what are you talking about {:?}", ty);
+                    unreachable!();
+                }
+            }
+        }
         Expression::Builtin(loc, returns, Builtin::ExternalFunctionAddress, func) => {
             if let Expression::ExternalFunction { address, .. } = &func[0] {
                 expression(address, cfg, contract_no, ns, vartab)
@@ -527,10 +574,6 @@ pub fn expression(
 
             Expression::Variable(*loc, elem_ty, address_res)
         }
-        Expression::StorageBytesLength(loc, expr) => Expression::StorageBytesLength(
-            *loc,
-            Box::new(expression(expr, cfg, contract_no, ns, vartab)),
-        ),
         Expression::Or(loc, left, right) => {
             let boolty = Type::Bool;
             let l = expression(left, cfg, contract_no, ns, vartab);

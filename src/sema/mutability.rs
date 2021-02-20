@@ -231,7 +231,7 @@ fn read_expression(expr: &Expression, state: &mut StateCheck) -> bool {
             right.recurse(state, read_expression);
             left.recurse(state, write_expression);
         }
-        Expression::StorageBytesLength(loc, _)
+        Expression::StorageArrayLength { loc, .. }
         | Expression::StorageBytesSubscript(loc, _, _)
         | Expression::StorageVariable(loc, _, _, _)
         | Expression::StorageLoad(loc, _, _) => state.read(loc),

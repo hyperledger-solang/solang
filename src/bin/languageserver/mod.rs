@@ -602,8 +602,8 @@ impl SolangServer {
                 SolangServer::construct_expr(expr1, lookup_tbl, symtab, fnc_map, ns);
                 SolangServer::construct_expr(expr2, lookup_tbl, symtab, fnc_map, ns);
             }
-            Expression::StorageBytesLength(_locs, expr1) => {
-                SolangServer::construct_expr(expr1, lookup_tbl, symtab, fnc_map, ns);
+            Expression::StorageArrayLength { array, .. } => {
+                SolangServer::construct_expr(array, lookup_tbl, symtab, fnc_map, ns);
             }
 
             //String operations expression

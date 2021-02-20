@@ -77,7 +77,7 @@ impl Expression {
             | Expression::DynamicArrayPush(loc, _, _, _)
             | Expression::DynamicArrayPop(loc, _, _)
             | Expression::StorageBytesSubscript(loc, _, _)
-            | Expression::StorageBytesLength(loc, _)
+            | Expression::StorageArrayLength { loc, .. }
             | Expression::StringCompare(loc, _, _)
             | Expression::StringConcat(loc, _, _, _)
             | Expression::Keccak256(loc, _, _)
@@ -166,7 +166,7 @@ impl Expression {
                 }
             }
             Expression::DynamicArrayLength(_, _) => Type::Uint(32),
-            Expression::StorageBytesLength(_, _) => Type::Uint(32),
+            Expression::StorageArrayLength { ty, .. } => ty.clone(),
             Expression::StorageBytesSubscript(_, _, _) => {
                 Type::StorageRef(Box::new(Type::Bytes(1)))
             }
@@ -4274,7 +4274,7 @@ fn member_access(
                     .find(|(_, field)| id.name == field.name)
                 {
                     Ok(Expression::StructMember(
-                        *loc,
+                        id.loc,
                         Type::StorageRef(Box::new(field.ty.clone())),
                         Box::new(expr),
                         field_no,
@@ -4290,32 +4290,28 @@ fn member_access(
                     Err(())
                 }
             }
-            Type::Bytes(n) => {
+            Type::Array(_, _) => {
                 if id.name == "length" {
-                    return Ok(Expression::NumberLiteral(
-                        *loc,
-                        Type::Uint(8),
-                        BigInt::from_u8(n).unwrap(),
-                    ));
+                    let elem_ty = expr.ty().storage_array_elem().deref_into();
+
+                    return Ok(Expression::StorageArrayLength {
+                        loc: id.loc,
+                        ty: ns.storage_type(),
+                        array: Box::new(expr),
+                        elem_ty,
+                    });
                 }
             }
-            Type::Array(_, dim) => {
+            Type::Bytes(_) | Type::DynamicBytes => {
                 if id.name == "length" {
-                    return match dim.last().unwrap() {
-                        None => Ok(Expression::StorageLoad(
-                            id.loc,
-                            ns.storage_type(),
-                            Box::new(expr),
-                        )),
-                        Some(d) => {
-                            bigint_to_expression(loc, d, ns, diagnostics, Some(&Type::Uint(256)))
-                        }
-                    };
-                }
-            }
-            Type::DynamicBytes => {
-                if id.name == "length" {
-                    return Ok(Expression::StorageBytesLength(*loc, Box::new(expr)));
+                    let elem_ty = expr.ty().storage_array_elem().deref_into();
+
+                    return Ok(Expression::StorageArrayLength {
+                        loc: id.loc,
+                        ty: Type::Uint(32),
+                        array: Box::new(expr),
+                        elem_ty,
+                    });
                 }
             }
             _ => {}
@@ -4328,7 +4324,7 @@ fn member_access(
                 .find(|f| id.name == f.1.name)
             {
                 return Ok(Expression::StructMember(
-                    *loc,
+                    id.loc,
                     Type::Ref(Box::new(f.ty.clone())),
                     Box::new(expr),
                     i,

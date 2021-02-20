@@ -442,9 +442,10 @@ impl ControlFlowGraph {
                 self.expr_to_string(contract, ns, a),
                 self.expr_to_string(contract, ns, i)
             ),
-            Expression::StorageBytesLength(_, a) => format!(
-                "(storage bytes length {})",
-                self.expr_to_string(contract, ns, a),
+            Expression::StorageArrayLength { array, elem_ty, .. } => format!(
+                "(storage array length {}[{}])",
+                self.expr_to_string(contract, ns, array),
+                elem_ty.to_string(ns),
             ),
             Expression::StructMember(_, _, a, f) => format!(
                 "(struct {} field {})",

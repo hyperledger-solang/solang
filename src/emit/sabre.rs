@@ -436,14 +436,6 @@ impl<'a> TargetRuntime<'a> for SabreTarget {
     ) -> IntValue<'a> {
         unimplemented!();
     }
-    fn storage_string_length(
-        &self,
-        _contract: &Contract<'a>,
-        _function: FunctionValue,
-        _slot: IntValue<'a>,
-    ) -> IntValue<'a> {
-        unimplemented!();
-    }
 
     fn get_storage_int(
         &self,
