@@ -528,7 +528,12 @@ pub enum Expression {
     DynamicArrayPush(pt::Loc, Box<Expression>, Type, Box<Expression>),
     DynamicArrayPop(pt::Loc, Box<Expression>, Type),
     StorageBytesSubscript(pt::Loc, Box<Expression>, Box<Expression>),
-    StorageBytesLength(pt::Loc, Box<Expression>),
+    StorageArrayLength {
+        loc: pt::Loc,
+        ty: Type,
+        array: Box<Expression>,
+        elem_ty: Type,
+    },
     StringCompare(pt::Loc, StringLocation, StringLocation),
     StringConcat(pt::Loc, Type, StringLocation, StringLocation),
 
@@ -810,9 +815,17 @@ impl Expression {
                         Box::new(filter(index, ctx)),
                     )
                 }
-                Expression::StorageBytesLength(loc, expr) => {
-                    Expression::StorageBytesLength(*loc, Box::new(filter(expr, ctx)))
-                }
+                Expression::StorageArrayLength {
+                    loc,
+                    ty,
+                    array,
+                    elem_ty,
+                } => Expression::StorageArrayLength {
+                    loc: *loc,
+                    ty: ty.clone(),
+                    array: Box::new(filter(array, ctx)),
+                    elem_ty: elem_ty.clone(),
+                },
                 Expression::StringCompare(loc, left, right) => Expression::StringCompare(
                     *loc,
                     match left {
@@ -1014,8 +1027,8 @@ impl Expression {
                     left.recurse(cx, f);
                     right.recurse(cx, f);
                 }
-                Expression::StorageBytesLength(_, expr)
-                | Expression::DynamicArrayPop(_, expr, _) => expr.recurse(cx, f),
+                Expression::DynamicArrayPop(_, expr, _) => expr.recurse(cx, f),
+                Expression::StorageArrayLength { array, .. } => array.recurse(cx, f),
                 Expression::StringCompare(_, left, right)
                 | Expression::StringConcat(_, _, left, right) => {
                     if let StringLocation::RunTime(expr) = left {

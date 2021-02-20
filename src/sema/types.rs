@@ -833,6 +833,7 @@ impl Type {
     /// array types and will cause a panic otherwise.
     pub fn storage_array_elem(&self) -> Self {
         match self {
+            Type::DynamicBytes => Type::Bytes(1),
             Type::Array(ty, dim) if dim.len() > 1 => Type::StorageRef(Box::new(Type::Array(
                 ty.clone(),
                 dim[..dim.len() - 1].to_vec(),
@@ -1086,6 +1087,15 @@ impl Type {
         match self {
             Type::StorageRef(r) => r,
             Type::Ref(r) => r,
+            _ => self,
+        }
+    }
+
+    /// If the type is Ref or StorageRef, get the underlying type
+    pub fn deref_into(self) -> Self {
+        match self {
+            Type::StorageRef(r) => *r,
+            Type::Ref(r) => *r,
             _ => self,
         }
     }

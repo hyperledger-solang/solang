@@ -944,11 +944,21 @@ fn expression(
                 false,
             )
         }
-        Expression::StorageBytesLength(loc, array) => {
+        Expression::StorageArrayLength {
+            loc,
+            ty,
+            array,
+            elem_ty,
+        } => {
             let array = expression(array, vars, pos, cfg, ns);
 
             (
-                Expression::StorageBytesLength(*loc, Box::new(array.0)),
+                Expression::StorageArrayLength {
+                    loc: *loc,
+                    ty: ty.clone(),
+                    array: Box::new(array.0),
+                    elem_ty: elem_ty.clone(),
+                },
                 false,
             )
         }

@@ -941,6 +941,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         contract: &Contract<'a>,
         _function: FunctionValue,
         slot: IntValue<'a>,
+        elem_ty: &ast::Type,
     ) -> IntValue<'a> {
         // contract storage is in 2nd account
         let account = unsafe {
@@ -983,7 +984,12 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             )
             .into_int_value();
 
-        contract
+        let member_size = contract
+            .context
+            .i32_type()
+            .const_int(elem_ty.size_of(contract.ns).to_u64().unwrap(), false);
+
+        let length_bytes = contract
             .builder
             .build_call(
                 contract.module.get_function("account_data_len").unwrap(),
@@ -993,7 +999,11 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             .try_as_basic_value()
             .left()
             .unwrap()
-            .into_int_value()
+            .into_int_value();
+
+        contract
+            .builder
+            .build_int_unsigned_div(length_bytes, member_size, "")
     }
 
     fn get_storage_int(
@@ -1754,7 +1764,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         _vartab: &HashMap<usize, Variable<'b>>,
         _function: FunctionValue<'b>,
     ) -> BasicValueEnum<'b> {
-        unimplemented!();
+        unimplemented!()
     }
 
     /// Crypto Hash

@@ -2792,6 +2792,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         contract: &Contract<'a>,
         _function: FunctionValue,
         slot: IntValue<'a>,
+        _ty: &ast::Type,
     ) -> IntValue<'a> {
         let slot_ptr = contract.builder.build_alloca(slot.get_type(), "slot");
         contract.builder.build_store(slot_ptr, slot);

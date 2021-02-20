@@ -180,10 +180,13 @@ pub trait TargetRuntime<'a> {
     ) -> IntValue<'a>;
     fn storage_string_length(
         &self,
-        contract: &Contract<'a>,
-        function: FunctionValue,
-        slot: IntValue<'a>,
-    ) -> IntValue<'a>;
+        _contract: &Contract<'a>,
+        _function: FunctionValue,
+        _slot: IntValue<'a>,
+        _elem_ty: &ast::Type,
+    ) -> IntValue<'a> {
+        unimplemented!();
+    }
 
     /// keccak256 hash
     fn keccak256_hash(
@@ -2175,13 +2178,6 @@ pub trait TargetRuntime<'a> {
                 self.get_storage_bytes_subscript(&contract, function, slot, index)
                     .into()
             }
-            Expression::StorageBytesLength(_, a) => {
-                let slot = self
-                    .expression(contract, a, vartab, function)
-                    .into_int_value();
-
-                self.storage_string_length(&contract, function, slot).into()
-            }
             Expression::DynamicArraySubscript(_, elem_ty, a, i) => {
                 let array = self.expression(contract, a, vartab, function);
 
@@ -2552,6 +2548,14 @@ pub trait TargetRuntime<'a> {
                     .into()
             }
             Expression::ReturnData(_) => self.return_data(contract).into(),
+            Expression::StorageArrayLength { array, elem_ty, .. } => {
+                let slot = self
+                    .expression(contract, array, vartab, function)
+                    .into_int_value();
+
+                self.storage_string_length(contract, function, slot, elem_ty)
+                    .into()
+            }
             Expression::Builtin(_, _, Builtin::Calldata, _)
                 if contract.ns.target != Target::Substrate =>
             {
