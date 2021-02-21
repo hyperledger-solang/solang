@@ -1,5 +1,7 @@
 use super::cfg::{ControlFlowGraph, Instr, InternalCallTy, Vartable};
-use super::storage::{array_offset, array_pop, array_push, bytes_pop, bytes_push};
+use super::storage::{
+    array_offset, array_pop, array_push, storage_slots_array_pop, storage_slots_array_push,
+};
 use crate::parser::pt;
 use crate::sema::ast::{Builtin, CallTy, Expression, Namespace, Parameter, StringLocation, Type};
 use crate::sema::eval::eval_const_number;
@@ -718,16 +720,20 @@ pub fn expression(
             Box::new(expression(e, cfg, contract_no, ns, vartab)),
         ),
         // for some built-ins, we have to inline special case code
-        Expression::Builtin(loc, _, Builtin::ArrayPush, args) => match args[0].ty().deref_any() {
-            Type::DynamicBytes => bytes_push(loc, args, cfg, contract_no, ns, vartab),
-            Type::Array(_, _) => array_push(loc, args, cfg, contract_no, ns, vartab),
-            _ => unreachable!(),
-        },
-        Expression::Builtin(loc, _, Builtin::ArrayPop, args) => match args[0].ty().deref_any() {
-            Type::DynamicBytes => bytes_pop(loc, args, cfg, contract_no, ns, vartab),
-            Type::Array(_, _) => array_pop(loc, args, cfg, contract_no, ns, vartab),
-            _ => unreachable!(),
-        },
+        Expression::Builtin(loc, _, Builtin::ArrayPush, args) => {
+            if ns.target == Target::Solana || args[0].ty().is_storage_bytes() {
+                array_push(loc, args, cfg, contract_no, ns, vartab)
+            } else {
+                storage_slots_array_push(loc, args, cfg, contract_no, ns, vartab)
+            }
+        }
+        Expression::Builtin(loc, _, Builtin::ArrayPop, args) => {
+            if ns.target == Target::Solana || args[0].ty().is_storage_bytes() {
+                array_pop(loc, args, cfg, contract_no, ns, vartab)
+            } else {
+                storage_slots_array_pop(loc, args, cfg, contract_no, ns, vartab)
+            }
+        }
         Expression::Builtin(_, _, Builtin::Assert, args) => {
             let true_ = cfg.new_basic_block("noassert".to_owned());
             let false_ = cfg.new_basic_block("doassert".to_owned());
@@ -1477,12 +1483,21 @@ fn array_subscript(
         Type::Array(_, _) => match array_ty.array_length() {
             None => {
                 if let Type::StorageRef(_) = array_ty {
-                    let array_length =
-                        Expression::StorageLoad(*loc, Type::Uint(256), Box::new(array.clone()));
+                    if ns.target == Target::Solana {
+                        Expression::StorageArrayLength {
+                            loc: *loc,
+                            ty: ns.storage_type(),
+                            array: Box::new(array.clone()),
+                            elem_ty: array_ty.storage_array_elem().deref_into(),
+                        }
+                    } else {
+                        let array_length =
+                            Expression::StorageLoad(*loc, Type::Uint(256), Box::new(array.clone()));
 
-                    array = Expression::Keccak256(*loc, Type::Uint(256), vec![array]);
+                        array = Expression::Keccak256(*loc, Type::Uint(256), vec![array]);
 
-                    array_length
+                        array_length
+                    }
                 } else {
                     Expression::DynamicArrayLength(*loc, Box::new(array.clone()))
                 }
@@ -1554,29 +1569,34 @@ fn array_subscript(
         let slot_ty = ns.storage_type();
 
         if ns.target == Target::Solana {
-            let elem_size = elem_ty.deref_any().size_of(ns);
-
-            Expression::Add(
-                *loc,
-                elem_ty,
-                Box::new(array),
-                Box::new(Expression::Multiply(
-                    *loc,
-                    slot_ty.clone(),
-                    Box::new(
-                        cast(
-                            &index_loc,
-                            Expression::Variable(index_loc, coerced_ty, pos),
-                            &slot_ty,
-                            false,
-                            ns,
-                            &mut Vec::new(),
-                        )
-                        .unwrap(),
-                    ),
-                    Box::new(Expression::NumberLiteral(*loc, slot_ty, elem_size)),
-                )),
+            let index = cast(
+                &index_loc,
+                Expression::Variable(index_loc, coerced_ty, pos),
+                &slot_ty,
+                false,
+                ns,
+                &mut Vec::new(),
             )
+            .unwrap();
+
+            if ty.array_length().is_some() {
+                // fixed length array
+                let elem_size = elem_ty.deref_any().size_of(ns);
+
+                Expression::Add(
+                    *loc,
+                    elem_ty,
+                    Box::new(array),
+                    Box::new(Expression::Multiply(
+                        *loc,
+                        slot_ty.clone(),
+                        Box::new(index),
+                        Box::new(Expression::NumberLiteral(*loc, slot_ty, elem_size)),
+                    )),
+                )
+            } else {
+                Expression::ArraySubscript(*loc, elem_ty, Box::new(array), Box::new(index))
+            }
         } else {
             let elem_size = elem_ty.storage_slots(ns);
 

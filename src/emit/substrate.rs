@@ -2555,13 +2555,14 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
     }
 
     /// Push a byte onto a bytes string in storage
-    fn storage_bytes_push(
+    fn storage_push(
         &self,
-        contract: &Contract,
+        contract: &Contract<'a>,
         _function: FunctionValue,
-        slot: IntValue,
-        val: IntValue,
-    ) {
+        _ty: &ast::Type,
+        slot: IntValue<'a>,
+        val: BasicValueEnum<'a>,
+    ) -> BasicValueEnum<'a> {
         let slot_ptr = contract.builder.build_alloca(slot.get_type(), "slot");
         contract.builder.build_store(slot_ptr, slot);
 
@@ -2655,15 +2656,18 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             ],
             "",
         );
+
+        val
     }
 
     /// Pop a value from a bytes string
-    fn storage_bytes_pop(
+    fn storage_pop(
         &self,
         contract: &Contract<'a>,
-        function: FunctionValue,
+        function: FunctionValue<'a>,
+        _ty: &ast::Type,
         slot: IntValue<'a>,
-    ) -> IntValue<'a> {
+    ) -> BasicValueEnum<'a> {
         let slot_ptr = contract.builder.build_alloca(slot.get_type(), "slot");
         contract.builder.build_store(slot_ptr, slot);
 
@@ -2783,11 +2787,11 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             "",
         );
 
-        val.into_int_value()
+        val
     }
 
     /// Calculate length of storage dynamic bytes
-    fn storage_string_length(
+    fn storage_array_length(
         &self,
         contract: &Contract<'a>,
         _function: FunctionValue,

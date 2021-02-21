@@ -316,24 +316,26 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
     ) {
         unimplemented!();
     }
-    fn storage_bytes_push(
-        &self,
-        _contract: &Contract,
-        _function: FunctionValue,
-        _slot: IntValue,
-        _val: IntValue,
-    ) {
-        unimplemented!();
-    }
-    fn storage_bytes_pop(
+    fn storage_push(
         &self,
         _contract: &Contract<'a>,
         _function: FunctionValue,
+        _ty: &ast::Type,
         _slot: IntValue<'a>,
-    ) -> IntValue<'a> {
+        _val: BasicValueEnum<'a>,
+    ) -> BasicValueEnum<'a> {
         unimplemented!();
     }
-    fn storage_string_length(
+    fn storage_pop(
+        &self,
+        _contract: &Contract<'a>,
+        _function: FunctionValue,
+        _ty: &ast::Type,
+        _slot: IntValue<'a>,
+    ) -> BasicValueEnum<'a> {
+        unimplemented!();
+    }
+    fn storage_array_length(
         &self,
         contract: &Contract<'a>,
         _function: FunctionValue,

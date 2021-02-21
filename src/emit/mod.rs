@@ -165,20 +165,33 @@ pub trait TargetRuntime<'a> {
         index: IntValue<'a>,
         value: IntValue<'a>,
     );
-    fn storage_bytes_push(
+    fn storage_subscript(
+        &self,
+        _contract: &Contract<'a>,
+        _function: FunctionValue<'a>,
+        _ty: &ast::Type,
+        _slot: IntValue<'a>,
+        _index: IntValue<'a>,
+    ) -> IntValue<'a> {
+        // not need for slot-based storage chains
+        unimplemented!();
+    }
+    fn storage_push(
         &self,
         contract: &Contract<'a>,
-        function: FunctionValue,
+        function: FunctionValue<'a>,
+        ty: &ast::Type,
         slot: IntValue<'a>,
-        val: IntValue<'a>,
-    );
-    fn storage_bytes_pop(
+        val: BasicValueEnum<'a>,
+    ) -> BasicValueEnum<'a>;
+    fn storage_pop(
         &self,
         contract: &Contract<'a>,
-        function: FunctionValue,
+        function: FunctionValue<'a>,
+        ty: &ast::Type,
         slot: IntValue<'a>,
-    ) -> IntValue<'a>;
-    fn storage_string_length(
+    ) -> BasicValueEnum<'a>;
+    fn storage_array_length(
         &self,
         _contract: &Contract<'a>,
         _function: FunctionValue,
@@ -2149,23 +2162,35 @@ pub trait TargetRuntime<'a> {
                     .build_right_shift(left, right, *signed, "")
                     .into()
             }
-            Expression::ArraySubscript(_, _, a, i) => {
-                let array = self
-                    .expression(contract, a, vartab, function)
-                    .into_pointer_value();
-                let index = self
-                    .expression(contract, i, vartab, function)
-                    .into_int_value();
+            Expression::ArraySubscript(_, ty, a, i) => {
+                if ty.is_contract_storage() {
+                    let array = self
+                        .expression(contract, a, vartab, function)
+                        .into_int_value();
+                    let index = self
+                        .expression(contract, i, vartab, function)
+                        .into_int_value();
 
-                unsafe {
-                    contract
-                        .builder
-                        .build_gep(
-                            array,
-                            &[contract.context.i32_type().const_zero(), index],
-                            "index_access",
-                        )
+                    self.storage_subscript(contract, function, ty.deref_any(), array, index)
                         .into()
+                } else {
+                    let array = self
+                        .expression(contract, a, vartab, function)
+                        .into_pointer_value();
+                    let index = self
+                        .expression(contract, i, vartab, function)
+                        .into_int_value();
+
+                    unsafe {
+                        contract
+                            .builder
+                            .build_gep(
+                                array,
+                                &[contract.context.i32_type().const_zero(), index],
+                                "index_access",
+                            )
+                            .into()
+                    }
                 }
             }
             Expression::StorageBytesSubscript(_, a, i) => {
@@ -2553,7 +2578,7 @@ pub trait TargetRuntime<'a> {
                     .expression(contract, array, vartab, function)
                     .into_int_value();
 
-                self.storage_string_length(contract, function, slot, elem_ty)
+                self.storage_array_length(contract, function, slot, elem_ty)
                     .into()
             }
             Expression::Builtin(_, _, Builtin::Calldata, _)
@@ -3236,24 +3261,27 @@ pub trait TargetRuntime<'a> {
                             value.into_int_value(),
                         );
                     }
-                    Instr::PushStorage { storage, value } => {
-                        let val = self
-                            .expression(contract, value, &w.vars, function)
-                            .into_int_value();
+                    Instr::PushStorage {
+                        res,
+                        storage,
+                        value,
+                    } => {
+                        let val = self.expression(contract, value, &w.vars, function);
                         let slot = self
                             .expression(contract, storage, &w.vars, function)
                             .into_int_value();
 
-                        self.storage_bytes_push(&contract, function, slot, val);
+                        w.vars.get_mut(res).unwrap().value =
+                            self.storage_push(&contract, function, &value.ty(), slot, val);
                     }
-                    Instr::PopStorage { res, storage } => {
+                    Instr::PopStorage { res, ty, storage } => {
                         let slot = self
                             .expression(contract, storage, &w.vars, function)
                             .into_int_value();
 
-                        let value = self.storage_bytes_pop(&contract, function, slot);
+                        let value = self.storage_pop(&contract, function, ty, slot);
 
-                        w.vars.get_mut(res).unwrap().value = value.into();
+                        w.vars.get_mut(res).unwrap().value = value;
                     }
                     Instr::PushMemory {
                         res,

@@ -128,16 +128,28 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
                         offset,
                     };
                 }
-                Instr::PushStorage { storage, value } => {
+                Instr::PushStorage {
+                    res,
+                    storage,
+                    value,
+                } => {
                     let (storage, _) = expression(storage, Some(&vars), &cur, cfg, ns);
                     let (value, _) = expression(value, Some(&vars), &cur, cfg, ns);
 
-                    cfg.blocks[block_no].instr[instr_no] = Instr::PushStorage { storage, value };
+                    cfg.blocks[block_no].instr[instr_no] = Instr::PushStorage {
+                        res: *res,
+                        storage,
+                        value,
+                    };
                 }
-                Instr::PopStorage { res, storage } => {
+                Instr::PopStorage { res, ty, storage } => {
                     let (storage, _) = expression(storage, Some(&vars), &cur, cfg, ns);
 
-                    cfg.blocks[block_no].instr[instr_no] = Instr::PopStorage { res: *res, storage };
+                    cfg.blocks[block_no].instr[instr_no] = Instr::PopStorage {
+                        res: *res,
+                        ty: ty.clone(),
+                        storage,
+                    };
                 }
                 Instr::PushMemory {
                     res,
