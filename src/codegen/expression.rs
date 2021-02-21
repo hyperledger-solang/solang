@@ -718,18 +718,16 @@ pub fn expression(
             Box::new(expression(e, cfg, contract_no, ns, vartab)),
         ),
         // for some built-ins, we have to inline special case code
-        Expression::Builtin(loc, _, Builtin::ArrayPush, args) => {
-            array_push(loc, args, cfg, contract_no, ns, vartab)
-        }
-        Expression::Builtin(loc, _, Builtin::ArrayPop, args) => {
-            array_pop(loc, args, cfg, contract_no, ns, vartab)
-        }
-        Expression::Builtin(loc, _, Builtin::BytesPush, args) => {
-            bytes_push(loc, args, cfg, contract_no, ns, vartab)
-        }
-        Expression::Builtin(loc, _, Builtin::BytesPop, args) => {
-            bytes_pop(loc, args, cfg, contract_no, ns, vartab)
-        }
+        Expression::Builtin(loc, _, Builtin::ArrayPush, args) => match args[0].ty().deref_any() {
+            Type::DynamicBytes => bytes_push(loc, args, cfg, contract_no, ns, vartab),
+            Type::Array(_, _) => array_push(loc, args, cfg, contract_no, ns, vartab),
+            _ => unreachable!(),
+        },
+        Expression::Builtin(loc, _, Builtin::ArrayPop, args) => match args[0].ty().deref_any() {
+            Type::DynamicBytes => bytes_pop(loc, args, cfg, contract_no, ns, vartab),
+            Type::Array(_, _) => array_pop(loc, args, cfg, contract_no, ns, vartab),
+            _ => unreachable!(),
+        },
         Expression::Builtin(_, _, Builtin::Assert, args) => {
             let true_ = cfg.new_basic_block("noassert".to_owned());
             let false_ = cfg.new_basic_block("doassert".to_owned());

@@ -87,8 +87,8 @@ fn find_writable_vectors(
             | Instr::SetStorage { .. }
             | Instr::ClearStorage { .. }
             | Instr::SetStorageBytes { .. }
-            | Instr::PushStorageBytes { .. }
-            | Instr::PopStorageBytes { .. }
+            | Instr::PushStorage { .. }
+            | Instr::PopStorage { .. }
             | Instr::SelfDestruct { .. }
             | Instr::EmitEvent { .. }
             | Instr::AbiDecode { .. }

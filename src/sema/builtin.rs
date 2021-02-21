@@ -401,10 +401,11 @@ pub fn is_reserved(fname: &str) -> bool {
         return true;
     }
 
-    if BUILTIN_FUNCTIONS
+    let is_builtin_function = BUILTIN_FUNCTIONS
         .iter()
-        .any(|p| (p.name == fname && p.namespace == None) || (p.namespace == Some(fname)))
-    {
+        .any(|p| (p.name == fname && p.namespace == None) || (p.namespace == Some(fname)));
+
+    if is_builtin_function {
         return true;
     }
 

@@ -3236,7 +3236,7 @@ pub trait TargetRuntime<'a> {
                             value.into_int_value(),
                         );
                     }
-                    Instr::PushStorageBytes { storage, value } => {
+                    Instr::PushStorage { storage, value } => {
                         let val = self
                             .expression(contract, value, &w.vars, function)
                             .into_int_value();
@@ -3246,7 +3246,7 @@ pub trait TargetRuntime<'a> {
 
                         self.storage_bytes_push(&contract, function, slot, val);
                     }
-                    Instr::PopStorageBytes { res, storage } => {
+                    Instr::PopStorage { res, storage } => {
                         let slot = self
                             .expression(contract, storage, &w.vars, function)
                             .into_int_value();

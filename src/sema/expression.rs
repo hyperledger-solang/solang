@@ -5472,7 +5472,7 @@ fn method_call_pos_args(
                     };
 
                     return Ok(Expression::Builtin(
-                        *loc,
+                        func.loc,
                         vec![ret_ty],
                         Builtin::ArrayPush,
                         builtin_args,
@@ -5500,7 +5500,7 @@ fn method_call_pos_args(
                     let elem_ty = storage_elem.deref_any();
 
                     return Ok(Expression::Builtin(
-                        *loc,
+                        func.loc,
                         vec![elem_ty.clone()],
                         Builtin::ArrayPop,
                         vec![var_expr],
@@ -5556,9 +5556,9 @@ fn method_call_pos_args(
                     };
 
                     return Ok(Expression::Builtin(
-                        *loc,
+                        func.loc,
                         vec![ret_ty],
-                        Builtin::BytesPush,
+                        Builtin::ArrayPush,
                         builtin_args,
                     ));
                 }
@@ -5573,9 +5573,9 @@ fn method_call_pos_args(
                     }
 
                     return Ok(Expression::Builtin(
-                        *loc,
+                        func.loc,
                         vec![Type::Bytes(1)],
-                        Builtin::BytesPop,
+                        Builtin::ArrayPop,
                         vec![var_expr],
                     ));
                 }

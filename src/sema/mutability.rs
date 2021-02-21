@@ -254,8 +254,6 @@ fn read_expression(expr: &Expression, state: &mut StateCheck) -> bool {
         | Expression::Builtin(loc, _, Builtin::PayableTransfer, _)
         | Expression::Builtin(loc, _, Builtin::ArrayPush, _)
         | Expression::Builtin(loc, _, Builtin::ArrayPop, _)
-        | Expression::Builtin(loc, _, Builtin::BytesPush, _)
-        | Expression::Builtin(loc, _, Builtin::BytesPop, _)
         | Expression::Builtin(loc, _, Builtin::SelfDestruct, _) => state.write(loc),
         Expression::Constructor { loc, .. } => {
             state.write(loc);
