@@ -65,11 +65,16 @@ pub enum Instr {
     },
     /// Push an element onto a bytes in storage
     PushStorage {
+        res: usize,
         value: Expression,
         storage: Expression,
     },
     /// Pop an element from a bytes in storage
-    PopStorage { res: usize, storage: Expression },
+    PopStorage {
+        res: usize,
+        ty: Type,
+        storage: Expression,
+    },
     /// Push element on memory array
     PushMemory {
         res: usize,
@@ -693,17 +698,23 @@ impl ControlFlowGraph {
                 self.expr_to_string(contract, ns, offset),
                 self.expr_to_string(contract, ns, value),
             ),
-            Instr::PushStorage { storage, value } => {
+            Instr::PushStorage {
+                res,
+                storage,
+                value,
+            } => {
                 format!(
-                    "push bytes slot({}) = {}",
+                    "%{} = push storage slot({}) = {}",
+                    self.vars[res].id.name,
                     self.expr_to_string(contract, ns, storage),
                     self.expr_to_string(contract, ns, value),
                 )
             }
-            Instr::PopStorage { res, storage } => {
+            Instr::PopStorage { res, ty, storage } => {
                 format!(
-                    "%{} = pop bytes slot({})",
+                    "%{} = pop storage ty:{} slot({})",
                     self.vars[res].id.name,
+                    ty.to_string(ns),
                     self.expr_to_string(contract, ns, storage),
                 )
             }

@@ -58,7 +58,7 @@ pub fn array_offset(
 }
 
 /// Push() method on dynamic array in storage
-pub fn array_push(
+pub fn storage_slots_array_push(
     loc: &pt::Loc,
     args: &[Expression],
     cfg: &mut ControlFlowGraph,
@@ -142,7 +142,7 @@ pub fn array_push(
 }
 
 /// Pop() method on dynamic array in storage
-pub fn array_pop(
+pub fn storage_slots_array_pop(
     loc: &pt::Loc,
     args: &[Expression],
     cfg: &mut ControlFlowGraph,
@@ -264,7 +264,7 @@ pub fn array_pop(
 }
 
 /// Push() method on dynamic bytes in storage
-pub fn bytes_push(
+pub fn array_push(
     loc: &pt::Loc,
     args: &[Expression],
     cfg: &mut ControlFlowGraph,
@@ -272,38 +272,36 @@ pub fn bytes_push(
     ns: &Namespace,
     vartab: &mut Vartable,
 ) -> Expression {
-    let ty = Type::Bytes(1);
-    let res = vartab.temp_anonymous(&ty);
-
     let storage = expression(&args[0], cfg, contract_no, ns, vartab);
 
-    let expr = if args.len() > 1 {
+    let mut ty = args[0].ty().storage_array_elem();
+
+    let value = if args.len() > 1 {
         expression(&args[1], cfg, contract_no, ns, vartab)
     } else {
-        Expression::NumberLiteral(*loc, ty.clone(), BigInt::zero())
+        ty.deref_any().default(ns).unwrap()
     };
 
-    cfg.add(
-        vartab,
-        Instr::Set {
-            loc: *loc,
-            res,
-            expr,
-        },
-    );
+    if !ty.is_reference_type() {
+        ty = ty.deref_into();
+    }
+
+    let res = vartab.temp_anonymous(&ty);
+
     cfg.add(
         vartab,
         Instr::PushStorage {
+            res,
             storage,
-            value: Expression::Variable(*loc, ty.clone(), res),
+            value,
         },
     );
 
     Expression::Variable(*loc, ty, res)
 }
 
-/// Pop() method on dynamic bytes in storage
-pub fn bytes_pop(
+/// Pop() method on array or bytes in storage
+pub fn array_pop(
     loc: &pt::Loc,
     args: &[Expression],
     cfg: &mut ControlFlowGraph,
@@ -313,9 +311,18 @@ pub fn bytes_pop(
 ) -> Expression {
     let storage = expression(&args[0], cfg, contract_no, ns, vartab);
 
-    let res = vartab.temp_anonymous(&Type::Bytes(1));
+    let ty = args[0].ty().storage_array_elem().deref_into();
 
-    cfg.add(vartab, Instr::PopStorage { res, storage });
+    let res = vartab.temp_anonymous(&ty);
 
-    Expression::Variable(*loc, Type::Bytes(1), res)
+    cfg.add(
+        vartab,
+        Instr::PopStorage {
+            res,
+            ty: ty.clone(),
+            storage,
+        },
+    );
+
+    Expression::Variable(*loc, ty, res)
 }

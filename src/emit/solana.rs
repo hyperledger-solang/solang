@@ -709,13 +709,72 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         contract.builder.build_store(member, val);
     }
 
-    fn storage_bytes_push(
+    fn storage_subscript(
         &self,
-        contract: &Contract,
-        function: FunctionValue,
-        slot: IntValue,
-        val: IntValue,
-    ) {
+        contract: &Contract<'a>,
+        _function: FunctionValue<'a>,
+        ty: &ast::Type,
+        slot: IntValue<'a>,
+        index: IntValue<'a>,
+    ) -> IntValue<'a> {
+        // contract storage is in 2nd account
+        let account = unsafe {
+            contract.builder.build_gep(
+                contract.accounts.unwrap(),
+                &[contract.context.i32_type().const_int(1, false)],
+                "account",
+            )
+        };
+
+        // 3rd member of account is data pointer
+        let data = unsafe {
+            contract.builder.build_gep(
+                account,
+                &[
+                    contract.context.i32_type().const_zero(),
+                    contract.context.i32_type().const_int(3, false),
+                ],
+                "data",
+            )
+        };
+
+        let data = contract
+            .builder
+            .build_load(data, "data")
+            .into_pointer_value();
+
+        let member = unsafe { contract.builder.build_gep(data, &[slot], "data") };
+        let offset_ptr = contract.builder.build_pointer_cast(
+            member,
+            contract.context.i32_type().ptr_type(AddressSpace::Generic),
+            "offset_ptr",
+        );
+
+        let offset = contract
+            .builder
+            .build_load(offset_ptr, "offset")
+            .into_int_value();
+
+        let elem_size = contract
+            .context
+            .i32_type()
+            .const_int(ty.size_of(contract.ns).to_u64().unwrap(), false);
+
+        contract.builder.build_int_add(
+            offset,
+            contract.builder.build_int_mul(index, elem_size, ""),
+            "",
+        )
+    }
+
+    fn storage_push(
+        &self,
+        contract: &Contract<'a>,
+        function: FunctionValue<'a>,
+        ty: &ast::Type,
+        slot: IntValue<'a>,
+        val: BasicValueEnum<'a>,
+    ) -> BasicValueEnum<'a> {
         // contract storage is in 2nd account
         let account = unsafe {
             contract.builder.build_gep(
@@ -766,11 +825,13 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             .unwrap()
             .into_int_value();
 
-        let new_length = contract.builder.build_int_add(
-            length,
-            contract.context.i32_type().const_int(1, false),
-            "new_length",
-        );
+        let member_size = contract
+            .context
+            .i32_type()
+            .const_int(ty.size_of(contract.ns).to_u64().unwrap(), false);
+        let new_length = contract
+            .builder
+            .build_int_add(length, member_size, "new_length");
 
         let rc = contract
             .builder
@@ -815,22 +876,33 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
 
         contract.builder.position_at_end(rc_zero);
 
-        let new_offset = contract
-            .builder
-            .build_load(offset_ptr, "offset")
-            .into_int_value();
+        let mut new_offset = contract.builder.build_int_add(
+            contract
+                .builder
+                .build_load(offset_ptr, "offset")
+                .into_int_value(),
+            length,
+            "",
+        );
 
-        let index = contract.builder.build_int_add(new_offset, length, "index");
-        let member = unsafe { contract.builder.build_gep(data, &[index], "data") };
-        contract.builder.build_store(member, val);
+        self.storage_store(contract, ty, &mut new_offset, val, function);
+
+        if ty.is_reference_type() {
+            // Caller expects a reference to storage; note that storage_store() should not modify
+            // new_offset even if the argument is mut
+            new_offset.into()
+        } else {
+            val
+        }
     }
 
-    fn storage_bytes_pop(
+    fn storage_pop(
         &self,
         contract: &Contract<'a>,
         function: FunctionValue,
+        ty: &ast::Type,
         slot: IntValue<'a>,
-    ) -> IntValue<'a> {
+    ) -> BasicValueEnum<'a> {
         // contract storage is in 2nd account
         let account = unsafe {
             contract.builder.build_gep(
@@ -907,16 +979,22 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             contract.context.i32_type().const_zero(),
         );
 
-        contract.builder.position_at_end(retrieve_block);
-        let new_length = contract.builder.build_int_sub(
-            length,
-            contract.context.i32_type().const_int(1, false),
-            "new_length",
-        );
+        let member_size = contract
+            .context
+            .i32_type()
+            .const_int(ty.size_of(contract.ns).to_u64().unwrap(), false);
 
-        let index = contract.builder.build_int_add(offset, new_length, "index");
-        let member = unsafe { contract.builder.build_gep(data, &[index], "data") };
-        let val = contract.builder.build_load(member, "val");
+        contract.builder.position_at_end(retrieve_block);
+
+        let new_length = contract
+            .builder
+            .build_int_sub(length, member_size, "new_length");
+
+        let mut new_offset = contract.builder.build_int_add(offset, new_length, "");
+
+        let val = self.storage_load(contract, ty, &mut new_offset, function);
+
+        // FIXME delete existing storage -- pointers need to be freed
 
         // we can assume pointer will stay the same after realloc to smaller size
         contract.builder.build_call(
@@ -933,10 +1011,10 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             "new_offset",
         );
 
-        val.into_int_value()
+        val
     }
 
-    fn storage_string_length(
+    fn storage_array_length(
         &self,
         contract: &Contract<'a>,
         _function: FunctionValue,

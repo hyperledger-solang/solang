@@ -546,3 +546,202 @@ fn fixed_array_dynamic_elements_storage() {
         ]),],
     );
 }
+
+#[test]
+fn storage_simple_dynamic_array() {
+    let mut vm = build_solidity(
+        r#"
+        contract foo {
+            int64[] store;
+
+            function push(int64 x) public {
+                store.push(x);
+            }
+
+            function push_zero() public {
+                store.push();
+            }
+
+            function pop() public returns (int64) {
+                return store.pop();
+            }
+
+            function len() public returns (uint) {
+                return store.length;
+            }
+
+            function subscript(uint32 i) public returns (int64) {
+                return store[i];
+            }
+        }"#,
+    );
+
+    vm.constructor(&[]);
+
+    let returns = vm.function("len", &[]);
+
+    assert_eq!(returns, vec![Token::Uint(ethereum_types::U256::from(0))]);
+
+    vm.function("push", &[Token::Int(ethereum_types::U256::from(102))]);
+
+    vm.function("push_zero", &[]);
+
+    vm.function(
+        "push",
+        &[Token::Int(ethereum_types::U256::from(12345678901u64))],
+    );
+
+    let returns = vm.function("subscript", &[Token::Uint(ethereum_types::U256::from(0))]);
+
+    assert_eq!(returns, vec![Token::Int(ethereum_types::U256::from(102))]);
+
+    let returns = vm.function("subscript", &[Token::Uint(ethereum_types::U256::from(1))]);
+
+    assert_eq!(returns, vec![Token::Int(ethereum_types::U256::from(0))]);
+
+    let returns = vm.function("subscript", &[Token::Uint(ethereum_types::U256::from(2))]);
+
+    assert_eq!(
+        returns,
+        vec![Token::Int(ethereum_types::U256::from(12345678901u64))]
+    );
+
+    let returns = vm.function("pop", &[]);
+
+    assert_eq!(
+        returns,
+        vec![Token::Int(ethereum_types::U256::from(12345678901u64))]
+    );
+
+    let returns = vm.function("len", &[]);
+
+    assert_eq!(returns, vec![Token::Uint(ethereum_types::U256::from(2))]);
+}
+
+#[test]
+#[should_panic]
+fn storage_pop_running_on_empty() {
+    let mut vm = build_solidity(
+        r#"
+        contract foo {
+            int64[] store;
+
+            function pop() public returns (int64) {
+                return store.pop();
+            }
+        }"#,
+    );
+
+    vm.constructor(&[]);
+
+    vm.function("pop", &[]);
+}
+
+#[test]
+fn storage_dynamic_array_of_structs() {
+    let mut vm = build_solidity(
+        r#"
+        struct S {
+            uint64 f1;
+            bool f2;
+        }
+
+        contract foo {
+            S[] store;
+
+            function push1(S x) public {
+                store.push(x);
+            }
+
+            function push2(S x) public {
+                S storage f = store.push();
+                f.f1 = x.f1;
+                f.f2 = x.f2;
+            }
+
+            function push_empty() public {
+                store.push();
+            }
+
+            function pop() public returns (S) {
+                return store.pop();
+            }
+
+            function len() public returns (uint) {
+                return store.length;
+            }
+
+            function subscript(uint32 i) public returns (S) {
+                return store[i];
+            }
+        }"#,
+    );
+
+    vm.constructor(&[]);
+
+    let returns = vm.function("len", &[]);
+
+    assert_eq!(returns, vec![Token::Uint(ethereum_types::U256::from(0))]);
+
+    vm.function(
+        "push1",
+        &[Token::Tuple(vec![
+            Token::Uint(ethereum_types::U256::from(13819038012u64)),
+            Token::Bool(true),
+        ])],
+    );
+
+    vm.function("push_empty", &[]);
+
+    vm.function(
+        "push2",
+        &[Token::Tuple(vec![
+            Token::Uint(ethereum_types::U256::from(12313123141123213u64)),
+            Token::Bool(true),
+        ])],
+    );
+
+    let returns = vm.function("subscript", &[Token::Uint(ethereum_types::U256::from(0))]);
+
+    assert_eq!(
+        returns,
+        vec![Token::Tuple(vec![
+            Token::Uint(ethereum_types::U256::from(13819038012u64)),
+            Token::Bool(true),
+        ])]
+    );
+
+    let returns = vm.function("subscript", &[Token::Uint(ethereum_types::U256::from(1))]);
+
+    assert_eq!(
+        returns,
+        vec![Token::Tuple(vec![
+            Token::Uint(ethereum_types::U256::from(0)),
+            Token::Bool(false),
+        ])]
+    );
+
+    let returns = vm.function("subscript", &[Token::Uint(ethereum_types::U256::from(2))]);
+
+    assert_eq!(
+        returns,
+        vec![Token::Tuple(vec![
+            Token::Uint(ethereum_types::U256::from(12313123141123213u64)),
+            Token::Bool(true),
+        ])]
+    );
+
+    let returns = vm.function("pop", &[]);
+
+    assert_eq!(
+        returns,
+        vec![Token::Tuple(vec![
+            Token::Uint(ethereum_types::U256::from(12313123141123213u64)),
+            Token::Bool(true),
+        ])]
+    );
+
+    let returns = vm.function("len", &[]);
+
+    assert_eq!(returns, vec![Token::Uint(ethereum_types::U256::from(2))]);
+}
