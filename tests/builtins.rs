@@ -8,7 +8,4 @@ fn builtin_prototype() {
     assert_eq!(p.namespace, Some("block"));
     assert_eq!(p.name, "timestamp");
     assert!(p.args.is_empty());
-
-    // there is no entry for some builtins
-    assert!(builtin::get_prototype(ast::Builtin::ArrayPush).is_none());
 }

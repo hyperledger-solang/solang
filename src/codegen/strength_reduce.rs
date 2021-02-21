@@ -129,11 +129,11 @@ fn block_reduce(
                 *storage = expression_reduce(storage, &vars, ns);
                 *offset = expression_reduce(offset, &vars, ns);
             }
-            Instr::PushStorageBytes { storage, value, .. } => {
+            Instr::PushStorage { storage, value, .. } => {
                 *value = expression_reduce(value, &vars, ns);
                 *storage = expression_reduce(storage, &vars, ns);
             }
-            Instr::PopStorageBytes { storage, .. } => {
+            Instr::PopStorage { storage, .. } => {
                 *storage = expression_reduce(storage, &vars, ns);
             }
             Instr::PushMemory { value, .. } => {
@@ -789,7 +789,7 @@ fn transfer(instr: &Instr, vars: &mut Variables, ns: &Namespace) {
                 }
             }
         }
-        Instr::PopStorageBytes { res, .. } => {
+        Instr::PopStorage { res, .. } => {
             let mut set = HashSet::new();
 
             set.insert(Value::unknown(8));

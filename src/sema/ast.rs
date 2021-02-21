@@ -1142,8 +1142,6 @@ pub enum Builtin {
     PayableTransfer,
     ArrayPush,
     ArrayPop,
-    BytesPush,
-    BytesPop,
     Assert,
     Print,
     Revert,

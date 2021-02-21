@@ -293,7 +293,7 @@ pub fn bytes_push(
     );
     cfg.add(
         vartab,
-        Instr::PushStorageBytes {
+        Instr::PushStorage {
             storage,
             value: Expression::Variable(*loc, ty.clone(), res),
         },
@@ -315,7 +315,7 @@ pub fn bytes_pop(
 
     let res = vartab.temp_anonymous(&Type::Bytes(1));
 
-    cfg.add(vartab, Instr::PopStorageBytes { res, storage });
+    cfg.add(vartab, Instr::PopStorage { res, storage });
 
     Expression::Variable(*loc, Type::Bytes(1), res)
 }
