@@ -577,6 +577,10 @@ fn storage_simple_dynamic_array() {
             function copy() public returns (int64[] memory) {
                 return store;
             }
+
+            function rm() public {
+                delete store;
+            }
         }"#,
     );
 
@@ -631,6 +635,12 @@ fn storage_simple_dynamic_array() {
     let returns = vm.function("len", &[]);
 
     assert_eq!(returns, vec![Token::Uint(ethereum_types::U256::from(2))]);
+
+    vm.function("rm", &[]);
+
+    let returns = vm.function("len", &[]);
+
+    assert_eq!(returns, vec![Token::Uint(ethereum_types::U256::from(0))]);
 }
 
 #[test]
@@ -692,6 +702,10 @@ fn storage_dynamic_array_of_structs() {
 
             function copy() public returns (S[] memory) {
                 return store;
+            }
+
+            function rm() public {
+                delete store;
             }
         }"#,
     );
@@ -783,4 +797,10 @@ fn storage_dynamic_array_of_structs() {
     let returns = vm.function("len", &[]);
 
     assert_eq!(returns, vec![Token::Uint(ethereum_types::U256::from(2))]);
+
+    vm.function("rm", &[]);
+
+    let returns = vm.function("len", &[]);
+
+    assert_eq!(returns, vec![Token::Uint(ethereum_types::U256::from(0))]);
 }
