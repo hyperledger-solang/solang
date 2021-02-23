@@ -573,6 +573,10 @@ fn storage_simple_dynamic_array() {
             function subscript(uint32 i) public returns (int64) {
                 return store[i];
             }
+
+            function copy() public returns (int64[] memory) {
+                return store;
+            }
         }"#,
     );
 
@@ -604,6 +608,17 @@ fn storage_simple_dynamic_array() {
     assert_eq!(
         returns,
         vec![Token::Int(ethereum_types::U256::from(12345678901u64))]
+    );
+
+    let returns = vm.function("copy", &[]);
+
+    assert_eq!(
+        returns,
+        vec![Token::Array(vec![
+            Token::Int(ethereum_types::U256::from(102)),
+            Token::Int(ethereum_types::U256::from(0)),
+            Token::Int(ethereum_types::U256::from(12345678901u64)),
+        ])],
     );
 
     let returns = vm.function("pop", &[]);
@@ -674,6 +689,10 @@ fn storage_dynamic_array_of_structs() {
             function subscript(uint32 i) public returns (S) {
                 return store[i];
             }
+
+            function copy() public returns (S[] memory) {
+                return store;
+            }
         }"#,
     );
 
@@ -728,6 +747,26 @@ fn storage_dynamic_array_of_structs() {
         vec![Token::Tuple(vec![
             Token::Uint(ethereum_types::U256::from(12313123141123213u64)),
             Token::Bool(true),
+        ])]
+    );
+
+    let returns = vm.function("copy", &[]);
+
+    assert_eq!(
+        returns,
+        vec![Token::Array(vec![
+            Token::Tuple(vec![
+                Token::Uint(ethereum_types::U256::from(13819038012u64)),
+                Token::Bool(true)
+            ]),
+            Token::Tuple(vec![
+                Token::Uint(ethereum_types::U256::from(0)),
+                Token::Bool(false)
+            ]),
+            Token::Tuple(vec![
+                Token::Uint(ethereum_types::U256::from(12313123141123213u64)),
+                Token::Bool(true)
+            ]),
         ])]
     );
 

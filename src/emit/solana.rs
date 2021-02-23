@@ -1133,181 +1133,212 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         // the slot is simply the offset after the magic
         let member = unsafe { contract.builder.build_gep(data, &[*slot], "data") };
 
-        if *ty == ast::Type::String || *ty == ast::Type::DynamicBytes {
-            let offset = contract
-                .builder
-                .build_load(
-                    contract.builder.build_pointer_cast(
-                        member,
-                        contract.context.i32_type().ptr_type(AddressSpace::Generic),
+        match ty {
+            ast::Type::String | ast::Type::DynamicBytes => {
+                let offset = contract
+                    .builder
+                    .build_load(
+                        contract.builder.build_pointer_cast(
+                            member,
+                            contract.context.i32_type().ptr_type(AddressSpace::Generic),
+                            "",
+                        ),
+                        "offset",
+                    )
+                    .into_int_value();
+
+                let string_length = contract
+                    .builder
+                    .build_call(
+                        contract.module.get_function("account_data_len").unwrap(),
+                        &[account.into(), offset.into()],
+                        "free",
+                    )
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap()
+                    .into_int_value();
+
+                let string_data =
+                    unsafe { contract.builder.build_gep(data, &[offset], "string_data") };
+
+                contract
+                    .builder
+                    .build_call(
+                        contract.module.get_function("vector_new").unwrap(),
+                        &[
+                            string_length.into(),
+                            contract.context.i32_type().const_int(1, false).into(),
+                            string_data.into(),
+                        ],
                         "",
-                    ),
-                    "offset",
-                )
-                .into_int_value();
-
-            let string_length = contract
-                .builder
-                .build_call(
-                    contract.module.get_function("account_data_len").unwrap(),
-                    &[account.into(), offset.into()],
-                    "free",
-                )
-                .try_as_basic_value()
-                .left()
-                .unwrap()
-                .into_int_value();
-
-            let string_data = unsafe { contract.builder.build_gep(data, &[offset], "string_data") };
-
-            contract
-                .builder
-                .build_call(
-                    contract.module.get_function("vector_new").unwrap(),
-                    &[
-                        string_length.into(),
-                        contract.context.i32_type().const_int(1, false).into(),
-                        string_data.into(),
-                    ],
-                    "",
-                )
-                .try_as_basic_value()
-                .left()
-                .unwrap()
-        } else if let ast::Type::Struct(struct_no) = ty {
-            let llvm_ty = contract.llvm_type(ty.deref_any());
-            // LLVMSizeOf() produces an i64
-            let size = contract.builder.build_int_truncate(
-                llvm_ty.size_of().unwrap(),
-                contract.context.i32_type(),
-                "size_of",
-            );
-
-            let new = contract
-                .builder
-                .build_call(
-                    contract.module.get_function("__malloc").unwrap(),
-                    &[size.into()],
-                    "",
-                )
-                .try_as_basic_value()
-                .left()
-                .unwrap()
-                .into_pointer_value();
-
-            let dest = contract.builder.build_pointer_cast(
-                new,
-                llvm_ty.ptr_type(AddressSpace::Generic),
-                "dest",
-            );
-
-            for (i, field) in contract.ns.structs[*struct_no].fields.iter().enumerate() {
-                let field_offset = contract.ns.structs[*struct_no].offsets[i].to_u64().unwrap();
-
-                let mut offset = contract.builder.build_int_add(
-                    *slot,
-                    contract.context.i32_type().const_int(field_offset, false),
-                    "field_offset",
+                    )
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap()
+            }
+            ast::Type::Struct(struct_no) => {
+                let llvm_ty = contract.llvm_type(ty.deref_any());
+                // LLVMSizeOf() produces an i64
+                let size = contract.builder.build_int_truncate(
+                    llvm_ty.size_of().unwrap(),
+                    contract.context.i32_type(),
+                    "size_of",
                 );
 
-                let val = self.storage_load(contract, &field.ty, &mut offset, function);
-
-                let elem = unsafe {
-                    contract.builder.build_gep(
-                        dest,
-                        &[
-                            contract.context.i32_type().const_zero(),
-                            contract.context.i32_type().const_int(i as u64, false),
-                        ],
-                        &field.name,
+                let new = contract
+                    .builder
+                    .build_call(
+                        contract.module.get_function("__malloc").unwrap(),
+                        &[size.into()],
+                        "",
                     )
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap()
+                    .into_pointer_value();
+
+                let dest = contract.builder.build_pointer_cast(
+                    new,
+                    llvm_ty.ptr_type(AddressSpace::Generic),
+                    "dest",
+                );
+
+                for (i, field) in contract.ns.structs[*struct_no].fields.iter().enumerate() {
+                    let field_offset = contract.ns.structs[*struct_no].offsets[i].to_u64().unwrap();
+
+                    let mut offset = contract.builder.build_int_add(
+                        *slot,
+                        contract.context.i32_type().const_int(field_offset, false),
+                        "field_offset",
+                    );
+
+                    let val = self.storage_load(contract, &field.ty, &mut offset, function);
+
+                    let elem = unsafe {
+                        contract.builder.build_gep(
+                            dest,
+                            &[
+                                contract.context.i32_type().const_zero(),
+                                contract.context.i32_type().const_int(i as u64, false),
+                            ],
+                            &field.name,
+                        )
+                    };
+
+                    contract.builder.build_store(elem, val);
+                }
+
+                dest.into()
+            }
+            ast::Type::Array(elem_ty, dim) => {
+                let llvm_ty = contract.llvm_type(ty.deref_any());
+
+                let dest;
+                let length;
+                let mut slot = *slot;
+
+                if dim[0].is_some() {
+                    // LLVMSizeOf() produces an i64 and malloc takes i32
+                    let size = contract.builder.build_int_truncate(
+                        llvm_ty.size_of().unwrap(),
+                        contract.context.i32_type(),
+                        "size_of",
+                    );
+
+                    let new = contract
+                        .builder
+                        .build_call(
+                            contract.module.get_function("__malloc").unwrap(),
+                            &[size.into()],
+                            "",
+                        )
+                        .try_as_basic_value()
+                        .left()
+                        .unwrap()
+                        .into_pointer_value();
+
+                    dest = contract.builder.build_pointer_cast(
+                        new,
+                        llvm_ty.ptr_type(AddressSpace::Generic),
+                        "dest",
+                    );
+                    length = contract
+                        .context
+                        .i32_type()
+                        .const_int(dim[0].as_ref().unwrap().to_u64().unwrap(), false);
+                } else {
+                    let elem_size = contract.builder.build_int_truncate(
+                        contract
+                            .context
+                            .i32_type()
+                            .const_int(elem_ty.size_of(contract.ns).to_u64().unwrap(), false),
+                        contract.context.i32_type(),
+                        "size_of",
+                    );
+
+                    length = self.storage_array_length(contract, function, slot, &elem_ty);
+
+                    slot = contract
+                        .builder
+                        .build_load(
+                            contract.builder.build_pointer_cast(
+                                member,
+                                contract.context.i32_type().ptr_type(AddressSpace::Generic),
+                                "",
+                            ),
+                            "offset",
+                        )
+                        .into_int_value();
+
+                    dest = contract.vector_new(length, elem_size, None);
                 };
 
+                let elem_size = elem_ty.size_of(contract.ns).to_u64().unwrap();
+
+                // loop over the array
+                let mut builder = LoopBuilder::new(contract, function);
+
+                // we need a phi for the offset
+                let offset_phi =
+                    builder.add_loop_phi(contract, "offset", slot.get_type(), slot.into());
+
+                let index =
+                    builder.over(contract, contract.context.i32_type().const_zero(), length);
+
+                let elem = contract.array_subscript(ty.deref_any(), dest, index);
+
+                let elem_ty = ty.array_deref();
+
+                let mut offset_val = offset_phi.into_int_value();
+
+                let val =
+                    self.storage_load(contract, &elem_ty.deref_memory(), &mut offset_val, function);
+
                 contract.builder.build_store(elem, val);
+
+                offset_val = contract.builder.build_int_add(
+                    offset_val,
+                    contract.context.i32_type().const_int(elem_size, false),
+                    "new_offset",
+                );
+
+                // set the offset for the next iteration of the loop
+                builder.set_loop_phi_value(contract, "offset", offset_val.into());
+
+                // done
+                builder.finish(contract);
+
+                dest.into()
             }
-
-            dest.into()
-        } else if let ast::Type::Array(elem_ty, dim) = ty {
-            let llvm_ty = contract.llvm_type(ty.deref_any());
-            // LLVMSizeOf() produces an i64 and malloc takes i32
-            let size = contract.builder.build_int_truncate(
-                llvm_ty.size_of().unwrap(),
-                contract.context.i32_type(),
-                "size_of",
-            );
-
-            let new = contract
-                .builder
-                .build_call(
-                    contract.module.get_function("__malloc").unwrap(),
-                    &[size.into()],
-                    "",
-                )
-                .try_as_basic_value()
-                .left()
-                .unwrap()
-                .into_pointer_value();
-
-            let dest = contract.builder.build_pointer_cast(
-                new,
-                llvm_ty.ptr_type(AddressSpace::Generic),
-                "dest",
-            );
-
-            let dim = dim[0].as_ref().unwrap().to_u64().unwrap();
-            let elem_size = elem_ty.size_of(contract.ns).to_u64().unwrap();
-
-            // loop over the array
-            let mut builder = LoopBuilder::new(contract, function);
-
-            // we need a phi for the offset
-            let offset_phi =
-                builder.add_loop_phi(contract, "offset", slot.get_type(), (*slot).into());
-
-            let index = builder.over(
-                contract,
-                contract.context.i64_type().const_zero(),
-                contract.context.i64_type().const_int(dim, false),
-            );
-
-            let elem = unsafe {
-                contract.builder.build_gep(
-                    dest,
-                    &[contract.context.i64_type().const_zero(), index],
-                    "array_member",
-                )
-            };
-            let elem_ty = ty.array_deref();
-
-            let mut offset_val = offset_phi.into_int_value();
-
-            let val =
-                self.storage_load(contract, &elem_ty.deref_memory(), &mut offset_val, function);
-
-            contract.builder.build_store(elem, val);
-
-            offset_val = contract.builder.build_int_add(
-                offset_val,
-                contract.context.i32_type().const_int(elem_size, false),
-                "new_offset",
-            );
-
-            // set the offset for the next iteration of the loop
-            builder.set_loop_phi_value(contract, "offset", offset_val.into());
-
-            // done
-            builder.finish(contract);
-
-            dest.into()
-        } else {
-            contract.builder.build_load(
+            _ => contract.builder.build_load(
                 contract.builder.build_pointer_cast(
                     member,
                     contract.llvm_type(ty).ptr_type(AddressSpace::Generic),
                     "",
                 ),
                 "",
-            )
+            ),
         }
     }
 
