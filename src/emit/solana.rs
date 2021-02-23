@@ -432,7 +432,29 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
 
             contract.builder.build_store(offset_ptr, new_offset);
         } else if let ast::Type::Array(elem_ty, dim) = ty {
-            let dim = dim[0].as_ref().unwrap().to_u64().unwrap();
+            // delete the existing storage
+            let mut elem_slot = *slot;
+
+            let offset_ptr = contract.builder.build_pointer_cast(
+                member,
+                contract.context.i32_type().ptr_type(AddressSpace::Generic),
+                "offset_ptr",
+            );
+
+            let length = if let Some(length) = dim[0].as_ref() {
+                contract
+                    .context
+                    .i32_type()
+                    .const_int(length.to_u64().unwrap(), false)
+            } else {
+                elem_slot = contract
+                    .builder
+                    .build_load(offset_ptr, "offset")
+                    .into_int_value();
+
+                self.storage_array_length(contract, function, *slot, elem_ty)
+            };
+
             let elem_size = elem_ty.size_of(contract.ns).to_u64().unwrap();
 
             // loop over the array
@@ -440,13 +462,9 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
 
             // we need a phi for the offset
             let offset_phi =
-                builder.add_loop_phi(contract, "offset", slot.get_type(), (*slot).into());
+                builder.add_loop_phi(contract, "offset", slot.get_type(), elem_slot.into());
 
-            let _ = builder.over(
-                contract,
-                contract.context.i64_type().const_zero(),
-                contract.context.i64_type().const_int(dim, false),
-            );
+            let _ = builder.over(contract, contract.context.i32_type().const_zero(), length);
 
             let mut offset_val = offset_phi.into_int_value();
 
@@ -465,6 +483,25 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
 
             // done
             builder.finish(contract);
+
+            // if the array was dynamic, free the array itself
+            if dim[0].is_none() {
+                let slot = contract
+                    .builder
+                    .build_load(offset_ptr, "offset")
+                    .into_int_value();
+
+                contract.builder.build_call(
+                    contract.module.get_function("account_data_free").unwrap(),
+                    &[account.into(), slot.into()],
+                    "",
+                );
+
+                // account_data_alloc will return 0 if the string is length 0
+                let new_offset = contract.context.i32_type().const_zero();
+
+                contract.builder.build_store(offset_ptr, new_offset);
+            }
         } else if let ast::Type::Struct(struct_no) = ty {
             for (i, field) in contract.ns.structs[*struct_no].fields.iter().enumerate() {
                 let field_offset = contract.ns.structs[*struct_no].offsets[i].to_u64().unwrap();
