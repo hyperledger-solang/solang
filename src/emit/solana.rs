@@ -369,6 +369,152 @@ impl SolanaTarget {
 
         (data_len_ptr, data_ptr, length)
     }
+
+    /// Free contract storage and zero out
+    fn storage_free<'b>(
+        &self,
+        contract: &Contract<'b>,
+        ty: &ast::Type,
+        account: PointerValue<'b>,
+        data: PointerValue<'b>,
+        slot: IntValue<'b>,
+        function: FunctionValue<'b>,
+        zero: bool,
+    ) {
+        if !zero && !ty.is_dynamic(contract.ns) {
+            // nothing to do
+            return;
+        }
+
+        // the slot is simply the offset after the magic
+        let member = unsafe { contract.builder.build_gep(data, &[slot], "data") };
+
+        if *ty == ast::Type::String || *ty == ast::Type::DynamicBytes {
+            let offset_ptr = contract.builder.build_pointer_cast(
+                member,
+                contract.context.i32_type().ptr_type(AddressSpace::Generic),
+                "offset_ptr",
+            );
+
+            let offset = contract
+                .builder
+                .build_load(offset_ptr, "offset")
+                .into_int_value();
+
+            contract.builder.build_call(
+                contract.module.get_function("account_data_free").unwrap(),
+                &[account.into(), offset.into()],
+                "",
+            );
+
+            // account_data_alloc will return 0 if the string is length 0
+            let new_offset = contract.context.i32_type().const_zero();
+
+            contract.builder.build_store(offset_ptr, new_offset);
+        } else if let ast::Type::Array(elem_ty, dim) = ty {
+            // delete the existing storage
+            let mut elem_slot = slot;
+
+            let offset_ptr = contract.builder.build_pointer_cast(
+                member,
+                contract.context.i32_type().ptr_type(AddressSpace::Generic),
+                "offset_ptr",
+            );
+
+            if elem_ty.is_dynamic(contract.ns) || zero {
+                let length = if let Some(length) = dim[0].as_ref() {
+                    contract
+                        .context
+                        .i32_type()
+                        .const_int(length.to_u64().unwrap(), false)
+                } else {
+                    elem_slot = contract
+                        .builder
+                        .build_load(offset_ptr, "offset")
+                        .into_int_value();
+
+                    self.storage_array_length(contract, function, slot, elem_ty)
+                };
+
+                let elem_size = elem_ty.size_of(contract.ns).to_u64().unwrap();
+
+                // loop over the array
+                let mut builder = LoopBuilder::new(contract, function);
+
+                // we need a phi for the offset
+                let offset_phi =
+                    builder.add_loop_phi(contract, "offset", slot.get_type(), elem_slot.into());
+
+                let _ = builder.over(contract, contract.context.i32_type().const_zero(), length);
+
+                let offset_val = offset_phi.into_int_value();
+
+                let elem_ty = ty.array_deref();
+
+                self.storage_free(
+                    contract,
+                    &elem_ty.deref_any(),
+                    account,
+                    data,
+                    offset_val,
+                    function,
+                    zero,
+                );
+
+                let offset_val = contract.builder.build_int_add(
+                    offset_val,
+                    contract.context.i32_type().const_int(elem_size, false),
+                    "new_offset",
+                );
+
+                // set the offset for the next iteration of the loop
+                builder.set_loop_phi_value(contract, "offset", offset_val.into());
+
+                // done
+                builder.finish(contract);
+            }
+
+            // if the array was dynamic, free the array itself
+            if dim[0].is_none() {
+                let slot = contract
+                    .builder
+                    .build_load(offset_ptr, "offset")
+                    .into_int_value();
+
+                contract.builder.build_call(
+                    contract.module.get_function("account_data_free").unwrap(),
+                    &[account.into(), slot.into()],
+                    "",
+                );
+
+                // account_data_alloc will return 0 if the string is length 0
+                let new_offset = contract.context.i32_type().const_zero();
+
+                contract.builder.build_store(offset_ptr, new_offset);
+            }
+        } else if let ast::Type::Struct(struct_no) = ty {
+            for (i, field) in contract.ns.structs[*struct_no].fields.iter().enumerate() {
+                let field_offset = contract.ns.structs[*struct_no].offsets[i].to_u64().unwrap();
+
+                let offset = contract.builder.build_int_add(
+                    slot,
+                    contract.context.i32_type().const_int(field_offset, false),
+                    "field_offset",
+                );
+
+                self.storage_free(contract, &field.ty, account, data, offset, function, zero);
+            }
+        } else {
+            let ty = contract.llvm_type(ty);
+
+            contract.builder.build_store(
+                contract
+                    .builder
+                    .build_pointer_cast(member, ty.ptr_type(AddressSpace::Generic), ""),
+                ty.into_int_type().const_zero(),
+            );
+        }
+    }
 }
 
 impl<'a> TargetRuntime<'a> for SolanaTarget {
@@ -406,124 +552,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             .build_load(data, "data")
             .into_pointer_value();
 
-        // the slot is simply the offset after the magic
-        let member = unsafe { contract.builder.build_gep(data, &[*slot], "data") };
-
-        if *ty == ast::Type::String || *ty == ast::Type::DynamicBytes {
-            let offset_ptr = contract.builder.build_pointer_cast(
-                member,
-                contract.context.i32_type().ptr_type(AddressSpace::Generic),
-                "offset_ptr",
-            );
-
-            let offset = contract
-                .builder
-                .build_load(offset_ptr, "offset")
-                .into_int_value();
-
-            contract.builder.build_call(
-                contract.module.get_function("account_data_free").unwrap(),
-                &[account.into(), offset.into()],
-                "",
-            );
-
-            // account_data_alloc will return 0 if the string is length 0
-            let new_offset = contract.context.i32_type().const_zero();
-
-            contract.builder.build_store(offset_ptr, new_offset);
-        } else if let ast::Type::Array(elem_ty, dim) = ty {
-            // delete the existing storage
-            let mut elem_slot = *slot;
-
-            let offset_ptr = contract.builder.build_pointer_cast(
-                member,
-                contract.context.i32_type().ptr_type(AddressSpace::Generic),
-                "offset_ptr",
-            );
-
-            let length = if let Some(length) = dim[0].as_ref() {
-                contract
-                    .context
-                    .i32_type()
-                    .const_int(length.to_u64().unwrap(), false)
-            } else {
-                elem_slot = contract
-                    .builder
-                    .build_load(offset_ptr, "offset")
-                    .into_int_value();
-
-                self.storage_array_length(contract, function, *slot, elem_ty)
-            };
-
-            let elem_size = elem_ty.size_of(contract.ns).to_u64().unwrap();
-
-            // loop over the array
-            let mut builder = LoopBuilder::new(contract, function);
-
-            // we need a phi for the offset
-            let offset_phi =
-                builder.add_loop_phi(contract, "offset", slot.get_type(), elem_slot.into());
-
-            let _ = builder.over(contract, contract.context.i32_type().const_zero(), length);
-
-            let mut offset_val = offset_phi.into_int_value();
-
-            let elem_ty = ty.array_deref();
-
-            self.storage_delete(contract, &elem_ty.deref_any(), &mut offset_val, function);
-
-            offset_val = contract.builder.build_int_add(
-                offset_val,
-                contract.context.i32_type().const_int(elem_size, false),
-                "new_offset",
-            );
-
-            // set the offset for the next iteration of the loop
-            builder.set_loop_phi_value(contract, "offset", offset_val.into());
-
-            // done
-            builder.finish(contract);
-
-            // if the array was dynamic, free the array itself
-            if dim[0].is_none() {
-                let slot = contract
-                    .builder
-                    .build_load(offset_ptr, "offset")
-                    .into_int_value();
-
-                contract.builder.build_call(
-                    contract.module.get_function("account_data_free").unwrap(),
-                    &[account.into(), slot.into()],
-                    "",
-                );
-
-                // account_data_alloc will return 0 if the string is length 0
-                let new_offset = contract.context.i32_type().const_zero();
-
-                contract.builder.build_store(offset_ptr, new_offset);
-            }
-        } else if let ast::Type::Struct(struct_no) = ty {
-            for (i, field) in contract.ns.structs[*struct_no].fields.iter().enumerate() {
-                let field_offset = contract.ns.structs[*struct_no].offsets[i].to_u64().unwrap();
-
-                let mut offset = contract.builder.build_int_add(
-                    *slot,
-                    contract.context.i32_type().const_int(field_offset, false),
-                    "field_offset",
-                );
-
-                self.storage_delete(contract, &field.ty, &mut offset, function);
-            }
-        } else {
-            let ty = contract.llvm_type(ty);
-
-            contract.builder.build_store(
-                contract
-                    .builder
-                    .build_pointer_cast(member, ty.ptr_type(AddressSpace::Generic), ""),
-                ty.into_int_type().const_zero(),
-            );
-        }
+        self.storage_free(contract, ty, account, data, *slot, function, true);
     }
 
     fn set_storage_extfunc(
@@ -936,7 +965,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
     fn storage_pop(
         &self,
         contract: &Contract<'a>,
-        function: FunctionValue,
+        function: FunctionValue<'a>,
         ty: &ast::Type,
         slot: IntValue<'a>,
     ) -> BasicValueEnum<'a> {
@@ -1031,7 +1060,8 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
 
         let val = self.storage_load(contract, ty, &mut new_offset, function);
 
-        // FIXME delete existing storage -- pointers need to be freed
+        // delete existing storage -- pointers need to be freed
+        //self.storage_free(contract, ty, account, data, new_offset, function, false);
 
         // we can assume pointer will stay the same after realloc to smaller size
         contract.builder.build_call(
@@ -1533,9 +1563,8 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                 "copied",
             );
         } else if let ast::Type::Array(elem_ty, dim) = ty {
-            if elem_ty.is_dynamic(contract.ns) {
-                // FIXME call delete if pointer null
-            }
+            // make sure any pointers are freed
+            self.storage_free(contract, ty, account, data, *slot, function, false);
 
             let offset_ptr = contract.builder.build_pointer_cast(
                 member,
@@ -1654,7 +1683,6 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             // done
             builder.finish(contract);
         } else if let ast::Type::Struct(struct_no) = ty {
-            // FIXME call delete if pointer null
             for (i, field) in contract.ns.structs[*struct_no].fields.iter().enumerate() {
                 let field_offset = contract.ns.structs[*struct_no].offsets[i].to_u64().unwrap();
 
@@ -1674,6 +1702,9 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                         &field.name,
                     )
                 };
+
+                // free any existing dynamic storage
+                self.storage_free(contract, &field.ty, account, data, offset, function, false);
 
                 self.storage_store(
                     contract,
