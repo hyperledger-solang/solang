@@ -1533,8 +1533,90 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                 "copied",
             );
         } else if let ast::Type::Array(elem_ty, dim) = ty {
-            // FIXME call delete if pointer null
-            let dim = dim[0].as_ref().unwrap().to_u64().unwrap();
+            if elem_ty.is_dynamic(contract.ns) {
+                // FIXME call delete if pointer null
+            }
+
+            let offset_ptr = contract.builder.build_pointer_cast(
+                member,
+                contract.context.i32_type().ptr_type(AddressSpace::Generic),
+                "offset_ptr",
+            );
+
+            let length = if let Some(length) = dim[0].as_ref() {
+                contract
+                    .context
+                    .i32_type()
+                    .const_int(length.to_u64().unwrap(), false)
+            } else {
+                contract.vector_len(val)
+            };
+
+            let mut elem_slot = *slot;
+
+            if dim[0].is_none() {
+                // reallocate to the right size
+                let member_size = contract
+                    .context
+                    .i32_type()
+                    .const_int(elem_ty.size_of(contract.ns).to_u64().unwrap(), false);
+                let new_length = contract
+                    .builder
+                    .build_int_mul(length, member_size, "new_length");
+                let offset = contract
+                    .builder
+                    .build_load(offset_ptr, "offset")
+                    .into_int_value();
+
+                let rc = contract
+                    .builder
+                    .build_call(
+                        contract
+                            .module
+                            .get_function("account_data_realloc")
+                            .unwrap(),
+                        &[
+                            account.into(),
+                            offset.into(),
+                            new_length.into(),
+                            offset_ptr.into(),
+                        ],
+                        "new_offset",
+                    )
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap()
+                    .into_int_value();
+
+                let is_rc_zero = contract.builder.build_int_compare(
+                    IntPredicate::EQ,
+                    rc,
+                    contract.context.i64_type().const_zero(),
+                    "is_rc_zero",
+                );
+
+                let rc_not_zero = contract.context.append_basic_block(function, "rc_not_zero");
+                let rc_zero = contract.context.append_basic_block(function, "rc_zero");
+
+                contract
+                    .builder
+                    .build_conditional_branch(is_rc_zero, rc_zero, rc_not_zero);
+
+                contract.builder.position_at_end(rc_not_zero);
+
+                self.return_code(
+                    contract,
+                    contract.context.i64_type().const_int(5u64 << 32, false),
+                );
+
+                contract.builder.position_at_end(rc_zero);
+
+                elem_slot = contract
+                    .builder
+                    .build_load(offset_ptr, "offset")
+                    .into_int_value();
+            }
+
             let elem_size = elem_ty.size_of(contract.ns).to_u64().unwrap();
 
             // loop over the array
@@ -1542,21 +1624,11 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
 
             // we need a phi for the offset
             let offset_phi =
-                builder.add_loop_phi(contract, "offset", slot.get_type(), (*slot).into());
+                builder.add_loop_phi(contract, "offset", slot.get_type(), elem_slot.into());
 
-            let index = builder.over(
-                contract,
-                contract.context.i64_type().const_zero(),
-                contract.context.i64_type().const_int(dim, false),
-            );
+            let index = builder.over(contract, contract.context.i32_type().const_zero(), length);
 
-            let elem = unsafe {
-                contract.builder.build_gep(
-                    val.into_pointer_value(),
-                    &[contract.context.i64_type().const_zero(), index],
-                    "array_member",
-                )
-            };
+            let elem = contract.array_subscript(ty, val.into_pointer_value(), index);
 
             let mut offset_val = offset_phi.into_int_value();
 
