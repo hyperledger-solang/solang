@@ -1,5 +1,5 @@
-Solang Testing
-==============
+Solang Test Suite
+=================
 
 Solang has a few test suites. These are all run on each pull request via
 `github actions <https://github.com/hyperledger-labs/solang/actions>`_.
@@ -55,5 +55,5 @@ Deploy contract on dev chain
 ----------------------------
 
 There are some tests in `integration <https://github.com/hyperledger-labs/solang/tree/main/integration/>`_
-which are written in node. These tests start an actual real chain (run via containers),
+which are written in node. These tests start an actual real chain via containers,
 and then deploying some tests contracts to them and interacting with them.
