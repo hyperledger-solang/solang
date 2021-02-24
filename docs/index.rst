@@ -34,4 +34,5 @@ and we have a `channel on chat.hyperledger.org <https://chat.hyperledger.org/cha
    optimizer
    extension
    examples
+   testing
    contributing
