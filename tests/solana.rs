@@ -78,13 +78,13 @@ fn serialize_parameters(input: &[u8], data: &[u8]) -> Vec<u8> {
         // account data
         // data len
         if account_no == 1 {
-            v.write_u64::<LittleEndian>(1024).unwrap();
+            v.write_u64::<LittleEndian>(4096).unwrap();
             let mut data = data.to_vec();
-            data.resize(1024, 0);
+            data.resize(4096, 0);
             v.write_all(&data).unwrap();
         } else {
-            v.write_u64::<LittleEndian>(1024).unwrap();
-            v.write_all(&[0u8; 1024]).unwrap();
+            v.write_u64::<LittleEndian>(4096).unwrap();
+            v.write_all(&[0u8; 4096]).unwrap();
         }
         v.write_all(&[0u8; MAX_PERMITTED_DATA_INCREASE]).unwrap();
 

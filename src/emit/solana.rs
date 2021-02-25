@@ -4,9 +4,10 @@ use crate::sema::ast;
 use std::collections::HashMap;
 use std::str;
 
-use inkwell::context::Context;
+use inkwell::module::Linkage;
 use inkwell::types::{BasicType, IntType};
 use inkwell::values::{BasicValueEnum, FunctionValue, IntValue, PointerValue, UnnamedAddress};
+use inkwell::{context::Context, types::BasicTypeEnum};
 use inkwell::{AddressSpace, IntPredicate, OptimizationLevel};
 use num_traits::ToPrimitive;
 use tiny_keccak::{Hasher, Keccak};
@@ -515,6 +516,328 @@ impl SolanaTarget {
             );
         }
     }
+
+    /// An entry in a sparse array or mapping
+    fn sparse_entry<'b>(
+        &self,
+        contract: &Contract<'b>,
+        key_ty: &ast::Type,
+        value_ty: &ast::Type,
+    ) -> BasicTypeEnum<'b> {
+        contract
+            .context
+            .struct_type(
+                &[
+                    contract.llvm_type(key_ty),         // key
+                    contract.context.i32_type().into(), // next field
+                    contract.llvm_type(value_ty),       // value
+                ],
+                false,
+            )
+            .into()
+    }
+
+    /// Generate sparse lookup
+    fn sparse_lookup<'b>(
+        &self,
+        contract: &Contract<'b>,
+        key_ty: &ast::Type,
+        value_ty: &ast::Type,
+    ) -> FunctionValue<'b> {
+        let function_name = format!(
+            "sparse_lookup_{}_{}",
+            key_ty.to_wasm_string(contract.ns),
+            value_ty.to_wasm_string(contract.ns)
+        );
+
+        if let Some(function) = contract.module.get_function(&function_name) {
+            return function;
+        }
+
+        // The function takes an offset (of the mapping or sparse array), the key which
+        // is the index, and it should return an offset.
+        let function_ty = contract.function_type(
+            &[ast::Type::Uint(32), key_ty.clone()],
+            &[ast::Type::Uint(32)],
+        );
+
+        let function =
+            contract
+                .module
+                .add_function(&function_name, function_ty, Some(Linkage::Internal));
+
+        let entry = contract.context.append_basic_block(function, "entry");
+
+        contract.builder.position_at_end(entry);
+
+        let offset = function.get_nth_param(0).unwrap().into_int_value();
+        let key = function.get_nth_param(1).unwrap().into_int_value();
+
+        let entry_ty = self.sparse_entry(contract, key_ty, value_ty);
+        let value_offset = unsafe {
+            entry_ty
+                .ptr_type(AddressSpace::Generic)
+                .const_null()
+                .const_gep(&[
+                    contract.context.i32_type().const_zero(),
+                    contract.context.i32_type().const_int(2, false),
+                ])
+                .const_to_int(contract.context.i32_type())
+        };
+
+        // contract storage is in 2nd account
+        let account = unsafe {
+            contract.builder.build_gep(
+                function.get_last_param().unwrap().into_pointer_value(),
+                &[contract.context.i32_type().const_int(1, false)],
+                "account",
+            )
+        };
+
+        // 3rd member of account is data pointer
+        let data = unsafe {
+            contract.builder.build_gep(
+                account,
+                &[
+                    contract.context.i32_type().const_zero(),
+                    contract.context.i32_type().const_int(3, false),
+                ],
+                "data",
+            )
+        };
+
+        let data = contract
+            .builder
+            .build_load(data, "data")
+            .into_pointer_value();
+
+        let member = unsafe { contract.builder.build_gep(data, &[offset], "data") };
+        let offset_ptr = contract.builder.build_pointer_cast(
+            member,
+            contract.context.i32_type().ptr_type(AddressSpace::Generic),
+            "offset_ptr",
+        );
+
+        // calculate the correct bucket. We have an prime number of
+        let bucket = if key_ty.bits(contract.ns) > 64 {
+            contract
+                .builder
+                .build_int_truncate(key, contract.context.i64_type(), "")
+        } else {
+            key
+        };
+
+        let bucket = contract.builder.build_int_unsigned_rem(
+            bucket,
+            bucket
+                .get_type()
+                .const_int(crate::sema::SOLANA_BUCKET_SIZE, false),
+            "",
+        );
+
+        let first_offset_ptr = unsafe {
+            contract
+                .builder
+                .build_gep(offset_ptr, &[bucket], "bucket_list")
+        };
+
+        // we should now loop until offset is zero or we found it
+        let loop_entry = contract.context.append_basic_block(function, "loop_entry");
+        let end_of_bucket = contract
+            .context
+            .append_basic_block(function, "end_of_bucket");
+        let examine_bucket = contract
+            .context
+            .append_basic_block(function, "examine_bucket");
+        let found_entry = contract.context.append_basic_block(function, "found_entry");
+        let next_entry = contract.context.append_basic_block(function, "next_entry");
+
+        // let's enter the loop
+        contract.builder.build_unconditional_branch(loop_entry);
+
+        contract.builder.position_at_end(loop_entry);
+
+        // we are walking the bucket list via the offset ptr
+        let offset_ptr_phi = contract.builder.build_phi(
+            contract.context.i32_type().ptr_type(AddressSpace::Generic),
+            "offset_ptr",
+        );
+
+        offset_ptr_phi.add_incoming(&[(&first_offset_ptr, entry)]);
+
+        // load the offset and check for zero (end of bucket list)
+        let offset = contract
+            .builder
+            .build_load(
+                offset_ptr_phi.as_basic_value().into_pointer_value(),
+                "offset",
+            )
+            .into_int_value();
+
+        let is_offset_zero = contract.builder.build_int_compare(
+            IntPredicate::EQ,
+            offset,
+            offset.get_type().const_zero(),
+            "offset_is_zero",
+        );
+
+        contract
+            .builder
+            .build_conditional_branch(is_offset_zero, end_of_bucket, examine_bucket);
+
+        contract.builder.position_at_end(examine_bucket);
+
+        // let's compare the key in this entry to the key we are looking for
+        let member = unsafe { contract.builder.build_gep(data, &[offset], "data") };
+        let entry_ptr = contract.builder.build_pointer_cast(
+            member,
+            entry_ty.ptr_type(AddressSpace::Generic),
+            "offset_ptr",
+        );
+
+        let entry_key = contract
+            .builder
+            .build_load(
+                unsafe {
+                    contract.builder.build_gep(
+                        entry_ptr,
+                        &[
+                            contract.context.i32_type().const_zero(),
+                            contract.context.i32_type().const_zero(),
+                        ],
+                        "key_ptr",
+                    )
+                },
+                "key",
+            )
+            .into_int_value();
+
+        let matches =
+            contract
+                .builder
+                .build_int_compare(IntPredicate::EQ, key, entry_key, "matches");
+
+        contract
+            .builder
+            .build_conditional_branch(matches, found_entry, next_entry);
+
+        contract.builder.position_at_end(found_entry);
+
+        let ret_offset = function.get_nth_param(2).unwrap().into_pointer_value();
+
+        contract.builder.build_store(
+            ret_offset,
+            contract
+                .builder
+                .build_int_add(offset, value_offset, "value_offset"),
+        );
+
+        contract
+            .builder
+            .build_return(Some(&contract.context.i64_type().const_zero()));
+
+        contract.builder.position_at_end(next_entry);
+
+        let offset_ptr = contract
+            .builder
+            .build_struct_gep(entry_ptr, 1, "offset_ptr")
+            .unwrap();
+
+        offset_ptr_phi.add_incoming(&[(&offset_ptr, next_entry)]);
+
+        contract.builder.build_unconditional_branch(loop_entry);
+
+        let offset_ptr = offset_ptr_phi.as_basic_value().into_pointer_value();
+
+        contract.builder.position_at_end(end_of_bucket);
+
+        let entry_length = entry_ty
+            .size_of()
+            .unwrap()
+            .const_cast(contract.context.i32_type(), false);
+
+        // account_data_alloc will return offset = 0 if the string is length 0
+        let rc = contract
+            .builder
+            .build_call(
+                contract.module.get_function("account_data_alloc").unwrap(),
+                &[account.into(), entry_length.into(), offset_ptr.into()],
+                "rc",
+            )
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_int_value();
+
+        let is_rc_zero = contract.builder.build_int_compare(
+            IntPredicate::EQ,
+            rc,
+            contract.context.i64_type().const_zero(),
+            "is_rc_zero",
+        );
+
+        let rc_not_zero = contract.context.append_basic_block(function, "rc_not_zero");
+        let rc_zero = contract.context.append_basic_block(function, "rc_zero");
+
+        contract
+            .builder
+            .build_conditional_branch(is_rc_zero, rc_zero, rc_not_zero);
+
+        contract.builder.position_at_end(rc_not_zero);
+
+        self.return_code(contract, rc);
+
+        contract.builder.position_at_end(rc_zero);
+
+        let offset = contract
+            .builder
+            .build_load(offset_ptr, "new_offset")
+            .into_int_value();
+
+        let member = unsafe { contract.builder.build_gep(data, &[offset], "data") };
+
+        // clear memory
+        let length = contract.builder.build_int_unsigned_div(
+            entry_length,
+            contract.context.i32_type().const_int(8, false),
+            "length_div_8",
+        );
+
+        contract.builder.build_call(
+            contract.module.get_function("__bzero8").unwrap(),
+            &[member.into(), length.into()],
+            "zeroed",
+        );
+
+        let entry_ptr = contract.builder.build_pointer_cast(
+            member,
+            entry_ty.ptr_type(AddressSpace::Generic),
+            "offset_ptr",
+        );
+
+        // set key
+        let key_ptr = contract
+            .builder
+            .build_struct_gep(entry_ptr, 0, "key_ptr")
+            .unwrap();
+
+        contract.builder.build_store(key_ptr, key);
+
+        let ret_offset = function.get_nth_param(2).unwrap().into_pointer_value();
+
+        contract.builder.build_store(
+            ret_offset,
+            contract
+                .builder
+                .build_int_add(offset, value_offset, "value_offset"),
+        );
+
+        contract
+            .builder
+            .build_return(Some(&contract.context.i64_type().const_zero()));
+
+        function
+    }
 }
 
 impl<'a> TargetRuntime<'a> for SolanaTarget {
@@ -778,7 +1101,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
     fn storage_subscript(
         &self,
         contract: &Contract<'a>,
-        _function: FunctionValue<'a>,
+        function: FunctionValue<'a>,
         ty: &ast::Type,
         slot: IntValue<'a>,
         index: IntValue<'a>,
@@ -792,45 +1115,100 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             )
         };
 
-        // 3rd member of account is data pointer
-        let data = unsafe {
-            contract.builder.build_gep(
-                account,
-                &[
-                    contract.context.i32_type().const_zero(),
-                    contract.context.i32_type().const_int(3, false),
-                ],
-                "data",
+        if let ast::Type::Mapping(key, value) = ty.deref_any() {
+            let offset = contract.build_alloca(function, contract.context.i32_type(), "offset");
+
+            let current_block = contract.builder.get_insert_block().unwrap();
+
+            let lookup = self.sparse_lookup(contract, key, value);
+
+            contract.builder.position_at_end(current_block);
+
+            let rc = contract
+                .builder
+                .build_call(
+                    lookup,
+                    &[
+                        slot.into(),
+                        index.into(),
+                        offset.into(),
+                        contract.accounts.unwrap().into(),
+                    ],
+                    "mapping_lookup_res",
+                )
+                .try_as_basic_value()
+                .left()
+                .unwrap()
+                .into_int_value();
+
+            // either load the result from offset or return failure
+            let is_rc_zero = contract.builder.build_int_compare(
+                IntPredicate::EQ,
+                rc,
+                rc.get_type().const_zero(),
+                "is_rc_zero",
+            );
+
+            let rc_not_zero = contract.context.append_basic_block(function, "rc_not_zero");
+            let rc_zero = contract.context.append_basic_block(function, "rc_zero");
+
+            contract
+                .builder
+                .build_conditional_branch(is_rc_zero, rc_zero, rc_not_zero);
+
+            contract.builder.position_at_end(rc_not_zero);
+
+            self.return_code(contract, rc);
+
+            contract.builder.position_at_end(rc_zero);
+
+            contract
+                .builder
+                .build_load(offset, "offset")
+                .into_int_value()
+        } else {
+            // 3rd member of account is data pointer
+            let data = unsafe {
+                contract.builder.build_gep(
+                    account,
+                    &[
+                        contract.context.i32_type().const_zero(),
+                        contract.context.i32_type().const_int(3, false),
+                    ],
+                    "data",
+                )
+            };
+
+            let data = contract
+                .builder
+                .build_load(data, "data")
+                .into_pointer_value();
+
+            let member = unsafe { contract.builder.build_gep(data, &[slot], "data") };
+            let offset_ptr = contract.builder.build_pointer_cast(
+                member,
+                contract.context.i32_type().ptr_type(AddressSpace::Generic),
+                "offset_ptr",
+            );
+
+            let offset = contract
+                .builder
+                .build_load(offset_ptr, "offset")
+                .into_int_value();
+
+            let elem_ty = ty.storage_array_elem().deref_into();
+
+            let elem_size = contract
+                .context
+                .i32_type()
+                .const_int(elem_ty.size_of(contract.ns).to_u64().unwrap(), false);
+
+            contract.builder.build_int_add(
+                offset,
+                contract.builder.build_int_mul(index, elem_size, ""),
+                "",
             )
-        };
-
-        let data = contract
-            .builder
-            .build_load(data, "data")
-            .into_pointer_value();
-
-        let member = unsafe { contract.builder.build_gep(data, &[slot], "data") };
-        let offset_ptr = contract.builder.build_pointer_cast(
-            member,
-            contract.context.i32_type().ptr_type(AddressSpace::Generic),
-            "offset_ptr",
-        );
-
-        let offset = contract
-            .builder
-            .build_load(offset_ptr, "offset")
-            .into_int_value();
-
-        let elem_size = contract
-            .context
-            .i32_type()
-            .const_int(ty.size_of(contract.ns).to_u64().unwrap(), false);
-
-        contract.builder.build_int_add(
-            offset,
-            contract.builder.build_int_mul(index, elem_size, ""),
-            "",
-        )
+        }
     }
 
     fn storage_push(

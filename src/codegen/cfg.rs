@@ -432,8 +432,9 @@ impl ControlFlowGraph {
                 self.expr_to_string(contract, ns, l),
                 self.expr_to_string(contract, ns, r)
             ),
-            Expression::ArraySubscript(_, _, a, i) => format!(
-                "(array index {}[{}])",
+            Expression::Subscript(_, ty, a, i) => format!(
+                "(subscript {} {}[{}])",
+                ty.to_string(ns),
                 self.expr_to_string(contract, ns, a),
                 self.expr_to_string(contract, ns, i)
             ),

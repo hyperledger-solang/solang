@@ -231,8 +231,8 @@ fn print_expr(e: &Expression, func: Option<&Function>, ns: &Namespace) -> Tree {
                 print_expr(right, func, ns),
             ],
         ),
-        Expression::ArraySubscript(_, ty, array, index) => Tree::Branch(
-            format!("array subscript {}", ty.to_string(ns)),
+        Expression::Subscript(_, ty, array, index) => Tree::Branch(
+            format!("subscript {}", ty.to_string(ns)),
             vec![
                 Tree::Branch(String::from("array"), vec![print_expr(array, func, ns)]),
                 Tree::Branch(String::from("index"), vec![print_expr(index, func, ns)]),

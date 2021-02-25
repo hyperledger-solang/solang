@@ -471,7 +471,7 @@ pub fn expression(
                 function_no: *function_no,
             }
         }
-        Expression::ArraySubscript(loc, ty, array, index) => {
+        Expression::Subscript(loc, ty, array, index) => {
             array_subscript(loc, ty, array, index, cfg, contract_no, ns, vartab)
         }
         Expression::StructMember(loc, ty, var, field_no) if ty.is_contract_storage() => {
@@ -1453,7 +1453,7 @@ pub fn emit_function_call(
 /// Resolve an array subscript expression
 fn array_subscript(
     loc: &pt::Loc,
-    ty: &Type,
+    array_ty: &Type,
     array: &Expression,
     index: &Expression,
     cfg: &mut ControlFlowGraph,
@@ -1461,13 +1461,17 @@ fn array_subscript(
     ns: &Namespace,
     vartab: &mut Vartable,
 ) -> Expression {
-    if array.ty().is_mapping() {
+    if array_ty.is_mapping() {
         let array = expression(array, cfg, contract_no, ns, vartab);
         let index = expression(index, cfg, contract_no, ns, vartab);
-        return Expression::Keccak256(*loc, ty.clone(), vec![array, index]);
+
+        return if ns.target == Target::Solana {
+            Expression::Subscript(*loc, array_ty.clone(), Box::new(array), Box::new(index))
+        } else {
+            Expression::Keccak256(*loc, array_ty.clone(), vec![array, index])
+        };
     }
 
-    let array_ty = array.ty();
     let mut array = expression(array, cfg, contract_no, ns, vartab);
     let index_ty = index.ty();
     let index = expression(index, cfg, contract_no, ns, vartab);
@@ -1564,7 +1568,7 @@ fn array_subscript(
 
     cfg.set_basic_block(in_bounds);
 
-    if let Type::StorageRef(ty) = array_ty {
+    if let Type::StorageRef(ty) = &array_ty {
         let elem_ty = ty.storage_array_elem();
         let slot_ty = ns.storage_type();
 
@@ -1595,7 +1599,7 @@ fn array_subscript(
                     )),
                 )
             } else {
-                Expression::ArraySubscript(*loc, elem_ty, Box::new(array), Box::new(index))
+                Expression::Subscript(*loc, array_ty.clone(), Box::new(array), Box::new(index))
             }
         } else {
             let elem_size = elem_ty.storage_slots(ns);
@@ -1695,9 +1699,9 @@ fn array_subscript(
                     )),
                 )
             }
-            Type::Array(_, dim) if dim.last().unwrap().is_some() => Expression::ArraySubscript(
+            Type::Array(_, dim) if dim.last().unwrap().is_some() => Expression::Subscript(
                 *loc,
-                array_ty.array_deref(),
+                array_ty.clone(),
                 Box::new(array),
                 Box::new(Expression::Variable(index_loc, coerced_ty, pos)),
             ),

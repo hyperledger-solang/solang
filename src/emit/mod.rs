@@ -2162,7 +2162,7 @@ pub trait TargetRuntime<'a> {
                     .build_right_shift(left, right, *signed, "")
                     .into()
             }
-            Expression::ArraySubscript(_, ty, a, i) => {
+            Expression::Subscript(_, ty, a, i) => {
                 if ty.is_contract_storage() {
                     let array = self
                         .expression(contract, a, vartab, function)
@@ -2171,7 +2171,7 @@ pub trait TargetRuntime<'a> {
                         .expression(contract, i, vartab, function)
                         .into_int_value();
 
-                    self.storage_subscript(contract, function, ty.deref_any(), array, index)
+                    self.storage_subscript(contract, function, ty, array, index)
                         .into()
                 } else {
                     let array = self

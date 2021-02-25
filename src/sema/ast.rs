@@ -226,42 +226,7 @@ impl Function {
                     sig.push('_');
                 }
 
-                fn type_to_wasm_name(ty: &Type, ns: &Namespace) -> String {
-                    match ty {
-                        Type::Bool => "bool".to_string(),
-                        Type::Address(_) => "address".to_string(),
-                        Type::Int(n) => format!("int{}", n),
-                        Type::Uint(n) => format!("uint{}", n),
-                        Type::Bytes(n) => format!("bytes{}", n),
-                        Type::DynamicBytes => "bytes".to_string(),
-                        Type::String => "string".to_string(),
-                        Type::Enum(i) => format!("{}", ns.enums[*i]),
-                        Type::Struct(i) => format!("{}", ns.structs[*i]),
-                        Type::Array(ty, len) => format!(
-                            "{}{}",
-                            type_to_wasm_name(ty, ns),
-                            len.iter()
-                                .map(|r| match r {
-                                    None => ":".to_string(),
-                                    Some(r) => format!(":{}", r),
-                                })
-                                .collect::<String>()
-                        ),
-                        Type::Mapping(k, v) => format!(
-                            "mapping:{}:{}",
-                            type_to_wasm_name(k, ns),
-                            type_to_wasm_name(v, ns)
-                        ),
-                        Type::Contract(i) => ns.contracts[*i].name.to_owned(),
-                        Type::InternalFunction { .. } => "function".to_owned(),
-                        Type::ExternalFunction { .. } => "function".to_owned(),
-                        Type::Ref(r) => type_to_wasm_name(r, ns),
-                        Type::StorageRef(r) => type_to_wasm_name(r, ns),
-                        _ => unreachable!(),
-                    }
-                }
-
-                sig.push_str(&type_to_wasm_name(&p.ty, ns));
+                sig.push_str(&p.ty.to_wasm_string(ns));
             }
         }
 
@@ -519,7 +484,7 @@ pub enum Expression {
         Box<Expression>,
         Box<Expression>,
     ),
-    ArraySubscript(pt::Loc, Type, Box<Expression>, Box<Expression>),
+    Subscript(pt::Loc, Type, Box<Expression>, Box<Expression>),
     StructMember(pt::Loc, Type, Box<Expression>, usize),
 
     AllocDynamicArray(pt::Loc, Type, Box<Expression>, Option<Vec<u8>>),
@@ -769,7 +734,7 @@ impl Expression {
                     Box::new(filter(left, ctx)),
                     Box::new(filter(right, ctx)),
                 ),
-                Expression::ArraySubscript(loc, ty, left, right) => Expression::ArraySubscript(
+                Expression::Subscript(loc, ty, left, right) => Expression::Subscript(
                     *loc,
                     ty.clone(),
                     Box::new(filter(left, ctx)),
@@ -1013,7 +978,7 @@ impl Expression {
                     left.recurse(cx, f);
                     right.recurse(cx, f);
                 }
-                Expression::ArraySubscript(_, _, left, right) => {
+                Expression::Subscript(_, _, left, right) => {
                     left.recurse(cx, f);
                     right.recurse(cx, f);
                 }

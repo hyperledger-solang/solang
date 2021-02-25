@@ -3,6 +3,7 @@ use super::ast::{
 };
 use super::diagnostics::any_errors;
 use super::tags::resolve_tags;
+use super::SOLANA_BUCKET_SIZE;
 use crate::parser::pt;
 use crate::Target;
 use num_bigint::BigInt;
@@ -812,7 +813,7 @@ impl Type {
             Type::Array(ty, dim) if dim.len() > 1 => {
                 Type::Array(ty.clone(), dim[..dim.len() - 1].to_vec())
             }
-            Type::Array(ty, dim) if dim.len() == 1 => Type::Ref(Box::new(*ty.clone())),
+            Type::Array(ty, dim) if dim.len() == 1 => Type::Ref(ty.clone()),
             Type::Bytes(_) => Type::Bytes(1),
             _ => panic!("deref on non-array"),
         }
@@ -833,12 +834,13 @@ impl Type {
     /// array types and will cause a panic otherwise.
     pub fn storage_array_elem(&self) -> Self {
         match self {
+            Type::Mapping(_, v) => Type::StorageRef(v.clone()),
             Type::DynamicBytes => Type::Bytes(1),
             Type::Array(ty, dim) if dim.len() > 1 => Type::StorageRef(Box::new(Type::Array(
                 ty.clone(),
                 dim[..dim.len() - 1].to_vec(),
             ))),
-            Type::Array(ty, dim) if dim.len() == 1 => Type::StorageRef(Box::new(*ty.clone())),
+            Type::Array(ty, dim) if dim.len() == 1 => Type::StorageRef(ty.clone()),
             Type::StorageRef(ty) => ty.storage_array_elem(),
             _ => panic!("deref on non-array"),
         }
@@ -948,7 +950,11 @@ impl Type {
     /// be very large
     pub fn storage_slots(&self, ns: &Namespace) -> BigInt {
         if ns.target == Target::Solana {
-            self.size_of(ns)
+            if let Type::Mapping(_, _) = self {
+                BigInt::from(SOLANA_BUCKET_SIZE) * ns.storage_type().storage_slots(ns)
+            } else {
+                self.size_of(ns)
+            }
         } else {
             match self {
                 Type::StorageRef(r) | Type::Ref(r) => r.storage_slots(ns),
@@ -1105,6 +1111,40 @@ impl Type {
         match self {
             Type::Ref(r) => r,
             _ => self,
+        }
+    }
+
+    /// Give a valid name for the type which is
+    pub fn to_wasm_string(&self, ns: &Namespace) -> String {
+        match self {
+            Type::Bool => "bool".to_string(),
+            Type::Address(_) => "address".to_string(),
+            Type::Int(n) => format!("int{}", n),
+            Type::Uint(n) => format!("uint{}", n),
+            Type::Bytes(n) => format!("bytes{}", n),
+            Type::DynamicBytes => "bytes".to_string(),
+            Type::String => "string".to_string(),
+            Type::Enum(i) => format!("{}", ns.enums[*i]),
+            Type::Struct(i) => format!("{}", ns.structs[*i]),
+            Type::Array(ty, len) => format!(
+                "{}{}",
+                ty.to_wasm_string(ns),
+                len.iter()
+                    .map(|r| match r {
+                        None => ":".to_string(),
+                        Some(r) => format!(":{}", r),
+                    })
+                    .collect::<String>()
+            ),
+            Type::Mapping(k, v) => {
+                format!("mapping:{}:{}", k.to_wasm_string(ns), v.to_wasm_string(ns))
+            }
+            Type::Contract(i) => ns.contracts[*i].name.to_owned(),
+            Type::InternalFunction { .. } => "function".to_owned(),
+            Type::ExternalFunction { .. } => "function".to_owned(),
+            Type::Ref(r) => r.to_wasm_string(ns),
+            Type::StorageRef(r) => r.to_wasm_string(ns),
+            _ => unreachable!(),
         }
     }
 }
