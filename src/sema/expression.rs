@@ -68,7 +68,7 @@ impl Expression {
             | Expression::Complement(loc, _, _)
             | Expression::UnaryMinus(loc, _, _)
             | Expression::Ternary(loc, _, _, _, _)
-            | Expression::ArraySubscript(loc, _, _, _)
+            | Expression::Subscript(loc, _, _, _)
             | Expression::StructMember(loc, _, _, _)
             | Expression::Or(loc, _, _)
             | Expression::AllocDynamicArray(loc, _, _, _)
@@ -148,7 +148,6 @@ impl Expression {
             | Expression::Complement(_, ty, _)
             | Expression::UnaryMinus(_, ty, _)
             | Expression::Ternary(_, ty, _, _, _)
-            | Expression::ArraySubscript(_, ty, _, _)
             | Expression::StructMember(_, ty, _, _)
             | Expression::AllocDynamicArray(_, ty, _, _)
             | Expression::DynamicArraySubscript(_, ty, _, _)
@@ -165,6 +164,10 @@ impl Expression {
                     _ => unreachable!(),
                 }
             }
+            Expression::Subscript(_, ty, _, _) if ty.is_contract_storage() => {
+                ty.storage_array_elem()
+            }
+            Expression::Subscript(_, ty, _, _) => ty.array_deref(),
             Expression::DynamicArrayLength(_, _) => Type::Uint(32),
             Expression::StorageArrayLength { ty, .. } => ty.clone(),
             Expression::StorageBytesSubscript(_, _, _) => {
@@ -4531,24 +4534,26 @@ fn array_subscript(
     match array_ty.deref_any() {
         Type::Bytes(_) | Type::Array(_, _) | Type::DynamicBytes => {
             if array_ty.is_contract_storage() {
-                Ok(Expression::ArraySubscript(
+                Ok(Expression::Subscript(
                     *loc,
-                    array_ty.storage_array_elem(),
+                    array_ty,
                     Box::new(array_expr),
                     Box::new(index_expr),
                 ))
             } else {
-                Ok(Expression::ArraySubscript(
+                let array = cast(
+                    &array.loc(),
+                    array_expr,
+                    &array_ty.deref_any(),
+                    true,
+                    ns,
+                    diagnostics,
+                )?;
+
+                Ok(Expression::Subscript(
                     *loc,
-                    array_ty.array_deref(),
-                    Box::new(cast(
-                        &array.loc(),
-                        array_expr,
-                        &array_ty.deref_any(),
-                        true,
-                        ns,
-                        diagnostics,
-                    )?),
+                    array_ty,
+                    Box::new(array),
                     Box::new(index_expr),
                 ))
             }
@@ -6952,33 +6957,32 @@ fn mapping_subscript(
 ) -> Result<Expression, ()> {
     let ty = mapping.ty();
 
-    let (key_ty, value_ty) = match ty.deref_any() {
-        Type::Mapping(k, v) => (k, v),
-        _ => unreachable!(),
-    };
-
-    let index_expr = cast(
-        &index.loc(),
-        expression(
-            index,
-            file_no,
-            contract_no,
+    if let Type::Mapping(key_ty, _) = ty.deref_any() {
+        let index_expr = cast(
+            &index.loc(),
+            expression(
+                index,
+                file_no,
+                contract_no,
+                ns,
+                symtable,
+                is_constant,
+                diagnostics,
+                Some(&key_ty),
+            )?,
+            key_ty,
+            true,
             ns,
-            symtable,
-            is_constant,
             diagnostics,
-            Some(&key_ty),
-        )?,
-        key_ty,
-        true,
-        ns,
-        diagnostics,
-    )?;
+        )?;
 
-    Ok(Expression::ArraySubscript(
-        *loc,
-        Type::StorageRef(value_ty.clone()),
-        Box::new(mapping),
-        Box::new(index_expr),
-    ))
+        Ok(Expression::Subscript(
+            *loc,
+            ty,
+            Box::new(mapping),
+            Box::new(index_expr),
+        ))
+    } else {
+        unreachable!()
+    }
 }

@@ -168,7 +168,7 @@ fn array_var(expr: &Expression) -> Option<usize> {
     match expr {
         Expression::Variable(_, _, var_no) => Some(*var_no),
         Expression::DynamicArraySubscript(_, _, expr, _)
-        | Expression::ArraySubscript(_, _, expr, _)
+        | Expression::Subscript(_, _, expr, _)
         | Expression::StructMember(_, _, expr, _) => array_var(expr),
         _ => None,
     }

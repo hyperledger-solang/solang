@@ -9,7 +9,7 @@ will be documented here.
   and modulo where possible.
 - Visual Studio Code extension can download the Solang binary from github
   releases, so the user is not required to download it themselves
-- The Solana now has support for arrays in contract storage
+- The Solana now has support for arrays and mapping in contract storage
 
 ### Fixed
 - ewasm: staticcall() and delegatecall() cannot take value argument

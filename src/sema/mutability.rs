@@ -281,7 +281,7 @@ fn read_expression(expr: &Expression, state: &mut StateCheck) -> bool {
 
 fn write_expression(expr: &Expression, state: &mut StateCheck) -> bool {
     match expr {
-        Expression::StructMember(loc, _, expr, _) | Expression::ArraySubscript(loc, _, expr, _) => {
+        Expression::StructMember(loc, _, expr, _) | Expression::Subscript(loc, _, expr, _) => {
             if expr.ty().is_contract_storage() {
                 state.write(loc);
                 return false;

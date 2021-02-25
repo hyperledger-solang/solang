@@ -33,6 +33,9 @@ use crate::file_cache::{FileCache, ResolvedFile};
 
 pub type ArrayDimension = Option<(pt::Loc, BigInt)>;
 
+// small prime number
+pub const SOLANA_BUCKET_SIZE: u64 = 251;
+
 /// Load a file file from the cache, parse and resolve it. The file must be present in
 /// the cache. This function is recursive for imports.
 pub fn sema(file: ResolvedFile, cache: &mut FileCache, ns: &mut ast::Namespace) {

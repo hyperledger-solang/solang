@@ -906,12 +906,12 @@ fn expression(
 
             (Expression::Not(*loc, Box::new(expr.0)), expr.1)
         }
-        Expression::ArraySubscript(loc, ty, array, index) => {
+        Expression::Subscript(loc, ty, array, index) => {
             let array = expression(array, vars, pos, cfg, ns);
             let index = expression(index, vars, pos, cfg, ns);
 
             (
-                Expression::ArraySubscript(*loc, ty.clone(), Box::new(array.0), Box::new(index.0)),
+                Expression::Subscript(*loc, ty.clone(), Box::new(array.0), Box::new(index.0)),
                 false,
             )
         }
