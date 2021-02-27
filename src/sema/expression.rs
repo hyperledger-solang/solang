@@ -4293,9 +4293,21 @@ fn member_access(
                     Err(())
                 }
             }
-            Type::Array(_, _) => {
+            Type::Array(_, dim) => {
                 if id.name == "length" {
                     let elem_ty = expr.ty().storage_array_elem().deref_into();
+
+                    if let Some(dim) = &dim[0] {
+                        // sparse array could be large than ns.storage_type() on Solana
+                        if dim.bits() > ns.storage_type().bits(ns) as u64 {
+                            return Ok(Expression::StorageArrayLength {
+                                loc: id.loc,
+                                ty: Type::Uint(256),
+                                array: Box::new(expr),
+                                elem_ty,
+                            });
+                        }
+                    }
 
                     return Ok(Expression::StorageArrayLength {
                         loc: id.loc,
