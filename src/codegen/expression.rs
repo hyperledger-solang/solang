@@ -1573,33 +1573,47 @@ fn array_subscript(
         let slot_ty = ns.storage_type();
 
         if ns.target == Target::Solana {
-            let index = cast(
-                &index_loc,
-                Expression::Variable(index_loc, coerced_ty, pos),
-                &slot_ty,
-                false,
-                ns,
-                &mut Vec::new(),
-            )
-            .unwrap();
-
-            if ty.array_length().is_some() {
-                // fixed length array
-                let elem_size = elem_ty.deref_any().size_of(ns);
-
-                Expression::Add(
-                    *loc,
-                    elem_ty,
-                    Box::new(array),
-                    Box::new(Expression::Multiply(
-                        *loc,
-                        slot_ty.clone(),
-                        Box::new(index),
-                        Box::new(Expression::NumberLiteral(*loc, slot_ty, elem_size)),
-                    )),
+            if ty.array_length().is_some() && ty.is_sparse_solana(ns) {
+                let index = cast(
+                    &index_loc,
+                    Expression::Variable(index_loc, coerced_ty, pos),
+                    &Type::Uint(256),
+                    false,
+                    ns,
+                    &mut Vec::new(),
                 )
-            } else {
+                .unwrap();
+
                 Expression::Subscript(*loc, array_ty.clone(), Box::new(array), Box::new(index))
+            } else {
+                let index = cast(
+                    &index_loc,
+                    Expression::Variable(index_loc, coerced_ty, pos),
+                    &slot_ty,
+                    false,
+                    ns,
+                    &mut Vec::new(),
+                )
+                .unwrap();
+
+                if ty.array_length().is_some() {
+                    // fixed length array
+                    let elem_size = elem_ty.deref_any().size_of(ns);
+
+                    Expression::Add(
+                        *loc,
+                        elem_ty,
+                        Box::new(array),
+                        Box::new(Expression::Multiply(
+                            *loc,
+                            slot_ty.clone(),
+                            Box::new(index),
+                            Box::new(Expression::NumberLiteral(*loc, slot_ty, elem_size)),
+                        )),
+                    )
+                } else {
+                    Expression::Subscript(*loc, array_ty.clone(), Box::new(array), Box::new(index))
+                }
             }
         } else {
             let elem_size = elem_ty.storage_slots(ns);

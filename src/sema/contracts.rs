@@ -5,12 +5,12 @@ use num_traits::Zero;
 use std::collections::HashMap;
 use std::collections::HashSet;
 
-use super::ast;
 use super::expression::match_constructor_to_args;
 use super::functions;
 use super::statements;
 use super::symtable::Symtable;
 use super::variables;
+use super::{ast, SOLANA_FIRST_OFFSET};
 use crate::{emit, Target};
 
 impl ast::Contract {
@@ -296,7 +296,7 @@ fn layout_contract(contract_no: usize, ns: &mut ast::Namespace) {
     let mut override_needed: HashMap<String, Vec<(usize, usize)>> = HashMap::new();
 
     let mut slot = if ns.target == Target::Solana {
-        BigInt::from(8)
+        BigInt::from(SOLANA_FIRST_OFFSET)
     } else {
         BigInt::zero()
     };

@@ -1,9 +1,13 @@
-use super::ast::{
-    Contract, Diagnostic, EnumDecl, EventDecl, Namespace, Parameter, StructDecl, Symbol, Tag, Type,
-};
 use super::diagnostics::any_errors;
 use super::tags::resolve_tags;
 use super::SOLANA_BUCKET_SIZE;
+use super::{
+    ast::{
+        Contract, Diagnostic, EnumDecl, EventDecl, Namespace, Parameter, StructDecl, Symbol, Tag,
+        Type,
+    },
+    SOLANA_SPARSE_ARRAY_SIZE,
+};
 use crate::parser::pt;
 use crate::Target;
 use num_bigint::BigInt;
@@ -950,7 +954,7 @@ impl Type {
     /// be very large
     pub fn storage_slots(&self, ns: &Namespace) -> BigInt {
         if ns.target == Target::Solana {
-            if let Type::Mapping(_, _) = self {
+            if self.is_sparse_solana(ns) {
                 BigInt::from(SOLANA_BUCKET_SIZE) * ns.storage_type().storage_slots(ns)
             } else {
                 self.size_of(ns)
@@ -1145,6 +1149,21 @@ impl Type {
             Type::Ref(r) => r.to_wasm_string(ns),
             Type::StorageRef(r) => r.to_wasm_string(ns),
             _ => unreachable!(),
+        }
+    }
+
+    /// Is this type sparse on Solana
+    pub fn is_sparse_solana(&self, ns: &Namespace) -> bool {
+        match self.deref_any() {
+            Type::Mapping(_, _) => true,
+            Type::Array(ty, dims) => {
+                if let Some(len) = &dims[0] {
+                    ty.storage_slots(ns) * len >= BigInt::from(SOLANA_SPARSE_ARRAY_SIZE)
+                } else {
+                    false
+                }
+            }
+            _ => false,
         }
     }
 }
