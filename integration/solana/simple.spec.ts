@@ -1,5 +1,6 @@
 import expect from 'expect';
 import { establishConnection } from './index';
+import crypto from 'crypto';
 
 describe('Deploy solang contract and test', () => {
     it('flipper', async function () {
@@ -463,5 +464,72 @@ describe('Deploy solang contract and test', () => {
             .rejects
             .toThrowError(new Error('failed to send transaction: Transaction simulation failed: Error processing Instruction 0: account data too small for instruction'));
     });
-});
 
+    it('arrays in account storage', async function () {
+        this.timeout(50000);
+
+        let conn = await establishConnection();
+
+        // storage.sol needs 168 bytes on constructor, more for string data
+        let prog = await conn.loadProgram("arrays.so", "arrays.abi", 512, 4096);
+
+        await prog.call_constructor(conn, []);
+
+        let users = [];
+
+        for (let i = 0; i < 3; i++) {
+            let addr = '0x' + crypto.randomBytes(32).toString('hex');
+            let name = `name${i}`;
+            let id = crypto.randomBytes(4).readUInt32BE(0).toString();
+            let perms: string[] = [];
+
+            for (let j = 0; j < Math.random() * 3; j++) {
+                let p = Math.floor(Math.random() * 8);
+
+                perms.push(`${p}`);
+            }
+
+            await prog.call_function(conn, "addUser", [id, addr, name, perms]);
+
+
+            users.push([
+                name, addr, id, perms
+            ]);
+        }
+
+        function returns(res: Object) {
+            let arr = Object.values(res);
+            let length = arr.pop()
+            expect(arr.length).toEqual(length);
+            return JSON.stringify(arr);
+        }
+
+        let user = users[Math.floor(Math.random() * users.length)];
+
+        let res = returns(await prog.call_function(conn, "getUserById", [user[2]]));
+
+        expect(res).toStrictEqual(JSON.stringify([user]));
+
+        if (user[3].length > 0) {
+            let perms = user[3];
+
+            let p = perms[Math.floor(Math.random() * perms.length)];
+
+            res = returns(await prog.call_function(conn, "hasPermission", [user[2], p]));
+
+            expect(res).toBe(JSON.stringify([true]));
+        }
+
+        user = users[Math.floor(Math.random() * users.length)];
+
+        res = returns(await prog.call_function(conn, "getUserByAddress", [user[1]]));
+
+        expect(res).toStrictEqual(JSON.stringify([user]));
+
+        await prog.call_function(conn, "removeUser", [user[2]]);
+
+        res = returns(await prog.call_function(conn, "userExists", [user[2]]));
+
+        expect(res).toBe(JSON.stringify([false]));
+    });
+});
