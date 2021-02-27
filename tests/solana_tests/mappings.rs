@@ -126,3 +126,126 @@ fn less_simple_mapping() {
         ])]
     );
 }
+
+#[test]
+fn sparse_array() {
+    let mut vm = build_solidity(
+        r#"
+        struct S {
+            string f1;
+            int64[] f2;
+        }
+
+        contract foo {
+            S[1e9] map;
+
+            function set_string(uint index, string s) public {
+                map[index].f1 = s;
+            }
+
+            function add_int(uint index, int64 n) public {
+                map[index].f2.push(n);
+            }
+
+            function get(uint index) public returns (S) {
+                return map[index];
+            }
+
+            function rm(uint index) public {
+                delete map[index];
+            }
+        }"#,
+    );
+
+    vm.constructor(&[]);
+
+    vm.function(
+        "set_string",
+        &[
+            Token::Uint(ethereum_types::U256::from(909090909)),
+            Token::String(String::from("This is a string which should be a little longer than 32 bytes so we the the abi encoder")),
+        ],
+    );
+
+    vm.function(
+        "add_int",
+        &[
+            Token::Uint(ethereum_types::U256::from(909090909)),
+            Token::Int(ethereum_types::U256::from(102)),
+        ],
+    );
+
+    let returns = vm.function("get", &[Token::Uint(ethereum_types::U256::from(909090909))]);
+
+    assert_eq!(
+        returns,
+        vec![Token::Tuple(vec![
+            Token::String(String::from("This is a string which should be a little longer than 32 bytes so we the the abi encoder")),
+            Token::Array(vec![Token::Int(ethereum_types::U256::from(102))]),
+        ])]
+    );
+}
+
+#[test]
+fn massive_sparse_array() {
+    let mut vm = build_solidity(
+        r#"
+        struct S {
+            string f1;
+            int64[] f2;
+        }
+
+        contract foo {
+            S[1e24] map;
+
+            function set_string(uint index, string s) public {
+                map[index].f1 = s;
+            }
+
+            function add_int(uint index, int64 n) public {
+                map[index].f2.push(n);
+            }
+
+            function get(uint index) public returns (S) {
+                return map[index];
+            }
+
+            function rm(uint index) public {
+                delete map[index];
+            }
+        }"#,
+    );
+
+    vm.constructor(&[]);
+
+    vm.function(
+        "set_string",
+        &[
+            Token::Uint(ethereum_types::U256::from(786868768768678687686877u128)),
+            Token::String(String::from("This is a string which should be a little longer than 32 bytes so we the the abi encoder")),
+        ],
+    );
+
+    vm.function(
+        "add_int",
+        &[
+            Token::Uint(ethereum_types::U256::from(786868768768678687686877u128)),
+            Token::Int(ethereum_types::U256::from(102)),
+        ],
+    );
+
+    let returns = vm.function(
+        "get",
+        &[Token::Uint(ethereum_types::U256::from(
+            786868768768678687686877u128,
+        ))],
+    );
+
+    assert_eq!(
+        returns,
+        vec![Token::Tuple(vec![
+            Token::String(String::from("This is a string which should be a little longer than 32 bytes so we the the abi encoder")),
+            Token::Array(vec![Token::Int(ethereum_types::U256::from(102))]),
+        ])]
+    );
+}

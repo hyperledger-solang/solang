@@ -538,7 +538,7 @@ impl SolanaTarget {
     }
 
     /// Generate sparse lookup
-    fn sparse_lookup<'b>(
+    fn sparse_lookup_function<'b>(
         &self,
         contract: &Contract<'b>,
         key_ty: &ast::Type,
@@ -838,6 +838,68 @@ impl SolanaTarget {
 
         function
     }
+
+    /// Do a lookup/subscript in a sparse array or mapping; this will call a function
+    fn sparse_lookup<'b>(
+        &self,
+        contract: &Contract<'b>,
+        function: FunctionValue<'b>,
+        key_ty: &ast::Type,
+        value_ty: &ast::Type,
+        slot: IntValue<'b>,
+        index: IntValue<'b>,
+    ) -> IntValue<'b> {
+        let offset = contract.build_alloca(function, contract.context.i32_type(), "offset");
+
+        let current_block = contract.builder.get_insert_block().unwrap();
+
+        let lookup = self.sparse_lookup_function(contract, key_ty, value_ty);
+
+        contract.builder.position_at_end(current_block);
+
+        let rc = contract
+            .builder
+            .build_call(
+                lookup,
+                &[
+                    slot.into(),
+                    index.into(),
+                    offset.into(),
+                    contract.accounts.unwrap().into(),
+                ],
+                "mapping_lookup_res",
+            )
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_int_value();
+
+        // either load the result from offset or return failure
+        let is_rc_zero = contract.builder.build_int_compare(
+            IntPredicate::EQ,
+            rc,
+            rc.get_type().const_zero(),
+            "is_rc_zero",
+        );
+
+        let rc_not_zero = contract.context.append_basic_block(function, "rc_not_zero");
+        let rc_zero = contract.context.append_basic_block(function, "rc_zero");
+
+        contract
+            .builder
+            .build_conditional_branch(is_rc_zero, rc_zero, rc_not_zero);
+
+        contract.builder.position_at_end(rc_not_zero);
+
+        self.return_code(contract, rc);
+
+        contract.builder.position_at_end(rc_zero);
+
+        contract
+            .builder
+            .build_load(offset, "offset")
+            .into_int_value()
+    }
 }
 
 impl<'a> TargetRuntime<'a> for SolanaTarget {
@@ -1116,56 +1178,14 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         };
 
         if let ast::Type::Mapping(key, value) = ty.deref_any() {
-            let offset = contract.build_alloca(function, contract.context.i32_type(), "offset");
+            self.sparse_lookup(contract, function, key, value, slot, index)
+        } else if ty.is_sparse_solana(contract.ns) {
+            // sparse array
+            let elem_ty = ty.storage_array_elem().deref_into();
 
-            let current_block = contract.builder.get_insert_block().unwrap();
+            let key = ast::Type::Uint(256);
 
-            let lookup = self.sparse_lookup(contract, key, value);
-
-            contract.builder.position_at_end(current_block);
-
-            let rc = contract
-                .builder
-                .build_call(
-                    lookup,
-                    &[
-                        slot.into(),
-                        index.into(),
-                        offset.into(),
-                        contract.accounts.unwrap().into(),
-                    ],
-                    "mapping_lookup_res",
-                )
-                .try_as_basic_value()
-                .left()
-                .unwrap()
-                .into_int_value();
-
-            // either load the result from offset or return failure
-            let is_rc_zero = contract.builder.build_int_compare(
-                IntPredicate::EQ,
-                rc,
-                rc.get_type().const_zero(),
-                "is_rc_zero",
-            );
-
-            let rc_not_zero = contract.context.append_basic_block(function, "rc_not_zero");
-            let rc_zero = contract.context.append_basic_block(function, "rc_zero");
-
-            contract
-                .builder
-                .build_conditional_branch(is_rc_zero, rc_zero, rc_not_zero);
-
-            contract.builder.position_at_end(rc_not_zero);
-
-            self.return_code(contract, rc);
-
-            contract.builder.position_at_end(rc_zero);
-
-            contract
-                .builder
-                .build_load(offset, "offset")
-                .into_int_value()
+            self.sparse_lookup(contract, function, &key, &elem_ty, slot, index)
         } else {
             // 3rd member of account is data pointer
             let data = unsafe {
