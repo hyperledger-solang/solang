@@ -86,6 +86,7 @@ impl SubstrateTarget {
             "seal_call",
             "seal_value_transferred",
             "seal_minimum_balance",
+            "seal_weight_to_fee",
             "seal_random",
             "seal_address",
             "seal_balance",

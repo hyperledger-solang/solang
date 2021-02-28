@@ -4598,15 +4598,11 @@ pub trait TargetRuntime<'a> {
 
     /// Emit the contract storage initializers
     fn emit_initializer(&mut self, contract: &mut Contract<'a>) -> FunctionValue<'a> {
-        let mut args = Vec::new();
-
-        if let Some(accounts) = contract.accounts {
-            args.push(accounts.get_type().into());
-        }
+        let function_ty = contract.function_type(&[], &[]);
 
         let function = contract.module.add_function(
             "storage_initializers",
-            contract.context.i32_type().fn_type(&args, false),
+            function_ty,
             Some(Linkage::Internal),
         );
 
