@@ -796,9 +796,14 @@ impl SolanaTarget {
 
         let member = unsafe { contract.builder.build_gep(data, &[offset], "data") };
 
-        // clear memory
+        // Clear memory. The length argument to __bzero8 is in lengths of 8 bytes. We round up to the nearest
+        // 8 byte, since account_data_alloc also rounds up to the nearest 8 byte when allocating.
         let length = contract.builder.build_int_unsigned_div(
-            entry_length,
+            contract.builder.build_int_add(
+                entry_length,
+                contract.context.i32_type().const_int(7, false),
+                "",
+            ),
             contract.context.i32_type().const_int(8, false),
             "length_div_8",
         );
