@@ -74,7 +74,13 @@ impl SolanaTarget {
 
         target.emit_dispatch(&mut con);
 
-        con.internalize(&["entrypoint", "sol_log_", "sol_alloc_free_"]);
+        con.internalize(&[
+            "entrypoint",
+            "sol_log_",
+            "sol_alloc_free_",
+            // This entry is produced by llvm due to merging of stdlib.bc with solidity llvm ir
+            "sol_alloc_free_.1",
+        ]);
 
         con
     }
