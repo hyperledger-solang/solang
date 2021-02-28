@@ -171,7 +171,7 @@ pub trait TargetRuntime<'a> {
         _function: FunctionValue<'a>,
         _ty: &ast::Type,
         _slot: IntValue<'a>,
-        _index: IntValue<'a>,
+        _index: BasicValueEnum<'a>,
     ) -> IntValue<'a> {
         // not need for slot-based storage chains
         unimplemented!();
@@ -2167,9 +2167,7 @@ pub trait TargetRuntime<'a> {
                     let array = self
                         .expression(contract, a, vartab, function)
                         .into_int_value();
-                    let index = self
-                        .expression(contract, i, vartab, function)
-                        .into_int_value();
+                    let index = self.expression(contract, i, vartab, function);
 
                     self.storage_subscript(contract, function, ty, array, index)
                         .into()

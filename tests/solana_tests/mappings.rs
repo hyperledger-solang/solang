@@ -128,6 +128,64 @@ fn less_simple_mapping() {
 }
 
 #[test]
+fn string_mapping() {
+    let mut vm = build_solidity(
+        r#"
+        struct S {
+            string f1;
+            int64[] f2;
+        }
+
+        contract foo {
+            mapping (string => S) map;
+
+            function set_string(string index, string s) public {
+                map[index].f1 = s;
+            }
+
+            function add_int(string index, int64 n) public {
+                map[index].f2.push(n);
+            }
+
+            function get(string index) public returns (S) {
+                return map[index];
+            }
+
+            function rm(string index) public {
+                delete map[index];
+            }
+        }"#,
+    );
+
+    vm.constructor(&[]);
+
+    vm.function(
+        "set_string",
+        &[
+            Token::String(String::from("a")),
+            Token::String(String::from("This is a string which should be a little longer than 32 bytes so we the the abi encoder")),
+        ],
+    );
+
+    vm.function(
+        "add_int",
+        &[
+            Token::String(String::from("a")),
+            Token::Int(ethereum_types::U256::from(102)),
+        ],
+    );
+
+    let returns = vm.function("get", &[Token::String(String::from("a"))]);
+
+    assert_eq!(
+        returns,
+        vec![Token::Tuple(vec![
+            Token::String(String::from("This is a string which should be a little longer than 32 bytes so we the the abi encoder")),
+            Token::Array(vec![Token::Int(ethereum_types::U256::from(102))]),
+        ])]
+    );
+}
+#[test]
 fn sparse_array() {
     let mut vm = build_solidity(
         r#"
