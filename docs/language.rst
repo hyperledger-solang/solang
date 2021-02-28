@@ -5,12 +5,34 @@ Solidity Language
 
 The Solidity language supported by Solang aims to be compatible with the latest
 `Ethereum Foundation Solidity Compiler <https://github.com/ethereum/solidity/>`_,
-version 0.7 with some caveats, please check out our :ref:`status` page.
+version 0.7 with some caveats.
 
 .. note::
 
   Where differences exist between different targets or the Ethereum Foundation Solidity
   compiler, this is noted in boxes like these.
+
+Brief Language Status
+---------------------
+
+As with any new project, bugs are possible. Please report any issues you may find to github.
+
+Differences:
+
+- ``immutable`` is not supported. Note this is impossible to implement on any than chain other than Ethereum; this is purely an ethereum feature
+- libraries are always statically linked into the contract code
+- Solang generates WebAssembly or BPF rather than EVM. This means that the ``assembly {}``
+  statement using EVM instructions is not supported
+
+Unique features to Solang:
+
+- Solang can target different blockchains and some features depending on the target.
+  For example, Parity Substrate uses a different ABI encoding and allows constructors
+  to be overloaded.
+- Events can be declared outside of contracts
+- Base contracts can be declared in any order
+- There is a ``print()`` function for debugging
+- Strings can be formatted with python style format string, which is useful for debugging: ``print("x = {}".format(x));``
 
 Solidity Source File Structure
 ------------------------------

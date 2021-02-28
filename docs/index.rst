@@ -19,7 +19,6 @@ for `Parity Substrate <https://substrate.dev/>`_,
 
 Solang aims for source file compatibility with the Ethereum EVM Solidity compiler,
 version 0.7. Where differences exists, this is noted in the :ref:`language documentation <language>`.
-Also, check our :ref:`status` page.
 The repository can be found on `github <https://github.com/hyperledger-labs/solang>`_
 and we have a `channel on chat.hyperledger.org <https://chat.hyperledger.org/channel/solang>`_.
 
@@ -28,9 +27,9 @@ and we have a `channel on chat.hyperledger.org <https://chat.hyperledger.org/cha
    :caption: Contents:
 
    installing
-   status
    running
    language
+   targets
    optimizer
    extension
    examples
