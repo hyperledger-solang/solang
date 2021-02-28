@@ -160,6 +160,20 @@ struct vector *vector_new(uint32_t members, uint32_t size, uint8_t *initial)
 	return v;
 }
 
+uint64_t vector_hash(struct vector *v)
+{
+	uint64_t hash = 0;
+	uint8_t *data = v->data;
+	uint32_t len = v->len;
+
+	while (len--)
+	{
+		hash += *data;
+	}
+
+	return hash;
+}
+
 bool __memcmp(uint8_t *left, uint32_t left_len, uint8_t *right, uint32_t right_len)
 {
 	if (left_len != right_len)

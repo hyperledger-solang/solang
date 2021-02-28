@@ -524,11 +524,17 @@ impl SolanaTarget {
         key_ty: &ast::Type,
         value_ty: &ast::Type,
     ) -> BasicTypeEnum<'b> {
+        let key = if matches!(key_ty, ast::Type::String | ast::Type::DynamicBytes) {
+            contract.context.i32_type().into()
+        } else {
+            contract.llvm_type(key_ty)
+        };
+
         contract
             .context
             .struct_type(
                 &[
-                    contract.llvm_type(key_ty),         // key
+                    key,                                // key
                     contract.context.i32_type().into(), // next field
                     contract.llvm_type(value_ty),       // value
                 ],
@@ -571,7 +577,7 @@ impl SolanaTarget {
         contract.builder.position_at_end(entry);
 
         let offset = function.get_nth_param(0).unwrap().into_int_value();
-        let key = function.get_nth_param(1).unwrap().into_int_value();
+        let key = function.get_nth_param(1).unwrap();
 
         let entry_ty = self.sparse_entry(contract, key_ty, value_ty);
         let value_offset = unsafe {
@@ -619,12 +625,26 @@ impl SolanaTarget {
         );
 
         // calculate the correct bucket. We have an prime number of
-        let bucket = if key_ty.bits(contract.ns) > 64 {
+        let bucket = if matches!(key_ty, ast::Type::String | ast::Type::DynamicBytes) {
             contract
                 .builder
-                .build_int_truncate(key, contract.context.i64_type(), "")
+                .build_call(
+                    contract.module.get_function("vector_hash").unwrap(),
+                    &[key],
+                    "hash",
+                )
+                .try_as_basic_value()
+                .left()
+                .unwrap()
+                .into_int_value()
+        } else if key_ty.bits(contract.ns) > 64 {
+            contract.builder.build_int_truncate(
+                key.into_int_value(),
+                contract.context.i64_type(),
+                "",
+            )
         } else {
-            key
+            key.into_int_value()
         };
 
         let bucket = contract.builder.build_int_unsigned_rem(
@@ -712,10 +732,45 @@ impl SolanaTarget {
             )
             .into_int_value();
 
-        let matches =
+        let matches = if matches!(key_ty, ast::Type::String | ast::Type::DynamicBytes) {
+            // entry_key is an offset
+            let entry_data = unsafe { contract.builder.build_gep(data, &[entry_key], "data") };
+            let entry_length = contract
+                .builder
+                .build_call(
+                    contract.module.get_function("account_data_len").unwrap(),
+                    &[account.into(), entry_key.into()],
+                    "length",
+                )
+                .try_as_basic_value()
+                .left()
+                .unwrap()
+                .into_int_value();
+
             contract
                 .builder
-                .build_int_compare(IntPredicate::EQ, key, entry_key, "matches");
+                .build_call(
+                    contract.module.get_function("__memcmp").unwrap(),
+                    &[
+                        entry_data.into(),
+                        entry_length.into(),
+                        contract.vector_bytes(key).into(),
+                        contract.vector_len(key).into(),
+                    ],
+                    "",
+                )
+                .try_as_basic_value()
+                .left()
+                .unwrap()
+                .into_int_value()
+        } else {
+            contract.builder.build_int_compare(
+                IntPredicate::EQ,
+                key.into_int_value(),
+                entry_key,
+                "matches",
+            )
+        };
 
         contract
             .builder
@@ -821,12 +876,87 @@ impl SolanaTarget {
         );
 
         // set key
-        let key_ptr = contract
-            .builder
-            .build_struct_gep(entry_ptr, 0, "key_ptr")
-            .unwrap();
+        if matches!(key_ty, ast::Type::String | ast::Type::DynamicBytes) {
+            let new_string_length = contract.vector_len(key);
+            let offset_ptr = contract
+                .builder
+                .build_struct_gep(entry_ptr, 0, "key_ptr")
+                .unwrap();
 
-        contract.builder.build_store(key_ptr, key);
+            // account_data_alloc will return offset = 0 if the string is length 0
+            let rc = contract
+                .builder
+                .build_call(
+                    contract.module.get_function("account_data_alloc").unwrap(),
+                    &[account.into(), new_string_length.into(), offset_ptr.into()],
+                    "alloc",
+                )
+                .try_as_basic_value()
+                .left()
+                .unwrap()
+                .into_int_value();
+
+            let is_rc_zero = contract.builder.build_int_compare(
+                IntPredicate::EQ,
+                rc,
+                contract.context.i64_type().const_zero(),
+                "is_rc_zero",
+            );
+
+            let rc_not_zero = contract.context.append_basic_block(function, "rc_not_zero");
+            let rc_zero = contract.context.append_basic_block(function, "rc_zero");
+            let memcpy = contract.context.append_basic_block(function, "memcpy");
+
+            contract
+                .builder
+                .build_conditional_branch(is_rc_zero, rc_zero, rc_not_zero);
+
+            contract.builder.position_at_end(rc_not_zero);
+
+            self.return_code(
+                contract,
+                contract.context.i64_type().const_int(5u64 << 32, false),
+            );
+
+            contract.builder.position_at_end(rc_zero);
+
+            let new_offset = contract.builder.build_load(offset_ptr, "new_offset");
+
+            contract.builder.build_unconditional_branch(memcpy);
+
+            contract.builder.position_at_end(memcpy);
+
+            let offset_phi = contract
+                .builder
+                .build_phi(contract.context.i32_type(), "offset");
+
+            offset_phi.add_incoming(&[(&new_offset, rc_zero), (&offset, entry)]);
+
+            let dest_string_data = unsafe {
+                contract.builder.build_gep(
+                    data,
+                    &[offset_phi.as_basic_value().into_int_value()],
+                    "dest_string_data",
+                )
+            };
+
+            contract.builder.build_call(
+                contract.module.get_function("__memcpy").unwrap(),
+                &[
+                    dest_string_data.into(),
+                    contract.vector_bytes(key).into(),
+                    new_string_length.into(),
+                ],
+                "copied",
+            );
+        } else {
+            let key_ptr = contract
+                .builder
+                .build_struct_gep(entry_ptr, 0, "key_ptr")
+                .unwrap();
+
+            contract.builder.build_store(key_ptr, key);
+        };
 
         let ret_offset = function.get_nth_param(2).unwrap().into_pointer_value();
 
@@ -852,7 +982,7 @@ impl SolanaTarget {
         key_ty: &ast::Type,
         value_ty: &ast::Type,
         slot: IntValue<'b>,
-        index: IntValue<'b>,
+        index: BasicValueEnum<'b>,
     ) -> IntValue<'b> {
         let offset = contract.build_alloca(function, contract.context.i32_type(), "offset");
 
@@ -868,7 +998,7 @@ impl SolanaTarget {
                 lookup,
                 &[
                     slot.into(),
-                    index.into(),
+                    index,
                     offset.into(),
                     contract.accounts.unwrap().into(),
                 ],
@@ -1171,7 +1301,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         function: FunctionValue<'a>,
         ty: &ast::Type,
         slot: IntValue<'a>,
-        index: IntValue<'a>,
+        index: BasicValueEnum<'a>,
     ) -> IntValue<'a> {
         // contract storage is in 2nd account
         let account = unsafe {
@@ -1230,7 +1360,9 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
 
             contract.builder.build_int_add(
                 offset,
-                contract.builder.build_int_mul(index, elem_size, ""),
+                contract
+                    .builder
+                    .build_int_mul(index.into_int_value(), elem_size, ""),
                 "",
             )
         }
