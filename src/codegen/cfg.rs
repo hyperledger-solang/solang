@@ -49,6 +49,13 @@ pub enum Instr {
     AssertFailure { expr: Option<Expression> },
     /// Print to log message
     Print { expr: Expression },
+    /// Load storage (this is an instruction rather than an expression
+    /// so that it can be moved around by the dead storage pass
+    LoadStorage {
+        res: usize,
+        ty: Type,
+        storage: Expression,
+    },
     /// Clear storage at slot for ty (might span multiple slots)
     ClearStorage { ty: Type, storage: Expression },
     /// Set storage value at slot
@@ -678,13 +685,19 @@ impl ControlFlowGraph {
                 true_block,
                 false_block,
             ),
+            Instr::LoadStorage { ty, res, storage } => format!(
+                "%{} = load storage slot({}) ty:{}",
+                self.vars[res].id.name,
+                self.expr_to_string(contract, ns, storage),
+                ty.to_string(ns),
+            ),
             Instr::ClearStorage { ty, storage } => format!(
                 "clear storage slot({}) ty:{}",
                 self.expr_to_string(contract, ns, storage),
                 ty.to_string(ns),
             ),
             Instr::SetStorage { ty, value, storage } => format!(
-                "set storage slot({}) ty:{} = %{}",
+                "store storage slot({}) ty:{} = %{}",
                 self.expr_to_string(contract, ns, storage),
                 ty.to_string(ns),
                 self.expr_to_string(contract, ns, value),

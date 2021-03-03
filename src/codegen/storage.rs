@@ -4,7 +4,7 @@ use num_traits::One;
 use num_traits::Zero;
 
 use super::cfg::{ControlFlowGraph, Instr, Vartable};
-use super::expression::expression;
+use super::expression::{expression, load_storage};
 use crate::parser::pt;
 use crate::sema::ast::{Expression, Namespace, Type};
 
@@ -72,12 +72,14 @@ pub fn storage_slots_array_push(
 
     let var_expr = expression(&args[0], cfg, contract_no, ns, vartab);
 
+    let expr = load_storage(loc, &slot_ty, var_expr.clone(), cfg, vartab);
+
     cfg.add(
         vartab,
         Instr::Set {
             loc: pt::Loc(0, 0, 0),
             res: length_pos,
-            expr: Expression::StorageLoad(*loc, slot_ty.clone(), Box::new(var_expr.clone())),
+            expr,
         },
     );
 
@@ -158,12 +160,14 @@ pub fn storage_slots_array_pop(
     let ty = args[0].ty();
     let var_expr = expression(&args[0], cfg, contract_no, ns, vartab);
 
+    let expr = load_storage(loc, &length_ty, var_expr.clone(), cfg, vartab);
+
     cfg.add(
         vartab,
         Instr::Set {
             loc: pt::Loc(0, 0, 0),
             res: length_pos,
-            expr: Expression::StorageLoad(*loc, length_ty.clone(), Box::new(var_expr.clone())),
+            expr,
         },
     );
 
@@ -229,16 +233,20 @@ pub fn storage_slots_array_pop(
 
     let res_pos = vartab.temp_anonymous(&elem_ty);
 
+    let expr = load_storage(
+        loc,
+        &elem_ty,
+        Expression::Variable(*loc, elem_ty.clone(), entry_pos),
+        cfg,
+        vartab,
+    );
+
     cfg.add(
         vartab,
         Instr::Set {
             loc: *loc,
             res: res_pos,
-            expr: Expression::StorageLoad(
-                *loc,
-                elem_ty.clone(),
-                Box::new(Expression::Variable(*loc, elem_ty.clone(), entry_pos)),
-            ),
+            expr,
         },
     );
 
