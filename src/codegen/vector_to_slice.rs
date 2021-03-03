@@ -84,6 +84,7 @@ fn find_writable_vectors(
             | Instr::Branch { .. }
             | Instr::BranchCond { .. }
             | Instr::PopMemory { .. }
+            | Instr::LoadStorage { .. }
             | Instr::SetStorage { .. }
             | Instr::ClearStorage { .. }
             | Instr::SetStorageBytes { .. }

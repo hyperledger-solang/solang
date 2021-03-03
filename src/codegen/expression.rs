@@ -26,11 +26,11 @@ pub fn expression(
             // base storage variables should precede contract variables, not overlap
             ns.contracts[contract_no].get_storage_slot(*var_contract_no, *var_no, ns)
         }
-        Expression::StorageLoad(loc, ty, expr) => Expression::StorageLoad(
-            *loc,
-            ty.clone(),
-            Box::new(expression(expr, cfg, contract_no, ns, vartab)),
-        ),
+        Expression::StorageLoad(loc, ty, expr) => {
+            let storage = expression(expr, cfg, contract_no, ns, vartab);
+
+            load_storage(loc, ty, storage, cfg, vartab)
+        }
         Expression::Add(loc, ty, left, right) => Expression::Add(
             *loc,
             ty.clone(),
@@ -175,9 +175,7 @@ pub fn expression(
             let v = expression(var, cfg, contract_no, ns, vartab);
             let v = match var.ty() {
                 Type::Ref(ty) => Expression::Load(var.loc(), ty.as_ref().clone(), Box::new(v)),
-                Type::StorageRef(ty) => {
-                    Expression::StorageLoad(var.loc(), ty.as_ref().clone(), Box::new(v))
-                }
+                Type::StorageRef(ty) => load_storage(&var.loc(), ty.as_ref(), v, cfg, vartab),
                 _ => v,
             };
 
@@ -241,9 +239,7 @@ pub fn expression(
             let v = expression(var, cfg, contract_no, ns, vartab);
             let v = match var.ty() {
                 Type::Ref(ty) => Expression::Load(var.loc(), ty.as_ref().clone(), Box::new(v)),
-                Type::StorageRef(ty) => {
-                    Expression::StorageLoad(var.loc(), ty.as_ref().clone(), Box::new(v))
-                }
+                Type::StorageRef(ty) => load_storage(&var.loc(), ty.as_ref(), v, cfg, vartab),
                 _ => v,
             };
 
@@ -404,7 +400,7 @@ pub fn expression(
                                 elem_ty: elem_ty.clone(),
                             }
                         } else {
-                            Expression::StorageLoad(*loc, ns.storage_type(), Box::new(array))
+                            load_storage(loc, &ns.storage_type(), array, cfg, vartab)
                         }
                     }
                     Some(length) => {
@@ -1496,7 +1492,7 @@ fn array_subscript(
                         }
                     } else {
                         let array_length =
-                            Expression::StorageLoad(*loc, Type::Uint(256), Box::new(array.clone()));
+                            load_storage(loc, &Type::Uint(256), array.clone(), cfg, vartab);
 
                         array = Expression::Keccak256(*loc, Type::Uint(256), vec![array]);
 
@@ -1746,4 +1742,26 @@ fn string_location(
         }
         _ => loc.clone(),
     }
+}
+
+// Generate a load from storage instruction
+pub fn load_storage(
+    loc: &pt::Loc,
+    ty: &Type,
+    storage: Expression,
+    cfg: &mut ControlFlowGraph,
+    vartab: &mut Vartable,
+) -> Expression {
+    let res = vartab.temp_anonymous(ty);
+
+    cfg.add(
+        vartab,
+        Instr::LoadStorage {
+            res,
+            ty: ty.clone(),
+            storage,
+        },
+    );
+
+    Expression::Variable(*loc, ty.clone(), res)
 }

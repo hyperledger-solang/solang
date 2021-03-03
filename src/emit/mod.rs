@@ -1919,12 +1919,10 @@ pub trait TargetRuntime<'a> {
                     value
                 }
             }
-            Expression::StorageLoad(_, ty, e) => {
-                let mut slot = self
-                    .expression(contract, e, vartab, function)
-                    .into_int_value();
-
-                self.storage_load(contract, ty, &mut slot, function)
+            Expression::StorageLoad(_, _, _) => {
+                // this should be covered by the Instr::LoadStorage instruction; if we reach this
+                // point the code generation is broken.
+                unreachable!();
             }
             Expression::ZeroExt(_, t, e) => {
                 let e = self
@@ -3220,6 +3218,14 @@ pub trait TargetRuntime<'a> {
                             bb_true,
                             bb_false,
                         );
+                    }
+                    Instr::LoadStorage { res, ty, storage } => {
+                        let mut slot = self
+                            .expression(contract, storage, &w.vars, function)
+                            .into_int_value();
+
+                        w.vars.get_mut(res).unwrap().value =
+                            self.storage_load(contract, ty, &mut slot, function);
                     }
                     Instr::ClearStorage { ty, storage } => {
                         let mut slot = self
