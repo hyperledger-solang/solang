@@ -4,10 +4,11 @@ use std::collections::HashSet;
 use std::fmt;
 use std::str;
 
-use super::expression::expression;
 use super::statements::{statement, LoopScopes};
-use super::vector_to_slice;
-use super::{constant_folding, reaching_definitions, strength_reduce};
+use super::{
+    constant_folding, dead_storage, expression::expression, reaching_definitions, strength_reduce,
+    vector_to_slice, Options,
+};
 use crate::parser::pt;
 use crate::sema::ast::{
     CallTy, Contract, Expression, Function, Namespace, Parameter, StringLocation, Type,
@@ -150,6 +151,8 @@ pub enum Instr {
         topics: Vec<Expression>,
         topic_tys: Vec<Parameter>,
     },
+    /// Do nothing
+    Nop,
 }
 
 #[derive(Clone)]
@@ -963,6 +966,7 @@ impl ControlFlowGraph {
                     .collect::<Vec<String>>()
                     .join(", ")
             ),
+            Instr::Nop => String::from("nop"),
         }
     }
 
@@ -1024,6 +1028,7 @@ pub fn generate_cfg(
     cfg_no: usize,
     all_cfgs: &mut Vec<ControlFlowGraph>,
     ns: &mut Namespace,
+    opt: &Options,
 ) {
     let default_constructor = &ns.default_constructor(contract_no);
 
@@ -1084,10 +1089,7 @@ pub fn generate_cfg(
         cfg.selector = func.selector();
     }
 
-    reaching_definitions::find(&mut cfg);
-    constant_folding::constant_folding(&mut cfg, ns);
-    vector_to_slice::vector_to_slice(&mut cfg, ns);
-    strength_reduce::strength_reduce(&mut cfg, ns);
+    optimize(&mut cfg, ns, opt);
 
     all_cfgs[cfg_no] = cfg;
 }
@@ -1116,6 +1118,23 @@ fn resolve_modifier_call<'a>(
     }
 
     panic!("modifier should resolve to internal call");
+}
+
+/// Run codegen optimizer passess
+pub fn optimize(cfg: &mut ControlFlowGraph, ns: &mut Namespace, opt: &Options) {
+    reaching_definitions::find(cfg);
+    if opt.constant_folding {
+        constant_folding::constant_folding(cfg, ns);
+    }
+    if opt.vector_to_slice {
+        vector_to_slice::vector_to_slice(cfg, ns);
+    }
+    if opt.strength_reduce {
+        strength_reduce::strength_reduce(cfg, ns);
+    }
+    if opt.dead_storage {
+        dead_storage::dead_storage(cfg, ns);
+    }
 }
 
 /// Generate the CFG for a function. If function_no is None, generate the implicit default

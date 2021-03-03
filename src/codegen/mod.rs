@@ -1,5 +1,6 @@
 pub mod cfg;
 mod constant_folding;
+mod dead_storage;
 mod expression;
 mod external_functions;
 mod reaching_definitions;
@@ -8,14 +9,33 @@ mod storage;
 mod strength_reduce;
 mod vector_to_slice;
 
-use self::cfg::{ControlFlowGraph, Instr, Vartable};
+use self::cfg::{optimize, ControlFlowGraph, Instr, Vartable};
 use self::expression::expression;
 use crate::sema::ast::Namespace;
+use crate::sema::diagnostics::any_errors;
+
+pub struct Options {
+    pub dead_storage: bool,
+    pub constant_folding: bool,
+    pub strength_reduce: bool,
+    pub vector_to_slice: bool,
+}
+
+impl Default for Options {
+    fn default() -> Self {
+        Options {
+            dead_storage: true,
+            constant_folding: true,
+            strength_reduce: true,
+            vector_to_slice: true,
+        }
+    }
+}
 
 /// The contracts are fully resolved but they do not have any a CFG which is needed for the llvm code emitter
 /// not all contracts need a cfg; only those for which we need the
-pub fn codegen(contract_no: usize, ns: &mut Namespace) {
-    if ns.contracts[contract_no].is_concrete() {
+pub fn codegen(contract_no: usize, ns: &mut Namespace, opt: &Options) {
+    if !any_errors(&ns.diagnostics) && ns.contracts[contract_no].is_concrete() {
         let mut cfg_no = 0;
         let mut all_cfg = Vec::new();
 
@@ -37,11 +57,18 @@ pub fn codegen(contract_no: usize, ns: &mut Namespace) {
             .collect::<Vec<(usize, usize)>>()
             .into_iter()
         {
-            cfg::generate_cfg(contract_no, Some(function_no), cfg_no, &mut all_cfg, ns)
+            cfg::generate_cfg(
+                contract_no,
+                Some(function_no),
+                cfg_no,
+                &mut all_cfg,
+                ns,
+                opt,
+            )
         }
 
         // Generate cfg for storage initializers
-        let cfg = storage_initializer(contract_no, ns);
+        let cfg = storage_initializer(contract_no, ns, opt);
         let pos = all_cfg.len();
         all_cfg.push(cfg);
         ns.contracts[contract_no].initializer = Some(pos);
@@ -52,7 +79,7 @@ pub fn codegen(contract_no: usize, ns: &mut Namespace) {
             let cfg_no = all_cfg.len();
             all_cfg.push(ControlFlowGraph::placeholder());
 
-            cfg::generate_cfg(contract_no, None, cfg_no, &mut all_cfg, ns);
+            cfg::generate_cfg(contract_no, None, cfg_no, &mut all_cfg, ns, opt);
 
             ns.contracts[contract_no].default_constructor = Some((func, cfg_no));
         }
@@ -62,7 +89,7 @@ pub fn codegen(contract_no: usize, ns: &mut Namespace) {
 }
 
 /// This function will set all contract storage initializers and should be called from the constructor
-fn storage_initializer(contract_no: usize, ns: &mut Namespace) -> ControlFlowGraph {
+fn storage_initializer(contract_no: usize, ns: &mut Namespace, opt: &Options) -> ControlFlowGraph {
     let mut cfg = ControlFlowGraph::new(String::from("storage_initializer"), None);
     let mut vartab = Vartable::new(ns.next_id);
 
@@ -90,10 +117,7 @@ fn storage_initializer(contract_no: usize, ns: &mut Namespace) -> ControlFlowGra
 
     cfg.vars = vartab.drain();
 
-    reaching_definitions::find(&mut cfg);
-    constant_folding::constant_folding(&mut cfg, ns);
-    vector_to_slice::vector_to_slice(&mut cfg, ns);
-    strength_reduce::strength_reduce(&mut cfg, ns);
+    optimize(&mut cfg, ns, opt);
 
     cfg
 }
