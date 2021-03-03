@@ -3111,6 +3111,7 @@ pub trait TargetRuntime<'a> {
 
             for ins in &cfg.blocks[w.block_no].instr {
                 match ins {
+                    Instr::Nop => (),
                     Instr::Return { value } if value.is_empty() => {
                         contract
                             .builder

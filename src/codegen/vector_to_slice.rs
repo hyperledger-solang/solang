@@ -81,6 +81,7 @@ fn find_writable_vectors(
             }
             // These instructions are fine with vectors
             Instr::Set { .. }
+            | Instr::Nop
             | Instr::Branch { .. }
             | Instr::BranchCond { .. }
             | Instr::PopMemory { .. }

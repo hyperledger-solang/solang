@@ -82,6 +82,19 @@ Options:
   object
     Output wasm object file; this is the contract before final linking.
 
+\\-\\-no\\-constant\\-folding
+   Disable the :ref:`constant-folding` codegen optimization
+
+\\-\\-no\\-strength\\-reduce
+   Disable the :ref:`strength-reduce` codegen optimization
+
+\\-\\-no\\-dead\\-storage
+   Disable the :ref:`dead-storage` optimization
+
+\\-\\-no\\-vector\\-to\\-slice
+   Disable the :ref:`vector-to-slice` optimization
+
+
 Running Solang from docker image
 ________________________________
 

@@ -6,7 +6,7 @@ use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 
 use solang::abi;
-use solang::codegen::codegen;
+use solang::codegen::{codegen, Options};
 use solang::file_cache::FileCache;
 use solang::sema::diagnostics;
 
@@ -51,7 +51,7 @@ fn main() {
         )
         .arg(
             Arg::with_name("OPT")
-                .help("Set optimizer level")
+                .help("Set llvm optimizer level")
                 .short("O")
                 .takes_value(true)
                 .possible_values(&["none", "less", "default", "aggressive"])
@@ -92,8 +92,38 @@ fn main() {
                 .multiple(true),
         )
         .arg(
+            Arg::with_name("CONSTANTFOLDING")
+                .help("Disable constant folding codegen optimization")
+                .long("no-constant-folding")
+                .display_order(1),
+        )
+        .arg(
+            Arg::with_name("STRENGTHREDUCE")
+                .help("Disable strength reduce codegen optimization")
+                .long("no-strength-reduce")
+                .display_order(2),
+        )
+        .arg(
+            Arg::with_name("DEADSTORAGE")
+                .help("Disable dead storage codegen optimization")
+                .long("no-dead-storage")
+                .display_order(3),
+        )
+        .arg(
+            Arg::with_name("VECTORTOSLICE")
+                .help("Disable vector to slice codegen optimization")
+                .long("no-vector-to-slice")
+                .display_order(4),
+        )
+        .arg(
+            Arg::with_name("MATHOVERFLOW")
+                .help("Enable math overflow checking")
+                .long("math-overflow")
+                .display_order(5),
+        )
+        .arg(
             Arg::with_name("LANGUAGESERVER")
-                .help("Start language server")
+                .help("Start language server on stdin/stdout")
                 .conflicts_with_all(&["STD-JSON", "OUTPUT", "EMIT", "OPT", "INPUT"])
                 .long("language-server"),
         )
@@ -101,11 +131,6 @@ fn main() {
             Arg::with_name("DOC")
                 .help("Generate documention for contracts using doc comments")
                 .long("doc"),
-        )
-        .arg(
-            Arg::with_name("MATHOVERFLOW")
-                .help("Enable math overflow checking")
-                .long("math-overflow"),
         )
         .get_matches();
 
@@ -219,7 +244,7 @@ fn process_filename(
         Path::new(matches.value_of("OUTPUT").unwrap_or(".")).join(format!("{}.{}", stem, ext))
     };
     let verbose = matches.is_present("VERBOSE");
-    let opt = match matches.value_of("OPT").unwrap() {
+    let llvm_opt = match matches.value_of("OPT").unwrap() {
         "none" => inkwell::OptimizationLevel::None,
         "less" => inkwell::OptimizationLevel::Less,
         "default" => inkwell::OptimizationLevel::Default,
@@ -233,9 +258,16 @@ fn process_filename(
     // resolve phase
     let mut ns = solang::parse_and_resolve(filename, cache, target);
 
+    let opt = Options {
+        dead_storage: !matches.is_present("DEADSTORAGE"),
+        strength_reduce: !matches.is_present("STRENGTHREDUCE"),
+        constant_folding: !matches.is_present("CONSTANTFOLDING"),
+        vector_to_slice: !matches.is_present("VECTORTOSLICE"),
+    };
+
     // codegen all the contracts; some additional errors/warnings will be detected here
     for contract_no in 0..ns.contracts.len() {
-        codegen(contract_no, &mut ns);
+        codegen(contract_no, &mut ns, &opt);
     }
 
     if matches.is_present("STD-JSON") {
@@ -275,7 +307,8 @@ fn process_filename(
             );
         }
 
-        let contract = resolved_contract.emit(&ns, &context, &filename, opt, math_overflow_check);
+        let contract =
+            resolved_contract.emit(&ns, &context, &filename, llvm_opt, math_overflow_check);
 
         if let Some("llvm-ir") = matches.value_of("EMIT") {
             if let Some(runtime) = &contract.runtime {
