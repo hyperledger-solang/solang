@@ -136,6 +136,39 @@ jobs:
       run: npm run test
       working-directory: ./integration/solana
 
+  burrow:
+    name: Burrow Integration test
+    runs-on: ubuntu-18.04
+    container: ubuntu:18.04
+    needs: linux
+    services:
+      burrow:
+        image: hyperledger/burrow:latest
+        ports:
+          - 10997
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v2
+    - uses: actions/setup-node@v1
+      with:
+        node-version: '12'
+    - uses: actions/download-artifact@master
+      with:
+        name: solang-linux
+        path: bin
+    - run: chmod 755 ./bin/solang
+    - run: echo "$(pwd)/bin" >> $GITHUB_PATH
+    - run: npm install
+      working-directory: ./integration/burrow
+    - name: Build Solang contract
+      run: npm run build
+      working-directory: ./integration/burrow
+    - name: Set github env
+      run: echo "RPC_URL=burrow:10997" >> $GITHUB_ENV
+    - name: Deploy and test contract
+      run: npm run test
+      working-directory: ./integration/burrow
+
   vscode:
     name: Visual Code Extension
     runs-on: ubuntu-18.04
