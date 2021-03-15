@@ -3,6 +3,7 @@
 [![Rocket.Chat](https://open.rocket.chat/images/join-chat.svg)](https://chat.hyperledger.org/channel/solang)
 [![CI](https://github.com/hyperledger-labs/solang/workflows/test/badge.svg)](https://github.com/hyperledger-labs/solang/actions)
 [![Documentation Status](https://readthedocs.org/projects/solang/badge/?version=latest)](https://solang.readthedocs.io/en/latest/?badge=latest)
+[![license](https://img.shields.io/github/license/hyperledger-labs/solang.svg)](LICENSE)
 [![LoC](https://tokei.rs/b1/github/hyperledger-labs/solang?category=lines)](https://github.com/hyperledger-labs/solang)
 
 [<img align="right" width="640" src="docs/web3_foundation_grants_badge_black.svg" alt="Funded by the web3 foundation">](https://github.com/w3f/Web3-collaboration/blob/master/grants/accepted_grant_applications.md#wave-4)
@@ -55,3 +56,7 @@ docker run --rm -it -v $(pwd):/sources hyperledgerlabs/solang -v -o /sources  --
 You will have a file called flipper.contact. You can use this directly in
 the [Polkadot UI](https://substrate.dev/substrate-contracts-workshop/#/0/deploying-your-contract?id=putting-your-code-on-the-blockchain), as if your smart
 contract was written using ink!.
+
+## License
+
+[Apache 2.0](LICENSE)
