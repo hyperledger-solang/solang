@@ -1,6 +1,15 @@
 name: test
 on: [push, pull_request]
 jobs:
+  repolinter:
+    name: Repolinter
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+      - name: Run repolinter
+        run: npx repolinter --rulesetUrl https://raw.githubusercontent.com/hyperledger-labs/hyperledger-community-management-tools/master/repo_structure/repolint.json
+
   lints:
     name: Lints
     runs-on: ubuntu-18.04
