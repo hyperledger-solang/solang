@@ -1,6 +1,7 @@
 import { strictEqual } from 'assert';
 import { Burrow } from '@hyperledger/burrow';
 import { readFileSync } from 'fs';
+import BN from 'bn.js';
 
 const default_url: string = "localhost:10997";
 const default_account = 'ABE2314B5D38BE9EA2BEDB8E58345C62FA6636BA';
@@ -95,11 +96,10 @@ describe('Deploy solang contract and test', () => {
 
         res = await prog.op_u64(0, 1000, 4100);
         strictEqual(res[0], 5100);
-        // FIXME: too large for @hyperledger/burrow. Needs fix in npm package
-        // res = await prog.op_u64(1, 1000, 4100);
-        // strictEqual(res[0], 18446744073709548516); // (2^64)-18446744073709548516 = 3100
-        // res = await prog.op_u64(2, 123456789, 123456789);
-        // strictEqual(res[0], 15241578750190521);
+        res = await prog.op_u64(1, 1000, 4100);
+        strictEqual(new BN('18446744073709548516').cmp(res[0]), 0); // (2^64)-18446744073709548516 = 3100
+        res = await prog.op_u64(2, 123456789, 123456789);
+        strictEqual(new BN('15241578750190521').cmp(res[0]), 0);
         res = await prog.op_u64(3, 123456789, 100);
         strictEqual(res[0], 1234567);
         res = await prog.op_u64(4, 123456789, 100);
@@ -129,20 +129,20 @@ describe('Deploy solang contract and test', () => {
 
         res = await prog.op_u256(0, 1000, 4100);
         strictEqual(res[0], 5100);
-        //res = await prog.op_u256(1, 1000, 4100);
-        // strictEqual(res[0], 115792089237316195423570985008687907853269984665640564039457584007913129636836); // (2^64)-18446744073709548516 = 3100
-        // res = await prog.op_u256(2, 123456789, 123456789);
-        // strictEqual(res[0], 15241578750190521);
+        res = await prog.op_u256(1, 1000, 4100);
+        strictEqual(new BN('115792089237316195423570985008687907853269984665640564039457584007913129636836').cmp(res[0]), 0); // (2^64)-18446744073709548516 = 3100
+        res = await prog.op_u256(2, 123456789, 123456789);
+        strictEqual(new BN('15241578750190521').cmp(res[0]), 0);
         res = await prog.op_u256(3, 123456789, 100);
         strictEqual(res[0], 1234567);
         res = await prog.op_u256(4, 123456789, 100);
         strictEqual(res[0], 89);
-        // res = await prog.op_u256(5, 123456789, 9);
-        // strictEqual(res[0], 6662462759719942007440037531362779472290810125440036903063319585255179509);
+        res = await prog.op_u256(5, 123456789, 9);
+        strictEqual(new BN('6662462759719942007440037531362779472290810125440036903063319585255179509').cmp(res[0]), 0);
         res = await prog.op_i256(6, 10000000000000, 8);
-        strictEqual(res[0], 2560000000000000);
+        strictEqual(res[0].toString(), '2560000000000000');
         res = await prog.op_i256(7, 10000000000000, 8);
-        strictEqual(res[0], 39062500000);
+        strictEqual(res[0].toString(), '39062500000');
 
 
         // TEST bytesN
