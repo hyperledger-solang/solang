@@ -19,6 +19,7 @@ fn testcases() {
 #[derive(Debug)]
 enum Test {
     Check(String),
+    NotCheck(String),
     Fail(String),
     Rewind,
 }
@@ -42,6 +43,8 @@ fn testcase(path: PathBuf) {
             checks.push(Test::Check(check.trim().to_string()));
         } else if let Some(fail) = line.strip_prefix("// FAIL:") {
             fails.push(Test::Fail(fail.trim().to_string()));
+        } else if let Some(not_check) = line.strip_prefix("// NOT-CHECK:") {
+            checks.push(Test::NotCheck(not_check.trim().to_string()));
         } else if let Some(check) = line.strip_prefix("// BEGIN-CHECK:") {
             checks.push(Test::Rewind);
             checks.push(Test::Check(check.trim().to_string()));
@@ -72,6 +75,11 @@ fn testcase(path: PathBuf) {
         match checks.get(current_check) {
             Some(Test::Check(needle)) => {
                 if line.contains(needle) {
+                    current_check += 1;
+                }
+            }
+            Some(Test::NotCheck(needle)) => {
+                if !line.contains(needle) {
                     current_check += 1;
                 }
             }
