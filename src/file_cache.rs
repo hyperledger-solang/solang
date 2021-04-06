@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::prelude::*;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 pub struct FileCache {
@@ -61,14 +61,14 @@ impl FileCache {
 
     /// Get file with contents. This must be a file which was previously
     /// add to the cache
-    pub fn get_file_contents(&mut self, file: &PathBuf) -> Arc<str> {
+    pub fn get_file_contents(&mut self, file: &Path) -> Arc<str> {
         let file_no = self.cached_paths[file];
 
         self.files[file_no].clone()
     }
 
     /// Populate the cache with absolute file path
-    fn load_file(&mut self, path: &PathBuf) -> Result<usize, String> {
+    fn load_file(&mut self, path: &Path) -> Result<usize, String> {
         if let Some(file_no) = self.cached_paths.get(path) {
             return Ok(*file_no);
         }
@@ -98,7 +98,7 @@ impl FileCache {
 
         self.files.push(Arc::from(contents));
 
-        self.cached_paths.insert(path.clone(), pos);
+        self.cached_paths.insert(path.to_path_buf(), pos);
 
         Ok(pos)
     }

@@ -4,6 +4,7 @@ use crate::sema::ast::{Namespace, Parameter, Type};
 use serde::Serialize;
 
 #[derive(Serialize)]
+#[allow(clippy::upper_case_acronyms)]
 pub struct ABIParam {
     pub name: String,
     #[serde(rename = "type")]
@@ -17,6 +18,7 @@ pub struct ABIParam {
 }
 
 #[derive(Serialize)]
+#[allow(clippy::upper_case_acronyms)]
 pub struct ABI {
     #[serde(skip_serializing_if = "String::is_empty")]
     pub name: String,

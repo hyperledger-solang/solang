@@ -3,7 +3,7 @@ mod solana_helpers;
 use byteorder::{ByteOrder, LittleEndian, WriteBytesExt};
 use ethabi::Token;
 use libc::c_char;
-use solana_helpers::allocator_bump::BPFAllocator;
+use solana_helpers::allocator_bump::Allocator;
 use solana_rbpf::{
     error::EbpfError,
     memory_region::{AccessType, MemoryMapping, MemoryRegion},
@@ -17,7 +17,7 @@ use std::mem::{align_of, size_of};
 
 mod solana_tests;
 
-fn build_solidity(src: &str) -> VM {
+fn build_solidity(src: &str) -> Program {
     let mut cache = FileCache::new();
 
     cache.set_file_contents("test.sol", src.to_string());
@@ -41,7 +41,7 @@ fn build_solidity(src: &str) -> VM {
     // resolve
     let (code, abi) = res.last().unwrap().clone();
 
-    VM {
+    Program {
         code,
         abi: ethabi::Contract::load(abi.as_bytes()).unwrap(),
         printbuf: String::new(),
@@ -138,7 +138,7 @@ fn deserialize_parameters(input: &[u8]) -> Vec<Vec<u8>> {
     res
 }
 
-struct VM {
+struct Program {
     code: Vec<u8>,
     abi: ethabi::Contract,
     printbuf: String,
@@ -190,7 +190,7 @@ impl<'a> SyscallObject<UserError> for Printer<'a> {
 /// information about that memory (start address and size) is passed
 /// to the VM to use for enforcement.
 pub struct SyscallAllocFree {
-    allocator: BPFAllocator,
+    allocator: Allocator,
 }
 
 const DEFAULT_HEAP_SIZE: usize = 32 * 1024;
@@ -221,7 +221,7 @@ impl SyscallObject<UserError> for SyscallAllocFree {
     }
 }
 
-impl VM {
+impl Program {
     fn execute(&mut self, buf: &mut String, calldata: &[u8]) {
         println!("running bpf with calldata:{}", hex::encode(calldata));
 
@@ -244,7 +244,7 @@ impl VM {
         vm.register_syscall_ex(
             "sol_alloc_free_",
             Syscall::Object(Box::new(SyscallAllocFree {
-                allocator: BPFAllocator::new(heap, MM_HEAP_START),
+                allocator: Allocator::new(heap, MM_HEAP_START),
             })),
         )
         .unwrap();
@@ -282,7 +282,7 @@ impl VM {
     fn function(&mut self, name: &str, args: &[Token]) -> Vec<Token> {
         let calldata = match self.abi.functions[name][0].encode_input(args) {
             Ok(n) => n,
-            Err(x) => panic!(format!("{}", x)),
+            Err(x) => panic!("{}", x),
         };
 
         println!("input: {}", hex::encode(&calldata));

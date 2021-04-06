@@ -88,7 +88,7 @@ pub struct Event {
     data: Vec<u8>,
 }
 
-pub struct VM {
+pub struct VirtualMachine {
     address: Address,
     caller: Address,
     memory: MemoryRef,
@@ -97,9 +97,9 @@ pub struct VM {
     pub value: u128,
 }
 
-impl VM {
+impl VirtualMachine {
     fn new(address: Address, caller: Address, value: u128) -> Self {
-        VM {
+        VirtualMachine {
             memory: MemoryInstance::alloc(Pages(16), Some(Pages(16))).unwrap(),
             input: Vec::new(),
             output: Vec::new(),
@@ -116,7 +116,7 @@ pub struct TestRuntime {
     pub printbuf: String,
     pub accounts: HashMap<Address, (Vec<u8>, u128)>,
     pub abi: abi::substrate::Abi,
-    pub vm: VM,
+    pub vm: VirtualMachine,
     pub events: Vec<Event>,
 }
 
@@ -497,7 +497,7 @@ impl Externals for TestRuntime {
                     hex::encode(&input)
                 );
 
-                let mut vm = VM::new(address, self.vm.address, value);
+                let mut vm = VirtualMachine::new(address, self.vm.address, value);
 
                 std::mem::swap(&mut self.vm, &mut vm);
 
@@ -647,7 +647,7 @@ impl Externals for TestRuntime {
                     panic!("seal_instantiate: {}", e);
                 }
 
-                let mut vm = VM::new(address, self.vm.address, value);
+                let mut vm = VirtualMachine::new(address, self.vm.address, value);
 
                 std::mem::swap(&mut self.vm, &mut vm);
 
@@ -1013,7 +1013,7 @@ impl TestRuntime {
 
         if let Some(RuntimeValue::I32(ret)) = self.invoke_call(module) {
             if ret != 0 {
-                panic!(format!("non zero return: {}", ret));
+                panic!("non zero return: {}", ret);
             }
         }
     }
@@ -1174,7 +1174,7 @@ pub fn build_solidity(src: &'static str) -> TestRuntime {
         printbuf: String::new(),
         store: HashMap::new(),
         contracts: res,
-        vm: VM::new(address, address_new(), 0),
+        vm: VirtualMachine::new(address, address_new(), 0),
         abi: abi::substrate::load(&abistr).unwrap(),
         events: Vec::new(),
     };
@@ -1210,7 +1210,7 @@ pub fn build_solidity_with_overflow_check(src: &'static str) -> TestRuntime {
         printbuf: String::new(),
         store: HashMap::new(),
         contracts: res,
-        vm: VM::new(address, address_new(), 0),
+        vm: VirtualMachine::new(address, address_new(), 0),
         abi: abi::substrate::load(&abistr).unwrap(),
         events: Vec::new(),
     };

@@ -57,31 +57,26 @@ SECTIONS
         )
         .expect("failed to write linker script to temp file");
 
-    let mut command_line = Vec::new();
-
-    command_line.push(CString::new("-z").unwrap());
-    command_line.push(CString::new("notext").unwrap());
-    command_line.push(CString::new("-shared").unwrap());
-    command_line.push(CString::new("--Bdynamic").unwrap());
-    command_line.push(
+    let command_line = vec![
+        CString::new("-z").unwrap(),
+        CString::new("notext").unwrap(),
+        CString::new("-shared").unwrap(),
+        CString::new("--Bdynamic").unwrap(),
         CString::new(
             linker_script_filename
                 .to_str()
                 .expect("temp path should be unicode"),
         )
         .unwrap(),
-    );
-    command_line.push(
         CString::new(
             object_filename
                 .to_str()
                 .expect("temp path should be unicode"),
         )
         .unwrap(),
-    );
-    command_line.push(CString::new("-o").unwrap());
-    command_line
-        .push(CString::new(res_filename.to_str().expect("temp path should be unicode")).unwrap());
+        CString::new("-o").unwrap(),
+        CString::new(res_filename.to_str().expect("temp path should be unicode")).unwrap(),
+    ];
 
     if super::elf_linker(&command_line) {
         panic!("linker failed");

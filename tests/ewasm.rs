@@ -28,7 +28,7 @@ fn address_new() -> Address {
     a
 }
 
-struct VM {
+struct VirtualMachine {
     memory: MemoryRef,
     cur: Address,
     code: Vec<u8>,
@@ -37,9 +37,9 @@ struct VM {
     returndata: Vec<u8>,
 }
 
-impl VM {
+impl VirtualMachine {
     fn new(code: Vec<u8>, address: Address) -> Self {
-        VM {
+        VirtualMachine {
             memory: MemoryInstance::alloc(Pages(2), Some(Pages(2))).unwrap(),
             input: Vec::new(),
             output: Vec::new(),
@@ -56,7 +56,7 @@ struct TestRuntime {
     value: u128,
     accounts: HashMap<Address, (Vec<u8>, u128)>,
     store: HashMap<(Address, [u8; 32]), [u8; 32]>,
-    vm: VM,
+    vm: VirtualMachine,
     events: Vec<Event>,
 }
 
@@ -303,7 +303,7 @@ impl Externals for TestRuntime {
                     .unwrap()
                     .clone();
 
-                let mut vm = VM::new(buf, addr);
+                let mut vm = VirtualMachine::new(buf, addr);
 
                 std::mem::swap(&mut self.vm, &mut vm);
 
@@ -401,7 +401,7 @@ impl Externals for TestRuntime {
                 // wasm validator will trip
                 let (code, _) = self.accounts.get(&addr).unwrap().clone();
 
-                let mut vm = VM::new(code.to_vec(), addr);
+                let mut vm = VirtualMachine::new(code.to_vec(), addr);
 
                 std::mem::swap(&mut self.vm, &mut vm);
 
@@ -611,7 +611,7 @@ impl TestRuntime {
     fn function(&mut self, name: &str, args: &[Token]) -> Vec<Token> {
         let calldata = match self.abi.functions[name][0].encode_input(args) {
             Ok(n) => n,
-            Err(x) => panic!(format!("{}", x)),
+            Err(x) => panic!("{}", x),
         };
 
         let module = self.create_module(&self.accounts[&self.vm.cur].0);
@@ -646,7 +646,7 @@ impl TestRuntime {
     fn function_abi_fail(&mut self, name: &str, args: &[Token], patch: fn(&mut Vec<u8>)) {
         let mut calldata = match self.abi.functions[name][0].encode_input(args) {
             Ok(n) => n,
-            Err(x) => panic!(format!("{}", x)),
+            Err(x) => panic!("{}", x),
         };
 
         patch(&mut calldata);
@@ -677,7 +677,7 @@ impl TestRuntime {
     fn function_revert(&mut self, name: &str, args: &[Token]) -> Option<String> {
         let calldata = match self.abi.functions[name][0].encode_input(args) {
             Ok(n) => n,
-            Err(x) => panic!(format!("{}", x)),
+            Err(x) => panic!("{}", x),
         };
 
         let module = self.create_module(&self.accounts[&self.vm.cur].0);
@@ -811,7 +811,7 @@ fn build_solidity(src: &str) -> TestRuntime {
 
     TestRuntime {
         accounts: HashMap::new(),
-        vm: VM::new(bc, [0u8; 20]),
+        vm: VirtualMachine::new(bc, [0u8; 20]),
         value: 0,
         store: HashMap::new(),
         abi: ethabi::Contract::load(abi.as_bytes()).unwrap(),
