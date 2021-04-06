@@ -135,7 +135,7 @@ pub fn resolve_fields(delay: ResolveFields, file_no: usize, ns: &mut Namespace) 
                     }
                 }
             }
-        };
+        }
 
         check(s, file_no, &mut vec![s], ns);
     }

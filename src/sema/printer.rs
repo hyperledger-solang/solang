@@ -432,12 +432,10 @@ fn print_statement(stmts: &[Statement], func: &Function, ns: &Namespace) -> Vec<
                 catch_stmt,
                 ..
             } => {
-                let mut list = Vec::new();
-
-                list.push(Tree::Branch(
+                let mut list = vec![Tree::Branch(
                     String::from("expr"),
                     vec![print_expr(expr, Some(func), ns)],
-                ));
+                )];
 
                 if !returns.is_empty() {
                     let returns = returns
@@ -626,9 +624,7 @@ impl Namespace {
 }
 
 fn print_func(func: &Function, ns: &Namespace) -> Tree {
-    let mut list = Vec::new();
-
-    list.push(Tree::Leaf(format!("visibility {}", func.visibility)));
+    let mut list = vec![Tree::Leaf(format!("visibility {}", func.visibility))];
 
     if func.ty == pt::FunctionTy::Constructor && func.ty == pt::FunctionTy::Function {
         list.push(Tree::Leaf(format!("signature {}", func.signature)));

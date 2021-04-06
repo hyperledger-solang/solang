@@ -3035,7 +3035,7 @@ pub trait TargetRuntime<'a> {
             }
 
             BasicBlock { bb, phis }
-        };
+        }
 
         let mut work = VecDeque::new();
 

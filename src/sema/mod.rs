@@ -1268,6 +1268,7 @@ impl ast::Namespace {
     // An array type can look like foo[2] foo.baz.bar, if foo is an enum type. The lalrpop parses
     // this as an expression, so we need to convert it to Type and check there are
     // no unexpected expressions types.
+    #[allow(clippy::vec_init_then_push)]
     pub fn expr_to_type<'a>(
         &mut self,
         file_no: usize,
@@ -1276,7 +1277,7 @@ impl ast::Namespace {
         diagnostics: &mut Vec<ast::Diagnostic>,
     ) -> Result<(Vec<&'a pt::Identifier>, pt::Expression, Vec<ArrayDimension>), ()> {
         let mut expr = expr;
-        let mut dimensions = Vec::new();
+        let mut dimensions = vec![];
 
         loop {
             expr = match expr {

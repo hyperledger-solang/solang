@@ -330,7 +330,7 @@ fn structs_encode() {
     struct Foo {
         f1: [u8; 3],
         f2: bool,
-    };
+    }
 
     let mut runtime = build_solidity(
         r##"
@@ -363,7 +363,7 @@ fn structs_decode() {
     struct Foo {
         f1: [u8; 3],
         f2: i32,
-    };
+    }
 
     let mut runtime = build_solidity(
         r##"
@@ -447,7 +447,7 @@ fn structs_decode() {
         f3: String,
         f4: Vec<i64>,
         f5: [bool; 4],
-    };
+    }
 
     let mut runtime = build_solidity(
         r##"
@@ -534,13 +534,13 @@ fn structs_in_structs_decode() {
     struct Foo {
         f1: [u8; 3],
         f2: i32,
-    };
+    }
     #[derive(Debug, PartialEq, Encode, Decode)]
     struct Bar {
         a: bool,
         b: Foo,
         c: Foo,
-    };
+    }
 
     let mut runtime = build_solidity(
         r##"
@@ -589,13 +589,13 @@ fn structs_in_structs_encode() {
     struct Foo {
         f1: [u8; 3],
         f2: i32,
-    };
+    }
     #[derive(Debug, PartialEq, Encode, Decode)]
     struct Bar {
         a: bool,
         b: Foo,
         c: Foo,
-    };
+    }
 
     let mut runtime = build_solidity(
         r##"
@@ -673,7 +673,7 @@ fn return_from_struct_storage() {
     struct Foo {
         f1: [u8; 3],
         f2: u32,
-    };
+    }
 
     let mut runtime = build_solidity(
         r##"
@@ -715,7 +715,7 @@ fn struct_in_init_return() {
     struct Card {
         value: u8,
         suit: u8,
-    };
+    }
 
     #[derive(Debug, PartialEq, Encode, Decode)]
     struct Hand {
@@ -724,7 +724,7 @@ fn struct_in_init_return() {
         card3: Card,
         card4: Card,
         card5: Card,
-    };
+    }
 
     let mut runtime = build_solidity(
         r#"
@@ -767,7 +767,7 @@ fn struct_struct_in_init_and_return() {
     struct Card {
         v: u8,
         s: u8,
-    };
+    }
 
     #[derive(Debug, PartialEq, Encode, Decode)]
     struct Hand {
@@ -776,7 +776,7 @@ fn struct_struct_in_init_and_return() {
         card3: Card,
         card4: Card,
         card5: Card,
-    };
+    }
 
     let mut runtime = build_solidity(
         r#"

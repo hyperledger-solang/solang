@@ -15,10 +15,8 @@ pub fn parse(src: &str, file_no: usize) -> Result<pt::SourceUnit, Vec<Diagnostic
 
     let s = solidity::SourceUnitParser::new().parse(src, file_no, lex);
 
-    let mut errors = Vec::new();
-
     if let Err(e) = s {
-        errors.push(match e {
+        let errors = vec![match e {
             ParseError::InvalidToken { location } => Diagnostic::parser_error(
                 pt::Loc(file_no, location, location),
                 "invalid token".to_string(),
@@ -45,7 +43,7 @@ pub fn parse(src: &str, file_no: usize) -> Result<pt::SourceUnit, Vec<Diagnostic
                 pt::Loc(file_no, location, location),
                 format!("unexpected end of file, expecting {}", expected.join(", ")),
             ),
-        });
+        }];
 
         Err(errors)
     } else {

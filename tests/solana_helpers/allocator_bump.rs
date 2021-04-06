@@ -1,17 +1,17 @@
 use std::alloc::Layout;
 
 #[derive(Debug)]
-pub struct BPFAllocator {
+pub struct Allocator {
     heap: Vec<u8>,
     start: u64,
     len: u64,
     pos: u64,
 }
 
-impl BPFAllocator {
+impl Allocator {
     pub fn new(heap: Vec<u8>, virtual_address: u64) -> Self {
         let len = heap.len() as u64;
-        Self {
+        Allocator {
             heap,
             start: virtual_address,
             len,
@@ -20,7 +20,7 @@ impl BPFAllocator {
     }
 }
 
-impl BPFAllocator {
+impl Allocator {
     pub fn alloc(&mut self, layout: Layout) -> u64 {
         let bytes_to_align = (self.pos as *const u8).align_offset(layout.align()) as u64;
         if self

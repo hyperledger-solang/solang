@@ -4014,7 +4014,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                     $name,
                 )
             }};
-        };
+        }
 
         match expr {
             ast::Expression::Builtin(_, _, ast::Builtin::Calldata, _) => {

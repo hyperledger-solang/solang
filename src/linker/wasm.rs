@@ -25,13 +25,13 @@ pub fn link(input: &[u8], name: &str, target: Target) -> Vec<u8> {
         .write_all(input)
         .expect("failed to write object file to temp file");
 
-    let mut command_line = Vec::new();
-
-    command_line.push(CString::new("-O3").unwrap());
-    command_line.push(CString::new("--no-entry").unwrap());
-    command_line.push(CString::new("--allow-undefined").unwrap());
-    command_line.push(CString::new("--gc-sections").unwrap());
-    command_line.push(CString::new("--global-base=0").unwrap());
+    let mut command_line = vec![
+        CString::new("-O3").unwrap(),
+        CString::new("--no-entry").unwrap(),
+        CString::new("--allow-undefined").unwrap(),
+        CString::new("--gc-sections").unwrap(),
+        CString::new("--global-base=0").unwrap(),
+    ];
 
     match target {
         Target::Ewasm => {
