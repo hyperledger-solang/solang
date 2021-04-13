@@ -51,7 +51,7 @@ Building Solang from source
 ---------------------------
 
 In order to build Solang from source, you will need rust 1.48.0 or higher,
-and a build of llvm based on our tree. There are a few patches which are not upstream yet
+and a build of llvm based on the Solana llvm tree. There are a few patches which are not upstream yet.
 First, follow the steps below for installing llvm and then proceed from there.
 
 If you do not have the correct version of rust installed, go to `rustup <https://rustup.rs/>`_.
@@ -60,7 +60,7 @@ Installing the LLVM Libraries
 -----------------------------
 
 Solang needs a build of
-`llvm with some extra patches <https://github.com/seanyoung/llvm-project/tree/bpf>`_.
+`llvm with some extra patches <https://github.com/solana-labs/llvm-project/>`_.
 You can either download the pre-built binaries or build your own from source. After that,
 You need to add the `bin` directory to your path, so that the build system of Solang can find the
 correct version of llvm to use.
@@ -69,26 +69,26 @@ Installing LLVM on Linux
 ________________________
 
 A pre-built version of llvm, specifically configured for Solang, is available at
-`<https://solang.io/download/llvm10.0-linux.tar.gz>`_. This version is built using the
+`<https://solang.io/download/llvm11.0-linux.tar.xz>`_. This version is built using the
 `dockerfile for building llvm on linux <https://github.com/hyperledger-labs/solang/blob/main/scripts/build-llvm-linux.dockerfile>`_.
 After downloading, untar the file in a terminal and add it to your path.
 
 .. code-block:: bash
 
-	tar zxf llvm10.0-linux.tar.gz
-	export PATH=$(pwd)/llvm10.0/bin:$PATH
+	tar Jxf llvm11.0-linux.tar.xz
+	export PATH=$(pwd)/llvm11.0/bin:$PATH
 
 Installing LLVM on Windows
 __________________________
 
 A pre-built version of llvm, specifically configured for Solang, is available at
-`<https://solang.io/download/llvm10.0-win.zip>`_. This version is built using the
+`<https://solang.io/download/llvm11.0-win.zip>`_. This version is built using the
 `dockerfile for building llvm on Windows <https://github.com/hyperledger-labs/solang/blob/main/scripts/build-llvm-windows.dockerfile>`_.
 
 If you want to use the dockerfile yourself rather than download the binaries above, then this
 requires `Docker Desktop <https://www.docker.com/products/docker-desktop>`_ installed, and then switched to
 `windows containers <https://docs.docker.com/docker-for-windows/#switch-between-windows-and-linux-containers>`_.
-The result will be an image with llvm compressed in the file ``c:\llvm10.0-win.zip``. Docker on Windows needs Hyper-V
+The result will be an image with llvm compressed in the file ``c:\llvm11.0-win.zip``. Docker on Windows needs Hyper-V
 enabled. If you are running Windows 10 in a virtual machine, be sure to check
 `this blog post <https://www.mess.org/2020/06/22/Hyper-V-in-KVM/>`_.
 
@@ -96,21 +96,21 @@ After unzipping the file, add the bin directory to your path.
 
 .. code-block:: batch
 
-	set PATH=%PATH%;C:\llvm10.0\bin
+	set PATH=%PATH%;C:\llvm11.0\bin
 
 Installing LLVM on Mac
 ______________________
 
 A pre-built version of llvm, specifically configured for Solang, is available on
-`<https://solang.io/download/llvm10.0-mac.tar.gz>`_. This version is built
+`<https://solang.io/download/llvm11.0-mac.tar.xz>`_. This version is built
 with the instructions below. After downloading, untar the file in a terminal and
 add it to your path.
 
 .. code-block:: bash
 
-	tar zxf llvm10.0-mac.tar.gz
-	xattr -rd com.apple.quarantine llvm10.0
-	export PATH=$(pwd)/llvm10.0/bin:$PATH
+	tar Jxf llvm11.0-mac.tar.xz
+	xattr -rd com.apple.quarantine llvm11.0
+	export PATH=$(pwd)/llvm11.0/bin:$PATH
 
 .. _llvm-from-source:
 
@@ -122,14 +122,8 @@ you may need to consult. First if all clone our llvm repository:
 
 .. code-block:: bash
 
-	git clone git://github.com/seanyoung/llvm-project
+	git clone git://github.com/solana-labs/llvm-project
 	cd llvm-project
-
-Now switch to the bpf branch:
-
-.. code-block:: bash
-
-	git checkout bpf
 
 Now run cmake to create the makefiles. Replace the *installdir* argument to ``CMAKE_INSTALL_PREFIX`` with with a directory where you would like to have llvm installed, and then run the build:
 
