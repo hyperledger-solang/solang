@@ -4,19 +4,38 @@
 #include "stdlib.h"
 #include "solana_sdk.h"
 
-extern uint64_t solang_dispatch(const uint8_t *input, uint64_t input_len, SolAccountInfo *ka);
+extern uint64_t solang_dispatch(const SolParameters *param);
 
 uint64_t
 entrypoint(const uint8_t *input)
 {
-    SolAccountInfo ka[2];
-    SolParameters params = (SolParameters){.ka = ka};
-    if (!sol_deserialize(input, &params, SOL_ARRAY_SIZE(ka)))
+    SolParameters params;
+
+    uint64_t ret = sol_deserialize(input, &params);
+    if (ret)
     {
-        return ERROR_INVALID_ARGUMENT;
+        return ret;
     }
 
-    return solang_dispatch(params.data, params.data_len, ka);
+    int account_no;
+
+    // the first account is the returndata account; ignore that one
+    for (account_no = 1; account_no < params.ka_num; account_no++)
+    {
+        if (SolPubkey_same(params.account_id, params.ka[account_no].key))
+        {
+            break;
+        }
+    }
+
+    if (account_no == params.ka_num)
+    {
+        return ERROR_INVALID_INSTRUCTION_DATA;
+    }
+
+    params.ka_cur = account_no;
+
+    return solang_dispatch(&params);
 }
 
 void *__malloc(uint32_t size)
@@ -140,10 +159,8 @@ uint64_t account_data_alloc(SolAccountInfo *ai, uint32_t size, uint32_t *res)
     }
 }
 
-uint32_t account_data_len(SolAccountInfo *ai, uint32_t offset)
+uint32_t account_data_len(void *data, uint32_t offset)
 {
-    void *data = ai->data;
-
     // Nothing to do
     if (!offset)
         return 0;
@@ -155,10 +172,8 @@ uint32_t account_data_len(SolAccountInfo *ai, uint32_t offset)
     return chunk->length;
 }
 
-void account_data_free(SolAccountInfo *ai, uint32_t offset)
+void account_data_free(void *data, uint32_t offset)
 {
-    void *data = ai->data;
-
     // Nothing to do
     if (!offset)
         return;

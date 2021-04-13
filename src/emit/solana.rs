@@ -109,6 +109,128 @@ impl SolanaTarget {
             .set_unnamed_address(UnnamedAddress::Local);
     }
 
+    /// Returns the SolAccountInfo of the executing contract
+    fn contract_storage_account<'b>(&self, contract: &Contract<'b>) -> PointerValue<'b> {
+        let parameters = contract
+            .builder
+            .get_insert_block()
+            .unwrap()
+            .get_parent()
+            .unwrap()
+            .get_last_param()
+            .unwrap()
+            .into_pointer_value();
+
+        let ka_cur = contract
+            .builder
+            .build_load(
+                contract
+                    .builder
+                    .build_struct_gep(parameters, 2, "ka_cur")
+                    .unwrap(),
+                "ka_cur",
+            )
+            .into_int_value();
+
+        unsafe {
+            contract.builder.build_gep(
+                parameters,
+                &[
+                    contract.context.i32_type().const_int(0, false),
+                    contract.context.i32_type().const_int(0, false),
+                    ka_cur,
+                ],
+                "account",
+            )
+        }
+    }
+
+    /// Returns the account data of the executing contract
+    fn contract_storage_data<'b>(&self, contract: &Contract<'b>) -> PointerValue<'b> {
+        let parameters = contract
+            .builder
+            .get_insert_block()
+            .unwrap()
+            .get_parent()
+            .unwrap()
+            .get_last_param()
+            .unwrap()
+            .into_pointer_value();
+
+        let ka_cur = contract
+            .builder
+            .build_load(
+                contract
+                    .builder
+                    .build_struct_gep(parameters, 2, "ka_cur")
+                    .unwrap(),
+                "ka_cur",
+            )
+            .into_int_value();
+
+        contract
+            .builder
+            .build_load(
+                unsafe {
+                    contract.builder.build_gep(
+                        parameters,
+                        &[
+                            contract.context.i32_type().const_int(0, false),
+                            contract.context.i32_type().const_int(0, false),
+                            ka_cur,
+                            contract.context.i32_type().const_int(3, false),
+                        ],
+                        "data",
+                    )
+                },
+                "data",
+            )
+            .into_pointer_value()
+    }
+
+    /// Returns the account data length of the executing contract
+    fn contract_storage_datalen<'b>(&self, contract: &Contract<'b>) -> IntValue<'b> {
+        let parameters = contract
+            .builder
+            .get_insert_block()
+            .unwrap()
+            .get_parent()
+            .unwrap()
+            .get_last_param()
+            .unwrap()
+            .into_pointer_value();
+
+        let ka_cur = contract
+            .builder
+            .build_load(
+                contract
+                    .builder
+                    .build_struct_gep(parameters, 2, "ka_cur")
+                    .unwrap(),
+                "ka_cur",
+            )
+            .into_int_value();
+
+        contract
+            .builder
+            .build_load(
+                unsafe {
+                    contract.builder.build_gep(
+                        parameters,
+                        &[
+                            contract.context.i32_type().const_int(0, false),
+                            contract.context.i32_type().const_int(0, false),
+                            ka_cur,
+                            contract.context.i32_type().const_int(2, false),
+                        ],
+                        "data_len",
+                    )
+                },
+                "data_len",
+            )
+            .into_int_value()
+    }
+
     fn emit_dispatch(&mut self, contract: &mut Contract) {
         let initializer = self.emit_initializer(contract);
 
@@ -118,27 +240,34 @@ impl SolanaTarget {
 
         contract.builder.position_at_end(entry);
 
-        let input = function.get_nth_param(0).unwrap().into_pointer_value();
-        let input_len = function.get_nth_param(1).unwrap().into_int_value();
-        let accounts = function.get_nth_param(2).unwrap().into_pointer_value();
+        let sol_params = function.get_nth_param(0).unwrap().into_pointer_value();
 
-        // load magic value of contract storage
-        let contract_data = contract
+        let input = contract
             .builder
             .build_load(
-                unsafe {
-                    contract.builder.build_gep(
-                        accounts,
-                        &[
-                            contract.context.i32_type().const_int(1, false),
-                            contract.context.i32_type().const_int(3, false),
-                        ],
-                        "contract_data",
-                    )
-                },
-                "contract_data",
+                contract
+                    .builder
+                    .build_struct_gep(sol_params, 4, "input")
+                    .unwrap(),
+                "data",
             )
             .into_pointer_value();
+
+        let input_len = contract
+            .builder
+            .build_load(
+                contract
+                    .builder
+                    .build_struct_gep(sol_params, 5, "input_len")
+                    .unwrap(),
+                "data_len",
+            )
+            .into_int_value();
+
+        // load magic value of contract storage
+        contract.parameters = Some(sol_params);
+
+        let contract_data = self.contract_storage_data(contract);
 
         let magic_value_ptr = contract.builder.build_pointer_cast(
             contract_data,
@@ -183,28 +312,11 @@ impl SolanaTarget {
             &contract.context.i64_type().const_int(4u64 << 32, false),
         ));
 
-        contract.accounts = Some(accounts);
-
         // generate constructor code
         contract.builder.position_at_end(constructor_block);
 
         // do we have enough contract data
-        let contract_data_len = contract
-            .builder
-            .build_load(
-                unsafe {
-                    contract.builder.build_gep(
-                        accounts,
-                        &[
-                            contract.context.i32_type().const_int(1, false),
-                            contract.context.i32_type().const_int(2, false),
-                        ],
-                        "contract_data_len_ptr",
-                    )
-                },
-                "contract_data_len",
-            )
-            .into_int_value();
+        let contract_data_len = self.contract_storage_datalen(contract);
 
         let fixed_fields_size = contract.contract.fixed_layout_size.to_u64().unwrap();
 
@@ -261,7 +373,7 @@ impl SolanaTarget {
 
         contract
             .builder
-            .build_call(initializer, &[accounts.into()], "");
+            .build_call(initializer, &[sol_params.into()], "");
 
         // There is only one possible constructor
         let ret = if let Some((cfg_no, cfg)) = contract
@@ -277,7 +389,7 @@ impl SolanaTarget {
             self.abi
                 .decode(contract, function, &mut args, input, input_len, &cfg.params);
 
-            args.push(accounts.into());
+            args.push(sol_params.into());
 
             contract
                 .builder
@@ -294,8 +406,6 @@ impl SolanaTarget {
 
         // Generate function call dispatch
         contract.builder.position_at_end(function_block);
-
-        contract.accounts = Some(accounts);
 
         let input = contract.builder.build_pointer_cast(
             input,
@@ -319,14 +429,27 @@ impl SolanaTarget {
         &self,
         contract: &Contract<'b>,
     ) -> (PointerValue<'b>, PointerValue<'b>, IntValue<'b>) {
+        let parameters = contract
+            .builder
+            .get_insert_block()
+            .unwrap()
+            .get_parent()
+            .unwrap()
+            .get_last_param()
+            .unwrap()
+            .into_pointer_value();
+
+        // the first field is the array of
         // the first account passed in is the return buffer; 3 field of account is "data"
         let data = contract
             .builder
             .build_load(
                 unsafe {
                     contract.builder.build_gep(
-                        contract.accounts.unwrap(),
+                        parameters,
                         &[
+                            contract.context.i32_type().const_zero(),
+                            contract.context.i32_type().const_zero(),
                             contract.context.i32_type().const_zero(),
                             contract.context.i32_type().const_int(3, false),
                         ],
@@ -342,8 +465,10 @@ impl SolanaTarget {
             .build_load(
                 unsafe {
                     contract.builder.build_gep(
-                        contract.accounts.unwrap(),
+                        parameters,
                         &[
+                            contract.context.i32_type().const_zero(),
+                            contract.context.i32_type().const_zero(),
                             contract.context.i32_type().const_zero(),
                             contract.context.i32_type().const_int(2, false),
                         ],
@@ -382,7 +507,6 @@ impl SolanaTarget {
         &self,
         contract: &Contract<'b>,
         ty: &ast::Type,
-        account: PointerValue<'b>,
         data: PointerValue<'b>,
         slot: IntValue<'b>,
         function: FunctionValue<'b>,
@@ -410,7 +534,7 @@ impl SolanaTarget {
 
             contract.builder.build_call(
                 contract.module.get_function("account_data_free").unwrap(),
-                &[account.into(), offset.into()],
+                &[data.into(), offset.into()],
                 "",
             );
 
@@ -461,7 +585,6 @@ impl SolanaTarget {
                 self.storage_free(
                     contract,
                     &elem_ty.deref_any(),
-                    account,
                     data,
                     offset_val,
                     function,
@@ -490,7 +613,7 @@ impl SolanaTarget {
 
                 contract.builder.build_call(
                     contract.module.get_function("account_data_free").unwrap(),
-                    &[account.into(), slot.into()],
+                    &[data.into(), slot.into()],
                     "",
                 );
 
@@ -509,7 +632,7 @@ impl SolanaTarget {
                     "field_offset",
                 );
 
-                self.storage_free(contract, &field.ty, account, data, offset, function, zero);
+                self.storage_free(contract, &field.ty, data, offset, function, zero);
             }
         } else {
             let ty = contract.llvm_type(ty);
@@ -597,31 +720,7 @@ impl SolanaTarget {
                 .const_to_int(contract.context.i32_type())
         };
 
-        // contract storage is in 2nd account
-        let account = unsafe {
-            contract.builder.build_gep(
-                function.get_last_param().unwrap().into_pointer_value(),
-                &[contract.context.i32_type().const_int(1, false)],
-                "account",
-            )
-        };
-
-        // 3rd member of account is data pointer
-        let data = unsafe {
-            contract.builder.build_gep(
-                account,
-                &[
-                    contract.context.i32_type().const_zero(),
-                    contract.context.i32_type().const_int(3, false),
-                ],
-                "data",
-            )
-        };
-
-        let data = contract
-            .builder
-            .build_load(data, "data")
-            .into_pointer_value();
+        let data = self.contract_storage_data(contract);
 
         let member = unsafe { contract.builder.build_gep(data, &[offset], "data") };
         let offset_ptr = contract.builder.build_pointer_cast(
@@ -745,7 +844,7 @@ impl SolanaTarget {
                 .builder
                 .build_call(
                     contract.module.get_function("account_data_len").unwrap(),
-                    &[account.into(), entry_key.into()],
+                    &[data.into(), entry_key.into()],
                     "length",
                 )
                 .try_as_basic_value()
@@ -816,6 +915,8 @@ impl SolanaTarget {
             .size_of()
             .unwrap()
             .const_cast(contract.context.i32_type(), false);
+
+        let account = self.contract_storage_account(contract);
 
         // account_data_alloc will return offset = 0 if the string is length 0
         let rc = contract
@@ -998,16 +1099,21 @@ impl SolanaTarget {
 
         contract.builder.position_at_end(current_block);
 
+        let parameters = contract
+            .builder
+            .get_insert_block()
+            .unwrap()
+            .get_parent()
+            .unwrap()
+            .get_last_param()
+            .unwrap()
+            .into_pointer_value();
+
         let rc = contract
             .builder
             .build_call(
                 lookup,
-                &[
-                    slot.into(),
-                    index,
-                    offset.into(),
-                    contract.accounts.unwrap().into(),
-                ],
+                &[slot.into(), index, offset.into(), parameters.into()],
                 "mapping_lookup_res",
             )
             .try_as_basic_value()
@@ -1053,32 +1159,9 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         function: FunctionValue<'a>,
     ) {
         // contract storage is in 2nd account
-        let account = unsafe {
-            contract.builder.build_gep(
-                contract.accounts.unwrap(),
-                &[contract.context.i32_type().const_int(1, false)],
-                "account",
-            )
-        };
+        let data = self.contract_storage_data(contract);
 
-        // 3rd member of account is data pointer
-        let data = unsafe {
-            contract.builder.build_gep(
-                account,
-                &[
-                    contract.context.i32_type().const_zero(),
-                    contract.context.i32_type().const_int(3, false),
-                ],
-                "data",
-            )
-        };
-
-        let data = contract
-            .builder
-            .build_load(data, "data")
-            .into_pointer_value();
-
-        self.storage_free(contract, ty, account, data, *slot, function, true);
+        self.storage_free(contract, ty, data, *slot, function, true);
     }
 
     fn set_storage_extfunc(
@@ -1127,31 +1210,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         slot: IntValue<'a>,
         index: IntValue<'a>,
     ) -> IntValue<'a> {
-        // contract storage is in 2nd account
-        let account = unsafe {
-            contract.builder.build_gep(
-                contract.accounts.unwrap(),
-                &[contract.context.i32_type().const_int(1, false)],
-                "account",
-            )
-        };
-
-        // 3rd member of account is data pointer
-        let data = unsafe {
-            contract.builder.build_gep(
-                account,
-                &[
-                    contract.context.i32_type().const_zero(),
-                    contract.context.i32_type().const_int(3, false),
-                ],
-                "data",
-            )
-        };
-
-        let data = contract
-            .builder
-            .build_load(data, "data")
-            .into_pointer_value();
+        let data = self.contract_storage_data(contract);
 
         let member = unsafe { contract.builder.build_gep(data, &[slot], "data") };
         let offset_ptr = contract.builder.build_pointer_cast(
@@ -1169,7 +1228,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             .builder
             .build_call(
                 contract.module.get_function("account_data_len").unwrap(),
-                &[account.into(), offset.into()],
+                &[data.into(), offset.into()],
                 "length",
             )
             .try_as_basic_value()
@@ -1218,31 +1277,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         index: IntValue,
         val: IntValue,
     ) {
-        // contract storage is in 2nd account
-        let account = unsafe {
-            contract.builder.build_gep(
-                contract.accounts.unwrap(),
-                &[contract.context.i32_type().const_int(1, false)],
-                "account",
-            )
-        };
-
-        // 3rd member of account is data pointer
-        let data = unsafe {
-            contract.builder.build_gep(
-                account,
-                &[
-                    contract.context.i32_type().const_zero(),
-                    contract.context.i32_type().const_int(3, false),
-                ],
-                "data",
-            )
-        };
-
-        let data = contract
-            .builder
-            .build_load(data, "data")
-            .into_pointer_value();
+        let data = self.contract_storage_data(contract);
 
         let member = unsafe { contract.builder.build_gep(data, &[slot], "data") };
         let offset_ptr = contract.builder.build_pointer_cast(
@@ -1260,7 +1295,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             .builder
             .build_call(
                 contract.module.get_function("account_data_len").unwrap(),
-                &[account.into(), offset.into()],
+                &[data.into(), offset.into()],
                 "length",
             )
             .try_as_basic_value()
@@ -1309,14 +1344,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         slot: IntValue<'a>,
         index: BasicValueEnum<'a>,
     ) -> IntValue<'a> {
-        // contract storage is in 2nd account
-        let account = unsafe {
-            contract.builder.build_gep(
-                contract.accounts.unwrap(),
-                &[contract.context.i32_type().const_int(1, false)],
-                "account",
-            )
-        };
+        let account = self.contract_storage_account(contract);
 
         if let ast::Type::Mapping(key, value) = ty.deref_any() {
             self.sparse_lookup(contract, function, key, value, slot, index)
@@ -1382,31 +1410,8 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         slot: IntValue<'a>,
         val: BasicValueEnum<'a>,
     ) -> BasicValueEnum<'a> {
-        // contract storage is in 2nd account
-        let account = unsafe {
-            contract.builder.build_gep(
-                contract.accounts.unwrap(),
-                &[contract.context.i32_type().const_int(1, false)],
-                "account",
-            )
-        };
-
-        // 3rd member of account is data pointer
-        let data = unsafe {
-            contract.builder.build_gep(
-                account,
-                &[
-                    contract.context.i32_type().const_zero(),
-                    contract.context.i32_type().const_int(3, false),
-                ],
-                "data",
-            )
-        };
-
-        let data = contract
-            .builder
-            .build_load(data, "data")
-            .into_pointer_value();
+        let data = self.contract_storage_data(contract);
+        let account = self.contract_storage_account(contract);
 
         let member = unsafe { contract.builder.build_gep(data, &[slot], "data") };
         let offset_ptr = contract.builder.build_pointer_cast(
@@ -1424,7 +1429,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             .builder
             .build_call(
                 contract.module.get_function("account_data_len").unwrap(),
-                &[account.into(), offset.into()],
+                &[data.into(), offset.into()],
                 "length",
             )
             .try_as_basic_value()
@@ -1510,31 +1515,8 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         ty: &ast::Type,
         slot: IntValue<'a>,
     ) -> BasicValueEnum<'a> {
-        // contract storage is in 2nd account
-        let account = unsafe {
-            contract.builder.build_gep(
-                contract.accounts.unwrap(),
-                &[contract.context.i32_type().const_int(1, false)],
-                "account",
-            )
-        };
-
-        // 3rd member of account is data pointer
-        let data = unsafe {
-            contract.builder.build_gep(
-                account,
-                &[
-                    contract.context.i32_type().const_zero(),
-                    contract.context.i32_type().const_int(3, false),
-                ],
-                "data",
-            )
-        };
-
-        let data = contract
-            .builder
-            .build_load(data, "data")
-            .into_pointer_value();
+        let data = self.contract_storage_data(contract);
+        let account = self.contract_storage_account(contract);
 
         let member = unsafe { contract.builder.build_gep(data, &[slot], "data") };
         let offset_ptr = contract.builder.build_pointer_cast(
@@ -1552,7 +1534,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             .builder
             .build_call(
                 contract.module.get_function("account_data_len").unwrap(),
-                &[account.into(), offset.into()],
+                &[data.into(), offset.into()],
                 "length",
             )
             .try_as_basic_value()
@@ -1629,31 +1611,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         slot: IntValue<'a>,
         elem_ty: &ast::Type,
     ) -> IntValue<'a> {
-        // contract storage is in 2nd account
-        let account = unsafe {
-            contract.builder.build_gep(
-                contract.accounts.unwrap(),
-                &[contract.context.i32_type().const_int(1, false)],
-                "account",
-            )
-        };
-
-        // 3rd member of account is data pointer
-        let data = unsafe {
-            contract.builder.build_gep(
-                account,
-                &[
-                    contract.context.i32_type().const_zero(),
-                    contract.context.i32_type().const_int(3, false),
-                ],
-                "data",
-            )
-        };
-
-        let data = contract
-            .builder
-            .build_load(data, "data")
-            .into_pointer_value();
+        let data = self.contract_storage_data(contract);
 
         // the slot is simply the offset after the magic
         let member = unsafe { contract.builder.build_gep(data, &[slot], "data") };
@@ -1679,7 +1637,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             .builder
             .build_call(
                 contract.module.get_function("account_data_len").unwrap(),
-                &[account.into(), offset.into()],
+                &[data.into(), offset.into()],
                 "length",
             )
             .try_as_basic_value()
@@ -1712,31 +1670,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         slot: &mut IntValue<'a>,
         function: FunctionValue,
     ) -> BasicValueEnum<'a> {
-        // contract storage is in 2nd account
-        let account = unsafe {
-            contract.builder.build_gep(
-                contract.accounts.unwrap(),
-                &[contract.context.i32_type().const_int(1, false)],
-                "account",
-            )
-        };
-
-        // 3rd member of account is data pointer
-        let data = unsafe {
-            contract.builder.build_gep(
-                account,
-                &[
-                    contract.context.i32_type().const_zero(),
-                    contract.context.i32_type().const_int(3, false),
-                ],
-                "data",
-            )
-        };
-
-        let data = contract
-            .builder
-            .build_load(data, "data")
-            .into_pointer_value();
+        let data = self.contract_storage_data(contract);
 
         // the slot is simply the offset after the magic
         let member = unsafe { contract.builder.build_gep(data, &[*slot], "data") };
@@ -1759,7 +1693,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                     .builder
                     .build_call(
                         contract.module.get_function("account_data_len").unwrap(),
-                        &[account.into(), offset.into()],
+                        &[data.into(), offset.into()],
                         "free",
                     )
                     .try_as_basic_value()
@@ -1958,31 +1892,8 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         val: BasicValueEnum<'a>,
         function: FunctionValue<'a>,
     ) {
-        // contract storage is in 2nd account
-        let account = unsafe {
-            contract.builder.build_gep(
-                contract.accounts.unwrap(),
-                &[contract.context.i32_type().const_int(1, false)],
-                "account",
-            )
-        };
-
-        // 3rd member of account is data pointer
-        let data = unsafe {
-            contract.builder.build_gep(
-                account,
-                &[
-                    contract.context.i32_type().const_zero(),
-                    contract.context.i32_type().const_int(3, false),
-                ],
-                "data",
-            )
-        };
-
-        let data = contract
-            .builder
-            .build_load(data, "data")
-            .into_pointer_value();
+        let data = self.contract_storage_data(contract);
+        let account = self.contract_storage_account(contract);
 
         // the slot is simply the offset after the magic
         let member = unsafe { contract.builder.build_gep(data, &[*slot], "data") };
@@ -2003,7 +1914,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                 .builder
                 .build_call(
                     contract.module.get_function("account_data_len").unwrap(),
-                    &[account.into(), offset.into()],
+                    &[data.into(), offset.into()],
                     "length",
                 )
                 .try_as_basic_value()
@@ -2034,7 +1945,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             // do not realloc since we're copying everything
             contract.builder.build_call(
                 contract.module.get_function("account_data_free").unwrap(),
-                &[account.into(), offset.into()],
+                &[data.into(), offset.into()],
                 "free",
             );
 
@@ -2105,7 +2016,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             );
         } else if let ast::Type::Array(elem_ty, dim) = ty {
             // make sure any pointers are freed
-            self.storage_free(contract, ty, account, data, *slot, function, false);
+            self.storage_free(contract, ty, data, *slot, function, false);
 
             let offset_ptr = contract.builder.build_pointer_cast(
                 member,
@@ -2245,7 +2156,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                 };
 
                 // free any existing dynamic storage
-                self.storage_free(contract, &field.ty, account, data, offset, function, false);
+                self.storage_free(contract, &field.ty, data, offset, function, false);
 
                 self.storage_store(
                     contract,

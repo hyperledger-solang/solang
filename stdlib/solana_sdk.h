@@ -217,11 +217,13 @@ void sol_panic_(const char *, uint64_t, uint64_t, uint64_t);
  */
 typedef struct
 {
-  SolAccountInfo *ka;          /** Pointer to an array of SolAccountInfo, must already
+  SolAccountInfo ka[10]; /** Pointer to an array of SolAccountInfo, must already
                           point to an array of SolAccountInfos */
-  uint64_t ka_num;             /** Number of SolAccountInfo entries in `ka` */
-  const uint8_t *data;         /** pointer to the instruction data */
-  uint64_t data_len;           /** Length in bytes of the instruction data */
+  uint64_t ka_num;       /** Number of SolAccountInfo entries in `ka` */
+  uint64_t ka_cur;
+  const SolPubkey *account_id;
+  const uint8_t *input;        /** pointer to the instruction data */
+  uint64_t input_len;          /** Length in bytes of the instruction data */
   const SolPubkey *program_id; /** program_id of the currently executing program */
 } SolParameters;
 
@@ -244,14 +246,13 @@ typedef struct
  * @param params Pointer to a SolParameters structure
  * @return Boolean true if successful.
  */
-static bool sol_deserialize(
+static uint64_t sol_deserialize(
     const uint8_t *input,
-    SolParameters *params,
-    uint64_t ka_num)
+    SolParameters *params)
 {
   if (NULL == input || NULL == params)
   {
-    return false;
+    return ERROR_INVALID_ARGUMENT;
   }
   params->ka_num = *(uint64_t *)input;
   input += sizeof(uint64_t);
@@ -261,7 +262,7 @@ static bool sol_deserialize(
     uint8_t dup_info = input[0];
     input += sizeof(uint8_t);
 
-    if (i >= ka_num)
+    if (i >= SOL_ARRAY_SIZE(params->ka))
     {
       if (dup_info == UINT8_MAX)
       {
@@ -336,15 +337,23 @@ static bool sol_deserialize(
     }
   }
 
-  params->data_len = *(uint64_t *)input;
+  uint64_t data_len = *(uint64_t *)input;
   input += sizeof(uint64_t);
-  params->data = input;
-  input += params->data_len;
+
+  if (data_len < SIZE_PUBKEY)
+  {
+    return ERROR_INVALID_INSTRUCTION_DATA;
+  }
+
+  params->account_id = (SolPubkey *)input;
+  params->input_len = data_len - SIZE_PUBKEY;
+  params->input = input + SIZE_PUBKEY;
+  input += data_len;
 
   params->program_id = (SolPubkey *)input;
   input += sizeof(SolPubkey);
 
-  return true;
+  return 0;
 }
 
 /**
@@ -543,8 +552,9 @@ static void sol_log_params(const SolParameters *params)
     sol_log("  - Rent Epoch");
     sol_log_64(0, 0, 0, 0, params->ka[i].rent_epoch);
   }
-  sol_log("- Instruction data\0");
-  sol_log_array(params->data, params->data_len);
+  sol_log("- Eth abi Instruction data\0");
+  sol_log_pubkey(params->account_id);
+  sol_log_array(params->input, params->input_len);
 }
 
 /**@}*/

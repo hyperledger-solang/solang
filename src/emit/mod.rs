@@ -3043,7 +3043,7 @@ pub trait TargetRuntime<'a> {
 
         // On Solana, the last argument is the accounts
         if contract.ns.target == Target::Solana {
-            contract.accounts = Some(function.get_last_param().unwrap().into_pointer_value());
+            contract.parameters = Some(function.get_last_param().unwrap().into_pointer_value());
         }
 
         // Create all the stack variables
@@ -3642,8 +3642,8 @@ pub trait TargetRuntime<'a> {
                             }
                         }
 
-                        if let Some(accounts) = contract.accounts {
-                            parms.push(accounts.into());
+                        if let Some(parameters) = contract.parameters {
+                            parms.push(parameters.into());
                         }
 
                         let ret = contract
@@ -3715,8 +3715,8 @@ pub trait TargetRuntime<'a> {
                             .collect::<Vec<BasicValueEnum>>();
 
                         // on Solana, we need to pass the accounts parameter around
-                        if let Some(accounts) = contract.accounts {
-                            parms.push(accounts.into());
+                        if let Some(parameters) = contract.parameters {
+                            parms.push(parameters.into());
                         }
 
                         if !res.is_empty() {
@@ -5294,7 +5294,7 @@ pub struct Contract<'a> {
     calldata_len: GlobalValue<'a>,
     scratch_len: Option<GlobalValue<'a>>,
     scratch: Option<GlobalValue<'a>>,
-    accounts: Option<PointerValue<'a>>,
+    parameters: Option<PointerValue<'a>>,
     return_values: HashMap<ReturnCode, IntValue<'a>>,
 }
 
@@ -5546,7 +5546,7 @@ impl<'a> Contract<'a> {
             calldata_len,
             scratch: None,
             scratch_len: None,
-            accounts: None,
+            parameters: None,
             return_values,
         }
     }
@@ -5843,7 +5843,7 @@ impl<'a> Contract<'a> {
         if self.ns.target == Target::Solana {
             args.push(
                 self.module
-                    .get_struct_type("struct.SolAccountInfo")
+                    .get_struct_type("struct.SolParameters")
                     .unwrap()
                     .ptr_type(AddressSpace::Generic)
                     .as_basic_type_enum(),
