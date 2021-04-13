@@ -131,6 +131,11 @@ class Program {
 
         const input = Web3EthAbi.encodeParameters(inputs, params);
 
+        const data = Buffer.concat([
+            this.contractStorageAccount.publicKey.toBuffer(),
+            Buffer.from(input.substr(2), 'hex')
+        ]);
+
         console.log('calling constructor [' + params + ']');
 
         const instruction = new TransactionInstruction({
@@ -138,7 +143,7 @@ class Program {
                 { pubkey: this.returnDataAccount.publicKey, isSigner: false, isWritable: true },
                 { pubkey: this.contractStorageAccount.publicKey, isSigner: false, isWritable: true }],
             programId: this.programId,
-            data: Buffer.from(input.substring(2), 'hex'),
+            data,
         });
 
         await sendAndConfirmTransaction(
@@ -157,6 +162,10 @@ class Program {
         let abi: AbiItem = JSON.parse(this.abi).find((e: AbiItem) => e.name == name);
 
         const input: string = Web3EthAbi.encodeFunctionCall(abi, params);
+        const data = Buffer.concat([
+            this.contractStorageAccount.publicKey.toBuffer(),
+            Buffer.from(input.substr(2), 'hex')
+        ]);
 
         let debug = 'calling function ' + name + ' [' + params + ']';
 
@@ -165,7 +174,7 @@ class Program {
                 { pubkey: this.returnDataAccount.publicKey, isSigner: false, isWritable: true },
                 { pubkey: this.contractStorageAccount.publicKey, isSigner: false, isWritable: true }],
             programId: this.programId,
-            data: Buffer.from(input.substr(2), 'hex'),
+            data,
         });
 
         await sendAndConfirmTransaction(

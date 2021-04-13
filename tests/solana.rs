@@ -3,6 +3,7 @@ mod solana_helpers;
 use byteorder::{ByteOrder, LittleEndian, WriteBytesExt};
 use ethabi::Token;
 use libc::c_char;
+use rand::Rng;
 use solana_helpers::allocator_bump::Allocator;
 use solana_rbpf::{
     error::EbpfError,
@@ -16,6 +17,18 @@ use std::io::Write;
 use std::mem::{align_of, size_of};
 
 mod solana_tests;
+
+type Account = [u8; 32];
+
+fn account_new() -> Account {
+    let mut rng = rand::thread_rng();
+
+    let mut a = [0u8; 32];
+
+    rng.fill(&mut a[..]);
+
+    a
+}
 
 fn build_solidity(src: &str) -> Program {
     let mut cache = FileCache::new();
@@ -44,6 +57,7 @@ fn build_solidity(src: &str) -> Program {
     Program {
         code,
         abi: ethabi::Contract::load(abi.as_bytes()).unwrap(),
+        account: account_new(),
         printbuf: String::new(),
         output: Vec::new(),
         data: Vec::new(),
@@ -52,7 +66,7 @@ fn build_solidity(src: &str) -> Program {
 
 const MAX_PERMITTED_DATA_INCREASE: usize = 10 * 1024;
 
-fn serialize_parameters(input: &[u8], data: &[u8]) -> Vec<u8> {
+fn serialize_parameters(input: &[u8], account: &Account, data: &[u8]) -> Vec<u8> {
     let mut v: Vec<u8> = Vec::new();
 
     // ka_num
@@ -69,7 +83,11 @@ fn serialize_parameters(input: &[u8], data: &[u8]) -> Vec<u8> {
         // padding
         v.write_all(&[0u8; 4]).unwrap();
         // key
-        v.write_all(&[0u8; 32]).unwrap();
+        if account_no == 1 {
+            v.write_all(&account[..]).unwrap();
+        } else {
+            v.write_all(&account_new()).unwrap();
+        }
         // owner
         v.write_all(&[0u8; 32]).unwrap();
         // lamports
@@ -141,6 +159,7 @@ fn deserialize_parameters(input: &[u8]) -> Vec<Vec<u8>> {
 struct Program {
     code: Vec<u8>,
     abi: ethabi::Contract,
+    account: Account,
     printbuf: String,
     data: Vec<u8>,
     output: Vec<u8>,
@@ -225,7 +244,7 @@ impl Program {
     fn execute(&mut self, buf: &mut String, calldata: &[u8]) {
         println!("running bpf with calldata:{}", hex::encode(calldata));
 
-        let parameter_bytes = serialize_parameters(&calldata, &self.data);
+        let parameter_bytes = serialize_parameters(&calldata, &self.account, &self.data);
         let heap = vec![0_u8; DEFAULT_HEAP_SIZE];
         let heap_region = MemoryRegion::new_from_slice(&heap, MM_HEAP_START, true);
 
@@ -269,9 +288,11 @@ impl Program {
 
     fn constructor(&mut self, args: &[Token]) {
         let calldata = if let Some(constructor) = &self.abi.constructor {
-            constructor.encode_input(Vec::new(), args).unwrap()
+            constructor
+                .encode_input(self.account.to_vec(), args)
+                .unwrap()
         } else {
-            Vec::new()
+            self.account.to_vec()
         };
 
         let mut buf = String::new();
@@ -280,8 +301,10 @@ impl Program {
     }
 
     fn function(&mut self, name: &str, args: &[Token]) -> Vec<Token> {
-        let calldata = match self.abi.functions[name][0].encode_input(args) {
-            Ok(n) => n,
+        let mut calldata: Vec<u8> = self.account.to_vec();
+
+        match self.abi.functions[name][0].encode_input(args) {
+            Ok(n) => calldata.extend(&n),
             Err(x) => panic!("{}", x),
         };
 
