@@ -1,18 +1,18 @@
 FROM ubuntu:18.04 as builder
 
-RUN apt-get update
 ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update -y
+RUN apt-get upgrade -y
 RUN apt-get install -y libz-dev pkg-config libssl-dev git cmake ninja-build gcc g++ python
 
-RUN git clone --branch bpf --single-branch \
-    git://github.com/seanyoung/llvm-project.git
+RUN git clone --single-branch git://github.com/solana-labs/llvm-project.git
 
 WORKDIR /llvm-project
 
 RUN cmake -G Ninja -DLLVM_ENABLE_ASSERTIONS=On -DLLVM_ENABLE_TERMINFO=Off \
     -DLLVM_ENABLE_PROJECTS=clang\;lld \
     -DLLVM_TARGETS_TO_BUILD=WebAssembly\;BPF \
-    -DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_INSTALL_PREFIX=/llvm10.0 llvm
+    -DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_INSTALL_PREFIX=/llvm11.0 llvm
 
 RUN cmake --build . --target install
 
@@ -27,6 +27,6 @@ RUN apt-get autoclean
 # Get Rust
 RUN curl https://sh.rustup.rs -sSf | bash -s -- -y --default-toolchain 1.48.0
 
-COPY --from=builder /llvm10.0 /llvm10.0/
+COPY --from=builder /llvm11.0 /llvm11.0/
 
-ENV PATH="/llvm10.0/bin:/root/.cargo/bin:${PATH}"
+ENV PATH="/llvm11.0/bin:/root/.cargo/bin:${PATH}"

@@ -54,11 +54,11 @@ jobs:
         # Make sure "git describe --tags" works for solang --version
         fetch-depth: 0
     - name: Download LLVM
-      run: curl -sS -o c:\llvm.zip https://solang.io/download/llvm10.0-win.zip
+      run: curl -sS -o c:\llvm.zip https://solang.io/download/llvm11.0-win.zip
     - name: Extract LLVM
       run: unzip c:\llvm.zip -d c:/
     - name: Add LLVM to Path
-      run: echo "c:\llvm10.0\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8
+      run: echo "c:\llvm11.0\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8
     - name: Build
       run: cargo build --verbose
     - name: Run tests
@@ -78,11 +78,11 @@ jobs:
         # Make sure "git describe --tags" works for solang --version
         fetch-depth: 0
     - name: Download LLVM
-      run: curl -sS -o llvm10.0-mac.tar.gz https://solang.io/download/llvm10.0-mac.tar.gz
+      run: curl -sS -o llvm11.0-mac.tar.xz https://solang.io/download/llvm11.0-mac.tar.xz
     - name: Extract LLVM
-      run: tar zxf llvm10.0-mac.tar.gz
+      run: tar Jxf llvm11.0-mac.tar.xz
     - name: Add LLVM to Path
-      run: echo "$(pwd)/llvm10.0/bin" >> $GITHUB_PATH
+      run: echo "$(pwd)/llvm11.0/bin" >> $GITHUB_PATH
     - name: Build
       run: cargo build --verbose
     - name: Run tests

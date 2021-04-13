@@ -5,10 +5,10 @@ FROM mcr.microsoft.com/windows/servercore:ltsc2019
 
 SHELL [ "powershell", "-Command", "$ErrorActionPreference = 'Stop'; $ProgressPreference = 'Continue'; $verbosePreference='Continue';"]
 
-# Download Visual Studio Build Tools 16.6. This should match the version on github actions virtual environment.
+# Download Visual Studio Build Tools 16.8.3. This should match the version on github actions virtual environment.
 # https://docs.microsoft.com/en-us/visualstudio/releases/2019/history
 # https://github.com/actions/virtual-environments/blob/main/images/win/Windows2019-Readme.md
-ADD https://download.visualstudio.microsoft.com/download/pr/067fd8d0-753e-4161-8780-dfa3e577839e/4776935864d08e66183acd5b3647c9616da989c60afbfe100d4afc459f7e5785/vs_BuildTools.exe C:\TEMP\vs_buildtools.exe
+ADD https://download.visualstudio.microsoft.com/download/pr/9b3476ff-6d0a-4ff8-956d-270147f21cd4/0df5becfebf4ae2418f5fae653feebf3888b0af00d3df0415cb64875147e9be3/vs_BuildTools.exe C:\TEMP\vs_buildtools.exe
 
 # Install Visual Studio Build Tools
 RUN C:\TEMP\vs_buildtools.exe --quiet --wait --norestart --nocache `
@@ -16,11 +16,7 @@ RUN C:\TEMP\vs_buildtools.exe --quiet --wait --norestart --nocache `
 	--add Microsoft.VisualStudio.Component.VC.CMake.Project `
 	--add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 `
 	--add Microsoft.VisualStudio.Component.VC.ATL `
-	--add Microsoft.VisualStudio.Component.Windows10SDK.16299 `
-	--remove Microsoft.VisualStudio.Component.Windows10SDK.10240 `
-	--remove Microsoft.VisualStudio.Component.Windows10SDK.10586 `
-	--remove Microsoft.VisualStudio.Component.Windows10SDK.14393 `
-	--remove Microsoft.VisualStudio.Component.Windows81SDK
+	--add Microsoft.VisualStudio.Component.Windows10SDK.18362
 
 # Rust
 ADD https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-msvc/rustup-init.exe C:\TEMP\rustup-init.exe
@@ -28,9 +24,9 @@ ADD https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-msvc/rustup-init.
 RUN C:\TEMP\rustup-init.exe -y
 
 # Git
-ADD https://github.com/git-for-windows/git/releases/download/v2.28.0.windows.1/MinGit-2.28.0-64-bit.zip C:\TEMP\MinGit-2.28.0-64-bit.zip
+ADD https://github.com/git-for-windows/git/releases/download/v2.30.0.windows.1/MinGit-2.30.0-64-bit.zip C:\TEMP\MinGit-2.30.0-64-bit.zip
 
-RUN Expand-Archive C:\TEMP\MinGit-2.28.0-64-bit.zip -DestinationPath c:\MinGit
+RUN Expand-Archive C:\TEMP\MinGit-2.30.0-64-bit.zip -DestinationPath c:\MinGit
 
 # LLVM Build requires Python
 # Newer versions than v3.5.4 fail due to https://github.com/microsoft/vcpkg/issues/6988
@@ -46,13 +42,13 @@ RUN Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force ; `
 
 # Invoke-BatchFile retains the environment after executing so we can set it up more permanently
 RUN Invoke-BatchFile C:\BuildTools\vc\Auxiliary\Build\vcvars64.bat ; `
-	$path = $env:path + ';c:\MinGit\cmd;C:\Users\ContainerAdministrator\.cargo\bin;C:\llvm10.0\bin;C:\Python' ; `
+	$path = $env:path + ';c:\MinGit\cmd;C:\Users\ContainerAdministrator\.cargo\bin;C:\llvm11.0\bin;C:\Python' ; `
 	Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Environment\' -Name Path -Value $path ; `
 	Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Environment\' -Name LIB -Value $env:LIB ; `
 	Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Environment\' -Name INCLUDE -Value $env:INCLUDE ; `
 	Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Environment\' -Name LIBPATH -Value $env:LIBPATH ;
 
-RUN git clone --branch bpf --single-branch git://github.com/seanyoung/llvm-project
+RUN git clone --single-branch git://github.com/solana-labs/llvm-project
 
 WORKDIR \llvm-project
 
@@ -61,12 +57,12 @@ RUN Add-Content llvm\CMakeLists.txt 'set(CMAKE_SUPPRESS_REGENERATION 1)' ;
 
 # All llvm targets should be enabled or inkwell refused to link
 RUN cmake -G Ninja -DLLVM_ENABLE_ASSERTIONS=On '-DLLVM_ENABLE_PROJECTS=clang;lld' `
-	-DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_INSTALL_PREFIX=C:/llvm10.0 `
+	-DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_INSTALL_PREFIX=C:/llvm11.0 `
 	-B build llvm
 RUN cmake --build build --target install
 
 WORKDIR \
 
-RUN Compress-Archive -Path C:\llvm10.0 -DestinationPath C:\llvm10.0-win.zip
+RUN Compress-Archive -Path C:\llvm11.0 -DestinationPath C:\llvm11.0-win.zip
 
 RUN Remove-Item -Path \llvm-project,C:\TEMP -Recurse -Force

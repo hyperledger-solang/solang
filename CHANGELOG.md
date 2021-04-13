@@ -11,6 +11,9 @@ will be documented here.
   releases, so the user is not required to download it themselves
 - The Solana now has support for arrays and mapping in contract storage
 
+### Changed
+- Solang now uses LLVM 11.0, based on the [Solana LLVM tree](https://github.com/solana-labs/llvm-project/)
+
 ### Fixed
 - ewasm: staticcall() and delegatecall() cannot take value argument
 - Fixed array support in the ethereum abi encoder and decoder

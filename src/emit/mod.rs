@@ -5283,7 +5283,6 @@ pub struct Contract<'a> {
     math_overflow_check: bool,
     builder: Builder<'a>,
     context: &'a Context,
-    triple: TargetTriple,
     contract: &'a ast::Contract,
     ns: &'a ast::Namespace,
     functions: HashMap<usize, FunctionValue<'a>>,
@@ -5379,9 +5378,9 @@ impl<'a> Contract<'a> {
 
         let target_machine = target
             .create_target_machine(
-                &self.triple,
+                &self.ns.target.llvm_target_triple(),
                 "",
-                "",
+                self.ns.target.llvm_features(),
                 self.opt,
                 RelocMode::Default,
                 CodeModel::Default,
@@ -5467,7 +5466,7 @@ impl<'a> Contract<'a> {
     ) -> Self {
         lazy_static::initialize(&LLVM_INIT);
 
-        let triple = TargetTriple::create(ns.target.llvm_target_triple());
+        let triple = ns.target.llvm_target_triple();
         let module = context.create_module(&contract.name);
 
         module.set_triple(&triple);
@@ -5535,7 +5534,6 @@ impl<'a> Contract<'a> {
             constructor_abort_value_transfers,
             math_overflow_check,
             builder: context.create_builder(),
-            triple,
             context,
             contract,
             ns,
@@ -6504,11 +6502,20 @@ impl Target {
     }
 
     /// LLVM Target triple
-    fn llvm_target_triple(&self) -> &'static str {
-        if *self == Target::Solana {
+    fn llvm_target_triple(&self) -> TargetTriple {
+        TargetTriple::create(if *self == Target::Solana {
             "bpfel-unknown-unknown"
         } else {
             "wasm32-unknown-unknown-wasm"
+        })
+    }
+
+    /// LLVM Target triple
+    fn llvm_features(&self) -> &'static str {
+        if *self == Target::Solana {
+            "+solana"
+        } else {
+            ""
         }
     }
 
