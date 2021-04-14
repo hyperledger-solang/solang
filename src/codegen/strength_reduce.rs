@@ -159,17 +159,12 @@ fn block_reduce(
                 *gas = expression_reduce(gas, &vars, ns);
             }
             Instr::ExternalCall {
-                args,
                 address,
                 payload,
                 value,
                 gas,
                 ..
             } => {
-                *args = args
-                    .iter()
-                    .map(|e| expression_reduce(e, &vars, ns))
-                    .collect();
                 *value = expression_reduce(value, &vars, ns);
                 if let Some(address) = address {
                     *address = expression_reduce(address, &vars, ns);

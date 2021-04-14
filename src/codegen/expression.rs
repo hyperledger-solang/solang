@@ -838,7 +838,6 @@ pub fn expression(
                         success: Some(success),
                         address: Some(address),
                         payload: Expression::BytesLiteral(*loc, Type::DynamicBytes, vec![]),
-                        args: Vec::new(),
                         value,
                         gas: Expression::NumberLiteral(
                             *loc,
@@ -872,7 +871,6 @@ pub fn expression(
                         success: None,
                         address: Some(address),
                         payload: Expression::BytesLiteral(*loc, Type::DynamicBytes, vec![]),
-                        args: Vec::new(),
                         value,
                         gas: Expression::NumberLiteral(
                             *loc,
@@ -1275,7 +1273,6 @@ pub fn emit_function_call(
                     success: Some(success),
                     address: Some(address),
                     payload: args,
-                    args: vec![],
                     value,
                     gas,
                     callty: ty.clone(),
@@ -1298,11 +1295,11 @@ pub fn emit_function_call(
             if let Expression::ExternalFunction {
                 function_no,
                 address,
-                ty,
                 ..
             } = function.as_ref()
             {
                 let ftype = &ns.functions[*function_no];
+                let tys = args.iter().map(|a| a.ty()).collect();
                 let args = args
                     .iter()
                     .map(|a| expression(a, cfg, callee_contract_no, ns, vartab))
@@ -1311,18 +1308,32 @@ pub fn emit_function_call(
                 let gas = expression(gas, cfg, callee_contract_no, ns, vartab);
                 let value = expression(value, cfg, callee_contract_no, ns, vartab);
 
+                let dest_func = &ns.functions[*function_no];
+
+                let selector = if ns.target == Target::Substrate {
+                    dest_func.selector().to_be()
+                } else {
+                    dest_func.selector()
+                };
+
+                let payload = Expression::AbiEncode {
+                    loc: *loc,
+                    packed: false,
+                    tys,
+                    selector: Some(Box::new(Expression::NumberLiteral(
+                        *loc,
+                        Type::Uint(32),
+                        BigInt::from(selector),
+                    ))),
+                    args,
+                };
+
                 cfg.add(
                     vartab,
                     Instr::ExternalCall {
                         success: None,
-                        address: None,
-                        payload: Expression::ExternalFunction {
-                            function_no: *function_no,
-                            address: Box::new(address),
-                            loc: *loc,
-                            ty: ty.clone(),
-                        },
-                        args,
+                        address: Some(address),
+                        payload,
                         value,
                         gas,
                         callty: CallTy::Regular,
@@ -1363,21 +1374,42 @@ pub fn emit_function_call(
                 ..
             } = function.ty()
             {
+                let tys = args.iter().map(|a| a.ty()).collect();
                 let args = args
                     .iter()
                     .map(|a| expression(a, cfg, callee_contract_no, ns, vartab))
                     .collect();
-                let payload = expression(function, cfg, callee_contract_no, ns, vartab);
+                let function = expression(function, cfg, callee_contract_no, ns, vartab);
                 let gas = expression(gas, cfg, callee_contract_no, ns, vartab);
                 let value = expression(value, cfg, callee_contract_no, ns, vartab);
+
+                let selector = Expression::Builtin(
+                    *loc,
+                    vec![Type::Uint(32)],
+                    Builtin::ExternalFunctionSelector,
+                    vec![function.clone()],
+                );
+                let address = Expression::Builtin(
+                    *loc,
+                    vec![Type::Address(false)],
+                    Builtin::ExternalFunctionAddress,
+                    vec![function],
+                );
+
+                let payload = Expression::AbiEncode {
+                    loc: *loc,
+                    packed: false,
+                    tys,
+                    selector: Some(Box::new(selector)),
+                    args,
+                };
 
                 cfg.add(
                     vartab,
                     Instr::ExternalCall {
                         success: None,
-                        address: None,
+                        address: Some(address),
                         payload,
-                        args,
                         value,
                         gas,
                         callty: CallTy::Regular,

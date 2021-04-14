@@ -2856,7 +2856,11 @@ pub trait TargetRuntime<'a> {
                     .expression(contract, address, vartab, function)
                     .into_int_value();
 
-                let selector = contract.ns.functions[*function_no].selector();
+                let mut selector = contract.ns.functions[*function_no].selector();
+
+                if contract.ns.target == Target::Substrate {
+                    selector = selector.to_be();
+                }
 
                 assert!(matches!(ty, ast::Type::ExternalFunction { .. }));
 
@@ -3861,200 +3865,19 @@ pub trait TargetRuntime<'a> {
                         success,
                         address,
                         payload,
-                        args,
                         value,
                         gas,
                         callty,
                     } => {
-                        let (payload, payload_len, address) = match payload.ty() {
-                            ast::Type::ExternalFunction { params, .. } => {
-                                if let ast::Expression::ExternalFunction {
-                                    address,
-                                    function_no,
-                                    ..
-                                } = payload
-                                {
-                                    let dest_func = &contract.ns.functions[*function_no];
-
-                                    let selector = if contract.ns.target == Target::Ewasm {
-                                        dest_func.selector().to_le()
-                                    } else {
-                                        dest_func.selector()
-                                    };
-
-                                    let selector = contract
-                                        .context
-                                        .i32_type()
-                                        .const_int(selector as u64, false);
-
-                                    let tys: Vec<ast::Type> =
-                                        dest_func.params.iter().map(|p| p.ty.clone()).collect();
-
-                                    let (payload, payload_len) = self.abi_encode(
-                                        contract,
-                                        Some(selector),
-                                        false,
-                                        function,
-                                        &args
-                                            .iter()
-                                            .map(|a| {
-                                                self.expression(contract, &a, &w.vars, function)
-                                            })
-                                            .collect::<Vec<BasicValueEnum>>(),
-                                        &tys,
-                                    );
-
-                                    let address = self
-                                        .expression(contract, address, &w.vars, function)
-                                        .into_int_value();
-
-                                    (payload, payload_len, address)
-                                } else {
-                                    // load selector from function expression
-                                    let ft = self
-                                        .expression(contract, payload, &w.vars, function)
-                                        .into_pointer_value();
-
-                                    let selector_member = unsafe {
-                                        contract.builder.build_gep(
-                                            ft,
-                                            &[
-                                                contract.context.i32_type().const_zero(),
-                                                contract.context.i32_type().const_int(1, false),
-                                            ],
-                                            "selector",
-                                        )
-                                    };
-
-                                    let selector = contract
-                                        .builder
-                                        .build_load(selector_member, "selector")
-                                        .into_int_value();
-
-                                    // we don't know the names of the parameters any more
-                                    let params = params
-                                        .iter()
-                                        .map(|ty| ast::Parameter {
-                                            ty: ty.clone(),
-                                            name: String::new(),
-                                            ty_loc: pt::Loc(0, 0, 0),
-                                            name_loc: None,
-                                            loc: pt::Loc(0, 0, 0),
-                                            indexed: false,
-                                        })
-                                        .collect::<Vec<ast::Parameter>>();
-
-                                    let tys: Vec<ast::Type> =
-                                        params.iter().map(|p| p.ty.clone()).collect();
-
-                                    let (payload, payload_len) = self.abi_encode(
-                                        contract,
-                                        Some(selector),
-                                        false,
-                                        function,
-                                        &args
-                                            .iter()
-                                            .map(|a| {
-                                                self.expression(contract, &a, &w.vars, function)
-                                            })
-                                            .collect::<Vec<BasicValueEnum>>(),
-                                        &tys,
-                                    );
-
-                                    let address_member = unsafe {
-                                        contract.builder.build_gep(
-                                            ft,
-                                            &[
-                                                contract.context.i32_type().const_zero(),
-                                                contract.context.i32_type().const_zero(),
-                                            ],
-                                            "address",
-                                        )
-                                    };
-
-                                    let address = contract
-                                        .builder
-                                        .build_load(address_member, "address")
-                                        .into_int_value();
-
-                                    (payload, payload_len, address)
-                                }
-                            }
-                            ast::Type::DynamicBytes => {
-                                let address = self
-                                    .expression(
-                                        contract,
-                                        address.as_ref().unwrap(),
-                                        &w.vars,
-                                        function,
-                                    )
-                                    .into_int_value();
-
-                                if let ast::Expression::BytesLiteral(_, _, bs) = payload {
-                                    assert_eq!(bs.len(), 0);
-
-                                    (
-                                        contract
-                                            .context
-                                            .i8_type()
-                                            .ptr_type(AddressSpace::Generic)
-                                            .const_null(),
-                                        contract.context.i32_type().const_zero(),
-                                        address,
-                                    )
-                                } else {
-                                    let raw = self
-                                        .expression(contract, payload, &w.vars, function)
-                                        .into_pointer_value();
-
-                                    let data = unsafe {
-                                        contract.builder.build_gep(
-                                            raw,
-                                            &[
-                                                contract.context.i32_type().const_zero(),
-                                                contract.context.i32_type().const_int(2, false),
-                                            ],
-                                            "rawdata",
-                                        )
-                                    };
-
-                                    let data_len = unsafe {
-                                        contract.builder.build_gep(
-                                            raw,
-                                            &[
-                                                contract.context.i32_type().const_zero(),
-                                                contract.context.i32_type().const_zero(),
-                                            ],
-                                            "rawdata_len",
-                                        )
-                                    };
-
-                                    (
-                                        contract.builder.build_pointer_cast(
-                                            data,
-                                            contract
-                                                .context
-                                                .i8_type()
-                                                .ptr_type(AddressSpace::Generic),
-                                            "data",
-                                        ),
-                                        contract
-                                            .builder
-                                            .build_load(data_len, "data_len")
-                                            .into_int_value(),
-                                        address,
-                                    )
-                                }
-                            }
-                            _ => unreachable!(),
-                        };
-
                         let gas = self
                             .expression(contract, gas, &w.vars, function)
                             .into_int_value();
                         let value = self
                             .expression(contract, value, &w.vars, function)
                             .into_int_value();
+                        let payload = self.expression(contract, payload, &w.vars, function);
+                        let address =
+                            self.expression(contract, address.as_ref().unwrap(), &w.vars, function);
 
                         let addr = contract.builder.build_array_alloca(
                             contract.context.i8_type(),
@@ -4083,8 +3906,8 @@ pub trait TargetRuntime<'a> {
                             contract,
                             function,
                             success,
-                            payload,
-                            payload_len,
+                            contract.vector_bytes(payload),
+                            contract.vector_len(payload),
                             addr,
                             gas,
                             value,
