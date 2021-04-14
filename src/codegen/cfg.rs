@@ -111,7 +111,6 @@ pub enum Instr {
         success: Option<usize>,
         address: Option<Expression>,
         payload: Expression,
-        args: Vec<Expression>,
         value: Expression,
         gas: Expression,
         callty: CallTy,
@@ -804,55 +803,26 @@ impl ControlFlowGraph {
                 success,
                 address,
                 payload,
-                args,
                 value,
                 gas,
                 callty,
             } => {
-                if let Expression::ExternalFunction {
-                    address,
-                    function_no,
-                    ..
-                } = payload
-                {
-                    format!(
-                        "{} = external call::{} address:{} signature:{} value:{} gas:{} {} {}",
-                        match success {
-                            Some(i) => format!("%{}", self.vars[i].id.name),
-                            None => "_".to_string(),
-                        },
-                        callty,
-                        self.expr_to_string(contract, ns, address),
-                        ns.functions[*function_no].signature,
-                        self.expr_to_string(contract, ns, value),
-                        self.expr_to_string(contract, ns, gas),
-                        ns.functions[*function_no].print_name(ns),
-                        args.iter()
-                            .map(|expr| self.expr_to_string(contract, ns, expr))
-                            .collect::<Vec<String>>()
-                            .join(", ")
-                    )
-                } else if let Some(address) = address {
-                    format!(
-                        "{} = external call address:{} value:{}",
-                        match success {
-                            Some(i) => format!("%{}", self.vars[i].id.name),
-                            None => "_".to_string(),
-                        },
-                        self.expr_to_string(contract, ns, address),
-                        self.expr_to_string(contract, ns, value),
-                    )
-                } else {
-                    format!(
-                        "{} = external call payload:{} value:{}",
-                        match success {
-                            Some(i) => format!("%{}", self.vars[i].id.name),
-                            None => "_".to_string(),
-                        },
-                        self.expr_to_string(contract, ns, payload),
-                        self.expr_to_string(contract, ns, value),
-                    )
-                }
+                format!(
+                    "{} = external call::{} address:{} payload:{} value:{} gas:{}",
+                    match success {
+                        Some(i) => format!("%{}", self.vars[i].id.name),
+                        None => "_".to_string(),
+                    },
+                    callty,
+                    if let Some(address) = address {
+                        self.expr_to_string(contract, ns, address)
+                    } else {
+                        String::new()
+                    },
+                    self.expr_to_string(contract, ns, payload),
+                    self.expr_to_string(contract, ns, value),
+                    self.expr_to_string(contract, ns, gas),
+                )
             }
             Instr::ValueTransfer {
                 success,

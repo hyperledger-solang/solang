@@ -203,15 +203,10 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
                     success,
                     address,
                     payload,
-                    args,
                     value,
                     gas,
                     callty,
                 } => {
-                    let args = args
-                        .iter()
-                        .map(|e| expression(e, Some(&vars), &cur, cfg, ns).0)
-                        .collect();
                     let value = expression(value, Some(&vars), &cur, cfg, ns).0;
                     let gas = expression(gas, Some(&vars), &cur, cfg, ns).0;
                     let payload = expression(payload, Some(&vars), &cur, cfg, ns).0;
@@ -223,7 +218,6 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
                         success: *success,
                         address,
                         payload,
-                        args,
                         value,
                         gas,
                         callty: callty.clone(),

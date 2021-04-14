@@ -482,7 +482,7 @@ fn ext() {
                 function(int32) external returns (bool) func = this.foo;
 
                 assert(address(this) == func.address);
-                assert(func.selector == 0x37117642);
+                assert(func.selector == 0x42761137);
             }
 
             function foo(int32) public returns (bool) {

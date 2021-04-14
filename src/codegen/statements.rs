@@ -5,7 +5,7 @@ use super::cfg::{ControlFlowGraph, Instr, Vartable};
 use super::expression::{assign_single, emit_function_call, expression};
 use crate::parser::pt;
 use crate::sema::ast::{
-    CallTy, DestructureField, Expression, Function, Namespace, Parameter, Statement, Type,
+    Builtin, CallTy, DestructureField, Expression, Function, Namespace, Parameter, Statement, Type,
 };
 use crate::sema::expression::cast;
 use num_traits::Zero;
@@ -744,6 +744,7 @@ fn try_catch(
 
     match &fcall {
         Expression::ExternalFunctionCall {
+            loc,
             function,
             args,
             value,
@@ -759,18 +760,41 @@ fn try_catch(
                 let gas = expression(gas, cfg, callee_contract_no, ns, vartab);
                 let function = expression(function, cfg, callee_contract_no, ns, vartab);
 
+                let tys = args.iter().map(|a| a.ty()).collect();
+
                 let args = args
                     .iter()
                     .map(|a| expression(a, cfg, callee_contract_no, ns, vartab))
                     .collect();
 
+                let selector = Expression::Builtin(
+                    *loc,
+                    vec![Type::Uint(32)],
+                    Builtin::ExternalFunctionSelector,
+                    vec![function.clone()],
+                );
+
+                let address = Expression::Builtin(
+                    *loc,
+                    vec![Type::Address(false)],
+                    Builtin::ExternalFunctionAddress,
+                    vec![function],
+                );
+
+                let payload = Expression::AbiEncode {
+                    loc: *loc,
+                    packed: false,
+                    tys,
+                    selector: Some(Box::new(selector)),
+                    args,
+                };
+
                 cfg.add(
                     vartab,
                     Instr::ExternalCall {
                         success: Some(success),
-                        address: None,
-                        payload: function,
-                        args,
+                        address: Some(address),
+                        payload,
                         value,
                         gas,
                         callty: CallTy::Regular,
