@@ -96,6 +96,7 @@ impl Expression {
             | Expression::Assign(loc, _, _, _)
             | Expression::List(loc, _)
             | Expression::FormatString(loc, _)
+            | Expression::AbiEncode { loc, .. }
             | Expression::And(loc, _, _) => *loc,
             Expression::InternalFunctionCfg(_) | Expression::Poison => unreachable!(),
         }
@@ -116,7 +117,7 @@ impl Expression {
             | Expression::NotEqual(_, _, _)
             | Expression::Not(_, _)
             | Expression::StringCompare(_, _, _) => Type::Bool,
-            Expression::CodeLiteral(_, _, _) => Type::DynamicBytes,
+            Expression::AbiEncode { .. } | Expression::CodeLiteral(_, _, _) => Type::DynamicBytes,
             Expression::StringConcat(_, ty, _, _)
             | Expression::FunctionArg(_, ty, _)
             | Expression::BytesLiteral(_, ty, _)

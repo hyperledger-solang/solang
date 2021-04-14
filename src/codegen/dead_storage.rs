@@ -199,8 +199,7 @@ fn instr_transfers(block_no: usize, block: &BasicBlock) -> Vec<Vec<Transfer>> {
             Instr::PopMemory { array, .. } => {
                 vec![Transfer::Kill { var_no: *array }]
             }
-            Instr::AbiEncodeVector { res, .. }
-            | Instr::ExternalCall {
+            Instr::ExternalCall {
                 success: Some(res), ..
             }
             | Instr::Constructor {

@@ -184,19 +184,6 @@ fn block_reduce(
             Instr::AbiDecode { data, .. } => {
                 *data = expression_reduce(data, &vars, ns);
             }
-            Instr::AbiEncodeVector { selector, args, .. } => {
-                *args = args
-                    .iter()
-                    .map(|e| expression_reduce(e, &vars, ns))
-                    .collect();
-
-                if let Some(selector) = selector {
-                    *selector = expression_reduce(selector, &vars, ns);
-                }
-            }
-            Instr::SelfDestruct { recipient } => {
-                *recipient = expression_reduce(recipient, &vars, ns);
-            }
             Instr::EmitEvent { topics, data, .. } => {
                 *topics = topics
                     .iter()

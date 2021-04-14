@@ -131,14 +131,6 @@ pub enum Instr {
         tys: Vec<Parameter>,
         data: Expression,
     },
-    /// ABI encode data, and store the result
-    AbiEncodeVector {
-        res: usize,
-        tys: Vec<Type>,
-        packed: bool,
-        selector: Option<Expression>,
-        args: Vec<Expression>,
-    },
     /// Insert unreachable instruction after e.g. self-destruct
     Unreachable,
     /// Self destruct
@@ -642,6 +634,23 @@ impl ControlFlowGraph {
                     .collect::<Vec<String>>()
                     .join(", ")
             ),
+            Expression::AbiEncode {
+                selector,
+                packed,
+                args,
+                ..
+            } => format!(
+                "(abiencode{}:(%{} {}))",
+                if *packed { "packed" } else { "" },
+                match selector {
+                    None => "".to_string(),
+                    Some(expr) => self.expr_to_string(contract, ns, expr),
+                },
+                args.iter()
+                    .map(|expr| self.expr_to_string(contract, ns, expr))
+                    .collect::<Vec<String>>()
+                    .join(", ")
+            ),
             _ => panic!("{:?}", expr),
         }
     }
@@ -886,25 +895,7 @@ impl ControlFlowGraph {
                     .collect::<Vec<String>>()
                     .join(", "),
             ),
-            Instr::AbiEncodeVector {
-                res,
-                selector,
-                packed,
-                args,
-                ..
-            } => format!(
-                "{} = (abiencode{}:(%{} {})",
-                format!("%{}", self.vars[res].id.name),
-                if *packed { "packed" } else { "" },
-                match selector {
-                    None => "".to_string(),
-                    Some(expr) => self.expr_to_string(contract, ns, expr),
-                },
-                args.iter()
-                    .map(|expr| self.expr_to_string(contract, ns, expr))
-                    .collect::<Vec<String>>()
-                    .join(", ")
-            ),
+
             Instr::Store { dest, pos } => format!(
                 "store {}, {}",
                 self.expr_to_string(contract, ns, dest),

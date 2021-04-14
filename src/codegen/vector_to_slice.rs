@@ -98,7 +98,6 @@ fn find_writable_vectors(
             | Instr::Constructor { .. }
             | Instr::Unreachable
             | Instr::Print { .. }
-            | Instr::AbiEncodeVector { .. }
             | Instr::AssertFailure { .. }
             | Instr::ValueTransfer { .. } => {
                 apply_transfers(&block.transfers[instr_no], vars, writable);
