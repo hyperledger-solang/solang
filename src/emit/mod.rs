@@ -2577,6 +2577,28 @@ pub trait TargetRuntime<'a> {
                 self.storage_array_length(contract, function, slot, elem_ty)
                     .into()
             }
+            Expression::AbiEncode {
+                tys,
+                selector,
+                packed,
+                args,
+                ..
+            } => self
+                .abi_encode_to_vector(
+                    contract,
+                    selector.as_ref().map(|s| {
+                        self.expression(contract, &s, vartab, function)
+                            .into_int_value()
+                    }),
+                    function,
+                    *packed,
+                    &args
+                        .iter()
+                        .map(|a| self.expression(contract, &a, vartab, function))
+                        .collect::<Vec<BasicValueEnum>>(),
+                    tys,
+                )
+                .into(),
             Expression::Builtin(_, _, Builtin::Calldata, _)
                 if contract.ns.target != Target::Substrate =>
             {
@@ -4024,10 +4046,7 @@ pub trait TargetRuntime<'a> {
                                     )
                                 }
                             }
-                            _ => {
-                                println!("foo {:?}", payload);
-                                unreachable!();
-                            }
+                            _ => unreachable!(),
                         };
 
                         let gas = self
@@ -4107,30 +4126,6 @@ pub trait TargetRuntime<'a> {
                         };
 
                         self.value_transfer(contract, function, success, addr, value);
-                    }
-                    Instr::AbiEncodeVector {
-                        res,
-                        tys,
-                        selector,
-                        packed,
-                        args,
-                    } => {
-                        w.vars.get_mut(res).unwrap().value = self
-                            .abi_encode_to_vector(
-                                contract,
-                                selector.as_ref().map(|s| {
-                                    self.expression(contract, &s, &w.vars, function)
-                                        .into_int_value()
-                                }),
-                                function,
-                                *packed,
-                                &args
-                                    .iter()
-                                    .map(|a| self.expression(contract, &a, &w.vars, function))
-                                    .collect::<Vec<BasicValueEnum>>(),
-                                tys,
-                            )
-                            .into();
                     }
                     Instr::AbiDecode {
                         res,

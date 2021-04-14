@@ -903,12 +903,16 @@ pub fn expression(
 
             cfg.add(
                 vartab,
-                Instr::AbiEncodeVector {
+                Instr::Set {
+                    loc: *loc,
                     res,
-                    tys,
-                    selector: None,
-                    packed: false,
-                    args,
+                    expr: Expression::AbiEncode {
+                        loc: *loc,
+                        tys,
+                        selector: None,
+                        packed: false,
+                        args,
+                    },
                 },
             );
 
@@ -931,12 +935,16 @@ pub fn expression(
 
             cfg.add(
                 vartab,
-                Instr::AbiEncodeVector {
+                Instr::Set {
+                    loc: *loc,
                     res,
-                    tys,
-                    selector: None,
-                    packed: true,
-                    args,
+                    expr: Expression::AbiEncode {
+                        loc: *loc,
+                        tys,
+                        selector: None,
+                        packed: true,
+                        args,
+                    },
                 },
             );
 
@@ -961,12 +969,16 @@ pub fn expression(
 
             cfg.add(
                 vartab,
-                Instr::AbiEncodeVector {
+                Instr::Set {
+                    loc: *loc,
                     res,
-                    tys,
-                    selector: Some(selector),
-                    packed: false,
-                    args,
+                    expr: Expression::AbiEncode {
+                        loc: *loc,
+                        tys,
+                        selector: Some(Box::new(selector)),
+                        packed: false,
+                        args,
+                    },
                 },
             );
 
@@ -998,12 +1010,16 @@ pub fn expression(
 
             cfg.add(
                 vartab,
-                Instr::AbiEncodeVector {
+                Instr::Set {
+                    loc: *loc,
                     res,
-                    tys,
-                    selector: Some(selector),
-                    packed: false,
-                    args,
+                    expr: Expression::AbiEncode {
+                        loc: *loc,
+                        tys,
+                        selector: Some(Box::new(selector)),
+                        packed: false,
+                        args,
+                    },
                 },
             );
 

@@ -246,29 +246,6 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
                         data,
                     }
                 }
-                Instr::AbiEncodeVector {
-                    res,
-                    tys,
-                    packed,
-                    selector,
-                    args,
-                } => {
-                    let args = args
-                        .iter()
-                        .map(|e| expression(e, Some(&vars), &cur, cfg, ns).0)
-                        .collect();
-                    let selector = selector
-                        .as_ref()
-                        .map(|expr| expression(expr, Some(&vars), &cur, cfg, ns).0);
-
-                    cfg.blocks[block_no].instr[instr_no] = Instr::AbiEncodeVector {
-                        res: *res,
-                        tys: tys.clone(),
-                        packed: *packed,
-                        selector,
-                        args,
-                    }
-                }
                 Instr::SelfDestruct { recipient } => {
                     let (recipient, _) = expression(recipient, Some(&vars), &cur, cfg, ns);
 
@@ -1049,6 +1026,33 @@ fn expression(
                     function_no: *function_no,
                 },
                 address.1,
+            )
+        }
+        Expression::AbiEncode {
+            loc,
+            tys,
+            packed,
+            selector,
+            args,
+        } => {
+            let args = args
+                .iter()
+                .map(|expr| expression(expr, vars, pos, cfg, ns).0)
+                .collect();
+
+            let selector = selector
+                .as_ref()
+                .map(|expr| Box::new(expression(&expr, vars, pos, cfg, ns).0));
+
+            (
+                Expression::AbiEncode {
+                    loc: *loc,
+                    tys: tys.clone(),
+                    packed: *packed,
+                    selector,
+                    args,
+                },
+                false,
             )
         }
         Expression::NumberLiteral(_, _, _)

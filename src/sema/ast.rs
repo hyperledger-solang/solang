@@ -553,6 +553,13 @@ pub enum Expression {
 
     ReturnData(pt::Loc),
     Builtin(pt::Loc, Vec<Type>, Builtin, Vec<Expression>),
+    AbiEncode {
+        loc: pt::Loc,
+        tys: Vec<Type>,
+        selector: Option<Box<Expression>>,
+        packed: bool,
+        args: Vec<Expression>,
+    },
     List(pt::Loc, Vec<Expression>),
     Poison,
 }
@@ -915,6 +922,24 @@ impl Expression {
                     let args = args.iter().map(|e| filter(e, ctx)).collect();
 
                     Expression::Builtin(*loc, tys.clone(), *builtin, args)
+                }
+                Expression::AbiEncode {
+                    loc,
+                    tys,
+                    selector,
+                    packed,
+                    args,
+                } => {
+                    let args = args.iter().map(|e| filter(e, ctx)).collect();
+                    let selector = selector.as_ref().map(|e| Box::new(filter(&e, ctx)));
+
+                    Expression::AbiEncode {
+                        loc: *loc,
+                        tys: tys.clone(),
+                        selector,
+                        packed: *packed,
+                        args,
+                    }
                 }
                 _ => self.clone(),
             },
