@@ -19,7 +19,7 @@ use super::ethabiencoder;
 use super::{Contract, TargetRuntime, Variable};
 
 pub struct EwasmTarget {
-    abi: ethabiencoder::EthAbiEncoder,
+    abi: ethabiencoder::EthAbiDecoder,
 }
 
 impl EwasmTarget {
@@ -33,7 +33,7 @@ impl EwasmTarget {
     ) -> Contract<'a> {
         // first emit runtime code
         let mut b = EwasmTarget {
-            abi: ethabiencoder::EthAbiEncoder { bswap: false },
+            abi: ethabiencoder::EthAbiDecoder { bswap: false },
         };
         let mut runtime_code = Contract::new(
             context,
@@ -60,7 +60,7 @@ impl EwasmTarget {
 
         // Now we have the runtime code, create the deployer
         let mut b = EwasmTarget {
-            abi: ethabiencoder::EthAbiEncoder { bswap: false },
+            abi: ethabiencoder::EthAbiDecoder { bswap: false },
         };
         let mut deploy_code = Contract::new(
             context,
@@ -684,9 +684,11 @@ impl EwasmTarget {
         args: &[BasicValueEnum<'b>],
         tys: &[ast::Type],
     ) -> (PointerValue<'b>, IntValue<'b>) {
-        let (mut length, mut offset) = ethabiencoder::EthAbiEncoder::total_encoded_length(
-            contract, selector, load, function, args, tys,
+        let encoder = ethabiencoder::EncoderBuilder::new(
+            contract, function, selector, load, args, tys, false,
         );
+
+        let mut length = encoder.encoded_length();
 
         if let Some((_, len)) = constant {
             length = contract.builder.build_int_add(
@@ -708,30 +710,7 @@ impl EwasmTarget {
             .unwrap()
             .into_pointer_value();
 
-        // malloc returns u8*
         let mut data = encoded_data;
-
-        if let Some(selector) = selector {
-            contract.builder.build_store(
-                contract.builder.build_pointer_cast(
-                    data,
-                    contract.context.i32_type().ptr_type(AddressSpace::Generic),
-                    "",
-                ),
-                selector,
-            );
-
-            data = unsafe {
-                contract.builder.build_gep(
-                    data,
-                    &[contract
-                        .context
-                        .i32_type()
-                        .const_int(std::mem::size_of::<u32>() as u64, false)],
-                    "",
-                )
-            };
-        }
 
         if let Some((code, code_len)) = constant {
             contract.builder.build_call(
@@ -764,39 +743,7 @@ impl EwasmTarget {
             };
         }
 
-        // We use a little trick here. The length might or might not include the selector.
-        // The length will be a multiple of 32 plus the selector (4). So by dividing by 8,
-        // we lose the selector.
-        contract.builder.build_call(
-            contract.module.get_function("__bzero8").unwrap(),
-            &[
-                data.into(),
-                contract
-                    .builder
-                    .build_int_unsigned_div(
-                        length,
-                        contract.context.i32_type().const_int(8, false),
-                        "",
-                    )
-                    .into(),
-            ],
-            "",
-        );
-
-        let mut dynamic = unsafe { contract.builder.build_gep(data, &[offset], "") };
-
-        for (i, ty) in tys.iter().enumerate() {
-            self.abi.encode_ty(
-                contract,
-                load,
-                function,
-                ty,
-                args[i],
-                &mut data,
-                &mut offset,
-                &mut dynamic,
-            );
-        }
+        encoder.finish(contract, function, data);
 
         (encoded_data, length)
     }
@@ -1198,8 +1145,7 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
         args: &[BasicValueEnum<'b>],
         tys: &[ast::Type],
     ) -> PointerValue<'b> {
-        self.abi
-            .encode_to_vector(contract, selector, function, packed, args, tys)
+        ethabiencoder::encode_to_vector(contract, selector, function, packed, args, tys, false)
     }
 
     fn abi_encode<'b>(

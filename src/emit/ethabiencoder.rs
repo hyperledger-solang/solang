@@ -8,15 +8,449 @@ use num_traits::ToPrimitive;
 use super::loop_builder::LoopBuilder;
 use super::{Contract, ReturnCode};
 
-pub struct EthAbiEncoder {
-    pub bswap: bool,
+/// Generate an in-place abi encoder. This is done in several stages:
+/// 1) EncoderBuilder::new() generates the code which calculates the required encoded length at runtime
+/// 2) EncoderBuilder::encoded_length() returns the required length
+/// 3) EncoderBuilder::finish() generates the code which encodes the data to the pointer provided. The
+///    called should ensure there is enough space.
+pub struct EncoderBuilder<'a, 'b> {
+    length: IntValue<'a>,
+    offset: IntValue<'a>,
+    selector: Option<IntValue<'a>>,
+    args: &'b [BasicValueEnum<'a>],
+    load_args: bool,
+    tys: &'b [ast::Type],
+    bswap: bool,
 }
 
-impl EthAbiEncoder {
+impl<'a, 'b> EncoderBuilder<'a, 'b> {
+    /// Create a new encoder. This will generate the code which calculates the length of encoded data
+    pub fn new(
+        contract: &Contract<'a>,
+        function: FunctionValue,
+        selector: Option<IntValue<'a>>,
+        load_args: bool,
+        args: &'b [BasicValueEnum<'a>],
+        tys: &'b [ast::Type],
+        bswap: bool,
+    ) -> Self {
+        let offset = contract.context.i32_type().const_int(
+            tys.iter()
+                .map(|ty| EncoderBuilder::encoded_fixed_length(ty, contract.ns))
+                .sum(),
+            false,
+        );
+
+        let mut length = offset;
+
+        // now add the dynamic lengths
+        for (i, ty) in tys.iter().enumerate() {
+            length = contract.builder.build_int_add(
+                length,
+                EncoderBuilder::encoded_dynamic_length(args[i], load_args, ty, function, contract),
+                "",
+            );
+        }
+
+        if selector.is_some() {
+            length = contract.builder.build_int_add(
+                length,
+                contract
+                    .context
+                    .i32_type()
+                    .const_int(std::mem::size_of::<u32>() as u64, false),
+                "",
+            );
+        }
+
+        EncoderBuilder {
+            length,
+            offset,
+            selector,
+            args,
+            load_args,
+            tys,
+            bswap,
+        }
+    }
+
+    /// Return the total length
+    pub fn encoded_length(&self) -> IntValue<'a> {
+        self.length
+    }
+
+    /// Return the amount of fixed and dynamic storage required to store a type
+    fn encoded_dynamic_length<'c>(
+        arg: BasicValueEnum<'c>,
+        load: bool,
+        ty: &ast::Type,
+        function: FunctionValue,
+        contract: &Contract<'c>,
+    ) -> IntValue<'c> {
+        match ty {
+            ast::Type::Struct(n) if ty.is_dynamic(contract.ns) => {
+                let arg = if load {
+                    contract.builder.build_load(arg.into_pointer_value(), "")
+                } else {
+                    arg
+                };
+
+                let normal_struct = contract
+                    .context
+                    .append_basic_block(function, "normal_struct");
+                let null_struct = contract.context.append_basic_block(function, "null_struct");
+                let done_struct = contract.context.append_basic_block(function, "done_struct");
+
+                let is_null = contract
+                    .builder
+                    .build_is_null(arg.into_pointer_value(), "is_null");
+
+                contract
+                    .builder
+                    .build_conditional_branch(is_null, null_struct, normal_struct);
+
+                contract.builder.position_at_end(normal_struct);
+
+                let mut normal_sum = contract.context.i32_type().const_zero();
+
+                for (i, field) in contract.ns.structs[*n].fields.iter().enumerate() {
+                    // a struct with dynamic fields gets stored in the dynamic part
+                    normal_sum = contract.builder.build_int_add(
+                        normal_sum,
+                        contract.context.i32_type().const_int(
+                            EncoderBuilder::encoded_fixed_length(&field.ty, contract.ns),
+                            false,
+                        ),
+                        "",
+                    );
+
+                    let elem = unsafe {
+                        contract.builder.build_gep(
+                            arg.into_pointer_value(),
+                            &[
+                                contract.context.i32_type().const_zero(),
+                                contract.context.i32_type().const_int(i as u64, false),
+                            ],
+                            &field.name,
+                        )
+                    };
+
+                    let len = EncoderBuilder::encoded_dynamic_length(
+                        elem.into(),
+                        true,
+                        &field.ty,
+                        function,
+                        contract,
+                    );
+
+                    normal_sum = contract.builder.build_int_add(normal_sum, len, "");
+                }
+
+                contract.builder.build_unconditional_branch(done_struct);
+
+                let normal_struct = contract.builder.get_insert_block().unwrap();
+
+                contract.builder.position_at_end(null_struct);
+
+                let mut null_sum = contract.context.i32_type().const_zero();
+
+                for field in &contract.ns.structs[*n].fields {
+                    // a struct with dynamic fields gets stored in the dynamic part
+                    null_sum = contract.builder.build_int_add(
+                        null_sum,
+                        contract.context.i32_type().const_int(
+                            EncoderBuilder::encoded_fixed_length(&field.ty, contract.ns),
+                            false,
+                        ),
+                        "",
+                    );
+
+                    null_sum = contract.builder.build_int_add(
+                        null_sum,
+                        EncoderBuilder::encoded_dynamic_length(
+                            contract.default_value(&field.ty),
+                            false,
+                            &field.ty,
+                            function,
+                            contract,
+                        ),
+                        "",
+                    );
+                }
+
+                contract.builder.build_unconditional_branch(done_struct);
+
+                let null_struct = contract.builder.get_insert_block().unwrap();
+
+                contract.builder.position_at_end(done_struct);
+
+                let sum = contract
+                    .builder
+                    .build_phi(contract.context.i32_type(), "sum");
+
+                sum.add_incoming(&[(&normal_sum, normal_struct), (&null_sum, null_struct)]);
+
+                sum.as_basic_value().into_int_value()
+            }
+            ast::Type::Array(elem_ty, dims) if ty.is_dynamic(contract.ns) => {
+                let arg = if load {
+                    contract.builder.build_load(arg.into_pointer_value(), "")
+                } else {
+                    arg
+                };
+
+                let mut sum = contract.context.i32_type().const_zero();
+
+                let len = match dims.last().unwrap() {
+                    None => {
+                        let array_len = contract.vector_len(arg);
+
+                        // A dynamic array will store its own length
+                        sum = contract.builder.build_int_add(
+                            sum,
+                            contract.context.i32_type().const_int(32, false),
+                            "",
+                        );
+
+                        array_len
+                    }
+                    Some(d) => contract
+                        .context
+                        .i32_type()
+                        .const_int(d.to_u64().unwrap(), false),
+                };
+
+                // plus fixed size elements
+                sum = contract.builder.build_int_add(
+                    sum,
+                    contract.builder.build_int_mul(
+                        len,
+                        contract.context.i32_type().const_int(
+                            EncoderBuilder::encoded_fixed_length(&elem_ty, contract.ns),
+                            false,
+                        ),
+                        "",
+                    ),
+                    "",
+                );
+
+                let normal_array = contract
+                    .context
+                    .append_basic_block(function, "normal_array");
+                let null_array = contract.context.append_basic_block(function, "null_array");
+                let done_array = contract.context.append_basic_block(function, "done_array");
+
+                let is_null = contract
+                    .builder
+                    .build_is_null(arg.into_pointer_value(), "is_null");
+
+                contract
+                    .builder
+                    .build_conditional_branch(is_null, null_array, normal_array);
+
+                contract.builder.position_at_end(normal_array);
+
+                let mut normal_length = sum;
+
+                contract.builder.position_at_end(normal_array);
+
+                // the element of the array are dynamic; we need to iterate over the array to find the encoded length
+                if elem_ty.is_dynamic(contract.ns) {
+                    contract.emit_loop_cond_first_with_int(
+                        function,
+                        contract.context.i32_type().const_zero(),
+                        len,
+                        &mut normal_length,
+                        |index, sum| {
+                            let elem =
+                                contract.array_subscript(ty, arg.into_pointer_value(), index);
+
+                            *sum = contract.builder.build_int_add(
+                                EncoderBuilder::encoded_dynamic_length(
+                                    elem.into(),
+                                    true,
+                                    &elem_ty,
+                                    function,
+                                    contract,
+                                ),
+                                *sum,
+                                "",
+                            );
+                        },
+                    );
+                }
+
+                contract.builder.build_unconditional_branch(done_array);
+
+                let normal_array = contract.builder.get_insert_block().unwrap();
+
+                contract.builder.position_at_end(null_array);
+
+                let elem = contract.default_value(&elem_ty.deref_any());
+
+                let null_length = contract.builder.build_int_add(
+                    contract.builder.build_int_mul(
+                        EncoderBuilder::encoded_dynamic_length(
+                            elem, false, elem_ty, function, contract,
+                        ),
+                        len,
+                        "",
+                    ),
+                    sum,
+                    "",
+                );
+
+                contract.builder.build_unconditional_branch(done_array);
+
+                let null_array = contract.builder.get_insert_block().unwrap();
+
+                contract.builder.position_at_end(done_array);
+
+                let encoded_length = contract
+                    .builder
+                    .build_phi(contract.context.i32_type(), "encoded_length");
+
+                encoded_length
+                    .add_incoming(&[(&normal_length, normal_array), (&null_length, null_array)]);
+
+                encoded_length.as_basic_value().into_int_value()
+            }
+            ast::Type::String | ast::Type::DynamicBytes => {
+                let arg = if load {
+                    contract.builder.build_load(arg.into_pointer_value(), "")
+                } else {
+                    arg
+                };
+
+                // The dynamic part is the length (=32 bytes) and the string
+                // data itself. Length 0 occupies no space, length 1-32 occupies
+                // 32 bytes, etc
+                contract.builder.build_and(
+                    contract.builder.build_int_add(
+                        contract.vector_len(arg),
+                        contract.context.i32_type().const_int(32 + 31, false),
+                        "",
+                    ),
+                    contract.context.i32_type().const_int(!31, false),
+                    "",
+                )
+            }
+            _ => contract.context.i32_type().const_zero(),
+        }
+    }
+
+    /// Return the encoded length of the given type, fixed part only
+    fn encoded_fixed_length(ty: &ast::Type, ns: &ast::Namespace) -> u64 {
+        match ty {
+            ast::Type::Bool
+            | ast::Type::Contract(_)
+            | ast::Type::Address(_)
+            | ast::Type::Int(_)
+            | ast::Type::Uint(_)
+            | ast::Type::Bytes(_)
+            | ast::Type::ExternalFunction { .. } => 32,
+            // String and Dynamic bytes use 32 bytes for the offset into dynamic encoded
+            ast::Type::String
+            | ast::Type::DynamicBytes
+            | ast::Type::Struct(_)
+            | ast::Type::Array(_, _)
+                if ty.is_dynamic(ns) =>
+            {
+                32
+            }
+            ast::Type::Enum(_) => 32,
+            ast::Type::Struct(n) => ns.structs[*n]
+                .fields
+                .iter()
+                .map(|f| EncoderBuilder::encoded_fixed_length(&f.ty, ns))
+                .sum(),
+            ast::Type::Array(ty, dims) => {
+                // The array must be fixed, dynamic arrays are handled above
+                let product: u64 = dims
+                    .iter()
+                    .map(|d| d.as_ref().unwrap().to_u64().unwrap())
+                    .product();
+
+                product * EncoderBuilder::encoded_fixed_length(&ty, ns)
+            }
+            ast::Type::Ref(r) => EncoderBuilder::encoded_fixed_length(r, ns),
+            ast::Type::StorageRef(r) => EncoderBuilder::encoded_fixed_length(r, ns),
+            _ => unreachable!(),
+        }
+    }
+
+    /// Make it so
+    pub fn finish(
+        self,
+        contract: &Contract<'a>,
+        function: FunctionValue<'a>,
+        output: PointerValue<'a>,
+    ) {
+        let mut output = output;
+
+        if let Some(selector) = self.selector {
+            contract.builder.build_store(
+                contract.builder.build_pointer_cast(
+                    output,
+                    contract.context.i32_type().ptr_type(AddressSpace::Generic),
+                    "",
+                ),
+                selector,
+            );
+
+            output = unsafe {
+                contract.builder.build_gep(
+                    output,
+                    &[contract
+                        .context
+                        .i32_type()
+                        .const_int(std::mem::size_of::<u32>() as u64, false)],
+                    "",
+                )
+            };
+        }
+
+        // We use a little trick here. The length might or might not include the selector.
+        // The length will be a multiple of 32 plus the selector (4). So by dividing by 8,
+        // we lose the selector.
+        contract.builder.build_call(
+            contract.module.get_function("__bzero8").unwrap(),
+            &[
+                output.into(),
+                contract
+                    .builder
+                    .build_int_unsigned_div(
+                        self.length,
+                        contract.context.i32_type().const_int(8, false),
+                        "",
+                    )
+                    .into(),
+            ],
+            "",
+        );
+
+        let mut output = output;
+        let mut offset = self.offset;
+        let mut dynamic = unsafe { contract.builder.build_gep(output, &[self.offset], "") };
+
+        for (i, ty) in self.tys.iter().enumerate() {
+            self.encode_ty(
+                contract,
+                self.load_args,
+                function,
+                ty,
+                self.args[i],
+                &mut output,
+                &mut offset,
+                &mut dynamic,
+            );
+        }
+    }
+
     /// Recursively encode a value in arg. The load argument specifies if the arg is a pointer
     /// to the value, or the value itself. The fixed pointer points to the fixed, non-dynamic part
     /// of the encoded data. The offset is current offset for dynamic fields.
-    pub fn encode_ty<'a>(
+    fn encode_ty(
         &self,
         contract: &Contract<'a>,
         load: bool,
@@ -129,7 +563,7 @@ impl EthAbiEncoder {
 
                 let array_data_offset = contract.builder.build_int_mul(
                     contract.context.i32_type().const_int(
-                        EthAbiEncoder::encoded_fixed_length(&elem_ty, contract.ns),
+                        EncoderBuilder::encoded_fixed_length(&elem_ty, contract.ns),
                         false,
                     ),
                     array_length,
@@ -538,7 +972,7 @@ impl EthAbiEncoder {
                 let fixed_field_length = contract.ns.structs[*n]
                     .fields
                     .iter()
-                    .map(|f| EthAbiEncoder::encoded_fixed_length(&f.ty, contract.ns))
+                    .map(|f| EncoderBuilder::encoded_fixed_length(&f.ty, contract.ns))
                     .sum();
 
                 *dynamic = unsafe {
@@ -877,7 +1311,7 @@ impl EthAbiEncoder {
     }
 
     /// ABI encode a single primitive
-    fn encode_primitive<'a>(
+    fn encode_primitive(
         &self,
         contract: &Contract<'a>,
         load: bool,
@@ -1278,307 +1712,13 @@ impl EthAbiEncoder {
             _ => unimplemented!(),
         }
     }
+}
 
-    /// Return the amount of fixed and dynamic storage required to store a type
-    pub fn encoded_dynamic_length<'a>(
-        arg: BasicValueEnum<'a>,
-        load: bool,
-        ty: &ast::Type,
-        function: FunctionValue,
-        contract: &Contract<'a>,
-    ) -> IntValue<'a> {
-        match ty {
-            ast::Type::Struct(n) if ty.is_dynamic(contract.ns) => {
-                let arg = if load {
-                    contract.builder.build_load(arg.into_pointer_value(), "")
-                } else {
-                    arg
-                };
+pub struct EthAbiDecoder {
+    pub bswap: bool,
+}
 
-                let normal_struct = contract
-                    .context
-                    .append_basic_block(function, "normal_struct");
-                let null_struct = contract.context.append_basic_block(function, "null_struct");
-                let done_struct = contract.context.append_basic_block(function, "done_struct");
-
-                let is_null = contract
-                    .builder
-                    .build_is_null(arg.into_pointer_value(), "is_null");
-
-                contract
-                    .builder
-                    .build_conditional_branch(is_null, null_struct, normal_struct);
-
-                contract.builder.position_at_end(normal_struct);
-
-                let mut normal_sum = contract.context.i32_type().const_zero();
-
-                for (i, field) in contract.ns.structs[*n].fields.iter().enumerate() {
-                    // a struct with dynamic fields gets stored in the dynamic part
-                    normal_sum = contract.builder.build_int_add(
-                        normal_sum,
-                        contract.context.i32_type().const_int(
-                            EthAbiEncoder::encoded_fixed_length(&field.ty, contract.ns),
-                            false,
-                        ),
-                        "",
-                    );
-
-                    let elem = unsafe {
-                        contract.builder.build_gep(
-                            arg.into_pointer_value(),
-                            &[
-                                contract.context.i32_type().const_zero(),
-                                contract.context.i32_type().const_int(i as u64, false),
-                            ],
-                            &field.name,
-                        )
-                    };
-
-                    let len = EthAbiEncoder::encoded_dynamic_length(
-                        elem.into(),
-                        true,
-                        &field.ty,
-                        function,
-                        contract,
-                    );
-
-                    normal_sum = contract.builder.build_int_add(normal_sum, len, "");
-                }
-
-                contract.builder.build_unconditional_branch(done_struct);
-
-                let normal_struct = contract.builder.get_insert_block().unwrap();
-
-                contract.builder.position_at_end(null_struct);
-
-                let mut null_sum = contract.context.i32_type().const_zero();
-
-                for field in &contract.ns.structs[*n].fields {
-                    // a struct with dynamic fields gets stored in the dynamic part
-                    null_sum = contract.builder.build_int_add(
-                        null_sum,
-                        contract.context.i32_type().const_int(
-                            EthAbiEncoder::encoded_fixed_length(&field.ty, contract.ns),
-                            false,
-                        ),
-                        "",
-                    );
-
-                    null_sum = contract.builder.build_int_add(
-                        null_sum,
-                        EthAbiEncoder::encoded_dynamic_length(
-                            contract.default_value(&field.ty),
-                            false,
-                            &field.ty,
-                            function,
-                            contract,
-                        ),
-                        "",
-                    );
-                }
-
-                contract.builder.build_unconditional_branch(done_struct);
-
-                let null_struct = contract.builder.get_insert_block().unwrap();
-
-                contract.builder.position_at_end(done_struct);
-
-                let sum = contract
-                    .builder
-                    .build_phi(contract.context.i32_type(), "sum");
-
-                sum.add_incoming(&[(&normal_sum, normal_struct), (&null_sum, null_struct)]);
-
-                sum.as_basic_value().into_int_value()
-            }
-            ast::Type::Array(elem_ty, dims) if ty.is_dynamic(contract.ns) => {
-                let arg = if load {
-                    contract.builder.build_load(arg.into_pointer_value(), "")
-                } else {
-                    arg
-                };
-
-                let mut sum = contract.context.i32_type().const_zero();
-
-                let len = match dims.last().unwrap() {
-                    None => {
-                        let array_len = contract.vector_len(arg);
-
-                        // A dynamic array will store its own length
-                        sum = contract.builder.build_int_add(
-                            sum,
-                            contract.context.i32_type().const_int(32, false),
-                            "",
-                        );
-
-                        array_len
-                    }
-                    Some(d) => contract
-                        .context
-                        .i32_type()
-                        .const_int(d.to_u64().unwrap(), false),
-                };
-
-                // plus fixed size elements
-                sum = contract.builder.build_int_add(
-                    sum,
-                    contract.builder.build_int_mul(
-                        len,
-                        contract.context.i32_type().const_int(
-                            EthAbiEncoder::encoded_fixed_length(&elem_ty, contract.ns),
-                            false,
-                        ),
-                        "",
-                    ),
-                    "",
-                );
-
-                let normal_array = contract
-                    .context
-                    .append_basic_block(function, "normal_array");
-                let null_array = contract.context.append_basic_block(function, "null_array");
-                let done_array = contract.context.append_basic_block(function, "done_array");
-
-                let is_null = contract
-                    .builder
-                    .build_is_null(arg.into_pointer_value(), "is_null");
-
-                contract
-                    .builder
-                    .build_conditional_branch(is_null, null_array, normal_array);
-
-                contract.builder.position_at_end(normal_array);
-
-                let mut normal_length = sum;
-
-                contract.builder.position_at_end(normal_array);
-
-                // the element of the array are dynamic; we need to iterate over the array to find the encoded length
-                if elem_ty.is_dynamic(contract.ns) {
-                    contract.emit_loop_cond_first_with_int(
-                        function,
-                        contract.context.i32_type().const_zero(),
-                        len,
-                        &mut normal_length,
-                        |index, sum| {
-                            let elem =
-                                contract.array_subscript(ty, arg.into_pointer_value(), index);
-
-                            *sum = contract.builder.build_int_add(
-                                EthAbiEncoder::encoded_dynamic_length(
-                                    elem.into(),
-                                    true,
-                                    &elem_ty,
-                                    function,
-                                    contract,
-                                ),
-                                *sum,
-                                "",
-                            );
-                        },
-                    );
-                }
-
-                contract.builder.build_unconditional_branch(done_array);
-
-                let normal_array = contract.builder.get_insert_block().unwrap();
-
-                contract.builder.position_at_end(null_array);
-
-                let elem = contract.default_value(&elem_ty.deref_any());
-
-                let null_length = contract.builder.build_int_add(
-                    contract.builder.build_int_mul(
-                        EthAbiEncoder::encoded_dynamic_length(
-                            elem, false, elem_ty, function, contract,
-                        ),
-                        len,
-                        "",
-                    ),
-                    sum,
-                    "",
-                );
-
-                contract.builder.build_unconditional_branch(done_array);
-
-                let null_array = contract.builder.get_insert_block().unwrap();
-
-                contract.builder.position_at_end(done_array);
-
-                let encoded_length = contract
-                    .builder
-                    .build_phi(contract.context.i32_type(), "encoded_length");
-
-                encoded_length
-                    .add_incoming(&[(&normal_length, normal_array), (&null_length, null_array)]);
-
-                encoded_length.as_basic_value().into_int_value()
-            }
-            ast::Type::String | ast::Type::DynamicBytes => {
-                let arg = if load {
-                    contract.builder.build_load(arg.into_pointer_value(), "")
-                } else {
-                    arg
-                };
-
-                // The dynamic part is the length (=32 bytes) and the string
-                // data itself. Length 0 occupies no space, length 1-32 occupies
-                // 32 bytes, etc
-                contract.builder.build_and(
-                    contract.builder.build_int_add(
-                        contract.vector_len(arg),
-                        contract.context.i32_type().const_int(32 + 31, false),
-                        "",
-                    ),
-                    contract.context.i32_type().const_int(!31, false),
-                    "",
-                )
-            }
-            _ => contract.context.i32_type().const_zero(),
-        }
-    }
-
-    /// Return the encoded length of the given type, fixed part only
-    pub fn encoded_fixed_length(ty: &ast::Type, ns: &ast::Namespace) -> u64 {
-        match ty {
-            ast::Type::Bool
-            | ast::Type::Contract(_)
-            | ast::Type::Address(_)
-            | ast::Type::Int(_)
-            | ast::Type::Uint(_)
-            | ast::Type::Bytes(_)
-            | ast::Type::ExternalFunction { .. } => 32,
-            // String and Dynamic bytes use 32 bytes for the offset into dynamic encoded
-            ast::Type::String
-            | ast::Type::DynamicBytes
-            | ast::Type::Struct(_)
-            | ast::Type::Array(_, _)
-                if ty.is_dynamic(ns) =>
-            {
-                32
-            }
-            ast::Type::Enum(_) => 32,
-            ast::Type::Struct(n) => ns.structs[*n]
-                .fields
-                .iter()
-                .map(|f| EthAbiEncoder::encoded_fixed_length(&f.ty, ns))
-                .sum(),
-            ast::Type::Array(ty, dims) => {
-                // The array must be fixed, dynamic arrays are handled above
-                let product: u64 = dims
-                    .iter()
-                    .map(|d| d.as_ref().unwrap().to_u64().unwrap())
-                    .product();
-
-                product * EthAbiEncoder::encoded_fixed_length(&ty, ns)
-            }
-            ast::Type::Ref(r) => EthAbiEncoder::encoded_fixed_length(r, ns),
-            ast::Type::StorageRef(r) => EthAbiEncoder::encoded_fixed_length(r, ns),
-            _ => unreachable!(),
-        }
-    }
-
+impl EthAbiDecoder {
     /// decode a single primitive which is always encoded in 32 bytes
     fn decode_primitive<'a>(
         &self,
@@ -2350,201 +2490,104 @@ impl EthAbiEncoder {
             ));
         }
     }
+}
 
-    /// Calculate length of encoded data and the offset where the dynamic part starts
-    pub fn total_encoded_length<'b>(
-        contract: &Contract<'b>,
-        selector: Option<IntValue<'b>>,
-        load: bool,
-        function: FunctionValue,
-        args: &[BasicValueEnum<'b>],
-        tys: &[ast::Type],
-    ) -> (IntValue<'b>, IntValue<'b>) {
-        let offset = contract.context.i32_type().const_int(
-            tys.iter()
-                .map(|ty| EthAbiEncoder::encoded_fixed_length(ty, contract.ns))
-                .sum(),
-            false,
-        );
-
-        let mut length = offset;
-
-        // now add the dynamic lengths
-        for (i, ty) in tys.iter().enumerate() {
-            length = contract.builder.build_int_add(
-                length,
-                EthAbiEncoder::encoded_dynamic_length(args[i], load, ty, function, contract),
-                "",
-            );
-        }
-
-        if selector.is_some() {
-            length = contract.builder.build_int_add(
-                length,
-                contract
-                    .context
-                    .i32_type()
-                    .const_int(std::mem::size_of::<u32>() as u64, false),
-                "",
-            );
-        }
-
-        (length, offset)
+/// ABI encode into a vector for abi.encode* style builtin functions
+pub fn encode_to_vector<'b>(
+    contract: &Contract<'b>,
+    selector: Option<IntValue<'b>>,
+    function: FunctionValue<'b>,
+    packed: bool,
+    args: &[BasicValueEnum<'b>],
+    tys: &[ast::Type],
+    bswap: bool,
+) -> PointerValue<'b> {
+    if packed {
+        unimplemented!();
     }
 
-    /// ABI encode into a vector for abi.encode* style builtin functions
-    pub fn encode_to_vector<'b>(
-        &self,
-        contract: &Contract<'b>,
-        selector: Option<IntValue<'b>>,
-        function: FunctionValue<'b>,
-        packed: bool,
-        args: &[BasicValueEnum<'b>],
-        tys: &[ast::Type],
-    ) -> PointerValue<'b> {
-        if packed {
-            unimplemented!();
-        }
+    let encoder = EncoderBuilder::new(contract, function, selector, false, args, tys, bswap);
 
-        let (length, mut offset) =
-            EthAbiEncoder::total_encoded_length(contract, selector, false, function, args, tys);
+    let length = encoder.encoded_length();
 
-        let malloc_length = contract.builder.build_int_add(
-            length,
-            contract
-                .module
-                .get_struct_type("struct.vector")
-                .unwrap()
-                .size_of()
-                .unwrap()
-                .const_cast(contract.context.i32_type(), false),
-            "size",
-        );
-
-        let p = contract
-            .builder
-            .build_call(
-                contract.module.get_function("__malloc").unwrap(),
-                &[malloc_length.into()],
-                "",
-            )
-            .try_as_basic_value()
-            .left()
+    let malloc_length = contract.builder.build_int_add(
+        length,
+        contract
+            .module
+            .get_struct_type("struct.vector")
             .unwrap()
-            .into_pointer_value();
+            .size_of()
+            .unwrap()
+            .const_cast(contract.context.i32_type(), false),
+        "size",
+    );
 
-        let v = contract.builder.build_pointer_cast(
-            p,
-            contract
-                .module
-                .get_struct_type("struct.vector")
-                .unwrap()
-                .ptr_type(AddressSpace::Generic),
-            "string",
-        );
-
-        let data_len = unsafe {
-            contract.builder.build_gep(
-                v,
-                &[
-                    contract.context.i32_type().const_zero(),
-                    contract.context.i32_type().const_zero(),
-                ],
-                "data_len",
-            )
-        };
-
-        contract.builder.build_store(data_len, length);
-
-        let data_size = unsafe {
-            contract.builder.build_gep(
-                v,
-                &[
-                    contract.context.i32_type().const_zero(),
-                    contract.context.i32_type().const_int(1, false),
-                ],
-                "data_size",
-            )
-        };
-
-        contract.builder.build_store(data_size, length);
-
-        let data = unsafe {
-            contract.builder.build_gep(
-                v,
-                &[
-                    contract.context.i32_type().const_zero(),
-                    contract.context.i32_type().const_int(2, false),
-                ],
-                "data",
-            )
-        };
-
-        let mut data = contract.builder.build_pointer_cast(
-            data,
-            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+    let p = contract
+        .builder
+        .build_call(
+            contract.module.get_function("__malloc").unwrap(),
+            &[malloc_length.into()],
             "",
-        );
+        )
+        .try_as_basic_value()
+        .left()
+        .unwrap()
+        .into_pointer_value();
 
-        if let Some(selector) = selector {
-            contract.builder.build_store(
-                contract.builder.build_pointer_cast(
-                    data,
-                    contract.context.i32_type().ptr_type(AddressSpace::Generic),
-                    "",
-                ),
-                selector,
-            );
+    let v = contract.builder.build_pointer_cast(
+        p,
+        contract
+            .module
+            .get_struct_type("struct.vector")
+            .unwrap()
+            .ptr_type(AddressSpace::Generic),
+        "string",
+    );
 
-            data = unsafe {
-                contract.builder.build_gep(
-                    data,
-                    &[contract
-                        .context
-                        .i32_type()
-                        .const_int(std::mem::size_of::<u32>() as u64, false)],
-                    "",
-                )
-            };
-        }
-
-        let mut data = contract.builder.build_pointer_cast(
-            data,
-            contract.context.i8_type().ptr_type(AddressSpace::Generic),
-            "",
-        );
-
-        contract.builder.build_call(
-            contract.module.get_function("__bzero8").unwrap(),
+    let data_len = unsafe {
+        contract.builder.build_gep(
+            v,
             &[
-                data.into(),
-                contract
-                    .builder
-                    .build_int_unsigned_div(
-                        length,
-                        contract.context.i32_type().const_int(8, false),
-                        "",
-                    )
-                    .into(),
+                contract.context.i32_type().const_zero(),
+                contract.context.i32_type().const_zero(),
             ],
-            "",
-        );
+            "data_len",
+        )
+    };
 
-        let mut dynamic = unsafe { contract.builder.build_gep(data, &[offset], "") };
+    contract.builder.build_store(data_len, length);
 
-        for (i, ty) in tys.iter().enumerate() {
-            self.encode_ty(
-                contract,
-                false,
-                function,
-                ty,
-                args[i],
-                &mut data,
-                &mut offset,
-                &mut dynamic,
-            );
-        }
+    let data_size = unsafe {
+        contract.builder.build_gep(
+            v,
+            &[
+                contract.context.i32_type().const_zero(),
+                contract.context.i32_type().const_int(1, false),
+            ],
+            "data_size",
+        )
+    };
 
-        v
-    }
+    contract.builder.build_store(data_size, length);
+
+    let data = unsafe {
+        contract.builder.build_gep(
+            v,
+            &[
+                contract.context.i32_type().const_zero(),
+                contract.context.i32_type().const_int(2, false),
+            ],
+            "data",
+        )
+    };
+
+    let data = contract.builder.build_pointer_cast(
+        data,
+        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+        "",
+    );
+
+    encoder.finish(contract, function, data);
+
+    v
 }

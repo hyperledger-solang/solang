@@ -17,7 +17,7 @@ use super::loop_builder::LoopBuilder;
 use super::{Contract, ReturnCode, TargetRuntime, Variable};
 
 pub struct SolanaTarget {
-    abi: ethabiencoder::EthAbiEncoder,
+    abi: ethabiencoder::EthAbiDecoder,
     magic: u32,
 }
 
@@ -42,7 +42,7 @@ impl SolanaTarget {
         magic.copy_from_slice(&hash[0..4]);
 
         let mut target = SolanaTarget {
-            abi: ethabiencoder::EthAbiEncoder { bswap: true },
+            abi: ethabiencoder::EthAbiDecoder { bswap: true },
             magic: u32::from_le_bytes(magic),
         };
 
@@ -2245,14 +2245,14 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
     /// ABI encode into a vector for abi.encode* style builtin functions
     fn abi_encode_to_vector<'b>(
         &self,
-        _contract: &Contract<'b>,
-        _selector: Option<IntValue<'b>>,
-        _function: FunctionValue<'b>,
-        _packed: bool,
-        _args: &[BasicValueEnum<'b>],
-        _spec: &[ast::Type],
+        contract: &Contract<'b>,
+        selector: Option<IntValue<'b>>,
+        function: FunctionValue<'b>,
+        packed: bool,
+        args: &[BasicValueEnum<'b>],
+        tys: &[ast::Type],
     ) -> PointerValue<'b> {
-        unimplemented!();
+        ethabiencoder::encode_to_vector(contract, selector, function, packed, args, tys, false)
     }
 
     fn abi_encode(
@@ -2264,11 +2264,12 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         args: &[BasicValueEnum<'a>],
         tys: &[ast::Type],
     ) -> (PointerValue<'a>, IntValue<'a>) {
-        let (output_len, mut output, output_size) = self.return_buffer(contract);
+        let (output_len, output, output_size) = self.return_buffer(contract);
 
-        let (length, mut offset) = ethabiencoder::EthAbiEncoder::total_encoded_length(
-            contract, selector, load, function, args, tys,
-        );
+        let encoder =
+            ethabiencoder::EncoderBuilder::new(contract, function, selector, load, args, tys, true);
+
+        let length = encoder.encoded_length();
 
         let length64 =
             contract
@@ -2308,61 +2309,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
 
         contract.builder.build_store(output_len, length64);
 
-        if let Some(selector) = selector {
-            contract.builder.build_store(
-                contract.builder.build_pointer_cast(
-                    output,
-                    contract.context.i32_type().ptr_type(AddressSpace::Generic),
-                    "",
-                ),
-                selector,
-            );
-
-            output = unsafe {
-                contract.builder.build_gep(
-                    output,
-                    &[contract
-                        .context
-                        .i32_type()
-                        .const_int(std::mem::size_of::<u32>() as u64, false)],
-                    "",
-                )
-            };
-        }
-
-        // We use a little trick here. The length might or might not include the selector.
-        // The length will be a multiple of 32 plus the selector (4). So by dividing by 8,
-        // we lose the selector.
-        contract.builder.build_call(
-            contract.module.get_function("__bzero8").unwrap(),
-            &[
-                output.into(),
-                contract
-                    .builder
-                    .build_int_unsigned_div(
-                        length,
-                        contract.context.i32_type().const_int(8, false),
-                        "",
-                    )
-                    .into(),
-            ],
-            "",
-        );
-
-        let mut dynamic = unsafe { contract.builder.build_gep(output, &[offset], "") };
-
-        for (i, ty) in tys.iter().enumerate() {
-            self.abi.encode_ty(
-                contract,
-                load,
-                function,
-                ty,
-                args[i],
-                &mut output,
-                &mut offset,
-                &mut dynamic,
-            );
-        }
+        encoder.finish(contract, function, output);
 
         (output, length)
     }
