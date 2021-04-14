@@ -16,7 +16,7 @@ use super::ethabiencoder;
 use super::{Contract, TargetRuntime, Variable};
 
 pub struct SabreTarget {
-    abi: ethabiencoder::EthAbiEncoder,
+    abi: ethabiencoder::EthAbiDecoder,
 }
 
 impl SabreTarget {
@@ -29,7 +29,7 @@ impl SabreTarget {
         math_overflow_check: bool,
     ) -> Contract<'a> {
         let mut b = SabreTarget {
-            abi: ethabiencoder::EthAbiEncoder { bswap: false },
+            abi: ethabiencoder::EthAbiDecoder { bswap: false },
         };
         let mut c = Contract::new(
             context,
@@ -617,9 +617,11 @@ impl<'a> TargetRuntime<'a> for SabreTarget {
         args: &[BasicValueEnum<'b>],
         tys: &[ast::Type],
     ) -> (PointerValue<'b>, IntValue<'b>) {
-        let (length, mut offset) = ethabiencoder::EthAbiEncoder::total_encoded_length(
-            contract, selector, load, function, args, tys,
+        let encoder = ethabiencoder::EncoderBuilder::new(
+            contract, function, selector, load, args, tys, false,
         );
+
+        let length = encoder.encoded_length();
 
         let encoded_data = contract
             .builder
@@ -633,64 +635,7 @@ impl<'a> TargetRuntime<'a> for SabreTarget {
             .unwrap()
             .into_pointer_value();
 
-        // malloc returns u8*
-        let mut data = encoded_data;
-
-        if let Some(selector) = selector {
-            contract.builder.build_store(
-                contract.builder.build_pointer_cast(
-                    data,
-                    contract.context.i32_type().ptr_type(AddressSpace::Generic),
-                    "",
-                ),
-                selector,
-            );
-
-            data = unsafe {
-                contract.builder.build_gep(
-                    data,
-                    &[contract
-                        .context
-                        .i32_type()
-                        .const_int(std::mem::size_of::<u32>() as u64, false)],
-                    "",
-                )
-            };
-        }
-
-        // We use a little trick here. The length might or might not include the selector.
-        // The length will be a multiple of 32 plus the selector (4). So by dividing by 8,
-        // we lose the selector.
-        contract.builder.build_call(
-            contract.module.get_function("__bzero8").unwrap(),
-            &[
-                data.into(),
-                contract
-                    .builder
-                    .build_int_unsigned_div(
-                        length,
-                        contract.context.i32_type().const_int(8, false),
-                        "",
-                    )
-                    .into(),
-            ],
-            "",
-        );
-
-        let mut dynamic = unsafe { contract.builder.build_gep(data, &[offset], "") };
-
-        for (i, ty) in tys.iter().enumerate() {
-            self.abi.encode_ty(
-                contract,
-                load,
-                function,
-                ty,
-                args[i],
-                &mut data,
-                &mut offset,
-                &mut dynamic,
-            );
-        }
+        encoder.finish(contract, function, encoded_data);
 
         (encoded_data, length)
     }

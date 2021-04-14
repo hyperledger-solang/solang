@@ -2997,7 +2997,7 @@ pub trait TargetRuntime<'a> {
     fn emit_cfg(
         &mut self,
         contract: &mut Contract<'a>,
-        cfg: &ControlFlowGraph,
+        cfg: &'a ControlFlowGraph,
         function: FunctionValue<'a>,
     ) {
         // recurse through basic blocks
