@@ -431,7 +431,7 @@ pub fn expression(
             if let Expression::ExternalFunction { function_no, .. } = &func[0] {
                 let selector = ns.functions[*function_no].selector();
 
-                Expression::NumberLiteral(*loc, Type::Uint(32), BigInt::from(selector))
+                Expression::NumberLiteral(*loc, Type::Bytes(4), BigInt::from(selector))
             } else {
                 let func = expression(&func[0], cfg, contract_no, ns, vartab);
 
@@ -907,8 +907,7 @@ pub fn expression(
                     expr: Expression::AbiEncode {
                         loc: *loc,
                         tys,
-                        selector: None,
-                        packed: false,
+                        packed: vec![],
                         args,
                     },
                 },
@@ -918,7 +917,7 @@ pub fn expression(
         }
         Expression::Builtin(loc, _, Builtin::AbiEncodePacked, args) => {
             let tys = args.iter().map(|a| a.ty()).collect();
-            let args = args
+            let packed = args
                 .iter()
                 .map(|v| expression(&v, cfg, contract_no, ns, vartab))
                 .collect();
@@ -939,9 +938,8 @@ pub fn expression(
                     expr: Expression::AbiEncode {
                         loc: *loc,
                         tys,
-                        selector: None,
-                        packed: true,
-                        args,
+                        packed,
+                        args: vec![],
                     },
                 },
             );
@@ -949,7 +947,7 @@ pub fn expression(
             Expression::Variable(*loc, Type::DynamicBytes, res)
         }
         Expression::Builtin(loc, _, Builtin::AbiEncodeWithSelector, args) => {
-            let tys = args.iter().skip(1).map(|a| a.ty()).collect();
+            let mut tys: Vec<Type> = args.iter().skip(1).map(|a| a.ty()).collect();
             // first argument is selector
             let mut args_iter = args.iter();
             let selector = expression(&args_iter.next().unwrap(), cfg, contract_no, ns, vartab);
@@ -965,6 +963,8 @@ pub fn expression(
                 &Type::DynamicBytes,
             );
 
+            tys.insert(0, Type::Bytes(4));
+
             cfg.add(
                 vartab,
                 Instr::Set {
@@ -973,8 +973,7 @@ pub fn expression(
                     expr: Expression::AbiEncode {
                         loc: *loc,
                         tys,
-                        selector: Some(Box::new(selector)),
-                        packed: false,
+                        packed: vec![selector],
                         args,
                     },
                 },
@@ -983,7 +982,7 @@ pub fn expression(
             Expression::Variable(*loc, Type::DynamicBytes, res)
         }
         Expression::Builtin(loc, _, Builtin::AbiEncodeWithSignature, args) => {
-            let tys = args.iter().skip(1).map(|a| a.ty()).collect();
+            let mut tys: Vec<Type> = args.iter().skip(1).map(|a| a.ty()).collect();
             // first argument is signature which needs hashing and shifting
             let mut args_iter = args.iter();
             let hash = Expression::Builtin(
@@ -1006,6 +1005,8 @@ pub fn expression(
                 &Type::DynamicBytes,
             );
 
+            tys.insert(0, Type::Bytes(4));
+
             cfg.add(
                 vartab,
                 Instr::Set {
@@ -1014,8 +1015,7 @@ pub fn expression(
                     expr: Expression::AbiEncode {
                         loc: *loc,
                         tys,
-                        selector: Some(Box::new(selector)),
-                        packed: false,
+                        packed: vec![selector],
                         args,
                     },
                 },
@@ -1299,7 +1299,7 @@ pub fn emit_function_call(
             } = function.as_ref()
             {
                 let ftype = &ns.functions[*function_no];
-                let tys = args.iter().map(|a| a.ty()).collect();
+                let mut tys: Vec<Type> = args.iter().map(|a| a.ty()).collect();
                 let args = args
                     .iter()
                     .map(|a| expression(a, cfg, callee_contract_no, ns, vartab))
@@ -1310,21 +1310,16 @@ pub fn emit_function_call(
 
                 let dest_func = &ns.functions[*function_no];
 
-                let selector = if ns.target == Target::Substrate {
-                    dest_func.selector().to_be()
-                } else {
-                    dest_func.selector()
-                };
+                tys.insert(0, Type::Bytes(4));
 
                 let payload = Expression::AbiEncode {
                     loc: *loc,
-                    packed: false,
                     tys,
-                    selector: Some(Box::new(Expression::NumberLiteral(
+                    packed: vec![Expression::NumberLiteral(
                         *loc,
-                        Type::Uint(32),
-                        BigInt::from(selector),
-                    ))),
+                        Type::Bytes(4),
+                        BigInt::from(dest_func.selector()),
+                    )],
                     args,
                 };
 
@@ -1374,7 +1369,7 @@ pub fn emit_function_call(
                 ..
             } = function.ty()
             {
-                let tys = args.iter().map(|a| a.ty()).collect();
+                let mut tys: Vec<Type> = args.iter().map(|a| a.ty()).collect();
                 let args = args
                     .iter()
                     .map(|a| expression(a, cfg, callee_contract_no, ns, vartab))
@@ -1385,7 +1380,7 @@ pub fn emit_function_call(
 
                 let selector = Expression::Builtin(
                     *loc,
-                    vec![Type::Uint(32)],
+                    vec![Type::Bytes(4)],
                     Builtin::ExternalFunctionSelector,
                     vec![function.clone()],
                 );
@@ -1396,11 +1391,12 @@ pub fn emit_function_call(
                     vec![function],
                 );
 
+                tys.insert(0, Type::Bytes(4));
+
                 let payload = Expression::AbiEncode {
                     loc: *loc,
-                    packed: false,
                     tys,
-                    selector: Some(Box::new(selector)),
+                    packed: vec![selector],
                     args,
                 };
 

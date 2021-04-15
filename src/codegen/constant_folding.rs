@@ -1026,24 +1026,22 @@ fn expression(
             loc,
             tys,
             packed,
-            selector,
             args,
         } => {
+            let packed = packed
+                .iter()
+                .map(|expr| expression(expr, vars, pos, cfg, ns).0)
+                .collect();
             let args = args
                 .iter()
                 .map(|expr| expression(expr, vars, pos, cfg, ns).0)
                 .collect();
 
-            let selector = selector
-                .as_ref()
-                .map(|expr| Box::new(expression(&expr, vars, pos, cfg, ns).0));
-
             (
                 Expression::AbiEncode {
                     loc: *loc,
                     tys: tys.clone(),
-                    packed: *packed,
-                    selector,
+                    packed,
                     args,
                 },
                 false,

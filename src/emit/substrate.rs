@@ -2985,32 +2985,35 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
     fn abi_encode_to_vector<'b>(
         &self,
         contract: &Contract<'b>,
-        selector: Option<IntValue<'b>>,
         function: FunctionValue<'b>,
-        packed: bool,
+        packed: &[BasicValueEnum<'b>],
         args: &[BasicValueEnum<'b>],
         tys: &[ast::Type],
     ) -> PointerValue<'b> {
         // first calculate how much memory we need to allocate
         let mut length = contract.context.i32_type().const_zero();
 
+        debug_assert_eq!(packed.len() + args.len(), tys.len());
+
+        let mut tys_iter = tys.iter();
+
         // note that encoded_length return the exact value for packed encoding
-        for (i, ty) in tys.iter().enumerate() {
+        for arg in packed {
+            let ty = tys_iter.next().unwrap();
+
             length = contract.builder.build_int_add(
                 length,
-                self.encoded_length(args[i], false, packed, &ty, function, contract),
+                self.encoded_length(*arg, false, true, ty, function, contract),
                 "",
             );
         }
 
-        if selector.is_some() {
+        for arg in args {
+            let ty = tys_iter.next().unwrap();
+
             length = contract.builder.build_int_add(
                 length,
-                contract
-                    .context
-                    .i32_type()
-                    .size_of()
-                    .const_cast(contract.context.i32_type(), false),
+                self.encoded_length(*arg, false, false, ty, function, contract),
                 "",
             );
         }
@@ -3050,7 +3053,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         );
 
         // if it's packed, we have the correct length already
-        if packed {
+        if args.is_empty() {
             let data_len = unsafe {
                 contract.builder.build_gep(
                     v,
@@ -3098,59 +3101,21 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
         let mut argsdata = data;
 
-        if let Some(selector) = selector {
-            // we need to byte-swap our bytes4 type
+        let mut tys_iter = tys.iter();
 
-            let temp = contract
-                .builder
-                .build_alloca(selector.get_type(), "selector");
+        for arg in packed {
+            let ty = tys_iter.next().unwrap();
 
-            contract.builder.build_store(temp, selector);
-
-            // byte order needs to be reversed. e.g. hex"11223344" should be 0x10 0x11 0x22 0x33 0x44
-            contract.builder.build_call(
-                contract.module.get_function("__leNtobeN").unwrap(),
-                &[
-                    contract
-                        .builder
-                        .build_pointer_cast(
-                            temp,
-                            contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                            "",
-                        )
-                        .into(),
-                    data.into(),
-                    contract.context.i32_type().const_int(4, false).into(),
-                ],
-                "",
-            );
-
-            argsdata = unsafe {
-                contract.builder.build_gep(
-                    argsdata,
-                    &[contract
-                        .context
-                        .i32_type()
-                        .size_of()
-                        .const_cast(contract.context.i32_type(), false)],
-                    "",
-                )
-            };
+            self.encode_ty(contract, false, true, function, ty, *arg, &mut argsdata);
         }
 
-        for (i, ty) in tys.iter().enumerate() {
-            self.encode_ty(
-                contract,
-                false,
-                packed,
-                function,
-                &ty,
-                args[i],
-                &mut argsdata,
-            );
+        for arg in args {
+            let ty = tys_iter.next().unwrap();
+
+            self.encode_ty(contract, false, false, function, ty, *arg, &mut argsdata);
         }
 
-        if !packed {
+        if !args.is_empty() {
             let length = contract.builder.build_int_sub(
                 contract
                     .builder
@@ -3343,7 +3308,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                 contract
                     .context
                     .i32_type()
-                    .const_int(constructor.selector() as u64, false),
+                    .const_int(constructor.selector().to_be() as u64, false),
             ),
             false,
             function,

@@ -34,7 +34,7 @@ fn abi_encode() {
 
     let returns = vm.function("test", &[]);
 
-    let mut bytes = vec![1, 2, 3, 4];
+    let mut bytes = vec![4, 3, 2, 1];
 
     bytes.extend(
         encode(&[

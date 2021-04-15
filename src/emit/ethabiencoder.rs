@@ -16,9 +16,9 @@ use super::{Contract, ReturnCode};
 pub struct EncoderBuilder<'a, 'b> {
     length: IntValue<'a>,
     offset: IntValue<'a>,
-    selector: Option<IntValue<'a>>,
-    args: &'b [BasicValueEnum<'a>],
     load_args: bool,
+    packed: &'b [BasicValueEnum<'a>],
+    args: &'b [BasicValueEnum<'a>],
     tys: &'b [ast::Type],
     bswap: bool,
 }
@@ -28,14 +28,19 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
     pub fn new(
         contract: &Contract<'a>,
         function: FunctionValue,
-        selector: Option<IntValue<'a>>,
         load_args: bool,
+        packed: &'b [BasicValueEnum<'a>],
         args: &'b [BasicValueEnum<'a>],
         tys: &'b [ast::Type],
         bswap: bool,
     ) -> Self {
+        debug_assert_eq!(packed.len() + args.len(), tys.len());
+
+        let args_tys = &tys[packed.len()..];
+
         let offset = contract.context.i32_type().const_int(
-            tys.iter()
+            args_tys
+                .iter()
                 .map(|ty| EncoderBuilder::encoded_fixed_length(ty, contract.ns))
                 .sum(),
             false,
@@ -43,22 +48,26 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
 
         let mut length = offset;
 
-        // now add the dynamic lengths
-        for (i, ty) in tys.iter().enumerate() {
+        // calculate the packed length
+        for (i, arg) in packed.iter().enumerate() {
             length = contract.builder.build_int_add(
                 length,
-                EncoderBuilder::encoded_dynamic_length(args[i], load_args, ty, function, contract),
+                EncoderBuilder::encoded_packed_length(*arg, load_args, &tys[i], function, contract),
                 "",
             );
         }
 
-        if selector.is_some() {
+        // now add the dynamic lengths
+        for (i, arg) in args.iter().enumerate() {
             length = contract.builder.build_int_add(
                 length,
-                contract
-                    .context
-                    .i32_type()
-                    .const_int(std::mem::size_of::<u32>() as u64, false),
+                EncoderBuilder::encoded_dynamic_length(
+                    *arg,
+                    load_args,
+                    &args_tys[i],
+                    function,
+                    contract,
+                ),
                 "",
             );
         }
@@ -66,9 +75,9 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
         EncoderBuilder {
             length,
             offset,
-            selector,
-            args,
             load_args,
+            packed,
+            args,
             tys,
             bswap,
         }
@@ -77,6 +86,242 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
     /// Return the total length
     pub fn encoded_length(&self) -> IntValue<'a> {
         self.length
+    }
+
+    /// Return the amount of fixed and dynamic storage required to store a type
+    fn encoded_packed_length<'c>(
+        arg: BasicValueEnum<'c>,
+        load: bool,
+        ty: &ast::Type,
+        function: FunctionValue,
+        contract: &Contract<'c>,
+    ) -> IntValue<'c> {
+        match ty {
+            ast::Type::Struct(n) => {
+                let arg = if load {
+                    contract.builder.build_load(arg.into_pointer_value(), "")
+                } else {
+                    arg
+                };
+
+                let normal_struct = contract
+                    .context
+                    .append_basic_block(function, "normal_struct");
+                let null_struct = contract.context.append_basic_block(function, "null_struct");
+                let done_struct = contract.context.append_basic_block(function, "done_struct");
+
+                let is_null = contract
+                    .builder
+                    .build_is_null(arg.into_pointer_value(), "is_null");
+
+                contract
+                    .builder
+                    .build_conditional_branch(is_null, null_struct, normal_struct);
+
+                contract.builder.position_at_end(normal_struct);
+
+                let mut normal_sum = contract.context.i32_type().const_zero();
+
+                for (i, field) in contract.ns.structs[*n].fields.iter().enumerate() {
+                    let elem = unsafe {
+                        contract.builder.build_gep(
+                            arg.into_pointer_value(),
+                            &[
+                                contract.context.i32_type().const_zero(),
+                                contract.context.i32_type().const_int(i as u64, false),
+                            ],
+                            &field.name,
+                        )
+                    };
+
+                    let len = EncoderBuilder::encoded_packed_length(
+                        elem.into(),
+                        true,
+                        &field.ty,
+                        function,
+                        contract,
+                    );
+
+                    normal_sum = contract.builder.build_int_add(normal_sum, len, "");
+                }
+
+                contract.builder.build_unconditional_branch(done_struct);
+
+                let normal_struct = contract.builder.get_insert_block().unwrap();
+
+                contract.builder.position_at_end(null_struct);
+
+                let mut null_sum = contract.context.i32_type().const_zero();
+
+                for field in &contract.ns.structs[*n].fields {
+                    null_sum = contract.builder.build_int_add(
+                        null_sum,
+                        EncoderBuilder::encoded_packed_length(
+                            contract.default_value(&field.ty),
+                            false,
+                            &field.ty,
+                            function,
+                            contract,
+                        ),
+                        "",
+                    );
+                }
+
+                contract.builder.build_unconditional_branch(done_struct);
+
+                let null_struct = contract.builder.get_insert_block().unwrap();
+
+                contract.builder.position_at_end(done_struct);
+
+                let sum = contract
+                    .builder
+                    .build_phi(contract.context.i32_type(), "sum");
+
+                sum.add_incoming(&[(&normal_sum, normal_struct), (&null_sum, null_struct)]);
+
+                sum.as_basic_value().into_int_value()
+            }
+            ast::Type::Array(elem_ty, dims) if elem_ty.is_dynamic(contract.ns) => {
+                let arg = if load {
+                    contract.builder.build_load(arg.into_pointer_value(), "")
+                } else {
+                    arg
+                };
+
+                let sum = contract.context.i32_type().const_zero();
+
+                let len = match dims.last().unwrap() {
+                    None => contract.vector_len(arg),
+                    Some(d) => contract
+                        .context
+                        .i32_type()
+                        .const_int(d.to_u64().unwrap(), false),
+                };
+
+                let normal_array = contract
+                    .context
+                    .append_basic_block(function, "normal_array");
+                let null_array = contract.context.append_basic_block(function, "null_array");
+                let done_array = contract.context.append_basic_block(function, "done_array");
+
+                let is_null = contract
+                    .builder
+                    .build_is_null(arg.into_pointer_value(), "is_null");
+
+                contract
+                    .builder
+                    .build_conditional_branch(is_null, null_array, normal_array);
+
+                contract.builder.position_at_end(normal_array);
+
+                let mut normal_length = sum;
+
+                contract.builder.position_at_end(normal_array);
+
+                // the element of the array are dynamic; we need to iterate over the array to find the encoded length
+                contract.emit_loop_cond_first_with_int(
+                    function,
+                    contract.context.i32_type().const_zero(),
+                    len,
+                    &mut normal_length,
+                    |index, sum| {
+                        let elem = contract.array_subscript(ty, arg.into_pointer_value(), index);
+
+                        *sum = contract.builder.build_int_add(
+                            EncoderBuilder::encoded_packed_length(
+                                elem.into(),
+                                true,
+                                &elem_ty,
+                                function,
+                                contract,
+                            ),
+                            *sum,
+                            "",
+                        );
+                    },
+                );
+
+                contract.builder.build_unconditional_branch(done_array);
+
+                let normal_array = contract.builder.get_insert_block().unwrap();
+
+                contract.builder.position_at_end(null_array);
+
+                let elem = contract.default_value(&elem_ty.deref_any());
+
+                let null_length = contract.builder.build_int_add(
+                    contract.builder.build_int_mul(
+                        EncoderBuilder::encoded_packed_length(
+                            elem, false, elem_ty, function, contract,
+                        ),
+                        len,
+                        "",
+                    ),
+                    sum,
+                    "",
+                );
+
+                contract.builder.build_unconditional_branch(done_array);
+
+                let null_array = contract.builder.get_insert_block().unwrap();
+
+                contract.builder.position_at_end(done_array);
+
+                let encoded_length = contract
+                    .builder
+                    .build_phi(contract.context.i32_type(), "encoded_length");
+
+                encoded_length
+                    .add_incoming(&[(&normal_length, normal_array), (&null_length, null_array)]);
+
+                encoded_length.as_basic_value().into_int_value()
+            }
+            ast::Type::Array(elem_ty, dims) => {
+                let arg = if load {
+                    contract.builder.build_load(arg.into_pointer_value(), "")
+                } else {
+                    arg
+                };
+
+                let len = match dims.last().unwrap() {
+                    None => contract.vector_len(arg),
+                    Some(d) => contract
+                        .context
+                        .i32_type()
+                        .const_int(d.to_u64().unwrap(), false),
+                };
+
+                // plus fixed size elements
+                contract.builder.build_int_mul(
+                    len,
+                    EncoderBuilder::encoded_packed_length(arg, false, &elem_ty, function, contract),
+                    "",
+                )
+            }
+            ast::Type::String | ast::Type::DynamicBytes => {
+                let arg = if load {
+                    contract.builder.build_load(arg.into_pointer_value(), "")
+                } else {
+                    arg
+                };
+
+                contract.vector_len(arg)
+            }
+            ast::Type::Uint(n) | ast::Type::Int(n) => contract
+                .context
+                .i32_type()
+                .const_int((*n as u64) / 8, false),
+            ast::Type::Bytes(n) => contract.context.i32_type().const_int(*n as u64, false),
+            ast::Type::Enum(_) | ast::Type::Bool => contract.context.i32_type().const_int(1, false),
+            ast::Type::Contract(_) | ast::Type::Address(_) => contract
+                .context
+                .i32_type()
+                .const_int(contract.ns.address_length as u64, false),
+            ast::Type::Ref(ty) => {
+                EncoderBuilder::encoded_packed_length(arg, false, ty, function, contract)
+            }
+            _ => unreachable!(),
+        }
     }
 
     /// Return the amount of fixed and dynamic storage required to store a type
@@ -387,27 +632,12 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
         output: PointerValue<'a>,
     ) {
         let mut output = output;
+        let mut ty_iter = self.tys.iter();
 
-        if let Some(selector) = self.selector {
-            contract.builder.build_store(
-                contract.builder.build_pointer_cast(
-                    output,
-                    contract.context.i32_type().ptr_type(AddressSpace::Generic),
-                    "",
-                ),
-                selector,
-            );
+        for arg in self.packed.iter() {
+            let ty = ty_iter.next().unwrap();
 
-            output = unsafe {
-                contract.builder.build_gep(
-                    output,
-                    &[contract
-                        .context
-                        .i32_type()
-                        .const_int(std::mem::size_of::<u32>() as u64, false)],
-                    "",
-                )
-            };
+            self.encode_packed_ty(contract, self.load_args, function, ty, *arg, &mut output);
         }
 
         // We use a little trick here. The length might or might not include the selector.
@@ -433,13 +663,15 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
         let mut offset = self.offset;
         let mut dynamic = unsafe { contract.builder.build_gep(output, &[self.offset], "") };
 
-        for (i, ty) in self.tys.iter().enumerate() {
+        for arg in self.args.iter() {
+            let ty = ty_iter.next().unwrap();
+
             self.encode_ty(
                 contract,
                 self.load_args,
                 function,
                 ty,
-                self.args[i],
+                *arg,
                 &mut output,
                 &mut offset,
                 &mut dynamic,
@@ -1305,6 +1537,464 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                 *dynamic = unsafe { contract.builder.build_gep(*dynamic, &[len], "") };
 
                 *offset = contract.builder.build_int_add(*offset, len, "");
+            }
+            _ => unreachable!(),
+        };
+    }
+
+    /// Recursively encode a value in arg. The load argument specifies if the arg is a pointer
+    /// to the value, or the value itself. The fixed pointer points to the fixed, non-dynamic part
+    /// of the encoded data. The offset is current offset for dynamic fields.
+    fn encode_packed_ty(
+        &self,
+        contract: &Contract<'a>,
+        load: bool,
+        function: FunctionValue<'a>,
+        ty: &ast::Type,
+        arg: BasicValueEnum<'a>,
+        output: &mut PointerValue<'a>,
+    ) {
+        match &ty {
+            ast::Type::Bool => {
+                let arg = if load {
+                    contract.builder.build_load(arg.into_pointer_value(), "")
+                } else {
+                    arg
+                };
+
+                let value = contract.builder.build_select(
+                    arg.into_int_value(),
+                    contract.context.i8_type().const_int(1, false),
+                    contract.context.i8_type().const_zero(),
+                    "bool_val",
+                );
+
+                contract.builder.build_store(*output, value);
+
+                *output = unsafe {
+                    contract.builder.build_gep(
+                        *output,
+                        &[contract.context.i32_type().const_int(1, false)],
+                        "",
+                    )
+                };
+            }
+            ast::Type::Bytes(1) | ast::Type::Int(8) | ast::Type::Uint(8) => {
+                let arg = if load {
+                    contract.builder.build_load(arg.into_pointer_value(), "")
+                } else {
+                    arg
+                };
+
+                contract.builder.build_store(*output, arg.into_int_value());
+
+                *output = unsafe {
+                    contract.builder.build_gep(
+                        *output,
+                        &[contract.context.i32_type().const_int(1, false)],
+                        "",
+                    )
+                };
+            }
+            ast::Type::Uint(n) | ast::Type::Int(n)
+                if self.bswap && (*n == 16 || *n == 32 || *n == 64) =>
+            {
+                let arg = if load {
+                    contract.builder.build_load(arg.into_pointer_value(), "")
+                } else {
+                    arg
+                };
+
+                // now convert to be
+                let bswap = contract.llvm_bswap(*n as u32);
+
+                let val = contract
+                    .builder
+                    .build_call(bswap, &[arg], "")
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap()
+                    .into_int_value();
+
+                contract.builder.build_store(
+                    contract.builder.build_pointer_cast(
+                        *output,
+                        val.get_type().ptr_type(AddressSpace::Generic),
+                        "",
+                    ),
+                    val,
+                );
+
+                *output = unsafe {
+                    contract.builder.build_gep(
+                        *output,
+                        &[contract.context.i32_type().const_int(*n as u64 / 8, false)],
+                        "",
+                    )
+                };
+            }
+            ast::Type::Contract(_)
+            | ast::Type::Address(_)
+            | ast::Type::Uint(_)
+            | ast::Type::Int(_)
+                if load =>
+            {
+                let n = match ty {
+                    ast::Type::Contract(_) | ast::Type::Address(_) => {
+                        contract.ns.address_length as u16 * 8
+                    }
+                    ast::Type::Uint(b) => *b,
+                    ast::Type::Int(b) => *b,
+                    _ => unreachable!(),
+                };
+
+                let arg8 = contract.builder.build_pointer_cast(
+                    arg.into_pointer_value(),
+                    contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                    "arg8",
+                );
+
+                let len = contract.context.i32_type().const_int(n as u64 / 8, false);
+
+                contract.builder.build_call(
+                    contract.module.get_function("__leNtobeN").unwrap(),
+                    &[arg8.into(), (*output).into(), len.into()],
+                    "",
+                );
+
+                *output = unsafe { contract.builder.build_gep(*output, &[len], "") };
+            }
+            ast::Type::Contract(_)
+            | ast::Type::Address(_)
+            | ast::Type::Uint(_)
+            | ast::Type::Int(_)
+                if !load =>
+            {
+                let n = match ty {
+                    ast::Type::Contract(_) | ast::Type::Address(_) => {
+                        contract.ns.address_length as u16 * 8
+                    }
+                    ast::Type::Uint(b) => *b,
+                    ast::Type::Int(b) => *b,
+                    _ => unreachable!(),
+                };
+
+                let temp = contract.build_alloca(
+                    function,
+                    arg.into_int_value().get_type(),
+                    &format!("uint{}", n),
+                );
+
+                contract.builder.build_store(temp, arg.into_int_value());
+
+                let len = contract.context.i32_type().const_int(n as u64 / 8, false);
+
+                contract.builder.build_call(
+                    contract.module.get_function("__leNtobeN").unwrap(),
+                    &[
+                        contract
+                            .builder
+                            .build_pointer_cast(
+                                temp,
+                                contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                                "store",
+                            )
+                            .into(),
+                        (*output).into(),
+                        len.into(),
+                    ],
+                    "",
+                );
+
+                *output = unsafe { contract.builder.build_gep(*output, &[len], "") };
+            }
+            ast::Type::Bytes(n) => {
+                let val = if load {
+                    arg.into_pointer_value()
+                } else {
+                    let temp = contract.build_alloca(
+                        function,
+                        arg.into_int_value().get_type(),
+                        &format!("bytes{}", n),
+                    );
+
+                    contract.builder.build_store(temp, arg.into_int_value());
+
+                    temp
+                };
+
+                let len = contract.context.i32_type().const_int(*n as u64, false);
+
+                contract.builder.build_call(
+                    contract.module.get_function("__leNtobeN").unwrap(),
+                    &[
+                        contract
+                            .builder
+                            .build_pointer_cast(
+                                val,
+                                contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                                "store",
+                            )
+                            .into(),
+                        (*output).into(),
+                        len.into(),
+                    ],
+                    "",
+                );
+
+                *output = unsafe { contract.builder.build_gep(*output, &[len], "") };
+            }
+            ast::Type::Array(elem_ty, dim) => {
+                let arg = if load {
+                    contract.builder.build_load(arg.into_pointer_value(), "")
+                } else {
+                    arg
+                };
+
+                let array_length = if let Some(d) = &dim[0] {
+                    // fixed length
+                    contract
+                        .context
+                        .i32_type()
+                        .const_int(d.to_u64().unwrap(), false)
+                } else {
+                    // Now, write the length to dynamic
+                    contract.vector_len(arg)
+                };
+
+                let normal_array = contract
+                    .context
+                    .append_basic_block(function, "normal_array");
+                let null_array = contract.context.append_basic_block(function, "null_array");
+                let done_array = contract.context.append_basic_block(function, "done_array");
+
+                let is_null = contract
+                    .builder
+                    .build_is_null(arg.into_pointer_value(), "is_null");
+
+                contract
+                    .builder
+                    .build_conditional_branch(is_null, null_array, normal_array);
+
+                contract.builder.position_at_end(normal_array);
+
+                let mut builder = LoopBuilder::new(contract, function);
+
+                let mut normal_output = builder
+                    .add_loop_phi(
+                        contract,
+                        "output",
+                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        (*output).into(),
+                    )
+                    .into_pointer_value();
+
+                let index = builder.over(
+                    contract,
+                    contract.context.i32_type().const_zero(),
+                    array_length,
+                );
+
+                // loop body
+                let elem = contract.array_subscript(ty, arg.into_pointer_value(), index);
+
+                self.encode_packed_ty(
+                    contract,
+                    true,
+                    function,
+                    &elem_ty.deref_any(),
+                    elem.into(),
+                    &mut normal_output,
+                );
+
+                builder.set_loop_phi_value(contract, "output", normal_output.into());
+
+                builder.finish(contract);
+
+                contract.builder.build_unconditional_branch(done_array);
+
+                let normal_output = builder.get_loop_phi("output");
+                let normal_array = contract.builder.get_insert_block().unwrap();
+
+                contract.builder.position_at_end(null_array);
+
+                let mut builder = LoopBuilder::new(contract, function);
+
+                let mut null_output = builder
+                    .add_loop_phi(
+                        contract,
+                        "output",
+                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        (*output).into(),
+                    )
+                    .into_pointer_value();
+
+                let _ = builder.over(
+                    contract,
+                    contract.context.i32_type().const_zero(),
+                    array_length,
+                );
+
+                // loop body
+                let elem = contract.default_value(&elem_ty.deref_any());
+
+                self.encode_packed_ty(
+                    contract,
+                    false,
+                    function,
+                    &elem_ty.deref_any(),
+                    elem,
+                    &mut null_output,
+                );
+
+                builder.set_loop_phi_value(contract, "output", null_output.into());
+
+                builder.finish(contract);
+
+                let null_output = builder.get_loop_phi("output");
+
+                contract.builder.build_unconditional_branch(done_array);
+
+                let null_array = contract.builder.get_insert_block().unwrap();
+
+                contract.builder.position_at_end(done_array);
+
+                let output_phi = contract.builder.build_phi(
+                    contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                    "output",
+                );
+
+                output_phi
+                    .add_incoming(&[(&normal_output, normal_array), (&null_output, null_array)]);
+
+                *output = output_phi.as_basic_value().into_pointer_value();
+            }
+            ast::Type::Struct(n) => {
+                let arg = if load {
+                    contract
+                        .builder
+                        .build_load(arg.into_pointer_value(), "")
+                        .into_pointer_value()
+                } else {
+                    arg.into_pointer_value()
+                };
+
+                let null_struct = contract.context.append_basic_block(function, "null_struct");
+                let normal_struct = contract
+                    .context
+                    .append_basic_block(function, "normal_struct");
+                let done_struct = contract.context.append_basic_block(function, "done_struct");
+
+                let is_null = contract.builder.build_is_null(arg, "is_null");
+
+                contract
+                    .builder
+                    .build_conditional_branch(is_null, null_struct, normal_struct);
+
+                contract.builder.position_at_end(normal_struct);
+
+                let mut normal_output = *output;
+
+                for (i, field) in contract.ns.structs[*n].fields.iter().enumerate() {
+                    let elem = unsafe {
+                        contract.builder.build_gep(
+                            arg,
+                            &[
+                                contract.context.i32_type().const_zero(),
+                                contract.context.i32_type().const_int(i as u64, false),
+                            ],
+                            &field.name,
+                        )
+                    };
+
+                    self.encode_packed_ty(
+                        contract,
+                        true,
+                        function,
+                        &field.ty,
+                        elem.into(),
+                        &mut normal_output,
+                    );
+                }
+
+                contract.builder.build_unconditional_branch(done_struct);
+
+                let normal_struct = contract.builder.get_insert_block().unwrap();
+
+                contract.builder.position_at_end(null_struct);
+
+                let mut null_output = *output;
+
+                // FIXME: abi encoding fixed length fields with default values. This should always be 0
+                for field in &contract.ns.structs[*n].fields {
+                    let elem = contract.default_value(&field.ty);
+
+                    self.encode_packed_ty(
+                        contract,
+                        false,
+                        function,
+                        &field.ty,
+                        elem,
+                        &mut null_output,
+                    );
+                }
+
+                contract.builder.build_unconditional_branch(done_struct);
+
+                let null_struct = contract.builder.get_insert_block().unwrap();
+
+                contract.builder.position_at_end(done_struct);
+
+                let output_phi = contract.builder.build_phi(
+                    contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                    "output",
+                );
+
+                output_phi
+                    .add_incoming(&[(&normal_output, normal_struct), (&null_output, null_struct)]);
+
+                *output = output_phi.as_basic_value().into_pointer_value();
+            }
+            ast::Type::Ref(ty) => {
+                self.encode_packed_ty(contract, load, function, ty, arg, output);
+            }
+            ast::Type::String | ast::Type::DynamicBytes => {
+                let arg = if load {
+                    contract.builder.build_load(arg.into_pointer_value(), "")
+                } else {
+                    arg
+                };
+
+                let len = contract.vector_len(arg);
+
+                // now copy the string data
+                let string_start = contract.vector_bytes(arg);
+
+                contract.builder.build_call(
+                    contract.module.get_function("__memcpy").unwrap(),
+                    &[
+                        contract
+                            .builder
+                            .build_pointer_cast(
+                                *output,
+                                contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                                "encoded_string",
+                            )
+                            .into(),
+                        contract
+                            .builder
+                            .build_pointer_cast(
+                                string_start,
+                                contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                                "string_start",
+                            )
+                            .into(),
+                        len.into(),
+                    ],
+                    "",
+                );
+
+                *output = unsafe { contract.builder.build_gep(*output, &[len], "") };
             }
             _ => unreachable!(),
         };
@@ -2495,18 +3185,13 @@ impl EthAbiDecoder {
 /// ABI encode into a vector for abi.encode* style builtin functions
 pub fn encode_to_vector<'b>(
     contract: &Contract<'b>,
-    selector: Option<IntValue<'b>>,
     function: FunctionValue<'b>,
-    packed: bool,
+    packed: &[BasicValueEnum<'b>],
     args: &[BasicValueEnum<'b>],
     tys: &[ast::Type],
     bswap: bool,
 ) -> PointerValue<'b> {
-    if packed {
-        unimplemented!();
-    }
-
-    let encoder = EncoderBuilder::new(contract, function, selector, false, args, tys, bswap);
+    let encoder = EncoderBuilder::new(contract, function, false, packed, args, tys, bswap);
 
     let length = encoder.encoded_length();
 

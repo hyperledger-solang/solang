@@ -599,9 +599,8 @@ impl<'a> TargetRuntime<'a> for SabreTarget {
     fn abi_encode_to_vector<'b>(
         &self,
         _contract: &Contract<'b>,
-        _selector: Option<IntValue<'b>>,
         _function: FunctionValue<'b>,
-        _packed: bool,
+        _packed: &[BasicValueEnum<'b>],
         _args: &[BasicValueEnum<'b>],
         _spec: &[ast::Type],
     ) -> PointerValue<'b> {
@@ -617,8 +616,17 @@ impl<'a> TargetRuntime<'a> for SabreTarget {
         args: &[BasicValueEnum<'b>],
         tys: &[ast::Type],
     ) -> (PointerValue<'b>, IntValue<'b>) {
+        let mut tys = tys.to_vec();
+
+        let packed = if let Some(selector) = selector {
+            tys.insert(0, ast::Type::Uint(32));
+            vec![selector.into()]
+        } else {
+            vec![]
+        };
+
         let encoder = ethabiencoder::EncoderBuilder::new(
-            contract, function, selector, load, args, tys, false,
+            contract, function, load, args, &packed, &tys, false,
         );
 
         let length = encoder.encoded_length();
