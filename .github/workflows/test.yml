@@ -18,7 +18,7 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v2
       - name: Rust stable
-        run: rustup default stable
+        run: rustup default 1.51.0
       - name: Run cargo fmt
         run: cargo fmt --all -- --check
       - name: Run cargo clippy
@@ -34,7 +34,7 @@ jobs:
       # checkout@v2 requires git 2.18 or higher, which is not in our image
       uses: actions/checkout@v1
     - name: Rust stable
-      run: rustup default stable
+      run: rustup default 1.51.0
     - name: Build
       run: cargo build --verbose
     - name: Run tests
