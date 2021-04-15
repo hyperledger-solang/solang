@@ -514,14 +514,13 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
     /// ABI encode into a vector for abi.encode* style builtin functions
     fn abi_encode_to_vector<'b>(
         &self,
-        _contract: &Contract<'b>,
-        _selector: Option<IntValue<'b>>,
-        _function: FunctionValue<'b>,
-        _packed: bool,
-        _args: &[BasicValueEnum<'b>],
-        _spec: &[ast::Type],
+        contract: &Contract<'b>,
+        function: FunctionValue<'b>,
+        packed: &[BasicValueEnum<'b>],
+        args: &[BasicValueEnum<'b>],
+        tys: &[ast::Type],
     ) -> PointerValue<'b> {
-        unimplemented!();
+        ethabiencoder::encode_to_vector(contract, function, packed, args, tys, false)
     }
 
     fn abi_encode<'b>(
@@ -533,8 +532,17 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
         args: &[BasicValueEnum<'b>],
         tys: &[ast::Type],
     ) -> (PointerValue<'b>, IntValue<'b>) {
+        let mut tys = tys.to_vec();
+
+        let packed = if let Some(selector) = selector {
+            tys.insert(0, ast::Type::Uint(32));
+            vec![selector.into()]
+        } else {
+            vec![]
+        };
+
         let encoder = ethabiencoder::EncoderBuilder::new(
-            contract, function, selector, load, args, tys, false,
+            contract, function, load, args, &packed, &tys, false,
         );
 
         let length = encoder.encoded_length();

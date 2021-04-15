@@ -99,9 +99,8 @@ pub trait TargetRuntime<'a> {
     fn abi_encode_to_vector<'b>(
         &self,
         contract: &Contract<'b>,
-        selector: Option<IntValue<'b>>,
         function: FunctionValue<'b>,
-        packed: bool,
+        packed: &[BasicValueEnum<'b>],
         args: &[BasicValueEnum<'b>],
         tys: &[ast::Type],
     ) -> PointerValue<'b>;
@@ -2578,20 +2577,15 @@ pub trait TargetRuntime<'a> {
                     .into()
             }
             Expression::AbiEncode {
-                tys,
-                selector,
-                packed,
-                args,
-                ..
+                tys, packed, args, ..
             } => self
                 .abi_encode_to_vector(
                     contract,
-                    selector.as_ref().map(|s| {
-                        self.expression(contract, &s, vartab, function)
-                            .into_int_value()
-                    }),
                     function,
-                    *packed,
+                    &packed
+                        .iter()
+                        .map(|a| self.expression(contract, &a, vartab, function))
+                        .collect::<Vec<BasicValueEnum>>(),
                     &args
                         .iter()
                         .map(|a| self.expression(contract, &a, vartab, function))
@@ -2856,11 +2850,7 @@ pub trait TargetRuntime<'a> {
                     .expression(contract, address, vartab, function)
                     .into_int_value();
 
-                let mut selector = contract.ns.functions[*function_no].selector();
-
-                if contract.ns.target == Target::Substrate {
-                    selector = selector.to_be();
-                }
+                let selector = contract.ns.functions[*function_no].selector();
 
                 assert!(matches!(ty, ast::Type::ExternalFunction { .. }));
 
@@ -3613,11 +3603,7 @@ pub trait TargetRuntime<'a> {
                     Instr::AssertFailure { expr: Some(expr) } => {
                         let v = self.expression(contract, expr, &w.vars, function);
 
-                        let selector = if contract.ns.target == Target::Ewasm {
-                            0x08c3_79a0u32.to_be()
-                        } else {
-                            0x08c3_79a0u32
-                        };
+                        let selector = 0x08c3_79a0u32;
 
                         let (data, len) = self.abi_encode(
                             contract,
@@ -4035,11 +4021,10 @@ pub trait TargetRuntime<'a> {
                                 )
                                 .into_int_value();
 
-                            // ewasm stores the selector little endian
-                            let selector = if contract.ns.target == Target::Ewasm {
-                                (*selector).to_be()
-                            } else {
+                            let selector = if contract.ns.target == Target::Substrate {
                                 *selector
+                            } else {
+                                selector.to_be()
                             };
 
                             let correct_selector = contract.builder.build_int_compare(
@@ -4401,7 +4386,7 @@ pub trait TargetRuntime<'a> {
                 None,
                 true,
                 function,
-                &args[f.params.len()..],
+                &args[f.params.len()..f.params.len() + f.returns.len()],
                 &tys,
             );
 
@@ -4416,7 +4401,7 @@ pub trait TargetRuntime<'a> {
             contract
                 .context
                 .i32_type()
-                .const_int(f.selector as u64, false),
+                .const_int(f.selector.to_be() as u64, false),
             bb,
         ));
     }

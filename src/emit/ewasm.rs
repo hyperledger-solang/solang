@@ -677,16 +677,15 @@ impl EwasmTarget {
     fn encode<'b>(
         &self,
         contract: &Contract<'b>,
-        selector: Option<IntValue<'b>>,
         constant: Option<(PointerValue<'b>, u64)>,
         load: bool,
         function: FunctionValue<'b>,
+        packed: &[BasicValueEnum<'b>],
         args: &[BasicValueEnum<'b>],
         tys: &[ast::Type],
     ) -> (PointerValue<'b>, IntValue<'b>) {
-        let encoder = ethabiencoder::EncoderBuilder::new(
-            contract, function, selector, load, args, tys, false,
-        );
+        let encoder =
+            ethabiencoder::EncoderBuilder::new(contract, function, load, packed, args, tys, false);
 
         let mut length = encoder.encoded_length();
 
@@ -1139,13 +1138,12 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
     fn abi_encode_to_vector<'b>(
         &self,
         contract: &Contract<'b>,
-        selector: Option<IntValue<'b>>,
         function: FunctionValue<'b>,
-        packed: bool,
+        packed: &[BasicValueEnum<'b>],
         args: &[BasicValueEnum<'b>],
         tys: &[ast::Type],
     ) -> PointerValue<'b> {
-        ethabiencoder::encode_to_vector(contract, selector, function, packed, args, tys, false)
+        ethabiencoder::encode_to_vector(contract, function, packed, args, tys, false)
     }
 
     fn abi_encode<'b>(
@@ -1157,7 +1155,16 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
         args: &[BasicValueEnum<'b>],
         tys: &[ast::Type],
     ) -> (PointerValue<'b>, IntValue<'b>) {
-        self.encode(contract, selector, None, load, function, args, tys)
+        let mut tys = tys.to_vec();
+
+        let packed = if let Some(selector) = selector {
+            tys.insert(0, ast::Type::Uint(32));
+            vec![selector.into()]
+        } else {
+            vec![]
+        };
+
+        self.encode(contract, None, load, function, &packed, args, &tys)
     }
 
     fn abi_decode<'b>(
@@ -1226,10 +1233,10 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
         // input
         let (input, input_len) = self.encode(
             contract,
-            None,
             Some((code, wasm.len() as u64)),
             false,
             function,
+            &[],
             args,
             &tys,
         );

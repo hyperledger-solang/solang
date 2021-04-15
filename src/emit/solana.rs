@@ -2246,13 +2246,12 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
     fn abi_encode_to_vector<'b>(
         &self,
         contract: &Contract<'b>,
-        selector: Option<IntValue<'b>>,
         function: FunctionValue<'b>,
-        packed: bool,
+        packed: &[BasicValueEnum<'b>],
         args: &[BasicValueEnum<'b>],
         tys: &[ast::Type],
     ) -> PointerValue<'b> {
-        ethabiencoder::encode_to_vector(contract, selector, function, packed, args, tys, false)
+        ethabiencoder::encode_to_vector(contract, function, packed, args, tys, true)
     }
 
     fn abi_encode(
@@ -2264,10 +2263,21 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         args: &[BasicValueEnum<'a>],
         tys: &[ast::Type],
     ) -> (PointerValue<'a>, IntValue<'a>) {
+        debug_assert_eq!(args.len(), tys.len());
+
         let (output_len, output, output_size) = self.return_buffer(contract);
 
+        let mut tys = tys.to_vec();
+
+        let packed = if let Some(selector) = selector {
+            tys.insert(0, ast::Type::Uint(32));
+            vec![selector.into()]
+        } else {
+            vec![]
+        };
+
         let encoder =
-            ethabiencoder::EncoderBuilder::new(contract, function, selector, load, args, tys, true);
+            ethabiencoder::EncoderBuilder::new(contract, function, load, &packed, args, &tys, true);
 
         let length = encoder.encoded_length();
 

@@ -57,8 +57,12 @@ impl ast::Contract {
         for cfg in &self.cfg {
             if !cfg.is_placeholder() {
                 out += &format!(
-                    "\n# {} {} public:{} nonpayable:{}\n",
-                    cfg.ty, cfg.name, cfg.public, cfg.nonpayable
+                    "\n# {} {} public:{} selector:{} nonpayable:{}\n",
+                    cfg.ty,
+                    cfg.name,
+                    cfg.public,
+                    hex::encode(cfg.selector.to_be_bytes()),
+                    cfg.nonpayable,
                 );
 
                 out += &format!(

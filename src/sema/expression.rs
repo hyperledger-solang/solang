@@ -4446,7 +4446,7 @@ fn member_access(
             if id.name == "selector" {
                 return Ok(Expression::Builtin(
                     e.loc(),
-                    vec![Type::Uint(32)],
+                    vec![Type::Bytes(4)],
                     Builtin::ExternalFunctionSelector,
                     vec![expr],
                 ));

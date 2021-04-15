@@ -1,3 +1,4 @@
+mod abi;
 mod arrays;
 mod mappings;
 mod primitives;

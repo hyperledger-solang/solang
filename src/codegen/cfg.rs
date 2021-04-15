@@ -633,18 +633,13 @@ impl ControlFlowGraph {
                     .collect::<Vec<String>>()
                     .join(", ")
             ),
-            Expression::AbiEncode {
-                selector,
-                packed,
-                args,
-                ..
-            } => format!(
-                "(abiencode{}:(%{} {}))",
-                if *packed { "packed" } else { "" },
-                match selector {
-                    None => "".to_string(),
-                    Some(expr) => self.expr_to_string(contract, ns, expr),
-                },
+            Expression::AbiEncode { packed, args, .. } => format!(
+                "(abiencode packed:{} non-packed:{})",
+                packed
+                    .iter()
+                    .map(|expr| self.expr_to_string(contract, ns, expr))
+                    .collect::<Vec<String>>()
+                    .join(", "),
                 args.iter()
                     .map(|expr| self.expr_to_string(contract, ns, expr))
                     .collect::<Vec<String>>()

@@ -188,7 +188,7 @@ impl Function {
         hasher.update(self.signature.as_bytes());
         hasher.finalize(&mut res);
 
-        u32::from_le_bytes([res[0], res[1], res[2], res[3]])
+        u32::from_be_bytes([res[0], res[1], res[2], res[3]])
     }
 
     /// Is this a constructor
@@ -556,8 +556,7 @@ pub enum Expression {
     AbiEncode {
         loc: pt::Loc,
         tys: Vec<Type>,
-        selector: Option<Box<Expression>>,
-        packed: bool,
+        packed: Vec<Expression>,
         args: Vec<Expression>,
     },
     List(pt::Loc, Vec<Expression>),
@@ -926,18 +925,16 @@ impl Expression {
                 Expression::AbiEncode {
                     loc,
                     tys,
-                    selector,
                     packed,
                     args,
                 } => {
+                    let packed = packed.iter().map(|e| filter(e, ctx)).collect();
                     let args = args.iter().map(|e| filter(e, ctx)).collect();
-                    let selector = selector.as_ref().map(|e| Box::new(filter(&e, ctx)));
 
                     Expression::AbiEncode {
                         loc: *loc,
                         tys: tys.clone(),
-                        selector,
-                        packed: *packed,
+                        packed,
                         args,
                     }
                 }

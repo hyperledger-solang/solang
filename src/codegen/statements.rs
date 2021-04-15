@@ -760,7 +760,9 @@ fn try_catch(
                 let gas = expression(gas, cfg, callee_contract_no, ns, vartab);
                 let function = expression(function, cfg, callee_contract_no, ns, vartab);
 
-                let tys = args.iter().map(|a| a.ty()).collect();
+                let mut tys: Vec<Type> = args.iter().map(|a| a.ty()).collect();
+
+                tys.insert(0, Type::Bytes(4));
 
                 let args = args
                     .iter()
@@ -769,7 +771,7 @@ fn try_catch(
 
                 let selector = Expression::Builtin(
                     *loc,
-                    vec![Type::Uint(32)],
+                    vec![Type::Bytes(4)],
                     Builtin::ExternalFunctionSelector,
                     vec![function.clone()],
                 );
@@ -783,9 +785,8 @@ fn try_catch(
 
                 let payload = Expression::AbiEncode {
                     loc: *loc,
-                    packed: false,
                     tys,
-                    selector: Some(Box::new(selector)),
+                    packed: vec![selector],
                     args,
                 };
 

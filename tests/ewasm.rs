@@ -2052,10 +2052,21 @@ fn external_call() {
             function test() public returns (int32) {
                 return x.get_x();
             }
+
+            function enc() public returns (bytes) {
+                return abi.encodeWithSignature("get_x()");
+            }
         }"##,
     );
 
     runtime.constructor(&[]);
+
+    let ret = runtime.function("enc", &[]);
+
+    assert_eq!(
+        ret,
+        vec!(ethabi::Token::Bytes(0x3829050au32.to_be_bytes().into()))
+    );
 
     let ret = runtime.function("test", &[]);
 
