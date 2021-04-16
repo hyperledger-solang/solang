@@ -247,7 +247,7 @@ pub trait TargetRuntime<'a> {
         success: Option<&mut BasicValueEnum<'b>>,
         payload: PointerValue<'b>,
         payload_len: IntValue<'b>,
-        address: PointerValue<'b>,
+        address: Option<PointerValue<'b>>,
         gas: IntValue<'b>,
         value: IntValue<'b>,
         ty: ast::CallTy,
@@ -3862,26 +3862,32 @@ pub trait TargetRuntime<'a> {
                             .expression(contract, value, &w.vars, function)
                             .into_int_value();
                         let payload = self.expression(contract, payload, &w.vars, function);
-                        let address =
-                            self.expression(contract, address.as_ref().unwrap(), &w.vars, function);
 
-                        let addr = contract.builder.build_array_alloca(
-                            contract.context.i8_type(),
-                            contract
-                                .context
-                                .i32_type()
-                                .const_int(contract.ns.address_length as u64, false),
-                            "address",
-                        );
+                        let address = if let Some(address) = address {
+                            let address = self.expression(contract, address, &w.vars, function);
 
-                        contract.builder.build_store(
-                            contract.builder.build_pointer_cast(
-                                addr,
-                                address.get_type().ptr_type(AddressSpace::Generic),
+                            let addr = contract.builder.build_array_alloca(
+                                contract.context.i8_type(),
+                                contract
+                                    .context
+                                    .i32_type()
+                                    .const_int(contract.ns.address_length as u64, false),
                                 "address",
-                            ),
-                            address,
-                        );
+                            );
+
+                            contract.builder.build_store(
+                                contract.builder.build_pointer_cast(
+                                    addr,
+                                    address.get_type().ptr_type(AddressSpace::Generic),
+                                    "address",
+                                ),
+                                address,
+                            );
+
+                            Some(addr)
+                        } else {
+                            None
+                        };
 
                         let success = match success {
                             Some(n) => Some(&mut w.vars.get_mut(n).unwrap().value),
@@ -3894,7 +3900,7 @@ pub trait TargetRuntime<'a> {
                             success,
                             contract.vector_bytes(payload),
                             contract.vector_len(payload),
-                            addr,
+                            address,
                             gas,
                             value,
                             callty.clone(),
@@ -4349,7 +4355,23 @@ pub trait TargetRuntime<'a> {
         }
 
         if contract.ns.target == Target::Solana {
-            args.push(function.get_last_param().unwrap());
+            let params_ty = dest
+                .get_type()
+                .get_param_types()
+                .last()
+                .unwrap()
+                .into_pointer_type();
+
+            args.push(
+                contract
+                    .builder
+                    .build_pointer_cast(
+                        function.get_last_param().unwrap().into_pointer_value(),
+                        params_ty,
+                        "",
+                    )
+                    .into(),
+            );
         }
 
         let ret = contract

@@ -6688,6 +6688,13 @@ fn parse_call_args(
                 )?));
             }
             "gas" => {
+                if ns.target == Target::Solana {
+                    diagnostics.push(Diagnostic::error(
+                        arg.loc,
+                        format!("‘gas’ not permitted for external calls on {}", ns.target),
+                    ));
+                    return Err(());
+                }
                 let ty = Type::Uint(64);
 
                 let expr = expression(

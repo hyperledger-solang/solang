@@ -698,7 +698,7 @@ impl<'a> TargetRuntime<'a> for SabreTarget {
         _success: Option<&mut BasicValueEnum<'b>>,
         _payload: PointerValue<'b>,
         _payload_len: IntValue<'b>,
-        _address: PointerValue<'b>,
+        _address: Option<PointerValue<'b>>,
         _gas: IntValue<'b>,
         _value: IntValue<'b>,
         _ty: ast::CallTy,

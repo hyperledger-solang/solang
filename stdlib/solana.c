@@ -43,6 +43,59 @@ void *__malloc(uint32_t size)
     return sol_alloc_free_(size, NULL);
 }
 
+uint64_t external_call(uint8_t *input, uint32_t input_len, const SolParameters *params)
+{
+    uint64_t sol_invoke_signed_c(
+        const SolInstruction *instruction,
+        const SolAccountInfo *account_infos,
+        int account_infos_len,
+        const SolSignerSeeds *signers_seeds,
+        int signers_seeds_len);
+
+    // The first 32 bytes of the input is the destination address
+    const SolPubkey *dest = (const SolPubkey *)input;
+
+    for (int account_no = 1; account_no < params->ka_num; account_no++)
+    {
+        const SolAccountInfo *acc = &params->ka[account_no];
+
+        if (SolPubkey_same(dest, acc->key))
+        {
+            // found it
+            SolAccountMeta metas[3] = {
+                {
+                    .pubkey = params->ka[0].key,
+                    .is_writable = true,
+                    .is_signer = false,
+                },
+                {
+                    .pubkey = acc->key,
+                    .is_writable = true,
+                    .is_signer = false,
+                },
+                {
+                    .pubkey = acc->owner,
+                    .is_writable = false,
+                    .is_signer = false,
+                }};
+
+            SolInstruction instruction = {
+                .program_id = acc->owner,
+                .accounts = metas,
+                .account_len = SOL_ARRAY_SIZE(metas),
+                .data = input,
+                .data_len = input_len,
+            };
+
+            return sol_invoke_signed_c(&instruction, params->ka, params->ka_num, NULL, 0);
+        }
+    }
+
+    sol_log("call to account not in transaction");
+
+    return ERROR_INVALID_ACCOUNT_DATA;
+}
+
 struct account_data_header
 {
     uint32_t magic;

@@ -158,7 +158,7 @@ class Program {
         );
     }
 
-    async call_function(test: TestConnection, name: string, params: any[]): Promise<{ [key: string]: any }> {
+    async call_function(test: TestConnection, name: string, params: any[], pubkeys: PublicKey[] = []): Promise<{ [key: string]: any }> {
         let abi: AbiItem = JSON.parse(this.abi).find((e: AbiItem) => e.name == name);
 
         const input: string = Web3EthAbi.encodeFunctionCall(abi, params);
@@ -169,10 +169,17 @@ class Program {
 
         let debug = 'calling function ' + name + ' [' + params + ']';
 
+        let keys = [
+            { pubkey: this.returnDataAccount.publicKey, isSigner: false, isWritable: true },
+            { pubkey: this.contractStorageAccount.publicKey, isSigner: false, isWritable: true }];
+
+
+        for (let i = 0; i < pubkeys.length; i++) {
+            keys.push({ pubkey: pubkeys[i], isSigner: false, isWritable: true });
+        }
+
         const instruction = new TransactionInstruction({
-            keys: [
-                { pubkey: this.returnDataAccount.publicKey, isSigner: false, isWritable: true },
-                { pubkey: this.contractStorageAccount.publicKey, isSigner: false, isWritable: true }],
+            keys,
             programId: this.programId,
             data,
         });
@@ -221,5 +228,18 @@ class Program {
         const accountInfo = await test.connection.getAccountInfo(this.returnDataAccount.publicKey);
 
         return accountInfo!.data;
+    }
+
+
+    all_keys(): PublicKey[] {
+        return [this.programId, this.contractStorageAccount.publicKey];
+    }
+
+    get_program_key(): PublicKey {
+        return this.programId;
+    }
+
+    get_storage_key(): PublicKey {
+        return this.contractStorageAccount.publicKey;
     }
 }
