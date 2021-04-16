@@ -133,7 +133,7 @@ class Program {
 
         const data = Buffer.concat([
             this.contractStorageAccount.publicKey.toBuffer(),
-            Buffer.from(input.substr(2), 'hex')
+            Buffer.from(input.replace('0x', ''), 'hex')
         ]);
 
         console.log('calling constructor [' + params + ']');
@@ -164,7 +164,7 @@ class Program {
         const input: string = Web3EthAbi.encodeFunctionCall(abi, params);
         const data = Buffer.concat([
             this.contractStorageAccount.publicKey.toBuffer(),
-            Buffer.from(input.substr(2), 'hex')
+            Buffer.from(input.replace('0x', ''), 'hex')
         ]);
 
         let debug = 'calling function ' + name + ' [' + params + ']';
