@@ -1267,12 +1267,26 @@ pub fn emit_function_call(
 
             let success = vartab.temp_name("success", &Type::Bool);
 
+            let (payload, address) = if ns.target == Target::Solana {
+                (
+                    Expression::AbiEncode {
+                        loc: *loc,
+                        packed: vec![address, args],
+                        args: Vec::new(),
+                        tys: vec![Type::Address(false), Type::DynamicBytes],
+                    },
+                    None,
+                )
+            } else {
+                (args, Some(address))
+            };
+
             cfg.add(
                 vartab,
                 Instr::ExternalCall {
                     success: Some(success),
-                    address: Some(address),
-                    payload: args,
+                    address,
+                    payload,
                     value,
                     gas,
                     callty: ty.clone(),
@@ -1312,22 +1326,45 @@ pub fn emit_function_call(
 
                 tys.insert(0, Type::Bytes(4));
 
-                let payload = Expression::AbiEncode {
-                    loc: *loc,
-                    tys,
-                    packed: vec![Expression::NumberLiteral(
-                        *loc,
-                        Type::Bytes(4),
-                        BigInt::from(dest_func.selector()),
-                    )],
-                    args,
+                let (payload, address) = if ns.target == Target::Solana {
+                    tys.insert(0, Type::Address(false));
+                    (
+                        Expression::AbiEncode {
+                            loc: *loc,
+                            tys,
+                            packed: vec![
+                                address,
+                                Expression::NumberLiteral(
+                                    *loc,
+                                    Type::Bytes(4),
+                                    BigInt::from(dest_func.selector()),
+                                ),
+                            ],
+                            args,
+                        },
+                        None,
+                    )
+                } else {
+                    (
+                        Expression::AbiEncode {
+                            loc: *loc,
+                            tys,
+                            packed: vec![Expression::NumberLiteral(
+                                *loc,
+                                Type::Bytes(4),
+                                BigInt::from(dest_func.selector()),
+                            )],
+                            args,
+                        },
+                        Some(address),
+                    )
                 };
 
                 cfg.add(
                     vartab,
                     Instr::ExternalCall {
                         success: None,
-                        address: Some(address),
+                        address,
                         payload,
                         value,
                         gas,

@@ -532,4 +532,32 @@ describe('Deploy solang contract and test', () => {
 
         expect(res).toBe(JSON.stringify([false]));
     });
+
+    it('external_call', async function () {
+        this.timeout(50000);
+
+        let conn = await establishConnection();
+
+        let caller = await conn.loadProgram("caller.so", "caller.abi");
+        let callee = await conn.loadProgram("callee.so", "callee.abi");
+
+        // call the constructor
+        await caller.call_constructor(conn, []);
+        await callee.call_constructor(conn, []);
+
+        await callee.call_function(conn, "set_x", ["102"]);
+
+        let res = await callee.call_function(conn, "get_x", []);
+
+        expect(res["0"]).toBe("102");
+
+        let address = '0x' + callee.get_storage_key().toBuffer().toString('hex');
+        console.log("addres: " + address);
+
+        await caller.call_function(conn, "do_call", [address, "13123"], callee.all_keys());
+
+        res = await callee.call_function(conn, "get_x", []);
+
+        expect(res["0"]).toBe("13123");
+    });
 });

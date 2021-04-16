@@ -371,9 +371,16 @@ impl SolanaTarget {
             contract.context.i32_type().const_int(heap_offset, false),
         );
 
-        contract
-            .builder
-            .build_call(initializer, &[sol_params.into()], "");
+        let arg_ty = initializer.get_type().get_param_types()[0].into_pointer_type();
+
+        contract.builder.build_call(
+            initializer,
+            &[contract
+                .builder
+                .build_pointer_cast(sol_params, arg_ty, "")
+                .into()],
+            "",
+        );
 
         // There is only one possible constructor
         let ret = if let Some((cfg_no, cfg)) = contract
@@ -389,11 +396,24 @@ impl SolanaTarget {
             self.abi
                 .decode(contract, function, &mut args, input, input_len, &cfg.params);
 
-            args.push(sol_params.into());
+            let function = contract.functions[&cfg_no];
+            let params_ty = function
+                .get_type()
+                .get_param_types()
+                .last()
+                .unwrap()
+                .into_pointer_type();
+
+            args.push(
+                contract
+                    .builder
+                    .build_pointer_cast(sol_params, params_ty, "")
+                    .into(),
+            );
 
             contract
                 .builder
-                .build_call(contract.functions[&cfg_no], &args, "")
+                .build_call(function, &args, "")
                 .try_as_basic_value()
                 .left()
                 .unwrap()
@@ -1250,6 +1270,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             .build_conditional_branch(in_range, get_block, bang_block);
 
         contract.builder.position_at_end(bang_block);
+
         self.assert_failure(
             contract,
             contract
@@ -2370,17 +2391,71 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
     /// Call external contract
     fn external_call<'b>(
         &self,
-        _contract: &Contract<'b>,
-        _function: FunctionValue,
-        _success: Option<&mut BasicValueEnum<'b>>,
-        _payload: PointerValue<'b>,
-        _payload_len: IntValue<'b>,
-        _address: PointerValue<'b>,
+        contract: &Contract<'b>,
+        function: FunctionValue,
+        success: Option<&mut BasicValueEnum<'b>>,
+        payload: PointerValue<'b>,
+        payload_len: IntValue<'b>,
+        _address: Option<PointerValue<'b>>,
         _gas: IntValue<'b>,
         _value: IntValue<'b>,
         _ty: ast::CallTy,
     ) {
-        unimplemented!();
+        let parameters = contract
+            .builder
+            .get_insert_block()
+            .unwrap()
+            .get_parent()
+            .unwrap()
+            .get_last_param()
+            .unwrap();
+
+        let ret = contract
+            .builder
+            .build_call(
+                contract.module.get_function("external_call").unwrap(),
+                &[payload.into(), payload_len.into(), parameters],
+                "",
+            )
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_int_value();
+
+        let is_success = contract.builder.build_int_compare(
+            IntPredicate::EQ,
+            ret,
+            contract.context.i64_type().const_zero(),
+            "success",
+        );
+
+        if let Some(success) = success {
+            // we're in a try statement. This means:
+            // do not abort execution; return success or not in success variable
+            *success = is_success.into();
+        } else {
+            let success_block = contract.context.append_basic_block(function, "success");
+            let bail_block = contract.context.append_basic_block(function, "bail");
+
+            contract
+                .builder
+                .build_conditional_branch(is_success, success_block, bail_block);
+
+            contract.builder.position_at_end(bail_block);
+
+            // should we log "call failed?"
+            self.assert_failure(
+                contract,
+                contract
+                    .context
+                    .i8_type()
+                    .ptr_type(AddressSpace::Generic)
+                    .const_null(),
+                contract.context.i32_type().const_zero(),
+            );
+
+            contract.builder.position_at_end(success_block);
+        }
     }
 
     /// Get return buffer for external call

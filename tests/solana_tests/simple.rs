@@ -19,7 +19,7 @@ fn simple() {
 
     assert_eq!(vm.printbuf, "Hello from constructor");
 
-    vm.printbuf = String::new();
+    vm.printbuf.truncate(0);
 
     vm.function("test", &[]);
 
@@ -75,6 +75,8 @@ fn parameters() {
     );
 
     assert_eq!(vm.printbuf, "x is 10");
+
+    vm.printbuf.truncate(0);
 
     vm.function(
         "test",
@@ -164,7 +166,7 @@ fn flipper() {
     vm.constructor(&[ethabi::Token::Bool(true)]);
 
     assert_eq!(
-        vm.data[0..9].to_vec(),
+        vm.data()[0..9].to_vec(),
         hex::decode("6fc90ec51000000001").unwrap()
     );
 
@@ -175,7 +177,7 @@ fn flipper() {
     vm.function("flip", &[]);
 
     assert_eq!(
-        vm.data[0..9].to_vec(),
+        vm.data()[0..9].to_vec(),
         hex::decode("6fc90ec51000000000").unwrap()
     );
 

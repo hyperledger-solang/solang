@@ -21,7 +21,7 @@ fn string() {
     vm.constructor(&[]);
 
     assert_eq!(
-        vm.data[0..12].to_vec(),
+        vm.data()[0..12].to_vec(),
         vec![65, 177, 160, 100, 16, 0, 0, 0, 0, 0, 0, 0]
     );
 
@@ -32,11 +32,11 @@ fn string() {
     vm.function("set", &[Token::String(String::from("Hello, World!"))]);
 
     assert_eq!(
-        vm.data[0..12].to_vec(),
+        vm.data()[0..12].to_vec(),
         vec![65, 177, 160, 100, 16, 0, 0, 0, 32, 0, 0, 0]
     );
 
-    assert_eq!(vm.data[32..45].to_vec(), b"Hello, World!");
+    assert_eq!(vm.data()[32..45].to_vec(), b"Hello, World!");
 
     let returns = vm.function("get", &[]);
 
@@ -51,7 +51,7 @@ fn string() {
     assert_eq!(returns, vec![Token::String(String::from("Hallo, Werld!"))]);
 
     assert_eq!(
-        vm.data[0..12].to_vec(),
+        vm.data()[0..12].to_vec(),
         vec![65, 177, 160, 100, 16, 0, 0, 0, 32, 0, 0, 0]
     );
 
@@ -64,7 +64,7 @@ fn string() {
     assert_eq!(returns, vec![Token::String(String::from(""))]);
 
     assert_eq!(
-        vm.data[0..12].to_vec(),
+        vm.data()[0..12].to_vec(),
         vec![65, 177, 160, 100, 16, 0, 0, 0, 0, 0, 0, 0]
     );
 }
@@ -97,7 +97,7 @@ fn bytes() {
     vm.constructor(&[]);
 
     assert_eq!(
-        vm.data[0..12].to_vec(),
+        vm.data()[0..12].to_vec(),
         vec![11, 66, 182, 57, 16, 0, 0, 0, 0, 0, 0, 0]
     );
 
@@ -113,7 +113,7 @@ fn bytes() {
     );
 
     assert_eq!(
-        vm.data[0..12].to_vec(),
+        vm.data()[0..12].to_vec(),
         vec![11, 66, 182, 57, 16, 0, 0, 0, 32, 0, 0, 0]
     );
 
@@ -254,7 +254,7 @@ fn storage_alignment() {
     vm.constructor(&[]);
 
     assert_eq!(
-        vm.data[0..32].to_vec(),
+        vm.data()[0..32].to_vec(),
         vec![
             11, 66, 182, 57, 32, 0, 0, 0, 1, 0, 3, 2, 4, 0, 0, 0, 8, 7, 6, 5, 0, 0, 0, 0, 16, 15,
             14, 13, 12, 11, 10, 9
@@ -299,7 +299,7 @@ fn bytes_push_pop() {
 
     vm.function("push", &[Token::FixedBytes(vec![0x41])]);
 
-    println!("data:{}", hex::encode(&vm.data));
+    println!("data:{}", hex::encode(&vm.data()));
 
     let returns = vm.function("get_bs", &[]);
 
@@ -363,7 +363,7 @@ fn simple_struct() {
     vm.function("set_s2", &[]);
 
     assert_eq!(
-        vm.data[0..24].to_vec(),
+        vm.data()[0..24].to_vec(),
         vec![
             11, 66, 182, 57, 24, 0, 0, 0, 173, 222, 0, 0, 254, 0, 0, 0, 173, 222, 0, 0, 0, 0, 0, 0
         ]
@@ -436,7 +436,7 @@ fn struct_in_struct() {
     vm.function("set_s2", &[]);
 
     assert_eq!(
-        vm.data[0..44].to_vec(),
+        vm.data()[0..44].to_vec(),
         vec![
             11, 66, 182, 57, 40, 0, 0, 0, 173, 222, 0, 0, 0, 0, 0, 0, 254, 0, 0, 0, 102, 0, 0, 0,
             114, 97, 98, 111, 111, 102, 0, 0, 210, 2, 150, 73, 0, 0, 0, 0, 0, 0, 0, 0
@@ -517,7 +517,7 @@ fn string_in_struct() {
     vm.function("set_s2", &[]);
 
     assert_eq!(
-        vm.data[0..56].to_vec(),
+        vm.data()[0..56].to_vec(),
         vec![
             11, 66, 182, 57, 32, 0, 0, 0, 173, 222, 0, 0, 0, 0, 0, 0, 254, 48, 0, 0, 0, 0, 0, 0,
             210, 2, 150, 73, 0, 0, 0, 0, 56, 0, 0, 0, 0, 0, 0, 0, 6, 0, 0, 0, 1, 0, 0, 0, 102, 111,

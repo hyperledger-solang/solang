@@ -3468,7 +3468,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         success: Option<&mut BasicValueEnum<'b>>,
         payload: PointerValue<'b>,
         payload_len: IntValue<'b>,
-        address: PointerValue<'b>,
+        address: Option<PointerValue<'b>>,
         gas: IntValue<'b>,
         value: IntValue<'b>,
         _ty: ast::CallTy,
@@ -3500,7 +3500,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             .build_call(
                 contract.module.get_function("seal_call").unwrap(),
                 &[
-                    address.into(),
+                    address.unwrap().into(),
                     contract
                         .context
                         .i32_type()

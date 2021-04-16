@@ -1354,7 +1354,7 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
         success: Option<&mut BasicValueEnum<'b>>,
         payload: PointerValue<'b>,
         payload_len: IntValue<'b>,
-        address: PointerValue<'b>,
+        address: Option<PointerValue<'b>>,
         gas: IntValue<'b>,
         value: IntValue<'b>,
         callty: ast::CallTy,
@@ -1370,7 +1370,7 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
                 contract
                     .builder
                     .build_pointer_cast(
-                        address,
+                        address.unwrap(),
                         contract.context.i8_type().ptr_type(AddressSpace::Generic),
                         "",
                     )
