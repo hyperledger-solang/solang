@@ -166,8 +166,8 @@ fn flipper() {
     vm.constructor(&[ethabi::Token::Bool(true)]);
 
     assert_eq!(
-        vm.data()[0..9].to_vec(),
-        hex::decode("6fc90ec51000000001").unwrap()
+        vm.data()[0..17].to_vec(),
+        hex::decode("6fc90ec500000000000000001800000001").unwrap()
     );
 
     let returns = vm.function("get", &[]);
@@ -177,8 +177,8 @@ fn flipper() {
     vm.function("flip", &[]);
 
     assert_eq!(
-        vm.data()[0..9].to_vec(),
-        hex::decode("6fc90ec51000000000").unwrap()
+        vm.data()[0..17].to_vec(),
+        hex::decode("6fc90ec500000000000000001800000000").unwrap()
     );
 
     let returns = vm.function("get", &[]);

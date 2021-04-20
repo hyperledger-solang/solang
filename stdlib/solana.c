@@ -99,6 +99,8 @@ uint64_t external_call(uint8_t *input, uint32_t input_len, const SolParameters *
 struct account_data_header
 {
     uint32_t magic;
+    uint32_t returndata_len;
+    uint32_t returndata_offset;
     uint32_t heap_offset;
 };
 
