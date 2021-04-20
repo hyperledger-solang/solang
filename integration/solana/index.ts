@@ -94,7 +94,7 @@ class TestConnection {
         return account;
     }
 
-    async loadProgram(sopath: string, abipath: string, returnDataSize: number = 2048, contractStorageSize: number = 512): Promise<Program> {
+    async loadProgram(sopath: string, abipath: string, contractStorageSize: number = 2048): Promise<Program> {
         console.log(`Loading ${sopath} ...`)
 
         const data: Buffer = fs.readFileSync(sopath);
@@ -114,15 +114,14 @@ class TestConnection {
 
         console.log('Program loaded to account', programId.toBase58());
 
-        const returnDataAccount = await this.createStorageAccount(programId, returnDataSize);
         const contractStorageAccount = await this.createStorageAccount(programId, contractStorageSize);
 
-        return new Program(programId, returnDataAccount, contractStorageAccount, abi);
+        return new Program(programId, contractStorageAccount, abi);
     }
 }
 
 class Program {
-    constructor(private programId: PublicKey, private returnDataAccount: Account, private contractStorageAccount: Account, private abi: string) { }
+    constructor(private programId: PublicKey, private contractStorageAccount: Account, private abi: string) { }
 
     async call_constructor(test: TestConnection, params: string[]): Promise<void> {
         let abi: AbiItem | undefined = JSON.parse(this.abi).find((e: AbiItem) => e.type == "constructor");
@@ -140,7 +139,6 @@ class Program {
 
         const instruction = new TransactionInstruction({
             keys: [
-                { pubkey: this.returnDataAccount.publicKey, isSigner: false, isWritable: true },
                 { pubkey: this.contractStorageAccount.publicKey, isSigner: false, isWritable: true }],
             programId: this.programId,
             data,
@@ -170,7 +168,6 @@ class Program {
         let debug = 'calling function ' + name + ' [' + params + ']';
 
         let keys = [
-            { pubkey: this.returnDataAccount.publicKey, isSigner: false, isWritable: true },
             { pubkey: this.contractStorageAccount.publicKey, isSigner: false, isWritable: true }];
 
 
@@ -196,11 +193,12 @@ class Program {
         );
 
         if (abi.outputs?.length) {
-            const accountInfo = await test.connection.getAccountInfo(this.returnDataAccount.publicKey);
+            const accountInfo = await test.connection.getAccountInfo(this.contractStorageAccount.publicKey);
 
-            let length = Number(accountInfo!.data.readBigInt64LE(0));
+            let length = Number(accountInfo!.data.readUInt32LE(4));
+            let offset = Number(accountInfo!.data.readUInt32LE(8));
 
-            let encoded = accountInfo!.data.slice(8, length + 8);
+            let encoded = accountInfo!.data.slice(offset, length + offset);
 
             let returns = Web3EthAbi.decodeParameters(abi.outputs!, encoded.toString('hex'));
 
@@ -223,13 +221,6 @@ class Program {
 
         return accountInfo!.data;
     }
-
-    async return_data(test: TestConnection, upto: number): Promise<Buffer> {
-        const accountInfo = await test.connection.getAccountInfo(this.returnDataAccount.publicKey);
-
-        return accountInfo!.data;
-    }
-
 
     all_keys(): PublicKey[] {
         return [this.programId, this.contractStorageAccount.publicKey];

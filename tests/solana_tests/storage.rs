@@ -33,10 +33,10 @@ fn string() {
 
     assert_eq!(
         vm.data()[0..20].to_vec(),
-        vec![65, 177, 160, 100, 0, 0, 0, 0, 0, 0, 0, 0, 24, 0, 0, 0, 40, 0, 0, 0]
+        vec![65, 177, 160, 100, 0, 0, 0, 0, 0, 0, 0, 0, 24, 0, 0, 0, 120, 0, 0, 0]
     );
 
-    assert_eq!(vm.data()[40..53].to_vec(), b"Hello, World!");
+    assert_eq!(vm.data()[120..133].to_vec(), b"Hello, World!");
 
     let returns = vm.function("get", &[]);
 
@@ -52,7 +52,7 @@ fn string() {
 
     assert_eq!(
         vm.data()[0..20].to_vec(),
-        vec![65, 177, 160, 100, 0, 0, 0, 0, 0, 0, 0, 0, 24, 0, 0, 0, 40, 0, 0, 0]
+        vec![65, 177, 160, 100, 96, 0, 0, 0, 152, 0, 0, 0, 24, 0, 0, 0, 120, 0, 0, 0]
     );
 
     // Try setting this to an empty string. This is also a special case where
@@ -65,7 +65,7 @@ fn string() {
 
     assert_eq!(
         vm.data()[0..20].to_vec(),
-        vec![65, 177, 160, 100, 0, 0, 0, 0, 0, 0, 0, 0, 24, 0, 0, 0, 0, 0, 0, 0]
+        vec![65, 177, 160, 100, 64, 0, 0, 0, 40, 0, 0, 0, 24, 0, 0, 0, 0, 0, 0, 0]
     );
 }
 
@@ -114,7 +114,7 @@ fn bytes() {
 
     assert_eq!(
         vm.data()[0..20].to_vec(),
-        vec![11, 66, 182, 57, 0, 0, 0, 0, 0, 0, 0, 0, 24, 0, 0, 0, 40, 0, 0, 0]
+        vec![11, 66, 182, 57, 0, 0, 0, 0, 0, 0, 0, 0, 24, 0, 0, 0, 88, 0, 0, 0]
     );
 
     for (i, b) in b"The shoemaker always wears the worst shoes"

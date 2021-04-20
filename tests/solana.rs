@@ -43,7 +43,6 @@ struct VirtualMachine {
     account_data: HashMap<Account, (Vec<u8>, Option<Account>)>,
     programs: Vec<Contract>,
     stack: Vec<Contract>,
-    returndata: Account,
     printbuf: String,
     output: Vec<u8>,
 }
@@ -94,17 +93,12 @@ fn build_solidity(src: &str) -> VirtualMachine {
         programs.push(Contract { program, abi, data });
     }
 
-    let returndata = account_new();
-
-    account_data.insert(returndata, ([0u8; 1024].to_vec(), None));
-
     let cur = programs.last().unwrap().clone();
 
     VirtualMachine {
         account_data,
         programs,
         stack: vec![cur],
-        returndata,
         printbuf: String::new(),
         output: Vec::new(),
     }
@@ -152,12 +146,8 @@ fn serialize_parameters(input: &[u8], vm: &VirtualMachine) -> Vec<u8> {
     v.write_u64::<LittleEndian>(vm.account_data.len() as u64)
         .unwrap();
 
-    serialize_account(&mut v, &vm.returndata, &vm.account_data[&vm.returndata]);
-
     for (key, data) in &vm.account_data {
-        if key != &vm.returndata {
-            serialize_account(&mut v, key, data);
-        }
+        serialize_account(&mut v, key, data);
     }
 
     // calldata
@@ -538,10 +528,11 @@ impl VirtualMachine {
 
         deserialize_parameters(&parameter_bytes, &mut elf.account_data);
 
-        let output = &elf.account_data[&elf.returndata].0;
+        let output = &elf.account_data[&elf.stack[0].data].0;
 
-        let len = LittleEndian::read_u64(&output);
-        elf.output = output[8..len as usize + 8].to_vec();
+        let len = LittleEndian::read_u32(&output[4..]) as usize;
+        let offset = LittleEndian::read_u32(&output[8..]) as usize;
+        elf.output = output[offset..offset + len].to_vec();
 
         println!("return: {}", hex::encode(&elf.output));
 
@@ -550,6 +541,8 @@ impl VirtualMachine {
 
     fn constructor(&mut self, args: &[Token]) {
         let program = &self.stack[0];
+
+        println!("constructor for {}", hex::encode(&program.data));
 
         let calldata = if let Some(constructor) = &program.abi.constructor {
             constructor
@@ -564,6 +557,8 @@ impl VirtualMachine {
 
     fn function(&mut self, name: &str, args: &[Token]) -> Vec<Token> {
         let program = &self.stack[0];
+
+        println!("function for {}", hex::encode(&program.data));
 
         let mut calldata: Vec<u8> = program.data.to_vec();
 
