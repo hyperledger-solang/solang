@@ -444,84 +444,6 @@ impl SolanaTarget {
         );
     }
 
-    // Returns the pointer to the length of the return buffer, and the buffer itself
-    fn return_buffer<'b>(
-        &self,
-        contract: &Contract<'b>,
-    ) -> (PointerValue<'b>, PointerValue<'b>, IntValue<'b>) {
-        let parameters = contract
-            .builder
-            .get_insert_block()
-            .unwrap()
-            .get_parent()
-            .unwrap()
-            .get_last_param()
-            .unwrap()
-            .into_pointer_value();
-
-        // the first field is the array of
-        // the first account passed in is the return buffer; 3 field of account is "data"
-        let data = contract
-            .builder
-            .build_load(
-                unsafe {
-                    contract.builder.build_gep(
-                        parameters,
-                        &[
-                            contract.context.i32_type().const_zero(),
-                            contract.context.i32_type().const_zero(),
-                            contract.context.i32_type().const_zero(),
-                            contract.context.i32_type().const_int(3, false),
-                        ],
-                        "data",
-                    )
-                },
-                "data",
-            )
-            .into_pointer_value();
-
-        let length = contract
-            .builder
-            .build_load(
-                unsafe {
-                    contract.builder.build_gep(
-                        parameters,
-                        &[
-                            contract.context.i32_type().const_zero(),
-                            contract.context.i32_type().const_zero(),
-                            contract.context.i32_type().const_zero(),
-                            contract.context.i32_type().const_int(2, false),
-                        ],
-                        "data_len",
-                    )
-                },
-                "data_len",
-            )
-            .into_int_value();
-
-        // First we have the 64 bit length field
-        let data_len_ptr = contract.builder.build_pointer_cast(
-            data,
-            contract.context.i64_type().ptr_type(AddressSpace::Generic),
-            "data_len_ptr",
-        );
-
-        // step over that field, and cast to u8* for the buffer itself
-        let data_ptr = contract.builder.build_pointer_cast(
-            unsafe {
-                contract.builder.build_gep(
-                    data_len_ptr,
-                    &[contract.context.i32_type().const_int(1, false)],
-                    "data_ptr",
-                )
-            },
-            contract.context.i8_type().ptr_type(AddressSpace::Generic),
-            "data_ptr",
-        );
-
-        (data_len_ptr, data_ptr, length)
-    }
-
     /// Free contract storage and zero out
     fn storage_free<'b>(
         &self,
@@ -2233,11 +2155,48 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
     }
 
     fn return_empty_abi(&self, contract: &Contract) {
-        let (data_len_ptr, _, _) = self.return_buffer(contract);
+        let data = self.contract_storage_data(contract);
+
+        let header_ptr = contract.builder.build_pointer_cast(
+            data,
+            contract.context.i32_type().ptr_type(AddressSpace::Generic),
+            "header_ptr",
+        );
+
+        let data_len_ptr = unsafe {
+            contract.builder.build_gep(
+                header_ptr,
+                &[contract.context.i64_type().const_int(1, false)],
+                "data_len_ptr",
+            )
+        };
+
+        let data_ptr = unsafe {
+            contract.builder.build_gep(
+                header_ptr,
+                &[contract.context.i64_type().const_int(2, false)],
+                "data_ptr",
+            )
+        };
+
+        let offset = contract
+            .builder
+            .build_load(data_ptr, "offset")
+            .into_int_value();
+
+        contract.builder.build_call(
+            contract.module.get_function("account_data_free").unwrap(),
+            &[data.into(), offset.into()],
+            "",
+        );
 
         contract
             .builder
-            .build_store(data_len_ptr, contract.context.i64_type().const_zero());
+            .build_store(data_len_ptr, contract.context.i32_type().const_zero());
+
+        contract
+            .builder
+            .build_store(data_ptr, contract.context.i32_type().const_zero());
 
         // return 0 for success
         contract
@@ -2286,8 +2245,6 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
     ) -> (PointerValue<'a>, IntValue<'a>) {
         debug_assert_eq!(args.len(), tys.len());
 
-        let (output_len, output, output_size) = self.return_buffer(contract);
-
         let mut tys = tys.to_vec();
 
         let packed = if let Some(selector) = selector {
@@ -2302,43 +2259,92 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
 
         let length = encoder.encoded_length();
 
-        let length64 =
-            contract
-                .builder
-                .build_int_z_extend(length, contract.context.i64_type(), "length64");
+        let data = self.contract_storage_data(contract);
+        let account = self.contract_storage_account(contract);
 
-        // check the return data account is big enough
-        let encoded_length_with_length = contract.builder.build_int_add(
-            length64,
-            contract.context.i64_type().const_int(8, false),
-            "encoded_length_with_length",
+        let header_ptr = contract.builder.build_pointer_cast(
+            data,
+            contract.context.i32_type().ptr_type(AddressSpace::Generic),
+            "header_ptr",
         );
 
-        // do bounds check on index
-        let is_enough_space = contract.builder.build_int_compare(
-            IntPredicate::UGE,
-            output_size,
-            encoded_length_with_length,
-            "is_enough_space",
+        let data_len_ptr = unsafe {
+            contract.builder.build_gep(
+                header_ptr,
+                &[contract.context.i64_type().const_int(1, false)],
+                "data_len_ptr",
+            )
+        };
+
+        let data_offset_ptr = unsafe {
+            contract.builder.build_gep(
+                header_ptr,
+                &[contract.context.i64_type().const_int(2, false)],
+                "data_offset_ptr",
+            )
+        };
+
+        let offset = contract
+            .builder
+            .build_load(data_offset_ptr, "offset")
+            .into_int_value();
+
+        let rc = contract
+            .builder
+            .build_call(
+                contract
+                    .module
+                    .get_function("account_data_realloc")
+                    .unwrap(),
+                &[
+                    account.into(),
+                    offset.into(),
+                    length.into(),
+                    data_offset_ptr.into(),
+                ],
+                "",
+            )
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_int_value();
+
+        let is_rc_zero = contract.builder.build_int_compare(
+            IntPredicate::EQ,
+            rc,
+            contract.context.i64_type().const_zero(),
+            "is_rc_zero",
         );
 
-        let not_enough = contract.context.append_basic_block(function, "not_enough");
-        let enough = contract.context.append_basic_block(function, "enough");
+        let rc_not_zero = contract.context.append_basic_block(function, "rc_not_zero");
+        let rc_zero = contract.context.append_basic_block(function, "rc_zero");
 
         contract
             .builder
-            .build_conditional_branch(is_enough_space, enough, not_enough);
+            .build_conditional_branch(is_rc_zero, rc_zero, rc_not_zero);
 
-        contract.builder.position_at_end(not_enough);
+        contract.builder.position_at_end(rc_not_zero);
 
         self.return_code(
             contract,
             contract.context.i64_type().const_int(5u64 << 32, false),
         );
 
-        contract.builder.position_at_end(enough);
+        contract.builder.position_at_end(rc_zero);
 
-        contract.builder.build_store(output_len, length64);
+        contract.builder.build_store(data_len_ptr, length);
+
+        let offset = contract
+            .builder
+            .build_load(data_offset_ptr, "offset")
+            .into_int_value();
+
+        // step over that field, and cast to u8* for the buffer itself
+        let output = contract.builder.build_pointer_cast(
+            unsafe { contract.builder.build_gep(data, &[offset], "data_ptr") },
+            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+            "data_ptr",
+        );
 
         encoder.finish(contract, function, output);
 

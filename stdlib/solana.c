@@ -19,8 +19,7 @@ entrypoint(const uint8_t *input)
 
     int account_no;
 
-    // the first account is the returndata account; ignore that one
-    for (account_no = 1; account_no < params.ka_num; account_no++)
+    for (account_no = 0; account_no < params.ka_num; account_no++)
     {
         if (SolPubkey_same(params.account_id, params.ka[account_no].key))
         {
@@ -55,7 +54,7 @@ uint64_t external_call(uint8_t *input, uint32_t input_len, const SolParameters *
     // The first 32 bytes of the input is the destination address
     const SolPubkey *dest = (const SolPubkey *)input;
 
-    for (int account_no = 1; account_no < params->ka_num; account_no++)
+    for (int account_no = 0; account_no < params->ka_num; account_no++)
     {
         const SolAccountInfo *acc = &params->ka[account_no];
 

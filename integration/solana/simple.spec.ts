@@ -251,7 +251,7 @@ describe('Deploy solang contract and test', () => {
 
         let conn = await establishConnection();
 
-        let prog = await conn.loadProgram("store.so", "store.abi");
+        let prog = await conn.loadProgram("store.so", "store.abi", 8192);
 
         // call the constructor
         await prog.call_constructor(conn, []);
@@ -400,7 +400,7 @@ describe('Deploy solang contract and test', () => {
         let conn = await establishConnection();
 
         // storage.sol needs 168 byes
-        let prog = await conn.loadProgram("store.so", "store.abi", 512, 100);
+        let prog = await conn.loadProgram("store.so", "store.abi", 100);
 
         await expect(prog.call_constructor(conn, []))
             .rejects
@@ -431,7 +431,7 @@ describe('Deploy solang contract and test', () => {
         let conn = await establishConnection();
 
         // storage.sol needs 168 bytes on constructor, more for string data
-        let prog = await conn.loadProgram("store.so", "store.abi", 512, 180);
+        let prog = await conn.loadProgram("store.so", "store.abi", 180);
 
         await prog.call_constructor(conn, []);
 
@@ -448,7 +448,7 @@ describe('Deploy solang contract and test', () => {
         let conn = await establishConnection();
 
         // storage.sol needs 168 bytes on constructor, more for string data
-        let prog = await conn.loadProgram("store.so", "store.abi", 512, 210);
+        let prog = await conn.loadProgram("store.so", "store.abi", 210);
 
         await prog.call_constructor(conn, []);
 
@@ -471,7 +471,7 @@ describe('Deploy solang contract and test', () => {
         let conn = await establishConnection();
 
         // storage.sol needs 168 bytes on constructor, more for string data
-        let prog = await conn.loadProgram("arrays.so", "arrays.abi", 512, 4096);
+        let prog = await conn.loadProgram("arrays.so", "arrays.abi", 4096);
 
         await prog.call_constructor(conn, []);
 
@@ -531,33 +531,5 @@ describe('Deploy solang contract and test', () => {
         res = returns(await prog.call_function(conn, "userExists", [user[2]]));
 
         expect(res).toBe(JSON.stringify([false]));
-    });
-
-    it('external_call', async function () {
-        this.timeout(50000);
-
-        let conn = await establishConnection();
-
-        let caller = await conn.loadProgram("caller.so", "caller.abi");
-        let callee = await conn.loadProgram("callee.so", "callee.abi");
-
-        // call the constructor
-        await caller.call_constructor(conn, []);
-        await callee.call_constructor(conn, []);
-
-        await callee.call_function(conn, "set_x", ["102"]);
-
-        let res = await callee.call_function(conn, "get_x", []);
-
-        expect(res["0"]).toBe("102");
-
-        let address = '0x' + callee.get_storage_key().toBuffer().toString('hex');
-        console.log("addres: " + address);
-
-        await caller.call_function(conn, "do_call", [address, "13123"], callee.all_keys());
-
-        res = await callee.call_function(conn, "get_x", []);
-
-        expect(res["0"]).toBe("13123");
     });
 });
