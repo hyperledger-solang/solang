@@ -251,8 +251,6 @@ fn process_filename(
         "aggressive" => inkwell::OptimizationLevel::Aggressive,
         _ => unreachable!(),
     };
-    let context = inkwell::context::Context::create();
-
     let mut json_contracts = HashMap::new();
 
     // resolve phase
@@ -306,6 +304,8 @@ fn process_filename(
                 resolved_contract.name, ns.target
             );
         }
+
+        let context = inkwell::context::Context::create();
 
         let contract =
             resolved_contract.emit(&ns, &context, &filename, llvm_opt, math_overflow_check);

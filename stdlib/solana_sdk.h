@@ -221,6 +221,7 @@ typedef struct
                           point to an array of SolAccountInfos */
   uint64_t ka_num;       /** Number of SolAccountInfo entries in `ka` */
   uint64_t ka_cur;
+  const SolAccountInfo *ka_last_called;
   const SolPubkey *account_id;
   const uint8_t *input;        /** pointer to the instruction data */
   uint64_t input_len;          /** Length in bytes of the instruction data */
