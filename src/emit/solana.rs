@@ -358,7 +358,7 @@ impl SolanaTarget {
         let heap_offset_ptr = unsafe {
             contract.builder.build_gep(
                 magic_value_ptr,
-                &[contract.context.i64_type().const_int(1, false)],
+                &[contract.context.i64_type().const_int(3, false)],
                 "heap_offset",
             )
         };
