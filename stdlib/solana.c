@@ -42,7 +42,7 @@ void *__malloc(uint32_t size)
     return sol_alloc_free_(size, NULL);
 }
 
-uint64_t external_call(uint8_t *input, uint32_t input_len, const SolParameters *params)
+uint64_t external_call(uint8_t *input, uint32_t input_len, SolParameters *params)
 {
     uint64_t sol_invoke_signed_c(
         const SolInstruction *instruction,
@@ -54,45 +54,40 @@ uint64_t external_call(uint8_t *input, uint32_t input_len, const SolParameters *
     // The first 32 bytes of the input is the destination address
     const SolPubkey *dest = (const SolPubkey *)input;
 
+    SolAccountMeta metas[10];
+    SolInstruction instruction = {
+        .program_id = NULL,
+        .accounts = metas,
+        .account_len = params->ka_num,
+        .data = input,
+        .data_len = input_len,
+    };
+
     for (int account_no = 0; account_no < params->ka_num; account_no++)
     {
         const SolAccountInfo *acc = &params->ka[account_no];
 
         if (SolPubkey_same(dest, acc->key))
         {
-            // found it
-            SolAccountMeta metas[3] = {
-                {
-                    .pubkey = params->ka[0].key,
-                    .is_writable = true,
-                    .is_signer = false,
-                },
-                {
-                    .pubkey = acc->key,
-                    .is_writable = true,
-                    .is_signer = false,
-                },
-                {
-                    .pubkey = acc->owner,
-                    .is_writable = false,
-                    .is_signer = false,
-                }};
-
-            SolInstruction instruction = {
-                .program_id = acc->owner,
-                .accounts = metas,
-                .account_len = SOL_ARRAY_SIZE(metas),
-                .data = input,
-                .data_len = input_len,
-            };
-
-            return sol_invoke_signed_c(&instruction, params->ka, params->ka_num, NULL, 0);
+            instruction.program_id = acc->owner;
+            params->ka_last_called = acc;
         }
+
+        metas[account_no].pubkey = acc->key;
+        metas[account_no].is_writable = acc->is_writable;
+        metas[account_no].is_signer = acc->is_signer;
     }
 
-    sol_log("call to account not in transaction");
+    if (instruction.program_id)
+    {
+        return sol_invoke_signed_c(&instruction, params->ka, params->ka_num, NULL, 0);
+    }
+    else
+    {
+        sol_log("call to account not in transaction");
 
-    return ERROR_INVALID_ACCOUNT_DATA;
+        return ERROR_INVALID_ACCOUNT_DATA;
+    }
 }
 
 struct account_data_header

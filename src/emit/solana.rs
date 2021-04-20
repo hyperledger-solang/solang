@@ -247,7 +247,7 @@ impl SolanaTarget {
             .build_load(
                 contract
                     .builder
-                    .build_struct_gep(sol_params, 4, "input")
+                    .build_struct_gep(sol_params, 5, "input")
                     .unwrap(),
                 "data",
             )
@@ -258,7 +258,7 @@ impl SolanaTarget {
             .build_load(
                 contract
                     .builder
-                    .build_struct_gep(sol_params, 5, "input_len")
+                    .build_struct_gep(sol_params, 6, "input_len")
                     .unwrap(),
                 "data_len",
             )
@@ -2402,11 +2402,13 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         success: Option<&mut BasicValueEnum<'b>>,
         payload: PointerValue<'b>,
         payload_len: IntValue<'b>,
-        _address: Option<PointerValue<'b>>,
+        address: Option<PointerValue<'b>>,
         _gas: IntValue<'b>,
         _value: IntValue<'b>,
         _ty: ast::CallTy,
     ) {
+        debug_assert!(address.is_none());
+
         let parameters = contract
             .builder
             .get_insert_block()
@@ -2465,8 +2467,28 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
     }
 
     /// Get return buffer for external call
-    fn return_data<'b>(&self, _contract: &Contract<'b>) -> PointerValue<'b> {
-        unimplemented!();
+    fn return_data<'b>(&self, contract: &Contract<'b>) -> PointerValue<'b> {
+        let parameters = contract
+            .builder
+            .get_insert_block()
+            .unwrap()
+            .get_parent()
+            .unwrap()
+            .get_last_param()
+            .unwrap()
+            .into_pointer_value();
+
+        // return the account that returned the value
+        contract
+            .builder
+            .build_load(
+                contract
+                    .builder
+                    .build_struct_gep(parameters, 3, "ka_last_called")
+                    .unwrap(),
+                "data",
+            )
+            .into_pointer_value()
     }
 
     fn return_code<'b>(&self, contract: &'b Contract, ret: IntValue<'b>) {

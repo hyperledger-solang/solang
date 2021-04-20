@@ -2,6 +2,7 @@ use crate::parser::pt;
 use crate::sema::ast;
 use crate::sema::ast::{Builtin, Expression, FormatArg, StringLocation};
 use std::cell::RefCell;
+use std::ffi::CStr;
 use std::fmt;
 use std::path::Path;
 use std::str;
@@ -19,8 +20,7 @@ use inkwell::memory_buffer::MemoryBuffer;
 use inkwell::module::{Linkage, Module};
 use inkwell::passes::PassManager;
 use inkwell::targets::{CodeModel, FileType, RelocMode, TargetTriple};
-use inkwell::types::BasicTypeEnum;
-use inkwell::types::{BasicType, FunctionType, IntType, StringRadix};
+use inkwell::types::{BasicType, BasicTypeEnum, FunctionType, IntType, StringRadix};
 use inkwell::values::{
     ArrayValue, BasicValueEnum, FunctionValue, GlobalValue, IntValue, PhiValue, PointerValue,
 };
@@ -3949,37 +3949,11 @@ pub trait TargetRuntime<'a> {
                         tys,
                         data,
                     } => {
-                        let v = self
-                            .expression(contract, data, &w.vars, function)
-                            .into_pointer_value();
+                        let v = self.expression(contract, data, &w.vars, function);
 
-                        let mut data = unsafe {
-                            contract.builder.build_gep(
-                                v,
-                                &[
-                                    contract.context.i32_type().const_zero(),
-                                    contract.context.i32_type().const_int(2, false),
-                                ],
-                                "data",
-                            )
-                        };
+                        let mut data = contract.vector_bytes(v);
 
-                        let mut data_len = contract
-                            .builder
-                            .build_load(
-                                unsafe {
-                                    contract.builder.build_gep(
-                                        v,
-                                        &[
-                                            contract.context.i32_type().const_zero(),
-                                            contract.context.i32_type().const_zero(),
-                                        ],
-                                        "data_len",
-                                    )
-                                },
-                                "data_len",
-                            )
-                            .into_int_value();
+                        let mut data_len = contract.vector_len(v);
 
                         if let Some(selector) = selector {
                             let exception = exception.unwrap();
@@ -6132,28 +6106,67 @@ impl<'a> Contract<'a> {
                 .unwrap()
                 .into_int_value()
         } else {
-            // field 0 is the length
-            let vector = vector.into_pointer_value();
+            let struct_ty = vector
+                .into_pointer_value()
+                .get_type()
+                .get_element_type()
+                .into_struct_type();
+            let name = struct_ty.get_name().unwrap();
 
-            let len = unsafe {
-                self.builder.build_gep(
-                    vector,
-                    &[
-                        self.context.i32_type().const_zero(),
-                        self.context.i32_type().const_zero(),
-                    ],
-                    "vector_len",
-                )
-            };
+            if name == CStr::from_bytes_with_nul(b"struct.SolAccountInfo\0").unwrap() {
+                // load the data pointer
+                let data = self
+                    .builder
+                    .build_load(
+                        self.builder
+                            .build_struct_gep(vector.into_pointer_value(), 3, "data")
+                            .unwrap(),
+                        "data",
+                    )
+                    .into_pointer_value();
 
-            self.builder
-                .build_select(
-                    self.builder.build_is_null(vector, "vector_is_null"),
-                    self.context.i32_type().const_zero(),
-                    self.builder.build_load(len, "vector_len").into_int_value(),
-                    "length",
-                )
-                .into_int_value()
+                // get the offset of the return data
+                let header_ptr = self.builder.build_pointer_cast(
+                    data,
+                    self.context.i32_type().ptr_type(AddressSpace::Generic),
+                    "header_ptr",
+                );
+
+                let data_len_ptr = unsafe {
+                    self.builder.build_gep(
+                        header_ptr,
+                        &[self.context.i64_type().const_int(1, false)],
+                        "data_len_ptr",
+                    )
+                };
+
+                self.builder
+                    .build_load(data_len_ptr, "len")
+                    .into_int_value()
+            } else {
+                // field 0 is the length
+                let vector = vector.into_pointer_value();
+
+                let len = unsafe {
+                    self.builder.build_gep(
+                        vector,
+                        &[
+                            self.context.i32_type().const_zero(),
+                            self.context.i32_type().const_zero(),
+                        ],
+                        "vector_len",
+                    )
+                };
+
+                self.builder
+                    .build_select(
+                        self.builder.build_is_null(vector, "vector_is_null"),
+                        self.context.i32_type().const_zero(),
+                        self.builder.build_load(len, "vector_len").into_int_value(),
+                        "length",
+                    )
+                    .into_int_value()
+            }
         }
     }
 
@@ -6168,22 +6181,68 @@ impl<'a> Contract<'a> {
                 .unwrap()
                 .into_pointer_value()
         } else {
-            let data = unsafe {
-                self.builder.build_gep(
-                    vector.into_pointer_value(),
-                    &[
-                        self.context.i32_type().const_zero(),
-                        self.context.i32_type().const_int(2, false),
-                    ],
+            // Get the type name of the struct we are point to
+            let struct_ty = vector
+                .into_pointer_value()
+                .get_type()
+                .get_element_type()
+                .into_struct_type();
+            let name = struct_ty.get_name().unwrap();
+
+            if name == CStr::from_bytes_with_nul(b"struct.SolAccountInfo\0").unwrap() {
+                // load the data pointer
+                let data = self
+                    .builder
+                    .build_load(
+                        self.builder
+                            .build_struct_gep(vector.into_pointer_value(), 3, "data")
+                            .unwrap(),
+                        "data",
+                    )
+                    .into_pointer_value();
+
+                // get the offset of the return data
+                let header_ptr = self.builder.build_pointer_cast(
+                    data,
+                    self.context.i32_type().ptr_type(AddressSpace::Generic),
+                    "header_ptr",
+                );
+
+                let data_ptr = unsafe {
+                    self.builder.build_gep(
+                        header_ptr,
+                        &[self.context.i64_type().const_int(2, false)],
+                        "data_ptr",
+                    )
+                };
+
+                let offset = self.builder.build_load(data_ptr, "offset").into_int_value();
+
+                let v = unsafe { self.builder.build_gep(data, &[offset], "data") };
+
+                self.builder.build_pointer_cast(
+                    v,
+                    self.context.i8_type().ptr_type(AddressSpace::Generic),
                     "data",
                 )
-            };
+            } else {
+                let data = unsafe {
+                    self.builder.build_gep(
+                        vector.into_pointer_value(),
+                        &[
+                            self.context.i32_type().const_zero(),
+                            self.context.i32_type().const_int(2, false),
+                        ],
+                        "data",
+                    )
+                };
 
-            self.builder.build_pointer_cast(
-                data,
-                self.context.i8_type().ptr_type(AddressSpace::Generic),
-                "data",
-            )
+                self.builder.build_pointer_cast(
+                    data,
+                    self.context.i8_type().ptr_type(AddressSpace::Generic),
+                    "data",
+                )
+            }
         }
     }
 

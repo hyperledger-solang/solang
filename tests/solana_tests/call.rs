@@ -57,7 +57,7 @@ fn calltys() {
 }
 
 #[test]
-fn two_contracts() {
+fn simple_external_call() {
     let mut vm = build_solidity(
         r#"
         contract bar0 {
@@ -100,4 +100,74 @@ fn two_contracts() {
     vm.function("test_other", &[Token::FixedBytes(bar1_account.to_vec())]);
 
     assert_eq!(vm.printbuf, "bar1 says: cross contract call");
+}
+
+#[test]
+fn external_call_with_returns() {
+    let mut vm = build_solidity(
+        r#"
+        contract bar0 {
+            function test_other(bar1 x) public returns (int64) {
+                return x.test_bar(7) + 5;
+            }
+        }
+
+        contract bar1 {
+            function test_bar(int64 y) public returns (int64) {
+                return 3 + y;
+            }
+        }"#,
+    );
+
+    vm.constructor(&[]);
+
+    let res = vm.function("test_bar", &[Token::Int(ethereum_types::U256::from(21))]);
+
+    assert_eq!(res, vec![Token::Int(ethereum_types::U256::from(24))]);
+
+    let bar1_account = vm.stack[0].data;
+
+    vm.set_program(0);
+
+    vm.constructor(&[]);
+
+    let res = vm.function("test_other", &[Token::FixedBytes(bar1_account.to_vec())]);
+
+    assert_eq!(res, vec![Token::Int(ethereum_types::U256::from(15))]);
+}
+
+#[test]
+fn external_call_with_string_returns() {
+    let mut vm = build_solidity(
+        r#"
+        contract bar0 {
+            function test_other(bar1 x) public returns (string) {
+                string y = x.test_bar(7);
+                print(y);
+                return y;
+            }
+        }
+
+        contract bar1 {
+            function test_bar(int64 y) public returns (string) {
+                return "foo:{}".format(y);
+            }
+        }"#,
+    );
+
+    vm.constructor(&[]);
+
+    let res = vm.function("test_bar", &[Token::Int(ethereum_types::U256::from(22))]);
+
+    assert_eq!(res, vec![Token::String(String::from("foo:22"))]);
+
+    let bar1_account = vm.stack[0].data;
+
+    vm.set_program(0);
+
+    vm.constructor(&[]);
+
+    let res = vm.function("test_other", &[Token::FixedBytes(bar1_account.to_vec())]);
+
+    assert_eq!(res, vec![Token::String(String::from("foo:7"))]);
 }

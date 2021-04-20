@@ -399,6 +399,8 @@ fn translate_slice_inner<'a, T>(
 
 struct SyscallInvokeSignedC<'a> {
     context: Rc<RefCell<&'a mut VirtualMachine>>,
+    input: &'a [u8],
+    calldata: &'a [u8],
 }
 
 impl<'a> SyscallInvokeSignedC<'a> {
@@ -467,6 +469,18 @@ impl<'a> SyscallObject<UserError> for SyscallInvokeSignedC<'a> {
 
             context.execute(&instruction.data);
 
+            let parameter_bytes = serialize_parameters(&self.calldata, &context);
+
+            assert_eq!(parameter_bytes.len(), self.input.len());
+
+            unsafe {
+                std::ptr::copy(
+                    parameter_bytes.as_ptr(),
+                    self.input.as_ptr() as *mut u8,
+                    parameter_bytes.len(),
+                );
+            }
+
             context.stack.remove(0);
         }
 
@@ -509,6 +523,8 @@ impl VirtualMachine {
             "sol_invoke_signed_c",
             Syscall::Object(Box::new(SyscallInvokeSignedC {
                 context: context.clone(),
+                input: &parameter_bytes,
+                calldata: &calldata,
             })),
         )
         .unwrap();
