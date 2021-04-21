@@ -31,7 +31,7 @@ Solana
 ______
 
 The Solana target requires `Solana <https://www.solana.com/>`_ 1.5.0 or later. This target is in the early stages right now,
-however it is under active development. All data types are supported, but the builtin functions, external calls, and constructor calls
+however it is under active development. All data types are supported, but the builtin functions, and constructor calls
 have not been implemented yet. This is how to build your Solidity for Solana:
 
 .. code-block:: bash
@@ -48,17 +48,13 @@ contract storage array of ``int[10000]``, then this is implemented using a hashm
 
 Solana has execution model which allows one program to interact with multiple accounts. Those accounts can
 be used for different purposes. In Solang's case, each time the contract is executed, it needs two accounts.
-The first account is for the `return data`, i.e. either the ABI encoded
-return values or the revert buffer. The second account is to hold the contract storage variables.
+One account is the program, which contains the compiled BPF program. The other account contains the contract storage
+variables, and also the return variables for the last invocation.
 
 The output of the compiler will tell you how large the second account needs to be. For the `flipper.sol` example,
-the output contains *"info: contract flipper uses exactly 9 bytes account data"*. This means the second account
-should be exactly 9 bytes; anything larger is wasted. If the output is
-*"info: contract store uses at least 168 bytes account data"* then some storage elements are dynamic, so the size
-depends on the data stored. For example there could be a ``string`` type, and storage depends on the length of
-the string. The minimum is 168 bytes, but storing any non-zero-length dynamic types will fail.
-
-If either account is too small, the transaction will fail with the error *account data too small for instruction*.
+the output contains *"info: contract flipper uses at least 17 bytes account data"*. This means the second account
+should be 17 bytes plus space for the return data, and any dynamic storage. If the account is too small, the transaction
+will fail with the error *account data too small for instruction*.
 
 Before any function on a smart contract can be used, the constructor must be first be called. This ensures that
 the constructor as declared in the solidity code is executed, and that the contract storage account is
@@ -66,10 +62,8 @@ correctly initialized. To call the constructor, abi encode (using ethereum abi e
 arguments, and pass in two accounts to the call, the 2nd being the contract storage account.
 
 Once that is done, any function on the contract can be called. To do that, abi encode the function call,
-pass this as input, and provide two accounts on the call. The second account must be the same contract
-storage account as used in the constructor. If there are any return values for the function, they
-are stored in the first return data account. The first 8 bytes is a 64 bits length, followed by the
-data itself. You can pass this into an ethereum abi decoder to get the expected return values.
+pass this as input, and provide the two accounts on the call, plus any accounts that may be called. The return data may
+be read from the account data if the call succeeds.
 
 There is `an example of this written in node <https://github.com/hyperledger-labs/solang/tree/main/integration/solana>`_.
 
