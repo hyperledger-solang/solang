@@ -2693,11 +2693,12 @@ pub trait TargetRuntime<'a> {
                     )
                     .try_as_basic_value()
                     .left()
-                    .unwrap();
+                    .unwrap()
+                    .into_int_value();
 
                 let success = contract.builder.build_int_compare(
                     IntPredicate::EQ,
-                    ret.into_int_value(),
+                    ret,
                     contract.context.i32_type().const_zero(),
                     "success",
                 );
@@ -2709,6 +2710,16 @@ pub trait TargetRuntime<'a> {
                     .build_conditional_branch(success, success_block, bail_block);
 
                 contract.builder.position_at_end(bail_block);
+
+                // On Solana the return type is 64 bit
+                let ret: BasicValueEnum = contract
+                    .builder
+                    .build_int_z_extend(
+                        ret,
+                        contract.return_values[&ReturnCode::Success].get_type(),
+                        "ret",
+                    )
+                    .into();
 
                 contract.builder.build_return(Some(&ret));
                 contract.builder.position_at_end(success_block);
@@ -2810,11 +2821,12 @@ pub trait TargetRuntime<'a> {
                     )
                     .try_as_basic_value()
                     .left()
-                    .unwrap();
+                    .unwrap()
+                    .into_int_value();
 
                 let success = contract.builder.build_int_compare(
                     IntPredicate::EQ,
-                    ret.into_int_value(),
+                    ret,
                     contract.context.i32_type().const_zero(),
                     "success",
                 );
@@ -2827,7 +2839,18 @@ pub trait TargetRuntime<'a> {
 
                 contract.builder.position_at_end(bail_block);
 
+                // On Solana the return type is 64 bit
+                let ret: BasicValueEnum = contract
+                    .builder
+                    .build_int_z_extend(
+                        ret,
+                        contract.return_values[&ReturnCode::Success].get_type(),
+                        "ret",
+                    )
+                    .into();
+
                 contract.builder.build_return(Some(&ret));
+
                 contract.builder.position_at_end(success_block);
 
                 let quotient = contract
