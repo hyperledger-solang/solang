@@ -546,6 +546,8 @@ impl VirtualMachine {
 
         let output = &elf.account_data[&elf.stack[0].data].0;
 
+        VirtualMachine::validate_heap(&output);
+
         let len = LittleEndian::read_u32(&output[4..]) as usize;
         let offset = LittleEndian::read_u32(&output[8..]) as usize;
         elf.output = output[offset..offset + len].to_vec();
@@ -606,6 +608,55 @@ impl VirtualMachine {
         let cur = self.programs[no].clone();
 
         self.stack = vec![cur];
+    }
+
+    fn validate_heap(data: &[u8]) {
+        let mut prev_offset = 0;
+        let return_len = LittleEndian::read_u32(&data[4..]) as usize;
+        let return_offset = LittleEndian::read_u32(&data[8..]) as usize;
+        let mut offset = LittleEndian::read_u32(&data[12..]) as usize;
+
+        // println!("data:{}", hex::encode(&data));
+        println!("returndata:{}", return_offset);
+        let real_return_len = if return_offset == 0 {
+            0
+        } else {
+            LittleEndian::read_u32(&data[return_offset - 8..]) as usize
+        };
+
+        assert_eq!(real_return_len, return_len);
+
+        loop {
+            let next = LittleEndian::read_u32(&data[offset..]) as usize;
+            let prev = LittleEndian::read_u32(&data[offset + 4..]) as usize;
+            let length = LittleEndian::read_u32(&data[offset + 8..]) as usize;
+            let allocate = LittleEndian::read_u32(&data[offset + 12..]) as usize;
+
+            println!(
+                "offset:{} prev:{} next:{} length:{} allocated:{} {}",
+                offset,
+                prev,
+                next,
+                length,
+                allocate,
+                hex::encode(&data[offset + 16..offset + 16 + length])
+            );
+
+            assert_eq!(prev, prev_offset);
+            prev_offset = offset;
+
+            if next == 0 {
+                assert_eq!(length, 0);
+                assert_eq!(allocate, 0);
+
+                break;
+            }
+
+            let space = next - offset - 16;
+            assert!(length <= space);
+
+            offset = next;
+        }
     }
 }
 

@@ -434,7 +434,7 @@ uint64_t account_data_realloc(SolAccountInfo *ai, uint32_t offset, uint32_t size
         }
     }
 
-    uint32_t old_length = account_data_len(ai, offset);
+    uint32_t old_length = account_data_len(data, offset);
     uint32_t new_offset;
     uint64_t rc = account_data_alloc(ai, size, &new_offset);
     if (rc)
