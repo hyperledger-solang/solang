@@ -595,7 +595,7 @@ pub fn contract_function(
         ns.contracts[contract_no].functions.push(func_no);
 
         if let Some(Symbol::Function(ref mut v)) =
-            ns.symbols
+            ns.function_symbols
                 .get_mut(&(file_no, Some(contract_no), id.name.to_owned()))
         {
             v.push((func.loc, func_no));
@@ -760,7 +760,8 @@ pub fn function(
     ns.functions.push(fdecl);
 
     if let Some(Symbol::Function(ref mut v)) =
-        ns.symbols.get_mut(&(file_no, None, id.name.to_owned()))
+        ns.function_symbols
+            .get_mut(&(file_no, None, id.name.to_owned()))
     {
         v.push((func.loc, func_no));
     } else {

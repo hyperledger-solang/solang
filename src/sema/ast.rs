@@ -325,8 +325,10 @@ pub struct Namespace {
     /// value length in bytes
     pub value_length: usize,
     pub diagnostics: Vec<Diagnostic>,
+    /// There is a separate namespace for functions and non-functions
+    pub function_symbols: HashMap<(usize, Option<usize>, String), Symbol>,
     /// Symbol key is file_no, contract, identifier
-    pub symbols: HashMap<(usize, Option<usize>, String), Symbol>,
+    pub variable_symbols: HashMap<(usize, Option<usize>, String), Symbol>,
     // each variable in the symbol table should have a unique number
     pub next_id: usize,
     /// For a variable reference at a location, give the constant value

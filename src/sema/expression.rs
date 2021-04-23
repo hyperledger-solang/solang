@@ -4070,7 +4070,9 @@ fn enum_value(
 
     // last element in our namespace vector is first element
     while let Some(name) = namespace.last().map(|f| f.name.clone()) {
-        if let Some(Symbol::Import(_, import_file_no)) = ns.symbols.get(&(file_no, None, name)) {
+        if let Some(Symbol::Import(_, import_file_no)) =
+            ns.variable_symbols.get(&(file_no, None, name))
+        {
             file_no = *import_file_no;
             namespace.pop();
         } else {
@@ -4846,7 +4848,9 @@ pub fn available_functions(
     let mut list = Vec::new();
 
     if global {
-        if let Some(Symbol::Function(v)) = ns.symbols.get(&(file_no, None, name.to_owned())) {
+        if let Some(Symbol::Function(v)) =
+            ns.function_symbols.get(&(file_no, None, name.to_owned()))
+        {
             list.extend(v.iter().map(|(_, func_no)| *func_no));
         }
     }
