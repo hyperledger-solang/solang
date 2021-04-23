@@ -65,7 +65,7 @@ pub fn resolve_typenames<'a>(
             }
             pt::SourceUnitPart::EventDefinition(def) => {
                 if let Some(Symbol::Event(events)) =
-                    ns.symbols
+                    ns.variable_symbols
                         .get_mut(&(file_no, None, def.name.name.to_owned()))
                 {
                     events.push((def.name.loc, delay.events.len()));
@@ -263,10 +263,11 @@ fn resolve_contract<'a>(
                 }
             }
             pt::ContractPart::EventDefinition(ref s) => {
-                if let Some(Symbol::Event(events)) =
-                    ns.symbols
-                        .get_mut(&(file_no, Some(contract_no), s.name.name.to_owned()))
-                {
+                if let Some(Symbol::Event(events)) = ns.variable_symbols.get_mut(&(
+                    file_no,
+                    Some(contract_no),
+                    s.name.name.to_owned(),
+                )) {
                     events.push((s.name.loc, delay.events.len()));
                 } else if !ns.add_symbol(
                     file_no,
