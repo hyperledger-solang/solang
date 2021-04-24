@@ -1,4 +1,6 @@
-use super::ast::{Diagnostic, Namespace, Symbol, Variable};
+use super::ast::{
+    Diagnostic, Expression, Function, Namespace, Parameter, Statement, Symbol, Type, Variable,
+};
 use super::expression::{cast, expression};
 use super::symtable::Symtable;
 use super::tags::resolve_tags;
@@ -244,8 +246,8 @@ pub fn var_decl(
         name: s.name.name.to_string(),
         loc: s.loc,
         tags,
-        visibility,
-        ty,
+        visibility: visibility.clone(),
+        ty: ty.clone(),
         constant: is_constant,
         initializer,
     };
@@ -264,13 +266,153 @@ pub fn var_decl(
         pos
     };
 
-    ns.add_symbol(
+    let success = ns.add_symbol(
         file_no,
         contract_no,
         &s.name,
         Symbol::Variable(s.loc, contract_no, pos),
     );
 
+    // for public variables in contracts, create an accessor function
+    if success && matches!(visibility, pt::Visibility::Public(_)) {
+        if let Some(contract_no) = contract_no {
+            // The accessor function returns the value of the storage variable, constant or not.
+            let mut expr = if is_constant {
+                Expression::ConstantVariable(
+                    pt::Loc(0, 0, 0),
+                    Type::StorageRef(Box::new(ty.clone())),
+                    Some(contract_no),
+                    pos,
+                )
+            } else {
+                Expression::StorageVariable(
+                    pt::Loc(0, 0, 0),
+                    Type::StorageRef(Box::new(ty.clone())),
+                    contract_no,
+                    pos,
+                )
+            };
+
+            // If the variable is an array or mapping, the accessor function takes mapping keys
+            // or array indices as arguments, and returns the dereferenced value
+            let mut params = Vec::new();
+            let ty = collect_parameters(&ty, &mut params, &mut expr, ns);
+
+            let mut func = Function::new(
+                s.name.loc,
+                s.name.name.to_owned(),
+                Some(contract_no),
+                Vec::new(),
+                pt::FunctionTy::Function,
+                // accessors for constant variables have view mutability
+                Some(pt::StateMutability::View(s.name.loc)),
+                visibility,
+                params,
+                vec![Parameter {
+                    name: String::new(),
+                    name_loc: Some(s.name.loc),
+                    loc: s.name.loc,
+                    ty: ty.clone(),
+                    ty_loc: s.ty.loc(),
+                    indexed: false,
+                }],
+                ns,
+            );
+
+            // Create the implicit body - just return the value
+            func.body = vec![Statement::Return(
+                pt::Loc(0, 0, 0),
+                vec![Expression::StorageLoad(
+                    pt::Loc(0, 0, 0),
+                    ty.clone(),
+                    Box::new(expr),
+                )],
+            )];
+            func.is_accessor = true;
+            func.has_body = true;
+
+            // add the function to the namespace and then to our contract
+            let func_no = ns.functions.len();
+
+            ns.functions.push(func);
+
+            ns.contracts[contract_no].functions.push(func_no);
+
+            // we already have a symbol for
+            let symbol = Symbol::Function(vec![(s.loc, func_no)]);
+
+            ns.function_symbols
+                .insert((s.loc.0, Some(contract_no), s.name.name.to_owned()), symbol);
+        }
+    }
+
     // Return true if the value is constant
     Some(is_constant)
+}
+
+/// For accessor functions, create the parameter list and the return expression
+fn collect_parameters<'a>(
+    ty: &'a Type,
+    params: &mut Vec<Parameter>,
+    expr: &mut Expression,
+    ns: &Namespace,
+) -> &'a Type {
+    match ty {
+        Type::Mapping(key, value) => {
+            let map = (*expr).clone();
+
+            *expr = Expression::Subscript(
+                pt::Loc(0, 0, 0),
+                Type::StorageRef(Box::new(ty.clone())),
+                Box::new(map),
+                Box::new(Expression::FunctionArg(
+                    pt::Loc(0, 0, 0),
+                    key.as_ref().clone(),
+                    params.len(),
+                )),
+            );
+
+            params.push(Parameter {
+                name: String::new(),
+                name_loc: None,
+                loc: pt::Loc(0, 0, 0),
+                ty: key.as_ref().clone(),
+                ty_loc: pt::Loc(0, 0, 0),
+                indexed: false,
+            });
+
+            collect_parameters(value, params, expr, ns)
+        }
+        Type::Array(elem_ty, dims) => {
+            let mut ty = Type::StorageRef(Box::new(ty.clone()));
+            for _ in 0..dims.len() {
+                let map = (*expr).clone();
+
+                *expr = Expression::Subscript(
+                    pt::Loc(0, 0, 0),
+                    ty.clone(),
+                    Box::new(map),
+                    Box::new(Expression::FunctionArg(
+                        pt::Loc(0, 0, 0),
+                        Type::Uint(256),
+                        params.len(),
+                    )),
+                );
+
+                ty = ty.storage_array_elem();
+
+                params.push(Parameter {
+                    name: String::new(),
+                    name_loc: None,
+                    loc: pt::Loc(0, 0, 0),
+                    ty: Type::Uint(256),
+                    ty_loc: pt::Loc(0, 0, 0),
+                    indexed: false,
+                });
+            }
+
+            collect_parameters(elem_ty, params, expr, ns)
+        }
+        _ => ty,
+    }
 }
