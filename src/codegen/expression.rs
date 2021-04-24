@@ -407,10 +407,7 @@ pub fn expression(
                         bigint_to_expression(loc, length, ns, &mut Vec::new(), Some(ty)).unwrap()
                     }
                 },
-                ty => {
-                    println!("what are you talking about {:?}", ty);
-                    unreachable!();
-                }
+                _ => unreachable!(),
             }
         }
         Expression::Builtin(loc, returns, Builtin::ExternalFunctionAddress, func) => {
@@ -1527,7 +1524,7 @@ pub fn emit_function_call(
     }
 }
 
-/// Resolve an array subscript expression
+/// Codegen for an array subscript expression
 fn array_subscript(
     loc: &pt::Loc,
     array_ty: &Type,

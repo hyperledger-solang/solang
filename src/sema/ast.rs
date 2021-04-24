@@ -131,6 +131,8 @@ pub struct Function {
     // modifiers for functions
     pub modifiers: Vec<Expression>,
     pub is_virtual: bool,
+    /// Is this function an acccesor function created by a public variable
+    pub is_accessor: bool,
     pub is_override: Option<(pt::Loc, Vec<usize>)>,
     pub has_body: bool,
     pub body: Vec<Statement>,
@@ -172,6 +174,7 @@ impl Function {
             bases: HashMap::new(),
             modifiers: Vec::new(),
             is_virtual: false,
+            is_accessor: false,
             has_body: false,
             is_override: None,
             body: Vec::new(),
@@ -304,6 +307,28 @@ impl Symbol {
             Symbol::Event(events) => &events[0].0,
             Symbol::Contract(loc, _) => loc,
             Symbol::Import(loc, _) => loc,
+        }
+    }
+
+    /// Is this symbol for an accessor function
+    pub fn is_accessor(&self, ns: &Namespace) -> bool {
+        if let Symbol::Function(func) = self {
+            func.iter()
+                .all(|(_, func_no)| ns.functions[*func_no].is_accessor)
+        } else {
+            false
+        }
+    }
+
+    /// Does this symbol have an accessor function
+    pub fn has_accessor(&self, ns: &Namespace) -> bool {
+        if let Symbol::Variable(_, Some(contract_no), var_no) = self {
+            matches!(
+                ns.contracts[*contract_no].variables[*var_no].visibility,
+                pt::Visibility::Public(_)
+            )
+        } else {
+            false
         }
     }
 }

@@ -1812,10 +1812,7 @@ fn simple_interface() {
         Target::Substrate,
     );
 
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "function ‘bar’ should specify ‘override’"
-    );
+    no_errors(ns.diagnostics);
 
     let mut runtime = build_solidity(
         r##"

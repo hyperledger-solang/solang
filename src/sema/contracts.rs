@@ -296,7 +296,8 @@ pub fn is_base(base: usize, parent: usize, ns: &ast::Namespace) -> bool {
 
 /// Layout the contract. We determine the layout of variables and deal with overriding variables
 fn layout_contract(contract_no: usize, ns: &mut ast::Namespace) {
-    let mut syms: HashMap<String, ast::Symbol> = HashMap::new();
+    let mut function_syms: HashMap<String, ast::Symbol> = HashMap::new();
+    let mut variable_syms: HashMap<String, ast::Symbol> = HashMap::new();
     let mut override_needed: HashMap<String, Vec<(usize, usize)>> = HashMap::new();
 
     let mut slot = if ns.target == Target::Solana {
@@ -319,7 +320,7 @@ fn layout_contract(contract_no: usize, ns: &mut ast::Namespace) {
 
             let mut done = false;
 
-            if let Some(ast::Symbol::Function(ref mut list)) = syms.get_mut(name) {
+            if let Some(ast::Symbol::Function(ref mut list)) = function_syms.get_mut(name) {
                 if let ast::Symbol::Function(funcs) = sym {
                     list.extend(funcs.to_owned());
                     done = true;
@@ -327,18 +328,24 @@ fn layout_contract(contract_no: usize, ns: &mut ast::Namespace) {
             }
 
             if !done {
-                if let Some(prev) = syms.get(name) {
-                    ns.diagnostics.push(ast::Diagnostic::error_with_note(
-                        *sym.loc(),
-                        format!("already defined ‘{}’", name),
-                        *prev.loc(),
-                        format!("previous definition of ‘{}’", name),
-                    ));
+                if let Some(prev) = variable_syms.get(name).or_else(|| function_syms.get(name)) {
+                    if !(prev.has_accessor(ns) || sym.has_accessor(ns)) {
+                        ns.diagnostics.push(ast::Diagnostic::error_with_note(
+                            *sym.loc(),
+                            format!("already defined ‘{}’", name),
+                            *prev.loc(),
+                            format!("previous definition of ‘{}’", name),
+                        ));
+                    }
                 }
             }
 
             if !sym.is_private_variable(ns) {
-                syms.insert(name.to_owned(), sym.clone());
+                if let ast::Symbol::Function(_) = sym {
+                    function_syms.insert(name.to_owned(), sym.clone());
+                } else {
+                    variable_syms.insert(name.to_owned(), sym.clone());
+                }
             }
         }
 
