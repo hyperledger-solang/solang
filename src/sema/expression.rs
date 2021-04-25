@@ -4854,7 +4854,7 @@ pub fn available_functions(
                 .all_functions
                 .keys()
                 .filter_map(|func_no| {
-                    if ns.functions[*func_no].name == name {
+                    if ns.functions[*func_no].name == name && ns.functions[*func_no].has_body {
                         Some(*func_no)
                     } else {
                         None
