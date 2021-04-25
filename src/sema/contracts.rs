@@ -469,23 +469,34 @@ fn layout_contract(contract_no: usize, ns: &mut ast::Namespace) {
 
                         if !extra.is_empty() {
                             ns.diagnostics.push(ast::Diagnostic::error(
-                            *loc,
-                            format!(
-                                "function ‘{}’ includes extraneous overrides ‘{}’, specify ‘override({})’",
-                                cur.name,
-                                extra.join(","),
-                                source_override
-                            ),
-                        ));
+                                *loc,
+                                format!(
+                                    "function ‘{}’ includes extraneous overrides ‘{}’, specify ‘override({})’",
+                                    cur.name,
+                                    extra.join(","),
+                                    source_override
+                                ),
+                            ));
                         }
                     }
 
+                    // FIXME: check override visibility/mutability
+
                     override_needed.remove(&signature);
                 } else if entry.len() == 1 {
-                    ns.diagnostics.push(ast::Diagnostic::error(
-                        cur.loc,
-                        format!("function ‘{}’ should specify ‘override’", cur.name),
-                    ));
+                    // Solidity 0.5 does not require the override keyword at all, later versions so. Uniswap v2 does
+                    // not specify override for implementing interfaces. As a compromise, only require override when
+                    // not implementing an interface
+                    if !ns.contracts[entry[0].0].is_interface() {
+                        ns.diagnostics.push(ast::Diagnostic::error(
+                            cur.loc,
+                            format!("function ‘{}’ should specify ‘override’", cur.name),
+                        ));
+                    }
+
+                    // FIXME: check override visibility/mutability
+
+                    override_needed.remove(&signature);
                 } else {
                     ns.diagnostics.push(ast::Diagnostic::error(
                         cur.loc,
