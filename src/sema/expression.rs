@@ -2582,14 +2582,6 @@ pub fn expression(
                 Err(_) => (),
             }
 
-            if is_constant {
-                diagnostics.push(Diagnostic::error(
-                    expr.loc(),
-                    "cannot call function in constant expression".to_string(),
-                ));
-                return Err(());
-            }
-
             let expr = function_call_expr(
                 loc,
                 ty,
@@ -2598,6 +2590,7 @@ pub fn expression(
                 contract_no,
                 ns,
                 symtable,
+                is_constant,
                 diagnostics,
             )?;
 
@@ -6767,24 +6760,35 @@ pub fn function_call_expr(
     contract_no: Option<usize>,
     ns: &mut Namespace,
     symtable: &Symtable,
+    is_constant: bool,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Result<Expression, ()> {
     let (ty, call_args, call_args_loc) = collect_call_args(ty, diagnostics)?;
 
     match ty {
-        pt::Expression::MemberAccess(_, member, func) => method_call_pos_args(
-            loc,
-            member,
-            func,
-            args,
-            &call_args,
-            call_args_loc,
-            file_no,
-            contract_no,
-            ns,
-            symtable,
-            diagnostics,
-        ),
+        pt::Expression::MemberAccess(_, member, func) => {
+            if is_constant {
+                diagnostics.push(Diagnostic::error(
+                    *loc,
+                    "cannot call function in constant expression".to_string(),
+                ));
+                return Err(());
+            }
+
+            method_call_pos_args(
+                loc,
+                member,
+                func,
+                args,
+                &call_args,
+                call_args_loc,
+                file_no,
+                contract_no,
+                ns,
+                symtable,
+                diagnostics,
+            )
+        }
         pt::Expression::Variable(id) => {
             // is it a builtin
             if builtin::is_builtin_call(None, &id.name, ns) {
@@ -6798,6 +6802,7 @@ pub fn function_call_expr(
                         contract_no,
                         ns,
                         symtable,
+                        is_constant,
                         diagnostics,
                     )?;
 
@@ -6811,6 +6816,14 @@ pub fn function_call_expr(
                         Ok(expr)
                     }
                 };
+            }
+
+            if is_constant {
+                diagnostics.push(Diagnostic::error(
+                    *loc,
+                    "cannot call function in constant expression".to_string(),
+                ));
+                return Err(());
             }
 
             // is there a local variable or contract variable with this name

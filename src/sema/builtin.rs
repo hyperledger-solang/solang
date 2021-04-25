@@ -15,6 +15,8 @@ pub struct Prototype {
     pub ret: &'static [Type],
     pub target: Option<Target>,
     pub doc: &'static str,
+    // Can this function be called in constant context (e.g. hash functions)
+    pub constant: bool,
 }
 
 // A list of all Solidity builtins functions
@@ -27,6 +29,7 @@ static BUILTIN_FUNCTIONS: [Prototype; 23] = [
         ret: &[Type::Void],
         target: None,
         doc: "Abort execution if argument evaluates to false",
+        constant: false,
     },
     Prototype {
         builtin: Builtin::Print,
@@ -36,6 +39,7 @@ static BUILTIN_FUNCTIONS: [Prototype; 23] = [
         ret: &[Type::Void],
         target: None,
         doc: "log string for debugging purposes. Runs on development chain only",
+        constant: false,
     },
     Prototype {
         builtin: Builtin::Require,
@@ -45,6 +49,7 @@ static BUILTIN_FUNCTIONS: [Prototype; 23] = [
         ret: &[Type::Void],
         target: None,
         doc: "Abort execution if argument evaulates to false",
+        constant: false,
     },
     Prototype {
         builtin: Builtin::Require,
@@ -54,6 +59,7 @@ static BUILTIN_FUNCTIONS: [Prototype; 23] = [
         ret: &[Type::Void],
         target: None,
         doc: "Abort execution if argument evaulates to false. Report string when aborting",
+        constant: false,
     },
     Prototype {
         builtin: Builtin::Revert,
@@ -63,6 +69,7 @@ static BUILTIN_FUNCTIONS: [Prototype; 23] = [
         ret: &[Type::Unreachable],
         target: None,
         doc: "Revert execution",
+        constant: false,
     },
     Prototype {
         builtin: Builtin::Revert,
@@ -72,6 +79,7 @@ static BUILTIN_FUNCTIONS: [Prototype; 23] = [
         ret: &[Type::Unreachable],
         target: None,
         doc: "Revert execution and report string",
+        constant: false,
     },
     Prototype {
         builtin: Builtin::SelfDestruct,
@@ -81,6 +89,7 @@ static BUILTIN_FUNCTIONS: [Prototype; 23] = [
         ret: &[Type::Unreachable],
         target: None,
         doc: "Destroys current account and deposits any remaining balance to address",
+        constant: false,
     },
     Prototype {
         builtin: Builtin::Keccak256,
@@ -90,6 +99,7 @@ static BUILTIN_FUNCTIONS: [Prototype; 23] = [
         ret: &[Type::Bytes(32)],
         target: None,
         doc: "Calculates keccak256 hash",
+        constant: true,
     },
     Prototype {
         builtin: Builtin::Ripemd160,
@@ -99,6 +109,7 @@ static BUILTIN_FUNCTIONS: [Prototype; 23] = [
         ret: &[Type::Bytes(20)],
         target: None,
         doc: "Calculates ripemd hash",
+        constant: true,
     },
     Prototype {
         builtin: Builtin::Sha256,
@@ -108,6 +119,7 @@ static BUILTIN_FUNCTIONS: [Prototype; 23] = [
         ret: &[Type::Bytes(32)],
         target: None,
         doc: "Calculates sha256 hash",
+        constant: true,
     },
     Prototype {
         builtin: Builtin::Blake2_128,
@@ -117,6 +129,7 @@ static BUILTIN_FUNCTIONS: [Prototype; 23] = [
         ret: &[Type::Bytes(16)],
         target: Some(Target::Substrate),
         doc: "Calculates blake2-128 hash",
+        constant: true,
     },
     Prototype {
         builtin: Builtin::Blake2_256,
@@ -126,6 +139,7 @@ static BUILTIN_FUNCTIONS: [Prototype; 23] = [
         ret: &[Type::Bytes(32)],
         target: Some(Target::Substrate),
         doc: "Calculates blake2-256 hash",
+        constant: true,
     },
     Prototype {
         builtin: Builtin::Gasleft,
@@ -135,6 +149,7 @@ static BUILTIN_FUNCTIONS: [Prototype; 23] = [
         ret: &[Type::Uint(64)],
         target: None,
         doc: "Return remaing gas left in current call",
+        constant: false,
     },
     Prototype {
         builtin: Builtin::BlockHash,
@@ -144,6 +159,7 @@ static BUILTIN_FUNCTIONS: [Prototype; 23] = [
         ret: &[Type::Bytes(32)],
         target: Some(Target::Ewasm),
         doc: "Returns the block hash for given block number",
+        constant: false,
     },
     Prototype {
         builtin: Builtin::Random,
@@ -153,6 +169,7 @@ static BUILTIN_FUNCTIONS: [Prototype; 23] = [
         ret: &[Type::Bytes(32)],
         target: Some(Target::Substrate),
         doc: "Returns deterministic random bytes",
+        constant: false,
     },
     Prototype {
         builtin: Builtin::AbiDecode,
@@ -162,6 +179,7 @@ static BUILTIN_FUNCTIONS: [Prototype; 23] = [
         ret: &[],
         target: None,
         doc: "Abi decode byte array with the given types",
+        constant: false,
     },
     Prototype {
         builtin: Builtin::AbiEncode,
@@ -171,6 +189,8 @@ static BUILTIN_FUNCTIONS: [Prototype; 23] = [
         ret: &[],
         target: None,
         doc: "Abi encode given arguments",
+        // it should be allowed in constant context, but we don't supported that yet
+        constant: false,
     },
     Prototype {
         builtin: Builtin::AbiEncodePacked,
@@ -180,6 +200,8 @@ static BUILTIN_FUNCTIONS: [Prototype; 23] = [
         ret: &[],
         target: None,
         doc: "Abi encode given arguments using packed encoding",
+        // it should be allowed in constant context, but we don't supported that yet
+        constant: false,
     },
     Prototype {
         builtin: Builtin::AbiEncodeWithSelector,
@@ -189,6 +211,8 @@ static BUILTIN_FUNCTIONS: [Prototype; 23] = [
         ret: &[],
         target: None,
         doc: "Abi encode given arguments with selector",
+        // it should be allowed in constant context, but we don't supported that yet
+        constant: false,
     },
     Prototype {
         builtin: Builtin::AbiEncodeWithSignature,
@@ -198,6 +222,8 @@ static BUILTIN_FUNCTIONS: [Prototype; 23] = [
         ret: &[],
         target: None,
         doc: "Abi encode given arguments with function signature",
+        // it should be allowed in constant context, but we don't supported that yet
+        constant: false,
     },
     Prototype {
         builtin: Builtin::Gasprice,
@@ -207,6 +233,7 @@ static BUILTIN_FUNCTIONS: [Prototype; 23] = [
         ret: &[Type::Value],
         target: None,
         doc: "Calculate price of given gas units",
+        constant: false,
     },
     Prototype {
         builtin: Builtin::MulMod,
@@ -216,6 +243,8 @@ static BUILTIN_FUNCTIONS: [Prototype; 23] = [
         ret: &[Type::Uint(256)],
         target: None,
         doc: "Multiply first two arguments, and the modulo last argument. Does not overflow",
+        // it should be allowed in constant context, but we don't supported that yet
+        constant: false,
     },
     Prototype {
         builtin: Builtin::AddMod,
@@ -225,6 +254,8 @@ static BUILTIN_FUNCTIONS: [Prototype; 23] = [
         ret: &[Type::Uint(256)],
         target: None,
         doc: "Add first two arguments, and the modulo last argument. Does not overflow",
+        // it should be allowed in constant context, but we don't supported that yet
+        constant: false,
     },
 ];
 
@@ -238,6 +269,7 @@ static BUILTIN_VARIABLE: [Prototype; 13] = [
         ret: &[Type::Address(true)],
         target: Some(Target::Ewasm),
         doc: "The address of the current block miner",
+        constant: false,
     },
     Prototype {
         builtin: Builtin::BlockDifficulty,
@@ -247,6 +279,7 @@ static BUILTIN_VARIABLE: [Prototype; 13] = [
         ret: &[Type::Uint(256)],
         target: Some(Target::Ewasm),
         doc: "The difficulty for current block",
+        constant: false,
     },
     Prototype {
         builtin: Builtin::GasLimit,
@@ -256,6 +289,7 @@ static BUILTIN_VARIABLE: [Prototype; 13] = [
         ret: &[Type::Uint(64)],
         target: Some(Target::Ewasm),
         doc: "The gas limit",
+        constant: false,
     },
     Prototype {
         builtin: Builtin::BlockNumber,
@@ -265,6 +299,7 @@ static BUILTIN_VARIABLE: [Prototype; 13] = [
         ret: &[Type::Uint(64)],
         target: None,
         doc: "Current block number",
+        constant: false,
     },
     Prototype {
         builtin: Builtin::Timestamp,
@@ -274,6 +309,7 @@ static BUILTIN_VARIABLE: [Prototype; 13] = [
         ret: &[Type::Uint(64)],
         target: None,
         doc: "Current timestamp in unix epoch (seconds since 1970)",
+        constant: false,
     },
     Prototype {
         builtin: Builtin::TombstoneDeposit,
@@ -283,6 +319,7 @@ static BUILTIN_VARIABLE: [Prototype; 13] = [
         ret: &[Type::Value],
         target: Some(Target::Substrate),
         doc: "Deposit required for a tombstone",
+        constant: false,
     },
     Prototype {
         builtin: Builtin::MinimumBalance,
@@ -292,6 +329,7 @@ static BUILTIN_VARIABLE: [Prototype; 13] = [
         ret: &[Type::Value],
         target: Some(Target::Substrate),
         doc: "Minimum balance required for an account",
+        constant: false,
     },
     Prototype {
         builtin: Builtin::Calldata,
@@ -301,6 +339,7 @@ static BUILTIN_VARIABLE: [Prototype; 13] = [
         ret: &[Type::DynamicBytes],
         target: None,
         doc: "Raw input bytes to current call",
+        constant: false,
     },
     Prototype {
         builtin: Builtin::Sender,
@@ -309,6 +348,7 @@ static BUILTIN_VARIABLE: [Prototype; 13] = [
         args: &[],
         ret: &[Type::Address(true)],
         target: None,
+        constant: false,
         doc: "Address of caller",
     },
     Prototype {
@@ -319,6 +359,7 @@ static BUILTIN_VARIABLE: [Prototype; 13] = [
         ret: &[Type::Bytes(4)],
         target: None,
         doc: "Function selector for current call",
+        constant: false,
     },
     Prototype {
         builtin: Builtin::Value,
@@ -328,6 +369,7 @@ static BUILTIN_VARIABLE: [Prototype; 13] = [
         ret: &[Type::Value],
         target: None,
         doc: "Value sent with current call",
+        constant: false,
     },
     Prototype {
         builtin: Builtin::Gasprice,
@@ -337,6 +379,7 @@ static BUILTIN_VARIABLE: [Prototype; 13] = [
         ret: &[Type::Value],
         target: None,
         doc: "gas price for one gas unit",
+        constant: false,
     },
     Prototype {
         builtin: Builtin::Origin,
@@ -346,6 +389,7 @@ static BUILTIN_VARIABLE: [Prototype; 13] = [
         ret: &[Type::Address(true)],
         target: Some(Target::Ewasm),
         doc: "Original address of sender current transaction",
+        constant: false,
     },
 ];
 
@@ -424,6 +468,7 @@ pub fn resolve_call(
     contract_no: Option<usize>,
     ns: &mut Namespace,
     symtable: &Symtable,
+    is_constant: bool,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Result<Expression, ()> {
     let matches = BUILTIN_FUNCTIONS
@@ -434,6 +479,17 @@ pub fn resolve_call(
     let marker = diagnostics.len();
 
     for func in &matches {
+        if is_constant && !func.constant {
+            diagnostics.push(Diagnostic::error(
+                *loc,
+                format!(
+                    "cannot call function ‘{}’ in constant expression",
+                    func.name
+                ),
+            ));
+            return Err(());
+        }
+
         if func.args.len() != args.len() {
             diagnostics.push(Diagnostic::error(
                 *loc,
@@ -458,7 +514,7 @@ pub fn resolve_call(
                 contract_no,
                 ns,
                 symtable,
-                false,
+                is_constant,
                 diagnostics,
                 Some(&func.args[i]),
             ) {
@@ -548,6 +604,7 @@ pub fn resolve_method_call(
             contract_no,
             ns,
             symtable,
+            false,
             diagnostics,
         );
     }
