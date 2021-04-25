@@ -17,8 +17,8 @@ use std::ops::Mul;
 
 /// List the types which should be resolved later
 pub struct ResolveFields<'a> {
-    pub structs: Vec<(StructDecl, &'a pt::StructDefinition, Option<usize>)>,
-    pub events: Vec<(EventDecl, &'a pt::EventDefinition, Option<usize>)>,
+    pub structs: Vec<(usize, &'a pt::StructDefinition, Option<usize>)>,
+    pub events: Vec<(usize, &'a pt::EventDefinition, Option<usize>)>,
 }
 
 /// Resolve all the types we can find (enums, structs, contracts). structs can have other
@@ -45,40 +45,39 @@ pub fn resolve_typenames<'a>(
                 let _ = enum_decl(&def, file_no, None, ns);
             }
             pt::SourceUnitPart::StructDefinition(def) => {
-                if ns.add_symbol(
-                    file_no,
-                    None,
-                    &def.name,
-                    Symbol::Struct(def.name.loc, delay.structs.len()),
-                ) {
-                    let s = StructDecl {
+                let pos = ns.structs.len();
+
+                if ns.add_symbol(file_no, None, &def.name, Symbol::Struct(def.name.loc, pos)) {
+                    ns.structs.push(StructDecl {
                         tags: Vec::new(),
                         name: def.name.name.to_owned(),
                         loc: def.name.loc,
                         contract: None,
                         fields: Vec::new(),
                         offsets: Vec::new(),
-                    };
+                    });
 
-                    delay.structs.push((s, def, None));
+                    delay.structs.push((pos, def, None));
                 }
             }
             pt::SourceUnitPart::EventDefinition(def) => {
+                let pos = ns.events.len();
+
                 if let Some(Symbol::Event(events)) =
                     ns.variable_symbols
                         .get_mut(&(file_no, None, def.name.name.to_owned()))
                 {
-                    events.push((def.name.loc, delay.events.len()));
+                    events.push((def.name.loc, pos));
                 } else if !ns.add_symbol(
                     file_no,
                     None,
                     &def.name,
-                    Symbol::Event(vec![(def.name.loc, delay.events.len())]),
+                    Symbol::Event(vec![(def.name.loc, pos)]),
                 ) {
                     continue;
                 }
 
-                let s = EventDecl {
+                ns.events.push(EventDecl {
                     tags: Vec::new(),
                     name: def.name.name.to_owned(),
                     loc: def.name.loc,
@@ -86,9 +85,9 @@ pub fn resolve_typenames<'a>(
                     fields: Vec::new(),
                     anonymous: def.anonymous,
                     signature: String::new(),
-                };
+                });
 
-                delay.events.push((s, def, None));
+                delay.events.push((pos, def, None));
             }
             _ => (),
         }
@@ -99,11 +98,10 @@ pub fn resolve_typenames<'a>(
 
 pub fn resolve_fields(delay: ResolveFields, file_no: usize, ns: &mut Namespace) {
     // now we can resolve the fields for the structs
-    for (mut decl, def, contract) in delay.structs {
+    for (pos, def, contract) in delay.structs {
         if let Some((tags, fields)) = struct_decl(def, file_no, contract, ns) {
-            decl.tags = tags;
-            decl.fields = fields;
-            ns.structs.push(decl);
+            ns.structs[pos].tags = tags;
+            ns.structs[pos].fields = fields;
         }
     }
 
@@ -146,12 +144,11 @@ pub fn resolve_fields(delay: ResolveFields, file_no: usize, ns: &mut Namespace) 
     }
 
     // now we can resolve the fields for the events
-    for (mut decl, def, contract) in delay.events {
+    for (pos, def, contract) in delay.events {
         if let Some((tags, fields)) = event_decl(def, file_no, contract, ns) {
-            decl.signature = ns.signature(&decl.name, &fields);
-            decl.fields = fields;
-            decl.tags = tags;
-            ns.events.push(decl);
+            ns.events[pos].signature = ns.signature(&ns.events[pos].name, &fields);
+            ns.events[pos].fields = fields;
+            ns.events[pos].tags = tags;
         }
     }
 
@@ -172,7 +169,7 @@ pub fn resolve_fields(delay: ResolveFields, file_no: usize, ns: &mut Namespace) 
 
         if global_signatures.get(&event.signature).is_some() {
             // already defined with the same fields
-            // solidiy 0.5 allows events to be redefined with the same fields, later version do not
+            // solidity 0.5 allows events to be redefined with the same fields, later version do not
         } else {
             global_signatures.insert(&event.signature, &event);
         }
@@ -187,7 +184,7 @@ pub fn resolve_fields(delay: ResolveFields, file_no: usize, ns: &mut Namespace) 
         if let Some(contract_name) = &event.contract {
             if global_signatures.get(&event.signature).is_some() {
                 // already defined with the same fields
-                // solidiy 0.5 allows events to be redefined with the same fields, later version do not
+                // solidity 0.5 allows events to be redefined with the same fields, later version do not
                 continue;
             }
 
@@ -233,44 +230,48 @@ fn resolve_contract<'a>(
                 }
             }
             pt::ContractPart::StructDefinition(ref s) => {
+                let pos = ns.structs.len();
+
                 if ns.add_symbol(
                     file_no,
                     Some(contract_no),
                     &s.name,
-                    Symbol::Struct(s.name.loc, delay.structs.len()),
+                    Symbol::Struct(s.name.loc, pos),
                 ) {
-                    let decl = StructDecl {
+                    ns.structs.push(StructDecl {
                         tags: Vec::new(),
                         name: s.name.name.to_owned(),
                         loc: s.name.loc,
                         contract: Some(def.name.name.to_owned()),
                         fields: Vec::new(),
                         offsets: Vec::new(),
-                    };
+                    });
 
-                    delay.structs.push((decl, s, Some(contract_no)));
+                    delay.structs.push((pos, s, Some(contract_no)));
                 } else {
                     broken = true;
                 }
             }
             pt::ContractPart::EventDefinition(ref s) => {
+                let pos = ns.events.len();
+
                 if let Some(Symbol::Event(events)) = ns.variable_symbols.get_mut(&(
                     file_no,
                     Some(contract_no),
                     s.name.name.to_owned(),
                 )) {
-                    events.push((s.name.loc, delay.events.len()));
+                    events.push((s.name.loc, pos));
                 } else if !ns.add_symbol(
                     file_no,
                     Some(contract_no),
                     &s.name,
-                    Symbol::Event(vec![(s.name.loc, delay.events.len())]),
+                    Symbol::Event(vec![(s.name.loc, pos)]),
                 ) {
                     broken = true;
                     continue;
                 }
 
-                let decl = EventDecl {
+                ns.events.push(EventDecl {
                     tags: Vec::new(),
                     name: s.name.name.to_owned(),
                     loc: s.name.loc,
@@ -278,9 +279,9 @@ fn resolve_contract<'a>(
                     fields: Vec::new(),
                     anonymous: s.anonymous,
                     signature: String::new(),
-                };
+                });
 
-                delay.events.push((decl, s, Some(contract_no)));
+                delay.events.push((pos, s, Some(contract_no)));
             }
             _ => (),
         }
@@ -605,10 +606,12 @@ fn struct_offsets(ns: &mut Namespace) {
             }
 
             // add entry for overall size
-            let remainder = offset.clone() % largest_alignment;
+            if largest_alignment > 1 {
+                let remainder = offset.clone() % largest_alignment;
 
-            if remainder > BigInt::zero() {
-                offset += largest_alignment - remainder;
+                if remainder > BigInt::zero() {
+                    offset += largest_alignment - remainder;
+                }
             }
 
             offsets.push(offset.clone());
