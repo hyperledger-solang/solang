@@ -449,10 +449,7 @@ fn signatures() {
         Target::Substrate,
     );
 
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "event ‘foo’ already defined with same fields"
-    );
+    no_errors(ns.diagnostics);
 
     let ns = parse_and_resolve(
         r#"
@@ -469,10 +466,7 @@ fn signatures() {
         Target::Substrate,
     );
 
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "event ‘foo’ already defined with same fields"
-    );
+    no_errors(ns.diagnostics);
 
     let ns = parse_and_resolve(
         r#"
@@ -488,8 +482,5 @@ fn signatures() {
         Target::Substrate,
     );
 
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "event ‘foo’ already defined with same fields"
-    );
+    no_errors(ns.diagnostics);
 }

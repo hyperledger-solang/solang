@@ -310,14 +310,9 @@ impl Symbol {
         }
     }
 
-    /// Is this symbol for an accessor function
-    pub fn is_accessor(&self, ns: &Namespace) -> bool {
-        if let Symbol::Function(func) = self {
-            func.iter()
-                .all(|(_, func_no)| ns.functions[*func_no].is_accessor)
-        } else {
-            false
-        }
+    /// Is this symbol for an event
+    pub fn is_event(&self) -> bool {
+        matches!(self, Symbol::Event(_))
     }
 
     /// Does this symbol have an accessor function

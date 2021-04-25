@@ -329,7 +329,13 @@ fn layout_contract(contract_no: usize, ns: &mut ast::Namespace) {
 
             if !done {
                 if let Some(prev) = variable_syms.get(name).or_else(|| function_syms.get(name)) {
-                    if !(prev.has_accessor(ns) || sym.has_accessor(ns)) {
+                    // events can be redefined, so allow duplicate event symbols
+                    // if a variable has an accessor function (i.e. public) then allow the variable sym,
+                    // check for duplicates will be on accessor function
+                    if !(prev.has_accessor(ns)
+                        || sym.has_accessor(ns)
+                        || prev.is_event() && sym.is_event())
+                    {
                         ns.diagnostics.push(ast::Diagnostic::error_with_note(
                             *sym.loc(),
                             format!("already defined ‘{}’", name),

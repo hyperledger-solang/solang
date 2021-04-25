@@ -170,13 +170,9 @@ pub fn resolve_fields(delay: ResolveFields, file_no: usize, ns: &mut Namespace) 
             continue;
         }
 
-        if let Some(prev) = global_signatures.get(&event.signature) {
-            ns.diagnostics.push(Diagnostic::error_with_note(
-                event.loc,
-                format!("event ‘{}’ already defined with same fields", event.name),
-                prev.loc,
-                format!("location of previous definition of ‘{}’", prev.name),
-            ));
+        if global_signatures.get(&event.signature).is_some() {
+            // already defined with the same fields
+            // solidiy 0.5 allows events to be redefined with the same fields, later version do not
         } else {
             global_signatures.insert(&event.signature, &event);
         }
@@ -189,23 +185,18 @@ pub fn resolve_fields(delay: ResolveFields, file_no: usize, ns: &mut Namespace) 
         let event = &ns.events[event_no];
 
         if let Some(contract_name) = &event.contract {
-            if let Some(prev) = global_signatures.get(&event.signature) {
-                ns.diagnostics.push(Diagnostic::error_with_note(
-                    event.loc,
-                    format!("event ‘{}’ already defined with same fields", event.name),
-                    prev.loc,
-                    format!("location of previous definition of ‘{}’", prev.name),
-                ));
+            if global_signatures.get(&event.signature).is_some() {
+                // already defined with the same fields
+                // solidiy 0.5 allows events to be redefined with the same fields, later version do not
                 continue;
             }
 
-            if let Some(prev) = contract_signatures.get(&(contract_name, &event.signature)) {
-                ns.diagnostics.push(Diagnostic::error_with_note(
-                    event.loc,
-                    format!("event ‘{}’ already defined with same fields", event.name),
-                    prev.loc,
-                    format!("location of previous definition of ‘{}’", prev.name),
-                ));
+            if contract_signatures
+                .get(&(contract_name, &event.signature))
+                .is_some()
+            {
+                // already defined with the same fields
+                // solidiy 0.5 allows events to be redefined with the same fields, later version do not
             } else {
                 contract_signatures.insert((contract_name, &event.signature), &event);
             }
