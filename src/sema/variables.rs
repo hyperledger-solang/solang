@@ -278,12 +278,7 @@ pub fn var_decl(
         if let Some(contract_no) = contract_no {
             // The accessor function returns the value of the storage variable, constant or not.
             let mut expr = if is_constant {
-                Expression::ConstantVariable(
-                    pt::Loc(0, 0, 0),
-                    Type::StorageRef(Box::new(ty.clone())),
-                    Some(contract_no),
-                    pos,
-                )
+                Expression::ConstantVariable(pt::Loc(0, 0, 0), ty.clone(), Some(contract_no), pos)
             } else {
                 Expression::StorageVariable(
                     pt::Loc(0, 0, 0),
@@ -322,11 +317,11 @@ pub fn var_decl(
             // Create the implicit body - just return the value
             func.body = vec![Statement::Return(
                 pt::Loc(0, 0, 0),
-                vec![Expression::StorageLoad(
-                    pt::Loc(0, 0, 0),
-                    ty.clone(),
-                    Box::new(expr),
-                )],
+                vec![if is_constant {
+                    expr
+                } else {
+                    Expression::StorageLoad(pt::Loc(0, 0, 0), ty.clone(), Box::new(expr))
+                }],
             )];
             func.is_accessor = true;
             func.has_body = true;

@@ -1187,6 +1187,7 @@ fn destructure(
             contract_no,
             ns,
             symtable,
+            false,
             diagnostics,
         )?,
         pt::Expression::NamedFunctionCall(loc, ty, args) => named_function_call_expr(
@@ -1497,6 +1498,7 @@ fn try_catch(
             contract_no,
             ns,
             symtable,
+            false,
             diagnostics,
         )?,
         pt::Expression::NamedFunctionCall(loc, ty, args) => named_function_call_expr(
