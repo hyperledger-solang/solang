@@ -1,4 +1,4 @@
-use crate::{build_solidity, first_error, parse_and_resolve};
+use crate::{build_solidity, first_error, no_errors, parse_and_resolve};
 use parity_scale_codec::Encode;
 use parity_scale_codec_derive::{Decode, Encode};
 use solang::Target;
@@ -602,4 +602,31 @@ fn ext() {
 
     runtime.function("test1", Vec::new());
     runtime.function("test2", Vec::new());
+}
+
+// Depending on context, you may want to resolve a public variable as a variable or function.
+#[test]
+fn variable_or_func_type() {
+    let ns = parse_and_resolve(
+        "contract bar {
+            int public total;
+        }
+
+        interface I {
+            function total() external returns (int);
+        }
+
+        contract foo is I, bar {
+            function f1() public {
+                // now we want the variable
+                int variable = total;
+                // now we want the function type
+                function() internal returns (int) func_type = total;
+            }
+        }
+        ",
+        Target::Substrate,
+    );
+
+    no_errors(ns.diagnostics);
 }

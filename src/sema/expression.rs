@@ -1561,7 +1561,17 @@ pub fn expression(
                 return Ok(Expression::Builtin(id.loc, vec![ty], builtin, vec![]));
             }
 
-            match ns.resolve_var(file_no, contract_no, id) {
+            // are we trying to resolve a function type?
+            let function_first = if let Some(resolve_to) = resolve_to {
+                matches!(
+                    resolve_to,
+                    Type::InternalFunction { .. } | Type::ExternalFunction { .. }
+                )
+            } else {
+                false
+            };
+
+            match ns.resolve_var(file_no, contract_no, id, function_first) {
                 Some(Symbol::Variable(_, Some(var_contract_no), var_no)) => {
                     let var_contract_no = *var_contract_no;
                     let var_no = *var_no;
@@ -6829,7 +6839,7 @@ pub fn function_call_expr(
             // is there a local variable or contract variable with this name
             if symtable.find(&id.name).is_some()
                 || matches!(
-                    ns.resolve_var(file_no, contract_no, id),
+                    ns.resolve_var(file_no, contract_no, id, true),
                     Some(Symbol::Variable(_, _, _))
                 )
             {

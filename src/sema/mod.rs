@@ -534,7 +534,7 @@ impl ast::Namespace {
         }
 
         if let Some(contract_no) = contract_no {
-            if let Some(ast::Symbol::Enum(_, n)) = self.resolve_base_contract(contract_no, id) {
+            if let Some(ast::Symbol::Enum(_, n)) = self.resolve_var_base_contract(contract_no, id) {
                 return Some(*n);
             }
 
@@ -711,8 +711,8 @@ impl ast::Namespace {
         }
     }
 
-    /// Does a parent contract have a variable defined with this name (recursive)
-    fn resolve_base_contract(
+    /// Does a parent contract have a function symbol defined with this name (recursive)
+    fn resolve_func_base_contract(
         &self,
         contract_no: usize,
         id: &pt::Identifier,
@@ -721,16 +721,32 @@ impl ast::Namespace {
             // find file this contract was defined in
             let file_no = self.contracts[base.contract_no].loc.0;
 
-            if let Some(sym) = self
-                .variable_symbols
+            let res = self
+                .function_symbols
                 .get(&(file_no, Some(base.contract_no), id.name.to_owned()))
-                .or_else(|| {
-                    self.function_symbols.get(&(
-                        file_no,
-                        Some(base.contract_no),
-                        id.name.to_owned(),
-                    ))
-                })
+                .or_else(|| self.resolve_func_base_contract(base.contract_no, id));
+
+            if res.is_some() {
+                return res;
+            }
+        }
+
+        None
+    }
+
+    /// Does a parent contract have a non-func symbol defined with this name (recursive)
+    fn resolve_var_base_contract(
+        &self,
+        contract_no: usize,
+        id: &pt::Identifier,
+    ) -> Option<&ast::Symbol> {
+        for base in self.contracts[contract_no].bases.iter() {
+            // find file this contract was defined in
+            let file_no = self.contracts[base.contract_no].loc.0;
+
+            if let Some(sym) =
+                self.variable_symbols
+                    .get(&(file_no, Some(base.contract_no), id.name.to_owned()))
             {
                 if let ast::Symbol::Variable(_, var_contract_no, var_no) = sym {
                     if *var_contract_no != Some(base.contract_no) {
@@ -746,7 +762,7 @@ impl ast::Namespace {
 
                 return Some(sym);
             } else {
-                let res = self.resolve_base_contract(base.contract_no, id);
+                let res = self.resolve_var_base_contract(base.contract_no, id);
 
                 if res.is_some() {
                     return res;
@@ -757,37 +773,56 @@ impl ast::Namespace {
         None
     }
 
-    /// Resolve contract variable
+    /// Resolve contract variable or function. Specify whether you wish to resolve
+    /// a function or a variable; this will change the lookup order. A public contract
+    /// will have both a accesssor function and variable, and the accessor function
+    /// may show else where in the base contracts a function without body.
     pub fn resolve_var(
         &self,
         file_no: usize,
         contract_no: Option<usize>,
         id: &pt::Identifier,
+        function_first: bool,
     ) -> Option<&ast::Symbol> {
-        let mut s = self
-            .variable_symbols
-            .get(&(file_no, contract_no, id.name.to_owned()))
-            .or_else(|| {
-                self.function_symbols
-                    .get(&(file_no, contract_no, id.name.to_owned()))
-            });
+        let func = || {
+            let mut s = self
+                .function_symbols
+                .get(&(file_no, contract_no, id.name.to_owned()));
 
-        if let Some(contract_no) = contract_no {
             if s.is_none() {
-                if let Some(sym) = self.resolve_base_contract(contract_no, id) {
-                    s = Some(sym);
+                if let Some(contract_no) = contract_no {
+                    s = self.resolve_func_base_contract(contract_no, id);
                 }
             }
-        }
 
-        s.or_else(|| {
-            self.variable_symbols
-                .get(&(file_no, None, id.name.to_owned()))
-                .or_else(|| {
-                    self.function_symbols
-                        .get(&(file_no, None, id.name.to_owned()))
-                })
-        })
+            s.or_else(|| {
+                self.function_symbols
+                    .get(&(file_no, None, id.name.to_owned()))
+            })
+        };
+
+        let var = || {
+            let mut s = self
+                .variable_symbols
+                .get(&(file_no, contract_no, id.name.to_owned()));
+
+            if s.is_none() {
+                if let Some(contract_no) = contract_no {
+                    s = self.resolve_var_base_contract(contract_no, id);
+                }
+            }
+
+            s.or_else(|| {
+                self.variable_symbols
+                    .get(&(file_no, None, id.name.to_owned()))
+            })
+        };
+
+        if function_first {
+            func().or_else(var)
+        } else {
+            var().or_else(func)
+        }
     }
 
     /// Check if an name would shadow an existing symbol
@@ -1336,7 +1371,7 @@ impl ast::Namespace {
         if let Some(contract_no) = contract_no {
             // check bases contracts
             if s.is_none() {
-                if let Some(sym) = self.resolve_base_contract(contract_no, &id) {
+                if let Some(sym) = self.resolve_var_base_contract(contract_no, &id) {
                     s = Some(sym);
                 }
             }
