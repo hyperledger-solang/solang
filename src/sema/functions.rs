@@ -729,7 +729,7 @@ pub fn function(
         ns,
     );
 
-    let fdecl = Function::new(
+    let mut fdecl = Function::new(
         func.loc,
         name,
         None,
@@ -741,6 +741,8 @@ pub fn function(
         returns,
         ns,
     );
+
+    fdecl.has_body = true;
 
     let id = func.name.as_ref().unwrap();
 

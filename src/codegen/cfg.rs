@@ -1012,7 +1012,7 @@ pub fn generate_cfg(
         }
     }
 
-    if func.ty == pt::FunctionTy::Modifier {
+    if func.ty == pt::FunctionTy::Modifier || !func.has_body {
         return;
     }
 
