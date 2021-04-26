@@ -303,6 +303,32 @@ fn test_interface() {
         first_error(ns.diagnostics),
         "interface ‘bar’ is not allowed to have contract variable ‘x’"
     );
+
+    // 1. implementing an interface does not require an override
+
+    // 2. interface is function implemented by base
+    let ns = parse_and_resolve(
+        r#"
+        interface bar {
+            function f1(address a) external;
+        }
+
+        interface bar2 {
+            function f1(address a) external;
+        }
+
+        contract x is bar {
+            function f1(address a) public {}
+        }
+
+        contract y is bar2, x {
+            function f2(address a) public {}
+        }
+        "#,
+        Target::Substrate,
+    );
+
+    no_errors(ns.diagnostics);
 }
 
 #[test]
