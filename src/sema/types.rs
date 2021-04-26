@@ -934,13 +934,13 @@ impl Type {
         }
     }
 
-    pub fn ordered(&self) -> bool {
+    pub fn is_integer(&self) -> bool {
         match self {
             Type::Int(_) => true,
             Type::Uint(_) => true,
             Type::Value => true,
-            Type::Ref(r) => r.ordered(),
-            Type::StorageRef(r) => r.ordered(),
+            Type::Ref(r) => r.is_integer(),
+            Type::StorageRef(r) => r.is_integer(),
             _ => false,
         }
     }

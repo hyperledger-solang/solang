@@ -387,10 +387,7 @@ fn address() {
         Target::Substrate,
     );
 
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "expression of type address not allowed"
-    );
+    no_errors(ns.diagnostics);
 
     let ns = parse_and_resolve(
         "contract test {
