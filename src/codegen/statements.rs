@@ -430,69 +430,7 @@ pub fn statement(
             cfg.set_phis(cond_block, set);
         }
         Statement::Destructure(_, fields, expr) => {
-            let mut values = match expr {
-                Expression::List(_, exprs) => {
-                    let mut values = Vec::new();
-
-                    for expr in exprs {
-                        let loc = expr.loc();
-                        let expr = expression(expr, cfg, contract_no, ns, vartab);
-                        let ty = expr.ty();
-
-                        let res = vartab.temp_anonymous(&ty);
-
-                        cfg.add(vartab, Instr::Set { loc, res, expr });
-
-                        values.push(Expression::Variable(loc, ty, res));
-                    }
-
-                    values
-                }
-                _ => {
-                    // must be function call, either internal or external
-                    emit_function_call(expr, contract_no, cfg, ns, vartab)
-                }
-            };
-
-            for field in fields.iter() {
-                let right = values.remove(0);
-
-                match field {
-                    DestructureField::None => {
-                        // nothing to do
-                    }
-                    DestructureField::VariableDecl(res, param) => {
-                        // the resolver did not cast the expression
-                        let expr = cast(&param.loc, right, &param.ty, true, ns, &mut Vec::new())
-                            .expect("sema should have checked cast");
-
-                        cfg.add(
-                            vartab,
-                            Instr::Set {
-                                loc: param.name_loc.unwrap_or(pt::Loc(0, 0, 0)),
-                                res: *res,
-                                expr,
-                            },
-                        );
-                    }
-                    DestructureField::Expression(left) => {
-                        // the resolver did not cast the expression
-                        let loc = left.loc();
-
-                        let expr = cast(
-                            &loc,
-                            right,
-                            left.ty().deref_any(),
-                            true,
-                            ns,
-                            &mut Vec::new(),
-                        )
-                        .expect("sema should have checked cast");
-
-                        assign_single(left, &expr, cfg, contract_no, ns, vartab);
-                    }
-                }
-            }
+            destructure(fields, expr, cfg, contract_no, ns, vartab, loops)
         }
         Statement::TryCatch {
             expr,
@@ -712,6 +650,116 @@ fn if_then_else(
     cfg.set_basic_block(endif);
 }
 
+fn destructure(
+    fields: &[DestructureField],
+    expr: &Expression,
+    cfg: &mut ControlFlowGraph,
+    contract_no: usize,
+    ns: &Namespace,
+    vartab: &mut Vartable,
+    loops: &mut LoopScopes,
+) {
+    if let Expression::Ternary(_, _, cond, left, right) = expr {
+        let cond = expression(cond, cfg, contract_no, ns, vartab);
+
+        let left_block = cfg.new_basic_block("left".to_string());
+        let right_block = cfg.new_basic_block("right".to_string());
+        let done_block = cfg.new_basic_block("done".to_string());
+
+        cfg.add(
+            vartab,
+            Instr::BranchCond {
+                cond,
+                true_block: left_block,
+                false_block: right_block,
+            },
+        );
+
+        vartab.new_dirty_tracker(ns.next_id);
+
+        cfg.set_basic_block(left_block);
+
+        destructure(fields, left, cfg, contract_no, ns, vartab, loops);
+
+        cfg.add(vartab, Instr::Branch { block: done_block });
+
+        cfg.set_basic_block(right_block);
+
+        destructure(fields, right, cfg, contract_no, ns, vartab, loops);
+
+        cfg.add(vartab, Instr::Branch { block: done_block });
+
+        cfg.set_phis(done_block, vartab.pop_dirty_tracker());
+
+        cfg.set_basic_block(done_block);
+
+        return;
+    }
+
+    let mut values = match expr {
+        Expression::List(_, exprs) => {
+            let mut values = Vec::new();
+
+            for expr in exprs {
+                let loc = expr.loc();
+                let expr = expression(expr, cfg, contract_no, ns, vartab);
+                let ty = expr.ty();
+
+                let res = vartab.temp_anonymous(&ty);
+
+                cfg.add(vartab, Instr::Set { loc, res, expr });
+
+                values.push(Expression::Variable(loc, ty, res));
+            }
+
+            values
+        }
+        _ => {
+            // must be function call, either internal or external
+            emit_function_call(expr, contract_no, cfg, ns, vartab)
+        }
+    };
+
+    for field in fields.iter() {
+        let right = values.remove(0);
+
+        match field {
+            DestructureField::None => {
+                // nothing to do
+            }
+            DestructureField::VariableDecl(res, param) => {
+                // the resolver did not cast the expression
+                let expr = cast(&param.loc, right, &param.ty, true, ns, &mut Vec::new())
+                    .expect("sema should have checked cast");
+
+                cfg.add(
+                    vartab,
+                    Instr::Set {
+                        loc: param.name_loc.unwrap_or(pt::Loc(0, 0, 0)),
+                        res: *res,
+                        expr,
+                    },
+                );
+            }
+            DestructureField::Expression(left) => {
+                // the resolver did not cast the expression
+                let loc = left.loc();
+
+                let expr = cast(
+                    &loc,
+                    right,
+                    left.ty().deref_any(),
+                    true,
+                    ns,
+                    &mut Vec::new(),
+                )
+                .expect("sema should have checked cast");
+
+                assign_single(left, &expr, cfg, contract_no, ns, vartab);
+            }
+        }
+    }
+}
 /// Resolve try catch statement
 #[allow(clippy::too_many_arguments)]
 fn try_catch(

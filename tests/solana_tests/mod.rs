@@ -2,6 +2,7 @@ mod abi;
 mod accessor;
 mod arrays;
 mod call;
+mod destructure;
 mod mappings;
 mod primitives;
 mod simple;
