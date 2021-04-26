@@ -367,7 +367,7 @@ fn coerce(
         return Ok(Type::Address(false));
     }
 
-    coerce_int(l, l_loc, r, r_loc, true, ns, diagnostics)
+    coerce_int(l, l_loc, r, r_loc, true, false, ns, diagnostics)
 }
 
 fn get_int_length(
@@ -421,6 +421,7 @@ fn coerce_int(
     r: &Type,
     r_loc: &pt::Loc,
     allow_bytes: bool,
+    for_compare: bool,
     ns: &Namespace,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Result<Type, ()> {
@@ -436,6 +437,12 @@ fn coerce_int(
     };
 
     match (l, r) {
+        (Type::Address(false), Type::Address(false)) if for_compare => {
+            return Ok(Type::Address(false));
+        }
+        (Type::Address(true), Type::Address(true)) if for_compare => {
+            return Ok(Type::Address(true));
+        }
         (Type::Bytes(left_length), Type::Bytes(right_length)) if allow_bytes => {
             return Ok(Type::Bytes(std::cmp::max(*left_length, *right_length)));
         }
@@ -466,7 +473,7 @@ pub fn bigint_to_expression(
     let bits = n.bits();
 
     if let Some(resolve_to) = resolve_to {
-        if !resolve_to.ordered() {
+        if !resolve_to.is_integer() {
             diagnostics.push(Diagnostic::error(
                 *loc,
                 format!("expected ‘{}’, found integer", resolve_to.to_string(ns)),
@@ -1703,6 +1710,7 @@ pub fn expression(
                 &right.ty(),
                 &r.loc(),
                 false,
+                false,
                 ns,
                 diagnostics,
             )?;
@@ -1742,6 +1750,7 @@ pub fn expression(
                 &right.ty(),
                 &r.loc(),
                 true,
+                false,
                 ns,
                 diagnostics,
             )?;
@@ -1781,6 +1790,7 @@ pub fn expression(
                 &right.ty(),
                 &r.loc(),
                 true,
+                false,
                 ns,
                 diagnostics,
             )?;
@@ -1820,6 +1830,7 @@ pub fn expression(
                 &right.ty(),
                 &r.loc(),
                 true,
+                false,
                 ns,
                 diagnostics,
             )?;
@@ -1931,6 +1942,7 @@ pub fn expression(
                 &right.ty(),
                 &r.loc(),
                 false,
+                false,
                 ns,
                 diagnostics,
             )?;
@@ -1970,6 +1982,7 @@ pub fn expression(
                 &right.ty(),
                 &r.loc(),
                 false,
+                false,
                 ns,
                 diagnostics,
             )?;
@@ -2008,6 +2021,7 @@ pub fn expression(
                 &l.loc(),
                 &right.ty(),
                 &r.loc(),
+                false,
                 false,
                 ns,
                 diagnostics,
@@ -2060,6 +2074,7 @@ pub fn expression(
                 &exp_type,
                 &e.loc(),
                 false,
+                false,
                 ns,
                 diagnostics,
             )?;
@@ -2101,6 +2116,7 @@ pub fn expression(
                 &right.ty(),
                 &r.loc(),
                 true,
+                true,
                 ns,
                 diagnostics,
             )?;
@@ -2138,6 +2154,7 @@ pub fn expression(
                 &l.loc(),
                 &right.ty(),
                 &r.loc(),
+                true,
                 true,
                 ns,
                 diagnostics,
@@ -2177,6 +2194,7 @@ pub fn expression(
                 &right.ty(),
                 &r.loc(),
                 true,
+                true,
                 ns,
                 diagnostics,
             )?;
@@ -2214,6 +2232,7 @@ pub fn expression(
                 &l.loc(),
                 &right.ty(),
                 &r.loc(),
+                true,
                 true,
                 ns,
                 diagnostics,
@@ -3665,6 +3684,7 @@ fn addition(
         &l.loc(),
         &right_type,
         &r.loc(),
+        false,
         false,
         ns,
         diagnostics,
