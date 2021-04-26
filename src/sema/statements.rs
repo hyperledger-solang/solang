@@ -1178,6 +1178,32 @@ fn destructure(
         }
     }
 
+    let expr = destructure_values(
+        loc,
+        expr,
+        &left_tys,
+        &fields,
+        file_no,
+        contract_no,
+        symtable,
+        ns,
+        diagnostics,
+    )?;
+
+    Ok(Statement::Destructure(*loc, fields, expr))
+}
+
+fn destructure_values(
+    loc: &pt::Loc,
+    expr: &pt::Expression,
+    left_tys: &[Option<Type>],
+    fields: &[DestructureField],
+    file_no: usize,
+    contract_no: Option<usize>,
+    symtable: &mut Symtable,
+    ns: &mut Namespace,
+    diagnostics: &mut Vec<Diagnostic>,
+) -> Result<Expression, ()> {
     let expr = match expr {
         pt::Expression::FunctionCall(loc, ty, args) => function_call_expr(
             loc,
@@ -1200,17 +1226,61 @@ fn destructure(
             symtable,
             diagnostics,
         )?,
+        pt::Expression::Ternary(loc, cond, left, right) => {
+            let cond = expression(
+                cond,
+                file_no,
+                contract_no,
+                ns,
+                symtable,
+                false,
+                diagnostics,
+                Some(&Type::Bool),
+            )?;
+
+            let left = destructure_values(
+                &left.loc(),
+                left,
+                left_tys,
+                fields,
+                file_no,
+                contract_no,
+                symtable,
+                ns,
+                diagnostics,
+            )?;
+
+            let right = destructure_values(
+                &right.loc(),
+                right,
+                left_tys,
+                fields,
+                file_no,
+                contract_no,
+                symtable,
+                ns,
+                diagnostics,
+            )?;
+
+            return Ok(Expression::Ternary(
+                *loc,
+                Type::Unreachable,
+                Box::new(cond),
+                Box::new(left),
+                Box::new(right),
+            ));
+        }
         _ => {
             let mut list = Vec::new();
 
             let exprs = parameter_list_to_expr_list(expr, diagnostics)?;
 
-            if exprs.len() != vars.len() {
+            if exprs.len() != left_tys.len() {
                 diagnostics.push(Diagnostic::error(
                     *loc,
                     format!(
                         "destructuring assignment has {} elements on the left and {} on the right",
-                        vars.len(),
+                        left_tys.len(),
                         exprs.len(),
                     ),
                 ));
@@ -1254,12 +1324,12 @@ fn destructure(
         right_tys.truncate(0);
     }
 
-    if vars.len() != right_tys.len() {
+    if left_tys.len() != right_tys.len() {
         diagnostics.push(Diagnostic::error(
             *loc,
             format!(
                 "destructuring assignment has {} elements on the left and {} on the right",
-                vars.len(),
+                left_tys.len(),
                 right_tys.len()
             ),
         ));
@@ -1281,7 +1351,7 @@ fn destructure(
         }
     }
 
-    Ok(Statement::Destructure(*loc, fields, expr))
+    Ok(expr)
 }
 
 /// Resolve the type of a variable declaration
