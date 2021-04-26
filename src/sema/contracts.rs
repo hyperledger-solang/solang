@@ -629,7 +629,7 @@ fn layout_contract(contract_no: usize, ns: &mut ast::Namespace) {
                             ));
                             continue;
                         }
-                    } else {
+                    } else if cur.has_body {
                         if let Some(entry) = override_needed.get_mut(&signature) {
                             entry.push((base_contract_no, function_no));
                         } else {
