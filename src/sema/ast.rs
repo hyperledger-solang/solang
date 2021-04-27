@@ -442,11 +442,14 @@ impl Contract {
 
     /// Return the constructor with no arguments
     pub fn no_args_constructor(&self, ns: &Namespace) -> Option<usize> {
-        self.functions.iter().position(|func_no| {
-            let func = &ns.functions[*func_no];
+        self.functions
+            .iter()
+            .find(|func_no| {
+                let func = &ns.functions[**func_no];
 
-            func.is_constructor() && func.params.is_empty()
-        })
+                func.is_constructor() && func.params.is_empty()
+            })
+            .cloned()
     }
 }
 
