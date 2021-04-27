@@ -1947,12 +1947,41 @@ pub fn expression(
                 diagnostics,
             )?;
 
-            Ok(Expression::Multiply(
-                *loc,
-                ty.clone(),
-                Box::new(cast(&l.loc(), left, &ty, true, ns, diagnostics)?),
-                Box::new(cast(&r.loc(), right, &ty, true, ns, diagnostics)?),
-            ))
+            // If we don't know what type the result is going to be, make any possible result fit.
+            if resolve_to.is_none() {
+                let bits = std::cmp::min(256, ty.bits(ns) * 2);
+
+                if ty.is_signed_int() {
+                    expression(
+                        expr,
+                        file_no,
+                        contract_no,
+                        ns,
+                        symtable,
+                        is_constant,
+                        diagnostics,
+                        Some(&Type::Int(bits)),
+                    )
+                } else {
+                    expression(
+                        expr,
+                        file_no,
+                        contract_no,
+                        ns,
+                        symtable,
+                        is_constant,
+                        diagnostics,
+                        Some(&Type::Uint(bits)),
+                    )
+                }
+            } else {
+                Ok(Expression::Multiply(
+                    *loc,
+                    ty.clone(),
+                    Box::new(cast(&l.loc(), left, &ty, true, ns, diagnostics)?),
+                    Box::new(cast(&r.loc(), right, &ty, true, ns, diagnostics)?),
+                ))
+            }
         }
         pt::Expression::Divide(loc, l, r) => {
             let left = expression(
@@ -2035,7 +2064,7 @@ pub fn expression(
             ))
         }
         pt::Expression::Power(loc, b, e) => {
-            let base = expression(
+            let mut base = expression(
                 b,
                 file_no,
                 contract_no,
@@ -2045,6 +2074,35 @@ pub fn expression(
                 diagnostics,
                 resolve_to,
             )?;
+
+            // If we don't know what type the result is going to be, assume
+            // the result is 256 bits
+            if resolve_to.is_none() {
+                if base.ty().is_signed_int() {
+                    base = expression(
+                        b,
+                        file_no,
+                        contract_no,
+                        ns,
+                        symtable,
+                        is_constant,
+                        diagnostics,
+                        Some(&Type::Int(256)),
+                    )?;
+                } else {
+                    base = expression(
+                        b,
+                        file_no,
+                        contract_no,
+                        ns,
+                        symtable,
+                        is_constant,
+                        diagnostics,
+                        Some(&Type::Uint(256)),
+                    )?;
+                };
+            }
+
             let exp = expression(
                 e,
                 file_no,
@@ -3605,7 +3663,7 @@ fn addition(
     diagnostics: &mut Vec<Diagnostic>,
     resolve_to: Option<&Type>,
 ) -> Result<Expression, ()> {
-    let left = expression(
+    let mut left = expression(
         l,
         file_no,
         contract_no,
@@ -3615,7 +3673,7 @@ fn addition(
         diagnostics,
         resolve_to,
     )?;
-    let right = expression(
+    let mut right = expression(
         r,
         file_no,
         contract_no,
@@ -3689,6 +3747,37 @@ fn addition(
         ns,
         diagnostics,
     )?;
+
+    // If we don't know what type the result is going to be
+    if resolve_to.is_none() {
+        let bits = std::cmp::min(256, ty.bits(ns) * 2);
+        let resolve_to = if ty.is_signed_int() {
+            Type::Int(bits)
+        } else {
+            Type::Uint(bits)
+        };
+
+        left = expression(
+            l,
+            file_no,
+            contract_no,
+            ns,
+            symtable,
+            is_constant,
+            diagnostics,
+            Some(&resolve_to),
+        )?;
+        right = expression(
+            r,
+            file_no,
+            contract_no,
+            ns,
+            symtable,
+            is_constant,
+            diagnostics,
+            Some(&resolve_to),
+        )?;
+    }
 
     Ok(Expression::Add(
         *loc,

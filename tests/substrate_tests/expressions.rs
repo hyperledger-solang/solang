@@ -907,6 +907,10 @@ fn power() {
             function power(uint64 base, uint64 exp) public returns (uint64) {
                 return base ** exp;
             }
+
+            function power_with_cast() public returns (uint64) {
+                return uint64(2 ** 32);
+            }
         }",
     );
 
@@ -953,6 +957,10 @@ fn power() {
     runtime.function("power", args);
 
     assert_eq!(runtime.vm.output, Val(0).encode());
+
+    runtime.function("power_with_cast", Vec::new());
+
+    assert_eq!(runtime.vm.output, Val(0x1_0000_0000).encode());
 
     let ns = parse_and_resolve(
         "contract test {
@@ -1082,8 +1090,16 @@ fn multiply() {
             function multiply(uint a, uint b) public returns (uint) {
                 return a * b;
             }
+
+            function multiply_with_cast() public returns (uint64) {
+                return uint64(255 * 255);
+            }
         }",
     );
+
+    runtime.function("multiply_with_cast", Vec::new());
+
+    assert_eq!(runtime.vm.output, 65025u64.encode());
 
     let mut rand = || -> (BigInt, Vec<u8>) {
         let length = rng.gen::<usize>() % size;
