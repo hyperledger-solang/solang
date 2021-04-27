@@ -1454,6 +1454,16 @@ values, for example.
         (b, , a) = (a, 5, b);
     }
 
+The right hand side of an destructure may contain the ternary conditional operator. The number
+of elements in both sides of the conditional must match the left hand side of the destructure statement.
+
+.. code-block:: javascript
+
+    function test(bool cond) public {
+        (int32 a, int32 b, int32 c) = cond ? (1, 2, 3) : (4, 5, 6)
+    }
+
+
 .. _try-catch:
 
 Try Catch Statement
@@ -1990,20 +2000,40 @@ retain their values between calls. These are declared so:
 .. code-block:: javascript
 
   contract hitcount {
-      uint counter = 1;
+      uint public counter = 1;
 
       function hit() public {
           counters++;
-      }
-
-      function count() public view returns (uint) {
-          return counter;
       }
   }
 
 The ``counter`` is maintained for each deployed ``hitcount`` contract. When the contract is deployed,
 the contract storage is set to 1. Contract storage variable do not need an initializer; when
 it is not present, it is initialized to 0, or ``false`` if it is a ``bool``.
+
+Accessor Functions
+__________________
+
+Any contract storage variable which is declared public, automatically gets an accessor function. This
+function has the same name as the variable name. So, in the example above, the value of counter can
+retrieved by calling a function called ``counter``, which returns ``uint``.
+
+If the type is either an array or a mapping, the key or array indices become arguments to the accessor
+function.
+
+.. code-block:: javascript
+
+    contract ethereum {
+        // As a public mapping,this creates accessor function called balance, which takes
+        // an address as an argument, and returns an uint
+        mapping(address => uint) public balances;
+
+        // A public array takes the index as an uint argument and returns the element,
+        // in this case string.
+        string[] users;
+    }
+
+
 
 How to clear Contract Storage
 _____________________________
