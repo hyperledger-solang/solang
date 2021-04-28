@@ -321,8 +321,7 @@ fn bytes() {
 fn uint() {
     let mut rng = rand::thread_rng();
 
-    for width in &[8, 16, 32, 64, 128, 256] {
-        let width: usize = *width;
+    for width in (8..=256).step_by(8) {
         let src = r#"
         contract test {
             function add(uintN a, uintN b) public returns (uintN) {
@@ -435,13 +434,14 @@ fn uint() {
 
                 assert_eq!(div, vec![ethabi::Token::Uint(res)]);
 
-                let add = vm.function("mod", &[ethabi::Token::Uint(a), ethabi::Token::Uint(b)]);
+                let remainder =
+                    vm.function("mod", &[ethabi::Token::Uint(a), ethabi::Token::Uint(b)]);
 
                 let mut res = a.rem(b);
 
                 truncate_uint(&mut res, width);
 
-                assert_eq!(add, vec![ethabi::Token::Uint(res)]);
+                assert_eq!(remainder, vec![ethabi::Token::Uint(res)]);
             }
 
             let or = vm.function("or", &[ethabi::Token::Uint(a), ethabi::Token::Uint(b)]);
@@ -537,8 +537,7 @@ fn truncate_uint(n: &mut ethereum_types::U256, width: usize) {
 fn int() {
     let mut rng = rand::thread_rng();
 
-    for width in &[8, 16, 32, 64, 128, 256] {
-        let width: usize = *width;
+    for width in (8..=256).step_by(8) {
         let src = r#"
         contract test {
             function add(intN a, intN b) public returns (intN) {
@@ -633,13 +632,13 @@ fn int() {
 
                 assert_eq!(div, vec![ethabi::Token::Int(res)]);
 
-                let add = vm.function("mod", &[ethabi::Token::Int(a), ethabi::Token::Int(b)]);
+                let remainder = vm.function("mod", &[ethabi::Token::Int(a), ethabi::Token::Int(b)]);
 
                 let res = big_a.clone().rem(&big_b);
 
                 let res = bigint_to_eth(&res, width);
 
-                assert_eq!(add, vec![ethabi::Token::Int(res)]);
+                assert_eq!(remainder, vec![ethabi::Token::Int(res)]);
             }
 
             let or = vm.function("or", &[ethabi::Token::Int(a), ethabi::Token::Int(b)]);

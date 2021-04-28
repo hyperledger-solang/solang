@@ -1224,6 +1224,7 @@ pub trait TargetRuntime<'a> {
                         BinaryOp::Add,
                         signed,
                     )
+                    .into()
                 } else {
                     contract.builder.build_int_add(left, right, "").into()
                 }
@@ -1246,11 +1247,23 @@ pub trait TargetRuntime<'a> {
                         BinaryOp::Subtract,
                         signed,
                     )
+                    .into()
                 } else {
                     contract.builder.build_int_sub(left, right, "").into()
                 }
             }
-            Expression::Multiply(_, _, l, r) => {
+            Expression::Multiply(_, res_ty, l, r) => {
+                let left = self
+                    .expression(contract, l, vartab, function)
+                    .into_int_value();
+                let right = self
+                    .expression(contract, r, vartab, function)
+                    .into_int_value();
+
+                self.mul(contract, function, left, right, res_ty.is_signed_int())
+                    .into()
+            }
+            Expression::Divide(_, _, l, r) if !l.ty().is_signed_int() => {
                 let left = self
                     .expression(contract, l, vartab, function)
                     .into_int_value();
@@ -1261,91 +1274,39 @@ pub trait TargetRuntime<'a> {
                 let bits = left.get_type().get_bit_width();
 
                 if bits > 64 {
-                    let l = contract.build_alloca(function, left.get_type(), "");
-                    let r = contract.build_alloca(function, left.get_type(), "");
-                    let o = contract.build_alloca(function, left.get_type(), "");
+                    let div_bits = if bits <= 128 { 128 } else { 256 };
 
-                    contract.builder.build_store(l, left);
-                    contract.builder.build_store(r, right);
-
-                    contract.builder.build_call(
-                        contract.module.get_function("__mul32").unwrap(),
-                        &[
-                            contract
-                                .builder
-                                .build_pointer_cast(
-                                    l,
-                                    contract.context.i32_type().ptr_type(AddressSpace::Generic),
-                                    "left",
-                                )
-                                .into(),
-                            contract
-                                .builder
-                                .build_pointer_cast(
-                                    r,
-                                    contract.context.i32_type().ptr_type(AddressSpace::Generic),
-                                    "right",
-                                )
-                                .into(),
-                            contract
-                                .builder
-                                .build_pointer_cast(
-                                    o,
-                                    contract.context.i32_type().ptr_type(AddressSpace::Generic),
-                                    "output",
-                                )
-                                .into(),
-                            contract
-                                .context
-                                .i32_type()
-                                .const_int(bits as u64 / 32, false)
-                                .into(),
-                        ],
-                        "",
-                    );
-
-                    contract.builder.build_load(o, "mul")
-                } else if contract.math_overflow_check {
-                    let signed = l.ty().is_signed_int();
-                    self.build_binary_op_with_overflow_check(
-                        contract,
-                        function,
-                        left,
-                        right,
-                        BinaryOp::Multiply,
-                        signed,
-                    )
-                } else {
-                    contract.builder.build_int_mul(left, right, "").into()
-                }
-            }
-            Expression::Divide(_, _, l, r) if !l.ty().is_signed_int() => {
-                let left = self.expression(contract, l, vartab, function);
-                let right = self.expression(contract, r, vartab, function);
-
-                let mut bits = left.into_int_value().get_type().get_bit_width();
-
-                if bits > 64 {
-                    if bits <= 128 {
-                        bits = 128;
-                    } else {
-                        bits = 256;
-                    };
-
-                    let name = format!("udivmod{}", bits);
+                    let name = format!("udivmod{}", div_bits);
 
                     let f = contract
                         .module
                         .get_function(&name)
                         .expect("div function missing");
 
-                    let dividend = contract.build_alloca(function, left.get_type(), "dividend");
-                    let divisor = contract.build_alloca(function, left.get_type(), "divisor");
-                    let rem = contract.build_alloca(function, left.get_type(), "remainder");
-                    let quotient = contract.build_alloca(function, left.get_type(), "quotient");
+                    let ty = contract.context.custom_width_int_type(div_bits);
 
-                    contract.builder.build_store(dividend, left);
-                    contract.builder.build_store(divisor, right);
+                    let dividend = contract.build_alloca(function, ty, "dividend");
+                    let divisor = contract.build_alloca(function, ty, "divisor");
+                    let rem = contract.build_alloca(function, ty, "remainder");
+                    let quotient = contract.build_alloca(function, ty, "quotient");
+
+                    contract.builder.build_store(
+                        dividend,
+                        if bits < div_bits {
+                            contract.builder.build_int_z_extend(left, ty, "")
+                        } else {
+                            left
+                        },
+                    );
+
+                    contract.builder.build_store(
+                        divisor,
+                        if bits < div_bits {
+                            contract.builder.build_int_z_extend(right, ty, "")
+                        } else {
+                            right
+                        },
+                    );
 
                     let ret = contract
                         .builder
@@ -1386,41 +1347,70 @@ pub trait TargetRuntime<'a> {
 
                     contract.builder.position_at_end(success_block);
 
-                    contract.builder.build_load(quotient, "quotient")
+                    let quotient = contract
+                        .builder
+                        .build_load(quotient, "quotient")
+                        .into_int_value();
+
+                    if bits < div_bits {
+                        contract
+                            .builder
+                            .build_int_truncate(quotient, left.get_type(), "")
+                    } else {
+                        quotient
+                    }
+                    .into()
                 } else {
                     contract
                         .builder
-                        .build_int_unsigned_div(left.into_int_value(), right.into_int_value(), "")
+                        .build_int_unsigned_div(left, right, "")
                         .into()
                 }
             }
             Expression::Divide(_, _, l, r) => {
-                let left = self.expression(contract, l, vartab, function);
-                let right = self.expression(contract, r, vartab, function);
+                let left = self
+                    .expression(contract, l, vartab, function)
+                    .into_int_value();
+                let right = self
+                    .expression(contract, r, vartab, function)
+                    .into_int_value();
 
-                let mut bits = left.into_int_value().get_type().get_bit_width();
+                let bits = left.get_type().get_bit_width();
 
                 if bits > 64 {
-                    if bits <= 128 {
-                        bits = 128;
-                    } else {
-                        bits = 256;
-                    };
+                    let div_bits = if bits <= 128 { 128 } else { 256 };
 
-                    let name = format!("sdivmod{}", bits);
+                    let name = format!("sdivmod{}", div_bits);
 
                     let f = contract
                         .module
                         .get_function(&name)
                         .expect("div function missing");
 
-                    let dividend = contract.build_alloca(function, left.get_type(), "dividend");
-                    let divisor = contract.build_alloca(function, left.get_type(), "divisor");
-                    let rem = contract.build_alloca(function, left.get_type(), "remainder");
-                    let quotient = contract.build_alloca(function, left.get_type(), "quotient");
+                    let ty = contract.context.custom_width_int_type(div_bits);
 
-                    contract.builder.build_store(dividend, left);
-                    contract.builder.build_store(divisor, right);
+                    let dividend = contract.build_alloca(function, ty, "dividend");
+                    let divisor = contract.build_alloca(function, ty, "divisor");
+                    let rem = contract.build_alloca(function, ty, "remainder");
+                    let quotient = contract.build_alloca(function, ty, "quotient");
+
+                    contract.builder.build_store(
+                        dividend,
+                        if bits < div_bits {
+                            contract.builder.build_int_s_extend(left, ty, "")
+                        } else {
+                            left
+                        },
+                    );
+
+                    contract.builder.build_store(
+                        divisor,
+                        if bits < div_bits {
+                            contract.builder.build_int_s_extend(right, ty, "")
+                        } else {
+                            right
+                        },
+                    );
 
                     let ret = contract
                         .builder
@@ -1461,10 +1451,21 @@ pub trait TargetRuntime<'a> {
 
                     contract.builder.position_at_end(success_block);
 
-                    contract.builder.build_load(quotient, "quotient")
+                    let quotient = contract
+                        .builder
+                        .build_load(quotient, "quotient")
+                        .into_int_value();
+
+                    if bits < div_bits {
+                        contract
+                            .builder
+                            .build_int_truncate(quotient, left.get_type(), "")
+                    } else {
+                        quotient
+                    }
+                    .into()
                 } else if contract.ns.target == Target::Solana {
                     // no signed div on BPF; do abs udev and then negate if needed
-                    let left = left.into_int_value();
                     let left_negative = contract.builder.build_int_compare(
                         IntPredicate::SLT,
                         left,
@@ -1472,14 +1473,16 @@ pub trait TargetRuntime<'a> {
                         "left_negative",
                     );
 
-                    let left = contract.builder.build_select(
-                        left_negative,
-                        contract.builder.build_int_neg(left, "signed_left"),
-                        left,
-                        "left_abs",
-                    );
+                    let left = contract
+                        .builder
+                        .build_select(
+                            left_negative,
+                            contract.builder.build_int_neg(left, "signed_left"),
+                            left,
+                            "left_abs",
+                        )
+                        .into_int_value();
 
-                    let right = right.into_int_value();
                     let right_negative = contract.builder.build_int_compare(
                         IntPredicate::SLT,
                         right,
@@ -1487,18 +1490,17 @@ pub trait TargetRuntime<'a> {
                         "right_negative",
                     );
 
-                    let right = contract.builder.build_select(
-                        right_negative,
-                        contract.builder.build_int_neg(right, "signed_right"),
-                        right,
-                        "right_abs",
-                    );
+                    let right = contract
+                        .builder
+                        .build_select(
+                            right_negative,
+                            contract.builder.build_int_neg(right, "signed_right"),
+                            right,
+                            "right_abs",
+                        )
+                        .into_int_value();
 
-                    let res = contract.builder.build_int_unsigned_div(
-                        left.into_int_value(),
-                        right.into_int_value(),
-                        "",
-                    );
+                    let res = contract.builder.build_int_unsigned_div(left, right, "");
 
                     let negate_result =
                         contract
@@ -1514,37 +1516,54 @@ pub trait TargetRuntime<'a> {
                 } else {
                     contract
                         .builder
-                        .build_int_signed_div(left.into_int_value(), right.into_int_value(), "")
+                        .build_int_signed_div(left, right, "")
                         .into()
                 }
             }
             Expression::Modulo(_, _, l, r) if !l.ty().is_signed_int() => {
-                let left = self.expression(contract, l, vartab, function);
-                let right = self.expression(contract, r, vartab, function);
+                let left = self
+                    .expression(contract, l, vartab, function)
+                    .into_int_value();
+                let right = self
+                    .expression(contract, r, vartab, function)
+                    .into_int_value();
 
-                let mut bits = left.into_int_value().get_type().get_bit_width();
+                let bits = left.get_type().get_bit_width();
 
                 if bits > 64 {
-                    if bits <= 128 {
-                        bits = 128;
-                    } else {
-                        bits = 256;
-                    };
+                    let div_bits = if bits <= 128 { 128 } else { 256 };
 
-                    let name = format!("udivmod{}", bits);
+                    let name = format!("udivmod{}", div_bits);
 
                     let f = contract
                         .module
                         .get_function(&name)
                         .expect("div function missing");
 
-                    let dividend = contract.build_alloca(function, left.get_type(), "dividend");
-                    let divisor = contract.build_alloca(function, left.get_type(), "divisor");
-                    let rem = contract.build_alloca(function, left.get_type(), "remainder");
-                    let quotient = contract.build_alloca(function, left.get_type(), "quotient");
+                    let ty = contract.context.custom_width_int_type(div_bits);
 
-                    contract.builder.build_store(dividend, left);
-                    contract.builder.build_store(divisor, right);
+                    let dividend = contract.build_alloca(function, ty, "dividend");
+                    let divisor = contract.build_alloca(function, ty, "divisor");
+                    let rem = contract.build_alloca(function, ty, "remainder");
+                    let quotient = contract.build_alloca(function, ty, "quotient");
+
+                    contract.builder.build_store(
+                        dividend,
+                        if bits < div_bits {
+                            contract.builder.build_int_z_extend(left, ty, "")
+                        } else {
+                            left
+                        },
+                    );
+
+                    contract.builder.build_store(
+                        divisor,
+                        if bits < div_bits {
+                            contract.builder.build_int_z_extend(right, ty, "")
+                        } else {
+                            right
+                        },
+                    );
 
                     let ret = contract
                         .builder
@@ -1585,41 +1604,69 @@ pub trait TargetRuntime<'a> {
 
                     contract.builder.position_at_end(success_block);
 
-                    contract.builder.build_load(rem, "urem")
+                    let rem = contract.builder.build_load(rem, "urem").into_int_value();
+
+                    if bits < div_bits {
+                        contract.builder.build_int_truncate(
+                            rem,
+                            contract.context.custom_width_int_type(bits),
+                            "",
+                        )
+                    } else {
+                        rem
+                    }
+                    .into()
                 } else {
                     contract
                         .builder
-                        .build_int_unsigned_rem(left.into_int_value(), right.into_int_value(), "")
+                        .build_int_unsigned_rem(left, right, "")
                         .into()
                 }
             }
             Expression::Modulo(_, _, l, r) => {
-                let left = self.expression(contract, l, vartab, function);
-                let right = self.expression(contract, r, vartab, function);
+                let left = self
+                    .expression(contract, l, vartab, function)
+                    .into_int_value();
+                let right = self
+                    .expression(contract, r, vartab, function)
+                    .into_int_value();
 
-                let mut bits = left.into_int_value().get_type().get_bit_width();
+                let bits = left.get_type().get_bit_width();
 
                 if bits > 64 {
-                    if bits <= 128 {
-                        bits = 128;
-                    } else {
-                        bits = 256;
-                    };
+                    let div_bits = if bits <= 128 { 128 } else { 256 };
 
-                    let name = format!("sdivmod{}", bits);
+                    let name = format!("sdivmod{}", div_bits);
 
                     let f = contract
                         .module
                         .get_function(&name)
                         .expect("div function missing");
 
-                    let dividend = contract.build_alloca(function, left.get_type(), "dividend");
-                    let divisor = contract.build_alloca(function, left.get_type(), "divisor");
-                    let rem = contract.build_alloca(function, left.get_type(), "remainder");
-                    let quotient = contract.build_alloca(function, left.get_type(), "quotient");
+                    let ty = contract.context.custom_width_int_type(div_bits);
 
-                    contract.builder.build_store(dividend, left);
-                    contract.builder.build_store(divisor, right);
+                    let dividend = contract.build_alloca(function, ty, "dividend");
+                    let divisor = contract.build_alloca(function, ty, "divisor");
+                    let rem = contract.build_alloca(function, ty, "remainder");
+                    let quotient = contract.build_alloca(function, ty, "quotient");
+
+                    contract.builder.build_store(
+                        dividend,
+                        if bits < div_bits {
+                            contract.builder.build_int_s_extend(left, ty, "")
+                        } else {
+                            left
+                        },
+                    );
+
+                    contract.builder.build_store(
+                        divisor,
+                        if bits < div_bits {
+                            contract.builder.build_int_s_extend(right, ty, "")
+                        } else {
+                            right
+                        },
+                    );
 
                     let ret = contract
                         .builder
@@ -1660,10 +1707,20 @@ pub trait TargetRuntime<'a> {
 
                     contract.builder.position_at_end(success_block);
 
-                    contract.builder.build_load(rem, "srem")
+                    let rem = contract.builder.build_load(rem, "srem").into_int_value();
+
+                    if bits < div_bits {
+                        contract.builder.build_int_truncate(
+                            rem,
+                            contract.context.custom_width_int_type(bits),
+                            "",
+                        )
+                    } else {
+                        rem
+                    }
+                    .into()
                 } else if contract.ns.target == Target::Solana {
                     // no signed rem on BPF; do abs udev and then negate if needed
-                    let left = left.into_int_value();
                     let left_negative = contract.builder.build_int_compare(
                         IntPredicate::SLT,
                         left,
@@ -1678,7 +1735,6 @@ pub trait TargetRuntime<'a> {
                         "left_abs",
                     );
 
-                    let right = right.into_int_value();
                     let right_negative = contract.builder.build_int_compare(
                         IntPredicate::SLT,
                         right,
@@ -1708,17 +1764,17 @@ pub trait TargetRuntime<'a> {
                 } else {
                     contract
                         .builder
-                        .build_int_signed_rem(left.into_int_value(), right.into_int_value(), "")
+                        .build_int_signed_rem(left, right, "")
                         .into()
                 }
             }
-            Expression::Power(_, _, l, r) => {
+            Expression::Power(_, res_ty, l, r) => {
                 let left = self.expression(contract, l, vartab, function);
                 let right = self.expression(contract, r, vartab, function);
 
                 let bits = left.into_int_value().get_type().get_bit_width();
 
-                let f = contract.upower(bits);
+                let f = self.power(contract, bits, res_ty.is_signed_int());
 
                 contract
                     .builder
@@ -5036,6 +5092,227 @@ pub trait TargetRuntime<'a> {
         vector.into()
     }
 
+    // emit a multiply for any width with or without overflow checking
+    fn mul(
+        &self,
+        contract: &Contract<'a>,
+        function: FunctionValue<'a>,
+        left: IntValue<'a>,
+        right: IntValue<'a>,
+        signed: bool,
+    ) -> IntValue<'a> {
+        let bits = left.get_type().get_bit_width();
+
+        if bits > 64 {
+            // round up the number of bits to the next 32
+            let mul_bits = (bits + 31) & !31;
+            let mul_ty = contract.context.custom_width_int_type(mul_bits);
+
+            // round up bits
+            let l = contract.build_alloca(function, mul_ty, "");
+            let r = contract.build_alloca(function, mul_ty, "");
+            let o = contract.build_alloca(function, mul_ty, "");
+
+            if mul_bits == bits {
+                contract.builder.build_store(l, left);
+                contract.builder.build_store(r, right);
+            } else if signed {
+                contract
+                    .builder
+                    .build_store(l, contract.builder.build_int_s_extend(left, mul_ty, ""));
+                contract
+                    .builder
+                    .build_store(r, contract.builder.build_int_s_extend(right, mul_ty, ""));
+            } else {
+                contract
+                    .builder
+                    .build_store(l, contract.builder.build_int_z_extend(left, mul_ty, ""));
+                contract
+                    .builder
+                    .build_store(r, contract.builder.build_int_z_extend(right, mul_ty, ""));
+            }
+
+            contract.builder.build_call(
+                contract.module.get_function("__mul32").unwrap(),
+                &[
+                    contract
+                        .builder
+                        .build_pointer_cast(
+                            l,
+                            contract.context.i32_type().ptr_type(AddressSpace::Generic),
+                            "left",
+                        )
+                        .into(),
+                    contract
+                        .builder
+                        .build_pointer_cast(
+                            r,
+                            contract.context.i32_type().ptr_type(AddressSpace::Generic),
+                            "right",
+                        )
+                        .into(),
+                    contract
+                        .builder
+                        .build_pointer_cast(
+                            o,
+                            contract.context.i32_type().ptr_type(AddressSpace::Generic),
+                            "output",
+                        )
+                        .into(),
+                    contract
+                        .context
+                        .i32_type()
+                        .const_int(mul_bits as u64 / 32, false)
+                        .into(),
+                ],
+                "",
+            );
+
+            let res = contract.builder.build_load(o, "mul");
+
+            if mul_bits == bits {
+                res.into_int_value()
+            } else {
+                contract
+                    .builder
+                    .build_int_truncate(res.into_int_value(), left.get_type(), "")
+            }
+        } else if contract.math_overflow_check {
+            self.build_binary_op_with_overflow_check(
+                contract,
+                function,
+                left,
+                right,
+                BinaryOp::Multiply,
+                signed,
+            )
+        } else {
+            contract.builder.build_int_mul(left, right, "")
+        }
+    }
+
+    fn power(&self, contract: &Contract<'a>, bits: u32, signed: bool) -> FunctionValue<'a> {
+        /*
+            int ipow(int base, int exp)
+            {
+                int result = 1;
+                for (;;)
+                {
+                    if (exp & 1)
+                        result *= base;
+                    exp >>= 1;
+                    if (!exp)
+                        break;
+                    base *= base;
+                }
+
+                return result;
+            }
+        */
+        let name = format!("__{}power{}", if signed { 's' } else { 'u' }, bits);
+        let ty = contract.context.custom_width_int_type(bits);
+
+        if let Some(f) = contract.module.get_function(&name) {
+            return f;
+        }
+
+        let pos = contract.builder.get_insert_block().unwrap();
+
+        // __upower(base, exp)
+        let function =
+            contract
+                .module
+                .add_function(&name, ty.fn_type(&[ty.into(), ty.into()], false), None);
+
+        let entry = contract.context.append_basic_block(function, "entry");
+        let loop_block = contract.context.append_basic_block(function, "loop");
+        let multiply = contract.context.append_basic_block(function, "multiply");
+        let nomultiply = contract.context.append_basic_block(function, "nomultiply");
+        let done = contract.context.append_basic_block(function, "done");
+        let notdone = contract.context.append_basic_block(function, "notdone");
+
+        contract.builder.position_at_end(entry);
+
+        contract.builder.build_unconditional_branch(loop_block);
+
+        contract.builder.position_at_end(loop_block);
+        let base = contract.builder.build_phi(ty, "base");
+        base.add_incoming(&[(&function.get_nth_param(0).unwrap(), entry)]);
+
+        let exp = contract.builder.build_phi(ty, "exp");
+        exp.add_incoming(&[(&function.get_nth_param(1).unwrap(), entry)]);
+
+        let result = contract.builder.build_phi(ty, "result");
+        result.add_incoming(&[(&ty.const_int(1, false), entry)]);
+
+        let lowbit = contract.builder.build_int_truncate(
+            exp.as_basic_value().into_int_value(),
+            contract.context.bool_type(),
+            "bit",
+        );
+
+        contract
+            .builder
+            .build_conditional_branch(lowbit, multiply, nomultiply);
+
+        contract.builder.position_at_end(multiply);
+
+        let result2 = self.mul(
+            contract,
+            function,
+            result.as_basic_value().into_int_value(),
+            base.as_basic_value().into_int_value(),
+            signed,
+        );
+
+        contract.builder.build_unconditional_branch(nomultiply);
+        contract.builder.position_at_end(nomultiply);
+
+        let result3 = contract.builder.build_phi(ty, "result");
+        result3.add_incoming(&[(&result.as_basic_value(), loop_block), (&result2, multiply)]);
+
+        let exp2 = contract.builder.build_right_shift(
+            exp.as_basic_value().into_int_value(),
+            ty.const_int(1, false),
+            false,
+            "exp",
+        );
+        let zero =
+            contract
+                .builder
+                .build_int_compare(IntPredicate::EQ, exp2, ty.const_zero(), "zero");
+
+        contract
+            .builder
+            .build_conditional_branch(zero, done, notdone);
+
+        contract.builder.position_at_end(done);
+
+        contract
+            .builder
+            .build_return(Some(&result3.as_basic_value()));
+
+        contract.builder.position_at_end(notdone);
+
+        let base2 = self.mul(
+            contract,
+            function,
+            base.as_basic_value().into_int_value(),
+            base.as_basic_value().into_int_value(),
+            signed,
+        );
+
+        base.add_incoming(&[(&base2, notdone)]);
+        result.add_incoming(&[(&result3.as_basic_value(), notdone)]);
+        exp.add_incoming(&[(&exp2, notdone)]);
+
+        contract.builder.build_unconditional_branch(loop_block);
+
+        contract.builder.position_at_end(pos);
+
+        function
+    }
+
     /// Convenience function for generating binary operations with overflow checking.
     fn build_binary_op_with_overflow_check(
         &self,
@@ -5045,7 +5322,7 @@ pub trait TargetRuntime<'a> {
         right: IntValue<'a>,
         op: BinaryOp,
         signed: bool,
-    ) -> BasicValueEnum<'a> {
+    ) -> IntValue<'a> {
         let ret_ty = contract.context.struct_type(
             &[
                 left.get_type().into(),
@@ -5094,6 +5371,7 @@ pub trait TargetRuntime<'a> {
             .builder
             .build_extract_value(op_res, 0, "res")
             .unwrap()
+            .into_int_value()
     }
 }
 pub struct Contract<'a> {
@@ -5676,203 +5954,6 @@ impl<'a> Contract<'a> {
         self.return_values[&ReturnCode::Success]
             .get_type()
             .fn_type(&args, false)
-    }
-
-    pub fn upower(&self, bit: u32) -> FunctionValue<'a> {
-        /*
-            int ipow(int base, int exp)
-            {
-                int result = 1;
-                for (;;)
-                {
-                    if (exp & 1)
-                        result *= base;
-                    exp >>= 1;
-                    if (!exp)
-                        break;
-                    base *= base;
-                }
-
-                return result;
-            }
-        */
-        let name = format!("__upower{}", bit);
-        let ty = self.context.custom_width_int_type(bit);
-
-        if let Some(f) = self.module.get_function(&name) {
-            return f;
-        }
-
-        let pos = self.builder.get_insert_block().unwrap();
-
-        // __upower(base, exp)
-        let function =
-            self.module
-                .add_function(&name, ty.fn_type(&[ty.into(), ty.into()], false), None);
-
-        let entry = self.context.append_basic_block(function, "entry");
-        let loop_block = self.context.append_basic_block(function, "loop");
-        let multiply = self.context.append_basic_block(function, "multiply");
-        let nomultiply = self.context.append_basic_block(function, "nomultiply");
-        let done = self.context.append_basic_block(function, "done");
-        let notdone = self.context.append_basic_block(function, "notdone");
-
-        self.builder.position_at_end(entry);
-
-        let l = self.builder.build_alloca(ty, "");
-        let r = self.builder.build_alloca(ty, "");
-        let o = self.builder.build_alloca(ty, "");
-
-        self.builder.build_unconditional_branch(loop_block);
-
-        self.builder.position_at_end(loop_block);
-        let base = self.builder.build_phi(ty, "base");
-        base.add_incoming(&[(&function.get_nth_param(0).unwrap(), entry)]);
-
-        let exp = self.builder.build_phi(ty, "exp");
-        exp.add_incoming(&[(&function.get_nth_param(1).unwrap(), entry)]);
-
-        let result = self.builder.build_phi(ty, "result");
-        result.add_incoming(&[(&ty.const_int(1, false), entry)]);
-
-        let lowbit = self.builder.build_int_truncate(
-            exp.as_basic_value().into_int_value(),
-            self.context.bool_type(),
-            "bit",
-        );
-
-        self.builder
-            .build_conditional_branch(lowbit, multiply, nomultiply);
-
-        self.builder.position_at_end(multiply);
-
-        let result2 = if bit > 64 {
-            self.builder
-                .build_store(l, result.as_basic_value().into_int_value());
-            self.builder
-                .build_store(r, base.as_basic_value().into_int_value());
-
-            self.builder.build_call(
-                self.module.get_function("__mul32").unwrap(),
-                &[
-                    self.builder
-                        .build_pointer_cast(
-                            l,
-                            self.context.i32_type().ptr_type(AddressSpace::Generic),
-                            "left",
-                        )
-                        .into(),
-                    self.builder
-                        .build_pointer_cast(
-                            r,
-                            self.context.i32_type().ptr_type(AddressSpace::Generic),
-                            "right",
-                        )
-                        .into(),
-                    self.builder
-                        .build_pointer_cast(
-                            o,
-                            self.context.i32_type().ptr_type(AddressSpace::Generic),
-                            "output",
-                        )
-                        .into(),
-                    self.context
-                        .i32_type()
-                        .const_int(bit as u64 / 32, false)
-                        .into(),
-                ],
-                "",
-            );
-
-            self.builder.build_load(o, "result").into_int_value()
-        } else {
-            self.builder.build_int_mul(
-                result.as_basic_value().into_int_value(),
-                base.as_basic_value().into_int_value(),
-                "result",
-            )
-        };
-
-        self.builder.build_unconditional_branch(nomultiply);
-        self.builder.position_at_end(nomultiply);
-
-        let result3 = self.builder.build_phi(ty, "result");
-        result3.add_incoming(&[(&result.as_basic_value(), loop_block), (&result2, multiply)]);
-
-        let exp2 = self.builder.build_right_shift(
-            exp.as_basic_value().into_int_value(),
-            ty.const_int(1, false),
-            false,
-            "exp",
-        );
-        let zero = self
-            .builder
-            .build_int_compare(IntPredicate::EQ, exp2, ty.const_zero(), "zero");
-
-        self.builder.build_conditional_branch(zero, done, notdone);
-
-        self.builder.position_at_end(done);
-
-        self.builder.build_return(Some(&result3.as_basic_value()));
-
-        self.builder.position_at_end(notdone);
-
-        let base2 = if bit > 64 {
-            self.builder
-                .build_store(l, base.as_basic_value().into_int_value());
-            self.builder
-                .build_store(r, base.as_basic_value().into_int_value());
-
-            self.builder.build_call(
-                self.module.get_function("__mul32").unwrap(),
-                &[
-                    self.builder
-                        .build_pointer_cast(
-                            l,
-                            self.context.i32_type().ptr_type(AddressSpace::Generic),
-                            "left",
-                        )
-                        .into(),
-                    self.builder
-                        .build_pointer_cast(
-                            r,
-                            self.context.i32_type().ptr_type(AddressSpace::Generic),
-                            "right",
-                        )
-                        .into(),
-                    self.builder
-                        .build_pointer_cast(
-                            o,
-                            self.context.i32_type().ptr_type(AddressSpace::Generic),
-                            "output",
-                        )
-                        .into(),
-                    self.context
-                        .i32_type()
-                        .const_int(bit as u64 / 32, false)
-                        .into(),
-                ],
-                "",
-            );
-
-            self.builder.build_load(o, "base").into_int_value()
-        } else {
-            self.builder.build_int_mul(
-                base.as_basic_value().into_int_value(),
-                base.as_basic_value().into_int_value(),
-                "base",
-            )
-        };
-
-        base.add_incoming(&[(&base2, notdone)]);
-        result.add_incoming(&[(&result3.as_basic_value(), notdone)]);
-        exp.add_incoming(&[(&exp2, notdone)]);
-
-        self.builder.build_unconditional_branch(loop_block);
-
-        self.builder.position_at_end(pos);
-
-        function
     }
 
     // Create the llvm intrinsic for counting leading zeros
