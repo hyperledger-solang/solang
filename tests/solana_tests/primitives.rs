@@ -321,10 +321,14 @@ fn bytes() {
 fn uint() {
     let mut rng = rand::thread_rng();
 
-    for width in &[8, 16, 32, 64, 128, 256] {
-        let width: usize = *width;
+    for width in (8..=256).step_by(8) {
         let src = r#"
         contract test {
+            function pass(uintN a) public returns (uintN) {
+                print("x:{:x}".format(uint64(a)));
+                return 0x7f;
+            }
+
             function add(uintN a, uintN b) public returns (uintN) {
                 return a + b;
             }
@@ -375,6 +379,8 @@ fn uint() {
 
         vm.constructor(&[]);
 
+        println!("width:{}", width);
+
         for _ in 0..10 {
             let mut a = Vec::new();
             let mut b = Vec::new();
@@ -394,11 +400,17 @@ fn uint() {
             truncate_uint(&mut a, width);
             truncate_uint(&mut b, width);
 
+            let res = vm.function("pass", &[ethabi::Token::Uint(a)]);
+
+            println!("{:x} = {:?} o", a, res);
+
             let add = vm.function("add", &[ethabi::Token::Uint(a), ethabi::Token::Uint(b)]);
 
             let (mut res, _) = a.overflowing_add(b);
 
             truncate_uint(&mut res, width);
+
+            println!("{:x} + {:x} = {:?} or {:x}", a, b, add, res);
 
             assert_eq!(add, vec![ethabi::Token::Uint(res)]);
 
@@ -537,8 +549,7 @@ fn truncate_uint(n: &mut ethereum_types::U256, width: usize) {
 fn int() {
     let mut rng = rand::thread_rng();
 
-    for width in &[8, 16, 32, 64, 128, 256] {
-        let width: usize = *width;
+    for width in (8..=256).step_by(8) {
         let src = r#"
         contract test {
             function add(intN a, intN b) public returns (intN) {

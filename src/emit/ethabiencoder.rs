@@ -2524,9 +2524,13 @@ impl EthAbiDecoder {
                     store.into()
                 }
             }
-            ast::Type::Uint(n) | ast::Type::Int(n)
-                if self.bswap && (*n == 16 || *n == 32 || *n == 64) =>
-            {
+            ast::Type::Uint(n) | ast::Type::Int(n) if self.bswap && *n <= 64 => {
+                let bits = if n.is_power_of_two() {
+                    *n
+                } else {
+                    n.next_power_of_two()
+                };
+
                 // our value is big endian, 32 bytes. So, find the offset within the 32 bytes
                 // where our value starts
                 let int8_ptr = unsafe {
@@ -2535,7 +2539,7 @@ impl EthAbiDecoder {
                         &[contract
                             .context
                             .i32_type()
-                            .const_int(32 - (*n as u64 / 8), false)],
+                            .const_int(32 - (bits as u64 / 8), false)],
                         "uint8_ptr",
                     )
                 };
@@ -2545,7 +2549,7 @@ impl EthAbiDecoder {
                         int8_ptr,
                         contract
                             .context
-                            .custom_width_int_type(*n as u32)
+                            .custom_width_int_type(bits as u32)
                             .ptr_type(AddressSpace::Generic),
                         "",
                     ),
@@ -2553,9 +2557,9 @@ impl EthAbiDecoder {
                 );
 
                 // now convert to le
-                let bswap = contract.llvm_bswap(*n as u32);
+                let bswap = contract.llvm_bswap(bits as u32);
 
-                let val = contract
+                let mut val = contract
                     .builder
                     .build_call(bswap, &[val], "")
                     .try_as_basic_value()
@@ -2563,52 +2567,17 @@ impl EthAbiDecoder {
                     .unwrap()
                     .into_int_value();
 
+                if bits > *n {
+                    val = contract.builder.build_int_truncate(
+                        val,
+                        contract.context.custom_width_int_type(*n as u32),
+                        "",
+                    );
+                }
+
                 if let Some(p) = to {
                     contract.builder.build_store(p, val);
                 }
-
-                val.into()
-            }
-            ast::Type::Uint(n) | ast::Type::Int(n) if self.bswap && *n < 64 => {
-                let uint64_ptr = contract.builder.build_pointer_cast(
-                    data,
-                    contract.context.i64_type().ptr_type(AddressSpace::Generic),
-                    "",
-                );
-
-                let uint64_ptr = unsafe {
-                    contract.builder.build_gep(
-                        uint64_ptr,
-                        &[contract.context.i32_type().const_int(3, false)],
-                        "uint64_ptr",
-                    )
-                };
-
-                let bswap = contract.llvm_bswap(64);
-
-                // load and bswap
-                let val = contract
-                    .builder
-                    .build_call(
-                        bswap,
-                        &[contract.builder.build_load(uint64_ptr, "uint64")],
-                        "",
-                    )
-                    .try_as_basic_value()
-                    .left()
-                    .unwrap()
-                    .into_int_value();
-
-                let val = contract.builder.build_right_shift(
-                    val,
-                    contract.context.i64_type().const_int(64 - *n as u64, false),
-                    ty.is_signed_int(),
-                    "",
-                );
-
-                let int_type = contract.context.custom_width_int_type(*n as u32);
-
-                let val = contract.builder.build_int_truncate(val, int_type, "");
 
                 val.into()
             }
