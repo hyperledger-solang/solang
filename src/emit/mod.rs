@@ -6405,11 +6405,12 @@ impl<'a> Contract<'a> {
     }
 }
 
-static BPF_IR: [&[u8]; 4] = [
+static BPF_IR: [&[u8]; 5] = [
     include_bytes!("../../stdlib/bpf/stdlib.bc"),
     include_bytes!("../../stdlib/bpf/bigint.bc"),
     include_bytes!("../../stdlib/bpf/format.bc"),
     include_bytes!("../../stdlib/bpf/solana.bc"),
+    include_bytes!("../../stdlib/bpf/ripemd160.bc"),
 ];
 
 static WASM_IR: [&[u8]; 4] = [

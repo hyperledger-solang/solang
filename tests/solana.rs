@@ -4,6 +4,7 @@ use byteorder::{ByteOrder, LittleEndian, WriteBytesExt};
 use ethabi::Token;
 use libc::c_char;
 use rand::Rng;
+use sha2::{Digest, Sha256};
 use solana_helpers::allocator_bump::Allocator;
 use solana_rbpf::{
     error::EbpfError,
@@ -24,6 +25,7 @@ use std::convert::TryInto;
 use std::io::Write;
 use std::mem::{align_of, size_of};
 use std::rc::Rc;
+use tiny_keccak::{Hasher, Keccak};
 
 mod solana_tests;
 
@@ -233,6 +235,72 @@ impl<'a> SyscallObject<UserError> for Printer<'a> {
     }
 }
 
+struct SolSha256();
+
+impl SyscallObject<UserError> for SolSha256 {
+    fn call(
+        &mut self,
+        src: u64,
+        len: u64,
+        dest: u64,
+        _arg4: u64,
+        _arg5: u64,
+        memory_mapping: &MemoryMapping,
+    ) -> Result<u64, EbpfError<UserError>> {
+        let arrays = translate_slice::<(u64, u64)>(memory_mapping, src, len)?;
+
+        let mut hasher = Sha256::new();
+        for (addr, len) in arrays {
+            let buf = translate_slice::<u8>(memory_mapping, *addr, *len)?;
+            println!("hashing: {}", hex::encode(buf));
+            hasher.update(buf);
+        }
+
+        let hash = hasher.finalize();
+
+        let hash_result = translate_slice_mut::<u8>(memory_mapping, dest, hash.len() as u64)?;
+
+        hash_result.copy_from_slice(&hash);
+
+        println!("sol_sha256: {}", hex::encode(hash));
+
+        Ok(0)
+    }
+}
+
+struct SolKeccak256();
+
+impl SyscallObject<UserError> for SolKeccak256 {
+    fn call(
+        &mut self,
+        src: u64,
+        len: u64,
+        dest: u64,
+        _arg4: u64,
+        _arg5: u64,
+        memory_mapping: &MemoryMapping,
+    ) -> Result<u64, EbpfError<UserError>> {
+        let arrays = translate_slice::<(u64, u64)>(memory_mapping, src, len)?;
+
+        let mut hasher = Keccak::v256();
+        let mut hash = [0u8; 32];
+        for (addr, len) in arrays {
+            let buf = translate_slice::<u8>(memory_mapping, *addr, *len)?;
+            println!("hashing: {}", hex::encode(buf));
+            hasher.update(buf);
+        }
+        hasher.finalize(&mut hash);
+
+        let hash_result = translate_slice_mut::<u8>(memory_mapping, dest, hash.len() as u64)?;
+
+        hash_result.copy_from_slice(&hash);
+
+        println!("sol_keccak256: {}", hex::encode(hash));
+
+        Ok(0)
+    }
+}
+
 // Shamelessly stolen from solana source
 
 /// Dynamic memory allocation syscall called when the BPF program calls
@@ -361,12 +429,14 @@ fn translate_type_inner<'a, T>(
             .map(|value| &mut *(value as *mut T))
     }
 }
+
 fn translate_type<'a, T>(
     memory_mapping: &MemoryMapping,
     vm_addr: u64,
 ) -> Result<&'a T, EbpfError<UserError>> {
     translate_type_inner::<T>(memory_mapping, AccessType::Load, vm_addr).map(|value| &*value)
 }
+
 fn translate_slice<'a, T>(
     memory_mapping: &MemoryMapping,
     vm_addr: u64,
@@ -374,6 +444,15 @@ fn translate_slice<'a, T>(
 ) -> Result<&'a [T], EbpfError<UserError>> {
     translate_slice_inner::<T>(memory_mapping, AccessType::Load, vm_addr, len).map(|value| &*value)
 }
+
+fn translate_slice_mut<'a, T>(
+    memory_mapping: &MemoryMapping,
+    vm_addr: u64,
+    len: u64,
+) -> Result<&'a mut [T], EbpfError<UserError>> {
+    translate_slice_inner::<T>(memory_mapping, AccessType::Store, vm_addr, len)
+}
+
 fn translate_slice_inner<'a, T>(
     memory_mapping: &MemoryMapping,
     access_type: AccessType,
@@ -518,6 +597,12 @@ impl VirtualMachine {
             })),
         )
         .unwrap();
+
+        vm.register_syscall_ex("sol_sha256", Syscall::Object(Box::new(SolSha256())))
+            .unwrap();
+
+        vm.register_syscall_ex("sol_keccak256", Syscall::Object(Box::new(SolKeccak256())))
+            .unwrap();
 
         vm.register_syscall_ex(
             "sol_invoke_signed_c",

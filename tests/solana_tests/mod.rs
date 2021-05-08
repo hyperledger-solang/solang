@@ -3,6 +3,7 @@ mod accessor;
 mod arrays;
 mod call;
 mod destructure;
+mod hash;
 mod mappings;
 mod primitives;
 mod simple;
