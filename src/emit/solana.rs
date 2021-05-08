@@ -89,6 +89,11 @@ impl SolanaTarget {
         let void_ty = contract.context.void_type();
         let u8_ptr = contract.context.i8_type().ptr_type(AddressSpace::Generic);
         let u64_ty = contract.context.i64_type();
+        let u32_ty = contract.context.i32_type();
+        let sol_bytes = contract
+            .context
+            .struct_type(&[u8_ptr.into(), u64_ty.into()], false)
+            .ptr_type(AddressSpace::Generic);
 
         let function = contract.module.add_function(
             "sol_alloc_free_",
@@ -102,6 +107,24 @@ impl SolanaTarget {
         let function = contract.module.add_function(
             "sol_log_",
             void_ty.fn_type(&[u8_ptr.into(), u64_ty.into()], false),
+            None,
+        );
+        function
+            .as_global_value()
+            .set_unnamed_address(UnnamedAddress::Local);
+
+        let function = contract.module.add_function(
+            "sol_sha256",
+            void_ty.fn_type(&[sol_bytes.into(), u32_ty.into(), u8_ptr.into()], false),
+            None,
+        );
+        function
+            .as_global_value()
+            .set_unnamed_address(UnnamedAddress::Local);
+
+        let function = contract.module.add_function(
+            "sol_keccak256",
+            void_ty.fn_type(&[sol_bytes.into(), u32_ty.into(), u8_ptr.into()], false),
             None,
         );
         function
@@ -2588,11 +2611,90 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
     /// Crypto Hash
     fn hash<'b>(
         &self,
-        _contract: &Contract<'b>,
-        _hash: HashTy,
-        _input: PointerValue<'b>,
-        _input_len: IntValue<'b>,
+        contract: &Contract<'b>,
+        hash: HashTy,
+        input: PointerValue<'b>,
+        input_len: IntValue<'b>,
     ) -> IntValue<'b> {
-        unimplemented!()
+        let (fname, hashlen) = match hash {
+            HashTy::Keccak256 => ("sol_keccak256", 32),
+            HashTy::Ripemd160 => ("ripemd160", 20),
+            HashTy::Sha256 => ("sol_sha256", 32),
+            _ => unreachable!(),
+        };
+
+        let res = contract.builder.build_array_alloca(
+            contract.context.i8_type(),
+            contract.context.i32_type().const_int(hashlen, false),
+            "res",
+        );
+
+        if hash == HashTy::Ripemd160 {
+            contract.builder.build_call(
+                contract.module.get_function(fname).unwrap(),
+                &[input.into(), input_len.into(), res.into()],
+                "hash",
+            );
+        } else {
+            let u8_ptr = contract.context.i8_type().ptr_type(AddressSpace::Generic);
+            let u64_ty = contract.context.i64_type();
+
+            let sol_bytes = contract
+                .context
+                .struct_type(&[u8_ptr.into(), u64_ty.into()], false);
+            let array = contract.builder.build_alloca(sol_bytes, "sol_bytes");
+
+            contract.builder.build_store(
+                contract
+                    .builder
+                    .build_struct_gep(array, 0, "input")
+                    .unwrap(),
+                input,
+            );
+
+            contract.builder.build_store(
+                contract
+                    .builder
+                    .build_struct_gep(array, 1, "input_len")
+                    .unwrap(),
+                contract
+                    .builder
+                    .build_int_z_extend(input_len, u64_ty, "input_len"),
+            );
+
+            contract.builder.build_call(
+                contract.module.get_function(fname).unwrap(),
+                &[
+                    array.into(),
+                    contract.context.i32_type().const_int(1, false).into(),
+                    res.into(),
+                ],
+                "hash",
+            );
+        }
+
+        // bytes32 needs to reverse bytes
+        let temp = contract
+            .builder
+            .build_alloca(contract.llvm_type(&ast::Type::Bytes(hashlen as u8)), "hash");
+
+        contract.builder.build_call(
+            contract.module.get_function("__beNtoleN").unwrap(),
+            &[
+                res.into(),
+                contract
+                    .builder
+                    .build_pointer_cast(
+                        temp,
+                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "",
+                    )
+                    .into(),
+                contract.context.i32_type().const_int(hashlen, false).into(),
+            ],
+            "",
+        );
+
+        contract.builder.build_load(temp, "hash").into_int_value()
     }
 }
