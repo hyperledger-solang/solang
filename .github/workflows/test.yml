@@ -118,7 +118,7 @@ jobs:
     needs: linux
     services:
       solana:
-        image: solanalabs/solana:v1.5.0
+        image: solanalabs/solana:v1.6.9
         ports:
           - 8899
           - 8900

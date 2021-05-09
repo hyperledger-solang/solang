@@ -30,7 +30,7 @@ It can be used directly in the
 Solana
 ______
 
-The Solana target requires `Solana <https://www.solana.com/>`_ 1.5.0 or later. This target is in the early stages right now,
+The Solana target requires `Solana <https://www.solana.com/>`_ 1.6.9 or later. This target is in the early stages right now,
 however it is under active development. All data types are supported, but the builtin functions, and constructor calls
 have not been implemented yet. This is how to build your Solidity for Solana:
 
