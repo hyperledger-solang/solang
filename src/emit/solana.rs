@@ -2520,12 +2520,69 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
     /// builtin expressions
     fn builtin<'b>(
         &self,
-        _contract: &Contract<'b>,
-        _expr: &ast::Expression,
+        contract: &Contract<'b>,
+        expr: &ast::Expression,
         _vartab: &HashMap<usize, Variable<'b>>,
         _function: FunctionValue<'b>,
     ) -> BasicValueEnum<'b> {
-        unimplemented!()
+        if let ast::Expression::Builtin(_, _, ast::Builtin::GetAddress, _) = expr {
+            let parameters = contract
+                .builder
+                .get_insert_block()
+                .unwrap()
+                .get_parent()
+                .unwrap()
+                .get_last_param()
+                .unwrap()
+                .into_pointer_value();
+
+            let account_id = contract
+                .builder
+                .build_load(
+                    contract
+                        .builder
+                        .build_struct_gep(parameters, 4, "account_id")
+                        .unwrap(),
+                    "account_id",
+                )
+                .into_pointer_value();
+
+            let value = contract
+                .builder
+                .build_alloca(contract.address_type(), "self_address");
+
+            contract.builder.build_call(
+                contract.module.get_function("__beNtoleN").unwrap(),
+                &[
+                    contract
+                        .builder
+                        .build_pointer_cast(
+                            account_id,
+                            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                            "",
+                        )
+                        .into(),
+                    contract
+                        .builder
+                        .build_pointer_cast(
+                            value,
+                            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                            "",
+                        )
+                        .into(),
+                    contract
+                        .context
+                        .i32_type()
+                        .const_int(contract.ns.address_length as u64, false)
+                        .into(),
+                ],
+                "",
+            );
+
+            contract.builder.build_load(value, "self_address")
+        } else {
+            unimplemented!();
+        }
     }
 
     /// Crypto Hash

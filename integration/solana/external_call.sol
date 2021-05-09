@@ -17,6 +17,10 @@ contract caller {
     function do_call4(callee e, callee2 e2, int64[4] memory x, string memory y) public returns (int64, string memory) {
         return (e2.do_stuff(x), e.call2(e2, y));
     }
+
+    function who_am_i() public view returns (address) {
+        return address(this);
+    }
 }
 
 contract callee {
