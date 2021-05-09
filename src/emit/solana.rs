@@ -2537,7 +2537,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         _data_len: IntValue<'b>,
         _topics: Vec<(PointerValue<'b>, IntValue<'b>)>,
     ) {
-        unimplemented!();
+        // Solana does not implement events, ignore for now
     }
 
     /// builtin expressions
