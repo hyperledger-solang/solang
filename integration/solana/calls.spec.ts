@@ -23,9 +23,14 @@ describe('Deploy solang contract and test', () => {
 
         expect(res["0"]).toBe("102");
 
+        let address_caller = '0x' + caller.get_storage_key().toBuffer().toString('hex');
         let address_callee = '0x' + callee.get_storage_key().toBuffer().toString('hex');
         let address_callee2 = '0x' + callee2.get_storage_key().toBuffer().toString('hex');
         console.log("addres: " + address_callee);
+
+        res = await caller.call_function(conn, "who_am_i", []);
+
+        expect(res["0"]).toBe(address_caller);
 
         await caller.call_function(conn, "do_call", [address_callee, "13123"], callee.all_keys());
 

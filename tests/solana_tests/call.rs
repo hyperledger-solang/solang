@@ -146,11 +146,20 @@ fn external_call_with_string_returns() {
                 print(y);
                 return y;
             }
+
+            function test_this(bar1 x) public {
+                address a = x.who_am_i();
+                assert(a == address(x));
+            }
         }
 
         contract bar1 {
             function test_bar(int64 y) public returns (string) {
                 return "foo:{}".format(y);
+            }
+
+            function who_am_i() public returns (address) {
+                return address(this);
             }
         }"#,
     );
@@ -170,4 +179,6 @@ fn external_call_with_string_returns() {
     let res = vm.function("test_other", &[Token::FixedBytes(bar1_account.to_vec())]);
 
     assert_eq!(res, vec![Token::String(String::from("foo:7"))]);
+
+    vm.function("test_this", &[Token::FixedBytes(bar1_account.to_vec())]);
 }
