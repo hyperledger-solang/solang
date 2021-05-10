@@ -6,6 +6,9 @@
 
 extern uint64_t solang_dispatch(const SolParameters *param);
 
+// The address 'SysvarC1ock11111111111111111111111111111111' base58 decoded
+static const SolPubkey clock_address = {0x06, 0xa7, 0xd5, 0x17, 0x18, 0xc7, 0x74, 0xc9, 0x28, 0x56, 0x63, 0x98, 0x69, 0x1d, 0x5e, 0xb6, 0x8b, 0x5e, 0xb8, 0xa3, 0x9b, 0x4b, 0x6d, 0x5c, 0x73, 0x55, 0x5b, 0x21, 0x00, 0x00, 0x00, 0x00};
+
 uint64_t
 entrypoint(const uint8_t *input)
 {
@@ -19,20 +22,27 @@ entrypoint(const uint8_t *input)
 
     int account_no;
 
+    params.ka_clock = NULL;
+    params.ka_cur = UINT64_MAX;
+
     for (account_no = 0; account_no < params.ka_num; account_no++)
     {
-        if (SolPubkey_same(params.account_id, params.ka[account_no].key))
+        const SolAccountInfo *acc = &params.ka[account_no];
+
+        if (SolPubkey_same(params.account_id, acc->key))
         {
-            break;
+            params.ka_cur = account_no;
+        }
+        else if (SolPubkey_same(&clock_address, acc->key))
+        {
+            params.ka_clock = acc;
         }
     }
 
-    if (account_no == params.ka_num)
+    if (params.ka_cur == UINT64_MAX)
     {
         return ERROR_INVALID_INSTRUCTION_DATA;
     }
-
-    params.ka_cur = account_no;
 
     return solang_dispatch(&params);
 }
@@ -88,6 +98,28 @@ uint64_t external_call(uint8_t *input, uint32_t input_len, SolParameters *params
 
         return ERROR_INVALID_ACCOUNT_DATA;
     }
+}
+
+struct clock_layout
+{
+    uint64_t slot;
+    uint64_t epoch_start_timestamp;
+    uint64_t epoch;
+    uint64_t leader_schedule_epoch;
+    uint64_t unix_timestamp;
+};
+
+uint64_t sol_timestamp(SolParameters *params)
+{
+    if (!params->ka_clock)
+    {
+        sol_log("clock account missing from transaction");
+        sol_panic();
+    }
+
+    struct clock_layout *clock_data = (struct clock_layout *)params->ka_clock->data;
+
+    return clock_data->unix_timestamp;
 }
 
 struct account_data_header

@@ -226,6 +226,7 @@ typedef struct
   const uint8_t *input;        /** pointer to the instruction data */
   uint64_t input_len;          /** Length in bytes of the instruction data */
   const SolPubkey *program_id; /** program_id of the currently executing program */
+  const SolAccountInfo *ka_clock;
 } SolParameters;
 
 /**

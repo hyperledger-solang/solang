@@ -1,9 +1,11 @@
 mod solana_helpers;
 
+use base58::{FromBase58, ToBase58};
 use byteorder::{ByteOrder, LittleEndian, WriteBytesExt};
 use ethabi::Token;
 use libc::c_char;
 use rand::Rng;
+use serde::Serialize;
 use sha2::{Digest, Sha256};
 use solana_helpers::allocator_bump::Allocator;
 use solana_rbpf::{
@@ -56,6 +58,15 @@ struct Contract {
     data: Account,
 }
 
+#[derive(Serialize)]
+struct ClockLayout {
+    slot: u64,
+    epoch_start_timestamp: u64,
+    epoch: u64,
+    leader_schedule_epoch: u64,
+    unix_timestamp: u64,
+}
+
 fn build_solidity(src: &str) -> VirtualMachine {
     let mut cache = FileCache::new();
 
@@ -94,6 +105,26 @@ fn build_solidity(src: &str) -> VirtualMachine {
 
         programs.push(Contract { program, abi, data });
     }
+
+    // Add clock account
+    let clock_account: Account = "SysvarC1ock11111111111111111111111111111111"
+        .from_base58()
+        .unwrap()
+        .try_into()
+        .unwrap();
+
+    let clock_layout = ClockLayout {
+        slot: 70818331,
+        epoch: 102,
+        epoch_start_timestamp: 946684800,
+        leader_schedule_epoch: 1231231312,
+        unix_timestamp: 1620656423,
+    };
+
+    account_data.insert(
+        clock_account,
+        (bincode::serialize(&clock_layout).unwrap(), None),
+    );
 
     let cur = programs.last().unwrap().clone();
 
@@ -148,8 +179,9 @@ fn serialize_parameters(input: &[u8], vm: &VirtualMachine) -> Vec<u8> {
     v.write_u64::<LittleEndian>(vm.account_data.len() as u64)
         .unwrap();
 
-    for (key, data) in &vm.account_data {
-        serialize_account(&mut v, key, data);
+    for (acc, data) in &vm.account_data {
+        //println!("acc:{} {}", hex::encode(acc), hex::encode(&data.0));
+        serialize_account(&mut v, acc, data);
     }
 
     // calldata
@@ -198,11 +230,11 @@ fn deserialize_parameters(
     }
 }
 
-struct Printer<'a> {
+struct SolLog<'a> {
     context: Rc<RefCell<&'a mut VirtualMachine>>,
 }
 
-impl<'a> SyscallObject<UserError> for Printer<'a> {
+impl<'a> SyscallObject<UserError> for SolLog<'a> {
     fn call(
         &mut self,
         vm_addr: u64,
@@ -232,6 +264,30 @@ impl<'a> SyscallObject<UserError> for Printer<'a> {
             }
             Ok(0)
         }
+    }
+}
+
+struct SolLogPubKey<'a> {
+    context: Rc<RefCell<&'a mut VirtualMachine>>,
+}
+
+impl<'a> SyscallObject<UserError> for SolLogPubKey<'a> {
+    fn call(
+        &mut self,
+        pubkey_addr: u64,
+        _arg2: u64,
+        _arg3: u64,
+        _arg4: u64,
+        _arg5: u64,
+        memory_mapping: &MemoryMapping,
+    ) -> Result<u64, EbpfError<UserError>> {
+        let account = translate_slice::<Account>(memory_mapping, pubkey_addr, 1)?;
+        let message = account[0].to_base58();
+        println!("log pubkey: {}", message);
+        if let Ok(mut context) = self.context.try_borrow_mut() {
+            context.printbuf.push_str(&message);
+        }
+        Ok(0)
     }
 }
 
@@ -592,7 +648,15 @@ impl VirtualMachine {
 
         vm.register_syscall_ex(
             "sol_log_",
-            Syscall::Object(Box::new(Printer {
+            Syscall::Object(Box::new(SolLog {
+                context: context.clone(),
+            })),
+        )
+        .unwrap();
+
+        vm.register_syscall_ex(
+            "sol_log_pubkey",
+            Syscall::Object(Box::new(SolLogPubKey {
                 context: context.clone(),
             })),
         )
