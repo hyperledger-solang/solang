@@ -8,7 +8,7 @@ import {
     SystemProgram,
     TransactionInstruction,
     Transaction,
-    sendAndConfirmTransaction,
+    sendAndConfirmTransaction, SYSVAR_CLOCK_PUBKEY,
 } from '@solana/web3.js';
 import fs from 'fs';
 import { AbiItem, AbiInput } from 'web3-utils';
@@ -168,8 +168,9 @@ class Program {
         let debug = 'calling function ' + name + ' [' + params + ']';
 
         let keys = [
-            { pubkey: this.contractStorageAccount.publicKey, isSigner: false, isWritable: true }];
-
+            { pubkey: this.contractStorageAccount.publicKey, isSigner: false, isWritable: true },
+            { pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false },
+        ];
 
         for (let i = 0; i < pubkeys.length; i++) {
             keys.push({ pubkey: pubkeys[i], isSigner: false, isWritable: true });

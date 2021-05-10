@@ -14,7 +14,7 @@ contract caller {
     }
 
     // call two different functions
-    function do_call4(callee e, callee2 e2, int64[4] memory x, string memory y) public returns (int64, string memory) {
+    function do_call4(callee e, callee2 e2, int64[4] memory x, string memory y) pure public returns (int64, string memory) {
         return (e2.do_stuff(x), e.call2(e2, y));
     }
 
@@ -34,7 +34,7 @@ contract callee {
         return x;
     }
 
-    function call2(callee2 e2, string s) public returns (string) {
+    function call2(callee2 e2, string s) public pure returns (string) {
         return e2.do_stuff2(s);
     }
 

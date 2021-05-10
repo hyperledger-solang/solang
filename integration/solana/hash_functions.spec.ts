@@ -22,5 +22,15 @@ describe('Deploy solang contract and test', () => {
         res = await hash_functions.call_function(conn, "hash_sha256", ['0x' + Buffer.from('Call me Ishmael.', 'utf8').toString('hex')]);
 
         expect(res["0"]).toBe("0x458f3ceeeec730139693560ecf66c9c22d9c7bc7dcb0599e8e10b667dfeac043");
+
+        console.log("calling timestamp");
+        res = await hash_functions.call_function(conn, "mr_now", []);
+
+        let now = Math.floor(+new Date() / 1000);
+
+        let ts = Number(res[0]);
+
+        expect(ts).toBeLessThanOrEqual(now);
+        expect(ts).toBeGreaterThan(now - 120);
     });
 });
