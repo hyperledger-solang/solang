@@ -618,7 +618,10 @@ impl SolanaTarget {
         key_ty: &ast::Type,
         value_ty: &ast::Type,
     ) -> BasicTypeEnum<'b> {
-        let key = if matches!(key_ty, ast::Type::String | ast::Type::DynamicBytes) {
+        let key = if matches!(
+            key_ty,
+            ast::Type::String | ast::Type::DynamicBytes | ast::Type::Mapping(_, _)
+        ) {
             contract.context.i32_type().into()
         } else {
             contract.llvm_type(key_ty)
@@ -630,7 +633,11 @@ impl SolanaTarget {
                 &[
                     key,                                // key
                     contract.context.i32_type().into(), // next field
-                    contract.llvm_type(value_ty),       // value
+                    if value_ty.is_mapping() {
+                        contract.context.i32_type().into()
+                    } else {
+                        contract.llvm_type(value_ty) // value
+                    },
                 ],
                 false,
             )

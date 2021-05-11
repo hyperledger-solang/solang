@@ -185,6 +185,62 @@ fn string_mapping() {
         ])]
     );
 }
+
+#[test]
+fn mapping_in_mapping() {
+    let mut vm = build_solidity(
+        r#"
+        contract foo {
+            mapping (string => mapping(int64 => byte)) public map;
+
+            function set(string s, int64 n, bytes1 v) public {
+                map[s][n] = v;
+            }
+        }"#,
+    );
+
+    vm.constructor(&[]);
+
+    vm.function(
+        "set",
+        &[
+            Token::String(String::from("a")),
+            Token::Int(ethereum_types::U256::from(102)),
+            Token::FixedBytes(vec![0x98]),
+        ],
+    );
+
+    let returns = vm.function(
+        "map",
+        &[
+            Token::String(String::from("a")),
+            Token::Int(ethereum_types::U256::from(102)),
+        ],
+    );
+
+    assert_eq!(returns, vec![Token::FixedBytes(vec![0x98])]);
+
+    let returns = vm.function(
+        "map",
+        &[
+            Token::String(String::from("a")),
+            Token::Int(ethereum_types::U256::from(103)),
+        ],
+    );
+
+    assert_eq!(returns, vec![Token::FixedBytes(vec![0])]);
+
+    let returns = vm.function(
+        "map",
+        &[
+            Token::String(String::from("b")),
+            Token::Int(ethereum_types::U256::from(102)),
+        ],
+    );
+
+    assert_eq!(returns, vec![Token::FixedBytes(vec![0])]);
+}
+
 #[test]
 fn sparse_array() {
     let mut vm = build_solidity(
