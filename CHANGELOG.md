@@ -9,14 +9,21 @@ will be documented here.
   and modulo where possible.
 - Visual Studio Code extension can download the Solang binary from github
   releases, so the user is not required to download it themselves
-- The Solana now has support for arrays and mapping in contract storage
+- The Solana target now has support for arrays and mapping in contract
+  storage
+- The Solana target has support for the keccak256(), ripemd160(), and
+  sha256() builtin hash functions.
+- The Solana target has support for the builtins this and block.timestamp.
+- Implement abi.encodePacked() for the ethereum abi encoder
 
 ### Changed
 - Solang now uses LLVM 11.0, based on the [Solana LLVM tree](https://github.com/solana-labs/llvm-project/)
 
 ### Fixed
+- Fix a number of issues with parsing the uniswap v2 contracts
 - ewasm: staticcall() and delegatecall() cannot take value argument
 - Fixed array support in the ethereum abi encoder and decoder
+- Fixed issues in arithmetic on non-power-of-2 types (e.g. uint112)
 
 ## [0.1.7]
 
