@@ -499,7 +499,7 @@ fn gen_abi(contract_no: usize, ns: &ast::Namespace) -> Abi {
                 .collect();
             let docs = vec![render(&event.tags)];
 
-            Event { name, args, docs }
+            Event { docs, name, args }
         })
         .collect();
 

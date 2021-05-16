@@ -52,10 +52,7 @@ pub fn parse(src: &str, file_no: usize) -> Result<pt::SourceUnit, Vec<Diagnostic
 }
 
 pub fn box_option<T>(o: Option<T>) -> Option<Box<T>> {
-    match o {
-        None => None,
-        Some(x) => Some(Box::new(x)),
-    }
+    o.map(Box::new)
 }
 
 #[cfg(test)]

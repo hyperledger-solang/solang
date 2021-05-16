@@ -634,7 +634,7 @@ impl VirtualMachine {
         let program = &self.stack[0];
 
         let executable =
-            Executable::<UserError>::from_elf(&self.account_data[&program.program].0, None)
+            <dyn Executable<UserError>>::from_elf(&self.account_data[&program.program].0, None)
                 .expect("should work");
         let mut vm = EbpfVm::<UserError, DefaultInstructionMeter>::new(
             executable.as_ref(),
