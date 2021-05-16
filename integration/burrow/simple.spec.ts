@@ -1,7 +1,7 @@
 import { strictEqual } from 'assert';
-import { Burrow } from '@hyperledger/burrow';
+import { Contract, Burrow } from '@hyperledger/burrow';
 import { readFileSync } from 'fs';
-import BN from 'bn.js';
+import { BigNumber } from 'ethers/lib/ethers';
 
 const default_url: string = "localhost:10997";
 const default_account = 'ABE2314B5D38BE9EA2BEDB8E58345C62FA6636BA';
@@ -21,11 +21,13 @@ describe('Deploy solang contract and test', () => {
 
         let conn = await establishConnection();
 
-        const data: string = readFileSync('flipper.wasm').toString('hex');
+        const bytecode: string = readFileSync('flipper.wasm').toString('hex');
 
         const abi = JSON.parse(readFileSync('flipper.abi', 'utf-8'));
 
-        let prog: any = await conn.contracts.deploy(abi, data, undefined, false);
+        let contract = new Contract({ abi, bytecode });
+
+        let prog: any = await contract.deploy(conn, false);
 
         let output = await prog.get();
         strictEqual(output[0], false);
@@ -41,11 +43,13 @@ describe('Deploy solang contract and test', () => {
 
         let conn = await establishConnection();
 
-        const data: string = readFileSync('flipper.wasm').toString('hex');
+        const bytecode: string = readFileSync('flipper.wasm').toString('hex');
 
         const abi = JSON.parse(readFileSync('flipper.abi', 'utf-8'));
 
-        let prog: any = await conn.contracts.deploy(abi, data, undefined, true);
+        let contract = new Contract({ abi, bytecode });
+
+        let prog: any = await contract.deploy(conn, true);
 
         let output = await prog.get();
         strictEqual(output[0], true);
@@ -61,12 +65,14 @@ describe('Deploy solang contract and test', () => {
 
         let conn = await establishConnection();
 
-        const data: string = readFileSync('primitives.wasm').toString('hex');
+        const bytecode: string = readFileSync('primitives.wasm').toString('hex');
 
         const abi = JSON.parse(readFileSync('primitives.abi', 'utf-8'));
 
         // call the constructor
-        let prog: any = await conn.contracts.deploy(abi, data, undefined);
+        let contract = new Contract({ abi, bytecode });
+
+        let prog: any = await contract.deploy(conn);
 
         // TEST Basic enums
         // in ethereum, an enum is described as an uint8 so can't use the enum
@@ -97,9 +103,9 @@ describe('Deploy solang contract and test', () => {
         res = await prog.op_u64(0, 1000, 4100);
         strictEqual(res[0], 5100);
         res = await prog.op_u64(1, 1000, 4100);
-        strictEqual(new BN('18446744073709548516').cmp(res[0]), 0); // (2^64)-18446744073709548516 = 3100
+        strictEqual(BigNumber.from('18446744073709548516').eq(res[0]), true); // (2^64)-18446744073709548516 = 3100
         res = await prog.op_u64(2, 123456789, 123456789);
-        strictEqual(new BN('15241578750190521').cmp(res[0]), 0);
+        strictEqual(BigNumber.from('15241578750190521').eq(res[0]), true);
         res = await prog.op_u64(3, 123456789, 100);
         strictEqual(res[0], 1234567);
         res = await prog.op_u64(4, 123456789, 100);
@@ -130,15 +136,15 @@ describe('Deploy solang contract and test', () => {
         res = await prog.op_u256(0, 1000, 4100);
         strictEqual(res[0], 5100);
         res = await prog.op_u256(1, 1000, 4100);
-        strictEqual(new BN('115792089237316195423570985008687907853269984665640564039457584007913129636836').cmp(res[0]), 0); // (2^64)-18446744073709548516 = 3100
+        strictEqual(BigNumber.from('115792089237316195423570985008687907853269984665640564039457584007913129636836').eq(res[0]), true); // (2^64)-18446744073709548516 = 3100
         res = await prog.op_u256(2, 123456789, 123456789);
-        strictEqual(new BN('15241578750190521').cmp(res[0]), 0);
+        strictEqual(BigNumber.from('15241578750190521').eq(res[0]), true);
         res = await prog.op_u256(3, 123456789, 100);
         strictEqual(res[0], 1234567);
         res = await prog.op_u256(4, 123456789, 100);
         strictEqual(res[0], 89);
         res = await prog.op_u256(5, 123456789, 9);
-        strictEqual(new BN('6662462759719942007440037531362779472290810125440036903063319585255179509').cmp(res[0]), 0);
+        strictEqual(BigNumber.from('6662462759719942007440037531362779472290810125440036903063319585255179509').eq(res[0]), true);
         res = await prog.op_i256(6, 10000000000000, 8);
         strictEqual(res[0].toString(), '2560000000000000');
         res = await prog.op_i256(7, 10000000000000, 8);
@@ -166,11 +172,11 @@ describe('Deploy solang contract and test', () => {
         strictEqual(res[0], '5B95FC2468ACF13579BDF7DDEE00');
         res = await prog.op_u8_14_shift(7, 'deadcafe123456789abcdefbeef7', 9);
         strictEqual(res[0], '006F56E57F091A2B3C4D5E6F7DF7');
-        res = await prog.op_u8_14(8, 'deadcafe123456789abcdefbeef7', '00000600');
+        res = await prog.op_u8_14(8, 'deadcafe123456789abcdefbeef7', '0000060000000000000000000000');
         strictEqual(res[0], 'DEADCEFE123456789ABCDEFBEEF7');
-        res = await prog.op_u8_14(9, 'deadcafe123456789abcdefbeef7', '000000000000000000ff');
+        res = await prog.op_u8_14(9, 'deadcafe123456789abcdefbeef7', '000000000000000000ff00000000');
         strictEqual(res[0], '000000000000000000BC00000000');
-        res = await prog.op_u8_14(10, 'deadcafe123456789abcdefbeef7', 'ff');
+        res = await prog.op_u8_14(10, 'deadcafe123456789abcdefbeef7', 'ff00000000000000000000000000');
         strictEqual(res[0], '21ADCAFE123456789ABCDEFBEEF7');
 
         // TEST address type.

@@ -152,7 +152,7 @@ jobs:
     needs: linux
     services:
       burrow:
-        image: hyperledger/burrow:0.31.1
+        image: hyperledger/burrow:0.32.1
         ports:
           - 10997
     steps:
