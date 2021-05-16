@@ -195,9 +195,9 @@ impl FileCache {
 
                     return Ok(ResolvedFile {
                         full_path,
-                        base,
-                        import_no,
                         file_no,
+                        import_no,
+                        base,
                     });
                 }
             }

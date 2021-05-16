@@ -328,14 +328,12 @@ pub fn expression(
                 .map(|v| expression(&v, cfg, *contract_no, ns, vartab))
                 .collect();
             let gas = expression(gas, cfg, *contract_no, ns, vartab);
-            let value = match value {
-                Some(value) => Some(expression(&value, cfg, *contract_no, ns, vartab)),
-                None => None,
-            };
-            let salt = match salt {
-                Some(salt) => Some(expression(&salt, cfg, *contract_no, ns, vartab)),
-                None => None,
-            };
+            let value = value
+                .as_ref()
+                .map(|value| expression(&value, cfg, *contract_no, ns, vartab));
+            let salt = salt
+                .as_ref()
+                .map(|salt| expression(&salt, cfg, *contract_no, ns, vartab));
 
             cfg.add(
                 vartab,

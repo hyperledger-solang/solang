@@ -913,10 +913,9 @@ fn try_catch(
                 _ => vartab.temp_anonymous(&Type::Contract(*contract_no)),
             };
 
-            let value = match value {
-                Some(v) => Some(expression(v, cfg, callee_contract_no, ns, vartab)),
-                None => None,
-            };
+            let value = value
+                .as_ref()
+                .map(|value| expression(value, cfg, callee_contract_no, ns, vartab));
 
             let gas = expression(gas, cfg, callee_contract_no, ns, vartab);
             let salt = salt

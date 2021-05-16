@@ -210,15 +210,11 @@ pub fn message_as_json(cache: &mut FileCache, ns: &Namespace) -> Vec<OutputJson>
             continue;
         }
 
-        let location = if let Some(pos) = msg.pos {
-            Some(LocJson {
-                file: format!("{}", ns.files[pos.0].display()),
-                start: pos.1 + 1,
-                end: pos.2 + 1,
-            })
-        } else {
-            None
-        };
+        let location = msg.pos.map(|pos| LocJson {
+            file: format!("{}", ns.files[pos.0].display()),
+            start: pos.1 + 1,
+            end: pos.2 + 1,
+        });
 
         json.push(OutputJson {
             sourceLocation: location,
