@@ -16,7 +16,7 @@ use inkwell::OptimizationLevel;
 use tiny_keccak::{Hasher, Keccak};
 
 use super::ethabiencoder;
-use super::{Contract, TargetRuntime, Variable};
+use super::{Binary, TargetRuntime, Variable};
 
 pub struct EwasmTarget {
     abi: ethabiencoder::EthAbiDecoder,
@@ -30,12 +30,12 @@ impl EwasmTarget {
         filename: &'a str,
         opt: OptimizationLevel,
         math_overflow_check: bool,
-    ) -> Contract<'a> {
+    ) -> Binary<'a> {
         // first emit runtime code
         let mut b = EwasmTarget {
             abi: ethabiencoder::EthAbiDecoder { bswap: false },
         };
-        let mut runtime_code = Contract::new(
+        let mut runtime_code = Binary::new(
             context,
             contract,
             ns,
@@ -62,7 +62,7 @@ impl EwasmTarget {
         let mut b = EwasmTarget {
             abi: ethabiencoder::EthAbiDecoder { bswap: false },
         };
-        let mut deploy_code = Contract::new(
+        let mut deploy_code = Binary::new(
             context,
             contract,
             ns,
@@ -120,30 +120,28 @@ impl EwasmTarget {
 
     fn runtime_prelude<'a>(
         &self,
-        contract: &Contract<'a>,
+        binary: &Binary<'a>,
         function: FunctionValue,
     ) -> (PointerValue<'a>, IntValue<'a>) {
-        let entry = contract.context.append_basic_block(function, "entry");
+        let entry = binary.context.append_basic_block(function, "entry");
 
-        contract.builder.position_at_end(entry);
+        binary.builder.position_at_end(entry);
 
         // first thing to do is abort value transfers if we're not payable
-        if contract.function_abort_value_transfers {
-            self.abort_if_value_transfer(contract, function);
+        if binary.function_abort_value_transfers {
+            self.abort_if_value_transfer(binary, function);
         }
 
         // init our heap
-        contract.builder.build_call(
-            contract.module.get_function("__init_heap").unwrap(),
-            &[],
-            "",
-        );
+        binary
+            .builder
+            .build_call(binary.module.get_function("__init_heap").unwrap(), &[], "");
 
         // copy arguments from scratch buffer
-        let args_length = contract
+        let args_length = binary
             .builder
             .build_call(
-                contract.module.get_function("getCallDataSize").unwrap(),
+                binary.module.get_function("getCallDataSize").unwrap(),
                 &[],
                 "calldatasize",
             )
@@ -151,15 +149,15 @@ impl EwasmTarget {
             .left()
             .unwrap();
 
-        contract.builder.build_store(
-            contract.calldata_len.as_pointer_value(),
+        binary.builder.build_store(
+            binary.calldata_len.as_pointer_value(),
             args_length.into_int_value(),
         );
 
-        let args = contract
+        let args = binary
             .builder
             .build_call(
-                contract.module.get_function("__malloc").unwrap(),
+                binary.module.get_function("__malloc").unwrap(),
                 &[args_length],
                 "",
             )
@@ -168,23 +166,23 @@ impl EwasmTarget {
             .unwrap()
             .into_pointer_value();
 
-        contract
+        binary
             .builder
-            .build_store(contract.calldata_data.as_pointer_value(), args);
+            .build_store(binary.calldata_data.as_pointer_value(), args);
 
-        contract.builder.build_call(
-            contract.module.get_function("callDataCopy").unwrap(),
+        binary.builder.build_call(
+            binary.module.get_function("callDataCopy").unwrap(),
             &[
                 args.into(),
-                contract.context.i32_type().const_zero().into(),
+                binary.context.i32_type().const_zero().into(),
                 args_length,
             ],
             "",
         );
 
-        let args = contract.builder.build_pointer_cast(
+        let args = binary.builder.build_pointer_cast(
             args,
-            contract.context.i32_type().ptr_type(AddressSpace::Generic),
+            binary.context.i32_type().ptr_type(AddressSpace::Generic),
             "",
         );
 
@@ -193,34 +191,32 @@ impl EwasmTarget {
 
     fn deployer_prelude<'a>(
         &self,
-        contract: &mut Contract<'a>,
+        binary: &mut Binary<'a>,
         function: FunctionValue,
     ) -> (PointerValue<'a>, IntValue<'a>) {
-        let entry = contract.context.append_basic_block(function, "entry");
+        let entry = binary.context.append_basic_block(function, "entry");
 
-        contract.builder.position_at_end(entry);
+        binary.builder.position_at_end(entry);
 
         // first thing to do is abort value transfers if constructors not payable
-        if contract.constructor_abort_value_transfers {
-            self.abort_if_value_transfer(contract, function);
+        if binary.constructor_abort_value_transfers {
+            self.abort_if_value_transfer(binary, function);
         }
 
         // init our heap
-        contract.builder.build_call(
-            contract.module.get_function("__init_heap").unwrap(),
-            &[],
-            "",
-        );
+        binary
+            .builder
+            .build_call(binary.module.get_function("__init_heap").unwrap(), &[], "");
 
         // The code_size will need to be patched later
-        let code_size = contract.context.i32_type().const_int(0x4000, false);
+        let code_size = binary.context.i32_type().const_int(0x4000, false);
 
         // copy arguments from scratch buffer
-        let args_length = contract.builder.build_int_sub(
-            contract
+        let args_length = binary.builder.build_int_sub(
+            binary
                 .builder
                 .build_call(
-                    contract.module.get_function("getCodeSize").unwrap(),
+                    binary.module.get_function("getCodeSize").unwrap(),
                     &[],
                     "codesize",
                 )
@@ -232,14 +228,14 @@ impl EwasmTarget {
             "",
         );
 
-        contract
+        binary
             .builder
-            .build_store(contract.calldata_len.as_pointer_value(), args_length);
+            .build_store(binary.calldata_len.as_pointer_value(), args_length);
 
-        let args = contract
+        let args = binary
             .builder
             .build_call(
-                contract.module.get_function("__malloc").unwrap(),
+                binary.module.get_function("__malloc").unwrap(),
                 &[args_length.into()],
                 "",
             )
@@ -248,61 +244,61 @@ impl EwasmTarget {
             .unwrap()
             .into_pointer_value();
 
-        contract
+        binary
             .builder
-            .build_store(contract.calldata_data.as_pointer_value(), args);
+            .build_store(binary.calldata_data.as_pointer_value(), args);
 
-        contract.builder.build_call(
-            contract.module.get_function("codeCopy").unwrap(),
+        binary.builder.build_call(
+            binary.module.get_function("codeCopy").unwrap(),
             &[args.into(), code_size.into(), args_length.into()],
             "",
         );
 
-        let args = contract.builder.build_pointer_cast(
+        let args = binary.builder.build_pointer_cast(
             args,
-            contract.context.i32_type().ptr_type(AddressSpace::Generic),
+            binary.context.i32_type().ptr_type(AddressSpace::Generic),
             "",
         );
 
-        contract.code_size = RefCell::new(Some(code_size));
+        binary.code_size = RefCell::new(Some(code_size));
 
         (args, args_length)
     }
 
-    fn declare_externals(&self, contract: &mut Contract) {
-        let u8_ptr_ty = contract.context.i8_type().ptr_type(AddressSpace::Generic);
-        let u32_ty = contract.context.i32_type();
-        let u64_ty = contract.context.i64_type();
-        let void_ty = contract.context.void_type();
+    fn declare_externals(&self, binary: &mut Binary) {
+        let u8_ptr_ty = binary.context.i8_type().ptr_type(AddressSpace::Generic);
+        let u32_ty = binary.context.i32_type();
+        let u64_ty = binary.context.i64_type();
+        let void_ty = binary.context.void_type();
 
         let ftype = void_ty.fn_type(&[u8_ptr_ty.into(), u8_ptr_ty.into()], false);
 
-        contract
+        binary
             .module
             .add_function("storageStore", ftype, Some(Linkage::External));
-        contract
+        binary
             .module
             .add_function("storageLoad", ftype, Some(Linkage::External));
 
-        contract.module.add_function(
+        binary.module.add_function(
             "getCallDataSize",
             u32_ty.fn_type(&[], false),
             Some(Linkage::External),
         );
 
-        contract.module.add_function(
+        binary.module.add_function(
             "getCodeSize",
             u32_ty.fn_type(&[], false),
             Some(Linkage::External),
         );
 
-        contract.module.add_function(
+        binary.module.add_function(
             "getReturnDataSize",
             u32_ty.fn_type(&[], false),
             Some(Linkage::External),
         );
 
-        contract.module.add_function(
+        binary.module.add_function(
             "callDataCopy",
             void_ty.fn_type(
                 &[
@@ -315,7 +311,7 @@ impl EwasmTarget {
             Some(Linkage::External),
         );
 
-        contract.module.add_function(
+        binary.module.add_function(
             "codeCopy",
             void_ty.fn_type(
                 &[
@@ -328,7 +324,7 @@ impl EwasmTarget {
             Some(Linkage::External),
         );
 
-        contract.module.add_function(
+        binary.module.add_function(
             "returnDataCopy",
             void_ty.fn_type(
                 &[
@@ -341,7 +337,7 @@ impl EwasmTarget {
             Some(Linkage::External),
         );
 
-        contract.module.add_function(
+        binary.module.add_function(
             "printMem",
             void_ty.fn_type(
                 &[
@@ -353,7 +349,7 @@ impl EwasmTarget {
             Some(Linkage::External),
         );
 
-        contract.module.add_function(
+        binary.module.add_function(
             "create",
             u32_ty.fn_type(
                 &[
@@ -367,7 +363,7 @@ impl EwasmTarget {
             Some(Linkage::External),
         );
 
-        contract.module.add_function(
+        binary.module.add_function(
             "call",
             u32_ty.fn_type(
                 &[
@@ -381,7 +377,7 @@ impl EwasmTarget {
             ),
             Some(Linkage::External),
         );
-        contract.module.add_function(
+        binary.module.add_function(
             "callStatic",
             u32_ty.fn_type(
                 &[
@@ -394,7 +390,7 @@ impl EwasmTarget {
             ),
             Some(Linkage::External),
         );
-        contract.module.add_function(
+        binary.module.add_function(
             "callDelegate",
             u32_ty.fn_type(
                 &[
@@ -407,7 +403,7 @@ impl EwasmTarget {
             ),
             Some(Linkage::External),
         );
-        contract.module.add_function(
+        binary.module.add_function(
             "getCallValue",
             void_ty.fn_type(
                 &[
@@ -418,7 +414,7 @@ impl EwasmTarget {
             Some(Linkage::External),
         );
 
-        contract.module.add_function(
+        binary.module.add_function(
             "getAddress",
             void_ty.fn_type(
                 &[
@@ -429,7 +425,7 @@ impl EwasmTarget {
             Some(Linkage::External),
         );
 
-        contract.module.add_function(
+        binary.module.add_function(
             "getCaller",
             void_ty.fn_type(
                 &[
@@ -440,7 +436,7 @@ impl EwasmTarget {
             Some(Linkage::External),
         );
 
-        contract.module.add_function(
+        binary.module.add_function(
             "getExternalBalance",
             void_ty.fn_type(
                 &[
@@ -452,7 +448,7 @@ impl EwasmTarget {
             Some(Linkage::External),
         );
 
-        contract.module.add_function(
+        binary.module.add_function(
             "getBlockHash",
             u32_ty.fn_type(
                 &[
@@ -464,7 +460,7 @@ impl EwasmTarget {
             Some(Linkage::External),
         );
 
-        contract.module.add_function(
+        binary.module.add_function(
             "getBlockCoinbase",
             void_ty.fn_type(
                 &[
@@ -475,7 +471,7 @@ impl EwasmTarget {
             Some(Linkage::External),
         );
 
-        contract.module.add_function(
+        binary.module.add_function(
             "getBlockDifficulty",
             void_ty.fn_type(
                 &[
@@ -486,31 +482,31 @@ impl EwasmTarget {
             Some(Linkage::External),
         );
 
-        contract.module.add_function(
+        binary.module.add_function(
             "getGasLeft",
             u64_ty.fn_type(&[], false),
             Some(Linkage::External),
         );
 
-        contract.module.add_function(
+        binary.module.add_function(
             "getBlockGasLimit",
             u64_ty.fn_type(&[], false),
             Some(Linkage::External),
         );
 
-        contract.module.add_function(
+        binary.module.add_function(
             "getBlockTimestamp",
             u64_ty.fn_type(&[], false),
             Some(Linkage::External),
         );
 
-        contract.module.add_function(
+        binary.module.add_function(
             "getBlockNumber",
             u64_ty.fn_type(&[], false),
             Some(Linkage::External),
         );
 
-        contract.module.add_function(
+        binary.module.add_function(
             "getTxGasPrice",
             void_ty.fn_type(
                 &[
@@ -521,7 +517,7 @@ impl EwasmTarget {
             Some(Linkage::External),
         );
 
-        contract.module.add_function(
+        binary.module.add_function(
             "getTxOrigin",
             void_ty.fn_type(
                 &[
@@ -532,7 +528,7 @@ impl EwasmTarget {
             Some(Linkage::External),
         );
 
-        contract.module.add_function(
+        binary.module.add_function(
             "log",
             void_ty.fn_type(
                 &[
@@ -549,12 +545,12 @@ impl EwasmTarget {
             Some(Linkage::External),
         );
 
-        let noreturn = contract
+        let noreturn = binary
             .context
             .create_enum_attribute(Attribute::get_named_enum_kind_id("noreturn"), 0);
 
         // mark as noreturn
-        contract
+        binary
             .module
             .add_function(
                 "finish",
@@ -570,7 +566,7 @@ impl EwasmTarget {
             .add_attribute(AttributeLoc::Function, noreturn);
 
         // mark as noreturn
-        contract
+        binary
             .module
             .add_function(
                 "revert",
@@ -586,7 +582,7 @@ impl EwasmTarget {
             .add_attribute(AttributeLoc::Function, noreturn);
 
         // mark as noreturn
-        contract
+        binary
             .module
             .add_function(
                 "selfDestruct",
@@ -601,22 +597,22 @@ impl EwasmTarget {
             .add_attribute(AttributeLoc::Function, noreturn);
     }
 
-    fn deployer_dispatch(&mut self, contract: &mut Contract, runtime: &[u8]) {
-        let initializer = self.emit_initializer(contract);
+    fn deployer_dispatch(&mut self, binary: &mut Binary, runtime: &[u8]) {
+        let initializer = self.emit_initializer(binary);
 
         // create start function
-        let ret = contract.context.void_type();
+        let ret = binary.context.void_type();
         let ftype = ret.fn_type(&[], false);
-        let function = contract.module.add_function("main", ftype, None);
+        let function = binary.module.add_function("main", ftype, None);
 
         // FIXME: If there is no constructor, do not copy the calldata (but check calldatasize == 0)
-        let (argsdata, length) = self.deployer_prelude(contract, function);
+        let (argsdata, length) = self.deployer_prelude(binary, function);
 
         // init our storage vars
-        contract.builder.build_call(initializer, &[], "");
+        binary.builder.build_call(initializer, &[], "");
 
         // ewasm only allows one constructor, hence find()
-        if let Some((cfg_no, cfg)) = contract
+        if let Some((cfg_no, cfg)) = binary
             .contract
             .cfg
             .iter()
@@ -627,21 +623,21 @@ impl EwasmTarget {
 
             // insert abi decode
             self.abi
-                .decode(contract, function, &mut args, argsdata, length, &cfg.params);
+                .decode(binary, function, &mut args, argsdata, length, &cfg.params);
 
-            contract
+            binary
                 .builder
-                .build_call(contract.functions[&cfg_no], &args, "");
+                .build_call(binary.functions[&cfg_no], &args, "");
         }
 
         // the deploy code should return the runtime wasm code
-        let runtime_code = contract.emit_global_string("runtime_code", runtime, true);
+        let runtime_code = binary.emit_global_string("runtime_code", runtime, true);
 
-        contract.builder.build_call(
-            contract.module.get_function("finish").unwrap(),
+        binary.builder.build_call(
+            binary.module.get_function("finish").unwrap(),
             &[
                 runtime_code.into(),
-                contract
+                binary
                     .context
                     .i32_type()
                     .const_int(runtime.len() as u64, false)
@@ -652,31 +648,31 @@ impl EwasmTarget {
 
         // since finish is marked noreturn, this should be optimized away
         // however it is needed to create valid LLVM IR
-        contract.builder.build_unreachable();
+        binary.builder.build_unreachable();
     }
 
-    fn function_dispatch(&mut self, contract: &Contract) {
+    fn function_dispatch(&mut self, binary: &Binary) {
         // create start function
-        let ret = contract.context.void_type();
+        let ret = binary.context.void_type();
         let ftype = ret.fn_type(&[], false);
-        let function = contract.module.add_function("main", ftype, None);
+        let function = binary.module.add_function("main", ftype, None);
 
-        let (argsdata, argslen) = self.runtime_prelude(contract, function);
+        let (argsdata, argslen) = self.runtime_prelude(binary, function);
 
         self.emit_function_dispatch(
-            contract,
+            binary,
             pt::FunctionTy::Function,
             argsdata,
             argslen,
             function,
             None,
-            |func| !contract.function_abort_value_transfers && func.nonpayable,
+            |func| !binary.function_abort_value_transfers && func.nonpayable,
         );
     }
 
     fn encode<'b>(
         &self,
-        contract: &Contract<'b>,
+        binary: &Binary<'b>,
         constant: Option<(PointerValue<'b>, u64)>,
         load: bool,
         function: FunctionValue<'b>,
@@ -685,22 +681,22 @@ impl EwasmTarget {
         tys: &[ast::Type],
     ) -> (PointerValue<'b>, IntValue<'b>) {
         let encoder =
-            ethabiencoder::EncoderBuilder::new(contract, function, load, packed, args, tys, false);
+            ethabiencoder::EncoderBuilder::new(binary, function, load, packed, args, tys, false);
 
         let mut length = encoder.encoded_length();
 
         if let Some((_, len)) = constant {
-            length = contract.builder.build_int_add(
+            length = binary.builder.build_int_add(
                 length,
-                contract.context.i32_type().const_int(len, false),
+                binary.context.i32_type().const_int(len, false),
                 "",
             );
         }
 
-        let encoded_data = contract
+        let encoded_data = binary
             .builder
             .build_call(
-                contract.module.get_function("__malloc").unwrap(),
+                binary.module.get_function("__malloc").unwrap(),
                 &[length.into()],
                 "",
             )
@@ -712,37 +708,33 @@ impl EwasmTarget {
         let mut data = encoded_data;
 
         if let Some((code, code_len)) = constant {
-            contract.builder.build_call(
-                contract.module.get_function("__memcpy").unwrap(),
+            binary.builder.build_call(
+                binary.module.get_function("__memcpy").unwrap(),
                 &[
-                    contract
+                    binary
                         .builder
                         .build_pointer_cast(
                             data,
-                            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                            binary.context.i8_type().ptr_type(AddressSpace::Generic),
                             "",
                         )
                         .into(),
                     code.into(),
-                    contract
-                        .context
-                        .i32_type()
-                        .const_int(code_len, false)
-                        .into(),
+                    binary.context.i32_type().const_int(code_len, false).into(),
                 ],
                 "",
             );
 
             data = unsafe {
-                contract.builder.build_gep(
+                binary.builder.build_gep(
                     data,
-                    &[contract.context.i32_type().const_int(code_len, false)],
+                    &[binary.context.i32_type().const_int(code_len, false)],
                     "",
                 )
             };
         }
 
-        encoder.finish(contract, function, data);
+        encoder.finish(binary, function, data);
 
         (encoded_data, length)
     }
@@ -751,37 +743,37 @@ impl EwasmTarget {
 impl<'a> TargetRuntime<'a> for EwasmTarget {
     fn storage_delete_single_slot(
         &self,
-        contract: &Contract,
+        binary: &Binary,
         _function: FunctionValue,
         slot: PointerValue,
     ) {
-        let value = contract
+        let value = binary
             .builder
-            .build_alloca(contract.context.custom_width_int_type(256), "value");
+            .build_alloca(binary.context.custom_width_int_type(256), "value");
 
-        let value8 = contract.builder.build_pointer_cast(
+        let value8 = binary.builder.build_pointer_cast(
             value,
-            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+            binary.context.i8_type().ptr_type(AddressSpace::Generic),
             "value8",
         );
 
-        contract.builder.build_call(
-            contract.module.get_function("__bzero8").unwrap(),
+        binary.builder.build_call(
+            binary.module.get_function("__bzero8").unwrap(),
             &[
                 value8.into(),
-                contract.context.i32_type().const_int(4, false).into(),
+                binary.context.i32_type().const_int(4, false).into(),
             ],
             "",
         );
 
-        contract.builder.build_call(
-            contract.module.get_function("storageStore").unwrap(),
+        binary.builder.build_call(
+            binary.module.get_function("storageStore").unwrap(),
             &[
-                contract
+                binary
                     .builder
                     .build_pointer_cast(
                         slot,
-                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
                         "",
                     )
                     .into(),
@@ -793,7 +785,7 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
 
     fn set_storage_string(
         &self,
-        _contract: &Contract<'a>,
+        _binary: &Binary<'a>,
         _function: FunctionValue<'a>,
         _slot: PointerValue<'a>,
         _dest: BasicValueEnum<'a>,
@@ -803,7 +795,7 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
 
     fn get_storage_string(
         &self,
-        _contract: &Contract<'a>,
+        _binary: &Binary<'a>,
         _function: FunctionValue,
         _slot: PointerValue,
     ) -> PointerValue<'a> {
@@ -811,7 +803,7 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
     }
     fn set_storage_extfunc(
         &self,
-        _contract: &Contract,
+        _binary: &Binary,
         _function: FunctionValue,
         _slot: PointerValue,
         _dest: PointerValue,
@@ -820,7 +812,7 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
     }
     fn get_storage_extfunc(
         &self,
-        _contract: &Contract<'a>,
+        _binary: &Binary<'a>,
         _function: FunctionValue,
         _slot: PointerValue<'a>,
     ) -> PointerValue<'a> {
@@ -828,7 +820,7 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
     }
     fn get_storage_bytes_subscript(
         &self,
-        _contract: &Contract<'a>,
+        _binary: &Binary<'a>,
         _function: FunctionValue,
         _slot: IntValue<'a>,
         _index: IntValue<'a>,
@@ -837,7 +829,7 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
     }
     fn set_storage_bytes_subscript(
         &self,
-        _contract: &Contract,
+        _binary: &Binary,
         _function: FunctionValue,
         _slot: IntValue,
         _index: IntValue,
@@ -847,7 +839,7 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
     }
     fn storage_push(
         &self,
-        _contract: &Contract<'a>,
+        _binary: &Binary<'a>,
         _function: FunctionValue,
         _ty: &ast::Type,
         _slot: IntValue<'a>,
@@ -857,7 +849,7 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
     }
     fn storage_pop(
         &self,
-        _contract: &Contract<'a>,
+        _binary: &Binary<'a>,
         _function: FunctionValue<'a>,
         _ty: &ast::Type,
         _slot: IntValue<'a>,
@@ -867,7 +859,7 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
 
     fn set_storage(
         &self,
-        contract: &Contract,
+        binary: &Binary,
         _function: FunctionValue,
         slot: PointerValue,
         dest: PointerValue,
@@ -879,22 +871,22 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
             .get_bit_width()
             == 256
         {
-            contract.builder.build_call(
-                contract.module.get_function("storageStore").unwrap(),
+            binary.builder.build_call(
+                binary.module.get_function("storageStore").unwrap(),
                 &[
-                    contract
+                    binary
                         .builder
                         .build_pointer_cast(
                             slot,
-                            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                            binary.context.i8_type().ptr_type(AddressSpace::Generic),
                             "",
                         )
                         .into(),
-                    contract
+                    binary
                         .builder
                         .build_pointer_cast(
                             dest,
-                            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                            binary.context.i8_type().ptr_type(AddressSpace::Generic),
                             "",
                         )
                         .into(),
@@ -902,42 +894,42 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
                 "",
             );
         } else {
-            let value = contract
+            let value = binary
                 .builder
-                .build_alloca(contract.context.custom_width_int_type(256), "value");
+                .build_alloca(binary.context.custom_width_int_type(256), "value");
 
-            let value8 = contract.builder.build_pointer_cast(
+            let value8 = binary.builder.build_pointer_cast(
                 value,
-                contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                binary.context.i8_type().ptr_type(AddressSpace::Generic),
                 "value8",
             );
 
-            contract.builder.build_call(
-                contract.module.get_function("__bzero8").unwrap(),
+            binary.builder.build_call(
+                binary.module.get_function("__bzero8").unwrap(),
                 &[
                     value8.into(),
-                    contract.context.i32_type().const_int(4, false).into(),
+                    binary.context.i32_type().const_int(4, false).into(),
                 ],
                 "",
             );
 
-            let val = contract.builder.build_load(dest, "value");
+            let val = binary.builder.build_load(dest, "value");
 
-            contract.builder.build_store(
-                contract
+            binary.builder.build_store(
+                binary
                     .builder
                     .build_pointer_cast(value, dest.get_type(), ""),
                 val,
             );
 
-            contract.builder.build_call(
-                contract.module.get_function("storageStore").unwrap(),
+            binary.builder.build_call(
+                binary.module.get_function("storageStore").unwrap(),
                 &[
-                    contract
+                    binary
                         .builder
                         .build_pointer_cast(
                             slot,
-                            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                            binary.context.i8_type().ptr_type(AddressSpace::Generic),
                             "",
                         )
                         .into(),
@@ -950,33 +942,33 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
 
     fn get_storage_int(
         &self,
-        contract: &Contract<'a>,
+        binary: &Binary<'a>,
         _function: FunctionValue,
         slot: PointerValue<'a>,
         ty: IntType<'a>,
     ) -> IntValue<'a> {
-        let dest = contract.builder.build_array_alloca(
-            contract.context.i8_type(),
-            contract.context.i32_type().const_int(32, false),
+        let dest = binary.builder.build_array_alloca(
+            binary.context.i8_type(),
+            binary.context.i32_type().const_int(32, false),
             "buf",
         );
 
-        contract.builder.build_call(
-            contract.module.get_function("storageLoad").unwrap(),
+        binary.builder.build_call(
+            binary.module.get_function("storageLoad").unwrap(),
             &[
-                contract
+                binary
                     .builder
                     .build_pointer_cast(
                         slot,
-                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
                         "",
                     )
                     .into(),
-                contract
+                binary
                     .builder
                     .build_pointer_cast(
                         dest,
-                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
                         "",
                     )
                     .into(),
@@ -984,10 +976,10 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
             "",
         );
 
-        contract
+        binary
             .builder
             .build_load(
-                contract
+                binary
                     .builder
                     .build_pointer_cast(dest, ty.ptr_type(AddressSpace::Generic), ""),
                 "loaded_int",
@@ -998,57 +990,52 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
     /// ewasm has no keccak256 host function, so call our implementation
     fn keccak256_hash(
         &self,
-        contract: &Contract,
+        binary: &Binary,
         src: PointerValue,
         length: IntValue,
         dest: PointerValue,
     ) {
-        let balance = contract
-            .builder
-            .build_alloca(contract.value_type(), "balance");
+        let balance = binary.builder.build_alloca(binary.value_type(), "balance");
 
-        contract
+        binary
             .builder
-            .build_store(balance, contract.value_type().const_zero());
+            .build_store(balance, binary.value_type().const_zero());
 
         let keccak256_pre_compile_address: [u8; 20] =
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 20];
 
-        let address = contract.emit_global_string(
-            "keccak256_precompile",
-            &keccak256_pre_compile_address,
-            true,
-        );
+        let address =
+            binary.emit_global_string("keccak256_precompile", &keccak256_pre_compile_address, true);
 
-        contract.builder.build_call(
-            contract.module.get_function("call").unwrap(),
+        binary.builder.build_call(
+            binary.module.get_function("call").unwrap(),
             &[
-                contract
+                binary
                     .context
                     .i64_type()
                     .const_int(i64::MAX as u64, false)
                     .into(),
-                contract
+                binary
                     .builder
                     .build_pointer_cast(
                         address,
-                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
                         "address",
                     )
                     .into(),
-                contract
+                binary
                     .builder
                     .build_pointer_cast(
                         balance,
-                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
                         "balance",
                     )
                     .into(),
-                contract
+                binary
                     .builder
                     .build_pointer_cast(
                         src,
-                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
                         "source",
                     )
                     .into(),
@@ -1059,96 +1046,96 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
 
         // We're not checking return value or returnDataSize;
         // assuming precompiles always succeed
-        contract.builder.build_call(
-            contract.module.get_function("returnDataCopy").unwrap(),
+        binary.builder.build_call(
+            binary.module.get_function("returnDataCopy").unwrap(),
             &[
-                contract
+                binary
                     .builder
                     .build_pointer_cast(
                         dest,
-                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
                         "dest",
                     )
                     .into(),
-                contract.context.i32_type().const_zero().into(),
-                contract.context.i32_type().const_int(32, false).into(),
+                binary.context.i32_type().const_zero().into(),
+                binary.context.i32_type().const_int(32, false).into(),
             ],
             "",
         );
     }
 
-    fn return_empty_abi(&self, contract: &Contract) {
-        contract.builder.build_call(
-            contract.module.get_function("finish").unwrap(),
+    fn return_empty_abi(&self, binary: &Binary) {
+        binary.builder.build_call(
+            binary.module.get_function("finish").unwrap(),
             &[
-                contract
+                binary
                     .context
                     .i8_type()
                     .ptr_type(AddressSpace::Generic)
                     .const_zero()
                     .into(),
-                contract.context.i32_type().const_zero().into(),
+                binary.context.i32_type().const_zero().into(),
             ],
             "",
         );
 
         // since finish is marked noreturn, this should be optimized away
         // however it is needed to create valid LLVM IR
-        contract.builder.build_unreachable();
+        binary.builder.build_unreachable();
     }
 
-    fn return_abi<'b>(&self, contract: &'b Contract, data: PointerValue<'b>, length: IntValue) {
-        contract.builder.build_call(
-            contract.module.get_function("finish").unwrap(),
+    fn return_abi<'b>(&self, binary: &'b Binary, data: PointerValue<'b>, length: IntValue) {
+        binary.builder.build_call(
+            binary.module.get_function("finish").unwrap(),
             &[data.into(), length.into()],
             "",
         );
 
         // since finish is marked noreturn, this should be optimized away
         // however it is needed to create valid LLVM IR
-        contract.builder.build_unreachable();
+        binary.builder.build_unreachable();
     }
 
     // ewasm main cannot return any value
-    fn return_code<'b>(&self, contract: &'b Contract, _ret: IntValue<'b>) {
+    fn return_code<'b>(&self, binary: &'b Binary, _ret: IntValue<'b>) {
         self.assert_failure(
-            contract,
-            contract
+            binary,
+            binary
                 .context
                 .i8_type()
                 .ptr_type(AddressSpace::Generic)
                 .const_null(),
-            contract.context.i32_type().const_zero(),
+            binary.context.i32_type().const_zero(),
         );
     }
 
-    fn assert_failure<'b>(&self, contract: &'b Contract, data: PointerValue, len: IntValue) {
-        contract.builder.build_call(
-            contract.module.get_function("revert").unwrap(),
+    fn assert_failure<'b>(&self, binary: &'b Binary, data: PointerValue, len: IntValue) {
+        binary.builder.build_call(
+            binary.module.get_function("revert").unwrap(),
             &[data.into(), len.into()],
             "",
         );
 
         // since revert is marked noreturn, this should be optimized away
         // however it is needed to create valid LLVM IR
-        contract.builder.build_unreachable();
+        binary.builder.build_unreachable();
     }
 
     /// ABI encode into a vector for abi.encode* style builtin functions
     fn abi_encode_to_vector<'b>(
         &self,
-        contract: &Contract<'b>,
+        binary: &Binary<'b>,
         function: FunctionValue<'b>,
         packed: &[BasicValueEnum<'b>],
         args: &[BasicValueEnum<'b>],
         tys: &[ast::Type],
     ) -> PointerValue<'b> {
-        ethabiencoder::encode_to_vector(contract, function, packed, args, tys, false)
+        ethabiencoder::encode_to_vector(binary, function, packed, args, tys, false)
     }
 
     fn abi_encode<'b>(
         &self,
-        contract: &Contract<'b>,
+        binary: &Binary<'b>,
         selector: Option<IntValue<'b>>,
         load: bool,
         function: FunctionValue<'b>,
@@ -1164,25 +1151,24 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
             vec![]
         };
 
-        self.encode(contract, None, load, function, &packed, args, &tys)
+        self.encode(binary, None, load, function, &packed, args, &tys)
     }
 
     fn abi_decode<'b>(
         &self,
-        contract: &Contract<'b>,
+        binary: &Binary<'b>,
         function: FunctionValue<'b>,
         args: &mut Vec<BasicValueEnum<'b>>,
         data: PointerValue<'b>,
         length: IntValue<'b>,
         spec: &[ast::Parameter],
     ) {
-        self.abi
-            .decode(contract, function, args, data, length, spec);
+        self.abi.decode(binary, function, args, data, length, spec);
     }
 
-    fn print(&self, contract: &Contract, string_ptr: PointerValue, string_len: IntValue) {
-        contract.builder.build_call(
-            contract.module.get_function("printMem").unwrap(),
+    fn print(&self, binary: &Binary, string_ptr: PointerValue, string_len: IntValue) {
+        binary.builder.build_call(
+            binary.module.get_function("printMem").unwrap(),
             &[string_ptr.into(), string_len.into()],
             "",
         );
@@ -1190,7 +1176,7 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
 
     fn create_contract<'b>(
         &mut self,
-        contract: &Contract<'b>,
+        binary: &Binary<'b>,
         function: FunctionValue<'b>,
         success: Option<&mut BasicValueEnum<'b>>,
         contract_no: usize,
@@ -1201,28 +1187,28 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
         value: Option<IntValue<'b>>,
         _salt: Option<IntValue<'b>>,
     ) {
-        let resolver_contract = &contract.ns.contracts[contract_no];
+        let resolver_binary = &binary.ns.contracts[contract_no];
 
-        let target_contract = Contract::build(
-            contract.context,
-            &resolver_contract,
-            contract.ns,
+        let target_binary = Binary::build(
+            binary.context,
+            &resolver_binary,
+            binary.ns,
             "",
-            contract.opt,
-            contract.math_overflow_check,
+            binary.opt,
+            binary.math_overflow_check,
         );
 
         // wasm
-        let wasm = target_contract.code(true).expect("compile should succeeed");
+        let wasm = target_binary.code(true).expect("compile should succeeed");
 
-        let code = contract.emit_global_string(
-            &format!("contract_{}_code", resolver_contract.name),
+        let code = binary.emit_global_string(
+            &format!("contract_{}_code", resolver_binary.name),
             &wasm,
             true,
         );
 
         let tys: Vec<ast::Type> = match constructor_no {
-            Some(function_no) => contract.ns.functions[function_no]
+            Some(function_no) => binary.ns.functions[function_no]
                 .params
                 .iter()
                 .map(|p| p.ty.clone())
@@ -1232,7 +1218,7 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
 
         // input
         let (input, input_len) = self.encode(
-            contract,
+            binary,
             Some((code, wasm.len() as u64)),
             false,
             function,
@@ -1242,44 +1228,42 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
         );
 
         // value is a u128
-        let value_ptr = contract
-            .builder
-            .build_alloca(contract.value_type(), "balance");
+        let value_ptr = binary.builder.build_alloca(binary.value_type(), "balance");
 
-        contract.builder.build_store(
+        binary.builder.build_store(
             value_ptr,
             match value {
                 Some(v) => v,
-                None => contract.value_type().const_zero(),
+                None => binary.value_type().const_zero(),
             },
         );
 
         // address needs its bytes reordered
-        let be_address = contract
+        let be_address = binary
             .builder
-            .build_alloca(contract.address_type(), "be_address");
+            .build_alloca(binary.address_type(), "be_address");
 
         // call create
-        let ret = contract
+        let ret = binary
             .builder
             .build_call(
-                contract.module.get_function("create").unwrap(),
+                binary.module.get_function("create").unwrap(),
                 &[
-                    contract
+                    binary
                         .builder
                         .build_pointer_cast(
                             value_ptr,
-                            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                            binary.context.i8_type().ptr_type(AddressSpace::Generic),
                             "value_transfer",
                         )
                         .into(),
                     input.into(),
                     input_len.into(),
-                    contract
+                    binary
                         .builder
                         .build_pointer_cast(
                             be_address,
-                            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                            binary.context.i8_type().ptr_type(AddressSpace::Generic),
                             "be_address",
                         )
                         .into(),
@@ -1291,65 +1275,65 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
             .unwrap()
             .into_int_value();
 
-        contract.builder.build_call(
-            contract.module.get_function("__beNtoleN").unwrap(),
+        binary.builder.build_call(
+            binary.module.get_function("__beNtoleN").unwrap(),
             &[
-                contract
+                binary
                     .builder
                     .build_pointer_cast(
                         be_address,
-                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
                         "",
                     )
                     .into(),
-                contract
+                binary
                     .builder
                     .build_pointer_cast(
                         address,
-                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
                         "",
                     )
                     .into(),
-                contract.context.i32_type().const_int(20, false).into(),
+                binary.context.i32_type().const_int(20, false).into(),
             ],
             "",
         );
 
-        let is_success = contract.builder.build_int_compare(
+        let is_success = binary.builder.build_int_compare(
             IntPredicate::EQ,
             ret,
-            contract.context.i32_type().const_zero(),
+            binary.context.i32_type().const_zero(),
             "success",
         );
 
         if let Some(success) = success {
             *success = is_success.into();
         } else {
-            let success_block = contract.context.append_basic_block(function, "success");
-            let bail_block = contract.context.append_basic_block(function, "bail");
-            contract
+            let success_block = binary.context.append_basic_block(function, "success");
+            let bail_block = binary.context.append_basic_block(function, "bail");
+            binary
                 .builder
                 .build_conditional_branch(is_success, success_block, bail_block);
 
-            contract.builder.position_at_end(bail_block);
+            binary.builder.position_at_end(bail_block);
 
             self.assert_failure(
-                contract,
-                contract
+                binary,
+                binary
                     .context
                     .i8_type()
                     .ptr_type(AddressSpace::Generic)
                     .const_null(),
-                contract.context.i32_type().const_zero(),
+                binary.context.i32_type().const_zero(),
             );
 
-            contract.builder.position_at_end(success_block);
+            binary.builder.position_at_end(success_block);
         }
     }
 
     fn external_call<'b>(
         &self,
-        contract: &Contract<'b>,
+        binary: &Binary<'b>,
         function: FunctionValue,
         success: Option<&mut BasicValueEnum<'b>>,
         payload: PointerValue<'b>,
@@ -1360,30 +1344,30 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
         callty: ast::CallTy,
     ) {
         // address needs its bytes reordered
-        let be_address = contract
+        let be_address = binary
             .builder
-            .build_alloca(contract.address_type(), "be_address");
+            .build_alloca(binary.address_type(), "be_address");
 
-        contract.builder.build_call(
-            contract.module.get_function("__leNtobeN").unwrap(),
+        binary.builder.build_call(
+            binary.module.get_function("__leNtobeN").unwrap(),
             &[
-                contract
+                binary
                     .builder
                     .build_pointer_cast(
                         address.unwrap(),
-                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
                         "",
                     )
                     .into(),
-                contract
+                binary
                     .builder
                     .build_pointer_cast(
                         be_address,
-                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
                         "",
                     )
                     .into(),
-                contract.context.i32_type().const_int(20, false).into(),
+                binary.context.i32_type().const_int(20, false).into(),
             ],
             "",
         );
@@ -1394,31 +1378,29 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
             // needs value
 
             // value is a u128
-            let value_ptr = contract
-                .builder
-                .build_alloca(contract.value_type(), "balance");
-            contract.builder.build_store(value_ptr, value);
+            let value_ptr = binary.builder.build_alloca(binary.value_type(), "balance");
+            binary.builder.build_store(value_ptr, value);
 
             // call create
-            ret = contract
+            ret = binary
                 .builder
                 .build_call(
-                    contract.module.get_function("call").unwrap(),
+                    binary.module.get_function("call").unwrap(),
                     &[
                         gas.into(),
-                        contract
+                        binary
                             .builder
                             .build_pointer_cast(
                                 be_address,
-                                contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                                binary.context.i8_type().ptr_type(AddressSpace::Generic),
                                 "address",
                             )
                             .into(),
-                        contract
+                        binary
                             .builder
                             .build_pointer_cast(
                                 value_ptr,
-                                contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                                binary.context.i8_type().ptr_type(AddressSpace::Generic),
                                 "value_transfer",
                             )
                             .into(),
@@ -1432,10 +1414,10 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
                 .unwrap()
                 .into_int_value();
         } else {
-            ret = contract
+            ret = binary
                 .builder
                 .build_call(
-                    contract
+                    binary
                         .module
                         .get_function(match callty {
                             ast::CallTy::Regular => "call",
@@ -1445,11 +1427,11 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
                         .unwrap(),
                     &[
                         gas.into(),
-                        contract
+                        binary
                             .builder
                             .build_pointer_cast(
                                 be_address,
-                                contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                                binary.context.i8_type().ptr_type(AddressSpace::Generic),
                                 "address",
                             )
                             .into(),
@@ -1464,43 +1446,43 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
                 .into_int_value();
         }
 
-        let is_success = contract.builder.build_int_compare(
+        let is_success = binary.builder.build_int_compare(
             IntPredicate::EQ,
             ret,
-            contract.context.i32_type().const_zero(),
+            binary.context.i32_type().const_zero(),
             "success",
         );
 
         if let Some(success) = success {
             *success = is_success.into();
         } else {
-            let success_block = contract.context.append_basic_block(function, "success");
-            let bail_block = contract.context.append_basic_block(function, "bail");
-            contract
+            let success_block = binary.context.append_basic_block(function, "success");
+            let bail_block = binary.context.append_basic_block(function, "bail");
+            binary
                 .builder
                 .build_conditional_branch(is_success, success_block, bail_block);
 
-            contract.builder.position_at_end(bail_block);
+            binary.builder.position_at_end(bail_block);
 
             self.assert_failure(
-                contract,
-                contract
+                binary,
+                binary
                     .context
                     .i8_type()
                     .ptr_type(AddressSpace::Generic)
                     .const_null(),
-                contract.context.i32_type().const_zero(),
+                binary.context.i32_type().const_zero(),
             );
 
-            contract.builder.position_at_end(success_block);
+            binary.builder.position_at_end(success_block);
         }
     }
 
-    fn return_data<'b>(&self, contract: &Contract<'b>) -> PointerValue<'b> {
-        let length = contract
+    fn return_data<'b>(&self, binary: &Binary<'b>) -> PointerValue<'b> {
+        let length = binary
             .builder
             .build_call(
-                contract.module.get_function("getReturnDataSize").unwrap(),
+                binary.module.get_function("getReturnDataSize").unwrap(),
                 &[],
                 "returndatasize",
             )
@@ -1509,22 +1491,22 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
             .unwrap()
             .into_int_value();
 
-        let malloc_length = contract.builder.build_int_add(
+        let malloc_length = binary.builder.build_int_add(
             length,
-            contract
+            binary
                 .module
                 .get_struct_type("struct.vector")
                 .unwrap()
                 .size_of()
                 .unwrap()
-                .const_cast(contract.context.i32_type(), false),
+                .const_cast(binary.context.i32_type(), false),
             "size",
         );
 
-        let p = contract
+        let p = binary
             .builder
             .build_call(
-                contract.module.get_function("__malloc").unwrap(),
+                binary.module.get_function("__malloc").unwrap(),
                 &[malloc_length.into()],
                 "",
             )
@@ -1533,9 +1515,9 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
             .unwrap()
             .into_pointer_value();
 
-        let v = contract.builder.build_pointer_cast(
+        let v = binary.builder.build_pointer_cast(
             p,
-            contract
+            binary
                 .module
                 .get_struct_type("struct.vector")
                 .unwrap()
@@ -1544,54 +1526,54 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
         );
 
         let data_len = unsafe {
-            contract.builder.build_gep(
+            binary.builder.build_gep(
                 v,
                 &[
-                    contract.context.i32_type().const_zero(),
-                    contract.context.i32_type().const_zero(),
+                    binary.context.i32_type().const_zero(),
+                    binary.context.i32_type().const_zero(),
                 ],
                 "data_len",
             )
         };
 
-        contract.builder.build_store(data_len, length);
+        binary.builder.build_store(data_len, length);
 
         let data_size = unsafe {
-            contract.builder.build_gep(
+            binary.builder.build_gep(
                 v,
                 &[
-                    contract.context.i32_type().const_zero(),
-                    contract.context.i32_type().const_int(1, false),
+                    binary.context.i32_type().const_zero(),
+                    binary.context.i32_type().const_int(1, false),
                 ],
                 "data_size",
             )
         };
 
-        contract.builder.build_store(data_size, length);
+        binary.builder.build_store(data_size, length);
 
         let data = unsafe {
-            contract.builder.build_gep(
+            binary.builder.build_gep(
                 v,
                 &[
-                    contract.context.i32_type().const_zero(),
-                    contract.context.i32_type().const_int(2, false),
+                    binary.context.i32_type().const_zero(),
+                    binary.context.i32_type().const_int(2, false),
                 ],
                 "data",
             )
         };
 
-        contract.builder.build_call(
-            contract.module.get_function("returnDataCopy").unwrap(),
+        binary.builder.build_call(
+            binary.module.get_function("returnDataCopy").unwrap(),
             &[
-                contract
+                binary
                     .builder
                     .build_pointer_cast(
                         data,
-                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
                         "",
                     )
                     .into(),
-                contract.context.i32_type().const_zero().into(),
+                binary.context.i32_type().const_zero().into(),
                 length.into(),
             ],
             "",
@@ -1601,45 +1583,45 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
     }
 
     /// ewasm value is always 128 bits
-    fn value_transferred<'b>(&self, contract: &Contract<'b>) -> IntValue<'b> {
-        let value = contract
+    fn value_transferred<'b>(&self, binary: &Binary<'b>) -> IntValue<'b> {
+        let value = binary
             .builder
-            .build_alloca(contract.value_type(), "value_transferred");
+            .build_alloca(binary.value_type(), "value_transferred");
 
-        contract.builder.build_call(
-            contract.module.get_function("getCallValue").unwrap(),
-            &[contract
+        binary.builder.build_call(
+            binary.module.get_function("getCallValue").unwrap(),
+            &[binary
                 .builder
                 .build_pointer_cast(
                     value,
-                    contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                    binary.context.i8_type().ptr_type(AddressSpace::Generic),
                     "",
                 )
                 .into()],
             "value_transferred",
         );
 
-        contract
+        binary
             .builder
             .build_load(value, "value_transferred")
             .into_int_value()
     }
 
-    /// Terminate execution, destroy contract and send remaining funds to addr
-    fn selfdestruct<'b>(&self, contract: &Contract<'b>, addr: IntValue<'b>) {
-        let address = contract
+    /// Terminate execution, destroy binary and send remaining funds to addr
+    fn selfdestruct<'b>(&self, binary: &Binary<'b>, addr: IntValue<'b>) {
+        let address = binary
             .builder
-            .build_alloca(contract.address_type(), "address");
+            .build_alloca(binary.address_type(), "address");
 
-        contract.builder.build_store(address, addr);
+        binary.builder.build_store(address, addr);
 
-        contract.builder.build_call(
-            contract.module.get_function("selfDestruct").unwrap(),
-            &[contract
+        binary.builder.build_call(
+            binary.module.get_function("selfDestruct").unwrap(),
+            &[binary
                 .builder
                 .build_pointer_cast(
                     address,
-                    contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                    binary.context.i8_type().ptr_type(AddressSpace::Generic),
                     "",
                 )
                 .into()],
@@ -1650,7 +1632,7 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
     /// Crypto Hash
     fn hash<'b>(
         &self,
-        contract: &Contract<'b>,
+        binary: &Binary<'b>,
         hash: HashTy,
         input: PointerValue<'b>,
         input_len: IntValue<'b>,
@@ -1671,44 +1653,41 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
             _ => unreachable!(),
         };
 
-        let res = contract.builder.build_array_alloca(
-            contract.context.i8_type(),
-            contract.context.i32_type().const_int(hashlen, false),
+        let res = binary.builder.build_array_alloca(
+            binary.context.i8_type(),
+            binary.context.i32_type().const_int(hashlen, false),
             "res",
         );
 
-        let balance = contract
+        let balance = binary.builder.build_alloca(binary.value_type(), "balance");
+
+        binary
             .builder
-            .build_alloca(contract.value_type(), "balance");
+            .build_store(balance, binary.value_type().const_zero());
 
-        contract
-            .builder
-            .build_store(balance, contract.value_type().const_zero());
+        let address = binary.emit_global_string(&format!("precompile_{}", hash), &precompile, true);
 
-        let address =
-            contract.emit_global_string(&format!("precompile_{}", hash), &precompile, true);
-
-        contract.builder.build_call(
-            contract.module.get_function("call").unwrap(),
+        binary.builder.build_call(
+            binary.module.get_function("call").unwrap(),
             &[
-                contract
+                binary
                     .context
                     .i64_type()
                     .const_int(i64::MAX as u64, false)
                     .into(),
-                contract
+                binary
                     .builder
                     .build_pointer_cast(
                         address,
-                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
                         "address",
                     )
                     .into(),
-                contract
+                binary
                     .builder
                     .build_pointer_cast(
                         balance,
-                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
                         "balance",
                     )
                     .into(),
@@ -1721,51 +1700,51 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
         // We're not checking return value or returnDataSize;
         // assuming precompiles always succeed
 
-        contract.builder.build_call(
-            contract.module.get_function("returnDataCopy").unwrap(),
+        binary.builder.build_call(
+            binary.module.get_function("returnDataCopy").unwrap(),
             &[
                 res.into(),
-                contract.context.i32_type().const_zero().into(),
-                contract.context.i32_type().const_int(hashlen, false).into(),
+                binary.context.i32_type().const_zero().into(),
+                binary.context.i32_type().const_int(hashlen, false).into(),
             ],
             "",
         );
 
         // bytes32 needs to reverse bytes
-        let temp = contract
+        let temp = binary
             .builder
-            .build_alloca(contract.llvm_type(&ast::Type::Bytes(hashlen as u8)), "hash");
+            .build_alloca(binary.llvm_type(&ast::Type::Bytes(hashlen as u8)), "hash");
 
-        contract.builder.build_call(
-            contract.module.get_function("__beNtoleN").unwrap(),
+        binary.builder.build_call(
+            binary.module.get_function("__beNtoleN").unwrap(),
             &[
                 res.into(),
-                contract
+                binary
                     .builder
                     .build_pointer_cast(
                         temp,
-                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
                         "",
                     )
                     .into(),
-                contract.context.i32_type().const_int(hashlen, false).into(),
+                binary.context.i32_type().const_int(hashlen, false).into(),
             ],
             "",
         );
 
-        contract.builder.build_load(temp, "hash").into_int_value()
+        binary.builder.build_load(temp, "hash").into_int_value()
     }
 
     /// Send event
     fn send_event<'b>(
         &self,
-        contract: &Contract<'b>,
+        binary: &Binary<'b>,
         event_no: usize,
         data: PointerValue<'b>,
         data_len: IntValue<'b>,
         topics: Vec<(PointerValue<'b>, IntValue<'b>)>,
     ) {
-        let empty_topic = contract
+        let empty_topic = binary
             .context
             .i8_type()
             .ptr_type(AddressSpace::Generic)
@@ -1773,7 +1752,7 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
 
         let mut encoded_topics = [empty_topic; 4];
 
-        let event = &contract.ns.events[event_no];
+        let event = &binary.ns.events[event_no];
 
         let mut topic_count = 0;
 
@@ -1784,7 +1763,7 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
             hasher.finalize(&mut hash);
 
             encoded_topics[0] =
-                contract.emit_global_string(&format!("event_{}_signature", event), &hash, true);
+                binary.emit_global_string(&format!("event_{}_signature", event), &hash, true);
 
             topic_count += 1;
         }
@@ -1793,13 +1772,13 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
             if let Some(32) = len.get_zero_extended_constant() {
                 encoded_topics[topic_count] = ptr;
             } else {
-                let dest = contract.builder.build_array_alloca(
-                    contract.context.i8_type(),
-                    contract.context.i32_type().const_int(32, false),
+                let dest = binary.builder.build_array_alloca(
+                    binary.context.i8_type(),
+                    binary.context.i32_type().const_int(32, false),
                     "hash",
                 );
 
-                self.keccak256_hash(contract, ptr, len, dest);
+                self.keccak256_hash(binary, ptr, len, dest);
 
                 encoded_topics[topic_count] = dest;
             }
@@ -1807,12 +1786,12 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
             topic_count += 1;
         }
 
-        contract.builder.build_call(
-            contract.module.get_function("log").unwrap(),
+        binary.builder.build_call(
+            binary.module.get_function("log").unwrap(),
             &[
                 data.into(),
                 data_len.into(),
-                contract
+                binary
                     .context
                     .i32_type()
                     .const_int(topic_count as u64, false)
@@ -1829,16 +1808,16 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
     /// builtin expressions
     fn builtin<'b>(
         &self,
-        contract: &Contract<'b>,
+        binary: &Binary<'b>,
         expr: &ast::Expression,
         vartab: &HashMap<usize, Variable<'b>>,
         function: FunctionValue<'b>,
     ) -> BasicValueEnum<'b> {
         macro_rules! straight_call {
             ($name:literal, $func:literal) => {{
-                contract
+                binary
                     .builder
-                    .build_call(contract.module.get_function($func).unwrap(), &[], $name)
+                    .build_call(binary.module.get_function($func).unwrap(), &[], $name)
                     .try_as_basic_value()
                     .left()
                     .unwrap()
@@ -1847,24 +1826,24 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
 
         macro_rules! single_value_stack {
             ($name:literal, $func:literal, $width:expr) => {{
-                let value = contract
+                let value = binary
                     .builder
-                    .build_alloca(contract.context.custom_width_int_type($width), $name);
+                    .build_alloca(binary.context.custom_width_int_type($width), $name);
 
-                contract.builder.build_call(
-                    contract.module.get_function($func).unwrap(),
-                    &[contract
+                binary.builder.build_call(
+                    binary.module.get_function($func).unwrap(),
+                    &[binary
                         .builder
                         .build_pointer_cast(
                             value,
-                            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                            binary.context.i8_type().ptr_type(AddressSpace::Generic),
                             "",
                         )
                         .into()],
                     $name,
                 );
 
-                contract.builder.build_load(value, $name)
+                binary.builder.build_load(value, $name)
             }};
         }
 
@@ -1884,43 +1863,41 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
             ast::Expression::Builtin(_, _, ast::Builtin::BlockDifficulty, _) => {
                 single_value_stack!("block_difficulty", "getBlockDifficulty", 256)
             }
-            ast::Expression::Builtin(_, _, ast::Builtin::Origin, _) => single_value_stack!(
-                "origin",
-                "getTxOrigin",
-                contract.ns.address_length as u32 * 8
-            ),
+            ast::Expression::Builtin(_, _, ast::Builtin::Origin, _) => {
+                single_value_stack!("origin", "getTxOrigin", binary.ns.address_length as u32 * 8)
+            }
             ast::Expression::Builtin(_, _, ast::Builtin::Sender, _) => {
-                single_value_stack!("caller", "getCaller", contract.ns.address_length as u32 * 8)
+                single_value_stack!("caller", "getCaller", binary.ns.address_length as u32 * 8)
             }
             ast::Expression::Builtin(_, _, ast::Builtin::BlockCoinbase, _) => single_value_stack!(
                 "coinbase",
                 "getBlockCoinbase",
-                contract.ns.address_length as u32 * 8
+                binary.ns.address_length as u32 * 8
             ),
             ast::Expression::Builtin(_, _, ast::Builtin::Gasprice, _) => single_value_stack!(
                 "gas_price",
                 "getTxGasPrice",
-                contract.ns.value_length as u32 * 8
+                binary.ns.value_length as u32 * 8
             ),
             ast::Expression::Builtin(_, _, ast::Builtin::Value, _) => {
-                single_value_stack!("value", "getCallValue", contract.ns.value_length as u32 * 8)
+                single_value_stack!("value", "getCallValue", binary.ns.value_length as u32 * 8)
             }
             ast::Expression::Builtin(_, _, ast::Builtin::BlockHash, args) => {
-                let block_number = self.expression(contract, &args[0], vartab, function);
+                let block_number = self.expression(binary, &args[0], vartab, function);
 
-                let value = contract
+                let value = binary
                     .builder
-                    .build_alloca(contract.context.custom_width_int_type(256), "block_hash");
+                    .build_alloca(binary.context.custom_width_int_type(256), "block_hash");
 
-                contract.builder.build_call(
-                    contract.module.get_function("getBlockHash").unwrap(),
+                binary.builder.build_call(
+                    binary.module.get_function("getBlockHash").unwrap(),
                     &[
                         block_number,
-                        contract
+                        binary
                             .builder
                             .build_pointer_cast(
                                 value,
-                                contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                                binary.context.i8_type().ptr_type(AddressSpace::Generic),
                                 "",
                             )
                             .into(),
@@ -1928,59 +1905,57 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
                     "block_hash",
                 );
 
-                contract.builder.build_load(value, "block_hash")
+                binary.builder.build_load(value, "block_hash")
             }
             ast::Expression::Builtin(_, _, ast::Builtin::GetAddress, _) => {
-                let value = contract
+                let value = binary
                     .builder
-                    .build_alloca(contract.address_type(), "self_address");
+                    .build_alloca(binary.address_type(), "self_address");
 
-                contract.builder.build_call(
-                    contract.module.get_function("getAddress").unwrap(),
-                    &[contract
+                binary.builder.build_call(
+                    binary.module.get_function("getAddress").unwrap(),
+                    &[binary
                         .builder
                         .build_pointer_cast(
                             value,
-                            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                            binary.context.i8_type().ptr_type(AddressSpace::Generic),
                             "",
                         )
                         .into()],
                     "self_address",
                 );
 
-                contract.builder.build_load(value, "self_address")
+                binary.builder.build_load(value, "self_address")
             }
             ast::Expression::Builtin(_, _, ast::Builtin::Balance, addr) => {
                 let addr = self
-                    .expression(contract, &addr[0], vartab, function)
+                    .expression(binary, &addr[0], vartab, function)
                     .into_int_value();
 
-                let address = contract
+                let address = binary
                     .builder
-                    .build_alloca(contract.address_type(), "address");
+                    .build_alloca(binary.address_type(), "address");
 
-                contract.builder.build_store(address, addr);
+                binary.builder.build_store(address, addr);
 
-                let balance = contract
-                    .builder
-                    .build_alloca(contract.value_type(), "balance");
+                let balance = binary.builder.build_alloca(binary.value_type(), "balance");
 
-                contract.builder.build_call(
-                    contract.module.get_function("getExternalBalance").unwrap(),
+                binary.builder.build_call(
+                    binary.module.get_function("getExternalBalance").unwrap(),
                     &[
-                        contract
+                        binary
                             .builder
                             .build_pointer_cast(
                                 address,
-                                contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                                binary.context.i8_type().ptr_type(AddressSpace::Generic),
                                 "",
                             )
                             .into(),
-                        contract
+                        binary
                             .builder
                             .build_pointer_cast(
                                 balance,
-                                contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                                binary.context.i8_type().ptr_type(AddressSpace::Generic),
                                 "",
                             )
                             .into(),
@@ -1988,7 +1963,7 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
                     "balance",
                 );
 
-                contract.builder.build_load(balance, "balance")
+                binary.builder.build_load(balance, "balance")
             }
             _ => unimplemented!(),
         }
