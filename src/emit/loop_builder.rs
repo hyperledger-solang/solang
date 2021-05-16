@@ -1,4 +1,4 @@
-use super::Contract;
+use super::Binary;
 use inkwell::basic_block::BasicBlock;
 use inkwell::types::BasicType;
 use inkwell::values::{BasicValueEnum, FunctionValue, IntValue, PhiValue};
@@ -20,15 +20,15 @@ pub struct LoopBuilder<'a> {
 impl<'a> LoopBuilder<'a> {
     /// Create a new loop. This creates the basic blocks and inserts a branch to start of the loop at
     /// the current location. This function should be called first.
-    pub fn new(contract: &Contract<'a>, function: FunctionValue) -> Self {
-        let entry_block = contract.builder.get_insert_block().unwrap();
-        let condition_block = contract.context.append_basic_block(function, "cond");
-        let body_block = contract.context.append_basic_block(function, "body");
-        let done_block = contract.context.append_basic_block(function, "done");
+    pub fn new(binary: &Binary<'a>, function: FunctionValue) -> Self {
+        let entry_block = binary.builder.get_insert_block().unwrap();
+        let condition_block = binary.context.append_basic_block(function, "cond");
+        let body_block = binary.context.append_basic_block(function, "body");
+        let done_block = binary.context.append_basic_block(function, "done");
 
-        contract.builder.build_unconditional_branch(condition_block);
+        binary.builder.build_unconditional_branch(condition_block);
 
-        contract.builder.position_at_end(condition_block);
+        binary.builder.position_at_end(condition_block);
 
         LoopBuilder {
             phis: HashMap::new(),
@@ -46,12 +46,12 @@ impl<'a> LoopBuilder<'a> {
     /// must be given.
     pub fn add_loop_phi<T: BasicType<'a>>(
         &mut self,
-        contract: &Contract<'a>,
+        binary: &Binary<'a>,
         name: &'static str,
         ty: T,
         initial_value: BasicValueEnum<'a>,
     ) -> BasicValueEnum<'a> {
-        let phi = contract.builder.build_phi(ty, name);
+        let phi = binary.builder.build_phi(ty, name);
 
         phi.add_incoming(&[(&initial_value, self.entry_block)]);
 
@@ -67,31 +67,31 @@ impl<'a> LoopBuilder<'a> {
     /// function.
     pub fn over(
         &mut self,
-        contract: &Contract<'a>,
+        binary: &Binary<'a>,
         from: IntValue<'a>,
         to: IntValue<'a>,
     ) -> IntValue<'a> {
         let loop_ty = from.get_type();
-        let loop_phi = contract.builder.build_phi(loop_ty, "index");
+        let loop_phi = binary.builder.build_phi(loop_ty, "index");
 
         let loop_var = loop_phi.as_basic_value().into_int_value();
 
         let next =
-            contract
+            binary
                 .builder
                 .build_int_add(loop_var, loop_ty.const_int(1, false), "next_index");
 
-        let comp = contract
+        let comp = binary
             .builder
             .build_int_compare(IntPredicate::ULT, loop_var, to, "loop_cond");
 
-        contract
+        binary
             .builder
             .build_conditional_branch(comp, self.body_block, self.done_block);
 
         loop_phi.add_incoming(&[(&from, self.entry_block)]);
 
-        contract.builder.position_at_end(self.body_block);
+        binary.builder.position_at_end(self.body_block);
 
         self.loop_phi = Some(loop_phi);
         self.next_index = Some(next);
@@ -102,11 +102,11 @@ impl<'a> LoopBuilder<'a> {
     /// Use this function to set the loop phis to their values at the end of the body
     pub fn set_loop_phi_value(
         &self,
-        contract: &Contract<'a>,
+        binary: &Binary<'a>,
         name: &'static str,
         value: BasicValueEnum<'a>,
     ) {
-        let block = contract.builder.get_insert_block().unwrap();
+        let block = binary.builder.get_insert_block().unwrap();
 
         self.phis[name].add_incoming(&[(&value, block)]);
     }
@@ -118,17 +118,17 @@ impl<'a> LoopBuilder<'a> {
 
     /// Call this once the body of the loop has been generated. This will close the loop
     /// and ensure the exit block has been reached.
-    pub fn finish(&self, contract: &Contract<'a>) {
-        let block = contract.builder.get_insert_block().unwrap();
+    pub fn finish(&self, binary: &Binary<'a>) {
+        let block = binary.builder.get_insert_block().unwrap();
 
         let loop_phi = self.loop_phi.unwrap();
 
         loop_phi.add_incoming(&[(self.next_index.as_ref().unwrap(), block)]);
 
-        contract
+        binary
             .builder
             .build_unconditional_branch(self.condition_block);
 
-        contract.builder.position_at_end(self.done_block);
+        binary.builder.position_at_end(self.done_block);
     }
 }

@@ -46,8 +46,8 @@ impl ast::Contract {
         filename: &'a str,
         opt: OptimizationLevel,
         math_overflow_check: bool,
-    ) -> emit::Contract {
-        emit::Contract::build(context, self, ns, filename, opt, math_overflow_check)
+    ) -> emit::Binary {
+        emit::Binary::build(context, self, ns, filename, opt, math_overflow_check)
     }
 
     /// Print the entire contract; storage initializers, constructors and functions and their CFGs

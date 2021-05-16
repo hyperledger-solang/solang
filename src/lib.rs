@@ -75,7 +75,7 @@ pub fn compile(
         .filter(|c| ns.contracts[*c].is_concrete())
         .map(|c| {
             // codegen
-            let contract = emit::Contract::build(
+            let contract = emit::Binary::build(
                 &ctx,
                 &ns.contracts[c],
                 &ns,

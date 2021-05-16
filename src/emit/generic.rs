@@ -13,7 +13,7 @@ use inkwell::IntPredicate;
 use inkwell::OptimizationLevel;
 
 use super::ethabiencoder;
-use super::{Contract, TargetRuntime, Variable};
+use super::{Binary, TargetRuntime, Variable};
 
 pub struct GenericTarget {
     abi: ethabiencoder::EthAbiDecoder,
@@ -27,12 +27,12 @@ impl GenericTarget {
         filename: &'a str,
         opt: OptimizationLevel,
         math_overflow_check: bool,
-    ) -> Contract<'a> {
+    ) -> Binary<'a> {
         let mut b = GenericTarget {
             abi: ethabiencoder::EthAbiDecoder { bswap: false },
         };
 
-        let mut c = Contract::new(
+        let mut c = Binary::new(
             context,
             contract,
             ns,
@@ -53,7 +53,7 @@ impl GenericTarget {
         c
     }
 
-    fn declare_externals(&self, contract: &mut Contract) {
+    fn declare_externals(&self, contract: &mut Binary) {
         let void_ty = contract.context.void_type();
         let u8_ptr = contract.context.i8_type().ptr_type(AddressSpace::Generic);
         let u32_ty = contract.context.i32_type();
@@ -102,7 +102,7 @@ impl GenericTarget {
         );
     }
 
-    fn emit_constructor(&mut self, contract: &mut Contract) {
+    fn emit_constructor(&mut self, contract: &mut Binary) {
         let initializer = self.emit_initializer(contract);
 
         let u8_ptr_ty = contract.context.i8_type().ptr_type(AddressSpace::Generic);
@@ -157,7 +157,7 @@ impl GenericTarget {
     }
 
     // emit function dispatch
-    fn emit_function<'s>(&'s mut self, contract: &'s mut Contract) {
+    fn emit_function<'s>(&'s mut self, contract: &'s mut Binary) {
         let u8_ptr_ty = contract.context.i8_type().ptr_type(AddressSpace::Generic);
         let u32_ty = contract.context.i32_type();
 
@@ -194,7 +194,7 @@ impl GenericTarget {
 impl<'a> TargetRuntime<'a> for GenericTarget {
     fn storage_delete_single_slot(
         &self,
-        contract: &Contract,
+        contract: &Binary,
         _function: FunctionValue,
         slot: PointerValue,
     ) {
@@ -210,7 +210,7 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
 
     fn set_storage(
         &self,
-        contract: &Contract,
+        contract: &Binary,
         _function: FunctionValue,
         slot: PointerValue,
         dest: PointerValue,
@@ -248,7 +248,7 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
 
     fn set_storage_string(
         &self,
-        contract: &Contract<'a>,
+        contract: &Binary<'a>,
         _function: FunctionValue<'a>,
         slot: PointerValue<'a>,
         dest: BasicValueEnum<'a>,
@@ -274,7 +274,7 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
 
     fn get_storage_string(
         &self,
-        _contract: &Contract<'a>,
+        _contract: &Binary<'a>,
         _function: FunctionValue,
         _slot: PointerValue<'a>,
     ) -> PointerValue<'a> {
@@ -282,7 +282,7 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
     }
     fn get_storage_bytes_subscript(
         &self,
-        _contract: &Contract<'a>,
+        _contract: &Binary<'a>,
         _function: FunctionValue,
         _slot: IntValue<'a>,
         _index: IntValue<'a>,
@@ -291,7 +291,7 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
     }
     fn set_storage_extfunc(
         &self,
-        _contract: &Contract,
+        _contract: &Binary,
         _function: FunctionValue,
         _slot: PointerValue,
         _dest: PointerValue,
@@ -300,7 +300,7 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
     }
     fn get_storage_extfunc(
         &self,
-        _contract: &Contract<'a>,
+        _contract: &Binary<'a>,
         _function: FunctionValue,
         _slot: PointerValue<'a>,
     ) -> PointerValue<'a> {
@@ -308,7 +308,7 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
     }
     fn set_storage_bytes_subscript(
         &self,
-        _contract: &Contract,
+        _contract: &Binary,
         _function: FunctionValue,
         _slot: IntValue,
         _index: IntValue,
@@ -318,7 +318,7 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
     }
     fn storage_push(
         &self,
-        _contract: &Contract<'a>,
+        _contract: &Binary<'a>,
         _function: FunctionValue,
         _ty: &ast::Type,
         _slot: IntValue<'a>,
@@ -328,7 +328,7 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
     }
     fn storage_pop(
         &self,
-        _contract: &Contract<'a>,
+        _contract: &Binary<'a>,
         _function: FunctionValue,
         _ty: &ast::Type,
         _slot: IntValue<'a>,
@@ -337,7 +337,7 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
     }
     fn storage_array_length(
         &self,
-        contract: &Contract<'a>,
+        contract: &Binary<'a>,
         _function: FunctionValue,
         slot: IntValue<'a>,
         _ty: &ast::Type,
@@ -367,7 +367,7 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
 
     fn get_storage_int(
         &self,
-        contract: &Contract<'a>,
+        contract: &Binary<'a>,
         function: FunctionValue,
         slot: PointerValue<'a>,
         ty: IntType<'a>,
@@ -452,7 +452,7 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
     /// sabre has no keccak256 host function, so call our implementation
     fn keccak256_hash(
         &self,
-        contract: &Contract,
+        contract: &Binary,
         src: PointerValue,
         length: IntValue,
         dest: PointerValue,
@@ -482,14 +482,14 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
         );
     }
 
-    fn return_empty_abi(&self, contract: &Contract) {
+    fn return_empty_abi(&self, contract: &Binary) {
         // return 0 for success
         contract
             .builder
             .build_return(Some(&contract.context.i32_type().const_int(0, false)));
     }
 
-    fn return_abi<'b>(&self, contract: &'b Contract, data: PointerValue<'b>, length: IntValue) {
+    fn return_abi<'b>(&self, contract: &'b Binary, data: PointerValue<'b>, length: IntValue) {
         contract.builder.build_call(
             contract.module.get_function("solang_set_return").unwrap(),
             &[data.into(), length.into()],
@@ -500,7 +500,7 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
             .build_return(Some(&contract.context.i32_type().const_int(0, false)));
     }
 
-    fn assert_failure<'b>(&self, contract: &'b Contract, data: PointerValue, length: IntValue) {
+    fn assert_failure<'b>(&self, contract: &'b Binary, data: PointerValue, length: IntValue) {
         contract.builder.build_call(
             contract.module.get_function("solang_set_return").unwrap(),
             &[data.into(), length.into()],
@@ -514,7 +514,7 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
     /// ABI encode into a vector for abi.encode* style builtin functions
     fn abi_encode_to_vector<'b>(
         &self,
-        contract: &Contract<'b>,
+        contract: &Binary<'b>,
         function: FunctionValue<'b>,
         packed: &[BasicValueEnum<'b>],
         args: &[BasicValueEnum<'b>],
@@ -525,7 +525,7 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
 
     fn abi_encode<'b>(
         &self,
-        contract: &Contract<'b>,
+        contract: &Binary<'b>,
         selector: Option<IntValue<'b>>,
         load: bool,
         function: FunctionValue<'b>,
@@ -566,7 +566,7 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
 
     fn abi_decode<'b>(
         &self,
-        contract: &Contract<'b>,
+        contract: &Binary<'b>,
         function: FunctionValue<'b>,
         args: &mut Vec<BasicValueEnum<'b>>,
         data: PointerValue<'b>,
@@ -577,7 +577,7 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
             .decode(contract, function, args, data, length, spec);
     }
 
-    fn print(&self, contract: &Contract, string_ptr: PointerValue, string_len: IntValue) {
+    fn print(&self, contract: &Binary, string_ptr: PointerValue, string_len: IntValue) {
         contract.builder.build_call(
             contract.module.get_function("solang_print").unwrap(),
             &[string_ptr.into(), string_len.into()],
@@ -588,7 +588,7 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
     /// Create new contract
     fn create_contract<'b>(
         &mut self,
-        _contract: &Contract<'b>,
+        _binary: &Binary<'b>,
         _function: FunctionValue,
         _success: Option<&mut BasicValueEnum<'b>>,
         _contract_no: usize,
@@ -605,7 +605,7 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
     /// Call external contract
     fn external_call<'b>(
         &self,
-        _contract: &Contract<'b>,
+        _binary: &Binary<'b>,
         _function: FunctionValue,
         _success: Option<&mut BasicValueEnum<'b>>,
         _payload: PointerValue<'b>,
@@ -619,28 +619,28 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
     }
 
     /// Get return buffer for external call
-    fn return_data<'b>(&self, _contract: &Contract<'b>) -> PointerValue<'b> {
+    fn return_data<'b>(&self, _binary: &Binary<'b>) -> PointerValue<'b> {
         panic!("generic cannot call other contracts");
     }
 
-    fn return_code<'b>(&self, contract: &'b Contract, ret: IntValue<'b>) {
-        contract.builder.build_return(Some(&ret));
+    fn return_code<'b>(&self, binary: &'b Binary, ret: IntValue<'b>) {
+        binary.builder.build_return(Some(&ret));
     }
 
     /// Sabre does not know about balances
-    fn value_transferred<'b>(&self, contract: &Contract<'b>) -> IntValue<'b> {
-        contract.value_type().const_zero()
+    fn value_transferred<'b>(&self, binary: &Binary<'b>) -> IntValue<'b> {
+        binary.value_type().const_zero()
     }
 
     /// Terminate execution, destroy contract and send remaining funds to addr
-    fn selfdestruct<'b>(&self, _contract: &Contract<'b>, _addr: IntValue<'b>) {
+    fn selfdestruct<'b>(&self, _binary: &Binary<'b>, _addr: IntValue<'b>) {
         panic!("generic does not have the concept of selfdestruct");
     }
 
     /// Send event
     fn send_event<'b>(
         &self,
-        _contract: &Contract<'b>,
+        _binary: &Binary<'b>,
         _event_no: usize,
         _data: PointerValue<'b>,
         _data_len: IntValue<'b>,
@@ -652,7 +652,7 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
     /// builtin expressions
     fn builtin<'b>(
         &self,
-        _contract: &Contract<'b>,
+        _binary: &Binary<'b>,
         _expr: &ast::Expression,
         _vartab: &HashMap<usize, Variable<'b>>,
         _function: FunctionValue<'b>,
@@ -663,7 +663,7 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
     /// Crypto Hash
     fn hash<'b>(
         &self,
-        _contract: &Contract<'b>,
+        _contract: &Binary<'b>,
         _hash: HashTy,
         _input: PointerValue<'b>,
         _input_len: IntValue<'b>,
