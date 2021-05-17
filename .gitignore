@@ -1,5 +1,4 @@
 /docs/build
 Cargo.lock
 /target
-/src/parser/solidity.rs
 **/*.rs.bk

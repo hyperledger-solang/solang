@@ -3,8 +3,9 @@ pub mod lexer;
 pub mod pt;
 
 #[allow(clippy::all)]
-#[cfg_attr(rustfmt, rustfmt_skip)]
-pub mod solidity;
+pub mod solidity {
+    include!(concat!(env!("OUT_DIR"), "/parser/solidity.rs"));
+}
 
 use crate::sema::ast::Diagnostic;
 use lalrpop_util::ParseError;
