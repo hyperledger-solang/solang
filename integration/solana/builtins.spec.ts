@@ -11,7 +11,7 @@ describe('Deploy solang contract and test', () => {
         let hash_functions = await conn.loadProgram("builtins.so", "builtins.abi");
 
         // call the constructor
-        await hash_functions.call_constructor(conn, []);
+        await hash_functions.call_constructor(conn, 'builtins', []);
 
         console.log("calling ripemd160");
         let res = await hash_functions.call_function(conn, "hash_ripemd160", ['0x' + Buffer.from('Call me Ishmael.', 'utf8').toString('hex')]);

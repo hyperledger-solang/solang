@@ -8,9 +8,7 @@ use crate::sema::eval::eval_const_number;
 use crate::sema::expression::{bigint_to_expression, cast, cast_shift_arg};
 use crate::Target;
 use num_bigint::BigInt;
-use num_traits::FromPrimitive;
-use num_traits::One;
-use num_traits::ToPrimitive;
+use num_traits::{FromPrimitive, One, ToPrimitive, Zero};
 use std::collections::HashSet;
 use std::ops::Mul;
 
@@ -1266,9 +1264,13 @@ pub fn emit_function_call(
                 (
                     Expression::AbiEncode {
                         loc: *loc,
-                        packed: vec![address, args],
+                        packed: vec![
+                            address,
+                            Expression::NumberLiteral(*loc, Type::Bytes(4), BigInt::zero()),
+                            args,
+                        ],
                         args: Vec::new(),
-                        tys: vec![Type::Address(false), Type::DynamicBytes],
+                        tys: vec![Type::Address(false), Type::Bytes(4), Type::DynamicBytes],
                     },
                     None,
                 )
@@ -1323,12 +1325,15 @@ pub fn emit_function_call(
 
                 let (payload, address) = if ns.target == Target::Solana {
                     tys.insert(0, Type::Address(false));
+                    tys.insert(1, Type::Bytes(4));
+
                     (
                         Expression::AbiEncode {
                             loc: *loc,
                             tys,
                             packed: vec![
                                 address,
+                                Expression::NumberLiteral(*loc, Type::Bytes(4), BigInt::zero()),
                                 Expression::NumberLiteral(
                                     *loc,
                                     Type::Bytes(4),

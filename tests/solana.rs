@@ -761,12 +761,12 @@ impl VirtualMachine {
 
         println!("constructor for {}", hex::encode(&program.data));
 
-        let calldata = if let Some(constructor) = &program.abi.constructor {
-            constructor
-                .encode_input(program.data.to_vec(), args)
-                .unwrap()
-        } else {
-            program.data.to_vec()
+        let mut calldata: Vec<u8> = program.data.to_vec();
+
+        calldata.extend(&0u32.to_le_bytes());
+
+        if let Some(constructor) = &program.abi.constructor {
+            calldata.extend(&constructor.encode_input(vec![], args).unwrap());
         };
 
         self.execute(&calldata);
@@ -778,6 +778,8 @@ impl VirtualMachine {
         println!("function for {}", hex::encode(&program.data));
 
         let mut calldata: Vec<u8> = program.data.to_vec();
+
+        calldata.extend(&0u32.to_le_bytes());
 
         match program.abi.functions[name][0].encode_input(args) {
             Ok(n) => calldata.extend(&n),
