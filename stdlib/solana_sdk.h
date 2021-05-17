@@ -227,6 +227,7 @@ typedef struct
   uint64_t input_len;          /** Length in bytes of the instruction data */
   const SolPubkey *program_id; /** program_id of the currently executing program */
   const SolAccountInfo *ka_clock;
+  uint32_t contract;
 } SolParameters;
 
 /**
@@ -342,14 +343,19 @@ static uint64_t sol_deserialize(
   uint64_t data_len = *(uint64_t *)input;
   input += sizeof(uint64_t);
 
-  if (data_len < SIZE_PUBKEY)
+  if (data_len < SIZE_PUBKEY + sizeof(uint32_t))
   {
     return ERROR_INVALID_INSTRUCTION_DATA;
   }
 
   params->account_id = (SolPubkey *)input;
-  params->input_len = data_len - SIZE_PUBKEY;
-  params->input = input + SIZE_PUBKEY;
+  input += SIZE_PUBKEY;
+  data_len -= SIZE_PUBKEY;
+  params->contract = *(uint32_t *)input;
+  input += sizeof(uint32_t);
+  data_len -= sizeof(uint32_t);
+  params->input_len = data_len;
+  params->input = input;
   input += data_len;
 
   params->program_id = (SolPubkey *)input;

@@ -11,7 +11,7 @@ describe('Deploy solang contract and test', () => {
         let prog = await conn.loadProgram("flipper.so", "flipper.abi");
 
         // call the constructor
-        await prog.call_constructor(conn, ["true"]);
+        await prog.call_constructor(conn, 'flipper', ["true"]);
 
         let res = await prog.call_function(conn, "get", []);
 
@@ -34,7 +34,7 @@ describe('Deploy solang contract and test', () => {
         let prog = await conn.loadProgram("primitives.so", "primitives.abi");
 
         // call the constructor
-        await prog.call_constructor(conn, []);
+        await prog.call_constructor(conn, 'primitives', []);
 
         // TEST Basic enums
         // in ethereum, an enum is described as an uint8 so can't use the enum
@@ -157,7 +157,7 @@ describe('Deploy solang contract and test', () => {
         let prog = await conn.loadProgram("store.so", "store.abi");
 
         // call the constructor
-        await prog.call_constructor(conn, []);
+        await prog.call_constructor(conn, 'store', []);
 
         function returns_to_array(res: Object) {
             let arr = Object.values(res);
@@ -254,7 +254,7 @@ describe('Deploy solang contract and test', () => {
         let prog = await conn.loadProgram("store.so", "store.abi", 8192);
 
         // call the constructor
-        await prog.call_constructor(conn, []);
+        await prog.call_constructor(conn, 'store', []);
 
         function returns(res: Object) {
             let arr = Object.values(res);
@@ -402,7 +402,7 @@ describe('Deploy solang contract and test', () => {
         // storage.sol needs 168 byes
         let prog = await conn.loadProgram("store.so", "store.abi", 100);
 
-        await expect(prog.call_constructor(conn, []))
+        await expect(prog.call_constructor(conn, 'store', []))
             .rejects
             .toThrowError(new Error('failed to send transaction: Transaction simulation failed: Error processing Instruction 0: account data too small for instruction'));
     });
@@ -415,7 +415,7 @@ describe('Deploy solang contract and test', () => {
         // storage.sol needs 168 byes
         let prog = await conn.loadProgram("store.so", "store.abi", 512);
 
-        await prog.call_constructor(conn, []);
+        await prog.call_constructor(conn, 'store', []);
 
         await prog.call_function(conn, "set_foo1", []);
 
@@ -433,7 +433,7 @@ describe('Deploy solang contract and test', () => {
         // storage.sol needs 168 bytes on constructor, more for string data
         let prog = await conn.loadProgram("store.so", "store.abi", 180);
 
-        await prog.call_constructor(conn, []);
+        await prog.call_constructor(conn, 'store', []);
 
         // set a load of string which will overflow
         await expect(prog.call_function(conn, "set_foo1", []))
@@ -450,7 +450,7 @@ describe('Deploy solang contract and test', () => {
         // storage.sol needs 168 bytes on constructor, more for string data
         let prog = await conn.loadProgram("store.so", "store.abi", 210);
 
-        await prog.call_constructor(conn, []);
+        await prog.call_constructor(conn, 'store', []);
 
         async function push_until_bang() {
             for (let i = 0; i < 100; i++) {
@@ -473,7 +473,7 @@ describe('Deploy solang contract and test', () => {
         // storage.sol needs 168 bytes on constructor, more for string data
         let prog = await conn.loadProgram("arrays.so", "arrays.abi", 4096);
 
-        await prog.call_constructor(conn, []);
+        await prog.call_constructor(conn, 'arrays', []);
 
         let users = [];
 

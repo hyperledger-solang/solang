@@ -11,7 +11,8 @@ import {
     sendAndConfirmTransaction, SYSVAR_CLOCK_PUBKEY,
 } from '@solana/web3.js';
 import fs from 'fs';
-import { AbiItem, AbiInput } from 'web3-utils';
+import { AbiItem } from 'web3-utils';
+import { utils } from 'ethers';
 const Web3EthAbi = require('web3-eth-abi');
 
 const default_url: string = "http://localhost:8899";
@@ -123,15 +124,18 @@ class TestConnection {
 class Program {
     constructor(private programId: PublicKey, private contractStorageAccount: Account, private abi: string) { }
 
-    async call_constructor(test: TestConnection, params: string[]): Promise<void> {
+    async call_constructor(test: TestConnection, contract: string, params: string[]): Promise<void> {
         let abi: AbiItem | undefined = JSON.parse(this.abi).find((e: AbiItem) => e.type == "constructor");
 
         let inputs = abi?.inputs! || [];
 
         const input = Web3EthAbi.encodeParameters(inputs, params);
 
+        let hash = utils.keccak256(Buffer.from(contract));
+
         const data = Buffer.concat([
             this.contractStorageAccount.publicKey.toBuffer(),
+            Buffer.from(hash.substr(2, 8), 'hex'),
             Buffer.from(input.replace('0x', ''), 'hex')
         ]);
 
@@ -162,6 +166,7 @@ class Program {
         const input: string = Web3EthAbi.encodeFunctionCall(abi, params);
         const data = Buffer.concat([
             this.contractStorageAccount.publicKey.toBuffer(),
+            Buffer.from('00000000', 'hex'),
             Buffer.from(input.replace('0x', ''), 'hex')
         ]);
 

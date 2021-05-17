@@ -13,9 +13,9 @@ describe('Deploy solang contract and test', () => {
         let callee2 = await conn.loadProgram("callee2.so", "callee2.abi");
 
         // call the constructor
-        await caller.call_constructor(conn, []);
-        await callee.call_constructor(conn, []);
-        await callee2.call_constructor(conn, []);
+        await caller.call_constructor(conn, 'caller', []);
+        await callee.call_constructor(conn, 'callee', []);
+        await callee2.call_constructor(conn, 'callee2', []);
 
         await callee.call_function(conn, "set_x", ["102"]);
 
