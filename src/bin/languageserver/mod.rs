@@ -10,14 +10,16 @@ use solang::parse_and_resolve;
 use solang::parser::pt;
 use solang::Target;
 
-use lsp_types::{Diagnostic, DiagnosticSeverity, HoverProviderCapability, Position, Range};
 use solang::sema::*;
+use tower_lsp::lsp_types::{
+    Diagnostic, DiagnosticSeverity, HoverProviderCapability, Position, Range,
+};
 
 use solang::*;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::path::PathBuf;
-use std::sync::Mutex;
+use tokio::sync::Mutex;
 
 use solang::sema::ast::*;
 use solang::sema::tags::*;
@@ -35,23 +37,22 @@ pub struct SolangServer {
     files: Mutex<HashMap<PathBuf, Hovers>>,
 }
 
-pub fn start_server(target: Target) {
-    let mut rt = tokio::runtime::Runtime::new().unwrap();
-    rt.block_on(async {
-        let stdin = tokio::io::stdin();
-        let stdout = tokio::io::stdout();
+#[tokio::main(flavor = "current_thread")]
+pub async fn start_server(target: Target) {
+    let stdin = tokio::io::stdin();
+    let stdout = tokio::io::stdout();
 
-        let (service, messages) = LspService::new(|client| SolangServer {
-            client,
-            target,
-            files: Mutex::new(HashMap::new()),
-        });
-
-        Server::new(stdin, stdout)
-            .interleave(messages)
-            .serve(service)
-            .await;
+    let (service, messages) = LspService::new(|client| SolangServer {
+        client,
+        target,
+        files: Mutex::new(HashMap::new()),
     });
+
+    Server::new(stdin, stdout)
+        .interleave(messages)
+        .serve(service)
+        .await;
+
     std::process::exit(1);
 }
 
@@ -123,8 +124,10 @@ impl SolangServer {
                         severity: Some(sev),
                         source: None,
                         code: None,
+                        code_description: None,
                         related_information,
                         tags: None,
+                        data: None,
                     })
                 })
                 .collect();
@@ -138,9 +141,10 @@ impl SolangServer {
 
             lookup.sort_by_key(|k| k.0);
 
-            if let Ok(mut files) = self.files.lock() {
-                files.insert(path, Hovers { offsets, lookup });
-            }
+            self.files
+                .lock()
+                .await
+                .insert(path, Hovers { offsets, lookup });
 
             res.await;
         }
@@ -149,9 +153,9 @@ impl SolangServer {
     /// Calculate the line and column from the Loc offset received from the parser
     fn loc_to_range(loc: &pt::Loc, file_offsets: &diagnostics::FileOffsets) -> Range {
         let (line, column) = file_offsets.convert(loc.0, loc.1);
-        let start = Position::new(line as u64, column as u64);
+        let start = Position::new(line as u32, column as u32);
         let (line, column) = file_offsets.convert(loc.0, loc.2);
-        let end = Position::new(line as u64, column as u64);
+        let end = Position::new(line as u32, column as u32);
 
         Range::new(start, end)
     }
@@ -971,6 +975,7 @@ impl LanguageServer for SolangServer {
                 completion_provider: Some(CompletionOptions {
                     resolve_provider: Some(false),
                     trigger_characters: Some(vec![".".to_string()]),
+                    all_commit_characters: None,
                     work_done_progress_options: Default::default(),
                 }),
                 signature_help_provider: Some(SignatureHelpOptions {
@@ -979,18 +984,17 @@ impl LanguageServer for SolangServer {
                     work_done_progress_options: Default::default(),
                 }),
                 document_highlight_provider: None,
-                workspace_symbol_provider: Some(true),
+                workspace_symbol_provider: Some(OneOf::Left(true)),
                 execute_command_provider: Some(ExecuteCommandOptions {
                     commands: vec!["dummy.do_something".to_string()],
                     work_done_progress_options: Default::default(),
                 }),
-                workspace: Some(WorkspaceCapability {
-                    workspace_folders: Some(WorkspaceFolderCapability {
+                workspace: Some(WorkspaceServerCapabilities {
+                    workspace_folders: Some(WorkspaceFoldersServerCapabilities {
                         supported: Some(true),
-                        change_notifications: Some(
-                            WorkspaceFolderCapabilityChangeNotifications::Bool(true),
-                        ),
+                        change_notifications: Some(OneOf::Left(true)),
                     }),
+                    file_operations: None,
                 }),
                 ..ServerCapabilities::default()
             },
@@ -1054,9 +1058,7 @@ impl LanguageServer for SolangServer {
         let uri = params.text_document.uri;
 
         if let Ok(path) = uri.to_file_path() {
-            if let Ok(mut files) = self.files.lock() {
-                files.remove(&path);
-            }
+            self.files.lock().await.remove(&path);
         }
     }
 
@@ -1071,33 +1073,30 @@ impl LanguageServer for SolangServer {
         let uri = txtdoc.uri;
 
         if let Ok(path) = uri.to_file_path() {
-            if let Ok(files) = self.files.lock() {
-                if let Some(hovers) = files.get(&path) {
-                    let offset =
-                        hovers
-                            .offsets
-                            .get_offset(0, pos.line as usize, pos.character as usize);
+            let files = self.files.lock().await;
+            if let Some(hovers) = files.get(&path) {
+                let offset =
+                    hovers
+                        .offsets
+                        .get_offset(0, pos.line as usize, pos.character as usize);
 
-                    if let Ok(pos) = hovers.lookup.binary_search_by(|entry| {
-                        if entry.0 > offset {
-                            Ordering::Greater
-                        } else if entry.1 < offset {
-                            Ordering::Less
-                        } else {
-                            Ordering::Equal
-                        }
-                    }) {
-                        let msg = &hovers.lookup[pos];
-                        let loc = pt::Loc(0, msg.0, msg.1);
-                        let range = SolangServer::loc_to_range(&loc, &hovers.offsets);
-
-                        return Ok(Some(Hover {
-                            contents: HoverContents::Scalar(MarkedString::String(
-                                msg.2.to_string(),
-                            )),
-                            range: Some(range),
-                        }));
+                if let Ok(pos) = hovers.lookup.binary_search_by(|entry| {
+                    if entry.0 > offset {
+                        Ordering::Greater
+                    } else if entry.1 < offset {
+                        Ordering::Less
+                    } else {
+                        Ordering::Equal
                     }
+                }) {
+                    let msg = &hovers.lookup[pos];
+                    let loc = pt::Loc(0, msg.0, msg.1);
+                    let range = SolangServer::loc_to_range(&loc, &hovers.offsets);
+
+                    return Ok(Some(Hover {
+                        contents: HoverContents::Scalar(MarkedString::String(msg.2.to_string())),
+                        range: Some(range),
+                    }));
                 }
             }
         }
