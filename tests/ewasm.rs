@@ -626,7 +626,11 @@ impl TestRuntime {
 
         match module.invoke_export("main", &[], self) {
             Err(wasmi::Error::Trap(trap)) => match trap.kind() {
-                TrapKind::Host(_) => {}
+                TrapKind::Host(host_error) => {
+                    if host_error.downcast_ref::<HostCodeFinish>().is_none() {
+                        panic!("fail to invoke main: {}", host_error);
+                    }
+                }
                 _ => panic!("fail to invoke main: {}", trap),
             },
             Ok(Some(RuntimeValue::I32(0))) => {}
@@ -663,7 +667,11 @@ impl TestRuntime {
 
         match module.invoke_export("main", &[], self) {
             Err(wasmi::Error::Trap(trap)) => match trap.kind() {
-                TrapKind::Host(_) => {}
+                TrapKind::Host(host_error) => {
+                    if host_error.downcast_ref::<HostCodeFinish>().is_none() {
+                        panic!("fail to invoke main: {}", host_error);
+                    }
+                }
                 _ => panic!("fail to invoke main: {}", trap),
             },
             Ok(Some(RuntimeValue::I32(3))) => {}
@@ -693,7 +701,7 @@ impl TestRuntime {
         match module.invoke_export("main", &[], self) {
             Err(wasmi::Error::Trap(trap)) => match trap.kind() {
                 TrapKind::Host(host_error) => {
-                    if host_error.downcast_ref::<HostCodeFinish>().is_some() {
+                    if host_error.downcast_ref::<HostCodeRevert>().is_none() {
                         panic!("function was suppose to revert, not finish")
                     }
                 }
@@ -2290,7 +2298,7 @@ fn selfdestruct() {
     runtime.function("step1", &[]);
     runtime.accounts.get_mut(&runtime.vm.cur).unwrap().1 = 0;
 
-    runtime.function("step2", &[]);
+    runtime.function_revert("step2", &[]);
     runtime.accounts.get_mut(&runtime.vm.cur).unwrap().1 = 511;
 }
 
