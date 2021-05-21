@@ -34,7 +34,6 @@ impl GenericTarget {
 
         let mut binary = Binary::new(
             context,
-            contract,
             ns,
             &contract.name,
             filename,

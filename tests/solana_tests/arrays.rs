@@ -17,7 +17,7 @@ fn fixed_array() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    vm.constructor("foo", &[]);
 
     let returns = vm.function("get", &[]);
 
@@ -51,7 +51,7 @@ fn fixed_array() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    vm.constructor("foo", &[]);
 
     let returns = vm.function("get", &[]);
 
@@ -108,7 +108,7 @@ fn fixed_array() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    vm.constructor("foo", &[]);
 
     let returns = vm.function("get", &[]);
 
@@ -171,7 +171,7 @@ fn dynamic_array_fixed_elements() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    vm.constructor("foo", &[]);
 
     let returns = vm.function(
         "get",
@@ -238,7 +238,7 @@ fn fixed_array_dynamic_elements() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    vm.constructor("foo", &[]);
 
     let returns = vm.function(
         "get",
@@ -305,7 +305,7 @@ fn dynamic_array_dynamic_elements() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    vm.constructor("foo", &[]);
 
     let returns = vm.function(
         "get",
@@ -369,7 +369,7 @@ fn fixed_array_fixed_elements_storage() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    vm.constructor("foo", &[]);
 
     vm.function(
         "set_elem",
@@ -472,7 +472,7 @@ fn fixed_array_dynamic_elements_storage() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    vm.constructor("foo", &[]);
 
     vm.function(
         "set_elem",
@@ -588,7 +588,7 @@ fn storage_simple_dynamic_array() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    vm.constructor("foo", &[]);
 
     let returns = vm.function("len", &[]);
 
@@ -689,7 +689,7 @@ fn storage_pop_running_on_empty() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    vm.constructor("foo", &[]);
 
     vm.function("pop", &[]);
 }
@@ -746,7 +746,7 @@ fn storage_dynamic_array_of_structs() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    vm.constructor("foo", &[]);
 
     let returns = vm.function("len", &[]);
 

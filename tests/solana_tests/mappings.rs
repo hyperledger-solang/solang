@@ -22,7 +22,7 @@ fn simple_mapping() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    vm.constructor("foo", &[]);
 
     for i in 0..10 {
         vm.function(
@@ -93,7 +93,7 @@ fn less_simple_mapping() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    vm.constructor("foo", &[]);
 
     vm.function(
         "set_string",
@@ -157,7 +157,7 @@ fn string_mapping() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    vm.constructor("foo", &[]);
 
     vm.function(
         "set_string",
@@ -199,7 +199,7 @@ fn mapping_in_mapping() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    vm.constructor("foo", &[]);
 
     vm.function(
         "set",
@@ -271,7 +271,7 @@ fn sparse_array() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    vm.constructor("foo", &[]);
 
     vm.function(
         "set_string",
@@ -330,7 +330,7 @@ fn massive_sparse_array() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    vm.constructor("foo", &[]);
 
     vm.function(
         "set_string",

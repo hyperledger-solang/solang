@@ -10,7 +10,7 @@ fn types() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    vm.constructor("foo", &[]);
 
     let returns = vm.function("f1", &[]);
 
@@ -23,7 +23,7 @@ fn types() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    vm.constructor("foo", &[]);
 
     let returns = vm.function("f1", &[Token::Uint(ethereum_types::U256::from(2))]);
 
@@ -43,7 +43,7 @@ fn types() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    vm.constructor("foo", &[]);
 
     let returns = vm.function(
         "f1",
@@ -67,7 +67,7 @@ fn types() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    vm.constructor("foo", &[]);
 
     let returns = vm.function("f1", &[Token::Int(ethereum_types::U256::from(4000))]);
 
@@ -88,7 +88,7 @@ fn interfaces() {
         "#,
     );
 
-    vm.constructor(&[]);
+    vm.constructor("foo", &[]);
 
     let returns = vm.function("f1", &[]);
 
@@ -104,7 +104,7 @@ fn constant() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    vm.constructor("x", &[]);
 
     let returns = vm.function("z", &[]);
 
@@ -123,7 +123,7 @@ fn constant() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    vm.constructor("x", &[]);
 
     let returns = vm.function("z", &[]);
 
@@ -142,7 +142,7 @@ fn constant() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    vm.constructor("x", &[]);
 
     let returns = vm.function("z", &[]);
 

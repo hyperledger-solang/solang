@@ -756,14 +756,18 @@ impl VirtualMachine {
         assert_eq!(res, 0);
     }
 
-    fn constructor(&mut self, args: &[Token]) {
+    fn constructor(&mut self, name: &str, args: &[Token]) {
         let program = &self.stack[0];
 
         println!("constructor for {}", hex::encode(&program.data));
 
         let mut calldata: Vec<u8> = program.data.to_vec();
 
-        calldata.extend(&0u32.to_le_bytes());
+        let mut hasher = Keccak::v256();
+        let mut hash = [0u8; 32];
+        hasher.update(name.as_bytes());
+        hasher.finalize(&mut hash);
+        calldata.extend(&hash[0..4]);
 
         if let Some(constructor) = &program.abi.constructor {
             calldata.extend(&constructor.encode_input(vec![], args).unwrap());

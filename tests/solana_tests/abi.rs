@@ -35,7 +35,7 @@ fn packed() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    vm.constructor("bar", &[]);
 
     vm.function("test", &[]);
     vm.function("test2", &[]);

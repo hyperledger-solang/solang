@@ -77,7 +77,7 @@ fn simple_external_call() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    vm.constructor("bar1", &[]);
 
     vm.function("test_bar", &[Token::String(String::from("yo"))]);
 
@@ -89,7 +89,7 @@ fn simple_external_call() {
 
     vm.set_program(0);
 
-    vm.constructor(&[]);
+    vm.constructor("bar0", &[]);
 
     vm.function("test_bar", &[Token::String(String::from("uncle beau"))]);
 
@@ -119,7 +119,7 @@ fn external_call_with_returns() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    vm.constructor("bar1", &[]);
 
     let res = vm.function("test_bar", &[Token::Int(ethereum_types::U256::from(21))]);
 
@@ -129,7 +129,7 @@ fn external_call_with_returns() {
 
     vm.set_program(0);
 
-    vm.constructor(&[]);
+    vm.constructor("bar0", &[]);
 
     let res = vm.function("test_other", &[Token::FixedBytes(bar1_account.to_vec())]);
 
@@ -164,7 +164,7 @@ fn external_call_with_string_returns() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    vm.constructor("bar1", &[]);
 
     let res = vm.function("test_bar", &[Token::Int(ethereum_types::U256::from(22))]);
 
@@ -174,7 +174,7 @@ fn external_call_with_string_returns() {
 
     vm.set_program(0);
 
-    vm.constructor(&[]);
+    vm.constructor("bar0", &[]);
 
     let res = vm.function("test_other", &[Token::FixedBytes(bar1_account.to_vec())]);
 
