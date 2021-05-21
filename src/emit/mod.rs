@@ -4153,9 +4153,11 @@ pub trait TargetRuntime<'a> {
     fn emit_initializer(&mut self, bin: &mut Binary<'a>) -> FunctionValue<'a> {
         let function_ty = bin.function_type(&[], &[]);
 
-        let function =
-            bin.module
-                .add_function("storage_initializers", function_ty, Some(Linkage::Internal));
+        let function = bin.module.add_function(
+            &format!("sol::{}::storage_initializers", bin.contract.name),
+            function_ty,
+            Some(Linkage::Internal),
+        );
 
         let cfg = &bin.contract.cfg[bin.contract.initializer.unwrap()];
 

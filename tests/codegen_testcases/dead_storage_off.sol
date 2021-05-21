@@ -4,7 +4,7 @@ contract nodeadstorage {
 
     // simple test. Two references to "a" must result in loadstorage twice with --no-dead-storage flag
 
-// BEGIN-CHECK: nodeadstorage::test1
+// BEGIN-CHECK: nodeadstorage::function::test1
 	function test1() public view returns (int) {
         return a + a;
 	}

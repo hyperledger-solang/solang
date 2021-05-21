@@ -1123,13 +1123,12 @@ fn function_cfg(
 
     let name = match func.ty {
         pt::FunctionTy::Function => {
-            format!("sol::function{}::{}", contract_name, func.llvm_symbol(ns))
+            format!("sol{}::function::{}", contract_name, func.llvm_symbol(ns))
         }
-        pt::FunctionTy::Constructor => format!(
-            "sol::constructor{}::{}",
-            contract_name,
-            func.llvm_symbol(ns)
-        ),
+        // There can be multiple constructors on Substrate, give them an unique name
+        pt::FunctionTy::Constructor => {
+            format!("sol{}::constructor::{:08x}", contract_name, func.selector())
+        }
         _ => format!("sol{}::{}", contract_name, func.ty),
     };
 
@@ -1341,7 +1340,7 @@ pub fn generate_modifier_dispatch(
     ns: &Namespace,
 ) -> ControlFlowGraph {
     let name = format!(
-        "sol::modifier::{}::{}::{}",
+        "sol::{}::modifier::{}::{}",
         &ns.contracts[contract_no].name,
         func.llvm_symbol(ns),
         modifier.llvm_symbol(ns)
