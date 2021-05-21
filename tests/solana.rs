@@ -11,8 +11,9 @@ use solana_helpers::allocator_bump::Allocator;
 use solana_rbpf::{
     error::EbpfError,
     memory_region::{AccessType, MemoryMapping, MemoryRegion},
+    question_mark,
     user_error::UserError,
-    vm::{Config, DefaultInstructionMeter, EbpfVm, Executable, Syscall, SyscallObject},
+    vm::{Config, DefaultInstructionMeter, EbpfVm, Executable, SyscallObject, SyscallRegistry},
 };
 use solang::{
     compile,
@@ -243,8 +244,9 @@ impl<'a> SyscallObject<UserError> for SolLog<'a> {
         _arg4: u64,
         _arg5: u64,
         memory_mapping: &MemoryMapping,
-    ) -> Result<u64, EbpfError<UserError>> {
-        let host_addr = memory_mapping.map(AccessType::Load, vm_addr, len)?;
+        result: &mut Result<u64, EbpfError<UserError>>,
+    ) {
+        let host_addr = question_mark!(memory_mapping.map(AccessType::Load, vm_addr, len), result);
         let c_buf: *const c_char = host_addr as *const c_char;
         unsafe {
             for i in 0..len {
@@ -262,7 +264,7 @@ impl<'a> SyscallObject<UserError> for SolLog<'a> {
             if let Ok(mut context) = self.context.try_borrow_mut() {
                 context.printbuf.push_str(message);
             }
-            Ok(0)
+            *result = Ok(0)
         }
     }
 }
@@ -280,14 +282,18 @@ impl<'a> SyscallObject<UserError> for SolLogPubKey<'a> {
         _arg4: u64,
         _arg5: u64,
         memory_mapping: &MemoryMapping,
-    ) -> Result<u64, EbpfError<UserError>> {
-        let account = translate_slice::<Account>(memory_mapping, pubkey_addr, 1)?;
+        result: &mut Result<u64, EbpfError<UserError>>,
+    ) {
+        let account = question_mark!(
+            translate_slice::<Account>(memory_mapping, pubkey_addr, 1),
+            result
+        );
         let message = account[0].to_base58();
         println!("log pubkey: {}", message);
         if let Ok(mut context) = self.context.try_borrow_mut() {
             context.printbuf.push_str(&message);
         }
-        Ok(0)
+        *result = Ok(0)
     }
 }
 
@@ -302,25 +308,32 @@ impl SyscallObject<UserError> for SolSha256 {
         _arg4: u64,
         _arg5: u64,
         memory_mapping: &MemoryMapping,
-    ) -> Result<u64, EbpfError<UserError>> {
-        let arrays = translate_slice::<(u64, u64)>(memory_mapping, src, len)?;
+        result: &mut Result<u64, EbpfError<UserError>>,
+    ) {
+        let arrays = question_mark!(
+            translate_slice::<(u64, u64)>(memory_mapping, src, len),
+            result
+        );
 
         let mut hasher = Sha256::new();
         for (addr, len) in arrays {
-            let buf = translate_slice::<u8>(memory_mapping, *addr, *len)?;
+            let buf = question_mark!(translate_slice::<u8>(memory_mapping, *addr, *len), result);
             println!("hashing: {}", hex::encode(buf));
             hasher.update(buf);
         }
 
         let hash = hasher.finalize();
 
-        let hash_result = translate_slice_mut::<u8>(memory_mapping, dest, hash.len() as u64)?;
+        let hash_result = question_mark!(
+            translate_slice_mut::<u8>(memory_mapping, dest, hash.len() as u64),
+            result
+        );
 
         hash_result.copy_from_slice(&hash);
 
         println!("sol_sha256: {}", hex::encode(hash));
 
-        Ok(0)
+        *result = Ok(0)
     }
 }
 
@@ -335,25 +348,32 @@ impl SyscallObject<UserError> for SolKeccak256 {
         _arg4: u64,
         _arg5: u64,
         memory_mapping: &MemoryMapping,
-    ) -> Result<u64, EbpfError<UserError>> {
-        let arrays = translate_slice::<(u64, u64)>(memory_mapping, src, len)?;
+        result: &mut Result<u64, EbpfError<UserError>>,
+    ) {
+        let arrays = question_mark!(
+            translate_slice::<(u64, u64)>(memory_mapping, src, len),
+            result
+        );
 
         let mut hasher = Keccak::v256();
         let mut hash = [0u8; 32];
         for (addr, len) in arrays {
-            let buf = translate_slice::<u8>(memory_mapping, *addr, *len)?;
+            let buf = question_mark!(translate_slice::<u8>(memory_mapping, *addr, *len), result);
             println!("hashing: {}", hex::encode(buf));
             hasher.update(buf);
         }
         hasher.finalize(&mut hash);
 
-        let hash_result = translate_slice_mut::<u8>(memory_mapping, dest, hash.len() as u64)?;
+        let hash_result = question_mark!(
+            translate_slice_mut::<u8>(memory_mapping, dest, hash.len() as u64),
+            result
+        );
 
         hash_result.copy_from_slice(&hash);
 
         println!("sol_keccak256: {}", hex::encode(hash));
 
-        Ok(0)
+        *result = Ok(0)
     }
 }
 
@@ -382,13 +402,17 @@ impl SyscallObject<UserError> for SyscallAllocFree {
         _arg4: u64,
         _arg5: u64,
         _memory_mapping: &MemoryMapping,
-    ) -> Result<u64, EbpfError<UserError>> {
+        result: &mut Result<u64, EbpfError<UserError>>,
+    ) {
         let align = align_of::<u128>();
         let layout = match Layout::from_size_align(size as usize, align) {
             Ok(layout) => layout,
-            Err(_) => return Ok(0),
+            Err(_) => {
+                *result = Ok(0);
+                return;
+            }
         };
-        if free_addr == 0 {
+        *result = if free_addr == 0 {
             Ok(self.allocator.alloc(layout))
         } else {
             self.allocator.dealloc(free_addr, layout);
@@ -583,7 +607,8 @@ impl<'a> SyscallObject<UserError> for SyscallInvokeSignedC<'a> {
         _signers_seeds_addr: u64,
         _signers_seeds_len: u64,
         memory_mapping: &MemoryMapping,
-    ) -> Result<u64, EbpfError<UserError>> {
+        result: &mut Result<u64, EbpfError<UserError>>,
+    ) {
         let instruction = self
             .translate_instruction(instruction_addr, memory_mapping)
             .expect("instruction not valid");
@@ -619,7 +644,7 @@ impl<'a> SyscallObject<UserError> for SyscallInvokeSignedC<'a> {
             context.stack.remove(0);
         }
 
-        Ok(0)
+        *result = Ok(0)
     }
 }
 
@@ -627,61 +652,86 @@ impl VirtualMachine {
     fn execute(&mut self, calldata: &[u8]) {
         println!("running bpf with calldata:{}", hex::encode(calldata));
 
-        let parameter_bytes = serialize_parameters(&calldata, &self);
+        let mut parameter_bytes = serialize_parameters(&calldata, &self);
         let heap = vec![0_u8; DEFAULT_HEAP_SIZE];
-        let heap_region = MemoryRegion::new_from_slice(&heap, MM_HEAP_START, true);
+        let heap_region = MemoryRegion::new_from_slice(&heap, MM_HEAP_START, 0, true);
 
         let program = &self.stack[0];
 
-        let executable =
-            <dyn Executable<UserError>>::from_elf(&self.account_data[&program.program].0, None)
-                .expect("should work");
+        let mut executable = <dyn Executable<UserError, DefaultInstructionMeter>>::from_elf(
+            &self.account_data[&program.program].0,
+            None,
+            Config::default(),
+        )
+        .expect("should work");
+
+        let mut syscall_registry = SyscallRegistry::default();
+        syscall_registry
+            .register_syscall_by_name(b"sol_log_", SolLog::call)
+            .unwrap();
+
+        syscall_registry
+            .register_syscall_by_name(b"sol_log_pubkey", SolLogPubKey::call)
+            .unwrap();
+
+        syscall_registry
+            .register_syscall_by_name(b"sol_sha256", SolSha256::call)
+            .unwrap();
+
+        syscall_registry
+            .register_syscall_by_name(b"sol_keccak256", SolKeccak256::call)
+            .unwrap();
+
+        syscall_registry
+            .register_syscall_by_name(b"sol_invoke_signed_c", SyscallInvokeSignedC::call)
+            .unwrap();
+
+        syscall_registry
+            .register_syscall_by_name(b"sol_alloc_free_", SyscallAllocFree::call)
+            .unwrap();
+
+        executable.set_syscall_registry(syscall_registry);
+
         let mut vm = EbpfVm::<UserError, DefaultInstructionMeter>::new(
             executable.as_ref(),
-            Config::default(),
-            &parameter_bytes,
+            &mut parameter_bytes,
             &[heap_region],
         )
         .unwrap();
 
         let context = Rc::new(RefCell::new(self));
 
-        vm.register_syscall_ex(
-            "sol_log_",
-            Syscall::Object(Box::new(SolLog {
+        vm.bind_syscall_context_object(
+            Box::new(SolLog {
                 context: context.clone(),
-            })),
+            }),
+            None,
         )
         .unwrap();
 
-        vm.register_syscall_ex(
-            "sol_log_pubkey",
-            Syscall::Object(Box::new(SolLogPubKey {
+        vm.bind_syscall_context_object(
+            Box::new(SolLogPubKey {
                 context: context.clone(),
-            })),
+            }),
+            None,
         )
         .unwrap();
 
-        vm.register_syscall_ex("sol_sha256", Syscall::Object(Box::new(SolSha256())))
-            .unwrap();
+        vm.bind_syscall_context_object(
+            Box::new(SyscallAllocFree {
+                allocator: Allocator::new(heap, MM_HEAP_START),
+            }),
+            None,
+        )
+        .unwrap();
 
-        vm.register_syscall_ex("sol_keccak256", Syscall::Object(Box::new(SolKeccak256())))
-            .unwrap();
-
-        vm.register_syscall_ex(
-            "sol_invoke_signed_c",
-            Syscall::Object(Box::new(SyscallInvokeSignedC {
+        vm.bind_syscall_context_object(
+            Box::new(SyscallInvokeSignedC {
                 context: context.clone(),
                 input: &parameter_bytes,
                 calldata: &calldata,
-            })),
-        )
-        .unwrap();
-        vm.register_syscall_ex(
-            "sol_alloc_free_",
-            Syscall::Object(Box::new(SyscallAllocFree {
-                allocator: Allocator::new(heap, MM_HEAP_START),
-            })),
+            }),
+            None,
         )
         .unwrap();
 
