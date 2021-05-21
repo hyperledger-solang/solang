@@ -32,10 +32,11 @@ impl GenericTarget {
             abi: ethabiencoder::EthAbiDecoder { bswap: false },
         };
 
-        let mut c = Binary::new(
+        let mut binary = Binary::new(
             context,
             contract,
             ns,
+            &contract.name,
             filename,
             opt,
             math_overflow_check,
@@ -43,14 +44,14 @@ impl GenericTarget {
         );
 
         // externals
-        b.declare_externals(&mut c);
+        b.declare_externals(&mut binary);
 
-        b.emit_functions(&mut c);
+        b.emit_functions(&mut binary, contract);
 
-        b.emit_constructor(&mut c);
-        b.emit_function(&mut c);
+        b.emit_constructor(&mut binary, contract);
+        b.emit_function(&mut binary, contract);
 
-        c
+        binary
     }
 
     fn declare_externals(&self, contract: &mut Binary) {
@@ -102,84 +103,78 @@ impl GenericTarget {
         );
     }
 
-    fn emit_constructor(&mut self, contract: &mut Binary) {
-        let initializer = self.emit_initializer(contract);
+    fn emit_constructor(&mut self, binary: &mut Binary, contract: &ast::Contract) {
+        let initializer = self.emit_initializer(binary, contract);
 
-        let u8_ptr_ty = contract.context.i8_type().ptr_type(AddressSpace::Generic);
-        let u32_ty = contract.context.i32_type();
+        let u8_ptr_ty = binary.context.i8_type().ptr_type(AddressSpace::Generic);
+        let u32_ty = binary.context.i32_type();
 
-        let ret = contract.context.i32_type();
+        let ret = binary.context.i32_type();
         let ftype = ret.fn_type(&[u8_ptr_ty.into(), u32_ty.into()], false);
-        let function = contract
+        let function = binary
             .module
             .add_function("solang_constructor", ftype, None);
 
-        let entry = contract.context.append_basic_block(function, "entry");
+        let entry = binary.context.append_basic_block(function, "entry");
 
-        contract.builder.position_at_end(entry);
+        binary.builder.position_at_end(entry);
 
         // we should not use our heap; use sabre provided heap instead
         let argsdata = function.get_nth_param(0).unwrap().into_pointer_value();
         let argslen = function.get_nth_param(1).unwrap().into_int_value();
 
         // init our storage vars
-        contract.builder.build_call(initializer, &[], "");
+        binary.builder.build_call(initializer, &[], "");
 
         if let Some((cfg_no, con)) = contract
-            .contract
             .functions
             .iter()
             .enumerate()
-            .map(|(cfg_no, function_no)| (cfg_no, &contract.ns.functions[*function_no]))
+            .map(|(cfg_no, function_no)| (cfg_no, &binary.ns.functions[*function_no]))
             .find(|(_, f)| f.is_constructor())
         {
             let mut args = Vec::new();
 
             // insert abi decode
-            self.abi.decode(
-                contract,
-                function,
-                &mut args,
-                argsdata,
-                argslen,
-                &con.params,
-            );
+            self.abi
+                .decode(binary, function, &mut args, argsdata, argslen, &con.params);
 
-            contract
+            binary
                 .builder
-                .build_call(contract.functions[&cfg_no], &args, "");
+                .build_call(binary.functions[&cfg_no], &args, "");
         }
 
         // return 0 for success
-        contract
+        binary
             .builder
-            .build_return(Some(&contract.context.i32_type().const_int(0, false)));
+            .build_return(Some(&binary.context.i32_type().const_int(0, false)));
     }
 
     // emit function dispatch
-    fn emit_function<'s>(&'s mut self, contract: &'s mut Binary) {
-        let u8_ptr_ty = contract.context.i8_type().ptr_type(AddressSpace::Generic);
-        let u32_ty = contract.context.i32_type();
+    fn emit_function<'s>(&'s mut self, binary: &'s mut Binary, contract: &ast::Contract) {
+        let u8_ptr_ty = binary.context.i8_type().ptr_type(AddressSpace::Generic);
+        let u32_ty = binary.context.i32_type();
 
-        let ret = contract.context.i32_type();
+        let ret = binary.context.i32_type();
         let ftype = ret.fn_type(&[u8_ptr_ty.into(), u32_ty.into()], false);
-        let function = contract.module.add_function("solang_function", ftype, None);
+        let function = binary.module.add_function("solang_function", ftype, None);
 
-        let entry = contract.context.append_basic_block(function, "entry");
+        let entry = binary.context.append_basic_block(function, "entry");
 
-        contract.builder.position_at_end(entry);
+        binary.builder.position_at_end(entry);
 
         // we should not use our heap; use sabre provided heap instead
         let argsdata = function.get_nth_param(0).unwrap().into_pointer_value();
         let argslen = function.get_nth_param(1).unwrap().into_int_value();
 
-        let argsdata = contract.builder.build_pointer_cast(
+        let argsdata = binary.builder.build_pointer_cast(
             argsdata,
-            contract.context.i32_type().ptr_type(AddressSpace::Generic),
+            binary.context.i32_type().ptr_type(AddressSpace::Generic),
             "argsdata32",
         );
 
         self.emit_function_dispatch(
+            binary,
             contract,
             pt::FunctionTy::Function,
             argsdata,

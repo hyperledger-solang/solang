@@ -50,6 +50,7 @@ impl SolanaTarget {
             context,
             contract,
             ns,
+            &contract.name,
             filename,
             opt,
             math_overflow_check,
@@ -70,9 +71,9 @@ impl SolanaTarget {
         // externals
         target.declare_externals(&mut con);
 
-        target.emit_functions(&mut con);
+        target.emit_functions(&mut con, contract);
 
-        target.emit_dispatch(&mut con);
+        target.emit_dispatch(&mut con, contract);
 
         con.internalize(&[
             "entrypoint",
@@ -254,8 +255,8 @@ impl SolanaTarget {
             .into_int_value()
     }
 
-    fn emit_dispatch(&mut self, binary: &mut Binary) {
-        let initializer = self.emit_initializer(binary);
+    fn emit_dispatch(&mut self, binary: &mut Binary, contract: &ast::Contract) {
+        let initializer = self.emit_initializer(binary, contract);
 
         let function = binary.module.get_function("solang_dispatch").unwrap();
 
@@ -339,7 +340,7 @@ impl SolanaTarget {
         // do we have enough binary data
         let binary_data_len = self.binary_storage_datalen(binary);
 
-        let fixed_fields_size = binary.contract.fixed_layout_size.to_u64().unwrap();
+        let fixed_fields_size = contract.fixed_layout_size.to_u64().unwrap();
 
         let is_enough = binary.builder.build_int_compare(
             IntPredicate::UGE,
@@ -404,8 +405,7 @@ impl SolanaTarget {
         );
 
         // There is only one possible constructor
-        let ret = if let Some((cfg_no, cfg)) = binary
-            .contract
+        let ret = if let Some((cfg_no, cfg)) = contract
             .cfg
             .iter()
             .enumerate()
@@ -456,6 +456,7 @@ impl SolanaTarget {
 
         self.emit_function_dispatch(
             binary,
+            contract,
             pt::FunctionTy::Function,
             input,
             input_len,
