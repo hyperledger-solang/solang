@@ -31,7 +31,6 @@ impl SubstrateTarget {
     ) -> Binary<'a> {
         let mut binary = Binary::new(
             context,
-            contract,
             ns,
             &contract.name,
             filename,
@@ -39,6 +38,8 @@ impl SubstrateTarget {
             math_overflow_check,
             None,
         );
+
+        binary.set_early_value_aborts(contract);
 
         let scratch_len = binary.module.add_global(
             context.i32_type(),

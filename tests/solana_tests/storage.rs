@@ -18,7 +18,7 @@ fn string() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    vm.constructor("foo", &[]);
 
     assert_eq!(
         vm.data()[0..20].to_vec(),
@@ -94,7 +94,7 @@ fn bytes() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    vm.constructor("c", &[]);
 
     assert_eq!(
         vm.data()[0..20].to_vec(),
@@ -186,7 +186,7 @@ fn bytes_set_subscript_range() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    vm.constructor("c", &[]);
 
     vm.function(
         "set_foo_offset",
@@ -223,7 +223,7 @@ fn bytes_get_subscript_range() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    vm.constructor("c", &[]);
 
     vm.function(
         "set_foo",
@@ -251,7 +251,7 @@ fn storage_alignment() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    vm.constructor("c", &[]);
 
     assert_eq!(
         vm.data()[0..40].to_vec(),
@@ -283,7 +283,7 @@ fn bytes_push_pop() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    vm.constructor("c", &[]);
 
     let returns = vm.function("get_bs", &[]);
 
@@ -326,7 +326,7 @@ fn bytes_empty_pop() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    vm.constructor("c", &[]);
 
     vm.function("pop", &[]);
 }
@@ -358,7 +358,7 @@ fn simple_struct() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    vm.constructor("c", &[]);
 
     vm.function("set_s2", &[]);
 
@@ -432,7 +432,7 @@ fn struct_in_struct() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    vm.constructor("c", &[]);
 
     vm.function("set_s2", &[]);
 
@@ -514,7 +514,7 @@ fn string_in_struct() {
             }"#,
     );
 
-    vm.constructor(&[]);
+    vm.constructor("c", &[]);
 
     vm.function("set_s2", &[]);
 
@@ -611,7 +611,7 @@ fn complex_struct() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    vm.constructor("c", &[]);
 
     vm.function("set_s2", &[]);
 

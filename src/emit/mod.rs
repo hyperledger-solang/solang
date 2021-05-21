@@ -5065,6 +5065,19 @@ impl<'a> Binary<'a> {
         }
     }
 
+    /// Build the LLVM IR for a set of contracts in a single namespace
+    pub fn build_bundle(
+        context: &'a Context,
+        ns: &'a ast::Namespace,
+        filename: &'a str,
+        opt: OptimizationLevel,
+        math_overflow_check: bool,
+    ) -> Self {
+        assert!(ns.target == Target::Solana);
+
+        solana::SolanaTarget::build_bundle(context, ns, filename, opt, math_overflow_check)
+    }
+
     /// Compile the bin and return the code as bytes. The result is
     /// cached, since this function can be called multiple times (e.g. one for
     /// each time a bin of this type is created).
@@ -5173,7 +5186,6 @@ impl<'a> Binary<'a> {
 
     pub fn new(
         context: &'a Context,
-        contract: &'a ast::Contract,
         ns: &'a ast::Namespace,
         name: &str,
         filename: &'a str,
@@ -5192,18 +5204,6 @@ impl<'a> Binary<'a> {
         // stdlib
         let intr = load_stdlib(&context, &ns.target);
         module.link_in_module(intr).unwrap();
-
-        // if there is no payable function, fallback or receive then abort all value transfers at the top
-        // note that receive() is always payable so this just checkes for presence.
-        let function_abort_value_transfers = !contract.functions.iter().any(|function_no| {
-            let f = &ns.functions[*function_no];
-            !f.is_constructor() && f.is_payable()
-        });
-
-        let constructor_abort_value_transfers = !contract.functions.iter().any(|function_no| {
-            let f = &ns.functions[*function_no];
-            f.is_constructor() && f.is_payable()
-        });
 
         let selector =
             module.add_global(context.i32_type(), Some(AddressSpace::Generic), "selector");
@@ -5247,8 +5247,8 @@ impl<'a> Binary<'a> {
             name: name.to_owned(),
             module,
             runtime,
-            function_abort_value_transfers,
-            constructor_abort_value_transfers,
+            function_abort_value_transfers: false,
+            constructor_abort_value_transfers: false,
             math_overflow_check,
             builder: context.create_builder(),
             context,
@@ -5265,6 +5265,21 @@ impl<'a> Binary<'a> {
             parameters: None,
             return_values,
         }
+    }
+
+    /// Set flags for early aborts if a value transfer is done and no function/constructor can handle it
+    pub fn set_early_value_aborts(&mut self, contract: &ast::Contract) {
+        // if there is no payable function, fallback or receive then abort all value transfers at the top
+        // note that receive() is always payable so this just checkes for presence.
+        self.function_abort_value_transfers = !contract.functions.iter().any(|function_no| {
+            let f = &self.ns.functions[*function_no];
+            !f.is_constructor() && f.is_payable()
+        });
+
+        self.constructor_abort_value_transfers = !contract.functions.iter().any(|function_no| {
+            let f = &self.ns.functions[*function_no];
+            f.is_constructor() && f.is_payable()
+        });
     }
 
     /// llvm value type, as in chain currency (usually 128 bits int)

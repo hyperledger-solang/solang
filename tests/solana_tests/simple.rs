@@ -15,7 +15,7 @@ fn simple() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    vm.constructor("foo", &[]);
 
     assert_eq!(vm.printbuf, "Hello from constructor");
 
@@ -39,7 +39,7 @@ fn format() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    vm.constructor("foo", &[]);
 
     assert_eq!(
         vm.printbuf,
@@ -64,7 +64,7 @@ fn parameters() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    vm.constructor("foo", &[]);
 
     vm.function(
         "test",
@@ -100,7 +100,7 @@ fn returns() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    vm.constructor("foo", &[]);
 
     let returns = vm.function(
         "test",
@@ -121,7 +121,7 @@ fn returns() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    vm.constructor("foo", &[]);
 
     let returns = vm.function(
         "test",
@@ -163,7 +163,7 @@ fn flipper() {
         }"#,
     );
 
-    vm.constructor(&[ethabi::Token::Bool(true)]);
+    vm.constructor("flipper", &[ethabi::Token::Bool(true)]);
 
     assert_eq!(
         vm.data()[0..17].to_vec(),

@@ -37,7 +37,6 @@ impl EwasmTarget {
         };
         let mut runtime_code = Binary::new(
             context,
-            contract,
             ns,
             &contract.name,
             filename,
@@ -45,6 +44,8 @@ impl EwasmTarget {
             math_overflow_check,
             None,
         );
+
+        runtime_code.set_early_value_aborts(contract);
 
         // externals
         b.declare_externals(&mut runtime_code);
@@ -65,7 +66,6 @@ impl EwasmTarget {
         };
         let mut deploy_code = Binary::new(
             context,
-            contract,
             ns,
             &contract.name,
             filename,
@@ -73,6 +73,8 @@ impl EwasmTarget {
             math_overflow_check,
             Some(Box::new(runtime_code)),
         );
+
+        deploy_code.set_early_value_aborts(contract);
 
         // externals
         b.declare_externals(&mut deploy_code);

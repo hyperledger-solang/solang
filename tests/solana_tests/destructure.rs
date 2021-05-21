@@ -15,7 +15,7 @@ fn conditional_destructure() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    vm.constructor("foo", &[]);
 
     let returns = vm.function("f", &[Token::Bool(true), Token::Bool(true)]);
 
