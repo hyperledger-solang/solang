@@ -4,7 +4,7 @@ contract deadstorage {
 
     // simple test. Two references to "a" must result in a single loadstorage
 
-// BEGIN-CHECK: deadstorage::test1
+// BEGIN-CHECK: deadstorage::function::test1
 	function test1() public view returns (int) {
         return a + a;
 	}
@@ -12,7 +12,7 @@ contract deadstorage {
 // NOT-CHECK: load storage slot(uint256 0) ty:int256
 
     // Two references to "a" with a write to A in between must result in two loadstorage
-// BEGIN-CHECK: deadstorage::test2
+// BEGIN-CHECK: deadstorage::function::test2
 	function test2() public returns (int) {
         int x = a;
         a = 2;
@@ -23,7 +23,7 @@ contract deadstorage {
 // CHECK: load storage slot(uint256 0) ty:int256
 
     // make sure that reachable stores are not eliminated
-// BEGIN-CHECK: deadstorage::test3
+// BEGIN-CHECK: deadstorage::function::test3
 	function test3(bool c) public {
 		a = 1;
 		if (c) {
@@ -34,7 +34,7 @@ contract deadstorage {
 // CHECK: store storage slot(uint256 0)
 
    // two successive stores are redundant
-// BEGIN-CHECK: deadstorage::test4
+// BEGIN-CHECK: deadstorage::function::test4
     int b;
 	function test4() public {
 		b = 511;
@@ -44,7 +44,7 @@ contract deadstorage {
 // NOT-CHECK: store storage slot(uint256 1)
 
    // stores in a previous block are always redundant
-// BEGIN-CHECK: deadstorage::test5
+// BEGIN-CHECK: deadstorage::function::test5
     int test5var;
 	function test5(bool c) public {
         if (c) {
@@ -57,7 +57,7 @@ contract deadstorage {
 // CHECK: store storage slot(uint256 2)
 // NOT-CHECK: store storage slot(uint256 2)
 
-// BEGIN-CHECK: deadstorage::test6
+// BEGIN-CHECK: deadstorage::function::test6
     // store/load are not merged yet. Make sure that we have a store before a load
     int test6var;
     function test6() public {
@@ -68,7 +68,7 @@ contract deadstorage {
 // CHECK: store storage slot(uint256 3)
 // CHECK: store storage slot(uint256 3)
 
-// BEGIN-CHECK: deadstorage::test7
+// BEGIN-CHECK: deadstorage::function::test7
     // storage should be flushed before function call
     int test7var;
     function test7() public {
@@ -79,7 +79,7 @@ contract deadstorage {
 // CHECK: store storage slot(uint256 4)
 // CHECK: store storage slot(uint256 4)
 
-// BEGIN-CHECK: deadstorage::test8
+// BEGIN-CHECK: deadstorage::function::test8
     // clear before store is redundant
     int test8var;
     function test8() public {
@@ -89,7 +89,7 @@ contract deadstorage {
 // NOT-CHECK: clear storage slot(uint256 5)
 // CHECK: store storage slot(uint256 5)
 
-// BEGIN-CHECK: deadstorage::test9
+// BEGIN-CHECK: deadstorage::function::test9
     // push should make both load/stores not redundant
     bytes test9var;
     function test9() public {
@@ -105,7 +105,7 @@ contract deadstorage {
 // CHECK: load storage slot(uint256 6)
 // CHECK: store storage slot(uint256 6)
 
-// BEGIN-CHECK: deadstorage::test10
+// BEGIN-CHECK: deadstorage::function::test10
     // pop should make both load/stores not redundant
     bytes test10var;
     function test10() public {
@@ -121,7 +121,7 @@ contract deadstorage {
 // CHECK: load storage slot(uint256 7)
 // CHECK: store storage slot(uint256 7)
 
-// BEGIN-CHECK: deadstorage::test11
+// BEGIN-CHECK: deadstorage::function::test11
     // some array tests
     int[11] test11var;
     function test11(uint index, uint index2) public view returns (int) {
@@ -131,7 +131,7 @@ contract deadstorage {
 // CHECK: load storage slot((uint256 8
 // CHECK: load storage slot((uint256 8
 
-// BEGIN-CHECK: deadstorage::test12
+// BEGIN-CHECK: deadstorage::function::test12
     // one load needed for this
     int[11] test12var;
     function test12(uint index) public view returns (int) {

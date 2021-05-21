@@ -1,13 +1,13 @@
 // RUN: --emit cfg
 contract c {
-// BEGIN-CHECK: c::test1
+// BEGIN-CHECK: c::function::test1
 	function test1() public pure {
 		bytes x = "foo1";
 		// x is not being used, so it can be a slice
 // CHECK: alloc slice uint32 4 "foo1"
 	}
 
-// BEGIN-CHECK: c::test2
+// BEGIN-CHECK: c::function::test2
 	function test2() public pure {
 		bytes x = "foo2";
 
@@ -20,7 +20,7 @@ contract c {
 
 	}
 
-// BEGIN-CHECK: c::test3
+// BEGIN-CHECK: c::function::test3
 	function test3() public pure {
 		bytes x = "foo3";
 
@@ -30,7 +30,7 @@ contract c {
 	}
 
 
-// BEGIN-CHECK: c::test4
+// BEGIN-CHECK: c::function::test4
 	function test4() public pure {
 		string x = "foo4";
 
@@ -45,7 +45,7 @@ contract c {
 // CHECK: alloc slice uint32 4 "foo4"
 	}
 
-// BEGIN-CHECK: c::test5
+// BEGIN-CHECK: c::function::test5
 	function test5() public pure {
 		bytes x = "foo5";
 
@@ -54,7 +54,7 @@ contract c {
 // CHECK: alloc bytes uint32 4 "foo5"
 	}
 
-// BEGIN-CHECK: c::test6
+// BEGIN-CHECK: c::function::test6
 	function test6() public pure {
 		bytes x = "foo6";
 
@@ -64,7 +64,7 @@ contract c {
 	}
 
 
-// BEGIN-CHECK: c::test7
+// BEGIN-CHECK: c::function::test7
 	function test7() public pure {
 		bytes x = "foo7";
 
@@ -75,7 +75,7 @@ contract c {
 // CHECK: alloc bytes uint32 4 "foo7"
 	}
 
-// BEGIN-CHECK: c::test8
+// BEGIN-CHECK: c::function::test8
 	function test8() public pure {
 		string x = "foo8";
 

@@ -4,7 +4,7 @@ contract test {
 /* Multiply tests */
 /******************/
 
-// BEGIN-CHECK: test::f1
+// BEGIN-CHECK: test::function::f1
     function f1()  pure public {
         for (uint i = 0; i < 10; i++) {
             // this multiply can be done with a 64 bit instruction
@@ -13,7 +13,7 @@ contract test {
 // CHECK: zext uint256 ((trunc uint64 %i) * uint64 100)
     }
 
-// BEGIN-CHECK: test::f2
+// BEGIN-CHECK: test::function::f2
     function f2(bool x) pure public {
         uint i = 0;
 
@@ -27,7 +27,7 @@ contract test {
     }
 
 
-// BEGIN-CHECK: test::f3
+// BEGIN-CHECK: test::function::f3
     function f3(bool x) pure public {
         uint i = 0;
 
@@ -40,7 +40,7 @@ contract test {
 // CHECK: (zext uint256 ((trunc uint64 (%i & uint256 255)) * uint64 100))
     }
 
-// BEGIN-CHECK: test::f4
+// BEGIN-CHECK: test::function::f4
     function f4() pure public {
         for (uint i = 0; i < 10; i++) {
             // this multiply can be done with a 64 bit instruction
@@ -49,7 +49,7 @@ contract test {
 // CHECK: (%i << uint256 15)
     }
 
-// BEGIN-CHECK: test::f5
+// BEGIN-CHECK: test::function::f5
     function f5() pure public {
         for (int i = -50; i < -10; i++) {
             // this multiply can be done with a 64 bit instruction
@@ -62,7 +62,7 @@ contract test {
 /* Division tests */
 /******************/
 
-// BEGIN-CHECK: test::f6
+// BEGIN-CHECK: test::function::f6
     function f6() pure public {
         for (uint i = 1e9; i < 1e9+10; i++) {
             print("i:{}".format(i / 32768));
@@ -70,7 +70,7 @@ contract test {
 // CHECK: (%i >> uint256 15)
     }
 
-// BEGIN-CHECK: test::f7
+// BEGIN-CHECK: test::function::f7
     function f7(uint64 arg1) pure public {
         // we're upcasting to 256 bits, but known bits will track this
         uint i = arg1;
@@ -78,7 +78,7 @@ contract test {
 // CHECK: zext uint256 ((trunc uint64 %i) / uint64 1000000))
     }
 
-// BEGIN-CHECK: test::f8
+// BEGIN-CHECK: test::function::f8
     function f8() pure public {
         // too many values to track; (101 values)
         for (uint i = 1e9; i < 1e9+101; i++) {
@@ -92,7 +92,7 @@ contract test {
 /* Modulo tests */
 /****************/
 
-// BEGIN-CHECK: test::f9
+// BEGIN-CHECK: test::function::f9
     function f9() pure public {
         // too many values to track; (101 values)
         for (uint i = 1e9; i < 1e9+101; i++) {
@@ -101,7 +101,7 @@ contract test {
 // CHECK: (%i & uint256 4294967295)
     }
 
-// BEGIN-CHECK: test::f10
+// BEGIN-CHECK: test::function::f10
     function f10() pure public {
         for (int i = 30; i >= 0; i--) {
             print("i:{}".format(i % 0x1_0000_0001));
@@ -109,7 +109,7 @@ contract test {
 // CHECK: (sext int256 ((trunc int64 %i) % int64 4294967297))
     }
 
-// BEGIN-CHECK: test::f11
+// BEGIN-CHECK: test::function::f11
     function f11() pure public {
         for (int i = 0; i != 102; i++) {
             print("i:{}".format(i % 0x1_0000_0001));
