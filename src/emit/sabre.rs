@@ -35,6 +35,7 @@ impl SabreTarget {
             context,
             contract,
             ns,
+            &contract.name,
             filename,
             opt,
             math_overflow_check,
@@ -44,9 +45,9 @@ impl SabreTarget {
         // externals
         b.declare_externals(&mut c);
 
-        b.emit_functions(&mut c);
+        b.emit_functions(&mut c, contract);
 
-        b.emit_entrypoint(&mut c);
+        b.emit_entrypoint(&mut c, contract);
 
         c.internalize(&[
             "entrypoint",
@@ -114,8 +115,8 @@ impl SabreTarget {
         );
     }
 
-    fn emit_entrypoint(&mut self, binary: &mut Binary) {
-        let initializer = self.emit_initializer(binary);
+    fn emit_entrypoint(&mut self, binary: &mut Binary, contract: &ast::Contract) {
+        let initializer = self.emit_initializer(binary, contract);
 
         let bytes_ptr = binary.context.i32_type().ptr_type(AddressSpace::Generic);
 
@@ -180,8 +181,7 @@ impl SabreTarget {
         // init our storage vars
         binary.builder.build_call(initializer, &[], "");
 
-        if let Some((cfg_no, con)) = binary
-            .contract
+        if let Some((cfg_no, con)) = contract
             .functions
             .iter()
             .enumerate()
@@ -208,6 +208,7 @@ impl SabreTarget {
 
         self.emit_function_dispatch(
             binary,
+            contract,
             pt::FunctionTy::Function,
             argsdata,
             argslen,

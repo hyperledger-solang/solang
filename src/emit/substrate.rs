@@ -29,17 +29,18 @@ impl SubstrateTarget {
         opt: OptimizationLevel,
         math_overflow_check: bool,
     ) -> Binary<'a> {
-        let mut c = Binary::new(
+        let mut binary = Binary::new(
             context,
             contract,
             ns,
+            &contract.name,
             filename,
             opt,
             math_overflow_check,
             None,
         );
 
-        let scratch_len = c.module.add_global(
+        let scratch_len = binary.module.add_global(
             context.i32_type(),
             Some(AddressSpace::Generic),
             "scratch_len",
@@ -47,29 +48,29 @@ impl SubstrateTarget {
         scratch_len.set_linkage(Linkage::Internal);
         scratch_len.set_initializer(&context.i32_type().get_undef());
 
-        c.scratch_len = Some(scratch_len);
+        binary.scratch_len = Some(scratch_len);
 
-        let scratch = c.module.add_global(
+        let scratch = binary.module.add_global(
             context.i8_type().array_type(SCRATCH_SIZE),
             Some(AddressSpace::Generic),
             "scratch",
         );
         scratch.set_linkage(Linkage::Internal);
         scratch.set_initializer(&context.i8_type().array_type(SCRATCH_SIZE).get_undef());
-        c.scratch = Some(scratch);
+        binary.scratch = Some(scratch);
 
         let mut b = SubstrateTarget {
             unique_strings: HashMap::new(),
         };
 
-        b.declare_externals(&c);
+        b.declare_externals(&binary);
 
-        b.emit_functions(&mut c);
+        b.emit_functions(&mut binary, contract);
 
-        b.emit_deploy(&mut c);
-        b.emit_call(&c);
+        b.emit_deploy(&mut binary, contract);
+        b.emit_call(&binary, contract);
 
-        c.internalize(&[
+        binary.internalize(&[
             "deploy",
             "call",
             "seal_input",
@@ -101,7 +102,7 @@ impl SubstrateTarget {
             "seal_transfer",
         ]);
 
-        c
+        binary
     }
 
     fn public_function_prelude<'a>(
@@ -492,8 +493,8 @@ impl SubstrateTarget {
         );
     }
 
-    fn emit_deploy(&mut self, binary: &mut Binary) {
-        let initializer = self.emit_initializer(binary);
+    fn emit_deploy(&mut self, binary: &mut Binary, contract: &ast::Contract) {
+        let initializer = self.emit_initializer(binary, contract);
 
         // create deploy function
         let function = binary.module.add_function(
@@ -513,6 +514,7 @@ impl SubstrateTarget {
 
         self.emit_function_dispatch(
             binary,
+            contract,
             pt::FunctionTy::Constructor,
             deploy_args,
             deploy_args_length,
@@ -535,7 +537,7 @@ impl SubstrateTarget {
         );
     }
 
-    fn emit_call(&mut self, binary: &Binary) {
+    fn emit_call(&mut self, binary: &Binary, contract: &ast::Contract) {
         // create call function
         let function = binary.module.add_function(
             "call",
@@ -548,6 +550,7 @@ impl SubstrateTarget {
 
         self.emit_function_dispatch(
             binary,
+            contract,
             pt::FunctionTy::Function,
             call_args,
             call_args_length,
@@ -3742,9 +3745,13 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
     }
 
     /// Substrate events should be prefixed with the index of the event in the metadata
-    fn event_id<'b>(&self, binary: &Binary<'b>, event_no: usize) -> Option<IntValue<'b>> {
-        let event_id = binary
-            .contract
+    fn event_id<'b>(
+        &self,
+        binary: &Binary<'b>,
+        contract: &ast::Contract,
+        event_no: usize,
+    ) -> Option<IntValue<'b>> {
+        let event_id = contract
             .sends_events
             .iter()
             .position(|e| *e == event_no)

@@ -39,6 +39,7 @@ impl EwasmTarget {
             context,
             contract,
             ns,
+            &contract.name,
             filename,
             opt,
             math_overflow_check,
@@ -50,9 +51,9 @@ impl EwasmTarget {
 
         // This also emits the constructors. We are relying on DCE to eliminate them from
         // the final code.
-        b.emit_functions(&mut runtime_code);
+        b.emit_functions(&mut runtime_code, contract);
 
-        b.function_dispatch(&runtime_code);
+        b.function_dispatch(&runtime_code, contract);
 
         runtime_code.internalize(&["main"]);
 
@@ -66,6 +67,7 @@ impl EwasmTarget {
             context,
             contract,
             ns,
+            &contract.name,
             filename,
             opt,
             math_overflow_check,
@@ -78,9 +80,9 @@ impl EwasmTarget {
         // FIXME: this emits the constructors, as well as the functions. In Ethereum Solidity,
         // no functions can be called from the constructor. We should either disallow this too
         // and not emit functions, or use lto linking to optimize any unused functions away.
-        b.emit_functions(&mut deploy_code);
+        b.emit_functions(&mut deploy_code, contract);
 
-        b.deployer_dispatch(&mut deploy_code, &runtime_bs);
+        b.deployer_dispatch(&mut deploy_code, contract, &runtime_bs);
 
         deploy_code.internalize(&[
             "main",
@@ -597,8 +599,8 @@ impl EwasmTarget {
             .add_attribute(AttributeLoc::Function, noreturn);
     }
 
-    fn deployer_dispatch(&mut self, binary: &mut Binary, runtime: &[u8]) {
-        let initializer = self.emit_initializer(binary);
+    fn deployer_dispatch(&mut self, binary: &mut Binary, contract: &ast::Contract, runtime: &[u8]) {
+        let initializer = self.emit_initializer(binary, contract);
 
         // create start function
         let ret = binary.context.void_type();
@@ -612,8 +614,7 @@ impl EwasmTarget {
         binary.builder.build_call(initializer, &[], "");
 
         // ewasm only allows one constructor, hence find()
-        if let Some((cfg_no, cfg)) = binary
-            .contract
+        if let Some((cfg_no, cfg)) = contract
             .cfg
             .iter()
             .enumerate()
@@ -651,7 +652,7 @@ impl EwasmTarget {
         binary.builder.build_unreachable();
     }
 
-    fn function_dispatch(&mut self, binary: &Binary) {
+    fn function_dispatch(&mut self, binary: &Binary, contract: &ast::Contract) {
         // create start function
         let ret = binary.context.void_type();
         let ftype = ret.fn_type(&[], false);
@@ -661,6 +662,7 @@ impl EwasmTarget {
 
         self.emit_function_dispatch(
             binary,
+            contract,
             pt::FunctionTy::Function,
             argsdata,
             argslen,

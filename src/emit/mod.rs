@@ -293,7 +293,12 @@ pub trait TargetRuntime<'a> {
     ) -> IntValue<'b>;
 
     /// Integer to prefix events with
-    fn event_id<'b>(&self, _bin: &Binary<'b>, _event_no: usize) -> Option<IntValue<'b>> {
+    fn event_id<'b>(
+        &self,
+        _bin: &Binary<'b>,
+        _contract: &ast::Contract,
+        _event_no: usize,
+    ) -> Option<IntValue<'b>> {
         None
     }
 
@@ -2825,7 +2830,8 @@ pub trait TargetRuntime<'a> {
     fn emit_cfg(
         &mut self,
         bin: &mut Binary<'a>,
-        cfg: &'a ControlFlowGraph,
+        contract: &ast::Contract,
+        cfg: &ControlFlowGraph,
         function: FunctionValue<'a>,
     ) {
         // recurse through basic blocks
@@ -3425,7 +3431,7 @@ pub trait TargetRuntime<'a> {
                         args,
                         ..
                     } => {
-                        let f = &bin.contract.cfg[*cfg_no];
+                        let f = &contract.cfg[*cfg_no];
 
                         let mut parms = args
                             .iter()
@@ -3842,7 +3848,7 @@ pub trait TargetRuntime<'a> {
 
                         let (data_ptr, data_len) = self.abi_encode(
                             bin,
-                            self.event_id(bin, *event_no),
+                            self.event_id(bin, contract, *event_no),
                             false,
                             function,
                             &data
@@ -3879,6 +3885,7 @@ pub trait TargetRuntime<'a> {
     fn emit_function_dispatch<F>(
         &self,
         bin: &Binary<'a>,
+        contract: &ast::Contract,
         function_ty: pt::FunctionTy,
         argsdata: inkwell::values::PointerValue<'a>,
         argslen: inkwell::values::IntValue<'a>,
@@ -3936,7 +3943,7 @@ pub trait TargetRuntime<'a> {
 
         let mut cases = Vec::new();
 
-        for (cfg_no, cfg) in bin.contract.cfg.iter().enumerate() {
+        for (cfg_no, cfg) in contract.cfg.iter().enumerate() {
             if cfg.ty != function_ty || !cfg.public {
                 continue;
             }
@@ -3964,15 +3971,13 @@ pub trait TargetRuntime<'a> {
         // emit fallback code
         bin.builder.position_at_end(no_function_matched);
 
-        let fallback = bin
-            .contract
+        let fallback = contract
             .cfg
             .iter()
             .enumerate()
             .find(|(_, cfg)| cfg.public && cfg.ty == pt::FunctionTy::Fallback);
 
-        let receive = bin
-            .contract
+        let receive = contract
             .cfg
             .iter()
             .enumerate()
@@ -4150,27 +4155,31 @@ pub trait TargetRuntime<'a> {
     }
 
     /// Emit the bin storage initializers
-    fn emit_initializer(&mut self, bin: &mut Binary<'a>) -> FunctionValue<'a> {
+    fn emit_initializer(
+        &mut self,
+        bin: &mut Binary<'a>,
+        contract: &ast::Contract,
+    ) -> FunctionValue<'a> {
         let function_ty = bin.function_type(&[], &[]);
 
         let function = bin.module.add_function(
-            &format!("sol::{}::storage_initializers", bin.contract.name),
+            &format!("sol::{}::storage_initializers", contract.name),
             function_ty,
             Some(Linkage::Internal),
         );
 
-        let cfg = &bin.contract.cfg[bin.contract.initializer.unwrap()];
+        let cfg = &contract.cfg[contract.initializer.unwrap()];
 
-        self.emit_cfg(bin, cfg, function);
+        self.emit_cfg(bin, contract, cfg, function);
 
         function
     }
 
     /// Emit all functions, constructors, fallback and receiver
-    fn emit_functions(&mut self, bin: &mut Binary<'a>) {
+    fn emit_functions(&mut self, bin: &mut Binary<'a>, contract: &ast::Contract) {
         let mut defines = Vec::new();
 
-        for (cfg_no, cfg) in bin.contract.cfg.iter().enumerate() {
+        for (cfg_no, cfg) in contract.cfg.iter().enumerate() {
             if !cfg.is_placeholder() {
                 let ftype = bin.function_type(
                     &cfg.params
@@ -4194,7 +4203,7 @@ pub trait TargetRuntime<'a> {
         }
 
         for (func_decl, cfg) in defines {
-            self.emit_cfg(bin, cfg, func_decl);
+            self.emit_cfg(bin, contract, cfg, func_decl);
         }
     }
 
@@ -4991,7 +5000,6 @@ pub struct Binary<'a> {
     math_overflow_check: bool,
     builder: Builder<'a>,
     context: &'a Context,
-    contract: &'a ast::Contract,
     ns: &'a ast::Namespace,
     functions: HashMap<usize, FunctionValue<'a>>,
     code: RefCell<Vec<u8>>,
@@ -5014,7 +5022,7 @@ enum ReturnCode {
 }
 
 impl<'a> Binary<'a> {
-    /// Build the LLVM IR for a bin
+    /// Build the LLVM IR for a single contract
     pub fn build(
         context: &'a Context,
         contract: &'a ast::Contract,
@@ -5107,7 +5115,7 @@ impl<'a> Binary<'a> {
                     let slice = out.as_slice();
 
                     if linking {
-                        let bs = link(slice, &self.contract.name, self.ns.target);
+                        let bs = link(slice, &self.name, self.ns.target);
 
                         if !self.patch_code_size(bs.len() as u64) {
                             self.code.replace(bs.to_vec());
@@ -5167,6 +5175,7 @@ impl<'a> Binary<'a> {
         context: &'a Context,
         contract: &'a ast::Contract,
         ns: &'a ast::Namespace,
+        name: &str,
         filename: &'a str,
         opt: OptimizationLevel,
         math_overflow_check: bool,
@@ -5175,7 +5184,7 @@ impl<'a> Binary<'a> {
         lazy_static::initialize(&LLVM_INIT);
 
         let triple = ns.target.llvm_target_triple();
-        let module = context.create_module(&contract.name);
+        let module = context.create_module(name);
 
         module.set_triple(&triple);
         module.set_source_file_name(filename);
@@ -5235,7 +5244,7 @@ impl<'a> Binary<'a> {
         );
 
         Binary {
-            name: contract.name.to_owned(),
+            name: name.to_owned(),
             module,
             runtime,
             function_abort_value_transfers,
@@ -5243,7 +5252,6 @@ impl<'a> Binary<'a> {
             math_overflow_check,
             builder: context.create_builder(),
             context,
-            contract,
             ns,
             functions: HashMap::new(),
             code: RefCell::new(Vec::new()),
