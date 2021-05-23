@@ -31,7 +31,7 @@ impl SubstrateTarget {
     ) -> Binary<'a> {
         let mut binary = Binary::new(
             context,
-            ns,
+            ns.target,
             &contract.name,
             filename,
             opt,
@@ -522,6 +522,7 @@ impl SubstrateTarget {
             deploy_args,
             deploy_args_length,
             function,
+            &binary.functions,
             Some(fallback_block),
             |_| false,
         );
@@ -563,6 +564,7 @@ impl SubstrateTarget {
             call_args,
             call_args_length,
             function,
+            &binary.functions,
             None,
             |func| !binary.function_abort_value_transfers && func.nonpayable,
         );

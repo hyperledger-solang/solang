@@ -1,4 +1,5 @@
 use clap::{App, Arg, ArgMatches};
+use itertools::Itertools;
 use serde::Serialize;
 use std::collections::HashMap;
 use std::fs::File;
@@ -8,7 +9,7 @@ use std::path::{Path, PathBuf};
 use solang::abi;
 use solang::codegen::{codegen, Options};
 use solang::file_cache::FileCache;
-use solang::sema::diagnostics;
+use solang::sema::{ast::Namespace, diagnostics};
 
 mod doc;
 mod languageserver;
@@ -147,12 +148,13 @@ fn main() {
         languageserver::start_server(target);
     }
 
+    let verbose = matches.is_present("VERBOSE");
     let mut json = JsonResult {
         errors: Vec::new(),
         contracts: HashMap::new(),
     };
 
-    if matches.is_present("VERBOSE") {
+    if verbose {
         eprintln!("info: Solang version {}", env!("GIT_HASH"));
     }
 
@@ -215,21 +217,101 @@ fn main() {
             doc::generate_docs(matches.value_of("OUTPUT").unwrap_or("."), &files, verbose);
         }
     } else {
+        let llvm_opt = match matches.value_of("OPT").unwrap() {
+            "none" => inkwell::OptimizationLevel::None,
+            "less" => inkwell::OptimizationLevel::Less,
+            "default" => inkwell::OptimizationLevel::Default,
+            "aggressive" => inkwell::OptimizationLevel::Aggressive,
+            _ => unreachable!(),
+        };
+
+        let opt = Options {
+            dead_storage: !matches.is_present("DEADSTORAGE"),
+            strength_reduce: !matches.is_present("STRENGTHREDUCE"),
+            constant_folding: !matches.is_present("CONSTANTFOLDING"),
+            vector_to_slice: !matches.is_present("VECTORTOSLICE"),
+        };
+
+        let mut namespaces = Vec::new();
+
         for filename in matches.values_of("INPUT").unwrap() {
-            process_filename(
+            namespaces.push(process_filename(
                 filename,
                 &mut cache,
                 target,
                 &matches,
                 &mut json,
                 math_overflow_check,
+                &opt,
+                llvm_opt,
+            ));
+        }
+
+        if target == solang::Target::Solana {
+            let context = inkwell::context::Context::create();
+
+            let binary = solang::compile_many(
+                &context,
+                &namespaces,
+                "bundle.sol",
+                llvm_opt,
+                math_overflow_check,
             );
+
+            if !save_intermediates(&binary, &matches) {
+                let bin_filename = output_file(&matches, "bundle", target.file_extension());
+
+                if matches.is_present("VERBOSE") {
+                    eprintln!(
+                        "info: Saving binary {} for contracts: {}",
+                        bin_filename.display(),
+                        namespaces
+                            .iter()
+                            .flat_map(|ns| ns
+                                .contracts
+                                .iter()
+                                .map(|contract| contract.name.as_str()))
+                            .join(", "),
+                    );
+                }
+
+                let code = binary.code(true).expect("llvm code emit should work");
+
+                let mut file = File::create(bin_filename).unwrap();
+                file.write_all(&code).unwrap();
+
+                // Write all ABI files
+                for ns in &namespaces {
+                    for contract_no in 0..ns.contracts.len() {
+                        let contract = &ns.contracts[contract_no];
+
+                        let (abi_bytes, abi_ext) =
+                            abi::generate_abi(contract_no, &ns, &code, verbose);
+                        let abi_filename = output_file(&matches, &contract.name, abi_ext);
+
+                        if verbose {
+                            eprintln!(
+                                "info: Saving ABI {} for contract {}",
+                                abi_filename.display(),
+                                contract.name
+                            );
+                        }
+
+                        let mut file = File::create(abi_filename).unwrap();
+                        file.write_all(&abi_bytes.as_bytes()).unwrap();
+                    }
+                }
+            }
         }
 
         if matches.is_present("STD-JSON") {
             println!("{}", serde_json::to_string(&json).unwrap());
         }
     }
+}
+
+fn output_file(matches: &ArgMatches, stem: &str, ext: &str) -> PathBuf {
+    Path::new(matches.value_of("OUTPUT").unwrap_or(".")).join(format!("{}.{}", stem, ext))
 }
 
 fn process_filename(
@@ -239,29 +321,15 @@ fn process_filename(
     matches: &ArgMatches,
     json: &mut JsonResult,
     math_overflow_check: bool,
-) {
-    let output_file = |stem: &str, ext: &str| -> PathBuf {
-        Path::new(matches.value_of("OUTPUT").unwrap_or(".")).join(format!("{}.{}", stem, ext))
-    };
+    opt: &Options,
+    llvm_opt: inkwell::OptimizationLevel,
+) -> Namespace {
     let verbose = matches.is_present("VERBOSE");
-    let llvm_opt = match matches.value_of("OPT").unwrap() {
-        "none" => inkwell::OptimizationLevel::None,
-        "less" => inkwell::OptimizationLevel::Less,
-        "default" => inkwell::OptimizationLevel::Default,
-        "aggressive" => inkwell::OptimizationLevel::Aggressive,
-        _ => unreachable!(),
-    };
+
     let mut json_contracts = HashMap::new();
 
     // resolve phase
     let mut ns = solang::parse_and_resolve(filename, cache, target);
-
-    let opt = Options {
-        dead_storage: !matches.is_present("DEADSTORAGE"),
-        strength_reduce: !matches.is_present("STRENGTHREDUCE"),
-        constant_folding: !matches.is_present("CONSTANTFOLDING"),
-        vector_to_slice: !matches.is_present("VECTORTOSLICE"),
-    };
 
     // codegen all the contracts; some additional errors/warnings will be detected here
     for contract_no in 0..ns.contracts.len() {
@@ -282,7 +350,7 @@ fn process_filename(
 
     if let Some("ast") = matches.value_of("EMIT") {
         println!("{}", ns.print(filename));
-        return;
+        return ns;
     }
 
     // emit phase
@@ -298,6 +366,10 @@ fn process_filename(
             continue;
         }
 
+        if target == solang::Target::Solana {
+            return ns;
+        }
+
         if verbose {
             eprintln!(
                 "info: Generating LLVM IR for contract {} with target {}",
@@ -307,120 +379,14 @@ fn process_filename(
 
         let context = inkwell::context::Context::create();
 
-        let contract =
+        let binary =
             resolved_contract.emit(&ns, &context, &filename, llvm_opt, math_overflow_check);
 
-        if let Some("llvm-ir") = matches.value_of("EMIT") {
-            if let Some(runtime) = &contract.runtime {
-                // In Ethereum, an ewasm contract has two parts, deployer and runtime. The deployer code returns the runtime wasm
-                // as a byte string
-                let llvm_filename = output_file(&format!("{}_deploy", contract.name), "ll");
-
-                if verbose {
-                    eprintln!(
-                        "info: Saving deployer LLVM {} for contract {}",
-                        llvm_filename.display(),
-                        contract.name
-                    );
-                }
-
-                contract.dump_llvm(&llvm_filename).unwrap();
-
-                let llvm_filename = output_file(&format!("{}_runtime", contract.name), "ll");
-
-                if verbose {
-                    eprintln!(
-                        "info: Saving runtime LLVM {} for contract {}",
-                        llvm_filename.display(),
-                        contract.name
-                    );
-                }
-
-                runtime.dump_llvm(&llvm_filename).unwrap();
-            } else {
-                let llvm_filename = output_file(&contract.name, "ll");
-
-                if verbose {
-                    eprintln!(
-                        "info: Saving LLVM IR {} for contract {}",
-                        llvm_filename.display(),
-                        contract.name
-                    );
-                }
-
-                contract.dump_llvm(&llvm_filename).unwrap();
-            }
+        if save_intermediates(&binary, matches) {
             continue;
         }
 
-        if let Some("llvm-bc") = matches.value_of("EMIT") {
-            // In Ethereum, an ewasm contract has two parts, deployer and runtime. The deployer code returns the runtime wasm
-            // as a byte string
-            if let Some(runtime) = &contract.runtime {
-                let bc_filename = output_file(&format!("{}_deploy", contract.name), "bc");
-
-                if verbose {
-                    eprintln!(
-                        "info: Saving deploy LLVM BC {} for contract {}",
-                        bc_filename.display(),
-                        contract.name
-                    );
-                }
-
-                contract.bitcode(&bc_filename);
-
-                let bc_filename = output_file(&format!("{}_runtime", contract.name), "bc");
-
-                if verbose {
-                    eprintln!(
-                        "info: Saving runtime LLVM BC {} for contract {}",
-                        bc_filename.display(),
-                        contract.name
-                    );
-                }
-
-                runtime.bitcode(&bc_filename);
-            } else {
-                let bc_filename = output_file(&contract.name, "bc");
-
-                if verbose {
-                    eprintln!(
-                        "info: Saving LLVM BC {} for contract {}",
-                        bc_filename.display(),
-                        contract.name
-                    );
-                }
-
-                contract.bitcode(&bc_filename);
-            }
-            continue;
-        }
-
-        if let Some("object") = matches.value_of("EMIT") {
-            let obj = match contract.code(false) {
-                Ok(o) => o,
-                Err(s) => {
-                    println!("error: {}", s);
-                    std::process::exit(1);
-                }
-            };
-
-            let obj_filename = output_file(&contract.name, "o");
-
-            if verbose {
-                eprintln!(
-                    "info: Saving Object {} for contract {}",
-                    obj_filename.display(),
-                    contract.name
-                );
-            }
-
-            let mut file = File::create(obj_filename).unwrap();
-            file.write_all(&obj).unwrap();
-            continue;
-        }
-
-        let code = match contract.code(true) {
+        let code = match binary.code(true) {
             Ok(o) => o,
             Err(s) => {
                 println!("error: {}", s);
@@ -430,7 +396,7 @@ fn process_filename(
 
         if matches.is_present("STD-JSON") {
             json_contracts.insert(
-                contract.name.to_owned(),
+                binary.name.to_owned(),
                 JsonContract {
                     abi: abi::ethereum::gen_abi(contract_no, &ns),
                     ewasm: EwasmContract {
@@ -442,7 +408,7 @@ fn process_filename(
             if verbose && target == solang::Target::Solana {
                 eprintln!(
                     "info: contract {} uses at least {} bytes account data",
-                    contract.name, resolved_contract.fixed_layout_size,
+                    binary.name, resolved_contract.fixed_layout_size,
                 );
             }
 
@@ -450,48 +416,168 @@ fn process_filename(
             if target == solang::Target::Substrate {
                 let (contract_bs, contract_ext) =
                     abi::generate_abi(contract_no, &ns, &code, verbose);
-                let contract_filename = output_file(&contract.name, contract_ext);
+                let contract_filename = output_file(matches, &binary.name, contract_ext);
 
                 if verbose {
                     eprintln!(
                         "info: Saving {} for contract {}",
                         contract_filename.display(),
-                        contract.name
+                        binary.name
                     );
                 }
 
                 let mut file = File::create(contract_filename).unwrap();
                 file.write_all(&contract_bs.as_bytes()).unwrap();
             } else {
-                let bin_filename = output_file(&contract.name, target.file_extension());
+                let bin_filename = output_file(matches, &binary.name, target.file_extension());
 
                 if verbose {
                     eprintln!(
                         "info: Saving binary {} for contract {}",
                         bin_filename.display(),
-                        contract.name
+                        binary.name
                     );
                 }
 
                 let mut file = File::create(bin_filename).unwrap();
                 file.write_all(&code).unwrap();
 
-                let (abi_bytes, abi_ext) = abi::generate_abi(contract_no, &ns, &code, verbose);
-                let abi_filename = output_file(&contract.name, abi_ext);
+                if target != solang::Target::Solana {
+                    let (abi_bytes, abi_ext) = abi::generate_abi(contract_no, &ns, &code, verbose);
+                    let abi_filename = output_file(matches, &binary.name, abi_ext);
 
-                if verbose {
-                    eprintln!(
-                        "info: Saving ABI {} for contract {}",
-                        abi_filename.display(),
-                        contract.name
-                    );
+                    if verbose {
+                        eprintln!(
+                            "info: Saving ABI {} for contract {}",
+                            abi_filename.display(),
+                            binary.name
+                        );
+                    }
+
+                    let mut file = File::create(abi_filename).unwrap();
+                    file.write_all(&abi_bytes.as_bytes()).unwrap();
                 }
-
-                file = File::create(abi_filename).unwrap();
-                file.write_all(&abi_bytes.as_bytes()).unwrap();
             }
         }
     }
 
     json.contracts.insert(filename.to_owned(), json_contracts);
+
+    ns
+}
+
+fn save_intermediates(binary: &solang::emit::Binary, matches: &ArgMatches) -> bool {
+    let verbose = matches.is_present("VERBOSE");
+
+    if let Some("llvm-ir") = matches.value_of("EMIT") {
+        if let Some(runtime) = &binary.runtime {
+            // In Ethereum, an ewasm contract has two parts, deployer and runtime. The deployer code returns the runtime wasm
+            // as a byte string
+            let llvm_filename = output_file(matches, &format!("{}_deploy", binary.name), "ll");
+
+            if verbose {
+                eprintln!(
+                    "info: Saving deployer LLVM {} for contract {}",
+                    llvm_filename.display(),
+                    binary.name
+                );
+            }
+
+            binary.dump_llvm(&llvm_filename).unwrap();
+
+            let llvm_filename = output_file(matches, &format!("{}_runtime", binary.name), "ll");
+
+            if verbose {
+                eprintln!(
+                    "info: Saving runtime LLVM {} for contract {}",
+                    llvm_filename.display(),
+                    binary.name
+                );
+            }
+
+            runtime.dump_llvm(&llvm_filename).unwrap();
+        } else {
+            let llvm_filename = output_file(matches, &binary.name, "ll");
+
+            if verbose {
+                eprintln!(
+                    "info: Saving LLVM IR {} for contract {}",
+                    llvm_filename.display(),
+                    binary.name
+                );
+            }
+
+            binary.dump_llvm(&llvm_filename).unwrap();
+        }
+        return true;
+    }
+
+    if let Some("llvm-bc") = matches.value_of("EMIT") {
+        // In Ethereum, an ewasm contract has two parts, deployer and runtime. The deployer code returns the runtime wasm
+        // as a byte string
+        if let Some(runtime) = &binary.runtime {
+            let bc_filename = output_file(matches, &format!("{}_deploy", binary.name), "bc");
+
+            if verbose {
+                eprintln!(
+                    "info: Saving deploy LLVM BC {} for contract {}",
+                    bc_filename.display(),
+                    binary.name
+                );
+            }
+
+            binary.bitcode(&bc_filename);
+
+            let bc_filename = output_file(matches, &format!("{}_runtime", binary.name), "bc");
+
+            if verbose {
+                eprintln!(
+                    "info: Saving runtime LLVM BC {} for contract {}",
+                    bc_filename.display(),
+                    binary.name
+                );
+            }
+
+            runtime.bitcode(&bc_filename);
+        } else {
+            let bc_filename = output_file(matches, &binary.name, "bc");
+
+            if verbose {
+                eprintln!(
+                    "info: Saving LLVM BC {} for contract {}",
+                    bc_filename.display(),
+                    binary.name
+                );
+            }
+
+            binary.bitcode(&bc_filename);
+        }
+        return true;
+    }
+
+    if let Some("object") = matches.value_of("EMIT") {
+        let obj = match binary.code(false) {
+            Ok(o) => o,
+            Err(s) => {
+                println!("error: {}", s);
+                std::process::exit(1);
+            }
+        };
+
+        let obj_filename = output_file(matches, &binary.name, "o");
+
+        if verbose {
+            eprintln!(
+                "info: Saving Object {} for contract {}",
+                obj_filename.display(),
+                binary.name
+            );
+        }
+
+        let mut file = File::create(obj_filename).unwrap();
+        file.write_all(&obj).unwrap();
+        return true;
+    }
+
+    false
 }

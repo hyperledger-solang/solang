@@ -8,9 +8,9 @@ describe('Deploy solang contract and test', () => {
 
         let conn = await establishConnection();
 
-        let caller = await conn.loadProgram("caller.so", "caller.abi");
-        let callee = await conn.loadProgram("callee.so", "callee.abi");
-        let callee2 = await conn.loadProgram("callee2.so", "callee2.abi");
+        let caller = await conn.loadProgram("bundle.so", "caller.abi");
+        let callee = await conn.loadProgram("bundle.so", "callee.abi");
+        let callee2 = await conn.loadProgram("bundle.so", "callee2.abi");
 
         // call the constructor
         await caller.call_constructor(conn, 'caller', []);

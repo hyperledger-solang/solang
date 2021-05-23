@@ -33,7 +33,7 @@ impl SabreTarget {
         };
         let mut c = Binary::new(
             context,
-            ns,
+            ns.target,
             &contract.name,
             filename,
             opt,
@@ -225,6 +225,7 @@ impl SabreTarget {
             argsdata,
             argslen,
             function,
+            &binary.functions,
             None,
             |_| false,
         );

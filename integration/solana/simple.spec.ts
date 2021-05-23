@@ -8,7 +8,7 @@ describe('Deploy solang contract and test', () => {
 
         let conn = await establishConnection();
 
-        let prog = await conn.loadProgram("flipper.so", "flipper.abi");
+        let prog = await conn.loadProgram("bundle.so", "flipper.abi");
 
         // call the constructor
         await prog.call_constructor(conn, 'flipper', ["true"]);
@@ -31,7 +31,7 @@ describe('Deploy solang contract and test', () => {
 
         let conn = await establishConnection();
 
-        let prog = await conn.loadProgram("primitives.so", "primitives.abi");
+        let prog = await conn.loadProgram("bundle.so", "primitives.abi");
 
         // call the constructor
         await prog.call_constructor(conn, 'primitives', []);
@@ -154,7 +154,7 @@ describe('Deploy solang contract and test', () => {
 
         let conn = await establishConnection();
 
-        let prog = await conn.loadProgram("store.so", "store.abi");
+        let prog = await conn.loadProgram("bundle.so", "store.abi");
 
         // call the constructor
         await prog.call_constructor(conn, 'store', []);
@@ -251,7 +251,7 @@ describe('Deploy solang contract and test', () => {
 
         let conn = await establishConnection();
 
-        let prog = await conn.loadProgram("store.so", "store.abi", 8192);
+        let prog = await conn.loadProgram("bundle.so", "store.abi", 8192);
 
         // call the constructor
         await prog.call_constructor(conn, 'store', []);
@@ -400,7 +400,7 @@ describe('Deploy solang contract and test', () => {
         let conn = await establishConnection();
 
         // storage.sol needs 168 byes
-        let prog = await conn.loadProgram("store.so", "store.abi", 100);
+        let prog = await conn.loadProgram("bundle.so", "store.abi", 100);
 
         await expect(prog.call_constructor(conn, 'store', []))
             .rejects
@@ -413,7 +413,7 @@ describe('Deploy solang contract and test', () => {
         let conn = await establishConnection();
 
         // storage.sol needs 168 byes
-        let prog = await conn.loadProgram("store.so", "store.abi", 512);
+        let prog = await conn.loadProgram("bundle.so", "store.abi", 512);
 
         await prog.call_constructor(conn, 'store', []);
 
@@ -431,7 +431,7 @@ describe('Deploy solang contract and test', () => {
         let conn = await establishConnection();
 
         // storage.sol needs 168 bytes on constructor, more for string data
-        let prog = await conn.loadProgram("store.so", "store.abi", 180);
+        let prog = await conn.loadProgram("bundle.so", "store.abi", 180);
 
         await prog.call_constructor(conn, 'store', []);
 
@@ -448,7 +448,7 @@ describe('Deploy solang contract and test', () => {
         let conn = await establishConnection();
 
         // storage.sol needs 168 bytes on constructor, more for string data
-        let prog = await conn.loadProgram("store.so", "store.abi", 210);
+        let prog = await conn.loadProgram("bundle.so", "store.abi", 210);
 
         await prog.call_constructor(conn, 'store', []);
 
@@ -471,7 +471,7 @@ describe('Deploy solang contract and test', () => {
         let conn = await establishConnection();
 
         // storage.sol needs 168 bytes on constructor, more for string data
-        let prog = await conn.loadProgram("arrays.so", "arrays.abi", 4096);
+        let prog = await conn.loadProgram("bundle.so", "arrays.abi", 4096);
 
         await prog.call_constructor(conn, 'arrays', []);
 

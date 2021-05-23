@@ -37,7 +37,7 @@ impl EwasmTarget {
         };
         let mut runtime_code = Binary::new(
             context,
-            ns,
+            ns.target,
             &contract.name,
             filename,
             opt,
@@ -66,7 +66,7 @@ impl EwasmTarget {
         };
         let mut deploy_code = Binary::new(
             context,
-            ns,
+            ns.target,
             &contract.name,
             filename,
             opt,
@@ -690,6 +690,7 @@ impl EwasmTarget {
             argsdata,
             argslen,
             function,
+            &binary.functions,
             None,
             |func| !binary.function_abort_value_transfers && func.nonpayable,
         );

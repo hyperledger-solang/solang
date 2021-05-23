@@ -1,6 +1,6 @@
 pub mod abi;
 pub mod codegen;
-mod emit;
+pub mod emit;
 pub mod file_cache;
 pub mod linker;
 pub mod parser;
@@ -93,6 +93,17 @@ pub fn compile(
         .collect();
 
     (results, ns)
+}
+
+/// Build a single binary out of multiple contracts. This is only possible on Solana
+pub fn compile_many<'a>(
+    context: &'a inkwell::context::Context,
+    namespaces: &'a [ast::Namespace],
+    filename: &str,
+    opt: OptimizationLevel,
+    math_overflow_check: bool,
+) -> emit::Binary<'a> {
+    emit::Binary::build_bundle(context, namespaces, filename, opt, math_overflow_check)
 }
 
 /// Parse and resolve the Solidity source code provided in src, for the target chain as specified in target.

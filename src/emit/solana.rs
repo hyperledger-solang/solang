@@ -1,6 +1,7 @@
 use crate::codegen::cfg::HashTy;
 use crate::parser::pt;
 use crate::sema::ast;
+use crate::Target;
 use std::collections::HashMap;
 use std::convert::TryInto;
 use std::str;
@@ -25,8 +26,10 @@ pub struct SolanaTarget {
 pub struct Contract<'a> {
     magic: u32,
     contract: &'a ast::Contract,
+    ns: &'a ast::Namespace,
     storage_initializer: FunctionValue<'a>,
     constructor: Option<(FunctionValue<'a>, &'a Vec<ast::Parameter>)>,
+    functions: HashMap<usize, FunctionValue<'a>>,
 }
 
 // Implement the Solana target which uses BPF
@@ -53,7 +56,7 @@ impl SolanaTarget {
 
         let mut binary = Binary::new(
             context,
-            ns,
+            Target::Solana,
             &contract.name,
             filename,
             opt,
@@ -87,15 +90,20 @@ impl SolanaTarget {
             .find(|(_, cfg)| cfg.ty == pt::FunctionTy::Constructor)
             .map(|(cfg_no, cfg)| (binary.functions[&cfg_no], &cfg.params));
 
+        let mut functions = HashMap::new();
+
+        std::mem::swap(&mut functions, &mut binary.functions);
+
         target.emit_dispatch(
             &mut binary,
             &[Contract {
                 magic: target.magic,
                 contract,
+                ns,
                 storage_initializer,
                 constructor,
+                functions,
             }],
-            ns,
         );
 
         binary.internalize(&[
@@ -112,8 +120,8 @@ impl SolanaTarget {
     /// Build a bundle of contracts from the same namespace
     pub fn build_bundle<'a>(
         context: &'a Context,
-        ns: &'a ast::Namespace,
-        filename: &'a str,
+        namespaces: &'a [ast::Namespace],
+        filename: &str,
         opt: OptimizationLevel,
         math_overflow_check: bool,
     ) -> Binary<'a> {
@@ -124,7 +132,7 @@ impl SolanaTarget {
 
         let mut binary = Binary::new(
             context,
-            ns,
+            Target::Solana,
             "bundle",
             filename,
             opt,
@@ -149,41 +157,49 @@ impl SolanaTarget {
 
         let mut contracts: Vec<Contract> = Vec::new();
 
-        for contract in &ns.contracts {
-            if !contract.is_concrete() {
-                continue;
+        for ns in namespaces {
+            for contract in &ns.contracts {
+                if !contract.is_concrete() {
+                    continue;
+                }
+
+                // We need a magic number for our contract.
+                let mut hasher = Keccak::v256();
+                let mut hash = [0u8; 32];
+                hasher.update(contract.name.as_bytes());
+                hasher.finalize(&mut hash);
+
+                target.magic = u32::from_le_bytes(hash[0..4].try_into().unwrap());
+
+                target.emit_functions(&mut binary, contract, ns);
+
+                let storage_initializer = target.emit_initializer(&mut binary, contract, ns);
+
+                let constructor = contract
+                    .cfg
+                    .iter()
+                    .enumerate()
+                    .find(|(_, cfg)| cfg.ty == pt::FunctionTy::Constructor)
+                    .map(|(cfg_no, cfg)| (binary.functions[&cfg_no], &cfg.params));
+
+                let mut functions = HashMap::new();
+
+                std::mem::swap(&mut functions, &mut binary.functions);
+
+                contracts.push(Contract {
+                    magic: target.magic,
+                    ns,
+                    contract,
+                    storage_initializer,
+                    constructor,
+                    functions,
+                });
+
+                binary.functions.drain();
             }
-
-            // We need a magic number for our contract.
-            let mut hasher = Keccak::v256();
-            let mut hash = [0u8; 32];
-            hasher.update(contract.name.as_bytes());
-            hasher.finalize(&mut hash);
-
-            target.magic = u32::from_le_bytes(hash[0..4].try_into().unwrap());
-
-            target.emit_functions(&mut binary, contract, ns);
-
-            let storage_initializer = target.emit_initializer(&mut binary, contract, ns);
-
-            let constructor = contract
-                .cfg
-                .iter()
-                .enumerate()
-                .find(|(_, cfg)| cfg.ty == pt::FunctionTy::Constructor)
-                .map(|(cfg_no, cfg)| (binary.functions[&cfg_no], &cfg.params));
-
-            contracts.push(Contract {
-                magic: target.magic,
-                contract,
-                storage_initializer,
-                constructor,
-            });
-
-            binary.functions.drain();
         }
 
-        target.emit_dispatch(&mut binary, &contracts, ns);
+        target.emit_dispatch(&mut binary, &contracts);
 
         binary.internalize(&[
             "entrypoint",
@@ -365,12 +381,7 @@ impl SolanaTarget {
             .into_int_value()
     }
 
-    fn emit_dispatch<'b>(
-        &mut self,
-        binary: &mut Binary<'b>,
-        contracts: &[Contract<'b>],
-        ns: &ast::Namespace,
-    ) {
+    fn emit_dispatch<'b>(&mut self, binary: &mut Binary<'b>, contracts: &[Contract<'b>]) {
         let function = binary.module.get_function("solang_dispatch").unwrap();
 
         let entry = binary.context.append_basic_block(function, "entry");
@@ -417,7 +428,6 @@ impl SolanaTarget {
             .build_load(magic_value_ptr, "magic")
             .into_int_value();
 
-        let function_block = binary.context.append_basic_block(function, "function_call");
         let constructor_block = binary
             .context
             .append_basic_block(function, "constructor_call");
@@ -426,31 +436,11 @@ impl SolanaTarget {
         // if the magic is zero it's a virgin binary
         // if the magic is our magic value, it's a function call
         // if the magic is another magic value, it is an error
-        binary.builder.build_switch(
-            magic_value,
-            badmagic_block,
-            &[
-                (binary.context.i32_type().const_zero(), constructor_block),
-                (
-                    binary
-                        .context
-                        .i32_type()
-                        .const_int(self.magic as u64, false),
-                    function_block,
-                ),
-            ],
-        );
-
-        binary.builder.position_at_end(badmagic_block);
-
-        binary.builder.build_return(Some(
-            &binary.context.i64_type().const_int(4u64 << 32, false),
-        ));
 
         // Generate function call dispatch
-        let mut cases = Vec::new();
+        let function_block = binary.builder.get_insert_block().unwrap();
 
-        binary.builder.position_at_end(function_block);
+        let mut cases = vec![(binary.context.i32_type().const_zero(), constructor_block)];
 
         let input = binary.builder.build_pointer_cast(
             input,
@@ -476,15 +466,22 @@ impl SolanaTarget {
             self.emit_function_dispatch(
                 binary,
                 &contract.contract,
-                ns,
+                contract.ns,
                 pt::FunctionTy::Function,
                 input,
                 input_len,
                 function,
+                &contract.functions,
                 None,
                 |_| false,
             );
         }
+
+        binary.builder.position_at_end(badmagic_block);
+
+        binary.builder.build_return(Some(
+            &binary.context.i64_type().const_int(4u64 << 32, false),
+        ));
 
         binary.builder.position_at_end(function_block);
 
@@ -591,8 +588,15 @@ impl SolanaTarget {
                 let mut args = Vec::new();
 
                 // insert abi decode
-                self.abi
-                    .decode(binary, function, &mut args, input, input_len, params, ns);
+                self.abi.decode(
+                    binary,
+                    function,
+                    &mut args,
+                    input,
+                    input_len,
+                    params,
+                    contract.ns,
+                );
 
                 let params_ty = constructor_function
                     .get_type()
