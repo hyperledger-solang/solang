@@ -45,16 +45,16 @@ impl EwasmTarget {
             None,
         );
 
-        runtime_code.set_early_value_aborts(contract);
+        runtime_code.set_early_value_aborts(contract, ns);
 
         // externals
         b.declare_externals(&mut runtime_code);
 
         // This also emits the constructors. We are relying on DCE to eliminate them from
         // the final code.
-        b.emit_functions(&mut runtime_code, contract);
+        b.emit_functions(&mut runtime_code, contract, ns);
 
-        b.function_dispatch(&runtime_code, contract);
+        b.function_dispatch(&runtime_code, contract, ns);
 
         runtime_code.internalize(&["main"]);
 
@@ -74,7 +74,7 @@ impl EwasmTarget {
             Some(Box::new(runtime_code)),
         );
 
-        deploy_code.set_early_value_aborts(contract);
+        deploy_code.set_early_value_aborts(contract, ns);
 
         // externals
         b.declare_externals(&mut deploy_code);
@@ -82,9 +82,9 @@ impl EwasmTarget {
         // FIXME: this emits the constructors, as well as the functions. In Ethereum Solidity,
         // no functions can be called from the constructor. We should either disallow this too
         // and not emit functions, or use lto linking to optimize any unused functions away.
-        b.emit_functions(&mut deploy_code, contract);
+        b.emit_functions(&mut deploy_code, contract, ns);
 
-        b.deployer_dispatch(&mut deploy_code, contract, &runtime_bs);
+        b.deployer_dispatch(&mut deploy_code, contract, &runtime_bs, ns);
 
         deploy_code.internalize(&[
             "main",
@@ -126,6 +126,7 @@ impl EwasmTarget {
         &self,
         binary: &Binary<'a>,
         function: FunctionValue,
+        ns: &ast::Namespace,
     ) -> (PointerValue<'a>, IntValue<'a>) {
         let entry = binary.context.append_basic_block(function, "entry");
 
@@ -133,7 +134,7 @@ impl EwasmTarget {
 
         // first thing to do is abort value transfers if we're not payable
         if binary.function_abort_value_transfers {
-            self.abort_if_value_transfer(binary, function);
+            self.abort_if_value_transfer(binary, function, ns);
         }
 
         // init our heap
@@ -197,6 +198,7 @@ impl EwasmTarget {
         &self,
         binary: &mut Binary<'a>,
         function: FunctionValue,
+        ns: &ast::Namespace,
     ) -> (PointerValue<'a>, IntValue<'a>) {
         let entry = binary.context.append_basic_block(function, "entry");
 
@@ -204,7 +206,7 @@ impl EwasmTarget {
 
         // first thing to do is abort value transfers if constructors not payable
         if binary.constructor_abort_value_transfers {
-            self.abort_if_value_transfer(binary, function);
+            self.abort_if_value_transfer(binary, function, ns);
         }
 
         // init our heap
@@ -601,8 +603,14 @@ impl EwasmTarget {
             .add_attribute(AttributeLoc::Function, noreturn);
     }
 
-    fn deployer_dispatch(&mut self, binary: &mut Binary, contract: &ast::Contract, runtime: &[u8]) {
-        let initializer = self.emit_initializer(binary, contract);
+    fn deployer_dispatch(
+        &mut self,
+        binary: &mut Binary,
+        contract: &ast::Contract,
+        runtime: &[u8],
+        ns: &ast::Namespace,
+    ) {
+        let initializer = self.emit_initializer(binary, contract, ns);
 
         // create start function
         let ret = binary.context.void_type();
@@ -610,7 +618,7 @@ impl EwasmTarget {
         let function = binary.module.add_function("main", ftype, None);
 
         // FIXME: If there is no constructor, do not copy the calldata (but check calldatasize == 0)
-        let (argsdata, length) = self.deployer_prelude(binary, function);
+        let (argsdata, length) = self.deployer_prelude(binary, function, ns);
 
         // init our storage vars
         binary.builder.build_call(initializer, &[], "");
@@ -625,8 +633,15 @@ impl EwasmTarget {
             let mut args = Vec::new();
 
             // insert abi decode
-            self.abi
-                .decode(binary, function, &mut args, argsdata, length, &cfg.params);
+            self.abi.decode(
+                binary,
+                function,
+                &mut args,
+                argsdata,
+                length,
+                &cfg.params,
+                ns,
+            );
 
             binary
                 .builder
@@ -654,17 +669,23 @@ impl EwasmTarget {
         binary.builder.build_unreachable();
     }
 
-    fn function_dispatch(&mut self, binary: &Binary, contract: &ast::Contract) {
+    fn function_dispatch(
+        &mut self,
+        binary: &Binary,
+        contract: &ast::Contract,
+        ns: &ast::Namespace,
+    ) {
         // create start function
         let ret = binary.context.void_type();
         let ftype = ret.fn_type(&[], false);
         let function = binary.module.add_function("main", ftype, None);
 
-        let (argsdata, argslen) = self.runtime_prelude(binary, function);
+        let (argsdata, argslen) = self.runtime_prelude(binary, function, ns);
 
         self.emit_function_dispatch(
             binary,
             contract,
+            ns,
             pt::FunctionTy::Function,
             argsdata,
             argslen,
@@ -683,9 +704,11 @@ impl EwasmTarget {
         packed: &[BasicValueEnum<'b>],
         args: &[BasicValueEnum<'b>],
         tys: &[ast::Type],
+        ns: &ast::Namespace,
     ) -> (PointerValue<'b>, IntValue<'b>) {
-        let encoder =
-            ethabiencoder::EncoderBuilder::new(binary, function, load, packed, args, tys, false);
+        let encoder = ethabiencoder::EncoderBuilder::new(
+            binary, function, load, packed, args, tys, false, ns,
+        );
 
         let mut length = encoder.encoded_length();
 
@@ -738,7 +761,7 @@ impl EwasmTarget {
             };
         }
 
-        encoder.finish(binary, function, data);
+        encoder.finish(binary, function, data, ns);
 
         (encoded_data, length)
     }
@@ -819,6 +842,7 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
         _binary: &Binary<'a>,
         _function: FunctionValue,
         _slot: PointerValue<'a>,
+        _ns: &ast::Namespace,
     ) -> PointerValue<'a> {
         unimplemented!();
     }
@@ -848,6 +872,7 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
         _ty: &ast::Type,
         _slot: IntValue<'a>,
         _val: BasicValueEnum<'a>,
+        _ns: &ast::Namespace,
     ) -> BasicValueEnum<'a> {
         unimplemented!();
     }
@@ -857,6 +882,7 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
         _function: FunctionValue<'a>,
         _ty: &ast::Type,
         _slot: IntValue<'a>,
+        _ns: &ast::Namespace,
     ) -> BasicValueEnum<'a> {
         unimplemented!();
     }
@@ -998,12 +1024,15 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
         src: PointerValue,
         length: IntValue,
         dest: PointerValue,
+        ns: &ast::Namespace,
     ) {
-        let balance = binary.builder.build_alloca(binary.value_type(), "balance");
+        let balance = binary
+            .builder
+            .build_alloca(binary.value_type(ns), "balance");
 
         binary
             .builder
-            .build_store(balance, binary.value_type().const_zero());
+            .build_store(balance, binary.value_type(ns).const_zero());
 
         let keccak256_pre_compile_address: [u8; 20] =
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 20];
@@ -1133,8 +1162,9 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
         packed: &[BasicValueEnum<'b>],
         args: &[BasicValueEnum<'b>],
         tys: &[ast::Type],
+        ns: &ast::Namespace,
     ) -> PointerValue<'b> {
-        ethabiencoder::encode_to_vector(binary, function, packed, args, tys, false)
+        ethabiencoder::encode_to_vector(binary, function, packed, args, tys, false, ns)
     }
 
     fn abi_encode<'b>(
@@ -1145,6 +1175,7 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
         function: FunctionValue<'b>,
         args: &[BasicValueEnum<'b>],
         tys: &[ast::Type],
+        ns: &ast::Namespace,
     ) -> (PointerValue<'b>, IntValue<'b>) {
         let mut tys = tys.to_vec();
 
@@ -1155,7 +1186,7 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
             vec![]
         };
 
-        self.encode(binary, None, load, function, &packed, args, &tys)
+        self.encode(binary, None, load, function, &packed, args, &tys, ns)
     }
 
     fn abi_decode<'b>(
@@ -1166,8 +1197,10 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
         data: PointerValue<'b>,
         length: IntValue<'b>,
         spec: &[ast::Parameter],
+        ns: &ast::Namespace,
     ) {
-        self.abi.decode(binary, function, args, data, length, spec);
+        self.abi
+            .decode(binary, function, args, data, length, spec, ns);
     }
 
     fn print(&self, binary: &Binary, string_ptr: PointerValue, string_len: IntValue) {
@@ -1190,13 +1223,14 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
         _gas: IntValue<'b>,
         value: Option<IntValue<'b>>,
         _salt: Option<IntValue<'b>>,
+        ns: &ast::Namespace,
     ) {
-        let resolver_binary = &binary.ns.contracts[contract_no];
+        let resolver_binary = &ns.contracts[contract_no];
 
         let target_binary = Binary::build(
             binary.context,
             &resolver_binary,
-            binary.ns,
+            ns,
             "",
             binary.opt,
             binary.math_overflow_check,
@@ -1212,7 +1246,7 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
         );
 
         let tys: Vec<ast::Type> = match constructor_no {
-            Some(function_no) => binary.ns.functions[function_no]
+            Some(function_no) => ns.functions[function_no]
                 .params
                 .iter()
                 .map(|p| p.ty.clone())
@@ -1229,23 +1263,26 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
             &[],
             args,
             &tys,
+            ns,
         );
 
         // value is a u128
-        let value_ptr = binary.builder.build_alloca(binary.value_type(), "balance");
+        let value_ptr = binary
+            .builder
+            .build_alloca(binary.value_type(ns), "balance");
 
         binary.builder.build_store(
             value_ptr,
             match value {
                 Some(v) => v,
-                None => binary.value_type().const_zero(),
+                None => binary.value_type(ns).const_zero(),
             },
         );
 
         // address needs its bytes reordered
         let be_address = binary
             .builder
-            .build_alloca(binary.address_type(), "be_address");
+            .build_alloca(binary.address_type(ns), "be_address");
 
         // call create
         let ret = binary
@@ -1346,11 +1383,12 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
         gas: IntValue<'b>,
         value: IntValue<'b>,
         callty: ast::CallTy,
+        ns: &ast::Namespace,
     ) {
         // address needs its bytes reordered
         let be_address = binary
             .builder
-            .build_alloca(binary.address_type(), "be_address");
+            .build_alloca(binary.address_type(ns), "be_address");
 
         binary.builder.build_call(
             binary.module.get_function("__leNtobeN").unwrap(),
@@ -1382,7 +1420,9 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
             // needs value
 
             // value is a u128
-            let value_ptr = binary.builder.build_alloca(binary.value_type(), "balance");
+            let value_ptr = binary
+                .builder
+                .build_alloca(binary.value_type(ns), "balance");
             binary.builder.build_store(value_ptr, value);
 
             // call create
@@ -1587,10 +1627,10 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
     }
 
     /// ewasm value is always 128 bits
-    fn value_transferred<'b>(&self, binary: &Binary<'b>) -> IntValue<'b> {
+    fn value_transferred<'b>(&self, binary: &Binary<'b>, ns: &ast::Namespace) -> IntValue<'b> {
         let value = binary
             .builder
-            .build_alloca(binary.value_type(), "value_transferred");
+            .build_alloca(binary.value_type(ns), "value_transferred");
 
         binary.builder.build_call(
             binary.module.get_function("getCallValue").unwrap(),
@@ -1612,10 +1652,10 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
     }
 
     /// Terminate execution, destroy binary and send remaining funds to addr
-    fn selfdestruct<'b>(&self, binary: &Binary<'b>, addr: IntValue<'b>) {
+    fn selfdestruct<'b>(&self, binary: &Binary<'b>, addr: IntValue<'b>, ns: &ast::Namespace) {
         let address = binary
             .builder
-            .build_alloca(binary.address_type(), "address");
+            .build_alloca(binary.address_type(ns), "address");
 
         binary.builder.build_store(address, addr);
 
@@ -1640,6 +1680,7 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
         hash: HashTy,
         input: PointerValue<'b>,
         input_len: IntValue<'b>,
+        ns: &ast::Namespace,
     ) -> IntValue<'b> {
         let (precompile, hashlen) = match hash {
             HashTy::Keccak256 => (
@@ -1663,11 +1704,13 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
             "res",
         );
 
-        let balance = binary.builder.build_alloca(binary.value_type(), "balance");
+        let balance = binary
+            .builder
+            .build_alloca(binary.value_type(ns), "balance");
 
         binary
             .builder
-            .build_store(balance, binary.value_type().const_zero());
+            .build_store(balance, binary.value_type(ns).const_zero());
 
         let address = binary.emit_global_string(&format!("precompile_{}", hash), &precompile, true);
 
@@ -1715,9 +1758,10 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
         );
 
         // bytes32 needs to reverse bytes
-        let temp = binary
-            .builder
-            .build_alloca(binary.llvm_type(&ast::Type::Bytes(hashlen as u8)), "hash");
+        let temp = binary.builder.build_alloca(
+            binary.llvm_type(&ast::Type::Bytes(hashlen as u8), ns),
+            "hash",
+        );
 
         binary.builder.build_call(
             binary.module.get_function("__beNtoleN").unwrap(),
@@ -1747,6 +1791,7 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
         data: PointerValue<'b>,
         data_len: IntValue<'b>,
         topics: Vec<(PointerValue<'b>, IntValue<'b>)>,
+        ns: &ast::Namespace,
     ) {
         let empty_topic = binary
             .context
@@ -1756,7 +1801,7 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
 
         let mut encoded_topics = [empty_topic; 4];
 
-        let event = &binary.ns.events[event_no];
+        let event = &ns.events[event_no];
 
         let mut topic_count = 0;
 
@@ -1782,7 +1827,7 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
                     "hash",
                 );
 
-                self.keccak256_hash(binary, ptr, len, dest);
+                self.keccak256_hash(binary, ptr, len, dest, ns);
 
                 encoded_topics[topic_count] = dest;
             }
@@ -1816,6 +1861,7 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
         expr: &ast::Expression,
         vartab: &HashMap<usize, Variable<'b>>,
         function: FunctionValue<'b>,
+        ns: &ast::Namespace,
     ) -> BasicValueEnum<'b> {
         macro_rules! straight_call {
             ($name:literal, $func:literal) => {{
@@ -1868,26 +1914,22 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
                 single_value_stack!("block_difficulty", "getBlockDifficulty", 256)
             }
             ast::Expression::Builtin(_, _, ast::Builtin::Origin, _) => {
-                single_value_stack!("origin", "getTxOrigin", binary.ns.address_length as u32 * 8)
+                single_value_stack!("origin", "getTxOrigin", ns.address_length as u32 * 8)
             }
             ast::Expression::Builtin(_, _, ast::Builtin::Sender, _) => {
-                single_value_stack!("caller", "getCaller", binary.ns.address_length as u32 * 8)
+                single_value_stack!("caller", "getCaller", ns.address_length as u32 * 8)
             }
-            ast::Expression::Builtin(_, _, ast::Builtin::BlockCoinbase, _) => single_value_stack!(
-                "coinbase",
-                "getBlockCoinbase",
-                binary.ns.address_length as u32 * 8
-            ),
-            ast::Expression::Builtin(_, _, ast::Builtin::Gasprice, _) => single_value_stack!(
-                "gas_price",
-                "getTxGasPrice",
-                binary.ns.value_length as u32 * 8
-            ),
+            ast::Expression::Builtin(_, _, ast::Builtin::BlockCoinbase, _) => {
+                single_value_stack!("coinbase", "getBlockCoinbase", ns.address_length as u32 * 8)
+            }
+            ast::Expression::Builtin(_, _, ast::Builtin::Gasprice, _) => {
+                single_value_stack!("gas_price", "getTxGasPrice", ns.value_length as u32 * 8)
+            }
             ast::Expression::Builtin(_, _, ast::Builtin::Value, _) => {
-                single_value_stack!("value", "getCallValue", binary.ns.value_length as u32 * 8)
+                single_value_stack!("value", "getCallValue", ns.value_length as u32 * 8)
             }
             ast::Expression::Builtin(_, _, ast::Builtin::BlockHash, args) => {
-                let block_number = self.expression(binary, &args[0], vartab, function);
+                let block_number = self.expression(binary, &args[0], vartab, function, ns);
 
                 let value = binary
                     .builder
@@ -1914,7 +1956,7 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
             ast::Expression::Builtin(_, _, ast::Builtin::GetAddress, _) => {
                 let value = binary
                     .builder
-                    .build_alloca(binary.address_type(), "self_address");
+                    .build_alloca(binary.address_type(ns), "self_address");
 
                 binary.builder.build_call(
                     binary.module.get_function("getAddress").unwrap(),
@@ -1933,16 +1975,18 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
             }
             ast::Expression::Builtin(_, _, ast::Builtin::Balance, addr) => {
                 let addr = self
-                    .expression(binary, &addr[0], vartab, function)
+                    .expression(binary, &addr[0], vartab, function, ns)
                     .into_int_value();
 
                 let address = binary
                     .builder
-                    .build_alloca(binary.address_type(), "address");
+                    .build_alloca(binary.address_type(ns), "address");
 
                 binary.builder.build_store(address, addr);
 
-                let balance = binary.builder.build_alloca(binary.value_type(), "balance");
+                let balance = binary
+                    .builder
+                    .build_alloca(binary.value_type(ns), "balance");
 
                 binary.builder.build_call(
                     binary.module.get_function("getExternalBalance").unwrap(),

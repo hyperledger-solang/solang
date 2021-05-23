@@ -33,6 +33,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
         args: &'b [BasicValueEnum<'a>],
         tys: &'b [ast::Type],
         bswap: bool,
+        ns: &ast::Namespace,
     ) -> Self {
         debug_assert_eq!(packed.len() + args.len(), tys.len());
 
@@ -41,7 +42,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
         let offset = binary.context.i32_type().const_int(
             args_tys
                 .iter()
-                .map(|ty| EncoderBuilder::encoded_fixed_length(ty, binary.ns))
+                .map(|ty| EncoderBuilder::encoded_fixed_length(ty, ns))
                 .sum(),
             false,
         );
@@ -52,7 +53,9 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
         for (i, arg) in packed.iter().enumerate() {
             length = binary.builder.build_int_add(
                 length,
-                EncoderBuilder::encoded_packed_length(*arg, load_args, &tys[i], function, binary),
+                EncoderBuilder::encoded_packed_length(
+                    *arg, load_args, &tys[i], function, binary, ns,
+                ),
                 "",
             );
         }
@@ -67,6 +70,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                     &args_tys[i],
                     function,
                     binary,
+                    ns,
                 ),
                 "",
             );
@@ -95,6 +99,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
         ty: &ast::Type,
         function: FunctionValue,
         binary: &Binary<'c>,
+        ns: &ast::Namespace,
     ) -> IntValue<'c> {
         match ty {
             ast::Type::Struct(n) => {
@@ -120,7 +125,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
 
                 let mut normal_sum = binary.context.i32_type().const_zero();
 
-                for (i, field) in binary.ns.structs[*n].fields.iter().enumerate() {
+                for (i, field) in ns.structs[*n].fields.iter().enumerate() {
                     let elem = unsafe {
                         binary.builder.build_gep(
                             arg.into_pointer_value(),
@@ -138,6 +143,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                         &field.ty,
                         function,
                         binary,
+                        ns,
                     );
 
                     normal_sum = binary.builder.build_int_add(normal_sum, len, "");
@@ -151,15 +157,16 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
 
                 let mut null_sum = binary.context.i32_type().const_zero();
 
-                for field in &binary.ns.structs[*n].fields {
+                for field in &ns.structs[*n].fields {
                     null_sum = binary.builder.build_int_add(
                         null_sum,
                         EncoderBuilder::encoded_packed_length(
-                            binary.default_value(&field.ty),
+                            binary.default_value(&field.ty, ns),
                             false,
                             &field.ty,
                             function,
                             binary,
+                            ns,
                         ),
                         "",
                     );
@@ -177,7 +184,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
 
                 sum.as_basic_value().into_int_value()
             }
-            ast::Type::Array(elem_ty, dims) if elem_ty.is_dynamic(binary.ns) => {
+            ast::Type::Array(elem_ty, dims) if elem_ty.is_dynamic(ns) => {
                 let arg = if load {
                     binary.builder.build_load(arg.into_pointer_value(), "")
                 } else {
@@ -219,7 +226,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                     len,
                     &mut normal_length,
                     |index, sum| {
-                        let elem = binary.array_subscript(ty, arg.into_pointer_value(), index);
+                        let elem = binary.array_subscript(ty, arg.into_pointer_value(), index, ns);
 
                         *sum = binary.builder.build_int_add(
                             EncoderBuilder::encoded_packed_length(
@@ -228,6 +235,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                                 &elem_ty,
                                 function,
                                 binary,
+                                ns,
                             ),
                             *sum,
                             "",
@@ -241,12 +249,12 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
 
                 binary.builder.position_at_end(null_array);
 
-                let elem = binary.default_value(&elem_ty.deref_any());
+                let elem = binary.default_value(&elem_ty.deref_any(), ns);
 
                 let null_length = binary.builder.build_int_add(
                     binary.builder.build_int_mul(
                         EncoderBuilder::encoded_packed_length(
-                            elem, false, elem_ty, function, binary,
+                            elem, false, elem_ty, function, binary, ns,
                         ),
                         len,
                         "",
@@ -288,7 +296,9 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                 // plus fixed size elements
                 binary.builder.build_int_mul(
                     len,
-                    EncoderBuilder::encoded_packed_length(arg, false, &elem_ty, function, binary),
+                    EncoderBuilder::encoded_packed_length(
+                        arg, false, &elem_ty, function, binary, ns,
+                    ),
                     "",
                 )
             }
@@ -309,9 +319,9 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
             ast::Type::Contract(_) | ast::Type::Address(_) => binary
                 .context
                 .i32_type()
-                .const_int(binary.ns.address_length as u64, false),
+                .const_int(ns.address_length as u64, false),
             ast::Type::Ref(ty) => {
-                EncoderBuilder::encoded_packed_length(arg, false, ty, function, binary)
+                EncoderBuilder::encoded_packed_length(arg, false, ty, function, binary, ns)
             }
             _ => unreachable!(),
         }
@@ -324,9 +334,10 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
         ty: &ast::Type,
         function: FunctionValue,
         binary: &Binary<'c>,
+        ns: &ast::Namespace,
     ) -> IntValue<'c> {
         match ty {
-            ast::Type::Struct(n) if ty.is_dynamic(binary.ns) => {
+            ast::Type::Struct(n) if ty.is_dynamic(ns) => {
                 let arg = if load {
                     binary.builder.build_load(arg.into_pointer_value(), "")
                 } else {
@@ -349,14 +360,14 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
 
                 let mut normal_sum = binary.context.i32_type().const_zero();
 
-                for (i, field) in binary.ns.structs[*n].fields.iter().enumerate() {
+                for (i, field) in ns.structs[*n].fields.iter().enumerate() {
                     // a struct with dynamic fields gets stored in the dynamic part
                     normal_sum = binary.builder.build_int_add(
                         normal_sum,
-                        binary.context.i32_type().const_int(
-                            EncoderBuilder::encoded_fixed_length(&field.ty, binary.ns),
-                            false,
-                        ),
+                        binary
+                            .context
+                            .i32_type()
+                            .const_int(EncoderBuilder::encoded_fixed_length(&field.ty, ns), false),
                         "",
                     );
 
@@ -377,6 +388,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                         &field.ty,
                         function,
                         binary,
+                        ns,
                     );
 
                     normal_sum = binary.builder.build_int_add(normal_sum, len, "");
@@ -390,25 +402,26 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
 
                 let mut null_sum = binary.context.i32_type().const_zero();
 
-                for field in &binary.ns.structs[*n].fields {
+                for field in &ns.structs[*n].fields {
                     // a struct with dynamic fields gets stored in the dynamic part
                     null_sum = binary.builder.build_int_add(
                         null_sum,
-                        binary.context.i32_type().const_int(
-                            EncoderBuilder::encoded_fixed_length(&field.ty, binary.ns),
-                            false,
-                        ),
+                        binary
+                            .context
+                            .i32_type()
+                            .const_int(EncoderBuilder::encoded_fixed_length(&field.ty, ns), false),
                         "",
                     );
 
                     null_sum = binary.builder.build_int_add(
                         null_sum,
                         EncoderBuilder::encoded_dynamic_length(
-                            binary.default_value(&field.ty),
+                            binary.default_value(&field.ty, ns),
                             false,
                             &field.ty,
                             function,
                             binary,
+                            ns,
                         ),
                         "",
                     );
@@ -426,7 +439,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
 
                 sum.as_basic_value().into_int_value()
             }
-            ast::Type::Array(elem_ty, dims) if ty.is_dynamic(binary.ns) => {
+            ast::Type::Array(elem_ty, dims) if ty.is_dynamic(ns) => {
                 let arg = if load {
                     binary.builder.build_load(arg.into_pointer_value(), "")
                 } else {
@@ -459,10 +472,10 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                     sum,
                     binary.builder.build_int_mul(
                         len,
-                        binary.context.i32_type().const_int(
-                            EncoderBuilder::encoded_fixed_length(&elem_ty, binary.ns),
-                            false,
-                        ),
+                        binary
+                            .context
+                            .i32_type()
+                            .const_int(EncoderBuilder::encoded_fixed_length(&elem_ty, ns), false),
                         "",
                     ),
                     "",
@@ -487,14 +500,15 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                 binary.builder.position_at_end(normal_array);
 
                 // the element of the array are dynamic; we need to iterate over the array to find the encoded length
-                if elem_ty.is_dynamic(binary.ns) {
+                if elem_ty.is_dynamic(ns) {
                     binary.emit_loop_cond_first_with_int(
                         function,
                         binary.context.i32_type().const_zero(),
                         len,
                         &mut normal_length,
                         |index, sum| {
-                            let elem = binary.array_subscript(ty, arg.into_pointer_value(), index);
+                            let elem =
+                                binary.array_subscript(ty, arg.into_pointer_value(), index, ns);
 
                             *sum = binary.builder.build_int_add(
                                 EncoderBuilder::encoded_dynamic_length(
@@ -503,6 +517,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                                     &elem_ty,
                                     function,
                                     binary,
+                                    ns,
                                 ),
                                 *sum,
                                 "",
@@ -517,12 +532,12 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
 
                 binary.builder.position_at_end(null_array);
 
-                let elem = binary.default_value(&elem_ty.deref_any());
+                let elem = binary.default_value(&elem_ty.deref_any(), ns);
 
                 let null_length = binary.builder.build_int_add(
                     binary.builder.build_int_mul(
                         EncoderBuilder::encoded_dynamic_length(
-                            elem, false, elem_ty, function, binary,
+                            elem, false, elem_ty, function, binary, ns,
                         ),
                         len,
                         "",
@@ -616,6 +631,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
         binary: &Binary<'a>,
         function: FunctionValue<'a>,
         output: PointerValue<'a>,
+        ns: &ast::Namespace,
     ) {
         let mut output = output;
         let mut ty_iter = self.tys.iter();
@@ -623,7 +639,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
         for arg in self.packed.iter() {
             let ty = ty_iter.next().unwrap();
 
-            self.encode_packed_ty(binary, self.load_args, function, ty, *arg, &mut output);
+            self.encode_packed_ty(binary, self.load_args, function, ty, *arg, &mut output, ns);
         }
 
         // We use a little trick here. The length might or might not include the selector.
@@ -654,6 +670,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
 
             self.encode_ty(
                 binary,
+                ns,
                 self.load_args,
                 function,
                 ty,
@@ -671,6 +688,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
     fn encode_ty(
         &self,
         binary: &Binary<'a>,
+        ns: &ast::Namespace,
         load: bool,
         function: FunctionValue<'a>,
         ty: &ast::Type,
@@ -686,7 +704,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
             | ast::Type::Int(_)
             | ast::Type::Uint(_)
             | ast::Type::Bytes(_) => {
-                self.encode_primitive(binary, load, function, ty, *fixed, arg);
+                self.encode_primitive(binary, load, function, ty, *fixed, arg, ns);
 
                 *fixed = unsafe {
                     binary.builder.build_gep(
@@ -697,7 +715,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                 };
             }
             ast::Type::Enum(n) => {
-                self.encode_primitive(binary, load, function, &binary.ns.enums[*n].ty, *fixed, arg);
+                self.encode_primitive(binary, load, function, &ns.enums[*n].ty, *fixed, arg, ns);
 
                 *fixed = unsafe {
                     binary.builder.build_gep(
@@ -707,7 +725,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                     )
                 };
             }
-            ast::Type::Array(elem_ty, dim) if ty.is_dynamic(binary.ns) => {
+            ast::Type::Array(elem_ty, dim) if ty.is_dynamic(ns) => {
                 let arg = if load {
                     binary.builder.build_load(arg.into_pointer_value(), "")
                 } else {
@@ -725,6 +743,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                     &ast::Type::Uint(32),
                     *fixed,
                     (*offset).into(),
+                    ns,
                 );
 
                 *fixed = unsafe {
@@ -753,6 +772,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                         &ast::Type::Uint(32),
                         *dynamic,
                         len.into(),
+                        ns,
                     );
 
                     *dynamic = unsafe {
@@ -773,10 +793,10 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                 };
 
                 let array_data_offset = binary.builder.build_int_mul(
-                    binary.context.i32_type().const_int(
-                        EncoderBuilder::encoded_fixed_length(&elem_ty, binary.ns),
-                        false,
-                    ),
+                    binary
+                        .context
+                        .i32_type()
+                        .const_int(EncoderBuilder::encoded_fixed_length(&elem_ty, ns), false),
                     array_length,
                     "array_data_offset",
                 );
@@ -833,10 +853,11 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                     builder.over(binary, binary.context.i32_type().const_zero(), array_length);
 
                 // loop body
-                let elem = binary.array_subscript(ty, arg.into_pointer_value(), index);
+                let elem = binary.array_subscript(ty, arg.into_pointer_value(), index, ns);
 
                 self.encode_ty(
                     binary,
+                    ns,
                     true,
                     function,
                     &elem_ty.deref_any(),
@@ -893,10 +914,11 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                 let _ = builder.over(binary, binary.context.i32_type().const_zero(), array_length);
 
                 // loop body
-                let elem = binary.default_value(&elem_ty.deref_any());
+                let elem = binary.default_value(&elem_ty.deref_any(), ns);
 
                 self.encode_ty(
                     binary,
+                    ns,
                     false,
                     function,
                     &elem_ty.deref_any(),
@@ -1015,6 +1037,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
 
                 self.encode_ty(
                     binary,
+                    ns,
                     true,
                     function,
                     &elem_ty.deref_any(),
@@ -1043,7 +1066,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                 // Create a loop for generating an array of empty values
                 // FIXME: all fixed-length types are encoded as zeros, and the memory has
                 // already been zero'ed out, so this is pointless. Just step over it.
-                let elem = binary.default_value(&elem_ty.deref_any());
+                let elem = binary.default_value(&elem_ty.deref_any(), ns);
 
                 let mut builder = LoopBuilder::new(binary, function);
 
@@ -1083,6 +1106,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                 // loop body
                 self.encode_ty(
                     binary,
+                    ns,
                     false,
                     function,
                     &elem_ty.deref_any(),
@@ -1136,7 +1160,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
 
                 *dynamic = dynamic_phi.as_basic_value().into_pointer_value();
             }
-            ast::Type::Struct(n) if ty.is_dynamic(binary.ns) => {
+            ast::Type::Struct(n) if ty.is_dynamic(ns) => {
                 let arg = if load {
                     binary.builder.build_load(arg.into_pointer_value(), "")
                 } else {
@@ -1151,6 +1175,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                     &ast::Type::Uint(32),
                     *fixed,
                     (*offset).into(),
+                    ns,
                 );
 
                 *fixed = unsafe {
@@ -1165,10 +1190,10 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                 let mut null_fields_dynamic = *dynamic;
 
                 // add size of fixed fields to dynamic
-                let fixed_field_length = binary.ns.structs[*n]
+                let fixed_field_length = ns.structs[*n]
                     .fields
                     .iter()
-                    .map(|f| EncoderBuilder::encoded_fixed_length(&f.ty, binary.ns))
+                    .map(|f| EncoderBuilder::encoded_fixed_length(&f.ty, ns))
                     .sum();
 
                 *dynamic = unsafe {
@@ -1206,7 +1231,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                     .i32_type()
                     .const_int(fixed_field_length, false);
 
-                for (i, field) in binary.ns.structs[*n].fields.iter().enumerate() {
+                for (i, field) in ns.structs[*n].fields.iter().enumerate() {
                     let elem = unsafe {
                         binary.builder.build_gep(
                             arg.into_pointer_value(),
@@ -1220,6 +1245,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
 
                     self.encode_ty(
                         binary,
+                        ns,
                         true,
                         function,
                         &field.ty,
@@ -1243,11 +1269,12 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                     .i32_type()
                     .const_int(fixed_field_length, false);
 
-                for field in &binary.ns.structs[*n].fields {
-                    let elem = binary.default_value(&field.ty);
+                for field in &ns.structs[*n].fields {
+                    let elem = binary.default_value(&field.ty, ns);
 
                     self.encode_ty(
                         binary,
+                        ns,
                         false,
                         function,
                         &field.ty,
@@ -1313,7 +1340,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                 let mut normal_offset = *offset;
                 let mut normal_dynamic = *dynamic;
 
-                for (i, field) in binary.ns.structs[*n].fields.iter().enumerate() {
+                for (i, field) in ns.structs[*n].fields.iter().enumerate() {
                     let elem = unsafe {
                         binary.builder.build_gep(
                             arg,
@@ -1327,6 +1354,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
 
                     self.encode_ty(
                         binary,
+                        ns,
                         true,
                         function,
                         &field.ty,
@@ -1348,11 +1376,12 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                 let mut null_dynamic = *dynamic;
 
                 // FIXME: abi encoding fixed length fields with default values. This should always be 0
-                for field in &binary.ns.structs[*n].fields {
-                    let elem = binary.default_value(&field.ty);
+                for field in &ns.structs[*n].fields {
+                    let elem = binary.default_value(&field.ty, ns);
 
                     self.encode_ty(
                         binary,
+                        ns,
                         false,
                         function,
                         &field.ty,
@@ -1401,7 +1430,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                 *offset = offset_phi.as_basic_value().into_int_value();
             }
             ast::Type::Ref(ty) => {
-                self.encode_ty(binary, load, function, ty, arg, fixed, offset, dynamic);
+                self.encode_ty(binary, ns, load, function, ty, arg, fixed, offset, dynamic);
             }
             ast::Type::String | ast::Type::DynamicBytes => {
                 // write the current offset to fixed
@@ -1412,6 +1441,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                     &ast::Type::Uint(32),
                     *fixed,
                     (*offset).into(),
+                    ns,
                 );
 
                 *fixed = unsafe {
@@ -1438,6 +1468,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                     &ast::Type::Uint(32),
                     *dynamic,
                     len.into(),
+                    ns,
                 );
 
                 *dynamic = unsafe {
@@ -1511,6 +1542,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
         ty: &ast::Type,
         arg: BasicValueEnum<'a>,
         output: &mut PointerValue<'a>,
+        ns: &ast::Namespace,
     ) {
         match &ty {
             ast::Type::Bool => {
@@ -1598,9 +1630,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                 if load =>
             {
                 let n = match ty {
-                    ast::Type::Contract(_) | ast::Type::Address(_) => {
-                        binary.ns.address_length as u16 * 8
-                    }
+                    ast::Type::Contract(_) | ast::Type::Address(_) => ns.address_length as u16 * 8,
                     ast::Type::Uint(b) => *b,
                     ast::Type::Int(b) => *b,
                     _ => unreachable!(),
@@ -1629,9 +1659,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                 if !load =>
             {
                 let n = match ty {
-                    ast::Type::Contract(_) | ast::Type::Address(_) => {
-                        binary.ns.address_length as u16 * 8
-                    }
+                    ast::Type::Contract(_) | ast::Type::Address(_) => ns.address_length as u16 * 8,
                     ast::Type::Uint(b) => *b,
                     ast::Type::Int(b) => *b,
                     _ => unreachable!(),
@@ -1749,7 +1777,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                     builder.over(binary, binary.context.i32_type().const_zero(), array_length);
 
                 // loop body
-                let elem = binary.array_subscript(ty, arg.into_pointer_value(), index);
+                let elem = binary.array_subscript(ty, arg.into_pointer_value(), index, ns);
 
                 self.encode_packed_ty(
                     binary,
@@ -1758,6 +1786,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                     &elem_ty.deref_any(),
                     elem.into(),
                     &mut normal_output,
+                    ns,
                 );
 
                 builder.set_loop_phi_value(binary, "output", normal_output.into());
@@ -1785,7 +1814,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                 let _ = builder.over(binary, binary.context.i32_type().const_zero(), array_length);
 
                 // loop body
-                let elem = binary.default_value(&elem_ty.deref_any());
+                let elem = binary.default_value(&elem_ty.deref_any(), ns);
 
                 self.encode_packed_ty(
                     binary,
@@ -1794,6 +1823,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                     &elem_ty.deref_any(),
                     elem,
                     &mut null_output,
+                    ns,
                 );
 
                 builder.set_loop_phi_value(binary, "output", null_output.into());
@@ -1842,7 +1872,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
 
                 let mut normal_output = *output;
 
-                for (i, field) in binary.ns.structs[*n].fields.iter().enumerate() {
+                for (i, field) in ns.structs[*n].fields.iter().enumerate() {
                     let elem = unsafe {
                         binary.builder.build_gep(
                             arg,
@@ -1861,6 +1891,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                         &field.ty,
                         elem.into(),
                         &mut normal_output,
+                        ns,
                     );
                 }
 
@@ -1873,8 +1904,8 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                 let mut null_output = *output;
 
                 // FIXME: abi encoding fixed length fields with default values. This should always be 0
-                for field in &binary.ns.structs[*n].fields {
-                    let elem = binary.default_value(&field.ty);
+                for field in &ns.structs[*n].fields {
+                    let elem = binary.default_value(&field.ty, ns);
 
                     self.encode_packed_ty(
                         binary,
@@ -1883,6 +1914,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                         &field.ty,
                         elem,
                         &mut null_output,
+                        ns,
                     );
                 }
 
@@ -1903,7 +1935,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                 *output = output_phi.as_basic_value().into_pointer_value();
             }
             ast::Type::Ref(ty) => {
-                self.encode_packed_ty(binary, load, function, ty, arg, output);
+                self.encode_packed_ty(binary, load, function, ty, arg, output, ns);
             }
             ast::Type::String | ast::Type::DynamicBytes => {
                 let arg = if load {
@@ -1956,6 +1988,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
         ty: &ast::Type,
         dest: PointerValue,
         arg: BasicValueEnum<'a>,
+        ns: &ast::Namespace,
     ) {
         match ty {
             ast::Type::Bool => {
@@ -2126,9 +2159,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                 if load =>
             {
                 let n = match ty {
-                    ast::Type::Contract(_) | ast::Type::Address(_) => {
-                        binary.ns.address_length as u16 * 8
-                    }
+                    ast::Type::Contract(_) | ast::Type::Address(_) => ns.address_length as u16 * 8,
                     ast::Type::Uint(b) => *b,
                     ast::Type::Int(b) => *b,
                     _ => unreachable!(),
@@ -2213,9 +2244,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                 if !load =>
             {
                 let n = match ty {
-                    ast::Type::Contract(_) | ast::Type::Address(_) => {
-                        binary.ns.address_length as u16 * 8
-                    }
+                    ast::Type::Contract(_) | ast::Type::Address(_) => ns.address_length as u16 * 8,
                     ast::Type::Uint(b) => *b,
                     ast::Type::Int(b) => *b,
                     _ => unreachable!(),
@@ -2362,6 +2391,7 @@ impl EthAbiDecoder {
         offset: &mut IntValue<'a>,
         data: PointerValue<'a>,
         length: IntValue,
+        ns: &ast::Namespace,
     ) -> BasicValueEnum<'a> {
         // TODO: investigate whether we can use build_int_nuw_add() and avoid 64 bit conversions
         let new_offset = binary.builder.build_int_add(
@@ -2377,7 +2407,7 @@ impl EthAbiDecoder {
         *offset = new_offset;
 
         let ty = if let ast::Type::Enum(n) = ty {
-            &binary.ns.enums[*n].ty
+            &ns.enums[*n].ty
         } else {
             ty
         };
@@ -2435,7 +2465,7 @@ impl EthAbiDecoder {
             ast::Type::Address(_) | ast::Type::Contract(_) => {
                 let int_type = binary
                     .context
-                    .custom_width_int_type(binary.ns.address_length as u32 * 8);
+                    .custom_width_int_type(ns.address_length as u32 * 8);
                 let type_size = int_type.size_of();
 
                 let store =
@@ -2607,10 +2637,11 @@ impl EthAbiDecoder {
         base_offset: IntValue<'b>,
         data: PointerValue<'b>,
         length: IntValue,
+        ns: &ast::Namespace,
     ) -> BasicValueEnum<'b> {
         match &ty {
             ast::Type::Array(elem_ty, dim) => {
-                let llvm_ty = binary.llvm_type(ty.deref_any());
+                let llvm_ty = binary.llvm_type(ty.deref_any(), ns);
 
                 let size = llvm_ty
                     .size_of()
@@ -2640,7 +2671,7 @@ impl EthAbiDecoder {
 
                     // if the struct has dynamic fields, read offset from dynamic section and
                     // read fields from there
-                    let mut dataoffset = if ty.is_dynamic(binary.ns) {
+                    let mut dataoffset = if ty.is_dynamic(ns) {
                         let dataoffset = binary.builder.build_int_z_extend(
                             self.decode_primitive(
                                 binary,
@@ -2650,6 +2681,7 @@ impl EthAbiDecoder {
                                 offset,
                                 data,
                                 length,
+                                ns,
                             )
                             .into_int_value(),
                             binary.context.i64_type(),
@@ -2665,7 +2697,7 @@ impl EthAbiDecoder {
 
                     // In dynamic struct sections, the offsets are relative to the start of the section.
                     // Ethereum ABI encoding is just insane.
-                    let base_offset = if ty.is_dynamic(binary.ns) {
+                    let base_offset = if ty.is_dynamic(ns) {
                         dataoffset
                     } else {
                         base_offset
@@ -2697,12 +2729,13 @@ impl EthAbiDecoder {
                                 base_offset,
                                 data,
                                 length,
+                                ns,
                             );
                         },
                     );
 
                     // if the struct is not dynamic, we have read the fields from fixed section so update
-                    if !ty.is_dynamic(binary.ns) {
+                    if !ty.is_dynamic(ns) {
                         *offset = dataoffset;
                     }
                 } else {
@@ -2716,6 +2749,7 @@ impl EthAbiDecoder {
                                 offset,
                                 data,
                                 length,
+                                ns,
                             )
                             .into_int_value(),
                             binary.context.i64_type(),
@@ -2734,13 +2768,14 @@ impl EthAbiDecoder {
                             &mut dataoffset,
                             data,
                             length,
+                            ns,
                         )
                         .into_int_value();
 
                     // in dynamic arrays, offsets are counted from after the array length
                     let base_offset = dataoffset;
 
-                    let llvm_elem_ty = binary.llvm_var(&elem_ty.deref_any());
+                    let llvm_elem_ty = binary.llvm_var(&elem_ty.deref_any(), ns);
                     let elem_size = llvm_elem_ty
                         .size_of()
                         .unwrap()
@@ -2810,6 +2845,7 @@ impl EthAbiDecoder {
                                 base_offset,
                                 data,
                                 length,
+                                ns,
                             );
                         },
                     );
@@ -2822,7 +2858,7 @@ impl EthAbiDecoder {
                 dest.into()
             }
             ast::Type::Struct(n) => {
-                let llvm_ty = binary.llvm_type(ty.deref_any());
+                let llvm_ty = binary.llvm_type(ty.deref_any(), ns);
 
                 let size = llvm_ty
                     .size_of()
@@ -2844,12 +2880,12 @@ impl EthAbiDecoder {
                 let struct_pointer = binary.builder.build_pointer_cast(
                     new,
                     llvm_ty.ptr_type(AddressSpace::Generic),
-                    &binary.ns.structs[*n].name,
+                    &ns.structs[*n].name,
                 );
 
                 // if the struct has dynamic fields, read offset from dynamic section and
                 // read fields from there
-                let mut dataoffset = if ty.is_dynamic(binary.ns) {
+                let mut dataoffset = if ty.is_dynamic(ns) {
                     let dataoffset = binary.builder.build_int_z_extend(
                         self.decode_primitive(
                             binary,
@@ -2859,6 +2895,7 @@ impl EthAbiDecoder {
                             offset,
                             data,
                             length,
+                            ns,
                         )
                         .into_int_value(),
                         binary.context.i64_type(),
@@ -2874,13 +2911,13 @@ impl EthAbiDecoder {
 
                 // In dynamic struct sections, the offsets are relative to the start of the section.
                 // Ethereum ABI encoding is just insane.
-                let base_offset = if ty.is_dynamic(binary.ns) {
+                let base_offset = if ty.is_dynamic(ns) {
                     dataoffset
                 } else {
                     base_offset
                 };
 
-                for (i, field) in binary.ns.structs[*n].fields.iter().enumerate() {
+                for (i, field) in ns.structs[*n].fields.iter().enumerate() {
                     let elem = unsafe {
                         binary.builder.build_gep(
                             struct_pointer,
@@ -2901,11 +2938,12 @@ impl EthAbiDecoder {
                         base_offset,
                         data,
                         length,
+                        ns,
                     );
                 }
 
                 // if the struct is not dynamic, we have read the fields from fixed section so update
-                if !ty.is_dynamic(binary.ns) {
+                if !ty.is_dynamic(ns) {
                     *offset = dataoffset;
                 }
 
@@ -2915,9 +2953,17 @@ impl EthAbiDecoder {
 
                 struct_pointer.into()
             }
-            ast::Type::Ref(ty) => {
-                self.decode_ty(binary, function, ty, to, offset, base_offset, data, length)
-            }
+            ast::Type::Ref(ty) => self.decode_ty(
+                binary,
+                function,
+                ty,
+                to,
+                offset,
+                base_offset,
+                data,
+                length,
+                ns,
+            ),
             ast::Type::String | ast::Type::DynamicBytes => {
                 // we read the offset and the length as 32 bits. Since we are in 32 bits wasm,
                 // we cannot deal with more than 4GB of abi encoded data.
@@ -2930,6 +2976,7 @@ impl EthAbiDecoder {
                         offset,
                         data,
                         length,
+                        ns,
                     )
                     .into_int_value(),
                     binary.context.i64_type(),
@@ -2949,6 +2996,7 @@ impl EthAbiDecoder {
                         &mut dataoffset,
                         data,
                         length,
+                        ns,
                     )
                     .into_int_value(),
                     binary.context.i64_type(),
@@ -3006,7 +3054,7 @@ impl EthAbiDecoder {
 
                 v.into()
             }
-            _ => self.decode_primitive(binary, function, ty, to, offset, data, length),
+            _ => self.decode_primitive(binary, function, ty, to, offset, data, length, ns),
         }
     }
 
@@ -3046,6 +3094,7 @@ impl EthAbiDecoder {
         data: PointerValue<'a>,
         datalength: IntValue<'a>,
         spec: &[ast::Parameter],
+        ns: &ast::Namespace,
     ) {
         let data = binary.builder.build_pointer_cast(
             data,
@@ -3073,6 +3122,7 @@ impl EthAbiDecoder {
                 binary.context.i64_type().const_zero(),
                 data,
                 data_length,
+                ns,
             ));
         }
     }
@@ -3086,8 +3136,9 @@ pub fn encode_to_vector<'b>(
     args: &[BasicValueEnum<'b>],
     tys: &[ast::Type],
     bswap: bool,
+    ns: &ast::Namespace,
 ) -> PointerValue<'b> {
-    let encoder = EncoderBuilder::new(binary, function, false, packed, args, tys, bswap);
+    let encoder = EncoderBuilder::new(binary, function, false, packed, args, tys, bswap, ns);
 
     let length = encoder.encoded_length();
 
@@ -3168,7 +3219,7 @@ pub fn encode_to_vector<'b>(
         "",
     );
 
-    encoder.finish(binary, function, data);
+    encoder.finish(binary, function, data, ns);
 
     v
 }
