@@ -367,6 +367,13 @@ fn process_filename(
         }
 
         if target == solang::Target::Solana {
+            if verbose {
+                eprintln!(
+                    "info: contract {} uses at least {} bytes account data",
+                    resolved_contract.name, resolved_contract.fixed_layout_size,
+                );
+            }
+            // we don't generate llvm here; this is done in one go for all contracts
             return ns;
         }
 
@@ -405,13 +412,6 @@ fn process_filename(
                 },
             );
         } else {
-            if verbose && target == solang::Target::Solana {
-                eprintln!(
-                    "info: contract {} uses at least {} bytes account data",
-                    binary.name, resolved_contract.fixed_layout_size,
-                );
-            }
-
             // Substrate has a single contact file
             if target == solang::Target::Substrate {
                 let (contract_bs, contract_ext) =

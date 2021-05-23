@@ -38,8 +38,9 @@ have not been implemented yet. This is how to build your Solidity for Solana:
 
   solang --target solana flipper.sol -v
 
-This will produce two files called `flipper.abi` and `flipper.so`. The first is an ethereum style abi file and the latter being
-the ELF BPF shared object which can be deployed on Solana.
+This will produce two files called `flipper.abi` and `bundle.so`. The first is an ethereum style abi file and the latter being
+the ELF BPF shared object which can be deployed on Solana. For each contract, an abi file will be created; a single `bundle.so`
+is created which contains the code all the contracts provided on the command line.
 
 The contract storage model in Solana is different from Ethereum; it is consists of a contigious piece of memory, which can be
 accessed directly from the smart contract. This means that there are no `storage slots`, and that a `mapping` must be implemented

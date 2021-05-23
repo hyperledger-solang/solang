@@ -15,6 +15,8 @@ will be documented here.
   sha256() builtin hash functions.
 - The Solana target has support for the builtins this and block.timestamp.
 - Implement abi.encodePacked() for the ethereum abi encoder
+- The Solana target now compiles all contracts to a single `bundle.so` BPF
+  program.
 
 ### Changed
 - Solang now uses LLVM 11.0, based on the [Solana LLVM tree](https://github.com/solana-labs/llvm-project/)
