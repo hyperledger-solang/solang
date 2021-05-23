@@ -4066,6 +4066,7 @@ pub trait TargetRuntime<'a> {
         argsdata: inkwell::values::PointerValue<'a>,
         argslen: inkwell::values::IntValue<'a>,
         function: inkwell::values::FunctionValue<'a>,
+        functions: &HashMap<usize, FunctionValue<'a>>,
         fallback: Option<inkwell::basic_block::BasicBlock>,
         nonpayable: F,
     ) where
@@ -4132,7 +4133,7 @@ pub trait TargetRuntime<'a> {
                 argsdata,
                 argslen,
                 function,
-                bin.functions[&cfg_no],
+                functions[&cfg_no],
                 &nonpayable,
             );
         }
@@ -5256,14 +5257,14 @@ impl<'a> Binary<'a> {
     /// Build the LLVM IR for a set of contracts in a single namespace
     pub fn build_bundle(
         context: &'a Context,
-        ns: &'a ast::Namespace,
-        filename: &'a str,
+        namespaces: &'a [ast::Namespace],
+        filename: &str,
         opt: OptimizationLevel,
         math_overflow_check: bool,
     ) -> Self {
-        assert!(ns.target == Target::Solana);
+        assert!(namespaces.iter().all(|ns| ns.target == Target::Solana));
 
-        solana::SolanaTarget::build_bundle(context, ns, filename, opt, math_overflow_check)
+        solana::SolanaTarget::build_bundle(context, namespaces, filename, opt, math_overflow_check)
     }
 
     /// Compile the bin and return the code as bytes. The result is
@@ -5373,23 +5374,23 @@ impl<'a> Binary<'a> {
 
     pub fn new(
         context: &'a Context,
-        ns: &'a ast::Namespace,
+        target: Target,
         name: &str,
-        filename: &'a str,
+        filename: &str,
         opt: OptimizationLevel,
         math_overflow_check: bool,
         runtime: Option<Box<Binary<'a>>>,
     ) -> Self {
         lazy_static::initialize(&LLVM_INIT);
 
-        let triple = ns.target.llvm_target_triple();
+        let triple = target.llvm_target_triple();
         let module = context.create_module(name);
 
         module.set_triple(&triple);
         module.set_source_file_name(filename);
 
         // stdlib
-        let intr = load_stdlib(&context, &ns.target);
+        let intr = load_stdlib(&context, &target);
         module.link_in_module(intr).unwrap();
 
         let selector =
@@ -5439,7 +5440,7 @@ impl<'a> Binary<'a> {
             math_overflow_check,
             builder: context.create_builder(),
             context,
-            target: ns.target,
+            target,
             functions: HashMap::new(),
             code: RefCell::new(Vec::new()),
             opt,

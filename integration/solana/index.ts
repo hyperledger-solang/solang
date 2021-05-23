@@ -42,7 +42,7 @@ const sleep = (ms: number) => new Promise(res => setTimeout(res, ms));
 
 async function newAccountWithLamports(
     connection: Connection,
-    lamports: number = 1000000000,
+    lamports: number = 10000000000,
 ): Promise<Account> {
     const account = new Account();
 

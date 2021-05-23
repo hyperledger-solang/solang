@@ -8,7 +8,7 @@ describe('Deploy solang contract and test', () => {
 
         let conn = await establishConnection();
 
-        let hash_functions = await conn.loadProgram("builtins.so", "builtins.abi");
+        let hash_functions = await conn.loadProgram("bundle.so", "builtins.abi");
 
         // call the constructor
         await hash_functions.call_constructor(conn, 'builtins', []);
