@@ -81,6 +81,7 @@ pub trait TargetRuntime<'a> {
         data: PointerValue<'b>,
         length: IntValue<'b>,
         spec: &[ast::Parameter],
+        ns: &ast::Namespace,
     );
 
     /// Abi encode with optional four bytes selector. The load parameter should be set if the args are
@@ -93,6 +94,7 @@ pub trait TargetRuntime<'a> {
         function: FunctionValue<'a>,
         args: &[BasicValueEnum<'a>],
         tys: &[ast::Type],
+        ns: &ast::Namespace,
     ) -> (PointerValue<'a>, IntValue<'a>);
 
     /// ABI encode into a vector for abi.encode* style builtin functions
@@ -103,6 +105,7 @@ pub trait TargetRuntime<'a> {
         packed: &[BasicValueEnum<'b>],
         args: &[BasicValueEnum<'b>],
         tys: &[ast::Type],
+        ns: &ast::Namespace,
     ) -> PointerValue<'b>;
 
     fn set_storage(
@@ -148,6 +151,7 @@ pub trait TargetRuntime<'a> {
         bin: &Binary<'a>,
         function: FunctionValue,
         slot: PointerValue<'a>,
+        ns: &ast::Namespace,
     ) -> PointerValue<'a>;
     fn get_storage_bytes_subscript(
         &self,
@@ -171,6 +175,7 @@ pub trait TargetRuntime<'a> {
         _ty: &ast::Type,
         _slot: IntValue<'a>,
         _index: BasicValueEnum<'a>,
+        _ns: &ast::Namespace,
     ) -> IntValue<'a> {
         // not need for slot-based storage chains
         unimplemented!();
@@ -182,6 +187,7 @@ pub trait TargetRuntime<'a> {
         ty: &ast::Type,
         slot: IntValue<'a>,
         val: BasicValueEnum<'a>,
+        ns: &ast::Namespace,
     ) -> BasicValueEnum<'a>;
     fn storage_pop(
         &self,
@@ -189,6 +195,7 @@ pub trait TargetRuntime<'a> {
         function: FunctionValue<'a>,
         ty: &ast::Type,
         slot: IntValue<'a>,
+        ns: &ast::Namespace,
     ) -> BasicValueEnum<'a>;
     fn storage_array_length(
         &self,
@@ -196,6 +203,7 @@ pub trait TargetRuntime<'a> {
         _function: FunctionValue,
         _slot: IntValue<'a>,
         _elem_ty: &ast::Type,
+        _ns: &ast::Namespace,
     ) -> IntValue<'a> {
         unimplemented!();
     }
@@ -207,6 +215,7 @@ pub trait TargetRuntime<'a> {
         src: PointerValue,
         length: IntValue,
         dest: PointerValue,
+        ns: &ast::Namespace,
     );
 
     /// Prints a string
@@ -237,6 +246,7 @@ pub trait TargetRuntime<'a> {
         gas: IntValue<'b>,
         value: Option<IntValue<'b>>,
         salt: Option<IntValue<'b>>,
+        ns: &ast::Namespace,
     );
 
     /// call external function
@@ -251,6 +261,7 @@ pub trait TargetRuntime<'a> {
         gas: IntValue<'b>,
         value: IntValue<'b>,
         ty: ast::CallTy,
+        ns: &ast::Namespace,
     );
 
     /// send value to address
@@ -261,6 +272,7 @@ pub trait TargetRuntime<'a> {
         _success: Option<&mut BasicValueEnum<'b>>,
         _address: PointerValue<'b>,
         _value: IntValue<'b>,
+        _ns: &ast::Namespace,
     ) {
         unimplemented!();
     }
@@ -272,16 +284,17 @@ pub trait TargetRuntime<'a> {
         expr: &Expression,
         vartab: &HashMap<usize, Variable<'b>>,
         function: FunctionValue<'b>,
+        ns: &ast::Namespace,
     ) -> BasicValueEnum<'b>;
 
     /// Return the return data from an external call (either revert error or return values)
     fn return_data<'b>(&self, bin: &Binary<'b>) -> PointerValue<'b>;
 
     /// Return the value we received
-    fn value_transferred<'b>(&self, bin: &Binary<'b>) -> IntValue<'b>;
+    fn value_transferred<'b>(&self, bin: &Binary<'b>, ns: &ast::Namespace) -> IntValue<'b>;
 
     /// Terminate execution, destroy bin and send remaining funds to addr
-    fn selfdestruct<'b>(&self, bin: &Binary<'b>, addr: IntValue<'b>);
+    fn selfdestruct<'b>(&self, bin: &Binary<'b>, addr: IntValue<'b>, ns: &ast::Namespace);
 
     /// Crypto Hash
     fn hash<'b>(
@@ -290,6 +303,7 @@ pub trait TargetRuntime<'a> {
         hash: HashTy,
         string: PointerValue<'b>,
         length: IntValue<'b>,
+        ns: &ast::Namespace,
     ) -> IntValue<'b>;
 
     /// Integer to prefix events with
@@ -310,18 +324,19 @@ pub trait TargetRuntime<'a> {
         data: PointerValue<'b>,
         data_len: IntValue<'b>,
         topics: Vec<(PointerValue<'b>, IntValue<'b>)>,
+        ns: &ast::Namespace,
     );
 
     /// Helper functions which need access to the trait
 
     /// If we receive a value transfer, and we are "payable", abort with revert
-    fn abort_if_value_transfer(&self, bin: &Binary, function: FunctionValue) {
-        let value = self.value_transferred(&bin);
+    fn abort_if_value_transfer(&self, bin: &Binary, function: FunctionValue, ns: &ast::Namespace) {
+        let value = self.value_transferred(&bin, ns);
 
         let got_value = bin.builder.build_int_compare(
             IntPredicate::NE,
             value,
-            bin.value_type().const_zero(),
+            bin.value_type(ns).const_zero(),
             "is_value_transfer",
         );
 
@@ -356,12 +371,13 @@ pub trait TargetRuntime<'a> {
         ty: &ast::Type,
         slot: &mut IntValue<'a>,
         function: FunctionValue,
+        ns: &ast::Namespace,
     ) -> BasicValueEnum<'a> {
         // The storage slot is an i256 accessed through a pointer, so we need
         // to store it
         let slot_ptr = binary.builder.build_alloca(slot.get_type(), "slot");
 
-        self.storage_load_slot(binary, ty, slot, slot_ptr, function)
+        self.storage_load_slot(binary, ty, slot, slot_ptr, function, ns)
     }
 
     /// Recursively load a type from bin storage for slot based bin storage
@@ -372,12 +388,13 @@ pub trait TargetRuntime<'a> {
         slot: &mut IntValue<'a>,
         slot_ptr: PointerValue<'a>,
         function: FunctionValue,
+        ns: &ast::Namespace,
     ) -> BasicValueEnum<'a> {
         match ty {
-            ast::Type::Ref(ty) => self.storage_load_slot(bin, ty, slot, slot_ptr, function),
+            ast::Type::Ref(ty) => self.storage_load_slot(bin, ty, slot, slot_ptr, function, ns),
             ast::Type::Array(_, dim) => {
                 if let Some(d) = &dim[0] {
-                    let llvm_ty = bin.llvm_type(ty.deref_any());
+                    let llvm_ty = bin.llvm_type(ty.deref_any(), ns);
                     // LLVMSizeOf() produces an i64
                     let size = bin.builder.build_int_truncate(
                         llvm_ty.size_of().unwrap(),
@@ -418,7 +435,8 @@ pub trait TargetRuntime<'a> {
                                 )
                             };
 
-                            let val = self.storage_load_slot(bin, &ty, slot, slot_ptr, function);
+                            let val =
+                                self.storage_load_slot(bin, &ty, slot, slot_ptr, function, ns);
 
                             bin.builder.build_store(elem, val);
                         },
@@ -430,13 +448,13 @@ pub trait TargetRuntime<'a> {
                     let slot_ty = ast::Type::Uint(256);
 
                     let size = bin.builder.build_int_truncate(
-                        self.storage_load_slot(bin, &slot_ty, slot, slot_ptr, function)
+                        self.storage_load_slot(bin, &slot_ty, slot, slot_ptr, function, ns)
                             .into_int_value(),
                         bin.context.i32_type(),
                         "size",
                     );
 
-                    let elem_ty = bin.llvm_type(&ty.array_elem());
+                    let elem_ty = bin.llvm_type(&ty.array_elem(), ns);
                     let elem_size = bin.builder.build_int_truncate(
                         elem_ty.size_of().unwrap(),
                         bin.context.i32_type(),
@@ -469,6 +487,7 @@ pub trait TargetRuntime<'a> {
                             .size_of()
                             .const_cast(bin.context.i32_type(), false),
                         slot_ptr,
+                        ns,
                     );
 
                     let mut elem_slot = bin
@@ -490,6 +509,7 @@ pub trait TargetRuntime<'a> {
                                 slot,
                                 slot_ptr,
                                 function,
+                                ns,
                             );
 
                             let data = unsafe {
@@ -519,7 +539,7 @@ pub trait TargetRuntime<'a> {
                 }
             }
             ast::Type::Struct(n) => {
-                let llvm_ty = bin.llvm_type(ty.deref_any());
+                let llvm_ty = bin.llvm_type(ty.deref_any(), ns);
                 // LLVMSizeOf() produces an i64
                 let size = bin.builder.build_int_truncate(
                     llvm_ty.size_of().unwrap(),
@@ -545,8 +565,8 @@ pub trait TargetRuntime<'a> {
                     "dest",
                 );
 
-                for (i, field) in bin.ns.structs[*n].fields.iter().enumerate() {
-                    let val = self.storage_load_slot(bin, &field.ty, slot, slot_ptr, function);
+                for (i, field) in ns.structs[*n].fields.iter().enumerate() {
+                    let val = self.storage_load_slot(bin, &field.ty, slot, slot_ptr, function, ns);
 
                     let elem = unsafe {
                         bin.builder.build_gep(
@@ -571,7 +591,7 @@ pub trait TargetRuntime<'a> {
 
                 *slot = bin.builder.build_int_add(
                     *slot,
-                    bin.number_literal(256, &BigInt::one()),
+                    bin.number_literal(256, &BigInt::one(), ns),
                     "string",
                 );
 
@@ -582,22 +602,26 @@ pub trait TargetRuntime<'a> {
 
                 let ptr_ty = bin
                     .context
-                    .custom_width_int_type(bin.ns.target.ptr_size() as u32);
+                    .custom_width_int_type(ns.target.ptr_size() as u32);
 
                 let ret = self.get_storage_int(bin, function, slot_ptr, ptr_ty);
 
                 bin.builder
-                    .build_int_to_ptr(ret, bin.llvm_type(ty.deref_any()).into_pointer_type(), "")
+                    .build_int_to_ptr(
+                        ret,
+                        bin.llvm_type(ty.deref_any(), ns).into_pointer_type(),
+                        "",
+                    )
                     .into()
             }
             ast::Type::ExternalFunction { .. } => {
                 bin.builder.build_store(slot_ptr, *slot);
 
-                let ret = self.get_storage_extfunc(bin, function, slot_ptr);
+                let ret = self.get_storage_extfunc(bin, function, slot_ptr, ns);
 
                 *slot = bin.builder.build_int_add(
                     *slot,
-                    bin.number_literal(256, &BigInt::one()),
+                    bin.number_literal(256, &BigInt::one(), ns),
                     "string",
                 );
 
@@ -610,12 +634,12 @@ pub trait TargetRuntime<'a> {
                     bin,
                     function,
                     slot_ptr,
-                    bin.llvm_type(ty.deref_any()).into_int_type(),
+                    bin.llvm_type(ty.deref_any(), ns).into_int_type(),
                 );
 
                 *slot = bin.builder.build_int_add(
                     *slot,
-                    bin.number_literal(256, &BigInt::one()),
+                    bin.number_literal(256, &BigInt::one(), ns),
                     "int",
                 );
 
@@ -632,10 +656,11 @@ pub trait TargetRuntime<'a> {
         slot: &mut IntValue<'a>,
         dest: BasicValueEnum<'a>,
         function: FunctionValue<'a>,
+        ns: &ast::Namespace,
     ) {
         let slot_ptr = bin.builder.build_alloca(slot.get_type(), "slot");
 
-        self.storage_store_slot(bin, ty, slot, slot_ptr, dest, function)
+        self.storage_store_slot(bin, ty, slot, slot_ptr, dest, function, ns)
     }
 
     /// Recursively store a type to bin storage for slot-based bin storage
@@ -647,6 +672,7 @@ pub trait TargetRuntime<'a> {
         slot_ptr: PointerValue<'a>,
         dest: BasicValueEnum<'a>,
         function: FunctionValue<'a>,
+        ns: &ast::Namespace,
     ) {
         match ty.deref_any() {
             ast::Type::Array(_, dim) => {
@@ -678,12 +704,13 @@ pub trait TargetRuntime<'a> {
                                 slot_ptr,
                                 elem.into(),
                                 function,
+                                ns,
                             );
 
                             if !ty.is_reference_type() {
                                 *slot = bin.builder.build_int_add(
                                     *slot,
-                                    bin.number_literal(256, &ty.storage_slots(bin.ns)),
+                                    bin.number_literal(256, &ty.storage_slots(ns), ns),
                                     "",
                                 );
                             }
@@ -711,7 +738,7 @@ pub trait TargetRuntime<'a> {
                     let slot_ty = ast::Type::Uint(256);
 
                     // details about our array elements
-                    let elem_ty = bin.llvm_type(&ty.array_elem());
+                    let elem_ty = bin.llvm_type(&ty.array_elem(), ns);
                     let elem_size = bin.builder.build_int_truncate(
                         elem_ty.size_of().unwrap(),
                         bin.context.i32_type(),
@@ -721,7 +748,7 @@ pub trait TargetRuntime<'a> {
                     // the previous length of the storage array
                     // we need this to clear any elements
                     let previous_size = bin.builder.build_int_truncate(
-                        self.storage_load_slot(bin, &slot_ty, slot, slot_ptr, function)
+                        self.storage_load_slot(bin, &slot_ty, slot, slot_ptr, function, ns)
                             .into_int_value(),
                         bin.context.i32_type(),
                         "previous_size",
@@ -729,14 +756,14 @@ pub trait TargetRuntime<'a> {
 
                     let new_slot = bin
                         .builder
-                        .build_alloca(bin.llvm_type(&slot_ty).into_int_type(), "new");
+                        .build_alloca(bin.llvm_type(&slot_ty, ns).into_int_type(), "new");
 
                     // set new length
                     bin.builder.build_store(
                         new_slot,
                         bin.builder.build_int_z_extend(
                             len,
-                            bin.llvm_type(&slot_ty).into_int_type(),
+                            bin.llvm_type(&slot_ty, ns).into_int_type(),
                             "",
                         ),
                     );
@@ -750,6 +777,7 @@ pub trait TargetRuntime<'a> {
                             .size_of()
                             .const_cast(bin.context.i32_type(), false),
                         new_slot,
+                        ns,
                     );
 
                     let mut elem_slot = bin
@@ -796,12 +824,13 @@ pub trait TargetRuntime<'a> {
                                 slot_ptr,
                                 elem.into(),
                                 function,
+                                ns,
                             );
 
                             if !ty.is_reference_type() {
                                 *slot = bin.builder.build_int_add(
                                     *slot,
-                                    bin.number_literal(256, &ty.storage_slots(bin.ns)),
+                                    bin.number_literal(256, &ty.storage_slots(ns), ns),
                                     "",
                                 );
                             }
@@ -816,12 +845,12 @@ pub trait TargetRuntime<'a> {
                         previous_size,
                         &mut elem_slot,
                         |_: IntValue<'a>, slot: &mut IntValue<'a>| {
-                            self.storage_delete_slot(bin, &ty, slot, slot_ptr, function);
+                            self.storage_delete_slot(bin, &ty, slot, slot_ptr, function, ns);
 
                             if !ty.is_reference_type() {
                                 *slot = bin.builder.build_int_add(
                                     *slot,
-                                    bin.number_literal(256, &ty.storage_slots(bin.ns)),
+                                    bin.number_literal(256, &ty.storage_slots(ns), ns),
                                     "",
                                 );
                             }
@@ -830,7 +859,7 @@ pub trait TargetRuntime<'a> {
                 }
             }
             ast::Type::Struct(n) => {
-                for (i, field) in bin.ns.structs[*n].fields.iter().enumerate() {
+                for (i, field) in ns.structs[*n].fields.iter().enumerate() {
                     let mut elem = unsafe {
                         bin.builder.build_gep(
                             dest.into_pointer_value(),
@@ -849,12 +878,20 @@ pub trait TargetRuntime<'a> {
                             .into_pointer_value();
                     }
 
-                    self.storage_store_slot(bin, &field.ty, slot, slot_ptr, elem.into(), function);
+                    self.storage_store_slot(
+                        bin,
+                        &field.ty,
+                        slot,
+                        slot_ptr,
+                        elem.into(),
+                        function,
+                        ns,
+                    );
 
                     if !field.ty.is_reference_type() {
                         *slot = bin.builder.build_int_add(
                             *slot,
-                            bin.number_literal(256, &field.ty.storage_slots(bin.ns)),
+                            bin.number_literal(256, &field.ty.storage_slots(ns), ns),
                             &field.name,
                         );
                     }
@@ -873,7 +910,7 @@ pub trait TargetRuntime<'a> {
             ast::Type::InternalFunction { .. } => {
                 let ptr_ty = bin
                     .context
-                    .custom_width_int_type(bin.ns.target.ptr_size() as u32);
+                    .custom_width_int_type(ns.target.ptr_size() as u32);
 
                 let m = bin.builder.build_alloca(ptr_ty, "");
 
@@ -927,10 +964,11 @@ pub trait TargetRuntime<'a> {
         ty: &ast::Type,
         slot: &mut IntValue<'a>,
         function: FunctionValue<'a>,
+        ns: &ast::Namespace,
     ) {
         let slot_ptr = bin.builder.build_alloca(slot.get_type(), "slot");
 
-        self.storage_delete_slot(bin, ty, slot, slot_ptr, function);
+        self.storage_delete_slot(bin, ty, slot, slot_ptr, function, ns);
     }
 
     /// Recursively clear bin storage for slot-based bin storage
@@ -941,6 +979,7 @@ pub trait TargetRuntime<'a> {
         slot: &mut IntValue<'a>,
         slot_ptr: PointerValue<'a>,
         function: FunctionValue<'a>,
+        ns: &ast::Namespace,
     ) {
         match ty.deref_any() {
             ast::Type::Array(_, dim) => {
@@ -953,12 +992,12 @@ pub trait TargetRuntime<'a> {
                         bin.context.i64_type().const_int(d.to_u64().unwrap(), false),
                         slot,
                         |_index: IntValue<'a>, slot: &mut IntValue<'a>| {
-                            self.storage_delete_slot(bin, &ty, slot, slot_ptr, function);
+                            self.storage_delete_slot(bin, &ty, slot, slot_ptr, function, ns);
 
                             if !ty.is_reference_type() {
                                 *slot = bin.builder.build_int_add(
                                     *slot,
-                                    bin.number_literal(256, &ty.storage_slots(bin.ns)),
+                                    bin.number_literal(256, &ty.storage_slots(ns), ns),
                                     "",
                                 );
                             }
@@ -984,6 +1023,7 @@ pub trait TargetRuntime<'a> {
                             .size_of()
                             .const_cast(bin.context.i32_type(), false),
                         buf,
+                        ns,
                     );
 
                     let mut entry_slot = bin.builder.build_load(buf, "entry_slot").into_int_value();
@@ -995,12 +1035,12 @@ pub trait TargetRuntime<'a> {
                         length,
                         &mut entry_slot,
                         |_index: IntValue<'a>, slot: &mut IntValue<'a>| {
-                            self.storage_delete_slot(bin, &ty, slot, slot_ptr, function);
+                            self.storage_delete_slot(bin, &ty, slot, slot_ptr, function, ns);
 
                             if !ty.is_reference_type() {
                                 *slot = bin.builder.build_int_add(
                                     *slot,
-                                    bin.number_literal(256, &ty.storage_slots(bin.ns)),
+                                    bin.number_literal(256, &ty.storage_slots(ns), ns),
                                     "",
                                 );
                             }
@@ -1008,17 +1048,24 @@ pub trait TargetRuntime<'a> {
                     );
 
                     // clear length itself
-                    self.storage_delete_slot(bin, &ast::Type::Uint(256), slot, slot_ptr, function);
+                    self.storage_delete_slot(
+                        bin,
+                        &ast::Type::Uint(256),
+                        slot,
+                        slot_ptr,
+                        function,
+                        ns,
+                    );
                 }
             }
             ast::Type::Struct(n) => {
-                for (_, field) in bin.ns.structs[*n].fields.iter().enumerate() {
-                    self.storage_delete_slot(bin, &field.ty, slot, slot_ptr, function);
+                for (_, field) in ns.structs[*n].fields.iter().enumerate() {
+                    self.storage_delete_slot(bin, &field.ty, slot, slot_ptr, function, ns);
 
                     if !field.ty.is_reference_type() {
                         *slot = bin.builder.build_int_add(
                             *slot,
-                            bin.number_literal(256, &field.ty.storage_slots(bin.ns)),
+                            bin.number_literal(256, &field.ty.storage_slots(ns), ns),
                             &field.name,
                         );
                     }
@@ -1046,6 +1093,7 @@ pub trait TargetRuntime<'a> {
         e: &Expression,
         vartab: &HashMap<usize, Variable<'a>>,
         function: FunctionValue<'a>,
+        ns: &ast::Namespace,
     ) -> BasicValueEnum<'a> {
         match e {
             Expression::FunctionArg(_, _, pos) => function.get_nth_param(*pos as u32).unwrap(),
@@ -1053,10 +1101,10 @@ pub trait TargetRuntime<'a> {
                 bin.context.bool_type().const_int(*val as u64, false).into()
             }
             Expression::NumberLiteral(_, ty, n) => {
-                bin.number_literal(ty.bits(bin.ns) as u32, n).into()
+                bin.number_literal(ty.bits(ns) as u32, n, ns).into()
             }
             Expression::StructLiteral(_, ty, exprs) => {
-                let struct_ty = bin.llvm_type(ty);
+                let struct_ty = bin.llvm_type(ty, ns);
 
                 let s = bin
                     .builder
@@ -1093,7 +1141,7 @@ pub trait TargetRuntime<'a> {
                     };
 
                     bin.builder
-                        .build_store(elem, self.expression(bin, f, vartab, function));
+                        .build_store(elem, self.expression(bin, f, vartab, function, ns));
                 }
 
                 s.into()
@@ -1109,12 +1157,12 @@ pub trait TargetRuntime<'a> {
                     .into()
             }
             Expression::CodeLiteral(_, bin_no, runtime) => {
-                let codegen_bin = &bin.ns.contracts[*bin_no];
+                let codegen_bin = &ns.contracts[*bin_no];
 
                 let target_bin = Binary::build(
                     bin.context,
                     &codegen_bin,
-                    bin.ns,
+                    ns,
                     "",
                     bin.opt,
                     bin.math_overflow_check,
@@ -1167,8 +1215,12 @@ pub trait TargetRuntime<'a> {
                     .into()
             }
             Expression::Add(_, _, l, r) => {
-                let left = self.expression(bin, l, vartab, function).into_int_value();
-                let right = self.expression(bin, r, vartab, function).into_int_value();
+                let left = self
+                    .expression(bin, l, vartab, function, ns)
+                    .into_int_value();
+                let right = self
+                    .expression(bin, r, vartab, function, ns)
+                    .into_int_value();
 
                 if bin.math_overflow_check {
                     let signed = l.ty().is_signed_int();
@@ -1186,8 +1238,12 @@ pub trait TargetRuntime<'a> {
                 }
             }
             Expression::Subtract(_, _, l, r) => {
-                let left = self.expression(bin, l, vartab, function).into_int_value();
-                let right = self.expression(bin, r, vartab, function).into_int_value();
+                let left = self
+                    .expression(bin, l, vartab, function, ns)
+                    .into_int_value();
+                let right = self
+                    .expression(bin, r, vartab, function, ns)
+                    .into_int_value();
 
                 if bin.math_overflow_check {
                     let signed = l.ty().is_signed_int();
@@ -1205,15 +1261,23 @@ pub trait TargetRuntime<'a> {
                 }
             }
             Expression::Multiply(_, res_ty, l, r) => {
-                let left = self.expression(bin, l, vartab, function).into_int_value();
-                let right = self.expression(bin, r, vartab, function).into_int_value();
+                let left = self
+                    .expression(bin, l, vartab, function, ns)
+                    .into_int_value();
+                let right = self
+                    .expression(bin, r, vartab, function, ns)
+                    .into_int_value();
 
                 self.mul(bin, function, left, right, res_ty.is_signed_int())
                     .into()
             }
             Expression::Divide(_, _, l, r) if !l.ty().is_signed_int() => {
-                let left = self.expression(bin, l, vartab, function).into_int_value();
-                let right = self.expression(bin, r, vartab, function).into_int_value();
+                let left = self
+                    .expression(bin, l, vartab, function, ns)
+                    .into_int_value();
+                let right = self
+                    .expression(bin, r, vartab, function, ns)
+                    .into_int_value();
 
                 let bits = left.get_type().get_bit_width();
 
@@ -1306,8 +1370,12 @@ pub trait TargetRuntime<'a> {
                 }
             }
             Expression::Divide(_, _, l, r) => {
-                let left = self.expression(bin, l, vartab, function).into_int_value();
-                let right = self.expression(bin, r, vartab, function).into_int_value();
+                let left = self
+                    .expression(bin, l, vartab, function, ns)
+                    .into_int_value();
+                let right = self
+                    .expression(bin, r, vartab, function, ns)
+                    .into_int_value();
 
                 let bits = left.get_type().get_bit_width();
 
@@ -1395,7 +1463,7 @@ pub trait TargetRuntime<'a> {
                         quotient
                     }
                     .into()
-                } else if bin.ns.target == Target::Solana {
+                } else if ns.target == Target::Solana {
                     // no signed div on BPF; do abs udev and then negate if needed
                     let left_negative = bin.builder.build_int_compare(
                         IntPredicate::SLT,
@@ -1448,8 +1516,12 @@ pub trait TargetRuntime<'a> {
                 }
             }
             Expression::Modulo(_, _, l, r) if !l.ty().is_signed_int() => {
-                let left = self.expression(bin, l, vartab, function).into_int_value();
-                let right = self.expression(bin, r, vartab, function).into_int_value();
+                let left = self
+                    .expression(bin, l, vartab, function, ns)
+                    .into_int_value();
+                let right = self
+                    .expression(bin, r, vartab, function, ns)
+                    .into_int_value();
 
                 let bits = left.get_type().get_bit_width();
 
@@ -1542,8 +1614,12 @@ pub trait TargetRuntime<'a> {
                 }
             }
             Expression::Modulo(_, _, l, r) => {
-                let left = self.expression(bin, l, vartab, function).into_int_value();
-                let right = self.expression(bin, r, vartab, function).into_int_value();
+                let left = self
+                    .expression(bin, l, vartab, function, ns)
+                    .into_int_value();
+                let right = self
+                    .expression(bin, r, vartab, function, ns)
+                    .into_int_value();
 
                 let bits = left.get_type().get_bit_width();
 
@@ -1631,7 +1707,7 @@ pub trait TargetRuntime<'a> {
                         rem
                     }
                     .into()
-                } else if bin.ns.target == Target::Solana {
+                } else if ns.target == Target::Solana {
                     // no signed rem on BPF; do abs udev and then negate if needed
                     let left_negative = bin.builder.build_int_compare(
                         IntPredicate::SLT,
@@ -1678,8 +1754,8 @@ pub trait TargetRuntime<'a> {
                 }
             }
             Expression::Power(_, res_ty, l, r) => {
-                let left = self.expression(bin, l, vartab, function);
-                let right = self.expression(bin, r, vartab, function);
+                let left = self.expression(bin, l, vartab, function, ns);
+                let right = self.expression(bin, r, vartab, function, ns);
 
                 let bits = left.into_int_value().get_type().get_bit_width();
 
@@ -1692,24 +1768,36 @@ pub trait TargetRuntime<'a> {
                     .unwrap()
             }
             Expression::Equal(_, l, r) => {
-                let left = self.expression(bin, l, vartab, function).into_int_value();
-                let right = self.expression(bin, r, vartab, function).into_int_value();
+                let left = self
+                    .expression(bin, l, vartab, function, ns)
+                    .into_int_value();
+                let right = self
+                    .expression(bin, r, vartab, function, ns)
+                    .into_int_value();
 
                 bin.builder
                     .build_int_compare(IntPredicate::EQ, left, right, "")
                     .into()
             }
             Expression::NotEqual(_, l, r) => {
-                let left = self.expression(bin, l, vartab, function).into_int_value();
-                let right = self.expression(bin, r, vartab, function).into_int_value();
+                let left = self
+                    .expression(bin, l, vartab, function, ns)
+                    .into_int_value();
+                let right = self
+                    .expression(bin, r, vartab, function, ns)
+                    .into_int_value();
 
                 bin.builder
                     .build_int_compare(IntPredicate::NE, left, right, "")
                     .into()
             }
             Expression::More(_, l, r) => {
-                let left = self.expression(bin, l, vartab, function).into_int_value();
-                let right = self.expression(bin, r, vartab, function).into_int_value();
+                let left = self
+                    .expression(bin, l, vartab, function, ns)
+                    .into_int_value();
+                let right = self
+                    .expression(bin, r, vartab, function, ns)
+                    .into_int_value();
 
                 bin.builder
                     .build_int_compare(
@@ -1725,8 +1813,12 @@ pub trait TargetRuntime<'a> {
                     .into()
             }
             Expression::MoreEqual(_, l, r) => {
-                let left = self.expression(bin, l, vartab, function).into_int_value();
-                let right = self.expression(bin, r, vartab, function).into_int_value();
+                let left = self
+                    .expression(bin, l, vartab, function, ns)
+                    .into_int_value();
+                let right = self
+                    .expression(bin, r, vartab, function, ns)
+                    .into_int_value();
 
                 bin.builder
                     .build_int_compare(
@@ -1742,8 +1834,12 @@ pub trait TargetRuntime<'a> {
                     .into()
             }
             Expression::Less(_, l, r) => {
-                let left = self.expression(bin, l, vartab, function).into_int_value();
-                let right = self.expression(bin, r, vartab, function).into_int_value();
+                let left = self
+                    .expression(bin, l, vartab, function, ns)
+                    .into_int_value();
+                let right = self
+                    .expression(bin, r, vartab, function, ns)
+                    .into_int_value();
 
                 bin.builder
                     .build_int_compare(
@@ -1759,8 +1855,12 @@ pub trait TargetRuntime<'a> {
                     .into()
             }
             Expression::LessEqual(_, l, r) => {
-                let left = self.expression(bin, l, vartab, function).into_int_value();
-                let right = self.expression(bin, r, vartab, function).into_int_value();
+                let left = self
+                    .expression(bin, l, vartab, function, ns)
+                    .into_int_value();
+                let right = self
+                    .expression(bin, r, vartab, function, ns)
+                    .into_int_value();
 
                 bin.builder
                     .build_int_compare(
@@ -1778,7 +1878,7 @@ pub trait TargetRuntime<'a> {
             Expression::Variable(_, _, s) => vartab[s].value,
             Expression::Load(_, ty, e) => {
                 let ptr = self
-                    .expression(bin, e, vartab, function)
+                    .expression(bin, e, vartab, function, ns)
                     .into_pointer_value();
 
                 let value = bin.builder.build_load(ptr, "");
@@ -1807,7 +1907,7 @@ pub trait TargetRuntime<'a> {
                     // allocate a new struct
                     let ty = e.ty();
 
-                    let llvm_ty = bin.llvm_type(&ty.deref_memory());
+                    let llvm_ty = bin.llvm_type(&ty.deref_memory(), ns);
 
                     let new_struct = bin
                         .builder
@@ -1828,7 +1928,7 @@ pub trait TargetRuntime<'a> {
                     let new_struct = bin.builder.build_pointer_cast(
                         new_struct,
                         llvm_ty.ptr_type(AddressSpace::Generic),
-                        &format!("new_{}", ty.to_string(bin.ns)),
+                        &format!("new_{}", ty.to_string(ns)),
                     );
 
                     bin.builder.build_store(ptr, new_struct);
@@ -1840,7 +1940,7 @@ pub trait TargetRuntime<'a> {
                     // insert phi node
                     let combined_struct_ptr = bin.builder.build_phi(
                         llvm_ty.ptr_type(AddressSpace::Generic),
-                        &format!("ptr_{}", ty.to_string(bin.ns)),
+                        &format!("ptr_{}", ty.to_string(ns)),
                     );
 
                     combined_struct_ptr.add_incoming(&[(&value, entry), (&new_struct, allocate)]);
@@ -1856,37 +1956,47 @@ pub trait TargetRuntime<'a> {
                 unreachable!();
             }
             Expression::ZeroExt(_, t, e) => {
-                let e = self.expression(bin, e, vartab, function).into_int_value();
-                let ty = bin.llvm_type(t);
+                let e = self
+                    .expression(bin, e, vartab, function, ns)
+                    .into_int_value();
+                let ty = bin.llvm_type(t, ns);
 
                 bin.builder
                     .build_int_z_extend(e, ty.into_int_type(), "")
                     .into()
             }
             Expression::UnaryMinus(_, _, e) => {
-                let e = self.expression(bin, e, vartab, function).into_int_value();
+                let e = self
+                    .expression(bin, e, vartab, function, ns)
+                    .into_int_value();
 
                 bin.builder.build_int_neg(e, "").into()
             }
             Expression::SignExt(_, t, e) => {
-                let e = self.expression(bin, e, vartab, function).into_int_value();
-                let ty = bin.llvm_type(t);
+                let e = self
+                    .expression(bin, e, vartab, function, ns)
+                    .into_int_value();
+                let ty = bin.llvm_type(t, ns);
 
                 bin.builder
                     .build_int_s_extend(e, ty.into_int_type(), "")
                     .into()
             }
             Expression::Trunc(_, t, e) => {
-                let e = self.expression(bin, e, vartab, function).into_int_value();
-                let ty = bin.llvm_type(t);
+                let e = self
+                    .expression(bin, e, vartab, function, ns)
+                    .into_int_value();
+                let ty = bin.llvm_type(t, ns);
 
                 bin.builder
                     .build_int_truncate(e, ty.into_int_type(), "")
                     .into()
             }
-            Expression::Cast(_, _, e) => self.expression(bin, e, vartab, function),
+            Expression::Cast(_, _, e) => self.expression(bin, e, vartab, function, ns),
             Expression::BytesCast(_, ast::Type::Bytes(_), ast::Type::DynamicBytes, e) => {
-                let e = self.expression(bin, e, vartab, function).into_int_value();
+                let e = self
+                    .expression(bin, e, vartab, function, ns)
+                    .into_int_value();
 
                 let size = e.get_type().get_bit_width() / 8;
                 let size = bin.context.i32_type().const_int(size as u64, false);
@@ -1933,7 +2043,7 @@ pub trait TargetRuntime<'a> {
                     .into()
             }
             Expression::BytesCast(_, ast::Type::DynamicBytes, ast::Type::Bytes(n), e) => {
-                let array = self.expression(bin, e, vartab, function);
+                let array = self.expression(bin, e, vartab, function, ns);
 
                 let len = bin.vector_len(array);
 
@@ -1984,56 +2094,88 @@ pub trait TargetRuntime<'a> {
                 bin.builder.build_load(le_bytes_ptr, "bytes")
             }
             Expression::Not(_, e) => {
-                let e = self.expression(bin, e, vartab, function).into_int_value();
+                let e = self
+                    .expression(bin, e, vartab, function, ns)
+                    .into_int_value();
 
                 bin.builder
                     .build_int_compare(IntPredicate::EQ, e, e.get_type().const_zero(), "")
                     .into()
             }
             Expression::Complement(_, _, e) => {
-                let e = self.expression(bin, e, vartab, function).into_int_value();
+                let e = self
+                    .expression(bin, e, vartab, function, ns)
+                    .into_int_value();
 
                 bin.builder.build_not(e, "").into()
             }
             Expression::Or(_, l, r) => {
-                let left = self.expression(bin, l, vartab, function).into_int_value();
-                let right = self.expression(bin, r, vartab, function).into_int_value();
+                let left = self
+                    .expression(bin, l, vartab, function, ns)
+                    .into_int_value();
+                let right = self
+                    .expression(bin, r, vartab, function, ns)
+                    .into_int_value();
 
                 bin.builder.build_or(left, right, "").into()
             }
             Expression::And(_, l, r) => {
-                let left = self.expression(bin, l, vartab, function).into_int_value();
-                let right = self.expression(bin, r, vartab, function).into_int_value();
+                let left = self
+                    .expression(bin, l, vartab, function, ns)
+                    .into_int_value();
+                let right = self
+                    .expression(bin, r, vartab, function, ns)
+                    .into_int_value();
 
                 bin.builder.build_and(left, right, "").into()
             }
             Expression::BitwiseOr(_, _, l, r) => {
-                let left = self.expression(bin, l, vartab, function).into_int_value();
-                let right = self.expression(bin, r, vartab, function).into_int_value();
+                let left = self
+                    .expression(bin, l, vartab, function, ns)
+                    .into_int_value();
+                let right = self
+                    .expression(bin, r, vartab, function, ns)
+                    .into_int_value();
 
                 bin.builder.build_or(left, right, "").into()
             }
             Expression::BitwiseAnd(_, _, l, r) => {
-                let left = self.expression(bin, l, vartab, function).into_int_value();
-                let right = self.expression(bin, r, vartab, function).into_int_value();
+                let left = self
+                    .expression(bin, l, vartab, function, ns)
+                    .into_int_value();
+                let right = self
+                    .expression(bin, r, vartab, function, ns)
+                    .into_int_value();
 
                 bin.builder.build_and(left, right, "").into()
             }
             Expression::BitwiseXor(_, _, l, r) => {
-                let left = self.expression(bin, l, vartab, function).into_int_value();
-                let right = self.expression(bin, r, vartab, function).into_int_value();
+                let left = self
+                    .expression(bin, l, vartab, function, ns)
+                    .into_int_value();
+                let right = self
+                    .expression(bin, r, vartab, function, ns)
+                    .into_int_value();
 
                 bin.builder.build_xor(left, right, "").into()
             }
             Expression::ShiftLeft(_, _, l, r) => {
-                let left = self.expression(bin, l, vartab, function).into_int_value();
-                let right = self.expression(bin, r, vartab, function).into_int_value();
+                let left = self
+                    .expression(bin, l, vartab, function, ns)
+                    .into_int_value();
+                let right = self
+                    .expression(bin, r, vartab, function, ns)
+                    .into_int_value();
 
                 bin.builder.build_left_shift(left, right, "").into()
             }
             Expression::ShiftRight(_, _, l, r, signed) => {
-                let left = self.expression(bin, l, vartab, function).into_int_value();
-                let right = self.expression(bin, r, vartab, function).into_int_value();
+                let left = self
+                    .expression(bin, l, vartab, function, ns)
+                    .into_int_value();
+                let right = self
+                    .expression(bin, r, vartab, function, ns)
+                    .into_int_value();
 
                 bin.builder
                     .build_right_shift(left, right, *signed, "")
@@ -2041,16 +2183,20 @@ pub trait TargetRuntime<'a> {
             }
             Expression::Subscript(_, ty, a, i) => {
                 if ty.is_contract_storage() {
-                    let array = self.expression(bin, a, vartab, function).into_int_value();
-                    let index = self.expression(bin, i, vartab, function);
+                    let array = self
+                        .expression(bin, a, vartab, function, ns)
+                        .into_int_value();
+                    let index = self.expression(bin, i, vartab, function, ns);
 
-                    self.storage_subscript(bin, function, ty, array, index)
+                    self.storage_subscript(bin, function, ty, array, index, ns)
                         .into()
                 } else {
                     let array = self
-                        .expression(bin, a, vartab, function)
+                        .expression(bin, a, vartab, function, ns)
                         .into_pointer_value();
-                    let index = self.expression(bin, i, vartab, function).into_int_value();
+                    let index = self
+                        .expression(bin, i, vartab, function, ns)
+                        .into_int_value();
 
                     unsafe {
                         bin.builder
@@ -2064,17 +2210,23 @@ pub trait TargetRuntime<'a> {
                 }
             }
             Expression::StorageBytesSubscript(_, a, i) => {
-                let index = self.expression(bin, i, vartab, function).into_int_value();
-                let slot = self.expression(bin, a, vartab, function).into_int_value();
+                let index = self
+                    .expression(bin, i, vartab, function, ns)
+                    .into_int_value();
+                let slot = self
+                    .expression(bin, a, vartab, function, ns)
+                    .into_int_value();
                 self.get_storage_bytes_subscript(&bin, function, slot, index)
                     .into()
             }
             Expression::DynamicArraySubscript(_, elem_ty, a, i) => {
-                let array = self.expression(bin, a, vartab, function);
+                let array = self.expression(bin, a, vartab, function, ns);
 
-                let ty = bin.llvm_var(elem_ty);
+                let ty = bin.llvm_var(elem_ty, ns);
 
-                let mut array_index = self.expression(bin, i, vartab, function).into_int_value();
+                let mut array_index = self
+                    .expression(bin, i, vartab, function, ns)
+                    .into_int_value();
 
                 // bounds checking already done; we can down-cast if necessary
                 if array_index.get_type().get_bit_width() > 32 {
@@ -2106,7 +2258,7 @@ pub trait TargetRuntime<'a> {
             }
             Expression::StructMember(_, _, a, i) => {
                 let struct_ptr = self
-                    .expression(bin, a, vartab, function)
+                    .expression(bin, a, vartab, function, ns)
                     .into_pointer_value();
 
                 unsafe {
@@ -2123,9 +2275,15 @@ pub trait TargetRuntime<'a> {
                 }
             }
             Expression::Ternary(_, _, c, l, r) => {
-                let cond = self.expression(bin, c, vartab, function).into_int_value();
-                let left = self.expression(bin, l, vartab, function).into_int_value();
-                let right = self.expression(bin, r, vartab, function).into_int_value();
+                let cond = self
+                    .expression(bin, c, vartab, function, ns)
+                    .into_int_value();
+                let left = self
+                    .expression(bin, l, vartab, function, ns)
+                    .into_int_value();
+                let right = self
+                    .expression(bin, r, vartab, function, ns)
+                    .into_int_value();
 
                 bin.builder.build_select(cond, left, right, "")
             }
@@ -2135,7 +2293,10 @@ pub trait TargetRuntime<'a> {
 
                 let exprs = exprs
                     .iter()
-                    .map(|e| self.expression(bin, e, vartab, function).into_int_value())
+                    .map(|e| {
+                        self.expression(bin, e, vartab, function, ns)
+                            .into_int_value()
+                    })
                     .collect::<Vec<IntValue>>();
                 let ty = exprs[0].get_type();
 
@@ -2175,7 +2336,7 @@ pub trait TargetRuntime<'a> {
             }
             Expression::ArrayLiteral(_, ty, dims, exprs) => {
                 // non-const array literals should alloca'ed and each element assigned
-                let ty = bin.llvm_type(ty);
+                let ty = bin.llvm_type(ty, ns);
 
                 let p = bin
                     .builder
@@ -2212,7 +2373,7 @@ pub trait TargetRuntime<'a> {
                         unsafe { bin.builder.build_gep(array, &ind, &format!("elemptr{}", i)) };
 
                     bin.builder
-                        .build_store(elemptr, self.expression(bin, expr, vartab, function));
+                        .build_store(elemptr, self.expression(bin, expr, vartab, function, ns));
                 }
 
                 array.into()
@@ -2223,7 +2384,7 @@ pub trait TargetRuntime<'a> {
 
                     let data = bin.emit_global_string("const_string", init, true);
 
-                    bin.llvm_type(ty)
+                    bin.llvm_type(ty, ns)
                         .into_struct_type()
                         .const_named_struct(&[
                             data.into(),
@@ -2242,11 +2403,11 @@ pub trait TargetRuntime<'a> {
                     };
 
                     let size = self
-                        .expression(bin, size, vartab, function)
+                        .expression(bin, size, vartab, function, ns)
                         .into_int_value();
 
                     let elem_size = bin
-                        .llvm_type(&elem)
+                        .llvm_type(&elem, ns)
                         .size_of()
                         .unwrap()
                         .const_cast(bin.context.i32_type(), false);
@@ -2255,7 +2416,7 @@ pub trait TargetRuntime<'a> {
                 }
             }
             Expression::DynamicArrayLength(_, a) => {
-                let array = self.expression(bin, a, vartab, function);
+                let array = self.expression(bin, a, vartab, function, ns);
 
                 bin.vector_len(array).into()
             }
@@ -2265,7 +2426,7 @@ pub trait TargetRuntime<'a> {
 
                 // first we need to calculate the length of the buffer and get the types/lengths
                 for e in exprs {
-                    let v = self.expression(bin, &e, vartab, function);
+                    let v = self.expression(bin, &e, vartab, function, ns);
 
                     let len = match e.ty() {
                         ast::Type::DynamicBytes | ast::Type::String => {
@@ -2354,13 +2515,13 @@ pub trait TargetRuntime<'a> {
                     .builder
                     .build_alloca(bin.context.custom_width_int_type(256), "keccak_dst");
 
-                self.keccak256_hash(&bin, src, length, dst);
+                self.keccak256_hash(&bin, src, length, dst, ns);
 
                 bin.builder.build_load(dst, "keccak256_hash")
             }
             Expression::StringCompare(_, l, r) => {
-                let (left, left_len) = self.string_location(bin, l, vartab, function);
-                let (right, right_len) = self.string_location(bin, r, vartab, function);
+                let (left, left_len) = self.string_location(bin, l, vartab, function, ns);
+                let (right, right_len) = self.string_location(bin, r, vartab, function, ns);
 
                 bin.builder
                     .build_call(
@@ -2373,8 +2534,8 @@ pub trait TargetRuntime<'a> {
                     .unwrap()
             }
             Expression::StringConcat(_, _, l, r) => {
-                let (left, left_len) = self.string_location(bin, l, vartab, function);
-                let (right, right_len) = self.string_location(bin, r, vartab, function);
+                let (left, left_len) = self.string_location(bin, l, vartab, function, ns);
+                let (right, right_len) = self.string_location(bin, r, vartab, function, ns);
 
                 let v = bin
                     .builder
@@ -2401,10 +2562,10 @@ pub trait TargetRuntime<'a> {
             Expression::ReturnData(_) => self.return_data(bin).into(),
             Expression::StorageArrayLength { array, elem_ty, .. } => {
                 let slot = self
-                    .expression(bin, array, vartab, function)
+                    .expression(bin, array, vartab, function, ns)
                     .into_int_value();
 
-                self.storage_array_length(bin, function, slot, elem_ty)
+                self.storage_array_length(bin, function, slot, elem_ty, ns)
                     .into()
             }
             Expression::AbiEncode {
@@ -2415,18 +2576,17 @@ pub trait TargetRuntime<'a> {
                     function,
                     &packed
                         .iter()
-                        .map(|a| self.expression(bin, &a, vartab, function))
+                        .map(|a| self.expression(bin, &a, vartab, function, ns))
                         .collect::<Vec<BasicValueEnum>>(),
                     &args
                         .iter()
-                        .map(|a| self.expression(bin, &a, vartab, function))
+                        .map(|a| self.expression(bin, &a, vartab, function, ns))
                         .collect::<Vec<BasicValueEnum>>(),
                     tys,
+                    ns,
                 )
                 .into(),
-            Expression::Builtin(_, _, Builtin::Calldata, _)
-                if bin.ns.target != Target::Substrate =>
-            {
+            Expression::Builtin(_, _, Builtin::Calldata, _) if ns.target != Target::Substrate => {
                 bin.builder
                     .build_call(
                         bin.module.get_function("vector_new").unwrap(),
@@ -2477,13 +2637,13 @@ pub trait TargetRuntime<'a> {
                 let res_ty = bin.context.custom_width_int_type(256);
 
                 let x = self
-                    .expression(bin, &args[0], vartab, function)
+                    .expression(bin, &args[0], vartab, function, ns)
                     .into_int_value();
                 let y = self
-                    .expression(bin, &args[1], vartab, function)
+                    .expression(bin, &args[1], vartab, function, ns)
                     .into_int_value();
                 let k = self
-                    .expression(bin, &args[2], vartab, function)
+                    .expression(bin, &args[2], vartab, function, ns)
                     .into_int_value();
                 let dividend = bin.builder.build_int_add(
                     bin.builder.build_int_z_extend(x, arith_ty, "wide_x"),
@@ -2559,10 +2719,10 @@ pub trait TargetRuntime<'a> {
                 let res_ty = bin.context.custom_width_int_type(256);
 
                 let x = self
-                    .expression(bin, &args[0], vartab, function)
+                    .expression(bin, &args[0], vartab, function, ns)
                     .into_int_value();
                 let y = self
-                    .expression(bin, &args[1], vartab, function)
+                    .expression(bin, &args[1], vartab, function, ns)
                     .into_int_value();
                 let x_m = bin.builder.build_alloca(arith_ty, "x_m");
                 let y_m = bin.builder.build_alloca(arith_ty, "x_y");
@@ -2602,7 +2762,7 @@ pub trait TargetRuntime<'a> {
                     "",
                 );
                 let k = self
-                    .expression(bin, &args[2], vartab, function)
+                    .expression(bin, &args[2], vartab, function, ns)
                     .into_int_value();
                 let dividend = bin.builder.build_load(x_times_y_m, "x_t_y");
 
@@ -2677,14 +2837,14 @@ pub trait TargetRuntime<'a> {
                 ..
             } => {
                 let address = self
-                    .expression(bin, address, vartab, function)
+                    .expression(bin, address, vartab, function, ns)
                     .into_int_value();
 
-                let selector = bin.ns.functions[*function_no].selector();
+                let selector = ns.functions[*function_no].selector();
 
                 assert!(matches!(ty, ast::Type::ExternalFunction { .. }));
 
-                let ty = bin.llvm_type(&ty);
+                let ty = bin.llvm_type(&ty, ns);
 
                 let ef = bin
                     .builder
@@ -2740,7 +2900,7 @@ pub trait TargetRuntime<'a> {
             }
             Expression::Builtin(_, _, Builtin::ExternalFunctionSelector, args) => {
                 let ef = self
-                    .expression(bin, &args[0], vartab, function)
+                    .expression(bin, &args[0], vartab, function, ns)
                     .into_pointer_value();
 
                 let selector_member = unsafe {
@@ -2758,7 +2918,7 @@ pub trait TargetRuntime<'a> {
             }
             Expression::Builtin(_, _, Builtin::ExternalFunctionAddress, args) => {
                 let ef = self
-                    .expression(bin, &args[0], vartab, function)
+                    .expression(bin, &args[0], vartab, function, ns)
                     .into_pointer_value();
 
                 let selector_member = unsafe {
@@ -2779,7 +2939,7 @@ pub trait TargetRuntime<'a> {
             | Expression::Builtin(_, _, hash @ Builtin::Blake2_128, args)
             | Expression::Builtin(_, _, hash @ Builtin::Blake2_256, args)
             | Expression::Builtin(_, _, hash @ Builtin::Sha256, args) => {
-                let v = self.expression(bin, &args[0], vartab, function);
+                let v = self.expression(bin, &args[0], vartab, function, ns);
 
                 let hash = match hash {
                     Builtin::Ripemd160 => HashTy::Ripemd160,
@@ -2790,15 +2950,17 @@ pub trait TargetRuntime<'a> {
                     _ => unreachable!(),
                 };
 
-                self.hash(&bin, hash, bin.vector_bytes(v), bin.vector_len(v))
+                self.hash(&bin, hash, bin.vector_bytes(v), bin.vector_len(v), ns)
                     .into()
             }
-            Expression::Builtin(_, _, _, _) => self.builtin(bin, e, vartab, function),
+            Expression::Builtin(_, _, _, _) => self.builtin(bin, e, vartab, function, ns),
             Expression::InternalFunctionCfg(cfg_no) => bin.functions[cfg_no]
                 .as_global_value()
                 .as_pointer_value()
                 .into(),
-            Expression::FormatString(_, args) => self.format_string(bin, args, vartab, function),
+            Expression::FormatString(_, args) => {
+                self.format_string(bin, args, vartab, function, ns)
+            }
             _ => panic!("{:?} not implemented", e),
         }
     }
@@ -2810,6 +2972,7 @@ pub trait TargetRuntime<'a> {
         location: &StringLocation,
         vartab: &HashMap<usize, Variable<'a>>,
         function: FunctionValue<'a>,
+        ns: &ast::Namespace,
     ) -> (PointerValue<'a>, IntValue<'a>) {
         match location {
             StringLocation::CompileTime(literal) => (
@@ -2819,7 +2982,7 @@ pub trait TargetRuntime<'a> {
                     .const_int(literal.len() as u64, false),
             ),
             StringLocation::RunTime(e) => {
-                let v = self.expression(bin, e, vartab, function);
+                let v = self.expression(bin, e, vartab, function, ns);
 
                 (bin.vector_bytes(v), bin.vector_len(v))
             }
@@ -2833,6 +2996,7 @@ pub trait TargetRuntime<'a> {
         contract: &ast::Contract,
         cfg: &ControlFlowGraph,
         function: FunctionValue<'a>,
+        ns: &ast::Namespace,
     ) {
         // recurse through basic blocks
         struct BasicBlock<'a> {
@@ -2852,6 +3016,7 @@ pub trait TargetRuntime<'a> {
             bin: &Binary<'a>,
             cfg: &ControlFlowGraph,
             function: FunctionValue,
+            ns: &ast::Namespace,
         ) -> BasicBlock<'a> {
             let cfg_bb = &cfg.blocks[block_no];
             let mut phis = HashMap::new();
@@ -2862,7 +3027,7 @@ pub trait TargetRuntime<'a> {
 
             if let Some(ref cfg_phis) = cfg_bb.phis {
                 for v in cfg_phis {
-                    let ty = bin.llvm_var(&cfg.vars[v].ty);
+                    let ty = bin.llvm_var(&cfg.vars[v].ty, ns);
 
                     phis.insert(*v, bin.builder.build_phi(ty, &cfg.vars[v].id.name));
                 }
@@ -2873,10 +3038,10 @@ pub trait TargetRuntime<'a> {
 
         let mut work = VecDeque::new();
 
-        blocks.insert(0, create_block(0, bin, cfg, function));
+        blocks.insert(0, create_block(0, bin, cfg, function, ns));
 
         // On Solana, the last argument is the accounts
-        if bin.ns.target == Target::Solana {
+        if ns.target == Target::Solana {
             bin.parameters = Some(function.get_last_param().unwrap().into_pointer_value());
         }
 
@@ -2888,7 +3053,7 @@ pub trait TargetRuntime<'a> {
                 Storage::Local if v.ty.is_reference_type() && !v.ty.is_contract_storage() => {
                     // a null pointer means an empty, zero'ed thing, be it string, struct or array
                     let value = bin
-                        .llvm_type(&v.ty)
+                        .llvm_type(&v.ty, ns)
                         .ptr_type(AddressSpace::Generic)
                         .const_null()
                         .into();
@@ -2900,7 +3065,7 @@ pub trait TargetRuntime<'a> {
                         *no,
                         Variable {
                             value: bin
-                                .llvm_type(&bin.ns.storage_type())
+                                .llvm_type(&ns.storage_type(), ns)
                                 .into_int_type()
                                 .const_zero()
                                 .into(),
@@ -2917,7 +3082,7 @@ pub trait TargetRuntime<'a> {
                     );
                 }
                 Storage::Local | Storage::Contract(_) | Storage::Constant(_) => {
-                    let ty = bin.llvm_type(&v.ty);
+                    let ty = bin.llvm_type(&v.ty, ns);
                     vars.insert(
                         *no,
                         Variable {
@@ -2954,7 +3119,7 @@ pub trait TargetRuntime<'a> {
                         let returns_offset = cfg.params.len();
                         for (i, val) in value.iter().enumerate() {
                             let arg = function.get_nth_param((returns_offset + i) as u32).unwrap();
-                            let retval = self.expression(bin, val, &w.vars, function);
+                            let retval = self.expression(bin, val, &w.vars, function, ns);
 
                             bin.builder.build_store(arg.into_pointer_value(), retval);
                         }
@@ -2962,7 +3127,7 @@ pub trait TargetRuntime<'a> {
                             .build_return(Some(&bin.return_values[&ReturnCode::Success]));
                     }
                     Instr::Set { res, expr, .. } => {
-                        let value_ref = self.expression(bin, expr, &w.vars, function);
+                        let value_ref = self.expression(bin, expr, &w.vars, function, ns);
 
                         w.vars.get_mut(res).unwrap().value = value_ref;
                     }
@@ -2970,7 +3135,7 @@ pub trait TargetRuntime<'a> {
                         let pos = bin.builder.get_insert_block().unwrap();
 
                         if !blocks.contains_key(&dest) {
-                            blocks.insert(*dest, create_block(*dest, bin, cfg, function));
+                            blocks.insert(*dest, create_block(*dest, bin, cfg, function, ns));
                             work.push_back(Work {
                                 block_no: *dest,
                                 vars: w.vars.clone(),
@@ -2989,7 +3154,7 @@ pub trait TargetRuntime<'a> {
                     Instr::Store { dest, pos } => {
                         let value_ref = w.vars[pos].value;
                         let dest_ref = self
-                            .expression(bin, dest, &w.vars, function)
+                            .expression(bin, dest, &w.vars, function, ns)
                             .into_pointer_value();
 
                         bin.builder.build_store(dest_ref, value_ref);
@@ -2999,13 +3164,13 @@ pub trait TargetRuntime<'a> {
                         true_block: true_,
                         false_block: false_,
                     } => {
-                        let cond = self.expression(bin, cond, &w.vars, function);
+                        let cond = self.expression(bin, cond, &w.vars, function, ns);
 
                         let pos = bin.builder.get_insert_block().unwrap();
 
                         let bb_true = {
                             if !blocks.contains_key(&true_) {
-                                blocks.insert(*true_, create_block(*true_, bin, cfg, function));
+                                blocks.insert(*true_, create_block(*true_, bin, cfg, function, ns));
                                 work.push_back(Work {
                                     block_no: *true_,
                                     vars: w.vars.clone(),
@@ -3023,7 +3188,8 @@ pub trait TargetRuntime<'a> {
 
                         let bb_false = {
                             if !blocks.contains_key(&false_) {
-                                blocks.insert(*false_, create_block(*false_, bin, cfg, function));
+                                blocks
+                                    .insert(*false_, create_block(*false_, bin, cfg, function, ns));
                                 work.push_back(Work {
                                     block_no: *false_,
                                     vars: w.vars.clone(),
@@ -3048,40 +3214,40 @@ pub trait TargetRuntime<'a> {
                     }
                     Instr::LoadStorage { res, ty, storage } => {
                         let mut slot = self
-                            .expression(bin, storage, &w.vars, function)
+                            .expression(bin, storage, &w.vars, function, ns)
                             .into_int_value();
 
                         w.vars.get_mut(res).unwrap().value =
-                            self.storage_load(bin, ty, &mut slot, function);
+                            self.storage_load(bin, ty, &mut slot, function, ns);
                     }
                     Instr::ClearStorage { ty, storage } => {
                         let mut slot = self
-                            .expression(bin, storage, &w.vars, function)
+                            .expression(bin, storage, &w.vars, function, ns)
                             .into_int_value();
 
-                        self.storage_delete(bin, ty, &mut slot, function);
+                        self.storage_delete(bin, ty, &mut slot, function, ns);
                     }
                     Instr::SetStorage { ty, value, storage } => {
-                        let value = self.expression(bin, value, &w.vars, function);
+                        let value = self.expression(bin, value, &w.vars, function, ns);
 
                         let mut slot = self
-                            .expression(bin, storage, &w.vars, function)
+                            .expression(bin, storage, &w.vars, function, ns)
                             .into_int_value();
 
-                        self.storage_store(bin, ty, &mut slot, value, function);
+                        self.storage_store(bin, ty, &mut slot, value, function, ns);
                     }
                     Instr::SetStorageBytes {
                         storage,
                         value,
                         offset,
                     } => {
-                        let value = self.expression(bin, value, &w.vars, function);
+                        let value = self.expression(bin, value, &w.vars, function, ns);
 
                         let slot = self
-                            .expression(bin, storage, &w.vars, function)
+                            .expression(bin, storage, &w.vars, function, ns)
                             .into_int_value();
                         let offset = self
-                            .expression(bin, offset, &w.vars, function)
+                            .expression(bin, offset, &w.vars, function, ns)
                             .into_int_value();
 
                         self.set_storage_bytes_subscript(
@@ -3097,20 +3263,20 @@ pub trait TargetRuntime<'a> {
                         storage,
                         value,
                     } => {
-                        let val = self.expression(bin, value, &w.vars, function);
+                        let val = self.expression(bin, value, &w.vars, function, ns);
                         let slot = self
-                            .expression(bin, storage, &w.vars, function)
+                            .expression(bin, storage, &w.vars, function, ns)
                             .into_int_value();
 
                         w.vars.get_mut(res).unwrap().value =
-                            self.storage_push(&bin, function, &value.ty(), slot, val);
+                            self.storage_push(&bin, function, &value.ty(), slot, val, ns);
                     }
                     Instr::PopStorage { res, ty, storage } => {
                         let slot = self
-                            .expression(bin, storage, &w.vars, function)
+                            .expression(bin, storage, &w.vars, function, ns)
                             .into_int_value();
 
-                        let value = self.storage_pop(&bin, function, ty, slot);
+                        let value = self.storage_pop(&bin, function, ty, slot, ns);
 
                         w.vars.get_mut(res).unwrap().value = value;
                     }
@@ -3136,11 +3302,11 @@ pub trait TargetRuntime<'a> {
                             bin.context.i8_type().ptr_type(AddressSpace::Generic),
                             "a",
                         );
-                        let llvm_ty = bin.llvm_type(ty);
+                        let llvm_ty = bin.llvm_type(ty, ns);
 
                         // Calculate total size for reallocation
                         let elem_ty = match ty {
-                            ast::Type::Array(..) => match bin.llvm_type(&ty.array_elem()) {
+                            ast::Type::Array(..) => match bin.llvm_type(&ty.array_elem(), ns) {
                                 elem @ BasicTypeEnum::StructType(_) => {
                                     // We don't store structs directly in the array, instead we store references to structs
                                     elem.ptr_type(AddressSpace::Generic).as_basic_type_enum()
@@ -3201,7 +3367,7 @@ pub trait TargetRuntime<'a> {
                                 "data",
                             )
                         };
-                        let value = self.expression(bin, value, &w.vars, function);
+                        let value = self.expression(bin, value, &w.vars, function, ns);
                         let elem_ptr = bin.builder.build_pointer_cast(
                             slot_ptr,
                             elem_ty.ptr_type(AddressSpace::Generic),
@@ -3282,11 +3448,11 @@ pub trait TargetRuntime<'a> {
                         );
 
                         bin.builder.position_at_end(pop);
-                        let llvm_ty = bin.llvm_type(ty);
+                        let llvm_ty = bin.llvm_type(ty, ns);
 
                         // Calculate total size for reallocation
                         let elem_ty = match ty {
-                            ast::Type::Array(..) => match bin.llvm_type(&ty.array_elem()) {
+                            ast::Type::Array(..) => match bin.llvm_type(&ty.array_elem(), ns) {
                                 elem @ BasicTypeEnum::StructType(_) => {
                                     // We don't store structs directly in the array, instead we store references to structs
                                     elem.ptr_type(AddressSpace::Generic).as_basic_type_enum()
@@ -3405,7 +3571,7 @@ pub trait TargetRuntime<'a> {
                         );
                     }
                     Instr::AssertFailure { expr: Some(expr) } => {
-                        let v = self.expression(bin, expr, &w.vars, function);
+                        let v = self.expression(bin, expr, &w.vars, function, ns);
 
                         let selector = 0x08c3_79a0u32;
 
@@ -3416,12 +3582,13 @@ pub trait TargetRuntime<'a> {
                             function,
                             &[v],
                             &[ast::Type::String],
+                            ns,
                         );
 
                         self.assert_failure(bin, data, len);
                     }
                     Instr::Print { expr } => {
-                        let expr = self.expression(bin, expr, &w.vars, function);
+                        let expr = self.expression(bin, expr, &w.vars, function, ns);
 
                         self.print(&bin, bin.vector_bytes(expr), bin.vector_len(expr));
                     }
@@ -3435,14 +3602,14 @@ pub trait TargetRuntime<'a> {
 
                         let mut parms = args
                             .iter()
-                            .map(|p| self.expression(bin, p, &w.vars, function))
+                            .map(|p| self.expression(bin, p, &w.vars, function, ns))
                             .collect::<Vec<BasicValueEnum>>();
 
                         if !res.is_empty() {
                             for v in f.returns.iter() {
                                 parms.push(
                                     bin.builder
-                                        .build_alloca(bin.llvm_var(&v.ty), &v.name)
+                                        .build_alloca(bin.llvm_var(&v.ty, ns), &v.name)
                                         .into(),
                                 );
                             }
@@ -3513,7 +3680,7 @@ pub trait TargetRuntime<'a> {
 
                         let mut parms = args
                             .iter()
-                            .map(|p| self.expression(bin, p, &w.vars, function))
+                            .map(|p| self.expression(bin, p, &w.vars, function, ns))
                             .collect::<Vec<BasicValueEnum>>();
 
                         // on Solana, we need to pass the accounts parameter around
@@ -3523,14 +3690,16 @@ pub trait TargetRuntime<'a> {
 
                         if !res.is_empty() {
                             for ty in returns.iter() {
-                                parms.push(bin.builder.build_alloca(bin.llvm_var(ty), "").into());
+                                parms.push(
+                                    bin.builder.build_alloca(bin.llvm_var(ty, ns), "").into(),
+                                );
                             }
                         }
 
                         let ret = bin
                             .builder
                             .build_call(
-                                self.expression(bin, call_expr, &w.vars, function)
+                                self.expression(bin, call_expr, &w.vars, function, ns)
                                     .into_pointer_value(),
                                 &parms,
                                 "",
@@ -3584,20 +3753,22 @@ pub trait TargetRuntime<'a> {
                     } => {
                         let args = &args
                             .iter()
-                            .map(|a| self.expression(bin, &a, &w.vars, function))
+                            .map(|a| self.expression(bin, &a, &w.vars, function, ns))
                             .collect::<Vec<BasicValueEnum>>();
 
-                        let address = bin.builder.build_alloca(bin.address_type(), "address");
+                        let address = bin.builder.build_alloca(bin.address_type(ns), "address");
 
                         let gas = self
-                            .expression(bin, gas, &w.vars, function)
+                            .expression(bin, gas, &w.vars, function, ns)
                             .into_int_value();
-                        let value = value
-                            .as_ref()
-                            .map(|v| self.expression(bin, &v, &w.vars, function).into_int_value());
-                        let salt = salt
-                            .as_ref()
-                            .map(|v| self.expression(bin, &v, &w.vars, function).into_int_value());
+                        let value = value.as_ref().map(|v| {
+                            self.expression(bin, &v, &w.vars, function, ns)
+                                .into_int_value()
+                        });
+                        let salt = salt.as_ref().map(|v| {
+                            self.expression(bin, &v, &w.vars, function, ns)
+                                .into_int_value()
+                        });
 
                         let success = match success {
                             Some(n) => Some(&mut w.vars.get_mut(n).unwrap().value),
@@ -3619,6 +3790,7 @@ pub trait TargetRuntime<'a> {
                             gas,
                             value,
                             salt,
+                            ns,
                         );
 
                         w.vars.get_mut(res).unwrap().value =
@@ -3633,21 +3805,21 @@ pub trait TargetRuntime<'a> {
                         callty,
                     } => {
                         let gas = self
-                            .expression(bin, gas, &w.vars, function)
+                            .expression(bin, gas, &w.vars, function, ns)
                             .into_int_value();
                         let value = self
-                            .expression(bin, value, &w.vars, function)
+                            .expression(bin, value, &w.vars, function, ns)
                             .into_int_value();
-                        let payload = self.expression(bin, payload, &w.vars, function);
+                        let payload = self.expression(bin, payload, &w.vars, function, ns);
 
                         let address = if let Some(address) = address {
-                            let address = self.expression(bin, address, &w.vars, function);
+                            let address = self.expression(bin, address, &w.vars, function, ns);
 
                             let addr = bin.builder.build_array_alloca(
                                 bin.context.i8_type(),
                                 bin.context
                                     .i32_type()
-                                    .const_int(bin.ns.address_length as u64, false),
+                                    .const_int(ns.address_length as u64, false),
                                 "address",
                             );
 
@@ -3680,6 +3852,7 @@ pub trait TargetRuntime<'a> {
                             gas,
                             value,
                             callty.clone(),
+                            ns,
                         );
                     }
                     Instr::ValueTransfer {
@@ -3688,17 +3861,17 @@ pub trait TargetRuntime<'a> {
                         value,
                     } => {
                         let value = self
-                            .expression(bin, value, &w.vars, function)
+                            .expression(bin, value, &w.vars, function, ns)
                             .into_int_value();
                         let address = self
-                            .expression(bin, address, &w.vars, function)
+                            .expression(bin, address, &w.vars, function, ns)
                             .into_int_value();
 
                         let addr = bin.builder.build_array_alloca(
                             bin.context.i8_type(),
                             bin.context
                                 .i32_type()
-                                .const_int(bin.ns.address_length as u64, false),
+                                .const_int(ns.address_length as u64, false),
                             "address",
                         );
 
@@ -3715,7 +3888,7 @@ pub trait TargetRuntime<'a> {
                             None => None,
                         };
 
-                        self.value_transfer(bin, function, success, addr, value);
+                        self.value_transfer(bin, function, success, addr, value, ns);
                     }
                     Instr::AbiDecode {
                         res,
@@ -3724,7 +3897,7 @@ pub trait TargetRuntime<'a> {
                         tys,
                         data,
                     } => {
-                        let v = self.expression(bin, data, &w.vars, function);
+                        let v = self.expression(bin, data, &w.vars, function, ns);
 
                         let mut data = bin.vector_bytes(v);
 
@@ -3741,7 +3914,7 @@ pub trait TargetRuntime<'a> {
                                     vars: w.vars.clone(),
                                 });
 
-                                create_block(exception, bin, cfg, function)
+                                create_block(exception, bin, cfg, function, ns)
                             });
 
                             bin.builder.position_at_end(pos);
@@ -3776,7 +3949,7 @@ pub trait TargetRuntime<'a> {
                                 )
                                 .into_int_value();
 
-                            let selector = if bin.ns.target == Target::Substrate {
+                            let selector = if ns.target == Target::Substrate {
                                 *selector
                             } else {
                                 selector.to_be()
@@ -3820,7 +3993,7 @@ pub trait TargetRuntime<'a> {
 
                         let mut returns = Vec::new();
 
-                        self.abi_decode(bin, function, &mut returns, data, data_len, &tys);
+                        self.abi_decode(bin, function, &mut returns, data, data_len, &tys, ns);
 
                         for (i, ret) in returns.into_iter().enumerate() {
                             w.vars.get_mut(&res[i]).unwrap().value = ret;
@@ -3831,10 +4004,10 @@ pub trait TargetRuntime<'a> {
                     }
                     Instr::SelfDestruct { recipient } => {
                         let recipient = self
-                            .expression(bin, recipient, &w.vars, function)
+                            .expression(bin, recipient, &w.vars, function, ns)
                             .into_int_value();
 
-                        self.selfdestruct(bin, recipient);
+                        self.selfdestruct(bin, recipient, ns);
                     }
                     Instr::EmitEvent {
                         event_no,
@@ -3853,9 +4026,10 @@ pub trait TargetRuntime<'a> {
                             function,
                             &data
                                 .iter()
-                                .map(|a| self.expression(bin, &a, &w.vars, function))
+                                .map(|a| self.expression(bin, &a, &w.vars, function, ns))
                                 .collect::<Vec<BasicValueEnum>>(),
                             &data_tys,
+                            ns,
                         );
 
                         let mut encoded = Vec::new();
@@ -3866,12 +4040,13 @@ pub trait TargetRuntime<'a> {
                                 None,
                                 false,
                                 function,
-                                &[self.expression(bin, topic, &w.vars, function)],
+                                &[self.expression(bin, topic, &w.vars, function, ns)],
                                 &[topic_tys[i].ty.clone()],
+                                ns,
                             ));
                         }
 
-                        self.send_event(bin, *event_no, data_ptr, data_len, encoded);
+                        self.send_event(bin, *event_no, data_ptr, data_len, encoded, ns);
                     }
                 }
             }
@@ -3886,6 +4061,7 @@ pub trait TargetRuntime<'a> {
         &self,
         bin: &Binary<'a>,
         contract: &ast::Contract,
+        ns: &ast::Namespace,
         function_ty: pt::FunctionTy,
         argsdata: inkwell::values::PointerValue<'a>,
         argslen: inkwell::values::IntValue<'a>,
@@ -3922,7 +4098,7 @@ pub trait TargetRuntime<'a> {
             .build_load(argsdata, "function_selector")
             .into_int_value();
 
-        if bin.ns.target != Target::Solana {
+        if ns.target != Target::Solana {
             // TODO: solana does not support bss, so different solution is needed
             bin.builder
                 .build_store(bin.selector.as_pointer_value(), fid);
@@ -3951,6 +4127,7 @@ pub trait TargetRuntime<'a> {
             self.add_dispatch_case(
                 bin,
                 cfg,
+                ns,
                 &mut cases,
                 argsdata,
                 argslen,
@@ -3993,12 +4170,12 @@ pub trait TargetRuntime<'a> {
         let got_value = if bin.function_abort_value_transfers {
             bin.context.bool_type().const_zero()
         } else {
-            let value = self.value_transferred(bin);
+            let value = self.value_transferred(bin, ns);
 
             bin.builder.build_int_compare(
                 IntPredicate::NE,
                 value,
-                bin.value_type().const_zero(),
+                bin.value_type(ns).const_zero(),
                 "is_value_transfer",
             )
         };
@@ -4041,6 +4218,7 @@ pub trait TargetRuntime<'a> {
         &self,
         bin: &Binary<'a>,
         f: &ControlFlowGraph,
+        ns: &ast::Namespace,
         cases: &mut Vec<(
             inkwell::values::IntValue<'a>,
             inkwell::basic_block::BasicBlock<'a>,
@@ -4058,24 +4236,24 @@ pub trait TargetRuntime<'a> {
         bin.builder.position_at_end(bb);
 
         if nonpayable(f) {
-            self.abort_if_value_transfer(bin, function);
+            self.abort_if_value_transfer(bin, function, ns);
         }
 
         let mut args = Vec::new();
 
         // insert abi decode
-        self.abi_decode(&bin, function, &mut args, argsdata, argslen, &f.params);
+        self.abi_decode(&bin, function, &mut args, argsdata, argslen, &f.params, ns);
 
         // add return values as pointer arguments at the end
         if !f.returns.is_empty() {
             for v in f.returns.iter() {
                 args.push(if !v.ty.is_reference_type() {
-                    bin.build_alloca(function, bin.llvm_type(&v.ty), &v.name)
+                    bin.build_alloca(function, bin.llvm_type(&v.ty, ns), &v.name)
                         .into()
                 } else {
                     bin.build_alloca(
                         function,
-                        bin.llvm_type(&v.ty).ptr_type(AddressSpace::Generic),
+                        bin.llvm_type(&v.ty, ns).ptr_type(AddressSpace::Generic),
                         &v.name,
                     )
                     .into()
@@ -4083,7 +4261,7 @@ pub trait TargetRuntime<'a> {
             }
         }
 
-        if bin.ns.target == Target::Solana {
+        if ns.target == Target::Solana {
             let params_ty = dest
                 .get_type()
                 .get_param_types()
@@ -4137,6 +4315,7 @@ pub trait TargetRuntime<'a> {
                 function,
                 &args[f.params.len()..f.params.len() + f.returns.len()],
                 &tys,
+                ns,
             );
 
             self.return_abi(&bin, data, length);
@@ -4159,8 +4338,9 @@ pub trait TargetRuntime<'a> {
         &mut self,
         bin: &mut Binary<'a>,
         contract: &ast::Contract,
+        ns: &ast::Namespace,
     ) -> FunctionValue<'a> {
-        let function_ty = bin.function_type(&[], &[]);
+        let function_ty = bin.function_type(&[], &[], ns);
 
         let function = bin.module.add_function(
             &format!("sol::{}::storage_initializers", contract.name),
@@ -4170,13 +4350,18 @@ pub trait TargetRuntime<'a> {
 
         let cfg = &contract.cfg[contract.initializer.unwrap()];
 
-        self.emit_cfg(bin, contract, cfg, function);
+        self.emit_cfg(bin, contract, cfg, function, ns);
 
         function
     }
 
     /// Emit all functions, constructors, fallback and receiver
-    fn emit_functions(&mut self, bin: &mut Binary<'a>, contract: &ast::Contract) {
+    fn emit_functions(
+        &mut self,
+        bin: &mut Binary<'a>,
+        contract: &ast::Contract,
+        ns: &ast::Namespace,
+    ) {
         let mut defines = Vec::new();
 
         for (cfg_no, cfg) in contract.cfg.iter().enumerate() {
@@ -4190,6 +4375,7 @@ pub trait TargetRuntime<'a> {
                         .iter()
                         .map(|p| p.ty.clone())
                         .collect::<Vec<ast::Type>>(),
+                    ns,
                 );
 
                 let func_decl = bin
@@ -4203,7 +4389,7 @@ pub trait TargetRuntime<'a> {
         }
 
         for (func_decl, cfg) in defines {
-            self.emit_cfg(bin, contract, cfg, func_decl);
+            self.emit_cfg(bin, contract, cfg, func_decl, ns);
         }
     }
 
@@ -4214,6 +4400,7 @@ pub trait TargetRuntime<'a> {
         args: &[(FormatArg, Expression)],
         vartab: &HashMap<usize, Variable<'a>>,
         function: FunctionValue<'a>,
+        ns: &ast::Namespace,
     ) -> BasicValueEnum<'a> {
         // first we need to calculate the space we need
         let mut length = bin.context.i32_type().const_zero();
@@ -4237,19 +4424,19 @@ pub trait TargetRuntime<'a> {
                     ast::Type::Contract(_) | ast::Type::Address(_) => bin
                         .context
                         .i32_type()
-                        .const_int(bin.ns.address_length as u64 * 2, false),
+                        .const_int(ns.address_length as u64 * 2, false),
                     ast::Type::Bytes(size) => {
                         bin.context.i32_type().const_int(size as u64 * 2, false)
                     }
                     ast::Type::String => {
-                        let val = self.expression(bin, arg, vartab, function);
+                        let val = self.expression(bin, arg, vartab, function, ns);
 
                         evaluated_arg[i] = Some(val);
 
                         bin.vector_len(val)
                     }
                     ast::Type::DynamicBytes => {
-                        let val = self.expression(bin, arg, vartab, function);
+                        let val = self.expression(bin, arg, vartab, function, ns);
 
                         evaluated_arg[i] = Some(val);
 
@@ -4280,7 +4467,7 @@ pub trait TargetRuntime<'a> {
                     ast::Type::Enum(enum_no) => bin
                         .context
                         .i32_type()
-                        .const_int(bin.ns.enums[enum_no].ty.bits(bin.ns) as u64 / 3, false),
+                        .const_int(ns.enums[enum_no].ty.bits(ns) as u64 / 3, false),
                     _ => unimplemented!(),
                 }
             };
@@ -4312,8 +4499,8 @@ pub trait TargetRuntime<'a> {
                     output = unsafe { bin.builder.build_gep(output, &[len], "") };
                 }
             } else {
-                let val =
-                    evaluated_arg[i].unwrap_or_else(|| self.expression(bin, arg, vartab, function));
+                let val = evaluated_arg[i]
+                    .unwrap_or_else(|| self.expression(bin, arg, vartab, function, ns));
                 let arg_ty = arg.ty();
 
                 match arg_ty {
@@ -4370,14 +4557,14 @@ pub trait TargetRuntime<'a> {
                         output = unsafe { bin.builder.build_gep(output, &[hex_len], "") };
                     }
                     ast::Type::Address(_) | ast::Type::Contract(_) => {
-                        let buf = bin.build_alloca(function, bin.address_type(), "address");
+                        let buf = bin.build_alloca(function, bin.address_type(ns), "address");
 
                         bin.builder.build_store(buf, val.into_int_value());
 
                         let len = bin
                             .context
                             .i32_type()
-                            .const_int(bin.ns.address_length as u64, false);
+                            .const_int(ns.address_length as u64, false);
 
                         let s = bin.builder.build_pointer_cast(
                             buf,
@@ -4396,7 +4583,7 @@ pub trait TargetRuntime<'a> {
                         output = unsafe { bin.builder.build_gep(output, &[hex_len], "") };
                     }
                     ast::Type::Bytes(size) => {
-                        let buf = bin.build_alloca(function, bin.llvm_type(&arg_ty), "bytesN");
+                        let buf = bin.build_alloca(function, bin.llvm_type(&arg_ty, ns), "bytesN");
 
                         bin.builder.build_store(buf, val.into_int_value());
 
@@ -4513,7 +4700,8 @@ pub trait TargetRuntime<'a> {
                                 .unwrap()
                                 .into_pointer_value();
                         } else {
-                            let buf = bin.build_alloca(function, bin.llvm_type(&arg_ty), "uint");
+                            let buf =
+                                bin.build_alloca(function, bin.llvm_type(&arg_ty, ns), "uint");
 
                             bin.builder.build_store(buf, val.into_int_value());
 
@@ -4665,7 +4853,7 @@ pub trait TargetRuntime<'a> {
                                 .unwrap()
                                 .into_pointer_value();
                         } else {
-                            let buf = bin.build_alloca(function, bin.llvm_type(&arg_ty), "int");
+                            let buf = bin.build_alloca(function, bin.llvm_type(&arg_ty, ns), "int");
 
                             bin.builder
                                 .build_store(buf, val_phi.as_basic_value().into_int_value());
@@ -4995,12 +5183,12 @@ pub struct Binary<'a> {
     pub name: String,
     pub module: Module<'a>,
     pub runtime: Option<Box<Binary<'a>>>,
+    target: Target,
     function_abort_value_transfers: bool,
     constructor_abort_value_transfers: bool,
     math_overflow_check: bool,
     builder: Builder<'a>,
     context: &'a Context,
-    ns: &'a ast::Namespace,
     functions: HashMap<usize, FunctionValue<'a>>,
     code: RefCell<Vec<u8>>,
     opt: OptimizationLevel,
@@ -5102,14 +5290,13 @@ impl<'a> Binary<'a> {
             _ => {}
         }
 
-        let target =
-            inkwell::targets::Target::from_name(self.ns.target.llvm_target_name()).unwrap();
+        let target = inkwell::targets::Target::from_name(self.target.llvm_target_name()).unwrap();
 
         let target_machine = target
             .create_target_machine(
-                &self.ns.target.llvm_target_triple(),
+                &self.target.llvm_target_triple(),
                 "",
-                self.ns.target.llvm_features(),
+                self.target.llvm_features(),
                 self.opt,
                 RelocMode::Default,
                 CodeModel::Default,
@@ -5128,7 +5315,7 @@ impl<'a> Binary<'a> {
                     let slice = out.as_slice();
 
                     if linking {
-                        let bs = link(slice, &self.name, self.ns.target);
+                        let bs = link(slice, &self.name, self.target);
 
                         if !self.patch_code_size(bs.len() as u64) {
                             self.code.replace(bs.to_vec());
@@ -5252,7 +5439,7 @@ impl<'a> Binary<'a> {
             math_overflow_check,
             builder: context.create_builder(),
             context,
-            ns,
+            target: ns.target,
             functions: HashMap::new(),
             code: RefCell::new(Vec::new()),
             opt,
@@ -5268,30 +5455,30 @@ impl<'a> Binary<'a> {
     }
 
     /// Set flags for early aborts if a value transfer is done and no function/constructor can handle it
-    pub fn set_early_value_aborts(&mut self, contract: &ast::Contract) {
+    pub fn set_early_value_aborts(&mut self, contract: &ast::Contract, ns: &ast::Namespace) {
         // if there is no payable function, fallback or receive then abort all value transfers at the top
         // note that receive() is always payable so this just checkes for presence.
         self.function_abort_value_transfers = !contract.functions.iter().any(|function_no| {
-            let f = &self.ns.functions[*function_no];
+            let f = &ns.functions[*function_no];
             !f.is_constructor() && f.is_payable()
         });
 
         self.constructor_abort_value_transfers = !contract.functions.iter().any(|function_no| {
-            let f = &self.ns.functions[*function_no];
+            let f = &ns.functions[*function_no];
             f.is_constructor() && f.is_payable()
         });
     }
 
     /// llvm value type, as in chain currency (usually 128 bits int)
-    fn value_type(&self) -> IntType<'a> {
+    fn value_type(&self, ns: &ast::Namespace) -> IntType<'a> {
         self.context
-            .custom_width_int_type(self.ns.value_length as u32 * 8)
+            .custom_width_int_type(ns.value_length as u32 * 8)
     }
 
     /// llvm address type
-    fn address_type(&self) -> IntType<'a> {
+    fn address_type(&self, ns: &ast::Namespace) -> IntType<'a> {
         self.context
-            .custom_width_int_type(self.ns.address_length as u32 * 8)
+            .custom_width_int_type(ns.address_length as u32 * 8)
     }
 
     /// Creates global string in the llvm module with initializer
@@ -5543,7 +5730,7 @@ impl<'a> Binary<'a> {
     }
 
     /// Convert a BigInt number to llvm const value
-    fn number_literal(&self, bits: u32, n: &BigInt) -> IntValue<'a> {
+    fn number_literal(&self, bits: u32, n: &BigInt, _ns: &ast::Namespace) -> IntValue<'a> {
         let ty = self.context.custom_width_int_type(bits);
         let s = n.to_string();
 
@@ -5551,27 +5738,34 @@ impl<'a> Binary<'a> {
     }
 
     /// Emit function prototype
-    fn function_type(&self, params: &[ast::Type], returns: &[ast::Type]) -> FunctionType<'a> {
+    fn function_type(
+        &self,
+        params: &[ast::Type],
+        returns: &[ast::Type],
+        ns: &ast::Namespace,
+    ) -> FunctionType<'a> {
         // function parameters
         let mut args = params
             .iter()
-            .map(|ty| self.llvm_var(&ty))
+            .map(|ty| self.llvm_var(&ty, ns))
             .collect::<Vec<BasicTypeEnum>>();
 
         // add return values
         for ty in returns {
             args.push(if ty.is_reference_type() && !ty.is_contract_storage() {
-                self.llvm_type(&ty)
+                self.llvm_type(&ty, ns)
                     .ptr_type(AddressSpace::Generic)
                     .ptr_type(AddressSpace::Generic)
                     .into()
             } else {
-                self.llvm_type(&ty).ptr_type(AddressSpace::Generic).into()
+                self.llvm_type(&ty, ns)
+                    .ptr_type(AddressSpace::Generic)
+                    .into()
             });
         }
 
         // On Solana, we need to pass around the accounts
-        if self.ns.target == Target::Solana {
+        if ns.target == Target::Solana {
             args.push(
                 self.module
                     .get_struct_type("struct.SolParameters")
@@ -5641,8 +5835,8 @@ impl<'a> Binary<'a> {
     }
 
     /// Return the llvm type for a variable holding the type, not the type itself
-    fn llvm_var(&self, ty: &ast::Type) -> BasicTypeEnum<'a> {
-        let llvm_ty = self.llvm_type(ty);
+    fn llvm_var(&self, ty: &ast::Type, ns: &ast::Namespace) -> BasicTypeEnum<'a> {
+        let llvm_ty = self.llvm_type(ty, ns);
         match ty.deref_memory() {
             ast::Type::Struct(_)
             | ast::Type::Array(_, _)
@@ -5653,8 +5847,8 @@ impl<'a> Binary<'a> {
     }
 
     /// Default empty value
-    fn default_value(&self, ty: &ast::Type) -> BasicValueEnum<'a> {
-        let llvm_ty = self.llvm_var(ty);
+    fn default_value(&self, ty: &ast::Type, ns: &ast::Namespace) -> BasicValueEnum<'a> {
+        let llvm_ty = self.llvm_var(ty, ns);
 
         // const_zero() on BasicTypeEnum yet. Should be coming to inkwell soon
         if llvm_ty.is_pointer_type() {
@@ -5665,7 +5859,7 @@ impl<'a> Binary<'a> {
     }
 
     /// Return the llvm type for the resolved type.
-    fn llvm_type(&self, ty: &ast::Type) -> BasicTypeEnum<'a> {
+    fn llvm_type(&self, ty: &ast::Type, ns: &ast::Namespace) -> BasicTypeEnum<'a> {
         match ty {
             ast::Type::Bool => BasicTypeEnum::IntType(self.context.bool_type()),
             ast::Type::Int(n) | ast::Type::Uint(n) => {
@@ -5673,20 +5867,20 @@ impl<'a> Binary<'a> {
             }
             ast::Type::Value => BasicTypeEnum::IntType(
                 self.context
-                    .custom_width_int_type(self.ns.value_length as u32 * 8),
+                    .custom_width_int_type(ns.value_length as u32 * 8),
             ),
             ast::Type::Contract(_) | ast::Type::Address(_) => {
-                BasicTypeEnum::IntType(self.address_type())
+                BasicTypeEnum::IntType(self.address_type(ns))
             }
             ast::Type::Bytes(n) => {
                 BasicTypeEnum::IntType(self.context.custom_width_int_type(*n as u32 * 8))
             }
-            ast::Type::Enum(n) => self.llvm_type(&self.ns.enums[*n].ty),
+            ast::Type::Enum(n) => self.llvm_type(&ns.enums[*n].ty, ns),
             ast::Type::String | ast::Type::DynamicBytes => {
                 self.module.get_struct_type("struct.vector").unwrap().into()
             }
             ast::Type::Array(base_ty, dims) => {
-                let ty = self.llvm_var(base_ty);
+                let ty = self.llvm_var(base_ty, ns);
 
                 let mut dims = dims.iter();
 
@@ -5709,30 +5903,30 @@ impl<'a> Binary<'a> {
             ast::Type::Struct(n) => self
                 .context
                 .struct_type(
-                    &self.ns.structs[*n]
+                    &ns.structs[*n]
                         .fields
                         .iter()
-                        .map(|f| self.llvm_var(&f.ty))
+                        .map(|f| self.llvm_var(&f.ty, ns))
                         .collect::<Vec<BasicTypeEnum>>(),
                     false,
                 )
                 .as_basic_type_enum(),
             ast::Type::Mapping(_, _) => unreachable!(),
             ast::Type::Ref(r) => self
-                .llvm_type(r)
+                .llvm_type(r, ns)
                 .ptr_type(AddressSpace::Generic)
                 .as_basic_type_enum(),
-            ast::Type::StorageRef(_) => self.llvm_type(&self.ns.storage_type()),
+            ast::Type::StorageRef(_) => self.llvm_type(&ns.storage_type(), ns),
             ast::Type::InternalFunction {
                 params, returns, ..
             } => {
-                let ftype = self.function_type(params, returns);
+                let ftype = self.function_type(params, returns, ns);
 
                 BasicTypeEnum::PointerType(ftype.ptr_type(AddressSpace::Generic))
             }
             ast::Type::ExternalFunction { .. } => {
-                let address = self.llvm_type(&ast::Type::Address(false));
-                let selector = self.llvm_type(&ast::Type::Uint(32));
+                let address = self.llvm_type(&ast::Type::Address(false), ns);
+                let selector = self.llvm_type(&ast::Type::Uint(32), ns);
 
                 BasicTypeEnum::PointerType(
                     self.context
@@ -5987,6 +6181,7 @@ impl<'a> Binary<'a> {
         array_ty: &ast::Type,
         array: PointerValue<'a>,
         index: IntValue<'a>,
+        ns: &ast::Namespace,
     ) -> PointerValue<'a> {
         match array_ty {
             ast::Type::Array(_, dim) => {
@@ -6001,7 +6196,7 @@ impl<'a> Binary<'a> {
                     }
                 } else {
                     let elem_ty = array_ty.array_deref();
-                    let llvm_elem_ty = self.llvm_var(&elem_ty);
+                    let llvm_elem_ty = self.llvm_var(&elem_ty, ns);
 
                     // dynamic length array or vector
                     let index = self.builder.build_int_mul(

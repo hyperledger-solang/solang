@@ -76,9 +76,9 @@ impl SolanaTarget {
         // externals
         target.declare_externals(&mut binary);
 
-        target.emit_functions(&mut binary, contract);
+        target.emit_functions(&mut binary, contract, ns);
 
-        let storage_initializer = target.emit_initializer(&mut binary, contract);
+        let storage_initializer = target.emit_initializer(&mut binary, contract, ns);
 
         let constructor = contract
             .cfg
@@ -95,6 +95,7 @@ impl SolanaTarget {
                 storage_initializer,
                 constructor,
             }],
+            ns,
         );
 
         binary.internalize(&[
@@ -161,9 +162,9 @@ impl SolanaTarget {
 
             target.magic = u32::from_le_bytes(hash[0..4].try_into().unwrap());
 
-            target.emit_functions(&mut binary, contract);
+            target.emit_functions(&mut binary, contract, ns);
 
-            let storage_initializer = target.emit_initializer(&mut binary, contract);
+            let storage_initializer = target.emit_initializer(&mut binary, contract, ns);
 
             let constructor = contract
                 .cfg
@@ -182,7 +183,7 @@ impl SolanaTarget {
             binary.functions.drain();
         }
 
-        target.emit_dispatch(&mut binary, &contracts);
+        target.emit_dispatch(&mut binary, &contracts, ns);
 
         binary.internalize(&[
             "entrypoint",
@@ -364,7 +365,12 @@ impl SolanaTarget {
             .into_int_value()
     }
 
-    fn emit_dispatch<'b>(&mut self, binary: &mut Binary<'b>, contracts: &[Contract<'b>]) {
+    fn emit_dispatch<'b>(
+        &mut self,
+        binary: &mut Binary<'b>,
+        contracts: &[Contract<'b>],
+        ns: &ast::Namespace,
+    ) {
         let function = binary.module.get_function("solang_dispatch").unwrap();
 
         let entry = binary.context.append_basic_block(function, "entry");
@@ -470,6 +476,7 @@ impl SolanaTarget {
             self.emit_function_dispatch(
                 binary,
                 &contract.contract,
+                ns,
                 pt::FunctionTy::Function,
                 input,
                 input_len,
@@ -585,7 +592,7 @@ impl SolanaTarget {
 
                 // insert abi decode
                 self.abi
-                    .decode(binary, function, &mut args, input, input_len, params);
+                    .decode(binary, function, &mut args, input, input_len, params, ns);
 
                 let params_ty = constructor_function
                     .get_type()
@@ -642,8 +649,9 @@ impl SolanaTarget {
         slot: IntValue<'b>,
         function: FunctionValue<'b>,
         zero: bool,
+        ns: &ast::Namespace,
     ) {
-        if !zero && !ty.is_dynamic(binary.ns) {
+        if !zero && !ty.is_dynamic(ns) {
             // nothing to do
             return;
         }
@@ -683,7 +691,7 @@ impl SolanaTarget {
                 "offset_ptr",
             );
 
-            if elem_ty.is_dynamic(binary.ns) || zero {
+            if elem_ty.is_dynamic(ns) || zero {
                 let length = if let Some(length) = dim[0].as_ref() {
                     binary
                         .context
@@ -695,10 +703,10 @@ impl SolanaTarget {
                         .build_load(offset_ptr, "offset")
                         .into_int_value();
 
-                    self.storage_array_length(binary, function, slot, elem_ty)
+                    self.storage_array_length(binary, function, slot, elem_ty, ns)
                 };
 
-                let elem_size = elem_ty.size_of(binary.ns).to_u64().unwrap();
+                let elem_size = elem_ty.size_of(ns).to_u64().unwrap();
 
                 // loop over the array
                 let mut builder = LoopBuilder::new(binary, function);
@@ -720,6 +728,7 @@ impl SolanaTarget {
                     offset_val,
                     function,
                     zero,
+                    ns,
                 );
 
                 let offset_val = binary.builder.build_int_add(
@@ -754,8 +763,8 @@ impl SolanaTarget {
                 binary.builder.build_store(offset_ptr, new_offset);
             }
         } else if let ast::Type::Struct(struct_no) = ty {
-            for (i, field) in binary.ns.structs[*struct_no].fields.iter().enumerate() {
-                let field_offset = binary.ns.structs[*struct_no].offsets[i].to_u64().unwrap();
+            for (i, field) in ns.structs[*struct_no].fields.iter().enumerate() {
+                let field_offset = ns.structs[*struct_no].offsets[i].to_u64().unwrap();
 
                 let offset = binary.builder.build_int_add(
                     slot,
@@ -763,10 +772,10 @@ impl SolanaTarget {
                     "field_offset",
                 );
 
-                self.storage_free(binary, &field.ty, data, offset, function, zero);
+                self.storage_free(binary, &field.ty, data, offset, function, zero, ns);
             }
         } else {
-            let ty = binary.llvm_type(ty);
+            let ty = binary.llvm_type(ty, ns);
 
             binary.builder.build_store(
                 binary
@@ -783,6 +792,7 @@ impl SolanaTarget {
         binary: &Binary<'b>,
         key_ty: &ast::Type,
         value_ty: &ast::Type,
+        ns: &ast::Namespace,
     ) -> BasicTypeEnum<'b> {
         let key = if matches!(
             key_ty,
@@ -790,7 +800,7 @@ impl SolanaTarget {
         ) {
             binary.context.i32_type().into()
         } else {
-            binary.llvm_type(key_ty)
+            binary.llvm_type(key_ty, ns)
         };
 
         binary
@@ -802,7 +812,7 @@ impl SolanaTarget {
                     if value_ty.is_mapping() {
                         binary.context.i32_type().into()
                     } else {
-                        binary.llvm_type(value_ty) // value
+                        binary.llvm_type(value_ty, ns) // value
                     },
                 ],
                 false,
@@ -816,11 +826,12 @@ impl SolanaTarget {
         binary: &Binary<'b>,
         key_ty: &ast::Type,
         value_ty: &ast::Type,
+        ns: &ast::Namespace,
     ) -> FunctionValue<'b> {
         let function_name = format!(
             "sparse_lookup_{}_{}",
-            key_ty.to_wasm_string(binary.ns),
-            value_ty.to_wasm_string(binary.ns)
+            key_ty.to_wasm_string(ns),
+            value_ty.to_wasm_string(ns)
         );
 
         if let Some(function) = binary.module.get_function(&function_name) {
@@ -832,6 +843,7 @@ impl SolanaTarget {
         let function_ty = binary.function_type(
             &[ast::Type::Uint(32), key_ty.clone()],
             &[ast::Type::Uint(32)],
+            ns,
         );
 
         let function =
@@ -846,7 +858,7 @@ impl SolanaTarget {
         let offset = function.get_nth_param(0).unwrap().into_int_value();
         let key = function.get_nth_param(1).unwrap();
 
-        let entry_ty = self.sparse_entry(binary, key_ty, value_ty);
+        let entry_ty = self.sparse_entry(binary, key_ty, value_ty, ns);
         let value_offset = unsafe {
             entry_ty
                 .ptr_type(AddressSpace::Generic)
@@ -880,7 +892,7 @@ impl SolanaTarget {
                 .left()
                 .unwrap()
                 .into_int_value()
-        } else if key_ty.bits(binary.ns) > 64 {
+        } else if key_ty.bits(ns) > 64 {
             binary
                 .builder
                 .build_int_truncate(key.into_int_value(), binary.context.i64_type(), "")
@@ -1224,12 +1236,13 @@ impl SolanaTarget {
         value_ty: &ast::Type,
         slot: IntValue<'b>,
         index: BasicValueEnum<'b>,
+        ns: &ast::Namespace,
     ) -> IntValue<'b> {
         let offset = binary.build_alloca(function, binary.context.i32_type(), "offset");
 
         let current_block = binary.builder.get_insert_block().unwrap();
 
-        let lookup = self.sparse_lookup_function(binary, key_ty, value_ty);
+        let lookup = self.sparse_lookup_function(binary, key_ty, value_ty, ns);
 
         binary.builder.position_at_end(current_block);
 
@@ -1288,11 +1301,12 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         ty: &ast::Type,
         slot: &mut IntValue<'a>,
         function: FunctionValue<'a>,
+        ns: &ast::Namespace,
     ) {
         // binary storage is in 2nd account
         let data = self.contract_storage_data(binary);
 
-        self.storage_free(binary, ty, data, *slot, function, true);
+        self.storage_free(binary, ty, data, *slot, function, true, ns);
     }
 
     fn set_storage_extfunc(
@@ -1309,6 +1323,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         _binary: &Binary<'a>,
         _function: FunctionValue,
         _slot: PointerValue<'a>,
+        _ns: &ast::Namespace,
     ) -> PointerValue<'a> {
         unimplemented!();
     }
@@ -1475,18 +1490,19 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         ty: &ast::Type,
         slot: IntValue<'a>,
         index: BasicValueEnum<'a>,
+        ns: &ast::Namespace,
     ) -> IntValue<'a> {
         let account = self.contract_storage_account(binary);
 
         if let ast::Type::Mapping(key, value) = ty.deref_any() {
-            self.sparse_lookup(binary, function, key, value, slot, index)
-        } else if ty.is_sparse_solana(binary.ns) {
+            self.sparse_lookup(binary, function, key, value, slot, index, ns)
+        } else if ty.is_sparse_solana(ns) {
             // sparse array
             let elem_ty = ty.storage_array_elem().deref_into();
 
             let key = ast::Type::Uint(256);
 
-            self.sparse_lookup(binary, function, &key, &elem_ty, slot, index)
+            self.sparse_lookup(binary, function, &key, &elem_ty, slot, index, ns)
         } else {
             // 3rd member of account is data pointer
             let data = unsafe {
@@ -1519,7 +1535,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             let elem_size = binary
                 .context
                 .i32_type()
-                .const_int(elem_ty.size_of(binary.ns).to_u64().unwrap(), false);
+                .const_int(elem_ty.size_of(ns).to_u64().unwrap(), false);
 
             binary.builder.build_int_add(
                 offset,
@@ -1538,6 +1554,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         ty: &ast::Type,
         slot: IntValue<'a>,
         val: BasicValueEnum<'a>,
+        ns: &ast::Namespace,
     ) -> BasicValueEnum<'a> {
         let data = self.contract_storage_data(binary);
         let account = self.contract_storage_account(binary);
@@ -1569,7 +1586,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         let member_size = binary
             .context
             .i32_type()
-            .const_int(ty.size_of(binary.ns).to_u64().unwrap(), false);
+            .const_int(ty.size_of(ns).to_u64().unwrap(), false);
         let new_length = binary
             .builder
             .build_int_add(length, member_size, "new_length");
@@ -1623,7 +1640,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             "",
         );
 
-        self.storage_store(binary, ty, &mut new_offset, val, function);
+        self.storage_store(binary, ty, &mut new_offset, val, function, ns);
 
         if ty.is_reference_type() {
             // Caller expects a reference to storage; note that storage_store() should not modify
@@ -1640,6 +1657,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         function: FunctionValue<'a>,
         ty: &ast::Type,
         slot: IntValue<'a>,
+        ns: &ast::Namespace,
     ) -> BasicValueEnum<'a> {
         let data = self.contract_storage_data(binary);
         let account = self.contract_storage_account(binary);
@@ -1697,7 +1715,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         let member_size = binary
             .context
             .i32_type()
-            .const_int(ty.size_of(binary.ns).to_u64().unwrap(), false);
+            .const_int(ty.size_of(ns).to_u64().unwrap(), false);
 
         binary.builder.position_at_end(retrieve_block);
 
@@ -1707,7 +1725,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
 
         let mut new_offset = binary.builder.build_int_add(offset, new_length, "");
 
-        let val = self.storage_load(binary, ty, &mut new_offset, function);
+        let val = self.storage_load(binary, ty, &mut new_offset, function, ns);
 
         // delete existing storage -- pointers need to be freed
         //self.storage_free(binary, ty, account, data, new_offset, function, false);
@@ -1733,6 +1751,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         _function: FunctionValue,
         slot: IntValue<'a>,
         elem_ty: &ast::Type,
+        ns: &ast::Namespace,
     ) -> IntValue<'a> {
         let data = self.contract_storage_data(binary);
 
@@ -1754,7 +1773,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         let member_size = binary
             .context
             .i32_type()
-            .const_int(elem_ty.size_of(binary.ns).to_u64().unwrap(), false);
+            .const_int(elem_ty.size_of(ns).to_u64().unwrap(), false);
 
         let length_bytes = binary
             .builder
@@ -1792,6 +1811,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         ty: &ast::Type,
         slot: &mut IntValue<'a>,
         function: FunctionValue,
+        ns: &ast::Namespace,
     ) -> BasicValueEnum<'a> {
         let data = self.contract_storage_data(binary);
 
@@ -1843,7 +1863,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                     .unwrap()
             }
             ast::Type::Struct(struct_no) => {
-                let llvm_ty = binary.llvm_type(ty.deref_any());
+                let llvm_ty = binary.llvm_type(ty.deref_any(), ns);
                 // LLVMSizeOf() produces an i64
                 let size = binary.builder.build_int_truncate(
                     llvm_ty.size_of().unwrap(),
@@ -1869,8 +1889,8 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                     "dest",
                 );
 
-                for (i, field) in binary.ns.structs[*struct_no].fields.iter().enumerate() {
-                    let field_offset = binary.ns.structs[*struct_no].offsets[i].to_u64().unwrap();
+                for (i, field) in ns.structs[*struct_no].fields.iter().enumerate() {
+                    let field_offset = ns.structs[*struct_no].offsets[i].to_u64().unwrap();
 
                     let mut offset = binary.builder.build_int_add(
                         *slot,
@@ -1878,7 +1898,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                         "field_offset",
                     );
 
-                    let val = self.storage_load(binary, &field.ty, &mut offset, function);
+                    let val = self.storage_load(binary, &field.ty, &mut offset, function, ns);
 
                     let elem = unsafe {
                         binary.builder.build_gep(
@@ -1897,7 +1917,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                 dest.into()
             }
             ast::Type::Array(elem_ty, dim) => {
-                let llvm_ty = binary.llvm_type(ty.deref_any());
+                let llvm_ty = binary.llvm_type(ty.deref_any(), ns);
 
                 let dest;
                 let length;
@@ -1937,12 +1957,12 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                         binary
                             .context
                             .i32_type()
-                            .const_int(elem_ty.size_of(binary.ns).to_u64().unwrap(), false),
+                            .const_int(elem_ty.size_of(ns).to_u64().unwrap(), false),
                         binary.context.i32_type(),
                         "size_of",
                     );
 
-                    length = self.storage_array_length(binary, function, slot, &elem_ty);
+                    length = self.storage_array_length(binary, function, slot, &elem_ty, ns);
 
                     slot = binary
                         .builder
@@ -1959,7 +1979,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                     dest = binary.vector_new(length, elem_size, None);
                 };
 
-                let elem_size = elem_ty.size_of(binary.ns).to_u64().unwrap();
+                let elem_size = elem_ty.size_of(ns).to_u64().unwrap();
 
                 // loop over the array
                 let mut builder = LoopBuilder::new(binary, function);
@@ -1970,14 +1990,19 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
 
                 let index = builder.over(binary, binary.context.i32_type().const_zero(), length);
 
-                let elem = binary.array_subscript(ty.deref_any(), dest, index);
+                let elem = binary.array_subscript(ty.deref_any(), dest, index, ns);
 
                 let elem_ty = ty.array_deref();
 
                 let mut offset_val = offset_phi.into_int_value();
 
-                let val =
-                    self.storage_load(binary, &elem_ty.deref_memory(), &mut offset_val, function);
+                let val = self.storage_load(
+                    binary,
+                    &elem_ty.deref_memory(),
+                    &mut offset_val,
+                    function,
+                    ns,
+                );
 
                 binary.builder.build_store(elem, val);
 
@@ -1998,7 +2023,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             _ => binary.builder.build_load(
                 binary.builder.build_pointer_cast(
                     member,
-                    binary.llvm_type(ty).ptr_type(AddressSpace::Generic),
+                    binary.llvm_type(ty, ns).ptr_type(AddressSpace::Generic),
                     "",
                 ),
                 "",
@@ -2013,6 +2038,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         slot: &mut IntValue<'a>,
         val: BasicValueEnum<'a>,
         function: FunctionValue<'a>,
+        ns: &ast::Namespace,
     ) {
         let data = self.contract_storage_data(binary);
         let account = self.contract_storage_account(binary);
@@ -2138,7 +2164,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             );
         } else if let ast::Type::Array(elem_ty, dim) = ty {
             // make sure any pointers are freed
-            self.storage_free(binary, ty, data, *slot, function, false);
+            self.storage_free(binary, ty, data, *slot, function, false, ns);
 
             let offset_ptr = binary.builder.build_pointer_cast(
                 member,
@@ -2162,7 +2188,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                 let member_size = binary
                     .context
                     .i32_type()
-                    .const_int(elem_ty.size_of(binary.ns).to_u64().unwrap(), false);
+                    .const_int(elem_ty.size_of(ns).to_u64().unwrap(), false);
                 let new_length = binary
                     .builder
                     .build_int_mul(length, member_size, "new_length");
@@ -2217,7 +2243,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                     .into_int_value();
             }
 
-            let elem_size = elem_ty.size_of(binary.ns).to_u64().unwrap();
+            let elem_size = elem_ty.size_of(ns).to_u64().unwrap();
 
             // loop over the array
             let mut builder = LoopBuilder::new(binary, function);
@@ -2228,7 +2254,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
 
             let index = builder.over(binary, binary.context.i32_type().const_zero(), length);
 
-            let elem = binary.array_subscript(ty, val.into_pointer_value(), index);
+            let elem = binary.array_subscript(ty, val.into_pointer_value(), index, ns);
 
             let mut offset_val = offset_phi.into_int_value();
 
@@ -2240,6 +2266,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                 &mut offset_val,
                 binary.builder.build_load(elem, "array_elem"),
                 function,
+                ns,
             );
 
             offset_val = binary.builder.build_int_add(
@@ -2254,8 +2281,8 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             // done
             builder.finish(binary);
         } else if let ast::Type::Struct(struct_no) = ty {
-            for (i, field) in binary.ns.structs[*struct_no].fields.iter().enumerate() {
-                let field_offset = binary.ns.structs[*struct_no].offsets[i].to_u64().unwrap();
+            for (i, field) in ns.structs[*struct_no].fields.iter().enumerate() {
+                let field_offset = ns.structs[*struct_no].offsets[i].to_u64().unwrap();
 
                 let mut offset = binary.builder.build_int_add(
                     *slot,
@@ -2275,7 +2302,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                 };
 
                 // free any existing dynamic storage
-                self.storage_free(binary, &field.ty, data, offset, function, false);
+                self.storage_free(binary, &field.ty, data, offset, function, false, ns);
 
                 self.storage_store(
                     binary,
@@ -2283,6 +2310,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                     &mut offset,
                     binary.builder.build_load(elem, &field.name),
                     function,
+                    ns,
                 );
             }
         } else {
@@ -2304,6 +2332,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         src: PointerValue,
         length: IntValue,
         dest: PointerValue,
+        _ns: &ast::Namespace,
     ) {
         binary.builder.build_call(
             binary.module.get_function("keccak256").unwrap(),
@@ -2406,8 +2435,9 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         packed: &[BasicValueEnum<'b>],
         args: &[BasicValueEnum<'b>],
         tys: &[ast::Type],
+        ns: &ast::Namespace,
     ) -> PointerValue<'b> {
-        ethabiencoder::encode_to_vector(binary, function, packed, args, tys, true)
+        ethabiencoder::encode_to_vector(binary, function, packed, args, tys, true, ns)
     }
 
     fn abi_encode(
@@ -2418,6 +2448,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         function: FunctionValue<'a>,
         args: &[BasicValueEnum<'a>],
         tys: &[ast::Type],
+        ns: &ast::Namespace,
     ) -> (PointerValue<'a>, IntValue<'a>) {
         debug_assert_eq!(args.len(), tys.len());
 
@@ -2430,8 +2461,9 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             vec![]
         };
 
-        let encoder =
-            ethabiencoder::EncoderBuilder::new(binary, function, load, &packed, args, &tys, true);
+        let encoder = ethabiencoder::EncoderBuilder::new(
+            binary, function, load, &packed, args, &tys, true, ns,
+        );
 
         let length = encoder.encoded_length();
 
@@ -2519,7 +2551,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             "data_ptr",
         );
 
-        encoder.finish(binary, function, output);
+        encoder.finish(binary, function, output, ns);
 
         (output, length)
     }
@@ -2532,8 +2564,10 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         data: PointerValue<'b>,
         length: IntValue<'b>,
         spec: &[ast::Parameter],
+        ns: &ast::Namespace,
     ) {
-        self.abi.decode(binary, function, args, data, length, spec);
+        self.abi
+            .decode(binary, function, args, data, length, spec, ns);
     }
 
     fn print(&self, binary: &Binary, string_ptr: PointerValue, string_len: IntValue) {
@@ -2562,6 +2596,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         _gas: IntValue<'b>,
         _value: Option<IntValue<'b>>,
         _salt: Option<IntValue<'b>>,
+        _ns: &ast::Namespace,
     ) {
         unimplemented!();
     }
@@ -2578,6 +2613,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         _gas: IntValue<'b>,
         _value: IntValue<'b>,
         _ty: ast::CallTy,
+        _ns: &ast::Namespace,
     ) {
         debug_assert!(address.is_none());
 
@@ -2668,12 +2704,12 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
     }
 
     /// Value received
-    fn value_transferred<'b>(&self, binary: &Binary<'b>) -> IntValue<'b> {
-        binary.value_type().const_zero()
+    fn value_transferred<'b>(&self, binary: &Binary<'b>, ns: &ast::Namespace) -> IntValue<'b> {
+        binary.value_type(ns).const_zero()
     }
 
     /// Terminate execution, destroy binary and send remaining funds to addr
-    fn selfdestruct<'b>(&self, _binary: &Binary<'b>, _addr: IntValue<'b>) {
+    fn selfdestruct<'b>(&self, _binary: &Binary<'b>, _addr: IntValue<'b>, _ns: &ast::Namespace) {
         unimplemented!();
     }
 
@@ -2685,6 +2721,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         _data: PointerValue<'b>,
         _data_len: IntValue<'b>,
         _topics: Vec<(PointerValue<'b>, IntValue<'b>)>,
+        _ns: &ast::Namespace,
     ) {
         // Solana does not implement events, ignore for now
     }
@@ -2696,6 +2733,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         expr: &ast::Expression,
         _vartab: &HashMap<usize, Variable<'b>>,
         _function: FunctionValue<'b>,
+        ns: &ast::Namespace,
     ) -> BasicValueEnum<'b> {
         match expr {
             ast::Expression::Builtin(_, _, ast::Builtin::Timestamp, _) => {
@@ -2743,7 +2781,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
 
                 let value = binary
                     .builder
-                    .build_alloca(binary.address_type(), "self_address");
+                    .build_alloca(binary.address_type(ns), "self_address");
 
                 binary.builder.build_call(
                     binary.module.get_function("__beNtoleN").unwrap(),
@@ -2767,7 +2805,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                         binary
                             .context
                             .i32_type()
-                            .const_int(binary.ns.address_length as u64, false)
+                            .const_int(ns.address_length as u64, false)
                             .into(),
                     ],
                     "",
@@ -2786,6 +2824,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         hash: HashTy,
         input: PointerValue<'b>,
         input_len: IntValue<'b>,
+        ns: &ast::Namespace,
     ) -> IntValue<'b> {
         let (fname, hashlen) = match hash {
             HashTy::Keccak256 => ("sol_keccak256", 32),
@@ -2842,9 +2881,10 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         }
 
         // bytes32 needs to reverse bytes
-        let temp = binary
-            .builder
-            .build_alloca(binary.llvm_type(&ast::Type::Bytes(hashlen as u8)), "hash");
+        let temp = binary.builder.build_alloca(
+            binary.llvm_type(&ast::Type::Bytes(hashlen as u8), ns),
+            "hash",
+        );
 
         binary.builder.build_call(
             binary.module.get_function("__beNtoleN").unwrap(),

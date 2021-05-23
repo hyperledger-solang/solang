@@ -44,9 +44,9 @@ impl SabreTarget {
         // externals
         b.declare_externals(&mut c);
 
-        b.emit_functions(&mut c, contract);
+        b.emit_functions(&mut c, contract, ns);
 
-        b.emit_entrypoint(&mut c, contract);
+        b.emit_entrypoint(&mut c, contract, ns);
 
         c.internalize(&[
             "entrypoint",
@@ -114,8 +114,13 @@ impl SabreTarget {
         );
     }
 
-    fn emit_entrypoint(&mut self, binary: &mut Binary, contract: &ast::Contract) {
-        let initializer = self.emit_initializer(binary, contract);
+    fn emit_entrypoint(
+        &mut self,
+        binary: &mut Binary,
+        contract: &ast::Contract,
+        ns: &ast::Namespace,
+    ) {
+        let initializer = self.emit_initializer(binary, contract, ns);
 
         let bytes_ptr = binary.context.i32_type().ptr_type(AddressSpace::Generic);
 
@@ -184,14 +189,21 @@ impl SabreTarget {
             .functions
             .iter()
             .enumerate()
-            .map(|(cfg_no, function_no)| (cfg_no, &binary.ns.functions[*function_no]))
+            .map(|(cfg_no, function_no)| (cfg_no, &ns.functions[*function_no]))
             .find(|(_, f)| f.is_constructor())
         {
             let mut args = Vec::new();
 
             // insert abi decode
-            self.abi
-                .decode(binary, function, &mut args, argsdata, argslen, &con.params);
+            self.abi.decode(
+                binary,
+                function,
+                &mut args,
+                argsdata,
+                argslen,
+                &con.params,
+                ns,
+            );
 
             binary
                 .builder
@@ -208,6 +220,7 @@ impl SabreTarget {
         self.emit_function_dispatch(
             binary,
             contract,
+            ns,
             pt::FunctionTy::Function,
             argsdata,
             argslen,
@@ -368,6 +381,7 @@ impl<'a> TargetRuntime<'a> for SabreTarget {
         _binary: &Binary<'a>,
         _function: FunctionValue,
         _slot: PointerValue<'a>,
+        _ns: &ast::Namespace,
     ) -> PointerValue<'a> {
         unimplemented!();
     }
@@ -416,6 +430,7 @@ impl<'a> TargetRuntime<'a> for SabreTarget {
         _ty: &ast::Type,
         _slot: IntValue<'a>,
         _val: BasicValueEnum<'a>,
+        _ns: &ast::Namespace,
     ) -> BasicValueEnum<'a> {
         unimplemented!();
     }
@@ -425,6 +440,7 @@ impl<'a> TargetRuntime<'a> for SabreTarget {
         _function: FunctionValue,
         _ty: &ast::Type,
         _slot: IntValue<'a>,
+        _ns: &ast::Namespace,
     ) -> BasicValueEnum<'a> {
         unimplemented!();
     }
@@ -538,6 +554,7 @@ impl<'a> TargetRuntime<'a> for SabreTarget {
         src: PointerValue,
         length: IntValue,
         dest: PointerValue,
+        _ns: &ast::Namespace,
     ) {
         binary.builder.build_call(
             binary.module.get_function("keccak256").unwrap(),
@@ -591,6 +608,7 @@ impl<'a> TargetRuntime<'a> for SabreTarget {
         _packed: &[BasicValueEnum<'b>],
         _args: &[BasicValueEnum<'b>],
         _spec: &[ast::Type],
+        _ns: &ast::Namespace,
     ) -> PointerValue<'b> {
         unimplemented!();
     }
@@ -603,6 +621,7 @@ impl<'a> TargetRuntime<'a> for SabreTarget {
         function: FunctionValue<'b>,
         args: &[BasicValueEnum<'b>],
         tys: &[ast::Type],
+        ns: &ast::Namespace,
     ) -> (PointerValue<'b>, IntValue<'b>) {
         let mut tys = tys.to_vec();
 
@@ -613,8 +632,9 @@ impl<'a> TargetRuntime<'a> for SabreTarget {
             vec![]
         };
 
-        let encoder =
-            ethabiencoder::EncoderBuilder::new(binary, function, load, args, &packed, &tys, false);
+        let encoder = ethabiencoder::EncoderBuilder::new(
+            binary, function, load, args, &packed, &tys, false, ns,
+        );
 
         let length = encoder.encoded_length();
 
@@ -630,7 +650,7 @@ impl<'a> TargetRuntime<'a> for SabreTarget {
             .unwrap()
             .into_pointer_value();
 
-        encoder.finish(binary, function, encoded_data);
+        encoder.finish(binary, function, encoded_data, ns);
 
         (encoded_data, length)
     }
@@ -643,8 +663,10 @@ impl<'a> TargetRuntime<'a> for SabreTarget {
         data: PointerValue<'b>,
         length: IntValue<'b>,
         spec: &[ast::Parameter],
+        ns: &ast::Namespace,
     ) {
-        self.abi.decode(binary, function, args, data, length, spec);
+        self.abi
+            .decode(binary, function, args, data, length, spec, ns);
     }
 
     fn print(&self, binary: &Binary, string_ptr: PointerValue, string_len: IntValue) {
@@ -672,6 +694,7 @@ impl<'a> TargetRuntime<'a> for SabreTarget {
         _gas: IntValue<'b>,
         _value: Option<IntValue<'b>>,
         _salt: Option<IntValue<'b>>,
+        _ns: &ast::Namespace,
     ) {
         panic!("Sabre cannot create new binarys");
     }
@@ -688,6 +711,7 @@ impl<'a> TargetRuntime<'a> for SabreTarget {
         _gas: IntValue<'b>,
         _value: IntValue<'b>,
         _ty: ast::CallTy,
+        _ns: &ast::Namespace,
     ) {
         panic!("Sabre cannot call other binarys");
     }
@@ -702,12 +726,12 @@ impl<'a> TargetRuntime<'a> for SabreTarget {
     }
 
     /// Sabre does not know about balances
-    fn value_transferred<'b>(&self, binary: &Binary<'b>) -> IntValue<'b> {
-        binary.value_type().const_zero()
+    fn value_transferred<'b>(&self, binary: &Binary<'b>, ns: &ast::Namespace) -> IntValue<'b> {
+        binary.value_type(ns).const_zero()
     }
 
     /// Terminate execution, destroy binary and send remaining funds to addr
-    fn selfdestruct<'b>(&self, _binary: &Binary<'b>, _addr: IntValue<'b>) {
+    fn selfdestruct<'b>(&self, _binary: &Binary<'b>, _addr: IntValue<'b>, _ns: &ast::Namespace) {
         panic!("Sabre does not have the concept of selfdestruct");
     }
 
@@ -719,6 +743,7 @@ impl<'a> TargetRuntime<'a> for SabreTarget {
         _data: PointerValue<'b>,
         _data_len: IntValue<'b>,
         _topics: Vec<(PointerValue<'b>, IntValue<'b>)>,
+        _ns: &ast::Namespace,
     ) {
         unimplemented!();
     }
@@ -730,6 +755,7 @@ impl<'a> TargetRuntime<'a> for SabreTarget {
         _expr: &ast::Expression,
         _vartab: &HashMap<usize, Variable<'b>>,
         _function: FunctionValue<'b>,
+        _ns: &ast::Namespace,
     ) -> BasicValueEnum<'b> {
         unimplemented!();
     }
@@ -741,6 +767,7 @@ impl<'a> TargetRuntime<'a> for SabreTarget {
         _hash: HashTy,
         _input: PointerValue<'b>,
         _input_len: IntValue<'b>,
+        _ns: &ast::Namespace,
     ) -> IntValue<'b> {
         unimplemented!()
     }

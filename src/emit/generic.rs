@@ -45,10 +45,10 @@ impl GenericTarget {
         // externals
         b.declare_externals(&mut binary);
 
-        b.emit_functions(&mut binary, contract);
+        b.emit_functions(&mut binary, contract, ns);
 
-        b.emit_constructor(&mut binary, contract);
-        b.emit_function(&mut binary, contract);
+        b.emit_constructor(&mut binary, contract, ns);
+        b.emit_function(&mut binary, contract, ns);
 
         binary
     }
@@ -102,8 +102,13 @@ impl GenericTarget {
         );
     }
 
-    fn emit_constructor(&mut self, binary: &mut Binary, contract: &ast::Contract) {
-        let initializer = self.emit_initializer(binary, contract);
+    fn emit_constructor(
+        &mut self,
+        binary: &mut Binary,
+        contract: &ast::Contract,
+        ns: &ast::Namespace,
+    ) {
+        let initializer = self.emit_initializer(binary, contract, ns);
 
         let u8_ptr_ty = binary.context.i8_type().ptr_type(AddressSpace::Generic);
         let u32_ty = binary.context.i32_type();
@@ -129,14 +134,21 @@ impl GenericTarget {
             .functions
             .iter()
             .enumerate()
-            .map(|(cfg_no, function_no)| (cfg_no, &binary.ns.functions[*function_no]))
+            .map(|(cfg_no, function_no)| (cfg_no, &ns.functions[*function_no]))
             .find(|(_, f)| f.is_constructor())
         {
             let mut args = Vec::new();
 
             // insert abi decode
-            self.abi
-                .decode(binary, function, &mut args, argsdata, argslen, &con.params);
+            self.abi.decode(
+                binary,
+                function,
+                &mut args,
+                argsdata,
+                argslen,
+                &con.params,
+                ns,
+            );
 
             binary
                 .builder
@@ -150,7 +162,12 @@ impl GenericTarget {
     }
 
     // emit function dispatch
-    fn emit_function<'s>(&'s mut self, binary: &'s mut Binary, contract: &ast::Contract) {
+    fn emit_function<'s>(
+        &'s mut self,
+        binary: &'s mut Binary,
+        contract: &ast::Contract,
+        ns: &ast::Namespace,
+    ) {
         let u8_ptr_ty = binary.context.i8_type().ptr_type(AddressSpace::Generic);
         let u32_ty = binary.context.i32_type();
 
@@ -175,6 +192,7 @@ impl GenericTarget {
         self.emit_function_dispatch(
             binary,
             contract,
+            ns,
             pt::FunctionTy::Function,
             argsdata,
             argslen,
@@ -297,6 +315,7 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
         _contract: &Binary<'a>,
         _function: FunctionValue,
         _slot: PointerValue<'a>,
+        _ns: &ast::Namespace,
     ) -> PointerValue<'a> {
         unimplemented!();
     }
@@ -317,6 +336,7 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
         _ty: &ast::Type,
         _slot: IntValue<'a>,
         _val: BasicValueEnum<'a>,
+        _ns: &ast::Namespace,
     ) -> BasicValueEnum<'a> {
         unimplemented!();
     }
@@ -326,6 +346,7 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
         _function: FunctionValue,
         _ty: &ast::Type,
         _slot: IntValue<'a>,
+        _ns: &ast::Namespace,
     ) -> BasicValueEnum<'a> {
         unimplemented!();
     }
@@ -335,6 +356,7 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
         _function: FunctionValue,
         slot: IntValue<'a>,
         _ty: &ast::Type,
+        _ns: &ast::Namespace,
     ) -> IntValue<'a> {
         let slot_ptr = contract.builder.build_alloca(slot.get_type(), "slot");
         contract.builder.build_store(slot_ptr, slot);
@@ -450,6 +472,7 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
         src: PointerValue,
         length: IntValue,
         dest: PointerValue,
+        _ns: &ast::Namespace,
     ) {
         contract.builder.build_call(
             contract.module.get_function("keccak256").unwrap(),
@@ -513,8 +536,9 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
         packed: &[BasicValueEnum<'b>],
         args: &[BasicValueEnum<'b>],
         tys: &[ast::Type],
+        ns: &ast::Namespace,
     ) -> PointerValue<'b> {
-        ethabiencoder::encode_to_vector(contract, function, packed, args, tys, false)
+        ethabiencoder::encode_to_vector(contract, function, packed, args, tys, false, ns)
     }
 
     fn abi_encode<'b>(
@@ -525,6 +549,7 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
         function: FunctionValue<'b>,
         args: &[BasicValueEnum<'b>],
         tys: &[ast::Type],
+        ns: &ast::Namespace,
     ) -> (PointerValue<'b>, IntValue<'b>) {
         let mut tys = tys.to_vec();
 
@@ -536,7 +561,7 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
         };
 
         let encoder = ethabiencoder::EncoderBuilder::new(
-            contract, function, load, args, &packed, &tys, false,
+            contract, function, load, args, &packed, &tys, false, ns,
         );
 
         let length = encoder.encoded_length();
@@ -553,7 +578,7 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
             .unwrap()
             .into_pointer_value();
 
-        encoder.finish(contract, function, encoded_data);
+        encoder.finish(contract, function, encoded_data, ns);
 
         (encoded_data, length)
     }
@@ -566,9 +591,10 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
         data: PointerValue<'b>,
         length: IntValue<'b>,
         spec: &[ast::Parameter],
+        ns: &ast::Namespace,
     ) {
         self.abi
-            .decode(contract, function, args, data, length, spec);
+            .decode(contract, function, args, data, length, spec, ns);
     }
 
     fn print(&self, contract: &Binary, string_ptr: PointerValue, string_len: IntValue) {
@@ -592,6 +618,7 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
         _gas: IntValue<'b>,
         _value: Option<IntValue<'b>>,
         _salt: Option<IntValue<'b>>,
+        _ns: &ast::Namespace,
     ) {
         panic!("generic cannot create new contracts");
     }
@@ -608,6 +635,7 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
         _gas: IntValue<'b>,
         _value: IntValue<'b>,
         _ty: ast::CallTy,
+        _ns: &ast::Namespace,
     ) {
         panic!("generic cannot call other contracts");
     }
@@ -622,12 +650,12 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
     }
 
     /// Sabre does not know about balances
-    fn value_transferred<'b>(&self, binary: &Binary<'b>) -> IntValue<'b> {
-        binary.value_type().const_zero()
+    fn value_transferred<'b>(&self, binary: &Binary<'b>, ns: &ast::Namespace) -> IntValue<'b> {
+        binary.value_type(ns).const_zero()
     }
 
     /// Terminate execution, destroy contract and send remaining funds to addr
-    fn selfdestruct<'b>(&self, _binary: &Binary<'b>, _addr: IntValue<'b>) {
+    fn selfdestruct<'b>(&self, _binary: &Binary<'b>, _addr: IntValue<'b>, _ns: &ast::Namespace) {
         panic!("generic does not have the concept of selfdestruct");
     }
 
@@ -639,6 +667,7 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
         _data: PointerValue<'b>,
         _data_len: IntValue<'b>,
         _topics: Vec<(PointerValue<'b>, IntValue<'b>)>,
+        _ns: &ast::Namespace,
     ) {
         unimplemented!();
     }
@@ -650,6 +679,7 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
         _expr: &ast::Expression,
         _vartab: &HashMap<usize, Variable<'b>>,
         _function: FunctionValue<'b>,
+        _ns: &ast::Namespace,
     ) -> BasicValueEnum<'b> {
         unimplemented!();
     }
@@ -661,6 +691,7 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
         _hash: HashTy,
         _input: PointerValue<'b>,
         _input_len: IntValue<'b>,
+        _ns: &ast::Namespace,
     ) -> IntValue<'b> {
         unimplemented!()
     }
