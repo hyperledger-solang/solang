@@ -101,10 +101,10 @@ After unzipping the file, add the bin directory to your path.
 Installing LLVM on Mac
 ______________________
 
-A pre-built version of llvm, specifically configured for Solang, is available on
-`<https://solang.io/download/llvm11.0-mac.tar.xz>`_. This version is built
-with the instructions below. After downloading, untar the file in a terminal and
-add it to your path.
+A pre-built version of llvm for intel macs, is available at
+`<https://solang.io/download/llvm11.0-mac.tar.xz>`_. If you have an arm/m1 mac,
+then you have to build your own llvm using the instructions below. After downloading,
+untar the file in a terminal and add it to your path like so:
 
 .. code-block:: bash
 
