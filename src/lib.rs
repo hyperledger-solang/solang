@@ -75,7 +75,7 @@ pub fn compile(
         .filter(|c| ns.contracts[*c].is_concrete())
         .map(|c| {
             // codegen
-            let contract = emit::Binary::build(
+            let binary = emit::Binary::build(
                 &ctx,
                 &ns.contracts[c],
                 &ns,
@@ -84,7 +84,7 @@ pub fn compile(
                 math_overflow_check,
             );
 
-            let bc = contract.code(true).expect("llvm code emit should work");
+            let bc = binary.code(true).expect("llvm code emit should work");
 
             let (abistr, _) = abi::generate_abi(c, &ns, &bc, false);
 
