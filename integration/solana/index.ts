@@ -1,5 +1,5 @@
 import {
-    Account,
+    Keypair,
     Connection,
     BpfLoader,
     BPF_LOADER_PROGRAM_ID,
@@ -43,8 +43,8 @@ const sleep = (ms: number) => new Promise(res => setTimeout(res, ms));
 async function newAccountWithLamports(
     connection: Connection,
     lamports: number = 10000000000,
-): Promise<Account> {
-    const account = new Account();
+): Promise<Keypair> {
+    const account = Keypair.generate();
 
     let retries = 10;
     await connection.requestAirdrop(account.publicKey, lamports);
@@ -62,14 +62,14 @@ async function newAccountWithLamports(
 }
 
 class TestConnection {
-    constructor(public connection: Connection, public payerAccount: Account) { }
+    constructor(public connection: Connection, public payerAccount: Keypair) { }
 
-    async createStorageAccount(programId: PublicKey, space: number): Promise<Account> {
+    async createStorageAccount(programId: PublicKey, space: number): Promise<Keypair> {
         const lamports = await this.connection.getMinimumBalanceForRentExemption(
             space
         );
 
-        let account = new Account();
+        let account = Keypair.generate();
 
         const transaction = new Transaction().add(
             SystemProgram.createAccount({
@@ -102,7 +102,7 @@ class TestConnection {
 
         const abi: string = fs.readFileSync(abipath, 'utf-8');
 
-        const programAccount = new Account();
+        const programAccount = Keypair.generate();
 
         await BpfLoader.load(
             this.connection,
@@ -122,7 +122,7 @@ class TestConnection {
 }
 
 class Program {
-    constructor(private programId: PublicKey, private contractStorageAccount: Account, private abi: string) { }
+    constructor(private programId: PublicKey, private contractStorageAccount: Keypair, private abi: string) { }
 
     async call_constructor(test: TestConnection, contract: string, params: string[]): Promise<void> {
         let abi: AbiItem | undefined = JSON.parse(this.abi).find((e: AbiItem) => e.type == "constructor");
