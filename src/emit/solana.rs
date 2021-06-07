@@ -3,7 +3,6 @@ use crate::parser::pt;
 use crate::sema::ast;
 use crate::Target;
 use std::collections::HashMap;
-use std::convert::TryInto;
 use std::str;
 
 use inkwell::module::Linkage;
@@ -12,7 +11,6 @@ use inkwell::values::{BasicValueEnum, FunctionValue, IntValue, PointerValue, Unn
 use inkwell::{context::Context, types::BasicTypeEnum};
 use inkwell::{AddressSpace, IntPredicate, OptimizationLevel};
 use num_traits::ToPrimitive;
-use tiny_keccak::{Hasher, Keccak};
 
 use super::ethabiencoder;
 use super::loop_builder::LoopBuilder;
@@ -42,16 +40,9 @@ impl SolanaTarget {
         opt: OptimizationLevel,
         math_overflow_check: bool,
     ) -> Binary<'a> {
-        // We need a magic number for our binary. This is used to check if the binary storage
-        // account is initialized for the correct binary
-        let mut hasher = Keccak::v256();
-        let mut hash = [0u8; 32];
-        hasher.update(contract.name.as_bytes());
-        hasher.finalize(&mut hash);
-
         let mut target = SolanaTarget {
             abi: ethabiencoder::EthAbiDecoder { bswap: true },
-            magic: u32::from_le_bytes(hash[0..4].try_into().unwrap()),
+            magic: contract.selector(),
         };
 
         let mut binary = Binary::new(
@@ -75,7 +66,6 @@ impl SolanaTarget {
             ReturnCode::AbiEncodingInvalid,
             context.i64_type().const_int(2u64 << 32, false),
         );
-
         // externals
         target.declare_externals(&mut binary);
 
@@ -164,12 +154,7 @@ impl SolanaTarget {
                 }
 
                 // We need a magic number for our contract.
-                let mut hasher = Keccak::v256();
-                let mut hash = [0u8; 32];
-                hasher.update(contract.name.as_bytes());
-                hasher.finalize(&mut hash);
-
-                target.magic = u32::from_le_bytes(hash[0..4].try_into().unwrap());
+                target.magic = contract.selector();
 
                 target.emit_functions(&mut binary, contract, ns);
 
@@ -2329,38 +2314,15 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         }
     }
 
-    /// sabre has no keccak256 host function, so call our implementation
     fn keccak256_hash(
         &self,
-        binary: &Binary,
-        src: PointerValue,
-        length: IntValue,
-        dest: PointerValue,
+        _binary: &Binary,
+        _src: PointerValue,
+        _length: IntValue,
+        _dest: PointerValue,
         _ns: &ast::Namespace,
     ) {
-        binary.builder.build_call(
-            binary.module.get_function("keccak256").unwrap(),
-            &[
-                binary
-                    .builder
-                    .build_pointer_cast(
-                        src,
-                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
-                        "src",
-                    )
-                    .into(),
-                length.into(),
-                binary
-                    .builder
-                    .build_pointer_cast(
-                        dest,
-                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
-                        "dest",
-                    )
-                    .into(),
-            ],
-            "",
-        );
+        unreachable!();
     }
 
     fn return_empty_abi(&self, binary: &Binary) {
@@ -2587,22 +2549,148 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         );
     }
 
-    /// Create new binary
+    /// Create new contract
     fn create_contract<'b>(
         &mut self,
-        _binary: &Binary<'b>,
-        _function: FunctionValue,
-        _success: Option<&mut BasicValueEnum<'b>>,
-        _binary_no: usize,
-        _constructor_no: Option<usize>,
-        _address: PointerValue<'b>,
-        _args: &[BasicValueEnum],
+        binary: &Binary<'b>,
+        function: FunctionValue<'b>,
+        success: Option<&mut BasicValueEnum<'b>>,
+        contract_no: usize,
+        constructor_no: Option<usize>,
+        address: PointerValue<'b>,
+        args: &[BasicValueEnum<'b>],
         _gas: IntValue<'b>,
-        _value: Option<IntValue<'b>>,
+        value: Option<IntValue<'b>>,
         _salt: Option<IntValue<'b>>,
-        _ns: &ast::Namespace,
+        ns: &ast::Namespace,
     ) {
-        unimplemented!();
+        // abi encode the arguments. The
+        let mut tys = vec![ast::Type::Bytes(4)];
+
+        if let Some(function_no) = constructor_no {
+            for param in &ns.functions[function_no].params {
+                tys.push(param.ty.clone());
+            }
+        };
+
+        let packed = [binary
+            .context
+            .i32_type()
+            .const_int(ns.contracts[contract_no].selector().to_be() as u64, false)
+            .into()];
+
+        let encoder = ethabiencoder::EncoderBuilder::new(
+            binary, function, false, &packed, args, &tys, true, ns,
+        );
+
+        let length = encoder.encoded_length();
+        let address_length = binary
+            .context
+            .i32_type()
+            .const_int(ns.address_length as u64, false);
+
+        let malloc_length = binary
+            .builder
+            .build_int_add(length, address_length, "malloc_length");
+
+        // The format of the payload is:
+        // 32 bytes address (will be filled in by create_contract C function)
+        // 4 bytes contract selector/magic
+        // remainder: eth abi encoded constructor arguments
+        let payload = binary
+            .builder
+            .build_call(
+                binary.module.get_function("__malloc").unwrap(),
+                &[malloc_length.into()],
+                "",
+            )
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_pointer_value();
+
+        let enc = unsafe { binary.builder.build_gep(payload, &[address_length], "enc") };
+
+        encoder.finish(binary, function, enc, ns);
+
+        let value = if let Some(value) = value {
+            value
+        } else {
+            binary.context.i64_type().const_int(0, false)
+        };
+
+        let sol_params = function.get_last_param().unwrap().into_pointer_value();
+
+        let ret = binary
+            .builder
+            .build_call(
+                binary.module.get_function("create_contract").unwrap(),
+                &[
+                    payload.into(),
+                    malloc_length.into(),
+                    value.into(),
+                    sol_params.into(),
+                ],
+                "",
+            )
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_int_value();
+
+        binary.builder.build_call(
+            binary.module.get_function("__beNtoleN").unwrap(),
+            &[
+                binary
+                    .builder
+                    .build_pointer_cast(
+                        payload,
+                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "",
+                    )
+                    .into(),
+                binary
+                    .builder
+                    .build_pointer_cast(
+                        address,
+                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "",
+                    )
+                    .into(),
+                binary
+                    .context
+                    .i32_type()
+                    .const_int(ns.address_length as u64, false)
+                    .into(),
+            ],
+            "",
+        );
+
+        let is_success = binary.builder.build_int_compare(
+            IntPredicate::EQ,
+            ret,
+            binary.context.i64_type().const_zero(),
+            "success",
+        );
+
+        if let Some(success) = success {
+            // we're in a try statement. This means:
+            // do not abort execution; return success or not in success variable
+            *success = is_success.into();
+        } else {
+            let success_block = binary.context.append_basic_block(function, "success");
+            let bail_block = binary.context.append_basic_block(function, "bail");
+
+            binary
+                .builder
+                .build_conditional_branch(is_success, success_block, bail_block);
+
+            binary.builder.position_at_end(bail_block);
+
+            binary.builder.build_return(Some(&ret));
+
+            binary.builder.position_at_end(success_block);
+        }
     }
 
     /// Call external binary
@@ -2736,7 +2824,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         binary: &Binary<'b>,
         expr: &ast::Expression,
         _vartab: &HashMap<usize, Variable<'b>>,
-        _function: FunctionValue<'b>,
+        function: FunctionValue<'b>,
         ns: &ast::Namespace,
     ) -> BasicValueEnum<'b> {
         match expr {
@@ -2783,9 +2871,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                     )
                     .into_pointer_value();
 
-                let value = binary
-                    .builder
-                    .build_alloca(binary.address_type(ns), "self_address");
+                let value = binary.build_alloca(function, binary.address_type(ns), "self_address");
 
                 binary.builder.build_call(
                     binary.module.get_function("__beNtoleN").unwrap(),
@@ -2850,12 +2936,16 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                 "hash",
             );
         } else {
-            let u8_ptr = binary.context.i8_type().ptr_type(AddressSpace::Generic);
             let u64_ty = binary.context.i64_type();
 
-            let sol_bytes = binary
-                .context
-                .struct_type(&[u8_ptr.into(), u64_ty.into()], false);
+            let sol_keccak256 = binary.module.get_function(fname).unwrap();
+
+            // The first argument is a SolBytes *, get the struct
+            let sol_bytes = sol_keccak256.get_type().get_param_types()[0]
+                .into_pointer_type()
+                .get_element_type()
+                .into_struct_type();
+
             let array = binary.builder.build_alloca(sol_bytes, "sol_bytes");
 
             binary.builder.build_store(
@@ -2874,7 +2964,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             );
 
             binary.builder.build_call(
-                binary.module.get_function(fname).unwrap(),
+                sol_keccak256,
                 &[
                     array.into(),
                     binary.context.i32_type().const_int(1, false).into(),

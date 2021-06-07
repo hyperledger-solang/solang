@@ -6807,7 +6807,10 @@ fn parse_call_args(
                 if ns.target == Target::Solana {
                     diagnostics.push(Diagnostic::error(
                         arg.loc,
-                        format!("‘gas’ not permitted for external calls on {}", ns.target),
+                        format!(
+                            "‘gas’ not permitted for external calls or constructors on {}",
+                            ns.target
+                        ),
                     ));
                     return Err(());
                 }
@@ -6827,6 +6830,17 @@ fn parse_call_args(
                 res.gas = Box::new(cast(&arg.expr.loc(), expr, &ty, true, ns, diagnostics)?);
             }
             "salt" => {
+                if ns.target == Target::Solana {
+                    diagnostics.push(Diagnostic::error(
+                        arg.loc,
+                        format!(
+                            "‘salt’ not permitted for external calls or constructors on {}",
+                            ns.target
+                        ),
+                    ));
+                    return Err(());
+                }
+
                 if external_call {
                     diagnostics.push(Diagnostic::error(
                         arg.loc,

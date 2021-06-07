@@ -11,3 +11,5 @@ all: $(SOLANA) $(WASM)
 
 $(SOLANA): TARGET_FLAGS=--target=bpfel -march=bpfel+solana
 $(WASM): TARGET_FLAGS=--target=wasm32
+
+bpf/solana.bc: solana.c solana_sdk.h
