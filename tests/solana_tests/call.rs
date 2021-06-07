@@ -52,7 +52,7 @@ fn calltys() {
 
     assert_eq!(
         first_error(ns.diagnostics),
-        "‘gas’ not permitted for external calls on solana"
+        "‘gas’ not permitted for external calls or constructors on solana"
     );
 }
 

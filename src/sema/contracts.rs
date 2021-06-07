@@ -4,6 +4,8 @@ use num_bigint::BigInt;
 use num_traits::Zero;
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::convert::TryInto;
+use tiny_keccak::{Hasher, Keccak};
 
 use super::expression::match_constructor_to_args;
 use super::functions;
@@ -87,6 +89,16 @@ impl ast::Contract {
         }
 
         out
+    }
+
+    /// Selector for this contract. This is used by Solana contract bundle
+    pub fn selector(&self) -> u32 {
+        let mut hasher = Keccak::v256();
+        let mut hash = [0u8; 32];
+        hasher.update(self.name.as_bytes());
+        hasher.finalize(&mut hash);
+
+        u32::from_le_bytes(hash[0..4].try_into().unwrap())
     }
 }
 

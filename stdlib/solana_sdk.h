@@ -45,6 +45,8 @@
 #define MAX_SEED_LENGTH_EXCEEDED TO_BUILTIN(13)
 /** Provided seeds do not result in a valid address */
 #define INVALID_SEEDS TO_BUILTIN(14)
+/** Need more account */
+#define ERROR_NEW_ACCOUNT_NEEDED TO_BUILTIN(15)
 
 /**
  * Boolean type

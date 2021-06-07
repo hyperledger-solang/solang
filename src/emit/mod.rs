@@ -3756,7 +3756,7 @@ pub trait TargetRuntime<'a> {
                             .map(|a| self.expression(bin, &a, &w.vars, function, ns))
                             .collect::<Vec<BasicValueEnum>>();
 
-                        let address = bin.builder.build_alloca(bin.address_type(ns), "address");
+                        let address = bin.build_alloca(function, bin.address_type(ns), "address");
 
                         let gas = self
                             .expression(bin, gas, &w.vars, function, ns)

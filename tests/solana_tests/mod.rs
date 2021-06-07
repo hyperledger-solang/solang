@@ -3,6 +3,7 @@ mod accessor;
 mod arrays;
 mod builtin;
 mod call;
+mod create_contract;
 mod destructure;
 mod hash;
 mod mappings;

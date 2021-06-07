@@ -5,7 +5,7 @@ use byteorder::{ByteOrder, LittleEndian, WriteBytesExt};
 use ethabi::Token;
 use libc::c_char;
 use rand::Rng;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use solana_helpers::allocator_bump::Allocator;
 use solana_rbpf::{
@@ -16,7 +16,9 @@ use solana_rbpf::{
     vm::{Config, DefaultInstructionMeter, EbpfVm, Executable, SyscallObject, SyscallRegistry},
 };
 use solang::{
-    compile,
+    abi::generate_abi,
+    codegen::{codegen, Options},
+    compile_many,
     file_cache::FileCache,
     sema::{ast, diagnostics},
     Target,
@@ -44,8 +46,13 @@ fn account_new() -> Account {
     a
 }
 
+struct AccountState {
+    data: Vec<u8>,
+    owner: Option<Account>,
+}
+
 struct VirtualMachine {
-    account_data: HashMap<Account, (Vec<u8>, Option<Account>)>,
+    account_data: HashMap<Account, AccountState>,
     programs: Vec<Contract>,
     stack: Vec<Contract>,
     printbuf: String,
@@ -55,7 +62,7 @@ struct VirtualMachine {
 #[derive(Clone)]
 struct Contract {
     program: Account,
-    abi: ethabi::Contract,
+    abi: Option<ethabi::Contract>,
     data: Account,
 }
 
@@ -68,43 +75,78 @@ struct ClockLayout {
     unix_timestamp: u64,
 }
 
+#[derive(Deserialize)]
+struct CreateAccount {
+    instruction: u32,
+    _lamports: u64,
+    space: u64,
+    program_id: Account,
+}
+
 fn build_solidity(src: &str) -> VirtualMachine {
     let mut cache = FileCache::new();
 
     cache.set_file_contents("test.sol", src.to_string());
 
-    let (res, ns) = compile(
-        "test.sol",
-        &mut cache,
-        inkwell::OptimizationLevel::Default,
-        Target::Solana,
-        false,
-    );
+    let mut ns = solang::parse_and_resolve("test.sol", &mut cache, Target::Solana);
+
+    // codegen all the contracts; some additional errors/warnings will be detected here
+    for contract_no in 0..ns.contracts.len() {
+        codegen(contract_no, &mut ns, &Options::default());
+    }
 
     diagnostics::print_messages(&mut cache, &ns, false);
 
-    for v in &res {
-        println!("contract size:{}", v.0.len());
-    }
+    let context = inkwell::context::Context::create();
 
-    assert_eq!(res.is_empty(), false);
+    let namespaces = vec![ns];
+
+    let binary = compile_many(
+        &context,
+        &namespaces,
+        "bundle.sol",
+        inkwell::OptimizationLevel::Default,
+        false,
+    );
+
+    let code = binary.code(true).expect("llvm code emit should work");
 
     let mut account_data = HashMap::new();
     let mut programs = Vec::new();
 
     // resolve
-    for (code, abi) in res {
+    let ns = &namespaces[0];
+
+    for contract_no in 0..ns.contracts.len() {
+        let (abi, _) = generate_abi(contract_no, &ns, &code, false);
+
         let program = account_new();
 
-        account_data.insert(program, (code.clone(), None));
+        account_data.insert(
+            program,
+            AccountState {
+                data: code.clone(),
+                owner: None,
+            },
+        );
 
         let abi = ethabi::Contract::load(abi.as_bytes()).unwrap();
 
         let data = account_new();
 
-        account_data.insert(data, ([0u8; 4096].to_vec(), Some(program)));
+        account_data.insert(
+            data,
+            AccountState {
+                data: [0u8; 4096].to_vec(),
+                owner: Some(program),
+            },
+        );
 
-        programs.push(Contract { program, abi, data });
+        programs.push(Contract {
+            program,
+            abi: Some(abi),
+            data,
+        });
     }
 
     // Add clock account
@@ -124,7 +166,10 @@ fn build_solidity(src: &str) -> VirtualMachine {
 
     account_data.insert(
         clock_account,
-        (bincode::serialize(&clock_layout).unwrap(), None),
+        AccountState {
+            data: bincode::serialize(&clock_layout).unwrap(),
+            owner: None,
+        },
     );
 
     let cur = programs.last().unwrap().clone();
@@ -143,7 +188,7 @@ const MAX_PERMITTED_DATA_INCREASE: usize = 10 * 1024;
 fn serialize_parameters(input: &[u8], vm: &VirtualMachine) -> Vec<u8> {
     let mut v: Vec<u8> = Vec::new();
 
-    fn serialize_account(v: &mut Vec<u8>, key: &Account, acc: &(Vec<u8>, Option<Account>)) {
+    fn serialize_account(v: &mut Vec<u8>, key: &Account, acc: &AccountState) {
         // dup_info
         v.write_u8(0xff).unwrap();
         // signer
@@ -157,13 +202,13 @@ fn serialize_parameters(input: &[u8], vm: &VirtualMachine) -> Vec<u8> {
         // key
         v.write_all(key).unwrap();
         // owner
-        v.write_all(&acc.1.unwrap_or([0u8; 32])).unwrap();
+        v.write_all(&acc.owner.unwrap_or([0u8; 32])).unwrap();
         // lamports
         v.write_u64::<LittleEndian>(0).unwrap();
 
         // account data
-        v.write_u64::<LittleEndian>(acc.0.len() as u64).unwrap();
-        v.write_all(&acc.0).unwrap();
+        v.write_u64::<LittleEndian>(acc.data.len() as u64).unwrap();
+        v.write_all(&acc.data).unwrap();
         v.write_all(&[0u8; MAX_PERMITTED_DATA_INCREASE]).unwrap();
 
         let padding = v.len() % 8;
@@ -190,16 +235,13 @@ fn serialize_parameters(input: &[u8], vm: &VirtualMachine) -> Vec<u8> {
     v.write_all(input).unwrap();
 
     // program id
-    v.write_all(&[0u8; 32]).unwrap();
+    v.write_all(&vm.stack[0].program).unwrap();
 
     v
 }
 
 // We want to extract the account data
-fn deserialize_parameters(
-    input: &[u8],
-    accounts_data: &mut HashMap<Account, (Vec<u8>, Option<Account>)>,
-) {
+fn deserialize_parameters(input: &[u8], accounts_data: &mut HashMap<Account, AccountState>) {
     let mut start = 0;
 
     let ka_num = LittleEndian::read_u64(&input[start..]);
@@ -217,7 +259,45 @@ fn deserialize_parameters(
         let data = input[start..start + data_len].to_vec();
 
         if let Some(entry) = accounts_data.get_mut(&account) {
-            entry.0 = data;
+            entry.data = data;
+        }
+
+        start += data_len + MAX_PERMITTED_DATA_INCREASE;
+
+        let padding = start % 8;
+        if padding > 0 {
+            start += 8 - padding
+        }
+
+        start += size_of::<u64>();
+    }
+}
+
+// We want to extract the account data
+fn update_parameters(input: &[u8], accounts_data: &HashMap<Account, AccountState>) {
+    let mut start = 0;
+
+    let ka_num = LittleEndian::read_u64(&input[start..]);
+    start += size_of::<u64>();
+
+    for _ in 0..ka_num {
+        start += 8;
+
+        let account: Account = input[start..start + 32].try_into().unwrap();
+
+        start += 32 + 32 + 8;
+
+        let data_len = LittleEndian::read_u64(&input[start..]) as usize;
+        start += size_of::<u64>();
+
+        if let Some(entry) = accounts_data.get(&account) {
+            unsafe {
+                std::ptr::copy(
+                    entry.data.as_ptr(),
+                    input[start..].as_ptr() as *mut u8,
+                    data_len,
+                );
+            }
         }
 
         start += data_len + MAX_PERMITTED_DATA_INCREASE;
@@ -480,6 +560,12 @@ pub struct Instruction {
 #[derive(Debug, PartialEq, Clone)]
 pub struct Pubkey([u8; 32]);
 
+impl Pubkey {
+    fn is_system_instruction(&self) -> bool {
+        self.0 == [0u8; 32]
+    }
+}
+
 #[derive(Debug, PartialEq, Clone)]
 pub struct AccountMeta {
     /// An account's public key
@@ -559,7 +645,6 @@ fn translate_slice_inner<'a, T>(
 struct SyscallInvokeSignedC<'a> {
     context: Rc<RefCell<&'a mut VirtualMachine>>,
     input: &'a [u8],
-    calldata: &'a [u8],
 }
 
 impl<'a> SyscallInvokeSignedC<'a> {
@@ -613,35 +698,61 @@ impl<'a> SyscallObject<UserError> for SyscallInvokeSignedC<'a> {
             .translate_instruction(instruction_addr, memory_mapping)
             .expect("instruction not valid");
 
-        let data_id: Account = instruction.data[..32].try_into().unwrap();
-
         println!("instruction:{:?}", instruction);
 
         if let Ok(mut context) = self.context.try_borrow_mut() {
-            let p = context
-                .programs
-                .iter()
-                .find(|p| p.program == instruction.program_id.0 && p.data == data_id)
-                .unwrap()
-                .clone();
+            if instruction.program_id.is_system_instruction() {
+                let create_account: CreateAccount =
+                    bincode::deserialize(&instruction.data).unwrap();
 
-            context.stack.insert(0, p);
+                let address = &instruction.accounts[1].pubkey;
 
-            context.execute(&instruction.data);
+                assert_eq!(create_account.instruction, 0);
 
-            let parameter_bytes = serialize_parameters(&self.calldata, &context);
-
-            assert_eq!(parameter_bytes.len(), self.input.len());
-
-            unsafe {
-                std::ptr::copy(
-                    parameter_bytes.as_ptr(),
-                    self.input.as_ptr() as *mut u8,
-                    parameter_bytes.len(),
+                println!(
+                    "creating account {} with space {} owner {}",
+                    hex::encode(address.0),
+                    create_account.space,
+                    hex::encode(create_account.program_id)
                 );
-            }
 
-            context.stack.remove(0);
+                context.account_data.insert(
+                    address.0,
+                    AccountState {
+                        data: vec![0; create_account.space as usize],
+                        owner: Some(create_account.program_id),
+                    },
+                );
+
+                context.programs.push(Contract {
+                    program: create_account.program_id,
+                    abi: None,
+                    data: address.0,
+                });
+            } else {
+                let data_id: Account = instruction.data[..32].try_into().unwrap();
+
+                println!(
+                    "calling {} program_id {}",
+                    hex::encode(data_id),
+                    hex::encode(instruction.program_id.0)
+                );
+
+                let p = context
+                    .programs
+                    .iter()
+                    .find(|p| p.program == instruction.program_id.0 && p.data == data_id)
+                    .unwrap()
+                    .clone();
+
+                context.stack.insert(0, p);
+
+                context.execute(&instruction.data);
+
+                update_parameters(self.input, &context.account_data);
+
+                context.stack.remove(0);
+            }
         }
 
         *result = Ok(0)
@@ -659,7 +770,7 @@ impl VirtualMachine {
         let program = &self.stack[0];
 
         let mut executable = <dyn Executable<UserError, DefaultInstructionMeter>>::from_elf(
-            &self.account_data[&program.program].0,
+            &self.account_data[&program.program].data,
             None,
             Config::default(),
         )
@@ -729,7 +840,6 @@ impl VirtualMachine {
             Box::new(SyscallInvokeSignedC {
                 context: context.clone(),
                 input: &parameter_bytes,
-                calldata: &calldata,
             }),
             None,
         )
@@ -743,7 +853,7 @@ impl VirtualMachine {
 
         deserialize_parameters(&parameter_bytes, &mut elf.account_data);
 
-        let output = &elf.account_data[&elf.stack[0].data].0;
+        let output = &elf.account_data[&elf.stack[0].data].data;
 
         VirtualMachine::validate_heap(&output);
 
@@ -769,7 +879,7 @@ impl VirtualMachine {
         hasher.finalize(&mut hash);
         calldata.extend(&hash[0..4]);
 
-        if let Some(constructor) = &program.abi.constructor {
+        if let Some(constructor) = &program.abi.as_ref().unwrap().constructor {
             calldata.extend(&constructor.encode_input(vec![], args).unwrap());
         };
 
@@ -785,7 +895,7 @@ impl VirtualMachine {
 
         calldata.extend(&0u32.to_le_bytes());
 
-        match program.abi.functions[name][0].encode_input(args) {
+        match program.abi.as_ref().unwrap().functions[name][0].encode_input(args) {
             Ok(n) => calldata.extend(&n),
             Err(x) => panic!("{}", x),
         };
@@ -798,7 +908,7 @@ impl VirtualMachine {
 
         let program = &self.stack[0];
 
-        program.abi.functions[name][0]
+        program.abi.as_ref().unwrap().functions[name][0]
             .decode_output(&self.output)
             .unwrap()
     }
@@ -806,13 +916,33 @@ impl VirtualMachine {
     fn data(&self) -> &Vec<u8> {
         let program = &self.stack[0];
 
-        &self.account_data[&program.data].0
+        &self.account_data[&program.data].data
     }
 
     fn set_program(&mut self, no: usize) {
         let cur = self.programs[no].clone();
 
         self.stack = vec![cur];
+    }
+
+    fn create_empty_account(&mut self, size: usize) {
+        let account = account_new();
+
+        println!("new empty account {}", account.to_base58());
+
+        self.account_data.insert(
+            account,
+            AccountState {
+                data: vec![0u8; size],
+                owner: Some(self.stack[0].program),
+            },
+        );
+
+        self.programs.push(Contract {
+            program: self.stack[0].program,
+            abi: None,
+            data: account,
+        });
     }
 
     fn validate_heap(data: &[u8]) {

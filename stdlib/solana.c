@@ -52,15 +52,15 @@ void *__malloc(uint32_t size)
     return sol_alloc_free_(size, NULL);
 }
 
+uint64_t sol_invoke_signed_c(
+    const SolInstruction *instruction,
+    const SolAccountInfo *account_infos,
+    int account_infos_len,
+    const SolSignerSeeds *signers_seeds,
+    int signers_seeds_len);
+
 uint64_t external_call(uint8_t *input, uint32_t input_len, SolParameters *params)
 {
-    uint64_t sol_invoke_signed_c(
-        const SolInstruction *instruction,
-        const SolAccountInfo *account_infos,
-        int account_infos_len,
-        const SolSignerSeeds *signers_seeds,
-        int signers_seeds_len);
-
     // The first 32 bytes of the input is the destination address
     const SolPubkey *dest = (const SolPubkey *)input;
 
@@ -98,6 +98,50 @@ uint64_t external_call(uint8_t *input, uint32_t input_len, SolParameters *params
 
         return ERROR_INVALID_ACCOUNT_DATA;
     }
+}
+
+// This function creates a new address and calls its constructor.
+uint64_t create_contract(uint8_t *input, uint32_t input_len, uint64_t lamports, SolParameters *params)
+{
+    const SolAccountInfo *new_acc = NULL;
+
+    SolAccountMeta metas[10];
+    const SolInstruction instruction = {
+        .program_id = (SolPubkey *)params->program_id,
+        .accounts = metas,
+        .account_len = params->ka_num,
+        .data = input,
+        .data_len = input_len,
+    };
+
+    // A fresh account must be provided by the caller; find it
+    for (int account_no = 0; account_no < params->ka_num; account_no++)
+    {
+        const SolAccountInfo *acc = &params->ka[account_no];
+
+        uint64_t *data = (uint64_t *)acc->data;
+
+        if (!new_acc && !*data && SolPubkey_same(params->program_id, acc->owner))
+        {
+            new_acc = acc;
+            params->ka_last_called = new_acc;
+        }
+
+        metas[account_no].pubkey = acc->key;
+        metas[account_no].is_writable = acc->is_writable;
+        metas[account_no].is_signer = acc->is_signer;
+    }
+
+    if (!new_acc)
+    {
+        sol_log("create contract requires a new account");
+
+        return ERROR_NEW_ACCOUNT_NEEDED;
+    }
+
+    __memcpy8(input, new_acc->key->x, SIZE_PUBKEY / 8);
+
+    return sol_invoke_signed_c(&instruction, params->ka, params->ka_num, NULL, 0);
 }
 
 struct clock_layout

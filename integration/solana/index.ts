@@ -92,6 +92,8 @@ class TestConnection {
             },
         );
 
+        console.log('Contract storage account', account.publicKey.toBase58());
+
         return account;
     }
 
