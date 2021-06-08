@@ -1,6 +1,6 @@
 import { Keypair } from '@solana/web3.js';
 import expect from 'expect';
-import { establishConnection } from './index';
+import { createProgramAddress, establishConnection } from './index';
 
 describe('Deploy solang contract and test', () => {
     it('create_contract', async function () {
@@ -13,10 +13,12 @@ describe('Deploy solang contract and test', () => {
         // call the constructor
         await creator.call_constructor(conn, 'creator', []);
 
+        let seed = await createProgramAddress(creator.get_program_key());
+
         console.log("now create child");
 
         let child = await conn.createStorageAccount(creator.get_program_key(), 1024);
 
-        await creator.call_function(conn, "create_child", [], [child.publicKey, creator.get_program_key()]);
+        await creator.call_function(conn, "create_child", [], [child.publicKey, creator.get_program_key()], [seed], [creator.get_storage_keypair()]);
     });
 });

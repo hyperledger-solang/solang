@@ -374,7 +374,7 @@ fn process_filename(
                 );
             }
             // we don't generate llvm here; this is done in one go for all contracts
-            return ns;
+            continue;
         }
 
         if verbose {

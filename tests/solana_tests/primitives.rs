@@ -25,7 +25,7 @@ fn assert_false() {
 
     vm.constructor("foo", &[]);
 
-    vm.function("assert_fails", &[]);
+    vm.function("assert_fails", &[], &[]);
 }
 
 #[test]
@@ -42,7 +42,7 @@ fn assert_true() {
 
     vm.constructor("foo", &[]);
 
-    vm.function("assert_fails", &[]);
+    vm.function("assert_fails", &[], &[]);
 }
 
 #[test]
@@ -74,16 +74,16 @@ fn boolean() {
 
     vm.constructor("foo", &[]);
 
-    let returns = vm.function("return_true", &[]);
+    let returns = vm.function("return_true", &[], &[]);
 
     assert_eq!(returns, vec![ethabi::Token::Bool(true),]);
 
-    let returns = vm.function("return_false", &[]);
+    let returns = vm.function("return_false", &[], &[]);
 
     assert_eq!(returns, vec![ethabi::Token::Bool(false),]);
 
-    vm.function("true_arg", &[ethabi::Token::Bool(true)]);
-    vm.function("false_arg", &[ethabi::Token::Bool(false)]);
+    vm.function("true_arg", &[ethabi::Token::Bool(true)], &[]);
+    vm.function("false_arg", &[ethabi::Token::Bool(false)], &[]);
 }
 
 #[test]
@@ -108,7 +108,7 @@ fn address() {
 
     vm.constructor("foo", &[]);
 
-    let returns = vm.function("return_address", &[]);
+    let returns = vm.function("return_address", &[], &[]);
 
     assert_eq!(
         returns,
@@ -124,6 +124,7 @@ fn address() {
             75, 161, 209, 89, 47, 84, 50, 13, 23, 127, 94, 21, 50, 249, 250, 185, 117, 49, 186,
             134, 82, 130, 112, 97, 218, 24, 157, 198, 40, 105, 118, 27,
         ])],
+        &[],
     );
 }
 
@@ -150,7 +151,7 @@ fn test_enum() {
 
     vm.constructor("foo", &[]);
 
-    let returns = vm.function("return_enum", &[]);
+    let returns = vm.function("return_enum", &[], &[]);
 
     assert_eq!(
         returns,
@@ -160,6 +161,7 @@ fn test_enum() {
     vm.function(
         "enum_arg",
         &[ethabi::Token::Uint(ethereum_types::U256::from(6))],
+        &[],
     );
 }
 
@@ -204,7 +206,7 @@ fn bytes() {
 
         vm.constructor("test", &[]);
 
-        let returns = vm.function("return_literal", &[]);
+        let returns = vm.function("return_literal", &[], &[]);
 
         assert_eq!(
             returns,
@@ -214,6 +216,7 @@ fn bytes() {
         let returns = vm.function(
             "return_arg",
             &[ethabi::Token::FixedBytes(vec![1, 2, 3, 4, 5, 6, 7])],
+            &[],
         );
 
         assert_eq!(
@@ -237,6 +240,7 @@ fn bytes() {
                     ethabi::Token::FixedBytes(a.to_vec()),
                     ethabi::Token::FixedBytes(b.to_vec()),
                 ],
+                &[],
             );
 
             let res: Vec<u8> = a.iter().zip(b.iter()).map(|(a, b)| a | b).collect();
@@ -256,6 +260,7 @@ fn bytes() {
                     ethabi::Token::FixedBytes(a.to_vec()),
                     ethabi::Token::FixedBytes(b.to_vec()),
                 ],
+                &[],
             );
 
             let res: Vec<u8> = a.iter().zip(b.iter()).map(|(a, b)| a & b).collect();
@@ -268,6 +273,7 @@ fn bytes() {
                     ethabi::Token::FixedBytes(a.to_vec()),
                     ethabi::Token::FixedBytes(b.to_vec()),
                 ],
+                &[],
             );
 
             let res: Vec<u8> = a.iter().zip(b.iter()).map(|(a, b)| a ^ b).collect();
@@ -284,6 +290,7 @@ fn bytes() {
                     ethabi::Token::FixedBytes(a.to_vec()),
                     ethabi::Token::Uint(ethereum_types::U256::from(r)),
                 ],
+                &[],
             );
 
             let mut res = (BigUint::from_bytes_be(&a) << r).to_bytes_be();
@@ -304,6 +311,7 @@ fn bytes() {
                     ethabi::Token::FixedBytes(a.to_vec()),
                     ethabi::Token::Uint(ethereum_types::U256::from(r)),
                 ],
+                &[],
             );
 
             let mut res = (BigUint::from_bytes_be(&a) >> r).to_bytes_be();
@@ -400,11 +408,15 @@ fn uint() {
             truncate_uint(&mut a, width);
             truncate_uint(&mut b, width);
 
-            let res = vm.function("pass", &[ethabi::Token::Uint(a)]);
+            let res = vm.function("pass", &[ethabi::Token::Uint(a)], &[]);
 
             println!("{:x} = {:?} o", a, res);
 
-            let add = vm.function("add", &[ethabi::Token::Uint(a), ethabi::Token::Uint(b)]);
+            let add = vm.function(
+                "add",
+                &[ethabi::Token::Uint(a), ethabi::Token::Uint(b)],
+                &[],
+            );
 
             let (mut res, _) = a.overflowing_add(b);
 
@@ -414,7 +426,11 @@ fn uint() {
 
             assert_eq!(add, vec![ethabi::Token::Uint(res)]);
 
-            let sub = vm.function("sub", &[ethabi::Token::Uint(a), ethabi::Token::Uint(b)]);
+            let sub = vm.function(
+                "sub",
+                &[ethabi::Token::Uint(a), ethabi::Token::Uint(b)],
+                &[],
+            );
 
             let (mut res, _) = a.overflowing_sub(b);
 
@@ -422,7 +438,11 @@ fn uint() {
 
             assert_eq!(sub, vec![ethabi::Token::Uint(res)]);
 
-            let mul = vm.function("mul", &[ethabi::Token::Uint(a), ethabi::Token::Uint(b)]);
+            let mul = vm.function(
+                "mul",
+                &[ethabi::Token::Uint(a), ethabi::Token::Uint(b)],
+                &[],
+            );
 
             let (mut res, _) = a.overflowing_mul(b);
 
@@ -430,7 +450,11 @@ fn uint() {
 
             assert_eq!(mul, vec![ethabi::Token::Uint(res)]);
 
-            let pow = vm.function("pow", &[ethabi::Token::Uint(a), ethabi::Token::Uint(b)]);
+            let pow = vm.function(
+                "pow",
+                &[ethabi::Token::Uint(a), ethabi::Token::Uint(b)],
+                &[],
+            );
 
             let (mut res, _) = a.overflowing_pow(b);
 
@@ -439,7 +463,11 @@ fn uint() {
             assert_eq!(pow, vec![ethabi::Token::Uint(res)]);
 
             if b != ethereum_types::U256::zero() {
-                let div = vm.function("div", &[ethabi::Token::Uint(a), ethabi::Token::Uint(b)]);
+                let div = vm.function(
+                    "div",
+                    &[ethabi::Token::Uint(a), ethabi::Token::Uint(b)],
+                    &[],
+                );
 
                 let mut res = a.div(b);
 
@@ -447,7 +475,11 @@ fn uint() {
 
                 assert_eq!(div, vec![ethabi::Token::Uint(res)]);
 
-                let add = vm.function("mod", &[ethabi::Token::Uint(a), ethabi::Token::Uint(b)]);
+                let add = vm.function(
+                    "mod",
+                    &[ethabi::Token::Uint(a), ethabi::Token::Uint(b)],
+                    &[],
+                );
 
                 let mut res = a.rem(b);
 
@@ -456,7 +488,7 @@ fn uint() {
                 assert_eq!(add, vec![ethabi::Token::Uint(res)]);
             }
 
-            let or = vm.function("or", &[ethabi::Token::Uint(a), ethabi::Token::Uint(b)]);
+            let or = vm.function("or", &[ethabi::Token::Uint(a), ethabi::Token::Uint(b)], &[]);
 
             let mut res = ethereum_types::U256([
                 a.0[0] | b.0[0],
@@ -469,7 +501,11 @@ fn uint() {
 
             assert_eq!(or, vec![ethabi::Token::Uint(res)]);
 
-            let and = vm.function("and", &[ethabi::Token::Uint(a), ethabi::Token::Uint(b)]);
+            let and = vm.function(
+                "and",
+                &[ethabi::Token::Uint(a), ethabi::Token::Uint(b)],
+                &[],
+            );
 
             let mut res = ethereum_types::U256([
                 a.0[0] & b.0[0],
@@ -482,7 +518,11 @@ fn uint() {
 
             assert_eq!(and, vec![ethabi::Token::Uint(res)]);
 
-            let xor = vm.function("xor", &[ethabi::Token::Uint(a), ethabi::Token::Uint(b)]);
+            let xor = vm.function(
+                "xor",
+                &[ethabi::Token::Uint(a), ethabi::Token::Uint(b)],
+                &[],
+            );
 
             let mut res = ethereum_types::U256([
                 a.0[0] ^ b.0[0],
@@ -503,6 +543,7 @@ fn uint() {
                     ethabi::Token::Uint(a),
                     ethabi::Token::Uint(ethereum_types::U256::from(r)),
                 ],
+                &[],
             );
 
             let mut res = a.shl(r);
@@ -517,6 +558,7 @@ fn uint() {
                     ethabi::Token::Uint(a),
                     ethabi::Token::Uint(ethereum_types::U256::from(r)),
                 ],
+                &[],
             );
 
             let mut res = a.shr(r);
@@ -617,7 +659,7 @@ fn int() {
             let big_a = eth_to_bigint(&a, width);
             let big_b = eth_to_bigint(&b, width);
 
-            let add = vm.function("add", &[ethabi::Token::Int(a), ethabi::Token::Int(b)]);
+            let add = vm.function("add", &[ethabi::Token::Int(a), ethabi::Token::Int(b)], &[]);
 
             let res = big_a.clone().add(&big_b);
 
@@ -625,26 +667,26 @@ fn int() {
 
             assert_eq!(add, vec![ethabi::Token::Int(res)]);
 
-            let sub = vm.function("sub", &[ethabi::Token::Int(a), ethabi::Token::Int(b)]);
+            let sub = vm.function("sub", &[ethabi::Token::Int(a), ethabi::Token::Int(b)], &[]);
 
             let res = bigint_to_eth(&big_a.clone().sub(&big_b), width);
 
             assert_eq!(sub, vec![ethabi::Token::Int(res)]);
 
-            let mul = vm.function("mul", &[ethabi::Token::Int(a), ethabi::Token::Int(b)]);
+            let mul = vm.function("mul", &[ethabi::Token::Int(a), ethabi::Token::Int(b)], &[]);
 
             let res = bigint_to_eth(&big_a.clone().mul(&big_b), width);
 
             assert_eq!(mul, vec![ethabi::Token::Int(res)]);
 
             if b != ethereum_types::U256::zero() {
-                let div = vm.function("div", &[ethabi::Token::Int(a), ethabi::Token::Int(b)]);
+                let div = vm.function("div", &[ethabi::Token::Int(a), ethabi::Token::Int(b)], &[]);
 
                 let res = bigint_to_eth(&big_a.clone().div(&big_b), width);
 
                 assert_eq!(div, vec![ethabi::Token::Int(res)]);
 
-                let add = vm.function("mod", &[ethabi::Token::Int(a), ethabi::Token::Int(b)]);
+                let add = vm.function("mod", &[ethabi::Token::Int(a), ethabi::Token::Int(b)], &[]);
 
                 let res = big_a.clone().rem(&big_b);
 
@@ -653,7 +695,7 @@ fn int() {
                 assert_eq!(add, vec![ethabi::Token::Int(res)]);
             }
 
-            let or = vm.function("or", &[ethabi::Token::Int(a), ethabi::Token::Int(b)]);
+            let or = vm.function("or", &[ethabi::Token::Int(a), ethabi::Token::Int(b)], &[]);
 
             let mut res = ethereum_types::U256([
                 a.0[0] | b.0[0],
@@ -666,7 +708,7 @@ fn int() {
 
             assert_eq!(or, vec![ethabi::Token::Int(res)]);
 
-            let and = vm.function("and", &[ethabi::Token::Int(a), ethabi::Token::Int(b)]);
+            let and = vm.function("and", &[ethabi::Token::Int(a), ethabi::Token::Int(b)], &[]);
 
             let mut res = ethereum_types::U256([
                 a.0[0] & b.0[0],
@@ -679,7 +721,7 @@ fn int() {
 
             assert_eq!(and, vec![ethabi::Token::Int(res)]);
 
-            let xor = vm.function("xor", &[ethabi::Token::Int(a), ethabi::Token::Int(b)]);
+            let xor = vm.function("xor", &[ethabi::Token::Int(a), ethabi::Token::Int(b)], &[]);
 
             let mut res = ethereum_types::U256([
                 a.0[0] ^ b.0[0],
@@ -700,6 +742,7 @@ fn int() {
                     ethabi::Token::Int(a),
                     ethabi::Token::Uint(ethereum_types::U256::from(r)),
                 ],
+                &[],
             );
 
             let mut res = a.shl(r);
@@ -714,6 +757,7 @@ fn int() {
                     ethabi::Token::Int(a),
                     ethabi::Token::Uint(ethereum_types::U256::from(r)),
                 ],
+                &[],
             );
 
             let res = bigint_to_eth(&big_a.clone().shr(r), width);

@@ -20,6 +20,7 @@ use crate::Target;
 pub type Vars = HashMap<usize, Variable>;
 
 #[derive(Clone)]
+#[allow(clippy::large_enum_variant)]
 pub enum Instr {
     /// Set variable
     Set {
@@ -104,6 +105,7 @@ pub enum Instr {
         value: Option<Expression>,
         gas: Expression,
         salt: Option<Expression>,
+        space: Option<Expression>,
     },
     /// Call external functions. If the call fails, set the success failure
     /// or abort if this is None
@@ -876,8 +878,9 @@ impl ControlFlowGraph {
                 gas,
                 salt,
                 value,
+                space,
             } => format!(
-                "%{}, {} = constructor salt:{} value:{} gas:{} {} #{:?} ({})",
+                "%{}, {} = constructor salt:{} value:{} gas:{} space:{} {} #{:?} ({})",
                 self.vars[res].id.name,
                 match success {
                     Some(i) => format!("%{}", self.vars[i].id.name),
@@ -892,6 +895,10 @@ impl ControlFlowGraph {
                     None => "".to_string(),
                 },
                 self.expr_to_string(contract, ns, gas),
+                match space {
+                    Some(space) => self.expr_to_string(contract, ns, space),
+                    None => "".to_string(),
+                },
                 ns.contracts[*contract_no].name,
                 constructor_no,
                 args.iter()

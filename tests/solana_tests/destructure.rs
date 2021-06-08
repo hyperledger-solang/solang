@@ -17,7 +17,7 @@ fn conditional_destructure() {
 
     vm.constructor("foo", &[]);
 
-    let returns = vm.function("f", &[Token::Bool(true), Token::Bool(true)]);
+    let returns = vm.function("f", &[Token::Bool(true), Token::Bool(true)], &[]);
 
     assert_eq!(
         returns,
@@ -27,7 +27,7 @@ fn conditional_destructure() {
         ]
     );
 
-    let returns = vm.function("f", &[Token::Bool(true), Token::Bool(false)]);
+    let returns = vm.function("f", &[Token::Bool(true), Token::Bool(false)], &[]);
 
     assert_eq!(
         returns,
@@ -37,7 +37,7 @@ fn conditional_destructure() {
         ]
     );
 
-    let returns = vm.function("f", &[Token::Bool(false), Token::Bool(false)]);
+    let returns = vm.function("f", &[Token::Bool(false), Token::Bool(false)], &[]);
 
     assert_eq!(
         returns,
@@ -47,7 +47,7 @@ fn conditional_destructure() {
         ]
     );
 
-    let returns = vm.function("f", &[Token::Bool(false), Token::Bool(true)]);
+    let returns = vm.function("f", &[Token::Bool(false), Token::Bool(true)], &[]);
 
     assert_eq!(
         returns,

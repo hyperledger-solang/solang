@@ -619,6 +619,7 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
         _gas: IntValue<'b>,
         _value: Option<IntValue<'b>>,
         _salt: Option<IntValue<'b>>,
+        _space: Option<IntValue<'b>>,
         _ns: &ast::Namespace,
     ) {
         panic!("generic cannot create new contracts");

@@ -215,6 +215,15 @@ void sol_panic_(const char *, uint64_t, uint64_t, uint64_t);
   }
 
 /**
+ * Seed used to create a program address or passed to sol_invoke_signed
+ */
+typedef struct
+{
+  const uint8_t *addr; /** Seed bytes */
+  uint64_t len;        /** Length of the seed bytes */
+} SolSignerSeed;
+
+/**
  * Structure that the program's entrypoint input data is deserialized into.
  */
 typedef struct
@@ -224,12 +233,15 @@ typedef struct
   uint64_t ka_num;       /** Number of SolAccountInfo entries in `ka` */
   uint64_t ka_cur;
   const SolAccountInfo *ka_last_called;
-  const SolPubkey *account_id;
-  const uint8_t *input;        /** pointer to the instruction data */
-  uint64_t input_len;          /** Length in bytes of the instruction data */
-  const SolPubkey *program_id; /** program_id of the currently executing program */
+  SolPubkey *account_id;
+  const uint8_t *input;  /** pointer to the instruction data */
+  uint64_t input_len;    /** Length in bytes of the instruction data */
+  SolPubkey *program_id; /** program_id of the currently executing program */
   const SolAccountInfo *ka_clock;
   uint32_t contract;
+  const SolPubkey *sender;
+  SolSignerSeed seeds[10];
+  int seeds_len;
 } SolParameters;
 
 /**
@@ -345,7 +357,7 @@ static uint64_t sol_deserialize(
   uint64_t data_len = *(uint64_t *)input;
   input += sizeof(uint64_t);
 
-  if (data_len < SIZE_PUBKEY + sizeof(uint32_t))
+  if (data_len < SIZE_PUBKEY * 2 + sizeof(uint32_t) + 1)
   {
     return ERROR_INVALID_INSTRUCTION_DATA;
   }
@@ -353,9 +365,37 @@ static uint64_t sol_deserialize(
   params->account_id = (SolPubkey *)input;
   input += SIZE_PUBKEY;
   data_len -= SIZE_PUBKEY;
+  params->sender = (SolPubkey *)input;
+  input += SIZE_PUBKEY;
+  data_len -= SIZE_PUBKEY;
+
+  // FIXME: check that sender is a signer
+
   params->contract = *(uint32_t *)input;
   input += sizeof(uint32_t);
   data_len -= sizeof(uint32_t);
+  uint8_t seeds_len = *input;
+  input += 1;
+  data_len -= 1;
+
+  for (int i = 0; i < seeds_len; i++)
+  {
+    uint8_t seed_len = *input;
+    input += 1;
+    data_len -= 1;
+
+    if (data_len < seed_len)
+    {
+      return ERROR_INVALID_INSTRUCTION_DATA;
+    }
+
+    params->seeds[i].len = seed_len;
+    params->seeds[i].addr = input;
+    input += seed_len;
+    data_len -= seed_len;
+  }
+  params->seeds_len = seeds_len;
+
   params->input_len = data_len;
   params->input = input;
   input += data_len;
@@ -413,15 +453,6 @@ typedef struct
   uint8_t *data;            /** Opaque data passed to the instruction processor */
   uint64_t data_len;        /** Length of the data in bytes */
 } SolInstruction;
-
-/**
- * Seed used to create a program address or passed to sol_invoke_signed
- */
-typedef struct
-{
-  const uint8_t *addr; /** Seed bytes */
-  uint64_t len;        /** Length of the seed bytes */
-} SolSignerSeed;
 
 /**
  * Seeds used by a signer to create a program address or passed to

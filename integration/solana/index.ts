@@ -13,6 +13,8 @@ import {
 import fs from 'fs';
 import { AbiItem } from 'web3-utils';
 import { utils } from 'ethers';
+import crypto from 'crypto';
+import { SigningKey } from 'ethers/lib/utils';
 const Web3EthAbi = require('web3-eth-abi');
 
 const default_url: string = "http://localhost:8899";
@@ -36,6 +38,19 @@ export async function establishConnection(): Promise<TestConnection> {
     );
 
     return new TestConnection(connection, payerAccount);
+}
+
+export async function createProgramAddress(program: PublicKey): Promise<any> {
+    while (true) {
+        let seed = crypto.randomBytes(7);
+        let pda: any = undefined;
+
+        await PublicKey.createProgramAddress([seed], program).then(v => { pda = v; }).catch(_ => { });
+
+        if (pda) {
+            return { address: pda, seed };
+        }
+    }
 }
 
 const sleep = (ms: number) => new Promise(res => setTimeout(res, ms));
@@ -126,7 +141,25 @@ class TestConnection {
 class Program {
     constructor(private programId: PublicKey, private contractStorageAccount: Keypair, private abi: string) { }
 
-    async call_constructor(test: TestConnection, contract: string, params: string[]): Promise<void> {
+    encode_seeds(seeds: any[]): Buffer {
+        let seed_encoded = Buffer.alloc(1 + seeds.map(seed => seed.seed.length + 1).reduce((a, b) => a + b, 0));
+
+        seed_encoded.writeUInt8(seeds.length);
+        let offset = 1;
+
+        seeds.forEach((v) => {
+            let seed = v.seed;
+
+            seed_encoded.writeUInt8(seed.length, offset);
+            offset += 1;
+            seed.copy(seed_encoded, offset);
+            offset += seed.length;
+        });
+
+        return seed_encoded;
+    }
+
+    async call_constructor(test: TestConnection, contract: string, params: string[], seeds: any[] = []): Promise<void> {
         let abi: AbiItem | undefined = JSON.parse(this.abi).find((e: AbiItem) => e.type == "constructor");
 
         let inputs = abi?.inputs! || [];
@@ -137,7 +170,9 @@ class Program {
 
         const data = Buffer.concat([
             this.contractStorageAccount.publicKey.toBuffer(),
+            test.payerAccount.publicKey.toBuffer(),
             Buffer.from(hash.substr(2, 8), 'hex'),
+            this.encode_seeds(seeds),
             Buffer.from(input.replace('0x', ''), 'hex')
         ]);
 
@@ -162,22 +197,29 @@ class Program {
         );
     }
 
-    async call_function(test: TestConnection, name: string, params: any[], pubkeys: PublicKey[] = []): Promise<{ [key: string]: any }> {
+    async call_function(test: TestConnection, name: string, params: any[], pubkeys: PublicKey[] = [], seeds: any[] = [], signers: Keypair[] = []): Promise<{ [key: string]: any }> {
         let abi: AbiItem = JSON.parse(this.abi).find((e: AbiItem) => e.name == name);
 
         const input: string = Web3EthAbi.encodeFunctionCall(abi, params);
         const data = Buffer.concat([
             this.contractStorageAccount.publicKey.toBuffer(),
+            test.payerAccount.publicKey.toBuffer(),
             Buffer.from('00000000', 'hex'),
+            this.encode_seeds(seeds),
             Buffer.from(input.replace('0x', ''), 'hex')
         ]);
 
         let debug = 'calling function ' + name + ' [' + params + ']';
 
-        let keys = [
-            { pubkey: this.contractStorageAccount.publicKey, isSigner: false, isWritable: true },
-            { pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false },
-        ];
+        let keys = [];
+
+        seeds.forEach((seed) => {
+            keys.push({ pubkey: seed.address, isSigner: false, isWritable: true });
+        });
+
+        keys.push({ pubkey: this.contractStorageAccount.publicKey, isSigner: false, isWritable: true });
+        keys.push({ pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false });
+        keys.push({ pubkey: PublicKey.default, isSigner: false, isWritable: false });
 
         for (let i = 0; i < pubkeys.length; i++) {
             keys.push({ pubkey: pubkeys[i], isSigner: false, isWritable: true });
@@ -189,10 +231,12 @@ class Program {
             data,
         });
 
+        signers.unshift(test.payerAccount);
+
         await sendAndConfirmTransaction(
             test.connection,
             new Transaction().add(instruction),
-            [test.payerAccount],
+            signers,
             {
                 skipPreflight: false,
                 commitment: 'recent',
@@ -238,7 +282,7 @@ class Program {
         return this.programId;
     }
 
-    get_storage_key(): PublicKey {
-        return this.contractStorageAccount.publicKey;
+    get_storage_keypair(): Keypair {
+        return this.contractStorageAccount;
     }
 }

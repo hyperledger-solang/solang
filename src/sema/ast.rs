@@ -572,6 +572,7 @@ pub enum Expression {
         gas: Box<Expression>,
         value: Option<Box<Expression>>,
         salt: Option<Box<Expression>>,
+        space: Option<Box<Expression>>,
     },
     FormatString(pt::Loc, Vec<(FormatArg, Expression)>),
     Keccak256(pt::Loc, Type, Vec<Expression>),
@@ -923,6 +924,7 @@ impl Expression {
                     gas,
                     value,
                     salt,
+                    space,
                 } => Expression::Constructor {
                     loc: *loc,
                     contract_no: *contract_no,
@@ -931,6 +933,7 @@ impl Expression {
                     value: value.as_ref().map(|e| Box::new(filter(e, ctx))),
                     gas: Box::new(filter(gas, ctx)),
                     salt: salt.as_ref().map(|e| Box::new(filter(e, ctx))),
+                    space: space.as_ref().map(|e| Box::new(filter(e, ctx))),
                 },
                 Expression::Keccak256(loc, ty, args) => {
                     let args = args.iter().map(|e| filter(e, ctx)).collect();

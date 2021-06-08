@@ -79,7 +79,7 @@ fn simple_external_call() {
 
     vm.constructor("bar1", &[]);
 
-    vm.function("test_bar", &[Token::String(String::from("yo"))]);
+    vm.function("test_bar", &[Token::String(String::from("yo"))], &[]);
 
     assert_eq!(vm.printbuf, "bar1 says: yo");
 
@@ -91,13 +91,21 @@ fn simple_external_call() {
 
     vm.constructor("bar0", &[]);
 
-    vm.function("test_bar", &[Token::String(String::from("uncle beau"))]);
+    vm.function(
+        "test_bar",
+        &[Token::String(String::from("uncle beau"))],
+        &[],
+    );
 
     assert_eq!(vm.printbuf, "bar0 says: uncle beau");
 
     vm.printbuf.truncate(0);
 
-    vm.function("test_other", &[Token::FixedBytes(bar1_account.to_vec())]);
+    vm.function(
+        "test_other",
+        &[Token::FixedBytes(bar1_account.to_vec())],
+        &[],
+    );
 
     assert_eq!(vm.printbuf, "bar1 says: cross contract call");
 }
@@ -121,7 +129,11 @@ fn external_call_with_returns() {
 
     vm.constructor("bar1", &[]);
 
-    let res = vm.function("test_bar", &[Token::Int(ethereum_types::U256::from(21))]);
+    let res = vm.function(
+        "test_bar",
+        &[Token::Int(ethereum_types::U256::from(21))],
+        &[],
+    );
 
     assert_eq!(res, vec![Token::Int(ethereum_types::U256::from(24))]);
 
@@ -131,7 +143,11 @@ fn external_call_with_returns() {
 
     vm.constructor("bar0", &[]);
 
-    let res = vm.function("test_other", &[Token::FixedBytes(bar1_account.to_vec())]);
+    let res = vm.function(
+        "test_other",
+        &[Token::FixedBytes(bar1_account.to_vec())],
+        &[],
+    );
 
     assert_eq!(res, vec![Token::Int(ethereum_types::U256::from(15))]);
 }
@@ -151,6 +167,10 @@ fn external_call_with_string_returns() {
                 address a = x.who_am_i();
                 assert(a == address(x));
             }
+
+            function test_sender(bar1 x) public returns (address) {
+                return x.who_is_sender();
+            }
         }
 
         contract bar1 {
@@ -161,12 +181,20 @@ fn external_call_with_string_returns() {
             function who_am_i() public returns (address) {
                 return address(this);
             }
+
+            function who_is_sender() public returns (address) {
+                return msg.sender;
+            }
         }"#,
     );
 
     vm.constructor("bar1", &[]);
 
-    let res = vm.function("test_bar", &[Token::Int(ethereum_types::U256::from(22))]);
+    let res = vm.function(
+        "test_bar",
+        &[Token::Int(ethereum_types::U256::from(22))],
+        &[],
+    );
 
     assert_eq!(res, vec![Token::String(String::from("foo:22"))]);
 
@@ -176,9 +204,27 @@ fn external_call_with_string_returns() {
 
     vm.constructor("bar0", &[]);
 
-    let res = vm.function("test_other", &[Token::FixedBytes(bar1_account.to_vec())]);
+    let bar0_account = vm.stack[0].data;
+
+    let res = vm.function(
+        "test_other",
+        &[Token::FixedBytes(bar1_account.to_vec())],
+        &[],
+    );
 
     assert_eq!(res, vec![Token::String(String::from("foo:7"))]);
 
-    vm.function("test_this", &[Token::FixedBytes(bar1_account.to_vec())]);
+    vm.function(
+        "test_this",
+        &[Token::FixedBytes(bar1_account.to_vec())],
+        &[],
+    );
+
+    let res = vm.function(
+        "test_sender",
+        &[Token::FixedBytes(bar1_account.to_vec())],
+        &[],
+    );
+
+    assert_eq!(res[0], Token::FixedBytes(bar0_account.to_vec()));
 }

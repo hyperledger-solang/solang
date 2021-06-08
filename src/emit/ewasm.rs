@@ -1224,6 +1224,7 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
         _gas: IntValue<'b>,
         value: Option<IntValue<'b>>,
         _salt: Option<IntValue<'b>>,
+        _space: Option<IntValue<'b>>,
         ns: &ast::Namespace,
     ) {
         let resolver_binary = &ns.contracts[contract_no];

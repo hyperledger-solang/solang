@@ -2562,10 +2562,11 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         _gas: IntValue<'b>,
         value: Option<IntValue<'b>>,
         _salt: Option<IntValue<'b>>,
+        space: Option<IntValue<'b>>,
         ns: &ast::Namespace,
     ) {
         // abi encode the arguments. The
-        let mut tys = vec![ast::Type::Bytes(4)];
+        let mut tys = vec![ast::Type::Bytes(4), ast::Type::Bytes(1)];
 
         if let Some(function_no) = constructor_no {
             for param in &ns.functions[function_no].params {
@@ -2573,11 +2574,14 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             }
         };
 
-        let packed = [binary
-            .context
-            .i32_type()
-            .const_int(ns.contracts[contract_no].selector().to_be() as u64, false)
-            .into()];
+        let packed = [
+            binary
+                .context
+                .i32_type()
+                .const_int(ns.contracts[contract_no].selector().to_be() as u64, false)
+                .into(),
+            binary.context.i8_type().const_zero().into(),
+        ];
 
         let encoder = ethabiencoder::EncoderBuilder::new(
             binary, function, false, &packed, args, &tys, true, ns,
@@ -2587,14 +2591,15 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         let address_length = binary
             .context
             .i32_type()
-            .const_int(ns.address_length as u64, false);
+            .const_int(ns.address_length as u64 * 2, false);
 
         let malloc_length = binary
             .builder
             .build_int_add(length, address_length, "malloc_length");
 
         // The format of the payload is:
-        // 32 bytes address (will be filled in by create_contract C function)
+        // 32 bytes recv (will be filled in by create_contract C function)
+        // 32 bytes sender (will be filled in by create_contract C function)
         // 4 bytes contract selector/magic
         // remainder: eth abi encoded constructor arguments
         let payload = binary
@@ -2613,10 +2618,22 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
 
         encoder.finish(binary, function, enc, ns);
 
+        let space = binary.builder.build_int_add(
+            binary.context.i64_type().const_int(
+                ns.contracts[contract_no]
+                    .fixed_layout_size
+                    .to_u64()
+                    .unwrap(),
+                false,
+            ),
+            space.unwrap_or_else(|| binary.context.i64_type().const_int(1024, false)),
+            "space",
+        );
+
         let value = if let Some(value) = value {
             value
         } else {
-            binary.context.i64_type().const_int(0, false)
+            binary.context.i64_type().const_zero()
         };
 
         let sol_params = function.get_last_param().unwrap().into_pointer_value();
@@ -2629,6 +2646,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                     payload.into(),
                     malloc_length.into(),
                     value.into(),
+                    space.into(),
                     sol_params.into(),
                 ],
                 "",

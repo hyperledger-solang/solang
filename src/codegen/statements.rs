@@ -906,6 +906,7 @@ fn try_catch(
             value,
             gas,
             salt,
+            space,
             ..
         } => {
             let address_res = match returns.get(0) {
@@ -920,7 +921,10 @@ fn try_catch(
             let gas = expression(gas, cfg, callee_contract_no, ns, vartab);
             let salt = salt
                 .as_ref()
-                .map(|gas| expression(gas, cfg, callee_contract_no, ns, vartab));
+                .map(|salt| expression(salt, cfg, callee_contract_no, ns, vartab));
+            let space = space
+                .as_ref()
+                .map(|space| expression(space, cfg, callee_contract_no, ns, vartab));
 
             let args = args
                 .iter()
@@ -938,6 +942,7 @@ fn try_catch(
                     value,
                     gas,
                     salt,
+                    space,
                 },
             );
 

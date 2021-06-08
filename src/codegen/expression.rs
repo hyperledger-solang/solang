@@ -318,6 +318,7 @@ pub fn expression(
             value,
             gas,
             salt,
+            space,
         } => {
             let address_res = vartab.temp_anonymous(&Type::Contract(*contract_no));
 
@@ -332,6 +333,9 @@ pub fn expression(
             let salt = salt
                 .as_ref()
                 .map(|salt| expression(&salt, cfg, *contract_no, ns, vartab));
+            let space = space
+                .as_ref()
+                .map(|space| expression(&space, cfg, *contract_no, ns, vartab));
 
             cfg.add(
                 vartab,
@@ -344,6 +348,7 @@ pub fn expression(
                     value,
                     gas,
                     salt,
+                    space,
                 },
             );
 
@@ -1266,11 +1271,24 @@ pub fn emit_function_call(
                         loc: *loc,
                         packed: vec![
                             address,
+                            Expression::Builtin(
+                                *loc,
+                                vec![Type::Address(false)],
+                                Builtin::GetAddress,
+                                Vec::new(),
+                            ),
                             Expression::NumberLiteral(*loc, Type::Bytes(4), BigInt::zero()),
+                            Expression::NumberLiteral(*loc, Type::Bytes(1), BigInt::zero()),
                             args,
                         ],
                         args: Vec::new(),
-                        tys: vec![Type::Address(false), Type::Bytes(4), Type::DynamicBytes],
+                        tys: vec![
+                            Type::Address(false),
+                            Type::Address(false),
+                            Type::Bytes(4),
+                            Type::Bytes(1),
+                            Type::DynamicBytes,
+                        ],
                     },
                     None,
                 )
@@ -1325,7 +1343,9 @@ pub fn emit_function_call(
 
                 let (payload, address) = if ns.target == Target::Solana {
                     tys.insert(0, Type::Address(false));
-                    tys.insert(1, Type::Bytes(4));
+                    tys.insert(1, Type::Address(false));
+                    tys.insert(2, Type::Bytes(4));
+                    tys.insert(3, Type::Bytes(1));
 
                     (
                         Expression::AbiEncode {
@@ -1333,7 +1353,14 @@ pub fn emit_function_call(
                             tys,
                             packed: vec![
                                 address,
+                                Expression::Builtin(
+                                    *loc,
+                                    vec![Type::Address(false)],
+                                    Builtin::GetAddress,
+                                    Vec::new(),
+                                ),
                                 Expression::NumberLiteral(*loc, Type::Bytes(4), BigInt::zero()),
+                                Expression::NumberLiteral(*loc, Type::Bytes(1), BigInt::zero()),
                                 Expression::NumberLiteral(
                                     *loc,
                                     Type::Bytes(4),
