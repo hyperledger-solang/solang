@@ -246,6 +246,7 @@ pub trait TargetRuntime<'a> {
         gas: IntValue<'b>,
         value: Option<IntValue<'b>>,
         salt: Option<IntValue<'b>>,
+        space: Option<IntValue<'b>>,
         ns: &ast::Namespace,
     );
 
@@ -3750,6 +3751,7 @@ pub trait TargetRuntime<'a> {
                         value,
                         gas,
                         salt,
+                        space,
                     } => {
                         let args = &args
                             .iter()
@@ -3766,6 +3768,10 @@ pub trait TargetRuntime<'a> {
                                 .into_int_value()
                         });
                         let salt = salt.as_ref().map(|v| {
+                            self.expression(bin, &v, &w.vars, function, ns)
+                                .into_int_value()
+                        });
+                        let space = space.as_ref().map(|v| {
                             self.expression(bin, &v, &w.vars, function, ns)
                                 .into_int_value()
                         });
@@ -3790,6 +3796,7 @@ pub trait TargetRuntime<'a> {
                             gas,
                             value,
                             salt,
+                            space,
                             ns,
                         );
 

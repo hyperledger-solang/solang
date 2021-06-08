@@ -744,6 +744,7 @@ impl SolangServer {
                 gas,
                 value,
                 salt,
+                space,
             } => {
                 SolangServer::construct_expr(gas, lookup_tbl, symtab, fnc_map, ns);
                 for expp in args {
@@ -754,6 +755,9 @@ impl SolangServer {
                 }
                 if let Some(optsalt) = salt {
                     SolangServer::construct_expr(optsalt, lookup_tbl, symtab, fnc_map, ns);
+                }
+                if let Some(space) = space {
+                    SolangServer::construct_expr(space, lookup_tbl, symtab, fnc_map, ns);
                 }
             }
 

@@ -21,7 +21,7 @@ fn simple() {
 
     vm.printbuf.truncate(0);
 
-    vm.function("test", &[]);
+    vm.function("test", &[], &[]);
 
     assert_eq!(vm.printbuf, "Hello from function");
 }
@@ -72,6 +72,7 @@ fn parameters() {
             ethabi::Token::Uint(ethereum_types::U256::from(10)),
             ethabi::Token::Uint(ethereum_types::U256::from(10)),
         ],
+        &[],
     );
 
     assert_eq!(vm.printbuf, "x is 10");
@@ -84,6 +85,7 @@ fn parameters() {
             ethabi::Token::Uint(ethereum_types::U256::from(99)),
             ethabi::Token::Uint(ethereum_types::U256::from(102)),
         ],
+        &[],
     );
 
     assert_eq!(vm.printbuf, "y is 102");
@@ -105,6 +107,7 @@ fn returns() {
     let returns = vm.function(
         "test",
         &[ethabi::Token::Uint(ethereum_types::U256::from(10))],
+        &[],
     );
 
     assert_eq!(
@@ -126,6 +129,7 @@ fn returns() {
     let returns = vm.function(
         "test",
         &[ethabi::Token::Uint(ethereum_types::U256::from(982451653))],
+        &[],
     );
 
     assert_eq!(
@@ -170,18 +174,18 @@ fn flipper() {
         hex::decode("6fc90ec500000000000000001800000001").unwrap()
     );
 
-    let returns = vm.function("get", &[]);
+    let returns = vm.function("get", &[], &[]);
 
     assert_eq!(returns, vec![ethabi::Token::Bool(true)]);
 
-    vm.function("flip", &[]);
+    vm.function("flip", &[], &[]);
 
     assert_eq!(
         vm.data()[0..17].to_vec(),
         hex::decode("6fc90ec500000000000000001800000000").unwrap()
     );
 
-    let returns = vm.function("get", &[]);
+    let returns = vm.function("get", &[], &[]);
 
     assert_eq!(returns, vec![ethabi::Token::Bool(false)]);
 }

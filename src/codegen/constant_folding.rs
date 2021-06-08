@@ -175,6 +175,7 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
                     value,
                     gas,
                     salt,
+                    space,
                 } => {
                     let args = args
                         .iter()
@@ -187,6 +188,9 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
                     let salt = salt
                         .as_ref()
                         .map(|expr| expression(expr, Some(&vars), &cur, cfg, ns).0);
+                    let space = space
+                        .as_ref()
+                        .map(|expr| expression(expr, Some(&vars), &cur, cfg, ns).0);
 
                     cfg.blocks[block_no].instr[instr_no] = Instr::Constructor {
                         success: *success,
@@ -197,6 +201,7 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
                         value,
                         gas,
                         salt,
+                        space,
                     };
                 }
                 Instr::ExternalCall {

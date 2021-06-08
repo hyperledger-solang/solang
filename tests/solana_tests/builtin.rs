@@ -14,7 +14,7 @@ fn timestamp() {
 
     vm.constructor("timestamp", &[]);
 
-    let returns = vm.function("mr_now", &[]);
+    let returns = vm.function("mr_now", &[], &[]);
 
     assert_eq!(
         returns,

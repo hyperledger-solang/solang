@@ -695,6 +695,7 @@ impl<'a> TargetRuntime<'a> for SabreTarget {
         _gas: IntValue<'b>,
         _value: Option<IntValue<'b>>,
         _salt: Option<IntValue<'b>>,
+        _space: Option<IntValue<'b>>,
         _ns: &ast::Namespace,
     ) {
         panic!("Sabre cannot create new binarys");

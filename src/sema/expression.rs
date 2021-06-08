@@ -2971,6 +2971,7 @@ fn constructor(
             value: call_args.value,
             gas: call_args.gas,
             salt: call_args.salt,
+            space: call_args.space,
         }),
         Err(()) => Err(()),
     }
@@ -3267,6 +3268,7 @@ pub fn constructor_named_args(
                 value: call_args.value,
                 gas: call_args.gas,
                 salt: call_args.salt,
+                space: call_args.space,
             });
         }
     }
@@ -3280,6 +3282,7 @@ pub fn constructor_named_args(
             value: call_args.value,
             gas: call_args.gas,
             salt: call_args.salt,
+            space: call_args.space,
         }),
         1 => Err(()),
         _ => {
@@ -6735,6 +6738,7 @@ struct CallArgs {
     gas: Box<Expression>,
     salt: Option<Box<Expression>>,
     value: Option<Box<Expression>>,
+    space: Option<Box<Expression>>,
 }
 
 /// Parse call arguments for external calls
@@ -6776,6 +6780,7 @@ fn parse_call_args(
         )),
         value: None,
         salt: None,
+        space: None,
     };
 
     for arg in args.values() {
@@ -6828,6 +6833,48 @@ fn parse_call_args(
                 )?;
 
                 res.gas = Box::new(cast(&arg.expr.loc(), expr, &ty, true, ns, diagnostics)?);
+            }
+            "space" => {
+                if ns.target != Target::Solana {
+                    diagnostics.push(Diagnostic::error(
+                        arg.loc,
+                        format!(
+                            "‘space’ not permitted for external calls or constructors on {}",
+                            ns.target
+                        ),
+                    ));
+                    return Err(());
+                }
+
+                if external_call {
+                    diagnostics.push(Diagnostic::error(
+                        arg.loc,
+                        "‘space’ not valid for external calls".to_string(),
+                    ));
+                    return Err(());
+                }
+
+                let ty = Type::Uint(64);
+
+                let expr = expression(
+                    &arg.expr,
+                    file_no,
+                    contract_no,
+                    ns,
+                    symtable,
+                    false,
+                    diagnostics,
+                    Some(&ty),
+                )?;
+
+                res.space = Some(Box::new(cast(
+                    &arg.expr.loc(),
+                    expr,
+                    &ty,
+                    true,
+                    ns,
+                    diagnostics,
+                )?));
             }
             "salt" => {
                 if ns.target == Target::Solana {
