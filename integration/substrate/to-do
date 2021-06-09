@@ -1,0 +1,4 @@
+ - make create_contract work
+ - transfer/balance
+ - block number
+ - selfdestruct/deposit

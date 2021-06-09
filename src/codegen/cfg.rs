@@ -711,7 +711,7 @@ impl ControlFlowGraph {
                 ty.to_string(ns),
             ),
             Instr::SetStorage { ty, value, storage } => format!(
-                "store storage slot({}) ty:{} = %{}",
+                "store storage slot({}) ty:{} = {}",
                 self.expr_to_string(contract, ns, storage),
                 ty.to_string(ns),
                 self.expr_to_string(contract, ns, value),

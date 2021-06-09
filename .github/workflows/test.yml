@@ -127,7 +127,7 @@ jobs:
       uses: actions/checkout@v2
     - uses: actions/setup-node@v1
       with:
-        node-version: '12'
+        node-version: '14'
     - uses: actions/download-artifact@master
       with:
         name: solang-linux
@@ -136,14 +136,43 @@ jobs:
     - run: echo "$(pwd)/bin" >> $GITHUB_PATH
     - run: npm install
       working-directory: ./integration/solana
-    - name: Build Solang contract
+    - name: Build Solang contracts
       run: npm run build
       working-directory: ./integration/solana
     - name: Set github env
       run: echo "RPC_URL=http://solana:8899/" >> $GITHUB_ENV
-    - name: Deploy and test contract
+    - name: Deploy and test contracts
       run: npm run test
       working-directory: ./integration/solana
+
+  substrate:
+    name: Substrate Integration test
+    runs-on: ubuntu-18.04
+    needs: linux
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v2
+      # We can't run substrate as a github actions service, since it requires
+      # command line arguments. See https://github.com/actions/runner/pull/1152
+    - name: Start substrate
+      run: docker run -d -p 9944:9944 parity/substrate:latest --dev --ws-external
+    - uses: actions/setup-node@v1
+      with:
+        node-version: '14'
+    - uses: actions/download-artifact@master
+      with:
+        name: solang-linux
+        path: bin
+    - run: chmod 755 ./bin/solang
+    - run: echo "$(pwd)/bin" >> $GITHUB_PATH
+    - run: npm install
+      working-directory: ./integration/substrate
+    - name: Build Solang contracts
+      run: npm run build
+      working-directory: ./integration/substrate
+    - name: Deploy and test contracts
+      run: npm run test
+      working-directory: ./integration/substrate
 
   burrow:
     name: Burrow Integration test
@@ -160,7 +189,7 @@ jobs:
       uses: actions/checkout@v2
     - uses: actions/setup-node@v1
       with:
-        node-version: '12'
+        node-version: '14'
     - uses: actions/download-artifact@master
       with:
         name: solang-linux

@@ -243,19 +243,21 @@ impl Abi {
 
     /// Returns index to builtin type in registry. Type is added if not already present
     fn builtin_enum_type(&mut self, e: &ast::EnumDecl) -> usize {
+        let mut variants: Vec<EnumVariant> = e
+            .values
+            .iter()
+            .map(|(key, val)| EnumVariant {
+                name: key.to_owned(),
+                discriminant: val.1,
+            })
+            .collect();
+
+        variants.sort_by(|a, b| a.discriminant.partial_cmp(&b.discriminant).unwrap());
+
         self.register_ty(Type::Enum {
             path: vec![e.name.to_owned()],
             def: EnumDef {
-                variant: Enum {
-                    variants: e
-                        .values
-                        .iter()
-                        .map(|(key, val)| EnumVariant {
-                            name: key.to_owned(),
-                            discriminant: val.1,
-                        })
-                        .collect(),
-                },
+                variant: Enum { variants },
             },
         })
     }
@@ -368,7 +370,8 @@ fn gen_abi(contract_no: usize, ns: &ast::Namespace) -> Abi {
         .filter_map(|layout| {
             let var = &ns.contracts[layout.contract_no].variables[layout.var_no];
 
-            if !var.ty.contains_mapping(ns) {
+            // mappings and large types cannot be represented
+            if !var.ty.contains_mapping(ns) && var.ty.fits_in_memory(ns) {
                 Some(StorageLayout {
                     name: var.name.to_string(),
                     layout: LayoutField {

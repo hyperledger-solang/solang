@@ -1142,7 +1142,15 @@ impl SubstrateTarget {
                 };
             }
             ast::Type::Enum(n) => {
-                self.encode_primitive(binary, load, &ns.enums[*n].ty, *data, arg, ns);
+                let arglen = self.encode_primitive(binary, load, &ns.enums[*n].ty, *data, arg, ns);
+
+                *data = unsafe {
+                    binary.builder.build_gep(
+                        *data,
+                        &[binary.context.i32_type().const_int(arglen, false)],
+                        "",
+                    )
+                };
             }
             ast::Type::Array(_, dim) if dim[0].is_some() => {
                 let arg = if load {
@@ -2930,16 +2938,21 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         binary.builder.build_unreachable();
     }
 
-    fn assert_failure<'b>(&self, binary: &'b Binary, data: PointerValue, length: IntValue) {
-        binary.builder.build_call(
-            binary.module.get_function("seal_return").unwrap(),
-            &[
-                binary.context.i32_type().const_int(1, false).into(),
-                data.into(),
-                length.into(),
-            ],
-            "",
+    fn assert_failure<'b>(&self, binary: &'b Binary, _data: PointerValue, _length: IntValue) {
+        // insert "unreachable" instruction; not that build_unreachable() tells the compiler
+        // that this code path is not reachable and may be discarded.
+        let asm_fn = binary.context.void_type().fn_type(&[], false);
+
+        let asm = binary.context.create_inline_asm(
+            asm_fn,
+            "unreachable".to_string(),
+            "".to_string(),
+            true,
+            false,
+            None,
         );
+
+        binary.builder.build_call(asm, &[], "unreachable");
 
         binary.builder.build_unreachable();
     }

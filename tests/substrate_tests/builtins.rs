@@ -924,7 +924,7 @@ fn addmod() {
         }"##,
     );
 
-    runtime.function_expect_return("test", Vec::new(), 1);
+    runtime.function_expect_failure("test", Vec::new());
 
     // bigger numbers (64 bit)
     let mut runtime = build_solidity(
@@ -1012,7 +1012,7 @@ fn mulmod() {
         }"##,
     );
 
-    runtime.function_expect_return("test", Vec::new(), 1);
+    runtime.function_expect_failure("test", Vec::new());
 
     // bigger numbers
     let mut runtime = build_solidity(

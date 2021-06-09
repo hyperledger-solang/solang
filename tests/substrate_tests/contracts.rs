@@ -422,12 +422,7 @@ fn revert_external_call() {
 
     runtime.constructor(0, Vec::new());
 
-    runtime.function_expect_return("test", Vec::new(), 1);
-
-    assert_eq!(
-        runtime.vm.output,
-        RevertReturn(0x08c3_79a0, "The reason why".to_string()).encode()
-    );
+    runtime.function_expect_failure("test", Vec::new());
 }
 
 #[test]
@@ -459,17 +454,9 @@ fn revert_constructor() {
 
     runtime.constructor(0, Vec::new());
 
-    runtime.function_expect_return("test", Vec::new(), 1);
+    runtime.function_expect_failure("test", Vec::new());
 
-    let expected = RevertReturn(0x08c3_79a0, "Hello, World!".to_string()).encode();
-
-    println!(
-        "{} == {}",
-        hex::encode(&runtime.vm.output),
-        hex::encode(&expected)
-    );
-
-    assert_eq!(runtime.vm.output, expected);
+    assert_eq!(runtime.vm.output.len(), 0);
 }
 
 #[test]

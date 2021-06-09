@@ -890,7 +890,9 @@ pub trait TargetRuntime<'a> {
                         ns,
                     );
 
-                    if !field.ty.is_reference_type() {
+                    if !field.ty.is_reference_type()
+                        || matches!(field.ty, ast::Type::String | ast::Type::DynamicBytes)
+                    {
                         *slot = bin.builder.build_int_add(
                             *slot,
                             bin.number_literal(256, &field.ty.storage_slots(ns), ns),
@@ -1064,7 +1066,9 @@ pub trait TargetRuntime<'a> {
                 for (_, field) in ns.structs[*n].fields.iter().enumerate() {
                     self.storage_delete_slot(bin, &field.ty, slot, slot_ptr, function, ns);
 
-                    if !field.ty.is_reference_type() {
+                    if !field.ty.is_reference_type()
+                        || matches!(field.ty, ast::Type::String | ast::Type::DynamicBytes)
+                    {
                         *slot = bin.builder.build_int_add(
                             *slot,
                             bin.number_literal(256, &field.ty.storage_slots(ns), ns),
