@@ -1,0 +1,4 @@
+*.js
+*.contract
+node_modules
+package-lock.json

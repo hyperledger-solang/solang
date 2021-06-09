@@ -1896,9 +1896,9 @@ fn large_index_ty_in_bounds() {
     runtime.constructor(0, Vec::new());
     runtime.function("test", 15u128.encode());
 
-    runtime.function_expect_return("test", 17u128.encode(), 1);
+    runtime.function_expect_failure("test", 17u128.encode());
 
-    runtime.function_expect_return("test", 0xfffffffffffffu128.encode(), 1);
+    runtime.function_expect_failure("test", 0xfffffffffffffu128.encode());
 }
 
 #[test]

@@ -27,7 +27,7 @@ pub fn array_offset(
         Expression::Add(*loc, slot_ty, Box::new(start), Box::new(index))
     } else if (elem_size.clone() & (elem_size.clone() - BigInt::one())) == BigInt::zero() {
         // elem_size is power of 2
-        Expression::ShiftLeft(
+        Expression::Add(
             *loc,
             slot_ty.clone(),
             Box::new(start),
@@ -38,7 +38,7 @@ pub fn array_offset(
                 Box::new(Expression::NumberLiteral(
                     *loc,
                     slot_ty,
-                    BigInt::from_u64(elem_size.bits()).unwrap(),
+                    BigInt::from_u64(elem_size.bits() - 1).unwrap(),
                 )),
             )),
         )

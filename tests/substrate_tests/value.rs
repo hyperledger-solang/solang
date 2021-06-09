@@ -807,7 +807,7 @@ fn selfdestruct() {
     runtime.function("step1", Vec::new());
     assert_eq!(runtime.accounts.get_mut(&runtime.vm.address).unwrap().1, 0);
 
-    runtime.function_expect_return("step2", Vec::new(), 1);
+    runtime.function_expect_failure("step2", Vec::new());
     assert_eq!(
         runtime.accounts.get_mut(&runtime.vm.address).unwrap().1,
         511

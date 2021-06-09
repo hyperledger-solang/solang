@@ -34,23 +34,13 @@ fn revert() {
         }"##,
     );
 
-    runtime.function_expect_return("test", Vec::new(), 1);
+    runtime.function_expect_failure("test", Vec::new());
 
-    assert_eq!(
-        runtime.vm.output,
-        RevertReturn(0x08c3_79a0, "yo!".to_string()).encode()
-    );
+    assert_eq!(runtime.vm.output.len(), 0);
 
-    runtime.function_expect_return("a", Vec::new(), 1);
+    runtime.function_expect_failure("a", Vec::new());
 
-    assert_eq!(
-        runtime.vm.output,
-        RevertReturn(
-            0x08c3_79a0,
-            "revert value has to be passed down the stack".to_string()
-        )
-        .encode()
-    );
+    assert_eq!(runtime.vm.output.len(), 0);
 
     let mut runtime = build_solidity(
         r##"
@@ -61,7 +51,7 @@ fn revert() {
         }"##,
     );
 
-    runtime.function_expect_return("test", Vec::new(), 1);
+    runtime.function_expect_failure("test", Vec::new());
 
     assert_eq!(runtime.vm.output.len(), 0);
 }
@@ -81,12 +71,10 @@ fn require() {
         }"##,
     );
 
-    runtime.function_expect_return("test1", Vec::new(), 1);
+    runtime.function_expect_failure("test1", Vec::new());
 
-    assert_eq!(
-        runtime.vm.output,
-        RevertReturn(0x08c3_79a0, "Program testing can be used to show the presence of bugs, but never to show their absence!".to_string()).encode()
-    );
+    // The reason is lost
+    assert_eq!(runtime.vm.output.len(), 0);
 
     runtime.function("test2", Vec::new());
 
@@ -103,10 +91,10 @@ fn input_wrong_size() {
         }"##,
     );
 
-    runtime.function_expect_return("test", b"A".to_vec(), 1);
+    runtime.function_expect_failure("test", b"A".to_vec());
 
     // the decoder does check if there is too much data
-    runtime.function_expect_return("test", b"ABCDE".to_vec(), 1);
+    runtime.function_expect_failure("test", b"ABCDE".to_vec());
 }
 
 #[test]
@@ -128,7 +116,7 @@ fn external_call_not_exist() {
         }"##,
     );
 
-    runtime.function_expect_return("test", Vec::new(), 1);
+    runtime.function_expect_failure("test", Vec::new());
 }
 
 #[test]
@@ -150,7 +138,7 @@ fn contract_already_exists() {
         }"##,
     );
 
-    runtime.function_expect_return("test", Vec::new(), 1);
+    runtime.function_expect_failure("test", Vec::new());
 
     let mut runtime = build_solidity(
         r##"
@@ -281,7 +269,7 @@ fn try_catch_external_calls() {
         "##,
     );
 
-    runtime.function("test", Vec::new());
+    runtime.function_expect_failure("test", Vec::new());
 
     let ns = parse_and_resolve(
         r##"
@@ -454,7 +442,7 @@ fn try_catch_external_calls() {
         "##,
     );
 
-    runtime.function("test", Vec::new());
+    runtime.function_expect_failure("test", Vec::new());
 
     #[derive(Debug, PartialEq, Encode, Decode)]
     struct Ret(u32);
@@ -512,9 +500,7 @@ fn try_catch_external_calls() {
 
     runtime.function("create_child", Vec::new());
 
-    runtime.function("test", Vec::new());
-
-    assert_eq!(runtime.vm.output, Ret(4000).encode());
+    runtime.function_expect_failure("test", Vec::new());
 }
 
 #[test]
@@ -648,7 +634,7 @@ fn try_catch_constructor() {
         "##,
     );
 
-    runtime.function("test", Vec::new());
+    runtime.function_expect_failure("test", Vec::new());
 
     let ns = parse_and_resolve(
         r##"
@@ -854,7 +840,7 @@ fn payable_functions() {
 
     runtime.constructor(0, Vec::new());
     runtime.vm.value = 1;
-    runtime.function_expect_return("test", Vec::new(), 1);
+    runtime.function_expect_failure("test", Vec::new());
 
     // test both
     let mut runtime = build_solidity(
@@ -869,7 +855,7 @@ fn payable_functions() {
 
     runtime.constructor(0, Vec::new());
     runtime.vm.value = 1;
-    runtime.function_expect_return("test2", Vec::new(), 1);
+    runtime.function_expect_failure("test2", Vec::new());
     runtime.vm.value = 1;
     runtime.function("test", Vec::new());
 
@@ -942,7 +928,7 @@ fn payable_functions() {
     assert_eq!(runtime.vm.output, Ret(3).encode());
 
     runtime.vm.value = 0;
-    runtime.raw_function_return(1, b"abde".to_vec());
+    runtime.raw_function_failure(b"abde".to_vec());
     let mut runtime = build_solidity(
         r##"
         contract c {
@@ -964,7 +950,7 @@ fn payable_functions() {
 
     runtime.constructor(0, Vec::new());
     runtime.vm.value = 1;
-    runtime.raw_function_return(1, b"abde".to_vec());
+    runtime.raw_function_failure(b"abde".to_vec());
 
     runtime.vm.value = 0;
     runtime.raw_function(b"abde".to_vec());

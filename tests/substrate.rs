@@ -505,7 +505,26 @@ impl Externals for TestRuntime {
 
                 self.vm.input = input;
 
-                let ret = self.invoke_call(module);
+                let ret = module.invoke_export("call", &[], self);
+
+                let ret = match ret {
+                    Err(wasmi::Error::Trap(trap)) => match trap.kind() {
+                        TrapKind::Host(host_error) => {
+                            if let Some(ret) = host_error.downcast_ref::<HostCodeReturn>() {
+                                Some(RuntimeValue::I32(ret.0))
+                            } else if host_error.downcast_ref::<HostCodeTerminate>().is_some() {
+                                Some(RuntimeValue::I32(1))
+                            } else {
+                                return Err(trap);
+                            }
+                        }
+                        _ => {
+                            return Err(trap);
+                        }
+                    },
+                    Ok(v) => v,
+                    Err(e) => panic!("fail to invoke call: {}", e),
+                };
 
                 let output = self.vm.output.clone();
 
@@ -655,7 +674,22 @@ impl Externals for TestRuntime {
 
                 self.vm.input = input;
 
-                let ret = self.invoke_deploy(module);
+                let ret = match module.invoke_export("deploy", &[], self) {
+                    Err(wasmi::Error::Trap(trap)) => match trap.kind() {
+                        TrapKind::Host(host_error) => {
+                            if let Some(ret) = host_error.downcast_ref::<HostCodeReturn>() {
+                                Some(RuntimeValue::I32(ret.0))
+                            } else {
+                                return Err(trap);
+                            }
+                        }
+                        _ => {
+                            return Err(trap);
+                        }
+                    },
+                    Ok(v) => v,
+                    Err(e) => panic!("fail to invoke deploy: {}", e),
+                };
 
                 let output = self.vm.output.clone();
 
@@ -1018,21 +1052,23 @@ impl TestRuntime {
         }
     }
 
-    pub fn function_expect_return(&mut self, name: &str, args: Vec<u8>, expected_ret: i32) {
+    pub fn function_expect_failure(&mut self, name: &str, args: Vec<u8>) {
         let m = self.abi.get_function(name).unwrap();
 
         let module = self.create_module(&self.accounts.get(&self.vm.address).unwrap().0);
 
         self.vm.input = m.selector().into_iter().chain(args).collect();
 
-        if let Some(RuntimeValue::I32(ret)) = self.invoke_call(module) {
-            println!(
-                "function_expected_return: got {} expected {}",
-                ret, expected_ret
-            );
-
-            if expected_ret != ret {
-                panic!("non one return")
+        match module.invoke_export("call", &[], self) {
+            Err(wasmi::Error::Trap(trap)) => match trap.kind() {
+                TrapKind::Unreachable => (),
+                _ => panic!("trap: {:?}", trap),
+            },
+            Err(err) => {
+                panic!("unexpected error: {:?}", err);
+            }
+            Ok(v) => {
+                panic!("unexpected return value: {:?}", v);
             }
         }
     }
@@ -1049,16 +1085,21 @@ impl TestRuntime {
         }
     }
 
-    pub fn raw_function_return(&mut self, expect_ret: i32, input: Vec<u8>) {
+    pub fn raw_function_failure(&mut self, input: Vec<u8>) {
         let module = self.create_module(&self.accounts.get(&self.vm.address).unwrap().0);
 
         self.vm.input = input;
 
-        if let Some(RuntimeValue::I32(ret)) = self.invoke_call(module) {
-            println!("got {} expected {}", ret, expect_ret);
-
-            if ret != expect_ret {
-                panic!("return not expected")
+        match module.invoke_export("call", &[], self) {
+            Err(wasmi::Error::Trap(trap)) => match trap.kind() {
+                TrapKind::Unreachable => (),
+                _ => panic!("trap: {:?}", trap),
+            },
+            Err(err) => {
+                panic!("unexpected error: {:?}", err);
+            }
+            Ok(v) => {
+                panic!("unexpected return value: {:?}", v);
             }
         }
     }
