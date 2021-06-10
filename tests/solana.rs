@@ -733,7 +733,10 @@ impl<'a> SyscallObject<UserError> for SyscallInvokeSignedC<'a> {
             .translate_instruction(instruction_addr, memory_mapping)
             .expect("instruction not valid");
 
-        println!("instruction:{:?}", instruction);
+        println!(
+            "sol_invoke_signed_c input:{}",
+            hex::encode(&instruction.data)
+        );
 
         let seeds = question_mark!(
             translate_slice::<SolSignerSeedsC>(

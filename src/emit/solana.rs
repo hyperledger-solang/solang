@@ -2867,6 +2867,61 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                     .left()
                     .unwrap()
             }
+            ast::Expression::Builtin(_, _, ast::Builtin::Sender, _) => {
+                let parameters = binary
+                    .builder
+                    .get_insert_block()
+                    .unwrap()
+                    .get_parent()
+                    .unwrap()
+                    .get_last_param()
+                    .unwrap()
+                    .into_pointer_value();
+
+                let sender = binary
+                    .builder
+                    .build_load(
+                        binary
+                            .builder
+                            .build_struct_gep(parameters, 10, "sender")
+                            .unwrap(),
+                        "sender",
+                    )
+                    .into_pointer_value();
+
+                let value =
+                    binary.build_alloca(function, binary.address_type(ns), "sender_address");
+
+                binary.builder.build_call(
+                    binary.module.get_function("__beNtoleN").unwrap(),
+                    &[
+                        binary
+                            .builder
+                            .build_pointer_cast(
+                                sender,
+                                binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                                "",
+                            )
+                            .into(),
+                        binary
+                            .builder
+                            .build_pointer_cast(
+                                value,
+                                binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                                "",
+                            )
+                            .into(),
+                        binary
+                            .context
+                            .i32_type()
+                            .const_int(ns.address_length as u64, false)
+                            .into(),
+                    ],
+                    "",
+                );
+
+                binary.builder.build_load(value, "sender_address")
+            }
             ast::Expression::Builtin(_, _, ast::Builtin::GetAddress, _) => {
                 let parameters = binary
                     .builder
