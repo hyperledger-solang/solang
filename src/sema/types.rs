@@ -893,6 +893,11 @@ impl Type {
         }
     }
 
+    /// Does this type fit into memory
+    pub fn fits_in_memory(&self, ns: &Namespace) -> bool {
+        self.size_of(ns) < BigInt::from(u16::MAX)
+    }
+
     /// Calculate the alignment
     pub fn align_of(&self, ns: &Namespace) -> usize {
         match self {

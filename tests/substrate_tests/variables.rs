@@ -2,6 +2,50 @@ use crate::{build_solidity, first_error, parse_and_resolve};
 use solang::Target;
 
 #[test]
+fn variable_size() {
+    let ns = parse_and_resolve(
+        "contract x {
+            function foo(int[12131231313213] memory y) public {}
+        }
+        ",
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "type is too large to fit into memory"
+    );
+
+    let ns = parse_and_resolve(
+        "contract x {
+            function foo() public returns (int[12131231313213] memory y) {}
+        }
+        ",
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "type is too large to fit into memory"
+    );
+
+    let ns = parse_and_resolve(
+        "contract x {
+            function foo() public {
+                int[64*1024] memory y;
+            }
+        }
+        ",
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "type is too large to fit into memory"
+    );
+}
+
+#[test]
 fn test_variable_errors() {
     let ns = parse_and_resolve(
         "contract test {
