@@ -840,6 +840,14 @@ pub fn resolve_params(
                         success = false;
                     }
 
+                    if !ty.fits_in_memory(ns) {
+                        diagnostics.push(Diagnostic::error(
+                            p.ty.loc(),
+                            String::from("type is too large to fit into memory"),
+                        ));
+                        success = false;
+                    }
+
                     ty
                 };
 
@@ -942,6 +950,14 @@ pub fn resolve_returns(
                                     r.ty.loc(),
                                     "return type containing mapping must be of type ‘storage’"
                                         .to_string(),
+                                ));
+                                success = false;
+                            }
+
+                            if !ty.fits_in_memory(ns) {
+                                diagnostics.push(Diagnostic::error(
+                                    r.ty.loc(),
+                                    String::from("type is too large to fit into memory"),
                                 ));
                                 success = false;
                             }

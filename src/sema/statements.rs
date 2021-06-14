@@ -6,7 +6,6 @@ use super::expression::{
 };
 use super::symtable::{LoopScopes, Symtable};
 use crate::parser::pt;
-use num_bigint::BigInt;
 use std::collections::HashMap;
 
 pub fn resolve_function_body(
@@ -1395,10 +1394,10 @@ fn resolve_var_decl_ty(
         return Err(());
     }
 
-    if !var_ty.is_contract_storage() && var_ty.size_of(ns) > BigInt::from(1024 * 1024) {
+    if !var_ty.is_contract_storage() && !var_ty.fits_in_memory(ns) {
         diagnostics.push(Diagnostic::error(
             ty.loc(),
-            "type to large to fit into memory".to_string(),
+            "type is too large to fit into memory".to_string(),
         ));
         return Err(());
     }
