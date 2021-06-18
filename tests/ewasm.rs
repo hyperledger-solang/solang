@@ -812,7 +812,7 @@ fn build_solidity(src: &str) -> TestRuntime {
         println!("contract size:{}", v.0.len());
     }
 
-    assert_eq!(res.is_empty(), false);
+    assert!(!res.is_empty());
 
     // resolve
     let (bc, abi) = res.last().unwrap().clone();
