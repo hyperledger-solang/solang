@@ -1230,20 +1230,14 @@ fn expression_values(expr: &Expression, vars: &Variables, ns: &Namespace) -> Has
                                 if l.known_bits[0..l.bits].all() && r.known_bits[0..r.bits].all() {
                                     // constants
                                     known_bits.set_all(true);
-
-                                    Value {
-                                        value: BitArray::new(max_possible.try_into().unwrap()),
-                                        known_bits,
-                                        bits: l.bits,
-                                    }
                                 } else {
                                     known_bits[top_bit + 1..l.bits].set_all(true);
+                                }
 
-                                    Value {
-                                        value: BitArray::new(max_possible.try_into().unwrap()),
-                                        known_bits,
-                                        bits: l.bits,
-                                    }
+                                Value {
+                                    value: BitArray::new(max_possible.try_into().unwrap()),
+                                    known_bits,
+                                    bits: l.bits,
                                 }
                             }
                             _ => {
@@ -1807,9 +1801,9 @@ fn expresson_known_bits() {
     let v = res.iter().next().unwrap();
 
     assert!(!v.all_known());
-    assert_eq!(v.known_bits[0..63].all(), false);
-    assert_eq!(v.known_bits[64..128].all(), true);
-    assert_eq!(v.value.all(), false);
+    assert!(!v.known_bits[0..63].all());
+    assert!(v.known_bits[64..128].all());
+    assert!(!v.value.all());
 
     // sign extend unknown value
     let expr = Expression::SignExt(
@@ -1824,8 +1818,8 @@ fn expresson_known_bits() {
 
     let v = res.iter().next().unwrap();
 
-    assert_eq!(v.known_bits.all(), false);
-    assert_eq!(v.value.all(), false);
+    assert!(!v.known_bits.all());
+    assert!(!v.value.all());
 
     // get the sign.
 
@@ -1861,10 +1855,10 @@ fn expresson_known_bits() {
     assert_eq!(res.len(), 1);
     let v = res.iter().next().unwrap();
 
-    assert_eq!(v.known_bits[0..62].all(), false);
-    assert_eq!(v.known_bits[63..128].all(), true);
-    assert_eq!(v.value[0..62].all(), false);
-    assert_eq!(v.value[63..128].all(), true);
+    assert!(!v.known_bits[0..62].all());
+    assert!(v.known_bits[63..128].all());
+    assert!(!v.value[0..62].all());
+    assert!(v.value[63..128].all());
 
     // test: trunc
     let expr = Expression::Trunc(
@@ -1878,9 +1872,9 @@ fn expresson_known_bits() {
     assert_eq!(res.len(), 1);
     let v = res.iter().next().unwrap();
 
-    assert_eq!(v.known_bits[0..32].all(), false);
-    assert_eq!(v.known_bits[32..256].all(), true);
-    assert_eq!(v.value.all(), false);
+    assert!(!v.known_bits[0..32].all());
+    assert!(v.known_bits[32..256].all());
+    assert!(!v.value.all());
 
     // test: bitwise and
     // lets put unknown in a variable amd
@@ -1904,9 +1898,9 @@ fn expresson_known_bits() {
     assert_eq!(res.len(), 1);
     let v = res.iter().next().unwrap();
 
-    assert_eq!(v.known_bits[0..16].all(), false);
-    assert_eq!(v.known_bits[16..256].all(), true);
-    assert_eq!(v.value.all(), false);
+    assert!(!v.known_bits[0..16].all());
+    assert!(v.known_bits[16..256].all());
+    assert!(!v.value.all());
 
     // test: bitwise xor
     let vars = HashMap::new();
@@ -1931,9 +1925,9 @@ fn expresson_known_bits() {
     assert_eq!(res.len(), 1);
     let v = res.iter().next().unwrap();
 
-    assert_eq!(v.known_bits.all(), true);
-    assert_eq!(v.value[0..24].all(), false);
-    assert_eq!(v.value[24..32].all(), true);
+    assert!(v.known_bits.all());
+    assert!(!v.value[0..24].all());
+    assert!(v.value[24..32].all());
 
     // test: add
     // first try some constants
@@ -1957,7 +1951,7 @@ fn expresson_known_bits() {
     assert_eq!(res.len(), 1);
     let v = res.iter().next().unwrap();
 
-    assert_eq!(v.known_bits.all(), true);
+    assert!(v.known_bits.all());
 
     let mut bs = (123456u32 + 7899900u32).to_le_bytes().to_vec();
     bs.resize(32, 0);
@@ -1981,7 +1975,7 @@ fn expresson_known_bits() {
     assert_eq!(res.len(), 1);
     let v = res.iter().next().unwrap();
 
-    assert_eq!(v.known_bits.all(), false);
+    assert!(!v.known_bits.all());
 
     // add: unknown plus constant
     let expr = Expression::Add(
@@ -2004,8 +1998,8 @@ fn expresson_known_bits() {
     assert_eq!(res.len(), 1);
     let v = res.iter().next().unwrap();
 
-    assert_eq!(v.known_bits[0..17].all(), false);
-    assert_eq!(v.known_bits[17..32].all(), true);
+    assert!(!v.known_bits[0..17].all());
+    assert!(v.known_bits[17..32].all());
     let mut value = BigInt::from_signed_bytes_le(v.value.as_buffer());
 
     // mask off the unknown bits and compare
@@ -2035,7 +2029,7 @@ fn expresson_known_bits() {
     assert_eq!(res.len(), 1);
     let v = res.iter().next().unwrap();
 
-    assert_eq!(v.known_bits.all(), true);
+    assert!(v.known_bits.all());
 
     let mut bs = (123456i32 - -7899900i32).to_le_bytes().to_vec();
     bs.resize(32, 0);
@@ -2064,7 +2058,7 @@ fn expresson_known_bits() {
     let v = res.iter().next().unwrap();
 
     // we can't know anything since the sign extend made L unknown
-    assert_eq!(v.known_bits.all(), false);
+    assert!(!v.known_bits.all());
 
     let mut vars = HashMap::new();
 
@@ -2161,7 +2155,7 @@ fn expresson_known_bits() {
     assert_eq!(res.len(), 1);
     let v = res.iter().next().unwrap();
 
-    assert_eq!(v.known_bits.all(), true);
+    assert!(v.known_bits.all());
 
     let mut bs = (123456i64 * -7899900i64).to_le_bytes().to_vec();
     bs.resize(32, 0xff);
@@ -2189,7 +2183,7 @@ fn expresson_known_bits() {
     assert_eq!(res.len(), 1);
     let v = res.iter().next().unwrap();
 
-    assert_eq!(v.known_bits.all(), true);
+    assert!(v.known_bits.all());
 
     let mut bs = (123456i64 * 7899900i64).to_le_bytes().to_vec();
     bs.resize(32, 0);

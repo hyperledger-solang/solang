@@ -269,7 +269,7 @@ fn serialize_parameters(
 
     for (acc, data) in &vm.account_data {
         //println!("acc:{} {}", hex::encode(acc), hex::encode(&data.0));
-        if seeds.iter().find(|seed| seed.0 == *acc).is_none() {
+        if !seeds.iter().any(|seed| seed.0 == *acc) {
             serialize_account(&mut v, &mut refs, acc, data);
         }
     }
