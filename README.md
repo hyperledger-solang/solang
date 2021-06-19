@@ -6,8 +6,6 @@
 [![license](https://img.shields.io/github/license/hyperledger-labs/solang.svg)](LICENSE)
 [![LoC](https://tokei.rs/b1/github/hyperledger-labs/solang?category=lines)](https://github.com/hyperledger-labs/solang)
 
-[<img align="right" width="640" src="docs/web3_foundation_grants_badge_black.svg" alt="Funded by the web3 foundation">](https://github.com/w3f/Web3-collaboration/blob/master/grants/accepted_grant_applications.md#wave-4)
-
 Welcome to Solang, a new Solidity compiler written in rust which uses
 llvm as the compiler backend. As a result, only the compiler front end
 needs to be written in rust.

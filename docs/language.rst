@@ -1704,6 +1704,9 @@ For external calls, value can be sent along with the call. The callee must be
         }
     }
 
+.. note::
+    The gas cannot be set on Solana for external calls.
+
 
 State mutability
 ________________
@@ -2231,7 +2234,7 @@ _____________________________________________________
 
 .. note::
     The gas or salt cannot be set on Solana. However, when creating a contract
-    on Solana, the size of the new account can be set using the space setting.
+    on Solana, the size of the new account can be set using `space:`.
 
 When a new contract is created, the address for the new contract is a hash of the input
 (the constructor arguments) to the new contract. So, a contract cannot be created twice
