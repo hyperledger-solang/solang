@@ -1,12 +1,6 @@
 Solang Solidity Compiler
 ========================
 
-.. image:: web3_foundation_grants_badge_black.svg
-    :width: 640px
-    :alt: Funded by the web3 foundation
-    :align: center
-    :target: https://github.com/w3f/Web3-collaboration/blob/master/grants/accepted_grant_applications.md#wave-4
-
 Welcome to the Solang Solidity Compiler, the portable Solidity compiler.
 Using Solang, you can compile smart contracts written in
 `Solidity <https://en.wikipedia.org/wiki/Solidity>`_
