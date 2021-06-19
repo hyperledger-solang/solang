@@ -2221,13 +2221,17 @@ The constructor should be declared ``payable`` for this to work.
     If no value is specified, then on Parity Substrate the minimum balance (also know as the
     existential deposit) is sent.
 
-Setting the salt and gas for the new contract
-_____________________________________________
+Setting the salt, gas, and space for the new contract
+_____________________________________________________
 
 .. note::
     `ewasm <https://github.com/ewasm/design/blob/master/eth_interface.md>`_ does not
     yet provide a method for setting the salt or gas for the new contract, so
     these values are ignored.
+
+.. note::
+    The gas or salt cannot be set on Solana. However, when creating a contract
+    on Solana, the size of the new account can be set using the space setting.
 
 When a new contract is created, the address for the new contract is a hash of the input
 (the constructor arguments) to the new contract. So, a contract cannot be created twice
@@ -2254,6 +2258,29 @@ can use. gas is a ``uint64``.
     contract adult {
         function test() public {
             hatchling h = new hatchling{salt: 0, gas: 10000}("luna");
+        }
+    }
+
+When creating contract on Solana, the size of the new account can be specified using
+`space:`. By default, the new account is created with a size of 1 kilobyte (1024 bytes)
+plus the size required for any fixed-size fields. When you specify space, this is
+the space in addition to the fixed-size fields. So, if you specify `space: 0`, then there is
+no space for any dynamicially allocated fields.
+
+.. code-block:: javascript
+
+    contact hatchling {
+        string name;
+
+        constructor(string id) payable {
+            require(id != "", "name must be provided");
+            name = id;
+        }
+    }
+
+    contract adult {
+        function test() public {
+            hatchling h = new hatchling{space: 10240}("luna");
         }
     }
 
