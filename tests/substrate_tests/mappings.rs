@@ -180,6 +180,41 @@ fn basic() {
     );
 
     runtime.function("test", Vec::new());
+
+    let mut runtime = build_solidity(
+        r##"
+        contract Test {
+            using TestLib for TestLib.data;
+
+            TestLib.data libdata;
+
+            function contfunc(uint64 num) public {
+                libdata.libfunc(num);
+            }
+        }
+
+        library TestLib {
+            using TestLib for TestLib.data;
+
+            struct pair {
+                uint64 a;
+                uint64 b;
+            }
+
+            struct data {
+                mapping(uint64 => pair) pairmap;
+            }
+
+            function libfunc(data storage self, uint64 value) internal {
+                self.pairmap[self.pairmap[value].a].a = 1;
+                //self.pairmap[self.pairmap[value].b].b = 2;
+            }
+        }
+        "##,
+    );
+
+    runtime.constructor(0, Vec::new());
+    runtime.function("contfunc", 1u64.encode());
 }
 
 #[test]

@@ -368,7 +368,7 @@ fn gen_abi(contract_no: usize, ns: &ast::Namespace) -> Abi {
         .filter_map(|layout| {
             let var = &ns.contracts[layout.contract_no].variables[layout.var_no];
 
-            if !var.ty.is_mapping() {
+            if !var.ty.contains_mapping(ns) {
                 Some(StorageLayout {
                     name: var.name.to_string(),
                     layout: LayoutField {
