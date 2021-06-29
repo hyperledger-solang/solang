@@ -1047,6 +1047,11 @@ pub fn expression(
 
             Expression::FormatString(*loc, args)
         }
+        Expression::AllocDynamicArray(loc, ty, size, init) => {
+            let size = expression(size, cfg, contract_no, ns, vartab);
+
+            Expression::AllocDynamicArray(*loc, ty.clone(), Box::new(size), init.clone())
+        }
         _ => expr.clone(),
     }
 }

@@ -3505,29 +3505,8 @@ pub fn new(
         diagnostics,
         Some(&Type::Uint(32)),
     )?;
-    let size_ty = size_expr.ty();
 
-    let size_width = match &size_ty {
-        Type::Uint(n) => n,
-        _ => {
-            diagnostics.push(Diagnostic::error(
-                size_loc,
-                format!(
-                    "new size argument must be unsigned integer, not ‘{}’",
-                    size_ty.to_string(ns)
-                ),
-            ));
-            return Err(());
-        }
-    };
-
-    // TODO: should we check an upper bound? Large allocations will fail anyway,
-    // and ethereum solidity does not check at compile time
-    let size = match size_width.cmp(&32) {
-        Ordering::Greater => Expression::Trunc(size_loc, Type::Uint(32), Box::new(size_expr)),
-        Ordering::Less => Expression::ZeroExt(size_loc, Type::Uint(32), Box::new(size_expr)),
-        Ordering::Equal => size_expr,
-    };
+    let size = cast(&size_loc, size_expr, &Type::Uint(32), true, ns, diagnostics)?;
 
     Ok(Expression::AllocDynamicArray(
         *loc,

@@ -761,7 +761,7 @@ fn memory_dynamic_array_new() {
 
     assert_eq!(
         first_error(ns.diagnostics),
-        "new size argument must be unsigned integer, not ‘bytes1’"
+        "implicit conversion to uint32 from bytes1 not allowed"
     );
 
     let ns = parse_and_resolve(
@@ -1896,4 +1896,23 @@ fn large_index_ty_in_bounds() {
     runtime.function_expect_return("test", 17u128.encode(), 1);
 
     runtime.function_expect_return("test", 0xfffffffffffffu128.encode(), 1);
+}
+
+#[test]
+fn alloc_size_from_storage() {
+    let mut runtime = build_solidity(
+        r#"
+        contract Test {
+            uint32 length = 1;
+
+            function contfunc() public view returns (uint64[] memory) {
+                uint64[] memory values = new uint64[](length);
+                return values;
+            }
+        }"#,
+    );
+
+    runtime.constructor(0, Vec::new());
+    runtime.function("contfunc", Vec::new());
+    assert_eq!(runtime.vm.output, vec![0u64].encode());
 }
