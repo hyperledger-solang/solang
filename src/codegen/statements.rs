@@ -1077,7 +1077,13 @@ fn try_catch(
         );
     }
 
-    let set = vartab.pop_dirty_tracker();
+    let mut set = vartab.pop_dirty_tracker();
+    if let Some(pos) = catch_param_pos {
+        set.remove(pos);
+    }
+    if let Some((Some(pos), _, _)) = error {
+        set.remove(pos);
+    }
     cfg.set_phis(finally_block, set);
 
     cfg.set_basic_block(finally_block);
