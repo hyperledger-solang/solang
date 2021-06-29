@@ -677,8 +677,18 @@ fn expression_compare(
         }
         (Expression::Variable(_, _, left), Expression::Variable(_, _, right)) => {
             // let's check that the variable left has the same reaching definitions as right
-            let left = &left_vars.vars[left];
-            let right = &right_vars.vars[right];
+            let left = match left_vars.vars.get(left) {
+                Some(left) => left,
+                None => {
+                    return ExpressionCmp::Unknown;
+                }
+            };
+            let right = match right_vars.vars.get(right) {
+                Some(right) => right,
+                None => {
+                    return ExpressionCmp::Unknown;
+                }
+            };
 
             if left == right {
                 ExpressionCmp::Equal

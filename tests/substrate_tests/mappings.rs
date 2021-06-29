@@ -207,7 +207,7 @@ fn basic() {
 
             function libfunc(data storage self, uint64 value) internal {
                 self.pairmap[self.pairmap[value].a].a = 1;
-                //self.pairmap[self.pairmap[value].b].b = 2;
+                self.pairmap[self.pairmap[value].b].b = 2;
             }
         }
         "##,
