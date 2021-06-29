@@ -1861,7 +1861,7 @@ fn try_catch(
             diagnostics,
         )?;
 
-        finally_reachable &= reachable;
+        finally_reachable |= reachable;
 
         symtable.leave_scope();
 
@@ -1924,7 +1924,7 @@ fn try_catch(
         diagnostics,
     )?;
 
-    finally_reachable &= reachable;
+    finally_reachable |= reachable;
 
     symtable.leave_scope();
 
