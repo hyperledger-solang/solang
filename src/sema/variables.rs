@@ -98,6 +98,7 @@ pub fn var_decl(
 
     let mut is_constant = false;
     let mut visibility: Option<pt::Visibility> = None;
+    let mut initialized = false;
 
     for attr in attrs {
         match &attr {
@@ -178,13 +179,14 @@ pub fn var_decl(
 
     let initializer = if let Some(initializer) = &s.initializer {
         let mut diagnostics = Vec::new();
+        initialized = true;
 
         let res = match expression(
             &initializer,
             file_no,
             contract_no,
             ns,
-            &symtable,
+            symtable,
             is_constant,
             &mut diagnostics,
             Some(&ty),
@@ -250,6 +252,8 @@ pub fn var_decl(
         ty: ty.clone(),
         constant: is_constant,
         initializer,
+        read: false,
+        assigned: initialized,
     };
 
     let pos = if let Some(contract_no) = contract_no {

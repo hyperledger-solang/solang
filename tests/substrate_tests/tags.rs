@@ -184,7 +184,8 @@ fn event_tag() {
         Target::Substrate,
     );
 
-    assert_eq!(ns.diagnostics.len(), 0);
+    //Event never emitted generates a warning
+    assert_eq!(ns.diagnostics.len(), 1);
 
     assert_eq!(ns.events[0].tags[0].tag, "param");
     assert_eq!(ns.events[0].tags[0].value, "asdad");
@@ -208,7 +209,8 @@ fn event_tag() {
         Target::Substrate,
     );
 
-    assert_eq!(ns.diagnostics.len(), 1);
+    //Event never emitted generates a warning
+    assert_eq!(ns.diagnostics.len(), 2);
 
     assert_eq!(ns.events[0].tags[0].tag, "title");
     assert_eq!(ns.events[0].tags[0].value, "foo bar");
@@ -399,7 +401,7 @@ fn functions() {
         Target::Substrate,
     );
 
-    assert_eq!(ns.diagnostics.len(), 2);
+    assert_eq!(ns.diagnostics.len(), 3);
 
     assert_eq!(ns.functions[0].tags[0].tag, "param");
     assert_eq!(ns.functions[0].tags[0].value, "sadad");
@@ -441,7 +443,8 @@ fn variables() {
         Target::Substrate,
     );
 
-    assert_eq!(ns.diagnostics.len(), 2);
+    //Variable 'y' has never been used (one item error in diagnostic)
+    assert_eq!(ns.diagnostics.len(), 3);
 
     assert_eq!(ns.contracts[0].variables[0].tags[0].tag, "notice");
     assert_eq!(ns.contracts[0].variables[0].tags[0].value, "so here we are");

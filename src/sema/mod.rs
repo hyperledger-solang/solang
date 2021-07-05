@@ -21,6 +21,7 @@ mod statements;
 pub mod symtable;
 pub mod tags;
 mod types;
+mod unused_variable;
 mod variables;
 
 use self::contracts::visit_bases;
@@ -30,6 +31,7 @@ use self::functions::{resolve_params, resolve_returns};
 use self::symtable::Symtable;
 use self::variables::var_decl;
 use crate::file_cache::{FileCache, ResolvedFile};
+use crate::sema::unused_variable::{check_unused_events, check_unused_namespace_variables};
 
 pub type ArrayDimension = Option<(pt::Loc, BigInt)>;
 
@@ -39,9 +41,16 @@ pub const SOLANA_BUCKET_SIZE: u64 = 251;
 pub const SOLANA_FIRST_OFFSET: u64 = 16;
 pub const SOLANA_SPARSE_ARRAY_SIZE: u64 = 1024;
 
+/// Performs semantic analysis and checks for unused variables
+pub fn sema(file: ResolvedFile, cache: &mut FileCache, ns: &mut ast::Namespace) {
+    perform_sema(file, cache, ns);
+    check_unused_namespace_variables(ns);
+    check_unused_events(ns);
+}
+
 /// Load a file file from the cache, parse and resolve it. The file must be present in
 /// the cache. This function is recursive for imports.
-pub fn sema(file: ResolvedFile, cache: &mut FileCache, ns: &mut ast::Namespace) {
+pub fn perform_sema(file: ResolvedFile, cache: &mut FileCache, ns: &mut ast::Namespace) {
     let file_no = ns.files.len();
 
     let source_code = cache.get_file_contents(&file.full_path);
@@ -168,7 +177,7 @@ fn resolve_import(
         }
         Ok(file) => {
             if !ns.files.iter().any(|f| *f == file.full_path) {
-                sema(file.clone(), cache, ns);
+                perform_sema(file.clone(), cache, ns);
 
                 // give up if we failed
                 if diagnostics::any_errors(&ns.diagnostics) {
@@ -1469,14 +1478,14 @@ impl ast::Namespace {
         expr: &pt::Expression,
         diagnostics: &mut Vec<ast::Diagnostic>,
     ) -> Result<ArrayDimension, ()> {
-        let symtable = Symtable::new();
+        let mut symtable = Symtable::new();
 
         let size_expr = expression(
             &expr,
             file_no,
             contract_no,
             self,
-            &symtable,
+            &mut symtable,
             true,
             diagnostics,
             Some(&ast::Type::Uint(256)),
