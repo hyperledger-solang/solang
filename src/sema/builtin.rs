@@ -467,7 +467,7 @@ pub fn resolve_call(
     args: &[pt::Expression],
     contract_no: Option<usize>,
     ns: &mut Namespace,
-    symtable: &Symtable,
+    symtable: &mut Symtable,
     is_constant: bool,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Result<Expression, ()> {
@@ -590,7 +590,7 @@ pub fn resolve_method_call(
     args: &[pt::Expression],
     contract_no: Option<usize>,
     ns: &mut Namespace,
-    symtable: &Symtable,
+    symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Result<Expression, ()> {
     // The abi.* functions need special handling, others do not

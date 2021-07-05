@@ -12,6 +12,21 @@ pub struct Variable {
     pub ty: Type,
     pub pos: usize,
     pub slice: bool,
+    pub assigned: bool,
+    pub read: bool,
+    pub usage_type: VariableUsage,
+}
+
+#[derive(Clone)]
+pub enum VariableUsage {
+    Parameter,
+    ReturnVariable,
+    AnonymousReturnVariable,
+    StateVariable,
+    DestructureVariable,
+    TryCatchReturns,
+    TryCatchErrorString,
+    TryCatchErrorBytes,
 }
 
 struct VarScope(HashMap<String, usize>, Option<HashSet<usize>>);
@@ -36,7 +51,14 @@ impl Symtable {
         }
     }
 
-    pub fn add(&mut self, id: &pt::Identifier, ty: Type, ns: &mut Namespace) -> Option<usize> {
+    pub fn add(
+        &mut self,
+        id: &pt::Identifier,
+        ty: Type,
+        ns: &mut Namespace,
+        assigned: bool,
+        usage_type: VariableUsage,
+    ) -> Option<usize> {
         let pos = ns.next_id;
         ns.next_id += 1;
 
@@ -47,6 +69,9 @@ impl Symtable {
                 ty,
                 pos,
                 slice: false,
+                assigned,
+                usage_type,
+                read: false,
             },
         );
 

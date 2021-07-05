@@ -62,6 +62,7 @@ pub struct EventDecl {
     pub fields: Vec<Parameter>,
     pub signature: String,
     pub anonymous: bool,
+    pub used: bool,
 }
 
 impl fmt::Display for EventDecl {
@@ -284,6 +285,8 @@ pub struct Variable {
     pub visibility: pt::Visibility,
     pub constant: bool,
     pub initializer: Option<Expression>,
+    pub assigned: bool,
+    pub read: bool,
 }
 
 #[derive(Clone, PartialEq)]

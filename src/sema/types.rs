@@ -85,6 +85,7 @@ pub fn resolve_typenames<'a>(
                     fields: Vec::new(),
                     anonymous: def.anonymous,
                     signature: String::new(),
+                    used: false,
                 });
 
                 delay.events.push((pos, def, None));
@@ -279,6 +280,7 @@ fn resolve_contract<'a>(
                     fields: Vec::new(),
                     anonymous: s.anonymous,
                     signature: String::new(),
+                    used: false,
                 });
 
                 delay.events.push((pos, s, Some(contract_no)));

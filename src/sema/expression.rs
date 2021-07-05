@@ -22,6 +22,9 @@ use super::eval::eval_const_number;
 use super::format::string_format;
 use super::symtable::Symtable;
 use crate::parser::pt;
+use crate::sema::unused_variable::{
+    assigned_variable, check_function_call, check_var_usage_expression, used_variable,
+};
 use crate::Target;
 use base58::{FromBase58, FromBase58Error};
 
@@ -1312,7 +1315,7 @@ pub fn expression(
     file_no: usize,
     contract_no: Option<usize>,
     ns: &mut Namespace,
-    symtable: &Symtable,
+    symtable: &mut Symtable,
     is_constant: bool,
     diagnostics: &mut Vec<Diagnostic>,
     resolve_to: Option<&Type>,
@@ -1704,6 +1707,8 @@ pub fn expression(
                 resolve_to,
             )?;
 
+            check_var_usage_expression(ns, &left, &right, symtable);
+
             let ty = coerce_int(
                 &left.ty(),
                 &l.loc(),
@@ -1743,6 +1748,8 @@ pub fn expression(
                 diagnostics,
                 resolve_to,
             )?;
+
+            check_var_usage_expression(ns, &left, &right, symtable);
 
             let ty = coerce_int(
                 &left.ty(),
@@ -1784,6 +1791,8 @@ pub fn expression(
                 resolve_to,
             )?;
 
+            check_var_usage_expression(ns, &left, &right, symtable);
+
             let ty = coerce_int(
                 &left.ty(),
                 &l.loc(),
@@ -1823,6 +1832,8 @@ pub fn expression(
                 diagnostics,
                 resolve_to,
             )?;
+
+            check_var_usage_expression(ns, &left, &right, symtable);
 
             let ty = coerce_int(
                 &left.ty(),
@@ -1864,6 +1875,7 @@ pub fn expression(
                 None,
             )?;
 
+            check_var_usage_expression(ns, &left, &right, symtable);
             // left hand side may be bytes/int/uint
             // right hand size may be int/uint
             let _ = get_int_length(&left.ty(), &l.loc(), true, ns, diagnostics)?;
@@ -1900,6 +1912,8 @@ pub fn expression(
                 None,
             )?;
 
+            check_var_usage_expression(ns, &left, &right, symtable);
+
             let left_type = left.ty();
             // left hand side may be bytes/int/uint
             // right hand size may be int/uint
@@ -1935,6 +1949,8 @@ pub fn expression(
                 diagnostics,
                 resolve_to,
             )?;
+
+            check_var_usage_expression(ns, &left, &right, symtable);
 
             let ty = coerce_int(
                 &left.ty(),
@@ -2005,6 +2021,8 @@ pub fn expression(
                 resolve_to,
             )?;
 
+            check_var_usage_expression(ns, &left, &right, symtable);
+
             let ty = coerce_int(
                 &left.ty(),
                 &l.loc(),
@@ -2044,6 +2062,8 @@ pub fn expression(
                 diagnostics,
                 resolve_to,
             )?;
+
+            check_var_usage_expression(ns, &left, &right, symtable);
 
             let ty = coerce_int(
                 &left.ty(),
@@ -2114,6 +2134,8 @@ pub fn expression(
                 resolve_to,
             )?;
 
+            check_var_usage_expression(ns, &base, &exp, symtable);
+
             let base_type = base.ty();
             let exp_type = exp.ty();
 
@@ -2168,6 +2190,7 @@ pub fn expression(
                 None,
             )?;
 
+            check_var_usage_expression(ns, &left, &right, symtable);
             let ty = coerce_int(
                 &left.ty(),
                 &l.loc(),
@@ -2207,6 +2230,7 @@ pub fn expression(
                 None,
             )?;
 
+            check_var_usage_expression(ns, &left, &right, symtable);
             let ty = coerce_int(
                 &left.ty(),
                 &l.loc(),
@@ -2245,6 +2269,7 @@ pub fn expression(
                 diagnostics,
                 None,
             )?;
+            check_var_usage_expression(ns, &left, &right, symtable);
 
             let ty = coerce_int(
                 &left.ty(),
@@ -2284,6 +2309,7 @@ pub fn expression(
                 diagnostics,
                 None,
             )?;
+            check_var_usage_expression(ns, &left, &right, symtable);
 
             let ty = coerce_int(
                 &left.ty(),
@@ -2341,6 +2367,7 @@ pub fn expression(
                 resolve_to,
             )?;
 
+            used_variable(ns, &expr, symtable);
             Ok(Expression::Not(
                 *loc,
                 Box::new(cast(&loc, expr, &Type::Bool, true, ns, diagnostics)?),
@@ -2358,6 +2385,7 @@ pub fn expression(
                 resolve_to,
             )?;
 
+            used_variable(ns, &expr, symtable);
             let expr_ty = expr.ty();
 
             get_int_length(&expr_ty, loc, true, ns, diagnostics)?;
@@ -2388,6 +2416,7 @@ pub fn expression(
                     resolve_to,
                 )?;
 
+                used_variable(ns, &expr, symtable);
                 let expr_type = expr.ty();
 
                 if let Expression::NumberLiteral(_, _, n) = expr {
@@ -2410,6 +2439,7 @@ pub fn expression(
                 diagnostics,
                 resolve_to,
             )?;
+            used_variable(ns, &expr, symtable);
             let expr_type = expr.ty();
 
             get_int_length(&expr_type, loc, false, ns, diagnostics)?;
@@ -2438,6 +2468,7 @@ pub fn expression(
                 diagnostics,
                 resolve_to,
             )?;
+            check_var_usage_expression(ns, &left, &right, symtable);
             let cond = expression(
                 c,
                 file_no,
@@ -2569,6 +2600,7 @@ pub fn expression(
                 diagnostics,
             )?;
 
+            check_function_call(ns, &expr, symtable);
             if expr.tys().len() > 1 {
                 diagnostics.push(Diagnostic::error(
                     *loc,
@@ -2590,26 +2622,41 @@ pub fn expression(
             }
 
             match call.as_ref() {
-                pt::Expression::FunctionCall(_, ty, args) => new(
-                    loc,
-                    ty,
-                    args,
-                    file_no,
-                    contract_no,
-                    ns,
-                    symtable,
-                    diagnostics,
-                ),
-                pt::Expression::NamedFunctionCall(_, ty, args) => constructor_named_args(
-                    loc,
-                    ty,
-                    args,
-                    file_no,
-                    contract_no,
-                    ns,
-                    symtable,
-                    diagnostics,
-                ),
+                pt::Expression::FunctionCall(_, ty, args) => {
+                    let res = new(
+                        loc,
+                        ty,
+                        args,
+                        file_no,
+                        contract_no,
+                        ns,
+                        symtable,
+                        diagnostics,
+                    );
+
+                    if let Ok(exp) = &res {
+                        check_function_call(ns, &exp, symtable);
+                    }
+                    res
+                }
+                pt::Expression::NamedFunctionCall(_, ty, args) => {
+                    let res = constructor_named_args(
+                        loc,
+                        ty,
+                        args,
+                        file_no,
+                        contract_no,
+                        ns,
+                        symtable,
+                        diagnostics,
+                    );
+
+                    if let Ok(exp) = &res {
+                        check_function_call(ns, &exp, symtable);
+                    }
+
+                    res
+                }
                 _ => unreachable!(),
             }
         }
@@ -2681,6 +2728,7 @@ pub fn expression(
                 diagnostics,
             )?;
 
+            check_function_call(ns, &expr, symtable);
             if expr.tys().len() > 1 {
                 diagnostics.push(Diagnostic::error(
                     *loc,
@@ -2711,18 +2759,26 @@ pub fn expression(
             is_constant,
             diagnostics,
         ),
-        pt::Expression::MemberAccess(loc, e, id) => member_access(
-            loc,
-            e,
-            id,
-            file_no,
-            contract_no,
-            ns,
-            symtable,
-            is_constant,
-            diagnostics,
-            resolve_to,
-        ),
+        pt::Expression::MemberAccess(loc, e, id) => {
+            let res = member_access(
+                loc,
+                e,
+                id,
+                file_no,
+                contract_no,
+                ns,
+                symtable,
+                is_constant,
+                diagnostics,
+                resolve_to,
+            );
+
+            if let Ok(exp) = &res {
+                used_variable(ns, &exp, symtable);
+            }
+
+            res
+        }
         pt::Expression::Or(loc, left, right) => {
             let boolty = Type::Bool;
             let l = cast(
@@ -2759,6 +2815,8 @@ pub fn expression(
                 ns,
                 diagnostics,
             )?;
+
+            check_var_usage_expression(ns, &l, &r, symtable);
 
             Ok(Expression::Or(*loc, Box::new(l), Box::new(r)))
         }
@@ -2798,6 +2856,7 @@ pub fn expression(
                 ns,
                 diagnostics,
             )?;
+            check_var_usage_expression(ns, &l, &r, symtable);
 
             Ok(Expression::And(*loc, Box::new(l), Box::new(r)))
         }
@@ -2898,7 +2957,7 @@ fn constructor(
     file_no: usize,
     contract_no: Option<usize>,
     ns: &mut Namespace,
-    symtable: &Symtable,
+    symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Result<Expression, ()> {
     // The current contract cannot be constructed with new. In order to create
@@ -2985,7 +3044,7 @@ pub fn match_constructor_to_args(
     contract_no: usize,
     args_contact_no: usize,
     ns: &mut Namespace,
-    symtable: &Symtable,
+    symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Result<(Option<usize>, Vec<Expression>), ()> {
     let marker = diagnostics.len();
@@ -3093,7 +3152,7 @@ pub fn constructor_named_args(
     file_no: usize,
     contract_no: Option<usize>,
     ns: &mut Namespace,
-    symtable: &Symtable,
+    symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Result<Expression, ()> {
     let (ty, call_args, _) = collect_call_args(ty, diagnostics)?;
@@ -3417,7 +3476,7 @@ pub fn new(
     file_no: usize,
     contract_no: Option<usize>,
     ns: &mut Namespace,
-    symtable: &Symtable,
+    symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Result<Expression, ()> {
     let (ty, call_args, call_args_loc) = collect_call_args(ty, diagnostics)?;
@@ -3506,6 +3565,8 @@ pub fn new(
         Some(&Type::Uint(32)),
     )?;
 
+    used_variable(ns, &size_expr, symtable);
+
     let size = cast(&size_loc, size_expr, &Type::Uint(32), true, ns, diagnostics)?;
 
     Ok(Expression::AllocDynamicArray(
@@ -3524,7 +3585,7 @@ fn equal(
     file_no: usize,
     contract_no: Option<usize>,
     ns: &mut Namespace,
-    symtable: &Symtable,
+    symtable: &mut Symtable,
     is_constant: bool,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Result<Expression, ()> {
@@ -3548,6 +3609,8 @@ fn equal(
         diagnostics,
         None,
     )?;
+
+    check_var_usage_expression(ns, &left, &right, symtable);
 
     // Comparing stringliteral against stringliteral
     if let (Expression::BytesLiteral(_, _, l), Expression::BytesLiteral(_, _, r)) = (&left, &right)
@@ -3640,7 +3703,7 @@ fn addition(
     file_no: usize,
     contract_no: Option<usize>,
     ns: &mut Namespace,
-    symtable: &Symtable,
+    symtable: &mut Symtable,
     is_constant: bool,
     diagnostics: &mut Vec<Diagnostic>,
     resolve_to: Option<&Type>,
@@ -3665,6 +3728,7 @@ fn addition(
         diagnostics,
         resolve_to,
     )?;
+    check_var_usage_expression(ns, &left, &right, symtable);
 
     // Concatenate stringliteral with stringliteral
     if let (Expression::BytesLiteral(_, _, l), Expression::BytesLiteral(_, _, r)) = (&left, &right)
@@ -3777,7 +3841,7 @@ pub fn assign_single(
     file_no: usize,
     contract_no: Option<usize>,
     ns: &mut Namespace,
-    symtable: &Symtable,
+    symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Result<Expression, ()> {
     let var = expression(
@@ -3790,6 +3854,7 @@ pub fn assign_single(
         diagnostics,
         None,
     )?;
+    assigned_variable(ns, &var, symtable);
     let var_ty = var.ty();
     let val = expression(
         right,
@@ -3801,6 +3866,7 @@ pub fn assign_single(
         diagnostics,
         Some(var_ty.deref_any()),
     )?;
+    used_variable(ns, &val, symtable);
     match &var {
         Expression::ConstantVariable(loc, _, Some(contract_no), var_no) => {
             diagnostics.push(Diagnostic::error(
@@ -3865,7 +3931,7 @@ fn assign_expr(
     file_no: usize,
     contract_no: Option<usize>,
     ns: &mut Namespace,
-    symtable: &Symtable,
+    symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Result<Expression, ()> {
     let var = expression(
@@ -3878,6 +3944,7 @@ fn assign_expr(
         diagnostics,
         None,
     )?;
+    assigned_variable(ns, &var, symtable);
     let var_ty = var.ty();
 
     let resolve_to = if matches!(
@@ -3899,6 +3966,7 @@ fn assign_expr(
         diagnostics,
         resolve_to,
     )?;
+    used_variable(ns, &set, symtable);
     let set_type = set.ty();
 
     let op = |assign: Expression,
@@ -4044,7 +4112,7 @@ fn incr_decr(
     file_no: usize,
     contract_no: Option<usize>,
     ns: &mut Namespace,
-    symtable: &Symtable,
+    symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Result<Expression, ()> {
     let op = |e: Expression, ty: Type| -> Expression {
@@ -4071,6 +4139,7 @@ fn incr_decr(
         diagnostics,
         None,
     )?;
+    used_variable(ns, &var, symtable);
     let var_ty = var.ty();
 
     match &var {
@@ -4217,7 +4286,7 @@ fn member_access(
     file_no: usize,
     contract_no: Option<usize>,
     ns: &mut Namespace,
-    symtable: &Symtable,
+    symtable: &mut Symtable,
     is_constant: bool,
     diagnostics: &mut Vec<Diagnostic>,
     resolve_to: Option<&Type>,
@@ -4345,6 +4414,7 @@ fn member_access(
     match expr_ty {
         Type::Bytes(n) => {
             if id.name == "length" {
+                used_variable(ns, &expr, symtable);
                 return Ok(Expression::NumberLiteral(
                     *loc,
                     Type::Uint(8),
@@ -4465,9 +4535,9 @@ fn member_access(
 
                     if !is_this {
                         diagnostics.push(Diagnostic::error(
-                                    expr.loc(),
-                                        "substrate can only retrieve balance of this, like ‘address(this).balance’".to_string(),
-                                ));
+                            expr.loc(),
+                            "substrate can only retrieve balance of this, like ‘address(this).balance’".to_string(),
+                        ));
                         return Err(());
                     }
                 }
@@ -4564,7 +4634,7 @@ fn array_subscript(
     file_no: usize,
     contract_no: Option<usize>,
     ns: &mut Namespace,
-    symtable: &Symtable,
+    symtable: &mut Symtable,
     is_constant: bool,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Result<Expression, ()> {
@@ -4692,7 +4762,7 @@ fn struct_literal(
     file_no: usize,
     contract_no: Option<usize>,
     ns: &mut Namespace,
-    symtable: &Symtable,
+    symtable: &mut Symtable,
     is_constant: bool,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Result<Expression, ()> {
@@ -4751,7 +4821,7 @@ fn call_function_type(
     file_no: usize,
     contract_no: Option<usize>,
     ns: &mut Namespace,
-    symtable: &Symtable,
+    symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Result<Expression, ()> {
     let mut function = expression(
@@ -5004,7 +5074,7 @@ pub fn call_position_args(
     virtual_call: bool,
     contract_no: Option<usize>,
     ns: &mut Namespace,
-    symtable: &Symtable,
+    symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Result<Expression, ()> {
     let mut name_matches = 0;
@@ -5141,7 +5211,7 @@ fn function_call_with_named_args(
     virtual_call: bool,
     contract_no: Option<usize>,
     ns: &mut Namespace,
-    symtable: &Symtable,
+    symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Result<Expression, ()> {
     let mut arguments = HashMap::new();
@@ -5300,7 +5370,7 @@ fn named_struct_literal(
     file_no: usize,
     contract_no: Option<usize>,
     ns: &mut Namespace,
-    symtable: &Symtable,
+    symtable: &mut Symtable,
     is_constant: bool,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Result<Expression, ()> {
@@ -5369,7 +5439,7 @@ fn method_call_pos_args(
     file_no: usize,
     contract_no: Option<usize>,
     ns: &mut Namespace,
-    symtable: &Symtable,
+    symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Result<Expression, ()> {
     if let pt::Expression::Variable(namespace) = var {
@@ -5670,7 +5740,6 @@ fn method_call_pos_args(
                             return Err(());
                         }
                     };
-
                     return Ok(Expression::Builtin(
                         func.loc,
                         vec![ret_ty],
@@ -6188,7 +6257,7 @@ fn method_call_named_args(
     file_no: usize,
     contract_no: Option<usize>,
     ns: &mut Namespace,
-    symtable: &Symtable,
+    symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Result<Expression, ()> {
     if let pt::Expression::Variable(namespace) = var {
@@ -6530,7 +6599,7 @@ fn resolve_array_literal(
     file_no: usize,
     contract_no: Option<usize>,
     ns: &mut Namespace,
-    symtable: &Symtable,
+    symtable: &mut Symtable,
     is_constant: bool,
     diagnostics: &mut Vec<Diagnostic>,
     resolve_to: Option<&Type>,
@@ -6584,6 +6653,7 @@ fn resolve_array_literal(
             diagnostics,
             Some(&ty),
         )?;
+        used_variable(ns, &other, symtable);
 
         if other.ty() != ty {
             other = cast(&e.loc(), other, &ty, true, ns, diagnostics)?;
@@ -6727,7 +6797,7 @@ fn parse_call_args(
     file_no: usize,
     contract_no: Option<usize>,
     ns: &mut Namespace,
-    symtable: &Symtable,
+    symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Result<CallArgs, ()> {
     let mut args: HashMap<&String, &pt::NamedArgument> = HashMap::new();
@@ -6918,7 +6988,7 @@ pub fn function_call_expr(
     file_no: usize,
     contract_no: Option<usize>,
     ns: &mut Namespace,
-    symtable: &Symtable,
+    symtable: &mut Symtable,
     is_constant: bool,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Result<Expression, ()> {
@@ -7051,7 +7121,7 @@ pub fn named_function_call_expr(
     file_no: usize,
     contract_no: Option<usize>,
     ns: &mut Namespace,
-    symtable: &Symtable,
+    symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Result<Expression, ()> {
     let (ty, call_args, call_args_loc) = collect_call_args(ty, diagnostics)?;
@@ -7147,7 +7217,7 @@ fn mapping_subscript(
     file_no: usize,
     contract_no: Option<usize>,
     ns: &mut Namespace,
-    symtable: &Symtable,
+    symtable: &mut Symtable,
     is_constant: bool,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Result<Expression, ()> {

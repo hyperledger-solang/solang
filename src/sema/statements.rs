@@ -6,6 +6,8 @@ use super::expression::{
 };
 use super::symtable::{LoopScopes, Symtable};
 use crate::parser::pt;
+use crate::sema::symtable::VariableUsage;
+use crate::sema::unused_variable::{check_function_call, used_variable};
 use std::collections::HashMap;
 
 pub fn resolve_function_body(
@@ -23,9 +25,13 @@ pub fn resolve_function_body(
     for (i, p) in def.params.iter().enumerate() {
         let p = p.1.as_ref().unwrap();
         if let Some(ref name) = p.name {
-            if let Some(pos) =
-                symtable.add(name, ns.functions[function_no].params[i].ty.clone(), ns)
-            {
+            if let Some(pos) = symtable.add(
+                name,
+                ns.functions[function_no].params[i].ty.clone(),
+                ns,
+                true,
+                VariableUsage::Parameter,
+            ) {
                 ns.check_shadowing(file_no, contract_no, name);
 
                 symtable.arguments.push(Some(pos));
@@ -74,9 +80,12 @@ pub fn resolve_function_body(
                                 base_no,
                                 contract_no,
                                 ns,
-                                &symtable,
+                                &mut symtable,
                                 &mut diagnostics,
                             ) {
+                                for arg in &args {
+                                    used_variable(ns, arg, &mut symtable);
+                                }
                                 ns.functions[function_no]
                                     .bases
                                     .insert(base_no, (base.loc, constructor_no, args));
@@ -152,7 +161,7 @@ pub fn resolve_function_body(
                     true,
                     contract_no,
                     ns,
-                    &symtable,
+                    &mut symtable,
                     &mut diagnostics,
                 ) {
                     modifiers.push(e);
@@ -176,9 +185,14 @@ pub fn resolve_function_body(
         if let Some(ref name) = p.1.as_ref().unwrap().name {
             return_required = false;
 
-            if let Some(pos) = symtable.add(name, ret.ty.clone(), ns) {
+            if let Some(pos) = symtable.add(
+                name,
+                ret.ty.clone(),
+                ns,
+                false,
+                VariableUsage::ReturnVariable,
+            ) {
                 ns.check_shadowing(file_no, contract_no, name);
-
                 symtable.returns.push(pos);
             }
         } else {
@@ -188,7 +202,15 @@ pub fn resolve_function_body(
                 name: "".to_owned(),
             };
 
-            let pos = symtable.add(&id, ret.ty.clone(), ns).unwrap();
+            let pos = symtable
+                .add(
+                    &id,
+                    ret.ty.clone(),
+                    ns,
+                    true,
+                    VariableUsage::AnonymousReturnVariable,
+                )
+                .unwrap();
 
             symtable.returns.push(pos);
         }
@@ -297,7 +319,9 @@ fn statement(
                 diagnostics,
             )?;
 
+            let mut initialized = false;
             let initializer = if let Some(init) = initializer {
+                initialized = true;
                 let expr = expression(
                     init,
                     file_no,
@@ -308,13 +332,20 @@ fn statement(
                     diagnostics,
                     Some(&var_ty),
                 )?;
+                used_variable(ns, &expr, symtable);
 
                 Some(cast(&expr.loc(), expr, &var_ty, true, ns, diagnostics)?)
             } else {
                 None
             };
 
-            if let Some(pos) = symtable.add(&decl.name, var_ty.clone(), ns) {
+            if let Some(pos) = symtable.add(
+                &decl.name,
+                var_ty.clone(),
+                ns,
+                initialized,
+                VariableUsage::StateVariable,
+            ) {
                 ns.check_shadowing(file_no, contract_no, &decl.name);
 
                 res.push(Statement::VariableDecl(
@@ -398,7 +429,7 @@ fn statement(
                 diagnostics,
                 Some(&Type::Bool),
             )?;
-
+            used_variable(ns, &expr, symtable);
             let cond = cast(&expr.loc(), expr, &Type::Bool, true, ns, diagnostics)?;
 
             symtable.new_scope();
@@ -433,7 +464,7 @@ fn statement(
                 diagnostics,
                 Some(&Type::Bool),
             )?;
-
+            used_variable(ns, &expr, symtable);
             let cond = cast(&expr.loc(), expr, &Type::Bool, true, ns, diagnostics)?;
 
             symtable.new_scope();
@@ -467,6 +498,7 @@ fn statement(
                 diagnostics,
                 Some(&Type::Bool),
             )?;
+            used_variable(ns, &expr, symtable);
 
             let cond = cast(&expr.loc(), expr, &Type::Bool, true, ns, diagnostics)?;
 
@@ -685,6 +717,11 @@ fn statement(
                 return Err(());
             }
 
+            for offset in symtable.returns.iter() {
+                let elem = symtable.vars.get_mut(offset).unwrap();
+                (*elem).assigned = true;
+            }
+
             res.push(Statement::Return(
                 *loc,
                 symtable
@@ -709,6 +746,15 @@ fn statement(
                 ns,
                 diagnostics,
             )?;
+
+            for offset in symtable.returns.iter() {
+                let elem = symtable.vars.get_mut(offset).unwrap();
+                (*elem).assigned = true;
+            }
+
+            for item in &vals {
+                used_variable(ns, item, symtable);
+            }
 
             res.push(Statement::Return(*loc, vals));
 
@@ -861,7 +907,8 @@ fn emit_event(
             let mut temp_diagnostics = Vec::new();
 
             for event_no in &event_nos {
-                let event = &ns.events[*event_no];
+                let event = &mut ns.events[*event_no];
+                event.used = true;
                 if args.len() != event.fields.len() {
                     temp_diagnostics.push(Diagnostic::error(
                         *loc,
@@ -897,6 +944,7 @@ fn emit_event(
                             break;
                         }
                     };
+                    used_variable(ns, &arg, symtable);
 
                     match cast(
                         &arg.loc(),
@@ -956,7 +1004,8 @@ fn emit_event(
             let mut temp_diagnostics = Vec::new();
 
             for event_no in &event_nos {
-                let event = &ns.events[*event_no];
+                let event = &mut ns.events[*event_no];
+                event.used = true;
                 let params_len = event.fields.len();
 
                 if params_len != arguments.len() {
@@ -1021,6 +1070,8 @@ fn emit_event(
                             break;
                         }
                     };
+
+                    used_variable(ns, &arg, symtable);
 
                     match cast(&arg.loc(), arg, &param.ty, true, ns, &mut temp_diagnostics) {
                         Ok(expr) => cast_args.push(expr),
@@ -1156,7 +1207,13 @@ fn destructure(
                 let (ty, ty_loc) =
                     resolve_var_decl_ty(&ty, &storage, file_no, contract_no, ns, diagnostics)?;
 
-                if let Some(pos) = symtable.add(&name, ty.clone(), ns) {
+                if let Some(pos) = symtable.add(
+                    &name,
+                    ty.clone(),
+                    ns,
+                    true,
+                    VariableUsage::DestructureVariable,
+                ) {
                     ns.check_shadowing(file_no, contract_no, &name);
 
                     left_tys.push(Some(ty.clone()));
@@ -1559,27 +1616,37 @@ fn try_catch(
     }
 
     let fcall = match expr {
-        pt::Expression::FunctionCall(loc, ty, args) => function_call_expr(
-            loc,
-            ty,
-            args,
-            file_no,
-            contract_no,
-            ns,
-            symtable,
-            false,
-            diagnostics,
-        )?,
-        pt::Expression::NamedFunctionCall(loc, ty, args) => named_function_call_expr(
-            loc,
-            ty,
-            args,
-            file_no,
-            contract_no,
-            ns,
-            symtable,
-            diagnostics,
-        )?,
+        pt::Expression::FunctionCall(loc, ty, args) => {
+            let res = function_call_expr(
+                loc,
+                ty,
+                args,
+                file_no,
+                contract_no,
+                ns,
+                symtable,
+                false,
+                diagnostics,
+            )?;
+            check_function_call(ns, &res, symtable);
+            res
+        }
+        pt::Expression::NamedFunctionCall(loc, ty, args) => {
+            let res = named_function_call_expr(
+                loc,
+                ty,
+                args,
+                file_no,
+                contract_no,
+                ns,
+                symtable,
+                diagnostics,
+            )?;
+
+            check_function_call(ns, &res, symtable);
+
+            res
+        }
         pt::Expression::New(loc, call) => {
             let mut call = call.as_ref();
 
@@ -1598,26 +1665,36 @@ fn try_catch(
             }
 
             match call {
-                pt::Expression::FunctionCall(_, ty, args) => new(
-                    loc,
-                    ty,
-                    args,
-                    file_no,
-                    contract_no,
-                    ns,
-                    symtable,
-                    diagnostics,
-                )?,
-                pt::Expression::NamedFunctionCall(_, ty, args) => constructor_named_args(
-                    loc,
-                    ty,
-                    args,
-                    file_no,
-                    contract_no,
-                    ns,
-                    symtable,
-                    diagnostics,
-                )?,
+                pt::Expression::FunctionCall(_, ty, args) => {
+                    let res = new(
+                        loc,
+                        ty,
+                        args,
+                        file_no,
+                        contract_no,
+                        ns,
+                        symtable,
+                        diagnostics,
+                    )?;
+                    check_function_call(ns, &res, symtable);
+
+                    res
+                }
+                pt::Expression::NamedFunctionCall(_, ty, args) => {
+                    let res = constructor_named_args(
+                        loc,
+                        ty,
+                        args,
+                        file_no,
+                        contract_no,
+                        ns,
+                        symtable,
+                        diagnostics,
+                    )?;
+                    check_function_call(ns, &res, symtable);
+
+                    res
+                }
                 _ => unreachable!(),
             }
         }
@@ -1737,7 +1814,13 @@ fn try_catch(
                 }
 
                 if let Some(name) = name {
-                    if let Some(pos) = symtable.add(&name, ret_ty.clone(), ns) {
+                    if let Some(pos) = symtable.add(
+                        &name,
+                        ret_ty.clone(),
+                        ns,
+                        false,
+                        VariableUsage::TryCatchReturns,
+                    ) {
                         ns.check_shadowing(file_no, contract_no, &name);
                         params.push((
                             Some(pos),
@@ -1840,7 +1923,13 @@ fn try_catch(
         };
 
         if let Some(name) = &error_stmt.1.name {
-            if let Some(pos) = symtable.add(&name, Type::String, ns) {
+            if let Some(pos) = symtable.add(
+                &name,
+                Type::String,
+                ns,
+                true,
+                VariableUsage::TryCatchErrorString,
+            ) {
                 ns.check_shadowing(file_no, contract_no, &name);
 
                 error_pos = Some(pos);
@@ -1904,7 +1993,9 @@ fn try_catch(
     let mut catch_stmt_resolved = Vec::new();
 
     if let Some(name) = &catch_stmt.0.name {
-        if let Some(pos) = symtable.add(&name, catch_ty, ns) {
+        if let Some(pos) =
+            symtable.add(&name, catch_ty, ns, true, VariableUsage::TryCatchErrorBytes)
+        {
             ns.check_shadowing(file_no, contract_no, &name);
             catch_param_pos = Some(pos);
             catch_param.name = name.name.to_string();

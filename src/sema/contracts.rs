@@ -13,6 +13,7 @@ use super::statements;
 use super::symtable::Symtable;
 use super::variables;
 use super::{ast, SOLANA_FIRST_OFFSET};
+use crate::sema::unused_variable::emit_warning_local_variable;
 use crate::{emit, Target};
 
 impl ast::Contract {
@@ -249,7 +250,7 @@ fn resolve_base_args(
                     .position(|e| e.contract_no == base_no)
                 {
                     if let Some(args) = &base.args {
-                        let symtable = Symtable::new();
+                        let mut symtable = Symtable::new();
 
                         // find constructor which matches this
                         if let Ok((Some(constructor_no), args)) = match_constructor_to_args(
@@ -259,7 +260,7 @@ fn resolve_base_args(
                             base_no,
                             *contract_no,
                             ns,
-                            &symtable,
+                            &mut symtable,
                             &mut diagnostics,
                         ) {
                             ns.contracts[*contract_no].bases[pos].constructor =
@@ -868,6 +869,12 @@ fn resolve_bodies(
             .is_err()
         {
             broken = true;
+        } else {
+            for (_, variable) in &ns.functions[function_no].symtable.vars {
+                if let Some(warning) = emit_warning_local_variable(&variable) {
+                    ns.diagnostics.push(*warning);
+                }
+            }
         }
     }
 

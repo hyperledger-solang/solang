@@ -18,7 +18,7 @@ pub fn string_format(
     file_no: usize,
     contract_no: Option<usize>,
     ns: &mut Namespace,
-    symtable: &Symtable,
+    symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Result<Expression, ()> {
     // first resolve the arguments. We can't say anything about the format string if the args are broken
