@@ -708,6 +708,12 @@ pub fn expression(
                 )
             }
         }
+        Expression::BytesCast(loc, ty, from, e) => Expression::BytesCast(
+            *loc,
+            ty.clone(),
+            from.clone(),
+            Box::new(expression(e, cfg, contract_no, ns, vartab)),
+        ),
         Expression::Load(loc, ty, e) => Expression::Load(
             *loc,
             ty.clone(),

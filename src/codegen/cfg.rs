@@ -616,6 +616,12 @@ impl ControlFlowGraph {
                 ty.to_string(ns),
                 self.expr_to_string(contract, ns, e)
             ),
+            Expression::BytesCast(_, ty, from, e) => format!(
+                "{} from:{} ({})",
+                ty.to_string(ns),
+                from.to_string(ns),
+                self.expr_to_string(contract, ns, e)
+            ),
             Expression::Builtin(_, _, builtin, args) => format!(
                 "(builtin {:?} ({}))",
                 builtin,
