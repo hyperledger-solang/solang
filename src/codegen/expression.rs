@@ -1790,24 +1790,25 @@ fn array_subscript(
             Type::Bytes(array_length) => {
                 let res_ty = Type::Bytes(1);
                 let from_ty = Type::Bytes(*array_length);
+                let index_ty = Type::Uint(*array_length as u16 * 8);
 
                 Expression::Trunc(
                     *loc,
                     res_ty,
                     Box::new(Expression::ShiftRight(
                         *loc,
-                        from_ty.clone(),
+                        from_ty,
                         Box::new(array),
                         // shift by (array_length - 1 - index) * 8
                         Box::new(Expression::ShiftLeft(
                             *loc,
-                            from_ty.clone(),
+                            index_ty.clone(),
                             Box::new(Expression::Subtract(
                                 *loc,
-                                from_ty.clone(),
+                                index_ty.clone(),
                                 Box::new(Expression::NumberLiteral(
                                     *loc,
-                                    from_ty.clone(),
+                                    index_ty.clone(),
                                     BigInt::from_u8(array_length - 1).unwrap(),
                                 )),
                                 Box::new(cast_shift_arg(
@@ -1820,7 +1821,7 @@ fn array_subscript(
                             )),
                             Box::new(Expression::NumberLiteral(
                                 *loc,
-                                from_ty,
+                                index_ty,
                                 BigInt::from_u8(3).unwrap(),
                             )),
                         )),

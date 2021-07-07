@@ -1062,7 +1062,7 @@ fn expression(
         | Expression::FormatString { .. }
         | Expression::InternalFunctionCfg(_) => (expr.clone(), false),
         // nothing else is permitted in cfg
-        _ => unreachable!(),
+        _ => panic!("expr should not be in cfg: {:?}", expr),
     }
 }
 
