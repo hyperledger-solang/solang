@@ -2,7 +2,7 @@ use parity_scale_codec::Encode;
 use parity_scale_codec_derive::{Decode, Encode};
 use rand::Rng;
 
-use crate::{build_solidity, first_error, parse_and_resolve};
+use crate::{build_solidity, first_error, no_errors, parse_and_resolve};
 use solang::Target;
 
 #[derive(Debug, PartialEq, Encode, Decode)]
@@ -1915,4 +1915,35 @@ fn alloc_size_from_storage() {
     runtime.constructor(0, Vec::new());
     runtime.function("contfunc", Vec::new());
     assert_eq!(runtime.vm.output, vec![0u64].encode());
+}
+
+#[test]
+fn lucas() {
+    let ns = parse_and_resolve(
+        r#"contract Test {
+        bytes byteArr;
+        bytes32 baRR;
+
+        function get() public  {
+            string memory s = "Test";
+            byteArr = bytes(s);
+            uint16 a = 1;
+            uint8 b;
+            b = uint8(a);
+
+            uint256 c;
+            c = b;
+            bytes32 b32;
+            b32 = bytes32(byteArr);
+            baRR = bytes32(c);
+            uint i1 = 1;
+            uint i2 = 1;
+            assert(b32[(i1*i2)-i1] == bytes1(baRR));
+        }
+    }
+    "#,
+        Target::Substrate,
+    );
+
+    no_errors(ns.diagnostics);
 }
