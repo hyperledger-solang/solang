@@ -4,7 +4,7 @@
   "description": "Integration tests with Solang and Solana",
   "main": "index.js",
   "scripts": {
-    "test": "tsc; ts-mocha *.spec.ts",
+    "test": "tsc; ts-mocha --parallel *.spec.ts",
     "build": "solang *.sol --target solana -v"
   },
   "author": "Sean Young <sean@mess.org>",

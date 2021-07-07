@@ -4,7 +4,7 @@ import crypto from 'crypto';
 
 describe('Deploy solang contract and test', () => {
     it('external_call', async function () {
-        this.timeout(50000);
+        this.timeout(100000);
 
         let conn = await establishConnection();
 
