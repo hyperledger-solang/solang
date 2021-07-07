@@ -8,11 +8,7 @@ const default_account = 'ABE2314B5D38BE9EA2BEDB8E58345C62FA6636BA';
 
 export async function establishConnection(): Promise<Burrow> {
     let url = process.env.RPC_URL || default_url;
-    let chain = new Burrow(url, default_account);
-
-    console.log('Connection to cluster established:', url);
-
-    return chain;
+    return new Burrow(url, default_account);
 }
 
 describe('Deploy solang contract and test', () => {
