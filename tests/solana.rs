@@ -894,13 +894,6 @@ impl VirtualMachine {
 
         let program = &self.stack[0];
 
-        let mut executable = <dyn Executable<UserError, DefaultInstructionMeter>>::from_elf(
-            &self.account_data[&program.program].data,
-            None,
-            Config::default(),
-        )
-        .expect("should work");
-
         let mut syscall_registry = SyscallRegistry::default();
         syscall_registry
             .register_syscall_by_name(b"sol_log_", SolLog::call)
@@ -926,7 +919,13 @@ impl VirtualMachine {
             .register_syscall_by_name(b"sol_alloc_free_", SyscallAllocFree::call)
             .unwrap();
 
-        executable.set_syscall_registry(syscall_registry);
+        let executable = <dyn Executable<UserError, DefaultInstructionMeter>>::from_elf(
+            &self.account_data[&program.program].data,
+            None,
+            Config::default(),
+            syscall_registry,
+        )
+        .expect("should work");
 
         let mut vm = EbpfVm::<UserError, DefaultInstructionMeter>::new(
             executable.as_ref(),
