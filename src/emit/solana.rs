@@ -2841,7 +2841,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         &self,
         binary: &Binary<'b>,
         expr: &ast::Expression,
-        _vartab: &HashMap<usize, Variable<'b>>,
+        vartab: &HashMap<usize, Variable<'b>>,
         function: FunctionValue<'b>,
         ns: &ast::Namespace,
     ) -> BasicValueEnum<'b> {
@@ -2975,6 +2975,53 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                 );
 
                 binary.builder.build_load(value, "self_address")
+            }
+            ast::Expression::Builtin(_, _, ast::Builtin::SignatureVerify, args) => {
+                assert_eq!(args.len(), 3);
+
+                let address = binary.build_alloca(function, binary.address_type(ns), "address");
+
+                binary.builder.build_store(
+                    address,
+                    self.expression(binary, &args[0], vartab, function, ns)
+                        .into_int_value(),
+                );
+
+                let message = self.expression(binary, &args[1], vartab, function, ns);
+                let signature = self.expression(binary, &args[2], vartab, function, ns);
+
+                let ret = binary
+                    .builder
+                    .build_call(
+                        binary.module.get_function("signature_verify").unwrap(),
+                        &[
+                            binary
+                                .builder
+                                .build_pointer_cast(
+                                    address,
+                                    binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                                    "",
+                                )
+                                .into(),
+                            message,
+                            signature,
+                        ],
+                        "",
+                    )
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap()
+                    .into_int_value();
+
+                binary
+                    .builder
+                    .build_int_compare(
+                        IntPredicate::EQ,
+                        ret,
+                        binary.context.i64_type().const_zero(),
+                        "success",
+                    )
+                    .into()
             }
             _ => unimplemented!(),
         }

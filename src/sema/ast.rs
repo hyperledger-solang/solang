@@ -1195,6 +1195,7 @@ pub enum Builtin {
     AddMod,
     ExternalFunctionAddress,
     ExternalFunctionSelector,
+    SignatureVerify,
 }
 
 #[derive(PartialEq, Clone, Debug)]

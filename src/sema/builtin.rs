@@ -20,7 +20,7 @@ pub struct Prototype {
 }
 
 // A list of all Solidity builtins functions
-static BUILTIN_FUNCTIONS: [Prototype; 23] = [
+static BUILTIN_FUNCTIONS: [Prototype; 24] = [
     Prototype {
         builtin: Builtin::Assert,
         namespace: None,
@@ -255,6 +255,16 @@ static BUILTIN_FUNCTIONS: [Prototype; 23] = [
         target: None,
         doc: "Add first two arguments, and the modulo last argument. Does not overflow",
         // it should be allowed in constant context, but we don't supported that yet
+        constant: false,
+    },
+    Prototype {
+        builtin: Builtin::SignatureVerify,
+        namespace: None,
+        name: "signatureVerify",
+        args: &[Type::Address(false), Type::DynamicBytes, Type::DynamicBytes],
+        ret: &[Type::Bool],
+        target: Some(Target::Solana),
+        doc: "ed25519 signature verification",
         constant: false,
     },
 ];
