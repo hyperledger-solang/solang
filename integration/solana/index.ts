@@ -139,7 +139,7 @@ class TestConnection {
 }
 
 class Program {
-    constructor(private programId: PublicKey, private contractStorageAccount: Keypair, private abi: string) { }
+    constructor(private programId: PublicKey, public contractStorageAccount: Keypair, private abi: string) { }
 
     encode_seeds(seeds: any[]): Buffer {
         let seed_encoded = Buffer.alloc(1 + seeds.map(seed => seed.seed.length + 1).reduce((a, b) => a + b, 0));

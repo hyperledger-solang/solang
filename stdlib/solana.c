@@ -5,6 +5,7 @@
 #include "solana_sdk.h"
 
 extern uint64_t solang_dispatch(const SolParameters *param);
+extern void __be32toleN(uint8_t *from, uint8_t *to, uint32_t length);
 
 // The address 'SysvarC1ock11111111111111111111111111111111' base58 decoded
 static const SolPubkey clock_address = {0x06, 0xa7, 0xd5, 0x17, 0x18, 0xc7, 0x74, 0xc9, 0x28, 0x56, 0x63, 0x98, 0x69, 0x1d, 0x5e, 0xb6, 0x8b, 0x5e, 0xb8, 0xa3, 0x9b, 0x4b, 0x6d, 0x5c, 0x73, 0x55, 0x5b, 0x21, 0x00, 0x00, 0x00, 0x00};
@@ -197,6 +198,20 @@ uint64_t create_contract(uint8_t *input, uint32_t input_len, uint64_t lamports, 
     __memcpy8(input + SIZE_PUBKEY, params->account_id->x, SIZE_PUBKEY / 8);
 
     return sol_invoke_signed_c(&instruction, params->ka, params->ka_num, NULL, 0);
+}
+
+uint64_t signature_verify(uint8_t *address, struct vector *message, struct vector *signature)
+{
+    uint8_t pubkey[SIZE_PUBKEY];
+
+    __be32toleN(address, pubkey, SIZE_PUBKEY);
+
+    if (signature->len != 64)
+    {
+        return ED25519_SIG_CHCKEC_INVALID_SIGNATURE;
+    }
+
+    return sol_ed25519_sig_check(message->data, message->len, signature->data, pubkey);
 }
 
 struct clock_layout

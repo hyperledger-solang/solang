@@ -8,5 +8,6 @@ mod destructure;
 mod hash;
 mod mappings;
 mod primitives;
+mod signature_verify;
 mod simple;
 mod storage;
