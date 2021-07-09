@@ -22,7 +22,7 @@ pub enum VariableUsage {
     Parameter,
     ReturnVariable,
     AnonymousReturnVariable,
-    StateVariable,
+    LocalVariable,
     DestructureVariable,
     TryCatchReturns,
     TryCatchErrorString,

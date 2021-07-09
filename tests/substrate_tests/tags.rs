@@ -401,7 +401,7 @@ fn functions() {
         Target::Substrate,
     );
 
-    assert_eq!(ns.diagnostics.len(), 3);
+    assert_eq!(ns.diagnostics.len(), 5);
 
     assert_eq!(ns.functions[0].tags[0].tag, "param");
     assert_eq!(ns.functions[0].tags[0].value, "sadad");

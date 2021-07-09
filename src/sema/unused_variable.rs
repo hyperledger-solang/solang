@@ -5,7 +5,7 @@ use crate::sema::ast::{
 use crate::sema::symtable::{Symtable, VariableUsage};
 use crate::sema::{ast, symtable};
 
-/// Mark variables as assigned, either in the symbol table (for state variables) or in the
+/// Mark variables as assigned, either in the symbol table (for local variables) or in the
 /// Namespace (for storage variables)
 pub fn assigned_variable(ns: &mut Namespace, exp: &Expression, symtable: &mut Symtable) {
     match &exp {
@@ -29,11 +29,17 @@ pub fn assigned_variable(ns: &mut Namespace, exp: &Expression, symtable: &mut Sy
             used_variable(ns, index, symtable);
         }
 
+        Expression::Trunc(_, _, var)
+        | Expression::Cast(_, _, var)
+        | Expression::BytesCast(_, _, _, var) => {
+            assigned_variable(ns, var, symtable);
+        }
+
         _ => {}
     }
 }
 
-/// Mark variables as used, either in the symbol table (for state variables) or in the
+/// Mark variables as used, either in the symbol table (for local variables) or in the
 /// Namespace (for global constants and storage variables)
 /// The functions handles complex expressions in a recursive fashion, such as array length call,
 /// assign expressions and array subscripts.
@@ -56,10 +62,6 @@ pub fn used_variable(ns: &mut Namespace, exp: &Expression, symtable: &mut Symtab
             ns.constants[*offset].read = true;
         }
 
-        Expression::ZeroExt(_, _, variable) => {
-            used_variable(ns, variable, symtable);
-        }
-
         Expression::StructMember(_, _, str, _) => {
             used_variable(ns, str, symtable);
         }
@@ -71,16 +73,8 @@ pub fn used_variable(ns: &mut Namespace, exp: &Expression, symtable: &mut Symtab
             used_variable(ns, index, symtable);
         }
 
-        Expression::Assign(_, _, assigned, assignee) => {
-            assigned_variable(ns, assigned, symtable);
-            used_variable(ns, assignee, symtable);
-        }
-
-        Expression::DynamicArrayLength(_, array) => {
-            used_variable(ns, array, symtable);
-        }
-
-        Expression::StorageArrayLength {
+        Expression::DynamicArrayLength(_, array)
+        | Expression::StorageArrayLength {
             loc: _,
             ty: _,
             array,
@@ -89,7 +83,12 @@ pub fn used_variable(ns: &mut Namespace, exp: &Expression, symtable: &mut Symtab
             used_variable(ns, array, symtable);
         }
 
-        Expression::StorageLoad(_, _, expr) => {
+        Expression::StorageLoad(_, _, expr)
+        | Expression::SignExt(_, _, expr)
+        | Expression::ZeroExt(_, _, expr)
+        | Expression::Trunc(_, _, expr)
+        | Expression::Cast(_, _, expr)
+        | Expression::BytesCast(_, _, _, expr) => {
             used_variable(ns, expr, symtable);
         }
 
@@ -135,12 +134,12 @@ pub fn check_function_call(ns: &mut Namespace, exp: &Expression, symtable: &mut 
         Expression::ExternalFunctionCallRaw {
             loc: _,
             ty: _,
-            address: function,
+            address,
             args,
             ..
         } => {
             used_variable(ns, args, symtable);
-            check_function_call(ns, function, symtable);
+            used_variable(ns, address, symtable);
         }
 
         Expression::ExternalFunction {
@@ -197,25 +196,25 @@ pub fn check_var_usage_expression(
 }
 
 /// Generate warnings for unused varibles
-fn generate_unused_warning(loc: Loc, text: &String, notes: Vec<Note>) -> Box<Diagnostic> {
-    Box::new(Diagnostic {
+fn generate_unused_warning(loc: Loc, text: &str, notes: Vec<Note>) -> Diagnostic {
+    Diagnostic {
         level: Level::Warning,
         ty: ErrorType::Warning,
         pos: Some(loc),
-        message: text.clone(),
+        message: text.parse().unwrap(),
         notes,
-    })
+    }
 }
 
-/// Emit different warning types according to the state variable usage
-pub fn emit_warning_local_variable(variable: &symtable::Variable) -> Option<Box<Diagnostic>> {
+/// Emit different warning types according to the function variable usage
+pub fn emit_warning_local_variable(variable: &symtable::Variable) -> Option<Diagnostic> {
     match &variable.usage_type {
         VariableUsage::Parameter => {
             if !variable.read {
                 return Some(generate_unused_warning(
                     variable.id.loc,
                     &format!(
-                        "Function parameter '{}' has never been used.",
+                        "function parameter '{}' has never been read",
                         variable.id.name
                     ),
                     vec![],
@@ -229,7 +228,7 @@ pub fn emit_warning_local_variable(variable: &symtable::Variable) -> Option<Box<
                 return Some(generate_unused_warning(
                     variable.id.loc,
                     &format!(
-                        "Return variable '{}' has never been assigned",
+                        "return variable '{}' has never been assigned",
                         variable.id.name
                     ),
                     vec![],
@@ -238,12 +237,12 @@ pub fn emit_warning_local_variable(variable: &symtable::Variable) -> Option<Box<
             None
         }
 
-        VariableUsage::StateVariable => {
+        VariableUsage::LocalVariable => {
             if !variable.assigned && !variable.read {
                 return Some(generate_unused_warning(
                     variable.id.loc,
                     &format!(
-                        "State variable '{}' has never been read nor assigned",
+                        "local variable '{}' has never been read nor assigned",
                         variable.id.name
                     ),
                     vec![],
@@ -252,7 +251,7 @@ pub fn emit_warning_local_variable(variable: &symtable::Variable) -> Option<Box<
                 return Some(generate_unused_warning(
                     variable.id.loc,
                     &format!(
-                        "State variable '{}' has been assigned, but never read.",
+                        "local variable '{}' has been assigned, but never read",
                         variable.id.name
                     ),
                     vec![],
@@ -261,7 +260,7 @@ pub fn emit_warning_local_variable(variable: &symtable::Variable) -> Option<Box<
                 return Some(generate_unused_warning(
                     variable.id.loc,
                     &format!(
-                        "State variable '{}' has never been assigned a value, but has been read.",
+                        "local variable '{}' has never been assigned a value, but has been read",
                         variable.id.name
                     ),
                     vec![],
@@ -275,7 +274,7 @@ pub fn emit_warning_local_variable(variable: &symtable::Variable) -> Option<Box<
                 return Some(generate_unused_warning(
                     variable.id.loc,
                     &format!(
-                        "Destructure variable '{}' has never been used.",
+                        "destructure variable '{}' has never been used",
                         variable.id.name
                     ),
                     vec![],
@@ -290,7 +289,7 @@ pub fn emit_warning_local_variable(variable: &symtable::Variable) -> Option<Box<
                 return Some(generate_unused_warning(
                     variable.id.loc,
                     &format!(
-                        "Try catch returns variable '{}' has never been read.",
+                        "try-catch returns variable '{}' has never been read",
                         variable.id.name
                     ),
                     vec![],
@@ -300,27 +299,54 @@ pub fn emit_warning_local_variable(variable: &symtable::Variable) -> Option<Box<
             None
         }
 
-        VariableUsage::AnonymousReturnVariable
-        | VariableUsage::TryCatchErrorBytes
-        | VariableUsage::TryCatchErrorString => None,
+        VariableUsage::TryCatchErrorBytes => {
+            if !variable.read {
+                return Some(generate_unused_warning(
+                    variable.id.loc,
+                    &format!(
+                        "try-catch error bytes '{}' has never been used",
+                        variable.id.name
+                    ),
+                    vec![],
+                ));
+            }
+
+            None
+        }
+
+        VariableUsage::TryCatchErrorString => {
+            if !variable.read {
+                return Some(generate_unused_warning(
+                    variable.id.loc,
+                    &format!(
+                        "try-catch error string '{}' has never been used",
+                        variable.id.name
+                    ),
+                    vec![],
+                ));
+            }
+
+            None
+        }
+        VariableUsage::AnonymousReturnVariable => None,
     }
 }
 
-/// Emit warnings depending on the state variable usage
-fn emit_warning_contract_variables(variable: &ast::Variable) -> Option<Box<Diagnostic>> {
-    if !variable.assigned && !variable.read {
+/// Emit warnings depending on the storage variable usage
+fn emit_warning_contract_variables(variable: &ast::Variable) -> Option<Diagnostic> {
+    if variable.assigned && !variable.read {
         return Some(generate_unused_warning(
             variable.loc,
             &format!(
-                "Storage variable '{}' has been assigned, but never used.",
+                "storage variable '{}' has been assigned, but never read",
                 variable.name
             ),
             vec![],
         ));
-    } else if variable.assigned && !variable.read {
+    } else if !variable.assigned && !variable.read {
         return Some(generate_unused_warning(
             variable.loc,
-            &format!("Storage variable '{}' has never been used.", variable.name),
+            &format!("storage variable '{}' has never been used", variable.name),
             vec![],
         ));
     }
@@ -335,7 +361,7 @@ pub fn check_unused_namespace_variables(ns: &mut Namespace) {
     for contract in &ns.contracts {
         for variable in &contract.variables {
             if let Some(warning) = emit_warning_contract_variables(variable) {
-                ns.diagnostics.push(*warning);
+                ns.diagnostics.push(warning);
             }
         }
     }
@@ -343,9 +369,9 @@ pub fn check_unused_namespace_variables(ns: &mut Namespace) {
     //Global constants should have been initialized during declaration
     for constant in &ns.constants {
         if !constant.read {
-            ns.diagnostics.push(*generate_unused_warning(
+            ns.diagnostics.push(generate_unused_warning(
                 constant.loc,
-                &format!("Global constant '{}' has never been used.", constant.name),
+                &format!("global constant '{}' has never been used", constant.name),
                 vec![],
             ))
         }
@@ -356,9 +382,9 @@ pub fn check_unused_namespace_variables(ns: &mut Namespace) {
 pub fn check_unused_events(ns: &mut Namespace) {
     for event in &ns.events {
         if !event.used {
-            ns.diagnostics.push(*generate_unused_warning(
+            ns.diagnostics.push(generate_unused_warning(
                 event.loc,
-                &format!("Event '{}' has never been emitted.", event.name),
+                &format!("event '{}' has never been emitted", event.name),
                 vec![],
             ))
         }

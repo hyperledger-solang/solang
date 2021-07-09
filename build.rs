@@ -11,7 +11,7 @@ fn main() {
     let cxxflags = Command::new("llvm-config")
         .args(&["--cxxflags"])
         .output()
-        .unwrap();
+        .expect("could not execute llvm-config");
 
     let cxxflags = String::from_utf8(cxxflags.stdout).unwrap();
 
