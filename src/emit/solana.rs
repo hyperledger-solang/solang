@@ -246,15 +246,7 @@ impl SolanaTarget {
 
     /// Returns the SolAccountInfo of the executing binary
     fn contract_storage_account<'b>(&self, binary: &Binary<'b>) -> PointerValue<'b> {
-        let parameters = binary
-            .builder
-            .get_insert_block()
-            .unwrap()
-            .get_parent()
-            .unwrap()
-            .get_last_param()
-            .unwrap()
-            .into_pointer_value();
+        let parameters = self.sol_parameters(binary);
 
         let ka_cur = binary
             .builder
@@ -267,7 +259,7 @@ impl SolanaTarget {
             )
             .into_int_value();
 
-        unsafe {
+        let account_info = unsafe {
             binary.builder.build_gep(
                 parameters,
                 &[
@@ -277,11 +269,21 @@ impl SolanaTarget {
                 ],
                 "account",
             )
-        }
+        };
+
+        binary.builder.build_pointer_cast(
+            account_info,
+            binary
+                .module
+                .get_struct_type("struct.SolAccountInfo")
+                .unwrap()
+                .ptr_type(AddressSpace::Generic),
+            "account_info",
+        )
     }
 
-    /// Returns the account data of the executing binary
-    fn contract_storage_data<'b>(&self, binary: &Binary<'b>) -> PointerValue<'b> {
+    /// Get the pointer to SolParameters
+    fn sol_parameters<'b>(&self, binary: &Binary<'b>) -> PointerValue<'b> {
         let parameters = binary
             .builder
             .get_insert_block()
@@ -289,8 +291,22 @@ impl SolanaTarget {
             .get_parent()
             .unwrap()
             .get_last_param()
-            .unwrap()
-            .into_pointer_value();
+            .unwrap();
+
+        binary.builder.build_pointer_cast(
+            parameters.into_pointer_value(),
+            binary
+                .module
+                .get_struct_type("struct.SolParameters")
+                .unwrap()
+                .ptr_type(AddressSpace::Generic),
+            "parameters",
+        )
+    }
+
+    /// Returns the account data of the executing binary
+    fn contract_storage_data<'b>(&self, binary: &Binary<'b>) -> PointerValue<'b> {
+        let parameters = self.sol_parameters(binary);
 
         let ka_cur = binary
             .builder
@@ -325,15 +341,7 @@ impl SolanaTarget {
 
     /// Returns the account data length of the executing binary
     fn contract_storage_datalen<'b>(&self, binary: &Binary<'b>) -> IntValue<'b> {
-        let parameters = binary
-            .builder
-            .get_insert_block()
-            .unwrap()
-            .get_parent()
-            .unwrap()
-            .get_last_param()
-            .unwrap()
-            .into_pointer_value();
+        let parameters = self.sol_parameters(binary);
 
         let ka_cur = binary
             .builder
@@ -1053,12 +1061,20 @@ impl SolanaTarget {
 
         let account = self.contract_storage_account(binary);
 
+        let account_data_alloc = binary.module.get_function("account_data_alloc").unwrap();
+
+        let arg1 = binary.builder.build_pointer_cast(
+            account,
+            account_data_alloc.get_type().get_param_types()[0].into_pointer_type(),
+            "",
+        );
+
         // account_data_alloc will return offset = 0 if the string is length 0
         let rc = binary
             .builder
             .build_call(
                 binary.module.get_function("account_data_alloc").unwrap(),
-                &[account.into(), entry_length.into(), offset_ptr.into()],
+                &[arg1.into(), entry_length.into(), offset_ptr.into()],
                 "rc",
             )
             .try_as_basic_value()
@@ -1235,15 +1251,7 @@ impl SolanaTarget {
 
         binary.builder.position_at_end(current_block);
 
-        let parameters = binary
-            .builder
-            .get_insert_block()
-            .unwrap()
-            .get_parent()
-            .unwrap()
-            .get_last_param()
-            .unwrap()
-            .into_pointer_value();
+        let parameters = self.sol_parameters(binary);
 
         let rc = binary
             .builder
@@ -2463,12 +2471,20 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             .build_load(data_offset_ptr, "offset")
             .into_int_value();
 
+        let account_data_realloc = binary.module.get_function("account_data_realloc").unwrap();
+
+        let arg1 = binary.builder.build_pointer_cast(
+            account,
+            account_data_realloc.get_type().get_param_types()[0].into_pointer_type(),
+            "",
+        );
+
         let rc = binary
             .builder
             .build_call(
-                binary.module.get_function("account_data_realloc").unwrap(),
+                account_data_realloc,
                 &[
-                    account.into(),
+                    arg1.into(),
                     offset.into(),
                     length.into(),
                     data_offset_ptr.into(),
@@ -2638,16 +2654,24 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
 
         let sol_params = function.get_last_param().unwrap().into_pointer_value();
 
+        let create_contract = binary.module.get_function("create_contract").unwrap();
+
+        let arg4 = binary.builder.build_pointer_cast(
+            sol_params,
+            create_contract.get_type().get_param_types()[4].into_pointer_type(),
+            "",
+        );
+
         let ret = binary
             .builder
             .build_call(
-                binary.module.get_function("create_contract").unwrap(),
+                create_contract,
                 &[
                     payload.into(),
                     malloc_length.into(),
                     value.into(),
                     space.into(),
-                    sol_params.into(),
+                    arg4.into(),
                 ],
                 "",
             )
@@ -2727,20 +2751,21 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
     ) {
         debug_assert!(address.is_none());
 
-        let parameters = binary
-            .builder
-            .get_insert_block()
-            .unwrap()
-            .get_parent()
-            .unwrap()
-            .get_last_param()
-            .unwrap();
+        let parameters = self.sol_parameters(binary);
+
+        let external_call = binary.module.get_function("external_call").unwrap();
+
+        let arg2 = binary.builder.build_pointer_cast(
+            parameters,
+            external_call.get_type().get_param_types()[2].into_pointer_type(),
+            "",
+        );
 
         let ret = binary
             .builder
             .build_call(
-                binary.module.get_function("external_call").unwrap(),
-                &[payload.into(), payload_len.into(), parameters],
+                external_call,
+                &[payload.into(), payload_len.into(), arg2.into()],
                 "",
             )
             .try_as_basic_value()
@@ -2786,15 +2811,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
 
     /// Get return buffer for external call
     fn return_data<'b>(&self, binary: &Binary<'b>) -> PointerValue<'b> {
-        let parameters = binary
-            .builder
-            .get_insert_block()
-            .unwrap()
-            .get_parent()
-            .unwrap()
-            .get_last_param()
-            .unwrap()
-            .into_pointer_value();
+        let parameters = self.sol_parameters(binary);
 
         // return the account that returned the value
         binary
@@ -2847,36 +2864,25 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
     ) -> BasicValueEnum<'b> {
         match expr {
             ast::Expression::Builtin(_, _, ast::Builtin::Timestamp, _) => {
-                let parameters = binary
-                    .builder
-                    .get_insert_block()
-                    .unwrap()
-                    .get_parent()
-                    .unwrap()
-                    .get_last_param()
-                    .unwrap();
+                let parameters = self.sol_parameters(binary);
+
+                let sol_timestamp = binary.module.get_function("sol_timestamp").unwrap();
+
+                let arg1 = binary.builder.build_pointer_cast(
+                    parameters,
+                    sol_timestamp.get_type().get_param_types()[0].into_pointer_type(),
+                    "",
+                );
 
                 binary
                     .builder
-                    .build_call(
-                        binary.module.get_function("sol_timestamp").unwrap(),
-                        &[parameters],
-                        "timestamp",
-                    )
+                    .build_call(sol_timestamp, &[arg1.into()], "timestamp")
                     .try_as_basic_value()
                     .left()
                     .unwrap()
             }
             ast::Expression::Builtin(_, _, ast::Builtin::Sender, _) => {
-                let parameters = binary
-                    .builder
-                    .get_insert_block()
-                    .unwrap()
-                    .get_parent()
-                    .unwrap()
-                    .get_last_param()
-                    .unwrap()
-                    .into_pointer_value();
+                let parameters = self.sol_parameters(binary);
 
                 let sender = binary
                     .builder
@@ -2923,15 +2929,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                 binary.builder.build_load(value, "sender_address")
             }
             ast::Expression::Builtin(_, _, ast::Builtin::GetAddress, _) => {
-                let parameters = binary
-                    .builder
-                    .get_insert_block()
-                    .unwrap()
-                    .get_parent()
-                    .unwrap()
-                    .get_last_param()
-                    .unwrap()
-                    .into_pointer_value();
+                let parameters = self.sol_parameters(binary);
 
                 let account_id = binary
                     .builder
@@ -2989,11 +2987,24 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
 
                 let message = self.expression(binary, &args[1], vartab, function, ns);
                 let signature = self.expression(binary, &args[2], vartab, function, ns);
+                let signature_verify = binary.module.get_function("signature_verify").unwrap();
+
+                let arg1 = binary.builder.build_pointer_cast(
+                    message.into_pointer_value(),
+                    signature_verify.get_type().get_param_types()[1].into_pointer_type(),
+                    "",
+                );
+
+                let arg2 = binary.builder.build_pointer_cast(
+                    signature.into_pointer_value(),
+                    signature_verify.get_type().get_param_types()[2].into_pointer_type(),
+                    "",
+                );
 
                 let ret = binary
                     .builder
                     .build_call(
-                        binary.module.get_function("signature_verify").unwrap(),
+                        signature_verify,
                         &[
                             binary
                                 .builder
@@ -3003,8 +3014,8 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                                     "",
                                 )
                                 .into(),
-                            message,
-                            signature,
+                            arg1.into(),
+                            arg2.into(),
                         ],
                         "",
                     )
