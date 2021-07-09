@@ -3616,11 +3616,14 @@ pub trait TargetRuntime<'a> {
 
                         if !res.is_empty() {
                             for v in f.returns.iter() {
-                                parms.push(
+                                parms.push(if ns.target == Target::Solana {
+                                    bin.build_alloca(function, bin.llvm_var(&v.ty, ns), &v.name)
+                                        .into()
+                                } else {
                                     bin.builder
                                         .build_alloca(bin.llvm_var(&v.ty, ns), &v.name)
-                                        .into(),
-                                );
+                                        .into()
+                                });
                             }
                         }
 
@@ -5543,6 +5546,31 @@ impl<'a> Binary<'a> {
         }
 
         let res = self.builder.build_alloca(ty, name);
+
+        self.builder.position_at_end(current);
+
+        res
+    }
+
+    fn build_array_alloca<T: BasicType<'a>>(
+        &self,
+        function: inkwell::values::FunctionValue<'a>,
+        ty: T,
+        length: IntValue<'a>,
+        name: &str,
+    ) -> PointerValue<'a> {
+        let entry = function
+            .get_first_basic_block()
+            .expect("function missing entry block");
+        let current = self.builder.get_insert_block().unwrap();
+
+        if let Some(instr) = entry.get_first_instruction() {
+            self.builder.position_before(&instr);
+        } else {
+            self.builder.position_at_end(entry);
+        }
+
+        let res = self.builder.build_array_alloca(ty, length, name);
 
         self.builder.position_at_end(current);
 

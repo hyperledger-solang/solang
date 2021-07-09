@@ -149,12 +149,13 @@ impl SolanaTarget {
 
         for ns in namespaces {
             for contract in &ns.contracts {
-                if !contract.is_concrete() {
-                    continue;
-                }
-
                 // We need a magic number for our contract.
                 target.magic = contract.selector();
+
+                // Ignore abstract contracts or contract names we have already seen
+                if !contract.is_concrete() || contracts.iter().any(|c| c.magic == target.magic) {
+                    continue;
+                }
 
                 target.emit_functions(&mut binary, contract, ns);
 
@@ -3055,7 +3056,8 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             _ => unreachable!(),
         };
 
-        let res = binary.builder.build_array_alloca(
+        let res = binary.build_array_alloca(
+            function,
             binary.context.i8_type(),
             binary.context.i32_type().const_int(hashlen, false),
             "res",
