@@ -766,6 +766,7 @@ impl<'a> TargetRuntime<'a> for SabreTarget {
     fn hash<'b>(
         &self,
         _binary: &Binary<'b>,
+        _function: FunctionValue<'b>,
         _hash: HashTy,
         _input: PointerValue<'b>,
         _input_len: IntValue<'b>,

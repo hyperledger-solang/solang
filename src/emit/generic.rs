@@ -53,49 +53,49 @@ impl GenericTarget {
         binary
     }
 
-    fn declare_externals(&self, contract: &mut Binary) {
-        let void_ty = contract.context.void_type();
-        let u8_ptr = contract.context.i8_type().ptr_type(AddressSpace::Generic);
-        let u32_ty = contract.context.i32_type();
+    fn declare_externals(&self, binary: &mut Binary) {
+        let void_ty = binary.context.void_type();
+        let u8_ptr = binary.context.i8_type().ptr_type(AddressSpace::Generic);
+        let u32_ty = binary.context.i32_type();
 
-        contract.module.add_function(
+        binary.module.add_function(
             "solang_storage_delete",
             void_ty.fn_type(&[u8_ptr.into()], false),
             Some(Linkage::External),
         );
-        contract.module.add_function(
+        binary.module.add_function(
             "solang_storage_set",
             void_ty.fn_type(
                 &[
                     u8_ptr.into(),
                     u8_ptr.into(),
-                    contract.context.i32_type().into(),
+                    binary.context.i32_type().into(),
                 ],
                 false,
             ),
             Some(Linkage::External),
         );
-        contract.module.add_function(
+        binary.module.add_function(
             "solang_storage_size",
             u32_ty.fn_type(&[u8_ptr.into()], false),
             Some(Linkage::External),
         );
-        contract.module.add_function(
+        binary.module.add_function(
             "solang_storage_get",
             void_ty.fn_type(&[u8_ptr.into(), u8_ptr.into()], false),
             Some(Linkage::External),
         );
-        contract.module.add_function(
+        binary.module.add_function(
             "solang_malloc",
-            u8_ptr.fn_type(&[contract.context.i32_type().into()], false),
+            u8_ptr.fn_type(&[binary.context.i32_type().into()], false),
             Some(Linkage::External),
         );
-        contract.module.add_function(
+        binary.module.add_function(
             "solang_print",
             void_ty.fn_type(&[u8_ptr.into(), u32_ty.into()], false),
             Some(Linkage::External),
         );
-        contract.module.add_function(
+        binary.module.add_function(
             "solang_set_return",
             void_ty.fn_type(&[u8_ptr.into(), u32_ty.into()], false),
             Some(Linkage::External),
@@ -207,15 +207,12 @@ impl GenericTarget {
 impl<'a> TargetRuntime<'a> for GenericTarget {
     fn storage_delete_single_slot(
         &self,
-        contract: &Binary,
+        binary: &Binary,
         _function: FunctionValue,
         slot: PointerValue,
     ) {
-        contract.builder.build_call(
-            contract
-                .module
-                .get_function("solang_storage_delete")
-                .unwrap(),
+        binary.builder.build_call(
+            binary.module.get_function("solang_storage_delete").unwrap(),
             &[slot.into()],
             "",
         );
@@ -223,28 +220,28 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
 
     fn set_storage(
         &self,
-        contract: &Binary,
+        binary: &Binary,
         _function: FunctionValue,
         slot: PointerValue,
         dest: PointerValue,
     ) {
         // TODO: check for non-zero
-        contract.builder.build_call(
-            contract.module.get_function("solang_storage_set").unwrap(),
+        binary.builder.build_call(
+            binary.module.get_function("solang_storage_set").unwrap(),
             &[
-                contract
+                binary
                     .builder
                     .build_pointer_cast(
                         slot,
-                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
                         "",
                     )
                     .into(),
-                contract
+                binary
                     .builder
                     .build_pointer_cast(
                         dest,
-                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
                         "",
                     )
                     .into(),
@@ -252,7 +249,7 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
                     .get_element_type()
                     .into_int_type()
                     .size_of()
-                    .const_cast(contract.context.i32_type(), false)
+                    .const_cast(binary.context.i32_type(), false)
                     .into(),
             ],
             "",
@@ -261,25 +258,25 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
 
     fn set_storage_string(
         &self,
-        contract: &Binary<'a>,
+        binary: &Binary<'a>,
         _function: FunctionValue<'a>,
         slot: PointerValue<'a>,
         dest: BasicValueEnum<'a>,
     ) {
         // TODO: check for non-zero
-        contract.builder.build_call(
-            contract.module.get_function("solang_storage_set").unwrap(),
+        binary.builder.build_call(
+            binary.module.get_function("solang_storage_set").unwrap(),
             &[
-                contract
+                binary
                     .builder
                     .build_pointer_cast(
                         slot,
-                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
                         "",
                     )
                     .into(),
-                contract.vector_bytes(dest).into(),
-                contract.vector_len(dest).into(),
+                binary.vector_bytes(dest).into(),
+                binary.vector_len(dest).into(),
             ],
             "",
         );
@@ -287,7 +284,7 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
 
     fn get_storage_string(
         &self,
-        _contract: &Binary<'a>,
+        _binary: &Binary<'a>,
         _function: FunctionValue,
         _slot: PointerValue<'a>,
     ) -> PointerValue<'a> {
@@ -295,7 +292,7 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
     }
     fn get_storage_bytes_subscript(
         &self,
-        _contract: &Binary<'a>,
+        _binary: &Binary<'a>,
         _function: FunctionValue,
         _slot: IntValue<'a>,
         _index: IntValue<'a>,
@@ -304,7 +301,7 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
     }
     fn set_storage_extfunc(
         &self,
-        _contract: &Binary,
+        _binary: &Binary,
         _function: FunctionValue,
         _slot: PointerValue,
         _dest: PointerValue,
@@ -313,7 +310,7 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
     }
     fn get_storage_extfunc(
         &self,
-        _contract: &Binary<'a>,
+        _binary: &Binary<'a>,
         _function: FunctionValue,
         _slot: PointerValue<'a>,
         _ns: &ast::Namespace,
@@ -322,7 +319,7 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
     }
     fn set_storage_bytes_subscript(
         &self,
-        _contract: &Binary,
+        _binary: &Binary,
         _function: FunctionValue,
         _slot: IntValue,
         _index: IntValue,
@@ -332,7 +329,7 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
     }
     fn storage_push(
         &self,
-        _contract: &Binary<'a>,
+        _binary: &Binary<'a>,
         _function: FunctionValue,
         _ty: &ast::Type,
         _slot: IntValue<'a>,
@@ -343,7 +340,7 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
     }
     fn storage_pop(
         &self,
-        _contract: &Binary<'a>,
+        _binary: &Binary<'a>,
         _function: FunctionValue,
         _ty: &ast::Type,
         _slot: IntValue<'a>,
@@ -353,24 +350,24 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
     }
     fn storage_array_length(
         &self,
-        contract: &Binary<'a>,
+        binary: &Binary<'a>,
         _function: FunctionValue,
         slot: IntValue<'a>,
         _ty: &ast::Type,
         _ns: &ast::Namespace,
     ) -> IntValue<'a> {
-        let slot_ptr = contract.builder.build_alloca(slot.get_type(), "slot");
-        contract.builder.build_store(slot_ptr, slot);
+        let slot_ptr = binary.builder.build_alloca(slot.get_type(), "slot");
+        binary.builder.build_store(slot_ptr, slot);
 
-        contract
+        binary
             .builder
             .build_call(
-                contract.module.get_function("solang_storage_size").unwrap(),
-                &[contract
+                binary.module.get_function("solang_storage_size").unwrap(),
+                &[binary
                     .builder
                     .build_pointer_cast(
                         slot_ptr,
-                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
                         "",
                     )
                     .into()],
@@ -384,20 +381,20 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
 
     fn get_storage_int(
         &self,
-        contract: &Binary<'a>,
+        binary: &Binary<'a>,
         function: FunctionValue,
         slot: PointerValue<'a>,
         ty: IntType<'a>,
     ) -> IntValue<'a> {
-        let exists = contract
+        let exists = binary
             .builder
             .build_call(
-                contract.module.get_function("solang_storage_size").unwrap(),
-                &[contract
+                binary.module.get_function("solang_storage_size").unwrap(),
+                &[binary
                     .builder
                     .build_pointer_cast(
                         slot,
-                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
                         "",
                     )
                     .into()],
@@ -407,45 +404,43 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
             .left()
             .unwrap();
 
-        let data_size = ty.size_of().const_cast(contract.context.i32_type(), false);
+        let data_size = ty.size_of().const_cast(binary.context.i32_type(), false);
 
-        let exists = contract.builder.build_int_compare(
+        let exists = binary.builder.build_int_compare(
             IntPredicate::EQ,
             exists.into_int_value(),
             data_size,
             "storage_exists",
         );
 
-        let entry = contract.builder.get_insert_block().unwrap();
-        let retrieve_block = contract.context.append_basic_block(function, "in_storage");
-        let done_storage = contract
-            .context
-            .append_basic_block(function, "done_storage");
+        let entry = binary.builder.get_insert_block().unwrap();
+        let retrieve_block = binary.context.append_basic_block(function, "in_storage");
+        let done_storage = binary.context.append_basic_block(function, "done_storage");
 
-        contract
+        binary
             .builder
             .build_conditional_branch(exists, retrieve_block, done_storage);
 
-        contract.builder.position_at_end(retrieve_block);
+        binary.builder.position_at_end(retrieve_block);
 
-        let dest = contract.builder.build_alloca(ty, "int");
+        let dest = binary.builder.build_alloca(ty, "int");
 
-        contract.builder.build_call(
-            contract.module.get_function("solang_storage_get").unwrap(),
+        binary.builder.build_call(
+            binary.module.get_function("solang_storage_get").unwrap(),
             &[
-                contract
+                binary
                     .builder
                     .build_pointer_cast(
                         slot,
-                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
                         "",
                     )
                     .into(),
-                contract
+                binary
                     .builder
                     .build_pointer_cast(
                         dest,
-                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
                         "",
                     )
                     .into(),
@@ -453,13 +448,13 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
             "",
         );
 
-        let loaded_int = contract.builder.build_load(dest, "int");
+        let loaded_int = binary.builder.build_load(dest, "int");
 
-        contract.builder.build_unconditional_branch(done_storage);
+        binary.builder.build_unconditional_branch(done_storage);
 
-        contract.builder.position_at_end(done_storage);
+        binary.builder.position_at_end(done_storage);
 
-        let res = contract.builder.build_phi(ty, "storage_res");
+        let res = binary.builder.build_phi(ty, "storage_res");
 
         res.add_incoming(&[(&loaded_int, retrieve_block), (&ty.const_zero(), entry)]);
 
@@ -469,29 +464,29 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
     /// sabre has no keccak256 host function, so call our implementation
     fn keccak256_hash(
         &self,
-        contract: &Binary,
+        binary: &Binary,
         src: PointerValue,
         length: IntValue,
         dest: PointerValue,
         _ns: &ast::Namespace,
     ) {
-        contract.builder.build_call(
-            contract.module.get_function("keccak256").unwrap(),
+        binary.builder.build_call(
+            binary.module.get_function("keccak256").unwrap(),
             &[
-                contract
+                binary
                     .builder
                     .build_pointer_cast(
                         src,
-                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
                         "src",
                     )
                     .into(),
                 length.into(),
-                contract
+                binary
                     .builder
                     .build_pointer_cast(
                         dest,
-                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
                         "dest",
                     )
                     .into(),
@@ -500,51 +495,51 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
         );
     }
 
-    fn return_empty_abi(&self, contract: &Binary) {
+    fn return_empty_abi(&self, binary: &Binary) {
         // return 0 for success
-        contract
+        binary
             .builder
-            .build_return(Some(&contract.context.i32_type().const_int(0, false)));
+            .build_return(Some(&binary.context.i32_type().const_int(0, false)));
     }
 
-    fn return_abi<'b>(&self, contract: &'b Binary, data: PointerValue<'b>, length: IntValue) {
-        contract.builder.build_call(
-            contract.module.get_function("solang_set_return").unwrap(),
+    fn return_abi<'b>(&self, binary: &'b Binary, data: PointerValue<'b>, length: IntValue) {
+        binary.builder.build_call(
+            binary.module.get_function("solang_set_return").unwrap(),
             &[data.into(), length.into()],
             "",
         );
-        contract
+        binary
             .builder
-            .build_return(Some(&contract.context.i32_type().const_int(0, false)));
+            .build_return(Some(&binary.context.i32_type().const_int(0, false)));
     }
 
-    fn assert_failure<'b>(&self, contract: &'b Binary, data: PointerValue, length: IntValue) {
-        contract.builder.build_call(
-            contract.module.get_function("solang_set_return").unwrap(),
+    fn assert_failure<'b>(&self, binary: &'b Binary, data: PointerValue, length: IntValue) {
+        binary.builder.build_call(
+            binary.module.get_function("solang_set_return").unwrap(),
             &[data.into(), length.into()],
             "",
         );
-        contract
+        binary
             .builder
-            .build_return(Some(&contract.context.i32_type().const_int(2, false)));
+            .build_return(Some(&binary.context.i32_type().const_int(2, false)));
     }
 
     /// ABI encode into a vector for abi.encode* style builtin functions
     fn abi_encode_to_vector<'b>(
         &self,
-        contract: &Binary<'b>,
+        binary: &Binary<'b>,
         function: FunctionValue<'b>,
         packed: &[BasicValueEnum<'b>],
         args: &[BasicValueEnum<'b>],
         tys: &[ast::Type],
         ns: &ast::Namespace,
     ) -> PointerValue<'b> {
-        ethabiencoder::encode_to_vector(contract, function, packed, args, tys, false, ns)
+        ethabiencoder::encode_to_vector(binary, function, packed, args, tys, false, ns)
     }
 
     fn abi_encode<'b>(
         &self,
-        contract: &Binary<'b>,
+        binary: &Binary<'b>,
         selector: Option<IntValue<'b>>,
         load: bool,
         function: FunctionValue<'b>,
@@ -562,15 +557,15 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
         };
 
         let encoder = ethabiencoder::EncoderBuilder::new(
-            contract, function, load, args, &packed, &tys, false, ns,
+            binary, function, load, args, &packed, &tys, false, ns,
         );
 
         let length = encoder.encoded_length();
 
-        let encoded_data = contract
+        let encoded_data = binary
             .builder
             .build_call(
-                contract.module.get_function("solang_malloc").unwrap(),
+                binary.module.get_function("solang_malloc").unwrap(),
                 &[length.into()],
                 "",
             )
@@ -579,14 +574,14 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
             .unwrap()
             .into_pointer_value();
 
-        encoder.finish(contract, function, encoded_data, ns);
+        encoder.finish(binary, function, encoded_data, ns);
 
         (encoded_data, length)
     }
 
     fn abi_decode<'b>(
         &self,
-        contract: &Binary<'b>,
+        binary: &Binary<'b>,
         function: FunctionValue<'b>,
         args: &mut Vec<BasicValueEnum<'b>>,
         data: PointerValue<'b>,
@@ -595,12 +590,12 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
         ns: &ast::Namespace,
     ) {
         self.abi
-            .decode(contract, function, args, data, length, spec, ns);
+            .decode(binary, function, args, data, length, spec, ns);
     }
 
-    fn print(&self, contract: &Binary, string_ptr: PointerValue, string_len: IntValue) {
-        contract.builder.build_call(
-            contract.module.get_function("solang_print").unwrap(),
+    fn print(&self, binary: &Binary, string_ptr: PointerValue, string_len: IntValue) {
+        binary.builder.build_call(
+            binary.module.get_function("solang_print").unwrap(),
             &[string_ptr.into(), string_len.into()],
             "",
         );
@@ -689,7 +684,9 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
     /// Crypto Hash
     fn hash<'b>(
         &self,
-        _contract: &Binary<'b>,
+        _binary: &Binary<'b>,
+        _function: FunctionValue<'b>,
+
         _hash: HashTy,
         _input: PointerValue<'b>,
         _input_len: IntValue<'b>,

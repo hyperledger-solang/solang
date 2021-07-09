@@ -1679,6 +1679,8 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
     fn hash<'b>(
         &self,
         binary: &Binary<'b>,
+        _function: FunctionValue<'b>,
+
         hash: HashTy,
         input: PointerValue<'b>,
         input_len: IntValue<'b>,

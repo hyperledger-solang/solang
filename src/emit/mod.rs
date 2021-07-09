@@ -301,6 +301,7 @@ pub trait TargetRuntime<'a> {
     fn hash<'b>(
         &self,
         bin: &Binary<'b>,
+        function: FunctionValue<'b>,
         hash: HashTy,
         string: PointerValue<'b>,
         length: IntValue<'b>,
@@ -2951,8 +2952,15 @@ pub trait TargetRuntime<'a> {
                     _ => unreachable!(),
                 };
 
-                self.hash(&bin, hash, bin.vector_bytes(v), bin.vector_len(v), ns)
-                    .into()
+                self.hash(
+                    &bin,
+                    function,
+                    hash,
+                    bin.vector_bytes(v),
+                    bin.vector_len(v),
+                    ns,
+                )
+                .into()
             }
             Expression::Builtin(_, _, _, _) => self.builtin(bin, e, vartab, function, ns),
             Expression::InternalFunctionCfg(cfg_no) => bin.functions[cfg_no]

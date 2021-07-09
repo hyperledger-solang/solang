@@ -3042,6 +3042,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
     fn hash<'b>(
         &self,
         binary: &Binary<'b>,
+        function: FunctionValue<'b>,
         hash: HashTy,
         input: PointerValue<'b>,
         input_len: IntValue<'b>,
@@ -3077,7 +3078,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                 .get_element_type()
                 .into_struct_type();
 
-            let array = binary.builder.build_alloca(sol_bytes, "sol_bytes");
+            let array = binary.build_alloca(function, sol_bytes, "sol_bytes");
 
             binary.builder.build_store(
                 binary.builder.build_struct_gep(array, 0, "input").unwrap(),
@@ -3106,7 +3107,8 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         }
 
         // bytes32 needs to reverse bytes
-        let temp = binary.builder.build_alloca(
+        let temp = binary.build_alloca(
+            function,
             binary.llvm_type(&ast::Type::Bytes(hashlen as u8), ns),
             "hash",
         );
