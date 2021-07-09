@@ -870,9 +870,9 @@ fn resolve_bodies(
         {
             broken = true;
         } else {
-            for (_, variable) in &ns.functions[function_no].symtable.vars {
+            for variable in ns.functions[function_no].symtable.vars.values() {
                 if let Some(warning) = emit_warning_local_variable(&variable) {
-                    ns.diagnostics.push(*warning);
+                    ns.diagnostics.push(warning);
                 }
             }
         }

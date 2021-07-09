@@ -1321,17 +1321,25 @@ pub fn expression(
     resolve_to: Option<&Type>,
 ) -> Result<Expression, ()> {
     match expr {
-        pt::Expression::ArrayLiteral(loc, exprs) => resolve_array_literal(
-            loc,
-            exprs,
-            file_no,
-            contract_no,
-            ns,
-            symtable,
-            is_constant,
-            diagnostics,
-            resolve_to,
-        ),
+        pt::Expression::ArrayLiteral(loc, exprs) => {
+            let res = resolve_array_literal(
+                loc,
+                exprs,
+                file_no,
+                contract_no,
+                ns,
+                symtable,
+                is_constant,
+                diagnostics,
+                resolve_to,
+            );
+
+            if let Ok(exp) = &res {
+                used_variable(ns, exp, symtable);
+            }
+
+            res
+        }
         pt::Expression::BoolLiteral(loc, v) => Ok(Expression::BoolLiteral(*loc, *v)),
         pt::Expression::StringLiteral(v) => {
             // Concatenate the strings
@@ -2479,6 +2487,7 @@ pub fn expression(
                 diagnostics,
                 resolve_to,
             )?;
+            used_variable(ns, &cond, symtable);
 
             let cond = cast(&c.loc(), cond, &Type::Bool, true, ns, diagnostics)?;
 
@@ -2759,26 +2768,18 @@ pub fn expression(
             is_constant,
             diagnostics,
         ),
-        pt::Expression::MemberAccess(loc, e, id) => {
-            let res = member_access(
-                loc,
-                e,
-                id,
-                file_no,
-                contract_no,
-                ns,
-                symtable,
-                is_constant,
-                diagnostics,
-                resolve_to,
-            );
-
-            if let Ok(exp) = &res {
-                used_variable(ns, &exp, symtable);
-            }
-
-            res
-        }
+        pt::Expression::MemberAccess(loc, e, id) => member_access(
+            loc,
+            e,
+            id,
+            file_no,
+            contract_no,
+            ns,
+            symtable,
+            is_constant,
+            diagnostics,
+            resolve_to,
+        ),
         pt::Expression::Or(loc, left, right) => {
             let boolty = Type::Bool;
             let l = cast(
@@ -4426,7 +4427,10 @@ fn member_access(
             if id.name == "length" {
                 return match dim.last().unwrap() {
                     None => Ok(Expression::DynamicArrayLength(*loc, Box::new(expr))),
-                    Some(d) => bigint_to_expression(loc, d, ns, diagnostics, Some(&Type::Uint(32))),
+                    Some(d) => {
+                        used_variable(ns, &expr, symtable);
+                        bigint_to_expression(loc, d, ns, diagnostics, Some(&Type::Uint(32)))
+                    }
                 };
             }
         }
@@ -4793,7 +4797,7 @@ fn struct_literal(
                 diagnostics,
                 Some(&struct_def.fields[i].ty),
             )?;
-
+            used_variable(ns, &expr, symtable);
             fields.push(cast(
                 loc,
                 expr,
@@ -5408,7 +5412,7 @@ fn named_struct_literal(
                         diagnostics,
                         Some(&f.ty),
                     )?;
-
+                    used_variable(ns, &expr, symtable);
                     fields[i] = cast(loc, expr, &f.ty, true, ns, diagnostics)?;
                 }
                 None => {
@@ -6640,6 +6644,7 @@ fn resolve_array_literal(
         first.ty()
     };
 
+    used_variable(ns, &first, symtable);
     let mut exprs = vec![first];
 
     for e in flattened {

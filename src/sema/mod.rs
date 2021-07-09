@@ -41,16 +41,18 @@ pub const SOLANA_BUCKET_SIZE: u64 = 251;
 pub const SOLANA_FIRST_OFFSET: u64 = 16;
 pub const SOLANA_SPARSE_ARRAY_SIZE: u64 = 1024;
 
-/// Performs semantic analysis and checks for unused variables
+/// Load a file file from the cache, parse and resolve it. The file must be present in
+/// the cache.
 pub fn sema(file: ResolvedFile, cache: &mut FileCache, ns: &mut ast::Namespace) {
-    perform_sema(file, cache, ns);
+    sema_file(file, cache, ns);
+
+    // Checks for unused variables
     check_unused_namespace_variables(ns);
     check_unused_events(ns);
 }
 
-/// Load a file file from the cache, parse and resolve it. The file must be present in
-/// the cache. This function is recursive for imports.
-pub fn perform_sema(file: ResolvedFile, cache: &mut FileCache, ns: &mut ast::Namespace) {
+/// Parse and resolve a file and its imports in a recursive manner.
+fn sema_file(file: ResolvedFile, cache: &mut FileCache, ns: &mut ast::Namespace) {
     let file_no = ns.files.len();
 
     let source_code = cache.get_file_contents(&file.full_path);
@@ -177,7 +179,7 @@ fn resolve_import(
         }
         Ok(file) => {
             if !ns.files.iter().any(|f| *f == file.full_path) {
-                perform_sema(file.clone(), cache, ns);
+                sema_file(file.clone(), cache, ns);
 
                 // give up if we failed
                 if diagnostics::any_errors(&ns.diagnostics) {

@@ -319,9 +319,7 @@ fn statement(
                 diagnostics,
             )?;
 
-            let mut initialized = false;
             let initializer = if let Some(init) = initializer {
-                initialized = true;
                 let expr = expression(
                     init,
                     file_no,
@@ -332,6 +330,7 @@ fn statement(
                     diagnostics,
                     Some(&var_ty),
                 )?;
+
                 used_variable(ns, &expr, symtable);
 
                 Some(cast(&expr.loc(), expr, &var_ty, true, ns, diagnostics)?)
@@ -343,8 +342,8 @@ fn statement(
                 &decl.name,
                 var_ty.clone(),
                 ns,
-                initialized,
-                VariableUsage::StateVariable,
+                initializer.is_some(),
+                VariableUsage::LocalVariable,
             ) {
                 ns.check_shadowing(file_no, contract_no, &decl.name);
 
@@ -715,11 +714,6 @@ fn statement(
                     ),
                 ));
                 return Err(());
-            }
-
-            for offset in symtable.returns.iter() {
-                let elem = symtable.vars.get_mut(offset).unwrap();
-                (*elem).assigned = true;
             }
 
             res.push(Statement::Return(
@@ -1261,27 +1255,35 @@ fn destructure_values(
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Result<Expression, ()> {
     let expr = match expr {
-        pt::Expression::FunctionCall(loc, ty, args) => function_call_expr(
-            loc,
-            ty,
-            args,
-            file_no,
-            contract_no,
-            ns,
-            symtable,
-            false,
-            diagnostics,
-        )?,
-        pt::Expression::NamedFunctionCall(loc, ty, args) => named_function_call_expr(
-            loc,
-            ty,
-            args,
-            file_no,
-            contract_no,
-            ns,
-            symtable,
-            diagnostics,
-        )?,
+        pt::Expression::FunctionCall(loc, ty, args) => {
+            let res = function_call_expr(
+                loc,
+                ty,
+                args,
+                file_no,
+                contract_no,
+                ns,
+                symtable,
+                false,
+                diagnostics,
+            )?;
+            check_function_call(ns, &res, symtable);
+            res
+        }
+        pt::Expression::NamedFunctionCall(loc, ty, args) => {
+            let res = named_function_call_expr(
+                loc,
+                ty,
+                args,
+                file_no,
+                contract_no,
+                ns,
+                symtable,
+                diagnostics,
+            )?;
+            check_function_call(ns, &res, symtable);
+            res
+        }
         pt::Expression::Ternary(loc, cond, left, right) => {
             let cond = expression(
                 cond,
@@ -1294,6 +1296,7 @@ fn destructure_values(
                 Some(&Type::Bool),
             )?;
 
+            used_variable(ns, &cond, symtable);
             let left = destructure_values(
                 &left.loc(),
                 left,
@@ -1305,7 +1308,7 @@ fn destructure_values(
                 ns,
                 diagnostics,
             )?;
-
+            used_variable(ns, &left, symtable);
             let right = destructure_values(
                 &right.loc(),
                 right,
@@ -1317,6 +1320,7 @@ fn destructure_values(
                 ns,
                 diagnostics,
             )?;
+            used_variable(ns, &right, symtable);
 
             return Ok(Expression::Ternary(
                 *loc,
@@ -1363,7 +1367,9 @@ fn destructure_values(
                         ));
                         return Err(());
                     }
-                    _ => (),
+                    _ => {
+                        used_variable(ns, &e, symtable);
+                    }
                 }
 
                 list.push(e);
