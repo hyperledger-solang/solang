@@ -914,7 +914,7 @@ pub trait TargetRuntime<'a> {
                     .context
                     .custom_width_int_type(ns.target.ptr_size() as u32);
 
-                let m = bin.builder.build_alloca(ptr_ty, "");
+                let m = bin.build_alloca(function, ptr_ty, "");
 
                 bin.builder.build_store(
                     m,
@@ -933,7 +933,7 @@ pub trait TargetRuntime<'a> {
                 bin.builder.build_store(slot_ptr, *slot);
 
                 let dest = if dest.is_int_value() {
-                    let m = bin.builder.build_alloca(dest.get_type(), "");
+                    let m = bin.build_alloca(function, dest.get_type(), "");
                     bin.builder.build_store(m, dest);
 
                     m
@@ -2005,7 +2005,7 @@ pub trait TargetRuntime<'a> {
                 let elem_size = bin.context.i32_type().const_int(1, false);
 
                 // Swap the byte order
-                let bytes_ptr = bin.builder.build_alloca(e.get_type(), "bytes_ptr");
+                let bytes_ptr = bin.build_alloca(function, e.get_type(), "bytes_ptr");
                 bin.builder.build_store(bytes_ptr, e);
                 let bytes_ptr = bin.builder.build_pointer_cast(
                     bytes_ptr,
@@ -2013,7 +2013,7 @@ pub trait TargetRuntime<'a> {
                     "bytes_ptr",
                 );
                 let init = bin.builder.build_pointer_cast(
-                    bin.builder.build_alloca(e.get_type(), "init"),
+                    bin.build_alloca(function, e.get_type(), "init"),
                     bin.context.i8_type().ptr_type(AddressSpace::Generic),
                     "init",
                 );
@@ -2076,7 +2076,7 @@ pub trait TargetRuntime<'a> {
 
                 // Switch byte order
                 let ty = bin.context.custom_width_int_type(*n as u32 * 8);
-                let le_bytes_ptr = bin.builder.build_alloca(ty, "le_bytes");
+                let le_bytes_ptr = bin.build_alloca(function, ty, "le_bytes");
 
                 bin.builder.build_call(
                     bin.module.get_function("__beNtoleN").unwrap(),
@@ -2607,7 +2607,7 @@ pub trait TargetRuntime<'a> {
             }
             Expression::Builtin(_, _, Builtin::Signature, _) => {
                 // need to byte-reverse selector
-                let selector = bin.builder.build_alloca(bin.context.i32_type(), "selector");
+                let selector = bin.build_alloca(function, bin.context.i32_type(), "selector");
 
                 // byte order needs to be reversed. e.g. hex"11223344" should be 0x10 0x11 0x22 0x33 0x44
                 bin.builder.build_call(
@@ -2655,10 +2655,10 @@ pub trait TargetRuntime<'a> {
 
                 let divisor = bin.builder.build_int_z_extend(k, arith_ty, "wide_k");
 
-                let pdividend = bin.builder.build_alloca(arith_ty, "dividend");
-                let pdivisor = bin.builder.build_alloca(arith_ty, "divisor");
-                let rem = bin.builder.build_alloca(arith_ty, "remainder");
-                let quotient = bin.builder.build_alloca(arith_ty, "quotient");
+                let pdividend = bin.build_alloca(function, arith_ty, "dividend");
+                let pdivisor = bin.build_alloca(function, arith_ty, "divisor");
+                let rem = bin.build_alloca(function, arith_ty, "remainder");
+                let quotient = bin.build_alloca(function, arith_ty, "quotient");
 
                 bin.builder.build_store(pdividend, dividend);
                 bin.builder.build_store(pdivisor, divisor);
@@ -2726,9 +2726,9 @@ pub trait TargetRuntime<'a> {
                 let y = self
                     .expression(bin, &args[1], vartab, function, ns)
                     .into_int_value();
-                let x_m = bin.builder.build_alloca(arith_ty, "x_m");
-                let y_m = bin.builder.build_alloca(arith_ty, "x_y");
-                let x_times_y_m = bin.builder.build_alloca(arith_ty, "x_times_y_m");
+                let x_m = bin.build_alloca(function, arith_ty, "x_m");
+                let y_m = bin.build_alloca(function, arith_ty, "x_y");
+                let x_times_y_m = bin.build_alloca(function, arith_ty, "x_times_y_m");
 
                 bin.builder
                     .build_store(x_m, bin.builder.build_int_z_extend(x, arith_ty, "wide_x"));
@@ -2770,10 +2770,10 @@ pub trait TargetRuntime<'a> {
 
                 let divisor = bin.builder.build_int_z_extend(k, arith_ty, "wide_k");
 
-                let pdividend = bin.builder.build_alloca(arith_ty, "dividend");
-                let pdivisor = bin.builder.build_alloca(arith_ty, "divisor");
-                let rem = bin.builder.build_alloca(arith_ty, "remainder");
-                let quotient = bin.builder.build_alloca(arith_ty, "quotient");
+                let pdividend = bin.build_alloca(function, arith_ty, "dividend");
+                let pdivisor = bin.build_alloca(function, arith_ty, "divisor");
+                let rem = bin.build_alloca(function, arith_ty, "remainder");
+                let quotient = bin.build_alloca(function, arith_ty, "quotient");
 
                 bin.builder.build_store(pdividend, dividend);
                 bin.builder.build_store(pdivisor, divisor);
@@ -3700,7 +3700,7 @@ pub trait TargetRuntime<'a> {
                         if !res.is_empty() {
                             for ty in returns.iter() {
                                 parms.push(
-                                    bin.builder.build_alloca(bin.llvm_var(ty, ns), "").into(),
+                                    bin.build_alloca(function, bin.llvm_var(ty, ns), "").into(),
                                 );
                             }
                         }
