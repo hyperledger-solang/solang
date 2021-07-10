@@ -1115,7 +1115,7 @@ fn function_cfg(
 ) -> ControlFlowGraph {
     let mut vartab = match function_no {
         Some(function_no) => {
-            Vartable::new_with_syms(&ns.functions[function_no].symtable, ns.next_id)
+            Vartable::from_symbol_table(&ns.functions[function_no].symtable, ns.next_id)
         }
         None => Vartable::new(ns.next_id),
     };
@@ -1363,7 +1363,7 @@ pub fn generate_modifier_dispatch(
     cfg.params = func.params.clone();
     cfg.returns = func.returns.clone();
 
-    let mut vartab = Vartable::new_with_syms(&func.symtable, ns.next_id);
+    let mut vartab = Vartable::from_symbol_table(&func.symtable, ns.next_id);
 
     vartab.add_symbol_table(&modifier.symtable);
     let mut loops = LoopScopes::new();
@@ -1475,7 +1475,7 @@ pub struct DirtyTracker {
 }
 
 impl Vartable {
-    pub fn new_with_syms(sym: &Symtable, next_id: usize) -> Self {
+    pub fn from_symbol_table(sym: &Symtable, next_id: usize) -> Self {
         let vars = sym
             .vars
             .iter()
