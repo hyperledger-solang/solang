@@ -48,7 +48,7 @@ RUN Invoke-BatchFile C:\BuildTools\vc\Auxiliary\Build\vcvars64.bat ; `
 	Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Environment\' -Name INCLUDE -Value $env:INCLUDE ; `
 	Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Environment\' -Name LIBPATH -Value $env:LIBPATH ;
 
-RUN git clone --single-branch git://github.com/solana-labs/llvm-project
+RUN git clone --single-branch git://github.com/solana-labs/llvm-project --branch solana-rustc/11.0-2021-01-05
 
 WORKDIR \llvm-project
 
