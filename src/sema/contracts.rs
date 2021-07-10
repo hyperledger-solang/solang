@@ -126,7 +126,7 @@ pub fn resolve(
 
     // Now we have all the declarations, we can create the layout of storage and handle base contracts
     for (contract_no, _) in contracts {
-        layout_contract(*contract_no, ns);
+        check_inheritance_and_layout(*contract_no, ns);
     }
 
     // Now we can resolve the bodies
@@ -308,7 +308,7 @@ pub fn is_base(base: usize, parent: usize, ns: &ast::Namespace) -> bool {
 }
 
 /// Layout the contract. We determine the layout of variables and deal with overriding variables
-fn layout_contract(contract_no: usize, ns: &mut ast::Namespace) {
+fn check_inheritance_and_layout(contract_no: usize, ns: &mut ast::Namespace) {
     let mut function_syms: HashMap<String, ast::Symbol> = HashMap::new();
     let mut variable_syms: HashMap<String, ast::Symbol> = HashMap::new();
     let mut override_needed: HashMap<String, Vec<(usize, usize)>> = HashMap::new();
