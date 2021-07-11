@@ -2431,23 +2431,7 @@ pub trait TargetRuntime<'a> {
                     let v = self.expression(bin, &e, vartab, function, ns);
 
                     let len = match e.ty() {
-                        ast::Type::DynamicBytes | ast::Type::String => {
-                            // field 0 is the length
-                            let array_len = unsafe {
-                                bin.builder.build_gep(
-                                    v.into_pointer_value(),
-                                    &[
-                                        bin.context.i32_type().const_zero(),
-                                        bin.context.i32_type().const_zero(),
-                                    ],
-                                    "array_len",
-                                )
-                            };
-
-                            bin.builder
-                                .build_load(array_len, "array_len")
-                                .into_int_value()
-                        }
+                        ast::Type::DynamicBytes | ast::Type::String => bin.vector_len(v),
                         _ => v
                             .get_type()
                             .size_of()
@@ -2475,16 +2459,7 @@ pub trait TargetRuntime<'a> {
 
                     match ty {
                         ast::Type::DynamicBytes | ast::Type::String => {
-                            let data = unsafe {
-                                bin.builder.build_gep(
-                                    v.into_pointer_value(),
-                                    &[
-                                        bin.context.i32_type().const_zero(),
-                                        bin.context.i32_type().const_int(2, false),
-                                    ],
-                                    "",
-                                )
-                            };
+                            let data = bin.vector_bytes(v);
 
                             bin.builder.build_call(
                                 bin.module.get_function("__memcpy").unwrap(),

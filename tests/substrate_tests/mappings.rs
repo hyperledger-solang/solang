@@ -389,6 +389,12 @@ fn test_user() {
             function rm(string name) public {
                 delete users[name];
             }
+
+            function get_foo() public view returns (bool, address) {
+                user storage s = users["foo"];
+
+                return (s.exists, s.addr);
+            }
         }"##,
     );
 
@@ -426,6 +432,12 @@ fn test_user() {
 
         assert_eq!(runtime.vm.output, GetRet(false, [0u8; 32]).encode());
     }
+
+    runtime.function("add", AddArg(b"foo".to_vec(), [1u8; 32]).encode());
+
+    runtime.function("get_foo", Vec::new());
+
+    assert_eq!(runtime.vm.output, GetRet(true, [1u8; 32]).encode());
 }
 
 #[test]
