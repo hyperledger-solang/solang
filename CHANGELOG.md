@@ -17,6 +17,8 @@ will be documented here.
 - Implement abi.encodePacked() for the ethereum abi encoder
 - The Solana target now compiles all contracts to a single `bundle.so` BPF
   program.
+- Any unused variables, events, or contract variables are now detected and
+  warnings are given, thanks to [LucasSte](https://github.com/LucasSte)
 
 ### Changed
 - Solang now uses LLVM 11.0, based on the [Solana LLVM tree](https://github.com/solana-labs/llvm-project/)
