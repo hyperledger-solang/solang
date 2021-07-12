@@ -7,7 +7,7 @@ use super::expression::{
 use super::symtable::{LoopScopes, Symtable};
 use crate::parser::pt;
 use crate::sema::symtable::VariableUsage;
-use crate::sema::unused_variable::{check_function_call, used_variable};
+use crate::sema::unused_variable::{assigned_variable, check_function_call, used_variable};
 use std::collections::HashMap;
 
 pub fn resolve_function_body(
@@ -1189,6 +1189,8 @@ fn destructure(
                         }
                     },
                 }
+
+                assigned_variable(ns, &e, symtable);
                 left_tys.push(Some(e.ty()));
                 fields.push(DestructureField::Expression(e));
             }
