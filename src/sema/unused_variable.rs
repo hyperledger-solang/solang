@@ -105,17 +105,26 @@ pub fn check_function_call(ns: &mut Namespace, exp: &Expression, symtable: &mut 
             returns: _,
             function,
             args,
-        }
-        | Expression::ExternalFunctionCall {
-            loc: _,
-            returns: _,
-            function,
-            args,
-            ..
         } => {
             for arg in args {
                 used_variable(ns, arg, symtable);
             }
+            check_function_call(ns, function, symtable);
+        }
+
+        Expression::ExternalFunctionCall {
+            loc: _,
+            returns: _,
+            function,
+            args,
+            value,
+            gas,
+        } => {
+            for arg in args {
+                used_variable(ns, arg, symtable);
+            }
+            used_variable(ns, gas, symtable);
+            used_variable(ns, value, symtable);
             check_function_call(ns, function, symtable);
         }
 
@@ -124,10 +133,25 @@ pub fn check_function_call(ns: &mut Namespace, exp: &Expression, symtable: &mut 
             contract_no: _,
             constructor_no: _,
             args,
-            ..
+            gas,
+            value,
+            salt,
+            space,
         } => {
             for arg in args {
                 used_variable(ns, arg, symtable);
+            }
+            used_variable(ns, gas, symtable);
+            if let Some(expr) = value {
+                used_variable(ns, expr, symtable);
+            }
+
+            if let Some(expr) = salt {
+                used_variable(ns, expr, symtable);
+            }
+
+            if let Some(expr) = space {
+                used_variable(ns, expr, symtable);
             }
         }
 
@@ -136,10 +160,13 @@ pub fn check_function_call(ns: &mut Namespace, exp: &Expression, symtable: &mut 
             ty: _,
             address,
             args,
-            ..
+            value,
+            gas,
         } => {
             used_variable(ns, args, symtable);
             used_variable(ns, address, symtable);
+            used_variable(ns, value, symtable);
+            used_variable(ns, gas, symtable);
         }
 
         Expression::ExternalFunction {
@@ -165,10 +192,11 @@ pub fn check_function_call(ns: &mut Namespace, exp: &Expression, symtable: &mut 
                 }
             }
 
-            Builtin::ArrayPop => {
-                used_variable(ns, &args[0], symtable);
+            _ => {
+                for arg in args {
+                    used_variable(ns, arg, symtable);
+                }
             }
-            _ => {}
         },
 
         Expression::DynamicArrayPush(_, array, _, arg) => {

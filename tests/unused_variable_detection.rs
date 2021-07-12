@@ -899,3 +899,33 @@ fn subarray_mapping_struct_literal() {
         "storage variable 'choice' has been assigned, but never read"
     ));
 }
+
+#[test]
+fn builtin_call_destructure() {
+    let file = r#"
+        contract Test {
+
+        function test() public returns(bool p) {
+            uint128 b = 1;
+            uint64 g = 2;
+            address payable ad = payable(address(this));
+            bytes memory by;
+            (p, ) = ad.call{value: b, gas: g}(by);
+            uint c = 1;
+            abi.encodeWithSignature("hey", c);
+
+            uint128 amount = 2;
+            ad.send(amount);
+            uint128 amount2 = 1;
+            ad.transfer(amount2);
+        }
+    }
+    "#;
+
+    let ns = generic_target_parse(file);
+    assert_eq!(count_warnings(&ns.diagnostics), 1);
+    assert!(assert_message_in_warnings(
+        &ns.diagnostics,
+        "local variable 'by' has never been assigned a value, but has been read"
+    ));
+}
