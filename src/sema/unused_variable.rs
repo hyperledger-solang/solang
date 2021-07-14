@@ -3,7 +3,7 @@ use crate::sema::ast::{
     Builtin, Diagnostic, ErrorType, Expression, Level, Namespace, Note, Statement,
 };
 use crate::sema::symtable::{Symtable, VariableUsage};
-use crate::sema::{ast, symtable};
+use crate::sema::{ast, contracts::visit_bases, symtable};
 
 /// Mark variables as assigned, either in the symbol table (for local variables) or in the
 /// Namespace (for storage variables)
@@ -413,6 +413,59 @@ pub fn check_unused_namespace_variables(ns: &mut Namespace) {
 
 /// Check for unused events
 pub fn check_unused_events(ns: &mut Namespace) {
+    // first we need to calculate which event shadows which
+    // an event can be declare on the global scope and re-declared in a contract,
+    // and then again redeclared in as base contract. In this case all of the events
+    // should be marked as used
+    for event_no in 0..ns.events.len() {
+        let event = &ns.events[event_no];
+
+        if !event.used {
+            continue;
+        }
+
+        let mut shadows = Vec::new();
+
+        if let Some(contract_no) = event.contract {
+            // is there a global event with the same name
+            if let Some(ast::Symbol::Event(events)) =
+                ns.variable_symbols
+                    .get(&(event.loc.0, None, event.name.to_owned()))
+            {
+                for e in events {
+                    let other_no = e.1;
+
+                    if event_no != other_no && ns.events[other_no].signature == event.signature {
+                        shadows.push(other_no);
+                    }
+                }
+            }
+
+            // is there a base contract with the same name
+            for base_no in visit_bases(contract_no, ns) {
+                let base_file_no = ns.contracts[base_no].loc.0;
+
+                if let Some(ast::Symbol::Event(events)) =
+                    ns.variable_symbols
+                        .get(&(base_file_no, Some(base_no), event.name.to_owned()))
+                {
+                    for e in events {
+                        let other_no = e.1;
+
+                        if event_no != other_no && ns.events[other_no].signature == event.signature
+                        {
+                            shadows.push(other_no);
+                        }
+                    }
+                }
+            }
+        }
+
+        for shadow in shadows {
+            ns.events[shadow].used = true;
+        }
+    }
+
     for event in &ns.events {
         if !event.used {
             ns.diagnostics.push(generate_unused_warning(
