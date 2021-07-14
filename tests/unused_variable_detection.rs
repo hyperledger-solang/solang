@@ -753,7 +753,7 @@ fn try_catch() {
     let file = r#"
     contract CalledContract {
         bool public ok = true;
-        bool public notOk = false;
+        bool private notOk = false;
     }
 
     contract TryCatcher {
@@ -782,6 +782,15 @@ fn try_catch() {
         &ns.diagnostics,
         "storage variable 'notOk' has been assigned, but never read"
     ));
+
+    let file = r#"
+    contract CalledContract {
+        bool public ok;
+    }
+    "#;
+
+    let ns = generic_target_parse(file);
+    assert_eq!(count_warnings(&ns.diagnostics), 0);
 }
 
 #[test]
