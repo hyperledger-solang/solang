@@ -43,8 +43,8 @@ pub const SOLANA_SPARSE_ARRAY_SIZE: u64 = 1024;
 
 /// Load a file file from the cache, parse and resolve it. The file must be present in
 /// the cache.
-pub fn sema(file: ResolvedFile, cache: &mut FileCache, ns: &mut ast::Namespace) {
-    sema_file(file, cache, ns);
+pub fn sema(file: &ResolvedFile, cache: &mut FileCache, ns: &mut ast::Namespace) {
+    sema_file(&file, cache, ns);
 
     // Checks for unused variables
     check_unused_namespace_variables(ns);
@@ -52,7 +52,7 @@ pub fn sema(file: ResolvedFile, cache: &mut FileCache, ns: &mut ast::Namespace) 
 }
 
 /// Parse and resolve a file and its imports in a recursive manner.
-fn sema_file(file: ResolvedFile, cache: &mut FileCache, ns: &mut ast::Namespace) {
+fn sema_file(file: &ResolvedFile, cache: &mut FileCache, ns: &mut ast::Namespace) {
     let file_no = ns.files.len();
 
     let source_code = cache.get_file_contents(&file.full_path);
@@ -179,7 +179,7 @@ fn resolve_import(
         }
         Ok(file) => {
             if !ns.files.iter().any(|f| *f == file.full_path) {
-                sema_file(file.clone(), cache, ns);
+                sema_file(&file, cache, ns);
 
                 // give up if we failed
                 if diagnostics::any_errors(&ns.diagnostics) {
@@ -203,28 +203,27 @@ fn resolve_import(
                 {
                     let import = import.clone();
 
-                    let new_symbol = if let Some(to) = rename_to { to } else { from };
+                    let symbol = rename_to.as_ref().unwrap_or(from);
 
                     // Only add symbol if it does not already exist with same definition
                     if let Some(existing) =
                         ns.variable_symbols
-                            .get(&(file_no, None, new_symbol.name.clone()))
+                            .get(&(file_no, None, symbol.name.clone()))
                     {
                         if existing == &import {
                             continue;
                         }
                     }
 
-                    ns.check_shadowing(file_no, None, new_symbol);
+                    ns.check_shadowing(file_no, None, symbol);
 
-                    ns.add_symbol(file_no, None, new_symbol, import);
+                    ns.add_symbol(file_no, None, symbol, import);
                 } else {
                     ns.diagnostics.push(ast::Diagnostic::error(
                         from.loc,
                         format!(
                             "import ‘{}’ does not export ‘{}’",
-                            filename.string,
-                            from.name.to_string()
+                            filename.string, from.name
                         ),
                     ));
                 }
