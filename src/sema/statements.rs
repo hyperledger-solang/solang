@@ -767,7 +767,7 @@ fn statement(
                     diagnostics,
                     None,
                 )?;
-
+                used_variable(ns, &expr, symtable);
                 return if let Type::StorageRef(ty) = expr.ty() {
                     if expr.ty().is_mapping() {
                         ns.diagnostics.push(Diagnostic::error(
