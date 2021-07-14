@@ -451,16 +451,7 @@ pub fn event_decl(
         });
     }
 
-    if fields.is_empty() {
-        if valid {
-            ns.diagnostics.push(Diagnostic::error(
-                def.name.loc,
-                format!("event definition for ‘{}’ has no fields", def.name.name),
-            ));
-        }
-
-        valid = false;
-    } else if def.anonymous && indexed_fields > 4 {
+    if def.anonymous && indexed_fields > 4 {
         ns.diagnostics.push(Diagnostic::error(
             def.name.loc,
             format!(
