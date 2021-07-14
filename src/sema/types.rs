@@ -388,7 +388,7 @@ pub fn struct_decl(
 /// definition is valid; however, whatever could be parsed will be added to the resolved
 /// contract, so that we can continue producing compiler messages for the remainder
 /// of the contract, even if the struct contains an invalid definition.
-pub fn event_decl(
+fn event_decl(
     def: &pt::EventDefinition,
     file_no: usize,
     contract_no: Option<usize>,
