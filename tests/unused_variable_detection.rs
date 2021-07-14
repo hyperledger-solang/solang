@@ -929,3 +929,21 @@ fn builtin_call_destructure() {
         "local variable 'by' has never been assigned a value, but has been read"
     ));
 }
+
+#[test]
+fn delete_statement() {
+    let file = r#"
+    pragma solidity 0;
+
+    contract Test1{
+        int test8var;
+        function test8() public {
+            delete test8var;
+        test8var = 2;
+        }
+    }
+    "#;
+
+    let ns = generic_target_parse(file);
+    assert_eq!(count_warnings(&ns.diagnostics), 0);
+}
