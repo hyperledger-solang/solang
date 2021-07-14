@@ -58,18 +58,18 @@ pub struct EventDecl {
     pub tags: Vec<Tag>,
     pub name: String,
     pub loc: pt::Loc,
-    pub contract: Option<String>,
+    pub contract: Option<usize>,
     pub fields: Vec<Parameter>,
     pub signature: String,
     pub anonymous: bool,
     pub used: bool,
 }
 
-impl fmt::Display for EventDecl {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl EventDecl {
+    pub fn symbol_name(&self, ns: &Namespace) -> String {
         match &self.contract {
-            Some(c) => write!(f, "{}.{}", c, self.name),
-            None => write!(f, "{}", self.name),
+            Some(c) => format!("{}.{}", ns.contracts[*c].name, self.name),
+            None => self.name.to_string(),
         }
     }
 }

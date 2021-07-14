@@ -1815,8 +1815,11 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
             let mut hash = [0u8; 32];
             hasher.finalize(&mut hash);
 
-            encoded_topics[0] =
-                binary.emit_global_string(&format!("event_{}_signature", event), &hash, true);
+            encoded_topics[0] = binary.emit_global_string(
+                &format!("event_{}_signature", event.symbol_name(ns)),
+                &hash,
+                true,
+            );
 
             topic_count += 1;
         }

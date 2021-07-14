@@ -3883,7 +3883,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
             if !event.anonymous {
                 let hash = binary.emit_global_string(
-                    &format!("event_{}_signature", event),
+                    &format!("event_{}_signature", event.symbol_name(ns)),
                     blake2_rfc::blake2b::blake2b(32, &[], event.signature.as_bytes()).as_bytes(),
                     true,
                 );

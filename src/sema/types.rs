@@ -228,7 +228,7 @@ fn resolve_contract<'a>(
                     tags: Vec::new(),
                     name: s.name.name.to_owned(),
                     loc: s.name.loc,
-                    contract: Some(def.name.name.to_owned()),
+                    contract: Some(contract_no),
                     fields: Vec::new(),
                     anonymous: s.anonymous,
                     signature: String::new(),

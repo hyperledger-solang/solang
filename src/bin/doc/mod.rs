@@ -180,7 +180,9 @@ pub fn generate_docs(outdir: &str, files: &[ast::Namespace], verbose: bool) {
 
             top.events.push(EventDecl {
                 name: &event_decl.name,
-                contract: event_decl.contract.as_deref(),
+                contract: event_decl
+                    .contract
+                    .map(|contract_no| file.contracts[contract_no].name.as_str()),
                 title: get_tag("title", &event_decl.tags),
                 notice: get_tag("notice", &event_decl.tags),
                 author: get_tag("author", &event_decl.tags),
