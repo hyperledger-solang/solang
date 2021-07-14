@@ -14,10 +14,7 @@ fn event_decl() {
         Target::Substrate,
     );
 
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "event definition for ‘foo’ has no fields"
-    );
+    no_errors(ns.diagnostics);
 
     let ns = parse_and_resolve(
         r#"
