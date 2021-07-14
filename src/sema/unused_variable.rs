@@ -382,6 +382,7 @@ fn emit_warning_contract_variables(variable: &ast::Variable) -> Option<Diagnosti
             vec![],
         ));
     }
+
     //Solidity attributes zero value to contract values that have never been assigned
     //There is no need to raise warning if we use them, as they have a valid value.
 

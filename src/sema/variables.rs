@@ -251,7 +251,7 @@ pub fn var_decl(
         constant: is_constant,
         assigned: initializer.is_some(),
         initializer,
-        read: false,
+        read: matches!(visibility, pt::Visibility::Public(_)),
     };
 
     let pos = if let Some(contract_no) = contract_no {
