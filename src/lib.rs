@@ -139,7 +139,7 @@ pub fn parse_and_resolve(filename: &str, cache: &mut FileCache, target: Target) 
             });
         }
         Ok(file) => {
-            sema::sema(file, cache, &mut ns);
+            sema::sema(&file, cache, &mut ns);
         }
     }
 
