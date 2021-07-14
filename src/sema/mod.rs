@@ -431,10 +431,8 @@ impl ast::Namespace {
             return false;
         }
 
-        // if there is nothing on the contract level, try top-level scope if its not an event
-        if let ast::Symbol::Event(_) = &symbol {
-            // it's ok to have event of same name in contract and global scope
-        } else if contract_no.is_some() {
+        // if there is nothing on the contract level
+        if contract_no.is_some() {
             if let Some(ast::Symbol::Function(v)) =
                 self.function_symbols
                     .get(&(file_no, None, id.name.to_owned()))
@@ -486,6 +484,7 @@ impl ast::Namespace {
                             "location of previous definition".to_string(),
                         ));
                     }
+                    ast::Symbol::Event(_) if symbol.is_event() => (),
                     ast::Symbol::Event(e) => {
                         self.diagnostics.push(ast::Diagnostic::warning_with_note(
                             id.loc,

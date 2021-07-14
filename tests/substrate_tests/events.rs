@@ -1,4 +1,4 @@
-use crate::{build_solidity, first_error, no_errors, parse_and_resolve};
+use crate::{build_solidity, first_error, first_warning, no_errors, parse_and_resolve};
 use parity_scale_codec::Encode;
 use parity_scale_codec_derive::{Decode, Encode};
 use solang::file_cache::FileCache;
@@ -15,6 +15,46 @@ fn event_decl() {
     );
 
     no_errors(ns.diagnostics);
+
+    let ns = parse_and_resolve(
+        r#"
+        enum e { a1 }
+        event e();"#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "e is already defined as an enum"
+    );
+
+    let ns = parse_and_resolve(
+        r#"
+        enum e { a1 }
+        contract c {
+            event e();
+        }"#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_warning(ns.diagnostics),
+        "e is already defined as an enum"
+    );
+
+    let ns = parse_and_resolve(
+        r#"
+        contract c {
+            enum e { a1 }
+            event e();
+        }"#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "e is already defined as an enum"
+    );
 
     let ns = parse_and_resolve(
         r#"
