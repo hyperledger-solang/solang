@@ -152,54 +152,6 @@ pub fn resolve_fields(delay: ResolveFields, file_no: usize, ns: &mut Namespace) 
             ns.events[pos].tags = tags;
         }
     }
-
-    // events can have the same name, but they cannot have the same signature
-    // events in the global scope cannot have matching name and signature
-    // events in the contract scope cannot hve matching name and signature in
-    // same scope or in global scope
-
-    // first check global scope
-    let mut global_signatures: HashMap<&String, &EventDecl> = HashMap::new();
-
-    for event_no in 0..ns.events.len() {
-        let event = &ns.events[event_no];
-
-        if event.contract.is_some() {
-            continue;
-        }
-
-        if global_signatures.get(&event.signature).is_some() {
-            // already defined with the same fields
-            // solidity 0.5 allows events to be redefined with the same fields, later version do not
-        } else {
-            global_signatures.insert(&event.signature, &event);
-        }
-    }
-
-    // first check contract scope
-    let mut contract_signatures: HashMap<(&String, &String), &EventDecl> = HashMap::new();
-
-    for event_no in 0..ns.events.len() {
-        let event = &ns.events[event_no];
-
-        if let Some(contract_name) = &event.contract {
-            if global_signatures.get(&event.signature).is_some() {
-                // already defined with the same fields
-                // solidity 0.5 allows events to be redefined with the same fields, later version do not
-                continue;
-            }
-
-            if contract_signatures
-                .get(&(contract_name, &event.signature))
-                .is_some()
-            {
-                // already defined with the same fields
-                // solidiy 0.5 allows events to be redefined with the same fields, later version do not
-            } else {
-                contract_signatures.insert((contract_name, &event.signature), &event);
-            }
-        }
-    }
 }
 
 /// Resolve all the types in a contract
