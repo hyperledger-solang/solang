@@ -924,7 +924,7 @@ impl ControlFlowGraph {
                 ..
             } => format!(
                 "emit event {} topics {} data {}",
-                ns.events[*event_no],
+                ns.events[*event_no].symbol_name(ns),
                 topics
                     .iter()
                     .map(|expr| self.expr_to_string(contract, ns, expr))

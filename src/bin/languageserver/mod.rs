@@ -294,7 +294,7 @@ impl SolangServer {
 
                 let mut msg = render(&event.tags);
 
-                msg.push_str(&format!("```\nevent {} {{\n", event));
+                msg.push_str(&format!("```\nevent {} {{\n", event.symbol_name(ns)));
 
                 let mut iter = event.fields.iter().peekable();
                 while let Some(field) = iter.next() {

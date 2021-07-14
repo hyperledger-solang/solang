@@ -403,7 +403,10 @@ fn print_statement(stmts: &[Statement], func: &Function, ns: &Namespace) -> Vec<
             Statement::Emit { event_no, args, .. } => {
                 let args = args.iter().map(|e| print_expr(e, Some(func), ns)).collect();
 
-                Tree::Branch(format!("emit {}", ns.events[*event_no].to_string()), args)
+                Tree::Branch(
+                    format!("emit {}", ns.events[*event_no].symbol_name(ns)),
+                    args,
+                )
             }
             Statement::Destructure(_, fields, args) => {
                 let fields = fields
@@ -527,7 +530,11 @@ impl Namespace {
                 .collect();
 
             t.push(Tree::Branch(
-                format!("event {} {}", e, if e.anonymous { "anonymous" } else { "" }),
+                format!(
+                    "event {} {}",
+                    e.symbol_name(&self),
+                    if e.anonymous { "anonymous" } else { "" }
+                ),
                 fields,
             ));
         }
