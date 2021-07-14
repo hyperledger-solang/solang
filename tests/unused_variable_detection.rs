@@ -72,6 +72,7 @@ fn emit_event() {
 
     // Unused event
     let case_2 = r#"
+    event Hey(uint8 n);
     contract usedEvent {
         event Hey(uint8 n);
         event Hello(uint8 n);
@@ -86,6 +87,48 @@ fn emit_event() {
     assert_eq!(
         get_first_warning(&ns.diagnostics).message,
         "event 'Hello' has never been emitted"
+    );
+
+    // Unused event
+    let case_2 = r#"
+    contract F {
+        event Hey(uint8 n);
+        event Hello(uint8 n);
+    }
+    contract usedEvent is F {
+        event Hey(uint8 n);
+        function emitEvent(uint8 n) public {
+            emit Hey(n);
+        }
+    }
+    "#;
+
+    let ns = generic_target_parse(case_2);
+    assert_eq!(count_warnings(&ns.diagnostics), 1);
+    assert_eq!(
+        get_first_warning(&ns.diagnostics).message,
+        "event 'Hello' has never been emitted"
+    );
+
+    // Unused event
+    let case_2 = r#"
+    contract F {
+        event Hey(uint8 n);
+    }
+    contract usedEvent is F {
+        event Hey(uint8 n);
+        function emitEvent(uint8 n) public {
+            // reference event in contract F, so our event decl is not used
+            emit F.Hey(n);
+        }
+    }
+    "#;
+
+    let ns = generic_target_parse(case_2);
+    assert_eq!(count_warnings(&ns.diagnostics), 1);
+    assert_eq!(
+        get_first_warning(&ns.diagnostics).message,
+        "event 'Hey' has never been emitted"
     );
 }
 
