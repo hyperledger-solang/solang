@@ -444,15 +444,7 @@ fn array_length() {
     "#;
 
     let ns = generic_target_parse(file);
-    assert_eq!(count_warnings(&ns.diagnostics), 2);
-    assert!(assert_message_in_warnings(
-        &ns.diagnostics,
-        "local variable 'arr3' has never been assigned a value, but has been read",
-    ));
-    assert!(assert_message_in_warnings(
-        &ns.diagnostics,
-        "local variable 'arr4' has never been assigned a value, but has been read"
-    ));
+    assert_eq!(count_warnings(&ns.diagnostics), 0);
 }
 
 #[test]
@@ -940,6 +932,30 @@ fn delete_statement() {
         function test8() public {
             delete test8var;
         test8var = 2;
+        }
+    }
+    "#;
+
+    let ns = generic_target_parse(file);
+    assert_eq!(count_warnings(&ns.diagnostics), 0);
+}
+
+#[test]
+fn load_length() {
+    let file = r#"
+        contract foo {
+        function f(uint i1) public pure returns (int) {
+            int[8] bar = [ int(10), 20, 30, 4, 5, 6, 7, 8 ];
+
+            bar[2] = 0x7_f;
+
+            return bar[i1];
+        }
+
+        function barfunc() public pure returns (uint) {
+            uint[2][3][4] array;
+
+            return array.length;
         }
     }
     "#;
