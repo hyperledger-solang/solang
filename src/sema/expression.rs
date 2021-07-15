@@ -4415,6 +4415,9 @@ fn member_access(
     match expr_ty {
         Type::Bytes(n) => {
             if id.name == "length" {
+                //We should not eliminate an array from the code when 'length' is called
+                //So the variable is also assigned a value to be read from 'length'
+                assigned_variable(ns, &expr, symtable);
                 used_variable(ns, &expr, symtable);
                 return Ok(Expression::NumberLiteral(
                     *loc,
@@ -4428,6 +4431,9 @@ fn member_access(
                 return match dim.last().unwrap() {
                     None => Ok(Expression::DynamicArrayLength(*loc, Box::new(expr))),
                     Some(d) => {
+                        //We should not eliminate an array from the code when 'length' is called
+                        //So the variable is also assigned a value to be read from 'length'
+                        assigned_variable(ns, &expr, symtable);
                         used_variable(ns, &expr, symtable);
                         bigint_to_expression(loc, d, ns, diagnostics, Some(&Type::Uint(32)))
                     }

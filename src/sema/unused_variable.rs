@@ -80,10 +80,14 @@ pub fn used_variable(ns: &mut Namespace, exp: &Expression, symtable: &mut Symtab
             array,
             ..
         } => {
+            //We should not eliminate an array from the code when 'length' is called
+            //So the variable is also assigned
+            assigned_variable(ns, array, symtable);
             used_variable(ns, array, symtable);
         }
 
         Expression::StorageLoad(_, _, expr)
+        | Expression::Load(_, _, expr)
         | Expression::SignExt(_, _, expr)
         | Expression::ZeroExt(_, _, expr)
         | Expression::Trunc(_, _, expr)
