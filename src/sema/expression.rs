@@ -4648,7 +4648,7 @@ fn array_subscript(
     is_constant: bool,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Result<Expression, ()> {
-    let array_expr = expression(
+    let array = expression(
         array,
         file_no,
         contract_no,
@@ -4658,12 +4658,12 @@ fn array_subscript(
         diagnostics,
         None,
     )?;
-    let array_ty = array_expr.ty();
+    let array_ty = array.ty();
 
-    if array_expr.ty().is_mapping() {
+    if array.ty().is_mapping() {
         return mapping_subscript(
             loc,
-            array_expr,
+            array,
             index,
             file_no,
             contract_no,
@@ -4674,13 +4674,13 @@ fn array_subscript(
         );
     }
 
-    let index_ty = if array_ty.is_contract_storage() {
+    let index_width_ty = if array_ty.is_contract_storage() && !array_ty.is_storage_bytes() {
         Type::Uint(256)
     } else {
         Type::Uint(32)
     };
 
-    let index_expr = expression(
+    let mut index = expression(
         index,
         file_no,
         contract_no,
@@ -4688,17 +4688,19 @@ fn array_subscript(
         symtable,
         is_constant,
         diagnostics,
-        Some(&index_ty),
+        Some(&index_width_ty),
     )?;
 
-    match index_expr.ty() {
+    let index_ty = index.ty();
+
+    match index_ty.deref_any() {
         Type::Uint(_) => (),
         _ => {
             diagnostics.push(Diagnostic::error(
                 *loc,
                 format!(
                     "array subscript must be an unsigned integer, not ‘{}’",
-                    index_expr.ty().to_string(ns)
+                    index.ty().to_string(ns)
                 ),
             ));
             return Err(());
@@ -4708,10 +4710,10 @@ fn array_subscript(
     if array_ty.is_storage_bytes() {
         return Ok(Expression::StorageBytesSubscript(
             *loc,
-            Box::new(array_expr),
+            Box::new(array),
             Box::new(cast(
                 &index.loc(),
-                index_expr,
+                index,
                 &Type::Uint(32),
                 false,
                 ns,
@@ -4720,19 +4722,31 @@ fn array_subscript(
         ));
     }
 
+    if index_ty.is_contract_storage() {
+        // make sure we load the index value from storage
+        index = cast(
+            &index.loc(),
+            index,
+            index_ty.deref_any(),
+            true,
+            ns,
+            diagnostics,
+        )?;
+    }
+
     match array_ty.deref_any() {
         Type::Bytes(_) | Type::Array(_, _) | Type::DynamicBytes => {
             if array_ty.is_contract_storage() {
                 Ok(Expression::Subscript(
                     *loc,
                     array_ty,
-                    Box::new(array_expr),
-                    Box::new(index_expr),
+                    Box::new(array),
+                    Box::new(index),
                 ))
             } else {
                 let array = cast(
                     &array.loc(),
-                    array_expr,
+                    array,
                     &array_ty.deref_any(),
                     true,
                     ns,
@@ -4743,7 +4757,7 @@ fn array_subscript(
                     *loc,
                     array_ty,
                     Box::new(array),
-                    Box::new(index_expr),
+                    Box::new(index),
                 ))
             }
         }

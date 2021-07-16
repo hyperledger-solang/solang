@@ -1882,10 +1882,13 @@ fn large_index_ty_in_bounds() {
     let mut runtime = build_solidity(
         r#"
         contract foo {
-            function test(uint128 index) public pure returns (uint16) {
+            uint128 storage_index;
+
+            function test(uint128 index) public returns (uint16) {
                 uint16[] memory a = new uint16[](16);
 
-                return a[index];
+                storage_index = index;
+                return a[storage_index];
             }
         }"#,
     );
