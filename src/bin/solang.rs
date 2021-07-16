@@ -277,7 +277,17 @@ fn main() {
 
                 let code = binary.code(true).expect("llvm code emit should work");
 
-                let mut file = File::create(bin_filename).unwrap();
+                let mut file = match File::create(&bin_filename) {
+                    Ok(file) => file,
+                    Err(err) => {
+                        eprintln!(
+                            "error: cannot create file ‘{}’: {}",
+                            bin_filename.display(),
+                            err,
+                        );
+                        std::process::exit(1);
+                    }
+                };
                 file.write_all(&code).unwrap();
 
                 // Write all ABI files
@@ -297,7 +307,18 @@ fn main() {
                             );
                         }
 
-                        let mut file = File::create(abi_filename).unwrap();
+                        let mut file = match File::create(abi_filename) {
+                            Ok(file) => file,
+                            Err(err) => {
+                                eprintln!(
+                                    "error: cannot create file ‘{}’: {}",
+                                    bin_filename.display(),
+                                    err
+                                );
+                                std::process::exit(1);
+                            }
+                        };
+
                         file.write_all(&abi_bytes.as_bytes()).unwrap();
                     }
                 }
@@ -426,7 +447,17 @@ fn process_filename(
                     );
                 }
 
-                let mut file = File::create(contract_filename).unwrap();
+                let mut file = match File::create(&contract_filename) {
+                    Ok(file) => file,
+                    Err(err) => {
+                        eprintln!(
+                            "error: cannot create file ‘{}’: {}",
+                            contract_filename.display(),
+                            err,
+                        );
+                        std::process::exit(1);
+                    }
+                };
                 file.write_all(&contract_bs.as_bytes()).unwrap();
             } else {
                 let bin_filename = output_file(matches, &binary.name, target.file_extension());
@@ -439,7 +470,17 @@ fn process_filename(
                     );
                 }
 
-                let mut file = File::create(bin_filename).unwrap();
+                let mut file = match File::create(&bin_filename) {
+                    Ok(file) => file,
+                    Err(err) => {
+                        eprintln!(
+                            "error: cannot create file ‘{}’: {}",
+                            bin_filename.display(),
+                            err,
+                        );
+                        std::process::exit(1);
+                    }
+                };
                 file.write_all(&code).unwrap();
 
                 if target != solang::Target::Solana {
@@ -454,7 +495,17 @@ fn process_filename(
                         );
                     }
 
-                    let mut file = File::create(abi_filename).unwrap();
+                    let mut file = match File::create(&abi_filename) {
+                        Ok(file) => file,
+                        Err(err) => {
+                            eprintln!(
+                                "error: cannot create file ‘{}’: {}",
+                                abi_filename.display(),
+                                err,
+                            );
+                            std::process::exit(1);
+                        }
+                    };
                     file.write_all(&abi_bytes.as_bytes()).unwrap();
                 }
             }
