@@ -295,6 +295,10 @@ fn main() {
                     for contract_no in 0..ns.contracts.len() {
                         let contract = &ns.contracts[contract_no];
 
+                        if !contract.is_concrete() {
+                            continue;
+                        }
+
                         let (abi_bytes, abi_ext) =
                             abi::generate_abi(contract_no, &ns, &code, verbose);
                         let abi_filename = output_file(&matches, &contract.name, abi_ext);
