@@ -117,7 +117,7 @@ fn check_mutability(func: &Function, ns: &Namespace) -> Vec<Diagnostic> {
 
     recurse_statements(&func.body, &mut state);
 
-    if pt::FunctionTy::Function == func.ty {
+    if pt::FunctionTy::Function == func.ty && !func.is_accessor {
         if !state.does_write_state && !state.does_read_state {
             match func.mutability {
                 Some(pt::StateMutability::Payable(_)) | Some(pt::StateMutability::Pure(_)) => (),

@@ -351,6 +351,15 @@ fn mutability() {
         first_warning(ns.diagnostics),
         "function declared ‘view’ can be declared ‘pure’"
     );
+
+    let ns = parse_and_resolve(
+        "contract test {
+            int64 constant public foo = 1844674;
+        }",
+        Target::Substrate,
+    );
+
+    no_warnings_errors(ns.diagnostics);
 }
 
 #[test]
