@@ -14,7 +14,6 @@ import fs from 'fs';
 import { AbiItem } from 'web3-utils';
 import { utils } from 'ethers';
 import crypto from 'crypto';
-import { SigningKey } from 'ethers/lib/utils';
 const Web3EthAbi = require('web3-eth-abi');
 
 const default_url: string = "http://localhost:8899";
