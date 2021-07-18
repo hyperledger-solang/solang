@@ -621,10 +621,54 @@ fn struct_in_array() {
             function set(S[] memory n) public {
                 store = n;
             }
+
+            function copy() public returns (S[] memory) {
+                return store;
+            }
         }"##,
     );
 
-    runtime.function("set", vec![S(102, true)].encode());
+    let val = vec![S(102, true), S(u64::MAX, false)];
+
+    runtime.function("set", val.encode());
+
+    runtime.function("copy", vec![]);
+
+    assert_eq!(runtime.vm.output, val.encode());
+}
+
+#[test]
+fn struct_in_fixed_array() {
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct S(u64, bool);
+
+    let mut runtime = build_solidity(
+        r##"
+        struct S {
+            uint64 f1;
+            bool f2;
+        }
+
+        contract foo {
+            S[2] store;
+
+            function set(S[2] memory n) public {
+                store = n;
+            }
+
+            function copy() public returns (S[2] memory) {
+                return store;
+            }
+        }"##,
+    );
+
+    let val = [S(102, true), S(u64::MAX, false)];
+
+    runtime.function("set", val.encode());
+
+    runtime.function("copy", vec![]);
+
+    assert_eq!(runtime.vm.output, val.encode());
 }
 
 #[test]
