@@ -456,7 +456,8 @@ pub trait TargetRuntime<'a> {
                         "size",
                     );
 
-                    let elem_ty = bin.llvm_type(&ty.array_elem(), ns);
+                    let elem_ty = bin.llvm_var(&ty.array_elem(), ns);
+
                     let elem_size = bin.builder.build_int_truncate(
                         elem_ty.size_of().unwrap(),
                         bin.context.i32_type(),
