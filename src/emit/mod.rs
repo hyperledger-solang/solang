@@ -719,28 +719,13 @@ pub trait TargetRuntime<'a> {
                         },
                     );
                 } else {
-                    // get the lenght of the our in-memory array
-                    let len = bin
-                        .builder
-                        .build_load(
-                            unsafe {
-                                bin.builder.build_gep(
-                                    dest.into_pointer_value(),
-                                    &[
-                                        bin.context.i32_type().const_zero(),
-                                        bin.context.i32_type().const_zero(),
-                                    ],
-                                    "array_len",
-                                )
-                            },
-                            "array_len",
-                        )
-                        .into_int_value();
+                    // get the length of the our in-memory array
+                    let len = bin.vector_len(dest);
 
                     let slot_ty = ast::Type::Uint(256);
 
                     // details about our array elements
-                    let elem_ty = bin.llvm_type(&ty.array_elem(), ns);
+                    let elem_ty = bin.llvm_var(&ty.array_elem(), ns);
                     let elem_size = bin.builder.build_int_truncate(
                         elem_ty.size_of().unwrap(),
                         bin.context.i32_type(),

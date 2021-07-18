@@ -604,6 +604,30 @@ fn array_in_struct() {
 }
 
 #[test]
+fn struct_in_array() {
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct S(u64, bool);
+
+    let mut runtime = build_solidity(
+        r##"
+        struct S {
+            uint64 f1;
+            bool f2;
+        }
+
+        contract foo {
+            S[] store;
+
+            function set(S[] memory n) public {
+                store = n;
+            }
+        }"##,
+    );
+
+    runtime.function("set", vec![S(102, true)].encode());
+}
+
+#[test]
 fn struct_array_struct() {
     let mut runtime = build_solidity(
         r##"
