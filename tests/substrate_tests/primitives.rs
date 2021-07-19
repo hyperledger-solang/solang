@@ -815,10 +815,11 @@ fn implicit_bytes_cast_incompatible_size() {
     let mut runtime = build_solidity(
         r#"
         contract c {
-            function test() public {
+            function test() public returns (bytes3) {
                 bytes b1 = hex"01020304";
 
                 bytes3 b2 = b1;
+                return b2;
             }
         }
         "#,

@@ -555,6 +555,10 @@ fn bytes_storage_subscript() {
             function and(uint32 index, bytes1 val) public {
                 bar[index] &= val;
             }
+
+            function get() public returns (bytes) {
+                return bar;
+            }
         }"##,
     );
 

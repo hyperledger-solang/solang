@@ -4,14 +4,15 @@ contract c {
 	function test1() public pure {
 		bytes x = "foo1";
 		// x is not being used, so it can be a slice
-// CHECK: alloc slice uint32 4 "foo1"
+// CHECK:
 	}
 
 // BEGIN-CHECK: c::function::test2
-	function test2() public pure {
+	function test2() public pure returns (bytes) {
 		bytes x = "foo2";
 
 		x[1] = 0;
+		return x;
 		// x is being modified, so it must be a vector
 // CHECK: alloc bytes uint32 4 "foo2"
 	}
@@ -46,10 +47,11 @@ contract c {
 	}
 
 // BEGIN-CHECK: c::function::test5
-	function test5() public pure {
+	function test5() public pure returns (bytes) {
 		bytes x = "foo5";
 
 		x.push(0);
+		return x;
 		// push modifies vectotr
 // CHECK: alloc bytes uint32 4 "foo5"
 	}
@@ -65,23 +67,24 @@ contract c {
 
 
 // BEGIN-CHECK: c::function::test7
-	function test7() public pure {
+	function test7() public pure returns (bytes) {
 		bytes x = "foo7";
 
 		bytes y = x;
 		y[1] = 0;
-
+		return y;
 		// x modified via y
 // CHECK: alloc bytes uint32 4 "foo7"
 	}
 
 // BEGIN-CHECK: c::function::test8
-	function test8() public pure {
+	function test8() public pure returns (bytes) {
 		string x = "foo8";
 
 		bytes y = bytes(x);
 		y[1] = 0;
 
+		return y;
 		// x modified via y
 // CHECK: alloc string uint32 4 "foo8"
 	}

@@ -29,8 +29,9 @@ pub fn resolve_function_body(
                 name,
                 ns.functions[function_no].params[i].ty.clone(),
                 ns,
-                true,
+                None,
                 VariableUsage::Parameter,
+                p.storage.clone(),
             ) {
                 ns.check_shadowing(file_no, contract_no, name);
 
@@ -191,8 +192,9 @@ pub fn resolve_function_body(
                 name,
                 ret.ty.clone(),
                 ns,
-                false,
+                None,
                 VariableUsage::ReturnVariable,
+                None,
             ) {
                 ns.check_shadowing(file_no, contract_no, name);
                 symtable.returns.push(pos);
@@ -209,8 +211,9 @@ pub fn resolve_function_body(
                     &id,
                     ret.ty.clone(),
                     ns,
-                    true,
+                    None,
                     VariableUsage::AnonymousReturnVariable,
+                    None,
                 )
                 .unwrap();
 
@@ -345,8 +348,9 @@ fn statement(
                 &decl.name,
                 var_ty.clone(),
                 ns,
-                initializer.is_some(),
+                initializer.clone(),
                 VariableUsage::LocalVariable,
+                decl.storage.clone(),
             ) {
                 ns.check_shadowing(file_no, contract_no, &decl.name);
 
@@ -1235,8 +1239,9 @@ fn destructure(
                     &name,
                     ty.clone(),
                     ns,
-                    true,
+                    None,
                     VariableUsage::DestructureVariable,
+                    storage.clone(),
                 ) {
                     ns.check_shadowing(file_no, contract_no, &name);
 
@@ -1867,8 +1872,9 @@ fn try_catch(
                         &name,
                         ret_ty.clone(),
                         ns,
-                        false,
+                        None,
                         VariableUsage::TryCatchReturns,
+                        storage.clone(),
                     ) {
                         ns.check_shadowing(file_no, contract_no, &name);
                         params.push((
@@ -1976,8 +1982,9 @@ fn try_catch(
                 &name,
                 Type::String,
                 ns,
-                true,
+                None,
                 VariableUsage::TryCatchErrorString,
+                error_stmt.1.storage.clone(),
             ) {
                 ns.check_shadowing(file_no, contract_no, &name);
 
@@ -2042,9 +2049,14 @@ fn try_catch(
     let mut catch_stmt_resolved = Vec::new();
 
     if let Some(name) = &catch_stmt.0.name {
-        if let Some(pos) =
-            symtable.add(&name, catch_ty, ns, true, VariableUsage::TryCatchErrorBytes)
-        {
+        if let Some(pos) = symtable.add(
+            &name,
+            catch_ty,
+            ns,
+            None,
+            VariableUsage::TryCatchErrorBytes,
+            catch_stmt.0.storage.clone(),
+        ) {
             ns.check_shadowing(file_no, contract_no, &name);
             catch_param_pos = Some(pos);
             catch_param.name = name.name.to_string();
