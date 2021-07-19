@@ -23,7 +23,8 @@ pub enum Type {
     Mapping(Box<Type>, Box<Type>),
     Contract(usize),
     Ref(Box<Type>),
-    StorageRef(Box<Type>),
+    /// Reference to storage, first bool is true for immutables
+    StorageRef(bool, Box<Type>),
     InternalFunction {
         mutability: Option<pt::StateMutability>,
         params: Vec<Type>,
@@ -284,6 +285,7 @@ pub struct Variable {
     pub ty: Type,
     pub visibility: pt::Visibility,
     pub constant: bool,
+    pub immutable: bool,
     pub initializer: Option<Expression>,
     pub assigned: bool,
     pub read: bool,

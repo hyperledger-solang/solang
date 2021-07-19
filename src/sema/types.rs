@@ -686,7 +686,7 @@ impl Type {
             }
             Type::Contract(n) => format!("contract {}", ns.contracts[*n].name),
             Type::Ref(r) => r.to_string(ns),
-            Type::StorageRef(ty) => format!("{} storage", ty.to_string(ns)),
+            Type::StorageRef(_, ty) => format!("{} storage", ty.to_string(ns)),
             Type::Void => "void".to_owned(),
             Type::Unreachable => "unreachable".to_owned(),
             Type::Slice => "slice".to_owned(),
@@ -703,7 +703,7 @@ impl Type {
             Type::Bytes(_) => true,
             Type::Value => true,
             Type::Ref(r) => r.is_primitive(),
-            Type::StorageRef(r) => r.is_primitive(),
+            Type::StorageRef(_, r) => r.is_primitive(),
             _ => false,
         }
     }
@@ -732,7 +732,7 @@ impl Type {
                     .collect::<String>()
             ),
             Type::Ref(r) => r.to_string(ns),
-            Type::StorageRef(r) => r.to_string(ns),
+            Type::StorageRef(_, r) => r.to_string(ns),
             Type::Struct(struct_no) => {
                 format!(
                     "({})",
@@ -778,14 +778,14 @@ impl Type {
     /// array types and will cause a panic otherwise.
     pub fn storage_array_elem(&self) -> Self {
         match self {
-            Type::Mapping(_, v) => Type::StorageRef(v.clone()),
+            Type::Mapping(_, v) => Type::StorageRef(false, v.clone()),
             Type::DynamicBytes => Type::Bytes(1),
-            Type::Array(ty, dim) if dim.len() > 1 => Type::StorageRef(Box::new(Type::Array(
-                ty.clone(),
-                dim[..dim.len() - 1].to_vec(),
-            ))),
-            Type::Array(ty, dim) if dim.len() == 1 => Type::StorageRef(ty.clone()),
-            Type::StorageRef(ty) => ty.storage_array_elem(),
+            Type::Array(ty, dim) if dim.len() > 1 => Type::StorageRef(
+                false,
+                Box::new(Type::Array(ty.clone(), dim[..dim.len() - 1].to_vec())),
+            ),
+            Type::Array(ty, dim) if dim.len() == 1 => Type::StorageRef(false, ty.clone()),
+            Type::StorageRef(_, ty) => ty.storage_array_elem(),
             _ => panic!("deref on non-array"),
         }
     }
@@ -794,7 +794,7 @@ impl Type {
     /// and will panic otherwise.
     pub fn array_length(&self) -> Option<&BigInt> {
         match self {
-            Type::StorageRef(ty) => ty.array_length(),
+            Type::StorageRef(_, ty) => ty.array_length(),
             Type::Ref(ty) => ty.array_length(),
             Type::Array(_, dim) => dim.last().unwrap().as_ref(),
             _ => panic!("array_length on non-array"),
@@ -870,7 +870,7 @@ impl Type {
             Type::Bytes(n) => *n as u16 * 8,
             Type::Enum(n) => ns.enums[*n].ty.bits(ns),
             Type::Value => ns.value_length as u16 * 8,
-            Type::StorageRef(_) => ns.storage_type().bits(ns),
+            Type::StorageRef(_, _) => ns.storage_type().bits(ns),
             _ => panic!("type not allowed"),
         }
     }
@@ -879,7 +879,7 @@ impl Type {
         match self {
             Type::Int(_) => true,
             Type::Ref(r) => r.is_signed_int(),
-            Type::StorageRef(r) => r.is_signed_int(),
+            Type::StorageRef(_, r) => r.is_signed_int(),
             _ => false,
         }
     }
@@ -890,7 +890,7 @@ impl Type {
             Type::Uint(_) => true,
             Type::Value => true,
             Type::Ref(r) => r.is_integer(),
-            Type::StorageRef(r) => r.is_integer(),
+            Type::StorageRef(_, r) => r.is_integer(),
             _ => false,
         }
     }
@@ -906,7 +906,7 @@ impl Type {
             }
         } else {
             match self {
-                Type::StorageRef(r) | Type::Ref(r) => r.storage_slots(ns),
+                Type::StorageRef(_, r) | Type::Ref(r) => r.storage_slots(ns),
                 Type::Struct(n) => ns.structs[*n]
                     .fields
                     .iter()
@@ -945,7 +945,7 @@ impl Type {
             Type::Mapping(_, _) => true,
             Type::Contract(_) => false,
             Type::Ref(r) => r.is_reference_type(),
-            Type::StorageRef(r) => r.is_reference_type(),
+            Type::StorageRef(_, r) => r.is_reference_type(),
             Type::InternalFunction { .. } => false,
             Type::ExternalFunction { .. } => false,
             _ => unreachable!(),
@@ -965,7 +965,7 @@ impl Type {
                 ty.is_dynamic(ns)
             }
             Type::Struct(n) => ns.structs[*n].fields.iter().any(|f| f.ty.is_dynamic(ns)),
-            Type::StorageRef(r) => r.is_dynamic(ns),
+            Type::StorageRef(_, r) => r.is_dynamic(ns),
             _ => false,
         }
     }
@@ -986,12 +986,12 @@ impl Type {
 
     /// Is this a reference to contract storage?
     pub fn is_contract_storage(&self) -> bool {
-        matches!(self, Type::StorageRef(_))
+        matches!(self, Type::StorageRef(_, _))
     }
 
     /// Is this a storage bytes string
     pub fn is_storage_bytes(&self) -> bool {
-        if let Type::StorageRef(ty) = self {
+        if let Type::StorageRef(_, ty) = self {
             if let Type::DynamicBytes = ty.as_ref() {
                 return true;
             }
@@ -1004,7 +1004,7 @@ impl Type {
     pub fn is_mapping(&self) -> bool {
         match self {
             Type::Mapping(_, _) => true,
-            Type::StorageRef(ty) => ty.is_mapping(),
+            Type::StorageRef(_, ty) => ty.is_mapping(),
             _ => false,
         }
     }
@@ -1018,7 +1018,7 @@ impl Type {
                 .fields
                 .iter()
                 .any(|f| f.ty.contains_mapping(ns)),
-            Type::StorageRef(r) | Type::Ref(r) => r.contains_mapping(ns),
+            Type::StorageRef(_, r) | Type::Ref(r) => r.contains_mapping(ns),
             _ => false,
         }
     }
@@ -1032,7 +1032,7 @@ impl Type {
                 .fields
                 .iter()
                 .any(|f| f.ty.contains_internal_function(ns)),
-            Type::StorageRef(r) | Type::Ref(r) => r.contains_internal_function(ns),
+            Type::StorageRef(_, r) | Type::Ref(r) => r.contains_internal_function(ns),
             _ => false,
         }
     }
@@ -1040,7 +1040,7 @@ impl Type {
     /// If the type is Ref or StorageRef, get the underlying type
     pub fn deref_any(&self) -> &Self {
         match self {
-            Type::StorageRef(r) => r,
+            Type::StorageRef(_, r) => r,
             Type::Ref(r) => r,
             _ => self,
         }
@@ -1049,7 +1049,7 @@ impl Type {
     /// If the type is Ref or StorageRef, get the underlying type
     pub fn deref_into(self) -> Self {
         match self {
-            Type::StorageRef(r) => *r,
+            Type::StorageRef(_, r) => *r,
             Type::Ref(r) => *r,
             _ => self,
         }
@@ -1092,7 +1092,7 @@ impl Type {
             Type::InternalFunction { .. } => "function".to_owned(),
             Type::ExternalFunction { .. } => "function".to_owned(),
             Type::Ref(r) => r.to_wasm_string(ns),
-            Type::StorageRef(r) => r.to_wasm_string(ns),
+            Type::StorageRef(_, r) => r.to_wasm_string(ns),
             _ => unreachable!(),
         }
     }

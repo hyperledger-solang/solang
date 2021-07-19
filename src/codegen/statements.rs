@@ -1144,7 +1144,7 @@ impl Type {
                 Vec::new(),
             )),
             Type::Ref(_) => unreachable!(),
-            Type::StorageRef(_) => None,
+            Type::StorageRef(_, _) => None,
             Type::String | Type::DynamicBytes => Some(Expression::AllocDynamicArray(
                 pt::Loc(0, 0, 0),
                 self.clone(),

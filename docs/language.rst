@@ -19,7 +19,6 @@ As with any new project, bugs are possible. Please report any issues you may fin
 
 Differences:
 
-- ``immutable`` is not supported. Note this is impossible to implement on any than chain other than Ethereum; this is purely an ethereum feature
 - libraries are always statically linked into the contract code
 - Solang generates WebAssembly or BPF rather than EVM. This means that the ``assembly {}``
   statement using EVM instructions is not supported
@@ -2013,6 +2012,29 @@ retain their values between calls. These are declared so:
 The ``counter`` is maintained for each deployed ``hitcount`` contract. When the contract is deployed,
 the contract storage is set to 1. Contract storage variable do not need an initializer; when
 it is not present, it is initialized to 0, or ``false`` if it is a ``bool``.
+
+Immutable Variables
+___________________
+
+A variable can be declared `immutable`. This means that it may only be modified in a constructor,
+and not in any other function or modifier.
+
+.. code-block:: javascript
+
+  contract foo {
+      uint public immutable bar;
+
+      constructor(int v) {
+        bar = v;
+      }
+
+      function hit() public {
+        // this is not permitted
+        bar++;
+      }
+  }
+
+This is purely a compiler syntax feature, the generated code is exactly the same.
 
 Accessor Functions
 __________________

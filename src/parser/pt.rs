@@ -206,6 +206,7 @@ pub struct EnumDefinition {
 pub enum VariableAttribute {
     Visibility(Visibility),
     Constant(Loc),
+    Immutable(Loc),
 }
 
 #[derive(Debug, PartialEq)]

@@ -557,7 +557,7 @@ fn expression(
             }
         }
         Expression::Variable(loc, ty, var) => {
-            if !matches!(ty, Type::Ref(_) | Type::StorageRef(_)) {
+            if !matches!(ty, Type::Ref(_) | Type::StorageRef(_, _)) {
                 if let Some(vars) = vars {
                     if let Some(defs) = vars.get(var) {
                         // There must be at least one definition, and all should evaluate to the same value
@@ -1088,7 +1088,7 @@ fn bigint_to_expression(loc: &Loc, ty: &Type, n: BigInt) -> (Expression, bool) {
                 n
             }
         }
-        Type::StorageRef(_) => n,
+        Type::StorageRef(_, _) => n,
         _ => unreachable!(),
     };
 

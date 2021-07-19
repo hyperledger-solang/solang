@@ -830,7 +830,7 @@ pub fn resolve_params(
 
                     ty_loc.2 = loc.2;
 
-                    Type::StorageRef(Box::new(ty))
+                    Type::StorageRef(false, Box::new(ty))
                 } else {
                     if ty.contains_mapping(ns) {
                         diagnostics.push(Diagnostic::error(
@@ -942,7 +942,7 @@ pub fn resolve_returns(
 
                             ty_loc.2 = loc.2;
 
-                            Type::StorageRef(Box::new(ty))
+                            Type::StorageRef(false, Box::new(ty))
                         }
                         _ => {
                             if ty.contains_mapping(ns) {

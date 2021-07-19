@@ -620,7 +620,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                 product * EncoderBuilder::encoded_fixed_length(&ty, ns)
             }
             ast::Type::Ref(r) => EncoderBuilder::encoded_fixed_length(r, ns),
-            ast::Type::StorageRef(r) => EncoderBuilder::encoded_fixed_length(r, ns),
+            ast::Type::StorageRef(_, r) => EncoderBuilder::encoded_fixed_length(r, ns),
             _ => unreachable!(),
         }
     }
