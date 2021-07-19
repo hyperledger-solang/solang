@@ -258,6 +258,7 @@ fn resolve_base_args(
                             args,
                             file_no,
                             base_no,
+                            None,
                             *contract_no,
                             ns,
                             &mut symtable,

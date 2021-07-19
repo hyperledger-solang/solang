@@ -5925,7 +5925,7 @@ impl<'a> Binary<'a> {
                 .llvm_type(r, ns)
                 .ptr_type(AddressSpace::Generic)
                 .as_basic_type_enum(),
-            ast::Type::StorageRef(_) => self.llvm_type(&ns.storage_type(), ns),
+            ast::Type::StorageRef(_, _) => self.llvm_type(&ns.storage_type(), ns),
             ast::Type::InternalFunction {
                 params, returns, ..
             } => {

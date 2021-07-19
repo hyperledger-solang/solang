@@ -1427,6 +1427,7 @@ impl ast::Namespace {
                     dimensions.push(self.resolve_array_dimension(
                         file_no,
                         contract_no,
+                        None,
                         index,
                         diagnostics,
                     )?);
@@ -1475,6 +1476,7 @@ impl ast::Namespace {
         &mut self,
         file_no: usize,
         contract_no: Option<usize>,
+        function_no: Option<usize>,
         expr: &pt::Expression,
         diagnostics: &mut Vec<ast::Diagnostic>,
     ) -> Result<ArrayDimension, ()> {
@@ -1484,6 +1486,7 @@ impl ast::Namespace {
             &expr,
             file_no,
             contract_no,
+            function_no,
             self,
             &mut symtable,
             true,

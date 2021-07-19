@@ -173,7 +173,7 @@ pub fn expression(
             let v = expression(var, cfg, contract_no, ns, vartab);
             let v = match var.ty() {
                 Type::Ref(ty) => Expression::Load(var.loc(), ty.as_ref().clone(), Box::new(v)),
-                Type::StorageRef(ty) => load_storage(&var.loc(), ty.as_ref(), v, cfg, vartab),
+                Type::StorageRef(_, ty) => load_storage(&var.loc(), ty.as_ref(), v, cfg, vartab),
                 _ => v,
             };
 
@@ -212,7 +212,7 @@ pub fn expression(
                     let dest = expression(var, cfg, contract_no, ns, vartab);
 
                     match var.ty() {
-                        Type::StorageRef(_) => {
+                        Type::StorageRef(_, _) => {
                             cfg.add(
                                 vartab,
                                 Instr::SetStorage {
@@ -237,7 +237,7 @@ pub fn expression(
             let v = expression(var, cfg, contract_no, ns, vartab);
             let v = match var.ty() {
                 Type::Ref(ty) => Expression::Load(var.loc(), ty.as_ref().clone(), Box::new(v)),
-                Type::StorageRef(ty) => load_storage(&var.loc(), ty.as_ref(), v, cfg, vartab),
+                Type::StorageRef(_, ty) => load_storage(&var.loc(), ty.as_ref(), v, cfg, vartab),
                 _ => v,
             };
 
@@ -291,7 +291,7 @@ pub fn expression(
                     );
 
                     match var.ty() {
-                        Type::StorageRef(_) => {
+                        Type::StorageRef(_, _) => {
                             cfg.add(
                                 vartab,
                                 Instr::SetStorage {
@@ -1103,7 +1103,7 @@ pub fn assign_single(
             );
 
             match left_ty {
-                Type::StorageRef(_) => {
+                Type::StorageRef(_, _) => {
                     if let Expression::StorageBytesSubscript(_, array, index) = dest {
                         // Set a byte in a byte array
                         cfg.add(
@@ -1601,7 +1601,7 @@ fn array_subscript(
         }
         Type::Array(_, _) => match array_ty.array_length() {
             None => {
-                if let Type::StorageRef(_) = array_ty {
+                if let Type::StorageRef(_, _) = array_ty {
                     if ns.target == Target::Solana {
                         Expression::StorageArrayLength {
                             loc: *loc,
@@ -1683,7 +1683,7 @@ fn array_subscript(
 
     cfg.set_basic_block(in_bounds);
 
-    if let Type::StorageRef(ty) = &array_ty {
+    if let Type::StorageRef(_, ty) = &array_ty {
         let elem_ty = ty.storage_array_elem();
         let slot_ty = ns.storage_type();
 

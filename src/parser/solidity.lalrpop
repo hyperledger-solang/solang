@@ -221,7 +221,8 @@ Visibility: Visibility = {
 
 VariableAttribute: VariableAttribute = {
     Visibility => VariableAttribute::Visibility(<>),
-    <l:@L> "constant" <r:@R> => VariableAttribute::Constant(Loc(file_no, l, r))
+    <l:@L> "constant" <r:@R> => VariableAttribute::Constant(Loc(file_no, l, r)),
+    <l:@L> "immutable" <r:@R> => VariableAttribute::Immutable(Loc(file_no, l, r))
 }
 
 Expression: Expression = {
@@ -828,5 +829,6 @@ extern {
         "override" => Token::Override,
         "using" => Token::Using,
         "modifier" => Token::Modifier,
+        "immutable" => Token::Immutable,
     }
 }

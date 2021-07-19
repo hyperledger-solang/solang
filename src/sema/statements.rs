@@ -78,6 +78,7 @@ pub fn resolve_function_body(
                                 args,
                                 file_no,
                                 base_no,
+                                Some(function_no),
                                 contract_no,
                                 ns,
                                 &mut symtable,
@@ -160,6 +161,7 @@ pub fn resolve_function_body(
                     available_functions(&modifier.name.name, false, file_no, contract_no, ns),
                     true,
                     contract_no,
+                    Some(function_no),
                     ns,
                     &mut symtable,
                     &mut diagnostics,
@@ -324,6 +326,7 @@ fn statement(
                     init,
                     file_no,
                     contract_no,
+                    Some(function_no),
                     ns,
                     symtable,
                     false,
@@ -422,6 +425,7 @@ fn statement(
                 cond_expr,
                 file_no,
                 contract_no,
+                Some(function_no),
                 ns,
                 symtable,
                 false,
@@ -457,6 +461,7 @@ fn statement(
                 cond_expr,
                 file_no,
                 contract_no,
+                Some(function_no),
                 ns,
                 symtable,
                 false,
@@ -491,6 +496,7 @@ fn statement(
                 cond_expr,
                 file_no,
                 contract_no,
+                Some(function_no),
                 ns,
                 symtable,
                 false,
@@ -640,6 +646,7 @@ fn statement(
                 cond_expr,
                 file_no,
                 contract_no,
+                Some(function_no),
                 ns,
                 symtable,
                 false,
@@ -761,6 +768,7 @@ fn statement(
                     expr,
                     file_no,
                     contract_no,
+                    Some(function_no),
                     ns,
                     symtable,
                     false,
@@ -768,7 +776,7 @@ fn statement(
                     None,
                 )?;
                 used_variable(ns, &expr, symtable);
-                return if let Type::StorageRef(ty) = expr.ty() {
+                return if let Type::StorageRef(_, ty) = expr.ty() {
                     if expr.ty().is_mapping() {
                         ns.diagnostics.push(Diagnostic::error(
                             *loc,
@@ -816,6 +824,7 @@ fn statement(
                         expr,
                         file_no,
                         contract_no,
+                        function_no,
                         symtable,
                         ns,
                         diagnostics,
@@ -831,6 +840,7 @@ fn statement(
                 expr,
                 file_no,
                 contract_no,
+                Some(function_no),
                 ns,
                 symtable,
                 false,
@@ -926,6 +936,7 @@ fn emit_event(
                         arg,
                         file_no,
                         contract_no,
+                        Some(function_no),
                         ns,
                         symtable,
                         false,
@@ -1052,6 +1063,7 @@ fn emit_event(
                         arg,
                         file_no,
                         contract_no,
+                        Some(function_no),
                         ns,
                         symtable,
                         false,
@@ -1119,6 +1131,7 @@ fn destructure(
     expr: &pt::Expression,
     file_no: usize,
     contract_no: Option<usize>,
+    function_no: usize,
     symtable: &mut Symtable,
     ns: &mut Namespace,
     diagnostics: &mut Vec<Diagnostic>,
@@ -1152,6 +1165,7 @@ fn destructure(
                     ty,
                     file_no,
                     contract_no,
+                    Some(function_no),
                     ns,
                     symtable,
                     false,
@@ -1177,9 +1191,23 @@ fn destructure(
                         ));
                         return Err(());
                     }
-                    Expression::StorageVariable(_, _, _, _) | Expression::Variable(_, _, _) => (),
+                    Expression::StorageVariable(_, _, var_contract_no, var_no) => {
+                        let store_var = &ns.contracts[*var_contract_no].variables[*var_no];
+
+                        if store_var.immutable && !ns.functions[function_no].is_constructor() {
+                            diagnostics.push(Diagnostic::error(
+                                *loc,
+                                format!(
+                                    "cannot assign to immutable ‘{}’ outside of constructor",
+                                    store_var.name
+                                ),
+                            ));
+                            return Err(());
+                        }
+                    }
+                    Expression::Variable(_, _, _) => (),
                     _ => match e.ty() {
-                        Type::Ref(_) | Type::StorageRef(_) => (),
+                        Type::Ref(_) | Type::StorageRef(false, _) => (),
                         _ => {
                             diagnostics.push(Diagnostic::error(
                                 *loc,
@@ -1237,6 +1265,7 @@ fn destructure(
         &fields,
         file_no,
         contract_no,
+        function_no,
         symtable,
         ns,
         diagnostics,
@@ -1252,6 +1281,7 @@ fn destructure_values(
     fields: &[DestructureField],
     file_no: usize,
     contract_no: Option<usize>,
+    function_no: usize,
     symtable: &mut Symtable,
     ns: &mut Namespace,
     diagnostics: &mut Vec<Diagnostic>,
@@ -1264,6 +1294,7 @@ fn destructure_values(
                 args,
                 file_no,
                 contract_no,
+                Some(function_no),
                 ns,
                 symtable,
                 false,
@@ -1279,6 +1310,7 @@ fn destructure_values(
                 args,
                 file_no,
                 contract_no,
+                Some(function_no),
                 ns,
                 symtable,
                 diagnostics,
@@ -1291,6 +1323,7 @@ fn destructure_values(
                 cond,
                 file_no,
                 contract_no,
+                Some(function_no),
                 ns,
                 symtable,
                 false,
@@ -1306,6 +1339,7 @@ fn destructure_values(
                 fields,
                 file_no,
                 contract_no,
+                function_no,
                 symtable,
                 ns,
                 diagnostics,
@@ -1318,6 +1352,7 @@ fn destructure_values(
                 fields,
                 file_no,
                 contract_no,
+                function_no,
                 symtable,
                 ns,
                 diagnostics,
@@ -1354,6 +1389,7 @@ fn destructure_values(
                     e,
                     file_no,
                     contract_no,
+                    Some(function_no),
                     ns,
                     symtable,
                     false,
@@ -1444,7 +1480,7 @@ fn resolve_var_decl_ty(
 
         if let pt::StorageLocation::Storage(loc) = storage {
             loc_ty.2 = loc.2;
-            var_ty = Type::StorageRef(Box::new(var_ty));
+            var_ty = Type::StorageRef(false, Box::new(var_ty));
         }
 
         // Note we are completely ignoring memory or calldata data locations. Everything
@@ -1525,6 +1561,7 @@ fn return_with_values(
             r,
             file_no,
             contract_no,
+            Some(function_no),
             ns,
             symtable,
             false,
@@ -1631,6 +1668,7 @@ fn try_catch(
                 args,
                 file_no,
                 contract_no,
+                Some(function_no),
                 ns,
                 symtable,
                 false,
@@ -1646,6 +1684,7 @@ fn try_catch(
                 args,
                 file_no,
                 contract_no,
+                Some(function_no),
                 ns,
                 symtable,
                 diagnostics,
@@ -1680,6 +1719,7 @@ fn try_catch(
                         args,
                         file_no,
                         contract_no,
+                        Some(function_no),
                         ns,
                         symtable,
                         diagnostics,
@@ -1695,6 +1735,7 @@ fn try_catch(
                         args,
                         file_no,
                         contract_no,
+                        Some(function_no),
                         ns,
                         symtable,
                         diagnostics,

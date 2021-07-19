@@ -98,6 +98,7 @@ pub fn var_decl(
 
     let mut is_constant = false;
     let mut visibility: Option<pt::Visibility> = None;
+    let mut has_immutable: Option<pt::Loc> = None;
 
     for attr in attrs {
         match &attr {
@@ -109,6 +110,17 @@ pub fn var_decl(
                     ));
                 }
                 is_constant = true;
+            }
+            pt::VariableAttribute::Immutable(loc) => {
+                if let Some(prev) = &has_immutable {
+                    ns.diagnostics.push(Diagnostic::error_with_note(
+                        *loc,
+                        "duplicate ‘immutable’ attribute".to_string(),
+                        *prev,
+                        "previous ‘immutable’ attribute".to_string(),
+                    ));
+                }
+                has_immutable = Some(*loc);
             }
             pt::VariableAttribute::Visibility(v) if contract_no.is_none() => {
                 ns.diagnostics.push(Diagnostic::error(
@@ -137,6 +149,16 @@ pub fn var_decl(
 
                 visibility = Some(v.clone());
             }
+        }
+    }
+
+    if let Some(loc) = &has_immutable {
+        if is_constant {
+            ns.diagnostics.push(Diagnostic::error(
+                *loc,
+                "variable cannot be declared both ‘immutable’ and ‘constant’".to_string(),
+            ));
+            is_constant = false;
         }
     }
 
@@ -183,6 +205,7 @@ pub fn var_decl(
             &initializer,
             file_no,
             contract_no,
+            None,
             ns,
             symtable,
             is_constant,
@@ -249,6 +272,7 @@ pub fn var_decl(
         visibility: visibility.clone(),
         ty: ty.clone(),
         constant: is_constant,
+        immutable: has_immutable.is_some(),
         assigned: initializer.is_some(),
         initializer,
         read: matches!(visibility, pt::Visibility::Public(_)),
@@ -284,7 +308,7 @@ pub fn var_decl(
             } else {
                 Expression::StorageVariable(
                     pt::Loc(0, 0, 0),
-                    Type::StorageRef(Box::new(ty.clone())),
+                    Type::StorageRef(false, Box::new(ty.clone())),
                     contract_no,
                     pos,
                 )
@@ -360,7 +384,7 @@ fn collect_parameters<'a>(
 
             *expr = Expression::Subscript(
                 pt::Loc(0, 0, 0),
-                Type::StorageRef(Box::new(ty.clone())),
+                Type::StorageRef(false, Box::new(ty.clone())),
                 Box::new(map),
                 Box::new(Expression::FunctionArg(
                     pt::Loc(0, 0, 0),
@@ -381,7 +405,7 @@ fn collect_parameters<'a>(
             collect_parameters(value, params, expr, ns)
         }
         Type::Array(elem_ty, dims) => {
-            let mut ty = Type::StorageRef(Box::new(ty.clone()));
+            let mut ty = Type::StorageRef(false, Box::new(ty.clone()));
             for _ in 0..dims.len() {
                 let map = (*expr).clone();
 

@@ -175,7 +175,7 @@ impl Expression {
             Expression::DynamicArrayLength(_, _) => Type::Uint(32),
             Expression::StorageArrayLength { ty, .. } => ty.clone(),
             Expression::StorageBytesSubscript(_, _, _) => {
-                Type::StorageRef(Box::new(Type::Bytes(1)))
+                Type::StorageRef(false, Box::new(Type::Bytes(1)))
             }
             Expression::ExternalFunctionCallRaw { .. } => {
                 panic!("two return values");
@@ -350,12 +350,12 @@ fn coerce(
 ) -> Result<Type, ()> {
     let l = match l {
         Type::Ref(ty) => ty,
-        Type::StorageRef(ty) => ty,
+        Type::StorageRef(_, ty) => ty,
         _ => l,
     };
     let r = match r {
         Type::Ref(ty) => ty,
-        Type::StorageRef(ty) => ty,
+        Type::StorageRef(_, ty) => ty,
         _ => r,
     };
 
@@ -407,7 +407,7 @@ fn get_int_length(
             Err(())
         }
         Type::Ref(n) => get_int_length(n, l_loc, allow_bytes, ns, diagnostics),
-        Type::StorageRef(n) => get_int_length(n, l_loc, allow_bytes, ns, diagnostics),
+        Type::StorageRef(_, n) => get_int_length(n, l_loc, allow_bytes, ns, diagnostics),
         _ => {
             diagnostics.push(Diagnostic::error(
                 *l_loc,
@@ -430,12 +430,12 @@ fn coerce_int(
 ) -> Result<Type, ()> {
     let l = match l {
         Type::Ref(ty) => ty,
-        Type::StorageRef(ty) => ty,
+        Type::StorageRef(_, ty) => ty,
         _ => l,
     };
     let r = match r {
         Type::Ref(ty) => ty,
-        Type::StorageRef(ty) => ty,
+        Type::StorageRef(_, ty) => ty,
         _ => r,
     };
 
@@ -593,7 +593,7 @@ pub fn cast(
     }
 
     // If it's a storage reference then load the value. The expr is the storage slot
-    if let Type::StorageRef(r) = from {
+    if let Type::StorageRef(_, r) = from {
         if let Expression::StorageBytesSubscript(_, _, _) = expr {
             return Ok(expr);
         } else {
@@ -1314,6 +1314,7 @@ pub fn expression(
     expr: &pt::Expression,
     file_no: usize,
     contract_no: Option<usize>,
+    function_no: Option<usize>,
     ns: &mut Namespace,
     symtable: &mut Symtable,
     is_constant: bool,
@@ -1327,6 +1328,7 @@ pub fn expression(
                 exprs,
                 file_no,
                 contract_no,
+                function_no,
                 ns,
                 symtable,
                 is_constant,
@@ -1615,7 +1617,7 @@ pub fn expression(
                     } else {
                         Ok(Expression::StorageVariable(
                             id.loc,
-                            Type::StorageRef(Box::new(var.ty.clone())),
+                            Type::StorageRef(var.immutable, Box::new(var.ty.clone())),
                             var_contract_no,
                             var_no,
                         ))
@@ -1687,6 +1689,7 @@ pub fn expression(
             r,
             file_no,
             contract_no,
+            function_no,
             ns,
             symtable,
             is_constant,
@@ -1698,6 +1701,7 @@ pub fn expression(
                 l,
                 file_no,
                 contract_no,
+                function_no,
                 ns,
                 symtable,
                 is_constant,
@@ -1708,6 +1712,7 @@ pub fn expression(
                 r,
                 file_no,
                 contract_no,
+                function_no,
                 ns,
                 symtable,
                 is_constant,
@@ -1740,6 +1745,7 @@ pub fn expression(
                 l,
                 file_no,
                 contract_no,
+                function_no,
                 ns,
                 symtable,
                 is_constant,
@@ -1750,6 +1756,7 @@ pub fn expression(
                 r,
                 file_no,
                 contract_no,
+                function_no,
                 ns,
                 symtable,
                 is_constant,
@@ -1782,6 +1789,7 @@ pub fn expression(
                 l,
                 file_no,
                 contract_no,
+                function_no,
                 ns,
                 symtable,
                 is_constant,
@@ -1792,6 +1800,7 @@ pub fn expression(
                 r,
                 file_no,
                 contract_no,
+                function_no,
                 ns,
                 symtable,
                 is_constant,
@@ -1824,6 +1833,7 @@ pub fn expression(
                 l,
                 file_no,
                 contract_no,
+                function_no,
                 ns,
                 symtable,
                 is_constant,
@@ -1834,6 +1844,7 @@ pub fn expression(
                 r,
                 file_no,
                 contract_no,
+                function_no,
                 ns,
                 symtable,
                 is_constant,
@@ -1866,6 +1877,7 @@ pub fn expression(
                 l,
                 file_no,
                 contract_no,
+                function_no,
                 ns,
                 symtable,
                 is_constant,
@@ -1876,6 +1888,7 @@ pub fn expression(
                 r,
                 file_no,
                 contract_no,
+                function_no,
                 ns,
                 symtable,
                 is_constant,
@@ -1903,6 +1916,7 @@ pub fn expression(
                 l,
                 file_no,
                 contract_no,
+                function_no,
                 ns,
                 symtable,
                 is_constant,
@@ -1913,6 +1927,7 @@ pub fn expression(
                 r,
                 file_no,
                 contract_no,
+                function_no,
                 ns,
                 symtable,
                 is_constant,
@@ -1941,6 +1956,7 @@ pub fn expression(
                 l,
                 file_no,
                 contract_no,
+                function_no,
                 ns,
                 symtable,
                 is_constant,
@@ -1951,6 +1967,7 @@ pub fn expression(
                 r,
                 file_no,
                 contract_no,
+                function_no,
                 ns,
                 symtable,
                 is_constant,
@@ -1980,6 +1997,7 @@ pub fn expression(
                         expr,
                         file_no,
                         contract_no,
+                        function_no,
                         ns,
                         symtable,
                         is_constant,
@@ -1991,6 +2009,7 @@ pub fn expression(
                         expr,
                         file_no,
                         contract_no,
+                        function_no,
                         ns,
                         symtable,
                         is_constant,
@@ -2012,6 +2031,7 @@ pub fn expression(
                 l,
                 file_no,
                 contract_no,
+                function_no,
                 ns,
                 symtable,
                 is_constant,
@@ -2022,6 +2042,7 @@ pub fn expression(
                 r,
                 file_no,
                 contract_no,
+                function_no,
                 ns,
                 symtable,
                 is_constant,
@@ -2054,6 +2075,7 @@ pub fn expression(
                 l,
                 file_no,
                 contract_no,
+                function_no,
                 ns,
                 symtable,
                 is_constant,
@@ -2064,6 +2086,7 @@ pub fn expression(
                 r,
                 file_no,
                 contract_no,
+                function_no,
                 ns,
                 symtable,
                 is_constant,
@@ -2096,6 +2119,7 @@ pub fn expression(
                 b,
                 file_no,
                 contract_no,
+                function_no,
                 ns,
                 symtable,
                 is_constant,
@@ -2111,6 +2135,7 @@ pub fn expression(
                         b,
                         file_no,
                         contract_no,
+                        function_no,
                         ns,
                         symtable,
                         is_constant,
@@ -2122,6 +2147,7 @@ pub fn expression(
                         b,
                         file_no,
                         contract_no,
+                        function_no,
                         ns,
                         symtable,
                         is_constant,
@@ -2135,6 +2161,7 @@ pub fn expression(
                 e,
                 file_no,
                 contract_no,
+                function_no,
                 ns,
                 symtable,
                 is_constant,
@@ -2181,6 +2208,7 @@ pub fn expression(
                 l,
                 file_no,
                 contract_no,
+                function_no,
                 ns,
                 symtable,
                 is_constant,
@@ -2191,6 +2219,7 @@ pub fn expression(
                 r,
                 file_no,
                 contract_no,
+                function_no,
                 ns,
                 symtable,
                 is_constant,
@@ -2221,6 +2250,7 @@ pub fn expression(
                 l,
                 file_no,
                 contract_no,
+                function_no,
                 ns,
                 symtable,
                 is_constant,
@@ -2231,6 +2261,7 @@ pub fn expression(
                 r,
                 file_no,
                 contract_no,
+                function_no,
                 ns,
                 symtable,
                 is_constant,
@@ -2261,6 +2292,7 @@ pub fn expression(
                 l,
                 file_no,
                 contract_no,
+                function_no,
                 ns,
                 symtable,
                 is_constant,
@@ -2271,6 +2303,7 @@ pub fn expression(
                 r,
                 file_no,
                 contract_no,
+                function_no,
                 ns,
                 symtable,
                 is_constant,
@@ -2301,6 +2334,7 @@ pub fn expression(
                 l,
                 file_no,
                 contract_no,
+                function_no,
                 ns,
                 symtable,
                 is_constant,
@@ -2311,6 +2345,7 @@ pub fn expression(
                 r,
                 file_no,
                 contract_no,
+                function_no,
                 ns,
                 symtable,
                 is_constant,
@@ -2342,6 +2377,7 @@ pub fn expression(
             r,
             file_no,
             contract_no,
+            function_no,
             ns,
             symtable,
             is_constant,
@@ -2356,6 +2392,7 @@ pub fn expression(
                 r,
                 file_no,
                 contract_no,
+                function_no,
                 ns,
                 symtable,
                 is_constant,
@@ -2368,6 +2405,7 @@ pub fn expression(
                 e,
                 file_no,
                 contract_no,
+                function_no,
                 ns,
                 symtable,
                 is_constant,
@@ -2386,6 +2424,7 @@ pub fn expression(
                 e,
                 file_no,
                 contract_no,
+                function_no,
                 ns,
                 symtable,
                 is_constant,
@@ -2417,6 +2456,7 @@ pub fn expression(
                     e,
                     file_no,
                     contract_no,
+                    function_no,
                     ns,
                     symtable,
                     is_constant,
@@ -2441,6 +2481,7 @@ pub fn expression(
                 e,
                 file_no,
                 contract_no,
+                function_no,
                 ns,
                 symtable,
                 is_constant,
@@ -2460,6 +2501,7 @@ pub fn expression(
                 l,
                 file_no,
                 contract_no,
+                function_no,
                 ns,
                 symtable,
                 is_constant,
@@ -2470,6 +2512,7 @@ pub fn expression(
                 r,
                 file_no,
                 contract_no,
+                function_no,
                 ns,
                 symtable,
                 is_constant,
@@ -2481,6 +2524,7 @@ pub fn expression(
                 c,
                 file_no,
                 contract_no,
+                function_no,
                 ns,
                 symtable,
                 is_constant,
@@ -2515,7 +2559,16 @@ pub fn expression(
                 return Err(());
             };
 
-            incr_decr(var, expr, file_no, contract_no, ns, symtable, diagnostics)
+            incr_decr(
+                var,
+                expr,
+                file_no,
+                contract_no,
+                function_no,
+                ns,
+                symtable,
+                diagnostics,
+            )
         }
 
         // assignment
@@ -2528,7 +2581,17 @@ pub fn expression(
                 return Err(());
             };
 
-            assign_single(loc, var, e, file_no, contract_no, ns, symtable, diagnostics)
+            assign_single(
+                loc,
+                var,
+                e,
+                file_no,
+                contract_no,
+                function_no,
+                ns,
+                symtable,
+                diagnostics,
+            )
         }
 
         pt::Expression::AssignAdd(loc, var, e)
@@ -2556,6 +2619,7 @@ pub fn expression(
                 e,
                 file_no,
                 contract_no,
+                function_no,
                 ns,
                 symtable,
                 diagnostics,
@@ -2573,6 +2637,7 @@ pub fn expression(
                         args,
                         file_no,
                         contract_no,
+                        function_no,
                         ns,
                         symtable,
                         is_constant,
@@ -2604,6 +2669,7 @@ pub fn expression(
                 args,
                 file_no,
                 contract_no,
+                function_no,
                 ns,
                 symtable,
                 diagnostics,
@@ -2638,6 +2704,7 @@ pub fn expression(
                         args,
                         file_no,
                         contract_no,
+                        function_no,
                         ns,
                         symtable,
                         diagnostics,
@@ -2655,6 +2722,7 @@ pub fn expression(
                         args,
                         file_no,
                         contract_no,
+                        function_no,
                         ns,
                         symtable,
                         diagnostics,
@@ -2687,6 +2755,7 @@ pub fn expression(
                         args,
                         file_no,
                         contract_no,
+                        function_no,
                         ns,
                         symtable,
                         is_constant,
@@ -2712,6 +2781,7 @@ pub fn expression(
                             &args[0],
                             file_no,
                             contract_no,
+                            function_no,
                             ns,
                             symtable,
                             is_constant,
@@ -2731,6 +2801,7 @@ pub fn expression(
                 args,
                 file_no,
                 contract_no,
+                function_no,
                 ns,
                 symtable,
                 is_constant,
@@ -2763,6 +2834,7 @@ pub fn expression(
             index,
             file_no,
             contract_no,
+            function_no,
             ns,
             symtable,
             is_constant,
@@ -2774,6 +2846,7 @@ pub fn expression(
             id,
             file_no,
             contract_no,
+            function_no,
             ns,
             symtable,
             is_constant,
@@ -2788,6 +2861,7 @@ pub fn expression(
                     left,
                     file_no,
                     contract_no,
+                    function_no,
                     ns,
                     symtable,
                     is_constant,
@@ -2805,6 +2879,7 @@ pub fn expression(
                     right,
                     file_no,
                     contract_no,
+                    function_no,
                     ns,
                     symtable,
                     is_constant,
@@ -2829,6 +2904,7 @@ pub fn expression(
                     left,
                     file_no,
                     contract_no,
+                    function_no,
                     ns,
                     symtable,
                     is_constant,
@@ -2846,6 +2922,7 @@ pub fn expression(
                     right,
                     file_no,
                     contract_no,
+                    function_no,
                     ns,
                     symtable,
                     is_constant,
@@ -2957,6 +3034,7 @@ fn constructor(
     call_args: CallArgs,
     file_no: usize,
     contract_no: Option<usize>,
+    function_no: Option<usize>,
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
@@ -3018,6 +3096,7 @@ fn constructor(
         args,
         file_no,
         no,
+        function_no,
         contract_no,
         ns,
         symtable,
@@ -3043,6 +3122,7 @@ pub fn match_constructor_to_args(
     args: &[pt::Expression],
     file_no: usize,
     contract_no: usize,
+    args_function_no: Option<usize>,
     args_contact_no: usize,
     ns: &mut Namespace,
     symtable: &mut Symtable,
@@ -3084,6 +3164,7 @@ pub fn match_constructor_to_args(
                 arg,
                 file_no,
                 Some(args_contact_no),
+                args_function_no,
                 ns,
                 symtable,
                 false,
@@ -3152,6 +3233,7 @@ pub fn constructor_named_args(
     args: &[pt::NamedArgument],
     file_no: usize,
     contract_no: Option<usize>,
+    arg_function_no: Option<usize>,
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
@@ -3163,6 +3245,7 @@ pub fn constructor_named_args(
         false,
         file_no,
         contract_no,
+        arg_function_no,
         ns,
         symtable,
         diagnostics,
@@ -3290,6 +3373,7 @@ pub fn constructor_named_args(
                 arg,
                 file_no,
                 Some(contract_no),
+                arg_function_no,
                 ns,
                 symtable,
                 false,
@@ -3476,6 +3560,7 @@ pub fn new(
     args: &[pt::Expression],
     file_no: usize,
     contract_no: Option<usize>,
+    function_no: Option<usize>,
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
@@ -3512,6 +3597,7 @@ pub fn new(
                 false,
                 file_no,
                 contract_no,
+                function_no,
                 ns,
                 symtable,
                 diagnostics,
@@ -3524,6 +3610,7 @@ pub fn new(
                 call_args,
                 file_no,
                 contract_no,
+                function_no,
                 ns,
                 symtable,
                 diagnostics,
@@ -3559,6 +3646,7 @@ pub fn new(
         &args[0],
         file_no,
         contract_no,
+        function_no,
         ns,
         symtable,
         false,
@@ -3585,6 +3673,7 @@ fn equal(
     r: &pt::Expression,
     file_no: usize,
     contract_no: Option<usize>,
+    function_no: Option<usize>,
     ns: &mut Namespace,
     symtable: &mut Symtable,
     is_constant: bool,
@@ -3594,6 +3683,7 @@ fn equal(
         l,
         file_no,
         contract_no,
+        function_no,
         ns,
         symtable,
         is_constant,
@@ -3604,6 +3694,7 @@ fn equal(
         r,
         file_no,
         contract_no,
+        function_no,
         ns,
         symtable,
         is_constant,
@@ -3703,6 +3794,7 @@ fn addition(
     r: &pt::Expression,
     file_no: usize,
     contract_no: Option<usize>,
+    function_no: Option<usize>,
     ns: &mut Namespace,
     symtable: &mut Symtable,
     is_constant: bool,
@@ -3713,6 +3805,7 @@ fn addition(
         l,
         file_no,
         contract_no,
+        function_no,
         ns,
         symtable,
         is_constant,
@@ -3723,6 +3816,7 @@ fn addition(
         r,
         file_no,
         contract_no,
+        function_no,
         ns,
         symtable,
         is_constant,
@@ -3808,6 +3902,7 @@ fn addition(
             l,
             file_no,
             contract_no,
+            function_no,
             ns,
             symtable,
             is_constant,
@@ -3818,6 +3913,7 @@ fn addition(
             r,
             file_no,
             contract_no,
+            function_no,
             ns,
             symtable,
             is_constant,
@@ -3841,6 +3937,7 @@ pub fn assign_single(
     right: &pt::Expression,
     file_no: usize,
     contract_no: Option<usize>,
+    function_no: Option<usize>,
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
@@ -3849,6 +3946,7 @@ pub fn assign_single(
         left,
         file_no,
         contract_no,
+        function_no,
         ns,
         symtable,
         false,
@@ -3861,6 +3959,7 @@ pub fn assign_single(
         right,
         file_no,
         contract_no,
+        function_no,
         ns,
         symtable,
         false,
@@ -3886,19 +3985,38 @@ pub fn assign_single(
             ));
             Err(())
         }
-        Expression::StorageVariable(loc, ty, _, _) => Ok(Expression::Assign(
-            *loc,
-            ty.clone(),
-            Box::new(var.clone()),
-            Box::new(cast(
-                &right.loc(),
-                val,
-                ty.deref_any(),
-                true,
-                ns,
-                diagnostics,
-            )?),
-        )),
+        Expression::StorageVariable(loc, ty, var_contract_no, var_no) => {
+            let store_var = &ns.contracts[*var_contract_no].variables[*var_no];
+
+            if store_var.immutable {
+                if let Some(function_no) = function_no {
+                    if !ns.functions[function_no].is_constructor() {
+                        diagnostics.push(Diagnostic::error(
+                            *loc,
+                            format!(
+                                "cannot assign to immutable ‘{}’ outside of constructor",
+                                store_var.name
+                            ),
+                        ));
+                        return Err(());
+                    }
+                }
+            }
+
+            Ok(Expression::Assign(
+                *loc,
+                ty.clone(),
+                Box::new(var.clone()),
+                Box::new(cast(
+                    &right.loc(),
+                    val,
+                    ty.deref_any(),
+                    true,
+                    ns,
+                    diagnostics,
+                )?),
+            ))
+        }
         Expression::Variable(_, var_ty, _) => Ok(Expression::Assign(
             *loc,
             var_ty.clone(),
@@ -3906,12 +4024,32 @@ pub fn assign_single(
             Box::new(cast(&right.loc(), val, var_ty, true, ns, diagnostics)?),
         )),
         _ => match &var_ty {
-            Type::Ref(r_ty) | Type::StorageRef(r_ty) => Ok(Expression::Assign(
+            Type::Ref(r_ty) => Ok(Expression::Assign(
                 *loc,
                 var_ty.clone(),
                 Box::new(var),
                 Box::new(cast(&right.loc(), val, r_ty, true, ns, diagnostics)?),
             )),
+            Type::StorageRef(immutable, r_ty) => {
+                if *immutable {
+                    if let Some(function_no) = function_no {
+                        if !ns.functions[function_no].is_constructor() {
+                            diagnostics.push(Diagnostic::error(
+                                *loc,
+                                "cannot assign to immutable outside of constructor".to_string(),
+                            ));
+                            return Err(());
+                        }
+                    }
+                }
+
+                Ok(Expression::Assign(
+                    *loc,
+                    var_ty.clone(),
+                    Box::new(var),
+                    Box::new(cast(&right.loc(), val, r_ty, true, ns, diagnostics)?),
+                ))
+            }
             _ => {
                 diagnostics.push(Diagnostic::error(
                     var.loc(),
@@ -3931,6 +4069,7 @@ fn assign_expr(
     right: &pt::Expression,
     file_no: usize,
     contract_no: Option<usize>,
+    function_no: Option<usize>,
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
@@ -3939,6 +4078,7 @@ fn assign_expr(
         left,
         file_no,
         contract_no,
+        function_no,
         ns,
         symtable,
         false,
@@ -3961,6 +4101,7 @@ fn assign_expr(
         right,
         file_no,
         contract_no,
+        function_no,
         ns,
         symtable,
         false,
@@ -4075,7 +4216,7 @@ fn assign_expr(
             ))
         }
         _ => match &var_ty {
-            Type::Ref(r_ty) | Type::StorageRef(r_ty) => match r_ty.as_ref() {
+            Type::Ref(r_ty) => match r_ty.as_ref() {
                 Type::Bytes(_) | Type::Int(_) | Type::Uint(_) => Ok(Expression::Assign(
                     *loc,
                     Type::Void,
@@ -4095,6 +4236,40 @@ fn assign_expr(
                     Err(())
                 }
             },
+            Type::StorageRef(immutable, r_ty) => {
+                if *immutable {
+                    if let Some(function_no) = function_no {
+                        if !ns.functions[function_no].is_constructor() {
+                            diagnostics.push(Diagnostic::error(
+                                *loc,
+                                "cannot assign to immutable outside of constructor".to_string(),
+                            ));
+                            return Err(());
+                        }
+                    }
+                }
+
+                match r_ty.as_ref() {
+                    Type::Bytes(_) | Type::Int(_) | Type::Uint(_) => Ok(Expression::Assign(
+                        *loc,
+                        Type::Void,
+                        Box::new(var.clone()),
+                        Box::new(op(
+                            cast(loc, var, r_ty, true, ns, diagnostics)?,
+                            r_ty,
+                            ns,
+                            diagnostics,
+                        )?),
+                    )),
+                    _ => {
+                        diagnostics.push(Diagnostic::error(
+                            var.loc(),
+                            format!("assigning to incorrect type {}", r_ty.to_string(ns)),
+                        ));
+                        Err(())
+                    }
+                }
+            }
             _ => {
                 diagnostics.push(Diagnostic::error(
                     var.loc(),
@@ -4112,6 +4287,7 @@ fn incr_decr(
     expr: &pt::Expression,
     file_no: usize,
     contract_no: Option<usize>,
+    function_no: Option<usize>,
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
@@ -4134,6 +4310,7 @@ fn incr_decr(
         v,
         file_no,
         contract_no,
+        function_no,
         ns,
         symtable,
         false,
@@ -4179,7 +4356,7 @@ fn incr_decr(
             Ok(op(var.clone(), ty.clone()))
         }
         _ => match &var_ty {
-            Type::Ref(r_ty) | Type::StorageRef(r_ty) => match r_ty.as_ref() {
+            Type::Ref(r_ty) => match r_ty.as_ref() {
                 Type::Int(_) | Type::Uint(_) => Ok(op(var, r_ty.as_ref().clone())),
                 _ => {
                     diagnostics.push(Diagnostic::error(
@@ -4189,6 +4366,29 @@ fn incr_decr(
                     Err(())
                 }
             },
+            Type::StorageRef(immutable, r_ty) => {
+                if *immutable {
+                    if let Some(function_no) = function_no {
+                        if !ns.functions[function_no].is_constructor() {
+                            diagnostics.push(Diagnostic::error(
+                                var.loc(),
+                                "cannot assign to immutable outside of constructor".to_string(),
+                            ));
+                            return Err(());
+                        }
+                    }
+                }
+                match r_ty.as_ref() {
+                    Type::Int(_) | Type::Uint(_) => Ok(op(var, r_ty.as_ref().clone())),
+                    _ => {
+                        diagnostics.push(Diagnostic::error(
+                            var.loc(),
+                            format!("assigning to incorrect type {}", r_ty.to_string(ns)),
+                        ));
+                        Err(())
+                    }
+                }
+            }
             _ => {
                 diagnostics.push(Diagnostic::error(
                     var.loc(),
@@ -4286,6 +4486,7 @@ fn member_access(
     id: &pt::Identifier,
     file_no: usize,
     contract_no: Option<usize>,
+    function_no: Option<usize>,
     ns: &mut Namespace,
     symtable: &mut Symtable,
     is_constant: bool,
@@ -4393,6 +4594,7 @@ fn member_access(
         e,
         file_no,
         contract_no,
+        function_no,
         ns,
         symtable,
         is_constant,
@@ -4445,7 +4647,7 @@ fn member_access(
                 return Ok(Expression::DynamicArrayLength(*loc, Box::new(expr)));
             }
         }
-        Type::StorageRef(r) => match *r {
+        Type::StorageRef(immutable, r) => match *r {
             Type::Struct(n) => {
                 return if let Some((field_no, field)) = ns.structs[n]
                     .fields
@@ -4455,7 +4657,7 @@ fn member_access(
                 {
                     Ok(Expression::StructMember(
                         id.loc,
-                        Type::StorageRef(Box::new(field.ty.clone())),
+                        Type::StorageRef(immutable, Box::new(field.ty.clone())),
                         Box::new(expr),
                         field_no,
                     ))
@@ -4643,6 +4845,7 @@ fn array_subscript(
     index: &pt::Expression,
     file_no: usize,
     contract_no: Option<usize>,
+    function_no: Option<usize>,
     ns: &mut Namespace,
     symtable: &mut Symtable,
     is_constant: bool,
@@ -4652,6 +4855,7 @@ fn array_subscript(
         array,
         file_no,
         contract_no,
+        function_no,
         ns,
         symtable,
         is_constant,
@@ -4667,6 +4871,7 @@ fn array_subscript(
             index,
             file_no,
             contract_no,
+            function_no,
             ns,
             symtable,
             is_constant,
@@ -4684,6 +4889,7 @@ fn array_subscript(
         index,
         file_no,
         contract_no,
+        function_no,
         ns,
         symtable,
         is_constant,
@@ -4785,6 +4991,7 @@ fn struct_literal(
     args: &[pt::Expression],
     file_no: usize,
     contract_no: Option<usize>,
+    function_no: Option<usize>,
     ns: &mut Namespace,
     symtable: &mut Symtable,
     is_constant: bool,
@@ -4811,6 +5018,7 @@ fn struct_literal(
                 &a,
                 file_no,
                 contract_no,
+                function_no,
                 ns,
                 symtable,
                 is_constant,
@@ -4844,6 +5052,7 @@ fn call_function_type(
     call_args_loc: Option<pt::Loc>,
     file_no: usize,
     contract_no: Option<usize>,
+    function_no: Option<usize>,
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
@@ -4852,6 +5061,7 @@ fn call_function_type(
         expr,
         file_no,
         contract_no,
+        function_no,
         ns,
         symtable,
         false,
@@ -4862,7 +5072,7 @@ fn call_function_type(
     let mut ty = function.ty();
 
     match ty {
-        Type::StorageRef(real_ty) | Type::Ref(real_ty) => {
+        Type::StorageRef(_, real_ty) | Type::Ref(real_ty) => {
             ty = *real_ty;
             function = cast(&expr.loc(), function, &ty, true, ns, diagnostics)?;
         }
@@ -4900,6 +5110,7 @@ fn call_function_type(
                 arg,
                 file_no,
                 contract_no,
+                function_no,
                 ns,
                 symtable,
                 false,
@@ -4938,6 +5149,7 @@ fn call_function_type(
             true,
             file_no,
             contract_no,
+            function_no,
             ns,
             symtable,
             diagnostics,
@@ -4986,6 +5198,7 @@ fn call_function_type(
                 arg,
                 file_no,
                 contract_no,
+                function_no,
                 ns,
                 symtable,
                 false,
@@ -5097,6 +5310,7 @@ pub fn call_position_args(
     function_nos: Vec<usize>,
     virtual_call: bool,
     contract_no: Option<usize>,
+    arg_function_no: Option<usize>,
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
@@ -5140,6 +5354,7 @@ pub fn call_position_args(
                 arg,
                 file_no,
                 contract_no,
+                arg_function_no,
                 ns,
                 symtable,
                 false,
@@ -5234,6 +5449,7 @@ fn function_call_with_named_args(
     function_nos: Vec<usize>,
     virtual_call: bool,
     contract_no: Option<usize>,
+    arg_function_no: Option<usize>,
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
@@ -5308,6 +5524,7 @@ fn function_call_with_named_args(
                 arg,
                 file_no,
                 contract_no,
+                arg_function_no,
                 ns,
                 symtable,
                 false,
@@ -5393,6 +5610,7 @@ fn named_struct_literal(
     args: &[pt::NamedArgument],
     file_no: usize,
     contract_no: Option<usize>,
+    function_no: Option<usize>,
     ns: &mut Namespace,
     symtable: &mut Symtable,
     is_constant: bool,
@@ -5426,6 +5644,7 @@ fn named_struct_literal(
                         &a.expr,
                         file_no,
                         contract_no,
+                        function_no,
                         ns,
                         symtable,
                         is_constant,
@@ -5462,6 +5681,7 @@ fn method_call_pos_args(
     call_args_loc: Option<pt::Loc>,
     file_no: usize,
     contract_no: Option<usize>,
+    arg_function_no: Option<usize>,
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
@@ -5483,6 +5703,7 @@ fn method_call_pos_args(
                 &func.name,
                 args,
                 contract_no,
+                arg_function_no,
                 ns,
                 symtable,
                 diagnostics,
@@ -5509,6 +5730,7 @@ fn method_call_pos_args(
                     available_super_functions(&func.name, cur_contract_no, ns),
                     false,
                     contract_no,
+                    arg_function_no,
                     ns,
                     symtable,
                     diagnostics,
@@ -5542,6 +5764,7 @@ fn method_call_pos_args(
                     available_functions(&func.name, false, file_no, Some(call_contract_no), ns),
                     true,
                     contract_no,
+                    arg_function_no,
                     ns,
                     symtable,
                     diagnostics,
@@ -5568,6 +5791,7 @@ fn method_call_pos_args(
                         available_functions(&func.name, false, file_no, Some(call_contract_no), ns),
                         false,
                         Some(contract_no),
+                        arg_function_no,
                         ns,
                         symtable,
                         diagnostics,
@@ -5581,6 +5805,7 @@ fn method_call_pos_args(
         var,
         file_no,
         contract_no,
+        arg_function_no,
         ns,
         symtable,
         false,
@@ -5605,6 +5830,7 @@ fn method_call_pos_args(
                 args,
                 file_no,
                 contract_no,
+                arg_function_no,
                 ns,
                 symtable,
                 diagnostics,
@@ -5618,7 +5844,19 @@ fn method_call_pos_args(
         };
     }
 
-    if let Type::StorageRef(ty) = &var_ty {
+    if let Type::StorageRef(immutable, ty) = &var_ty {
+        if *immutable {
+            if let Some(function_no) = arg_function_no {
+                if !ns.functions[function_no].is_constructor() {
+                    diagnostics.push(Diagnostic::error(
+                        *loc,
+                        "cannot call method on immutable outside of constructor".to_string(),
+                    ));
+                    return Err(());
+                }
+            }
+        }
+
         match ty.as_ref() {
             Type::Array(_, dim) => {
                 if let Some(loc) = call_args_loc {
@@ -5647,6 +5885,7 @@ fn method_call_pos_args(
                                 &args[0],
                                 file_no,
                                 contract_no,
+                                arg_function_no,
                                 ns,
                                 symtable,
                                 false,
@@ -5667,7 +5906,7 @@ fn method_call_pos_args(
                         }
                         0 => {
                             if elem_ty.is_reference_type() {
-                                Type::StorageRef(Box::new(elem_ty))
+                                Type::StorageRef(false, Box::new(elem_ty))
                             } else {
                                 elem_ty
                             }
@@ -5737,6 +5976,7 @@ fn method_call_pos_args(
                                 &args[0],
                                 file_no,
                                 contract_no,
+                                arg_function_no,
                                 ns,
                                 symtable,
                                 false,
@@ -5807,6 +6047,7 @@ fn method_call_pos_args(
                         &args[0],
                         file_no,
                         contract_no,
+                        arg_function_no,
                         ns,
                         symtable,
                         false,
@@ -5855,6 +6096,7 @@ fn method_call_pos_args(
             true,
             file_no,
             contract_no,
+            arg_function_no,
             ns,
             symtable,
             diagnostics,
@@ -5895,6 +6137,7 @@ fn method_call_pos_args(
                     arg,
                     file_no,
                     contract_no,
+                    arg_function_no,
                     ns,
                     symtable,
                     false,
@@ -6015,6 +6258,7 @@ fn method_call_pos_args(
                 &args[0],
                 file_no,
                 contract_no,
+                arg_function_no,
                 ns,
                 symtable,
                 false,
@@ -6056,6 +6300,7 @@ fn method_call_pos_args(
                 true,
                 file_no,
                 contract_no,
+                arg_function_no,
                 ns,
                 symtable,
                 diagnostics,
@@ -6087,6 +6332,7 @@ fn method_call_pos_args(
                 &args[0],
                 file_no,
                 contract_no,
+                arg_function_no,
                 ns,
                 symtable,
                 false,
@@ -6190,6 +6436,7 @@ fn method_call_pos_args(
                         arg,
                         file_no,
                         Some(contract_no),
+                        arg_function_no,
                         ns,
                         symtable,
                         false,
@@ -6280,6 +6527,7 @@ fn method_call_named_args(
     call_args_loc: Option<pt::Loc>,
     file_no: usize,
     contract_no: Option<usize>,
+    arg_function_no: Option<usize>,
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
@@ -6304,6 +6552,7 @@ fn method_call_named_args(
                     available_super_functions(&func_name.name, cur_contract_no, ns),
                     false,
                     contract_no,
+                    arg_function_no,
                     ns,
                     symtable,
                     diagnostics,
@@ -6342,6 +6591,7 @@ fn method_call_named_args(
                     ),
                     true,
                     contract_no,
+                    arg_function_no,
                     ns,
                     symtable,
                     diagnostics,
@@ -6373,6 +6623,7 @@ fn method_call_named_args(
                         ),
                         false,
                         Some(contract_no),
+                        arg_function_no,
                         ns,
                         symtable,
                         diagnostics,
@@ -6386,6 +6637,7 @@ fn method_call_named_args(
         var,
         file_no,
         contract_no,
+        arg_function_no,
         ns,
         symtable,
         false,
@@ -6400,6 +6652,7 @@ fn method_call_named_args(
             true,
             file_no,
             contract_no,
+            arg_function_no,
             ns,
             symtable,
             diagnostics,
@@ -6470,6 +6723,7 @@ fn method_call_named_args(
                     arg,
                     file_no,
                     contract_no,
+                    arg_function_no,
                     ns,
                     symtable,
                     false,
@@ -6622,6 +6876,7 @@ fn resolve_array_literal(
     exprs: &[pt::Expression],
     file_no: usize,
     contract_no: Option<usize>,
+    function_no: Option<usize>,
     ns: &mut Namespace,
     symtable: &mut Symtable,
     is_constant: bool,
@@ -6651,6 +6906,7 @@ fn resolve_array_literal(
         flattened.next().unwrap(),
         file_no,
         contract_no,
+        function_no,
         ns,
         symtable,
         is_constant,
@@ -6672,6 +6928,7 @@ fn resolve_array_literal(
             e,
             file_no,
             contract_no,
+            function_no,
             ns,
             symtable,
             is_constant,
@@ -6821,6 +7078,7 @@ fn parse_call_args(
     external_call: bool,
     file_no: usize,
     contract_no: Option<usize>,
+    function_no: Option<usize>,
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
@@ -6866,6 +7124,7 @@ fn parse_call_args(
                     &arg.expr,
                     file_no,
                     contract_no,
+                    function_no,
                     ns,
                     symtable,
                     false,
@@ -6899,6 +7158,7 @@ fn parse_call_args(
                     &arg.expr,
                     file_no,
                     contract_no,
+                    function_no,
                     ns,
                     symtable,
                     false,
@@ -6934,6 +7194,7 @@ fn parse_call_args(
                     &arg.expr,
                     file_no,
                     contract_no,
+                    function_no,
                     ns,
                     symtable,
                     false,
@@ -6976,6 +7237,7 @@ fn parse_call_args(
                     &arg.expr,
                     file_no,
                     contract_no,
+                    function_no,
                     ns,
                     symtable,
                     false,
@@ -7012,6 +7274,7 @@ pub fn function_call_expr(
     args: &[pt::Expression],
     file_no: usize,
     contract_no: Option<usize>,
+    arg_function_no: Option<usize>,
     ns: &mut Namespace,
     symtable: &mut Symtable,
     is_constant: bool,
@@ -7038,6 +7301,7 @@ pub fn function_call_expr(
                 call_args_loc,
                 file_no,
                 contract_no,
+                arg_function_no,
                 ns,
                 symtable,
                 diagnostics,
@@ -7054,6 +7318,7 @@ pub fn function_call_expr(
                         &id.name,
                         args,
                         contract_no,
+                        arg_function_no,
                         ns,
                         symtable,
                         is_constant,
@@ -7095,6 +7360,7 @@ pub fn function_call_expr(
                     call_args_loc,
                     file_no,
                     contract_no,
+                    arg_function_no,
                     ns,
                     symtable,
                     diagnostics,
@@ -7117,6 +7383,7 @@ pub fn function_call_expr(
                     available_functions(&id.name, true, file_no, contract_no, ns),
                     true,
                     contract_no,
+                    arg_function_no,
                     ns,
                     symtable,
                     diagnostics,
@@ -7131,6 +7398,7 @@ pub fn function_call_expr(
             call_args_loc,
             file_no,
             contract_no,
+            arg_function_no,
             ns,
             symtable,
             diagnostics,
@@ -7145,6 +7413,7 @@ pub fn named_function_call_expr(
     args: &[pt::NamedArgument],
     file_no: usize,
     contract_no: Option<usize>,
+    function_no: Option<usize>,
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
@@ -7161,6 +7430,7 @@ pub fn named_function_call_expr(
             call_args_loc,
             file_no,
             contract_no,
+            function_no,
             ns,
             symtable,
             diagnostics,
@@ -7182,6 +7452,7 @@ pub fn named_function_call_expr(
                 available_functions(&id.name, true, file_no, contract_no, ns),
                 true,
                 contract_no,
+                function_no,
                 ns,
                 symtable,
                 diagnostics,
@@ -7241,6 +7512,7 @@ fn mapping_subscript(
     index: &pt::Expression,
     file_no: usize,
     contract_no: Option<usize>,
+    function_no: Option<usize>,
     ns: &mut Namespace,
     symtable: &mut Symtable,
     is_constant: bool,
@@ -7255,6 +7527,7 @@ fn mapping_subscript(
                 index,
                 file_no,
                 contract_no,
+                function_no,
                 ns,
                 symtable,
                 is_constant,

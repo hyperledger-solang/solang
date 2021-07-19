@@ -910,7 +910,7 @@ impl SolangServer {
     fn expanded_ty(ty: &sema::ast::Type, ns: &ast::Namespace) -> String {
         match ty {
             sema::ast::Type::Ref(ty) => SolangServer::expanded_ty(ty, ns),
-            sema::ast::Type::StorageRef(ty) => SolangServer::expanded_ty(ty, ns),
+            sema::ast::Type::StorageRef(_, ty) => SolangServer::expanded_ty(ty, ns),
             sema::ast::Type::Struct(n) => {
                 let strct = &ns.structs[*n];
 

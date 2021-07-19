@@ -46,6 +46,109 @@ fn variable_size() {
 }
 
 #[test]
+fn immutable() {
+    let ns = parse_and_resolve(
+        "contract x {
+            int public immutable y = 1;
+
+            function foo() public {
+                y = 2;
+            }
+        }
+        ",
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "cannot assign to immutable ‘y’ outside of constructor"
+    );
+
+    let ns = parse_and_resolve(
+        "contract x {
+            int public immutable y = 1;
+
+            function foo() public {
+                y += 1;
+            }
+        }
+        ",
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "cannot assign to immutable outside of constructor"
+    );
+
+    let ns = parse_and_resolve(
+        "contract x {
+            int public immutable y = 1;
+
+            function foo() public {
+                y++;
+            }
+        }
+        ",
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "cannot assign to immutable outside of constructor"
+    );
+
+    let ns = parse_and_resolve(
+        "contract x {
+            int[] public immutable y;
+
+            function foo() public {
+                y.push();
+            }
+        }
+        ",
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "cannot call method on immutable outside of constructor"
+    );
+
+    let ns = parse_and_resolve(
+        "contract x {
+            int public immutable y;
+
+            function foo() public {
+                int a;
+
+                (y, a) = (1, 2);
+            }
+        }
+        ",
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "cannot assign to immutable ‘y’ outside of constructor"
+    );
+
+    let ns = parse_and_resolve(
+        "contract x {
+            int immutable public immutable y = 1;
+        }
+        ",
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "duplicate ‘immutable’ attribute"
+    );
+}
+
+#[test]
 fn test_variable_errors() {
     let ns = parse_and_resolve(
         "contract test {
