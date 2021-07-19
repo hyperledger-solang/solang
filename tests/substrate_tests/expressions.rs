@@ -1519,8 +1519,9 @@ fn addition_overflow() {
     let mut runtime = build_solidity_with_overflow_check(
         r#"
         contract overflow {
-            function foo(uint8 x) internal {
+            function foo(uint8 x) internal returns (uint8) {
                 uint8 y = x + 1;
+                return y;
             }
 
             function bar() public {
@@ -1539,8 +1540,9 @@ fn subtraction_underflow() {
     let mut runtime = build_solidity_with_overflow_check(
         r#"
         contract underflow {
-            function foo(uint64 x) internal {
+            function foo(uint64 x) internal return (uint64) {
                 uint64 y = x - 1;
+                return y;
             }
 
             function bar() public {
@@ -1559,8 +1561,9 @@ fn multiplication_overflow() {
     let mut runtime = build_solidity_with_overflow_check(
         r#"
         contract overflow {
-            function foo(int8 x) internal {
+            function foo(int8 x) internal returns (int8) {
                 int8 y = x * int8(64);
+                return y;
             }
 
             function bar() public {

@@ -959,10 +959,11 @@ fn array_bounds_dynamic_array() {
     let mut runtime = build_solidity(
         r#"
         contract foo {
-            function test() public {
+            function test() public returns (int32) {
                 int32[] memory a = new int32[](5);
 
                 a[5] = 102;
+                return a[3];
             }
         }"#,
     );
@@ -976,10 +977,11 @@ fn empty_array_bounds_dynamic_array() {
     let mut runtime = build_solidity(
         r#"
         contract foo {
-            function test() public {
+            function test() public returns (bytes32) {
                 bytes32[] memory a = new bytes32[](0);
 
                 a[0] = "yo";
+                return a[0];
             }
         }"#,
     );

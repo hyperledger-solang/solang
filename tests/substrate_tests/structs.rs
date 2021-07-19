@@ -511,7 +511,7 @@ fn struct_in_struct() {
                 foo c;
             }
 
-            function test() public pure {
+            function test() public pure returns (bytes7) {
                 bar memory f = bar({ a: address(0), b: hex"fe", c: foo({ x: true, y: 102 }) });
 
                 foo memory m = foo(false, 50);
@@ -521,6 +521,8 @@ fn struct_in_struct() {
                 f.c.y = 300;
 
                 assert(m.y == 300);
+
+                return f.b;
             }
         }"##,
     );

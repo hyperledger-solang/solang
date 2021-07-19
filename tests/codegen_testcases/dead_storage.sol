@@ -36,9 +36,10 @@ contract deadstorage {
    // two successive stores are redundant
 // BEGIN-CHECK: deadstorage::function::test4
     int b;
-	function test4() public {
+	function test4() public returns (int) {
 		b = 511;
 	    b = 512;
+        return b;
 	}
 // CHECK: store storage slot(uint256 1)
 // NOT-CHECK: store storage slot(uint256 1)
@@ -46,13 +47,15 @@ contract deadstorage {
    // stores in a previous block are always redundant
 // BEGIN-CHECK: deadstorage::function::test5
     int test5var;
-	function test5(bool c) public {
+	function test5(bool c) public returns (int) {
         if (c) {
             test5var = 1;
         } else {
             test5var = 2;
         }
         test5var = 3;
+
+        return test5var;
 	}
 // CHECK: store storage slot(uint256 2)
 // NOT-CHECK: store storage slot(uint256 2)
@@ -60,10 +63,11 @@ contract deadstorage {
 // BEGIN-CHECK: deadstorage::function::test6
     // store/load are not merged yet. Make sure that we have a store before a load
     int test6var;
-    function test6() public {
+    function test6() public returns (int) {
         test6var = 1;
         int f = test6var;
         test6var = 2;
+        return test6var + f;
     }
 // CHECK: store storage slot(uint256 3)
 // CHECK: store storage slot(uint256 3)
@@ -71,10 +75,11 @@ contract deadstorage {
 // BEGIN-CHECK: deadstorage::function::test7
     // storage should be flushed before function call
     int test7var;
-    function test7() public {
+    function test7() public returns (int) {
         test7var = 1;
         test6();
         test7var = 2;
+        return test7var;
     }
 // CHECK: store storage slot(uint256 4)
 // CHECK: store storage slot(uint256 4)
@@ -92,12 +97,14 @@ contract deadstorage {
 // BEGIN-CHECK: deadstorage::function::test9
     // push should make both load/stores not redundant
     bytes test9var;
-    function test9() public {
+    function test9() public returns (bytes){
         test9var = "a";
         bytes f = test9var;
         test9var.push(hex"01");
         f = test9var;
         test9var = "c";
+
+        return f;
     }
 // CHECK: store storage slot(uint256 6)
 // CHECK: load storage slot(uint256 6)
@@ -108,12 +115,14 @@ contract deadstorage {
 // BEGIN-CHECK: deadstorage::function::test10
     // pop should make both load/stores not redundant
     bytes test10var;
-    function test10() public {
+    function test10() public returns (bytes) {
         test10var = "a";
         bytes f = test10var;
         test10var.pop();
         f = test10var;
         test10var = "c";
+
+        return f;
     }
 // CHECK: store storage slot(uint256 7)
 // CHECK: load storage slot(uint256 7)

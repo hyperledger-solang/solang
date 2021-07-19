@@ -3,6 +3,9 @@ use std::collections::LinkedList;
 
 use super::cfg::{ControlFlowGraph, Instr, Vartable};
 use super::expression::{assign_single, emit_function_call, expression};
+use crate::codegen::unused_variable::{
+    should_remove_assignment, should_remove_variable, SideEffectsCheckParameters,
+};
 use crate::parser::pt;
 use crate::sema::ast::{
     Builtin, CallTy, DestructureField, Expression, Function, Namespace, Parameter, Statement, Type,
@@ -24,7 +27,20 @@ pub fn statement(
 ) {
     match stmt {
         Statement::VariableDecl(loc, pos, _, Some(init)) => {
-            let expr = expression(init, cfg, contract_no, ns, vartab);
+            if should_remove_variable(pos, func, Some(init)) {
+                let mut params = SideEffectsCheckParameters {
+                    cfg,
+                    contract_no,
+                    func: Some(func),
+                    ns,
+                    vartab,
+                };
+
+                check_side_effects_expressions(init, &mut params);
+                return;
+            }
+
+            let expr = expression(init, cfg, contract_no, Some(func), ns, vartab);
 
             cfg.add(
                 vartab,
@@ -36,6 +52,10 @@ pub fn statement(
             );
         }
         Statement::VariableDecl(loc, pos, param, None) => {
+            if should_remove_variable(pos, func, None) {
+                return;
+            }
+
             // Set it to a default value
             if let Some(expr) = param.ty.default(ns) {
                 cfg.add(
@@ -54,21 +74,39 @@ pub fn statement(
             } else {
                 let values = values
                     .iter()
-                    .map(|expr| expression(expr, cfg, contract_no, ns, vartab))
+                    .map(|expr| expression(expr, cfg, contract_no, Some(func), ns, vartab))
                     .collect();
 
                 cfg.add(vartab, Instr::Return { value: values });
             }
         }
         Statement::Expression(_, reachable, expr) => {
-            let _ = expression(expr, cfg, contract_no, ns, vartab);
+            if let Expression::Assign(_, _, left, right) = &expr {
+                if should_remove_assignment(ns, left, func) {
+                    let mut params = SideEffectsCheckParameters {
+                        cfg,
+                        contract_no,
+                        func: Some(func),
+                        ns,
+                        vartab,
+                    };
+                    right.recurse(&mut params, check_side_effects_expressions);
+
+                    if !reachable {
+                        cfg.add(vartab, Instr::Unreachable);
+                    }
+                    return;
+                }
+            }
+
+            let _ = expression(expr, cfg, contract_no, Some(func), ns, vartab);
 
             if !reachable {
                 cfg.add(vartab, Instr::Unreachable);
             }
         }
         Statement::Delete(_, ty, expr) => {
-            let var_expr = expression(expr, cfg, contract_no, ns, vartab);
+            let var_expr = expression(expr, cfg, contract_no, Some(func), ns, vartab);
 
             cfg.add(
                 vartab,
@@ -157,7 +195,7 @@ pub fn statement(
 
             cfg.set_basic_block(cond);
 
-            let cond_expr = expression(cond_expr, cfg, contract_no, ns, vartab);
+            let cond_expr = expression(cond_expr, cfg, contract_no, Some(func), ns, vartab);
 
             cfg.add(
                 vartab,
@@ -184,7 +222,7 @@ pub fn statement(
 
             cfg.set_basic_block(cond);
 
-            let cond_expr = expression(cond_expr, cfg, contract_no, ns, vartab);
+            let cond_expr = expression(cond_expr, cfg, contract_no, Some(func), ns, vartab);
 
             cfg.add(
                 vartab,
@@ -356,7 +394,7 @@ pub fn statement(
 
             cfg.set_basic_block(cond_block);
 
-            let cond_expr = expression(cond_expr, cfg, contract_no, ns, vartab);
+            let cond_expr = expression(cond_expr, cfg, contract_no, Some(func), ns, vartab);
 
             cfg.add(
                 vartab,
@@ -430,7 +468,7 @@ pub fn statement(
             cfg.set_phis(cond_block, set);
         }
         Statement::Destructure(_, fields, expr) => {
-            destructure(fields, expr, cfg, contract_no, ns, vartab, loops)
+            destructure(fields, expr, cfg, contract_no, func, ns, vartab, loops)
         }
         Statement::TryCatch {
             expr,
@@ -473,7 +511,7 @@ pub fn statement(
                     indexed: false,
                 };
 
-                let e = expression(arg, cfg, contract_no, ns, vartab);
+                let e = expression(arg, cfg, contract_no, Some(func), ns, vartab);
 
                 if event.fields[i].indexed {
                     topics.push(e);
@@ -519,7 +557,7 @@ fn if_then(
     placeholder: Option<&Instr>,
     return_override: Option<&Instr>,
 ) {
-    let cond = expression(cond, cfg, contract_no, ns, vartab);
+    let cond = expression(cond, cfg, contract_no, Some(func), ns, vartab);
 
     let then = cfg.new_basic_block("then".to_string());
     let endif = cfg.new_basic_block("endif".to_string());
@@ -578,7 +616,7 @@ fn if_then_else(
     placeholder: Option<&Instr>,
     return_override: Option<&Instr>,
 ) {
-    let cond = expression(cond, cfg, contract_no, ns, vartab);
+    let cond = expression(cond, cfg, contract_no, Some(func), ns, vartab);
 
     let then = cfg.new_basic_block("then".to_string());
     let else_ = cfg.new_basic_block("else".to_string());
@@ -655,12 +693,13 @@ fn destructure(
     expr: &Expression,
     cfg: &mut ControlFlowGraph,
     contract_no: usize,
+    func: &Function,
     ns: &Namespace,
     vartab: &mut Vartable,
     loops: &mut LoopScopes,
 ) {
     if let Expression::Ternary(_, _, cond, left, right) = expr {
-        let cond = expression(cond, cfg, contract_no, ns, vartab);
+        let cond = expression(cond, cfg, contract_no, Some(func), ns, vartab);
 
         let left_block = cfg.new_basic_block("left".to_string());
         let right_block = cfg.new_basic_block("right".to_string());
@@ -679,13 +718,13 @@ fn destructure(
 
         cfg.set_basic_block(left_block);
 
-        destructure(fields, left, cfg, contract_no, ns, vartab, loops);
+        destructure(fields, left, cfg, contract_no, func, ns, vartab, loops);
 
         cfg.add(vartab, Instr::Branch { block: done_block });
 
         cfg.set_basic_block(right_block);
 
-        destructure(fields, right, cfg, contract_no, ns, vartab, loops);
+        destructure(fields, right, cfg, contract_no, func, ns, vartab, loops);
 
         cfg.add(vartab, Instr::Branch { block: done_block });
 
@@ -702,7 +741,7 @@ fn destructure(
 
             for expr in exprs {
                 let loc = expr.loc();
-                let expr = expression(expr, cfg, contract_no, ns, vartab);
+                let expr = expression(expr, cfg, contract_no, Some(func), ns, vartab);
                 let ty = expr.ty();
 
                 let res = vartab.temp_anonymous(&ty);
@@ -716,7 +755,7 @@ fn destructure(
         }
         _ => {
             // must be function call, either internal or external
-            emit_function_call(expr, contract_no, cfg, ns, vartab)
+            emit_function_call(expr, contract_no, cfg, Some(func), ns, vartab)
         }
     };
 
@@ -731,6 +770,10 @@ fn destructure(
                 // the resolver did not cast the expression
                 let expr = cast(&param.loc, right, &param.ty, true, ns, &mut Vec::new())
                     .expect("sema should have checked cast");
+
+                if should_remove_variable(res, func, Some(&expr)) {
+                    continue;
+                }
 
                 cfg.add(
                     vartab,
@@ -755,7 +798,11 @@ fn destructure(
                 )
                 .expect("sema should have checked cast");
 
-                assign_single(left, &expr, cfg, contract_no, ns, vartab);
+                if should_remove_assignment(ns, left, func) {
+                    continue;
+                }
+
+                assign_single(left, &expr, cfg, contract_no, Some(func), ns, vartab);
             }
         }
     }
@@ -804,9 +851,10 @@ fn try_catch(
                 ..
             } = function.ty()
             {
-                let value = expression(value, cfg, callee_contract_no, ns, vartab);
-                let gas = expression(gas, cfg, callee_contract_no, ns, vartab);
-                let function = expression(function, cfg, callee_contract_no, ns, vartab);
+                let value = expression(value, cfg, callee_contract_no, Some(func), ns, vartab);
+                let gas = expression(gas, cfg, callee_contract_no, Some(func), ns, vartab);
+                let function =
+                    expression(function, cfg, callee_contract_no, Some(func), ns, vartab);
 
                 let mut tys: Vec<Type> = args.iter().map(|a| a.ty()).collect();
 
@@ -814,7 +862,7 @@ fn try_catch(
 
                 let args = args
                     .iter()
-                    .map(|a| expression(a, cfg, callee_contract_no, ns, vartab))
+                    .map(|a| expression(a, cfg, callee_contract_no, Some(func), ns, vartab))
                     .collect();
 
                 let selector = Expression::Builtin(
@@ -916,19 +964,19 @@ fn try_catch(
 
             let value = value
                 .as_ref()
-                .map(|value| expression(value, cfg, callee_contract_no, ns, vartab));
+                .map(|value| expression(value, cfg, callee_contract_no, Some(func), ns, vartab));
 
-            let gas = expression(gas, cfg, callee_contract_no, ns, vartab);
+            let gas = expression(gas, cfg, callee_contract_no, Some(func), ns, vartab);
             let salt = salt
                 .as_ref()
-                .map(|salt| expression(salt, cfg, callee_contract_no, ns, vartab));
+                .map(|salt| expression(salt, cfg, callee_contract_no, Some(func), ns, vartab));
             let space = space
                 .as_ref()
-                .map(|space| expression(space, cfg, callee_contract_no, ns, vartab));
+                .map(|space| expression(space, cfg, callee_contract_no, Some(func), ns, vartab));
 
             let args = args
                 .iter()
-                .map(|a| expression(a, cfg, callee_contract_no, ns, vartab))
+                .map(|a| expression(a, cfg, callee_contract_no, Some(func), ns, vartab))
                 .collect();
 
             cfg.add(
@@ -1179,5 +1227,23 @@ impl Type {
             }
             _ => unreachable!(),
         }
+    }
+}
+
+pub fn check_side_effects_expressions(
+    exp: &Expression,
+    ctx: &mut SideEffectsCheckParameters,
+) -> bool {
+    match &exp {
+        Expression::InternalFunctionCall { .. }
+        | Expression::ExternalFunctionCall { .. }
+        | Expression::ExternalFunctionCallRaw { .. }
+        | Expression::Constructor { .. }
+        | Expression::Builtin(..) => {
+            let _ = expression(exp, ctx.cfg, ctx.contract_no, ctx.func, ctx.ns, ctx.vartab);
+            false
+        }
+
+        _ => true,
     }
 }

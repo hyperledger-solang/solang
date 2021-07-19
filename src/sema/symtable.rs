@@ -5,6 +5,7 @@ use std::str;
 
 use super::ast::{Diagnostic, Namespace, Type};
 use crate::parser::pt;
+use crate::sema::ast::Expression;
 
 #[derive(Clone)]
 pub struct Variable {
@@ -15,6 +16,8 @@ pub struct Variable {
     pub assigned: bool,
     pub read: bool,
     pub usage_type: VariableUsage,
+    pub initializer: Option<Expression>,
+    pub storage_location: Option<pt::StorageLocation>,
 }
 
 #[derive(Clone)]
@@ -56,8 +59,9 @@ impl Symtable {
         id: &pt::Identifier,
         ty: Type,
         ns: &mut Namespace,
-        assigned: bool,
+        initializer: Option<Expression>,
         usage_type: VariableUsage,
+        storage_location: Option<pt::StorageLocation>,
     ) -> Option<usize> {
         let pos = ns.next_id;
         ns.next_id += 1;
@@ -69,9 +73,11 @@ impl Symtable {
                 ty,
                 pos,
                 slice: false,
-                assigned,
+                initializer,
+                assigned: false,
                 usage_type,
                 read: false,
+                storage_location,
             },
         );
 

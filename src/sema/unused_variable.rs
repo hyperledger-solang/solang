@@ -29,10 +29,12 @@ pub fn assigned_variable(ns: &mut Namespace, exp: &Expression, symtable: &mut Sy
             used_variable(ns, index, symtable);
         }
 
-        Expression::Trunc(_, _, var)
-        | Expression::Cast(_, _, var)
-        | Expression::BytesCast(_, _, _, var) => {
-            assigned_variable(ns, var, symtable);
+        Expression::StorageLoad(_, _, expr)
+        | Expression::Load(_, _, expr)
+        | Expression::Trunc(_, _, expr)
+        | Expression::Cast(_, _, expr)
+        | Expression::BytesCast(_, _, _, expr) => {
+            assigned_variable(ns, expr, symtable);
         }
 
         _ => {}
@@ -96,6 +98,10 @@ pub fn used_variable(ns: &mut Namespace, exp: &Expression, symtable: &mut Symtab
             used_variable(ns, expr, symtable);
         }
 
+        Expression::InternalFunctionCall { .. } | Expression::ExternalFunctionCall { .. } => {
+            check_function_call(ns, exp, symtable);
+        }
+
         _ => {}
     }
 }
@@ -104,6 +110,10 @@ pub fn used_variable(ns: &mut Namespace, exp: &Expression, symtable: &mut Symtab
 /// usage of the latter as well
 pub fn check_function_call(ns: &mut Namespace, exp: &Expression, symtable: &mut Symtable) {
     match &exp {
+        Expression::Load(..) | Expression::StorageLoad(..) | Expression::Variable(_, _, _) => {
+            used_variable(ns, exp, symtable);
+        }
+
         Expression::InternalFunctionCall {
             loc: _,
             returns: _,
@@ -212,6 +222,12 @@ pub fn check_function_call(ns: &mut Namespace, exp: &Expression, symtable: &mut 
             used_variable(ns, array, symtable);
         }
 
+        Expression::FormatString(_, args) => {
+            for (_, expr) in args {
+                used_variable(ns, expr, symtable);
+            }
+        }
+
         _ => {}
     }
 }
@@ -270,7 +286,8 @@ pub fn emit_warning_local_variable(variable: &symtable::Variable) -> Option<Diag
         }
 
         VariableUsage::LocalVariable => {
-            if !variable.assigned && !variable.read {
+            let assigned = variable.initializer.is_some() || variable.assigned;
+            if !assigned && !variable.read {
                 return Some(generate_unused_warning(
                     variable.id.loc,
                     &format!(
@@ -279,7 +296,7 @@ pub fn emit_warning_local_variable(variable: &symtable::Variable) -> Option<Diag
                     ),
                     vec![],
                 ));
-            } else if variable.assigned && !variable.read {
+            } else if assigned && !variable.read {
                 return Some(generate_unused_warning(
                     variable.id.loc,
                     &format!(
@@ -288,7 +305,7 @@ pub fn emit_warning_local_variable(variable: &symtable::Variable) -> Option<Diag
                     ),
                     vec![],
                 ));
-            } else if !variable.assigned && variable.read {
+            } else if !assigned && variable.read {
                 return Some(generate_unused_warning(
                     variable.id.loc,
                     &format!(

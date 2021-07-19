@@ -4814,6 +4814,7 @@ fn member_access(
         }
         Type::ExternalFunction { .. } => {
             if id.name == "address" {
+                used_variable(ns, &expr, symtable);
                 return Ok(Expression::Builtin(
                     e.loc(),
                     vec![Type::Address(false)],
@@ -4822,6 +4823,7 @@ fn member_access(
                 ));
             }
             if id.name == "selector" {
+                used_variable(ns, &expr, symtable);
                 return Ok(Expression::Builtin(
                     e.loc(),
                     vec![Type::Bytes(4)],

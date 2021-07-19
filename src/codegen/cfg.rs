@@ -1258,7 +1258,8 @@ fn function_cfg(
                     .iter()
                     .enumerate()
                     .map(|(i, a)| {
-                        let expr = expression(a, &mut cfg, contract_no, ns, &mut vartab);
+                        let expr =
+                            expression(a, &mut cfg, contract_no, Some(func), ns, &mut vartab);
 
                         if let Some(id) = &func.symtable.arguments[i] {
                             let ty = expr.ty();
@@ -1400,7 +1401,7 @@ pub fn generate_modifier_dispatch(
     // now set the modifier args
     for (i, arg) in modifier.symtable.arguments.iter().enumerate() {
         if let Some(pos) = arg {
-            let expr = expression(&args[i], &mut cfg, contract_no, ns, &mut vartab);
+            let expr = expression(&args[i], &mut cfg, contract_no, Some(func), ns, &mut vartab);
             cfg.add(
                 &mut vartab,
                 Instr::Set {

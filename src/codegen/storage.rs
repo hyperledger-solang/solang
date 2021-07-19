@@ -6,7 +6,7 @@ use num_traits::Zero;
 use super::cfg::{ControlFlowGraph, Instr, Vartable};
 use super::expression::{expression, load_storage};
 use crate::parser::pt;
-use crate::sema::ast::{Expression, Namespace, Type};
+use crate::sema::ast::{Expression, Function, Namespace, Type};
 
 /// Given a storage slot which is the start of the array, calculate the
 /// offset of the array element. This function exists to avoid doing
@@ -63,6 +63,7 @@ pub fn storage_slots_array_push(
     args: &[Expression],
     cfg: &mut ControlFlowGraph,
     contract_no: usize,
+    func: Option<&Function>,
     ns: &Namespace,
     vartab: &mut Vartable,
 ) -> Expression {
@@ -70,7 +71,7 @@ pub fn storage_slots_array_push(
     let slot_ty = ns.storage_type();
     let length_pos = vartab.temp_anonymous(&slot_ty);
 
-    let var_expr = expression(&args[0], cfg, contract_no, ns, vartab);
+    let var_expr = expression(&args[0], cfg, contract_no, func, ns, vartab);
 
     let expr = load_storage(loc, &slot_ty, var_expr.clone(), cfg, vartab);
 
@@ -103,7 +104,7 @@ pub fn storage_slots_array_push(
     );
 
     if args.len() == 2 {
-        let value = expression(&args[1], cfg, contract_no, ns, vartab);
+        let value = expression(&args[1], cfg, contract_no, func, ns, vartab);
 
         cfg.add(
             vartab,
@@ -149,6 +150,7 @@ pub fn storage_slots_array_pop(
     args: &[Expression],
     cfg: &mut ControlFlowGraph,
     contract_no: usize,
+    func: Option<&Function>,
     ns: &Namespace,
     vartab: &mut Vartable,
 ) -> Expression {
@@ -158,7 +160,7 @@ pub fn storage_slots_array_pop(
     let length_pos = vartab.temp_anonymous(&slot_ty);
 
     let ty = args[0].ty();
-    let var_expr = expression(&args[0], cfg, contract_no, ns, vartab);
+    let var_expr = expression(&args[0], cfg, contract_no, func, ns, vartab);
 
     let expr = load_storage(loc, &length_ty, var_expr.clone(), cfg, vartab);
 
@@ -277,15 +279,16 @@ pub fn array_push(
     args: &[Expression],
     cfg: &mut ControlFlowGraph,
     contract_no: usize,
+    func: Option<&Function>,
     ns: &Namespace,
     vartab: &mut Vartable,
 ) -> Expression {
-    let storage = expression(&args[0], cfg, contract_no, ns, vartab);
+    let storage = expression(&args[0], cfg, contract_no, func, ns, vartab);
 
     let mut ty = args[0].ty().storage_array_elem();
 
     let value = if args.len() > 1 {
-        expression(&args[1], cfg, contract_no, ns, vartab)
+        expression(&args[1], cfg, contract_no, func, ns, vartab)
     } else {
         ty.deref_any().default(ns).unwrap()
     };
@@ -314,10 +317,11 @@ pub fn array_pop(
     args: &[Expression],
     cfg: &mut ControlFlowGraph,
     contract_no: usize,
+    func: Option<&Function>,
     ns: &Namespace,
     vartab: &mut Vartable,
 ) -> Expression {
-    let storage = expression(&args[0], cfg, contract_no, ns, vartab);
+    let storage = expression(&args[0], cfg, contract_no, func, ns, vartab);
 
     let ty = args[0].ty().storage_array_elem().deref_into();
 
