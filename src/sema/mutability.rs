@@ -1,18 +1,21 @@
 use super::ast::{
     Builtin, DestructureField, Diagnostic, Expression, Function, Namespace, Statement, Type,
 };
+use super::diagnostics;
 use crate::parser::pt;
 
 /// check state mutablity
 pub fn mutablity(file_no: usize, ns: &mut Namespace) {
-    for func in &ns.functions {
-        if func.loc.0 != file_no {
-            continue;
+    if !diagnostics::any_errors(&ns.diagnostics) {
+        for func in &ns.functions {
+            if func.loc.0 != file_no {
+                continue;
+            }
+
+            let diagnostics = check_mutability(func, ns);
+
+            ns.diagnostics.extend(diagnostics);
         }
-
-        let diagnostics = check_mutability(func, ns);
-
-        ns.diagnostics.extend(diagnostics);
     }
 }
 
@@ -272,6 +275,7 @@ fn read_expression(expr: &Expression, state: &mut StateCheck) -> bool {
             }
             _ => unreachable!(),
         },
+        Expression::ExternalFunctionCallRaw { loc, .. } => state.write(loc),
         _ => {
             return true;
         }
