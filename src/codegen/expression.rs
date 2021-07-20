@@ -1058,6 +1058,13 @@ pub fn expression(
 
             Expression::AllocDynamicArray(*loc, ty.clone(), Box::new(size), init.clone())
         }
+        Expression::Ternary(loc, ty, cond, left, right) => Expression::Ternary(
+            *loc,
+            ty.clone(),
+            Box::new(expression(cond, cfg, contract_no, ns, vartab)),
+            Box::new(expression(left, cfg, contract_no, ns, vartab)),
+            Box::new(expression(right, cfg, contract_no, ns, vartab)),
+        ),
         _ => expr.clone(),
     }
 }
