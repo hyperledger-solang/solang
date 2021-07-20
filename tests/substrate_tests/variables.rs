@@ -112,7 +112,7 @@ fn immutable() {
 
     assert_eq!(
         first_error(ns.diagnostics),
-        "cannot call method on immutable outside of constructor"
+        "cannot call method on immutable array outside of constructor"
     );
 
     let ns = parse_and_resolve(

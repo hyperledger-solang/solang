@@ -5845,20 +5845,21 @@ fn method_call_pos_args(
     }
 
     if let Type::StorageRef(immutable, ty) = &var_ty {
-        if *immutable {
-            if let Some(function_no) = arg_function_no {
-                if !ns.functions[function_no].is_constructor() {
-                    diagnostics.push(Diagnostic::error(
-                        *loc,
-                        "cannot call method on immutable outside of constructor".to_string(),
-                    ));
-                    return Err(());
-                }
-            }
-        }
-
         match ty.as_ref() {
             Type::Array(_, dim) => {
+                if *immutable {
+                    if let Some(function_no) = arg_function_no {
+                        if !ns.functions[function_no].is_constructor() {
+                            diagnostics.push(Diagnostic::error(
+                                *loc,
+                                "cannot call method on immutable array outside of constructor"
+                                    .to_string(),
+                            ));
+                            return Err(());
+                        }
+                    }
+                }
+
                 if let Some(loc) = call_args_loc {
                     diagnostics.push(Diagnostic::error(
                         loc,
@@ -5957,6 +5958,19 @@ fn method_call_pos_args(
                 }
             }
             Type::DynamicBytes => {
+                if *immutable {
+                    if let Some(function_no) = arg_function_no {
+                        if !ns.functions[function_no].is_constructor() {
+                            diagnostics.push(Diagnostic::error(
+                                *loc,
+                                "cannot call method on immutable bytes outside of constructor"
+                                    .to_string(),
+                            ));
+                            return Err(());
+                        }
+                    }
+                }
+
                 if let Some(loc) = call_args_loc {
                     diagnostics.push(Diagnostic::error(
                         loc,
