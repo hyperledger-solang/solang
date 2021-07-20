@@ -1,7 +1,9 @@
 use parity_scale_codec::Encode;
 use parity_scale_codec_derive::{Decode, Encode};
 
-use crate::{build_solidity, first_error, first_warning, no_warnings_errors, parse_and_resolve};
+use crate::{
+    build_solidity, first_error, first_warning, no_warnings, no_warnings_errors, parse_and_resolve,
+};
 use solang::Target;
 
 #[test]
@@ -313,6 +315,43 @@ fn mutability() {
         first_error(ns.diagnostics),
         "function declared ‘view’ but this expression writes to state"
     );
+
+    let ns = parse_and_resolve(
+        r#"contract c {
+            function add(address a) public view {
+                (bool f, bytes memory res) = a.call(hex"0102");
+            }
+        }"#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "function declared ‘view’ but this expression writes to state"
+    );
+
+    let ns = parse_and_resolve(
+        r#"contract c {
+            function add(address a) public returns (bool f, bytes res) {
+                (f, res) = a.call(hex"0102");
+            }
+        }"#,
+        Target::Substrate,
+    );
+
+    assert_eq!(ns.diagnostics.len(), 1);
+
+    // ensure that we don't warn "function may be declared pure" if we can't parse it
+    let ns = parse_and_resolve(
+        r#"contract c {
+            function add(address a) public returns (bool f, bytes res) {
+                return true;
+            }
+        }"#,
+        Target::Substrate,
+    );
+
+    no_warnings(&ns.diagnostics);
 
     let ns = parse_and_resolve(
         "contract test {

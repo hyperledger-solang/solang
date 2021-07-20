@@ -1285,6 +1285,16 @@ pub fn no_errors(errors: Vec<ast::Diagnostic>) {
     );
 }
 
+pub fn no_warnings(errors: &[ast::Diagnostic]) {
+    assert!(
+        errors
+            .iter()
+            .filter(|m| m.level == ast::Level::Warning)
+            .count()
+            == 0
+    );
+}
+
 pub fn no_warnings_errors(errors: Vec<ast::Diagnostic>) {
     assert!(
         errors
