@@ -436,83 +436,53 @@ fn process_filename(
                     },
                 },
             );
-        } else {
-            // Substrate has a single contact file
-            if target == solang::Target::Substrate {
-                let (contract_bs, contract_ext) =
-                    abi::generate_abi(contract_no, &ns, &code, verbose);
-                let contract_filename = output_file(matches, &binary.name, contract_ext);
+        } else if target != solang::Target::Solana {
+            let bin_filename = output_file(matches, &binary.name, target.file_extension());
 
-                if verbose {
-                    eprintln!(
-                        "info: Saving {} for contract {}",
-                        contract_filename.display(),
-                        binary.name
-                    );
-                }
-
-                let mut file = match File::create(&contract_filename) {
-                    Ok(file) => file,
-                    Err(err) => {
-                        eprintln!(
-                            "error: cannot create file ‘{}’: {}",
-                            contract_filename.display(),
-                            err,
-                        );
-                        std::process::exit(1);
-                    }
-                };
-                file.write_all(&contract_bs.as_bytes()).unwrap();
-            } else {
-                let bin_filename = output_file(matches, &binary.name, target.file_extension());
-
-                if verbose {
-                    eprintln!(
-                        "info: Saving binary {} for contract {}",
-                        bin_filename.display(),
-                        binary.name
-                    );
-                }
-
-                let mut file = match File::create(&bin_filename) {
-                    Ok(file) => file,
-                    Err(err) => {
-                        eprintln!(
-                            "error: cannot create file ‘{}’: {}",
-                            bin_filename.display(),
-                            err,
-                        );
-                        std::process::exit(1);
-                    }
-                };
-                file.write_all(&code).unwrap();
-
-                if target != solang::Target::Solana {
-                    let (abi_bytes, abi_ext) = abi::generate_abi(contract_no, &ns, &code, verbose);
-                    let abi_filename = output_file(matches, &binary.name, abi_ext);
-
-                    if verbose {
-                        eprintln!(
-                            "info: Saving ABI {} for contract {}",
-                            abi_filename.display(),
-                            binary.name
-                        );
-                    }
-
-                    let mut file = match File::create(&abi_filename) {
-                        Ok(file) => file,
-                        Err(err) => {
-                            eprintln!(
-                                "error: cannot create file ‘{}’: {}",
-                                abi_filename.display(),
-                                err,
-                            );
-                            std::process::exit(1);
-                        }
-                    };
-                    file.write_all(&abi_bytes.as_bytes()).unwrap();
-                }
+            if verbose {
+                eprintln!(
+                    "info: Saving binary {} for contract {}",
+                    bin_filename.display(),
+                    binary.name
+                );
             }
+
+            let mut file = match File::create(&bin_filename) {
+                Ok(file) => file,
+                Err(err) => {
+                    eprintln!(
+                        "error: cannot create file ‘{}’: {}",
+                        bin_filename.display(),
+                        err,
+                    );
+                    std::process::exit(1);
+                }
+            };
+            file.write_all(&code).unwrap();
+
+            let (abi_bytes, abi_ext) = abi::generate_abi(contract_no, &ns, &code, verbose);
+            let abi_filename = output_file(matches, &binary.name, abi_ext);
+
+            if verbose {
+                eprintln!(
+                    "info: Saving ABI {} for contract {}",
+                    abi_filename.display(),
+                    binary.name
+                );
+            }
+
+            let mut file = match File::create(&abi_filename) {
+                Ok(file) => file,
+                Err(err) => {
+                    eprintln!(
+                        "error: cannot create file ‘{}’: {}",
+                        abi_filename.display(),
+                        err,
+                    );
+                    std::process::exit(1);
+                }
+            };
+            file.write_all(&abi_bytes.as_bytes()).unwrap();
         }
     }
 
