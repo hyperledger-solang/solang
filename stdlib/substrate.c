@@ -4,7 +4,7 @@
 #include "stdlib.h"
 
 // 32 bit integer as as scale compact integer
-// https://substrate.dev/docs/en/conceptual/core/codec#vectors-lists-series-sets
+// https://substrate.dev/docs/en/knowledgebase/advanced/codec#compactgeneral-integers
 uint8_t *compact_encode_u32(uint8_t *dest, uint32_t val)
 {
     if (val < 64)
