@@ -207,6 +207,7 @@ pub enum VariableAttribute {
     Visibility(Visibility),
     Constant(Loc),
     Immutable(Loc),
+    Override(Loc),
 }
 
 #[derive(Debug, PartialEq)]

@@ -20,6 +20,7 @@ will be documented here.
 - Any unused variables, events, or contract variables are now detected and
   warnings are given, thanks to [LucasSte](https://github.com/LucasSte)
 - The `immutable` attribute on contract storage variables is now supported.
+- The `override` attribute on public contract storage variables is now supported.
 
 ### Changed
 - Solang now uses LLVM 11.0, based on the [Solana LLVM tree](https://github.com/solana-labs/llvm-project/)

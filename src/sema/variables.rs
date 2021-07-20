@@ -99,6 +99,7 @@ pub fn var_decl(
     let mut is_constant = false;
     let mut visibility: Option<pt::Visibility> = None;
     let mut has_immutable: Option<pt::Loc> = None;
+    let mut has_override: Option<pt::Loc> = None;
 
     for attr in attrs {
         match &attr {
@@ -121,6 +122,17 @@ pub fn var_decl(
                     ));
                 }
                 has_immutable = Some(*loc);
+            }
+            pt::VariableAttribute::Override(loc) => {
+                if let Some(prev) = &has_override {
+                    ns.diagnostics.push(Diagnostic::error_with_note(
+                        *loc,
+                        "duplicate ‘override’ attribute".to_string(),
+                        *prev,
+                        "previous ‘override’ attribute".to_string(),
+                    ));
+                }
+                has_override = Some(*loc);
             }
             pt::VariableAttribute::Visibility(v) if contract_no.is_none() => {
                 ns.diagnostics.push(Diagnostic::error(
@@ -166,6 +178,16 @@ pub fn var_decl(
         Some(v) => v,
         None => pt::Visibility::Internal(s.ty.loc()),
     };
+
+    if let pt::Visibility::Public(_) = &visibility {
+        // override allowed
+    } else if let Some(loc) = &has_override {
+        ns.diagnostics.push(Diagnostic::error(
+            *loc,
+            "only public variable can be declared ‘override’".to_string(),
+        ));
+        has_override = None;
+    }
 
     if contract_no.is_none() {
         if !is_constant {
@@ -351,6 +373,7 @@ pub fn var_decl(
             )];
             func.is_accessor = true;
             func.has_body = true;
+            func.is_override = has_override.map(|loc| (loc, Vec::new()));
 
             // add the function to the namespace and then to our contract
             let func_no = ns.functions.len();
