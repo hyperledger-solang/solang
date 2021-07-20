@@ -1,4 +1,4 @@
-use crate::{build_solidity, first_error, parse_and_resolve};
+use crate::{build_solidity, first_error, no_errors, parse_and_resolve};
 use solang::Target;
 
 #[test]
@@ -146,6 +146,96 @@ fn immutable() {
         first_error(ns.diagnostics),
         "duplicate ‘immutable’ attribute"
     );
+}
+
+#[test]
+fn override_attribute() {
+    let ns = parse_and_resolve(
+        "contract x {
+            int override y = 1;
+        }
+        ",
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "only public variable can be declared ‘override’"
+    );
+
+    let ns = parse_and_resolve(
+        "contract x {
+            int override internal y = 1;
+        }
+        ",
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "only public variable can be declared ‘override’"
+    );
+
+    let ns = parse_and_resolve(
+        "contract x {
+            int override private y = 1;
+        }
+        ",
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "only public variable can be declared ‘override’"
+    );
+
+    let ns = parse_and_resolve(
+        "contract x {
+            int override override y = 1;
+        }
+        ",
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "duplicate ‘override’ attribute"
+    );
+
+    let ns = parse_and_resolve(
+        "contract x is y {
+            int public foo;
+        }
+
+        contract y {
+            function foo() public virtual returns (int) {
+                return 102;
+            }
+        }
+        ",
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "function ‘foo’ with this signature already defined"
+    );
+
+    let ns = parse_and_resolve(
+        "contract x is y {
+            int public override foo;
+        }
+
+        contract y {
+            function foo() public virtual returns (int) {
+                return 102;
+            }
+        }
+        ",
+        Target::Substrate,
+    );
+
+    no_errors(ns.diagnostics);
 }
 
 #[test]
