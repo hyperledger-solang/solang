@@ -597,7 +597,7 @@ be reflected in the current function. For example:
   32 bytes. However, since ``bytes32`` is a primitive in itself, this will only be 32
   bytes when ABI encoded.
 
-  In Substrate, the `SCALE <https://substrate.dev/docs/en/overview/low-level-data-format>`_
+  In Substrate, the `SCALE <https://substrate.dev/docs/en/knowledgebase/advanced/codec>`_
   encoding uses 32 bytes for both types.
 
 Dynamic Length Arrays
@@ -3001,7 +3001,7 @@ _________________________
 
 The ABI encoding depends on the target being compiled for. Substrate uses the
 `SCALE Codec <https://substrate.dev/docs/en/knowledgebase/advanced/codec>`_ and ewasm uses
-`Ethereum ABI encoding <https://substrate.dev/docs/en/knowledgebase/advanced/codec>`_.
+`Ethereum ABI encoding <https://docs.soliditylang.org/en/v0.7.6/abi-spec.html>`_.
 
 abi.decode(bytes, (*type-list*))
 ++++++++++++++++++++++++++++++++

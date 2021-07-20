@@ -51,9 +51,9 @@ Alternatively if you want to use the solang docker image, run:
 ```
 docker run --rm -it -v $(pwd):/sources hyperledgerlabs/solang -v -o /sources  --target substrate /sources/flipper.sol
 ```
-You will have a file called flipper.contact. You can use this directly in
-the [Polkadot UI](https://substrate.dev/substrate-contracts-workshop/#/0/deploying-your-contract?id=putting-your-code-on-the-blockchain), as if your smart
-contract was written using ink!.
+You will have a file called flipper.contract. You can use this directly in
+the [Polkadot UI](https://substrate.dev/substrate-contracts-workshop/#/0/deploy-contract),
+as if your smart contract was written using ink!.
 
 ## License
 
