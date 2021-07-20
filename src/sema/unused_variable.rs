@@ -1,4 +1,4 @@
-use crate::parser::pt::Loc;
+use crate::parser::pt::{ContractTy, Loc};
 use crate::sema::ast::{
     Builtin, Diagnostic, ErrorType, Expression, Level, Namespace, Note, Statement,
 };
@@ -468,6 +468,16 @@ pub fn check_unused_events(ns: &mut Namespace) {
 
     for event in &ns.events {
         if !event.used {
+            if let Some(contract_no) = event.contract {
+                // don't complain about events in interfaces or abstract contracts
+                if matches!(
+                    ns.contracts[contract_no].ty,
+                    ContractTy::Interface(_) | ContractTy::Abstract(_)
+                ) {
+                    continue;
+                }
+            }
+
             ns.diagnostics.push(generate_unused_warning(
                 event.loc,
                 &format!("event '{}' has never been emitted", event.name),

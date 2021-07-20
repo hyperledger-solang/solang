@@ -130,6 +130,19 @@ fn emit_event() {
         get_first_warning(&ns.diagnostics).message,
         "event 'Hey' has never been emitted"
     );
+
+    // make sure we don't complain about interfaces or abstract contracts
+    let case_3 = r#"
+    abstract contract F {
+        event Hey(uint8 n);
+    }
+    interface G {
+        event Hey(uint8 n);
+    }
+    "#;
+
+    let ns = generic_target_parse(case_3);
+    assert_eq!(count_warnings(&ns.diagnostics), 0);
 }
 
 #[test]
