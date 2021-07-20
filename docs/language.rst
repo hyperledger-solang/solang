@@ -2058,6 +2058,22 @@ function.
         string[] users;
     }
 
+The accessor function may override a method on a base contract by specifying ``override``. The base function
+must be virtual and have the same signature as the accessor. The ``override`` keyword only affects the
+accessor function, so it can only be used in combination with public variables and cannot be used to
+override a variable in the base contract.
+
+.. code-block:: javascript
+
+    contract foo is bar {
+        int public override baz;
+    }
+
+    contract bar {
+        function baz() public virtual returns (int) {
+            return 512;
+        }
+    }
 
 
 How to clear Contract Storage
