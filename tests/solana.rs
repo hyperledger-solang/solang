@@ -141,6 +141,10 @@ fn build_solidity(src: &str) -> VirtualMachine {
     let ns = &namespaces[0];
 
     for contract_no in 0..ns.contracts.len() {
+        if !ns.contracts[contract_no].is_concrete() {
+            continue;
+        }
+
         let (abi, _) = generate_abi(contract_no, &ns, &code, false);
 
         let program = account_new();

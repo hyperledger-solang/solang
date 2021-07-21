@@ -41,3 +41,33 @@ fn packed() {
     vm.function("test2", &[], &[]);
     vm.function("test3", &[], &[]);
 }
+
+#[test]
+fn inherited() {
+    let mut vm = build_solidity(
+        r#"
+        contract bar is foo { }
+
+        contract foo {
+            function test() public {
+            }
+        }"#,
+    );
+
+    vm.constructor("bar", &[]);
+
+    vm.function("test", &[], &[]);
+
+    let mut vm = build_solidity(
+        r#"
+            contract bar is foo { }
+
+            contract foo {
+                int public test;
+            }"#,
+    );
+
+    vm.constructor("bar", &[]);
+
+    vm.function("test", &[], &[]);
+}

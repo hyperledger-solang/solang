@@ -77,34 +77,49 @@ pub fn gen_abi(contract_no: usize, ns: &Namespace) -> Vec<ABI> {
     }
 
     ns.contracts[contract_no]
-        .functions
-        .iter()
+        .all_functions
+        .keys()
         .filter_map(|function_no| {
             let func = &ns.functions[*function_no];
 
-            if matches!(
+            if let Some(base_contract_no) = func.contract_no {
+                if ns.contracts[base_contract_no].is_library() {
+                    return None;
+                }
+
+                if func.ty == pt::FunctionTy::Constructor && base_contract_no != contract_no {
+                    return None;
+                }
+            }
+
+            if !matches!(
                 func.visibility,
                 pt::Visibility::Public(_) | pt::Visibility::External(_)
             ) {
-                Some(ABI {
-                    name: func.name.to_owned(),
-                    mutability: func.print_mutability(),
-                    ty: func.ty.to_string(),
-                    inputs: func
-                        .params
-                        .iter()
-                        .map(|p| parameter_to_abi(p, ns))
-                        .collect(),
-                    outputs: func
-                        .returns
-                        .iter()
-                        .map(|p| parameter_to_abi(p, ns))
-                        .collect(),
-                    anonymous: false,
-                })
-            } else {
-                None
+                return None;
             }
+
+            if func.ty == pt::FunctionTy::Modifier || !func.has_body {
+                return None;
+            }
+
+            Some(func)
+        })
+        .map(|func| ABI {
+            name: func.name.to_owned(),
+            mutability: func.print_mutability(),
+            ty: func.ty.to_string(),
+            inputs: func
+                .params
+                .iter()
+                .map(|p| parameter_to_abi(p, ns))
+                .collect(),
+            outputs: func
+                .returns
+                .iter()
+                .map(|p| parameter_to_abi(p, ns))
+                .collect(),
+            anonymous: false,
         })
         .chain(
             ns.contracts[contract_no]
