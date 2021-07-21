@@ -129,8 +129,8 @@ uint64_t create_contract(uint8_t *input, uint32_t input_len, uint64_t lamports, 
     }
 
     SolAccountMeta create_metas[2] = {
-        {params->account_id, true, true},
         {new_acc->key, true, true},
+        {params->account_id, true, true},
     };
 
     // FIXME we need to add our own seed if we have one in order to fund/approve it
@@ -138,26 +138,30 @@ uint64_t create_contract(uint8_t *input, uint32_t input_len, uint64_t lamports, 
         {seed, 1},
     };
 
-    // create the account
-    struct create_account
+    struct allocate
     {
-        uint32_t instruction;
-        uint64_t lamports;
+        uint32_t instruction_allocate;
         uint64_t space;
-        SolPubkey owner;
-    } __attribute__((__packed__)) create_account = {
-        0,
-        lamports,
+    } __attribute__((__packed__)) allocate = {
+        8,
         space,
+    };
+
+    struct assign
+    {
+        uint32_t instruction_assign;
+        SolPubkey owner;
+    } __attribute__((__packed__)) assign = {
+        1,
         *params->ka[params->ka_cur].owner,
     };
 
-    const SolInstruction create_instruction = {
+    SolInstruction create_instruction = {
         .program_id = (SolPubkey *)&system_address,
         .accounts = create_metas,
         .account_len = SOL_ARRAY_SIZE(create_metas),
-        .data = (uint8_t *)&create_account,
-        .data_len = sizeof(create_account),
+        .data = (uint8_t *)&allocate,
+        .data_len = sizeof(allocate),
     };
 
     uint64_t ret = sol_invoke_signed_c(&create_instruction, params->ka, params->ka_num,
@@ -165,7 +169,20 @@ uint64_t create_contract(uint8_t *input, uint32_t input_len, uint64_t lamports, 
 
     if (ret != 0)
     {
-        sol_log("failed to create new account");
+        sol_log("failed to allocate new account");
+
+        sol_panic();
+    }
+
+    create_instruction.data = (uint8_t *)&assign;
+    create_instruction.data_len = sizeof(assign);
+
+    ret = sol_invoke_signed_c(&create_instruction, params->ka, params->ka_num,
+                              signer_seeds, SOL_ARRAY_SIZE(signer_seeds));
+
+    if (ret != 0)
+    {
+        sol_log("failed to assign new account");
 
         sol_panic();
     }

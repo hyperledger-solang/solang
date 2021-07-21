@@ -94,6 +94,18 @@ struct CreateAccountWithSeed {
     program_id: Account,
 }
 
+#[derive(Deserialize)]
+struct Allocate {
+    instruction: u32,
+    space: u64,
+}
+
+#[derive(Deserialize)]
+struct Assign {
+    instruction: u32,
+    owner: Account,
+}
+
 fn build_solidity(src: &str) -> VirtualMachine {
     let mut cache = FileCache::new();
 
@@ -907,6 +919,29 @@ impl<'a> SyscallObject<UserError> for SyscallInvokeSignedC<'a> {
                             }
                         }
                     }
+                    1 => {
+                        let assign: Assign = bincode::deserialize(&instruction.data).unwrap();
+
+                        let address = &instruction.accounts[0].pubkey;
+
+                        println!("assign address: {}", address.0.to_base58());
+                        for s in &signers {
+                            println!("signer: {}", s.0.to_base58());
+                        }
+                        assert!(signers.contains(&address));
+
+                        assert_eq!(assign.instruction, 1);
+
+                        println!(
+                            "assign account {} owner {}",
+                            address.0.to_base58(),
+                            assign.owner.to_base58(),
+                        );
+
+                        if let Some(entry) = context.account_data.get_mut(&address.0) {
+                            entry.owner = Some(assign.owner);
+                        }
+                    }
                     3 => {
                         let create_account: CreateAccountWithSeed =
                             bincode::deserialize(&instruction.data).unwrap();
@@ -942,6 +977,39 @@ impl<'a> SyscallObject<UserError> for SyscallInvokeSignedC<'a> {
                             abi: None,
                             data: new_address,
                         });
+                    }
+                    8 => {
+                        let allocate: Allocate = bincode::deserialize(&instruction.data).unwrap();
+
+                        let address = &instruction.accounts[0].pubkey;
+
+                        println!("new address: {}", address.0.to_base58());
+                        for s in &signers {
+                            println!("signer: {}", s.0.to_base58());
+                        }
+                        assert!(signers.contains(&address));
+
+                        assert_eq!(allocate.instruction, 8);
+
+                        println!(
+                            "allocate account {} with space {}",
+                            address.0.to_base58(),
+                            allocate.space,
+                        );
+
+                        assert_eq!(context.account_data[&address.0].data.len(), 0);
+
+                        if let Some(entry) = context.account_data.get_mut(&address.0) {
+                            entry.data = vec![0; allocate.space as usize];
+                        }
+
+                        let mut refs = self.refs.try_borrow_mut().unwrap();
+
+                        for r in refs.iter_mut() {
+                            if r.account == address.0 {
+                                r.length = allocate.space as usize;
+                            }
+                        }
                     }
                     instruction => panic!("instruction {} not supported", instruction),
                 }
