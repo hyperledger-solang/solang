@@ -15,7 +15,7 @@ describe('Deploy solang contract and test', () => {
 
         let seed = await createProgramAddress(creator.get_program_key());
 
-        console.log("now create child");
+        console.log("now create child: " + seed.address.toString());
 
         let child = await conn.createStorageAccount(creator.get_program_key(), 1024);
 
