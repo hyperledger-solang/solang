@@ -10,11 +10,12 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use solana_helpers::allocator_bump::Allocator;
 use solana_rbpf::{
+    ebpf,
     error::EbpfError,
-    memory_region::{AccessType, MemoryMapping, MemoryRegion},
+    memory_region::{AccessType, MemoryMapping},
     question_mark,
     user_error::UserError,
-    vm::{Config, DefaultInstructionMeter, EbpfVm, Executable, SyscallObject, SyscallRegistry},
+    vm::{Config, EbpfVm, Executable, SyscallObject, SyscallRegistry, TestInstructionMeter},
 };
 use solang::{
     abi::generate_abi,
@@ -594,7 +595,6 @@ pub struct SyscallAllocFree {
 }
 
 const DEFAULT_HEAP_SIZE: usize = 32 * 1024;
-pub const MM_HEAP_START: u64 = 0x300000000;
 /// Start of the input buffers in the memory map
 
 impl SyscallObject<UserError> for SyscallAllocFree {
@@ -1054,8 +1054,7 @@ impl VirtualMachine {
         println!("running bpf with calldata:{}", hex::encode(calldata));
 
         let (mut parameter_bytes, mut refs) = serialize_parameters(&calldata, &self, seeds);
-        let heap = vec![0_u8; DEFAULT_HEAP_SIZE];
-        let heap_region = MemoryRegion::new_from_slice(&heap, MM_HEAP_START, 0, true);
+        let mut heap = vec![0_u8; DEFAULT_HEAP_SIZE];
 
         let program = &self.stack[0];
 
@@ -1088,7 +1087,7 @@ impl VirtualMachine {
             .register_syscall_by_name(b"sol_ed25519_sig_check", SyscallEd25519SigCheck::call)
             .unwrap();
 
-        let executable = <dyn Executable<UserError, DefaultInstructionMeter>>::from_elf(
+        let executable = <dyn Executable<UserError, TestInstructionMeter>>::from_elf(
             &self.account_data[&program.program].data,
             None,
             Config::default(),
@@ -1096,10 +1095,10 @@ impl VirtualMachine {
         )
         .expect("should work");
 
-        let mut vm = EbpfVm::<UserError, DefaultInstructionMeter>::new(
+        let mut vm = EbpfVm::<UserError, TestInstructionMeter>::new(
             executable.as_ref(),
+            &mut heap,
             &mut parameter_bytes,
-            &[heap_region],
         )
         .unwrap();
 
@@ -1124,7 +1123,7 @@ impl VirtualMachine {
 
         vm.bind_syscall_context_object(
             Box::new(SyscallAllocFree {
-                allocator: Allocator::new(heap, MM_HEAP_START),
+                allocator: Allocator::new(heap, ebpf::MM_HEAP_START),
             }),
             None,
         )
@@ -1141,7 +1140,7 @@ impl VirtualMachine {
         .unwrap();
 
         let res = vm
-            .execute_program_interpreted(&mut DefaultInstructionMeter {})
+            .execute_program_interpreted(&mut TestInstructionMeter { remaining: 1000000 })
             .unwrap();
 
         let mut elf = context.try_borrow_mut().unwrap();
