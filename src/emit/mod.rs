@@ -4362,6 +4362,8 @@ pub trait TargetRuntime<'a> {
                     ns,
                 );
 
+                assert_eq!(bin.module.get_function(&cfg.name), None);
+
                 let func_decl = bin
                     .module
                     .add_function(&cfg.name, ftype, Some(Linkage::Internal));
