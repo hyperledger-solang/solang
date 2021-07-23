@@ -90,7 +90,11 @@ pub fn codegen(contract_no: usize, ns: &mut Namespace, opt: &Options) {
 
 /// This function will set all contract storage initializers and should be called from the constructor
 fn storage_initializer(contract_no: usize, ns: &mut Namespace, opt: &Options) -> ControlFlowGraph {
-    let mut cfg = ControlFlowGraph::new(String::from("storage_initializer"), None);
+    // note the single `:` to prevent a name clash with user-declared functions
+    let mut cfg = ControlFlowGraph::new(
+        format!("{}:storage_initializer", ns.contracts[contract_no].name),
+        None,
+    );
     let mut vartab = Vartable::new(ns.next_id);
 
     for layout in &ns.contracts[contract_no].layout {

@@ -1130,19 +1130,22 @@ fn function_cfg(
 
     // symbol name
     let contract_name = match func.contract_no {
-        Some(contract_no) => format!("::{}", ns.contracts[contract_no].name),
-        None => String::new(),
+        Some(base_contract_no) => format!(
+            "{}::{}",
+            ns.contracts[contract_no].name, ns.contracts[base_contract_no].name
+        ),
+        None => ns.contracts[contract_no].name.to_string(),
     };
 
     let name = match func.ty {
         pt::FunctionTy::Function => {
-            format!("sol{}::function::{}", contract_name, func.llvm_symbol(ns))
+            format!("{}::function::{}", contract_name, func.llvm_symbol(ns))
         }
         // There can be multiple constructors on Substrate, give them an unique name
         pt::FunctionTy::Constructor => {
-            format!("sol{}::constructor::{:08x}", contract_name, func.selector())
+            format!("{}::constructor::{:08x}", contract_name, func.selector())
         }
-        _ => format!("sol{}::{}", contract_name, func.ty),
+        _ => format!("{}::{}", contract_name, func.ty),
     };
 
     let mut cfg = ControlFlowGraph::new(name, function_no);
