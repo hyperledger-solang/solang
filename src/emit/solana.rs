@@ -442,12 +442,63 @@ impl SolanaTarget {
             "input_ptr32",
         );
 
+        let dispatch_function_ty = binary.context.i64_type().fn_type(
+            &[
+                input.get_type().into(),
+                input_len.get_type().into(),
+                sol_params.get_type().into(),
+            ],
+            false,
+        );
+
         for contract in contracts {
+            let dispatch_function = binary.module.add_function(
+                &format!("dispatch_{}", contract.contract.name),
+                dispatch_function_ty,
+                None,
+            );
+
+            let entry = binary
+                .context
+                .append_basic_block(dispatch_function, "entry");
+
+            binary.builder.position_at_end(entry);
+
+            self.emit_function_dispatch(
+                binary,
+                &contract.contract,
+                contract.ns,
+                pt::FunctionTy::Function,
+                dispatch_function
+                    .get_nth_param(0)
+                    .unwrap()
+                    .into_pointer_value(),
+                dispatch_function.get_nth_param(1).unwrap().into_int_value(),
+                dispatch_function,
+                &contract.functions,
+                None,
+                |_| false,
+            );
+
             let function_block = binary
                 .context
                 .append_basic_block(function, &format!("function_{}", contract.contract.name));
 
             binary.builder.position_at_end(function_block);
+
+            let rc = binary
+                .builder
+                .build_call(
+                    dispatch_function,
+                    &[input.into(), input_len.into(), sol_params.into()],
+                    "res",
+                )
+                .try_as_basic_value()
+                .left()
+                .unwrap()
+                .into_int_value();
+
+            binary.builder.build_return(Some(&rc));
 
             cases.push((
                 binary
@@ -456,19 +507,6 @@ impl SolanaTarget {
                     .const_int(contract.magic as u64, false),
                 function_block,
             ));
-
-            self.emit_function_dispatch(
-                binary,
-                &contract.contract,
-                contract.ns,
-                pt::FunctionTy::Function,
-                input,
-                input_len,
-                function,
-                &contract.functions,
-                None,
-                |_| false,
-            );
         }
 
         binary.builder.position_at_end(badmagic_block);
