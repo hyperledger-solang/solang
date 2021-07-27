@@ -520,3 +520,27 @@ fn mutability() {
         "function ‘foo’ overrides modifier"
     );
 }
+
+#[test]
+fn repeated_modifier() {
+    let mut runtime = build_solidity(
+        r##"
+        contract Test {
+            modifier notZero(uint64 num) {
+                require(num != 0, "invalid number");
+                _;
+            }
+
+            function contfunc(uint64 num1, uint64 num2) public notZero(num1) notZero(num2) {
+                // any code
+            }
+        }"##,
+    );
+
+    runtime.constructor(0, Vec::new());
+
+    runtime.function_expect_failure("contfunc", (1u64, 0u64).encode());
+    runtime.function_expect_failure("contfunc", (0u64, 0u64).encode());
+    runtime.function_expect_failure("contfunc", (0u64, 1u64).encode());
+    runtime.function("contfunc", (1u64, 1u64).encode());
+}
