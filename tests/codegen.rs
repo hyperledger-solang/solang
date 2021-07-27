@@ -34,7 +34,8 @@ fn testcase(path: PathBuf) {
     let mut checks = Vec::new();
     let mut fails = Vec::new();
     for line in reader.lines() {
-        let line = line.unwrap();
+        let mut line = line.unwrap();
+        line = line.trim().parse().unwrap();
         if let Some(args) = line.strip_prefix("// RUN: ") {
             assert_eq!(command_line, None);
 

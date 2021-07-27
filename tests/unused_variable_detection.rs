@@ -1028,3 +1028,241 @@ fn load_length() {
     let ns = generic_target_parse(file);
     assert_eq!(count_warnings(&ns.diagnostics), 0);
 }
+
+#[test]
+fn address_selector() {
+    let file = r#"
+    contract ctc {
+        function foo(int32 a) public pure returns (bool) {
+            return a==1;
+        }
+
+        function test() public view {
+               function(int32) external returns (bool) func = this.foo;
+
+            assert(address(this) == func.address);
+            assert(func.selector == hex"42761137");
+        }
+    }
+    "#;
+
+    let ns = generic_target_parse(file);
+    assert_eq!(count_warnings(&ns.diagnostics), 0);
+}
+
+#[test]
+fn load_storage_load() {
+    let file = r#"
+        struct X {
+            uint32 f1;
+            bool f2;
+        }
+
+        contract foo {
+            function get() public pure returns (X[4] f) {
+                f[1].f1 = 102;
+                f[1].f2 = true;
+            }
+        }
+    "#;
+
+    let ns = generic_target_parse(file);
+    assert_eq!(count_warnings(&ns.diagnostics), 0);
+}
+
+#[test]
+fn variable_function() {
+    let file = r#"
+    contract ft is Arith {
+            function test(bool action, int32 a, int32 b) public returns (int32) {
+                function(int32,int32) internal returns (int32) func;
+
+                if (action) {
+                    func = Arith.mul;
+                } else {
+                    func = Arith.add;
+                }
+
+                return func(a, b);
+            }
+        }
+
+        contract Arith {
+            function mul(int32 a, int32 b) internal pure returns (int32) {
+                return a * b;
+            }
+
+            function add(int32 a, int32 b) internal pure returns (int32) {
+                return a + b;
+            }
+        }
+    "#;
+
+    let ns = generic_target_parse(file);
+    assert_eq!(count_warnings(&ns.diagnostics), 0);
+
+    let file = r#"
+    contract ft {
+            function test() public {
+                function(int32) external returns (uint64) func = this.foo;
+
+                assert(func(102) == 0xabbaabba);
+            }
+
+            function foo(int32) public pure returns (uint64) {
+                return 0xabbaabba;
+            }
+        }
+    "#;
+
+    let ns = generic_target_parse(file);
+    assert_eq!(count_warnings(&ns.diagnostics), 0);
+
+    let file = r#"
+    contract ft {
+            function(int32,int32) internal returns (int32) func;
+
+            function mul(int32 a, int32 b) internal pure returns (int32) {
+                return a * b;
+            }
+
+            function add(int32 a, int32 b) internal pure returns (int32) {
+                return a + b;
+            }
+
+            function set_op(bool action) public {
+                if (action) {
+                    func = mul;
+                } else {
+                    func = add;
+                }
+            }
+
+            function test(int32 a, int32 b) public returns (int32) {
+                return func(a, b);
+            }
+        }
+    "#;
+
+    let ns = generic_target_parse(file);
+    assert_eq!(count_warnings(&ns.diagnostics), 0);
+
+    let file = r#"
+    contract ft {
+            function mul(int32 a, int32 b) internal pure returns (int32) {
+                return a * b;
+            }
+
+            function add(int32 a, int32 b) internal pure returns (int32) {
+                return a + b;
+            }
+
+            function test(bool action, int32 a, int32 b) public returns (int32) {
+                function(int32,int32) internal returns (int32) func;
+
+                if (action) {
+                    func = mul;
+                } else {
+                    func = add;
+                }
+
+                return func(a, b);
+            }
+        }
+    "#;
+
+    let ns = generic_target_parse(file);
+    assert_eq!(count_warnings(&ns.diagnostics), 0);
+
+    let file = r#"
+    contract ft is Arith {
+            function mul(int32 a, int32 b) internal pure override returns (int32) {
+                return a * b * 10;
+            }
+
+            function add(int32 a, int32 b) internal pure override returns (int32) {
+                return a + b + 10;
+            }
+        }
+
+        contract Arith {
+            function test(bool action, int32 a, int32 b) public returns (int32) {
+                function(int32,int32) internal returns (int32) func;
+
+                if (action) {
+                    func = mul;
+                } else {
+                    func = add;
+                }
+
+                return func(a, b);
+            }
+
+            function mul(int32 a, int32 b) internal virtual returns (int32) {
+                return a * b;
+            }
+
+            function add(int32 a, int32 b) internal virtual returns (int32) {
+                return a + b;
+            }
+        }
+    "#;
+    let ns = generic_target_parse(file);
+    assert_eq!(count_warnings(&ns.diagnostics), 0);
+
+    let file = r#"
+    function global_function() pure returns (uint32) {
+            return 102;
+        }
+
+        function global_function2() pure returns (uint32) {
+            return global_function() + 5;
+        }
+
+        contract c {
+            function test() public {
+                function() internal returns (uint32) ftype = global_function2;
+
+                uint64 x = ftype();
+
+                assert(x == 107);
+            }
+        }
+    "#;
+    let ns = generic_target_parse(file);
+    assert_eq!(count_warnings(&ns.diagnostics), 0);
+}
+
+#[test]
+fn format_string() {
+    let file = r#"
+    contract foo {
+            constructor() {
+                int x = 21847450052839212624230656502990235142567050104912751880812823948662932355201;
+
+                print("x = {}".format(x));
+            }
+        }
+    "#;
+
+    let ns = generic_target_parse(file);
+    assert_eq!(count_warnings(&ns.diagnostics), 0);
+}
+
+#[test]
+fn balance() {
+    let file = r#"
+    contract foo {
+
+
+    function test(address payable addr) public pure returns (bool) {
+        bool p;
+        p = addr.balance == 2;
+        return p;
+    }
+
+    }
+    "#;
+    let ns = generic_target_parse(file);
+    assert_eq!(count_warnings(&ns.diagnostics), 0);
+}

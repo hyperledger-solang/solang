@@ -4753,7 +4753,7 @@ fn member_access(
                         return Err(());
                     }
                 }
-
+                used_variable(ns, &expr, symtable);
                 return Ok(Expression::Builtin(
                     *loc,
                     vec![Type::Value],
