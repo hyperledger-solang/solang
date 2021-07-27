@@ -1040,7 +1040,7 @@ pub fn generate_cfg(
 
         cfg.public = false;
 
-        for call in func.modifiers.iter().rev() {
+        for (chain_no, call) in func.modifiers.iter().enumerate().rev() {
             let modifier_cfg_no = all_cfgs.len();
 
             all_cfgs.push(cfg);
@@ -1049,8 +1049,15 @@ pub fn generate_cfg(
 
             let modifier = &ns.functions[modifier_no];
 
-            cfg =
-                generate_modifier_dispatch(contract_no, func, modifier, modifier_cfg_no, args, ns);
+            cfg = generate_modifier_dispatch(
+                contract_no,
+                func,
+                modifier,
+                modifier_cfg_no,
+                chain_no,
+                args,
+                ns,
+            );
         }
 
         cfg.public = public;
@@ -1352,13 +1359,16 @@ pub fn generate_modifier_dispatch(
     func: &Function,
     modifier: &Function,
     cfg_no: usize,
+    chain_no: usize,
     args: &[Expression],
     ns: &Namespace,
 ) -> ControlFlowGraph {
     let name = format!(
-        "sol::{}::modifier::{}::{}",
+        "{}::{}::{}::modifier{}::{}",
         &ns.contracts[contract_no].name,
+        &ns.contracts[func.contract_no.unwrap()].name,
         func.llvm_symbol(ns),
+        chain_no,
         modifier.llvm_symbol(ns)
     );
     let mut cfg = ControlFlowGraph::new(name, None);
