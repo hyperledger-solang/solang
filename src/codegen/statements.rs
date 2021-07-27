@@ -36,7 +36,8 @@ pub fn statement(
                     vartab,
                 };
 
-                check_side_effects_expressions(init, &mut params);
+                //If we remove the assignment, we must keep expressions that have side effects
+                init.recurse(&mut params, process_side_effects_expressions);
                 return;
             }
 
@@ -90,7 +91,7 @@ pub fn statement(
                         ns,
                         vartab,
                     };
-                    right.recurse(&mut params, check_side_effects_expressions);
+                    right.recurse(&mut params, process_side_effects_expressions);
 
                     if !reachable {
                         cfg.add(vartab, Instr::Unreachable);
@@ -1230,7 +1231,10 @@ impl Type {
     }
 }
 
-pub fn check_side_effects_expressions(
+/// This function looks for expressions that have side effects during code execution and
+/// processes them.
+/// They must be added to the cfg event if we remove the assignment
+pub fn process_side_effects_expressions(
     exp: &Expression,
     ctx: &mut SideEffectsCheckParameters,
 ) -> bool {
@@ -1239,10 +1243,29 @@ pub fn check_side_effects_expressions(
         | Expression::ExternalFunctionCall { .. }
         | Expression::ExternalFunctionCallRaw { .. }
         | Expression::Constructor { .. }
-        | Expression::Builtin(..) => {
+        | Expression::Assign(..)
+        | Expression::DynamicArrayPop(..)
+        | Expression::DynamicArrayPush(..) => {
             let _ = expression(exp, ctx.cfg, ctx.contract_no, ctx.func, ctx.ns, ctx.vartab);
             false
         }
+
+        Expression::Builtin(_, _, builtin_type, _) => match &builtin_type {
+            Builtin::PayableSend
+            | Builtin::ArrayPush
+            | Builtin::ArrayPop
+            // PayableTransfer, Revert, Require and SelfDestruct do not occur inside an expression
+            // for they return no value. They should not bother the unused variable elimination.
+            | Builtin::PayableTransfer
+            | Builtin::Revert
+            | Builtin::Require
+            | Builtin::SelfDestruct => {
+                let _ = expression(exp, ctx.cfg, ctx.contract_no, ctx.func, ctx.ns, ctx.vartab);
+                false
+            }
+
+            _ => true,
+        },
 
         _ => true,
     }

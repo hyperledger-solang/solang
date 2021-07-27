@@ -172,6 +172,7 @@ pub fn expression(
                 .collect(),
         ),
         Expression::Assign(_, _, left, right) => {
+            // If we reach this condition, the assignment is inside an expression.
             if let Some(function) = func {
                 if should_remove_assignment(ns, left, function) {
                     return expression(right, cfg, contract_no, func, ns, vartab);
@@ -1080,9 +1081,9 @@ pub fn expression(
         Expression::Ternary(loc, ty, cond, left, right) => Expression::Ternary(
             *loc,
             ty.clone(),
-            Box::new(expression(cond, cfg, contract_no, ns, vartab)),
-            Box::new(expression(left, cfg, contract_no, ns, vartab)),
-            Box::new(expression(right, cfg, contract_no, ns, vartab)),
+            Box::new(expression(cond, cfg, contract_no, func, ns, vartab)),
+            Box::new(expression(left, cfg, contract_no, func, ns, vartab)),
+            Box::new(expression(right, cfg, contract_no, func, ns, vartab)),
         ),
         _ => expr.clone(),
     }

@@ -1,10 +1,11 @@
 // RUN: --emit cfg
 contract c {
 // BEGIN-CHECK: c::function::test1
-	function test1() public pure {
+	function test1() public pure{
 		bytes x = "foo1";
 		// x is not being used, so it can be a slice
-// CHECK:
+// CHECK: alloc slice uint32 4 "foo1"
+	bytes y = x;
 	}
 
 // BEGIN-CHECK: c::function::test2

@@ -11,3 +11,4 @@ mod primitives;
 mod signature_verify;
 mod simple;
 mod storage;
+mod unused_variable_elimination;
