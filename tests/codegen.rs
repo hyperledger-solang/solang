@@ -60,6 +60,7 @@ fn testcase(path: PathBuf) {
         .args(args.split_whitespace())
         .arg(format!("{}", path.canonicalize().unwrap().display()))
         .assert();
+
     let output = assert.get_output();
 
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -102,6 +103,7 @@ fn testcase(path: PathBuf) {
     }
 
     if current_check < checks.len() {
+        println!("{}", stderr);
         println!("OUTPUT: \n===8<===8<===\n{}===8<===8<===\n", stdout);
 
         panic!("NOT FOUND CHECK: {:?}", checks[current_check]);
