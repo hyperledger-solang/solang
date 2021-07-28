@@ -60,9 +60,9 @@ jobs:
     - name: Add LLVM to Path
       run: echo "c:\llvm11.0\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8
     - name: Build
-      run: cargo build --verbose --release
+      run: cargo build --verbose
     - name: Run tests
-      run: cargo test --verbose --release
+      run: cargo test --verbose
     - uses: actions/upload-artifact@master
       with:
         name: solang.exe
