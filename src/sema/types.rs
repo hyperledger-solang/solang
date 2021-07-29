@@ -665,10 +665,8 @@ impl Type {
                     }
                 );
 
-                if let Some(mutability) = mutability {
-                    s.push(' ');
-
-                    s.push_str(&mutability.to_string());
+                if !mutability.is_default() {
+                    s.push_str(&format!(" {}", mutability));
                 }
 
                 if !returns.is_empty() {

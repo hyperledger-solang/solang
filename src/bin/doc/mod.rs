@@ -301,7 +301,7 @@ pub fn generate_docs(outdir: &str, files: &[ast::Namespace], verbose: bool) {
                 Function {
                     name: &func.name,
                     ty: format!("{}", func.ty),
-                    mutability: func.print_mutability(),
+                    mutability: format!("{}", func.mutability),
                     base_contract,
                     title: get_tag("title", &func.tags),
                     notice: get_tag("notice", &func.tags),

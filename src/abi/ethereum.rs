@@ -107,7 +107,7 @@ pub fn gen_abi(contract_no: usize, ns: &Namespace) -> Vec<ABI> {
         })
         .map(|func| ABI {
             name: func.name.to_owned(),
-            mutability: func.print_mutability(),
+            mutability: format!("{}", func.mutability),
             ty: func.ty.to_string(),
             inputs: func
                 .params

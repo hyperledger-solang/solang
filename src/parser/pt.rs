@@ -61,24 +61,6 @@ pub enum Type {
     },
 }
 
-impl fmt::Display for Type {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Type::Address => write!(f, "address"),
-            Type::Payable => write!(f, "payable"),
-            Type::AddressPayable => write!(f, "address payable"),
-            Type::Bool => write!(f, "bool"),
-            Type::String => write!(f, "string"),
-            Type::Int(n) => write!(f, "int{}", n),
-            Type::Uint(n) => write!(f, "uint{}", n),
-            Type::Bytes(n) => write!(f, "bytes{}", n),
-            Type::DynamicBytes => write!(f, "bytes"),
-            Type::Mapping(_, _, _) => write!(f, "mapping(key => value)"),
-            Type::Function { .. } => write!(f, "function()"),
-        }
-    }
-}
-
 #[derive(Debug, Clone, PartialEq)]
 pub enum StorageLocation {
     Memory(Loc),
@@ -387,31 +369,31 @@ pub struct Parameter {
     pub name: Option<Identifier>,
 }
 
-#[derive(Debug, PartialEq, Hash, Eq, Clone)]
-pub enum StateMutability {
+#[derive(Debug, PartialEq, Clone)]
+pub enum Mutability {
     Pure(Loc),
     View(Loc),
     Constant(Loc),
     Payable(Loc),
 }
 
-impl fmt::Display for StateMutability {
+impl fmt::Display for Mutability {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            StateMutability::Pure(_) => write!(f, "pure"),
-            StateMutability::Constant(_) | StateMutability::View(_) => write!(f, "view"),
-            StateMutability::Payable(_) => write!(f, "payable"),
+            Mutability::Pure(_) => write!(f, "pure"),
+            Mutability::Constant(_) | Mutability::View(_) => write!(f, "view"),
+            Mutability::Payable(_) => write!(f, "payable"),
         }
     }
 }
 
-impl StateMutability {
+impl Mutability {
     pub fn loc(&self) -> Loc {
         match self {
-            StateMutability::Pure(loc)
-            | StateMutability::Constant(loc)
-            | StateMutability::View(loc)
-            | StateMutability::Payable(loc) => *loc,
+            Mutability::Pure(loc)
+            | Mutability::Constant(loc)
+            | Mutability::View(loc)
+            | Mutability::Payable(loc) => *loc,
         }
     }
 }
@@ -448,7 +430,7 @@ impl Visibility {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum FunctionAttribute {
-    StateMutability(StateMutability),
+    Mutability(Mutability),
     Visibility(Visibility),
     Virtual(Loc),
     Override(Loc, Vec<Identifier>),

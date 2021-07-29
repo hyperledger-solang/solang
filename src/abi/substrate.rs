@@ -445,11 +445,14 @@ fn gen_abi(contract_no: usize, ns: &ast::Namespace) -> Abi {
             _ => false,
         })
         .map(|f| {
-            let payable = matches!(f.mutability, Some(pt::StateMutability::Payable(_)));
+            let payable = matches!(f.mutability, ast::Mutability::Payable(_));
 
             Message {
                 name: f.name.to_owned(),
-                mutates: f.mutability.is_none() || payable,
+                mutates: matches!(
+                    f.mutability,
+                    ast::Mutability::Payable(_) | ast::Mutability::Nonpayable(_)
+                ),
                 payable,
                 return_type: match f.returns.len() {
                     0 => None,

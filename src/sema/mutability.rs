@@ -1,5 +1,6 @@
 use super::ast::{
-    Builtin, DestructureField, Diagnostic, Expression, Function, Namespace, Statement, Type,
+    Builtin, DestructureField, Diagnostic, Expression, Function, Mutability, Namespace, Statement,
+    Type,
 };
 use super::diagnostics;
 use crate::parser::pt;
@@ -37,7 +38,7 @@ impl<'a> StateCheck<'a> {
                 *loc,
                 format!(
                     "function declared ‘{}’ but this expression writes to state",
-                    self.func.print_mutability()
+                    self.func.mutability
                 ),
             ));
         }
@@ -51,7 +52,7 @@ impl<'a> StateCheck<'a> {
                 *loc,
                 format!(
                     "function declared ‘{}’ but this expression reads from state",
-                    self.func.print_mutability()
+                    self.func.mutability
                 ),
             ));
         }
@@ -76,11 +77,11 @@ fn check_mutability(func: &Function, ns: &Namespace) -> Vec<Diagnostic> {
     };
 
     match func.mutability {
-        Some(pt::StateMutability::Pure(_)) => (),
-        Some(pt::StateMutability::Constant(_)) | Some(pt::StateMutability::View(_)) => {
+        Mutability::Pure(_) => (),
+        Mutability::View(_) => {
             state.can_read_state = true;
         }
-        Some(pt::StateMutability::Payable(_)) | None => {
+        Mutability::Payable(_) | Mutability::Nonpayable(_) => {
             state.can_read_state = true;
             state.can_write_state = true;
         }
@@ -123,8 +124,8 @@ fn check_mutability(func: &Function, ns: &Namespace) -> Vec<Diagnostic> {
     if pt::FunctionTy::Function == func.ty && !func.is_accessor {
         if !state.does_write_state && !state.does_read_state {
             match func.mutability {
-                Some(pt::StateMutability::Payable(_)) | Some(pt::StateMutability::Pure(_)) => (),
-                None => {
+                Mutability::Payable(_) | Mutability::Pure(_) => (),
+                Mutability::Nonpayable(_) => {
                     state.diagnostics.push(Diagnostic::warning(
                         func.loc,
                         "function can be declared ‘pure’".to_string(),
@@ -135,14 +136,14 @@ fn check_mutability(func: &Function, ns: &Namespace) -> Vec<Diagnostic> {
                         func.loc,
                         format!(
                             "function declared ‘{}’ can be declared ‘pure’",
-                            func.print_mutability()
+                            func.mutability
                         ),
                     ));
                 }
             }
         }
 
-        if !state.does_write_state && state.does_read_state && func.mutability.is_none() {
+        if !state.does_write_state && state.does_read_state && func.mutability.is_default() {
             state.diagnostics.push(Diagnostic::warning(
                 func.loc,
                 "function can be declared ‘view’".to_string(),
@@ -266,11 +267,9 @@ fn read_expression(expr: &Expression, state: &mut StateCheck) -> bool {
             Type::ExternalFunction { mutability, .. }
             | Type::InternalFunction { mutability, .. } => {
                 match mutability {
-                    None | Some(pt::StateMutability::Payable(_)) => state.write(loc),
-                    Some(pt::StateMutability::View(_)) | Some(pt::StateMutability::Constant(_)) => {
-                        state.read(loc)
-                    }
-                    Some(pt::StateMutability::Pure(_)) => (),
+                    Mutability::Nonpayable(_) | Mutability::Payable(_) => state.write(loc),
+                    Mutability::View(_) => state.read(loc),
+                    Mutability::Pure(_) => (),
                 };
             }
             _ => unreachable!(),

@@ -637,9 +637,7 @@ fn print_func(func: &Function, ns: &Namespace) -> Tree {
         list.push(Tree::Leaf(format!("signature {}", func.signature)));
     }
 
-    if let Some(mutability) = &func.mutability {
-        list.push(Tree::Leaf(format!("mutability {}", mutability)));
-    }
+    list.push(Tree::Leaf(format!("mutability {}", func.mutability)));
 
     if func.is_virtual {
         list.push(Tree::Leaf(String::from("virtual")));

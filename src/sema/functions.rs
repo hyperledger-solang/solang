@@ -1,4 +1,4 @@
-use super::ast::{Diagnostic, Function, Namespace, Parameter, Symbol, Type};
+use super::ast::{Diagnostic, Function, Mutability, Namespace, Parameter, Symbol, Type};
 use super::contracts::is_base;
 use super::tags::resolve_tags;
 use crate::parser::pt;
@@ -93,14 +93,14 @@ pub fn contract_function(
         success = false;
     }
 
-    let mut mutability: Option<pt::StateMutability> = None;
+    let mut mutability: Option<pt::Mutability> = None;
     let mut visibility: Option<pt::Visibility> = None;
     let mut is_virtual: Option<pt::Loc> = None;
     let mut is_override: Option<(pt::Loc, Vec<usize>)> = None;
 
     for a in &func.attributes {
         match &a {
-            pt::FunctionAttribute::StateMutability(m) => {
+            pt::FunctionAttribute::Mutability(m) => {
                 if let Some(e) = &mutability {
                     ns.diagnostics.push(Diagnostic::error_with_note(
                         m.loc(),
@@ -112,13 +112,13 @@ pub fn contract_function(
                     continue;
                 }
 
-                if let pt::StateMutability::Constant(loc) = m {
+                if let pt::Mutability::Constant(loc) = m {
                     ns.diagnostics.push(Diagnostic::warning(
                         *loc,
                         "‘constant’ is deprecated. Use ‘view’ instead".to_string(),
                     ));
 
-                    mutability = Some(pt::StateMutability::View(*loc));
+                    mutability = Some(pt::Mutability::View(*loc));
                 } else {
                     mutability = Some(m.clone());
                 }
@@ -266,7 +266,7 @@ pub fn contract_function(
     // storage parameters/returns are only allowed in internal/private functions
     let storage_allowed = match visibility {
         pt::Visibility::Internal(_) | pt::Visibility::Private(_) => {
-            if let Some(pt::StateMutability::Payable(loc)) = mutability {
+            if let Some(pt::Mutability::Payable(loc)) = mutability {
                 ns.diagnostics.push(Diagnostic::error(
                     loc,
                     "internal or private function cannot be payable".to_string(),
@@ -344,7 +344,7 @@ pub fn contract_function(
                 "function in a library cannot override".to_string(),
             ));
             success = false;
-        } else if let Some(pt::StateMutability::Payable(_)) = mutability {
+        } else if let Some(pt::Mutability::Payable(_)) = mutability {
             ns.diagnostics.push(Diagnostic::error(
                 func.loc,
                 "function in a library cannot be payable".to_string(),
@@ -480,14 +480,14 @@ pub fn contract_function(
         }
 
         match fdecl.mutability {
-            Some(pt::StateMutability::Pure(loc)) => {
+            Mutability::Pure(loc) => {
                 ns.diagnostics.push(Diagnostic::error(
                     loc,
                     "constructor cannot be declared pure".to_string(),
                 ));
                 return None;
             }
-            Some(pt::StateMutability::View(loc)) => {
+            Mutability::View(loc) => {
                 ns.diagnostics.push(Diagnostic::error(
                     loc,
                     "constructor cannot be declared view".to_string(),
@@ -545,7 +545,7 @@ pub fn contract_function(
             return None;
         }
 
-        if let Some(pt::StateMutability::Payable(_)) = fdecl.mutability {
+        if fdecl.is_payable() {
             if func.ty == pt::FunctionTy::Fallback {
                 ns.diagnostics.push(Diagnostic::error(
                     func.loc,
@@ -620,11 +620,11 @@ pub fn function(
 ) -> Option<usize> {
     let mut success = true;
 
-    let mut mutability: Option<pt::StateMutability> = None;
+    let mut mutability: Option<pt::Mutability> = None;
 
     for a in &func.attributes {
         match &a {
-            pt::FunctionAttribute::StateMutability(m) => {
+            pt::FunctionAttribute::Mutability(m) => {
                 if let Some(e) = &mutability {
                     ns.diagnostics.push(Diagnostic::error_with_note(
                         m.loc(),
@@ -636,13 +636,13 @@ pub fn function(
                     continue;
                 }
 
-                if let pt::StateMutability::Constant(loc) = m {
+                if let pt::Mutability::Constant(loc) = m {
                     ns.diagnostics.push(Diagnostic::warning(
                         *loc,
                         "‘constant’ is deprecated. Use ‘view’ instead".to_string(),
                     ));
 
-                    mutability = Some(pt::StateMutability::View(*loc));
+                    mutability = Some(pt::Mutability::View(*loc));
                 } else {
                     mutability = Some(m.clone());
                 }

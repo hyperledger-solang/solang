@@ -1,6 +1,6 @@
 use crate::parser::{parse, pt};
 use crate::Target;
-use ast::Diagnostic;
+use ast::{Diagnostic, Mutability};
 use num_bigint::BigInt;
 use num_traits::Signed;
 use num_traits::Zero;
@@ -986,7 +986,7 @@ impl ast::Namespace {
         let (namespace, id, dimensions) =
             self.expr_to_type(file_no, contract_no, &id, diagnostics)?;
 
-        if let pt::Expression::Type(_, ty) = &id {
+        if let pt::Expression::Type(loc, ty) = &id {
             assert!(namespace.is_empty());
 
             let ty = match ty {
@@ -1025,14 +1025,14 @@ impl ast::Namespace {
                     returns,
                     trailing_attributes,
                 } => {
-                    let mut mutability: Option<pt::StateMutability> = None;
+                    let mut mutability: Option<pt::Mutability> = None;
                     let mut visibility: Option<pt::Visibility> = None;
 
                     let mut success = true;
 
                     for a in attributes {
                         match a {
-                            pt::FunctionAttribute::StateMutability(m) => {
+                            pt::FunctionAttribute::Mutability(m) => {
                                 if let Some(e) = &mutability {
                                     diagnostics.push(ast::Diagnostic::error_with_note(
                                         m.loc(),
@@ -1050,13 +1050,13 @@ impl ast::Namespace {
                                     continue;
                                 }
 
-                                if let pt::StateMutability::Constant(loc) = m {
+                                if let pt::Mutability::Constant(loc) = m {
                                     diagnostics.push(ast::Diagnostic::warning(
                                         *loc,
                                         "‘constant’ is deprecated. Use ‘view’ instead".to_string(),
                                     ));
 
-                                    mutability = Some(pt::StateMutability::View(*loc));
+                                    mutability = Some(pt::Mutability::View(*loc));
                                 } else {
                                     mutability = Some(m.clone());
                                 }
@@ -1120,7 +1120,7 @@ impl ast::Namespace {
                     // trailing visibility for contract variables should be removed already
                     for a in trailing_attributes {
                         match a {
-                            pt::FunctionAttribute::StateMutability(m) => {
+                            pt::FunctionAttribute::Mutability(m) => {
                                 diagnostics.push(ast::Diagnostic::error(
                                     m.loc(),
                                     format!(
@@ -1175,6 +1175,14 @@ impl ast::Namespace {
                             p.ty
                         })
                         .collect();
+
+                    let mutability = match mutability {
+                        None => Mutability::Nonpayable(*loc),
+                        Some(pt::Mutability::Payable(loc)) => Mutability::Payable(loc),
+                        Some(pt::Mutability::Pure(loc)) => Mutability::Pure(loc),
+                        Some(pt::Mutability::View(loc)) => Mutability::View(loc),
+                        Some(pt::Mutability::Constant(loc)) => Mutability::View(loc),
+                    };
 
                     if is_external {
                         ast::Type::ExternalFunction {

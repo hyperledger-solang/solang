@@ -14,7 +14,8 @@ use std::ops::{Add, Shl, Sub};
 
 use super::address::to_hexstr_eip55;
 use super::ast::{
-    Builtin, CallTy, Diagnostic, Expression, Function, Namespace, StringLocation, Symbol, Type,
+    Builtin, CallTy, Diagnostic, Expression, Function, Mutability, Namespace, StringLocation,
+    Symbol, Type,
 };
 use super::builtin;
 use super::contracts::{is_base, visit_bases};
@@ -1289,22 +1290,17 @@ fn cast_types(
 }
 
 /// Compare two mutability levels
-pub fn compatible_mutability(
-    left: &Option<pt::StateMutability>,
-    right: &Option<pt::StateMutability>,
-) -> bool {
+pub fn compatible_mutability(left: &Mutability, right: &Mutability) -> bool {
     matches!(
         (left, right),
         // only payable is compatible with payable
-        (Some(pt::StateMutability::Payable(_)), Some(pt::StateMutability::Payable(_)))
+        (Mutability::Payable(_), Mutability::Payable(_))
             // default is compatible with anything but pure and view
-            | (None, Some(pt::StateMutability::Payable(_))) | (None, None)
+            | (Mutability::Nonpayable(_), Mutability::Nonpayable(_) | Mutability::Payable(_))
             // view is compatible with anything but pure
-            | (Some(pt::StateMutability::View(_)), Some(pt::StateMutability::Payable(_)))
-            | (Some(pt::StateMutability::View(_)), None)
-            | (Some(pt::StateMutability::View(_)), Some(pt::StateMutability::View(_)))
+            | (Mutability::View(_), Mutability::View(_) | Mutability::Nonpayable(_) | Mutability::Payable(_))
             // pure is compatible with anything
-            | (Some(pt::StateMutability::Pure(_)), _) // everything else is not compatible
+            | (Mutability::Pure(_), _) // everything else is not compatible
     )
 }
 
@@ -5459,9 +5455,7 @@ fn call_function_type(
         )?;
 
         let value = if let Some(value) = call_args.value {
-            if !value.const_zero(contract_no, ns)
-                && !matches!(mutability, Some(pt::StateMutability::Payable(_)))
-            {
+            if !value.const_zero(contract_no, ns) && !matches!(mutability, Mutability::Payable(_)) {
                 diagnostics.push(Diagnostic::error(
                     *loc,
                     format!(
