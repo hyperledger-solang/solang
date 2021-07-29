@@ -8,6 +8,7 @@ use std::convert::TryInto;
 use tiny_keccak::{Hasher, Keccak};
 
 use super::ast;
+use super::expression::compatible_mutability;
 use super::expression::match_constructor_to_args;
 use super::functions;
 use super::statements;
@@ -418,21 +419,67 @@ fn check_inheritance(contract_no: usize, ns: &mut ast::Namespace) {
                         }
                     }
 
-                    // FIXME: check override visibility/mutability
+                    for (_, function_no) in entry {
+                        let func = &ns.functions[*function_no];
+
+                        if !func.is_accessor
+                            && !cur.is_accessor
+                            && !compatible_mutability(&cur.mutability, &func.mutability)
+                        {
+                            ns.diagnostics.push(ast::Diagnostic::error_with_note(
+                                cur.loc,
+                                format!("mutability ‘{}’ of function ‘{}’ is not compatible with mutability ‘{}’", cur.mutability, cur.name, func.mutability),
+                                func.loc,
+                                String::from("location of base function")
+                            ));
+                        }
+
+                        if !compatible_visibility(&cur.visibility, &func.visibility) {
+                            ns.diagnostics.push(ast::Diagnostic::error_with_note(
+                                cur.loc,
+                                format!("visibility ‘{}’ of function ‘{}’ is not compatible with visibility ‘{}’", cur.visibility, cur.name, func.visibility),
+                                func.loc,
+                                String::from("location of base function")
+                            ));
+                        }
+                    }
 
                     override_needed.remove(&signature);
                 } else if entry.len() == 1 {
+                    let (base_contract_no, function_no) = entry[0];
+
                     // Solidity 0.5 does not require the override keyword at all, later versions so. Uniswap v2 does
                     // not specify override for implementing interfaces. As a compromise, only require override when
                     // not implementing an interface
-                    if !ns.contracts[entry[0].0].is_interface() {
+                    if !ns.contracts[base_contract_no].is_interface() {
                         ns.diagnostics.push(ast::Diagnostic::error(
                             cur.loc,
                             format!("function ‘{}’ should specify ‘override’", cur.name),
                         ));
                     }
 
-                    // FIXME: check override visibility/mutability
+                    let func = &ns.functions[function_no];
+
+                    if !func.is_accessor
+                        && !cur.is_accessor
+                        && !compatible_mutability(&cur.mutability, &func.mutability)
+                    {
+                        ns.diagnostics.push(ast::Diagnostic::error_with_note(
+                            cur.loc,
+                            format!("mutability ‘{}’ of function ‘{}’ is not compatible with mutability ‘{}’", cur.mutability, cur.name, func.mutability),
+                            func.loc,
+                            String::from("location of base function")
+                        ));
+                    }
+
+                    if !compatible_visibility(&cur.visibility, &func.visibility) {
+                        ns.diagnostics.push(ast::Diagnostic::error_with_note(
+                            cur.loc,
+                            format!("visibility ‘{}’ of function ‘{}’ is not compatible with visibility ‘{}’", cur.visibility, cur.name, func.visibility),
+                            func.loc,
+                            String::from("location of base function")
+                        ));
+                    }
 
                     override_needed.remove(&signature);
                 } else {
@@ -535,6 +582,27 @@ fn check_inheritance(contract_no: usize, ns: &mut ast::Namespace) {
                         ));
 
                         continue;
+                    }
+
+                    if !func_prev.is_accessor
+                        && !cur.is_accessor
+                        && !compatible_mutability(&cur.mutability, &func_prev.mutability)
+                    {
+                        ns.diagnostics.push(ast::Diagnostic::error_with_note(
+                            cur.loc,
+                            format!("mutability ‘{}’ of function ‘{}’ is not compatible with mutability ‘{}’", cur.mutability, cur.name, func_prev.mutability),
+                            func_prev.loc,
+                            String::from("location of base function")
+                        ));
+                    }
+
+                    if !compatible_visibility(&cur.visibility, &func_prev.visibility) {
+                        ns.diagnostics.push(ast::Diagnostic::error_with_note(
+                            cur.loc,
+                            format!("visibility ‘{}’ of function ‘{}’ is not compatible with visibility ‘{}’", cur.visibility, cur.name, func_prev.visibility),
+                            func_prev.loc,
+                            String::from("location of base function")
+                        ));
                     }
 
                     // if a function needs an override, it was defined in a contract, not outside
@@ -964,4 +1032,17 @@ fn check_base_args(contract_no: usize, ns: &mut ast::Namespace) {
     }
 
     ns.diagnostics.extend(diagnostics.into_iter());
+}
+
+/// Compare two visibility levels
+fn compatible_visibility(left: &pt::Visibility, right: &pt::Visibility) -> bool {
+    matches!(
+        (left, right),
+        // public and external are compatible with each other, otherwise the have to be the same
+        (
+            pt::Visibility::Public(_) | pt::Visibility::External(_),
+            pt::Visibility::Public(_) | pt::Visibility::External(_)
+        ) | (pt::Visibility::Internal(_), pt::Visibility::Internal(_))
+            | (pt::Visibility::Private(_), pt::Visibility::Private(_))
+    )
 }

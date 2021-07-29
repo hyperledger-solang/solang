@@ -806,7 +806,7 @@ fn call_inherited_function() {
     let ns = parse_and_resolve(
         r#"
         contract base {
-            function foo(uint64 a) private returns (uint64) {
+            function foo(uint64 a) public returns (uint64) {
                 return a + 102;
             }
         }
@@ -2050,4 +2050,111 @@ fn test_super() {
     runtime.function("bar", Vec::new());
 
     assert_eq!(runtime.vm.output, 112u64.encode());
+}
+
+#[test]
+fn mutability() {
+    let ns = parse_and_resolve(
+        r#"
+        contract y {
+            function foo() external pure virtual returns (int) {
+                return 102;
+            }
+        }
+
+        contract x is y {
+            function foo() external override returns (int) {
+                return 102;
+            }
+        }
+        "#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "mutability ‘nonpayable’ of function ‘foo’ is not compatible with mutability ‘pure’"
+    );
+
+    let ns = parse_and_resolve(
+        r#"
+        abstract contract y {
+            function foo() external view virtual returns (int);
+        }
+
+        contract x is y {
+            function foo() external payable override returns (int) {
+                return 102;
+            }
+        }
+        "#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "mutability ‘payable’ of function ‘foo’ is not compatible with mutability ‘view’"
+    );
+}
+
+#[test]
+fn visibility() {
+    let ns = parse_and_resolve(
+        r#"
+        contract y {
+            function foo() external virtual returns (int) {
+                return 102;
+            }
+        }
+
+        contract x is y {
+            function foo() public override returns (int) {
+                return 102;
+            }
+        }
+        "#,
+        Target::Substrate,
+    );
+
+    no_errors(ns.diagnostics);
+
+    let ns = parse_and_resolve(
+        r#"
+        abstract contract y {
+            function foo() external virtual returns (int);
+        }
+
+        contract x is y {
+            function foo() internal override returns (int) {
+                return 102;
+            }
+        }
+        "#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "visibility ‘internal’ of function ‘foo’ is not compatible with visibility ‘external’"
+    );
+
+    let ns = parse_and_resolve(
+        r#"
+        abstract contract y {
+            function foo() internal virtual returns (int);
+        }
+
+        contract x is y {
+            function foo() private override returns (int) {
+                return 102;
+            }
+        }
+        "#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "visibility ‘private’ of function ‘foo’ is not compatible with visibility ‘internal’"
+    );
 }
