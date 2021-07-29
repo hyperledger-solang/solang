@@ -1636,3 +1636,44 @@ impl Vartable {
         self.dirty.pop().unwrap().set
     }
 }
+
+impl Contract {
+    /// Print the entire contract; storage initializers, constructors and functions and their CFGs
+    pub fn print_cfg(&self, ns: &Namespace) -> String {
+        let mut out = format!("#\n# Contract: {}\n#\n\n", self.name);
+
+        for cfg in &self.cfg {
+            if !cfg.is_placeholder() {
+                out += &format!(
+                    "\n# {} {} public:{} selector:{} nonpayable:{}\n",
+                    cfg.ty,
+                    cfg.name,
+                    cfg.public,
+                    hex::encode(cfg.selector.to_be_bytes()),
+                    cfg.nonpayable,
+                );
+
+                out += &format!(
+                    "# params: {}\n",
+                    cfg.params
+                        .iter()
+                        .map(|p| p.ty.to_string(ns))
+                        .collect::<Vec<String>>()
+                        .join(",")
+                );
+                out += &format!(
+                    "# returns: {}\n",
+                    cfg.returns
+                        .iter()
+                        .map(|p| p.ty.to_string(ns))
+                        .collect::<Vec<String>>()
+                        .join(",")
+                );
+
+                out += &cfg.to_string(self, ns);
+            }
+        }
+
+        out
+    }
+}
