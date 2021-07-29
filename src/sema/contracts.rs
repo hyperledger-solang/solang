@@ -7,14 +7,14 @@ use std::collections::HashSet;
 use std::convert::TryInto;
 use tiny_keccak::{Hasher, Keccak};
 
+use super::ast;
 use super::expression::match_constructor_to_args;
 use super::functions;
 use super::statements;
 use super::symtable::Symtable;
 use super::variables;
-use super::{ast, SOLANA_FIRST_OFFSET};
+use crate::emit;
 use crate::sema::unused_variable::emit_warning_local_variable;
-use crate::{emit, Target};
 
 impl ast::Contract {
     /// Create a new contract, abstract contract, interface or library
@@ -27,7 +27,6 @@ impl ast::Contract {
             using: Vec::new(),
             layout: Vec::new(),
             fixed_layout_size: BigInt::zero(),
-            dynamic_storage: false,
             tags,
             functions: Vec::new(),
             all_functions: HashMap::new(),
@@ -124,9 +123,9 @@ pub fn resolve(
     // Resolve base contract constructor arguments on contract definition (not constructor definitions)
     resolve_base_args(contracts, file_no, ns);
 
-    // Now we have all the declarations, we can create the layout of storage and handle base contracts
+    // Now we have all the declarations, we can handle base contracts
     for (contract_no, _) in contracts {
-        check_inheritance_and_layout(*contract_no, ns);
+        check_inheritance(*contract_no, ns);
     }
 
     // Now we can resolve the bodies
@@ -308,17 +307,11 @@ pub fn is_base(base: usize, parent: usize, ns: &ast::Namespace) -> bool {
         .any(|parent| is_base(base, parent.contract_no, ns))
 }
 
-/// Layout the contract. We determine the layout of variables and deal with overriding variables
-fn check_inheritance_and_layout(contract_no: usize, ns: &mut ast::Namespace) {
+/// Check the inheritance of all functions and other symbols
+fn check_inheritance(contract_no: usize, ns: &mut ast::Namespace) {
     let mut function_syms: HashMap<String, ast::Symbol> = HashMap::new();
     let mut variable_syms: HashMap<String, ast::Symbol> = HashMap::new();
     let mut override_needed: HashMap<String, Vec<(usize, usize)>> = HashMap::new();
-
-    let mut slot = if ns.target == Target::Solana {
-        BigInt::from(SOLANA_FIRST_OFFSET)
-    } else {
-        BigInt::zero()
-    };
 
     for base_contract_no in visit_bases(contract_no, ns) {
         // find file number where contract is defined
@@ -366,36 +359,6 @@ fn check_inheritance_and_layout(contract_no: usize, ns: &mut ast::Namespace) {
                 } else {
                     variable_syms.insert(name.to_owned(), sym.clone());
                 }
-            }
-        }
-
-        for var_no in 0..ns.contracts[base_contract_no].variables.len() {
-            if !ns.contracts[base_contract_no].variables[var_no].constant {
-                let ty = ns.contracts[base_contract_no].variables[var_no].ty.clone();
-
-                if ns.target == Target::Solana {
-                    // elements need to be aligned on solana
-                    let alignment = ty.align_of(ns);
-
-                    let offset = slot.clone() % alignment;
-
-                    if offset > BigInt::zero() {
-                        slot += alignment - offset;
-                    }
-                }
-
-                ns.contracts[contract_no].layout.push(ast::Layout {
-                    slot: slot.clone(),
-                    contract_no: base_contract_no,
-                    var_no,
-                    ty: ty.clone(),
-                });
-
-                if ty.is_dynamic(ns) {
-                    ns.contracts[contract_no].dynamic_storage = true;
-                }
-
-                slot += ty.storage_slots(ns);
             }
         }
 
@@ -668,8 +631,6 @@ fn check_inheritance_and_layout(contract_no: usize, ns: &mut ast::Namespace) {
                 .insert(function_no, usize::MAX);
         }
     }
-
-    ns.contracts[contract_no].fixed_layout_size = slot;
 
     for list in override_needed.values() {
         let func = &ns.functions[list[0].1];

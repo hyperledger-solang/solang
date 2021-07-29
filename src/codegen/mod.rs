@@ -12,8 +12,16 @@ mod vector_to_slice;
 
 use self::cfg::{optimize, ControlFlowGraph, Instr, Vartable};
 use self::expression::expression;
-use crate::sema::ast::Namespace;
+use crate::sema::ast::{Layout, Namespace};
+use crate::sema::contracts::visit_bases;
 use crate::sema::diagnostics::any_errors;
+use crate::Target;
+
+use num_bigint::BigInt;
+use num_traits::Zero;
+
+// The sizeof(struct account_data_header)
+pub const SOLANA_FIRST_OFFSET: u64 = 16;
 
 pub struct Options {
     pub dead_storage: bool,
@@ -37,6 +45,8 @@ impl Default for Options {
 /// not all contracts need a cfg; only those for which we need the
 pub fn codegen(contract_no: usize, ns: &mut Namespace, opt: &Options) {
     if !any_errors(&ns.diagnostics) && ns.contracts[contract_no].is_concrete() {
+        layout(contract_no, ns);
+
         let mut cfg_no = 0;
         let mut all_cfg = Vec::new();
 
@@ -125,4 +135,43 @@ fn storage_initializer(contract_no: usize, ns: &mut Namespace, opt: &Options) ->
     optimize(&mut cfg, ns, opt);
 
     cfg
+}
+
+/// Layout the contract. We determine the layout of variables and deal with overriding variables
+fn layout(contract_no: usize, ns: &mut Namespace) {
+    let mut slot = if ns.target == Target::Solana {
+        BigInt::from(SOLANA_FIRST_OFFSET)
+    } else {
+        BigInt::zero()
+    };
+
+    for base_contract_no in visit_bases(contract_no, ns) {
+        for var_no in 0..ns.contracts[base_contract_no].variables.len() {
+            if !ns.contracts[base_contract_no].variables[var_no].constant {
+                let ty = ns.contracts[base_contract_no].variables[var_no].ty.clone();
+
+                if ns.target == Target::Solana {
+                    // elements need to be aligned on solana
+                    let alignment = ty.align_of(ns);
+
+                    let offset = slot.clone() % alignment;
+
+                    if offset > BigInt::zero() {
+                        slot += alignment - offset;
+                    }
+                }
+
+                ns.contracts[contract_no].layout.push(Layout {
+                    slot: slot.clone(),
+                    contract_no: base_contract_no,
+                    var_no,
+                    ty: ty.clone(),
+                });
+
+                slot += ty.storage_slots(ns);
+            }
+        }
+    }
+
+    ns.contracts[contract_no].fixed_layout_size = slot;
 }
