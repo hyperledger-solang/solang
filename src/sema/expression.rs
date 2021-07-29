@@ -205,7 +205,7 @@ impl Expression {
 
     /// Is this expression 0
     fn const_zero(&self, contract_no: Option<usize>, ns: &Namespace) -> bool {
-        if let Ok((_, value)) = eval_const_number(&self, contract_no, ns) {
+        if let Ok((_, value)) = eval_const_number(self, contract_no, ns) {
             value == BigInt::zero()
         } else {
             false
@@ -791,7 +791,7 @@ fn cast_types(
             let enum_ty = &ns.enums[*enum_no];
             let from_width = enum_ty.ty.bits(ns);
 
-            match from_width.cmp(&to_width) {
+            match from_width.cmp(to_width) {
                 Ordering::Greater => Ok(Expression::Trunc(*loc, to.clone(), Box::new(expr))),
                 Ordering::Less => Ok(Expression::ZeroExt(*loc, to.clone(), Box::new(expr))),
                 Ordering::Equal => Ok(Expression::Cast(*loc, to.clone(), Box::new(expr))),
@@ -799,7 +799,7 @@ fn cast_types(
         }
         (Type::Bytes(1), Type::Uint(8)) => Ok(expr),
         (Type::Uint(8), Type::Bytes(1)) => Ok(expr),
-        (Type::Uint(from_len), Type::Uint(to_len)) => match from_len.cmp(&to_len) {
+        (Type::Uint(from_len), Type::Uint(to_len)) => match from_len.cmp(to_len) {
             Ordering::Greater => {
                 if implicit {
                     diagnostics.push(Diagnostic::type_error(
@@ -818,7 +818,7 @@ fn cast_types(
             Ordering::Less => Ok(Expression::ZeroExt(*loc, to.clone(), Box::new(expr))),
             Ordering::Equal => Ok(Expression::Cast(*loc, to.clone(), Box::new(expr))),
         },
-        (Type::Int(from_len), Type::Int(to_len)) => match from_len.cmp(&to_len) {
+        (Type::Int(from_len), Type::Int(to_len)) => match from_len.cmp(to_len) {
             Ordering::Greater => {
                 if implicit {
                     diagnostics.push(Diagnostic::type_error(
@@ -1717,7 +1717,7 @@ pub fn expression(
             used_variable(ns, &expr, symtable);
             Ok(Expression::Not(
                 *loc,
-                Box::new(cast(&loc, expr, &Type::Bool, true, ns, diagnostics)?),
+                Box::new(cast(loc, expr, &Type::Bool, true, ns, diagnostics)?),
             ))
         }
         pt::Expression::Complement(loc, e) => {
@@ -2012,7 +2012,7 @@ pub fn expression(
                     );
 
                     if let Ok(exp) = &res {
-                        check_function_call(ns, &exp, symtable);
+                        check_function_call(ns, exp, symtable);
                     }
                     res
                 }
@@ -2030,7 +2030,7 @@ pub fn expression(
                     );
 
                     if let Ok(exp) = &res {
-                        check_function_call(ns, &exp, symtable);
+                        check_function_call(ns, exp, symtable);
                     }
 
                     res
@@ -2157,7 +2157,7 @@ pub fn expression(
         pt::Expression::Or(loc, left, right) => {
             let boolty = Type::Bool;
             let l = cast(
-                &loc,
+                loc,
                 expression(
                     left,
                     file_no,
@@ -2175,7 +2175,7 @@ pub fn expression(
                 diagnostics,
             )?;
             let r = cast(
-                &loc,
+                loc,
                 expression(
                     right,
                     file_no,
@@ -2200,7 +2200,7 @@ pub fn expression(
         pt::Expression::And(loc, left, right) => {
             let boolty = Type::Bool;
             let l = cast(
-                &loc,
+                loc,
                 expression(
                     left,
                     file_no,
@@ -2218,7 +2218,7 @@ pub fn expression(
                 diagnostics,
             )?;
             let r = cast(
-                &loc,
+                loc,
                 expression(
                     right,
                     file_no,
@@ -3520,7 +3520,7 @@ fn circular_reference(from: usize, to: usize, ns: &Namespace) -> bool {
     ns.contracts[from]
         .creates
         .iter()
-        .any(|n| circular_reference(*n, to, &ns))
+        .any(|n| circular_reference(*n, to, ns))
 }
 
 /// Resolve an new contract expression with named arguments
@@ -4019,7 +4019,7 @@ fn equal(
                 StringLocation::RunTime(Box::new(cast(
                     &r.loc(),
                     right,
-                    &right_type.deref_any(),
+                    right_type.deref_any(),
                     true,
                     ns,
                     diagnostics,
@@ -4038,7 +4038,7 @@ fn equal(
                 StringLocation::RunTime(Box::new(cast(
                     &l.loc(),
                     left,
-                    &left_type.deref_any(),
+                    left_type.deref_any(),
                     true,
                     ns,
                     diagnostics,
@@ -4057,7 +4057,7 @@ fn equal(
                 StringLocation::RunTime(Box::new(cast(
                     &l.loc(),
                     left,
-                    &left_type.deref_any(),
+                    left_type.deref_any(),
                     true,
                     ns,
                     diagnostics,
@@ -4065,7 +4065,7 @@ fn equal(
                 StringLocation::RunTime(Box::new(cast(
                     &r.loc(),
                     right,
-                    &right_type.deref_any(),
+                    right_type.deref_any(),
                     true,
                     ns,
                     diagnostics,
@@ -4416,7 +4416,7 @@ fn assign_expr(
         let set = match expr {
             pt::Expression::AssignShiftLeft(_, _, _)
             | pt::Expression::AssignShiftRight(_, _, _) => {
-                let left_length = get_int_length(&ty, &loc, true, ns, diagnostics)?;
+                let left_length = get_int_length(ty, loc, true, ns, diagnostics)?;
                 let right_length = get_int_length(&set_type, &left.loc(), false, ns, diagnostics)?;
 
                 // TODO: does shifting by negative value need compiletime/runtime check?
@@ -4430,7 +4430,7 @@ fn assign_expr(
                     Expression::Trunc(*loc, ty.clone(), Box::new(set))
                 }
             }
-            _ => cast(&right.loc(), set, &ty, true, ns, diagnostics)?,
+            _ => cast(&right.loc(), set, ty, true, ns, diagnostics)?,
         };
 
         Ok(match expr {
@@ -4807,7 +4807,7 @@ fn member_access(
     // is it an basecontract.function expression (unless basecontract is a local variable)
     if let pt::Expression::Variable(namespace) = e {
         if symtable.find(&namespace.name).is_none() {
-            if let Some(call_contract_no) = ns.resolve_contract(file_no, &namespace) {
+            if let Some(call_contract_no) = ns.resolve_contract(file_no, namespace) {
                 if let Some(contract_no) = contract_no {
                     if is_base(call_contract_no, contract_no, ns) {
                         // find function with this name
@@ -5252,7 +5252,7 @@ fn array_subscript(
                 let array = cast(
                     &array.loc(),
                     array,
-                    &array_ty.deref_any(),
+                    array_ty.deref_any(),
                     true,
                     ns,
                     diagnostics,
@@ -5314,7 +5314,7 @@ fn struct_literal(
 
         for (i, a) in args.iter().enumerate() {
             let expr = expression(
-                &a,
+                a,
                 file_no,
                 contract_no,
                 function_no,
@@ -6042,7 +6042,7 @@ fn method_call_pos_args(
         }
 
         // library or base contract call
-        if let Some(call_contract_no) = ns.resolve_contract(file_no, &namespace) {
+        if let Some(call_contract_no) = ns.resolve_contract(file_no, namespace) {
             if ns.contracts[call_contract_no].is_library() {
                 if let Some(loc) = call_args_loc {
                     diagnostics.push(Diagnostic::error(
@@ -6363,7 +6363,7 @@ fn method_call_pos_args(
                         symtable,
                         false,
                         diagnostics,
-                        Some(&elem_ty),
+                        Some(elem_ty),
                     )?;
 
                     cast(&args[0].loc(), val_expr, elem_ty, true, ns, diagnostics)?
@@ -6878,7 +6878,7 @@ fn method_call_named_args(
         }
 
         // library or base contract call
-        if let Some(call_contract_no) = ns.resolve_contract(file_no, &namespace) {
+        if let Some(call_contract_no) = ns.resolve_contract(file_no, namespace) {
             if ns.contracts[call_contract_no].is_library() {
                 if let Some(loc) = call_args_loc {
                     diagnostics.push(Diagnostic::error(
@@ -6959,7 +6959,7 @@ fn method_call_named_args(
 
     if let Type::Contract(external_contract_no) = &var_ty.deref_any() {
         let call_args = parse_call_args(
-            &call_args,
+            call_args,
             true,
             file_no,
             contract_no,
@@ -7687,7 +7687,7 @@ pub fn function_call_expr(
 
                 call_position_args(
                     loc,
-                    &id,
+                    id,
                     pt::FunctionTy::Function,
                     args,
                     file_no,
@@ -7757,7 +7757,7 @@ pub fn named_function_call_expr(
 
             function_call_with_named_args(
                 loc,
-                &id,
+                id,
                 args,
                 file_no,
                 available_functions(&id.name, true, file_no, contract_no, ns),
@@ -7843,7 +7843,7 @@ fn mapping_subscript(
                 symtable,
                 is_constant,
                 diagnostics,
-                Some(&key_ty),
+                Some(key_ty),
             )?,
             key_ty,
             true,

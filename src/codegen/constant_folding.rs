@@ -707,7 +707,7 @@ fn expression(
                         match &expr {
                             Expression::AllocDynamicArray(_, _, _, Some(bs))
                             | Expression::BytesLiteral(_, _, bs) => {
-                                hasher.update(&bs);
+                                hasher.update(bs);
                             }
                             Expression::NumberLiteral(_, ty, n) => {
                                 let (sign, mut bs) = n.to_bytes_le();

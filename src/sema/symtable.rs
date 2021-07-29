@@ -83,7 +83,7 @@ impl Symtable {
 
         // the variable has no name, like unnamed return or parameters values
         if !id.name.is_empty() {
-            if let Some(ref prev) = self.find(&id.name) {
+            if let Some(prev) = self.find(&id.name) {
                 ns.diagnostics.push(Diagnostic::error_with_note(
                     id.loc,
                     format!("{} is already declared", id.name.to_string()),

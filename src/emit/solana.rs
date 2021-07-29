@@ -466,7 +466,7 @@ impl SolanaTarget {
 
             self.emit_function_dispatch(
                 binary,
-                &contract.contract,
+                contract.contract,
                 contract.ns,
                 pt::FunctionTy::Function,
                 dispatch_function
@@ -759,7 +759,7 @@ impl SolanaTarget {
 
                 self.storage_free(
                     binary,
-                    &elem_ty.deref_any(),
+                    elem_ty.deref_any(),
                     data,
                     offset_val,
                     function,
@@ -1998,7 +1998,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                         "size_of",
                     );
 
-                    length = self.storage_array_length(binary, function, slot, &elem_ty, ns);
+                    length = self.storage_array_length(binary, function, slot, elem_ty, ns);
 
                     slot = binary
                         .builder
@@ -2034,7 +2034,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
 
                 let val = self.storage_load(
                     binary,
-                    &elem_ty.deref_memory(),
+                    elem_ty.deref_memory(),
                     &mut offset_val,
                     function,
                     ns,
@@ -2298,7 +2298,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
 
             self.storage_store(
                 binary,
-                &elem_ty.deref_any(),
+                elem_ty.deref_any(),
                 &mut offset_val,
                 binary.builder.build_load(elem, "array_elem"),
                 function,

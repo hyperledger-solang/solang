@@ -224,7 +224,7 @@ pub fn var_decl(
         let mut diagnostics = Vec::new();
 
         let res = match expression(
-            &initializer,
+            initializer,
             file_no,
             contract_no,
             None,

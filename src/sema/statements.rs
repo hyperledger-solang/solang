@@ -384,7 +384,7 @@ fn statement(
                     return Err(());
                 }
                 reachable = statement(
-                    &stmt,
+                    stmt,
                     res,
                     file_no,
                     contract_no,
@@ -1233,17 +1233,17 @@ fn destructure(
                 name: Some(name),
             }) => {
                 let (ty, ty_loc) =
-                    resolve_var_decl_ty(&ty, &storage, file_no, contract_no, ns, diagnostics)?;
+                    resolve_var_decl_ty(ty, storage, file_no, contract_no, ns, diagnostics)?;
 
                 if let Some(pos) = symtable.add(
-                    &name,
+                    name,
                     ty.clone(),
                     ns,
                     None,
                     VariableUsage::DestructureVariable,
                     storage.clone(),
                 ) {
-                    ns.check_shadowing(file_no, contract_no, &name);
+                    ns.check_shadowing(file_no, contract_no, name);
 
                     left_tys.push(Some(ty.clone()));
 
@@ -1469,7 +1469,7 @@ fn resolve_var_decl_ty(
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Result<(Type, pt::Loc), ()> {
     let mut loc_ty = ty.loc();
-    let mut var_ty = ns.resolve_type(file_no, contract_no, false, &ty, diagnostics)?;
+    let mut var_ty = ns.resolve_type(file_no, contract_no, false, ty, diagnostics)?;
 
     if let Some(storage) = storage {
         if !var_ty.can_have_data_location() {
@@ -1853,7 +1853,7 @@ fn try_catch(
                 ty, storage, name, ..
             }) => {
                 let (ret_ty, ty_loc) =
-                    resolve_var_decl_ty(&ty, &storage, file_no, contract_no, ns, diagnostics)?;
+                    resolve_var_decl_ty(ty, storage, file_no, contract_no, ns, diagnostics)?;
 
                 if arg_ty != ret_ty {
                     diagnostics.push(Diagnostic::error(
@@ -1869,14 +1869,14 @@ fn try_catch(
 
                 if let Some(name) = name {
                     if let Some(pos) = symtable.add(
-                        &name,
+                        name,
                         ret_ty.clone(),
                         ns,
                         None,
                         VariableUsage::TryCatchReturns,
                         storage.clone(),
                     ) {
-                        ns.check_shadowing(file_no, contract_no, &name);
+                        ns.check_shadowing(file_no, contract_no, name);
                         params.push((
                             Some(pos),
                             Parameter {
@@ -1920,7 +1920,7 @@ fn try_catch(
     let mut ok_resolved = Vec::new();
 
     let mut finally_reachable = statement(
-        &ok,
+        ok,
         &mut ok_resolved,
         file_no,
         contract_no,
@@ -1979,14 +1979,14 @@ fn try_catch(
 
         if let Some(name) = &error_stmt.1.name {
             if let Some(pos) = symtable.add(
-                &name,
+                name,
                 Type::String,
                 ns,
                 None,
                 VariableUsage::TryCatchErrorString,
                 error_stmt.1.storage.clone(),
             ) {
-                ns.check_shadowing(file_no, contract_no, &name);
+                ns.check_shadowing(file_no, contract_no, name);
 
                 error_pos = Some(pos);
                 error_param.name = name.name.to_string();
@@ -2050,14 +2050,14 @@ fn try_catch(
 
     if let Some(name) = &catch_stmt.0.name {
         if let Some(pos) = symtable.add(
-            &name,
+            name,
             catch_ty,
             ns,
             None,
             VariableUsage::TryCatchErrorBytes,
             catch_stmt.0.storage.clone(),
         ) {
-            ns.check_shadowing(file_no, contract_no, &name);
+            ns.check_shadowing(file_no, contract_no, name);
             catch_param_pos = Some(pos);
             catch_param.name = name.name.to_string();
             catch_param.name_loc = Some(name.loc);

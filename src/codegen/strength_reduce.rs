@@ -205,8 +205,8 @@ fn expression_reduce(expr: &Expression, vars: &Variables, ns: &mut Namespace) ->
                 let bits = ty.bits(ns) as usize;
 
                 if bits >= 128 {
-                    let left_values = expression_values(&left, vars, ns);
-                    let right_values = expression_values(&right, vars, ns);
+                    let left_values = expression_values(left, vars, ns);
+                    let right_values = expression_values(right, vars, ns);
 
                     if let Some(right) = is_single_constant(&right_values) {
                         // is it a power of two
@@ -338,8 +338,8 @@ fn expression_reduce(expr: &Expression, vars: &Variables, ns: &mut Namespace) ->
                 let bits = ty.bits(ns) as usize;
 
                 if bits >= 128 {
-                    let left_values = expression_values(&left, vars, ns);
-                    let right_values = expression_values(&right, vars, ns);
+                    let left_values = expression_values(left, vars, ns);
+                    let right_values = expression_values(right, vars, ns);
 
                     if let Some(right) = is_single_constant(&right_values) {
                         // is it a power of two
@@ -468,8 +468,8 @@ fn expression_reduce(expr: &Expression, vars: &Variables, ns: &mut Namespace) ->
                 let bits = ty.bits(ns) as usize;
 
                 if bits >= 128 {
-                    let left_values = expression_values(&left, vars, ns);
-                    let right_values = expression_values(&right, vars, ns);
+                    let left_values = expression_values(left, vars, ns);
+                    let right_values = expression_values(right, vars, ns);
 
                     if let Some(right) = is_single_constant(&right_values) {
                         // is it a power of two
@@ -999,7 +999,7 @@ fn expression_values(expr: &Expression, vars: &Variables, ns: &Namespace) -> Has
             set
         }
         Expression::ZeroExt(_, ty, expr) => {
-            let vals = expression_values(&expr, vars, ns);
+            let vals = expression_values(expr, vars, ns);
             let bits_after = ty.bits(ns) as usize;
 
             vals.into_iter()
@@ -1012,7 +1012,7 @@ fn expression_values(expr: &Expression, vars: &Variables, ns: &Namespace) -> Has
                 .collect()
         }
         Expression::SignExt(_, ty, expr) => {
-            let vals = expression_values(&expr, vars, ns);
+            let vals = expression_values(expr, vars, ns);
             let bits_after = ty.bits(ns) as usize;
 
             vals.into_iter()
@@ -1032,7 +1032,7 @@ fn expression_values(expr: &Expression, vars: &Variables, ns: &Namespace) -> Has
                 .collect()
         }
         Expression::Trunc(_, ty, expr) => {
-            let vals = expression_values(&expr, vars, ns);
+            let vals = expression_values(expr, vars, ns);
             let bits_after = ty.bits(ns) as usize;
 
             vals.into_iter()
@@ -1046,8 +1046,8 @@ fn expression_values(expr: &Expression, vars: &Variables, ns: &Namespace) -> Has
                 .collect()
         }
         Expression::BitwiseOr(_, _, left, right) => {
-            let left = expression_values(&left, vars, ns);
-            let right = expression_values(&right, vars, ns);
+            let left = expression_values(left, vars, ns);
+            let right = expression_values(right, vars, ns);
 
             left.iter()
                 .cartesian_product(right.iter())
@@ -1059,8 +1059,8 @@ fn expression_values(expr: &Expression, vars: &Variables, ns: &Namespace) -> Has
                 .collect()
         }
         Expression::BitwiseAnd(_, _, left, right) => {
-            let left = expression_values(&left, vars, ns);
-            let right = expression_values(&right, vars, ns);
+            let left = expression_values(left, vars, ns);
+            let right = expression_values(right, vars, ns);
 
             // bitwise and
             // value bits become 0 if right known_bit and !value
@@ -1075,8 +1075,8 @@ fn expression_values(expr: &Expression, vars: &Variables, ns: &Namespace) -> Has
                 .collect()
         }
         Expression::BitwiseXor(_, _, left, right) => {
-            let left = expression_values(&left, vars, ns);
-            let right = expression_values(&right, vars, ns);
+            let left = expression_values(left, vars, ns);
+            let right = expression_values(right, vars, ns);
 
             // bitwise and
             // value bits become 0 if right known_bit and !value
@@ -1095,8 +1095,8 @@ fn expression_values(expr: &Expression, vars: &Variables, ns: &Namespace) -> Has
                 .collect()
         }
         Expression::Add(_, ty, left, right) => {
-            let left = expression_values(&left, vars, ns);
-            let right = expression_values(&right, vars, ns);
+            let left = expression_values(left, vars, ns);
+            let right = expression_values(right, vars, ns);
 
             left.iter()
                 .cartesian_product(right.iter())
@@ -1146,8 +1146,8 @@ fn expression_values(expr: &Expression, vars: &Variables, ns: &Namespace) -> Has
                 .collect()
         }
         Expression::Subtract(_, ty, left, right) => {
-            let left = expression_values(&left, vars, ns);
-            let right = expression_values(&right, vars, ns);
+            let left = expression_values(left, vars, ns);
+            let right = expression_values(right, vars, ns);
 
             left.iter()
                 .cartesian_product(right.iter())
@@ -1193,8 +1193,8 @@ fn expression_values(expr: &Expression, vars: &Variables, ns: &Namespace) -> Has
                 .collect()
         }
         Expression::Multiply(_, ty, left, right) => {
-            let left = expression_values(&left, vars, ns);
-            let right = expression_values(&right, vars, ns);
+            let left = expression_values(left, vars, ns);
+            let right = expression_values(right, vars, ns);
 
             left.iter()
                 .cartesian_product(right.iter())
@@ -1292,8 +1292,8 @@ fn expression_values(expr: &Expression, vars: &Variables, ns: &Namespace) -> Has
         Expression::More(_, left, right) => {
             let ty = left.ty();
 
-            let left = expression_values(&left, vars, ns);
-            let right = expression_values(&right, vars, ns);
+            let left = expression_values(left, vars, ns);
+            let right = expression_values(right, vars, ns);
 
             left.iter()
                 .cartesian_product(right.iter())
@@ -1351,8 +1351,8 @@ fn expression_values(expr: &Expression, vars: &Variables, ns: &Namespace) -> Has
         Expression::MoreEqual(_, left, right) => {
             let ty = left.ty();
 
-            let left = expression_values(&left, vars, ns);
-            let right = expression_values(&right, vars, ns);
+            let left = expression_values(left, vars, ns);
+            let right = expression_values(right, vars, ns);
 
             left.iter()
                 .cartesian_product(right.iter())
@@ -1408,8 +1408,8 @@ fn expression_values(expr: &Expression, vars: &Variables, ns: &Namespace) -> Has
         Expression::Less(_, left, right) => {
             let ty = left.ty();
 
-            let left = expression_values(&left, vars, ns);
-            let right = expression_values(&right, vars, ns);
+            let left = expression_values(left, vars, ns);
+            let right = expression_values(right, vars, ns);
 
             left.iter()
                 .cartesian_product(right.iter())
@@ -1467,8 +1467,8 @@ fn expression_values(expr: &Expression, vars: &Variables, ns: &Namespace) -> Has
         Expression::LessEqual(_, left, right) => {
             let ty = left.ty();
 
-            let left = expression_values(&left, vars, ns);
-            let right = expression_values(&right, vars, ns);
+            let left = expression_values(left, vars, ns);
+            let right = expression_values(right, vars, ns);
 
             left.iter()
                 .cartesian_product(right.iter())
@@ -1522,8 +1522,8 @@ fn expression_values(expr: &Expression, vars: &Variables, ns: &Namespace) -> Has
                 .collect()
         }
         Expression::Equal(_, left_expr, right_expr) => {
-            let left = expression_values(&left_expr, vars, ns);
-            let right = expression_values(&right_expr, vars, ns);
+            let left = expression_values(left_expr, vars, ns);
+            let right = expression_values(right_expr, vars, ns);
 
             left.iter()
                 .cartesian_product(right.iter())
@@ -1561,8 +1561,8 @@ fn expression_values(expr: &Expression, vars: &Variables, ns: &Namespace) -> Has
                 .collect()
         }
         Expression::NotEqual(_, left_expr, right_expr) => {
-            let left = expression_values(&left_expr, vars, ns);
-            let right = expression_values(&right_expr, vars, ns);
+            let left = expression_values(left_expr, vars, ns);
+            let right = expression_values(right_expr, vars, ns);
 
             left.iter()
                 .cartesian_product(right.iter())
@@ -1600,7 +1600,7 @@ fn expression_values(expr: &Expression, vars: &Variables, ns: &Namespace) -> Has
                 .collect()
         }
         Expression::Not(_, expr) => {
-            let vals = expression_values(&expr, vars, ns);
+            let vals = expression_values(expr, vars, ns);
 
             vals.into_iter()
                 .map(|mut v| {
@@ -1614,8 +1614,8 @@ fn expression_values(expr: &Expression, vars: &Variables, ns: &Namespace) -> Has
                 .collect()
         }
         Expression::Or(_, left, right) => {
-            let left = expression_values(&left, vars, ns);
-            let right = expression_values(&right, vars, ns);
+            let left = expression_values(left, vars, ns);
+            let right = expression_values(right, vars, ns);
 
             left.iter()
                 .cartesian_product(right.iter())
@@ -1640,8 +1640,8 @@ fn expression_values(expr: &Expression, vars: &Variables, ns: &Namespace) -> Has
                 .collect()
         }
         Expression::And(_, left, right) => {
-            let left = expression_values(&left, vars, ns);
-            let right = expression_values(&right, vars, ns);
+            let left = expression_values(left, vars, ns);
+            let right = expression_values(right, vars, ns);
 
             left.iter()
                 .cartesian_product(right.iter())
@@ -1665,7 +1665,7 @@ fn expression_values(expr: &Expression, vars: &Variables, ns: &Namespace) -> Has
                 .collect()
         }
         Expression::Complement(_, _, expr) => {
-            let vals = expression_values(&expr, vars, ns);
+            let vals = expression_values(expr, vars, ns);
 
             vals.into_iter()
                 .map(|mut v| {

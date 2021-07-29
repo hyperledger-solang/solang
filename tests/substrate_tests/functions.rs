@@ -423,7 +423,7 @@ fn shadowing() {
         }
     }";
 
-    let ns = parse_and_resolve(&src, Target::Substrate);
+    let ns = parse_and_resolve(src, Target::Substrate);
 
     assert_eq!(
         first_warning(ns.diagnostics),
@@ -463,7 +463,7 @@ fn scopes() {
         }
     }";
 
-    let ns = parse_and_resolve(&src, Target::Substrate);
+    let ns = parse_and_resolve(src, Target::Substrate);
 
     assert_eq!(first_error(ns.diagnostics), "`a\' is not found");
 
@@ -477,7 +477,7 @@ fn scopes() {
         }
     }";
 
-    let ns = parse_and_resolve(&src, Target::Substrate);
+    let ns = parse_and_resolve(src, Target::Substrate);
 
     assert_eq!(first_error(ns.diagnostics), "`i\' is not found");
 }
@@ -494,7 +494,7 @@ fn for_forever() {
         }
     }";
 
-    let ns = parse_and_resolve(&src, Target::Substrate);
+    let ns = parse_and_resolve(src, Target::Substrate);
 
     assert_eq!(first_error(ns.diagnostics), "unreachable statement");
 }
@@ -570,7 +570,7 @@ fn test_full_example() {
     // parse
     let src = include_str!("../../examples/full_example.sol");
 
-    let mut runtime = build_solidity(&src);
+    let mut runtime = build_solidity(src);
 
     runtime.constructor(0, Val32(102).encode());
 
@@ -602,7 +602,7 @@ fn test_large_vals() {
             }
         }";
 
-    let mut runtime = build_solidity(&src);
+    let mut runtime = build_solidity(src);
 
     runtime.constructor(0, Vec::new());
 
@@ -620,7 +620,7 @@ fn args_and_returns() {
         }
     }";
 
-    let ns = parse_and_resolve(&src, Target::Substrate);
+    let ns = parse_and_resolve(src, Target::Substrate);
 
     assert_eq!(first_error(ns.diagnostics), "arg1 is already declared");
 
@@ -630,7 +630,7 @@ fn args_and_returns() {
         }
     }";
 
-    let ns = parse_and_resolve(&src, Target::Substrate);
+    let ns = parse_and_resolve(src, Target::Substrate);
 
     assert_eq!(first_error(ns.diagnostics), "arg2 is already declared");
 
@@ -640,7 +640,7 @@ fn args_and_returns() {
         }
     }";
 
-    let ns = parse_and_resolve(&src, Target::Substrate);
+    let ns = parse_and_resolve(src, Target::Substrate);
 
     assert_eq!(first_error(ns.diagnostics), "missing return statement");
 
@@ -663,7 +663,7 @@ fn args_and_returns() {
         }
     }";
 
-    let ns = parse_and_resolve(&src, Target::Substrate);
+    let ns = parse_and_resolve(src, Target::Substrate);
 
     assert_eq!(first_error(ns.diagnostics), "missing return statement");
 
@@ -702,7 +702,7 @@ fn named_argument_call() {
         }
     }";
 
-    let ns = parse_and_resolve(&src, Target::Substrate);
+    let ns = parse_and_resolve(src, Target::Substrate);
 
     assert_eq!(
         first_error(ns.diagnostics),
@@ -719,7 +719,7 @@ fn named_argument_call() {
         }
     }";
 
-    let ns = parse_and_resolve(&src, Target::Substrate);
+    let ns = parse_and_resolve(src, Target::Substrate);
 
     assert_eq!(first_error(ns.diagnostics), "unexpected array type");
 
@@ -733,7 +733,7 @@ fn named_argument_call() {
         }
     }";
 
-    let ns = parse_and_resolve(&src, Target::Substrate);
+    let ns = parse_and_resolve(src, Target::Substrate);
 
     assert_eq!(
         first_error(ns.diagnostics),
@@ -750,7 +750,7 @@ fn named_argument_call() {
         }
     }";
 
-    let ns = parse_and_resolve(&src, Target::Substrate);
+    let ns = parse_and_resolve(src, Target::Substrate);
 
     assert_eq!(
         first_error(ns.diagnostics),
@@ -767,7 +767,7 @@ fn named_argument_call() {
         }
     }";
 
-    let ns = parse_and_resolve(&src, Target::Substrate);
+    let ns = parse_and_resolve(src, Target::Substrate);
 
     assert_eq!(
         first_error(ns.diagnostics),
@@ -811,7 +811,7 @@ fn positional_argument_call() {
         }
     }";
 
-    let ns = parse_and_resolve(&src, Target::Substrate);
+    let ns = parse_and_resolve(src, Target::Substrate);
 
     assert_eq!(
         first_error(ns.diagnostics),
@@ -828,7 +828,7 @@ fn positional_argument_call() {
         }
     }";
 
-    let ns = parse_and_resolve(&src, Target::Substrate);
+    let ns = parse_and_resolve(src, Target::Substrate);
 
     assert_eq!(first_error(ns.diagnostics), "expression is not an array");
 
@@ -842,7 +842,7 @@ fn positional_argument_call() {
         }
     }";
 
-    let ns = parse_and_resolve(&src, Target::Substrate);
+    let ns = parse_and_resolve(src, Target::Substrate);
 
     assert_eq!(
         first_error(ns.diagnostics),
@@ -958,7 +958,7 @@ fn payable() {
             }
         }"##;
 
-    let ns = parse_and_resolve(&src, Target::Substrate);
+    let ns = parse_and_resolve(src, Target::Substrate);
 
     assert_eq!(
         first_error(ns.diagnostics),
@@ -976,7 +976,7 @@ fn payable() {
             }
         }"##;
 
-    let ns = parse_and_resolve(&src, Target::Substrate);
+    let ns = parse_and_resolve(src, Target::Substrate);
 
     assert_eq!(
         first_error(ns.diagnostics),
@@ -994,7 +994,7 @@ fn payable() {
             }
         }"##;
 
-    let ns = parse_and_resolve(&src, Target::Substrate);
+    let ns = parse_and_resolve(src, Target::Substrate);
 
     assert_eq!(
         first_error(ns.diagnostics),
@@ -1012,7 +1012,7 @@ fn payable() {
             }
         }"##;
 
-    let ns = parse_and_resolve(&src, Target::Substrate);
+    let ns = parse_and_resolve(src, Target::Substrate);
 
     assert_eq!(
         first_error(ns.diagnostics),
@@ -1027,7 +1027,7 @@ fn payable() {
             }
         }"##;
 
-    let ns = parse_and_resolve(&src, Target::Substrate);
+    let ns = parse_and_resolve(src, Target::Substrate);
 
     assert_eq!(
         first_error(ns.diagnostics),
@@ -1042,7 +1042,7 @@ fn payable() {
             }
         }"##;
 
-    let ns = parse_and_resolve(&src, Target::Substrate);
+    let ns = parse_and_resolve(src, Target::Substrate);
 
     assert_eq!(
         first_error(ns.diagnostics),

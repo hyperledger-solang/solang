@@ -75,10 +75,10 @@ mod test {
                     int64 $thing_102;
                 }";
 
-        let lex = lexer::Lexer::new(&src);
+        let lex = lexer::Lexer::new(src);
 
         let e = solidity::SourceUnitParser::new()
-            .parse(&src, 0, lex)
+            .parse(src, 0, lex)
             .unwrap();
 
         let a = SourceUnit(vec![SourceUnitPart::ContractDefinition(Box::new(

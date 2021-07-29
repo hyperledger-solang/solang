@@ -200,7 +200,7 @@ impl SolangServer {
                             msg.push_str(&format!(" = hex\"{}\"", hex::encode(&bs)));
                         }
                         Expression::BytesLiteral(_, ast::Type::String, bs) => {
-                            msg.push_str(&format!(" = \"{}\"", String::from_utf8_lossy(&bs)));
+                            msg.push_str(&format!(" = \"{}\"", String::from_utf8_lossy(bs)));
                         }
                         Expression::NumberLiteral(_, ast::Type::Uint(_), n)
                         | Expression::NumberLiteral(_, ast::Type::Int(_), n) => {
@@ -338,7 +338,7 @@ impl SolangServer {
                 }
                 if let Some(okstmt) = error {
                     for stmts in &okstmt.2 {
-                        SolangServer::construct_stmt(&stmts, lookup_tbl, symtab, fnc_map, ns);
+                        SolangServer::construct_stmt(stmts, lookup_tbl, symtab, fnc_map, ns);
                     }
                 }
             }
@@ -465,7 +465,7 @@ impl SolangServer {
                             msg.push_str(&format!(" hex\"{}\"", hex::encode(&bs)));
                         }
                         Expression::BytesLiteral(_, ast::Type::String, bs) => {
-                            msg.push_str(&format!(" \"{}\"", String::from_utf8_lossy(&bs)));
+                            msg.push_str(&format!(" \"{}\"", String::from_utf8_lossy(bs)));
                         }
                         Expression::NumberLiteral(_, ast::Type::Uint(_), n)
                         | Expression::NumberLiteral(_, ast::Type::Int(_), n) => {
@@ -806,7 +806,7 @@ impl SolangServer {
         let msg = format!("{} {}", msg_typ, contvar.name);
         lookup_tbl.push((contvar.loc.1, contvar.loc.2, msg));
         if let Some(expr) = &contvar.initializer {
-            SolangServer::construct_expr(&expr, lookup_tbl, samptb, fnc_map, ns);
+            SolangServer::construct_expr(expr, lookup_tbl, samptb, fnc_map, ns);
         }
     }
 
@@ -839,7 +839,7 @@ impl SolangServer {
 
         for strct in &ns.structs {
             for filds in &strct.fields {
-                SolangServer::construct_strct(&filds, lookup_tbl, ns);
+                SolangServer::construct_strct(filds, lookup_tbl, ns);
             }
 
             let msg_tg = render(&strct.tags[..]);
@@ -858,7 +858,7 @@ impl SolangServer {
             }
 
             for stmt in &fnc.body {
-                SolangServer::construct_stmt(&stmt, lookup_tbl, &fnc.symtable, fnc_map, ns);
+                SolangServer::construct_stmt(stmt, lookup_tbl, &fnc.symtable, fnc_map, ns);
             }
         }
 
@@ -893,7 +893,7 @@ impl SolangServer {
 
         for entdcl in &ns.events {
             for filds in &entdcl.fields {
-                SolangServer::construct_strct(&filds, lookup_tbl, ns);
+                SolangServer::construct_strct(filds, lookup_tbl, ns);
             }
             let msg_tg = render(&entdcl.tags[..]);
             lookup_tbl.push((entdcl.loc.1, (entdcl.loc.1 + entdcl.name.len()), msg_tg));

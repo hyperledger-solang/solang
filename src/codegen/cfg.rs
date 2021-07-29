@@ -512,7 +512,7 @@ impl ControlFlowGraph {
                 "(keccak256 {})",
                 exprs
                     .iter()
-                    .map(|e| self.expr_to_string(contract, ns, &e))
+                    .map(|e| self.expr_to_string(contract, ns, e))
                     .collect::<Vec<String>>()
                     .join(", ")
             ),
@@ -545,7 +545,7 @@ impl ControlFlowGraph {
                 "(call {} ({})",
                 self.expr_to_string(contract, ns, function),
                 args.iter()
-                    .map(|a| self.expr_to_string(contract, ns, &a))
+                    .map(|a| self.expr_to_string(contract, ns, a))
                     .collect::<Vec<String>>()
                     .join(", ")
             ),
@@ -559,7 +559,7 @@ impl ControlFlowGraph {
                 ns.contracts[*contract_no].name,
                 ns.functions[*constructor_no].signature,
                 args.iter()
-                    .map(|a| self.expr_to_string(contract, ns, &a))
+                    .map(|a| self.expr_to_string(contract, ns, a))
                     .collect::<Vec<String>>()
                     .join(", ")
             ),
@@ -572,7 +572,7 @@ impl ControlFlowGraph {
                 "(constructor:{} ({})",
                 ns.contracts[*contract_no].name,
                 args.iter()
-                    .map(|a| self.expr_to_string(contract, ns, &a))
+                    .map(|a| self.expr_to_string(contract, ns, a))
                     .collect::<Vec<String>>()
                     .join(", ")
             ),
@@ -589,7 +589,7 @@ impl ControlFlowGraph {
                 "(external call {} ({})",
                 self.expr_to_string(contract, ns, function),
                 args.iter()
-                    .map(|a| self.expr_to_string(contract, ns, &a))
+                    .map(|a| self.expr_to_string(contract, ns, a))
                     .collect::<Vec<String>>()
                     .join(", ")
             ),
@@ -626,18 +626,14 @@ impl ControlFlowGraph {
                 "(builtin {:?} ({}))",
                 builtin,
                 args.iter()
-                    .map(|a| self.expr_to_string(contract, ns, &a))
+                    .map(|a| self.expr_to_string(contract, ns, a))
                     .collect::<Vec<String>>()
                     .join(", ")
             ),
             Expression::FormatString(_, args) => format!(
                 "(format string {})",
                 args.iter()
-                    .map(|(spec, a)| format!(
-                        "({} {})",
-                        spec,
-                        self.expr_to_string(contract, ns, &a)
-                    ))
+                    .map(|(spec, a)| format!("({} {})", spec, self.expr_to_string(contract, ns, a)))
                     .collect::<Vec<String>>()
                     .join(", ")
             ),

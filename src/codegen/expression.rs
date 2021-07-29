@@ -337,18 +337,18 @@ pub fn expression(
 
             let args = args
                 .iter()
-                .map(|v| expression(&v, cfg, *contract_no, func, ns, vartab))
+                .map(|v| expression(v, cfg, *contract_no, func, ns, vartab))
                 .collect();
             let gas = expression(gas, cfg, *contract_no, func, ns, vartab);
             let value = value
                 .as_ref()
-                .map(|value| expression(&value, cfg, *contract_no, func, ns, vartab));
+                .map(|value| expression(value, cfg, *contract_no, func, ns, vartab));
             let salt = salt
                 .as_ref()
-                .map(|salt| expression(&salt, cfg, *contract_no, func, ns, vartab));
+                .map(|salt| expression(salt, cfg, *contract_no, func, ns, vartab));
             let space = space
                 .as_ref()
-                .map(|space| expression(&space, cfg, *contract_no, func, ns, vartab));
+                .map(|space| expression(space, cfg, *contract_no, func, ns, vartab));
 
             cfg.add(
                 vartab,
@@ -905,7 +905,7 @@ pub fn expression(
             let tys = args.iter().map(|a| a.ty()).collect();
             let args = args
                 .iter()
-                .map(|v| expression(&v, cfg, contract_no, func, ns, vartab))
+                .map(|v| expression(v, cfg, contract_no, func, ns, vartab))
                 .collect();
 
             let res = vartab.temp(
@@ -936,7 +936,7 @@ pub fn expression(
             let tys = args.iter().map(|a| a.ty()).collect();
             let packed = args
                 .iter()
-                .map(|v| expression(&v, cfg, contract_no, func, ns, vartab))
+                .map(|v| expression(v, cfg, contract_no, func, ns, vartab))
                 .collect();
 
             let res = vartab.temp(
@@ -968,7 +968,7 @@ pub fn expression(
             // first argument is selector
             let mut args_iter = args.iter();
             let selector = expression(
-                &args_iter.next().unwrap(),
+                args_iter.next().unwrap(),
                 cfg,
                 contract_no,
                 func,
@@ -976,7 +976,7 @@ pub fn expression(
                 vartab,
             );
             let args = args_iter
-                .map(|v| expression(&v, cfg, contract_no, func, ns, vartab))
+                .map(|v| expression(v, cfg, contract_no, func, ns, vartab))
                 .collect();
 
             let res = vartab.temp(
@@ -1018,7 +1018,7 @@ pub fn expression(
             let hash = expression(&hash, cfg, contract_no, func, ns, vartab);
             let selector = cast(loc, hash, &Type::Bytes(4), false, ns, &mut Vec::new()).unwrap();
             let args = args_iter
-                .map(|v| expression(&v, cfg, contract_no, func, ns, vartab))
+                .map(|v| expression(v, cfg, contract_no, func, ns, vartab))
                 .collect();
 
             let res = vartab.temp(
@@ -1060,7 +1060,7 @@ pub fn expression(
         Expression::Builtin(loc, tys, builtin, args) => {
             let args = args
                 .iter()
-                .map(|v| expression(&v, cfg, contract_no, func, ns, vartab))
+                .map(|v| expression(v, cfg, contract_no, func, ns, vartab))
                 .collect();
 
             Expression::Builtin(*loc, tys.clone(), *builtin, args)
@@ -1116,7 +1116,7 @@ pub fn assign_single(
             let left_ty = left.ty();
             let ty = left_ty.deref_memory();
 
-            let pos = vartab.temp_anonymous(&ty);
+            let pos = vartab.temp_anonymous(ty);
 
             let dest = expression(left, cfg, contract_no, func, ns, vartab);
             let right = expression(right, cfg, contract_no, func, ns, vartab);
@@ -1256,7 +1256,7 @@ pub fn emit_function_call(
                             name: String::new(),
                         };
 
-                        let temp_pos = vartab.temp(&id, &ty);
+                        let temp_pos = vartab.temp(&id, ty);
                         res.push(temp_pos);
                         return_tys.push(ty.clone());
                         return_values.push(Expression::Variable(id.loc, ty.clone(), temp_pos));
@@ -1562,7 +1562,7 @@ pub fn emit_function_call(
             let mut res = Vec::new();
 
             for ret in tys {
-                let temp_pos = vartab.temp_anonymous(&ret);
+                let temp_pos = vartab.temp_anonymous(ret);
                 res.push(temp_pos);
                 returns.push(Expression::Variable(*loc, ret.clone(), temp_pos));
             }
@@ -1845,7 +1845,7 @@ fn array_subscript(
                                     loc,
                                     Expression::Variable(index_loc, coerced_ty, pos),
                                     index_width,
-                                    &array_ty,
+                                    array_ty,
                                     ns,
                                 )),
                             )),

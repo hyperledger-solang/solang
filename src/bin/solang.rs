@@ -300,7 +300,7 @@ fn main() {
                         }
 
                         let (abi_bytes, abi_ext) =
-                            abi::generate_abi(contract_no, &ns, &code, verbose);
+                            abi::generate_abi(contract_no, ns, &code, verbose);
                         let abi_filename = output_file(&matches, &contract.name, abi_ext);
 
                         if verbose {
@@ -323,7 +323,7 @@ fn main() {
                             }
                         };
 
-                        file.write_all(&abi_bytes.as_bytes()).unwrap();
+                        file.write_all(abi_bytes.as_bytes()).unwrap();
                     }
                 }
             }
@@ -358,7 +358,7 @@ fn process_filename(
 
     // codegen all the contracts; some additional errors/warnings will be detected here
     for contract_no in 0..ns.contracts.len() {
-        codegen(contract_no, &mut ns, &opt);
+        codegen(contract_no, &mut ns, opt);
     }
 
     if matches.is_present("STD-JSON") {
@@ -411,8 +411,7 @@ fn process_filename(
 
         let context = inkwell::context::Context::create();
 
-        let binary =
-            resolved_contract.emit(&ns, &context, &filename, llvm_opt, math_overflow_check);
+        let binary = resolved_contract.emit(&ns, &context, filename, llvm_opt, math_overflow_check);
 
         if save_intermediates(&binary, matches) {
             continue;
@@ -482,7 +481,7 @@ fn process_filename(
                     std::process::exit(1);
                 }
             };
-            file.write_all(&abi_bytes.as_bytes()).unwrap();
+            file.write_all(abi_bytes.as_bytes()).unwrap();
         }
     }
 

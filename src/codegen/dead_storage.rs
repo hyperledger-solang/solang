@@ -358,13 +358,13 @@ fn apply_transfers(
 
                     for (var_no, def) in vars.vars.iter() {
                         for def in def.keys() {
-                            if let Some((_, storage)) = get_storage_definition(def, &cfg) {
+                            if let Some((_, storage)) = get_storage_definition(def, cfg) {
                                 if let Some(expr) = expr {
                                     let storage_vars = get_vars_at(def, block_vars);
 
                                     if expression_compare(
                                         expr,
-                                        &vars,
+                                        vars,
                                         storage,
                                         &storage_vars,
                                         cfg,
@@ -395,7 +395,7 @@ fn apply_transfers(
 
                             if expression_compare(
                                 expr,
-                                &vars,
+                                vars,
                                 storage,
                                 &storage_vars,
                                 cfg,
@@ -485,12 +485,12 @@ pub fn dead_storage(cfg: &mut ControlFlowGraph, _ns: &mut Namespace) {
                         if defs.len() == 1 {
                             let (def, _) = defs.iter().next().unwrap();
 
-                            if let Some((other, def_storage)) = get_storage_definition(def, &cfg) {
+                            if let Some((other, def_storage)) = get_storage_definition(def, cfg) {
                                 let def_vars = get_vars_at(def, &block_vars);
 
                                 if expression_compare(
                                     storage,
-                                    &vars,
+                                    vars,
                                     def_storage,
                                     &def_vars,
                                     cfg,
@@ -515,7 +515,7 @@ pub fn dead_storage(cfg: &mut ControlFlowGraph, _ns: &mut Namespace) {
                         for (def, expr) in &vars.stores {
                             let def_vars = get_vars_at(def, &block_vars);
 
-                            if expression_compare(storage, &vars, expr, &def_vars, cfg, &block_vars)
+                            if expression_compare(storage, vars, expr, &def_vars, cfg, &block_vars)
                                 != ExpressionCmp::NotEqual
                             {
                                 if let Some(entry) = redundant_stores.get_mut(def) {
@@ -529,7 +529,7 @@ pub fn dead_storage(cfg: &mut ControlFlowGraph, _ns: &mut Namespace) {
                     for (def, expr) in &vars.stores {
                         let def_vars = get_vars_at(def, &block_vars);
 
-                        if expression_compare(storage, &vars, expr, &def_vars, cfg, &block_vars)
+                        if expression_compare(storage, vars, expr, &def_vars, cfg, &block_vars)
                             != ExpressionCmp::NotEqual
                         {
                             if let Some(entry) = redundant_stores.get_mut(def) {
@@ -696,10 +696,10 @@ fn expression_compare(
                 let left = left.iter().next().unwrap();
                 let right = right.iter().next().unwrap();
 
-                match (get_definition(&left.0, cfg), get_definition(&right.0, cfg)) {
+                match (get_definition(left.0, cfg), get_definition(right.0, cfg)) {
                     (Some(left_expr), Some(right_expr)) => {
-                        let left_vars = get_vars_at(&left.0, block_vars);
-                        let right_vars = get_vars_at(&right.0, block_vars);
+                        let left_vars = get_vars_at(left.0, block_vars);
+                        let right_vars = get_vars_at(right.0, block_vars);
 
                         expression_compare(
                             left_expr,

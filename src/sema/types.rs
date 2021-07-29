@@ -39,10 +39,10 @@ pub fn resolve_typenames<'a>(
     for part in &s.0 {
         match part {
             pt::SourceUnitPart::ContractDefinition(def) => {
-                resolve_contract(&def, file_no, &mut delay, ns);
+                resolve_contract(def, file_no, &mut delay, ns);
             }
             pt::SourceUnitPart::EnumDefinition(def) => {
-                let _ = enum_decl(&def, file_no, None, ns);
+                let _ = enum_decl(def, file_no, None, ns);
             }
             pt::SourceUnitPart::StructDefinition(def) => {
                 let pos = ns.structs.len();

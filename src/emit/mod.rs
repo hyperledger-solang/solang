@@ -333,7 +333,7 @@ pub trait TargetRuntime<'a> {
 
     /// If we receive a value transfer, and we are "payable", abort with revert
     fn abort_if_value_transfer(&self, bin: &Binary, function: FunctionValue, ns: &ast::Namespace) {
-        let value = self.value_transferred(&bin, ns);
+        let value = self.value_transferred(bin, ns);
 
         let got_value = bin.builder.build_int_compare(
             IntPredicate::NE,
@@ -1153,7 +1153,7 @@ pub trait TargetRuntime<'a> {
 
                 let target_bin = Binary::build(
                     bin.context,
-                    &codegen_bin,
+                    codegen_bin,
                     ns,
                     "",
                     bin.opt,
@@ -1899,7 +1899,7 @@ pub trait TargetRuntime<'a> {
                     // allocate a new struct
                     let ty = e.ty();
 
-                    let llvm_ty = bin.llvm_type(&ty.deref_memory(), ns);
+                    let llvm_ty = bin.llvm_type(ty.deref_memory(), ns);
 
                     let new_struct = bin
                         .builder
@@ -2053,7 +2053,7 @@ pub trait TargetRuntime<'a> {
 
                 bin.builder.position_at_end(error);
                 self.assert_failure(
-                    &bin,
+                    bin,
                     bin.context
                         .i8_type()
                         .ptr_type(AddressSpace::Generic)
@@ -2208,7 +2208,7 @@ pub trait TargetRuntime<'a> {
                 let slot = self
                     .expression(bin, a, vartab, function, ns)
                     .into_int_value();
-                self.get_storage_bytes_subscript(&bin, function, slot, index)
+                self.get_storage_bytes_subscript(bin, function, slot, index)
                     .into()
             }
             Expression::DynamicArraySubscript(_, elem_ty, a, i) => {
@@ -2418,7 +2418,7 @@ pub trait TargetRuntime<'a> {
 
                 // first we need to calculate the length of the buffer and get the types/lengths
                 for e in exprs {
-                    let v = self.expression(bin, &e, vartab, function, ns);
+                    let v = self.expression(bin, e, vartab, function, ns);
 
                     let len = match e.ty() {
                         ast::Type::DynamicBytes | ast::Type::String => bin.vector_len(v),
@@ -2482,7 +2482,7 @@ pub trait TargetRuntime<'a> {
                     .builder
                     .build_alloca(bin.context.custom_width_int_type(256), "keccak_dst");
 
-                self.keccak256_hash(&bin, src, length, dst, ns);
+                self.keccak256_hash(bin, src, length, dst, ns);
 
                 bin.builder.build_load(dst, "keccak256_hash")
             }
@@ -2543,11 +2543,11 @@ pub trait TargetRuntime<'a> {
                     function,
                     &packed
                         .iter()
-                        .map(|a| self.expression(bin, &a, vartab, function, ns))
+                        .map(|a| self.expression(bin, a, vartab, function, ns))
                         .collect::<Vec<BasicValueEnum>>(),
                     &args
                         .iter()
-                        .map(|a| self.expression(bin, &a, vartab, function, ns))
+                        .map(|a| self.expression(bin, a, vartab, function, ns))
                         .collect::<Vec<BasicValueEnum>>(),
                     tys,
                     ns,
@@ -2811,7 +2811,7 @@ pub trait TargetRuntime<'a> {
 
                 assert!(matches!(ty, ast::Type::ExternalFunction { .. }));
 
-                let ty = bin.llvm_type(&ty, ns);
+                let ty = bin.llvm_type(ty, ns);
 
                 let ef = bin
                     .builder
@@ -2918,7 +2918,7 @@ pub trait TargetRuntime<'a> {
                 };
 
                 self.hash(
-                    &bin,
+                    bin,
                     function,
                     hash,
                     bin.vector_bytes(v),
@@ -3108,7 +3108,7 @@ pub trait TargetRuntime<'a> {
                     Instr::Branch { block: dest } => {
                         let pos = bin.builder.get_insert_block().unwrap();
 
-                        if !blocks.contains_key(&dest) {
+                        if !blocks.contains_key(dest) {
                             blocks.insert(*dest, create_block(*dest, bin, cfg, function, ns));
                             work.push_back(Work {
                                 block_no: *dest,
@@ -3143,7 +3143,7 @@ pub trait TargetRuntime<'a> {
                         let pos = bin.builder.get_insert_block().unwrap();
 
                         let bb_true = {
-                            if !blocks.contains_key(&true_) {
+                            if !blocks.contains_key(true_) {
                                 blocks.insert(*true_, create_block(*true_, bin, cfg, function, ns));
                                 work.push_back(Work {
                                     block_no: *true_,
@@ -3161,7 +3161,7 @@ pub trait TargetRuntime<'a> {
                         };
 
                         let bb_false = {
-                            if !blocks.contains_key(&false_) {
+                            if !blocks.contains_key(false_) {
                                 blocks
                                     .insert(*false_, create_block(*false_, bin, cfg, function, ns));
                                 work.push_back(Work {
@@ -3243,14 +3243,14 @@ pub trait TargetRuntime<'a> {
                             .into_int_value();
 
                         w.vars.get_mut(res).unwrap().value =
-                            self.storage_push(&bin, function, &value.ty(), slot, val, ns);
+                            self.storage_push(bin, function, &value.ty(), slot, val, ns);
                     }
                     Instr::PopStorage { res, ty, storage } => {
                         let slot = self
                             .expression(bin, storage, &w.vars, function, ns)
                             .into_int_value();
 
-                        let value = self.storage_pop(&bin, function, ty, slot, ns);
+                        let value = self.storage_pop(bin, function, ty, slot, ns);
 
                         w.vars.get_mut(res).unwrap().value = value;
                     }
@@ -3564,7 +3564,7 @@ pub trait TargetRuntime<'a> {
                     Instr::Print { expr } => {
                         let expr = self.expression(bin, expr, &w.vars, function, ns);
 
-                        self.print(&bin, bin.vector_bytes(expr), bin.vector_len(expr));
+                        self.print(bin, bin.vector_bytes(expr), bin.vector_len(expr));
                     }
                     Instr::Call {
                         res,
@@ -3731,7 +3731,7 @@ pub trait TargetRuntime<'a> {
                     } => {
                         let args = &args
                             .iter()
-                            .map(|a| self.expression(bin, &a, &w.vars, function, ns))
+                            .map(|a| self.expression(bin, a, &w.vars, function, ns))
                             .collect::<Vec<BasicValueEnum>>();
 
                         let address = bin.build_alloca(function, bin.address_type(ns), "address");
@@ -3740,15 +3740,15 @@ pub trait TargetRuntime<'a> {
                             .expression(bin, gas, &w.vars, function, ns)
                             .into_int_value();
                         let value = value.as_ref().map(|v| {
-                            self.expression(bin, &v, &w.vars, function, ns)
+                            self.expression(bin, v, &w.vars, function, ns)
                                 .into_int_value()
                         });
                         let salt = salt.as_ref().map(|v| {
-                            self.expression(bin, &v, &w.vars, function, ns)
+                            self.expression(bin, v, &w.vars, function, ns)
                                 .into_int_value()
                         });
                         let space = space.as_ref().map(|v| {
-                            self.expression(bin, &v, &w.vars, function, ns)
+                            self.expression(bin, v, &w.vars, function, ns)
                                 .into_int_value()
                         });
 
@@ -3758,7 +3758,7 @@ pub trait TargetRuntime<'a> {
                         };
 
                         self.create_contract(
-                            &bin,
+                            bin,
                             function,
                             success,
                             *contract_no,
@@ -3976,7 +3976,7 @@ pub trait TargetRuntime<'a> {
 
                         let mut returns = Vec::new();
 
-                        self.abi_decode(bin, function, &mut returns, data, data_len, &tys, ns);
+                        self.abi_decode(bin, function, &mut returns, data, data_len, tys, ns);
 
                         for (i, ret) in returns.into_iter().enumerate() {
                             w.vars.get_mut(&res[i]).unwrap().value = ret;
@@ -4009,7 +4009,7 @@ pub trait TargetRuntime<'a> {
                             function,
                             &data
                                 .iter()
-                                .map(|a| self.expression(bin, &a, &w.vars, function, ns))
+                                .map(|a| self.expression(bin, a, &w.vars, function, ns))
                                 .collect::<Vec<BasicValueEnum>>(),
                             &data_tys,
                             ns,
@@ -4226,7 +4226,7 @@ pub trait TargetRuntime<'a> {
         let mut args = Vec::new();
 
         // insert abi decode
-        self.abi_decode(&bin, function, &mut args, argsdata, argslen, &f.params, ns);
+        self.abi_decode(bin, function, &mut args, argsdata, argslen, &f.params, ns);
 
         // add return values as pointer arguments at the end
         if !f.returns.is_empty() {
@@ -4288,12 +4288,12 @@ pub trait TargetRuntime<'a> {
 
         if f.returns.is_empty() {
             // return ABI of length 0
-            self.return_empty_abi(&bin);
+            self.return_empty_abi(bin);
         } else {
             let tys: Vec<ast::Type> = f.returns.iter().map(|p| p.ty.clone()).collect();
 
             let (data, length) = self.abi_encode(
-                &bin,
+                bin,
                 None,
                 true,
                 function,
@@ -4302,7 +4302,7 @@ pub trait TargetRuntime<'a> {
                 ns,
             );
 
-            self.return_abi(&bin, data, length);
+            self.return_abi(bin, data, length);
         }
 
         bin.builder.position_at_end(bail_block);
@@ -4473,7 +4473,7 @@ pub trait TargetRuntime<'a> {
         for (i, (spec, arg)) in args.iter().enumerate() {
             if *spec == FormatArg::StringLiteral {
                 if let Expression::BytesLiteral(_, _, bs) = arg {
-                    let s = bin.emit_global_string("format_arg", &bs, true);
+                    let s = bin.emit_global_string("format_arg", bs, true);
                     let len = bin.context.i32_type().const_int(bs.len() as u64, false);
 
                     bin.builder.build_call(
@@ -4708,7 +4708,7 @@ pub trait TargetRuntime<'a> {
                             output = bin
                                 .builder
                                 .build_call(
-                                    bin.module.get_function(&func_name).unwrap(),
+                                    bin.module.get_function(func_name).unwrap(),
                                     &[output.into(), s.into(), len.into()],
                                     "",
                                 )
@@ -4863,7 +4863,7 @@ pub trait TargetRuntime<'a> {
                             output = bin
                                 .builder
                                 .build_call(
-                                    bin.module.get_function(&func_name).unwrap(),
+                                    bin.module.get_function(func_name).unwrap(),
                                     &[output_after_minus.into(), s.into(), len.into()],
                                     "",
                                 )
@@ -5375,7 +5375,7 @@ impl<'a> Binary<'a> {
         module.set_source_file_name(filename);
 
         // stdlib
-        let intr = load_stdlib(&context, &target);
+        let intr = load_stdlib(context, &target);
         module.link_in_module(intr).unwrap();
 
         let selector =
@@ -5758,18 +5758,18 @@ impl<'a> Binary<'a> {
         // function parameters
         let mut args = params
             .iter()
-            .map(|ty| self.llvm_var(&ty, ns))
+            .map(|ty| self.llvm_var(ty, ns))
             .collect::<Vec<BasicTypeEnum>>();
 
         // add return values
         for ty in returns {
             args.push(if ty.is_reference_type() && !ty.is_contract_storage() {
-                self.llvm_type(&ty, ns)
+                self.llvm_type(ty, ns)
                     .ptr_type(AddressSpace::Generic)
                     .ptr_type(AddressSpace::Generic)
                     .into()
             } else {
-                self.llvm_type(&ty, ns)
+                self.llvm_type(ty, ns)
                     .ptr_type(AddressSpace::Generic)
                     .into()
             });
@@ -6265,7 +6265,7 @@ static SUBSTRATE_IR: &[u8] = include_bytes!("../../stdlib/wasm/substrate.bc");
 /// the solang library
 fn load_stdlib<'a>(context: &'a Context, target: &Target) -> Module<'a> {
     if *target == Target::Solana {
-        let memory = MemoryBuffer::create_from_memory_range(&BPF_IR[0], "bpf_bc");
+        let memory = MemoryBuffer::create_from_memory_range(BPF_IR[0], "bpf_bc");
 
         let module = Module::parse_bitcode_from_buffer(&memory, context).unwrap();
 
@@ -6280,7 +6280,7 @@ fn load_stdlib<'a>(context: &'a Context, target: &Target) -> Module<'a> {
         return module;
     }
 
-    let memory = MemoryBuffer::create_from_memory_range(&WASM_IR[0], "wasm_bc");
+    let memory = MemoryBuffer::create_from_memory_range(WASM_IR[0], "wasm_bc");
 
     let module = Module::parse_bitcode_from_buffer(&memory, context).unwrap();
 
