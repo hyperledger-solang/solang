@@ -37,8 +37,6 @@ pub type ArrayDimension = Option<(pt::Loc, BigInt)>;
 
 // small prime number
 pub const SOLANA_BUCKET_SIZE: u64 = 251;
-// The sizeof(struct account_data_header)
-pub const SOLANA_FIRST_OFFSET: u64 = 16;
 pub const SOLANA_SPARSE_ARRAY_SIZE: u64 = 1024;
 
 /// Load a file file from the cache, parse and resolve it. The file must be present in
