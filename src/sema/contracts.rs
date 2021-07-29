@@ -52,45 +52,6 @@ impl ast::Contract {
         emit::Binary::build(context, self, ns, filename, opt, math_overflow_check)
     }
 
-    /// Print the entire contract; storage initializers, constructors and functions and their CFGs
-    pub fn print_cfg(&self, ns: &ast::Namespace) -> String {
-        let mut out = format!("#\n# Contract: {}\n#\n\n", self.name);
-
-        for cfg in &self.cfg {
-            if !cfg.is_placeholder() {
-                out += &format!(
-                    "\n# {} {} public:{} selector:{} nonpayable:{}\n",
-                    cfg.ty,
-                    cfg.name,
-                    cfg.public,
-                    hex::encode(cfg.selector.to_be_bytes()),
-                    cfg.nonpayable,
-                );
-
-                out += &format!(
-                    "# params: {}\n",
-                    cfg.params
-                        .iter()
-                        .map(|p| p.ty.to_string(ns))
-                        .collect::<Vec<String>>()
-                        .join(",")
-                );
-                out += &format!(
-                    "# returns: {}\n",
-                    cfg.returns
-                        .iter()
-                        .map(|p| p.ty.to_string(ns))
-                        .collect::<Vec<String>>()
-                        .join(",")
-                );
-
-                out += &cfg.to_string(self, ns);
-            }
-        }
-
-        out
-    }
-
     /// Selector for this contract. This is used by Solana contract bundle
     pub fn selector(&self) -> u32 {
         let mut hasher = Keccak::v256();
