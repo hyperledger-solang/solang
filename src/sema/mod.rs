@@ -42,7 +42,7 @@ pub const SOLANA_SPARSE_ARRAY_SIZE: u64 = 1024;
 /// Load a file file from the cache, parse and resolve it. The file must be present in
 /// the cache.
 pub fn sema(file: &ResolvedFile, cache: &mut FileCache, ns: &mut ast::Namespace) {
-    sema_file(&file, cache, ns);
+    sema_file(file, cache, ns);
 
     // Checks for unused variables
     check_unused_namespace_variables(ns);
@@ -91,7 +91,7 @@ fn sema_file(file: &ResolvedFile, cache: &mut FileCache, ns: &mut ast::Namespace
                 resolve_pragma(name, value, ns);
             }
             pt::SourceUnitPart::ImportDirective(import) => {
-                resolve_import(import, Some(&file), file_no, cache, ns);
+                resolve_import(import, Some(file), file_no, cache, ns);
             }
             _ => (),
         }
@@ -263,12 +263,12 @@ fn resolve_import(
             }
         }
         pt::Import::GlobalSymbol(_, symbol) => {
-            ns.check_shadowing(file_no, None, &symbol);
+            ns.check_shadowing(file_no, None, symbol);
 
             ns.add_symbol(
                 file_no,
                 None,
-                &symbol,
+                symbol,
                 ast::Symbol::Import(symbol.loc, import_file_no),
             );
         }
@@ -984,7 +984,7 @@ impl ast::Namespace {
         }
 
         let (namespace, id, dimensions) =
-            self.expr_to_type(file_no, contract_no, &id, diagnostics)?;
+            self.expr_to_type(file_no, contract_no, id, diagnostics)?;
 
         if let pt::Expression::Type(loc, ty) = &id {
             assert!(namespace.is_empty());
@@ -1386,7 +1386,7 @@ impl ast::Namespace {
         if let Some(contract_no) = contract_no {
             // check bases contracts
             if s.is_none() {
-                if let Some(sym) = self.resolve_var_base_contract(contract_no, &id) {
+                if let Some(sym) = self.resolve_var_base_contract(contract_no, id) {
                     s = Some(sym);
                 }
             }
@@ -1489,7 +1489,7 @@ impl ast::Namespace {
         let mut symtable = Symtable::new();
 
         let size_expr = expression(
-            &expr,
+            expr,
             file_no,
             contract_no,
             function_no,

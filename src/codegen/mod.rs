@@ -115,7 +115,7 @@ fn storage_initializer(contract_no: usize, ns: &mut Namespace, opt: &Options) ->
             let storage =
                 ns.contracts[contract_no].get_storage_slot(layout.contract_no, layout.var_no, ns);
 
-            let value = expression(&init, &mut cfg, contract_no, None, ns, &mut vartab);
+            let value = expression(init, &mut cfg, contract_no, None, ns, &mut vartab);
 
             cfg.add(
                 &mut vartab,

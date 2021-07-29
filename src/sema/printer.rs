@@ -50,7 +50,7 @@ fn print_expr(e: &Expression, func: Option<&Function>, ns: &Namespace) -> Tree {
         )),
         Expression::BytesLiteral(_, Type::String, bs) => Tree::Leaf(format!(
             "literal string \"{}\"",
-            String::from_utf8_lossy(&bs)
+            String::from_utf8_lossy(bs)
         )),
         Expression::BytesLiteral(_, ty, b) => {
             Tree::Leaf(format!("literal {} {}", ty.to_string(ns), hex::encode(b)))
@@ -508,7 +508,7 @@ impl Namespace {
             let fields = s
                 .fields
                 .iter()
-                .map(|p| Tree::Leaf(format!("field {} {}", p.ty.to_string(&self), p.name)))
+                .map(|p| Tree::Leaf(format!("field {} {}", p.ty.to_string(self), p.name)))
                 .collect();
 
             t.push(Tree::Branch(format!("struct {}", s), fields));
@@ -522,7 +522,7 @@ impl Namespace {
                 .map(|p| {
                     Tree::Leaf(format!(
                         "field {} {}{}",
-                        p.ty.to_string(&self),
+                        p.ty.to_string(self),
                         if p.indexed { "indexed " } else { "" },
                         p.name
                     ))
@@ -532,7 +532,7 @@ impl Namespace {
             t.push(Tree::Branch(
                 format!(
                     "event {} {}",
-                    e.symbol_name(&self),
+                    e.symbol_name(self),
                     if e.anonymous { "anonymous" } else { "" }
                 ),
                 fields,
@@ -677,7 +677,7 @@ fn print_func(func: &Function, ns: &Namespace) -> Tree {
         let params = func
             .params
             .iter()
-            .map(|p| Tree::Leaf(format!("{} {}", p.ty.to_string(&ns), p.name)))
+            .map(|p| Tree::Leaf(format!("{} {}", p.ty.to_string(ns), p.name)))
             .collect();
 
         list.push(Tree::Branch(String::from("params"), params));
@@ -687,7 +687,7 @@ fn print_func(func: &Function, ns: &Namespace) -> Tree {
         let returns = func
             .returns
             .iter()
-            .map(|p| Tree::Leaf(format!("{} {}", p.ty.to_string(&ns), p.name)))
+            .map(|p| Tree::Leaf(format!("{} {}", p.ty.to_string(ns), p.name)))
             .collect();
 
         list.push(Tree::Branch(String::from("returns"), returns));

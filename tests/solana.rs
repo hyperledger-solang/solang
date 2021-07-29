@@ -146,7 +146,7 @@ fn build_solidity(src: &str) -> VirtualMachine {
             continue;
         }
 
-        let (abi, _) = generate_abi(contract_no, &ns, &code, false);
+        let (abi, _) = generate_abi(contract_no, ns, &code, false);
 
         let program = account_new();
 
@@ -897,7 +897,7 @@ impl<'a> SyscallObject<UserError> for SyscallInvokeSignedC<'a> {
                         for s in &signers {
                             println!("signer: {}", s.0.to_base58());
                         }
-                        assert!(signers.contains(&address));
+                        assert!(signers.contains(address));
 
                         assert_eq!(create_account.instruction, 0);
 
@@ -932,7 +932,7 @@ impl<'a> SyscallObject<UserError> for SyscallInvokeSignedC<'a> {
                         for s in &signers {
                             println!("signer: {}", s.0.to_base58());
                         }
-                        assert!(signers.contains(&address));
+                        assert!(signers.contains(address));
 
                         assert_eq!(assign.instruction, 1);
 
@@ -991,7 +991,7 @@ impl<'a> SyscallObject<UserError> for SyscallInvokeSignedC<'a> {
                         for s in &signers {
                             println!("signer: {}", s.0.to_base58());
                         }
-                        assert!(signers.contains(&address));
+                        assert!(signers.contains(address));
 
                         assert_eq!(allocate.instruction, 8);
 
@@ -1053,7 +1053,7 @@ impl VirtualMachine {
     fn execute(&mut self, calldata: &[u8], seeds: &[&(Account, Vec<u8>)]) {
         println!("running bpf with calldata:{}", hex::encode(calldata));
 
-        let (mut parameter_bytes, mut refs) = serialize_parameters(&calldata, &self, seeds);
+        let (mut parameter_bytes, mut refs) = serialize_parameters(calldata, self, seeds);
         let mut heap = vec![0_u8; DEFAULT_HEAP_SIZE];
 
         let program = &self.stack[0];
@@ -1150,7 +1150,7 @@ impl VirtualMachine {
 
         let output = &elf.account_data[&elf.stack[0].data].data;
 
-        VirtualMachine::validate_heap(&output);
+        VirtualMachine::validate_heap(output);
 
         let len = LittleEndian::read_u32(&output[4..]) as usize;
         let offset = LittleEndian::read_u32(&output[8..]) as usize;

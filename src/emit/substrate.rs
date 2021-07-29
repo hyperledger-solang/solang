@@ -957,7 +957,7 @@ impl SubstrateTarget {
                 let selector =
                     self.decode_ty(binary, function, &ast::Type::Uint(32), data, end, ns);
 
-                let ty = binary.llvm_type(&ty, ns);
+                let ty = binary.llvm_type(ty, ns);
 
                 let ef = binary
                     .builder
@@ -1215,7 +1215,7 @@ impl SubstrateTarget {
 
                 let mut null_data = *data;
 
-                let elem = binary.default_value(&elem_ty.deref_any(), ns);
+                let elem = binary.default_value(elem_ty.deref_any(), ns);
 
                 binary.emit_static_loop_with_pointer(
                     function,
@@ -1311,7 +1311,7 @@ impl SubstrateTarget {
                             true,
                             packed,
                             function,
-                            &ty.deref_any(),
+                            ty.deref_any(),
                             elem.into(),
                             data,
                         );
@@ -1707,14 +1707,14 @@ impl SubstrateTarget {
 
                     binary.builder.position_at_end(null_array);
 
-                    let elem = binary.default_value(&elem_ty.deref_any(), ns);
+                    let elem = binary.default_value(elem_ty.deref_any(), ns);
 
                     let null_length = binary.builder.build_int_mul(
                         self.encoded_length(
                             elem,
                             false,
                             packed,
-                            &elem_ty.deref_any(),
+                            elem_ty.deref_any(),
                             function,
                             binary,
                             ns,
@@ -1741,14 +1741,14 @@ impl SubstrateTarget {
                     encoded_length.as_basic_value().into_int_value()
                 } else {
                     // elements have static length
-                    let elem = binary.default_value(&elem_ty.deref_any(), ns);
+                    let elem = binary.default_value(elem_ty.deref_any(), ns);
 
                     binary.builder.build_int_mul(
                         self.encoded_length(
                             elem,
                             false,
                             packed,
-                            &elem_ty.deref_any(),
+                            elem_ty.deref_any(),
                             function,
                             binary,
                             ns,
@@ -1827,7 +1827,7 @@ impl SubstrateTarget {
                     encoded_length
                 } else {
                     // elements have static length
-                    let elem = binary.default_value(&elem_ty.deref_any(), ns);
+                    let elem = binary.default_value(elem_ty.deref_any(), ns);
 
                     binary.builder.build_int_add(
                         encoded_length,
@@ -1836,7 +1836,7 @@ impl SubstrateTarget {
                                 elem,
                                 false,
                                 packed,
-                                &elem_ty.deref_any(),
+                                elem_ty.deref_any(),
                                 function,
                                 binary,
                                 ns,
@@ -3328,7 +3328,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             ),
             false,
             function,
-            &args,
+            args,
             &tys,
             ns,
         );
@@ -3371,7 +3371,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         // wasm
         let target_binary = Binary::build(
             binary.context,
-            &resolver_binary,
+            resolver_binary,
             ns,
             "",
             binary.opt,

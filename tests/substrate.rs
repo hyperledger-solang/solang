@@ -204,7 +204,7 @@ impl Externals for TestRuntime {
                         panic!("seal_get_storage buffer is too small");
                     }
 
-                    if let Err(e) = self.vm.memory.set(dest_ptr, &value) {
+                    if let Err(e) = self.vm.memory.set(dest_ptr, value) {
                         panic!("seal_get_storage: {}", e);
                     }
 
@@ -338,7 +338,7 @@ impl Externals for TestRuntime {
                     hex::encode(hash)
                 );
 
-                if let Err(e) = self.vm.memory.set(out_ptr, &hash.as_bytes()) {
+                if let Err(e) = self.vm.memory.set(out_ptr, hash.as_bytes()) {
                     panic!("seal_hash_blake2_128: {}", e);
                 }
 
@@ -365,7 +365,7 @@ impl Externals for TestRuntime {
                     hex::encode(hash)
                 );
 
-                if let Err(e) = self.vm.memory.set(out_ptr, &hash.as_bytes()) {
+                if let Err(e) = self.vm.memory.set(out_ptr, hash.as_bytes()) {
                     panic!("seal_hash_blake2_256: {}", e);
                 }
 

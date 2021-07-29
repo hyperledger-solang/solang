@@ -676,7 +676,7 @@ impl<'input> Lexer<'input> {
 
                                 self.chars.next();
 
-                                while let Some((i, ch)) = self.chars.next() {
+                                for (i, ch) in &mut self.chars {
                                     if ch == quote_char {
                                         return Some(Ok((
                                             start,
@@ -687,7 +687,7 @@ impl<'input> Lexer<'input> {
 
                                     if !ch.is_ascii_hexdigit() && ch != '_' {
                                         // Eat up the remainer of the string
-                                        while let Some((_, ch)) = self.chars.next() {
+                                        for (_, ch) in &mut self.chars {
                                             if ch == quote_char {
                                                 break;
                                             }
@@ -715,7 +715,7 @@ impl<'input> Lexer<'input> {
 
                                 self.chars.next();
 
-                                while let Some((i, ch)) = self.chars.next() {
+                                for (i, ch) in &mut self.chars {
                                     if ch == quote_char {
                                         return Some(Ok((
                                             start,
@@ -760,7 +760,7 @@ impl<'input> Lexer<'input> {
 
                             let mut last = start + 3;
 
-                            while let Some((i, ch)) = self.chars.next() {
+                            for (i, ch) in &mut self.chars {
                                 if ch == '\n' || ch == '\r' {
                                     break;
                                 }

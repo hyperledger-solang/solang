@@ -232,7 +232,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                             EncoderBuilder::encoded_packed_length(
                                 elem.into(),
                                 true,
-                                &elem_ty,
+                                elem_ty,
                                 function,
                                 binary,
                                 ns,
@@ -249,7 +249,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
 
                 binary.builder.position_at_end(null_array);
 
-                let elem = binary.default_value(&elem_ty.deref_any(), ns);
+                let elem = binary.default_value(elem_ty.deref_any(), ns);
 
                 let null_length = binary.builder.build_int_add(
                     binary.builder.build_int_mul(
@@ -297,7 +297,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                 binary.builder.build_int_mul(
                     len,
                     EncoderBuilder::encoded_packed_length(
-                        arg, false, &elem_ty, function, binary, ns,
+                        arg, false, elem_ty, function, binary, ns,
                     ),
                     "",
                 )
@@ -475,7 +475,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                         binary
                             .context
                             .i32_type()
-                            .const_int(EncoderBuilder::encoded_fixed_length(&elem_ty, ns), false),
+                            .const_int(EncoderBuilder::encoded_fixed_length(elem_ty, ns), false),
                         "",
                     ),
                     "",
@@ -514,7 +514,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                                 EncoderBuilder::encoded_dynamic_length(
                                     elem.into(),
                                     true,
-                                    &elem_ty,
+                                    elem_ty,
                                     function,
                                     binary,
                                     ns,
@@ -532,7 +532,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
 
                 binary.builder.position_at_end(null_array);
 
-                let elem = binary.default_value(&elem_ty.deref_any(), ns);
+                let elem = binary.default_value(elem_ty.deref_any(), ns);
 
                 let null_length = binary.builder.build_int_add(
                     binary.builder.build_int_mul(
@@ -617,7 +617,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                     .map(|d| d.as_ref().unwrap().to_u64().unwrap())
                     .product();
 
-                product * EncoderBuilder::encoded_fixed_length(&ty, ns)
+                product * EncoderBuilder::encoded_fixed_length(ty, ns)
             }
             ast::Type::Ref(r) => EncoderBuilder::encoded_fixed_length(r, ns),
             ast::Type::StorageRef(_, r) => EncoderBuilder::encoded_fixed_length(r, ns),
@@ -796,7 +796,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                     binary
                         .context
                         .i32_type()
-                        .const_int(EncoderBuilder::encoded_fixed_length(&elem_ty, ns), false),
+                        .const_int(EncoderBuilder::encoded_fixed_length(elem_ty, ns), false),
                     array_length,
                     "array_data_offset",
                 );
@@ -860,7 +860,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                     ns,
                     true,
                     function,
-                    &elem_ty.deref_any(),
+                    elem_ty.deref_any(),
                     elem.into(),
                     &mut normal_fixed,
                     &mut normal_array_data_offset,
@@ -914,14 +914,14 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                 let _ = builder.over(binary, binary.context.i32_type().const_zero(), array_length);
 
                 // loop body
-                let elem = binary.default_value(&elem_ty.deref_any(), ns);
+                let elem = binary.default_value(elem_ty.deref_any(), ns);
 
                 self.encode_ty(
                     binary,
                     ns,
                     false,
                     function,
-                    &elem_ty.deref_any(),
+                    elem_ty.deref_any(),
                     elem,
                     &mut null_fixed,
                     &mut null_array_data_offset,
@@ -1040,7 +1040,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                     ns,
                     true,
                     function,
-                    &elem_ty.deref_any(),
+                    elem_ty.deref_any(),
                     elem.into(),
                     &mut normal_fixed,
                     &mut normal_offset,
@@ -1066,7 +1066,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                 // Create a loop for generating an array of empty values
                 // FIXME: all fixed-length types are encoded as zeros, and the memory has
                 // already been zero'ed out, so this is pointless. Just step over it.
-                let elem = binary.default_value(&elem_ty.deref_any(), ns);
+                let elem = binary.default_value(elem_ty.deref_any(), ns);
 
                 let mut builder = LoopBuilder::new(binary, function);
 
@@ -1109,7 +1109,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                     ns,
                     false,
                     function,
-                    &elem_ty.deref_any(),
+                    elem_ty.deref_any(),
                     elem,
                     &mut null_fixed,
                     &mut null_offset,
@@ -1783,7 +1783,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                     binary,
                     true,
                     function,
-                    &elem_ty.deref_any(),
+                    elem_ty.deref_any(),
                     elem.into(),
                     &mut normal_output,
                     ns,
@@ -1814,13 +1814,13 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                 let _ = builder.over(binary, binary.context.i32_type().const_zero(), array_length);
 
                 // loop body
-                let elem = binary.default_value(&elem_ty.deref_any(), ns);
+                let elem = binary.default_value(elem_ty.deref_any(), ns);
 
                 self.encode_packed_ty(
                     binary,
                     false,
                     function,
-                    &elem_ty.deref_any(),
+                    elem_ty.deref_any(),
                     elem,
                     &mut null_output,
                     ns,
@@ -2723,7 +2723,7 @@ impl EthAbiDecoder {
                             self.decode_ty(
                                 binary,
                                 function,
-                                &elem_ty,
+                                elem_ty,
                                 Some(elem),
                                 offset,
                                 base_offset,
@@ -2775,7 +2775,7 @@ impl EthAbiDecoder {
                     // in dynamic arrays, offsets are counted from after the array length
                     let base_offset = dataoffset;
 
-                    let llvm_elem_ty = binary.llvm_var(&elem_ty.deref_any(), ns);
+                    let llvm_elem_ty = binary.llvm_var(elem_ty.deref_any(), ns);
                     let elem_size = llvm_elem_ty
                         .size_of()
                         .unwrap()
@@ -2839,7 +2839,7 @@ impl EthAbiDecoder {
                             self.decode_ty(
                                 binary,
                                 function,
-                                &elem_ty,
+                                elem_ty,
                                 Some(elem),
                                 offset,
                                 base_offset,

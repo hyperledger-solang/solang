@@ -778,7 +778,7 @@ fn resolve_declarations<'a>(
     }
 
     // resolve state variables
-    variables::contract_variables(&def, file_no, contract_no, ns);
+    variables::contract_variables(def, file_no, contract_no, ns);
 
     resolve_bodies
 }
@@ -862,7 +862,7 @@ fn resolve_bodies(
             broken = true;
         } else {
             for variable in ns.functions[function_no].symtable.vars.values() {
-                if let Some(warning) = emit_warning_local_variable(&variable) {
+                if let Some(warning) = emit_warning_local_variable(variable) {
                     ns.diagnostics.push(warning);
                 }
             }

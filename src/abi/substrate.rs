@@ -293,7 +293,7 @@ fn tags(contract_no: usize, tagname: &str, ns: &ast::Namespace) -> Vec<String> {
 
 /// Generate the metadata for Substrate 2.0
 pub fn metadata(contract_no: usize, code: &[u8], ns: &ast::Namespace) -> Value {
-    let hash = blake2_rfc::blake2b::blake2b(32, &[], &code);
+    let hash = blake2_rfc::blake2b::blake2b(32, &[], code);
     let version = Version::parse(env!("CARGO_PKG_VERSION")).unwrap();
     let language = SourceLanguage::new(Language::Solidity, version.clone());
     let compiler = SourceCompiler::new(Compiler::Solang, version);

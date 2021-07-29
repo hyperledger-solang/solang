@@ -1231,7 +1231,7 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
 
         let target_binary = Binary::build(
             binary.context,
-            &resolver_binary,
+            resolver_binary,
             ns,
             "",
             binary.opt,
