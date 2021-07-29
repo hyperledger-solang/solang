@@ -2013,7 +2013,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         let ty = binary.llvm_type(
             &ast::Type::ExternalFunction {
                 params: Vec::new(),
-                mutability: None,
+                mutability: ast::Mutability::Nonpayable(pt::Loc(0, 0, 0)),
                 returns: Vec::new(),
             },
             ns,

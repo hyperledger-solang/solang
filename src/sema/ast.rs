@@ -26,12 +26,12 @@ pub enum Type {
     /// Reference to storage, first bool is true for immutables
     StorageRef(bool, Box<Type>),
     InternalFunction {
-        mutability: Option<pt::StateMutability>,
+        mutability: Mutability,
         params: Vec<Type>,
         returns: Vec<Type>,
     },
     ExternalFunction {
-        mutability: Option<pt::StateMutability>,
+        mutability: Mutability,
         params: Vec<Type>,
         returns: Vec<Type>,
     },
@@ -117,6 +117,31 @@ pub struct Parameter {
     pub indexed: bool,
 }
 
+#[derive(PartialEq, Eq, Clone, Hash, Debug)]
+pub enum Mutability {
+    Payable(pt::Loc),
+    Nonpayable(pt::Loc),
+    View(pt::Loc),
+    Pure(pt::Loc),
+}
+
+impl Mutability {
+    pub fn is_default(&self) -> bool {
+        matches!(self, Mutability::Nonpayable(_))
+    }
+}
+
+impl fmt::Display for Mutability {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Mutability::Pure(_) => write!(f, "pure"),
+            Mutability::View(_) => write!(f, "view"),
+            Mutability::Nonpayable(_) => write!(f, "nonpayable"),
+            Mutability::Payable(_) => write!(f, "payable"),
+        }
+    }
+}
+
 pub struct Function {
     pub tags: Vec<Tag>,
     pub loc: pt::Loc,
@@ -124,7 +149,7 @@ pub struct Function {
     pub contract_no: Option<usize>,
     pub ty: pt::FunctionTy,
     pub signature: String,
-    pub mutability: Option<pt::StateMutability>,
+    pub mutability: Mutability,
     pub visibility: pt::Visibility,
     pub params: Vec<Parameter>,
     pub returns: Vec<Parameter>,
@@ -150,7 +175,7 @@ impl Function {
         contract_no: Option<usize>,
         tags: Vec<Tag>,
         ty: pt::FunctionTy,
-        mutability: Option<pt::StateMutability>,
+        mutability: Option<pt::Mutability>,
         visibility: pt::Visibility,
         params: Vec<Parameter>,
         returns: Vec<Parameter>,
@@ -160,6 +185,14 @@ impl Function {
             pt::FunctionTy::Fallback => String::from("@fallback"),
             pt::FunctionTy::Receive => String::from("@receive"),
             _ => ns.signature(&name, &params),
+        };
+
+        let mutability = match mutability {
+            None => Mutability::Nonpayable(loc),
+            Some(pt::Mutability::Payable(loc)) => Mutability::Payable(loc),
+            Some(pt::Mutability::Pure(loc)) => Mutability::Pure(loc),
+            Some(pt::Mutability::View(loc)) => Mutability::View(loc),
+            Some(pt::Mutability::Constant(loc)) => Mutability::View(loc),
         };
 
         Function {
@@ -203,7 +236,7 @@ impl Function {
 
     /// Does this function have the payable state
     pub fn is_payable(&self) -> bool {
-        matches!(self.mutability, Some(pt::StateMutability::Payable(_)))
+        matches!(self.mutability, Mutability::Payable(_))
     }
 
     /// Is this function accessable externally
@@ -236,14 +269,6 @@ impl Function {
         }
 
         sig
-    }
-
-    /// State mutability as string
-    pub fn print_mutability(&self) -> String {
-        match &self.mutability {
-            None => "nonpayable".to_string(),
-            Some(m) => format!("{}", m),
-        }
     }
 
     /// Print the function type, contract name, and name

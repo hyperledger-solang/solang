@@ -348,7 +348,7 @@ pub fn var_decl(
                 Vec::new(),
                 pt::FunctionTy::Function,
                 // accessors for constant variables have view mutability
-                Some(pt::StateMutability::View(s.name.loc)),
+                Some(pt::Mutability::View(s.name.loc)),
                 visibility,
                 params,
                 vec![Parameter {

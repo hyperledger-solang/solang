@@ -104,7 +104,7 @@ FunctionType: Type = {
 }
 
 FunctionTypeAttribute: FunctionAttribute = {
-    StateMutability => FunctionAttribute::StateMutability(<>),
+    Mutability => FunctionAttribute::Mutability(<>),
     Visibility => FunctionAttribute::Visibility(<>),
 }
 
@@ -458,15 +458,15 @@ ParameterList: Vec<(Loc, Option<Parameter>)> = {
     "(" <CommaTwo<OptParameter>> ")" => <>,
 }
 
-StateMutability: StateMutability = {
-    <l:@L> "pure" <r:@R> => StateMutability::Pure(Loc(file_no, l, r)),
-    <l:@L> "constant" <r:@R> => StateMutability::Constant(Loc(file_no, l, r)),
-    <l:@L> "view" <r:@R> => StateMutability::View(Loc(file_no, l, r)),
-    <l:@L> "payable" <r:@R> => StateMutability::Payable(Loc(file_no, l, r)),
+Mutability: Mutability = {
+    <l:@L> "pure" <r:@R> => Mutability::Pure(Loc(file_no, l, r)),
+    <l:@L> "constant" <r:@R> => Mutability::Constant(Loc(file_no, l, r)),
+    <l:@L> "view" <r:@R> => Mutability::View(Loc(file_no, l, r)),
+    <l:@L> "payable" <r:@R> => Mutability::Payable(Loc(file_no, l, r)),
 }
 
 FunctionAttribute: FunctionAttribute = {
-    StateMutability => FunctionAttribute::StateMutability(<>),
+    Mutability => FunctionAttribute::Mutability(<>),
     Visibility => FunctionAttribute::Visibility(<>),
     <l:@L> "virtual" <r:@R> => FunctionAttribute::Virtual(Loc(file_no, <>)),
     <l:@L> "override" <r:@R> => FunctionAttribute::Override(Loc(file_no, <>), Vec::new()),
