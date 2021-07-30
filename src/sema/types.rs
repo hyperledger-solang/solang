@@ -452,25 +452,22 @@ fn enum_decl(
 ) -> bool {
     let mut valid = true;
 
-    let mut bits = if enum_.values.is_empty() {
+    if enum_.values.is_empty() {
         ns.diagnostics.push(Diagnostic::error(
             enum_.name.loc,
-            format!("enum ‘{}’ is missing fields", enum_.name.name),
+            format!("enum ‘{}’ has no fields", enum_.name.name),
         ));
         valid = false;
-
-        0
-    } else {
-        // Number of bits required to represent this enum
-        std::mem::size_of::<usize>() as u32 * 8 - (enum_.values.len() - 1).leading_zeros()
-    };
-
-    // round it up to the next
-    if bits <= 8 {
-        bits = 8;
-    } else {
-        bits += 7;
-        bits -= bits % 8;
+    } else if enum_.values.len() > 256 {
+        ns.diagnostics.push(Diagnostic::error(
+            enum_.name.loc,
+            format!(
+                "enum ‘{}’ has {} fields, which is more than the 256 limit",
+                enum_.name.name,
+                enum_.values.len()
+            ),
+        ));
+        valid = false;
     }
 
     // check for duplicates
@@ -501,7 +498,7 @@ fn enum_decl(
             Some(c) => Some(ns.contracts[c].name.to_owned()),
             None => None,
         },
-        ty: Type::Uint(bits as u16),
+        ty: Type::Uint(8),
         values: entries,
     };
 
@@ -569,51 +566,6 @@ fn struct_offsets(ns: &mut Namespace) {
 
         changes
     } {}
-}
-
-#[test]
-fn enum_256values_is_uint8() {
-    let mut e = pt::EnumDefinition {
-        doc: vec![],
-        loc: pt::Loc(0, 0, 0),
-        name: pt::Identifier {
-            loc: pt::Loc(0, 0, 0),
-            name: "foo".into(),
-        },
-        values: Vec::new(),
-    };
-
-    let mut ns = Namespace::new(Target::Ewasm, 20, 16);
-
-    e.values.push(pt::Identifier {
-        loc: pt::Loc(0, 0, 0),
-        name: "first".into(),
-    });
-
-    assert!(enum_decl(&e, 0, None, &mut ns));
-    assert_eq!(ns.enums.last().unwrap().ty, Type::Uint(8));
-
-    for i in 1..256 {
-        e.values.push(pt::Identifier {
-            loc: pt::Loc(0, 0, 0),
-            name: format!("val{}", i),
-        })
-    }
-
-    assert_eq!(e.values.len(), 256);
-
-    e.name.name = "foo2".to_owned();
-    assert!(enum_decl(&e, 0, None, &mut ns));
-    assert_eq!(ns.enums.last().unwrap().ty, Type::Uint(8));
-
-    e.values.push(pt::Identifier {
-        loc: pt::Loc(0, 0, 0),
-        name: "another".into(),
-    });
-
-    e.name.name = "foo3".to_owned();
-    assert!(enum_decl(&e, 0, None, &mut ns));
-    assert_eq!(ns.enums.last().unwrap().ty, Type::Uint(16));
 }
 
 impl Type {
@@ -1062,7 +1014,7 @@ impl Type {
     }
 
     /// Give a valid name for the type which is
-    pub fn to_wasm_string(&self, ns: &Namespace) -> String {
+    pub fn to_llvm_string(&self, ns: &Namespace) -> String {
         match self {
             Type::Bool => "bool".to_string(),
             Type::Address(_) => "address".to_string(),
@@ -1075,7 +1027,7 @@ impl Type {
             Type::Struct(i) => format!("{}", ns.structs[*i]),
             Type::Array(ty, len) => format!(
                 "{}{}",
-                ty.to_wasm_string(ns),
+                ty.to_llvm_string(ns),
                 len.iter()
                     .map(|r| match r {
                         None => ":".to_string(),
@@ -1084,13 +1036,13 @@ impl Type {
                     .collect::<String>()
             ),
             Type::Mapping(k, v) => {
-                format!("mapping:{}:{}", k.to_wasm_string(ns), v.to_wasm_string(ns))
+                format!("mapping:{}:{}", k.to_llvm_string(ns), v.to_llvm_string(ns))
             }
             Type::Contract(i) => ns.contracts[*i].name.to_owned(),
             Type::InternalFunction { .. } => "function".to_owned(),
             Type::ExternalFunction { .. } => "function".to_owned(),
-            Type::Ref(r) => r.to_wasm_string(ns),
-            Type::StorageRef(_, r) => r.to_wasm_string(ns),
+            Type::Ref(r) => r.to_llvm_string(ns),
+            Type::StorageRef(_, r) => r.to_llvm_string(ns),
             _ => unreachable!(),
         }
     }
