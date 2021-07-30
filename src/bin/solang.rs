@@ -267,10 +267,17 @@ fn main() {
                         bin_filename.display(),
                         namespaces
                             .iter()
-                            .flat_map(|ns| ns
-                                .contracts
-                                .iter()
-                                .map(|contract| contract.name.as_str()))
+                            .flat_map(|ns| {
+                                ns.contracts.iter().filter_map(|contract| {
+                                    if contract.is_concrete() {
+                                        Some(contract.name.as_str())
+                                    } else {
+                                        None
+                                    }
+                                })
+                            })
+                            .sorted()
+                            .dedup()
                             .join(", "),
                     );
                 }
