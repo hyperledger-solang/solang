@@ -606,6 +606,7 @@ fn save_intermediates(binary: &solang::emit::Binary, matches: &ArgMatches) -> bo
             true
         }
         Some("cfg") => true,
+        Some("ast") => true,
         _ => false,
     }
 }

@@ -55,6 +55,14 @@ fn print_expr(e: &Expression, func: Option<&Function>, ns: &Namespace) -> Tree {
         Expression::BytesLiteral(_, ty, b) => {
             Tree::Leaf(format!("literal {} {}", ty.to_string(ns), hex::encode(b)))
         }
+        Expression::ArrayLiteral(_, ty, _, values) => Tree::Branch(
+            format!("array literal {}", ty.to_string(ns)),
+            values.iter().map(|e| print_expr(e, func, ns)).collect(),
+        ),
+        Expression::ConstArrayLiteral(_, ty, _, values) => Tree::Branch(
+            format!("const array literal {}", ty.to_string(ns)),
+            values.iter().map(|e| print_expr(e, func, ns)).collect(),
+        ),
         Expression::CodeLiteral(_, contract_no, true) => {
             Tree::Leaf(format!("code runtime {}", ns.contracts[*contract_no].name))
         }
@@ -166,6 +174,14 @@ fn print_expr(e: &Expression, func: Option<&Function>, ns: &Namespace) -> Tree {
         ),
         Expression::Cast(_, ty, expr) => Tree::Branch(
             format!("cast {}", ty.to_string(ns)),
+            vec![print_expr(expr, func, ns)],
+        ),
+        Expression::BytesCast(_, ty, from, expr) => Tree::Branch(
+            format!(
+                "bytes cast to {} from {}",
+                ty.to_string(ns),
+                from.to_string(ns)
+            ),
             vec![print_expr(expr, func, ns)],
         ),
         Expression::PreIncrement(_, ty, expr) => Tree::Branch(
@@ -299,13 +315,174 @@ fn print_expr(e: &Expression, func: Option<&Function>, ns: &Namespace) -> Tree {
                 args.iter().map(|e| print_expr(e, func, ns)).collect(),
             )
         }
+        Expression::StringCompare(_, left, right) => Tree::Branch(
+            String::from("string compare"),
+            vec![
+                print_string_location(left, func, ns),
+                print_string_location(right, func, ns),
+            ],
+        ),
+        Expression::StringConcat(_, _, left, right) => Tree::Branch(
+            String::from("string concatenate"),
+            vec![
+                print_string_location(left, func, ns),
+                print_string_location(right, func, ns),
+            ],
+        ),
         Expression::FormatString(_, args) => Tree::Branch(
             String::from("format"),
             args.iter()
                 .map(|(_, arg)| print_expr(arg, func, ns))
                 .collect(),
         ),
-        _ => Tree::Leaf(String::from("not implemented")),
+        Expression::StorageArrayLength { array, .. } => Tree::Branch(
+            String::from("storage array length"),
+            vec![print_expr(array, func, ns)],
+        ),
+        Expression::InternalFunctionCall { function, args, .. } => Tree::Branch(
+            String::from("internal function call"),
+            vec![
+                print_expr(function, func, ns),
+                Tree::Branch(
+                    String::from("args"),
+                    args.iter().map(|e| print_expr(e, func, ns)).collect(),
+                ),
+            ],
+        ),
+        Expression::ExternalFunctionCall {
+            function,
+            args,
+            value,
+            ..
+        } => Tree::Branch(
+            String::from("external function call"),
+            vec![
+                print_expr(function, func, ns),
+                print_expr(value, func, ns),
+                Tree::Branch(
+                    String::from("args"),
+                    args.iter().map(|e| print_expr(e, func, ns)).collect(),
+                ),
+            ],
+        ),
+        Expression::ExternalFunctionCallRaw {
+            address,
+            args,
+            value,
+            ..
+        } => Tree::Branch(
+            String::from("external function call raw"),
+            vec![
+                print_expr(address, func, ns),
+                print_expr(value, func, ns),
+                print_expr(args, func, ns),
+            ],
+        ),
+        Expression::Constructor {
+            contract_no,
+            value,
+            salt,
+            space,
+            args,
+            ..
+        } => {
+            let mut list = vec![Tree::Leaf(format!(
+                "contract {}",
+                ns.contracts[*contract_no].name
+            ))];
+
+            if let Some(value) = value {
+                list.push(Tree::Branch(
+                    String::from("value"),
+                    vec![print_expr(value, func, ns)],
+                ));
+            }
+
+            if let Some(salt) = salt {
+                list.push(Tree::Branch(
+                    String::from("salt"),
+                    vec![print_expr(salt, func, ns)],
+                ));
+            }
+
+            if let Some(space) = space {
+                list.push(Tree::Branch(
+                    String::from("space"),
+                    vec![print_expr(space, func, ns)],
+                ));
+            }
+
+            list.push(Tree::Branch(
+                String::from("args"),
+                args.iter().map(|e| print_expr(e, func, ns)).collect(),
+            ));
+
+            Tree::Branch(String::from("constructor"), list)
+        }
+        Expression::AllocDynamicArray(_, ty, expr, None) => Tree::Branch(
+            format!("allocate dynamic array {}", ty.to_string(ns)),
+            vec![print_expr(expr, func, ns)],
+        ),
+        Expression::AllocDynamicArray(_, ty, expr, Some(init)) => Tree::Branch(
+            format!("allocate dynamic array {}", ty.to_string(ns)),
+            vec![
+                print_expr(expr, func, ns),
+                Tree::Leaf(format!("init {}", hex::encode(init))),
+            ],
+        ),
+        Expression::DynamicArrayLength(_, array) => Tree::Branch(
+            String::from("dynamic array length"),
+            vec![print_expr(array, func, ns)],
+        ),
+        Expression::DynamicArraySubscript(_, ty, array, index) => Tree::Branch(
+            format!("dynamic array subscript {}", ty.to_string(ns)),
+            vec![
+                Tree::Branch(String::from("array"), vec![print_expr(array, func, ns)]),
+                Tree::Branch(String::from("index"), vec![print_expr(index, func, ns)]),
+            ],
+        ),
+        Expression::DynamicArrayPush(_, array, ty, value) => Tree::Branch(
+            format!("dynamic array push {}", ty.to_string(ns)),
+            vec![
+                Tree::Branch(String::from("array"), vec![print_expr(array, func, ns)]),
+                Tree::Branch(String::from("value"), vec![print_expr(value, func, ns)]),
+            ],
+        ),
+        Expression::DynamicArrayPop(_, array, ty) => Tree::Branch(
+            format!("dynamic array pop {}", ty.to_string(ns)),
+            vec![Tree::Branch(
+                String::from("array"),
+                vec![print_expr(array, func, ns)],
+            )],
+        ),
+        Expression::StorageBytesSubscript(_, array, index) => Tree::Branch(
+            String::from("storage bytes subscript"),
+            vec![
+                Tree::Branch(String::from("array"), vec![print_expr(array, func, ns)]),
+                Tree::Branch(String::from("index"), vec![print_expr(index, func, ns)]),
+            ],
+        ),
+        Expression::List(_, list) => Tree::Branch(
+            String::from("list"),
+            list.iter().map(|e| print_expr(e, func, ns)).collect(),
+        ),
+        Expression::FunctionArg(_, ty, no) => {
+            Tree::Leaf(format!("func arg #{} {}", no, ty.to_string(ns)))
+        }
+        Expression::InternalFunctionCfg(..)
+        | Expression::ReturnData(..)
+        | Expression::Poison
+        | Expression::AbiEncode { .. }
+        | Expression::Keccak256(..) => {
+            panic!("should not present in ast");
+        }
+    }
+}
+
+fn print_string_location(s: &StringLocation, func: Option<&Function>, ns: &Namespace) -> Tree {
+    match s {
+        StringLocation::CompileTime(val) => Tree::Leaf(format!("hex\"{}\"", hex::encode(val))),
+        StringLocation::RunTime(expr) => print_expr(expr, func, ns),
     }
 }
 

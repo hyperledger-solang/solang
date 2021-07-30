@@ -570,7 +570,6 @@ pub enum Expression {
         address: Box<Expression>,
         function_no: usize,
     },
-    InternalFunctionCfg(usize),
     InternalFunctionCall {
         loc: pt::Loc,
         returns: Vec<Type>,
@@ -604,17 +603,18 @@ pub enum Expression {
         space: Option<Box<Expression>>,
     },
     FormatString(pt::Loc, Vec<(FormatArg, Expression)>),
-    Keccak256(pt::Loc, Type, Vec<Expression>),
-
-    ReturnData(pt::Loc),
     Builtin(pt::Loc, Vec<Type>, Builtin, Vec<Expression>),
+    List(pt::Loc, Vec<Expression>),
+    // The remaining types are only generated during codegen
+    Keccak256(pt::Loc, Type, Vec<Expression>),
+    ReturnData(pt::Loc),
     AbiEncode {
         loc: pt::Loc,
         tys: Vec<Type>,
         packed: Vec<Expression>,
         args: Vec<Expression>,
     },
-    List(pt::Loc, Vec<Expression>),
+    InternalFunctionCfg(usize),
     Poison,
 }
 
