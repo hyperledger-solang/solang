@@ -866,8 +866,8 @@ impl SolanaTarget {
     ) -> FunctionValue<'b> {
         let function_name = format!(
             "sparse_lookup_{}_{}",
-            key_ty.to_wasm_string(ns),
-            value_ty.to_wasm_string(ns)
+            key_ty.to_llvm_string(ns),
+            value_ty.to_llvm_string(ns)
         );
 
         if let Some(function) = binary.module.get_function(&function_name) {

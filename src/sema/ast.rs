@@ -264,7 +264,7 @@ impl Function {
                     sig.push('_');
                 }
 
-                sig.push_str(&p.ty.to_wasm_string(ns));
+                sig.push_str(&p.ty.to_llvm_string(ns));
             }
         }
 
