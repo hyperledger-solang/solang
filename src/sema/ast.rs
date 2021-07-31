@@ -144,6 +144,7 @@ impl fmt::Display for Mutability {
 
 pub struct Function {
     pub tags: Vec<Tag>,
+    /// The location of the prototype (not body)
     pub loc: pt::Loc,
     pub name: String,
     pub contract_no: Option<usize>,
@@ -161,7 +162,9 @@ pub struct Function {
     /// Is this function an acccesor function created by a public variable
     pub is_accessor: bool,
     pub is_override: Option<(pt::Loc, Vec<usize>)>,
+    /// Was the function declared with a body
     pub has_body: bool,
+    /// The resolved body (if any)
     pub body: Vec<Statement>,
     pub symtable: Symtable,
     // What events are emitted by the body of this function
