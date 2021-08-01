@@ -11,6 +11,7 @@ pub mod ast;
 pub mod builtin;
 pub mod contracts;
 pub mod diagnostics;
+mod dotgraphviz;
 pub mod eval;
 pub mod expression;
 mod file;

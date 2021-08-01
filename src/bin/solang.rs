@@ -57,7 +57,9 @@ fn main() {
                 .help("Emit compiler state at early stage")
                 .long("emit")
                 .takes_value(true)
-                .possible_values(&["ast", "cfg", "llvm-ir", "llvm-bc", "object", "asm"]),
+                .possible_values(&[
+                    "ast", "ast-dot", "cfg", "llvm-ir", "llvm-bc", "object", "asm",
+                ]),
         )
         .arg(
             Arg::with_name("OPT")
@@ -475,6 +477,22 @@ fn process_file(
         return Ok(ns);
     }
 
+    if let Some("ast-dot") = matches.value_of("EMIT") {
+        let filepath = PathBuf::from(filename);
+        let stem = filepath.file_stem().unwrap().to_string_lossy();
+        let dot_filename = output_file(matches, &stem, "dot");
+
+        if verbose {
+            eprintln!("info: Saving graphviz dot {}", dot_filename.display());
+        }
+
+        if let Err(err) = ns.dotgraphviz(&dot_filename) {
+            eprintln!("{}: error: {}", dot_filename.display(), err.to_string());
+            std::process::exit(1);
+        }
+        return Ok(ns);
+    }
+
     // emit phase
     for contract_no in 0..ns.contracts.len() {
         let resolved_contract = &ns.contracts[contract_no];
@@ -738,6 +756,7 @@ fn save_intermediates(binary: &solang::emit::Binary, matches: &ArgMatches) -> bo
         }
         Some("cfg") => true,
         Some("ast") => true,
+        Some("ast-dot") => true,
         _ => false,
     }
 }
