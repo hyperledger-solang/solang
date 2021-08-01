@@ -361,10 +361,19 @@ impl Symbol {
     }
 }
 
+/// Any Solidity file, either the main file or anything that was imported
+#[derive(Clone)]
+pub struct File {
+    /// The on-disk filename
+    pub path: PathBuf,
+    /// Used for offset to line-column conversions
+    pub line_starts: Vec<usize>,
+}
+
 /// When resolving a Solidity file, this holds all the resolved items
 pub struct Namespace {
     pub target: Target,
-    pub files: Vec<PathBuf>,
+    pub files: Vec<File>,
     pub enums: Vec<EnumDecl>,
     pub structs: Vec<StructDecl>,
     pub events: Vec<EventDecl>,

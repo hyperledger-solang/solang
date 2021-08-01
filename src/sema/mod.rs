@@ -13,6 +13,7 @@ pub mod contracts;
 pub mod diagnostics;
 pub mod eval;
 pub mod expression;
+mod file;
 mod format;
 mod functions;
 mod mutability;
@@ -55,7 +56,8 @@ fn sema_file(file: &ResolvedFile, cache: &mut FileCache, ns: &mut ast::Namespace
 
     let source_code = cache.get_file_contents(&file.full_path);
 
-    ns.files.push(file.full_path.clone());
+    ns.files
+        .push(ast::File::new(file.full_path.clone(), &source_code));
 
     let pt = match parse(&source_code, file_no) {
         Ok(s) => s,
@@ -176,7 +178,7 @@ fn resolve_import(
             return;
         }
         Ok(file) => {
-            if !ns.files.iter().any(|f| *f == file.full_path) {
+            if !ns.files.iter().any(|f| f.path == file.full_path) {
                 sema_file(&file, cache, ns);
 
                 // give up if we failed
@@ -187,7 +189,7 @@ fn resolve_import(
 
             ns.files
                 .iter()
-                .position(|f| *f == file.full_path)
+                .position(|f| f.path == file.full_path)
                 .expect("import should be loaded by now")
         }
     };

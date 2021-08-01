@@ -200,7 +200,7 @@ fn main() {
         for filename in matches.values_of("INPUT").unwrap() {
             let ns = solang::parse_and_resolve(filename, &mut cache, target);
 
-            diagnostics::print_messages(&mut cache, &ns, verbose);
+            diagnostics::print_messages(&ns, verbose);
 
             if ns.contracts.is_empty() {
                 eprintln!("{}: error: no contracts found", filename);
@@ -369,10 +369,10 @@ fn process_filename(
     }
 
     if matches.is_present("STD-JSON") {
-        let mut out = diagnostics::message_as_json(cache, &ns);
+        let mut out = diagnostics::message_as_json(&ns);
         json.errors.append(&mut out);
     } else {
-        diagnostics::print_messages(cache, &ns, verbose);
+        diagnostics::print_messages(&ns, verbose);
     }
 
     if ns.contracts.is_empty() || diagnostics::any_errors(&ns.diagnostics) {
