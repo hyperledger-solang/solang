@@ -2,12 +2,12 @@ import { assert } from 'console';
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { promises as fs } from 'fs';
-import expandPathResolving from './expandPathResolving';
 import getPlatform from './getPlatform';
 import downloadWithRetryDialog from './downloadWithRetryDialog';
 import fetchLatestRelease from './fetchLatestRelease';
 import download from './download';
-import { getServerPath, setServerPath } from './serverPath';
+import executableVersion from './executableVersion';
+import { lte } from 'semver';
 
 interface Artifact {
   name: string;
@@ -16,14 +16,6 @@ interface Artifact {
 
 export default async function getServer(context: vscode.ExtensionContext): Promise<string | undefined> {
   const config = vscode.workspace.getConfiguration('solang');
-
-  const explicitPath = getServerPath(context);
-  if (explicitPath) {
-    if (explicitPath.startsWith('~/')) {
-      return expandPathResolving(explicitPath);
-    }
-    return explicitPath;
-  }
 
   const platfrom = getPlatform();
   if (platfrom === undefined) {
@@ -40,9 +32,22 @@ export default async function getServer(context: vscode.ExtensionContext): Promi
     await context.globalState.update('serverVersion', undefined);
   }
 
+  const release = await downloadWithRetryDialog(async () => {
+    return await fetchLatestRelease();
+  });
+  console.log("Latest Solang available: " + release.tag_name);
+
+  const latestVersion = release.tag_name;
+
+  const ourVersion = executableVersion(dest);
+  console.log("Local Solang version: " + ourVersion);
+  if (ourVersion && lte(latestVersion, ourVersion)) {
+    return dest;
+  }
+
   if (config.get('updates.askBeforeDownload')) {
     const userResponse = await vscode.window.showInformationMessage(
-      'Language server for solang is not installed.',
+      `Language server for solang ${latestVersion} is not installed.`,
       'Download now'
     );
 
@@ -51,11 +56,6 @@ export default async function getServer(context: vscode.ExtensionContext): Promi
     }
   }
 
-  const release = await downloadWithRetryDialog(async () => {
-    return await fetchLatestRelease();
-  });
-  const version = release.tag_name;
-
   const artifact = release.assets.find((artifact: Artifact) => artifact.name === platfrom);
   assert(!!artifact, `Bad release: ${JSON.stringify(release)}`);
 
@@ -63,12 +63,10 @@ export default async function getServer(context: vscode.ExtensionContext): Promi
     await download({
       url: artifact.browser_download_url,
       dest,
-      progressTitle: `Downloading Solang Solidity Compiler version ${version}`,
+      progressTitle: `Downloading Solang Solidity Compiler version ${latestVersion}`,
       mode: 0o755,
     });
   });
-
-  await setServerPath(context, dest);
 
   return dest;
 }
