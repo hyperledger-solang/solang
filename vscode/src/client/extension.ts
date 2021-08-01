@@ -7,8 +7,7 @@ import { join } from 'path';
 import { LanguageClient, LanguageClientOptions, ServerOptions, Executable } from 'vscode-languageclient';
 import expandPathResolving from '../utils/expandPathResolving';
 import getServer from '../utils/getServer';
-import isValidExecutable from '../utils/isValidExecutable';
-import { setServerPath } from '../utils/serverPath';
+import executableVersion from '../utils/executableVersion';
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
@@ -71,20 +70,15 @@ async function bootstrapServer(context: vscode.ExtensionContext) {
   } else {
     path = await getServer(context);
   }
-  
+
   if (!path) {
     throw new Error('Solang Language Server is not available.');
   }
 
   console.log('Using server binary at', path);
 
-  if (!isValidExecutable(path)) {
-    setServerPath(context, undefined);
-    throw new Error(`Failed to execute ${path} --version`);
-  }
-
   return path;
 }
 
 // this method is called when your extension is deactivated
-export function deactivate() {}
+export function deactivate() { }
