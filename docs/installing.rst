@@ -69,7 +69,8 @@ Installing LLVM on Linux
 ________________________
 
 A pre-built version of llvm, specifically configured for Solang, is available at
-`<https://solang.io/download/llvm11.0-linux.tar.xz>`_. This version is built using the
+`<https://solang.io/download/llvm11.0-linux.tar.xz>`_ for x64 and
+`<https://solang.io/download/llvm11.0-linux-arm64.tar.xz>`_ for arm64. This version is built using the
 `dockerfile for building llvm on linux <https://github.com/hyperledger-labs/solang/blob/main/scripts/build-llvm-linux.dockerfile>`_.
 After downloading, untar the file in a terminal and add it to your path.
 
