@@ -470,7 +470,7 @@ fn try_catch_external_calls() {
                     print(l);
                     return 4000;
                 }
-                catch (bytes) {
+                catch {
                     print("try catch path");
                     return 2000;
                 }

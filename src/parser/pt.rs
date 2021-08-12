@@ -502,7 +502,7 @@ pub enum Statement {
         Expression,
         Option<(Vec<(Loc, Option<Parameter>)>, Box<Statement>)>,
         Option<Box<(Identifier, Parameter, Statement)>>,
-        Box<(Parameter, Statement)>,
+        Box<(Option<Parameter>, Statement)>,
     ),
 }
 

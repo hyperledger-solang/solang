@@ -686,11 +686,13 @@ fn print_statement(stmts: &[Statement], func: &Function, ns: &Namespace) -> Vec<
                     ));
                 }
 
-                list.push(Tree::Leaf(format!(
-                    "catch_param: {} {}",
-                    catch_param.ty.to_string(ns),
-                    catch_param.name
-                )));
+                if let Some(param) = catch_param {
+                    list.push(Tree::Leaf(format!(
+                        "catch_param: {} {}",
+                        param.ty.to_string(ns),
+                        param.name
+                    )));
+                }
 
                 list.push(Tree::Branch(
                     String::from("catch_stmt"),
