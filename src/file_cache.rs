@@ -139,22 +139,18 @@ impl FileCache {
             let import_path = self.import_paths[*import_no].join(base);
 
             if let Ok(full_path) = import_path.join(path.clone()).canonicalize() {
-                // strip the filename off and the import prefix for the base
-                if let Ok(base) = &full_path
+                let file_no = self.load_file(&full_path)?;
+                let base = full_path
                     .parent()
                     .expect("path should include filename")
-                    .strip_prefix(import_path)
-                {
-                    let file_no = self.load_file(&full_path)?;
-                    let base = base.to_path_buf();
+                    .to_path_buf();
 
-                    return Ok(ResolvedFile {
-                        full_path,
-                        base,
-                        import_no: *import_no,
-                        file_no,
-                    });
-                }
+                return Ok(ResolvedFile {
+                    full_path,
+                    base,
+                    import_no: *import_no,
+                    file_no,
+                });
             }
 
             // start with the next import
@@ -182,24 +178,19 @@ impl FileCache {
             let import_no = (i + start_import_no) % self.import_paths.len();
             let import_path = &self.import_paths[import_no];
 
-            // we want to prevent walking up the tree with .. or /
             if let Ok(full_path) = import_path.join(path.clone()).canonicalize() {
-                // strip the filename off and the import prefix for the base
-                if let Ok(base) = &full_path
+                let base = full_path
                     .parent()
                     .expect("path should include filename")
-                    .strip_prefix(import_path)
-                {
-                    let file_no = self.load_file(&full_path)?;
-                    let base = base.to_path_buf();
+                    .to_path_buf();
+                let file_no = self.load_file(&full_path)?;
 
-                    return Ok(ResolvedFile {
-                        full_path,
-                        file_no,
-                        import_no,
-                        base,
-                    });
-                }
+                return Ok(ResolvedFile {
+                    full_path,
+                    file_no,
+                    import_no,
+                    base,
+                });
             }
         }
 
