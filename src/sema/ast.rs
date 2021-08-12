@@ -1256,6 +1256,11 @@ impl fmt::Display for CallTy {
 #[derive(Clone, Debug)]
 #[allow(clippy::large_enum_variant)]
 pub enum Statement {
+    Block {
+        loc: pt::Loc,
+        unchecked: bool,
+        statements: Vec<Statement>,
+    },
     VariableDecl(pt::Loc, usize, Parameter, Option<Expression>),
     If(pt::Loc, bool, Expression, Vec<Statement>, Vec<Statement>),
     While(pt::Loc, bool, Expression, Vec<Statement>),
@@ -1317,6 +1322,11 @@ impl Statement {
     pub fn recurse<T>(&self, cx: &mut T, f: fn(stmt: &Statement, ctx: &mut T) -> bool) {
         if f(self, cx) {
             match self {
+                Statement::Block { statements, .. } => {
+                    for stmt in statements {
+                        stmt.recurse(cx, f);
+                    }
+                }
                 Statement::If(_, _, _, then_stmt, else_stmt) => {
                     for stmt in then_stmt {
                         stmt.recurse(cx, f);
@@ -1383,6 +1393,7 @@ impl Statement {
 
     pub fn reachable(&self) -> bool {
         match self {
+            Statement::Block { statements, .. } => statements.iter().all(|s| s.reachable()),
             Statement::Underscore(_)
             | Statement::Destructure(_, _, _)
             | Statement::VariableDecl(_, _, _, _) => true,

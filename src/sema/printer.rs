@@ -491,6 +491,14 @@ fn print_statement(stmts: &[Statement], func: &Function, ns: &Namespace) -> Vec<
 
     for stmt in stmts {
         res.push(match stmt {
+            Statement::Block {
+                statements,
+                unchecked,
+                ..
+            } => Tree::Branch(
+                format!("block{}", if *unchecked { " unchecked" } else { "" }),
+                print_statement(statements, func, ns),
+            ),
             Statement::VariableDecl(_, _, p, None) => {
                 Tree::Leaf(format!("declare {} {}", p.ty.to_string(ns), p.name))
             }
