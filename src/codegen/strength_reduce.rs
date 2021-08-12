@@ -201,7 +201,7 @@ fn block_reduce(
 fn expression_reduce(expr: &Expression, vars: &Variables, ns: &mut Namespace) -> Expression {
     let filter = |expr: &Expression, ns: &mut Namespace| -> Expression {
         match expr {
-            Expression::Multiply(loc, ty, left, right) => {
+            Expression::Multiply(loc, ty, unchecked, left, right) => {
                 let bits = ty.bits(ns) as usize;
 
                 if bits >= 128 {
@@ -258,6 +258,7 @@ fn expression_reduce(expr: &Expression, vars: &Variables, ns: &mut Namespace) ->
                                     Box::new(Expression::Multiply(
                                         *loc,
                                         Type::Int(64),
+                                        *unchecked,
                                         Box::new(
                                             cast(
                                                 loc,
@@ -304,6 +305,7 @@ fn expression_reduce(expr: &Expression, vars: &Variables, ns: &mut Namespace) ->
                                 Box::new(Expression::Multiply(
                                     *loc,
                                     Type::Uint(64),
+                                    *unchecked,
                                     Box::new(
                                         cast(
                                             loc,
@@ -1094,7 +1096,7 @@ fn expression_values(expr: &Expression, vars: &Variables, ns: &Namespace) -> Has
                 })
                 .collect()
         }
-        Expression::Add(_, ty, left, right) => {
+        Expression::Add(_, ty, _, left, right) => {
             let left = expression_values(left, vars, ns);
             let right = expression_values(right, vars, ns);
 
@@ -1145,7 +1147,7 @@ fn expression_values(expr: &Expression, vars: &Variables, ns: &Namespace) -> Has
                 })
                 .collect()
         }
-        Expression::Subtract(_, ty, left, right) => {
+        Expression::Subtract(_, ty, _, left, right) => {
             let left = expression_values(left, vars, ns);
             let right = expression_values(right, vars, ns);
 
@@ -1192,7 +1194,7 @@ fn expression_values(expr: &Expression, vars: &Variables, ns: &Namespace) -> Has
                 })
                 .collect()
         }
-        Expression::Multiply(_, ty, left, right) => {
+        Expression::Multiply(_, ty, _, left, right) => {
             let left = expression_values(left, vars, ns);
             let right = expression_values(right, vars, ns);
 
@@ -1934,6 +1936,7 @@ fn expresson_known_bits() {
     let expr = Expression::Add(
         loc,
         Type::Int(32),
+        false,
         Box::new(Expression::NumberLiteral(
             loc,
             Type::Int(32),
@@ -1962,6 +1965,7 @@ fn expresson_known_bits() {
     let expr = Expression::Add(
         loc,
         Type::Int(32),
+        false,
         Box::new(Expression::FunctionArg(loc, Type::Int(32), 0)),
         Box::new(Expression::NumberLiteral(
             loc,
@@ -1981,6 +1985,7 @@ fn expresson_known_bits() {
     let expr = Expression::Add(
         loc,
         Type::Uint(32),
+        false,
         Box::new(Expression::ZeroExt(
             loc,
             Type::Uint(32),
@@ -2012,6 +2017,7 @@ fn expresson_known_bits() {
     let expr = Expression::Subtract(
         loc,
         Type::Int(32),
+        false,
         Box::new(Expression::NumberLiteral(
             loc,
             Type::Int(32),
@@ -2040,6 +2046,7 @@ fn expresson_known_bits() {
     let expr = Expression::Subtract(
         loc,
         Type::Int(32),
+        false,
         Box::new(Expression::SignExt(
             loc,
             Type::Uint(32),
@@ -2099,6 +2106,7 @@ fn expresson_known_bits() {
     let expr = Expression::Subtract(
         loc,
         Type::Int(32),
+        false,
         Box::new(Expression::Variable(loc, Type::Uint(32), 0)),
         Box::new(Expression::Variable(loc, Type::Uint(32), 1)),
     );
@@ -2138,6 +2146,7 @@ fn expresson_known_bits() {
     let expr = Expression::Multiply(
         loc,
         Type::Int(32),
+        false,
         Box::new(Expression::NumberLiteral(
             loc,
             Type::Int(32),
@@ -2166,6 +2175,7 @@ fn expresson_known_bits() {
     let expr = Expression::Multiply(
         loc,
         Type::Uint(32),
+        false,
         Box::new(Expression::NumberLiteral(
             loc,
             Type::Uint(32),
@@ -2228,6 +2238,7 @@ fn expresson_known_bits() {
     let expr = Expression::Multiply(
         loc,
         Type::Uint(64),
+        false,
         Box::new(Expression::Variable(loc, Type::Uint(64), 0)),
         Box::new(Expression::Variable(loc, Type::Uint(64), 1)),
     );
@@ -2381,6 +2392,7 @@ fn expresson_known_bits() {
         &Expression::Subtract(
             loc,
             Type::Int(64),
+            false,
             Box::new(Expression::ZeroExt(
                 loc,
                 Type::Int(64),

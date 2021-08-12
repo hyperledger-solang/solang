@@ -14,15 +14,15 @@ pub fn eval_const_number(
     ns: &Namespace,
 ) -> Result<(pt::Loc, BigInt), Diagnostic> {
     match expr {
-        Expression::Add(loc, _, l, r) => Ok((
+        Expression::Add(loc, _, _, l, r) => Ok((
             *loc,
             eval_const_number(l, contract_no, ns)?.1 + eval_const_number(r, contract_no, ns)?.1,
         )),
-        Expression::Subtract(loc, _, l, r) => Ok((
+        Expression::Subtract(loc, _, _, l, r) => Ok((
             *loc,
             eval_const_number(l, contract_no, ns)?.1 - eval_const_number(r, contract_no, ns)?.1,
         )),
-        Expression::Multiply(loc, _, l, r) => Ok((
+        Expression::Multiply(loc, _, _, l, r) => Ok((
             *loc,
             eval_const_number(l, contract_no, ns)?.1 * eval_const_number(r, contract_no, ns)?.1,
         )),
@@ -56,7 +56,7 @@ pub fn eval_const_number(
             *loc,
             eval_const_number(l, contract_no, ns)?.1 ^ eval_const_number(r, contract_no, ns)?.1,
         )),
-        Expression::Power(loc, _, base, exp) => {
+        Expression::Power(loc, _, _, base, exp) => {
             let b = eval_const_number(base, contract_no, ns)?.1;
             let mut e = eval_const_number(exp, contract_no, ns)?.1;
 

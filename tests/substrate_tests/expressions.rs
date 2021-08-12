@@ -1535,14 +1535,58 @@ fn addition_overflow() {
 }
 
 #[test]
+fn unchecked_addition_overflow() {
+    let mut runtime = build_solidity_with_overflow_check(
+        r#"
+        contract overflow {
+            function foo(uint8 x) internal returns (uint8) {
+                unchecked {
+                    uint8 y = x + 1;
+                    return y;
+                }
+            }
+
+            function bar() public {
+                foo(255);
+            }
+        }
+        "#,
+    );
+
+    runtime.function("bar", Vec::new());
+}
+
+#[test]
 #[should_panic]
 fn subtraction_underflow() {
     let mut runtime = build_solidity_with_overflow_check(
         r#"
         contract underflow {
-            function foo(uint64 x) internal return (uint64) {
+            function foo(uint64 x) internal returns (uint64) {
                 uint64 y = x - 1;
                 return y;
+            }
+
+            function bar() public {
+                foo(0);
+            }
+        }
+        "#,
+    );
+
+    runtime.function("bar", Vec::new());
+}
+
+#[test]
+fn unchecked_subtraction_underflow() {
+    let mut runtime = build_solidity_with_overflow_check(
+        r#"
+        contract underflow {
+            function foo(uint64 x) internal returns (uint64) {
+                unchecked {
+                    uint64 y = x - 1;
+                    return y;
+                }
             }
 
             function bar() public {
@@ -1564,6 +1608,28 @@ fn multiplication_overflow() {
             function foo(int8 x) internal returns (int8) {
                 int8 y = x * int8(64);
                 return y;
+            }
+
+            function bar() public {
+                foo(8);
+            }
+        }
+        "#,
+    );
+
+    runtime.function("bar", Vec::new());
+}
+
+#[test]
+fn unchecked_multiplication_overflow() {
+    let mut runtime = build_solidity_with_overflow_check(
+        r#"
+        contract overflow {
+            function foo(int8 x) internal returns (int8) {
+                unchecked {
+                    int8 y = x * int8(64);
+                    return y;
+                }
             }
 
             function bar() public {

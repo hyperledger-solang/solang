@@ -504,12 +504,12 @@ pub enum Expression {
     StructLiteral(pt::Loc, Type, Vec<Expression>),
     ArrayLiteral(pt::Loc, Type, Vec<u32>, Vec<Expression>),
     ConstArrayLiteral(pt::Loc, Type, Vec<u32>, Vec<Expression>),
-    Add(pt::Loc, Type, Box<Expression>, Box<Expression>),
-    Subtract(pt::Loc, Type, Box<Expression>, Box<Expression>),
-    Multiply(pt::Loc, Type, Box<Expression>, Box<Expression>),
+    Add(pt::Loc, Type, bool, Box<Expression>, Box<Expression>),
+    Subtract(pt::Loc, Type, bool, Box<Expression>, Box<Expression>),
+    Multiply(pt::Loc, Type, bool, Box<Expression>, Box<Expression>),
     Divide(pt::Loc, Type, Box<Expression>, Box<Expression>),
     Modulo(pt::Loc, Type, Box<Expression>, Box<Expression>),
-    Power(pt::Loc, Type, Box<Expression>, Box<Expression>),
+    Power(pt::Loc, Type, bool, Box<Expression>, Box<Expression>),
     BitwiseOr(pt::Loc, Type, Box<Expression>, Box<Expression>),
     BitwiseAnd(pt::Loc, Type, Box<Expression>, Box<Expression>),
     BitwiseXor(pt::Loc, Type, Box<Expression>, Box<Expression>),
@@ -526,10 +526,10 @@ pub enum Expression {
     Cast(pt::Loc, Type, Box<Expression>),
     BytesCast(pt::Loc, Type, Type, Box<Expression>),
 
-    PreIncrement(pt::Loc, Type, Box<Expression>),
-    PreDecrement(pt::Loc, Type, Box<Expression>),
-    PostIncrement(pt::Loc, Type, Box<Expression>),
-    PostDecrement(pt::Loc, Type, Box<Expression>),
+    PreIncrement(pt::Loc, Type, bool, Box<Expression>),
+    PreDecrement(pt::Loc, Type, bool, Box<Expression>),
+    PostIncrement(pt::Loc, Type, bool, Box<Expression>),
+    PostDecrement(pt::Loc, Type, bool, Box<Expression>),
     Assign(pt::Loc, Type, Box<Expression>, Box<Expression>),
 
     More(pt::Loc, Box<Expression>, Box<Expression>),
@@ -658,21 +658,24 @@ impl Expression {
                         args.iter().map(|e| filter(e, ctx)).collect(),
                     )
                 }
-                Expression::Add(loc, ty, left, right) => Expression::Add(
+                Expression::Add(loc, ty, unchecked, left, right) => Expression::Add(
                     *loc,
                     ty.clone(),
+                    *unchecked,
                     Box::new(filter(left, ctx)),
                     Box::new(filter(right, ctx)),
                 ),
-                Expression::Subtract(loc, ty, left, right) => Expression::Subtract(
+                Expression::Subtract(loc, ty, unchecked, left, right) => Expression::Subtract(
                     *loc,
                     ty.clone(),
+                    *unchecked,
                     Box::new(filter(left, ctx)),
                     Box::new(filter(right, ctx)),
                 ),
-                Expression::Multiply(loc, ty, left, right) => Expression::Multiply(
+                Expression::Multiply(loc, ty, unchecked, left, right) => Expression::Multiply(
                     *loc,
                     ty.clone(),
+                    *unchecked,
                     Box::new(filter(left, ctx)),
                     Box::new(filter(right, ctx)),
                 ),
@@ -682,9 +685,10 @@ impl Expression {
                     Box::new(filter(left, ctx)),
                     Box::new(filter(right, ctx)),
                 ),
-                Expression::Power(loc, ty, left, right) => Expression::Power(
+                Expression::Power(loc, ty, unchecked, left, right) => Expression::Power(
                     *loc,
                     ty.clone(),
+                    *unchecked,
                     Box::new(filter(left, ctx)),
                     Box::new(filter(right, ctx)),
                 ),
@@ -745,18 +749,30 @@ impl Expression {
                     from.clone(),
                     Box::new(filter(expr, ctx)),
                 ),
-                Expression::PreIncrement(loc, ty, expr) => {
-                    Expression::PreIncrement(*loc, ty.clone(), Box::new(filter(expr, ctx)))
-                }
-                Expression::PreDecrement(loc, ty, expr) => {
-                    Expression::PreDecrement(*loc, ty.clone(), Box::new(filter(expr, ctx)))
-                }
-                Expression::PostIncrement(loc, ty, expr) => {
-                    Expression::PostIncrement(*loc, ty.clone(), Box::new(filter(expr, ctx)))
-                }
-                Expression::PostDecrement(loc, ty, expr) => {
-                    Expression::PostDecrement(*loc, ty.clone(), Box::new(filter(expr, ctx)))
-                }
+                Expression::PreIncrement(loc, ty, unchecked, expr) => Expression::PreIncrement(
+                    *loc,
+                    ty.clone(),
+                    *unchecked,
+                    Box::new(filter(expr, ctx)),
+                ),
+                Expression::PreDecrement(loc, ty, unchecked, expr) => Expression::PreDecrement(
+                    *loc,
+                    ty.clone(),
+                    *unchecked,
+                    Box::new(filter(expr, ctx)),
+                ),
+                Expression::PostIncrement(loc, ty, unchecked, expr) => Expression::PostIncrement(
+                    *loc,
+                    ty.clone(),
+                    *unchecked,
+                    Box::new(filter(expr, ctx)),
+                ),
+                Expression::PostDecrement(loc, ty, unchecked, expr) => Expression::PostDecrement(
+                    *loc,
+                    ty.clone(),
+                    *unchecked,
+                    Box::new(filter(expr, ctx)),
+                ),
                 Expression::Assign(loc, ty, left, right) => Expression::Assign(
                     *loc,
                     ty.clone(),
@@ -1024,12 +1040,12 @@ impl Expression {
                         e.recurse(cx, f);
                     }
                 }
-                Expression::Add(_, _, left, right)
-                | Expression::Subtract(_, _, left, right)
-                | Expression::Multiply(_, _, left, right)
+                Expression::Add(_, _, _, left, right)
+                | Expression::Subtract(_, _, _, left, right)
+                | Expression::Multiply(_, _, _, left, right)
                 | Expression::Divide(_, _, left, right)
                 | Expression::Modulo(_, _, left, right)
-                | Expression::Power(_, _, left, right)
+                | Expression::Power(_, _, _, left, right)
                 | Expression::BitwiseOr(_, _, left, right)
                 | Expression::BitwiseAnd(_, _, left, right)
                 | Expression::BitwiseXor(_, _, left, right)
@@ -1045,10 +1061,10 @@ impl Expression {
                 | Expression::Trunc(_, _, expr)
                 | Expression::Cast(_, _, expr)
                 | Expression::BytesCast(_, _, _, expr)
-                | Expression::PreIncrement(_, _, expr)
-                | Expression::PreDecrement(_, _, expr)
-                | Expression::PostIncrement(_, _, expr)
-                | Expression::PostDecrement(_, _, expr) => expr.recurse(cx, f),
+                | Expression::PreIncrement(_, _, _, expr)
+                | Expression::PreDecrement(_, _, _, expr)
+                | Expression::PostIncrement(_, _, _, expr)
+                | Expression::PostDecrement(_, _, _, expr) => expr.recurse(cx, f),
 
                 Expression::Assign(_, _, left, right)
                 | Expression::More(_, left, right)

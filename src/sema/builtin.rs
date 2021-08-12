@@ -480,6 +480,7 @@ pub fn resolve_call(
     ns: &mut Namespace,
     symtable: &mut Symtable,
     is_constant: bool,
+    unchecked: bool,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Result<Expression, ()> {
     let matches = BUILTIN_FUNCTIONS
@@ -527,6 +528,7 @@ pub fn resolve_call(
                 ns,
                 symtable,
                 is_constant,
+                unchecked,
                 diagnostics,
                 Some(&func.args[i]),
             ) {
@@ -602,6 +604,7 @@ pub fn resolve_method_call(
     args: &[pt::Expression],
     contract_no: Option<usize>,
     function_no: Option<usize>,
+    unchecked: bool,
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
@@ -619,6 +622,7 @@ pub fn resolve_method_call(
             ns,
             symtable,
             false,
+            unchecked,
             diagnostics,
         );
     }
@@ -653,6 +657,7 @@ pub fn resolve_method_call(
                 ns,
                 symtable,
                 false,
+                unchecked,
                 diagnostics,
                 Some(&Type::DynamicBytes),
             )?,
@@ -746,6 +751,7 @@ pub fn resolve_method_call(
                     ns,
                     symtable,
                     false,
+                    unchecked,
                     diagnostics,
                     Some(&Type::Bytes(4)),
                 )?;
@@ -781,6 +787,7 @@ pub fn resolve_method_call(
                     ns,
                     symtable,
                     false,
+                    unchecked,
                     diagnostics,
                     Some(&Type::String),
                 )?;
@@ -817,6 +824,7 @@ pub fn resolve_method_call(
             ns,
             symtable,
             false,
+            unchecked,
             diagnostics,
             None,
         )?;

@@ -231,6 +231,7 @@ pub fn var_decl(
             ns,
             symtable,
             is_constant,
+            false,
             &mut diagnostics,
             Some(&ty),
         ) {

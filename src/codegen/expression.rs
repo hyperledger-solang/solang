@@ -33,21 +33,24 @@ pub fn expression(
 
             load_storage(loc, ty, storage, cfg, vartab)
         }
-        Expression::Add(loc, ty, left, right) => Expression::Add(
+        Expression::Add(loc, ty, unchecked, left, right) => Expression::Add(
             *loc,
             ty.clone(),
+            *unchecked,
             Box::new(expression(left, cfg, contract_no, func, ns, vartab)),
             Box::new(expression(right, cfg, contract_no, func, ns, vartab)),
         ),
-        Expression::Subtract(loc, ty, left, right) => Expression::Subtract(
+        Expression::Subtract(loc, ty, unchecked, left, right) => Expression::Subtract(
             *loc,
             ty.clone(),
+            *unchecked,
             Box::new(expression(left, cfg, contract_no, func, ns, vartab)),
             Box::new(expression(right, cfg, contract_no, func, ns, vartab)),
         ),
-        Expression::Multiply(loc, ty, left, right) => Expression::Multiply(
+        Expression::Multiply(loc, ty, unchecked, left, right) => Expression::Multiply(
             *loc,
             ty.clone(),
+            *unchecked,
             Box::new(expression(left, cfg, contract_no, func, ns, vartab)),
             Box::new(expression(right, cfg, contract_no, func, ns, vartab)),
         ),
@@ -63,9 +66,10 @@ pub fn expression(
             Box::new(expression(left, cfg, contract_no, func, ns, vartab)),
             Box::new(expression(right, cfg, contract_no, func, ns, vartab)),
         ),
-        Expression::Power(loc, ty, left, right) => Expression::Power(
+        Expression::Power(loc, ty, unchecked, left, right) => Expression::Power(
             *loc,
             ty.clone(),
+            *unchecked,
             Box::new(expression(left, cfg, contract_no, func, ns, vartab)),
             Box::new(expression(right, cfg, contract_no, func, ns, vartab)),
         ),
@@ -181,7 +185,8 @@ pub fn expression(
 
             assign_single(left, right, cfg, contract_no, func, ns, vartab)
         }
-        Expression::PreDecrement(loc, ty, var) | Expression::PreIncrement(loc, ty, var) => {
+        Expression::PreDecrement(loc, ty, unchecked, var)
+        | Expression::PreIncrement(loc, ty, unchecked, var) => {
             let res = vartab.temp_anonymous(ty);
             let v = expression(var, cfg, contract_no, func, ns, vartab);
             let v = match var.ty() {
@@ -192,11 +197,11 @@ pub fn expression(
 
             let one = Box::new(Expression::NumberLiteral(*loc, ty.clone(), BigInt::one()));
             let expr = match expr {
-                Expression::PreDecrement(_, _, _) => {
-                    Expression::Subtract(*loc, ty.clone(), Box::new(v), one)
+                Expression::PreDecrement(..) => {
+                    Expression::Subtract(*loc, ty.clone(), *unchecked, Box::new(v), one)
                 }
-                Expression::PreIncrement(_, _, _) => {
-                    Expression::Add(*loc, ty.clone(), Box::new(v), one)
+                Expression::PreIncrement(..) => {
+                    Expression::Add(*loc, ty.clone(), *unchecked, Box::new(v), one)
                 }
                 _ => unreachable!(),
             };
@@ -245,7 +250,8 @@ pub fn expression(
 
             Expression::Variable(*loc, ty.clone(), res)
         }
-        Expression::PostDecrement(loc, ty, var) | Expression::PostIncrement(loc, ty, var) => {
+        Expression::PostDecrement(loc, ty, unchecked, var)
+        | Expression::PostIncrement(loc, ty, unchecked, var) => {
             let res = vartab.temp_anonymous(ty);
             let v = expression(var, cfg, contract_no, func, ns, vartab);
             let v = match var.ty() {
@@ -265,15 +271,17 @@ pub fn expression(
 
             let one = Box::new(Expression::NumberLiteral(*loc, ty.clone(), BigInt::one()));
             let expr = match expr {
-                Expression::PostDecrement(_, _, _) => Expression::Subtract(
+                Expression::PostDecrement(..) => Expression::Subtract(
                     *loc,
                     ty.clone(),
+                    *unchecked,
                     Box::new(Expression::Variable(*loc, ty.clone(), res)),
                     one,
                 ),
-                Expression::PostIncrement(_, _, _) => Expression::Add(
+                Expression::PostIncrement(..) => Expression::Add(
                     *loc,
                     ty.clone(),
+                    *unchecked,
                     Box::new(Expression::Variable(*loc, ty.clone(), res)),
                     one,
                 ),
@@ -495,6 +503,7 @@ pub fn expression(
                 Expression::Add(
                     *loc,
                     ty.clone(),
+                    true,
                     Box::new(expression(var, cfg, contract_no, func, ns, vartab)),
                     Box::new(Expression::NumberLiteral(*loc, ns.storage_type(), offset)),
                 )
@@ -1055,7 +1064,7 @@ pub fn expression(
             let gasprice = Expression::Builtin(*loc, vec![ty.clone()], Builtin::Gasprice, vec![]);
             let units = expression(&expr[0], cfg, contract_no, func, ns, vartab);
 
-            Expression::Multiply(*loc, ty, Box::new(units), Box::new(gasprice))
+            Expression::Multiply(*loc, ty, true, Box::new(units), Box::new(gasprice))
         }
         Expression::Builtin(loc, tys, builtin, args) => {
             let args = args
@@ -1748,10 +1757,12 @@ fn array_subscript(
                     Expression::Add(
                         *loc,
                         elem_ty,
+                        true,
                         Box::new(array),
                         Box::new(Expression::Multiply(
                             *loc,
                             slot_ty.clone(),
+                            true,
                             Box::new(index),
                             Box::new(Expression::NumberLiteral(*loc, slot_ty, elem_size)),
                         )),
@@ -1770,6 +1781,7 @@ fn array_subscript(
                     return Expression::Add(
                         *loc,
                         elem_ty,
+                        true,
                         Box::new(array),
                         Box::new(Expression::ZeroExt(
                             *loc,
@@ -1777,6 +1789,7 @@ fn array_subscript(
                             Box::new(Expression::Multiply(
                                 *loc,
                                 Type::Uint(64),
+                                true,
                                 Box::new(
                                     cast(
                                         &index_loc,
@@ -1836,6 +1849,7 @@ fn array_subscript(
                             Box::new(Expression::Subtract(
                                 *loc,
                                 index_ty.clone(),
+                                true,
                                 Box::new(Expression::NumberLiteral(
                                     *loc,
                                     index_ty.clone(),

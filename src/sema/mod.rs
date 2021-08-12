@@ -1498,6 +1498,7 @@ impl ast::Namespace {
             self,
             &mut symtable,
             true,
+            true,
             diagnostics,
             Some(&ast::Type::Uint(256)),
         )?;

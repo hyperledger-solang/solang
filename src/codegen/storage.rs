@@ -24,12 +24,13 @@ pub fn array_offset(
     // the index needs to be cast to i256 and multiplied by the number
     // of slots for each element
     if elem_size == BigInt::one() {
-        Expression::Add(*loc, slot_ty, Box::new(start), Box::new(index))
+        Expression::Add(*loc, slot_ty, true, Box::new(start), Box::new(index))
     } else if (elem_size.clone() & (elem_size.clone() - BigInt::one())) == BigInt::zero() {
         // elem_size is power of 2
         Expression::Add(
             *loc,
             slot_ty.clone(),
+            true,
             Box::new(start),
             Box::new(Expression::ShiftLeft(
                 *loc,
@@ -46,10 +47,12 @@ pub fn array_offset(
         Expression::Add(
             *loc,
             slot_ty.clone(),
+            true,
             Box::new(start),
             Box::new(Expression::Multiply(
                 *loc,
                 slot_ty.clone(),
+                true,
                 Box::new(index),
                 Box::new(Expression::NumberLiteral(*loc, slot_ty, elem_size)),
             )),
@@ -120,6 +123,7 @@ pub fn storage_slots_array_push(
     let new_length = Expression::Add(
         *loc,
         slot_ty.clone(),
+        true,
         Box::new(Expression::Variable(*loc, slot_ty.clone(), length_pos)),
         Box::new(Expression::NumberLiteral(
             *loc,
@@ -207,6 +211,7 @@ pub fn storage_slots_array_pop(
             expr: Expression::Subtract(
                 *loc,
                 length_ty.clone(),
+                true,
                 Box::new(Expression::Variable(*loc, length_ty.clone(), length_pos)),
                 Box::new(Expression::NumberLiteral(*loc, length_ty, BigInt::one())),
             ),

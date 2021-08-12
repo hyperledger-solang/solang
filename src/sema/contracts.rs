@@ -221,6 +221,7 @@ fn resolve_base_args(
                             base_no,
                             None,
                             *contract_no,
+                            false,
                             ns,
                             &mut symtable,
                             &mut diagnostics,

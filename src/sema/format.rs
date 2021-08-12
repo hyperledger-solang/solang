@@ -18,6 +18,7 @@ pub fn string_format(
     file_no: usize,
     contract_no: Option<usize>,
     function_no: Option<usize>,
+    unchecked: bool,
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
@@ -34,6 +35,7 @@ pub fn string_format(
             ns,
             symtable,
             false,
+            unchecked,
             diagnostics,
             None,
         )?;

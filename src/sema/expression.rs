@@ -41,12 +41,12 @@ impl Expression {
             | Expression::StructLiteral(loc, _, _)
             | Expression::ArrayLiteral(loc, _, _, _)
             | Expression::ConstArrayLiteral(loc, _, _, _)
-            | Expression::Add(loc, _, _, _)
-            | Expression::Subtract(loc, _, _, _)
-            | Expression::Multiply(loc, _, _, _)
+            | Expression::Add(loc, _, _, _, _)
+            | Expression::Subtract(loc, _, _, _, _)
+            | Expression::Multiply(loc, _, _, _, _)
             | Expression::Divide(loc, _, _, _)
             | Expression::Modulo(loc, _, _, _)
-            | Expression::Power(loc, _, _, _)
+            | Expression::Power(loc, _, _, _, _)
             | Expression::BitwiseOr(loc, _, _, _)
             | Expression::BitwiseAnd(loc, _, _, _)
             | Expression::BitwiseXor(loc, _, _, _)
@@ -92,10 +92,10 @@ impl Expression {
             | Expression::ExternalFunctionCall { loc, .. }
             | Expression::ExternalFunctionCallRaw { loc, .. }
             | Expression::Constructor { loc, .. }
-            | Expression::PreIncrement(loc, _, _)
-            | Expression::PreDecrement(loc, _, _)
-            | Expression::PostIncrement(loc, _, _)
-            | Expression::PostDecrement(loc, _, _)
+            | Expression::PreIncrement(loc, ..)
+            | Expression::PreDecrement(loc, ..)
+            | Expression::PostIncrement(loc, ..)
+            | Expression::PostDecrement(loc, ..)
             | Expression::Builtin(loc, _, _, _)
             | Expression::Assign(loc, _, _, _)
             | Expression::List(loc, _)
@@ -129,12 +129,12 @@ impl Expression {
             | Expression::StructLiteral(_, ty, _)
             | Expression::ArrayLiteral(_, ty, _, _)
             | Expression::ConstArrayLiteral(_, ty, _, _)
-            | Expression::Add(_, ty, _, _)
-            | Expression::Subtract(_, ty, _, _)
-            | Expression::Multiply(_, ty, _, _)
+            | Expression::Add(_, ty, ..)
+            | Expression::Subtract(_, ty, ..)
+            | Expression::Multiply(_, ty, _, _, _)
             | Expression::Divide(_, ty, _, _)
             | Expression::Modulo(_, ty, _, _)
-            | Expression::Power(_, ty, _, _)
+            | Expression::Power(_, ty, _, _, _)
             | Expression::BitwiseOr(_, ty, _, _)
             | Expression::BitwiseAnd(_, ty, _, _)
             | Expression::BitwiseXor(_, ty, _, _)
@@ -156,10 +156,10 @@ impl Expression {
             | Expression::StructMember(_, ty, _, _)
             | Expression::AllocDynamicArray(_, ty, _, _)
             | Expression::DynamicArraySubscript(_, ty, _, _)
-            | Expression::PreIncrement(_, ty, _)
-            | Expression::PreDecrement(_, ty, _)
-            | Expression::PostIncrement(_, ty, _)
-            | Expression::PostDecrement(_, ty, _)
+            | Expression::PreIncrement(_, ty, ..)
+            | Expression::PreDecrement(_, ty, ..)
+            | Expression::PostIncrement(_, ty, ..)
+            | Expression::PostDecrement(_, ty, ..)
             | Expression::Keccak256(_, ty, _)
             | Expression::Assign(_, ty, _, _) => ty.clone(),
             Expression::DynamicArrayPush(_, _, ty, _) | Expression::DynamicArrayPop(_, _, ty) => {
@@ -1314,6 +1314,7 @@ pub fn expression(
     ns: &mut Namespace,
     symtable: &mut Symtable,
     is_constant: bool,
+    unchecked: bool,
     diagnostics: &mut Vec<Diagnostic>,
     resolve_to: Option<&Type>,
 ) -> Result<Expression, ()> {
@@ -1328,6 +1329,7 @@ pub fn expression(
                 ns,
                 symtable,
                 is_constant,
+                unchecked,
                 diagnostics,
                 resolve_to,
             );
@@ -1370,6 +1372,7 @@ pub fn expression(
             ns,
             symtable,
             is_constant,
+            unchecked,
             diagnostics,
             resolve_to,
         ),
@@ -1383,6 +1386,7 @@ pub fn expression(
             ns,
             symtable,
             is_constant,
+            unchecked,
             diagnostics,
             resolve_to,
         ),
@@ -1396,6 +1400,7 @@ pub fn expression(
             ns,
             symtable,
             is_constant,
+            unchecked,
             diagnostics,
             resolve_to,
         ),
@@ -1409,6 +1414,7 @@ pub fn expression(
             ns,
             symtable,
             is_constant,
+            unchecked,
             diagnostics,
             resolve_to,
         ),
@@ -1422,6 +1428,7 @@ pub fn expression(
             ns,
             symtable,
             is_constant,
+            unchecked,
             diagnostics,
             resolve_to,
         ),
@@ -1435,6 +1442,7 @@ pub fn expression(
             ns,
             symtable,
             is_constant,
+            unchecked,
             diagnostics,
             resolve_to,
         ),
@@ -1448,6 +1456,7 @@ pub fn expression(
             ns,
             symtable,
             is_constant,
+            unchecked,
             diagnostics,
             resolve_to,
         ),
@@ -1461,6 +1470,7 @@ pub fn expression(
             ns,
             symtable,
             is_constant,
+            unchecked,
             diagnostics,
             resolve_to,
         ),
@@ -1474,6 +1484,7 @@ pub fn expression(
             ns,
             symtable,
             is_constant,
+            unchecked,
             diagnostics,
             resolve_to,
         ),
@@ -1487,6 +1498,7 @@ pub fn expression(
             ns,
             symtable,
             is_constant,
+            unchecked,
             diagnostics,
             resolve_to,
         ),
@@ -1500,6 +1512,7 @@ pub fn expression(
             ns,
             symtable,
             is_constant,
+            unchecked,
             diagnostics,
             resolve_to,
         ),
@@ -1513,6 +1526,7 @@ pub fn expression(
                 ns,
                 symtable,
                 is_constant,
+                unchecked,
                 diagnostics,
                 None,
             )?;
@@ -1524,6 +1538,7 @@ pub fn expression(
                 ns,
                 symtable,
                 is_constant,
+                unchecked,
                 diagnostics,
                 None,
             )?;
@@ -1555,6 +1570,7 @@ pub fn expression(
                 ns,
                 symtable,
                 is_constant,
+                unchecked,
                 diagnostics,
                 None,
             )?;
@@ -1566,6 +1582,7 @@ pub fn expression(
                 ns,
                 symtable,
                 is_constant,
+                unchecked,
                 diagnostics,
                 None,
             )?;
@@ -1597,6 +1614,7 @@ pub fn expression(
                 ns,
                 symtable,
                 is_constant,
+                unchecked,
                 diagnostics,
                 None,
             )?;
@@ -1608,6 +1626,7 @@ pub fn expression(
                 ns,
                 symtable,
                 is_constant,
+                unchecked,
                 diagnostics,
                 None,
             )?;
@@ -1639,6 +1658,7 @@ pub fn expression(
                 ns,
                 symtable,
                 is_constant,
+                unchecked,
                 diagnostics,
                 None,
             )?;
@@ -1650,6 +1670,7 @@ pub fn expression(
                 ns,
                 symtable,
                 is_constant,
+                unchecked,
                 diagnostics,
                 None,
             )?;
@@ -1682,6 +1703,7 @@ pub fn expression(
             ns,
             symtable,
             is_constant,
+            unchecked,
             diagnostics,
         ),
 
@@ -1697,6 +1719,7 @@ pub fn expression(
                 ns,
                 symtable,
                 is_constant,
+                unchecked,
                 diagnostics,
             )?),
         )),
@@ -1710,6 +1733,7 @@ pub fn expression(
                 ns,
                 symtable,
                 is_constant,
+                unchecked,
                 diagnostics,
                 resolve_to,
             )?;
@@ -1729,6 +1753,7 @@ pub fn expression(
                 ns,
                 symtable,
                 is_constant,
+                unchecked,
                 diagnostics,
                 resolve_to,
             )?;
@@ -1761,6 +1786,7 @@ pub fn expression(
                     ns,
                     symtable,
                     is_constant,
+                    unchecked,
                     diagnostics,
                     resolve_to,
                 )?;
@@ -1786,6 +1812,7 @@ pub fn expression(
                 ns,
                 symtable,
                 is_constant,
+                unchecked,
                 diagnostics,
                 resolve_to,
             )?;
@@ -1806,6 +1833,7 @@ pub fn expression(
                 ns,
                 symtable,
                 is_constant,
+                unchecked,
                 diagnostics,
                 resolve_to,
             )?;
@@ -1817,6 +1845,7 @@ pub fn expression(
                 ns,
                 symtable,
                 is_constant,
+                unchecked,
                 diagnostics,
                 resolve_to,
             )?;
@@ -1829,6 +1858,7 @@ pub fn expression(
                 ns,
                 symtable,
                 is_constant,
+                unchecked,
                 diagnostics,
                 resolve_to,
             )?;
@@ -1866,6 +1896,7 @@ pub fn expression(
                 file_no,
                 contract_no,
                 function_no,
+                unchecked,
                 ns,
                 symtable,
                 diagnostics,
@@ -1889,6 +1920,7 @@ pub fn expression(
                 file_no,
                 contract_no,
                 function_no,
+                unchecked,
                 ns,
                 symtable,
                 diagnostics,
@@ -1921,6 +1953,7 @@ pub fn expression(
                 file_no,
                 contract_no,
                 function_no,
+                unchecked,
                 ns,
                 symtable,
                 diagnostics,
@@ -1942,6 +1975,7 @@ pub fn expression(
                         ns,
                         symtable,
                         is_constant,
+                        unchecked,
                         diagnostics,
                     );
                 }
@@ -1971,6 +2005,7 @@ pub fn expression(
                 file_no,
                 contract_no,
                 function_no,
+                unchecked,
                 ns,
                 symtable,
                 diagnostics,
@@ -2006,6 +2041,7 @@ pub fn expression(
                         file_no,
                         contract_no,
                         function_no,
+                        unchecked,
                         ns,
                         symtable,
                         diagnostics,
@@ -2024,6 +2060,7 @@ pub fn expression(
                         file_no,
                         contract_no,
                         function_no,
+                        unchecked,
                         ns,
                         symtable,
                         diagnostics,
@@ -2060,6 +2097,7 @@ pub fn expression(
                         ns,
                         symtable,
                         is_constant,
+                        unchecked,
                         diagnostics,
                     );
                 }
@@ -2086,6 +2124,7 @@ pub fn expression(
                             ns,
                             symtable,
                             is_constant,
+                            unchecked,
                             diagnostics,
                             None,
                         )?;
@@ -2106,6 +2145,7 @@ pub fn expression(
                 ns,
                 symtable,
                 is_constant,
+                unchecked,
                 diagnostics,
             )?;
 
@@ -2139,6 +2179,7 @@ pub fn expression(
             ns,
             symtable,
             is_constant,
+            unchecked,
             diagnostics,
         ),
         pt::Expression::MemberAccess(loc, e, id) => member_access(
@@ -2151,6 +2192,7 @@ pub fn expression(
             ns,
             symtable,
             is_constant,
+            unchecked,
             diagnostics,
             resolve_to,
         ),
@@ -2166,6 +2208,7 @@ pub fn expression(
                     ns,
                     symtable,
                     is_constant,
+                    unchecked,
                     diagnostics,
                     resolve_to,
                 )?,
@@ -2184,6 +2227,7 @@ pub fn expression(
                     ns,
                     symtable,
                     is_constant,
+                    unchecked,
                     diagnostics,
                     resolve_to,
                 )?,
@@ -2209,6 +2253,7 @@ pub fn expression(
                     ns,
                     symtable,
                     is_constant,
+                    unchecked,
                     diagnostics,
                     resolve_to,
                 )?,
@@ -2227,6 +2272,7 @@ pub fn expression(
                     ns,
                     symtable,
                     is_constant,
+                    unchecked,
                     diagnostics,
                     resolve_to,
                 )?,
@@ -2694,6 +2740,7 @@ fn subtract(
     ns: &mut Namespace,
     symtable: &mut Symtable,
     is_constant: bool,
+    unchecked: bool,
     diagnostics: &mut Vec<Diagnostic>,
     resolve_to: Option<&Type>,
 ) -> Result<Expression, ()> {
@@ -2705,6 +2752,7 @@ fn subtract(
         ns,
         symtable,
         is_constant,
+        unchecked,
         diagnostics,
         resolve_to,
     )?;
@@ -2716,6 +2764,7 @@ fn subtract(
         ns,
         symtable,
         is_constant,
+        unchecked,
         diagnostics,
         resolve_to,
     )?;
@@ -2736,6 +2785,7 @@ fn subtract(
     Ok(Expression::Subtract(
         *loc,
         ty.clone(),
+        unchecked,
         Box::new(cast(&l.loc(), left, &ty, true, ns, diagnostics)?),
         Box::new(cast(&r.loc(), right, &ty, true, ns, diagnostics)?),
     ))
@@ -2751,6 +2801,7 @@ fn bitwise_or(
     ns: &mut Namespace,
     symtable: &mut Symtable,
     is_constant: bool,
+    unchecked: bool,
     diagnostics: &mut Vec<Diagnostic>,
     resolve_to: Option<&Type>,
 ) -> Result<Expression, ()> {
@@ -2762,6 +2813,7 @@ fn bitwise_or(
         ns,
         symtable,
         is_constant,
+        unchecked,
         diagnostics,
         resolve_to,
     )?;
@@ -2773,6 +2825,7 @@ fn bitwise_or(
         ns,
         symtable,
         is_constant,
+        unchecked,
         diagnostics,
         resolve_to,
     )?;
@@ -2808,6 +2861,7 @@ fn bitwise_and(
     ns: &mut Namespace,
     symtable: &mut Symtable,
     is_constant: bool,
+    unchecked: bool,
     diagnostics: &mut Vec<Diagnostic>,
     resolve_to: Option<&Type>,
 ) -> Result<Expression, ()> {
@@ -2819,6 +2873,7 @@ fn bitwise_and(
         ns,
         symtable,
         is_constant,
+        unchecked,
         diagnostics,
         resolve_to,
     )?;
@@ -2830,6 +2885,7 @@ fn bitwise_and(
         ns,
         symtable,
         is_constant,
+        unchecked,
         diagnostics,
         resolve_to,
     )?;
@@ -2865,6 +2921,7 @@ fn bitwise_xor(
     ns: &mut Namespace,
     symtable: &mut Symtable,
     is_constant: bool,
+    unchecked: bool,
     diagnostics: &mut Vec<Diagnostic>,
     resolve_to: Option<&Type>,
 ) -> Result<Expression, ()> {
@@ -2876,6 +2933,7 @@ fn bitwise_xor(
         ns,
         symtable,
         is_constant,
+        unchecked,
         diagnostics,
         resolve_to,
     )?;
@@ -2887,6 +2945,7 @@ fn bitwise_xor(
         ns,
         symtable,
         is_constant,
+        unchecked,
         diagnostics,
         resolve_to,
     )?;
@@ -2922,6 +2981,7 @@ fn shift_left(
     ns: &mut Namespace,
     symtable: &mut Symtable,
     is_constant: bool,
+    unchecked: bool,
     diagnostics: &mut Vec<Diagnostic>,
     resolve_to: Option<&Type>,
 ) -> Result<Expression, ()> {
@@ -2933,6 +2993,7 @@ fn shift_left(
         ns,
         symtable,
         is_constant,
+        unchecked,
         diagnostics,
         resolve_to,
     )?;
@@ -2944,6 +3005,7 @@ fn shift_left(
         ns,
         symtable,
         is_constant,
+        unchecked,
         diagnostics,
         None,
     )?;
@@ -2974,6 +3036,7 @@ fn shift_right(
     ns: &mut Namespace,
     symtable: &mut Symtable,
     is_constant: bool,
+    unchecked: bool,
     diagnostics: &mut Vec<Diagnostic>,
     resolve_to: Option<&Type>,
 ) -> Result<Expression, ()> {
@@ -2985,6 +3048,7 @@ fn shift_right(
         ns,
         symtable,
         is_constant,
+        unchecked,
         diagnostics,
         resolve_to,
     )?;
@@ -2996,6 +3060,7 @@ fn shift_right(
         ns,
         symtable,
         is_constant,
+        unchecked,
         diagnostics,
         None,
     )?;
@@ -3027,6 +3092,7 @@ fn multiply(
     ns: &mut Namespace,
     symtable: &mut Symtable,
     is_constant: bool,
+    unchecked: bool,
     diagnostics: &mut Vec<Diagnostic>,
     resolve_to: Option<&Type>,
 ) -> Result<Expression, ()> {
@@ -3038,6 +3104,7 @@ fn multiply(
         ns,
         symtable,
         is_constant,
+        unchecked,
         diagnostics,
         resolve_to,
     )?;
@@ -3049,6 +3116,7 @@ fn multiply(
         ns,
         symtable,
         is_constant,
+        unchecked,
         diagnostics,
         resolve_to,
     )?;
@@ -3081,6 +3149,7 @@ fn multiply(
                 ns,
                 symtable,
                 is_constant,
+                unchecked,
                 diagnostics,
                 Some(&Type::Int(bits)),
             )
@@ -3095,6 +3164,7 @@ fn multiply(
                 ns,
                 symtable,
                 is_constant,
+                unchecked,
                 diagnostics,
                 Some(&Type::Uint(bits)),
             )
@@ -3103,6 +3173,7 @@ fn multiply(
         Ok(Expression::Multiply(
             *loc,
             ty.clone(),
+            unchecked,
             Box::new(cast(&l.loc(), left, &ty, true, ns, diagnostics)?),
             Box::new(cast(&r.loc(), right, &ty, true, ns, diagnostics)?),
         ))
@@ -3119,6 +3190,7 @@ fn divide(
     ns: &mut Namespace,
     symtable: &mut Symtable,
     is_constant: bool,
+    unchecked: bool,
     diagnostics: &mut Vec<Diagnostic>,
     resolve_to: Option<&Type>,
 ) -> Result<Expression, ()> {
@@ -3130,6 +3202,7 @@ fn divide(
         ns,
         symtable,
         is_constant,
+        unchecked,
         diagnostics,
         resolve_to,
     )?;
@@ -3141,6 +3214,7 @@ fn divide(
         ns,
         symtable,
         is_constant,
+        unchecked,
         diagnostics,
         resolve_to,
     )?;
@@ -3176,6 +3250,7 @@ fn modulo(
     ns: &mut Namespace,
     symtable: &mut Symtable,
     is_constant: bool,
+    unchecked: bool,
     diagnostics: &mut Vec<Diagnostic>,
     resolve_to: Option<&Type>,
 ) -> Result<Expression, ()> {
@@ -3187,6 +3262,7 @@ fn modulo(
         ns,
         symtable,
         is_constant,
+        unchecked,
         diagnostics,
         resolve_to,
     )?;
@@ -3198,6 +3274,7 @@ fn modulo(
         ns,
         symtable,
         is_constant,
+        unchecked,
         diagnostics,
         resolve_to,
     )?;
@@ -3233,6 +3310,7 @@ fn power(
     ns: &mut Namespace,
     symtable: &mut Symtable,
     is_constant: bool,
+    unchecked: bool,
     diagnostics: &mut Vec<Diagnostic>,
     resolve_to: Option<&Type>,
 ) -> Result<Expression, ()> {
@@ -3244,6 +3322,7 @@ fn power(
         ns,
         symtable,
         is_constant,
+        unchecked,
         diagnostics,
         resolve_to,
     )?;
@@ -3260,6 +3339,7 @@ fn power(
                 ns,
                 symtable,
                 is_constant,
+                unchecked,
                 diagnostics,
                 Some(&Type::Int(256)),
             )?;
@@ -3272,6 +3352,7 @@ fn power(
                 ns,
                 symtable,
                 is_constant,
+                unchecked,
                 diagnostics,
                 Some(&Type::Uint(256)),
             )?;
@@ -3286,6 +3367,7 @@ fn power(
         ns,
         symtable,
         is_constant,
+        unchecked,
         diagnostics,
         resolve_to,
     )?;
@@ -3318,6 +3400,7 @@ fn power(
     Ok(Expression::Power(
         *loc,
         ty.clone(),
+        unchecked,
         Box::new(cast(&b.loc(), base, &ty, true, ns, diagnostics)?),
         Box::new(cast(&e.loc(), exp, &ty, true, ns, diagnostics)?),
     ))
@@ -3332,6 +3415,7 @@ fn constructor(
     file_no: usize,
     contract_no: Option<usize>,
     function_no: Option<usize>,
+    unchecked: bool,
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
@@ -3395,6 +3479,7 @@ fn constructor(
         no,
         function_no,
         contract_no,
+        unchecked,
         ns,
         symtable,
         diagnostics,
@@ -3421,6 +3506,7 @@ pub fn match_constructor_to_args(
     contract_no: usize,
     args_function_no: Option<usize>,
     args_contact_no: usize,
+    unchecked: bool,
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
@@ -3465,6 +3551,7 @@ pub fn match_constructor_to_args(
                 ns,
                 symtable,
                 false,
+                unchecked,
                 diagnostics,
                 Some(&params[i].ty),
             ) {
@@ -3531,6 +3618,7 @@ pub fn constructor_named_args(
     file_no: usize,
     contract_no: Option<usize>,
     arg_function_no: Option<usize>,
+    unchecked: bool,
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
@@ -3543,6 +3631,7 @@ pub fn constructor_named_args(
         file_no,
         contract_no,
         arg_function_no,
+        unchecked,
         ns,
         symtable,
         diagnostics,
@@ -3674,6 +3763,7 @@ pub fn constructor_named_args(
                 ns,
                 symtable,
                 false,
+                unchecked,
                 diagnostics,
                 Some(&param.ty),
             ) {
@@ -3858,6 +3948,7 @@ pub fn new(
     file_no: usize,
     contract_no: Option<usize>,
     function_no: Option<usize>,
+    unchecked: bool,
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
@@ -3895,6 +3986,7 @@ pub fn new(
                 file_no,
                 contract_no,
                 function_no,
+                unchecked,
                 ns,
                 symtable,
                 diagnostics,
@@ -3908,6 +4000,7 @@ pub fn new(
                 file_no,
                 contract_no,
                 function_no,
+                unchecked,
                 ns,
                 symtable,
                 diagnostics,
@@ -3947,6 +4040,7 @@ pub fn new(
         ns,
         symtable,
         false,
+        unchecked,
         diagnostics,
         Some(&Type::Uint(32)),
     )?;
@@ -3974,6 +4068,7 @@ fn equal(
     ns: &mut Namespace,
     symtable: &mut Symtable,
     is_constant: bool,
+    unchecked: bool,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Result<Expression, ()> {
     let left = expression(
@@ -3984,6 +4079,7 @@ fn equal(
         ns,
         symtable,
         is_constant,
+        unchecked,
         diagnostics,
         None,
     )?;
@@ -3995,6 +4091,7 @@ fn equal(
         ns,
         symtable,
         is_constant,
+        unchecked,
         diagnostics,
         None,
     )?;
@@ -4095,6 +4192,7 @@ fn addition(
     ns: &mut Namespace,
     symtable: &mut Symtable,
     is_constant: bool,
+    unchecked: bool,
     diagnostics: &mut Vec<Diagnostic>,
     resolve_to: Option<&Type>,
 ) -> Result<Expression, ()> {
@@ -4106,6 +4204,7 @@ fn addition(
         ns,
         symtable,
         is_constant,
+        unchecked,
         diagnostics,
         resolve_to,
     )?;
@@ -4117,6 +4216,7 @@ fn addition(
         ns,
         symtable,
         is_constant,
+        unchecked,
         diagnostics,
         resolve_to,
     )?;
@@ -4203,6 +4303,7 @@ fn addition(
             ns,
             symtable,
             is_constant,
+            unchecked,
             diagnostics,
             Some(&resolve_to),
         )?;
@@ -4214,6 +4315,7 @@ fn addition(
             ns,
             symtable,
             is_constant,
+            unchecked,
             diagnostics,
             Some(&resolve_to),
         )?;
@@ -4222,6 +4324,7 @@ fn addition(
     Ok(Expression::Add(
         *loc,
         ty.clone(),
+        unchecked,
         Box::new(cast(&l.loc(), left, &ty, true, ns, diagnostics)?),
         Box::new(cast(&r.loc(), right, &ty, true, ns, diagnostics)?),
     ))
@@ -4235,6 +4338,7 @@ pub fn assign_single(
     file_no: usize,
     contract_no: Option<usize>,
     function_no: Option<usize>,
+    unchecked: bool,
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
@@ -4247,6 +4351,7 @@ pub fn assign_single(
         ns,
         symtable,
         false,
+        unchecked,
         diagnostics,
         None,
     )?;
@@ -4260,6 +4365,7 @@ pub fn assign_single(
         ns,
         symtable,
         false,
+        unchecked,
         diagnostics,
         Some(var_ty.deref_any()),
     )?;
@@ -4367,6 +4473,7 @@ fn assign_expr(
     file_no: usize,
     contract_no: Option<usize>,
     function_no: Option<usize>,
+    unchecked: bool,
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
@@ -4379,6 +4486,7 @@ fn assign_expr(
         ns,
         symtable,
         false,
+        unchecked,
         diagnostics,
         None,
     )?;
@@ -4402,6 +4510,7 @@ fn assign_expr(
         ns,
         symtable,
         false,
+        unchecked,
         diagnostics,
         resolve_to,
     )?;
@@ -4435,13 +4544,13 @@ fn assign_expr(
 
         Ok(match expr {
             pt::Expression::AssignAdd(_, _, _) => {
-                Expression::Add(*loc, ty.clone(), Box::new(assign), Box::new(set))
+                Expression::Add(*loc, ty.clone(), unchecked, Box::new(assign), Box::new(set))
             }
             pt::Expression::AssignSubtract(_, _, _) => {
-                Expression::Subtract(*loc, ty.clone(), Box::new(assign), Box::new(set))
+                Expression::Subtract(*loc, ty.clone(), unchecked, Box::new(assign), Box::new(set))
             }
             pt::Expression::AssignMultiply(_, _, _) => {
-                Expression::Multiply(*loc, ty.clone(), Box::new(assign), Box::new(set))
+                Expression::Multiply(*loc, ty.clone(), unchecked, Box::new(assign), Box::new(set))
             }
             pt::Expression::AssignOr(_, _, _) => {
                 Expression::BitwiseOr(*loc, ty.clone(), Box::new(assign), Box::new(set))
@@ -4585,19 +4694,24 @@ fn incr_decr(
     file_no: usize,
     contract_no: Option<usize>,
     function_no: Option<usize>,
+    unchecked: bool,
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Result<Expression, ()> {
     let op = |e: Expression, ty: Type| -> Expression {
         match expr {
-            pt::Expression::PreIncrement(loc, _) => Expression::PreIncrement(*loc, ty, Box::new(e)),
-            pt::Expression::PreDecrement(loc, _) => Expression::PreDecrement(*loc, ty, Box::new(e)),
+            pt::Expression::PreIncrement(loc, _) => {
+                Expression::PreIncrement(*loc, ty, unchecked, Box::new(e))
+            }
+            pt::Expression::PreDecrement(loc, _) => {
+                Expression::PreDecrement(*loc, ty, unchecked, Box::new(e))
+            }
             pt::Expression::PostIncrement(loc, _) => {
-                Expression::PostIncrement(*loc, ty, Box::new(e))
+                Expression::PostIncrement(*loc, ty, unchecked, Box::new(e))
             }
             pt::Expression::PostDecrement(loc, _) => {
-                Expression::PostDecrement(*loc, ty, Box::new(e))
+                Expression::PostDecrement(*loc, ty, unchecked, Box::new(e))
             }
             _ => unreachable!(),
         }
@@ -4611,6 +4725,7 @@ fn incr_decr(
         ns,
         symtable,
         false,
+        unchecked,
         diagnostics,
         None,
     )?;
@@ -4787,6 +4902,7 @@ fn member_access(
     ns: &mut Namespace,
     symtable: &mut Symtable,
     is_constant: bool,
+    unchecked: bool,
     diagnostics: &mut Vec<Diagnostic>,
     resolve_to: Option<&Type>,
 ) -> Result<Expression, ()> {
@@ -4895,6 +5011,7 @@ fn member_access(
         ns,
         symtable,
         is_constant,
+        unchecked,
         diagnostics,
         resolve_to,
     )?;
@@ -5148,6 +5265,7 @@ fn array_subscript(
     ns: &mut Namespace,
     symtable: &mut Symtable,
     is_constant: bool,
+    unchecked: bool,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Result<Expression, ()> {
     let array = expression(
@@ -5158,6 +5276,7 @@ fn array_subscript(
         ns,
         symtable,
         is_constant,
+        unchecked,
         diagnostics,
         None,
     )?;
@@ -5174,6 +5293,7 @@ fn array_subscript(
             ns,
             symtable,
             is_constant,
+            unchecked,
             diagnostics,
         );
     }
@@ -5192,6 +5312,7 @@ fn array_subscript(
         ns,
         symtable,
         is_constant,
+        unchecked,
         diagnostics,
         Some(&index_width_ty),
     )?;
@@ -5294,6 +5415,7 @@ fn struct_literal(
     ns: &mut Namespace,
     symtable: &mut Symtable,
     is_constant: bool,
+    unchecked: bool,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Result<Expression, ()> {
     let struct_def = ns.structs[struct_no].clone();
@@ -5321,6 +5443,7 @@ fn struct_literal(
                 ns,
                 symtable,
                 is_constant,
+                unchecked,
                 diagnostics,
                 Some(&struct_def.fields[i].ty),
             )?;
@@ -5352,6 +5475,7 @@ fn call_function_type(
     file_no: usize,
     contract_no: Option<usize>,
     function_no: Option<usize>,
+    unchecked: bool,
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
@@ -5364,6 +5488,7 @@ fn call_function_type(
         ns,
         symtable,
         false,
+        unchecked,
         diagnostics,
         None,
     )?;
@@ -5413,6 +5538,7 @@ fn call_function_type(
                 ns,
                 symtable,
                 false,
+                unchecked,
                 diagnostics,
                 Some(&params[i]),
             )?;
@@ -5449,6 +5575,7 @@ fn call_function_type(
             file_no,
             contract_no,
             function_no,
+            unchecked,
             ns,
             symtable,
             diagnostics,
@@ -5499,6 +5626,7 @@ fn call_function_type(
                 ns,
                 symtable,
                 false,
+                unchecked,
                 diagnostics,
                 Some(&params[i]),
             )?;
@@ -5608,6 +5736,7 @@ pub fn call_position_args(
     virtual_call: bool,
     contract_no: Option<usize>,
     arg_function_no: Option<usize>,
+    unchecked: bool,
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
@@ -5655,6 +5784,7 @@ pub fn call_position_args(
                 ns,
                 symtable,
                 false,
+                unchecked,
                 &mut errors,
                 Some(&ty),
             ) {
@@ -5747,6 +5877,7 @@ fn function_call_with_named_args(
     virtual_call: bool,
     contract_no: Option<usize>,
     arg_function_no: Option<usize>,
+    unchecked: bool,
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
@@ -5825,6 +5956,7 @@ fn function_call_with_named_args(
                 ns,
                 symtable,
                 false,
+                unchecked,
                 &mut errors,
                 Some(&ty),
             ) {
@@ -5911,6 +6043,7 @@ fn named_struct_literal(
     ns: &mut Namespace,
     symtable: &mut Symtable,
     is_constant: bool,
+    unchecked: bool,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Result<Expression, ()> {
     let struct_def = ns.structs[struct_no].clone();
@@ -5945,6 +6078,7 @@ fn named_struct_literal(
                         ns,
                         symtable,
                         is_constant,
+                        unchecked,
                         diagnostics,
                         Some(&f.ty),
                     )?;
@@ -5979,6 +6113,7 @@ fn method_call_pos_args(
     file_no: usize,
     contract_no: Option<usize>,
     arg_function_no: Option<usize>,
+    unchecked: bool,
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
@@ -6001,6 +6136,7 @@ fn method_call_pos_args(
                 args,
                 contract_no,
                 arg_function_no,
+                unchecked,
                 ns,
                 symtable,
                 diagnostics,
@@ -6028,6 +6164,7 @@ fn method_call_pos_args(
                     false,
                     contract_no,
                     arg_function_no,
+                    unchecked,
                     ns,
                     symtable,
                     diagnostics,
@@ -6062,6 +6199,7 @@ fn method_call_pos_args(
                     true,
                     contract_no,
                     arg_function_no,
+                    unchecked,
                     ns,
                     symtable,
                     diagnostics,
@@ -6089,6 +6227,7 @@ fn method_call_pos_args(
                         false,
                         Some(contract_no),
                         arg_function_no,
+                        unchecked,
                         ns,
                         symtable,
                         diagnostics,
@@ -6106,6 +6245,7 @@ fn method_call_pos_args(
         ns,
         symtable,
         false,
+        unchecked,
         diagnostics,
         None,
     )?;
@@ -6128,6 +6268,7 @@ fn method_call_pos_args(
                 file_no,
                 contract_no,
                 arg_function_no,
+                unchecked,
                 ns,
                 symtable,
                 diagnostics,
@@ -6187,6 +6328,7 @@ fn method_call_pos_args(
                                 ns,
                                 symtable,
                                 false,
+                                unchecked,
                                 diagnostics,
                                 Some(&elem_ty),
                             )?;
@@ -6291,6 +6433,7 @@ fn method_call_pos_args(
                                 ns,
                                 symtable,
                                 false,
+                                unchecked,
                                 diagnostics,
                                 Some(&elem_ty),
                             )?;
@@ -6362,6 +6505,7 @@ fn method_call_pos_args(
                         ns,
                         symtable,
                         false,
+                        unchecked,
                         diagnostics,
                         Some(elem_ty),
                     )?;
@@ -6408,6 +6552,7 @@ fn method_call_pos_args(
             file_no,
             contract_no,
             arg_function_no,
+            unchecked,
             ns,
             symtable,
             diagnostics,
@@ -6452,6 +6597,7 @@ fn method_call_pos_args(
                     ns,
                     symtable,
                     false,
+                    unchecked,
                     diagnostics,
                     Some(&ty),
                 ) {
@@ -6573,6 +6719,7 @@ fn method_call_pos_args(
                 ns,
                 symtable,
                 false,
+                unchecked,
                 diagnostics,
                 Some(&Type::Value),
             )?;
@@ -6612,6 +6759,7 @@ fn method_call_pos_args(
                 file_no,
                 contract_no,
                 arg_function_no,
+                unchecked,
                 ns,
                 symtable,
                 diagnostics,
@@ -6647,6 +6795,7 @@ fn method_call_pos_args(
                 ns,
                 symtable,
                 false,
+                unchecked,
                 diagnostics,
                 Some(&Type::DynamicBytes),
             )?;
@@ -6751,6 +6900,7 @@ fn method_call_pos_args(
                         ns,
                         symtable,
                         false,
+                        unchecked,
                         &mut errors,
                         Some(&ty),
                     ) {
@@ -6839,6 +6989,7 @@ fn method_call_named_args(
     file_no: usize,
     contract_no: Option<usize>,
     arg_function_no: Option<usize>,
+    unchecked: bool,
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
@@ -6864,6 +7015,7 @@ fn method_call_named_args(
                     false,
                     contract_no,
                     arg_function_no,
+                    unchecked,
                     ns,
                     symtable,
                     diagnostics,
@@ -6903,6 +7055,7 @@ fn method_call_named_args(
                     true,
                     contract_no,
                     arg_function_no,
+                    unchecked,
                     ns,
                     symtable,
                     diagnostics,
@@ -6935,6 +7088,7 @@ fn method_call_named_args(
                         false,
                         Some(contract_no),
                         arg_function_no,
+                        unchecked,
                         ns,
                         symtable,
                         diagnostics,
@@ -6952,6 +7106,7 @@ fn method_call_named_args(
         ns,
         symtable,
         false,
+        unchecked,
         diagnostics,
         None,
     )?;
@@ -6964,6 +7119,7 @@ fn method_call_named_args(
             file_no,
             contract_no,
             arg_function_no,
+            unchecked,
             ns,
             symtable,
             diagnostics,
@@ -7038,6 +7194,7 @@ fn method_call_named_args(
                     ns,
                     symtable,
                     false,
+                    unchecked,
                     diagnostics,
                     Some(&param.ty),
                 ) {
@@ -7191,6 +7348,7 @@ fn resolve_array_literal(
     ns: &mut Namespace,
     symtable: &mut Symtable,
     is_constant: bool,
+    unchecked: bool,
     diagnostics: &mut Vec<Diagnostic>,
     resolve_to: Option<&Type>,
 ) -> Result<Expression, ()> {
@@ -7221,6 +7379,7 @@ fn resolve_array_literal(
         ns,
         symtable,
         is_constant,
+        unchecked,
         diagnostics,
         resolve_to,
     )?;
@@ -7243,6 +7402,7 @@ fn resolve_array_literal(
             ns,
             symtable,
             is_constant,
+            unchecked,
             diagnostics,
             Some(&ty),
         )?;
@@ -7390,6 +7550,7 @@ fn parse_call_args(
     file_no: usize,
     contract_no: Option<usize>,
     function_no: Option<usize>,
+    unchecked: bool,
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
@@ -7439,6 +7600,7 @@ fn parse_call_args(
                     ns,
                     symtable,
                     false,
+                    unchecked,
                     diagnostics,
                     Some(&ty),
                 )?;
@@ -7473,6 +7635,7 @@ fn parse_call_args(
                     ns,
                     symtable,
                     false,
+                    unchecked,
                     diagnostics,
                     Some(&ty),
                 )?;
@@ -7509,6 +7672,7 @@ fn parse_call_args(
                     ns,
                     symtable,
                     false,
+                    unchecked,
                     diagnostics,
                     Some(&ty),
                 )?;
@@ -7552,6 +7716,7 @@ fn parse_call_args(
                     ns,
                     symtable,
                     false,
+                    unchecked,
                     diagnostics,
                     Some(&ty),
                 )?;
@@ -7589,6 +7754,7 @@ pub fn function_call_expr(
     ns: &mut Namespace,
     symtable: &mut Symtable,
     is_constant: bool,
+    unchecked: bool,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Result<Expression, ()> {
     let (ty, call_args, call_args_loc) = collect_call_args(ty, diagnostics)?;
@@ -7613,6 +7779,7 @@ pub fn function_call_expr(
                 file_no,
                 contract_no,
                 arg_function_no,
+                unchecked,
                 ns,
                 symtable,
                 diagnostics,
@@ -7633,6 +7800,7 @@ pub fn function_call_expr(
                         ns,
                         symtable,
                         is_constant,
+                        unchecked,
                         diagnostics,
                     )?;
 
@@ -7672,6 +7840,7 @@ pub fn function_call_expr(
                     file_no,
                     contract_no,
                     arg_function_no,
+                    unchecked,
                     ns,
                     symtable,
                     diagnostics,
@@ -7695,6 +7864,7 @@ pub fn function_call_expr(
                     true,
                     contract_no,
                     arg_function_no,
+                    unchecked,
                     ns,
                     symtable,
                     diagnostics,
@@ -7710,6 +7880,7 @@ pub fn function_call_expr(
             file_no,
             contract_no,
             arg_function_no,
+            unchecked,
             ns,
             symtable,
             diagnostics,
@@ -7725,6 +7896,7 @@ pub fn named_function_call_expr(
     file_no: usize,
     contract_no: Option<usize>,
     function_no: Option<usize>,
+    unchecked: bool,
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
@@ -7742,6 +7914,7 @@ pub fn named_function_call_expr(
             file_no,
             contract_no,
             function_no,
+            unchecked,
             ns,
             symtable,
             diagnostics,
@@ -7764,6 +7937,7 @@ pub fn named_function_call_expr(
                 true,
                 contract_no,
                 function_no,
+                unchecked,
                 ns,
                 symtable,
                 diagnostics,
@@ -7827,6 +8001,7 @@ fn mapping_subscript(
     ns: &mut Namespace,
     symtable: &mut Symtable,
     is_constant: bool,
+    unchecked: bool,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Result<Expression, ()> {
     let ty = mapping.ty();
@@ -7842,6 +8017,7 @@ fn mapping_subscript(
                 ns,
                 symtable,
                 is_constant,
+                unchecked,
                 diagnostics,
                 Some(key_ty),
             )?,
