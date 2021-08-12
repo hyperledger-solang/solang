@@ -918,18 +918,6 @@ pub fn resolve_returns(
                     ty
                 } else {
                     match r.storage {
-                        Some(pt::StorageLocation::Calldata(loc)) => {
-                            diagnostics.push(Diagnostic::error(
-                                loc,
-                                "data location ‘calldata’ can not be used for return types"
-                                    .to_string(),
-                            ));
-                            success = false;
-
-                            ty_loc.2 = loc.2;
-
-                            ty
-                        }
                         Some(pt::StorageLocation::Storage(loc)) => {
                             if !is_internal {
                                 diagnostics.push(Diagnostic::error(
