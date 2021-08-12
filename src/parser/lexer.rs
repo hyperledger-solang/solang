@@ -170,6 +170,7 @@ pub enum Token<'input> {
     Using,
     Modifier,
     Immutable,
+    Unchecked,
 }
 
 impl<'input> fmt::Display for Token<'input> {
@@ -298,6 +299,7 @@ impl<'input> fmt::Display for Token<'input> {
             Token::Using => write!(f, "using"),
             Token::Modifier => write!(f, "modifier"),
             Token::Immutable => write!(f, "immutable"),
+            Token::Unchecked => write!(f, "unchecked"),
         }
     }
 }
@@ -521,6 +523,7 @@ static KEYWORDS: phf::Map<&'static str, Token> = phf_map! {
     "using" => Token::Using,
     "modifier" => Token::Modifier,
     "immutable" => Token::Immutable,
+    "unchecked" => Token::Unchecked,
 };
 
 impl<'input> Lexer<'input> {

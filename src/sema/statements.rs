@@ -371,11 +371,11 @@ fn statement(
 
             Ok(true)
         }
-        pt::Statement::Block(_, stmts) => {
+        pt::Statement::Block { statements, .. } => {
             symtable.new_scope();
             let mut reachable = true;
 
-            for stmt in stmts {
+            for stmt in statements {
                 if !reachable {
                     ns.diagnostics.push(Diagnostic::error(
                         stmt.loc(),
