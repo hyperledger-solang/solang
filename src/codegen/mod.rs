@@ -41,8 +41,8 @@ impl Default for Options {
     }
 }
 
-/// The contracts are fully resolved but they do not have any a CFG which is needed for the llvm code emitter
-/// not all contracts need a cfg; only those for which we need the
+/// The contracts are fully resolved but they do not have any a CFG which is needed for
+/// the llvm code emitter. This will also do addition code checks.
 pub fn codegen(contract_no: usize, ns: &mut Namespace, opt: &Options) {
     if !any_errors(&ns.diagnostics) && ns.contracts[contract_no].is_concrete() {
         layout(contract_no, ns);
