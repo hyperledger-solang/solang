@@ -7352,7 +7352,7 @@ pub fn collect_call_args<'a>(
 
                 named_arguments.extend(args);
             }
-            pt::Statement::Block(_, s) if s.is_empty() => {
+            pt::Statement::Block { statements, .. } if statements.is_empty() => {
                 // {}
                 diagnostics.push(Diagnostic::error(
                     block.loc(),

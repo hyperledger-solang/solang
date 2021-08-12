@@ -475,7 +475,11 @@ pub struct FunctionDefinition {
 #[derive(Debug, PartialEq, Clone)]
 #[allow(clippy::large_enum_variant, clippy::type_complexity)]
 pub enum Statement {
-    Block(Loc, Vec<Statement>),
+    Block {
+        loc: Loc,
+        unchecked: bool,
+        statements: Vec<Statement>,
+    },
     Args(Loc, Vec<NamedArgument>),
     If(Loc, Expression, Box<Statement>, Option<Box<Statement>>),
     While(Loc, Expression, Box<Statement>),
@@ -505,7 +509,7 @@ pub enum Statement {
 impl Statement {
     pub fn loc(&self) -> Loc {
         match self {
-            Statement::Block(loc, _)
+            Statement::Block { loc, .. }
             | Statement::Args(loc, _)
             | Statement::If(loc, _, _, _)
             | Statement::While(loc, _, _)
