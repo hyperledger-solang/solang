@@ -1685,7 +1685,7 @@ fn try_catch(
     expr: &pt::Expression,
     returns_and_ok: &Option<(Vec<(pt::Loc, Option<pt::Parameter>)>, Box<pt::Statement>)>,
     error_stmt: &Option<Box<(pt::Identifier, pt::Parameter, pt::Statement)>>,
-    catch_stmt: &(pt::Parameter, pt::Statement),
+    catch_stmt: &(Option<pt::Parameter>, pt::Statement),
     file_no: usize,
     contract_no: Option<usize>,
     function_no: usize,
@@ -2068,54 +2068,61 @@ fn try_catch(
         None
     };
 
-    let (catch_ty, ty_loc) = resolve_var_decl_ty(
-        &catch_stmt.0.ty,
-        &catch_stmt.0.storage,
-        file_no,
-        contract_no,
-        ns,
-        diagnostics,
-    )?;
-
-    if catch_ty != Type::DynamicBytes {
-        diagnostics.push(Diagnostic::error(
-            catch_stmt.0.ty.loc(),
-            format!(
-                "catch can only take ‘bytes memory’, not ‘{}’",
-                catch_ty.to_string(ns)
-            ),
-        ));
-        return Err(());
-    }
-
-    symtable.new_scope();
-
-    let mut catch_param = Parameter {
-        loc: catch_stmt.0.loc,
-        ty: Type::DynamicBytes,
-        ty_loc,
-        name: "".to_owned(),
-        name_loc: None,
-        indexed: false,
-    };
     let mut catch_param_pos = None;
     let mut catch_stmt_resolved = Vec::new();
 
-    if let Some(name) = &catch_stmt.0.name {
-        if let Some(pos) = symtable.add(
-            name,
-            catch_ty,
+    symtable.new_scope();
+
+    let catch_param = if let Some(param) = &catch_stmt.0 {
+        let (catch_ty, ty_loc) = resolve_var_decl_ty(
+            &param.ty,
+            &param.storage,
+            file_no,
+            contract_no,
             ns,
-            None,
-            VariableUsage::TryCatchErrorBytes,
-            catch_stmt.0.storage.clone(),
-        ) {
-            ns.check_shadowing(file_no, contract_no, name);
-            catch_param_pos = Some(pos);
-            catch_param.name = name.name.to_string();
-            catch_param.name_loc = Some(name.loc);
+            diagnostics,
+        )?;
+
+        if catch_ty != Type::DynamicBytes {
+            diagnostics.push(Diagnostic::error(
+                param.ty.loc(),
+                format!(
+                    "catch can only take ‘bytes memory’, not ‘{}’",
+                    catch_ty.to_string(ns)
+                ),
+            ));
+            return Err(());
         }
-    }
+
+        let mut catch_param = Parameter {
+            loc: param.loc,
+            ty: Type::DynamicBytes,
+            ty_loc,
+            name: "".to_owned(),
+            name_loc: None,
+            indexed: false,
+        };
+
+        if let Some(name) = &param.name {
+            if let Some(pos) = symtable.add(
+                name,
+                catch_ty,
+                ns,
+                None,
+                VariableUsage::TryCatchErrorBytes,
+                param.storage.clone(),
+            ) {
+                ns.check_shadowing(file_no, contract_no, name);
+                catch_param_pos = Some(pos);
+                catch_param.name = name.name.to_string();
+                catch_param.name_loc = Some(name.loc);
+            }
+        }
+
+        Some(catch_param)
+    } else {
+        None
+    };
 
     let reachable = statement(
         &catch_stmt.1,

@@ -1308,7 +1308,7 @@ pub enum Statement {
         returns: Vec<(Option<usize>, Parameter)>,
         ok_stmt: Vec<Statement>,
         error: Option<(Option<usize>, Parameter, Vec<Statement>)>,
-        catch_param: Parameter,
+        catch_param: Option<Parameter>,
         catch_param_pos: Option<usize>,
         catch_stmt: Vec<Statement>,
     },

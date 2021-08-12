@@ -679,7 +679,7 @@ NonIfStatement: Statement = {
         Statement::Return(Loc(file_no, l, r), Some(e))
     },
     <l:@L> "try" <e:TryExpression> <returns:TryReturns?> <error:CatchError?>
-        "catch" "(" <p:Parameter> ")" <b:BlockStatement> <r:@R> => {
+        "catch" <p:("(" <Parameter> ")")?> <b:BlockStatement> <r:@R> => {
             Statement::Try(Loc(file_no, l, r), e, returns,
                 box_option(error),
                 Box::new((p, b)))
