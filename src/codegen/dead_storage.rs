@@ -657,9 +657,9 @@ fn expression_compare(
                 ExpressionCmp::Unknown
             }
         }
-        (Expression::Add(_, _, l1, r1), Expression::Add(_, _, l2, r2))
-        | (Expression::Multiply(_, _, l1, r1), Expression::Multiply(_, _, l2, r2))
-        | (Expression::Subtract(_, _, l1, r1), Expression::Subtract(_, _, l2, r2))
+        (Expression::Add(_, _, _, l1, r1), Expression::Add(_, _, _, l2, r2))
+        | (Expression::Multiply(_, _, _, l1, r1), Expression::Multiply(_, _, _, l2, r2))
+        | (Expression::Subtract(_, _, _, l1, r1), Expression::Subtract(_, _, _, l2, r2))
         | (Expression::Subscript(_, _, l1, r1), Expression::Subscript(_, _, l2, r2)) => {
             let l = expression_compare(l1, left_vars, l2, right_vars, cfg, block_vars);
 

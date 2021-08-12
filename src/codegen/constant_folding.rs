@@ -298,7 +298,7 @@ fn expression(
     ns: &mut Namespace,
 ) -> (Expression, bool) {
     match expr {
-        Expression::Add(loc, ty, left, right) => {
+        Expression::Add(loc, ty, unchecked, left, right) => {
             let left = expression(left, vars, pos, cfg, ns);
             let right = expression(right, vars, pos, cfg, ns);
 
@@ -308,12 +308,18 @@ fn expression(
                 bigint_to_expression(loc, ty, left.add(right))
             } else {
                 (
-                    Expression::Add(*loc, ty.clone(), Box::new(left.0), Box::new(right.0)),
+                    Expression::Add(
+                        *loc,
+                        ty.clone(),
+                        *unchecked,
+                        Box::new(left.0),
+                        Box::new(right.0),
+                    ),
                     left.1 && right.1,
                 )
             }
         }
-        Expression::Subtract(loc, ty, left, right) => {
+        Expression::Subtract(loc, ty, unchecked, left, right) => {
             let left = expression(left, vars, pos, cfg, ns);
             let right = expression(right, vars, pos, cfg, ns);
 
@@ -323,12 +329,18 @@ fn expression(
                 bigint_to_expression(loc, ty, left.sub(right))
             } else {
                 (
-                    Expression::Subtract(*loc, ty.clone(), Box::new(left.0), Box::new(right.0)),
+                    Expression::Subtract(
+                        *loc,
+                        ty.clone(),
+                        *unchecked,
+                        Box::new(left.0),
+                        Box::new(right.0),
+                    ),
                     left.1 && right.1,
                 )
             }
         }
-        Expression::Multiply(loc, ty, left, right) => {
+        Expression::Multiply(loc, ty, unchecked, left, right) => {
             let left = expression(left, vars, pos, cfg, ns);
             let right = expression(right, vars, pos, cfg, ns);
 
@@ -338,7 +350,13 @@ fn expression(
                 bigint_to_expression(loc, ty, left.mul(right))
             } else {
                 (
-                    Expression::Multiply(*loc, ty.clone(), Box::new(left.0), Box::new(right.0)),
+                    Expression::Multiply(
+                        *loc,
+                        ty.clone(),
+                        *unchecked,
+                        Box::new(left.0),
+                        Box::new(right.0),
+                    ),
                     left.1 && right.1,
                 )
             }
@@ -441,7 +459,7 @@ fn expression(
                 left.1 && right.1,
             )
         }
-        Expression::Power(loc, ty, left, right) => {
+        Expression::Power(loc, ty, unchecked, left, right) => {
             let left = expression(left, vars, pos, cfg, ns);
             let right = expression(right, vars, pos, cfg, ns);
 
@@ -461,7 +479,13 @@ fn expression(
             }
 
             (
-                Expression::Power(*loc, ty.clone(), Box::new(left.0), Box::new(right.0)),
+                Expression::Power(
+                    *loc,
+                    ty.clone(),
+                    *unchecked,
+                    Box::new(left.0),
+                    Box::new(right.0),
+                ),
                 left.1 && right.1,
             )
         }

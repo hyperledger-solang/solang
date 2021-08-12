@@ -1206,7 +1206,7 @@ pub trait TargetRuntime<'a> {
                     )
                     .into()
             }
-            Expression::Add(_, _, l, r) => {
+            Expression::Add(_, _, unchecked, l, r) => {
                 let left = self
                     .expression(bin, l, vartab, function, ns)
                     .into_int_value();
@@ -1214,7 +1214,7 @@ pub trait TargetRuntime<'a> {
                     .expression(bin, r, vartab, function, ns)
                     .into_int_value();
 
-                if bin.math_overflow_check {
+                if bin.math_overflow_check && !*unchecked {
                     let signed = l.ty().is_signed_int();
                     self.build_binary_op_with_overflow_check(
                         bin,
@@ -1229,7 +1229,7 @@ pub trait TargetRuntime<'a> {
                     bin.builder.build_int_add(left, right, "").into()
                 }
             }
-            Expression::Subtract(_, _, l, r) => {
+            Expression::Subtract(_, _, unchecked, l, r) => {
                 let left = self
                     .expression(bin, l, vartab, function, ns)
                     .into_int_value();
@@ -1237,7 +1237,7 @@ pub trait TargetRuntime<'a> {
                     .expression(bin, r, vartab, function, ns)
                     .into_int_value();
 
-                if bin.math_overflow_check {
+                if bin.math_overflow_check && !*unchecked {
                     let signed = l.ty().is_signed_int();
                     self.build_binary_op_with_overflow_check(
                         bin,
@@ -1252,7 +1252,7 @@ pub trait TargetRuntime<'a> {
                     bin.builder.build_int_sub(left, right, "").into()
                 }
             }
-            Expression::Multiply(_, res_ty, l, r) => {
+            Expression::Multiply(_, res_ty, unchecked, l, r) => {
                 let left = self
                     .expression(bin, l, vartab, function, ns)
                     .into_int_value();
@@ -1260,8 +1260,15 @@ pub trait TargetRuntime<'a> {
                     .expression(bin, r, vartab, function, ns)
                     .into_int_value();
 
-                self.mul(bin, function, left, right, res_ty.is_signed_int())
-                    .into()
+                self.mul(
+                    bin,
+                    function,
+                    *unchecked,
+                    left,
+                    right,
+                    res_ty.is_signed_int(),
+                )
+                .into()
             }
             Expression::Divide(_, _, l, r) if !l.ty().is_signed_int() => {
                 let left = self
@@ -1745,13 +1752,13 @@ pub trait TargetRuntime<'a> {
                     bin.builder.build_int_signed_rem(left, right, "").into()
                 }
             }
-            Expression::Power(_, res_ty, l, r) => {
+            Expression::Power(_, res_ty, unchecked, l, r) => {
                 let left = self.expression(bin, l, vartab, function, ns);
                 let right = self.expression(bin, r, vartab, function, ns);
 
                 let bits = left.into_int_value().get_type().get_bit_width();
 
-                let f = self.power(bin, bits, res_ty.is_signed_int());
+                let f = self.power(bin, *unchecked, bits, res_ty.is_signed_int());
 
                 bin.builder
                     .build_call(f, &[left, right], "power")
@@ -4908,6 +4915,7 @@ pub trait TargetRuntime<'a> {
         &self,
         bin: &Binary<'a>,
         function: FunctionValue<'a>,
+        unchecked: bool,
         left: IntValue<'a>,
         right: IntValue<'a>,
         signed: bool,
@@ -4979,7 +4987,7 @@ pub trait TargetRuntime<'a> {
                 bin.builder
                     .build_int_truncate(res.into_int_value(), left.get_type(), "")
             }
-        } else if bin.math_overflow_check {
+        } else if bin.math_overflow_check && !unchecked {
             self.build_binary_op_with_overflow_check(
                 bin,
                 function,
@@ -4993,7 +5001,13 @@ pub trait TargetRuntime<'a> {
         }
     }
 
-    fn power(&self, bin: &Binary<'a>, bits: u32, signed: bool) -> FunctionValue<'a> {
+    fn power(
+        &self,
+        bin: &Binary<'a>,
+        unchecked: bool,
+        bits: u32,
+        signed: bool,
+    ) -> FunctionValue<'a> {
         /*
             int ipow(int base, int exp)
             {
@@ -5011,7 +5025,12 @@ pub trait TargetRuntime<'a> {
                 return result;
             }
         */
-        let name = format!("__{}power{}", if signed { 's' } else { 'u' }, bits);
+        let name = format!(
+            "__{}power{}{}",
+            if signed { 's' } else { 'u' },
+            bits,
+            if unchecked { "unchecked" } else { "" }
+        );
         let ty = bin.context.custom_width_int_type(bits);
 
         if let Some(f) = bin.module.get_function(&name) {
@@ -5060,6 +5079,7 @@ pub trait TargetRuntime<'a> {
         let result2 = self.mul(
             bin,
             function,
+            unchecked,
             result.as_basic_value().into_int_value(),
             base.as_basic_value().into_int_value(),
             signed,
@@ -5091,6 +5111,7 @@ pub trait TargetRuntime<'a> {
         let base2 = self.mul(
             bin,
             function,
+            unchecked,
             base.as_basic_value().into_int_value(),
             base.as_basic_value().into_int_value(),
             signed,

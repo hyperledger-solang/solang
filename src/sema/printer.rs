@@ -84,16 +84,28 @@ fn print_expr(e: &Expression, func: Option<&Function>, ns: &Namespace) -> Tree {
 
             Tree::Branch(format!("struct {}", ty.to_string(ns)), fields)
         }
-        Expression::Add(_, ty, left, right) => Tree::Branch(
-            format!("add {}", ty.to_string(ns)),
+        Expression::Add(_, ty, unchecked, left, right) => Tree::Branch(
+            format!(
+                "add {}{}",
+                if *unchecked { "unchecked " } else { "" },
+                ty.to_string(ns)
+            ),
             vec![print_expr(left, func, ns), print_expr(right, func, ns)],
         ),
-        Expression::Subtract(_, ty, left, right) => Tree::Branch(
-            format!("subtract {}", ty.to_string(ns)),
+        Expression::Subtract(_, ty, unchecked, left, right) => Tree::Branch(
+            format!(
+                "subtract {}{}",
+                if *unchecked { "unchecked " } else { "" },
+                ty.to_string(ns)
+            ),
             vec![print_expr(left, func, ns), print_expr(right, func, ns)],
         ),
-        Expression::Multiply(_, ty, left, right) => Tree::Branch(
-            format!("multiply {}", ty.to_string(ns)),
+        Expression::Multiply(_, ty, unchecked, left, right) => Tree::Branch(
+            format!(
+                "multiply {}{}",
+                if *unchecked { "unchecked " } else { "" },
+                ty.to_string(ns)
+            ),
             vec![print_expr(left, func, ns), print_expr(right, func, ns)],
         ),
         Expression::Divide(_, ty, left, right) => Tree::Branch(
@@ -104,8 +116,12 @@ fn print_expr(e: &Expression, func: Option<&Function>, ns: &Namespace) -> Tree {
             format!("modulo {}", ty.to_string(ns)),
             vec![print_expr(left, func, ns), print_expr(right, func, ns)],
         ),
-        Expression::Power(_, ty, left, right) => Tree::Branch(
-            format!("power {}", ty.to_string(ns)),
+        Expression::Power(_, ty, unchecked, left, right) => Tree::Branch(
+            format!(
+                "power {}{}",
+                if *unchecked { "unchecked " } else { "" },
+                ty.to_string(ns)
+            ),
             vec![print_expr(left, func, ns), print_expr(right, func, ns)],
         ),
         Expression::BitwiseOr(_, ty, left, right) => Tree::Branch(
@@ -184,20 +200,36 @@ fn print_expr(e: &Expression, func: Option<&Function>, ns: &Namespace) -> Tree {
             ),
             vec![print_expr(expr, func, ns)],
         ),
-        Expression::PreIncrement(_, ty, expr) => Tree::Branch(
-            format!("pre-increment {}", ty.to_string(ns)),
+        Expression::PreIncrement(_, ty, unchecked, expr) => Tree::Branch(
+            format!(
+                "pre-increment {}{}",
+                if *unchecked { "unchecked " } else { "" },
+                ty.to_string(ns)
+            ),
             vec![print_expr(expr, func, ns)],
         ),
-        Expression::PreDecrement(_, ty, expr) => Tree::Branch(
-            format!("pre-decrement {}", ty.to_string(ns)),
+        Expression::PreDecrement(_, ty, unchecked, expr) => Tree::Branch(
+            format!(
+                "pre-decrement {}{}",
+                if *unchecked { "unchecked " } else { "" },
+                ty.to_string(ns)
+            ),
             vec![print_expr(expr, func, ns)],
         ),
-        Expression::PostIncrement(_, ty, expr) => Tree::Branch(
-            format!("post-increment {}", ty.to_string(ns)),
+        Expression::PostIncrement(_, ty, unchecked, expr) => Tree::Branch(
+            format!(
+                "post-increment {}{}",
+                if *unchecked { "unchecked " } else { "" },
+                ty.to_string(ns)
+            ),
             vec![print_expr(expr, func, ns)],
         ),
-        Expression::PostDecrement(_, ty, expr) => Tree::Branch(
-            format!("post-decrement {}", ty.to_string(ns)),
+        Expression::PostDecrement(_, ty, unchecked, expr) => Tree::Branch(
+            format!(
+                "post-decrement {}{}",
+                if *unchecked { "unchecked " } else { "" },
+                ty.to_string(ns)
+            ),
             vec![print_expr(expr, func, ns)],
         ),
         Expression::Assign(_, ty, left, right) => Tree::Branch(

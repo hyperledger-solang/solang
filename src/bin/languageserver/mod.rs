@@ -391,20 +391,44 @@ impl SolangServer {
             }
 
             // Arithmetic expression
-            ast::Expression::Add(locs, ty, expr1, expr2) => {
-                lookup_tbl.push((locs.1, locs.2, format!("{} addition", ty.to_string(ns))));
+            ast::Expression::Add(locs, ty, unchecked, expr1, expr2) => {
+                lookup_tbl.push((
+                    locs.1,
+                    locs.2,
+                    format!(
+                        "{} {}addition",
+                        if *unchecked { "unchecked " } else { "" },
+                        ty.to_string(ns)
+                    ),
+                ));
 
                 SolangServer::construct_expr(expr1, lookup_tbl, symtab, fnc_map, ns);
                 SolangServer::construct_expr(expr2, lookup_tbl, symtab, fnc_map, ns);
             }
-            ast::Expression::Subtract(locs, ty, expr1, expr2) => {
-                lookup_tbl.push((locs.1, locs.2, format!("{} subtraction", ty.to_string(ns))));
+            ast::Expression::Subtract(locs, ty, unchecked, expr1, expr2) => {
+                lookup_tbl.push((
+                    locs.1,
+                    locs.2,
+                    format!(
+                        "{} {}subtraction",
+                        if *unchecked { "unchecked " } else { "" },
+                        ty.to_string(ns)
+                    ),
+                ));
 
                 SolangServer::construct_expr(expr1, lookup_tbl, symtab, fnc_map, ns);
                 SolangServer::construct_expr(expr2, lookup_tbl, symtab, fnc_map, ns);
             }
-            ast::Expression::Multiply(locs, ty, expr1, expr2) => {
-                lookup_tbl.push((locs.1, locs.2, format!("{} multiply", ty.to_string(ns))));
+            ast::Expression::Multiply(locs, ty, unchecked, expr1, expr2) => {
+                lookup_tbl.push((
+                    locs.1,
+                    locs.2,
+                    format!(
+                        "{} {}multiply",
+                        if *unchecked { "unchecked " } else { "" },
+                        ty.to_string(ns)
+                    ),
+                ));
 
                 SolangServer::construct_expr(expr1, lookup_tbl, symtab, fnc_map, ns);
                 SolangServer::construct_expr(expr2, lookup_tbl, symtab, fnc_map, ns);
@@ -421,8 +445,16 @@ impl SolangServer {
                 SolangServer::construct_expr(expr1, lookup_tbl, symtab, fnc_map, ns);
                 SolangServer::construct_expr(expr2, lookup_tbl, symtab, fnc_map, ns);
             }
-            ast::Expression::Power(locs, ty, expr1, expr2) => {
-                lookup_tbl.push((locs.1, locs.2, format!("{} power", ty.to_string(ns))));
+            ast::Expression::Power(locs, ty, unchecked, expr1, expr2) => {
+                lookup_tbl.push((
+                    locs.1,
+                    locs.2,
+                    format!(
+                        "{} {}power",
+                        if *unchecked { "unchecked " } else { "" },
+                        ty.to_string(ns)
+                    ),
+                ));
 
                 SolangServer::construct_expr(expr1, lookup_tbl, symtab, fnc_map, ns);
                 SolangServer::construct_expr(expr2, lookup_tbl, symtab, fnc_map, ns);
@@ -512,16 +544,16 @@ impl SolangServer {
             }
 
             //Increment-Decrement expression
-            ast::Expression::PreIncrement(_locs, _typ, expr1) => {
+            ast::Expression::PreIncrement(_locs, _typ, _, expr1) => {
                 SolangServer::construct_expr(expr1, lookup_tbl, symtab, fnc_map, ns);
             }
-            ast::Expression::PreDecrement(_locs, _typ, expr1) => {
+            ast::Expression::PreDecrement(_locs, _typ, _, expr1) => {
                 SolangServer::construct_expr(expr1, lookup_tbl, symtab, fnc_map, ns);
             }
-            ast::Expression::PostIncrement(_locs, _typ, expr1) => {
+            ast::Expression::PostIncrement(_locs, _typ, _, expr1) => {
                 SolangServer::construct_expr(expr1, lookup_tbl, symtab, fnc_map, ns);
             }
-            ast::Expression::PostDecrement(_locs, _typ, expr1) => {
+            ast::Expression::PostDecrement(_locs, _typ, _, expr1) => {
                 SolangServer::construct_expr(expr1, lookup_tbl, symtab, fnc_map, ns);
             }
             ast::Expression::Assign(_locs, _typ, expr1, expr2) => {

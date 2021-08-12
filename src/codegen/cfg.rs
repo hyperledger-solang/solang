@@ -317,12 +317,12 @@ impl ControlFlowGraph {
                     .collect::<Vec<String>>()
                     .join(", ")
             ),
-            Expression::Add(_, _, l, r) => format!(
+            Expression::Add(_, _, _, l, r) => format!(
                 "({} + {})",
                 self.expr_to_string(contract, ns, l),
                 self.expr_to_string(contract, ns, r)
             ),
-            Expression::Subtract(_, _, l, r) => format!(
+            Expression::Subtract(_, _, _, l, r) => format!(
                 "({} - {})",
                 self.expr_to_string(contract, ns, l),
                 self.expr_to_string(contract, ns, r)
@@ -352,7 +352,7 @@ impl ControlFlowGraph {
                 self.expr_to_string(contract, ns, l),
                 self.expr_to_string(contract, ns, r)
             ),
-            Expression::Multiply(_, _, l, r) => format!(
+            Expression::Multiply(_, _, _, l, r) => format!(
                 "({} * {})",
                 self.expr_to_string(contract, ns, l),
                 self.expr_to_string(contract, ns, r)
@@ -367,7 +367,7 @@ impl ControlFlowGraph {
                 self.expr_to_string(contract, ns, l),
                 self.expr_to_string(contract, ns, r)
             ),
-            Expression::Power(_, _, l, r) => format!(
+            Expression::Power(_, _, _, l, r) => format!(
                 "({} ** {})",
                 self.expr_to_string(contract, ns, l),
                 self.expr_to_string(contract, ns, r)
@@ -599,16 +599,16 @@ impl ControlFlowGraph {
                 self.expr_to_string(contract, ns, l),
                 self.expr_to_string(contract, ns, r)
             ),
-            Expression::PostDecrement(_, _, e) => {
+            Expression::PostDecrement(_, _, _, e) => {
                 format!("{}--", self.expr_to_string(contract, ns, e),)
             }
-            Expression::PostIncrement(_, _, e) => {
+            Expression::PostIncrement(_, _, _, e) => {
                 format!("{}++", self.expr_to_string(contract, ns, e),)
             }
-            Expression::PreDecrement(_, _, e) => {
+            Expression::PreDecrement(_, _, _, e) => {
                 format!("--{}", self.expr_to_string(contract, ns, e),)
             }
-            Expression::PreIncrement(_, _, e) => {
+            Expression::PreIncrement(_, _, _, e) => {
                 format!("++{}", self.expr_to_string(contract, ns, e),)
             }
             Expression::Cast(_, ty, e) => format!(
