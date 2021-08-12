@@ -1024,10 +1024,22 @@ x :superscript:`y`. This can only be done for unsigned types.
   uint64 thousand = 1000;
   uint64 billion = thousand ** 3;
 
-.. note::
+Overflow checking is limited to types of 64 bits and smaller, if the `--math-overflow` command
+line argument is specified. No overflow checking is generated in `unchecked` blocks, like so:
 
-  No overflow checking is done on the arithmetic operations, just like with the
-  Ethereum Foundation Solidity compiler.
+.. code-block:: javascript
+
+    contract foo {
+        function f(int64 n) public {
+            unchecked {
+                int64 j = n - 1;
+            }
+        }
+    }
+
+.. warning::
+
+  Overflow checking for types larger than ``int64`` (e.g. ``uint128``) is not implemented yet.
 
 Bitwise operators
 _________________
