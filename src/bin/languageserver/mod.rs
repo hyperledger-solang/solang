@@ -178,6 +178,11 @@ impl SolangServer {
         ns: &ast::Namespace,
     ) {
         match stmt {
+            ast::Statement::Block { statements, .. } => {
+                for stmt in statements {
+                    SolangServer::construct_stmt(stmt, lookup_tbl, symtab, fnc_map, ns);
+                }
+            }
             ast::Statement::VariableDecl(loc, var_no, _param, expr) => {
                 if let Some(exp) = expr {
                     SolangServer::construct_expr(exp, lookup_tbl, symtab, fnc_map, ns);

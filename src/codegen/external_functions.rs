@@ -125,7 +125,10 @@ fn check_statement(stmt: &Statement, call_list: &mut Vec<usize>) -> bool {
                 e.recurse(call_list, check_expression);
             }
         }
-        Statement::Break(_) | Statement::Continue(_) | Statement::Underscore(_) => (),
+        Statement::Block { .. }
+        | Statement::Break(_)
+        | Statement::Continue(_)
+        | Statement::Underscore(_) => (),
     }
 
     true

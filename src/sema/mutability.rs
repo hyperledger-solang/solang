@@ -157,6 +157,9 @@ fn check_mutability(func: &Function, ns: &Namespace) -> Vec<Diagnostic> {
 fn recurse_statements(stmts: &[Statement], state: &mut StateCheck) {
     for stmt in stmts.iter() {
         match stmt {
+            Statement::Block { statements, .. } => {
+                recurse_statements(statements, state);
+            }
             Statement::VariableDecl(_, _, _, Some(expr)) => {
                 expr.recurse(state, read_expression);
             }

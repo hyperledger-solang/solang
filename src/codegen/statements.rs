@@ -26,6 +26,21 @@ pub fn statement(
     return_override: Option<&Instr>,
 ) {
     match stmt {
+        Statement::Block { statements, .. } => {
+            for stmt in statements {
+                statement(
+                    stmt,
+                    func,
+                    cfg,
+                    contract_no,
+                    ns,
+                    vartab,
+                    loops,
+                    placeholder,
+                    return_override,
+                );
+            }
+        }
         Statement::VariableDecl(loc, pos, _, Some(init)) => {
             if should_remove_variable(pos, func, Some(init)) {
                 let mut params = SideEffectsCheckParameters {
