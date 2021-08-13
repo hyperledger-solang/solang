@@ -1346,3 +1346,23 @@ pub fn first_error(errors: Vec<ast::Diagnostic>) -> String {
         None => panic!("no errors found"),
     }
 }
+
+pub fn no_errors(errors: Vec<ast::Diagnostic>) {
+    assert!(
+        errors
+            .iter()
+            .filter(|m| m.level == ast::Level::Error)
+            .count()
+            == 0
+    );
+}
+
+pub fn no_warnings_errors(errors: Vec<ast::Diagnostic>) {
+    assert!(
+        errors
+            .iter()
+            .filter(|m| m.level == ast::Level::Error || m.level == ast::Level::Warning)
+            .count()
+            == 0
+    );
+}

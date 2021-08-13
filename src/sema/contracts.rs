@@ -739,6 +739,9 @@ fn resolve_declarations<'a>(
     let mut function_no_bodies = Vec::new();
     let mut resolve_bodies = Vec::new();
 
+    // resolve state variables. We may need a constant to resolve a function type
+    variables::contract_variables(def, file_no, contract_no, ns);
+
     // resolve function signatures
     for parts in &def.parts {
         if let pt::ContractPart::FunctionDefinition(ref f) = parts {
@@ -777,9 +780,6 @@ fn resolve_declarations<'a>(
                 ));
         }
     }
-
-    // resolve state variables
-    variables::contract_variables(def, file_no, contract_no, ns);
 
     resolve_bodies
 }
