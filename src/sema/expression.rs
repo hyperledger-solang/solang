@@ -674,6 +674,28 @@ pub fn cast(
                 ))
             }
         }
+        (&Expression::NumberLiteral(_, _, ref n), p, &Type::Bytes(to_len)) if p.is_primitive() => {
+            // round up the number of bits to bytes
+            let bytes = (n.bits() + 7) / 8;
+
+            return if !n.is_zero() && bytes != to_len as u64 {
+                diagnostics.push(Diagnostic::type_error(
+                    *loc,
+                    format!(
+                        "implicit conversion from {} to {} not allowed",
+                        from.to_string(ns),
+                        to.to_string(ns)
+                    ),
+                ));
+                Err(())
+            } else {
+                Ok(Expression::NumberLiteral(
+                    *loc,
+                    Type::Bytes(to_len),
+                    n.clone(),
+                ))
+            };
+        }
         // Literal strings can be implicitly lengthened
         (&Expression::BytesLiteral(_, _, ref bs), p, &Type::Bytes(to_len)) if p.is_primitive() => {
             return if bs.len() > to_len as usize && implicit {
