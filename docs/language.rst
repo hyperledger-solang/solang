@@ -1160,7 +1160,13 @@ will always be 0.
         }
     }
 
-The contract code for a contract, i.e. the binary WebAssembly or BOF, can be retrieved using the
+The `EIP-165 <https://eips.ethereum.org/EIPS/eip-165>`_ interface value can be retrieved using the
+syntax ``type(...).interfaceId``. This is only permitted on interfaces. The interfaceId is simply
+an bitwise XOR of all function selectors in the interface. This makes it possible to uniquely identify
+an interface at runtime, which can be used to write a `supportsInterface()` function as described
+in the EIP.
+
+The contract code for a contract, i.e. the binary WebAssembly or BPF, can be retrieved using the
 ``type(c).creationCode`` and ``type(c).runtimeCode`` fields, as ``bytes``. In Ethereum,
 the constructor code is in the ``creationCode`` WebAssembly and all the functions are in
 the ``runtimeCode`` WebAssembly or BPF. Parity Substrate has a single WebAssembly code for both,

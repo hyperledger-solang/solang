@@ -616,6 +616,7 @@ pub enum Expression {
     },
     FormatString(pt::Loc, Vec<(FormatArg, Expression)>),
     Builtin(pt::Loc, Vec<Type>, Builtin, Vec<Expression>),
+    InterfaceId(pt::Loc, usize),
     List(pt::Loc, Vec<Expression>),
     // The remaining types are only generated during codegen
     Keccak256(pt::Loc, Type, Vec<Expression>),

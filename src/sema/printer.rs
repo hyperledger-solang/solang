@@ -361,6 +361,9 @@ fn print_expr(e: &Expression, func: Option<&Function>, ns: &Namespace) -> Tree {
                 print_string_location(right, func, ns),
             ],
         ),
+        Expression::InterfaceId(_, contract_no) => {
+            Tree::Leaf(format!("interfaceId {}", ns.contracts[*contract_no].name))
+        }
         Expression::FormatString(_, args) => Tree::Branch(
             String::from("format"),
             args.iter()

@@ -101,6 +101,7 @@ impl Expression {
             | Expression::List(loc, _)
             | Expression::FormatString(loc, _)
             | Expression::AbiEncode { loc, .. }
+            | Expression::InterfaceId(loc, ..)
             | Expression::And(loc, _, _) => *loc,
             Expression::InternalFunctionCfg(_) | Expression::Poison => unreachable!(),
         }
@@ -194,6 +195,7 @@ impl Expression {
             }
             Expression::Constructor { contract_no, .. } => Type::Contract(*contract_no),
             Expression::Poison => unreachable!(),
+            Expression::InterfaceId(..) => Type::Bytes(4),
             Expression::FormatString(_, _) => Type::String,
             // codegen Expressions
             Expression::ReturnData(_) => Type::DynamicBytes,
@@ -3878,6 +3880,22 @@ pub fn type_name_expr(
             Type::String,
             ns.contracts[*n].name.as_bytes().to_vec(),
         )),
+        (Type::Contract(n), "interfaceId") => {
+            let contract = &ns.contracts[*n];
+
+            if !contract.is_interface() {
+                diagnostics.push(Diagnostic::error(
+                    *loc,
+                    format!(
+                        "type(…).interfaceId is permitted on interface, not {} {}",
+                        contract.ty, contract.name
+                    ),
+                ));
+                Err(())
+            } else {
+                Ok(Expression::InterfaceId(*loc, *n))
+            }
+        }
         (Type::Contract(no), "creationCode") | (Type::Contract(no), "runtimeCode") => {
             let contract_no = match contract_no {
                 Some(contract_no) => contract_no,
