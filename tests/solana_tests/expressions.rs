@@ -1,4 +1,4 @@
-use crate::{build_solidity, first_error, parse_and_resolve};
+use crate::{build_solidity, first_error, no_errors, parse_and_resolve};
 use ethabi::Token;
 use solang::Target;
 
@@ -41,4 +41,19 @@ fn interfaceid() {
         returns,
         vec![Token::FixedBytes(0xc78d9f3au32.to_be_bytes().to_vec())]
     );
+}
+
+#[test]
+fn const_in_type() {
+    let ns = parse_and_resolve(
+        r#"
+        contract x {
+            uint public constant Y = 24;
+
+            constructor(bytes32[Y] memory foo) {}
+        }"#,
+        Target::Solana,
+    );
+
+    no_errors(ns.diagnostics);
 }
