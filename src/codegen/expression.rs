@@ -1094,6 +1094,19 @@ pub fn expression(
             Box::new(expression(left, cfg, contract_no, func, ns, vartab)),
             Box::new(expression(right, cfg, contract_no, func, ns, vartab)),
         ),
+        Expression::InterfaceId(loc, contract_no) => {
+            let mut id: u32 = 0;
+
+            for func_no in &ns.contracts[*contract_no].functions {
+                let func = &ns.functions[*func_no];
+
+                if func.ty == pt::FunctionTy::Function {
+                    id ^= func.selector();
+                }
+            }
+
+            Expression::NumberLiteral(*loc, Type::Bytes(4), BigInt::from(id))
+        }
         _ => expr.clone(),
     }
 }
