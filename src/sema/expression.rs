@@ -619,7 +619,7 @@ pub fn cast(
                     diagnostics.push(Diagnostic::type_error(
                         *loc,
                         format!(
-                            "implicit conversion cannot change negative number to {}",
+                            "implicit conversion cannot change negative number to ‘{}’",
                             to.to_string(ns)
                         ),
                     ));
@@ -641,7 +641,7 @@ pub fn cast(
                 diagnostics.push(Diagnostic::type_error(
                     *loc,
                     format!(
-                        "implicit conversion would truncate from {} to {}",
+                        "implicit conversion would truncate from ‘{}’ to ‘{}’",
                         from.to_string(ns),
                         to.to_string(ns)
                     ),
@@ -660,7 +660,7 @@ pub fn cast(
                 diagnostics.push(Diagnostic::type_error(
                     *loc,
                     format!(
-                        "implicit conversion would truncate from {} to {}",
+                        "implicit conversion would truncate from ‘{}’ to ‘{}’",
                         from.to_string(ns),
                         to.to_string(ns)
                     ),
@@ -678,12 +678,21 @@ pub fn cast(
             // round up the number of bits to bytes
             let bytes = (n.bits() + 7) / 8;
 
-            return if !n.is_zero() && bytes != to_len as u64 {
+            return if n.sign() == Sign::Minus {
                 diagnostics.push(Diagnostic::type_error(
                     *loc,
                     format!(
-                        "implicit conversion from {} to {} not allowed",
-                        from.to_string(ns),
+                        "negative number cannot be converted to type ‘{}’",
+                        to.to_string(ns)
+                    ),
+                ));
+                Err(())
+            } else if n.sign() == Sign::Plus && bytes != to_len as u64 {
+                diagnostics.push(Diagnostic::type_error(
+                    *loc,
+                    format!(
+                        "number of {} bytes cannot be converted to type ‘{}’",
+                        bytes,
                         to.to_string(ns)
                     ),
                 ));
@@ -702,7 +711,7 @@ pub fn cast(
                 diagnostics.push(Diagnostic::type_error(
                     *loc,
                     format!(
-                        "implicit conversion would truncate from {} to {}",
+                        "implicit conversion would truncate from ‘{}’ to ‘{}’",
                         from.to_string(ns),
                         to.to_string(ns)
                     ),

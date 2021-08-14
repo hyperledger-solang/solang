@@ -79,4 +79,34 @@ fn bytes32_0() {
     );
 
     no_errors(ns.diagnostics);
+
+    let ns = parse_and_resolve(
+        r#"
+        contract foo {
+            function b32() public pure returns (bytes32 r) {
+                r = bytes32(0xffee);
+            }
+        }"#,
+        Target::Solana,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "number of 2 bytes cannot be converted to type ‘bytes32’"
+    );
+
+    let ns = parse_and_resolve(
+        r#"
+        contract foo {
+            function b32() public pure returns (bytes32 r) {
+                r = bytes32(-1);
+            }
+        }"#,
+        Target::Solana,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "negative number cannot be converted to type ‘bytes32’"
+    );
 }
