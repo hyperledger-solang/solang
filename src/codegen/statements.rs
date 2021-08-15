@@ -1241,6 +1241,7 @@ impl Type {
                     ))
                 }
             }
+            Type::Contract(_) => None,
             _ => unreachable!(),
         }
     }

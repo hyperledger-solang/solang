@@ -110,3 +110,28 @@ fn bytes32_0() {
         "negative number cannot be converted to type ‘bytes32’"
     );
 }
+
+#[test]
+fn contract_no_init() {
+    let ns = parse_and_resolve(
+        r#"
+        contract other {
+            int public a;
+        }
+
+        contract testing {
+            function test(int x) public returns (int) {
+                other o;
+                do {
+                    x--;
+                    o = new other();
+                }while(x > 0);
+
+                return o.a();
+            }
+        }"#,
+        Target::Solana,
+    );
+
+    no_errors(ns.diagnostics);
+}
