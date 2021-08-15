@@ -234,8 +234,10 @@ fn main() {
 
         let mut namespaces = Vec::new();
 
+        let mut errors = false;
+
         for filename in matches.values_of("INPUT").unwrap() {
-            namespaces.push(process_filename(
+            match process_filename(
                 filename,
                 &mut cache,
                 target,
@@ -244,7 +246,17 @@ fn main() {
                 math_overflow_check,
                 &opt,
                 llvm_opt,
-            ));
+            ) {
+                Ok(ns) => namespaces.push(ns),
+                Err(_) => {
+                    errors = true;
+                }
+            }
+        }
+
+        if errors {
+            eprintln!("error: not all contracts are valid");
+            std::process::exit(1);
         }
 
         if target == solang::Target::Solana {
@@ -355,7 +367,7 @@ fn process_filename(
     math_overflow_check: bool,
     opt: &Options,
     llvm_opt: inkwell::OptimizationLevel,
-) -> Namespace {
+) -> Result<Namespace, ()> {
     let verbose = matches.is_present("VERBOSE");
 
     let mut json_contracts = HashMap::new();
@@ -376,13 +388,12 @@ fn process_filename(
     }
 
     if ns.contracts.is_empty() || diagnostics::any_errors(&ns.diagnostics) {
-        eprintln!("{}: error: no valid contracts found", filename);
-        std::process::exit(1);
+        return Err(());
     }
 
     if let Some("ast") = matches.value_of("EMIT") {
         println!("{}", ns.print(filename));
-        return ns;
+        return Ok(ns);
     }
 
     // emit phase
@@ -494,7 +505,7 @@ fn process_filename(
 
     json.contracts.insert(filename.to_owned(), json_contracts);
 
-    ns
+    Ok(ns)
 }
 
 fn save_intermediates(binary: &solang::emit::Binary, matches: &ArgMatches) -> bool {
