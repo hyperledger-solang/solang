@@ -924,6 +924,13 @@ fn statement(
 
             Ok(true)
         }
+        pt::Statement::Assembly { loc, .. } => {
+            ns.diagnostics.push(Diagnostic::error(
+                *loc,
+                format!("evm assembly not supported on target {}", ns.target),
+            ));
+            Err(())
+        }
     }
 }
 

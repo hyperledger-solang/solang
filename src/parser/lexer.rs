@@ -110,6 +110,7 @@ pub enum Token<'input> {
 
     Equal,
     Assign,
+    ColonAssign,
 
     NotEqual,
     Not,
@@ -171,6 +172,8 @@ pub enum Token<'input> {
     Modifier,
     Immutable,
     Unchecked,
+    Assembly,
+    Let,
 }
 
 impl<'input> fmt::Display for Token<'input> {
@@ -218,6 +221,7 @@ impl<'input> fmt::Display for Token<'input> {
             Token::Modulo => write!(f, "%"),
             Token::Equal => write!(f, "=="),
             Token::Assign => write!(f, "="),
+            Token::ColonAssign => write!(f, ":="),
             Token::NotEqual => write!(f, "!="),
             Token::Not => write!(f, "!"),
             Token::ShiftLeft => write!(f, "<<"),
@@ -300,6 +304,8 @@ impl<'input> fmt::Display for Token<'input> {
             Token::Modifier => write!(f, "modifier"),
             Token::Immutable => write!(f, "immutable"),
             Token::Unchecked => write!(f, "unchecked"),
+            Token::Assembly => write!(f, "assembly"),
+            Token::Let => write!(f, "let"),
         }
     }
 }
@@ -524,6 +530,8 @@ static KEYWORDS: phf::Map<&'static str, Token> = phf_map! {
     "modifier" => Token::Modifier,
     "immutable" => Token::Immutable,
     "unchecked" => Token::Unchecked,
+    "assembly" => Token::Assembly,
+    "let" => Token::Let,
 };
 
 impl<'input> Lexer<'input> {
@@ -981,7 +989,15 @@ impl<'input> Lexer<'input> {
                 Some((i, '.')) => return Some(Ok((i, Token::Member, i + 1))),
                 Some((i, '[')) => return Some(Ok((i, Token::OpenBracket, i + 1))),
                 Some((i, ']')) => return Some(Ok((i, Token::CloseBracket, i + 1))),
-                Some((i, ':')) => return Some(Ok((i, Token::Colon, i + 1))),
+                Some((i, ':')) => {
+                    return match self.chars.peek() {
+                        Some((_, '=')) => {
+                            self.chars.next();
+                            Some(Ok((i, Token::ColonAssign, i + 2)))
+                        }
+                        _ => Some(Ok((i, Token::Colon, i + 1))),
+                    };
+                }
                 Some((i, '?')) => return Some(Ok((i, Token::Question, i + 1))),
                 Some((_, ch)) if ch.is_whitespace() => (),
                 Some((start, _)) => {
