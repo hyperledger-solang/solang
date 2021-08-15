@@ -480,6 +480,10 @@ pub enum Statement {
         unchecked: bool,
         statements: Vec<Statement>,
     },
+    Assembly {
+        loc: Loc,
+        assembly: Vec<AssemblyStatement>,
+    },
     Args(Loc, Vec<NamedArgument>),
     If(Loc, Expression, Box<Statement>, Option<Box<Statement>>),
     While(Loc, Expression, Box<Statement>),
@@ -506,10 +510,32 @@ pub enum Statement {
     ),
 }
 
+#[derive(Debug, PartialEq, Clone)]
+pub enum AssemblyStatement {
+    Assign(Loc, AssemblyExpression, AssemblyExpression),
+    LetAssign(Loc, AssemblyExpression, AssemblyExpression),
+    Expression(AssemblyExpression),
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum AssemblyExpression {
+    BoolLiteral(Loc, bool),
+    NumberLiteral(Loc, BigInt),
+    HexNumberLiteral(Loc, String),
+    StringLiteral(StringLiteral),
+    Variable(Identifier),
+    Assign(Loc, Box<AssemblyExpression>, Box<AssemblyExpression>),
+    LetAssign(Loc, Box<AssemblyExpression>, Box<AssemblyExpression>),
+    Function(Loc, Box<AssemblyExpression>, Vec<AssemblyExpression>),
+    Member(Loc, Box<AssemblyExpression>, Identifier),
+    Subscript(Loc, Box<AssemblyExpression>, Box<AssemblyExpression>),
+}
+
 impl Statement {
     pub fn loc(&self) -> Loc {
         match self {
             Statement::Block { loc, .. }
+            | Statement::Assembly { loc, .. }
             | Statement::Args(loc, _)
             | Statement::If(loc, _, _, _)
             | Statement::While(loc, _, _)

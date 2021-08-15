@@ -1,6 +1,7 @@
 mod abi;
 mod accessor;
 mod arrays;
+mod assembly;
 mod builtin;
 mod call;
 mod create_contract;

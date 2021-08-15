@@ -662,6 +662,9 @@ NonIfStatement: Statement = {
     <l:@L> "unchecked" "{" <statements:Statement*> "}" <r:@R> => {
         Statement::Block { loc: Loc(file_no, l, r), unchecked: true, statements }
     },
+    <l:@L> "assembly" "{" <assembly:AssemblyStatement*> "}" <r:@R> => {
+        Statement::Assembly { loc: Loc(file_no, l, r), assembly }
+    },
     <SimpleStatement> ";" => <>,
     <l:@L>"do" <b:Statement> "while" "(" <e:Expression> ")" <r:@R> ";" => {
         Statement::DoWhile(Loc(file_no, l, r), Box::new(b), e)
@@ -686,6 +689,68 @@ NonIfStatement: Statement = {
     },
     <l:@L> "emit" <ty:FunctionCall> <r:@R> ";" => {
         Statement::Emit(Loc(file_no, l, r), ty)
+    },
+}
+
+AssemblyStatement: AssemblyStatement = {
+    <l:@L> <left:AssemblyExpression0> ":=" <right:AssemblyExpression2> <r:@R> => {
+        AssemblyStatement::Assign(Loc(file_no, l, r), left, right)
+    },
+    <l:@L> "let" <left:AssemblyExpression0> ":=" <right:AssemblyExpression2> <r:@R> => {
+        AssemblyStatement::LetAssign(Loc(file_no, l, r), left, right)
+    },
+    <expr:AssemblyExpression1> => {
+        AssemblyStatement::Expression(expr)
+    },
+}
+
+AssemblyExpression2: AssemblyExpression = {
+    "(" <AssemblyExpression1> ")" => <>,
+    AssemblyExpression1
+}
+
+AssemblyExpression1: AssemblyExpression = {
+    <l:@L> <function:AssemblyExpression0> "(" <args:Comma<AssemblyExpression2>> ")" <r:@R> => {
+        AssemblyExpression::Function(Loc(file_no, l, r), Box::new(function), args)
+    },
+    <l:@L> <ty:NoFunctionType> <br:@R> "(" <args:Comma<AssemblyExpression2>> ")" <r:@R> => {
+        let id = Identifier { loc: Loc(file_no, l, br), name: String::from(&input[l..br]) };
+
+        AssemblyExpression::Function(Loc(file_no, l, r), Box::new(AssemblyExpression::Variable(id)), args)
+    },
+    AssemblyExpression0
+}
+
+AssemblyExpression0: AssemblyExpression = {
+    <a:@L> "true" <b:@R> => AssemblyExpression::BoolLiteral(Loc(file_no, a, b), true),
+    <a:@L> "false" <b:@R> => AssemblyExpression::BoolLiteral(Loc(file_no, a, b), false),
+    <l:@L> <n:number> <r:@R> => {
+        let base: String = n.0.chars().filter(|v| *v != '_').collect();
+        let exp: String = n.1.chars().filter(|v| *v != '_').collect();
+
+        let n = if exp.is_empty() {
+            BigInt::from_str(&base).unwrap()
+        } else {
+            let base = BigInt::from_str(&base).unwrap();
+            let exp = BigInt::from_str("10").unwrap().pow(BigUint::from_str(&exp).unwrap());
+
+            base.mul(exp)
+        };
+
+        AssemblyExpression::NumberLiteral(Loc(file_no, l, r), n)
+    },
+    <l:@L> <n:hexnumber> <r:@R> => {
+        AssemblyExpression::HexNumberLiteral(Loc(file_no, l, r), n.to_owned())
+    },
+    <StringLiteral> => {
+        AssemblyExpression::StringLiteral(<>)
+    },
+    <Identifier> => AssemblyExpression::Variable(<>),
+    <l:@L> <array:AssemblyExpression0> "[" <index:AssemblyExpression1> "]" <r:@R> => {
+        AssemblyExpression::Subscript(Loc(file_no, l, r), Box::new(array), Box::new(index))
+    },
+    <l:@L> <array:AssemblyExpression0> "." <member:Identifier> <r:@R> => {
+        AssemblyExpression::Member(Loc(file_no, l, r), Box::new(array), member)
     },
 }
 
@@ -741,6 +806,7 @@ extern {
         "%=" => Token::ModuloAssign,
         "?" => Token::Question,
         ":" => Token::Colon,
+        ":=" => Token::ColonAssign,
         "||" => Token::Or,
         "&&" => Token::And,
         "!=" => Token::NotEqual,
@@ -837,5 +903,7 @@ extern {
         "modifier" => Token::Modifier,
         "immutable" => Token::Immutable,
         "unchecked" => Token::Unchecked,
+        "assembly" => Token::Assembly,
+        "let" => Token::Let,
     }
 }
