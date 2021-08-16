@@ -68,8 +68,8 @@ jobs:
         name: solang.exe
         path: ./target/debug/solang.exe
 
-  mac:
-    name: Mac
+  mac-intel:
+    name: Mac Intel
     runs-on: macos-latest
     steps:
     - name: Checkout sources
@@ -89,7 +89,7 @@ jobs:
       run: cargo test --verbose
     - uses: actions/upload-artifact@master
       with:
-        name: solang-mac
+        name: solang-mac-intel
         path: ./target/debug/solang
 
   docker:
