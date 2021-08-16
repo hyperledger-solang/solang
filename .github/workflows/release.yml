@@ -52,8 +52,8 @@ jobs:
         asset_name: solang.exe
         tag: ${{ github.ref }}
 
-  mac:
-    name: Mac
+  mac-intel:
+    name: Mac Intel
     runs-on: macos-latest
     steps:
     - name: Checkout sources
@@ -73,7 +73,7 @@ jobs:
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
         file: target/release/solang
-        asset_name: solang-mac
+        asset_name: solang-mac-intel
         tag: ${{ github.ref }}
 
   docker:
