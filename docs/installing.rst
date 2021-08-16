@@ -14,9 +14,11 @@ For Windows x64, there is a binary available:
 
 `<https://github.com/hyperledger-labs/solang/releases/download/v0.1.7/solang.exe>`_
 
-For MacOS, there is a binary available:
+For MacOS, there is an intel binary available.
+Remember to remove the quarantine attribute using ``xattr -d com.apple.quarantine solang-mac`` in the terminal.
 
 `<https://github.com/hyperledger-labs/solang/releases/download/v0.1.7/solang-mac>`_
+
 
 Using hyperledgerlabs/solang docker hub images
 ----------------------------------------------
