@@ -223,7 +223,7 @@ pub fn var_decl(
     let initializer = if let Some(initializer) = &s.initializer {
         let mut diagnostics = Vec::new();
 
-        let res = match expression(
+        match expression(
             initializer,
             file_no,
             contract_no,
@@ -235,30 +235,27 @@ pub fn var_decl(
             &mut diagnostics,
             Some(&ty),
         ) {
-            Ok(res) => res,
+            Ok(res) => {
+                // implicitly conversion to correct ty
+                match cast(&s.loc, res, &ty, true, ns, &mut diagnostics) {
+                    Ok(res) => Some(res),
+                    Err(_) => {
+                        ns.diagnostics.extend(diagnostics);
+                        None
+                    }
+                }
+            }
             Err(()) => {
                 ns.diagnostics.extend(diagnostics);
-                return None;
+                None
             }
-        };
-
-        // implicitly conversion to correct ty
-        let res = match cast(&s.loc, res, &ty, true, ns, &mut diagnostics) {
-            Ok(res) => res,
-            Err(_) => {
-                ns.diagnostics.extend(diagnostics);
-                return None;
-            }
-        };
-
-        Some(res)
+        }
     } else {
         if is_constant {
             ns.diagnostics.push(Diagnostic::decl_error(
                 s.loc,
                 "missing initializer for constant".to_string(),
             ));
-            return None;
         }
 
         None
