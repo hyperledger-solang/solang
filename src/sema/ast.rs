@@ -368,6 +368,8 @@ pub struct File {
     pub path: PathBuf,
     /// Used for offset to line-column conversions
     pub line_starts: Vec<usize>,
+    /// Indicates the file number in FileCache.files
+    pub cache_no: usize,
 }
 
 /// When resolving a Solidity file, this holds all the resolved items
@@ -628,12 +630,13 @@ pub enum Expression {
         args: Vec<Expression>,
     },
     InternalFunctionCfg(usize),
+    Undefined(Type),
     Poison,
 }
 
 impl Expression {
-    // Recurse over expression and copy each element through a filter. This allows the optimizer passes to create
-    // copies of expressions while modifying the results slightly
+    /// Recurse over expression and copy each element through a filter. This allows the optimizer passes to create
+    /// copies of expressions while modifying the results slightly
     pub fn copy_filter<T, F>(&self, ctx: &mut T, filter: F) -> Expression
     where
         F: Fn(&Expression, &mut T) -> Expression,
@@ -1177,6 +1180,85 @@ impl Expression {
                     }
                 }
                 _ => (),
+            }
+        }
+    }
+
+    /// Return the location for this expression
+    pub fn loc(&self) -> pt::Loc {
+        match self {
+            Expression::FunctionArg(loc, _, _)
+            | Expression::BoolLiteral(loc, _)
+            | Expression::BytesLiteral(loc, _, _)
+            | Expression::CodeLiteral(loc, _, _)
+            | Expression::NumberLiteral(loc, _, _)
+            | Expression::StructLiteral(loc, _, _)
+            | Expression::ArrayLiteral(loc, _, _, _)
+            | Expression::ConstArrayLiteral(loc, _, _, _)
+            | Expression::Add(loc, _, _, _, _)
+            | Expression::Subtract(loc, _, _, _, _)
+            | Expression::Multiply(loc, _, _, _, _)
+            | Expression::Divide(loc, _, _, _)
+            | Expression::Modulo(loc, _, _, _)
+            | Expression::Power(loc, _, _, _, _)
+            | Expression::BitwiseOr(loc, _, _, _)
+            | Expression::BitwiseAnd(loc, _, _, _)
+            | Expression::BitwiseXor(loc, _, _, _)
+            | Expression::ShiftLeft(loc, _, _, _)
+            | Expression::ShiftRight(loc, _, _, _, _)
+            | Expression::Variable(loc, _, _)
+            | Expression::ConstantVariable(loc, _, _, _)
+            | Expression::StorageVariable(loc, _, _, _)
+            | Expression::Load(loc, _, _)
+            | Expression::StorageLoad(loc, _, _)
+            | Expression::ZeroExt(loc, _, _)
+            | Expression::SignExt(loc, _, _)
+            | Expression::Trunc(loc, _, _)
+            | Expression::Cast(loc, _, _)
+            | Expression::BytesCast(loc, _, _, _)
+            | Expression::More(loc, _, _)
+            | Expression::Less(loc, _, _)
+            | Expression::MoreEqual(loc, _, _)
+            | Expression::LessEqual(loc, _, _)
+            | Expression::Equal(loc, _, _)
+            | Expression::NotEqual(loc, _, _)
+            | Expression::Not(loc, _)
+            | Expression::Complement(loc, _, _)
+            | Expression::UnaryMinus(loc, _, _)
+            | Expression::Ternary(loc, _, _, _, _)
+            | Expression::Subscript(loc, _, _, _)
+            | Expression::StructMember(loc, _, _, _)
+            | Expression::Or(loc, _, _)
+            | Expression::AllocDynamicArray(loc, _, _, _)
+            | Expression::DynamicArrayLength(loc, _)
+            | Expression::DynamicArraySubscript(loc, _, _, _)
+            | Expression::DynamicArrayPush(loc, _, _, _)
+            | Expression::DynamicArrayPop(loc, _, _)
+            | Expression::StorageBytesSubscript(loc, _, _)
+            | Expression::StorageArrayLength { loc, .. }
+            | Expression::StringCompare(loc, _, _)
+            | Expression::StringConcat(loc, _, _, _)
+            | Expression::Keccak256(loc, _, _)
+            | Expression::ReturnData(loc)
+            | Expression::InternalFunction { loc, .. }
+            | Expression::ExternalFunction { loc, .. }
+            | Expression::InternalFunctionCall { loc, .. }
+            | Expression::ExternalFunctionCall { loc, .. }
+            | Expression::ExternalFunctionCallRaw { loc, .. }
+            | Expression::Constructor { loc, .. }
+            | Expression::PreIncrement(loc, _, _, _)
+            | Expression::PreDecrement(loc, _, _, _)
+            | Expression::PostIncrement(loc, _, _, _)
+            | Expression::PostDecrement(loc, _, _, _)
+            | Expression::Builtin(loc, _, _, _)
+            | Expression::Assign(loc, _, _, _)
+            | Expression::List(loc, _)
+            | Expression::FormatString(loc, _)
+            | Expression::AbiEncode { loc, .. }
+            | Expression::InterfaceId(loc, ..)
+            | Expression::And(loc, _, _) => *loc,
+            Expression::InternalFunctionCfg(_) | Expression::Undefined(_) | Expression::Poison => {
+                unreachable!()
             }
         }
     }

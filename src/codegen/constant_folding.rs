@@ -1083,6 +1083,7 @@ fn expression(
         | Expression::FunctionArg(_, _, _) => (expr.clone(), true),
         Expression::AllocDynamicArray(_, _, _, _)
         | Expression::ReturnData(_)
+        | Expression::Undefined(_)
         | Expression::FormatString { .. }
         | Expression::InternalFunctionCfg(_) => (expr.clone(), false),
         // nothing else is permitted in cfg

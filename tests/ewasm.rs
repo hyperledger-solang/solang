@@ -806,7 +806,7 @@ fn build_solidity(src: &str) -> TestRuntime {
         false,
     );
 
-    diagnostics::print_messages(&ns, false);
+    diagnostics::print_messages(&cache, &ns, false);
 
     for v in &res {
         println!("contract size:{}", v.0.len());

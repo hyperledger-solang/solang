@@ -29,6 +29,7 @@ fn weekdays() {
                 assert(int8(Weekday.Sunday) == 6);
 
                 Weekday x;
+                x = Weekday.Monday;
 
                 assert(uint(x) == 0);
 

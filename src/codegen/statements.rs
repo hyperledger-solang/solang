@@ -42,7 +42,7 @@ pub fn statement(
             }
         }
         Statement::VariableDecl(loc, pos, _, Some(init)) => {
-            if should_remove_variable(pos, func, Some(init)) {
+            if should_remove_variable(pos, func) {
                 let mut params = SideEffectsCheckParameters {
                     cfg,
                     contract_no,
@@ -57,7 +57,6 @@ pub fn statement(
             }
 
             let expr = expression(init, cfg, contract_no, Some(func), ns, vartab);
-
             cfg.add(
                 vartab,
                 Instr::Set {
@@ -68,21 +67,19 @@ pub fn statement(
             );
         }
         Statement::VariableDecl(loc, pos, param, None) => {
-            if should_remove_variable(pos, func, None) {
+            if should_remove_variable(pos, func) {
                 return;
             }
 
-            // Set it to a default value
-            if let Some(expr) = param.ty.default(ns) {
-                cfg.add(
-                    vartab,
-                    Instr::Set {
-                        loc: *loc,
-                        res: *pos,
-                        expr,
-                    },
-                );
-            }
+            // Add variable as undefined
+            cfg.add(
+                vartab,
+                Instr::Set {
+                    loc: *loc,
+                    res: *pos,
+                    expr: Expression::Undefined(param.ty.clone()),
+                },
+            );
         }
         Statement::Return(_, values) => {
             if let Some(return_instr) = return_override {
@@ -787,7 +784,7 @@ fn destructure(
                 let expr = cast(&param.loc, right, &param.ty, true, ns, &mut Vec::new())
                     .expect("sema should have checked cast");
 
-                if should_remove_variable(res, func, Some(&expr)) {
+                if should_remove_variable(res, func) {
                     continue;
                 }
 
@@ -1219,7 +1216,9 @@ impl Type {
                 )),
                 None,
             )),
-            Type::InternalFunction { .. } | Type::ExternalFunction { .. } => None,
+            Type::InternalFunction { .. } | Type::Contract(_) | Type::ExternalFunction { .. } => {
+                None
+            }
             Type::Array(_, dims) => {
                 if dims[0].is_none() {
                     Some(Expression::AllocDynamicArray(
@@ -1241,7 +1240,6 @@ impl Type {
                     ))
                 }
             }
-            Type::Contract(_) => None,
             _ => unreachable!(),
         }
     }

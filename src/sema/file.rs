@@ -3,7 +3,7 @@ use crate::parser::pt::Loc;
 use std::path::PathBuf;
 
 impl File {
-    pub fn new(path: PathBuf, contents: &str) -> Self {
+    pub fn new(path: PathBuf, contents: &str, cache_no: usize) -> Self {
         let mut line_starts = Vec::new();
 
         for (ind, c) in contents.char_indices() {
@@ -12,7 +12,11 @@ impl File {
             }
         }
 
-        File { path, line_starts }
+        File {
+            path,
+            line_starts,
+            cache_no,
+        }
     }
 
     /// Give a position as a human readable position

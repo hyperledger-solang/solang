@@ -311,7 +311,7 @@ fn structs_as_ref_args() {
             }
 
             function test() public {
-                foo f;
+                foo f = foo(false, 2);
 
                 func(f);
 

@@ -54,10 +54,13 @@ pub fn sema(file: &ResolvedFile, cache: &mut FileCache, ns: &mut ast::Namespace)
 fn sema_file(file: &ResolvedFile, cache: &mut FileCache, ns: &mut ast::Namespace) {
     let file_no = ns.files.len();
 
-    let source_code = cache.get_file_contents(&file.full_path);
+    let (source_code, file_cache_no) = cache.get_file_contents_and_number(&file.full_path);
 
-    ns.files
-        .push(ast::File::new(file.full_path.clone(), &source_code));
+    ns.files.push(ast::File::new(
+        file.full_path.clone(),
+        &source_code,
+        file_cache_no,
+    ));
 
     let pt = match parse(&source_code, file_no) {
         Ok(s) => s,

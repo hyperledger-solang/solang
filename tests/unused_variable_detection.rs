@@ -376,14 +376,10 @@ fn subscript() {
     "#;
 
     let ns = generic_target_parse(file);
-    assert_eq!(count_warnings(&ns.diagnostics), 5);
+    assert_eq!(count_warnings(&ns.diagnostics), 4);
     assert!(assert_message_in_warnings(
         &ns.diagnostics,
         "local variable 'arr4' has been assigned, but never read"
-    ));
-    assert!(assert_message_in_warnings(
-        &ns.diagnostics,
-        "local variable 'arr5' has been assigned, but never read"
     ));
     assert!(assert_message_in_warnings(
         &ns.diagnostics,
@@ -464,11 +460,7 @@ fn assign_trunc_cast() {
 "#;
 
     let ns = generic_target_parse(file);
-    assert_eq!(count_warnings(&ns.diagnostics), 2);
-    assert!(assert_message_in_warnings(
-        &ns.diagnostics,
-        "local variable 'b32' has never been assigned a value, but has been read"
-    ));
+    assert_eq!(count_warnings(&ns.diagnostics), 1);
     assert!(assert_message_in_warnings(
         &ns.diagnostics,
         "storage variable 'byteArr' has been assigned, but never read"
@@ -966,7 +958,7 @@ fn builtin_call_destructure() {
             uint128 b = 1;
             uint64 g = 2;
             address payable ad = payable(address(this));
-            bytes memory by;
+            bytes memory by = hex"AB2";
             (p, ) = ad.call{value: b, gas: g}(by);
             uint c = 1;
             abi.encodeWithSignature("hey", c);
@@ -980,11 +972,7 @@ fn builtin_call_destructure() {
     "#;
 
     let ns = generic_target_parse(file);
-    assert_eq!(count_warnings(&ns.diagnostics), 1);
-    assert!(assert_message_in_warnings(
-        &ns.diagnostics,
-        "local variable 'by' has never been assigned a value, but has been read"
-    ));
+    assert_eq!(count_warnings(&ns.diagnostics), 0);
 }
 
 #[test]

@@ -507,6 +507,7 @@ fn print_expr(e: &Expression, func: Option<&Function>, ns: &Namespace) -> Tree {
         Expression::InternalFunctionCfg(..)
         | Expression::ReturnData(..)
         | Expression::Poison
+        | Expression::Undefined(_)
         | Expression::AbiEncode { .. }
         | Expression::Keccak256(..) => {
             panic!("should not present in ast");
