@@ -296,20 +296,13 @@ pub fn emit_warning_local_variable(variable: &symtable::Variable) -> Option<Diag
                     ),
                     vec![],
                 ));
-            } else if assigned && !variable.read {
+            } else if assigned && !variable.read && !variable.is_reference() {
+                // Values assigned to variables that reference others change the value of its reference
+                // No warning needed in this case
                 return Some(generate_unused_warning(
                     variable.id.loc,
                     &format!(
                         "local variable '{}' has been assigned, but never read",
-                        variable.id.name
-                    ),
-                    vec![],
-                ));
-            } else if !assigned && variable.read {
-                return Some(generate_unused_warning(
-                    variable.id.loc,
-                    &format!(
-                        "local variable '{}' has never been assigned a value, but has been read",
                         variable.id.name
                     ),
                     vec![],

@@ -1,4 +1,5 @@
 use super::ast::{Diagnostic, ErrorType, Level, Namespace, Note};
+use crate::file_cache::FileCache;
 use crate::parser::pt::Loc;
 use serde::Serialize;
 
@@ -130,11 +131,25 @@ impl Diagnostic {
         }
     }
 
-    fn formated_message(&self, ns: &Namespace) -> String {
+    fn formatted_message(&self, ns: &Namespace, cache: &FileCache) -> String {
         let mut s = if let Some(pos) = self.pos {
             let loc = ns.files[pos.0].loc_to_string(&pos);
 
-            format!("{}: {}: {}", loc, self.level.to_string(), self.message)
+            let (full_line, beg_line_no, beg_offset, type_size) =
+                cache.get_line_and_offset_from_loc(&ns.files[pos.0], &pos);
+
+            format!(
+                "{}: {}: {}\nLine {}:\n\t{}\n\t{:-<7$}{:^<8$}",
+                loc,
+                self.level.to_string(),
+                self.message,
+                beg_line_no + 1,
+                full_line,
+                "",
+                "",
+                beg_offset,
+                type_size
+            )
         } else {
             format!("solang: {}: {}", self.level.to_string(), self.message)
         };
@@ -142,20 +157,34 @@ impl Diagnostic {
         for note in &self.notes {
             let loc = ns.files[note.pos.0].loc_to_string(&note.pos);
 
-            s.push_str(&format!("\n\t{}: {}: {}", loc, "note", note.message));
+            let (full_line, beg_line_no, beg_offset, type_size) =
+                cache.get_line_and_offset_from_loc(&ns.files[note.pos.0], &note.pos);
+
+            s.push_str(&format!(
+                "\n\t{}: {}: {}\n\tLine {}:\n\t\t{}\n\t\t{:-<7$}{:^<8$}",
+                loc,
+                "note",
+                note.message,
+                beg_line_no + 1,
+                full_line,
+                "",
+                "",
+                beg_offset,
+                type_size
+            ));
         }
 
         s
     }
 }
 
-pub fn print_messages(ns: &Namespace, debug: bool) {
+pub fn print_messages(cache: &FileCache, ns: &Namespace, debug: bool) {
     for msg in &ns.diagnostics {
         if !debug && msg.level == Level::Debug {
             continue;
         }
 
-        eprintln!("{}", msg.formated_message(ns));
+        eprintln!("{}", msg.formatted_message(ns, cache));
     }
 }
 
@@ -183,7 +212,7 @@ pub struct OutputJson {
     pub formattedMessage: String,
 }
 
-pub fn message_as_json(ns: &Namespace) -> Vec<OutputJson> {
+pub fn message_as_json(ns: &Namespace, cache: &FileCache) -> Vec<OutputJson> {
     let mut json = Vec::new();
 
     for msg in &ns.diagnostics {
@@ -203,7 +232,7 @@ pub fn message_as_json(ns: &Namespace) -> Vec<OutputJson> {
             component: "general".to_owned(),
             severity: msg.level.to_string().to_owned(),
             message: msg.message.to_owned(),
-            formattedMessage: msg.formated_message(ns),
+            formattedMessage: msg.formatted_message(ns, cache),
         });
     }
 

@@ -1690,6 +1690,14 @@ fn expression_values(expr: &Expression, vars: &Variables, ns: &Namespace) -> Has
             // reference to a function; ignore
             HashSet::new()
         }
+        Expression::Undefined(expr_type) => {
+            // If the variable is undefined, we can return the default value to optimize operations
+            if let Some(default_expr) = expr_type.default(ns) {
+                return expression_values(&default_expr, vars, ns);
+            }
+
+            HashSet::new()
+        }
         e => {
             let ty = e.ty();
             let mut set = HashSet::new();

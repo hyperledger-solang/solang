@@ -7,10 +7,11 @@ mod reaching_definitions;
 mod statements;
 mod storage;
 mod strength_reduce;
+mod undefined_variable;
 mod unused_variable;
 mod vector_to_slice;
 
-use self::cfg::{optimize, ControlFlowGraph, Instr, Vartable};
+use self::cfg::{optimize_and_check_cfg, ControlFlowGraph, Instr, Vartable};
 use self::expression::expression;
 use crate::sema::ast::{Layout, Namespace};
 use crate::sema::contracts::visit_bases;
@@ -132,7 +133,7 @@ fn storage_initializer(contract_no: usize, ns: &mut Namespace, opt: &Options) ->
 
     cfg.vars = vartab.drain();
 
-    optimize(&mut cfg, ns, opt);
+    optimize_and_check_cfg(&mut cfg, ns, None, opt);
 
     cfg
 }

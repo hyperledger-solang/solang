@@ -119,7 +119,7 @@ fn build_solidity(src: &str) -> VirtualMachine {
         codegen(contract_no, &mut ns, &Options::default());
     }
 
-    diagnostics::print_messages(&ns, false);
+    diagnostics::print_messages(&cache, &ns, false);
 
     let context = inkwell::context::Context::create();
 

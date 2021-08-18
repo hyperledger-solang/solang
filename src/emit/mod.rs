@@ -3108,9 +3108,17 @@ pub trait TargetRuntime<'a> {
                             .build_return(Some(&bin.return_values[&ReturnCode::Success]));
                     }
                     Instr::Set { res, expr, .. } => {
-                        let value_ref = self.expression(bin, expr, &w.vars, function, ns);
-
-                        w.vars.get_mut(res).unwrap().value = value_ref;
+                        if let Expression::Undefined(expr_type) = expr {
+                            // If the variable has been declared as undefined, but we can
+                            // initialize it with a default value
+                            if let Some(default_expr) = expr_type.default(ns) {
+                                w.vars.get_mut(res).unwrap().value =
+                                    self.expression(bin, &default_expr, &w.vars, function, ns);
+                            }
+                        } else {
+                            w.vars.get_mut(res).unwrap().value =
+                                self.expression(bin, expr, &w.vars, function, ns);
+                        }
                     }
                     Instr::Branch { block: dest } => {
                         let pos = bin.builder.get_insert_block().unwrap();

@@ -1,3 +1,5 @@
+use crate::parser::pt::Loc;
+use crate::sema::ast;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::prelude::*;
@@ -61,10 +63,10 @@ impl FileCache {
 
     /// Get file with contents. This must be a file which was previously
     /// add to the cache
-    pub fn get_file_contents(&mut self, file: &Path) -> Arc<str> {
+    pub fn get_file_contents_and_number(&mut self, file: &Path) -> (Arc<str>, usize) {
         let file_no = self.cached_paths[file];
 
-        self.files[file_no].clone()
+        (self.files[file_no].clone(), file_no)
     }
 
     /// Populate the cache with absolute file path
@@ -195,5 +197,39 @@ impl FileCache {
         }
 
         Err(format!("file not found ‘{}’", filename))
+    }
+
+    /// Get line and the target symbol's offset from loc
+    pub fn get_line_and_offset_from_loc(
+        &self,
+        file: &ast::File,
+        loc: &Loc,
+    ) -> (String, usize, usize, usize) {
+        let (beg_line_no, mut beg_offset) = file.offset_to_line_column(loc.1);
+        let (end_line_no, mut end_offset) = file.offset_to_line_column(loc.2);
+        let mut full_line = self.files[file.cache_no]
+            .lines()
+            .nth(beg_line_no)
+            .unwrap()
+            .to_owned();
+        // If the loc spans across multiple lines, we concatenate them
+        if beg_line_no != end_line_no {
+            for i in beg_offset + 1..end_offset + 1 {
+                let line = self.files[file.cache_no].lines().nth(i).unwrap();
+                if i == end_offset {
+                    end_offset += full_line.len();
+                }
+                full_line.push_str(line);
+            }
+        }
+
+        let old_size = full_line.len();
+        full_line = full_line.trim_start().parse().unwrap();
+        // Calculate the size of the symbol we want to highlight
+        let size = end_offset - beg_offset;
+        // Update the offset after trimming the line
+        beg_offset -= old_size - full_line.len();
+
+        (full_line, beg_line_no, beg_offset, size)
     }
 }

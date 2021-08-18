@@ -9,6 +9,7 @@ use super::{
     constant_folding, dead_storage, expression::expression, reaching_definitions, strength_reduce,
     vector_to_slice, Options,
 };
+use crate::codegen::undefined_variable;
 use crate::parser::pt;
 use crate::sema::ast::{
     CallTy, Contract, Expression, Function, Namespace, Parameter, StringLocation, Type,
@@ -148,7 +149,117 @@ pub enum Instr {
     Nop,
 }
 
-#[derive(Clone)]
+impl Instr {
+    pub fn recurse_expressions<T>(
+        &self,
+        cx: &mut T,
+        f: fn(expr: &Expression, ctx: &mut T) -> bool,
+    ) {
+        match self {
+            Instr::BranchCond { cond: expr, .. }
+            | Instr::Store { dest: expr, .. }
+            | Instr::LoadStorage { storage: expr, .. }
+            | Instr::ClearStorage { storage: expr, .. }
+            | Instr::Print { expr }
+            | Instr::AssertFailure { expr: Some(expr) }
+            | Instr::PopStorage { storage: expr, .. }
+            | Instr::AbiDecode { data: expr, .. }
+            | Instr::SelfDestruct { recipient: expr }
+            | Instr::Set { expr, .. } => {
+                expr.recurse(cx, f);
+            }
+
+            Instr::PushMemory { value: expr, .. } => {
+                expr.recurse(cx, f);
+            }
+
+            Instr::SetStorage { value, storage, .. }
+            | Instr::PushStorage { value, storage, .. } => {
+                value.recurse(cx, f);
+                storage.recurse(cx, f);
+            }
+
+            Instr::SetStorageBytes {
+                value,
+                storage,
+                offset,
+            } => {
+                value.recurse(cx, f);
+                storage.recurse(cx, f);
+                offset.recurse(cx, f);
+            }
+
+            Instr::Return { value: exprs } | Instr::Call { args: exprs, .. } => {
+                for expr in exprs {
+                    expr.recurse(cx, f);
+                }
+            }
+
+            Instr::Constructor {
+                args,
+                value,
+                gas,
+                salt,
+                space,
+                ..
+            } => {
+                for arg in args {
+                    arg.recurse(cx, f);
+                }
+                if let Some(expr) = value {
+                    expr.recurse(cx, f);
+                }
+                gas.recurse(cx, f);
+
+                if let Some(expr) = salt {
+                    expr.recurse(cx, f);
+                }
+
+                if let Some(expr) = space {
+                    expr.recurse(cx, f);
+                }
+            }
+
+            Instr::ExternalCall {
+                address,
+                payload,
+                value,
+                gas,
+                ..
+            } => {
+                if let Some(expr) = address {
+                    expr.recurse(cx, f);
+                }
+                payload.recurse(cx, f);
+                value.recurse(cx, f);
+                gas.recurse(cx, f);
+            }
+
+            Instr::ValueTransfer { address, value, .. } => {
+                address.recurse(cx, f);
+                value.recurse(cx, f);
+            }
+
+            Instr::EmitEvent { data, topics, .. } => {
+                for expr in data {
+                    expr.recurse(cx, f);
+                }
+
+                for expr in topics {
+                    expr.recurse(cx, f);
+                }
+            }
+
+            Instr::AssertFailure { expr: None }
+            | Instr::Unreachable
+            | Instr::Nop
+            | Instr::Branch { .. }
+            | Instr::PopMemory { .. } => {}
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
 #[allow(clippy::large_enum_variant)]
 pub enum InternalCallTy {
     Static(usize),
@@ -649,6 +760,7 @@ impl ControlFlowGraph {
                     .collect::<Vec<String>>()
                     .join(", ")
             ),
+            Expression::Undefined(_) => "undef".to_string(),
             _ => panic!("{:?}", expr),
         }
     }
@@ -1061,7 +1173,7 @@ pub fn generate_cfg(
         cfg.selector = func.selector();
     }
 
-    optimize(&mut cfg, ns, opt);
+    optimize_and_check_cfg(&mut cfg, ns, function_no, opt);
 
     all_cfgs[cfg_no] = cfg;
 }
@@ -1092,9 +1204,20 @@ fn resolve_modifier_call<'a>(
     panic!("modifier should resolve to internal call");
 }
 
-/// Run codegen optimizer passess
-pub fn optimize(cfg: &mut ControlFlowGraph, ns: &mut Namespace, opt: &Options) {
+/// Detect undefined variables and run codegen optimizer passess
+pub fn optimize_and_check_cfg(
+    cfg: &mut ControlFlowGraph,
+    ns: &mut Namespace,
+    func_no: Option<usize>,
+    opt: &Options,
+) {
     reaching_definitions::find(cfg);
+    if let Some(function) = func_no {
+        // If there are undefined variables, we raise an error and don't run optimizations
+        if undefined_variable::find_undefined_variables(cfg, ns, function) {
+            return;
+        }
+    }
     if opt.constant_folding {
         constant_folding::constant_folding(cfg, ns);
     }
