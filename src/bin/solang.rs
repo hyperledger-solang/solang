@@ -381,10 +381,10 @@ fn process_filename(
     }
 
     if matches.is_present("STD-JSON") {
-        let mut out = diagnostics::message_as_json(&ns, &cache);
+        let mut out = diagnostics::message_as_json(&ns, cache);
         json.errors.append(&mut out);
     } else {
-        diagnostics::print_messages(&cache, &ns, verbose);
+        diagnostics::print_messages(cache, &ns, verbose);
     }
 
     if ns.contracts.is_empty() || diagnostics::any_errors(&ns.diagnostics) {
