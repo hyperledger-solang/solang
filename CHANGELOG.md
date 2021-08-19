@@ -18,9 +18,14 @@ will be documented here.
 - The Solana target now compiles all contracts to a single `bundle.so` BPF
   program.
 - Any unused variables, events, or contract variables are now detected and
-  warnings are given, thanks to [LucasSte](https://github.com/LucasSte)
+  warnings are given, thanks to [LucasSte](https://github.com/hyperledger-labs/solang/pull/429)
 - The `immutable` attribute on contract storage variables is now supported.
 - The `override` attribute on public contract storage variables is now supported.
+- The `unchecked {}` code block is now parsed and supported. Math overflow still
+  is unsupported for types larger than 64 bit.
+- `assembly {}` blocks are now parsed and give a friendly error message.
+- Any variable use before it is given a value is now detected and results in
+  a undefined variable diagnostic, thanks to [LucasSte](https://github.com/hyperledger-labs/solang/pull/468)
 
 ### Changed
 - Solang now uses LLVM 11.0, based on the [Solana LLVM tree](https://github.com/solana-labs/llvm-project/)
