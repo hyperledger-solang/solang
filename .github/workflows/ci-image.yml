@@ -1,8 +1,7 @@
-name: ci-image
+name: Build and push ci image
 on: [workflow_dispatch]
 jobs:
-  docker:
-    name: update-ci-image
+  build-push-ci-image:
     runs-on: ubuntu-18.04
     steps:
     - name: Checkout sources
