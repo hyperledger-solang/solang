@@ -73,7 +73,7 @@ ________________________
 A pre-built version of llvm, specifically configured for Solang, is available at
 `<https://solang.io/download/llvm11.0-linux.tar.xz>`_ for x64 and
 `<https://solang.io/download/llvm11.0-linux-arm64.tar.xz>`_ for arm64. This version is built using the
-`dockerfile for building llvm on linux <https://github.com/hyperledger-labs/solang/blob/main/scripts/build-llvm-linux.dockerfile>`_.
+`dockerfile for building llvm on linux <https://github.com/hyperledger-labs/solang/blob/main/build/build-llvm-linux.dockerfile>`_.
 After downloading, untar the file in a terminal and add it to your path.
 
 .. code-block:: bash
@@ -86,7 +86,7 @@ __________________________
 
 A pre-built version of llvm, specifically configured for Solang, is available at
 `<https://solang.io/download/llvm11.0-win.zip>`_. This version is built using the
-`dockerfile for building llvm on Windows <https://github.com/hyperledger-labs/solang/blob/main/scripts/build-llvm-windows.dockerfile>`_.
+`dockerfile for building llvm on Windows <https://github.com/hyperledger-labs/solang/blob/main/build/build-llvm-windows.dockerfile>`_.
 
 If you want to use the dockerfile yourself rather than download the binaries above, then this
 requires `Docker Desktop <https://www.docker.com/products/docker-desktop>`_ installed, and then switched to
