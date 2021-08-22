@@ -6,7 +6,7 @@ jobs:
     steps:
     - name: Checkout sources
       uses: actions/checkout@v1
-    - run: docker build -f scripts/ci.dockerfile -t hyperledgerlabs/solang:ci .
+    - run: docker build -f build/ci.dockerfile -t hyperledgerlabs/solang:ci .
     - name: Login to DockerHub
       uses: docker/login-action@v1
       with:
