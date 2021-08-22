@@ -1,4 +1,4 @@
-name: test
+name: Build tests
 on: [push, pull_request]
 jobs:
   repolinter:
