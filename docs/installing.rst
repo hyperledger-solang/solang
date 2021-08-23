@@ -63,57 +63,56 @@ Installing the LLVM Libraries
 
 Solang needs a build of
 `llvm with some extra patches <https://github.com/solana-labs/llvm-project/>`_.
-You can either download the pre-built binaries or build your own from source. After that,
-You need to add the `bin` directory to your path, so that the build system of Solang can find the
-correct version of llvm to use.
+You can either download the pre-built binaries from
+`github <https://github.com/hyperledger-labs/solang/releases/tag/llvm12.0-1>`_
+or build your own from source. After that, you need to add the `bin` directory to your
+path, so that the build system of Solang can find the correct version of llvm to use.
 
 Installing LLVM on Linux
 ________________________
 
 A pre-built version of llvm, specifically configured for Solang, is available at
-`<https://solang.io/download/llvm11.0-linux.tar.xz>`_ for x64 and
-`<https://solang.io/download/llvm11.0-linux-arm64.tar.xz>`_ for arm64. This version is built using the
-`dockerfile for building llvm on linux <https://github.com/hyperledger-labs/solang/blob/main/build/build-llvm-linux.dockerfile>`_.
+`<https://github.com/hyperledger-labs/solang/releases/download/llvm12.0-1/llvm12.0-linux-intel.tar.xz>`_.
 After downloading, untar the file in a terminal and add it to your path.
 
 .. code-block:: bash
 
-	tar Jxf llvm11.0-linux.tar.xz
-	export PATH=$(pwd)/llvm11.0/bin:$PATH
+	tar Jxf llvm12.0-linux-intel.tar.xz
+	export PATH=$(pwd)/llvm12.0/bin:$PATH
 
 Installing LLVM on Windows
 __________________________
 
 A pre-built version of llvm, specifically configured for Solang, is available at
-`<https://solang.io/download/llvm11.0-win.zip>`_. This version is built using the
-`dockerfile for building llvm on Windows <https://github.com/hyperledger-labs/solang/blob/main/build/build-llvm-windows.dockerfile>`_.
-
-If you want to use the dockerfile yourself rather than download the binaries above, then this
-requires `Docker Desktop <https://www.docker.com/products/docker-desktop>`_ installed, and then switched to
-`windows containers <https://docs.docker.com/docker-for-windows/#switch-between-windows-and-linux-containers>`_.
-The result will be an image with llvm compressed in the file ``c:\llvm11.0-win.zip``. Docker on Windows needs Hyper-V
-enabled. If you are running Windows 10 in a virtual machine, be sure to check
-`this blog post <https://www.mess.org/2020/06/22/Hyper-V-in-KVM/>`_.
+`<https://github.com/hyperledger-labs/solang/releases/download/llvm12.0-1/llvm12.0-win.zip>`_.
 
 After unzipping the file, add the bin directory to your path.
 
 .. code-block:: batch
 
-	set PATH=%PATH%;C:\llvm11.0\bin
+	set PATH=%PATH%;C:\llvm12.0\bin
+
+You can use docker for windows to build your own llvm from source. There is
+`dockerfile for building llvm on Windows <https://github.com/hyperledger-labs/solang/blob/main/build/build-llvm-windows.dockerfile>`_.
+This will need `Docker Desktop <https://www.docker.com/products/docker-desktop>`_ installed, and then switched to
+`windows containers <https://docs.docker.com/docker-for-windows/#switch-between-windows-and-linux-containers>`_.
+The result will be an image with llvm compressed in the file ``c:\llvm12.0-win.zip``. Docker on Windows needs Hyper-V
+enabled. If you are running Windows 10 in a virtual machine, be sure to check
+`this blog post <https://www.mess.org/2020/06/22/Hyper-V-in-KVM/>`_.
 
 Installing LLVM on Mac
 ______________________
 
 A pre-built version of llvm for intel macs, is available at
-`<https://solang.io/download/llvm11.0-mac.tar.xz>`_ and for arm macs there is
-`<https://solang.io/download/llvm11.0-mac-arm.tar.xz>`_. After downloading,
+`<https://github.com/hyperledger-labs/solang/releases/download/llvm12.0-1/llvm12.0-mac-intel.tar.xz>`_ and for arm macs there is
+`<https://github.com/hyperledger-labs/solang/releases/download/llvm12.0-1/llvm12.0-mac-arm.tar.xz>`_. After downloading,
 untar the file in a terminal and add it to your path like so:
 
 .. code-block:: bash
 
-	tar Jxf llvm11.0-mac.tar.xz
-	xattr -rd com.apple.quarantine llvm11.0
-	export PATH=$(pwd)/llvm11.0/bin:$PATH
+	tar Jxf llvm12.0-mac-arm.tar.xz
+	xattr -rd com.apple.quarantine llvm12.0
+	export PATH=$(pwd)/llvm12.0/bin:$PATH
 
 .. _llvm-from-source:
 
@@ -125,7 +124,7 @@ you may need to consult. First if all clone our llvm repository:
 
 .. code-block:: bash
 
-	git clone --branch solana-rustc/11.0-2021-01-05 git://github.com/solana-labs/llvm-project
+	git clone --branch solana-rustc/12.0-2021-04-15 git://github.com/solana-labs/llvm-project
 	cd llvm-project
 
 Now run cmake to create the makefiles. Replace the *installdir* argument to ``CMAKE_INSTALL_PREFIX`` with with a directory where you would like to have llvm installed, and then run the build:
