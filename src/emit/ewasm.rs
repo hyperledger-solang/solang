@@ -17,6 +17,7 @@ use tiny_keccak::{Hasher, Keccak};
 
 use super::ethabiencoder;
 use super::{Binary, TargetRuntime, Variable};
+use crate::emit::Generate;
 
 pub struct EwasmTarget {
     abi: ethabiencoder::EthAbiDecoder,
@@ -58,7 +59,7 @@ impl EwasmTarget {
 
         runtime_code.internalize(&["main"]);
 
-        let runtime_bs = runtime_code.code(true).unwrap();
+        let runtime_bs = runtime_code.code(Generate::Linked).unwrap();
 
         // Now we have the runtime code, create the deployer
         let mut b = EwasmTarget {
@@ -1239,7 +1240,9 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
         );
 
         // wasm
-        let wasm = target_binary.code(true).expect("compile should succeeed");
+        let wasm = target_binary
+            .code(Generate::Linked)
+            .expect("compile should succeeed");
 
         let code = binary.emit_global_string(
             &format!("contract_{}_code", resolver_binary.name),

@@ -1166,10 +1166,12 @@ pub trait TargetRuntime<'a> {
                     target_bin
                         .runtime
                         .unwrap()
-                        .code(true)
+                        .code(Generate::Linked)
                         .expect("compile should succeeed")
                 } else {
-                    target_bin.code(true).expect("compile should succeeed")
+                    target_bin
+                        .code(Generate::Linked)
+                        .expect("compile should succeeed")
                 };
 
                 let size = bin.context.i32_type().const_int(code.len() as u64, false);
@@ -5227,6 +5229,13 @@ enum ReturnCode {
     AbiEncodingInvalid,
 }
 
+#[derive(PartialEq)]
+pub enum Generate {
+    Object,
+    Assembly,
+    Linked,
+}
+
 impl<'a> Binary<'a> {
     /// Build the LLVM IR for a single contract
     pub fn build(
@@ -5288,7 +5297,7 @@ impl<'a> Binary<'a> {
     /// cached, since this function can be called multiple times (e.g. one for
     /// each time a bin of this type is created).
     /// Pass our module to llvm for optimization and compilation
-    pub fn code(&self, linking: bool) -> Result<Vec<u8>, String> {
+    pub fn code(&self, generate: Generate) -> Result<Vec<u8>, String> {
         // return cached result if available
         if !self.code.borrow().is_empty() {
             return Ok(self.code.borrow().clone());
@@ -5328,11 +5337,18 @@ impl<'a> Binary<'a> {
             // until it is right.
 
             // The correct solution is to make ewasm less insane.
-            match target_machine.write_to_memory_buffer(&self.module, FileType::Object) {
+            match target_machine.write_to_memory_buffer(
+                &self.module,
+                if generate == Generate::Assembly {
+                    FileType::Assembly
+                } else {
+                    FileType::Object
+                },
+            ) {
                 Ok(out) => {
                     let slice = out.as_slice();
 
-                    if linking {
+                    if generate == Generate::Linked {
                         let bs = link(slice, &self.name, self.target);
 
                         if !self.patch_code_size(bs.len() as u64) {
@@ -5341,8 +5357,6 @@ impl<'a> Binary<'a> {
                             return Ok(bs.to_vec());
                         }
                     } else {
-                        self.code.replace(slice.to_vec());
-
                         return Ok(slice.to_vec());
                     }
                 }

@@ -21,6 +21,7 @@ use solang::{
     abi::generate_abi,
     codegen::{codegen, Options},
     compile_many,
+    emit::Generate,
     file_cache::FileCache,
     sema::{ast, diagnostics},
     Target,
@@ -131,7 +132,9 @@ fn build_solidity(src: &str) -> VirtualMachine {
         false,
     );
 
-    let code = binary.code(true).expect("llvm code emit should work");
+    let code = binary
+        .code(Generate::Linked)
+        .expect("llvm code emit should work");
 
     let mut account_data = HashMap::new();
     let mut programs = Vec::new();

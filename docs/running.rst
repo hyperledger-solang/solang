@@ -79,6 +79,9 @@ Options:
   llvm-bc
     Output llvm bitcode as binary file.
 
+  asm
+    Output assembly text file.
+
   object
     Output wasm object file; this is the contract before final linking.
 

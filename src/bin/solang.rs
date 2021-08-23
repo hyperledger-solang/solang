@@ -8,6 +8,7 @@ use std::path::{Path, PathBuf};
 
 use solang::abi;
 use solang::codegen::{codegen, Options};
+use solang::emit::Generate;
 use solang::file_cache::FileCache;
 use solang::sema::{ast::Namespace, diagnostics};
 
@@ -48,7 +49,7 @@ fn main() {
                 .help("Emit compiler state at early stage")
                 .long("emit")
                 .takes_value(true)
-                .possible_values(&["ast", "cfg", "llvm-ir", "llvm-bc", "object"]),
+                .possible_values(&["ast", "cfg", "llvm-ir", "llvm-bc", "object", "asm"]),
         )
         .arg(
             Arg::with_name("OPT")
@@ -287,7 +288,9 @@ fn main() {
                     );
                 }
 
-                let code = binary.code(true).expect("llvm code emit should work");
+                let code = binary
+                    .code(Generate::Linked)
+                    .expect("llvm code emit should work");
 
                 let mut file = match File::create(&bin_filename) {
                     Ok(file) => file,
@@ -589,7 +592,7 @@ fn save_intermediates(binary: &solang::emit::Binary, matches: &ArgMatches) -> bo
         }
 
         Some("object") => {
-            let obj = match binary.code(false) {
+            let obj = match binary.code(Generate::Object) {
                 Ok(o) => o,
                 Err(s) => {
                     println!("error: {}", s);
@@ -602,6 +605,29 @@ fn save_intermediates(binary: &solang::emit::Binary, matches: &ArgMatches) -> bo
             if verbose {
                 eprintln!(
                     "info: Saving Object {} for contract {}",
+                    obj_filename.display(),
+                    binary.name
+                );
+            }
+
+            let mut file = File::create(obj_filename).unwrap();
+            file.write_all(&obj).unwrap();
+            true
+        }
+        Some("asm") => {
+            let obj = match binary.code(Generate::Assembly) {
+                Ok(o) => o,
+                Err(s) => {
+                    println!("error: {}", s);
+                    std::process::exit(1);
+                }
+            };
+
+            let obj_filename = output_file(matches, &binary.name, "asm");
+
+            if verbose {
+                eprintln!(
+                    "info: Saving Assembly {} for contract {}",
                     obj_filename.display(),
                     binary.name
                 );
