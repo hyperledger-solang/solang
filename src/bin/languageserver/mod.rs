@@ -62,9 +62,7 @@ impl SolangServer {
             let mut ns = parse_and_resolve(os_str.to_str().unwrap(), &mut filecache, self.target);
 
             // codegen all the contracts; some additional errors/warnings will be detected here
-            for contract_no in 0..ns.contracts.len() {
-                codegen(contract_no, &mut ns, &Default::default());
-            }
+            codegen(&mut ns, &Default::default());
 
             let diags = ns
                 .diagnostics

@@ -67,9 +67,7 @@ pub fn compile(
     }
 
     // codegen all the contracts
-    for contract_no in 0..ns.contracts.len() {
-        codegen::codegen(contract_no, &mut ns, &Default::default());
-    }
+    codegen::codegen(&mut ns, &Default::default());
 
     let results = (0..ns.contracts.len())
         .filter(|c| ns.contracts[*c].is_concrete())
