@@ -115,9 +115,7 @@ fn build_solidity(src: &str) -> VirtualMachine {
     let mut ns = solang::parse_and_resolve("test.sol", &mut cache, Target::Solana);
 
     // codegen all the contracts; some additional errors/warnings will be detected here
-    for contract_no in 0..ns.contracts.len() {
-        codegen(contract_no, &mut ns, &Options::default());
-    }
+    codegen(&mut ns, &Options::default());
 
     diagnostics::print_messages(&cache, &ns, false);
 

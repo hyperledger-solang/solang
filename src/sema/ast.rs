@@ -435,6 +435,7 @@ pub struct Contract {
     pub initializer: Option<usize>,
     pub default_constructor: Option<(Function, usize)>,
     pub cfg: Vec<ControlFlowGraph>,
+    pub code: Vec<u8>,
 }
 
 impl Contract {

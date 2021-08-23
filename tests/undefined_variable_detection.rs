@@ -14,11 +14,11 @@ fn parse_and_codegen(src: &'static str) -> Namespace {
         constant_folding: false,
         strength_reduce: false,
         vector_to_slice: false,
+        opt_level: inkwell::OptimizationLevel::Default,
+        math_overflow_check: false,
     };
 
-    for contract_no in 0..ns.contracts.len() {
-        codegen(contract_no, &mut ns, &opt);
-    }
+    codegen(&mut ns, &opt);
 
     ns
 }

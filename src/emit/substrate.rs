@@ -3269,11 +3269,11 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         _space: Option<IntValue<'b>>,
         ns: &ast::Namespace,
     ) {
-        let resolver_binary = &ns.contracts[contract_no];
+        let created_contract = &ns.contracts[contract_no];
 
         let constructor = match constructor_no {
             Some(function_no) => &ns.functions[function_no],
-            None => &resolver_binary.default_constructor.as_ref().unwrap().0,
+            None => &created_contract.default_constructor.as_ref().unwrap().0,
         };
 
         let scratch_buf = binary.builder.build_pointer_cast(
@@ -3371,22 +3371,12 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             );
         }
 
-        // wasm
-        let target_binary = Binary::build(
-            binary.context,
-            resolver_binary,
-            ns,
-            "",
-            binary.opt,
-            binary.math_overflow_check,
-        );
-
-        let wasm = target_binary.code(true).expect("compile should succeeed");
+        assert!(!created_contract.code.is_empty());
 
         // code hash
         let codehash = binary.emit_global_string(
-            &format!("binary_{}_codehash", resolver_binary.name),
-            blake2_rfc::blake2b::blake2b(32, &[], &wasm).as_bytes(),
+            &format!("binary_{}_codehash", created_contract.name),
+            blake2_rfc::blake2b::blake2b(32, &[], &created_contract.code).as_bytes(),
             true,
         );
 

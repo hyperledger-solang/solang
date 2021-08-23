@@ -29,6 +29,8 @@ pub struct Options {
     pub constant_folding: bool,
     pub strength_reduce: bool,
     pub vector_to_slice: bool,
+    pub math_overflow_check: bool,
+    pub opt_level: inkwell::OptimizationLevel,
 }
 
 impl Default for Options {
@@ -38,13 +40,77 @@ impl Default for Options {
             constant_folding: true,
             strength_reduce: true,
             vector_to_slice: true,
+            math_overflow_check: false,
+            opt_level: inkwell::OptimizationLevel::Default,
         }
     }
 }
 
 /// The contracts are fully resolved but they do not have any a CFG which is needed for
 /// the llvm code emitter. This will also do addition code checks.
-pub fn codegen(contract_no: usize, ns: &mut Namespace, opt: &Options) {
+pub fn codegen(ns: &mut Namespace, opt: &Options) {
+    if any_errors(&ns.diagnostics) {
+        return;
+    }
+
+    let mut contracts_done = Vec::new();
+
+    contracts_done.resize(ns.contracts.len(), false);
+
+    // codegen all the contracts; some additional errors/warnings will be detected here
+    while contracts_done.iter().any(|e| !*e) {
+        for contract_no in 0..ns.contracts.len() {
+            if contracts_done[contract_no] {
+                continue;
+            }
+
+            if !ns.contracts[contract_no].is_concrete() {
+                contracts_done[contract_no] = true;
+                continue;
+            }
+
+            // does this contract create any contract which are not done
+            if ns.contracts[contract_no]
+                .creates
+                .iter()
+                .any(|c| !contracts_done[*c])
+            {
+                continue;
+            }
+
+            contract(contract_no, ns, opt);
+
+            if any_errors(&ns.diagnostics) {
+                return;
+            }
+
+            // Solana creates a single bundle
+            if ns.target != Target::Solana && ns.target != Target::Generic {
+                let context = inkwell::context::Context::create();
+
+                let filename = ns.files[0].path.to_string_lossy();
+
+                let binary = ns.contracts[contract_no].emit(
+                    ns,
+                    &context,
+                    &filename,
+                    opt.opt_level,
+                    opt.math_overflow_check,
+                );
+
+                let code = binary.code(true).expect("llvm build");
+
+                drop(binary);
+
+                ns.contracts[contract_no].code = code;
+            }
+
+            contracts_done[contract_no] = true;
+        }
+    }
+}
+
+fn contract(contract_no: usize, ns: &mut Namespace, opt: &Options) {
     if !any_errors(&ns.diagnostics) && ns.contracts[contract_no].is_concrete() {
         layout(contract_no, ns);
 

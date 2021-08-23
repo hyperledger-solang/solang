@@ -217,7 +217,7 @@ fn main() {
             doc::generate_docs(matches.value_of("OUTPUT").unwrap_or("."), &files, verbose);
         }
     } else {
-        let llvm_opt = match matches.value_of("OPT").unwrap() {
+        let opt_level = match matches.value_of("OPT").unwrap() {
             "none" => inkwell::OptimizationLevel::None,
             "less" => inkwell::OptimizationLevel::Less,
             "default" => inkwell::OptimizationLevel::Default,
@@ -230,6 +230,8 @@ fn main() {
             strength_reduce: !matches.is_present("STRENGTHREDUCE"),
             constant_folding: !matches.is_present("CONSTANTFOLDING"),
             vector_to_slice: !matches.is_present("VECTORTOSLICE"),
+            math_overflow_check,
+            opt_level,
         };
 
         let mut namespaces = Vec::new();
@@ -237,16 +239,7 @@ fn main() {
         let mut errors = false;
 
         for filename in matches.values_of("INPUT").unwrap() {
-            match process_filename(
-                filename,
-                &mut cache,
-                target,
-                &matches,
-                &mut json,
-                math_overflow_check,
-                &opt,
-                llvm_opt,
-            ) {
+            match process_filename(filename, &mut cache, target, &matches, &mut json, &opt) {
                 Ok(ns) => namespaces.push(ns),
                 Err(_) => {
                     errors = true;
@@ -266,7 +259,7 @@ fn main() {
                 &context,
                 &namespaces,
                 "bundle.sol",
-                llvm_opt,
+                opt_level,
                 math_overflow_check,
             );
 
@@ -364,9 +357,7 @@ fn process_filename(
     target: solang::Target,
     matches: &ArgMatches,
     json: &mut JsonResult,
-    math_overflow_check: bool,
     opt: &Options,
-    llvm_opt: inkwell::OptimizationLevel,
 ) -> Result<Namespace, ()> {
     let verbose = matches.is_present("VERBOSE");
 
@@ -376,9 +367,7 @@ fn process_filename(
     let mut ns = solang::parse_and_resolve(filename, cache, target);
 
     // codegen all the contracts; some additional errors/warnings will be detected here
-    for contract_no in 0..ns.contracts.len() {
-        codegen(contract_no, &mut ns, opt);
-    }
+    codegen(&mut ns, opt);
 
     if matches.is_present("STD-JSON") {
         let mut out = diagnostics::message_as_json(&ns, cache);
@@ -429,19 +418,17 @@ fn process_filename(
 
         let context = inkwell::context::Context::create();
 
-        let binary = resolved_contract.emit(&ns, &context, filename, llvm_opt, math_overflow_check);
+        let binary = resolved_contract.emit(
+            &ns,
+            &context,
+            filename,
+            opt.opt_level,
+            opt.math_overflow_check,
+        );
 
         if save_intermediates(&binary, matches) {
             continue;
         }
-
-        let code = match binary.code(true) {
-            Ok(o) => o,
-            Err(s) => {
-                println!("error: {}", s);
-                std::process::exit(1);
-            }
-        };
 
         if matches.is_present("STD-JSON") {
             json_contracts.insert(
@@ -449,7 +436,7 @@ fn process_filename(
                 JsonContract {
                     abi: abi::ethereum::gen_abi(contract_no, &ns),
                     ewasm: EwasmContract {
-                        wasm: hex::encode_upper(code),
+                        wasm: hex::encode_upper(&resolved_contract.code),
                     },
                 },
             );
@@ -475,9 +462,10 @@ fn process_filename(
                     std::process::exit(1);
                 }
             };
-            file.write_all(&code).unwrap();
+            file.write_all(&resolved_contract.code).unwrap();
 
-            let (abi_bytes, abi_ext) = abi::generate_abi(contract_no, &ns, &code, verbose);
+            let (abi_bytes, abi_ext) =
+                abi::generate_abi(contract_no, &ns, &resolved_contract.code, verbose);
             let abi_filename = output_file(matches, &binary.name, abi_ext);
 
             if verbose {

@@ -38,6 +38,7 @@ impl ast::Contract {
             initializer: None,
             default_constructor: None,
             cfg: Vec::new(),
+            code: Vec::new(),
         }
     }
 
