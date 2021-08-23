@@ -82,7 +82,9 @@ pub fn compile(
                 math_overflow_check,
             );
 
-            let bc = binary.code(true).expect("llvm code emit should work");
+            let bc = binary
+                .code(emit::Generate::Linked)
+                .expect("llvm code emit should work");
 
             let (abistr, _) = abi::generate_abi(c, &ns, &bc, false);
 

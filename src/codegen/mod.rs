@@ -13,6 +13,7 @@ mod vector_to_slice;
 
 use self::cfg::{optimize_and_check_cfg, ControlFlowGraph, Instr, Vartable};
 use self::expression::expression;
+use crate::emit::Generate;
 use crate::sema::ast::{Layout, Namespace};
 use crate::sema::contracts::visit_bases;
 use crate::sema::diagnostics::any_errors;
@@ -98,7 +99,7 @@ pub fn codegen(ns: &mut Namespace, opt: &Options) {
                     opt.math_overflow_check,
                 );
 
-                let code = binary.code(true).expect("llvm build");
+                let code = binary.code(Generate::Linked).expect("llvm build");
 
                 drop(binary);
 
