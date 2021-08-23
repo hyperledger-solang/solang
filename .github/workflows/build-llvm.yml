@@ -13,8 +13,8 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: llvm11.0-1
-        release_name: LLVM Libraries v11.0 (v1)
+        tag_name: llvm12.0-1
+        release_name: LLVM Libraries v12.0 (v1)
         draft: false
         prerelease: false
 
@@ -23,17 +23,17 @@ jobs:
     runs-on: ubuntu-18.04
     needs: create
     steps:
-    - run: git clone --depth 1 --branch solana-rustc/11.0-2021-01-05 git://github.com/solana-labs/llvm-project.git
+    - run: git clone --depth 1 --branch solana-rustc/12.0-2021-04-15 git://github.com/solana-labs/llvm-project.git
     - name: Install Ninja
       uses: llvm/actions/install-ninja@main
     - run: cmake -G Ninja -DLLVM_ENABLE_ASSERTIONS=On -DLLVM_ENABLE_TERMINFO=Off
         -DLLVM_ENABLE_PROJECTS='clang;lld'
         -DLLVM_TARGETS_TO_BUILD='WebAssembly\;BPF'
-        -DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_INSTALL_PREFIX=../llvm11.0 llvm
+        -DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_INSTALL_PREFIX=../llvm12.0 llvm
       working-directory: ./llvm-project/
     - run: cmake --build . --target install
       working-directory: ./llvm-project/
-    - run: tar Jcf ./llvm11.0-linux-x86-64.tar.xz ./llvm11.0/
+    - run: tar Jcf ./llvm12.0-linux-x86-64.tar.xz ./llvm12.0/
     - name: Upload Release Asset
       id: upload-release-asset
       uses: actions/upload-release-asset@v1
@@ -41,8 +41,8 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ needs.create.outputs.upload_url }}
-        asset_path: ./llvm11.0-linux-x86-64.tar.xz
-        asset_name: llvm11.0-linux-x86-64.tar.xz
+        asset_path: ./llvm12.0-linux-x86-64.tar.xz
+        asset_name: llvm12.0-linux-x86-64.tar.xz
         asset_content_type: application/x-xz
 
   mac-intel:
@@ -50,17 +50,17 @@ jobs:
     needs: create
     runs-on: macos-latest
     steps:
-    - run: git clone --depth 1 --branch solana-rustc/11.0-2021-01-05 git://github.com/solana-labs/llvm-project.git
+    - run: git clone --depth 1 --branch solana-rustc/12.0-2021-04-15 git://github.com/solana-labs/llvm-project.git
     - name: Install Ninja
       uses: llvm/actions/install-ninja@main
     - run: cmake -G Ninja -DLLVM_ENABLE_ASSERTIONS=On -DLLVM_ENABLE_TERMINFO=Off
         -DLLVM_ENABLE_PROJECTS='clang;lld'
         -DLLVM_TARGETS_TO_BUILD='WebAssembly;BPF'
-        -DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_INSTALL_PREFIX=../llvm11.0 llvm
+        -DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_INSTALL_PREFIX=../llvm12.0 llvm
       working-directory: ./llvm-project/
     - run: cmake --build . --target install
       working-directory: ./llvm-project/
-    - run: tar Jcf ./llvm11.0-mac-intel.tar.xz ./llvm11.0/
+    - run: tar Jcf ./llvm12.0-mac-intel.tar.xz ./llvm12.0/
     - name: Upload Release Asset
       id: upload-release-asset
       uses: actions/upload-release-asset@v1
@@ -68,8 +68,8 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ needs.create.outputs.upload_url }}
-        asset_path: ./llvm11.0-mac-intel.tar.xz
-        asset_name: llvm11.0-mac-intel.tar.xz
+        asset_path: ./llvm12.0-mac-intel.tar.xz
+        asset_name: llvm12.0-mac-intel.tar.xz
         asset_content_type: application/x-xz
 
   windows:
@@ -78,7 +78,7 @@ jobs:
     runs-on: windows-latest
     steps:
     - run: Get-Volume
-    - run: git clone --depth 1 --branch solana-rustc/11.0-2021-01-05 git://github.com/solana-labs/llvm-project.git
+    - run: git clone --depth 1 --branch solana-rustc/12.0-2021-04-15 git://github.com/solana-labs/llvm-project.git
       # We may not have enough space to compile llvm, see https://github.com/actions/virtual-environments/issues/326
       working-directory: C:\
     - name: Setup Windows
@@ -89,11 +89,11 @@ jobs:
       uses: llvm/actions/install-ninja@main
     - run: cmake -G Ninja -DLLVM_ENABLE_ASSERTIONS=On -DLLVM_ENABLE_TERMINFO=Off
         '-DLLVM_ENABLE_PROJECTS=clang;lld'
-        -DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_INSTALL_PREFIX=C:/llvm11.0 llvm
+        -DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_INSTALL_PREFIX=C:/llvm12.0 llvm
       working-directory: C:\llvm-project
     - run: cmake --build . --target install
       working-directory: C:\llvm-project
-    - run: Compress-Archive -Path C:\llvm11.0 -DestinationPath C:\llvm11.0-win.zip
+    - run: Compress-Archive -Path C:\llvm12.0 -DestinationPath C:\llvm12.0-win.zip
     - name: Upload Release Asset
       id: upload-release-asset
       uses: actions/upload-release-asset@v1
@@ -101,6 +101,6 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ needs.create.outputs.upload_url }}
-        asset_path: C:\llvm11.0-win.zip
-        asset_name: llvm11.0-win.zip
+        asset_path: C:\llvm12.0-win.zip
+        asset_name: llvm12.0-win.zip
         asset_content_type: application/zip
