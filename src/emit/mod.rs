@@ -2,6 +2,7 @@ use crate::parser::pt;
 use crate::sema::ast;
 use crate::sema::ast::{Builtin, Expression, FormatArg, StringLocation};
 use std::cell::RefCell;
+use std::convert::TryFrom;
 use std::ffi::CStr;
 use std::fmt;
 use std::path::Path;
@@ -22,7 +23,8 @@ use inkwell::passes::PassManager;
 use inkwell::targets::{CodeModel, FileType, RelocMode, TargetTriple};
 use inkwell::types::{BasicType, BasicTypeEnum, FunctionType, IntType, StringRadix};
 use inkwell::values::{
-    ArrayValue, BasicValueEnum, FunctionValue, GlobalValue, IntValue, PhiValue, PointerValue,
+    ArrayValue, BasicValueEnum, CallableValue, FunctionValue, GlobalValue, IntValue, PhiValue,
+    PointerValue,
 };
 use inkwell::AddressSpace;
 use inkwell::IntPredicate;
@@ -3688,14 +3690,15 @@ pub trait TargetRuntime<'a> {
                             }
                         }
 
+                        let callable = CallableValue::try_from(
+                            self.expression(bin, call_expr, &w.vars, function, ns)
+                                .into_pointer_value(),
+                        )
+                        .unwrap();
+
                         let ret = bin
                             .builder
-                            .build_call(
-                                self.expression(bin, call_expr, &w.vars, function, ns)
-                                    .into_pointer_value(),
-                                &parms,
-                                "",
-                            )
+                            .build_call(callable, &parms, "")
                             .try_as_basic_value()
                             .left()
                             .unwrap();

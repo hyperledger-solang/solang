@@ -4,12 +4,13 @@ use crate::sema::ast;
 use inkwell::context::Context;
 use inkwell::module::Linkage;
 use inkwell::types::{BasicType, IntType};
-use inkwell::values::{BasicValueEnum, FunctionValue, IntValue, PointerValue};
+use inkwell::values::{BasicValueEnum, CallableValue, FunctionValue, IntValue, PointerValue};
 use inkwell::AddressSpace;
 use inkwell::IntPredicate;
 use inkwell::OptimizationLevel;
 use num_traits::ToPrimitive;
 use std::collections::HashMap;
+use std::convert::TryFrom;
 
 use super::{Binary, TargetRuntime, Variable};
 
@@ -2952,7 +2953,9 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             None,
         );
 
-        binary.builder.build_call(asm, &[], "unreachable");
+        let callable = CallableValue::try_from(asm).unwrap();
+
+        binary.builder.build_call(callable, &[], "unreachable");
 
         binary.builder.build_unreachable();
     }
