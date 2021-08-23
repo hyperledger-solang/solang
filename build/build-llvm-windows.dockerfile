@@ -42,13 +42,13 @@ RUN Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force ; `
 
 # Invoke-BatchFile retains the environment after executing so we can set it up more permanently
 RUN Invoke-BatchFile C:\BuildTools\vc\Auxiliary\Build\vcvars64.bat ; `
-	$path = $env:path + ';c:\MinGit\cmd;C:\Users\ContainerAdministrator\.cargo\bin;C:\llvm11.0\bin;C:\Python' ; `
+	$path = $env:path + ';c:\MinGit\cmd;C:\Users\ContainerAdministrator\.cargo\bin;C:\llvm12.0\bin;C:\Python' ; `
 	Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Environment\' -Name Path -Value $path ; `
 	Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Environment\' -Name LIB -Value $env:LIB ; `
 	Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Environment\' -Name INCLUDE -Value $env:INCLUDE ; `
 	Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Environment\' -Name LIBPATH -Value $env:LIBPATH ;
 
-RUN git clone --single-branch git://github.com/solana-labs/llvm-project --branch solana-rustc/11.0-2021-01-05
+RUN git clone --single-branch git://github.com/solana-labs/llvm-project --branch solana-rustc/12.0-2021-04-15
 
 WORKDIR \llvm-project
 
@@ -57,12 +57,12 @@ RUN Add-Content llvm\CMakeLists.txt 'set(CMAKE_SUPPRESS_REGENERATION 1)' ;
 
 # All llvm targets should be enabled or inkwell refused to link
 RUN cmake -G Ninja -DLLVM_ENABLE_ASSERTIONS=On '-DLLVM_ENABLE_PROJECTS=clang;lld' `
-	-DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_INSTALL_PREFIX=C:/llvm11.0 `
+	-DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_INSTALL_PREFIX=C:/llvm12.0 `
 	-B build llvm
 RUN cmake --build build --target install
 
 WORKDIR \
 
-RUN Compress-Archive -Path C:\llvm11.0 -DestinationPath C:\llvm11.0-win.zip
+RUN Compress-Archive -Path C:\llvm12.0 -DestinationPath C:\llvm12.0-win.zip
 
 RUN Remove-Item -Path \llvm-project,C:\TEMP -Recurse -Force

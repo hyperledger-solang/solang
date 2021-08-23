@@ -28,7 +28,7 @@ will be documented here.
   a undefined variable diagnostic, thanks to [LucasSte](https://github.com/hyperledger-labs/solang/pull/468)
 
 ### Changed
-- Solang now uses LLVM 11.0, based on the [Solana LLVM tree](https://github.com/solana-labs/llvm-project/)
+- Solang now uses LLVM 12.0, based on the [Solana LLVM tree](https://github.com/solana-labs/llvm-project/)
 
 ### Fixed
 - Fix a number of issues with parsing the uniswap v2 contracts
