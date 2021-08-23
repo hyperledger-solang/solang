@@ -508,43 +508,46 @@ pub fn statement(
             return_override,
         ),
         Statement::Emit { event_no, args, .. } => {
-            let event = &ns.events[*event_no];
-            let mut data = Vec::new();
-            let mut data_tys = Vec::new();
-            let mut topics = Vec::new();
-            let mut topic_tys = Vec::new();
+            // Solana cannot emit events, and breaks when the emitter calls self.abi_encode()
+            if ns.target != crate::Target::Solana {
+                let event = &ns.events[*event_no];
+                let mut data = Vec::new();
+                let mut data_tys = Vec::new();
+                let mut topics = Vec::new();
+                let mut topic_tys = Vec::new();
 
-            for (i, arg) in args.iter().enumerate() {
-                let param = Parameter {
-                    ty: arg.ty(),
-                    ty_loc: arg.loc(),
-                    loc: arg.loc(),
-                    name: "".to_owned(),
-                    name_loc: None,
-                    indexed: false,
-                };
+                for (i, arg) in args.iter().enumerate() {
+                    let param = Parameter {
+                        ty: arg.ty(),
+                        ty_loc: arg.loc(),
+                        loc: arg.loc(),
+                        name: "".to_owned(),
+                        name_loc: None,
+                        indexed: false,
+                    };
 
-                let e = expression(arg, cfg, contract_no, Some(func), ns, vartab);
+                    let e = expression(arg, cfg, contract_no, Some(func), ns, vartab);
 
-                if event.fields[i].indexed {
-                    topics.push(e);
-                    topic_tys.push(param);
-                } else {
-                    data.push(e);
-                    data_tys.push(param);
+                    if event.fields[i].indexed {
+                        topics.push(e);
+                        topic_tys.push(param);
+                    } else {
+                        data.push(e);
+                        data_tys.push(param);
+                    }
                 }
-            }
 
-            cfg.add(
-                vartab,
-                Instr::EmitEvent {
-                    event_no: *event_no,
-                    data,
-                    data_tys,
-                    topics,
-                    topic_tys,
-                },
-            );
+                cfg.add(
+                    vartab,
+                    Instr::EmitEvent {
+                        event_no: *event_no,
+                        data,
+                        data_tys,
+                        topics,
+                        topic_tys,
+                    },
+                );
+            }
         }
         Statement::Underscore(_) => {
             cfg.add(
