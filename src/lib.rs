@@ -54,12 +54,10 @@ impl fmt::Display for Target {
 pub fn compile(
     filename: &str,
     cache: &mut FileCache,
-    opt: OptimizationLevel,
+    opt_level: OptimizationLevel,
     target: Target,
     math_overflow_check: bool,
 ) -> (Vec<(Vec<u8>, String)>, ast::Namespace) {
-    let ctx = inkwell::context::Context::create();
-
     let mut ns = parse_and_resolve(filename, cache, target);
 
     if diagnostics::any_errors(&ns.diagnostics) {
@@ -67,28 +65,25 @@ pub fn compile(
     }
 
     // codegen all the contracts
-    codegen::codegen(&mut ns, &Default::default());
+    codegen::codegen(
+        &mut ns,
+        &codegen::Options {
+            math_overflow_check,
+            opt_level,
+            ..Default::default()
+        },
+    );
 
     let results = (0..ns.contracts.len())
         .filter(|c| ns.contracts[*c].is_concrete())
         .map(|c| {
-            // codegen
-            let binary = emit::Binary::build(
-                &ctx,
-                &ns.contracts[c],
-                &ns,
-                filename,
-                opt,
-                math_overflow_check,
-            );
+            // codegen has already happened
+            assert!(!ns.contracts[c].code.is_empty());
 
-            let bc = binary
-                .code(emit::Generate::Linked)
-                .expect("llvm code emit should work");
+            let code = &ns.contracts[c].code;
+            let (abistr, _) = abi::generate_abi(c, &ns, code, false);
 
-            let (abistr, _) = abi::generate_abi(c, &ns, &bc, false);
-
-            (bc, abistr)
+            (code.clone(), abistr)
         })
         .collect();
 
