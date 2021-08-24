@@ -52,6 +52,30 @@ jobs:
         asset_name: solang.exe
         tag: ${{ github.ref }}
 
+  mac-arm:
+    name: Mac Arm
+    runs-on: macos-arm
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v2
+    - name: Download LLVM
+      run: wget -q -O llvm11.0-mac-arm.tar.xz https://solang.io/download/llvm11.0-mac-arm.tar.xz
+    - name: Extract LLVM
+      run: tar Jxf llvm11.0-mac-arm.tar.xz
+    - name: Add LLVM to Path
+      run: echo "$(pwd)/llvm11.0/bin" >> $GITHUB_PATH
+    - name: Build
+      run: cargo build --release --verbose
+    - name: Run tests
+      run: cargo test --release --verbose
+    - name: Upload binary
+      uses: svenstaro/upload-release-action@v2
+      with:
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        file: target/release/solang
+        asset_name: solang-mac-arm
+        tag: ${{ github.ref }}
+
   mac-intel:
     name: Mac Intel
     runs-on: macos-latest
@@ -59,7 +83,7 @@ jobs:
     - name: Checkout sources
       uses: actions/checkout@v2
     - name: Download LLVM
-      run: curl -sS -o llvm11.0-mac.tar.xz https://solang.io/download/llvm11.0-mac.tar.xz
+      run: wget -q -O llvm11.0-mac.tar.xz https://solang.io/download/llvm11.0-mac.tar.xz
     - name: Extract LLVM
       run: tar Jxf llvm11.0-mac.tar.xz
     - name: Add LLVM to Path

@@ -45,6 +45,33 @@ jobs:
         asset_name: llvm12.0-linux-x86-64.tar.xz
         asset_content_type: application/x-xz
 
+  mac-arm:
+    name: Mac Arm
+    needs: create
+    runs-on: macos-arm
+    steps:
+    - run: git clone --depth 1 --branch solana-rustc/12.0-2021-04-15 git://github.com/solana-labs/llvm-project.git
+    - name: Install Ninja
+      uses: llvm/actions/install-ninja@main
+    - run: cmake -G Ninja -DLLVM_ENABLE_ASSERTIONS=On -DLLVM_ENABLE_TERMINFO=Off
+        -DLLVM_ENABLE_PROJECTS='clang;lld'
+        -DLLVM_TARGETS_TO_BUILD='WebAssembly;BPF'
+        -DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_INSTALL_PREFIX=../llvm12.0 llvm
+      working-directory: ./llvm-project/
+    - run: cmake --build . --target install
+      working-directory: ./llvm-project/
+    - run: tar Jcf ./llvm12.0-mac-arm.tar.xz ./llvm12.0/
+    - name: Upload Release Asset
+      id: upload-release-asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ needs.create.outputs.upload_url }}
+        asset_path: ./llvm12.0-mac-arm.tar.xz
+        asset_name: llvm12.0-mac-arm.tar.xz
+        asset_content_type: application/x-xz
+
   mac-intel:
     name: Mac Intel
     needs: create
