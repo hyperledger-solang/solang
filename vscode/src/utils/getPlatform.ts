@@ -8,8 +8,9 @@ export default function getPlatform(): string | undefined {
     case 'arm64 linux':
       return 'solang-linux';
     case 'x64 darwin':
+      return 'solang-mac-intel';
     case 'arm64 darwin':
-      return 'solang-mac';
+      return 'solang-mac-arm';
     default:
       return;
   }
