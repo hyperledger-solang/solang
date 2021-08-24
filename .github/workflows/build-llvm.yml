@@ -56,6 +56,7 @@ jobs:
     - run: cmake -G Ninja -DLLVM_ENABLE_ASSERTIONS=On -DLLVM_ENABLE_TERMINFO=Off
         -DLLVM_ENABLE_PROJECTS='clang;lld'
         -DLLVM_TARGETS_TO_BUILD='WebAssembly;BPF'
+        -DCMAKE_OSX_ARCHITECTURES=arm64
         -DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_INSTALL_PREFIX=../llvm12.0 llvm
       working-directory: ./llvm-project/
     - run: cmake --build . --target install
