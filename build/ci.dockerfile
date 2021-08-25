@@ -1,9 +1,9 @@
-FROM ubuntu:18.04 as builder
+FROM ubuntu:20.04 as builder
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update -y
 RUN apt-get upgrade -y
-RUN apt-get install -y libz-dev pkg-config libssl-dev git cmake ninja-build gcc g++ python
+RUN apt-get install -y libz-dev pkg-config libssl-dev git cmake ninja-build gcc g++ python3
 
 RUN git clone --single-branch --branch solana-rustc/12.0-2021-04-15 \
     git://github.com/solana-labs/llvm-project.git
@@ -17,11 +17,11 @@ RUN cmake -G Ninja -DLLVM_ENABLE_ASSERTIONS=On -DLLVM_ENABLE_TERMINFO=Off \
 
 RUN cmake --build . --target install
 
-FROM ubuntu:18.04
+FROM ubuntu:20.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update
-RUN apt-get install -y zlib1g-dev pkg-config libssl-dev git libffi-dev curl gcc
+RUN apt-get install -y zlib1g-dev pkg-config libssl-dev git libffi-dev curl gcc g++
 RUN apt-get clean
 RUN apt-get autoclean
 

@@ -1,9 +1,9 @@
-FROM ubuntu:18.04
+FROM ubuntu:20.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update -y
 RUN apt-get upgrade -y
-RUN apt-get install -y libz-dev pkg-config libssl-dev git cmake ninja-build gcc g++ python
+RUN apt-get install -y libz-dev pkg-config libssl-dev git cmake ninja-build gcc g++ python3
 
 RUN git clone --single-branch --branch solana-rustc/12.0-2021-04-15 \
     git://github.com/solana-labs/llvm-project.git

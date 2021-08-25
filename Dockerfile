@@ -15,7 +15,7 @@ RUN make
 WORKDIR /src
 RUN cargo build --release
 
-FROM ubuntu:18.04
+FROM ubuntu:20.04
 COPY --from=builder /src/target/release/solang /usr/bin/solang
 
 ENTRYPOINT ["/usr/bin/solang"]
