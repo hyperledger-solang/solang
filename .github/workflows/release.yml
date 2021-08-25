@@ -8,7 +8,7 @@ name: Build Release Binaries
 jobs:
   linux:
     name: Linux
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     container: hyperledgerlabs/solang:ci
     steps:
     - name: Checkout sources
@@ -102,7 +102,7 @@ jobs:
 
   docker:
     name: Docker
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     steps:
     - name: Checkout sources
       uses: actions/checkout@v2
