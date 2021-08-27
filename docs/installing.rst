@@ -8,24 +8,25 @@ Download release binaries
 
 For Linux x86-64, there is a binary available in the github releases:
 
-`<https://github.com/hyperledger-labs/solang/releases/download/v0.1.7/solang-linux>`_
+`<https://github.com/hyperledger-labs/solang/releases/download/v0.1.8/solang-linux>`_
 
 For Windows x64, there is a binary available:
 
-`<https://github.com/hyperledger-labs/solang/releases/download/v0.1.7/solang.exe>`_
+`<https://github.com/hyperledger-labs/solang/releases/download/v0.1.8/solang.exe>`_
 
-For MacOS, there is an intel binary available.
-Remember to remove the quarantine attribute using ``xattr -d com.apple.quarantine solang-mac`` in the terminal.
+For MacOS, there is an arm and intel binary available.
+Remember to remove the quarantine attribute using ``xattr -d com.apple.quarantine solang-mac-arm`` in the terminal.
 
-`<https://github.com/hyperledger-labs/solang/releases/download/v0.1.7/solang-mac>`_
+`<https://github.com/hyperledger-labs/solang/releases/download/v0.1.8/solang-mac-arm>`_
 
+`<https://github.com/hyperledger-labs/solang/releases/download/v0.1.8/solang-mac-intel>`_
 
 Using hyperledgerlabs/solang docker hub images
 ----------------------------------------------
 
 New images are automatically made available on
 `docker hub <https://hub.docker.com/repository/docker/hyperledgerlabs/solang/>`_.
-There is a release `v0.1.7` tag and a `latest` tag:
+There is a release `v0.1.8` tag and a `latest` tag:
 
 .. code-block:: bash
 
