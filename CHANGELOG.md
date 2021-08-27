@@ -2,7 +2,7 @@
 All notable changes to [Solang](https://github.com/hyperledger-labs/solang/)
 will be documented here.
 
-## [Unreleased]
+## [0.1.8]
 
 ### Added
 - Added a strength reduce pass to eliminate 256/128 bit multiply, division,
