@@ -56,8 +56,8 @@ Once you have node and npm installed, you can build the extension like so:
     npm install -g vsce
     vsce package
 
-You should now have an extension file called solang-0.0.1.vsix which can be
-installed using `code --install-extension solang-0.0.1.vsix`.
+You should now have an extension file called solang-0.2.0.vsix which can be
+installed using `code --install-extension solang-0.2.0.vsix`.
 
 Alternatively, the extension be run from vscode itself.
 
