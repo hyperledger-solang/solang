@@ -1527,7 +1527,7 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
         }
     }
 
-    fn return_data<'b>(&self, binary: &Binary<'b>) -> PointerValue<'b> {
+    fn return_data<'b>(&self, binary: &Binary<'b>, _function: FunctionValue) -> PointerValue<'b> {
         let length = binary
             .builder
             .build_call(

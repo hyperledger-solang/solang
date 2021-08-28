@@ -59,7 +59,7 @@ struct VirtualMachine {
     programs: Vec<Contract>,
     stack: Vec<Contract>,
     printbuf: String,
-    output: Vec<u8>,
+    return_data: Option<(Account, Vec<u8>)>,
 }
 
 #[derive(Clone)]
@@ -208,7 +208,7 @@ fn build_solidity(src: &str) -> VirtualMachine {
         programs,
         stack: vec![cur],
         printbuf: String::new(),
-        output: Vec::new(),
+        return_data: None,
     }
 }
 
@@ -488,6 +488,85 @@ impl SyscallObject<UserError> for SolKeccak256 {
         println!("sol_keccak256: {}", hex::encode(hash));
 
         *result = Ok(0)
+    }
+}
+
+struct SyscallSetReturnData<'a> {
+    context: Rc<RefCell<&'a mut VirtualMachine>>,
+}
+
+impl<'a> SyscallObject<UserError> for SyscallSetReturnData<'a> {
+    fn call(
+        &mut self,
+        addr: u64,
+        len: u64,
+        _arg3: u64,
+        _arg4: u64,
+        _arg5: u64,
+        memory_mapping: &MemoryMapping,
+        result: &mut Result<u64, EbpfError<UserError>>,
+    ) {
+        if len > 1024 {
+            panic!("sol_set_return_data: length is {}", len);
+        }
+        let buf = question_mark!(translate_slice::<u8>(memory_mapping, addr, len), result);
+
+        if let Ok(mut context) = self.context.try_borrow_mut() {
+            if len == 0 {
+                context.return_data = None;
+            } else {
+                context.return_data = Some((context.stack[0].program, buf.to_vec()));
+            }
+
+            *result = Ok(0);
+        } else {
+            panic!();
+        }
+    }
+}
+
+struct SyscallGetReturnData<'a> {
+    context: Rc<RefCell<&'a mut VirtualMachine>>,
+}
+
+impl<'a> SyscallObject<UserError> for SyscallGetReturnData<'a> {
+    fn call(
+        &mut self,
+        addr: u64,
+        len: u64,
+        program_id_addr: u64,
+        _arg4: u64,
+        _arg5: u64,
+        memory_mapping: &MemoryMapping,
+        result: &mut Result<u64, EbpfError<UserError>>,
+    ) {
+        if let Ok(context) = self.context.try_borrow() {
+            if let Some((program_id, return_data)) = &context.return_data {
+                let length = std::cmp::min(len, return_data.len() as u64);
+
+                if len > 0 {
+                    let set_result = question_mark!(
+                        translate_slice_mut::<u8>(memory_mapping, addr, length),
+                        result
+                    );
+
+                    set_result.copy_from_slice(&return_data[..length as usize]);
+
+                    let program_id_result = question_mark!(
+                        translate_slice_mut::<u8>(memory_mapping, program_id_addr, 32),
+                        result
+                    );
+
+                    program_id_result.copy_from_slice(program_id);
+                }
+
+                *result = Ok(return_data.len() as u64);
+            } else {
+                *result = Ok(0);
+            }
+        } else {
+            panic!();
+        }
     }
 }
 
@@ -886,6 +965,8 @@ impl<'a> SyscallObject<UserError> for SyscallInvokeSignedC<'a> {
                 })
                 .collect();
 
+            context.return_data = None;
+
             if instruction.program_id.is_system_instruction() {
                 match bincode::deserialize::<u32>(&instruction.data).unwrap() {
                     0 => {
@@ -1088,6 +1169,14 @@ impl VirtualMachine {
             .register_syscall_by_name(b"sol_ed25519_sig_check", SyscallEd25519SigCheck::call)
             .unwrap();
 
+        syscall_registry
+            .register_syscall_by_name(b"sol_set_return_data", SyscallSetReturnData::call)
+            .unwrap();
+
+        syscall_registry
+            .register_syscall_by_name(b"sol_get_return_data", SyscallGetReturnData::call)
+            .unwrap();
+
         let executable = <dyn Executable<UserError, TestInstructionMeter>>::from_elf(
             &self.account_data[&program.program].data,
             None,
@@ -1140,6 +1229,22 @@ impl VirtualMachine {
         )
         .unwrap();
 
+        vm.bind_syscall_context_object(
+            Box::new(SyscallSetReturnData {
+                context: context.clone(),
+            }),
+            None,
+        )
+        .unwrap();
+
+        vm.bind_syscall_context_object(
+            Box::new(SyscallGetReturnData {
+                context: context.clone(),
+            }),
+            None,
+        )
+        .unwrap();
+
         let res = vm
             .execute_program_interpreted(&mut TestInstructionMeter { remaining: 1000000 })
             .unwrap();
@@ -1153,11 +1258,9 @@ impl VirtualMachine {
 
         VirtualMachine::validate_heap(output);
 
-        let len = LittleEndian::read_u32(&output[4..]) as usize;
-        let offset = LittleEndian::read_u32(&output[8..]) as usize;
-        elf.output = output[offset..offset + len].to_vec();
-
-        println!("return: {}", hex::encode(&elf.output));
+        if let Some((_, return_data)) = &elf.return_data {
+            println!("return: {}", hex::encode(&return_data));
+        }
 
         assert_eq!(res, 0);
     }
@@ -1199,13 +1302,17 @@ impl VirtualMachine {
 
         self.execute(&calldata, seeds);
 
-        println!("output: {}", hex::encode(&self.output));
+        if let Some((_, return_data)) = &self.return_data {
+            println!("return: {}", hex::encode(&return_data));
 
-        let program = &self.stack[0];
+            let program = &self.stack[0];
 
-        program.abi.as_ref().unwrap().functions[name][0]
-            .decode_output(&self.output)
-            .unwrap()
+            program.abi.as_ref().unwrap().functions[name][0]
+                .decode_output(return_data)
+                .unwrap()
+        } else {
+            Vec::new()
+        }
     }
 
     fn input(

@@ -1,6 +1,5 @@
 import expect from 'expect';
 import { establishConnection } from './index';
-import crypto from 'crypto';
 
 describe('Deploy solang contract and test', () => {
     it('external_call', async function () {

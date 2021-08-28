@@ -243,6 +243,24 @@ impl SolanaTarget {
         function
             .as_global_value()
             .set_unnamed_address(UnnamedAddress::Local);
+
+        let function = binary.module.add_function(
+            "sol_set_return_data",
+            void_ty.fn_type(&[u8_ptr.into(), u64_ty.into()], false),
+            None,
+        );
+        function
+            .as_global_value()
+            .set_unnamed_address(UnnamedAddress::Local);
+
+        let function = binary.module.add_function(
+            "sol_get_return_data",
+            u64_ty.fn_type(&[u8_ptr.into(), u64_ty.into(), u8_ptr.into()], false),
+            None,
+        );
+        function
+            .as_global_value()
+            .set_unnamed_address(UnnamedAddress::Local);
     }
 
     /// Returns the SolAccountInfo of the executing binary
@@ -2373,66 +2391,45 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
     }
 
     fn return_empty_abi(&self, binary: &Binary) {
-        let data = self.contract_storage_data(binary);
-
-        let header_ptr = binary.builder.build_pointer_cast(
-            data,
-            binary.context.i32_type().ptr_type(AddressSpace::Generic),
-            "header_ptr",
-        );
-
-        let data_len_ptr = unsafe {
-            binary.builder.build_gep(
-                header_ptr,
-                &[binary.context.i64_type().const_int(1, false)],
-                "data_len_ptr",
-            )
-        };
-
-        let data_ptr = unsafe {
-            binary.builder.build_gep(
-                header_ptr,
-                &[binary.context.i64_type().const_int(2, false)],
-                "data_ptr",
-            )
-        };
-
-        let offset = binary
+        // return 0 for success
+        binary
             .builder
-            .build_load(data_ptr, "offset")
-            .into_int_value();
+            .build_return(Some(&binary.context.i64_type().const_int(0, false)));
+    }
 
+    fn return_abi<'b>(&self, binary: &'b Binary, data: PointerValue<'b>, length: IntValue) {
+        // set return data
         binary.builder.build_call(
-            binary.module.get_function("account_data_free").unwrap(),
-            &[data.into(), offset.into()],
+            binary.module.get_function("sol_set_return_data").unwrap(),
+            &[
+                data.into(),
+                binary
+                    .builder
+                    .build_int_z_extend(length, binary.context.i64_type(), "length")
+                    .into(),
+            ],
             "",
         );
 
-        binary
-            .builder
-            .build_store(data_len_ptr, binary.context.i32_type().const_zero());
-
-        binary
-            .builder
-            .build_store(data_ptr, binary.context.i32_type().const_zero());
-
         // return 0 for success
         binary
             .builder
             .build_return(Some(&binary.context.i64_type().const_int(0, false)));
     }
 
-    fn return_abi<'b>(&self, binary: &'b Binary, _data: PointerValue<'b>, _length: IntValue) {
-        // return data already filled in output binary
-
-        // return 0 for success
-        binary
-            .builder
-            .build_return(Some(&binary.context.i64_type().const_int(0, false)));
-    }
-
-    fn assert_failure<'b>(&self, binary: &'b Binary, _data: PointerValue, _length: IntValue) {
+    fn assert_failure<'b>(&self, binary: &'b Binary, data: PointerValue, length: IntValue) {
         // the reason code should be null (and already printed)
+        binary.builder.build_call(
+            binary.module.get_function("sol_set_return_data").unwrap(),
+            &[
+                data.into(),
+                binary
+                    .builder
+                    .build_int_z_extend(length, binary.context.i64_type(), "length")
+                    .into(),
+            ],
+            "",
+        );
 
         // return 1 for failure
         binary.builder.build_return(Some(
@@ -2480,101 +2477,21 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
 
         let length = encoder.encoded_length();
 
-        let data = self.contract_storage_data(binary);
-        let account = self.contract_storage_account(binary);
-
-        let header_ptr = binary.builder.build_pointer_cast(
-            data,
-            binary.context.i32_type().ptr_type(AddressSpace::Generic),
-            "header_ptr",
-        );
-
-        let data_len_ptr = unsafe {
-            binary.builder.build_gep(
-                header_ptr,
-                &[binary.context.i64_type().const_int(1, false)],
-                "data_len_ptr",
-            )
-        };
-
-        let data_offset_ptr = unsafe {
-            binary.builder.build_gep(
-                header_ptr,
-                &[binary.context.i64_type().const_int(2, false)],
-                "data_offset_ptr",
-            )
-        };
-
-        let offset = binary
-            .builder
-            .build_load(data_offset_ptr, "offset")
-            .into_int_value();
-
-        let account_data_realloc = binary.module.get_function("account_data_realloc").unwrap();
-
-        let arg1 = binary.builder.build_pointer_cast(
-            account,
-            account_data_realloc.get_type().get_param_types()[0].into_pointer_type(),
-            "",
-        );
-
-        let rc = binary
+        let encoded_data = binary
             .builder
             .build_call(
-                account_data_realloc,
-                &[
-                    arg1.into(),
-                    offset.into(),
-                    length.into(),
-                    data_offset_ptr.into(),
-                ],
+                binary.module.get_function("__malloc").unwrap(),
+                &[length.into()],
                 "",
             )
             .try_as_basic_value()
             .left()
             .unwrap()
-            .into_int_value();
+            .into_pointer_value();
 
-        let is_rc_zero = binary.builder.build_int_compare(
-            IntPredicate::EQ,
-            rc,
-            binary.context.i64_type().const_zero(),
-            "is_rc_zero",
-        );
+        encoder.finish(binary, function, encoded_data, ns);
 
-        let rc_not_zero = binary.context.append_basic_block(function, "rc_not_zero");
-        let rc_zero = binary.context.append_basic_block(function, "rc_zero");
-
-        binary
-            .builder
-            .build_conditional_branch(is_rc_zero, rc_zero, rc_not_zero);
-
-        binary.builder.position_at_end(rc_not_zero);
-
-        self.return_code(
-            binary,
-            binary.context.i64_type().const_int(5u64 << 32, false),
-        );
-
-        binary.builder.position_at_end(rc_zero);
-
-        binary.builder.build_store(data_len_ptr, length);
-
-        let offset = binary
-            .builder
-            .build_load(data_offset_ptr, "offset")
-            .into_int_value();
-
-        // step over that field, and cast to u8* for the buffer itself
-        let output = binary.builder.build_pointer_cast(
-            unsafe { binary.builder.build_gep(data, &[offset], "data_ptr") },
-            binary.context.i8_type().ptr_type(AddressSpace::Generic),
-            "data_ptr",
-        );
-
-        encoder.finish(binary, function, output, ns);
-
-        (output, length)
+        (encoded_data, length)
     }
 
     fn abi_decode<'b>(
@@ -2849,20 +2766,141 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
     }
 
     /// Get return buffer for external call
-    fn return_data<'b>(&self, binary: &Binary<'b>) -> PointerValue<'b> {
-        let parameters = self.sol_parameters(binary);
+    fn return_data<'b>(
+        &self,
+        binary: &Binary<'b>,
+        function: FunctionValue<'b>,
+    ) -> PointerValue<'b> {
+        let null_u8_ptr = binary
+            .context
+            .i8_type()
+            .ptr_type(AddressSpace::Generic)
+            .const_zero();
 
-        // return the account that returned the value
-        binary
+        let length_as_64 = binary
             .builder
-            .build_load(
-                binary
-                    .builder
-                    .build_struct_gep(parameters, 3, "ka_last_called")
-                    .unwrap(),
+            .build_call(
+                binary.module.get_function("sol_get_return_data").unwrap(),
+                &[
+                    null_u8_ptr.into(),
+                    binary.context.i64_type().const_zero().into(),
+                    null_u8_ptr.into(),
+                ],
+                "returndatasize",
+            )
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_int_value();
+
+        let length =
+            binary
+                .builder
+                .build_int_truncate(length_as_64, binary.context.i32_type(), "length");
+
+        let malloc_length = binary.builder.build_int_add(
+            length,
+            binary
+                .module
+                .get_struct_type("struct.vector")
+                .unwrap()
+                .size_of()
+                .unwrap()
+                .const_cast(binary.context.i32_type(), false),
+            "size",
+        );
+
+        let p = binary
+            .builder
+            .build_call(
+                binary.module.get_function("__malloc").unwrap(),
+                &[malloc_length.into()],
+                "",
+            )
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_pointer_value();
+
+        let v = binary.builder.build_pointer_cast(
+            p,
+            binary
+                .module
+                .get_struct_type("struct.vector")
+                .unwrap()
+                .ptr_type(AddressSpace::Generic),
+            "string",
+        );
+
+        let data_len = unsafe {
+            binary.builder.build_gep(
+                v,
+                &[
+                    binary.context.i32_type().const_zero(),
+                    binary.context.i32_type().const_zero(),
+                ],
+                "data_len",
+            )
+        };
+
+        binary.builder.build_store(data_len, length);
+
+        let data_size = unsafe {
+            binary.builder.build_gep(
+                v,
+                &[
+                    binary.context.i32_type().const_zero(),
+                    binary.context.i32_type().const_int(1, false),
+                ],
+                "data_size",
+            )
+        };
+
+        binary.builder.build_store(data_size, length);
+
+        let data = unsafe {
+            binary.builder.build_gep(
+                v,
+                &[
+                    binary.context.i32_type().const_zero(),
+                    binary.context.i32_type().const_int(2, false),
+                ],
                 "data",
             )
-            .into_pointer_value()
+        };
+
+        let program_id = binary.build_array_alloca(
+            function,
+            binary.context.i8_type(),
+            binary.context.i32_type().const_int(32, false),
+            "program_id",
+        );
+
+        binary.builder.build_call(
+            binary.module.get_function("sol_get_return_data").unwrap(),
+            &[
+                binary
+                    .builder
+                    .build_pointer_cast(
+                        data,
+                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "",
+                    )
+                    .into(),
+                length_as_64.into(),
+                binary
+                    .builder
+                    .build_pointer_cast(
+                        program_id,
+                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "",
+                    )
+                    .into(),
+            ],
+            "",
+        );
+
+        v
     }
 
     fn return_code<'b>(&self, binary: &'b Binary, ret: IntValue<'b>) {

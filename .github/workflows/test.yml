@@ -143,7 +143,7 @@ jobs:
     needs: linux
     services:
       solana:
-        image: solanalabs/solana:v1.7.3
+        image: solanalabs/solana:edge
         ports:
           - 8899
           - 8900
