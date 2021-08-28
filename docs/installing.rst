@@ -65,7 +65,7 @@ Installing the LLVM Libraries
 Solang needs a build of
 `llvm with some extra patches <https://github.com/solana-labs/llvm-project/>`_.
 You can either download the pre-built binaries from
-`github <https://github.com/hyperledger-labs/solang/releases/tag/llvm12.0-1>`_
+`github <https://github.com/hyperledger-labs/solang/releases/tag/v0.1.8>`_
 or build your own from source. After that, you need to add the `bin` directory to your
 path, so that the build system of Solang can find the correct version of llvm to use.
 
@@ -73,7 +73,7 @@ Installing LLVM on Linux
 ________________________
 
 A pre-built version of llvm, specifically configured for Solang, is available at
-`<https://github.com/hyperledger-labs/solang/releases/download/llvm12.0-1/llvm12.0-linux-intel.tar.xz>`_.
+`<https://github.com/hyperledger-labs/solang/releases/download/v0.1.8/llvm12.0-linux-intel.tar.xz>`_.
 After downloading, untar the file in a terminal and add it to your path.
 
 .. code-block:: bash
@@ -85,7 +85,7 @@ Installing LLVM on Windows
 __________________________
 
 A pre-built version of llvm, specifically configured for Solang, is available at
-`<https://github.com/hyperledger-labs/solang/releases/download/llvm12.0-1/llvm12.0-win.zip>`_.
+`<https://github.com/hyperledger-labs/solang/releases/download/v0.1.8/llvm12.0-win.zip>`_.
 
 After unzipping the file, add the bin directory to your path.
 
@@ -105,8 +105,8 @@ Installing LLVM on Mac
 ______________________
 
 A pre-built version of llvm for intel macs, is available at
-`<https://github.com/hyperledger-labs/solang/releases/download/llvm12.0-1/llvm12.0-mac-intel.tar.xz>`_ and for arm macs there is
-`<https://github.com/hyperledger-labs/solang/releases/download/llvm12.0-1/llvm12.0-mac-arm.tar.xz>`_. After downloading,
+`<https://github.com/hyperledger-labs/solang/releases/download/v0.1.8/llvm12.0-mac-intel.tar.xz>`_ and for arm macs there is
+`<https://github.com/hyperledger-labs/solang/releases/download/v0.1.8/llvm12.0-mac-arm.tar.xz>`_. After downloading,
 untar the file in a terminal and add it to your path like so:
 
 .. code-block:: bash
