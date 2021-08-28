@@ -1033,7 +1033,10 @@ impl LanguageServer for SolangServer {
 
     async fn initialized(&self, _: InitializedParams) {
         self.client
-            .log_message(MessageType::Info, "server initialized!")
+            .log_message(
+                MessageType::Info,
+                format!("solang language server {} initialized", env!("GIT_HASH")),
+            )
             .await;
     }
 
