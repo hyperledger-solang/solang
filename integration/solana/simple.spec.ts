@@ -407,24 +407,6 @@ describe('Deploy solang contract and test', () => {
             .toThrowError(new Error('failed to send transaction: Transaction simulation failed: Error processing Instruction 0: account data too small for instruction'));
     });
 
-    it('returndata too small', async function () {
-        this.timeout(50000);
-
-        let conn = await establishConnection();
-
-        // storage.sol needs 168 byes
-        let prog = await conn.loadProgram("bundle.so", "store.abi", 512);
-
-        await prog.call_constructor(conn, 'store', []);
-
-        await prog.call_function(conn, "set_foo1", []);
-
-        // get foo1
-        await expect(prog.call_function(conn, "get_both_foos", []))
-            .rejects
-            .toThrowError(new Error('failed to send transaction: Transaction simulation failed: Error processing Instruction 0: account data too small for instruction'));
-    });
-
     it('account storage too small dynamic alloc', async function () {
         this.timeout(50000);
 

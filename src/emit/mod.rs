@@ -291,7 +291,7 @@ pub trait TargetRuntime<'a> {
     ) -> BasicValueEnum<'b>;
 
     /// Return the return data from an external call (either revert error or return values)
-    fn return_data<'b>(&self, bin: &Binary<'b>) -> PointerValue<'b>;
+    fn return_data<'b>(&self, bin: &Binary<'b>, function: FunctionValue<'b>) -> PointerValue<'b>;
 
     /// Return the value we received
     fn value_transferred<'b>(&self, bin: &Binary<'b>, ns: &ast::Namespace) -> IntValue<'b>;
@@ -2537,7 +2537,7 @@ pub trait TargetRuntime<'a> {
                     )
                     .into()
             }
-            Expression::ReturnData(_) => self.return_data(bin).into(),
+            Expression::ReturnData(_) => self.return_data(bin, function).into(),
             Expression::StorageArrayLength { array, elem_ty, .. } => {
                 let slot = self
                     .expression(bin, array, vartab, function, ns)
@@ -6167,68 +6167,22 @@ impl<'a> Binary<'a> {
                 .unwrap()
                 .into_pointer_value()
         } else {
-            // Get the type name of the struct we are point to
-            let struct_ty = vector
-                .into_pointer_value()
-                .get_type()
-                .get_element_type()
-                .into_struct_type();
-            let name = struct_ty.get_name().unwrap();
-
-            if name == CStr::from_bytes_with_nul(b"struct.SolAccountInfo\0").unwrap() {
-                // load the data pointer
-                let data = self
-                    .builder
-                    .build_load(
-                        self.builder
-                            .build_struct_gep(vector.into_pointer_value(), 3, "data")
-                            .unwrap(),
-                        "data",
-                    )
-                    .into_pointer_value();
-
-                // get the offset of the return data
-                let header_ptr = self.builder.build_pointer_cast(
-                    data,
-                    self.context.i32_type().ptr_type(AddressSpace::Generic),
-                    "header_ptr",
-                );
-
-                let data_ptr = unsafe {
-                    self.builder.build_gep(
-                        header_ptr,
-                        &[self.context.i64_type().const_int(2, false)],
-                        "data_ptr",
-                    )
-                };
-
-                let offset = self.builder.build_load(data_ptr, "offset").into_int_value();
-
-                let v = unsafe { self.builder.build_gep(data, &[offset], "data") };
-
-                self.builder.build_pointer_cast(
-                    v,
-                    self.context.i8_type().ptr_type(AddressSpace::Generic),
+            let data = unsafe {
+                self.builder.build_gep(
+                    vector.into_pointer_value(),
+                    &[
+                        self.context.i32_type().const_zero(),
+                        self.context.i32_type().const_int(2, false),
+                    ],
                     "data",
                 )
-            } else {
-                let data = unsafe {
-                    self.builder.build_gep(
-                        vector.into_pointer_value(),
-                        &[
-                            self.context.i32_type().const_zero(),
-                            self.context.i32_type().const_int(2, false),
-                        ],
-                        "data",
-                    )
-                };
+            };
 
-                self.builder.build_pointer_cast(
-                    data,
-                    self.context.i8_type().ptr_type(AddressSpace::Generic),
-                    "data",
-                )
-            }
+            self.builder.build_pointer_cast(
+                data,
+                self.context.i8_type().ptr_type(AddressSpace::Generic),
+                "data",
+            )
         }
     }
 

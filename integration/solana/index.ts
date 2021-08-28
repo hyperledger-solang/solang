@@ -14,13 +14,15 @@ import fs from 'fs';
 import { AbiItem } from 'web3-utils';
 import { utils } from 'ethers';
 import crypto from 'crypto';
+import { encode } from 'querystring';
 const Web3EthAbi = require('web3-eth-abi');
 
 const default_url: string = "http://localhost:8899";
+const return_data_prefix = 'Program return data: ';
 
 export async function establishConnection(): Promise<TestConnection> {
     let url = process.env.RPC_URL || default_url;
-    let connection = new Connection(url, 'recent');
+    let connection = new Connection(url, 'confirmed');
     const version = await connection.getVersion();
     console.log('Connection to cluster established:', url, version);
 
@@ -101,7 +103,7 @@ class TestConnection {
             [this.payerAccount, account],
             {
                 skipPreflight: false,
-                commitment: 'recent',
+                commitment: 'confirmed',
                 preflightCommitment: undefined,
             },
         );
@@ -190,7 +192,7 @@ class Program {
             [test.payerAccount],
             {
                 skipPreflight: false,
-                commitment: 'recent',
+                commitment: 'confirmed',
                 preflightCommitment: undefined,
             },
         );
@@ -221,7 +223,8 @@ class Program {
         keys.push({ pubkey: PublicKey.default, isSigner: false, isWritable: false });
 
         for (let i = 0; i < pubkeys.length; i++) {
-            keys.push({ pubkey: pubkeys[i], isSigner: false, isWritable: true });
+            // make each 2nd key writable (will be account storage for contract)
+            keys.push({ pubkey: pubkeys[i], isSigner: false, isWritable: (i & 1) == 1 });
         }
 
         const instruction = new TransactionInstruction({
@@ -232,24 +235,37 @@ class Program {
 
         signers.unshift(test.payerAccount);
 
-        await sendAndConfirmTransaction(
+        let signature = await sendAndConfirmTransaction(
             test.connection,
             new Transaction().add(instruction),
             signers,
             {
                 skipPreflight: false,
-                commitment: 'recent',
+                commitment: 'confirmed',
                 preflightCommitment: undefined,
             },
         );
 
         if (abi.outputs?.length) {
-            const accountInfo = await test.connection.getAccountInfo(this.contractStorageAccount.publicKey);
+            const parsedTx = await test.connection.getParsedConfirmedTransaction(
+                signature,
+            );
 
-            let length = Number(accountInfo!.data.readUInt32LE(4));
-            let offset = Number(accountInfo!.data.readUInt32LE(8));
+            let encoded = Buffer.from([]);
 
-            let encoded = accountInfo!.data.slice(offset, length + offset);
+            let seen = 0;
+
+            for (let message of parsedTx!.meta?.logMessages!) {
+                if (message.startsWith(return_data_prefix)) {
+                    let [program_id, return_data] = message.slice(return_data_prefix.length).split(" ");
+                    encoded = Buffer.from(return_data, 'base64')
+                    seen += 1;
+                }
+            }
+
+            if (seen == 0) {
+                throw 'return data not set';
+            }
 
             let returns = Web3EthAbi.decodeParameters(abi.outputs!, encoded.toString('hex'));
 
@@ -265,6 +281,72 @@ class Program {
             console.log(debug);
             return [];
         }
+    }
+
+    async call_function_expect_revert(test: TestConnection, name: string, params: any[], pubkeys: PublicKey[] = [], seeds: any[] = [], signers: Keypair[] = []): Promise<string> {
+        let abi: AbiItem = JSON.parse(this.abi).find((e: AbiItem) => e.name == name);
+
+        const input: string = Web3EthAbi.encodeFunctionCall(abi, params);
+        const data = Buffer.concat([
+            this.contractStorageAccount.publicKey.toBuffer(),
+            test.payerAccount.publicKey.toBuffer(),
+            Buffer.from('00000000', 'hex'),
+            this.encode_seeds(seeds),
+            Buffer.from(input.replace('0x', ''), 'hex')
+        ]);
+
+        let debug = 'calling function ' + name + ' [' + params + ']';
+
+        let keys = [];
+
+        seeds.forEach((seed) => {
+            keys.push({ pubkey: seed.address, isSigner: false, isWritable: true });
+        });
+
+        keys.push({ pubkey: this.contractStorageAccount.publicKey, isSigner: false, isWritable: true });
+        keys.push({ pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false });
+        keys.push({ pubkey: PublicKey.default, isSigner: false, isWritable: false });
+
+        for (let i = 0; i < pubkeys.length; i++) {
+            // make each 2nd key writable (will be account storage for contract)
+            keys.push({ pubkey: pubkeys[i], isSigner: false, isWritable: (i & 1) == 1 });
+        }
+
+        const instruction = new TransactionInstruction({
+            keys,
+            programId: this.programId,
+            data,
+        });
+
+        signers.unshift(test.payerAccount);
+
+        const { err, logs } = (await test.connection.simulateTransaction(new Transaction().add(instruction),
+            signers)).value;
+
+        if (!err) {
+            throw 'error is not falsy';
+        }
+
+        let encoded;
+        let seen = 0;
+
+        for (let message of logs!) {
+            if (message.startsWith(return_data_prefix)) {
+                let [program_id, return_data] = message.slice(return_data_prefix.length).split(" ");
+                encoded = Buffer.from(return_data, 'base64')
+                seen += 1;
+            }
+        }
+
+        if (seen == 0) {
+            throw 'return data not set';
+        }
+
+        if (encoded?.readUInt32BE(0) != 0x08c379a0) {
+            throw 'signature not correct';
+        }
+
+        return Web3EthAbi.decodeParameter('string', encoded.subarray(4).toString('hex'));
     }
 
     async contract_storage(test: TestConnection, upto: number): Promise<Buffer> {

@@ -638,7 +638,7 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
     }
 
     /// Get return buffer for external call
-    fn return_data<'b>(&self, _binary: &Binary<'b>) -> PointerValue<'b> {
+    fn return_data<'b>(&self, _binary: &Binary<'b>, _function: FunctionValue) -> PointerValue<'b> {
         panic!("generic cannot call other contracts");
     }
 

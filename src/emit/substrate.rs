@@ -3672,7 +3672,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         }
     }
 
-    fn return_data<'b>(&self, binary: &Binary<'b>) -> PointerValue<'b> {
+    fn return_data<'b>(&self, binary: &Binary<'b>, _function: FunctionValue) -> PointerValue<'b> {
         let scratch_buf = binary.builder.build_pointer_cast(
             binary.scratch.unwrap().as_pointer_value(),
             binary.context.i8_type().ptr_type(AddressSpace::Generic),
