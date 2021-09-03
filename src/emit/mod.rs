@@ -2876,7 +2876,7 @@ pub trait TargetRuntime<'a> {
 
                 ef.into()
             }
-            Expression::Builtin(_, _, Builtin::ExternalFunctionSelector, args) => {
+            Expression::Builtin(_, _, Builtin::FunctionSelector, args) => {
                 let ef = self
                     .expression(bin, &args[0], vartab, function, ns)
                     .into_pointer_value();

@@ -884,7 +884,7 @@ fn try_catch(
                 let selector = Expression::Builtin(
                     *loc,
                     vec![Type::Bytes(4)],
-                    Builtin::ExternalFunctionSelector,
+                    Builtin::FunctionSelector,
                     vec![function.clone()],
                 );
 

@@ -135,3 +135,56 @@ fn contract_no_init() {
 
     no_errors(ns.diagnostics);
 }
+
+#[test]
+fn selector_in_free_function() {
+    let ns = parse_and_resolve(
+        r#"
+        interface I {
+            function X(bytes) external;
+        }
+
+        function x() returns (bytes4) {
+            return I.X.selector;
+        }
+
+        contract foo {}
+        "#,
+        Target::Solana,
+    );
+
+    no_errors(ns.diagnostics);
+
+    let ns = parse_and_resolve(
+        r#"
+        interface I {
+            function X(bytes) external;
+        }
+
+        contract X {
+            function x() public returns (bytes4) {
+                return I.X.selector;
+            }
+        }"#,
+        Target::Solana,
+    );
+
+    no_errors(ns.diagnostics);
+
+    let ns = parse_and_resolve(
+        r#"
+        contract I {
+            function X() external {}
+        }
+
+        contract foo {
+            function f(I t) public returns (bytes4) {
+                return t.X.selector;
+            }
+        }
+        "#,
+        Target::Solana,
+    );
+
+    no_errors(ns.diagnostics);
+}

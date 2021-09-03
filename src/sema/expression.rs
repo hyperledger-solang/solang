@@ -4897,63 +4897,50 @@ fn member_access(
     if let pt::Expression::Variable(namespace) = e {
         if symtable.find(&namespace.name).is_none() {
             if let Some(call_contract_no) = ns.resolve_contract(file_no, namespace) {
-                if let Some(contract_no) = contract_no {
-                    if is_base(call_contract_no, contract_no, ns) {
-                        // find function with this name
-                        let mut name_matches = 0;
-                        let mut expr = Err(());
+                // find function with this name
+                let mut name_matches = 0;
+                let mut expr = Err(());
 
-                        for function_no in &ns.contracts[call_contract_no].functions {
-                            let func = &ns.functions[*function_no];
+                for function_no in &ns.contracts[call_contract_no].functions {
+                    let func = &ns.functions[*function_no];
 
-                            if func.name != id.name || func.ty != pt::FunctionTy::Function {
-                                continue;
-                            }
+                    if func.name != id.name || func.ty != pt::FunctionTy::Function {
+                        continue;
+                    }
 
-                            name_matches += 1;
+                    name_matches += 1;
 
-                            expr = Ok(Expression::InternalFunction {
-                                loc: e.loc(),
-                                ty: function_type(func, false),
-                                function_no: *function_no,
-                                signature: None,
-                            })
-                        }
+                    expr = Ok(Expression::InternalFunction {
+                        loc: e.loc(),
+                        ty: function_type(func, false),
+                        function_no: *function_no,
+                        signature: None,
+                    })
+                }
 
-                        return match name_matches {
-                            0 => {
-                                diagnostics.push(Diagnostic::error(
-                                    e.loc(),
-                                    format!(
-                                        "contract ‘{}’ does not have a function called ‘{}’",
-                                        ns.contracts[call_contract_no].name, id.name,
-                                    ),
-                                ));
-                                Err(())
-                            }
-                            1 => expr,
-                            _ => {
-                                diagnostics.push(Diagnostic::error(
-                                    e.loc(),
-                                    format!(
-                                        "function ‘{}’ of contract ‘{}’ is overloaded",
-                                        id.name, ns.contracts[call_contract_no].name,
-                                    ),
-                                ));
-                                Err(())
-                            }
-                        };
-                    } else {
+                return match name_matches {
+                    0 => {
                         diagnostics.push(Diagnostic::error(
-                            id.loc,
+                            e.loc(),
                             format!(
-                                "contract ‘{}’ is not a base of ‘{}’",
-                                ns.contracts[call_contract_no].name, ns.contracts[contract_no].name,
+                                "contract ‘{}’ does not have a function called ‘{}’",
+                                ns.contracts[call_contract_no].name, id.name,
                             ),
                         ));
-                        return Err(());
+                        Err(())
                     }
-                }
+                    1 => expr,
+                    _ => {
+                        diagnostics.push(Diagnostic::error(
+                            e.loc(),
+                            format!(
+                                "function ‘{}’ of contract ‘{}’ is overloaded",
+                                id.name, ns.contracts[call_contract_no].name,
+                            ),
+                        ));
+                        Err(())
+                    }
+                };
             }
         }
     }
@@ -5153,7 +5140,7 @@ fn member_access(
             let mut name_matches = 0;
             let mut ext_expr = Err(());
 
-            for function_no in ns.contracts[ref_contract_no].all_functions.keys() {
+            for function_no in &ns.contracts[ref_contract_no].functions {
                 let func = &ns.functions[*function_no];
 
                 if func.name != id.name || func.ty != pt::FunctionTy::Function || !func.is_public()
@@ -5181,8 +5168,10 @@ fn member_access(
                 diagnostics.push(Diagnostic::error(
                     id.loc,
                     format!(
-                        "contract ‘{}’ has no public function ‘{}’",
-                        ns.contracts[ref_contract_no].name, id.name
+                        "{} ‘{}’ has no public function ‘{}’",
+                        ns.contracts[ref_contract_no].ty,
+                        ns.contracts[ref_contract_no].name,
+                        id.name
                     ),
                 ));
                 Err(())
@@ -5192,8 +5181,10 @@ fn member_access(
                 diagnostics.push(Diagnostic::error(
                     id.loc,
                     format!(
-                        "function ‘{}’ of contract ‘{}’ is overloaded",
-                        id.name, ns.contracts[ref_contract_no].name
+                        "function ‘{}’ of {} ‘{}’ is overloaded",
+                        id.name,
+                        ns.contracts[ref_contract_no].ty,
+                        ns.contracts[ref_contract_no].name
                     ),
                 ));
                 Err(())
@@ -5214,9 +5205,22 @@ fn member_access(
                 return Ok(Expression::Builtin(
                     e.loc(),
                     vec![Type::Bytes(4)],
-                    Builtin::ExternalFunctionSelector,
+                    Builtin::FunctionSelector,
                     vec![expr],
                 ));
+            }
+        }
+        Type::InternalFunction { .. } => {
+            if let Expression::InternalFunction { .. } = expr {
+                if id.name == "selector" {
+                    used_variable(ns, &expr, symtable);
+                    return Ok(Expression::Builtin(
+                        e.loc(),
+                        vec![Type::Bytes(4)],
+                        Builtin::FunctionSelector,
+                        vec![expr],
+                    ));
+                }
             }
         }
         _ => (),
