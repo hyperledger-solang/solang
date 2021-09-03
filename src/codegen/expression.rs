@@ -446,20 +446,24 @@ pub fn expression(
                 )
             }
         }
-        Expression::Builtin(loc, returns, Builtin::ExternalFunctionSelector, func_expr) => {
-            if let Expression::ExternalFunction { function_no, .. } = &func_expr[0] {
-                let selector = ns.functions[*function_no].selector();
+        Expression::Builtin(loc, returns, Builtin::FunctionSelector, func_expr) => {
+            match &func_expr[0] {
+                Expression::ExternalFunction { function_no, .. }
+                | Expression::InternalFunction { function_no, .. } => {
+                    let selector = ns.functions[*function_no].selector();
 
-                Expression::NumberLiteral(*loc, Type::Bytes(4), BigInt::from(selector))
-            } else {
-                let func_expr = expression(&func_expr[0], cfg, contract_no, func, ns, vartab);
+                    Expression::NumberLiteral(*loc, Type::Bytes(4), BigInt::from(selector))
+                }
+                _ => {
+                    let func_expr = expression(&func_expr[0], cfg, contract_no, func, ns, vartab);
 
-                Expression::Builtin(
-                    *loc,
-                    returns.clone(),
-                    Builtin::ExternalFunctionSelector,
-                    vec![func_expr],
-                )
+                    Expression::Builtin(
+                        *loc,
+                        returns.clone(),
+                        Builtin::FunctionSelector,
+                        vec![func_expr],
+                    )
+                }
             }
         }
         Expression::InternalFunctionCall { .. }
@@ -1507,7 +1511,7 @@ pub fn emit_function_call(
                 let selector = Expression::Builtin(
                     *loc,
                     vec![Type::Bytes(4)],
-                    Builtin::ExternalFunctionSelector,
+                    Builtin::FunctionSelector,
                     vec![function.clone()],
                 );
                 let address = Expression::Builtin(

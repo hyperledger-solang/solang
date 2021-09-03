@@ -1332,7 +1332,7 @@ pub enum Builtin {
     MulMod,
     AddMod,
     ExternalFunctionAddress,
-    ExternalFunctionSelector,
+    FunctionSelector,
     SignatureVerify,
 }
 
