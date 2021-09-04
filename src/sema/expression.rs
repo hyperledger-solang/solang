@@ -6535,7 +6535,7 @@ fn method_call_pos_args(
             diagnostics,
         )?;
 
-        let marker = ns.diagnostics.len();
+        let marker = diagnostics.len();
         let mut name_match = 0;
 
         for function_no in ns.contracts[*ext_contract_no].functions.clone() {
@@ -6651,6 +6651,36 @@ fn method_call_pos_args(
                     value,
                     gas: call_args.gas,
                 });
+            }
+        }
+
+        let self_ty = var_ty.deref_any();
+
+        // what about call args
+        match resolve_using(
+            loc,
+            func,
+            &var_expr,
+            self_ty,
+            &ExprContext {
+                file_no,
+                contract_no,
+                function_no: arg_function_no,
+                unchecked,
+            },
+            args,
+            symtable,
+            diagnostics,
+            ns,
+        ) {
+            Ok(Some(expr)) => {
+                diagnostics.truncate(marker);
+
+                return Ok(expr);
+            }
+            Ok(None) => (),
+            Err(_) => {
+                return Err(());
             }
         }
 
@@ -6806,143 +6836,30 @@ fn method_call_pos_args(
     }
 
     // resolve it using library extension
-    if let Some(contract_no) = contract_no {
-        let extended_ty = var_ty.deref_any();
+    if contract_no.is_some() {
+        let self_ty = var_ty.deref_any();
 
-        // first collect all possible libraries that match the using directive type
-        // Use HashSet for deduplication.
-        // If the using directive specifies a type, the type must match the type of
-        // the method call object exactly.
-        let libraries: HashSet<usize> = ns.contracts[contract_no]
-            .using
-            .iter()
-            .filter_map(|(library_no, ty)| match ty {
-                None => Some(*library_no),
-                Some(ty) if ty == extended_ty => Some(*library_no),
-                _ => None,
-            })
-            .collect();
-
-        let mut name_matches = 0;
-        let mut errors = Vec::new();
-
-        for library_no in libraries {
-            for function_no in ns.contracts[library_no].functions.clone() {
-                let libfunc = &ns.functions[function_no];
-
-                if libfunc.name != func.name || libfunc.ty != pt::FunctionTy::Function {
-                    continue;
-                }
-
-                name_matches += 1;
-
-                let params_len = libfunc.params.len();
-
-                if params_len != args.len() + 1 {
-                    errors.push(Diagnostic::error(
-                        *loc,
-                        format!(
-                            "library function expects {} arguments, {} provided (including self)",
-                            params_len,
-                            args.len() + 1
-                        ),
-                    ));
-                    continue;
-                }
-
-                let mut matches = true;
-                let mut cast_args = Vec::new();
-
-                match cast(
-                    &var_expr.loc(),
-                    var_expr.clone(),
-                    &libfunc.params[0].ty,
-                    true,
-                    ns,
-                    &mut errors,
-                ) {
-                    Ok(e) => cast_args.push(e),
-                    Err(()) => continue,
-                }
-
-                // check if arguments can be implicitly casted
-                for (i, arg) in args.iter().enumerate() {
-                    let ty = ns.functions[function_no].params[i + 1].ty.clone();
-
-                    let arg = match expression(
-                        arg,
-                        file_no,
-                        Some(contract_no),
-                        arg_function_no,
-                        ns,
-                        symtable,
-                        false,
-                        unchecked,
-                        &mut errors,
-                        Some(&ty),
-                    ) {
-                        Ok(e) => e,
-                        Err(()) => {
-                            matches = false;
-                            continue;
-                        }
-                    };
-
-                    match cast(&arg.loc(), arg.clone(), &ty, true, ns, &mut errors) {
-                        Ok(expr) => cast_args.push(expr),
-                        Err(_) => {
-                            matches = false;
-                            break;
-                        }
-                    }
-                }
-
-                if !matches {
-                    continue;
-                }
-
-                let libfunc = &ns.functions[function_no];
-
-                if libfunc.is_private() {
-                    errors.push(Diagnostic::error_with_note(
-                        *loc,
-                        "cannot call private library function".to_string(),
-                        libfunc.loc,
-                        format!("declaration of function ‘{}’", libfunc.name),
-                    ));
-
-                    continue;
-                }
-
-                let returns = function_returns(libfunc);
-                let ty = function_type(libfunc, false);
-
-                return Ok(Expression::InternalFunctionCall {
-                    loc: *loc,
-                    returns,
-                    function: Box::new(Expression::InternalFunction {
-                        loc: *loc,
-                        ty,
-                        function_no,
-                        signature: None,
-                    }),
-                    args: cast_args,
-                });
+        match resolve_using(
+            loc,
+            func,
+            &var_expr,
+            self_ty,
+            &ExprContext {
+                file_no,
+                contract_no,
+                function_no: arg_function_no,
+                unchecked,
+            },
+            args,
+            symtable,
+            diagnostics,
+            ns,
+        ) {
+            Ok(Some(expr)) => {
+                return Ok(expr);
             }
-        }
-
-        match name_matches {
-            0 => (),
-            1 => {
-                diagnostics.extend(errors);
-
-                return Err(());
-            }
-            _ => {
-                diagnostics.push(Diagnostic::error(
-                    *loc,
-                    "cannot find overloaded library function which matches signature".to_string(),
-                ));
+            Ok(None) => (),
+            Err(_) => {
                 return Err(());
             }
         }
@@ -6954,6 +6871,165 @@ fn method_call_pos_args(
     ));
 
     Err(())
+}
+
+struct ExprContext {
+    /// What source file are we in
+    file_no: usize,
+    // Are we resolving a contract, and if so, which one
+    contract_no: Option<usize>,
+    // Are resolving the body of a function, and if os, which one
+    function_no: Option<usize>,
+    // Are we currently in an unchecked block
+    unchecked: bool,
+}
+
+fn resolve_using(
+    loc: &pt::Loc,
+    func: &pt::Identifier,
+    self_expr: &Expression,
+    self_ty: &Type,
+    context: &ExprContext,
+    args: &[pt::Expression],
+    symtable: &mut Symtable,
+    diagnostics: &mut Vec<Diagnostic>,
+    ns: &mut Namespace,
+) -> Result<Option<Expression>, ()> {
+    // first collect all possible libraries that match the using directive type
+    // Use HashSet for deduplication.
+    // If the using directive specifies a type, the type must match the type of
+    // the method call object exactly.
+    let libraries: HashSet<usize> = ns.contracts[context.contract_no.unwrap()]
+        .using
+        .iter()
+        .filter_map(|(library_no, ty)| match ty {
+            None => Some(*library_no),
+            Some(ty) if ty == self_ty => Some(*library_no),
+            _ => None,
+        })
+        .collect();
+
+    let mut name_matches = 0;
+    let mut errors = Vec::new();
+
+    for library_no in libraries {
+        for function_no in ns.contracts[library_no].functions.clone() {
+            let libfunc = &ns.functions[function_no];
+
+            if libfunc.name != func.name || libfunc.ty != pt::FunctionTy::Function {
+                continue;
+            }
+
+            name_matches += 1;
+
+            let params_len = libfunc.params.len();
+
+            if params_len != args.len() + 1 {
+                errors.push(Diagnostic::error(
+                    *loc,
+                    format!(
+                        "library function expects {} arguments, {} provided (including self)",
+                        params_len,
+                        args.len() + 1
+                    ),
+                ));
+                continue;
+            }
+            let mut matches = true;
+            let mut cast_args = Vec::new();
+
+            match cast(
+                &self_expr.loc(),
+                self_expr.clone(),
+                &libfunc.params[0].ty,
+                true,
+                ns,
+                &mut errors,
+            ) {
+                Ok(e) => cast_args.push(e),
+                Err(()) => continue,
+            }
+
+            // check if arguments can be implicitly casted
+            for (i, arg) in args.iter().enumerate() {
+                let ty = ns.functions[function_no].params[i + 1].ty.clone();
+
+                let arg = match expression(
+                    arg,
+                    context.file_no,
+                    context.contract_no,
+                    context.function_no,
+                    ns,
+                    symtable,
+                    false,
+                    context.unchecked,
+                    &mut errors,
+                    Some(&ty),
+                ) {
+                    Ok(e) => e,
+                    Err(()) => {
+                        matches = false;
+                        continue;
+                    }
+                };
+
+                match cast(&arg.loc(), arg.clone(), &ty, true, ns, &mut errors) {
+                    Ok(expr) => cast_args.push(expr),
+                    Err(_) => {
+                        matches = false;
+                        break;
+                    }
+                }
+            }
+            if !matches {
+                continue;
+            }
+
+            let libfunc = &ns.functions[function_no];
+
+            if libfunc.is_private() {
+                errors.push(Diagnostic::error_with_note(
+                    *loc,
+                    "cannot call private library function".to_string(),
+                    libfunc.loc,
+                    format!("declaration of function ‘{}’", libfunc.name),
+                ));
+
+                continue;
+            }
+
+            let returns = function_returns(libfunc);
+            let ty = function_type(libfunc, false);
+
+            return Ok(Some(Expression::InternalFunctionCall {
+                loc: *loc,
+                returns,
+                function: Box::new(Expression::InternalFunction {
+                    loc: *loc,
+                    ty,
+                    function_no,
+                    signature: None,
+                }),
+                args: cast_args,
+            }));
+        }
+    }
+
+    match name_matches {
+        0 => Ok(None),
+        1 => {
+            diagnostics.extend(errors);
+
+            Err(())
+        }
+        _ => {
+            diagnostics.push(Diagnostic::error(
+                *loc,
+                "cannot find overloaded library function which matches signature".to_string(),
+            ));
+            Err(())
+        }
+    }
 }
 
 fn method_call_named_args(
@@ -7116,7 +7192,7 @@ fn method_call_named_args(
             arguments.insert(&arg.name.name, &arg.expr);
         }
 
-        let marker = ns.diagnostics.len();
+        let marker = diagnostics.len();
         let mut name_match = 0;
 
         // function call
