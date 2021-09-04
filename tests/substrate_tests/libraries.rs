@@ -228,7 +228,7 @@ fn using() {
 
     assert_eq!(
         first_error(ns.diagnostics),
-        "using library ‘x’ to extend library type not possible"
+        "using library ‘x’ to extend library not possible"
     );
 
     #[derive(Debug, PartialEq, Encode, Decode)]

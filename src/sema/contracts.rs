@@ -817,12 +817,14 @@ fn resolve_using(
                             expr,
                             &mut diagnostics,
                         ) {
-                            Ok(ast::Type::Contract(contract_no)) => {
+                            Ok(ast::Type::Contract(contract_no))
+                                if ns.contracts[contract_no].is_library() =>
+                            {
                                 ns.diagnostics.push(ast::Diagnostic::error(
                                     using.library.loc,
                                     format!(
-                                        "using library ‘{}’ to extend {} type not possible",
-                                        using.library.name, ns.contracts[contract_no].ty
+                                        "using library ‘{}’ to extend library not possible",
+                                        using.library.name,
                                     ),
                                 ));
                                 continue;
