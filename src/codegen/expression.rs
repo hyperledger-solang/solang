@@ -12,7 +12,7 @@ use crate::sema::expression::{bigint_to_expression, cast, cast_shift_arg};
 use crate::Target;
 use num_bigint::BigInt;
 use num_traits::{FromPrimitive, One, ToPrimitive, Zero};
-use std::collections::HashSet;
+use std::collections::BTreeSet;
 use std::ops::Mul;
 
 pub fn expression(
@@ -640,7 +640,7 @@ pub fn expression(
                 },
             );
 
-            let mut phis = HashSet::new();
+            let mut phis = BTreeSet::new();
             phis.insert(pos);
 
             cfg.set_phis(end_or, phis);
@@ -695,7 +695,7 @@ pub fn expression(
                 },
             );
 
-            let mut phis = HashSet::new();
+            let mut phis = BTreeSet::new();
             phis.insert(pos);
 
             cfg.set_phis(end_and, phis);

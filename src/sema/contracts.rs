@@ -2,8 +2,7 @@ use crate::parser::pt;
 use inkwell::OptimizationLevel;
 use num_bigint::BigInt;
 use num_traits::Zero;
-use std::collections::HashMap;
-use std::collections::HashSet;
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::convert::TryInto;
 use tiny_keccak::{Hasher, Keccak};
 
@@ -30,7 +29,7 @@ impl ast::Contract {
             fixed_layout_size: BigInt::zero(),
             tags,
             functions: Vec::new(),
-            all_functions: HashMap::new(),
+            all_functions: BTreeMap::new(),
             virtual_functions: HashMap::new(),
             variables: Vec::new(),
             creates: Vec::new(),

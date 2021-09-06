@@ -1,6 +1,5 @@
 use num_bigint::BigInt;
-use std::collections::HashMap;
-use std::collections::HashSet;
+use std::collections::{BTreeSet, HashMap, HashSet};
 use std::fmt;
 use std::str;
 
@@ -289,7 +288,7 @@ impl fmt::Display for HashTy {
 
 #[derive(Clone)]
 pub struct BasicBlock {
-    pub phis: Option<HashSet<usize>>,
+    pub phis: Option<BTreeSet<usize>>,
     pub name: String,
     pub instr: Vec<Instr>,
     pub defs: reaching_definitions::VarDefs,
@@ -374,7 +373,7 @@ impl ControlFlowGraph {
         pos
     }
 
-    pub fn set_phis(&mut self, block: usize, phis: HashSet<usize>) {
+    pub fn set_phis(&mut self, block: usize, phis: BTreeSet<usize>) {
         if !phis.is_empty() {
             self.blocks[block].phis = Some(phis);
         }
@@ -1604,7 +1603,7 @@ pub struct Vartable {
 
 pub struct DirtyTracker {
     lim: usize,
-    set: HashSet<usize>,
+    set: BTreeSet<usize>,
 }
 
 impl Vartable {
@@ -1747,11 +1746,11 @@ impl Vartable {
     pub fn new_dirty_tracker(&mut self, lim: usize) {
         self.dirty.push(DirtyTracker {
             lim,
-            set: HashSet::new(),
+            set: BTreeSet::new(),
         });
     }
 
-    pub fn pop_dirty_tracker(&mut self) -> HashSet<usize> {
+    pub fn pop_dirty_tracker(&mut self) -> BTreeSet<usize> {
         self.dirty.pop().unwrap().set
     }
 }
