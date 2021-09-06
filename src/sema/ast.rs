@@ -3,9 +3,11 @@ use crate::codegen::cfg::ControlFlowGraph;
 use crate::parser::pt;
 use crate::Target;
 use num_bigint::BigInt;
-use std::collections::HashMap;
-use std::fmt;
-use std::path::PathBuf;
+use std::{
+    collections::{BTreeMap, HashMap},
+    fmt,
+    path::PathBuf,
+};
 use tiny_keccak::{Hasher, Keccak};
 
 #[derive(PartialEq, Clone, Eq, Hash, Debug)]
@@ -425,7 +427,7 @@ pub struct Contract {
     pub layout: Vec<Layout>,
     pub fixed_layout_size: BigInt,
     pub functions: Vec<usize>,
-    pub all_functions: HashMap<usize, usize>,
+    pub all_functions: BTreeMap<usize, usize>,
     pub virtual_functions: HashMap<String, usize>,
     pub variables: Vec<Variable>,
     // List of contracts this contract instantiates
