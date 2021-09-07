@@ -242,6 +242,7 @@ typedef struct
   const SolPubkey *sender;
   SolSignerSeed seeds[10];
   int seeds_len;
+  const SolAccountInfo *ka_instructions;
 } SolParameters;
 
 /**
@@ -405,33 +406,6 @@ static uint64_t sol_deserialize(
 
   return 0;
 }
-
-/** The ed25519 public key is not a valid public key */
-#define ED25519_SIG_CHECK_INVALID_PUBLIC_KEY 1
-/** The ed25519 signature is not a valid signature */
-#define ED25519_SIG_CHCKEC_INVALID_SIGNATURE 2
-/** THe ed25519 signature could not be verified */
-#define ED25519_SIG_CHECK_VERIFIY_FAILED 3
-
-/** ed25519 signature length */
-#define ED25519_SIGNATURE_LENGTH 64
-
-/** ed25519 public key length */
-#define ED25519_PUBLIC_KEY_LENGTH 32
-
-/**
- * Check ed25519 signature using public key
- *
- * @param message Message to be verified
- * @param message_len Length of message
- * @param signature Signature to be verified
- * @param publickey Public key to use for verification
- */
-uint64_t sol_ed25519_sig_check(
-    uint8_t *message,
-    uint64_t message_len,
-    uint8_t signature[ED25519_SIGNATURE_LENGTH],
-    uint8_t publickey[ED25519_PUBLIC_KEY_LENGTH]);
 
 /**
  * Byte array pointer and string

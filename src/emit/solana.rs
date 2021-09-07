@@ -3165,6 +3165,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
 
                 let message = self.expression(binary, &args[1], vartab, function, ns);
                 let signature = self.expression(binary, &args[2], vartab, function, ns);
+                let parameters = self.sol_parameters(binary);
                 let signature_verify = binary.module.get_function("signature_verify").unwrap();
 
                 let arg1 = binary.builder.build_pointer_cast(
@@ -3194,6 +3195,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                                 .into(),
                             arg1.into(),
                             arg2.into(),
+                            parameters.into(),
                         ],
                         "",
                     )
