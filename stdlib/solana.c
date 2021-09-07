@@ -9,8 +9,12 @@ extern void __be32toleN(uint8_t *from, uint8_t *to, uint32_t length);
 
 // The address 'SysvarC1ock11111111111111111111111111111111' base58 decoded
 static const SolPubkey clock_address = {0x06, 0xa7, 0xd5, 0x17, 0x18, 0xc7, 0x74, 0xc9, 0x28, 0x56, 0x63, 0x98, 0x69, 0x1d, 0x5e, 0xb6, 0x8b, 0x5e, 0xb8, 0xa3, 0x9b, 0x4b, 0x6d, 0x5c, 0x73, 0x55, 0x5b, 0x21, 0x00, 0x00, 0x00, 0x00};
-// The address '11111111111111111111111111111111' base58 decoded
+// The address '1111111111111111111111111111111111111111111' base58 decoded
 static const SolPubkey system_address = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+// The address 'Sysvar1nstructions1111111111111111111111111' base58 decoded
+static const SolPubkey instructions_address = {0x06, 0xa7, 0xd5, 0x17, 0x18, 0x7b, 0xd1, 0x66, 0x35, 0xda, 0xd4, 0x04, 0x55, 0xfd, 0xc2, 0xc0, 0xc1, 0x24, 0xc6, 0x8f, 0x21, 0x56, 0x75, 0xa5, 0xdb, 0xba, 0xcb, 0x5f, 0x08, 0x00, 0x00, 0x00};
+// The address 'Ed25519SigVerify111111111111111111111111111' base58 decoded
+static const SolPubkey ed25519_address = {0x03, 0x7d, 0x46, 0xd6, 0x7c, 0x93, 0xfb, 0xbe, 0x12, 0xf9, 0x42, 0x8f, 0x83, 0x8d, 0x40, 0xff, 0x05, 0x70, 0x74, 0x49, 0x27, 0xf4, 0x8a, 0x64, 0xfc, 0xca, 0x70, 0x44, 0x80, 0x00, 0x00, 0x00};
 
 uint64_t
 entrypoint(const uint8_t *input)
@@ -26,6 +30,7 @@ entrypoint(const uint8_t *input)
     int account_no;
 
     params.ka_clock = NULL;
+    params.ka_instructions = NULL;
     params.ka_cur = UINT64_MAX;
 
     for (account_no = 0; account_no < params.ka_num; account_no++)
@@ -39,6 +44,10 @@ entrypoint(const uint8_t *input)
         else if (SolPubkey_same(&clock_address, acc->key))
         {
             params.ka_clock = acc;
+        }
+        else if (SolPubkey_same(&instructions_address, acc->key))
+        {
+            params.ka_instructions = acc;
         }
     }
 
@@ -217,18 +226,96 @@ uint64_t create_contract(uint8_t *input, uint32_t input_len, uint64_t lamports, 
     return sol_invoke_signed_c(&instruction, params->ka, params->ka_num, NULL, 0);
 }
 
-uint64_t signature_verify(uint8_t *address, struct vector *message, struct vector *signature)
+struct ed25519_instruction_sig
 {
-    uint8_t pubkey[SIZE_PUBKEY];
+    uint16_t signature_offset;
+    uint16_t signature_instruction_index;
+    uint16_t public_key_offset;
+    uint16_t public_key_instruction_index;
+    uint16_t message_offset;
+    uint16_t message_size;
+    uint16_t message_instruction_index;
+    uint8_t public_key[SIZE_PUBKEY];
+    uint8_t signature[64];
+    uint8_t message[0];
+};
 
-    __be32toleN(address, pubkey, SIZE_PUBKEY);
+struct ed25519_instruction
+{
+    uint8_t num_signatures;
+    uint8_t padding;
+    struct ed25519_instruction_sig sig[0];
+};
 
-    if (signature->len != 64)
+uint64_t signature_verify(uint8_t *address, struct vector *message, struct vector *signature, SolParameters *params)
+{
+    uint8_t public_key[32];
+
+    __be32toleN(address, public_key, SIZE_PUBKEY);
+
+    if (params->ka_instructions)
     {
-        return ED25519_SIG_CHCKEC_INVALID_SIGNATURE;
+        uint16_t *data = (uint16_t *)params->ka_instructions->data;
+
+        uint64_t instr_count = data[0];
+
+        // for each instruction
+        for (uint64_t instr_no = 0; instr_no < instr_count; instr_no++)
+        {
+            uint8_t *instr = params->ka_instructions->data + data[1 + instr_no];
+
+            // step over the accounts
+            uint64_t accounts = *((uint16_t *)instr);
+
+            instr += accounts * 33 + 2;
+
+            if (sol_memcmp(&ed25519_address, instr, sizeof(ed25519_address)))
+            {
+                continue;
+            }
+
+            // step over program_id and length
+            instr += 2 + 32;
+
+            struct ed25519_instruction *ed25519 = (struct ed25519_instruction *)instr;
+
+            for (uint64_t sig_no = 0; sig_no < ed25519->num_signatures; sig_no++)
+            {
+                struct ed25519_instruction_sig *sig = &ed25519->sig[sig_no];
+
+                if (sig->public_key_instruction_index != instr_no ||
+                    sig->signature_instruction_index != instr_no ||
+                    sig->message_instruction_index != instr_no)
+                    continue;
+
+                if (sol_memcmp(public_key, instr + sig->public_key_offset, SIZE_PUBKEY))
+                {
+                    continue;
+                }
+
+                if (sol_memcmp(signature->data, instr + sig->signature_offset, 64))
+                {
+                    continue;
+                }
+
+                if (sig->message_size != message->len)
+                {
+                    continue;
+                }
+
+                if (sol_memcmp(message->data, instr + sig->message_offset, message->len))
+                {
+                    continue;
+                }
+
+                return 0;
+            }
+        }
     }
 
-    return sol_ed25519_sig_check(message->data, message->len, signature->data, pubkey);
+    sol_log("could not find verified signature");
+
+    return 1;
 }
 
 struct clock_layout
