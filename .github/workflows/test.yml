@@ -71,6 +71,7 @@ jobs:
   mac-arm:
     name: Mac Arm
     runs-on: macos-arm
+    if: ${{ github.repository_owner == 'hyperledger-labs' }}
     steps:
     - name: Checkout sources
       uses: actions/checkout@v2
@@ -127,13 +128,13 @@ jobs:
         fetch-depth: 0
     - run: docker build . -t hyperledgerlabs/solang:latest
     - name: Login to DockerHub
-      if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+      if: ${{ github.repository_owner == 'hyperledger-labs' && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
       uses: docker/login-action@v1
       with:
         username: ${{ secrets.DH_USER }}
         password: ${{ secrets.DH_KEY }}
     - run: docker push hyperledgerlabs/solang:latest
-      if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+      if: ${{ github.repository_owner == 'hyperledger-labs' && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
 
   solana:
     name: Solana Integration test
