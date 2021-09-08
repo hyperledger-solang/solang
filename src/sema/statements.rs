@@ -252,7 +252,7 @@ pub fn resolve_function_body(
             // ok
         } else if return_required {
             ns.diagnostics.push(Diagnostic::error(
-                body.loc(),
+                body.loc().end(),
                 "missing return statement".to_string(),
             ));
             return Err(());
@@ -292,7 +292,7 @@ pub fn resolve_function_body(
 
         if !has_underscore {
             ns.diagnostics.push(Diagnostic::error(
-                body.loc(),
+                body.loc().end(),
                 "missing ‘_’ in modifier".to_string(),
             ));
         }
