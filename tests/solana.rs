@@ -3,7 +3,7 @@ mod solana_helpers;
 use base58::{FromBase58, ToBase58};
 use byteorder::{ByteOrder, LittleEndian, WriteBytesExt};
 use ed25519_dalek::{ed25519::signature::Signature, Verifier};
-use ethabi::Token;
+use ethabi::{RawLog, Token};
 use libc::c_char;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
@@ -58,7 +58,8 @@ struct VirtualMachine {
     account_data: HashMap<Account, AccountState>,
     programs: Vec<Contract>,
     stack: Vec<Contract>,
-    printbuf: String,
+    logs: String,
+    events: Vec<Vec<Vec<u8>>>,
     return_data: Option<(Account, Vec<u8>)>,
 }
 
@@ -207,7 +208,8 @@ fn build_solidity(src: &str) -> VirtualMachine {
         account_data,
         programs,
         stack: vec![cur],
-        printbuf: String::new(),
+        logs: String::new(),
+        events: Vec::new(),
         return_data: None,
     }
 }
@@ -376,7 +378,7 @@ impl<'a> SyscallObject<UserError> for SolLog<'a> {
             .unwrap();
             println!("log: {}", message);
             if let Ok(mut context) = self.context.try_borrow_mut() {
-                context.printbuf.push_str(message);
+                context.logs.push_str(message);
             }
             *result = Ok(0)
         }
@@ -405,7 +407,7 @@ impl<'a> SyscallObject<UserError> for SolLogPubKey<'a> {
         let message = account[0].to_base58();
         println!("log pubkey: {}", message);
         if let Ok(mut context) = self.context.try_borrow_mut() {
-            context.printbuf.push_str(&message);
+            context.logs.push_str(&message);
         }
         *result = Ok(0)
     }
@@ -564,6 +566,49 @@ impl<'a> SyscallObject<UserError> for SyscallGetReturnData<'a> {
             } else {
                 *result = Ok(0);
             }
+        } else {
+            panic!();
+        }
+    }
+}
+
+struct SyscallLogData<'a> {
+    context: Rc<RefCell<&'a mut VirtualMachine>>,
+}
+
+impl<'a> SyscallObject<UserError> for SyscallLogData<'a> {
+    fn call(
+        &mut self,
+        addr: u64,
+        len: u64,
+        _arg3: u64,
+        _arg4: u64,
+        _arg5: u64,
+        memory_mapping: &MemoryMapping,
+        result: &mut Result<u64, EbpfError<UserError>>,
+    ) {
+        if let Ok(mut context) = self.context.try_borrow_mut() {
+            let untranslated_events =
+                question_mark!(translate_slice::<&[u8]>(memory_mapping, addr, len), result);
+
+            let mut events = Vec::with_capacity(untranslated_events.len());
+
+            for untranslated_event in untranslated_events {
+                let event = question_mark!(
+                    translate_slice_mut::<u8>(
+                        memory_mapping,
+                        untranslated_event.as_ptr() as u64,
+                        untranslated_event.len() as u64,
+                    ),
+                    result
+                );
+
+                events.push(event.to_vec());
+            }
+
+            context.events.push(events.to_vec());
+
+            *result = Ok(0);
         } else {
             panic!();
         }
@@ -1177,6 +1222,10 @@ impl VirtualMachine {
             .register_syscall_by_name(b"sol_get_return_data", SyscallGetReturnData::call)
             .unwrap();
 
+        syscall_registry
+            .register_syscall_by_name(b"sol_log_data", SyscallLogData::call)
+            .unwrap();
+
         let executable = <dyn Executable<UserError, TestInstructionMeter>>::from_elf(
             &self.account_data[&program.program].data,
             None,
@@ -1239,6 +1288,14 @@ impl VirtualMachine {
 
         vm.bind_syscall_context_object(
             Box::new(SyscallGetReturnData {
+                context: context.clone(),
+            }),
+            None,
+        )
+        .unwrap();
+
+        vm.bind_syscall_context_object(
+            Box::new(SyscallLogData {
                 context: context.clone(),
             }),
             None,
@@ -1437,6 +1494,30 @@ impl VirtualMachine {
 
             offset = next;
         }
+    }
+
+    pub fn events(&self) -> Vec<RawLog> {
+        self.events
+            .iter()
+            .map(|fields| {
+                assert_eq!(fields.len(), 2);
+
+                assert_eq!(fields[0].len() % 32, 0);
+                assert!(fields[0].len() <= 4 * 32);
+
+                let topics = fields[0]
+                    .chunks_exact(32)
+                    .map(|topic| {
+                        let topic: [u8; 32] = topic.try_into().unwrap();
+
+                        ethereum_types::H256::from(topic)
+                    })
+                    .collect();
+                let data = fields[1].clone();
+
+                RawLog { data, topics }
+            })
+            .collect()
     }
 }
 

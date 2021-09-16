@@ -36,6 +36,7 @@ ______
 The Solana target requires latest `Solana <https://www.solana.com/>`_ master due to:
 
  - https://github.com/solana-labs/solana/pull/19548
+ - https://github.com/solana-labs/solana/pull/19764
 
 This target is in the early stages right now, however it is under active development.
 All data types are supported, but not all the builtin functions and variables
@@ -72,9 +73,12 @@ arguments, and pass in two accounts to the call, the 2nd being the contract stor
 Once that is done, any function on the contract can be called. To do that, abi encode the function call,
 pass this as input, and provide the two accounts on the call, plus any accounts that may be called.
 
-The return data (i.e. the return values or the revert error) is provided in the program log in base64.
+The return data (i.e. the return values or the revert error) is provided in the
+program log in base64. Any emitted events are written to the program log in base64
+too.
 
-There is `an example of this written in node <https://github.com/hyperledger-labs/solang/tree/main/integration/solana>`_.
+There is `an example of this written in node
+<https://github.com/hyperledger-labs/solang/tree/main/integration/solana>`_.
 
 Hyperledger Burrow (ewasm)
 __________________________

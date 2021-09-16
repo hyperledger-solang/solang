@@ -19,6 +19,7 @@ const Web3EthAbi = require('web3-eth-abi');
 
 const default_url: string = "http://localhost:8899";
 const return_data_prefix = 'Program return: ';
+const log_data_prefix = 'Program data: ';
 
 export async function establishConnection(): Promise<TestConnection> {
     let url = process.env.RPC_URL || default_url;
@@ -347,6 +348,87 @@ class Program {
         }
 
         return Web3EthAbi.decodeParameter('string', encoded.subarray(4).toString('hex'));
+    }
+
+    async call_function_events(test: TestConnection, name: string, params: any[], pubkeys: PublicKey[] = [], seeds: any[] = [], signers: Keypair[] = []): Promise<any[]> {
+        let abi: AbiItem[] = JSON.parse(this.abi);
+        let func = abi.find((e: AbiItem) => e.name == name)!;
+
+        const input: string = Web3EthAbi.encodeFunctionCall(func, params);
+        const data = Buffer.concat([
+            this.contractStorageAccount.publicKey.toBuffer(),
+            test.payerAccount.publicKey.toBuffer(),
+            Buffer.from('00000000', 'hex'),
+            this.encode_seeds(seeds),
+            Buffer.from(input.replace('0x', ''), 'hex')
+        ]);
+
+        let debug = 'calling function ' + name + ' [' + params + ']';
+
+        let keys = [];
+
+        seeds.forEach((seed) => {
+            keys.push({ pubkey: seed.address, isSigner: false, isWritable: true });
+        });
+
+        keys.push({ pubkey: this.contractStorageAccount.publicKey, isSigner: false, isWritable: true });
+        keys.push({ pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false });
+        keys.push({ pubkey: PublicKey.default, isSigner: false, isWritable: false });
+
+        for (let i = 0; i < pubkeys.length; i++) {
+            // make each 2nd key writable (will be account storage for contract)
+            keys.push({ pubkey: pubkeys[i], isSigner: false, isWritable: (i & 1) == 1 });
+        }
+
+        const instruction = new TransactionInstruction({
+            keys,
+            programId: this.programId,
+            data,
+        });
+
+        signers.unshift(test.payerAccount);
+
+        const { err, logs } = (await test.connection.simulateTransaction(new Transaction().add(instruction),
+            signers)).value;
+
+        if (err) {
+            throw 'error is not falsy';
+        }
+
+        let events = [];
+        let event_abis = new Map();
+
+        for (let index in abi) {
+            let e = abi[index];
+
+            if (e.type == "event") {
+                let signature = Web3EthAbi.encodeEventSignature(e);
+                event_abis.set(signature, e);
+            }
+        }
+
+        for (let message of logs!) {
+            if (message.startsWith(log_data_prefix)) {
+                let fields = message.slice(log_data_prefix.length).split(" ");
+                if (fields.length != 2) {
+                    throw "expecting two fields for return data";
+                }
+                let topic_data = Buffer.from(fields[0], 'base64');
+                let topics = [];
+
+                for (let offset = 0; offset < topic_data.length; offset += 32) {
+                    topics.push('0x' + topic_data.subarray(offset, offset + 32).toString('hex'));
+                }
+
+                let data = '0x' + Buffer.from(fields[1], 'base64').toString('hex');
+
+                let event = event_abis.get(topics[0])!;
+
+                events.push(Web3EthAbi.decodeLog(event.inputs, data, topics.slice(1)));
+            }
+        }
+
+        return events;
     }
 
     async contract_storage(test: TestConnection, upto: number): Promise<Buffer> {

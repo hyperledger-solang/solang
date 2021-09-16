@@ -6,6 +6,7 @@ mod builtin;
 mod call;
 mod create_contract;
 mod destructure;
+mod events;
 mod expressions;
 mod hash;
 mod mappings;

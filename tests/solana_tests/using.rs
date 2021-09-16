@@ -30,7 +30,7 @@ fn using_for_contracts() {
     runtime.constructor("C", &[]);
     runtime.function("test", &[], &[]);
 
-    assert_eq!(runtime.printbuf, "Hello");
+    assert_eq!(runtime.logs, "Hello");
 
     let mut runtime = build_solidity(
         r#"
@@ -73,5 +73,5 @@ fn using_for_contracts() {
     runtime.constructor("foo", &[]);
     runtime.function("test", &[], &[]);
 
-    assert_eq!(runtime.printbuf, "X libX contractx:2");
+    assert_eq!(runtime.logs, "X libX contractx:2");
 }
