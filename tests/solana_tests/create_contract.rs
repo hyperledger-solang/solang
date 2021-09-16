@@ -37,9 +37,9 @@ fn simple_create_contract() {
 
     let bar1 = vm.function("test_other", &[], &[&seed]);
 
-    assert_eq!(vm.printbuf, "bar1 says: yo from bar0");
+    assert_eq!(vm.logs, "bar1 says: yo from bar0");
 
-    vm.printbuf.truncate(0);
+    vm.logs.truncate(0);
 
     println!("next test, {:?}", bar1);
 
@@ -49,7 +49,7 @@ fn simple_create_contract() {
         &[],
     );
 
-    assert_eq!(vm.printbuf, "Hello xywoleh");
+    assert_eq!(vm.logs, "Hello xywoleh");
 }
 
 #[test]
@@ -117,12 +117,9 @@ fn two_contracts() {
 
     let _bar1 = vm.function("test_other", &[], &[&seed1, &seed2]);
 
-    assert_eq!(
-        vm.printbuf,
-        "bar1 says: yo from bar0bar1 says: hi from bar0"
-    );
+    assert_eq!(vm.logs, "bar1 says: yo from bar0bar1 says: hi from bar0");
 
-    vm.printbuf.truncate(0);
+    vm.logs.truncate(0);
 }
 
 #[test]

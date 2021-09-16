@@ -261,6 +261,22 @@ impl SolanaTarget {
         function
             .as_global_value()
             .set_unnamed_address(UnnamedAddress::Local);
+
+        let fields = binary.context.opaque_struct_type("SolLogDataField");
+
+        fields.set_body(&[u8_ptr.into(), u64_ty.into()], false);
+
+        let function = binary.module.add_function(
+            "sol_log_data",
+            void_ty.fn_type(
+                &[fields.ptr_type(AddressSpace::Generic).into(), u64_ty.into()],
+                false,
+            ),
+            None,
+        );
+        function
+            .as_global_value()
+            .set_unnamed_address(UnnamedAddress::Local);
     }
 
     /// Returns the SolAccountInfo of the executing binary
@@ -2920,17 +2936,99 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
     /// Emit event
     fn emit_event<'b>(
         &self,
-        _binary: &Binary<'b>,
+        binary: &Binary<'b>,
         _contract: &ast::Contract,
-        _function: FunctionValue<'b>,
+        function: FunctionValue<'b>,
         _event_no: usize,
-        _data: &[BasicValueEnum<'b>],
-        _data_tys: &[ast::Type],
-        _topics: &[BasicValueEnum<'b>],
-        _topic_tys: &[ast::Type],
-        _ns: &ast::Namespace,
+        data: &[BasicValueEnum<'b>],
+        data_tys: &[ast::Type],
+        topics: &[BasicValueEnum<'b>],
+        topic_tys: &[ast::Type],
+        ns: &ast::Namespace,
     ) {
-        // Solana does not implement events, ignore for now
+        let fields = binary.build_array_alloca(
+            function,
+            binary.module.get_struct_type("SolLogDataField").unwrap(),
+            binary.context.i32_type().const_int(2, false),
+            "fields",
+        );
+
+        let (topic_ptr, topic_len) =
+            self.abi_encode(binary, None, false, function, topics, topic_tys, ns);
+
+        let field_data = unsafe {
+            binary.builder.build_gep(
+                fields,
+                &[
+                    binary.context.i32_type().const_zero(),
+                    binary.context.i32_type().const_zero(),
+                ],
+                "field_data",
+            )
+        };
+
+        binary.builder.build_store(field_data, topic_ptr);
+
+        let field_len = unsafe {
+            binary.builder.build_gep(
+                fields,
+                &[
+                    binary.context.i32_type().const_zero(),
+                    binary.context.i32_type().const_int(1, false),
+                ],
+                "field_len",
+            )
+        };
+
+        binary.builder.build_store(
+            field_len,
+            binary
+                .builder
+                .build_int_z_extend(topic_len, binary.context.i64_type(), "topic_len64"),
+        );
+
+        let (data_ptr, data_len) =
+            self.abi_encode(binary, None, false, function, data, data_tys, ns);
+
+        let field_data = unsafe {
+            binary.builder.build_gep(
+                fields,
+                &[
+                    binary.context.i32_type().const_int(1, false),
+                    binary.context.i32_type().const_zero(),
+                ],
+                "field_data",
+            )
+        };
+
+        binary.builder.build_store(field_data, data_ptr);
+
+        let field_len = unsafe {
+            binary.builder.build_gep(
+                fields,
+                &[
+                    binary.context.i32_type().const_int(1, false),
+                    binary.context.i32_type().const_int(1, false),
+                ],
+                "field_len",
+            )
+        };
+
+        binary.builder.build_store(
+            field_len,
+            binary
+                .builder
+                .build_int_z_extend(data_len, binary.context.i64_type(), "data_len64"),
+        );
+
+        binary.builder.build_call(
+            binary.module.get_function("sol_log_data").unwrap(),
+            &[
+                fields.into(),
+                binary.context.i64_type().const_int(2, false).into(),
+            ],
+            "",
+        );
     }
 
     /// builtin expressions

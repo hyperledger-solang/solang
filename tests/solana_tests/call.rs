@@ -81,9 +81,9 @@ fn simple_external_call() {
 
     vm.function("test_bar", &[Token::String(String::from("yo"))], &[]);
 
-    assert_eq!(vm.printbuf, "bar1 says: yo");
+    assert_eq!(vm.logs, "bar1 says: yo");
 
-    vm.printbuf.truncate(0);
+    vm.logs.truncate(0);
 
     let bar1_account = vm.stack[0].data;
 
@@ -97,9 +97,9 @@ fn simple_external_call() {
         &[],
     );
 
-    assert_eq!(vm.printbuf, "bar0 says: uncle beau");
+    assert_eq!(vm.logs, "bar0 says: uncle beau");
 
-    vm.printbuf.truncate(0);
+    vm.logs.truncate(0);
 
     vm.function(
         "test_other",
@@ -107,7 +107,7 @@ fn simple_external_call() {
         &[],
     );
 
-    assert_eq!(vm.printbuf, "bar1 says: cross contract call");
+    assert_eq!(vm.logs, "bar1 says: cross contract call");
 }
 
 #[test]

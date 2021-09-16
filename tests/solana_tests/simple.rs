@@ -17,13 +17,13 @@ fn simple() {
 
     vm.constructor("foo", &[]);
 
-    assert_eq!(vm.printbuf, "Hello from constructor");
+    assert_eq!(vm.logs, "Hello from constructor");
 
-    vm.printbuf.truncate(0);
+    vm.logs.truncate(0);
 
     vm.function("test", &[], &[]);
 
-    assert_eq!(vm.printbuf, "Hello from function");
+    assert_eq!(vm.logs, "Hello from function");
 }
 
 #[test]
@@ -42,7 +42,7 @@ fn format() {
     vm.constructor("foo", &[]);
 
     assert_eq!(
-        vm.printbuf,
+        vm.logs,
         "x = 21847450052839212624230656502990235142567050104912751880812823948662932355201"
     );
 }
@@ -75,9 +75,9 @@ fn parameters() {
         &[],
     );
 
-    assert_eq!(vm.printbuf, "x is 10");
+    assert_eq!(vm.logs, "x is 10");
 
-    vm.printbuf.truncate(0);
+    vm.logs.truncate(0);
 
     vm.function(
         "test",
@@ -88,7 +88,7 @@ fn parameters() {
         &[],
     );
 
-    assert_eq!(vm.printbuf, "y is 102");
+    assert_eq!(vm.logs, "y is 102");
 }
 
 #[test]

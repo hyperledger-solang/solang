@@ -509,101 +509,98 @@ pub fn statement(
             return_override,
         ),
         Statement::Emit { event_no, args, .. } => {
-            // Solana cannot emit events, and breaks when the emitter calls self.abi_encode()
-            if ns.target != crate::Target::Solana {
-                let event = &ns.events[*event_no];
-                let mut data = Vec::new();
-                let mut data_tys = Vec::new();
-                let mut topics = Vec::new();
-                let mut topic_tys = Vec::new();
+            let event = &ns.events[*event_no];
+            let mut data = Vec::new();
+            let mut data_tys = Vec::new();
+            let mut topics = Vec::new();
+            let mut topic_tys = Vec::new();
 
-                if !event.anonymous && ns.target != crate::Target::Substrate {
-                    let mut hasher = Keccak::v256();
-                    hasher.update(event.signature.as_bytes());
-                    let mut hash = [0u8; 32];
-                    hasher.finalize(&mut hash);
+            if !event.anonymous && ns.target != crate::Target::Substrate {
+                let mut hasher = Keccak::v256();
+                hasher.update(event.signature.as_bytes());
+                let mut hash = [0u8; 32];
+                hasher.finalize(&mut hash);
 
-                    topic_tys.push(Type::Bytes(32));
-                    topics.push(Expression::BytesLiteral(
-                        pt::Loc(0, 0, 0),
-                        Type::Bytes(32),
-                        hash.to_vec(),
-                    ));
-                }
-
-                for (i, arg) in args.iter().enumerate() {
-                    if event.fields[i].indexed {
-                        let ty = arg.ty();
-
-                        match ty {
-                            Type::String | Type::DynamicBytes => {
-                                let e = expression(
-                                    &Expression::Builtin(
-                                        pt::Loc(0, 0, 0),
-                                        vec![Type::Bytes(32)],
-                                        Builtin::Keccak256,
-                                        vec![arg.clone()],
-                                    ),
-                                    cfg,
-                                    contract_no,
-                                    Some(func),
-                                    ns,
-                                    vartab,
-                                );
-
-                                topics.push(e);
-                                topic_tys.push(Type::Bytes(32));
-                            }
-                            Type::Struct(_) | Type::Array(..) => {
-                                // We should have an AbiEncodePackedPad
-                                let e = expression(
-                                    &Expression::Builtin(
-                                        pt::Loc(0, 0, 0),
-                                        vec![Type::Bytes(32)],
-                                        Builtin::Keccak256,
-                                        vec![Expression::Builtin(
-                                            pt::Loc(0, 0, 0),
-                                            vec![Type::DynamicBytes],
-                                            Builtin::AbiEncodePacked,
-                                            vec![arg.clone()],
-                                        )],
-                                    ),
-                                    cfg,
-                                    contract_no,
-                                    Some(func),
-                                    ns,
-                                    vartab,
-                                );
-
-                                topics.push(e);
-                                topic_tys.push(Type::Bytes(32));
-                            }
-                            _ => {
-                                let e = expression(arg, cfg, contract_no, Some(func), ns, vartab);
-
-                                topics.push(e);
-                                topic_tys.push(ty);
-                            }
-                        }
-                    } else {
-                        let e = expression(arg, cfg, contract_no, Some(func), ns, vartab);
-
-                        data.push(e);
-                        data_tys.push(arg.ty());
-                    }
-                }
-
-                cfg.add(
-                    vartab,
-                    Instr::EmitEvent {
-                        event_no: *event_no,
-                        data,
-                        data_tys,
-                        topics,
-                        topic_tys,
-                    },
-                );
+                topic_tys.push(Type::Bytes(32));
+                topics.push(Expression::BytesLiteral(
+                    pt::Loc(0, 0, 0),
+                    Type::Bytes(32),
+                    hash.to_vec(),
+                ));
             }
+
+            for (i, arg) in args.iter().enumerate() {
+                if event.fields[i].indexed {
+                    let ty = arg.ty();
+
+                    match ty {
+                        Type::String | Type::DynamicBytes => {
+                            let e = expression(
+                                &Expression::Builtin(
+                                    pt::Loc(0, 0, 0),
+                                    vec![Type::Bytes(32)],
+                                    Builtin::Keccak256,
+                                    vec![arg.clone()],
+                                ),
+                                cfg,
+                                contract_no,
+                                Some(func),
+                                ns,
+                                vartab,
+                            );
+
+                            topics.push(e);
+                            topic_tys.push(Type::Bytes(32));
+                        }
+                        Type::Struct(_) | Type::Array(..) => {
+                            // We should have an AbiEncodePackedPad
+                            let e = expression(
+                                &Expression::Builtin(
+                                    pt::Loc(0, 0, 0),
+                                    vec![Type::Bytes(32)],
+                                    Builtin::Keccak256,
+                                    vec![Expression::Builtin(
+                                        pt::Loc(0, 0, 0),
+                                        vec![Type::DynamicBytes],
+                                        Builtin::AbiEncodePacked,
+                                        vec![arg.clone()],
+                                    )],
+                                ),
+                                cfg,
+                                contract_no,
+                                Some(func),
+                                ns,
+                                vartab,
+                            );
+
+                            topics.push(e);
+                            topic_tys.push(Type::Bytes(32));
+                        }
+                        _ => {
+                            let e = expression(arg, cfg, contract_no, Some(func), ns, vartab);
+
+                            topics.push(e);
+                            topic_tys.push(ty);
+                        }
+                    }
+                } else {
+                    let e = expression(arg, cfg, contract_no, Some(func), ns, vartab);
+
+                    data.push(e);
+                    data_tys.push(arg.ty());
+                }
+            }
+
+            cfg.add(
+                vartab,
+                Instr::EmitEvent {
+                    event_no: *event_no,
+                    data,
+                    data_tys,
+                    topics,
+                    topic_tys,
+                },
+            );
         }
         Statement::Underscore(_) => {
             cfg.add(
