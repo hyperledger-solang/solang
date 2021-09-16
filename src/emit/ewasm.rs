@@ -1805,19 +1805,8 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
         let (data_ptr, data_len) =
             self.abi_encode(binary, None, false, function, data, data_tys, ns);
 
-        let mut encoded_topics = Vec::new();
-
-        for (i, topic) in topics.iter().enumerate() {
-            encoded_topics.push(self.abi_encode(
-                binary,
-                None,
-                false,
-                function,
-                &[*topic],
-                &[topic_tys[i].clone()],
-                ns,
-            ));
-        }
+        let (mut topic_ptr, _) =
+            self.abi_encode(binary, None, false, function, topics, topic_tys, ns);
 
         let empty_topic = binary
             .context
@@ -1825,26 +1814,19 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
             .ptr_type(AddressSpace::Generic)
             .const_null();
 
-        let mut topics = [empty_topic; 5];
+        let mut topic_ptrs = [empty_topic; 4];
 
-        let mut topic_count = 0;
+        #[allow(clippy::needless_range_loop)]
+        for topic_no in 0..topics.len() {
+            topic_ptrs[topic_no] = topic_ptr;
 
-        for (ptr, len) in encoded_topics.into_iter() {
-            if let Some(32) = len.get_zero_extended_constant() {
-                topics[topic_count] = ptr;
-            } else {
-                let dest = binary.builder.build_array_alloca(
-                    binary.context.i8_type(),
-                    binary.context.i32_type().const_int(32, false),
-                    "hash",
-                );
-
-                self.keccak256_hash(binary, ptr, len, dest, ns);
-
-                topics[topic_count] = dest;
-            }
-
-            topic_count += 1;
+            topic_ptr = unsafe {
+                binary.builder.build_gep(
+                    topic_ptr,
+                    &[binary.context.i32_type().const_int(32, false)],
+                    "next_topic",
+                )
+            };
         }
 
         binary.builder.build_call(
@@ -1855,12 +1837,12 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
                 binary
                     .context
                     .i32_type()
-                    .const_int(topic_count as u64, false)
+                    .const_int(topics.len() as u64, false)
                     .into(),
-                topics[0].into(),
-                topics[1].into(),
-                topics[2].into(),
-                topics[3].into(),
+                topic_ptrs[0].into(),
+                topic_ptrs[1].into(),
+                topic_ptrs[2].into(),
+                topic_ptrs[3].into(),
             ],
             "",
         );

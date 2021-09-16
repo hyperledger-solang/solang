@@ -2340,4 +2340,56 @@ fn event() {
             }
         }
     }
+
+    let mut runtime = build_solidity(
+        r##"
+        contract c {
+            event foo (
+                bool indexed y,
+                string indexed x,
+                int[2] indexed z
+            );
+
+            function func() public {
+                emit foo(true, "foobar", [1, 2]);
+            }
+        }"##,
+    );
+
+    runtime.constructor(&[]);
+
+    runtime.function("func", &[]);
+
+    assert_eq!(runtime.events.len(), 1);
+
+    let event = &runtime.abi.events_by_name("foo").unwrap()[0];
+
+    for log in runtime.events() {
+        let decoded = event.parse_log(log).unwrap();
+
+        for log in &decoded.params {
+            match log.name.as_str() {
+                "y" => assert_eq!(log.value, ethabi::Token::Bool(true)),
+                "x" => assert_eq!(
+                    log.value,
+                    ethabi::Token::FixedBytes(
+                        hex::decode(
+                            "38d18acb67d25c8bb9942764b62f18e17054f66a817bd4295423adf9ed98873e"
+                        )
+                        .unwrap()
+                    )
+                ),
+                "z" => assert_eq!(
+                    log.value,
+                    ethabi::Token::FixedBytes(
+                        hex::decode(
+                            "e90b7bceb6e7df5418fb78d8ee546e97c83a08bbccc01a0644d599ccd2a7c2e0"
+                        )
+                        .unwrap()
+                    )
+                ),
+                _ => panic!("unexpected field {}", log.name),
+            }
+        }
+    }
 }
