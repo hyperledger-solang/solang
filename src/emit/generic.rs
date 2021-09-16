@@ -656,14 +656,17 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
         panic!("generic does not have the concept of selfdestruct");
     }
 
-    /// Send event
-    fn send_event<'b>(
+    /// Emit event
+    fn emit_event<'b>(
         &self,
         _binary: &Binary<'b>,
+        _contract: &ast::Contract,
+        _function: FunctionValue<'b>,
         _event_no: usize,
-        _data: PointerValue<'b>,
-        _data_len: IntValue<'b>,
-        _topics: Vec<(PointerValue<'b>, IntValue<'b>)>,
+        _data: &[BasicValueEnum<'b>],
+        _data_tys: &[ast::Type],
+        _topics: &[BasicValueEnum<'b>],
+        _topic_tys: &[ast::Type],
         _ns: &ast::Namespace,
     ) {
         unimplemented!();

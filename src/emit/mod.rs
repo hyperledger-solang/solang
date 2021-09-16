@@ -320,14 +320,17 @@ pub trait TargetRuntime<'a> {
         None
     }
 
-    /// Send event
-    fn send_event<'b>(
+    /// Emit event
+    fn emit_event<'b>(
         &self,
         bin: &Binary<'b>,
+        contract: &ast::Contract,
+        function: FunctionValue<'b>,
         event_no: usize,
-        data: PointerValue<'b>,
-        data_len: IntValue<'b>,
-        topics: Vec<(PointerValue<'b>, IntValue<'b>)>,
+        data: &[BasicValueEnum<'b>],
+        data_tys: &[ast::Type],
+        topics: &[BasicValueEnum<'b>],
+        topic_tys: &[ast::Type],
         ns: &ast::Namespace,
     );
 
@@ -4022,34 +4025,23 @@ pub trait TargetRuntime<'a> {
                         let data_tys: Vec<ast::Type> =
                             data_tys.iter().map(|p| p.ty.clone()).collect();
 
-                        let (data_ptr, data_len) = self.abi_encode(
-                            bin,
-                            self.event_id(bin, contract, *event_no),
-                            false,
-                            function,
-                            &data
-                                .iter()
-                                .map(|a| self.expression(bin, a, &w.vars, function, ns))
-                                .collect::<Vec<BasicValueEnum>>(),
-                            &data_tys,
-                            ns,
+                        let data = data
+                            .iter()
+                            .map(|a| self.expression(bin, a, &w.vars, function, ns))
+                            .collect::<Vec<BasicValueEnum>>();
+
+                        let topics = topics
+                            .iter()
+                            .map(|a| self.expression(bin, a, &w.vars, function, ns))
+                            .collect::<Vec<BasicValueEnum>>();
+
+                        let topic_tys: Vec<ast::Type> =
+                            topic_tys.iter().map(|p| p.ty.clone()).collect();
+
+                        self.emit_event(
+                            bin, contract, function, *event_no, &data, &data_tys, &topics,
+                            &topic_tys, ns,
                         );
-
-                        let mut encoded = Vec::new();
-
-                        for (i, topic) in topics.iter().enumerate() {
-                            encoded.push(self.abi_encode(
-                                bin,
-                                None,
-                                false,
-                                function,
-                                &[self.expression(bin, topic, &w.vars, function, ns)],
-                                &[topic_tys[i].ty.clone()],
-                                ns,
-                            ));
-                        }
-
-                        self.send_event(bin, *event_no, data_ptr, data_len, encoded, ns);
                     }
                 }
             }

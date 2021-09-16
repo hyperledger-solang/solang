@@ -1790,23 +1790,43 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
         binary.builder.build_load(temp, "hash").into_int_value()
     }
 
-    /// Send event
-    fn send_event<'b>(
+    /// Emit event
+    fn emit_event<'b>(
         &self,
         binary: &Binary<'b>,
+        _contract: &ast::Contract,
+        function: FunctionValue<'b>,
         event_no: usize,
-        data: PointerValue<'b>,
-        data_len: IntValue<'b>,
-        topics: Vec<(PointerValue<'b>, IntValue<'b>)>,
+        data: &[BasicValueEnum<'b>],
+        data_tys: &[ast::Type],
+        topics: &[BasicValueEnum<'b>],
+        topic_tys: &[ast::Type],
         ns: &ast::Namespace,
     ) {
+        let (data_ptr, data_len) =
+            self.abi_encode(binary, None, false, function, data, data_tys, ns);
+
+        let mut encoded_topics = Vec::new();
+
+        for (i, topic) in topics.iter().enumerate() {
+            encoded_topics.push(self.abi_encode(
+                binary,
+                None,
+                false,
+                function,
+                &[*topic],
+                &[topic_tys[i].clone()],
+                ns,
+            ));
+        }
+
         let empty_topic = binary
             .context
             .i8_type()
             .ptr_type(AddressSpace::Generic)
             .const_null();
 
-        let mut encoded_topics = [empty_topic; 4];
+        let mut topics = [empty_topic; 4];
 
         let event = &ns.events[event_no];
 
@@ -1818,7 +1838,7 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
             let mut hash = [0u8; 32];
             hasher.finalize(&mut hash);
 
-            encoded_topics[0] = binary.emit_global_string(
+            topics[0] = binary.emit_global_string(
                 &format!("event_{}_signature", event.symbol_name(ns)),
                 &hash,
                 true,
@@ -1827,9 +1847,9 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
             topic_count += 1;
         }
 
-        for (ptr, len) in topics.into_iter() {
+        for (ptr, len) in encoded_topics.into_iter() {
             if let Some(32) = len.get_zero_extended_constant() {
-                encoded_topics[topic_count] = ptr;
+                topics[topic_count] = ptr;
             } else {
                 let dest = binary.builder.build_array_alloca(
                     binary.context.i8_type(),
@@ -1839,7 +1859,7 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
 
                 self.keccak256_hash(binary, ptr, len, dest, ns);
 
-                encoded_topics[topic_count] = dest;
+                topics[topic_count] = dest;
             }
 
             topic_count += 1;
@@ -1848,17 +1868,17 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
         binary.builder.build_call(
             binary.module.get_function("log").unwrap(),
             &[
-                data.into(),
+                data_ptr.into(),
                 data_len.into(),
                 binary
                     .context
                     .i32_type()
                     .const_int(topic_count as u64, false)
                     .into(),
-                encoded_topics[0].into(),
-                encoded_topics[1].into(),
-                encoded_topics[2].into(),
-                encoded_topics[3].into(),
+                topics[0].into(),
+                topics[1].into(),
+                topics[2].into(),
+                topics[3].into(),
             ],
             "",
         );

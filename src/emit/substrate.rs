@@ -3840,14 +3840,17 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         Some(binary.context.i8_type().const_int(event_id as u64, false))
     }
 
-    /// Send event
-    fn send_event<'b>(
+    /// Emit event
+    fn emit_event<'b>(
         &self,
         binary: &Binary<'b>,
+        contract: &ast::Contract,
+        function: FunctionValue<'b>,
         event_no: usize,
-        data_ptr: PointerValue<'b>,
-        data_len: IntValue<'b>,
-        topics: Vec<(PointerValue<'b>, IntValue<'b>)>,
+        data: &[BasicValueEnum<'b>],
+        data_tys: &[ast::Type],
+        topics: &[BasicValueEnum<'b>],
+        topic_tys: &[ast::Type],
         ns: &ast::Namespace,
     ) {
         let event = &ns.events[event_no];
@@ -3913,7 +3916,17 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                 };
             }
 
-            for (ptr, len) in topics {
+            for (i, topic) in topics.iter().enumerate() {
+                let (ptr, len) = self.abi_encode(
+                    binary,
+                    None,
+                    false,
+                    function,
+                    &[*topic],
+                    &[topic_tys[i].clone()],
+                    ns,
+                );
+
                 binary.builder.build_call(
                     binary.module.get_function("seal_hash_blake2_256").unwrap(),
                     &[ptr.into(), len.into(), dest.into()],
@@ -3937,6 +3950,16 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                 .ptr_type(AddressSpace::Generic)
                 .const_null()
         };
+
+        let (data_ptr, data_len) = self.abi_encode(
+            binary,
+            self.event_id(binary, contract, event_no),
+            false,
+            function,
+            data,
+            data_tys,
+            ns,
+        );
 
         binary.builder.build_call(
             binary.module.get_function("seal_deposit_event").unwrap(),
