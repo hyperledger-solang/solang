@@ -3853,9 +3853,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         topic_tys: &[ast::Type],
         ns: &ast::Namespace,
     ) {
-        let event = &ns.events[event_no];
-
-        let topic_count = topics.len() + if event.anonymous { 0 } else { 1 };
+        let topic_count = topics.len();
         let topic_size = binary.context.i32_type().const_int(
             if topic_count > 0 {
                 32 * topic_count as u64 + 1
@@ -3890,47 +3888,37 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                 )
             };
 
-            if !event.anonymous {
-                let hash = binary.emit_global_string(
-                    &format!("event_{}_signature", event.symbol_name(ns)),
-                    blake2_rfc::blake2b::blake2b(32, &[], event.signature.as_bytes()).as_bytes(),
-                    true,
-                );
-
-                binary.builder.build_call(
-                    binary.module.get_function("__memcpy8").unwrap(),
-                    &[
-                        dest.into(),
-                        hash.into(),
-                        binary.context.i32_type().const_int(4, false).into(),
-                    ],
-                    "",
-                );
-
-                dest = unsafe {
-                    binary.builder.build_gep(
-                        dest,
-                        &[binary.context.i32_type().const_int(32, false)],
-                        "dest",
-                    )
-                };
-            }
+            binary.builder.build_call(
+                binary.module.get_function("__bzero8").unwrap(),
+                &[
+                    binary
+                        .builder
+                        .build_pointer_cast(
+                            dest,
+                            binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                            "dest",
+                        )
+                        .into(),
+                    binary
+                        .context
+                        .i32_type()
+                        .const_int(topic_count as u64 * 4, false)
+                        .into(),
+                ],
+                "",
+            );
 
             for (i, topic) in topics.iter().enumerate() {
-                let (ptr, len) = self.abi_encode(
+                let mut data = dest;
+                self.encode_ty(
                     binary,
-                    None,
-                    false,
-                    function,
-                    &[*topic],
-                    &[topic_tys[i].clone()],
                     ns,
-                );
-
-                binary.builder.build_call(
-                    binary.module.get_function("seal_hash_blake2_256").unwrap(),
-                    &[ptr.into(), len.into(), dest.into()],
-                    "hash",
+                    false,
+                    true,
+                    function,
+                    &topic_tys[i],
+                    *topic,
+                    &mut data,
                 );
 
                 dest = unsafe {

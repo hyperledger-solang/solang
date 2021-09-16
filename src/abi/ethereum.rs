@@ -25,12 +25,13 @@ pub struct ABI {
     #[serde(rename = "type")]
     pub ty: String,
     pub inputs: Vec<ABIParam>,
-    // outputs should be skipped if ty is constructor
-    pub outputs: Vec<ABIParam>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub outputs: Option<Vec<ABIParam>>,
     #[serde(rename = "stateMutability")]
+    #[serde(skip_serializing_if = "String::is_empty")]
     pub mutability: String,
-    #[serde(skip_serializing_if = "is_false")]
-    pub anonymous: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub anonymous: Option<bool>,
 }
 
 #[allow(clippy::trivially_copy_pass_by_ref)]
@@ -114,12 +115,17 @@ pub fn gen_abi(contract_no: usize, ns: &Namespace) -> Vec<ABI> {
                 .iter()
                 .map(|p| parameter_to_abi(p, ns))
                 .collect(),
-            outputs: func
-                .returns
-                .iter()
-                .map(|p| parameter_to_abi(p, ns))
-                .collect(),
-            anonymous: false,
+            outputs: if func.ty == pt::FunctionTy::Function {
+                Some(
+                    func.returns
+                        .iter()
+                        .map(|p| parameter_to_abi(p, ns))
+                        .collect(),
+                )
+            } else {
+                None
+            },
+            anonymous: None,
         })
         .chain(
             ns.contracts[contract_no]
@@ -136,9 +142,9 @@ pub fn gen_abi(contract_no: usize, ns: &Namespace) -> Vec<ABI> {
                             .iter()
                             .map(|p| parameter_to_abi(p, ns))
                             .collect(),
-                        outputs: Vec::new(),
+                        outputs: None,
                         ty: "event".to_owned(),
-                        anonymous: event.anonymous,
+                        anonymous: Some(event.anonymous),
                     }
                 }),
         )

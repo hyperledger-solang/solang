@@ -283,11 +283,11 @@ fn emit() {
     let mut runtime = build_solidity(
         r##"
         contract a {
-            event foo(bool,uint32);
-            event bar(uint32,uint64);
+            event foo(bool,uint32,int64 indexed);
+            event bar(uint32,uint64,string indexed);
             function emit_event() public {
-                emit foo(true, 102);
-                emit bar(0xdeadcafe, 102);
+                emit foo(true, 102, 1);
+                emit bar(0xdeadcafe, 102, "foobar");
             }
         }"##,
     );
@@ -298,17 +298,17 @@ fn emit() {
     assert_eq!(runtime.events.len(), 2);
     let event = &runtime.events[0];
     assert_eq!(event.topics.len(), 1);
-    assert_eq!(
-        event.topics[0],
-        blake2_rfc::blake2b::blake2b(32, &[], b"foo(bool,uint32)").as_bytes()
-    );
+    let mut t = [0u8; 32];
+    t[0] = 1;
+
+    assert_eq!(event.topics[0], t);
     assert_eq!(event.data, Foo(0, true, 102).encode());
 
     let event = &runtime.events[1];
     assert_eq!(event.topics.len(), 1);
     assert_eq!(
-        event.topics[0],
-        blake2_rfc::blake2b::blake2b(32, &[], b"bar(uint32,uint64)").as_bytes()
+        event.topics[0].to_vec(),
+        hex::decode("38d18acb67d25c8bb9942764b62f18e17054f66a817bd4295423adf9ed98873e").unwrap()
     );
     assert_eq!(event.data, (1u8, 0xdeadcafeu32, 102u64).encode());
 }

@@ -532,12 +532,62 @@ pub fn statement(
                 }
 
                 for (i, arg) in args.iter().enumerate() {
-                    let e = expression(arg, cfg, contract_no, Some(func), ns, vartab);
-
                     if event.fields[i].indexed {
-                        topics.push(e);
-                        topic_tys.push(arg.ty());
+                        let ty = arg.ty();
+
+                        match ty {
+                            Type::String | Type::DynamicBytes => {
+                                let e = expression(
+                                    &Expression::Builtin(
+                                        pt::Loc(0, 0, 0),
+                                        vec![Type::Bytes(32)],
+                                        Builtin::Keccak256,
+                                        vec![arg.clone()],
+                                    ),
+                                    cfg,
+                                    contract_no,
+                                    Some(func),
+                                    ns,
+                                    vartab,
+                                );
+
+                                topics.push(e);
+                                topic_tys.push(Type::Bytes(32));
+                            }
+                            Type::Struct(_) | Type::Array(..) => {
+                                // We should have an AbiEncodePackedPad
+                                let e = expression(
+                                    &Expression::Builtin(
+                                        pt::Loc(0, 0, 0),
+                                        vec![Type::Bytes(32)],
+                                        Builtin::Keccak256,
+                                        vec![Expression::Builtin(
+                                            pt::Loc(0, 0, 0),
+                                            vec![Type::DynamicBytes],
+                                            Builtin::AbiEncodePacked,
+                                            vec![arg.clone()],
+                                        )],
+                                    ),
+                                    cfg,
+                                    contract_no,
+                                    Some(func),
+                                    ns,
+                                    vartab,
+                                );
+
+                                topics.push(e);
+                                topic_tys.push(Type::Bytes(32));
+                            }
+                            _ => {
+                                let e = expression(arg, cfg, contract_no, Some(func), ns, vartab);
+
+                                topics.push(e);
+                                topic_tys.push(ty);
+                            }
+                        }
                     } else {
+                        let e = expression(arg, cfg, contract_no, Some(func), ns, vartab);
+
                         data.push(e);
                         data_tys.push(arg.ty());
                     }
