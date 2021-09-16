@@ -12,6 +12,7 @@ use crate::sema::ast::{
 };
 use crate::sema::expression::cast;
 use num_traits::Zero;
+use tiny_keccak::{Hasher, Keccak};
 
 /// Resolve a statement, which might be a block of statements or an entire body of a function
 pub fn statement(
@@ -516,24 +517,29 @@ pub fn statement(
                 let mut topics = Vec::new();
                 let mut topic_tys = Vec::new();
 
-                for (i, arg) in args.iter().enumerate() {
-                    let param = Parameter {
-                        ty: arg.ty(),
-                        ty_loc: arg.loc(),
-                        loc: arg.loc(),
-                        name: "".to_owned(),
-                        name_loc: None,
-                        indexed: false,
-                    };
+                if !event.anonymous && ns.target != crate::Target::Substrate {
+                    let mut hasher = Keccak::v256();
+                    hasher.update(event.signature.as_bytes());
+                    let mut hash = [0u8; 32];
+                    hasher.finalize(&mut hash);
 
+                    topic_tys.push(Type::Bytes(32));
+                    topics.push(Expression::BytesLiteral(
+                        pt::Loc(0, 0, 0),
+                        Type::Bytes(32),
+                        hash.to_vec(),
+                    ));
+                }
+
+                for (i, arg) in args.iter().enumerate() {
                     let e = expression(arg, cfg, contract_no, Some(func), ns, vartab);
 
                     if event.fields[i].indexed {
                         topics.push(e);
-                        topic_tys.push(param);
+                        topic_tys.push(arg.ty());
                     } else {
                         data.push(e);
-                        data_tys.push(param);
+                        data_tys.push(arg.ty());
                     }
                 }
 

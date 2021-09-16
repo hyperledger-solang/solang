@@ -4022,9 +4022,6 @@ pub trait TargetRuntime<'a> {
                         topics,
                         topic_tys,
                     } => {
-                        let data_tys: Vec<ast::Type> =
-                            data_tys.iter().map(|p| p.ty.clone()).collect();
-
                         let data = data
                             .iter()
                             .map(|a| self.expression(bin, a, &w.vars, function, ns))
@@ -4035,12 +4032,9 @@ pub trait TargetRuntime<'a> {
                             .map(|a| self.expression(bin, a, &w.vars, function, ns))
                             .collect::<Vec<BasicValueEnum>>();
 
-                        let topic_tys: Vec<ast::Type> =
-                            topic_tys.iter().map(|p| p.ty.clone()).collect();
-
                         self.emit_event(
-                            bin, contract, function, *event_no, &data, &data_tys, &topics,
-                            &topic_tys, ns,
+                            bin, contract, function, *event_no, &data, data_tys, &topics,
+                            topic_tys, ns,
                         );
                     }
                 }

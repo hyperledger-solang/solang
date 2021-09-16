@@ -13,7 +13,6 @@ use inkwell::values::{BasicValueEnum, FunctionValue, IntValue, PointerValue};
 use inkwell::AddressSpace;
 use inkwell::IntPredicate;
 use inkwell::OptimizationLevel;
-use tiny_keccak::{Hasher, Keccak};
 
 use super::ethabiencoder;
 use super::{Binary, TargetRuntime, Variable};
@@ -1796,7 +1795,7 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
         binary: &Binary<'b>,
         _contract: &ast::Contract,
         function: FunctionValue<'b>,
-        event_no: usize,
+        _event_no: usize,
         data: &[BasicValueEnum<'b>],
         data_tys: &[ast::Type],
         topics: &[BasicValueEnum<'b>],
@@ -1826,26 +1825,9 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
             .ptr_type(AddressSpace::Generic)
             .const_null();
 
-        let mut topics = [empty_topic; 4];
-
-        let event = &ns.events[event_no];
+        let mut topics = [empty_topic; 5];
 
         let mut topic_count = 0;
-
-        if !event.anonymous {
-            let mut hasher = Keccak::v256();
-            hasher.update(event.signature.as_bytes());
-            let mut hash = [0u8; 32];
-            hasher.finalize(&mut hash);
-
-            topics[0] = binary.emit_global_string(
-                &format!("event_{}_signature", event.symbol_name(ns)),
-                &hash,
-                true,
-            );
-
-            topic_count += 1;
-        }
 
         for (ptr, len) in encoded_topics.into_iter() {
             if let Some(32) = len.get_zero_extended_constant() {
