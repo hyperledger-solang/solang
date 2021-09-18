@@ -6,7 +6,7 @@ import { ISubmittableResult } from '@polkadot/types/types';
 import { KeyringPair } from '@polkadot/keyring/types';
 
 const default_url: string = "ws://localhost:9944";
-export const gasLimit: BigInt = 200000n * 1000000n;
+export const gasLimit: bigint = 200000n * 1000000n;
 
 export function aliceKeypair(): KeyringPair {
   const keyring = new Keyring({ type: 'sr25519' });
