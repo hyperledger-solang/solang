@@ -33,8 +33,12 @@ It can be used directly in the
 Solana
 ______
 
-The Solana target requires `Solana <https://www.solana.com/>`_ 1.6.9 or later. This target is in the early stages right now,
-however it is under active development. All data types are supported, but the builtin functions, and constructor calls
+The Solana target requires latest `Solana <https://www.solana.com/>`_ master due to:
+
+ - https://github.com/solana-labs/solana/pull/19548
+
+This target is in the early stages right now, however it is under active development.
+All data types are supported, but not all the builtin functions and variables
 have not been implemented yet. This is how to build your Solidity for Solana:
 
 .. code-block:: bash
@@ -66,8 +70,9 @@ correctly initialized. To call the constructor, abi encode (using ethereum abi e
 arguments, and pass in two accounts to the call, the 2nd being the contract storage account.
 
 Once that is done, any function on the contract can be called. To do that, abi encode the function call,
-pass this as input, and provide the two accounts on the call, plus any accounts that may be called. The return data may
-be read from the account data if the call succeeds.
+pass this as input, and provide the two accounts on the call, plus any accounts that may be called.
+
+The return data (i.e. the return values or the revert error) is provided in the program log in base64.
 
 There is `an example of this written in node <https://github.com/hyperledger-labs/solang/tree/main/integration/solana>`_.
 
