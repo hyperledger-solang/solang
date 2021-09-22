@@ -18,7 +18,7 @@ import { encode } from 'querystring';
 const Web3EthAbi = require('web3-eth-abi');
 
 const default_url: string = "http://localhost:8899";
-const return_data_prefix = 'Program return data: ';
+const return_data_prefix = 'Program return: ';
 
 export async function establishConnection(): Promise<TestConnection> {
     let url = process.env.RPC_URL || default_url;
