@@ -9,7 +9,7 @@ use tower_lsp::{Client, LanguageServer};
 use tower_lsp::{LspService, Server};
 
 use solang::codegen::codegen;
-use solang::file_cache::FileCache;
+use solang::file_resolver::FileResolver;
 use solang::parse_and_resolve;
 use solang::parser::pt;
 use solang::sema::{ast, builtin::get_prototype, symtable, tags::render};
@@ -49,17 +49,15 @@ impl SolangServer {
     /// Parse file
     async fn parse_file(&self, uri: Url) {
         if let Ok(path) = uri.to_file_path() {
-            let mut filecache = FileCache::new();
+            let mut resolver = FileResolver::new();
 
             let dir = path.parent().unwrap();
 
-            if let Ok(dir) = dir.canonicalize() {
-                filecache.add_import_path(dir);
-            }
+            let _ = resolver.add_import_path(PathBuf::from(dir));
 
             let os_str = path.file_name().unwrap();
 
-            let mut ns = parse_and_resolve(os_str.to_str().unwrap(), &mut filecache, self.target);
+            let mut ns = parse_and_resolve(os_str.to_str().unwrap(), &mut resolver, self.target);
 
             // codegen all the contracts; some additional errors/warnings will be detected here
             codegen(&mut ns, &Default::default());

@@ -22,7 +22,7 @@ use solang::{
     codegen::{codegen, Options},
     compile_many,
     emit::Generate,
-    file_cache::FileCache,
+    file_resolver::FileResolver,
     sema::{ast, diagnostics},
     Target,
 };
@@ -110,7 +110,7 @@ struct Assign {
 }
 
 fn build_solidity(src: &str) -> VirtualMachine {
-    let mut cache = FileCache::new();
+    let mut cache = FileResolver::new();
 
     cache.set_file_contents("test.sol", src.to_string());
 
@@ -1522,7 +1522,7 @@ impl VirtualMachine {
 }
 
 pub fn parse_and_resolve(src: &'static str, target: Target) -> ast::Namespace {
-    let mut cache = FileCache::new();
+    let mut cache = FileResolver::new();
 
     cache.set_file_contents("test.sol", src.to_string());
 

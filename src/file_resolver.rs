@@ -1,14 +1,16 @@
 use crate::parser::pt::Loc;
 use crate::sema::ast;
 use std::collections::HashMap;
+use std::ffi::OsString;
 use std::fs::File;
-use std::io::prelude::*;
+use std::io;
+use std::io::{prelude::*, Error, ErrorKind};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-pub struct FileCache {
+pub struct FileResolver {
     /// Set of import paths search for imports
-    import_paths: Vec<PathBuf>,
+    import_paths: Vec<(Option<OsString>, PathBuf)>,
     /// List file by import path
     cached_paths: HashMap<PathBuf, usize>,
     /// The actual file contents
@@ -31,25 +33,43 @@ pub struct ResolvedFile {
     base: PathBuf,
 }
 
-impl Default for FileCache {
+impl Default for FileResolver {
     fn default() -> Self {
-        FileCache::new()
+        FileResolver::new()
     }
 }
 
-impl FileCache {
+impl FileResolver {
     /// Create a new file cache object
     pub fn new() -> Self {
-        FileCache {
+        FileResolver {
             import_paths: Vec::new(),
             cached_paths: HashMap::new(),
             files: Vec::new(),
         }
     }
 
-    /// Add import path. This must be the canonicalized path
-    pub fn add_import_path(&mut self, path: PathBuf) {
-        self.import_paths.push(path);
+    /// Add import path
+    pub fn add_import_path(&mut self, path: PathBuf) -> io::Result<()> {
+        self.import_paths.push((None, path.canonicalize()?));
+        Ok(())
+    }
+
+    /// Add import map
+    pub fn add_import_map(&mut self, map: OsString, path: PathBuf) -> io::Result<()> {
+        if self
+            .import_paths
+            .iter()
+            .any(|(m, _)| m.as_ref() == Some(&map))
+        {
+            Err(Error::new(
+                ErrorKind::Other,
+                format!("duplicate mapping for ‘{}’", map.to_string_lossy()),
+            ))
+        } else {
+            self.import_paths.push((Some(map), path.canonicalize()?));
+            Ok(())
+        }
     }
 
     /// Update the cache for the filename with the given contents
@@ -114,6 +134,35 @@ impl FileCache {
         filename: &str,
     ) -> Result<ResolvedFile, String> {
         let path = PathBuf::from(filename);
+
+        // first check maps
+        let mut iter = path.iter();
+        if let Some(first_part) = iter.next() {
+            let relpath: PathBuf = iter.collect();
+
+            for (import_no, import) in self.import_paths.iter().enumerate() {
+                if let (Some(mapping), import_path) = import {
+                    if first_part == mapping {
+                        // match!
+                        if let Ok(full_path) = import_path.join(&relpath).canonicalize() {
+                            let file_no = self.load_file(&full_path)?;
+                            let base = full_path
+                                .parent()
+                                .expect("path should include filename")
+                                .to_path_buf();
+
+                            return Ok(ResolvedFile {
+                                full_path,
+                                base,
+                                import_no,
+                                file_no,
+                            });
+                        }
+                    }
+                }
+            }
+        }
+
         let mut start_import_no = 0;
 
         // first try relative to the parent
@@ -138,21 +187,23 @@ impl FileCache {
                 });
             }
 
-            let import_path = self.import_paths[*import_no].join(base);
+            if let (None, import_path) = &self.import_paths[*import_no] {
+                let import_path = import_path.join(base);
 
-            if let Ok(full_path) = import_path.join(path.clone()).canonicalize() {
-                let file_no = self.load_file(&full_path)?;
-                let base = full_path
-                    .parent()
-                    .expect("path should include filename")
-                    .to_path_buf();
+                if let Ok(full_path) = import_path.join(path.clone()).canonicalize() {
+                    let file_no = self.load_file(&full_path)?;
+                    let base = full_path
+                        .parent()
+                        .expect("path should include filename")
+                        .to_path_buf();
 
-                return Ok(ResolvedFile {
-                    full_path,
-                    base,
-                    import_no: *import_no,
-                    file_no,
-                });
+                    return Ok(ResolvedFile {
+                        full_path,
+                        base,
+                        import_no: *import_no,
+                        file_no,
+                    });
+                }
             }
 
             // start with the next import
@@ -178,21 +229,22 @@ impl FileCache {
         // walk over the import paths until we find one that resolves
         for i in 0..self.import_paths.len() {
             let import_no = (i + start_import_no) % self.import_paths.len();
-            let import_path = &self.import_paths[import_no];
 
-            if let Ok(full_path) = import_path.join(path.clone()).canonicalize() {
-                let base = full_path
-                    .parent()
-                    .expect("path should include filename")
-                    .to_path_buf();
-                let file_no = self.load_file(&full_path)?;
+            if let (None, import_path) = &self.import_paths[import_no] {
+                if let Ok(full_path) = import_path.join(path.clone()).canonicalize() {
+                    let base = full_path
+                        .parent()
+                        .expect("path should include filename")
+                        .to_path_buf();
+                    let file_no = self.load_file(&full_path)?;
 
-                return Ok(ResolvedFile {
-                    full_path,
-                    file_no,
-                    import_no,
-                    base,
-                });
+                    return Ok(ResolvedFile {
+                        full_path,
+                        file_no,
+                        import_no,
+                        base,
+                    });
+                }
             }
         }
 

@@ -1,7 +1,7 @@
 use crate::{build_solidity, first_error, first_warning, no_errors, parse_and_resolve};
 use parity_scale_codec::Encode;
 use parity_scale_codec_derive::{Decode, Encode};
-use solang::file_cache::FileCache;
+use solang::file_resolver::FileResolver;
 use solang::Target;
 
 #[test]
@@ -315,7 +315,7 @@ fn emit() {
 
 #[test]
 fn event_imported() {
-    let mut cache = FileCache::new();
+    let mut cache = FileResolver::new();
 
     cache.set_file_contents(
         "a.sol",
@@ -343,7 +343,7 @@ fn event_imported() {
 
     no_errors(ns.diagnostics);
 
-    let mut cache = FileCache::new();
+    let mut cache = FileResolver::new();
 
     cache.set_file_contents(
         "a.sol",
@@ -373,7 +373,7 @@ fn event_imported() {
 
     no_errors(ns.diagnostics);
 
-    let mut cache = FileCache::new();
+    let mut cache = FileResolver::new();
 
     cache.set_file_contents(
         "a.sol",
@@ -403,7 +403,7 @@ fn event_imported() {
 
     no_errors(ns.diagnostics);
 
-    let mut cache = FileCache::new();
+    let mut cache = FileResolver::new();
 
     cache.set_file_contents(
         "a.sol",

@@ -1,7 +1,7 @@
 use crate::{build_solidity, first_error, first_warning, no_errors, parse_and_resolve};
 use parity_scale_codec::Encode;
 use parity_scale_codec_derive::{Decode, Encode};
-use solang::file_cache::FileCache;
+use solang::file_resolver::FileResolver;
 use solang::Target;
 
 #[test]
@@ -94,7 +94,7 @@ fn test_abstract() {
         "cannot construct ‘foo’ of type ‘abstract contract’"
     );
 
-    let mut cache = FileCache::new();
+    let mut cache = FileResolver::new();
 
     cache.set_file_contents(
         "a.sol",
@@ -128,7 +128,7 @@ fn test_abstract() {
 
     assert_eq!(contracts.len(), 1);
 
-    let mut cache = FileCache::new();
+    let mut cache = FileResolver::new();
 
     cache.set_file_contents(
         "a.sol",
