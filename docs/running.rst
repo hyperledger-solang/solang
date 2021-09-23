@@ -51,6 +51,11 @@ Options:
   will only search the current directory. This option can be specified multiple times
   and the directories will be searched in the order specified.
 
+\\-\\-importmap *map=directory*
+  When resolving ``import`` directives, if the first part of the path matches *map*,
+  search the directory provided for the file. This option can be specified multiple times
+  with different values for map.
+
 \\-\\-help, -h
   This displays a short description of all the options
 

@@ -1,7 +1,7 @@
 pub mod abi;
 pub mod codegen;
 pub mod emit;
-pub mod file_cache;
+pub mod file_resolver;
 pub mod linker;
 pub mod parser;
 
@@ -11,7 +11,7 @@ pub mod parser;
 #[allow(clippy::result_unit_err)]
 pub mod sema;
 
-use file_cache::FileCache;
+use file_resolver::FileResolver;
 use inkwell::OptimizationLevel;
 use sema::ast;
 use sema::diagnostics;
@@ -53,12 +53,12 @@ impl fmt::Display for Target {
 /// The ctx is the inkwell llvm context.
 pub fn compile(
     filename: &str,
-    cache: &mut FileCache,
+    resolver: &mut FileResolver,
     opt_level: OptimizationLevel,
     target: Target,
     math_overflow_check: bool,
 ) -> (Vec<(Vec<u8>, String)>, ast::Namespace) {
-    let mut ns = parse_and_resolve(filename, cache, target);
+    let mut ns = parse_and_resolve(filename, resolver, target);
 
     if diagnostics::any_errors(&ns.diagnostics) {
         return (Vec::new(), ns);
@@ -106,7 +106,11 @@ pub fn compile_many<'a>(
 /// informational messages like `found contact N`.
 ///
 /// Note that multiple contracts can be specified in on solidity source file.
-pub fn parse_and_resolve(filename: &str, cache: &mut FileCache, target: Target) -> ast::Namespace {
+pub fn parse_and_resolve(
+    filename: &str,
+    resolver: &mut FileResolver,
+    target: Target,
+) -> ast::Namespace {
     let mut ns = ast::Namespace::new(
         target,
         match target {
@@ -123,7 +127,7 @@ pub fn parse_and_resolve(filename: &str, cache: &mut FileCache, target: Target) 
         },
     );
 
-    match cache.resolve_file(None, filename) {
+    match resolver.resolve_file(None, filename) {
         Err(message) => {
             ns.diagnostics.push(ast::Diagnostic {
                 ty: ast::ErrorType::ParserError,
@@ -134,7 +138,7 @@ pub fn parse_and_resolve(filename: &str, cache: &mut FileCache, target: Target) 
             });
         }
         Ok(file) => {
-            sema::sema(&file, cache, &mut ns);
+            sema::sema(&file, resolver, &mut ns);
         }
     }
 

@@ -2,6 +2,7 @@ use clap::{App, Arg, ArgMatches};
 use itertools::Itertools;
 use serde::Serialize;
 use std::collections::HashMap;
+use std::ffi::OsString;
 use std::fs::File;
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
@@ -9,7 +10,7 @@ use std::path::{Path, PathBuf};
 use solang::abi;
 use solang::codegen::{codegen, Options};
 use solang::emit::Generate;
-use solang::file_cache::FileCache;
+use solang::file_resolver::FileResolver;
 use solang::sema::{ast::Namespace, diagnostics};
 
 mod doc;
@@ -91,7 +92,17 @@ fn main() {
                 .short("I")
                 .long("importpath")
                 .takes_value(true)
-                .multiple(true),
+                .multiple(true)
+                .require_delimiter(true),
+        )
+        .arg(
+            Arg::with_name("IMPORTMAP")
+                .help("Map directory to search for solidity files [format: map=path]")
+                .short("m")
+                .long("importmap")
+                .takes_value(true)
+                .multiple(true)
+                .require_delimiter(true),
         )
         .arg(
             Arg::with_name("CONSTANTFOLDING")
@@ -161,34 +172,41 @@ fn main() {
 
     let math_overflow_check = matches.is_present("MATHOVERFLOW");
 
-    let mut cache = FileCache::new();
+    let mut cache = FileResolver::new();
 
     for filename in matches.values_of("INPUT").unwrap() {
         if let Ok(path) = PathBuf::from(filename).canonicalize() {
-            cache.add_import_path(path.parent().unwrap().to_path_buf());
+            let _ = cache.add_import_path(path.parent().unwrap().to_path_buf());
         }
     }
 
-    match PathBuf::from(".").canonicalize() {
-        Ok(p) => cache.add_import_path(p),
-        Err(e) => {
-            eprintln!(
-                "error: cannot add current directory to import path: {}",
-                e.to_string()
-            );
-            std::process::exit(1);
-        }
+    if let Err(e) = cache.add_import_path(PathBuf::from(".")) {
+        eprintln!(
+            "error: cannot add current directory to import path: {}",
+            e.to_string()
+        );
+        std::process::exit(1);
     }
 
     if let Some(paths) = matches.values_of("IMPORTPATH") {
-        for p in paths {
-            let path = PathBuf::from(p);
-            match path.canonicalize() {
-                Ok(p) => cache.add_import_path(p),
-                Err(e) => {
-                    eprintln!("error: import path ‘{}’: {}", p, e.to_string());
+        for path in paths {
+            if let Err(e) = cache.add_import_path(PathBuf::from(path)) {
+                eprintln!("error: import path ‘{}’: {}", path, e.to_string());
+                std::process::exit(1);
+            }
+        }
+    }
+
+    if let Some(maps) = matches.values_of("IMPORTMAP") {
+        for p in maps {
+            if let Some((map, path)) = p.split_once('=') {
+                if let Err(e) = cache.add_import_map(OsString::from(map), PathBuf::from(path)) {
+                    eprintln!("error: import path ‘{}’: {}", path, e.to_string());
                     std::process::exit(1);
                 }
+            } else {
+                eprintln!("error: import map ‘{}’: contains no ‘=’", p);
+                std::process::exit(1);
             }
         }
     }
@@ -356,7 +374,7 @@ fn output_file(matches: &ArgMatches, stem: &str, ext: &str) -> PathBuf {
 
 fn process_filename(
     filename: &str,
-    cache: &mut FileCache,
+    resolver: &mut FileResolver,
     target: solang::Target,
     matches: &ArgMatches,
     json: &mut JsonResult,
@@ -367,16 +385,16 @@ fn process_filename(
     let mut json_contracts = HashMap::new();
 
     // resolve phase
-    let mut ns = solang::parse_and_resolve(filename, cache, target);
+    let mut ns = solang::parse_and_resolve(filename, resolver, target);
 
     // codegen all the contracts; some additional errors/warnings will be detected here
     codegen(&mut ns, opt);
 
     if matches.is_present("STD-JSON") {
-        let mut out = diagnostics::message_as_json(&ns, cache);
+        let mut out = diagnostics::message_as_json(&ns, resolver);
         json.errors.append(&mut out);
     } else {
-        diagnostics::print_messages(cache, &ns, verbose);
+        diagnostics::print_messages(resolver, &ns, verbose);
     }
 
     if ns.contracts.is_empty() || diagnostics::any_errors(&ns.diagnostics) {

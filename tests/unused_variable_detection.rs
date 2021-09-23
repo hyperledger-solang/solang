@@ -1,18 +1,18 @@
 use itertools::Itertools;
-use solang::file_cache::FileCache;
+use solang::file_resolver::FileResolver;
 use solang::sema::ast;
 use solang::sema::ast::{Diagnostic, Level};
 use solang::{parse_and_resolve, Target};
 
 fn generic_target_parse(src: &'static str) -> ast::Namespace {
-    let mut cache = FileCache::new();
+    let mut cache = FileResolver::new();
     cache.set_file_contents("test.sol", src.to_string());
 
     parse_and_resolve("test.sol", &mut cache, Target::Generic)
 }
 
 fn generic_parse_two_files(src1: &'static str, src2: &'static str) -> ast::Namespace {
-    let mut cache = FileCache::new();
+    let mut cache = FileResolver::new();
     cache.set_file_contents("test.sol", src1.to_string());
     cache.set_file_contents("test2.sol", src2.to_string());
 

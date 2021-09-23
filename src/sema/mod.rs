@@ -31,7 +31,7 @@ use self::expression::expression;
 use self::functions::{resolve_params, resolve_returns};
 use self::symtable::Symtable;
 use self::variables::var_decl;
-use crate::file_cache::{FileCache, ResolvedFile};
+use crate::file_resolver::{FileResolver, ResolvedFile};
 use crate::sema::unused_variable::{check_unused_events, check_unused_namespace_variables};
 
 pub type ArrayDimension = Option<(pt::Loc, BigInt)>;
@@ -42,8 +42,8 @@ pub const SOLANA_SPARSE_ARRAY_SIZE: u64 = 1024;
 
 /// Load a file file from the cache, parse and resolve it. The file must be present in
 /// the cache.
-pub fn sema(file: &ResolvedFile, cache: &mut FileCache, ns: &mut ast::Namespace) {
-    sema_file(file, cache, ns);
+pub fn sema(file: &ResolvedFile, resolver: &mut FileResolver, ns: &mut ast::Namespace) {
+    sema_file(file, resolver, ns);
 
     // Checks for unused variables
     check_unused_namespace_variables(ns);
@@ -51,10 +51,10 @@ pub fn sema(file: &ResolvedFile, cache: &mut FileCache, ns: &mut ast::Namespace)
 }
 
 /// Parse and resolve a file and its imports in a recursive manner.
-fn sema_file(file: &ResolvedFile, cache: &mut FileCache, ns: &mut ast::Namespace) {
+fn sema_file(file: &ResolvedFile, resolver: &mut FileResolver, ns: &mut ast::Namespace) {
     let file_no = ns.files.len();
 
-    let (source_code, file_cache_no) = cache.get_file_contents_and_number(&file.full_path);
+    let (source_code, file_cache_no) = resolver.get_file_contents_and_number(&file.full_path);
 
     ns.files.push(ast::File::new(
         file.full_path.clone(),
@@ -96,7 +96,7 @@ fn sema_file(file: &ResolvedFile, cache: &mut FileCache, ns: &mut ast::Namespace
                 resolve_pragma(name, value, ns);
             }
             pt::SourceUnitPart::ImportDirective(import) => {
-                resolve_import(import, Some(file), file_no, cache, ns);
+                resolve_import(import, Some(file), file_no, resolver, ns);
             }
             _ => (),
         }
@@ -164,7 +164,7 @@ fn resolve_import(
     import: &pt::Import,
     parent: Option<&ResolvedFile>,
     file_no: usize,
-    cache: &mut FileCache,
+    resolver: &mut FileResolver,
     ns: &mut ast::Namespace,
 ) {
     let filename = match import {
@@ -173,7 +173,7 @@ fn resolve_import(
         pt::Import::Rename(f, _) => f,
     };
 
-    let import_file_no = match cache.resolve_file(parent, &filename.string) {
+    let import_file_no = match resolver.resolve_file(parent, &filename.string) {
         Err(message) => {
             ns.diagnostics
                 .push(ast::Diagnostic::error(filename.loc, message));
@@ -182,7 +182,7 @@ fn resolve_import(
         }
         Ok(file) => {
             if !ns.files.iter().any(|f| f.path == file.full_path) {
-                sema_file(&file, cache, ns);
+                sema_file(&file, resolver, ns);
 
                 // give up if we failed
                 if diagnostics::any_errors(&ns.diagnostics) {

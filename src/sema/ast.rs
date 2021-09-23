@@ -370,7 +370,7 @@ pub struct File {
     pub path: PathBuf,
     /// Used for offset to line-column conversions
     pub line_starts: Vec<usize>,
-    /// Indicates the file number in FileCache.files
+    /// Indicates the file number in FileResolver.files
     pub cache_no: usize,
 }
 

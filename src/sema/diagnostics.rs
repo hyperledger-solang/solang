@@ -1,5 +1,5 @@
 use super::ast::{Diagnostic, ErrorType, Level, Namespace, Note};
-use crate::file_cache::FileCache;
+use crate::file_resolver::FileResolver;
 use crate::parser::pt::Loc;
 use serde::Serialize;
 
@@ -131,7 +131,7 @@ impl Diagnostic {
         }
     }
 
-    fn formatted_message(&self, ns: &Namespace, cache: &FileCache) -> String {
+    fn formatted_message(&self, ns: &Namespace, cache: &FileResolver) -> String {
         let mut s = if let Some(pos) = self.pos {
             let loc = ns.files[pos.0].loc_to_string(&pos);
 
@@ -178,7 +178,7 @@ impl Diagnostic {
     }
 }
 
-pub fn print_messages(cache: &FileCache, ns: &Namespace, debug: bool) {
+pub fn print_messages(cache: &FileResolver, ns: &Namespace, debug: bool) {
     for msg in &ns.diagnostics {
         if !debug && msg.level == Level::Debug {
             continue;
@@ -212,7 +212,7 @@ pub struct OutputJson {
     pub formattedMessage: String,
 }
 
-pub fn message_as_json(ns: &Namespace, cache: &FileCache) -> Vec<OutputJson> {
+pub fn message_as_json(ns: &Namespace, cache: &FileResolver) -> Vec<OutputJson> {
     let mut json = Vec::new();
 
     for msg in &ns.diagnostics {
