@@ -2,6 +2,16 @@
 All notable changes to [Solang](https://github.com/hyperledger-labs/solang/)
 will be documented here.
 
+## [Unreleased]
+
+### Added
+- Added supported for solc import mapppings using `--importmap`
+- Added supported for Events on Solana
+
+## Changed
+- On Solana, the return data is now provided in the program log. As a result,
+  RPCs are now are now supported.
+
 ## [0.1.8]
 
 ### Added
