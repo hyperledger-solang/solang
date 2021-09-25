@@ -71,8 +71,12 @@ fn import_map() {
 fn import() {
     let mut cmd = Command::cargo_bin("solang").unwrap();
     let assert = cmd
-        .args(&["--importpath", "imports", "import.sol"])
-        .current_dir("tests/imports_testcases")
+        .args(&[
+            "--importpath",
+            "./imports_testcases/imports",
+            "imports_testcases/import.sol",
+        ])
+        .current_dir("tests")
         .assert();
 
     let output = assert.get_output();
