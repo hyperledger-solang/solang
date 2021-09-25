@@ -8,7 +8,7 @@ will be documented here.
 - Added supported for solc import mapppings using `--importmap`
 - Added supported for Events on Solana
 
-## Changed
+### Changed
 - On Solana, the return data is now provided in the program log. As a result,
   RPCs are now are now supported.
 

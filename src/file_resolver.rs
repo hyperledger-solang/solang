@@ -25,7 +25,7 @@ pub struct FileResolver {
 pub struct ResolvedFile {
     /// Full path on the filesystem
     pub full_path: PathBuf,
-    /// Index into the file cache
+    /// Index into the file resolver
     file_no: usize,
     /// Which import path was used, if any
     import_no: usize,
@@ -40,7 +40,7 @@ impl Default for FileResolver {
 }
 
 impl FileResolver {
-    /// Create a new file cache object
+    /// Create a new file resolver
     pub fn new() -> Self {
         FileResolver {
             import_paths: Vec::new(),
@@ -51,7 +51,7 @@ impl FileResolver {
 
     /// Add import path
     pub fn add_import_path(&mut self, path: PathBuf) -> io::Result<()> {
-        self.import_paths.push((None, path.canonicalize()?));
+        self.import_paths.push((None, canonicalize(&path)?));
         Ok(())
     }
 
@@ -67,7 +67,7 @@ impl FileResolver {
                 format!("duplicate mapping for ‘{}’", map.to_string_lossy()),
             ))
         } else {
-            self.import_paths.push((Some(map), path.canonicalize()?));
+            self.import_paths.push((Some(map), canonicalize(&path)?));
             Ok(())
         }
     }
@@ -144,7 +144,7 @@ impl FileResolver {
                 if let (Some(mapping), import_path) = import {
                     if first_part == mapping {
                         // match!
-                        if let Ok(full_path) = import_path.join(&relpath).canonicalize() {
+                        if let Ok(full_path) = canonicalize(&import_path.join(&relpath)) {
                             let file_no = self.load_file(&full_path)?;
                             let base = full_path
                                 .parent()
@@ -190,7 +190,7 @@ impl FileResolver {
             if let (None, import_path) = &self.import_paths[*import_no] {
                 let import_path = import_path.join(base);
 
-                if let Ok(full_path) = import_path.join(path.clone()).canonicalize() {
+                if let Ok(full_path) = canonicalize(&import_path.join(path.clone())) {
                     let file_no = self.load_file(&full_path)?;
                     let base = full_path
                         .parent()
@@ -231,7 +231,7 @@ impl FileResolver {
             let import_no = (i + start_import_no) % self.import_paths.len();
 
             if let (None, import_path) = &self.import_paths[import_no] {
-                if let Ok(full_path) = import_path.join(path.clone()).canonicalize() {
+                if let Ok(full_path) = canonicalize(&import_path.join(path.clone())) {
                     let base = full_path
                         .parent()
                         .expect("path should include filename")
@@ -284,4 +284,38 @@ impl FileResolver {
 
         (full_line, beg_line_no, beg_offset, size)
     }
+}
+
+/// Return the canonicalized path
+fn canonicalize(path: &Path) -> io::Result<PathBuf> {
+    let canon = path.canonicalize()?;
+
+    // On Windows, canonicalize returns a UNC paths (starts with \\?\C:).
+    // Such a path requires \ rather than / so if we append foo/bar.sol in search
+    // of an import, we will get file not found. Strip this prefix.
+    //
+    // See https://github.com/rust-lang/rust/issues/42869
+    #[cfg(windows)]
+    {
+        use std::path::{Component, Prefix};
+        let mut new_path = PathBuf::new();
+
+        for component in canon.components() {
+            match component {
+                Component::Prefix(prefix_component) => {
+                    if let Prefix::VerbatimDisk(disk) = prefix_component.kind() {
+                        new_path.push(PathBuf::from(format!("{}:", disk as char)));
+                    } else {
+                        new_path.push(component);
+                    }
+                }
+                _ => new_path.push(component),
+            }
+        }
+
+        return Ok(new_path);
+    }
+
+    #[cfg(not(windows))]
+    Ok(canon)
 }
