@@ -295,25 +295,29 @@ fn canonicalize(path: &Path) -> io::Result<PathBuf> {
     // of an import, we will get file not found. Strip this prefix.
     //
     // See https://github.com/rust-lang/rust/issues/42869
+    //
+    // Ideally PathBuf::join() would be able to deal with UNC paths, and we
+    // would not have this problem. This would also mean that paths longer than
+    // 260 characters would be supported (this requires UNC paths).
     #[cfg(windows)]
     {
         use std::path::{Component, Prefix};
-        let mut new_path = PathBuf::new();
+        let mut non_unc_path = PathBuf::new();
 
         for component in canon.components() {
             match component {
                 Component::Prefix(prefix_component) => {
                     if let Prefix::VerbatimDisk(disk) = prefix_component.kind() {
-                        new_path.push(PathBuf::from(format!("{}:", disk as char)));
+                        non_unc_path.push(PathBuf::from(format!("{}:", disk as char)));
                     } else {
-                        new_path.push(component);
+                        non_unc_path.push(component);
                     }
                 }
-                _ => new_path.push(component),
+                _ => non_unc_path.push(component),
             }
         }
 
-        return Ok(new_path);
+        Ok(non_unc_path)
     }
 
     #[cfg(not(windows))]
