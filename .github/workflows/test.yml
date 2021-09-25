@@ -59,6 +59,9 @@ jobs:
       run: unzip c:\llvm.zip -d c:/
     - name: Add LLVM to Path
       run: echo "c:\llvm12.0\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8
+    # We run clippy on Linux in the lint job above, but this does not check #[cfg(windows)] items
+    - name: Run cargo clippy
+      run: cargo clippy --tests --bins -- -D warnings
     - name: Build
       run: cargo build --verbose
     - name: Run tests
