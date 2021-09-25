@@ -65,7 +65,7 @@ fn main() {
                 .help("Target to build for")
                 .long("target")
                 .takes_value(true)
-                .possible_values(&["substrate", "ewasm", "sabre", "generic", "solana"])
+                .possible_values(&["solana", "substrate", "ewasm", "generic"])
                 .default_value("substrate"),
         )
         .arg(
@@ -148,11 +148,10 @@ fn main() {
         .get_matches();
 
     let target = match matches.value_of("TARGET") {
+        Some("solana") => solang::Target::Solana,
         Some("substrate") => solang::Target::Substrate,
         Some("ewasm") => solang::Target::Ewasm,
-        Some("sabre") => solang::Target::Sabre,
         Some("generic") => solang::Target::Generic,
-        Some("solana") => solang::Target::Solana,
         _ => unreachable!(),
     };
 

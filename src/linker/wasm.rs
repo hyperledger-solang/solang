@@ -38,10 +38,6 @@ pub fn link(input: &[u8], name: &str, target: Target) -> Vec<u8> {
             command_line.push(CString::new("--export").unwrap());
             command_line.push(CString::new("main").unwrap());
         }
-        Target::Sabre => {
-            command_line.push(CString::new("--export").unwrap());
-            command_line.push(CString::new("entrypoint").unwrap());
-        }
         Target::Substrate => {
             command_line.push(CString::new("--export").unwrap());
             command_line.push(CString::new("deploy").unwrap());

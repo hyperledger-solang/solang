@@ -12,6 +12,9 @@ will be documented here.
 - On Solana, the return data is now provided in the program log. As a result,
   RPCs are now are now supported.
 
+### Removed
+- The Sawtooth Sabre target has been removed.
+
 ## [0.1.8]
 
 ### Added

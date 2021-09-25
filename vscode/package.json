@@ -25,10 +25,9 @@
 					"scope": "window",
 					"type": "string",
 					"enum": [
-						"substrate",
 						"solana",
-						"ewasm",
-						"sawtooth"
+						"substrate",
+						"ewasm"
 					],
 					"default": "substrate",
 					"description": "Chain to build for. The Solidity language changes in subtle ways depending on the target."

@@ -5,7 +5,6 @@ The Solang Solidity Compiler compiles Solidity for the following blockchains:
 - Parity Substrate
 - Solana
 - ewasm
-- Hyperledger Sawtooth
 
 This extension provides syntax highlighting, diagnostics  (i.e. compiler warnings and errors), and information on types and functions when hovering.
 

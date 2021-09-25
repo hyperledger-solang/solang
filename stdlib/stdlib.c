@@ -112,24 +112,6 @@ void __leNtobeN(uint8_t *from, uint8_t *to, uint32_t length)
 	} while (--length);
 }
 
-// sabre wants the storage keys as a hex string. Convert the uint256 pointed
-// to be by v into a hex string
-char *__u256ptohex(uint8_t *v, char *str)
-{
-	// the uint256 will be stored little endian so fill it in reverse
-	str += 63;
-
-	for (int i = 0; i < 32; i++)
-	{
-		uint8_t l = (v[i] & 0x0f);
-		*str-- = l > 9 ? l + 'a' : '0' + l;
-		uint8_t h = (v[i] >> 4);
-		*str-- = h > 9 ? h + 'a' : '0' + h;
-	}
-
-	return str;
-}
-
 // Create a new vector. If initial is -1 then clear the data. This is done since a null pointer valid in wasm
 struct vector *vector_new(uint32_t members, uint32_t size, uint8_t *initial)
 {
