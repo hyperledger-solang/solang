@@ -6,10 +6,9 @@ names are provided as command line arguments; the output is an optimized
 wasm or bpf file which is ready for deployment on a chain, and an abi file.
 
 The following targets are supported right now:
-`Parity Substrate <https://substrate.dev/>`_,
-`Solana <https://www.solana.com/>`_
-`Ethereum ewasm <https://github.com/ewasm/design>`_, and
-`Sawtooth Sabre <https://github.com/hyperledger/sawtooth-sabre>`_.
+`Solana <https://www.solana.com/>`_,
+`Parity Substrate <https://substrate.dev/>`_, and
+`Ethereum ewasm <https://github.com/ewasm/design>`_.
 
 
 Usage
@@ -30,8 +29,8 @@ Options:
   will be silent if there are no errors or warnings.
 
 \\-\\-target *target*
-  This takes one argument, which can either be ``ewasm``, ``sabre``, ``solana``,
-  or ``substrate``. The default is substrate.
+  This takes one argument, which can either be ``solana``, ``substrate``, or ``ewasm``.
+  The default is substrate.
 
 \\-\\-doc
   Generate documentation for the given Solidity files as a single html page. This uses the

@@ -34,7 +34,6 @@ mod ethabiencoder;
 mod ewasm;
 mod generic;
 mod loop_builder;
-mod sabre;
 mod solana;
 mod substrate;
 
@@ -5243,9 +5242,6 @@ impl<'a> Binary<'a> {
             ),
             Target::Ewasm => {
                 ewasm::EwasmTarget::build(context, contract, ns, filename, opt, math_overflow_check)
-            }
-            Target::Sabre => {
-                sabre::SabreTarget::build(context, contract, ns, filename, opt, math_overflow_check)
             }
             Target::Generic => generic::GenericTarget::build(
                 context,

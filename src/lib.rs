@@ -20,26 +20,23 @@ use std::fmt;
 /// The target chain you want to compile Solidity for.
 #[derive(PartialEq, Clone, Copy)]
 pub enum Target {
+    /// Solana, see <https://solana.com/>
+    Solana,
     /// Parity Substrate, see <https://substrate.dev/>
     Substrate,
     /// Ethereum ewasm, see <https://github.com/ewasm/design>
     Ewasm,
-    /// Sawtooth Sabre, see <https://github.com/hyperledger/sawtooth-sabre>
-    Sabre,
     /// Generate a generic object file for linking
     Generic,
-    /// Solana, see <https://solana.com/>
-    Solana,
 }
 
 impl fmt::Display for Target {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
+            Target::Solana => write!(f, "solana"),
             Target::Substrate => write!(f, "Substrate"),
             Target::Ewasm => write!(f, "ewasm"),
-            Target::Sabre => write!(f, "Sawtooth Sabre"),
             Target::Generic => write!(f, "generic"),
-            Target::Solana => write!(f, "solana"),
         }
     }
 }
@@ -116,7 +113,6 @@ pub fn parse_and_resolve(
         match target {
             Target::Ewasm => 20,
             Target::Substrate => 32,
-            Target::Sabre => 0,    // Sabre has no address type
             Target::Generic => 20, // Same as ethereum
             Target::Solana => 32,
         },
