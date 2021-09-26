@@ -5,7 +5,7 @@ use std::ffi::OsString;
 use std::fs::File;
 use std::io;
 use std::io::{prelude::*, Error, ErrorKind};
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 use std::sync::Arc;
 
 pub struct FileResolver {
@@ -51,7 +51,7 @@ impl FileResolver {
 
     /// Add import path
     pub fn add_import_path(&mut self, path: PathBuf) -> io::Result<()> {
-        self.import_paths.push((None, canonicalize(&path)?));
+        self.import_paths.push((None, path.canonicalize()?));
         Ok(())
     }
 
@@ -67,7 +67,7 @@ impl FileResolver {
                 format!("duplicate mapping for ‘{}’", map.to_string_lossy()),
             ))
         } else {
-            self.import_paths.push((Some(map), canonicalize(&path)?));
+            self.import_paths.push((Some(map), path.canonicalize()?));
             Ok(())
         }
     }
@@ -144,7 +144,7 @@ impl FileResolver {
                 if let (Some(mapping), import_path) = import {
                     if first_part == mapping {
                         // match!
-                        if let Ok(full_path) = canonicalize(&import_path.join(&relpath)) {
+                        if let Ok(full_path) = join_fold(import_path, &relpath).canonicalize() {
                             let file_no = self.load_file(&full_path)?;
                             let base = full_path
                                 .parent()
@@ -172,7 +172,7 @@ impl FileResolver {
         {
             if self.import_paths.is_empty() {
                 // we have no import paths, resolve by what's in the cache
-                let full_path = base.join(path);
+                let full_path = join_fold(base, &path);
                 let base = (&full_path.parent())
                     .expect("path should include filename")
                     .to_path_buf();
@@ -188,9 +188,9 @@ impl FileResolver {
             }
 
             if let (None, import_path) = &self.import_paths[*import_no] {
-                let import_path = import_path.join(base);
+                let import_path = join_fold(import_path, base);
 
-                if let Ok(full_path) = canonicalize(&import_path.join(path.clone())) {
+                if let Ok(full_path) = join_fold(&import_path, &path).canonicalize() {
                     let file_no = self.load_file(&full_path)?;
                     let base = full_path
                         .parent()
@@ -231,7 +231,7 @@ impl FileResolver {
             let import_no = (i + start_import_no) % self.import_paths.len();
 
             if let (None, import_path) = &self.import_paths[import_no] {
-                if let Ok(full_path) = canonicalize(&import_path.join(path.clone())) {
+                if let Ok(full_path) = join_fold(import_path, &path).canonicalize() {
                     let base = full_path
                         .parent()
                         .expect("path should include filename")
@@ -286,40 +286,97 @@ impl FileResolver {
     }
 }
 
-/// Return the canonicalized path
-fn canonicalize(path: &Path) -> io::Result<PathBuf> {
-    let canon = path.canonicalize()?;
+// see https://github.com/rust-lang/rust/pull/89270
+fn join_fold(left: &Path, right: &Path) -> PathBuf {
+    let mut buf = Vec::new();
+    let mut has_prefix = false;
 
-    // On Windows, canonicalize returns a UNC paths (starts with \\?\C:).
-    // Such a path requires \ rather than / so if we append foo/bar.sol in search
-    // of an import, we will get file not found. Strip this prefix.
-    //
-    // See https://github.com/rust-lang/rust/issues/42869
-    //
-    // Ideally PathBuf::join() would be able to deal with UNC paths, and we
-    // would not have this problem. This would also mean that paths longer than
-    // 260 characters would be supported (this requires UNC paths).
-    #[cfg(windows)]
-    {
-        use std::path::{Component, Prefix};
-        let mut non_unc_path = PathBuf::new();
-
-        for component in canon.components() {
-            match component {
-                Component::Prefix(prefix_component) => {
-                    if let Prefix::VerbatimDisk(disk) = prefix_component.kind() {
-                        non_unc_path.push(PathBuf::from(format!("{}:", disk as char)));
-                    } else {
-                        non_unc_path.push(component);
-                    }
+    for c in left.components() {
+        match c {
+            Component::Prefix(_) => {
+                has_prefix = true;
+                buf.push(c);
+            }
+            Component::Normal(_) | Component::RootDir => {
+                buf.push(c);
+            }
+            Component::CurDir => (),
+            Component::ParentDir => {
+                if let Some(Component::Normal(_)) = buf.last() {
+                    buf.pop();
+                } else {
+                    buf.push(c);
                 }
-                _ => non_unc_path.push(component),
             }
         }
-
-        Ok(non_unc_path)
     }
 
-    #[cfg(not(windows))]
-    Ok(canon)
+    for c in right.components() {
+        match c {
+            Component::Prefix(_) => {
+                buf = vec![c];
+                has_prefix = true;
+            }
+            Component::RootDir => {
+                if has_prefix {
+                    buf.push(c);
+                } else {
+                    buf = vec![c];
+                }
+            }
+            Component::CurDir => (),
+            Component::ParentDir => match buf.last() {
+                Some(Component::RootDir) => (),
+                Some(Component::Prefix(_) | Component::ParentDir) | None => buf.push(c),
+                _ => {
+                    let _ = buf.pop();
+                }
+            },
+            Component::Normal(_) => {
+                buf.push(c);
+            }
+        }
+    }
+
+    buf.iter().collect()
+}
+
+#[test]
+#[cfg(not(windows))]
+fn test_join() {
+    let x = join_fold(&PathBuf::from("/foo//"), &PathBuf::from("bar"));
+
+    assert_eq!(x.to_string_lossy(), r"/foo/bar");
+
+    let x = join_fold(&PathBuf::from("/foo//"), &PathBuf::from("/../bar"));
+
+    assert_eq!(x.to_string_lossy(), r"/bar");
+}
+
+#[test]
+#[cfg(windows)]
+fn test_win_join() {
+    let x = join_fold(&PathBuf::from("/foo//"), &PathBuf::from("bar"));
+
+    assert_eq!(x.to_string_lossy(), r"\foo\bar");
+
+    let x = join_fold(&PathBuf::from("/foo//"), &PathBuf::from("/../bar"));
+
+    assert_eq!(x.to_string_lossy(), r"\bar");
+
+    let x = join_fold(&PathBuf::from("C:/foo//"), &PathBuf::from("bar"));
+
+    assert_eq!(x.to_string_lossy(), r"C:\foo\bar");
+
+    let x = join_fold(&PathBuf::from("C:"), &PathBuf::from("bar/../foo"));
+
+    assert_eq!(x.to_string_lossy(), r"C:foo");
+
+    let x = join_fold(&PathBuf::from("C:"), &PathBuf::from("/bar/../foo"));
+
+    assert_eq!(x.to_string_lossy(), r"C:\foo");
+
+    let x = join_fold(&PathBuf::from("C:"), &PathBuf::from("../foo"));
+
+    assert_eq!(x.to_string_lossy(), r"C:..\foo");
 }
