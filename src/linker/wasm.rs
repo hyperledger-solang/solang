@@ -8,11 +8,6 @@ use std::io::Write;
 use tempfile::tempdir;
 
 pub fn link(input: &[u8], name: &str, target: Target) -> Vec<u8> {
-    if target == Target::Generic {
-        // Cannot link generic object
-        return input.to_vec();
-    }
-
     let dir = tempdir().expect("failed to create temp directory for linking");
 
     let object_filename = dir.path().join(&format!("{}.o", name));

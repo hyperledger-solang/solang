@@ -14,6 +14,7 @@ will be documented here.
 
 ### Removed
 - The Sawtooth Sabre target has been removed.
+- The generic target has been removed.
 
 ## [0.1.8]
 

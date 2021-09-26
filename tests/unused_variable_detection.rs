@@ -4,19 +4,19 @@ use solang::sema::ast;
 use solang::sema::ast::{Diagnostic, Level};
 use solang::{parse_and_resolve, Target};
 
-fn generic_target_parse(src: &'static str) -> ast::Namespace {
+fn parse(src: &'static str) -> ast::Namespace {
     let mut cache = FileResolver::new();
     cache.set_file_contents("test.sol", src.to_string());
 
-    parse_and_resolve("test.sol", &mut cache, Target::Generic)
+    parse_and_resolve("test.sol", &mut cache, Target::Solana)
 }
 
-fn generic_parse_two_files(src1: &'static str, src2: &'static str) -> ast::Namespace {
+fn parse_two_files(src1: &'static str, src2: &'static str) -> ast::Namespace {
     let mut cache = FileResolver::new();
     cache.set_file_contents("test.sol", src1.to_string());
     cache.set_file_contents("test2.sol", src2.to_string());
 
-    parse_and_resolve("test.sol", &mut cache, Target::Generic)
+    parse_and_resolve("test.sol", &mut cache, Target::Solana)
 }
 
 fn count_warnings(diagnostics: &[Diagnostic]) -> usize {
@@ -67,7 +67,7 @@ fn emit_event() {
     }
     "#;
 
-    let ns = generic_target_parse(case_1);
+    let ns = parse(case_1);
     assert_eq!(count_warnings(&ns.diagnostics), 0);
 
     // Unused event
@@ -82,7 +82,7 @@ fn emit_event() {
     }
     "#;
 
-    let ns = generic_target_parse(case_2);
+    let ns = parse(case_2);
     assert_eq!(count_warnings(&ns.diagnostics), 1);
     assert_eq!(
         get_first_warning(&ns.diagnostics).message,
@@ -103,7 +103,7 @@ fn emit_event() {
     }
     "#;
 
-    let ns = generic_target_parse(case_2);
+    let ns = parse(case_2);
     assert_eq!(count_warnings(&ns.diagnostics), 1);
     assert_eq!(
         get_first_warning(&ns.diagnostics).message,
@@ -124,7 +124,7 @@ fn emit_event() {
     }
     "#;
 
-    let ns = generic_target_parse(case_2);
+    let ns = parse(case_2);
     assert_eq!(count_warnings(&ns.diagnostics), 1);
     assert_eq!(
         get_first_warning(&ns.diagnostics).message,
@@ -141,7 +141,7 @@ fn emit_event() {
     }
     "#;
 
-    let ns = generic_target_parse(case_3);
+    let ns = parse(case_3);
     assert_eq!(count_warnings(&ns.diagnostics), 0);
 }
 
@@ -168,7 +168,7 @@ fn constant_variable() {
     "#;
 
     //Constant properly read
-    let ns = generic_parse_two_files(file_1, file_2);
+    let ns = parse_two_files(file_1, file_2);
     assert_eq!(count_warnings(&ns.diagnostics), 0);
 
     let file_1 = r#"
@@ -186,7 +186,7 @@ fn constant_variable() {
         }
     "#;
 
-    let ns = generic_parse_two_files(file_1, file_2);
+    let ns = parse_two_files(file_1, file_2);
     assert_eq!(count_warnings(&ns.diagnostics), 2);
     assert!(assert_message_in_warnings(
         &ns.diagnostics,
@@ -210,7 +210,7 @@ fn storage_variable() {
         }
     "#;
 
-    let ns = generic_target_parse(file);
+    let ns = parse(file);
     let warnings = get_warnings(&ns.diagnostics);
     assert_eq!(warnings.len(), 2);
     assert_eq!(
@@ -233,7 +233,7 @@ fn storage_variable() {
         }
     "#;
 
-    let ns = generic_target_parse(file);
+    let ns = parse(file);
     assert_eq!(count_warnings(&ns.diagnostics), 1);
     assert_eq!(
         get_first_warning(&ns.diagnostics).message,
@@ -255,7 +255,7 @@ fn storage_variable() {
         }
     "#;
 
-    let ns = generic_target_parse(file);
+    let ns = parse(file);
     assert_eq!(count_warnings(&ns.diagnostics), 0);
 }
 
@@ -278,7 +278,7 @@ fn state_variable() {
         }
     "#;
 
-    let ns = generic_target_parse(file);
+    let ns = parse(file);
     assert_eq!(count_warnings(&ns.diagnostics), 3);
     assert!(assert_message_in_warnings(
         &ns.diagnostics,
@@ -325,7 +325,7 @@ fn struct_usage() {
         }
     "#;
 
-    let ns = generic_target_parse(file);
+    let ns = parse(file);
     assert_eq!(count_warnings(&ns.diagnostics), 4);
     assert!(assert_message_in_warnings(
         &ns.diagnostics,
@@ -375,7 +375,7 @@ fn subscript() {
         }
     "#;
 
-    let ns = generic_target_parse(file);
+    let ns = parse(file);
     assert_eq!(count_warnings(&ns.diagnostics), 4);
     assert!(assert_message_in_warnings(
         &ns.diagnostics,
@@ -426,7 +426,7 @@ fn subscript() {
         }
     "#;
 
-    let ns = generic_target_parse(file);
+    let ns = parse(file);
     assert_eq!(count_warnings(&ns.diagnostics), 0);
 }
 
@@ -459,7 +459,7 @@ fn assign_trunc_cast() {
     }
 "#;
 
-    let ns = generic_target_parse(file);
+    let ns = parse(file);
     assert_eq!(count_warnings(&ns.diagnostics), 1);
     assert!(assert_message_in_warnings(
         &ns.diagnostics,
@@ -491,7 +491,7 @@ fn array_length() {
     }
     "#;
 
-    let ns = generic_target_parse(file);
+    let ns = parse(file);
     assert_eq!(count_warnings(&ns.diagnostics), 0);
 }
 
@@ -517,7 +517,7 @@ fn sign_ext_storage_load() {
     }
     "#;
 
-    let ns = generic_target_parse(file);
+    let ns = parse(file);
     assert_eq!(count_warnings(&ns.diagnostics), 0);
 }
 
@@ -588,7 +588,7 @@ fn statements() {
         }
     }
     "#;
-    let ns = generic_target_parse(file);
+    let ns = parse(file);
     assert_eq!(count_warnings(&ns.diagnostics), 2);
     assert!(assert_message_in_warnings(
         &ns.diagnostics,
@@ -638,7 +638,7 @@ fn function_call() {
     }
     "#;
 
-    let ns = generic_target_parse(file);
+    let ns = parse(file);
     assert_eq!(count_warnings(&ns.diagnostics), 0);
 
     let file = r#"
@@ -672,7 +672,7 @@ fn function_call() {
     }
     "#;
 
-    let ns = generic_target_parse(file);
+    let ns = parse(file);
     assert_eq!(count_warnings(&ns.diagnostics), 0);
 }
 
@@ -693,7 +693,7 @@ fn array_push_pop() {
     }
     "#;
 
-    let ns = generic_target_parse(file);
+    let ns = parse(file);
     assert_eq!(count_warnings(&ns.diagnostics), 2);
     assert!(assert_message_in_warnings(
         &ns.diagnostics,
@@ -721,7 +721,7 @@ fn array_push_pop() {
     }
     "#;
 
-    let ns = generic_target_parse(file);
+    let ns = parse(file);
     assert_eq!(count_warnings(&ns.diagnostics), 0);
 }
 
@@ -744,7 +744,7 @@ fn return_variable() {
     }
     "#;
 
-    let ns = generic_target_parse(file);
+    let ns = parse(file);
     assert_eq!(count_warnings(&ns.diagnostics), 3);
     assert!(assert_message_in_warnings(
         &ns.diagnostics,
@@ -783,7 +783,7 @@ fn try_catch() {
     }
     "#;
 
-    let ns = generic_target_parse(file);
+    let ns = parse(file);
     assert_eq!(count_warnings(&ns.diagnostics), 3);
     assert!(assert_message_in_warnings(
         &ns.diagnostics,
@@ -824,7 +824,7 @@ fn try_catch() {
       }
     "#;
 
-    let ns = generic_target_parse(file);
+    let ns = parse(file);
     assert_eq!(count_warnings(&ns.diagnostics), 1);
     assert!(assert_message_in_warnings(
         &ns.diagnostics,
@@ -837,7 +837,7 @@ fn try_catch() {
     }
     "#;
 
-    let ns = generic_target_parse(file);
+    let ns = parse(file);
     assert_eq!(count_warnings(&ns.diagnostics), 0);
 }
 
@@ -866,7 +866,7 @@ fn destructure() {
     }
     "#;
 
-    let ns = generic_target_parse(file);
+    let ns = parse(file);
     assert_eq!(count_warnings(&ns.diagnostics), 0);
 }
 
@@ -890,7 +890,7 @@ fn struct_initialization() {
     }
     "#;
 
-    let ns = generic_target_parse(file);
+    let ns = parse(file);
     assert_eq!(count_warnings(&ns.diagnostics), 0);
 }
 
@@ -941,7 +941,7 @@ fn subarray_mapping_struct_literal() {
     }
     "#;
 
-    let ns = generic_target_parse(file);
+    let ns = parse(file);
     assert_eq!(count_warnings(&ns.diagnostics), 1);
     assert!(assert_message_in_warnings(
         &ns.diagnostics,
@@ -971,7 +971,7 @@ fn builtin_call_destructure() {
     }
     "#;
 
-    let ns = generic_target_parse(file);
+    let ns = parse(file);
     assert_eq!(count_warnings(&ns.diagnostics), 0);
 }
 
@@ -989,7 +989,7 @@ fn delete_statement() {
     }
     "#;
 
-    let ns = generic_target_parse(file);
+    let ns = parse(file);
     assert_eq!(count_warnings(&ns.diagnostics), 0);
 }
 
@@ -1013,7 +1013,7 @@ fn load_length() {
     }
     "#;
 
-    let ns = generic_target_parse(file);
+    let ns = parse(file);
     assert_eq!(count_warnings(&ns.diagnostics), 0);
 }
 
@@ -1034,7 +1034,7 @@ fn address_selector() {
     }
     "#;
 
-    let ns = generic_target_parse(file);
+    let ns = parse(file);
     assert_eq!(count_warnings(&ns.diagnostics), 0);
 }
 
@@ -1054,7 +1054,7 @@ fn load_storage_load() {
         }
     "#;
 
-    let ns = generic_target_parse(file);
+    let ns = parse(file);
     assert_eq!(count_warnings(&ns.diagnostics), 0);
 }
 
@@ -1086,7 +1086,7 @@ fn variable_function() {
         }
     "#;
 
-    let ns = generic_target_parse(file);
+    let ns = parse(file);
     assert_eq!(count_warnings(&ns.diagnostics), 0);
 
     let file = r#"
@@ -1103,7 +1103,7 @@ fn variable_function() {
         }
     "#;
 
-    let ns = generic_target_parse(file);
+    let ns = parse(file);
     assert_eq!(count_warnings(&ns.diagnostics), 0);
 
     let file = r#"
@@ -1132,7 +1132,7 @@ fn variable_function() {
         }
     "#;
 
-    let ns = generic_target_parse(file);
+    let ns = parse(file);
     assert_eq!(count_warnings(&ns.diagnostics), 0);
 
     let file = r#"
@@ -1159,7 +1159,7 @@ fn variable_function() {
         }
     "#;
 
-    let ns = generic_target_parse(file);
+    let ns = parse(file);
     assert_eq!(count_warnings(&ns.diagnostics), 0);
 
     let file = r#"
@@ -1195,7 +1195,7 @@ fn variable_function() {
             }
         }
     "#;
-    let ns = generic_target_parse(file);
+    let ns = parse(file);
     assert_eq!(count_warnings(&ns.diagnostics), 0);
 
     let file = r#"
@@ -1217,7 +1217,7 @@ fn variable_function() {
             }
         }
     "#;
-    let ns = generic_target_parse(file);
+    let ns = parse(file);
     assert_eq!(count_warnings(&ns.diagnostics), 0);
 }
 
@@ -1233,7 +1233,7 @@ fn format_string() {
         }
     "#;
 
-    let ns = generic_target_parse(file);
+    let ns = parse(file);
     assert_eq!(count_warnings(&ns.diagnostics), 0);
 }
 
@@ -1251,6 +1251,6 @@ fn balance() {
 
     }
     "#;
-    let ns = generic_target_parse(file);
+    let ns = parse(file);
     assert_eq!(count_warnings(&ns.diagnostics), 0);
 }

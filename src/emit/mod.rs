@@ -32,7 +32,6 @@ use inkwell::OptimizationLevel;
 
 mod ethabiencoder;
 mod ewasm;
-mod generic;
 mod loop_builder;
 mod solana;
 mod substrate;
@@ -5243,14 +5242,6 @@ impl<'a> Binary<'a> {
             Target::Ewasm => {
                 ewasm::EwasmTarget::build(context, contract, ns, filename, opt, math_overflow_check)
             }
-            Target::Generic => generic::GenericTarget::build(
-                context,
-                contract,
-                ns,
-                filename,
-                opt,
-                math_overflow_check,
-            ),
             Target::Solana => solana::SolanaTarget::build(
                 context,
                 contract,
@@ -6332,8 +6323,6 @@ impl Target {
         match self {
             // Solana uses ELF dynamic shared object (BPF)
             Target::Solana => "so",
-            // Generic target produces object file for linking
-            Target::Generic => "o",
             // Everything else generates webassembly
             _ => "wasm",
         }
