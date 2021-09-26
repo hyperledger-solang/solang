@@ -26,8 +26,6 @@ pub enum Target {
     Substrate,
     /// Ethereum ewasm, see <https://github.com/ewasm/design>
     Ewasm,
-    /// Generate a generic object file for linking
-    Generic,
 }
 
 impl fmt::Display for Target {
@@ -36,7 +34,6 @@ impl fmt::Display for Target {
             Target::Solana => write!(f, "solana"),
             Target::Substrate => write!(f, "Substrate"),
             Target::Ewasm => write!(f, "ewasm"),
-            Target::Generic => write!(f, "generic"),
         }
     }
 }
@@ -113,7 +110,6 @@ pub fn parse_and_resolve(
         match target {
             Target::Ewasm => 20,
             Target::Substrate => 32,
-            Target::Generic => 20, // Same as ethereum
             Target::Solana => 32,
         },
         if target == Target::Solana {

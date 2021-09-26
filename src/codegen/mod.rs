@@ -86,7 +86,7 @@ pub fn codegen(ns: &mut Namespace, opt: &Options) {
             }
 
             // Solana creates a single bundle
-            if ns.target != Target::Solana && ns.target != Target::Generic {
+            if ns.target != Target::Solana {
                 let context = inkwell::context::Context::create();
 
                 let filename = ns.files[0].path.to_string_lossy();
