@@ -1,4 +1,4 @@
-// RUN: --no-dead-storage --emit cfg
+// RUN: --no-dead-storage --emit cfg --target substrate
 contract nodeadstorage {
     int a;
 

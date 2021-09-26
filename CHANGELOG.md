@@ -11,6 +11,7 @@ will be documented here.
 ### Changed
 - On Solana, the return data is now provided in the program log. As a result,
   RPCs are now are now supported.
+- On the solang command line, the target must be specified.
 
 ### Removed
 - The Sawtooth Sabre target has been removed.

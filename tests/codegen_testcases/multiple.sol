@@ -1,4 +1,4 @@
-// RUN: --emit cfg
+// RUN: --target substrate --emit cfg
 contract c {
     event f(bool);
 

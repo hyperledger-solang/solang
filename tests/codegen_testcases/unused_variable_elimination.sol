@@ -1,4 +1,4 @@
-// RUN: --emit cfg
+// RUN: --target substrate --emit cfg
 
 contract c2 {
     int public cd;
@@ -10,7 +10,7 @@ contract c2 {
         cd=2;
 // CHECK: store storage slot(uint256 0) ty:int256 =
         return (1, 2);
-    } 
+    }
 }
 
 contract c {
@@ -114,8 +114,8 @@ return 3;
         it2 = 1;
 
         return 2;
-// CHECK: store storage slot((%t2 + uint256 0)) ty:int256 = 
-// CHECK: store storage slot(uint256 2) ty:int256 = 
+// CHECK: store storage slot((%t2 + uint256 0)) ty:int256 =
+// CHECK: store storage slot(uint256 2) ty:int256 =
 // NOT-CHECK: ty:struct c1.testStruct %t3 = struct { int256 1, int256 2 }
 // NOT-CHECK: alloc int256[] len uint32 5
 // NOT-CHECK: store storage slot(uint256 3) ty:int256
@@ -145,7 +145,7 @@ return 3;
         c2 ct = new c2();
         (int a, int b) = ct.doSomething();
 // CHECK: ty:int256 %b =
-// NOT-CHECK: ty:int256 %a = 
+// NOT-CHECK: ty:int256 %a =
         return b;
     }
 
@@ -156,7 +156,7 @@ return 3;
         int b = 2;
         (a, b) = ct.doSomething();
         // CHECK: ty:int256 %a =
-        // NOT-CHECK: ty:int256 %b = 
+        // NOT-CHECK: ty:int256 %b =
         return a;
     }
 
@@ -175,7 +175,7 @@ return 3;
 // BEGIN-CHECK: c3::function::test14
     function test14() public returns (int) {
         int[] storage ptrArr = testArr;
-        
+
 // CHECK: store storage slot(%temp.69) ty:int256 storage = int256 3
         ptrArr.push(3);
 
@@ -204,7 +204,7 @@ return 3;
         x = 5*vec.pop();
         return 0;
 // CHECK: pop array ty:int256[]
-    }  
+    }
 // BEGIN-CHECK: c3::function::test18
     function test18(address payable addr) public returns (bool) {
         bool p;
