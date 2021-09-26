@@ -1182,6 +1182,14 @@ impl Expression {
                         e.recurse(cx, f);
                     }
                 }
+                Expression::AbiEncode { packed, args, .. } => {
+                    for e in packed {
+                        e.recurse(cx, f);
+                    }
+                    for e in args {
+                        e.recurse(cx, f);
+                    }
+                }
                 _ => (),
             }
         }
