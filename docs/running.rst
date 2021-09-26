@@ -29,8 +29,8 @@ Options:
   will be silent if there are no errors or warnings.
 
 \\-\\-target *target*
-  This takes one argument, which can either be ``solana``, ``substrate``, or ``ewasm``.
-  The default is substrate.
+  This takes one argument, which can either be ``solana``, ``substrate``, or ``ewasm``. The target
+  must be specified.
 
 \\-\\-doc
   Generate documentation for the given Solidity files as a single html page. This uses the

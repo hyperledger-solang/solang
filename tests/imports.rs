@@ -5,6 +5,8 @@ fn import_map_dup() {
     let mut cmd = Command::cargo_bin("solang").unwrap();
     let dup = cmd
         .args(&[
+            "--target",
+            "solana",
             "--importmap",
             "foo=tests",
             "--importmap",
@@ -29,7 +31,13 @@ fn import_map_dup() {
 fn import_map_badpath() {
     let mut cmd = Command::cargo_bin("solang").unwrap();
     let badpath = cmd
-        .args(&["--importmap", "foo=/does/not/exist", "bar.sol"])
+        .args(&[
+            "--target",
+            "solana",
+            "--importmap",
+            "foo=/does/not/exist",
+            "bar.sol",
+        ])
         .env("exit", "1")
         .assert();
 
@@ -45,7 +53,13 @@ fn import_map_badpath() {
 fn import_map() {
     let mut cmd = Command::cargo_bin("solang").unwrap();
     let assert = cmd
-        .args(&["--importmap", "foo=imports/", "import_map.sol"])
+        .args(&[
+            "--target",
+            "solana",
+            "--importmap",
+            "foo=imports/",
+            "import_map.sol",
+        ])
         .current_dir("tests/imports_testcases")
         .assert();
 
@@ -55,7 +69,7 @@ fn import_map() {
 
     let mut cmd = Command::cargo_bin("solang").unwrap();
     let badpath = cmd
-        .args(&["import_map.sol"])
+        .args(&["import_map.sol", "--target", "solana"])
         .current_dir("tests/imports_testcases")
         .assert();
 
@@ -72,6 +86,8 @@ fn import() {
     let mut cmd = Command::cargo_bin("solang").unwrap();
     let assert = cmd
         .args(&[
+            "--target",
+            "solana",
             "--importpath",
             "./imports_testcases/imports",
             "imports_testcases/import.sol",
@@ -85,7 +101,7 @@ fn import() {
 
     let mut cmd = Command::cargo_bin("solang").unwrap();
     let badpath = cmd
-        .args(&["import.sol"])
+        .args(&["--target", "solana", "import.sol"])
         .current_dir("tests/imports_testcases")
         .assert();
 

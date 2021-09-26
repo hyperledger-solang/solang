@@ -66,7 +66,7 @@ fn main() {
                 .long("target")
                 .takes_value(true)
                 .possible_values(&["solana", "substrate", "ewasm"])
-                .default_value("substrate"),
+                .required(true),
         )
         .arg(
             Arg::with_name("STD-JSON")
@@ -170,15 +170,15 @@ fn main() {
 
     let math_overflow_check = matches.is_present("MATHOVERFLOW");
 
-    let mut cache = FileResolver::new();
+    let mut resolver = FileResolver::new();
 
     for filename in matches.values_of("INPUT").unwrap() {
         if let Ok(path) = PathBuf::from(filename).canonicalize() {
-            let _ = cache.add_import_path(path.parent().unwrap().to_path_buf());
+            let _ = resolver.add_import_path(path.parent().unwrap().to_path_buf());
         }
     }
 
-    if let Err(e) = cache.add_import_path(PathBuf::from(".")) {
+    if let Err(e) = resolver.add_import_path(PathBuf::from(".")) {
         eprintln!(
             "error: cannot add current directory to import path: {}",
             e.to_string()
@@ -188,7 +188,7 @@ fn main() {
 
     if let Some(paths) = matches.values_of("IMPORTPATH") {
         for path in paths {
-            if let Err(e) = cache.add_import_path(PathBuf::from(path)) {
+            if let Err(e) = resolver.add_import_path(PathBuf::from(path)) {
                 eprintln!("error: import path ‘{}’: {}", path, e.to_string());
                 std::process::exit(1);
             }
@@ -198,7 +198,7 @@ fn main() {
     if let Some(maps) = matches.values_of("IMPORTMAP") {
         for p in maps {
             if let Some((map, path)) = p.split_once('=') {
-                if let Err(e) = cache.add_import_map(OsString::from(map), PathBuf::from(path)) {
+                if let Err(e) = resolver.add_import_map(OsString::from(map), PathBuf::from(path)) {
                     eprintln!("error: import path ‘{}’: {}", path, e.to_string());
                     std::process::exit(1);
                 }
@@ -215,9 +215,9 @@ fn main() {
         let mut files = Vec::new();
 
         for filename in matches.values_of("INPUT").unwrap() {
-            let ns = solang::parse_and_resolve(filename, &mut cache, target);
+            let ns = solang::parse_and_resolve(filename, &mut resolver, target);
 
-            diagnostics::print_messages(&cache, &ns, verbose);
+            diagnostics::print_messages(&resolver, &ns, verbose);
 
             if ns.contracts.is_empty() {
                 eprintln!("{}: error: no contracts found", filename);
@@ -256,7 +256,7 @@ fn main() {
         let mut errors = false;
 
         for filename in matches.values_of("INPUT").unwrap() {
-            match process_filename(filename, &mut cache, target, &matches, &mut json, &opt) {
+            match process_filename(filename, &mut resolver, target, &matches, &mut json, &opt) {
                 Ok(ns) => namespaces.push(ns),
                 Err(_) => {
                     errors = true;

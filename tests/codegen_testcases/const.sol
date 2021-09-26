@@ -1,4 +1,4 @@
-// RUN: --emit cfg
+// RUN: --target substrate --emit cfg
 contract c {
 // BEGIN-CHECK: c::function::test
 	function test() public pure returns (int32) {

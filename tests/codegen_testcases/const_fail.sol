@@ -1,4 +1,4 @@
-// RUN: --emit cfg
+// RUN: --target substrate --emit cfg
 contract c {
 	function divide_zero() public pure returns (uint32) {
 		uint32 x = 2;
