@@ -1323,6 +1323,7 @@ pub enum Builtin {
     BlockDifficulty,
     GasLimit,
     BlockNumber,
+    Slot,
     Timestamp,
     Calldata,
     Sender,

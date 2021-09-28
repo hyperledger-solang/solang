@@ -327,7 +327,7 @@ struct clock_layout
     uint64_t unix_timestamp;
 };
 
-uint64_t sol_timestamp(SolParameters *params)
+struct clock_layout *sol_clock(SolParameters *params)
 {
     if (!params->ka_clock)
     {
@@ -337,7 +337,7 @@ uint64_t sol_timestamp(SolParameters *params)
 
     struct clock_layout *clock_data = (struct clock_layout *)params->ka_clock->data;
 
-    return clock_data->unix_timestamp;
+    return clock_data;
 }
 
 struct account_data_header

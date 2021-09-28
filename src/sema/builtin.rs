@@ -270,7 +270,7 @@ static BUILTIN_FUNCTIONS: [Prototype; 24] = [
 ];
 
 // A list of all Solidity builtins variables
-static BUILTIN_VARIABLE: [Prototype; 13] = [
+static BUILTIN_VARIABLE: [Prototype; 14] = [
     Prototype {
         builtin: Builtin::BlockCoinbase,
         namespace: Some("block"),
@@ -309,6 +309,16 @@ static BUILTIN_VARIABLE: [Prototype; 13] = [
         ret: &[Type::Uint(64)],
         target: None,
         doc: "Current block number",
+        constant: false,
+    },
+    Prototype {
+        builtin: Builtin::Slot,
+        namespace: Some("block"),
+        name: "slot",
+        args: &[],
+        ret: &[Type::Uint(64)],
+        target: Some(Target::Solana),
+        doc: "Current slot number",
         constant: false,
     },
     Prototype {

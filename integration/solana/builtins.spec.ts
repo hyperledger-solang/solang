@@ -1,6 +1,5 @@
 import expect from 'expect';
 import { establishConnection } from './index';
-import crypto from 'crypto';
 
 describe('Deploy solang contract and test', () => {
     it('builtins', async function () {
@@ -37,5 +36,16 @@ describe('Deploy solang contract and test', () => {
 
         expect(ts).toBeLessThanOrEqual(now);
         expect(ts).toBeGreaterThan(now - 120);
+
+        console.log("calling slot");
+        res = await hash_functions.call_function(conn, "mr_slot", []);
+
+        let sol_slot = Number(res[0]);
+
+        let rpc_slot = await conn.connection.getSlot();
+        console.log("slot from rpc " + rpc_slot);
+
+        expect(sol_slot).toBeGreaterThan(rpc_slot - 10);
+        expect(sol_slot).toBeLessThan(rpc_slot + 10);
     });
 });
