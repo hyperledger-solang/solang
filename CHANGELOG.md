@@ -7,6 +7,8 @@ will be documented here.
 ### Added
 - Added supported for solc import mapppings using `--importmap`
 - Added supported for Events on Solana
+- `block.number` and `block.slot` are implemented for Solana
+- Verify ed25519 signatures with `signatureVerify()` on Solana
 
 ### Changed
 - On Solana, the return data is now provided in the program log. As a result,

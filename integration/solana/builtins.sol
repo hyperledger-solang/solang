@@ -15,4 +15,8 @@ contract builtins {
 	function mr_now() public returns (uint64) {
 		return block.timestamp;
 	}
+
+	function mr_slot() public returns (uint64) {
+		return block.slot;
+	}
 }

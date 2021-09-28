@@ -2950,6 +2950,20 @@ you are doing.
 
 The other block properties depend on which chain is being used.
 
+.. note::
+    Solana requires the `clock account <https://edge.docs.solana.com/developing/runtime-facilities/sysvars#clock>`_
+    to present in the account for the instruction to use any of the ``block`` fields.
+
+    On Solana, ``block.number`` gives the slot number rather than the block height.
+    For processing, you want to use the slot rather the block height. Slots
+    include empty blocks, which do not count towards the block height.
+
+Solana
+~~~~~~
+
+uint64 ``block.slot``
+    The current slot. This is an alias for ``block.number``.
+
 Parity Substrate
 ~~~~~~~~~~~~~~~~
 
@@ -3141,7 +3155,7 @@ This returns the ``bytes32`` blake2_256 hash of the bytes.
     This function is only available on Parity Substrate.
 
 signatureVerify(address public_key, bytes message, bytes signature)
-++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 Verify the ed25519 signature given the public key, message, and signature. This
 function returns ``true`` if the signature matches, ``false`` otherwise.

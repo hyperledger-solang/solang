@@ -3044,20 +3044,51 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             ast::Expression::Builtin(_, _, ast::Builtin::Timestamp, _) => {
                 let parameters = self.sol_parameters(binary);
 
-                let sol_timestamp = binary.module.get_function("sol_timestamp").unwrap();
+                let sol_clock = binary.module.get_function("sol_clock").unwrap();
 
                 let arg1 = binary.builder.build_pointer_cast(
                     parameters,
-                    sol_timestamp.get_type().get_param_types()[0].into_pointer_type(),
+                    sol_clock.get_type().get_param_types()[0].into_pointer_type(),
                     "",
                 );
 
-                binary
+                let clock = binary
                     .builder
-                    .build_call(sol_timestamp, &[arg1.into()], "timestamp")
+                    .build_call(sol_clock, &[arg1.into()], "clock")
                     .try_as_basic_value()
                     .left()
                     .unwrap()
+                    .into_pointer_value();
+
+                let timestamp = binary
+                    .builder
+                    .build_struct_gep(clock, 4, "unix_timestamp")
+                    .unwrap();
+
+                binary.builder.build_load(timestamp, "timestamp")
+            }
+            ast::Expression::Builtin(_, _, ast::Builtin::BlockNumber | ast::Builtin::Slot, _) => {
+                let parameters = self.sol_parameters(binary);
+
+                let sol_clock = binary.module.get_function("sol_clock").unwrap();
+
+                let arg1 = binary.builder.build_pointer_cast(
+                    parameters,
+                    sol_clock.get_type().get_param_types()[0].into_pointer_type(),
+                    "",
+                );
+
+                let clock = binary
+                    .builder
+                    .build_call(sol_clock, &[arg1.into()], "clock")
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap()
+                    .into_pointer_value();
+
+                let slot = binary.builder.build_struct_gep(clock, 0, "slot").unwrap();
+
+                binary.builder.build_load(slot, "timestamp")
             }
             ast::Expression::Builtin(_, _, ast::Builtin::Sender, _) => {
                 let parameters = self.sol_parameters(binary);
