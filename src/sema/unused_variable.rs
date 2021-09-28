@@ -1,7 +1,5 @@
 use crate::parser::pt::{ContractTy, Loc};
-use crate::sema::ast::{
-    Builtin, Diagnostic, ErrorType, Expression, Level, Namespace, Note, Statement,
-};
+use crate::sema::ast::{Builtin, Diagnostic, ErrorType, Expression, Level, Namespace, Note};
 use crate::sema::symtable::{Symtable, VariableUsage};
 use crate::sema::{ast, contracts::visit_bases, symtable};
 
@@ -187,15 +185,9 @@ pub fn check_function_call(ns: &mut Namespace, exp: &Expression, symtable: &mut 
             loc: _,
             ty: _,
             address,
-            function_no,
+            ..
         } => {
             used_variable(ns, address, symtable);
-            if ns.functions[*function_no].is_accessor {
-                let body = ns.functions[*function_no].body[0].clone();
-                if let Statement::Return(_, exprs) = &body {
-                    used_variable(ns, &exprs[0], symtable);
-                }
-            }
         }
 
         Expression::Builtin(_, _, expr_type, args) => match expr_type {
