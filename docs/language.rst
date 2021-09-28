@@ -3140,18 +3140,18 @@ This returns the ``bytes32`` blake2_256 hash of the bytes.
 
     This function is only available on Parity Substrate.
 
-signatureVerify(addres public_key, bytes message, bytes signature)
+signatureVerify(address public_key, bytes message, bytes signature)
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 Verify the ed25519 signature given the public key, message, and signature. This
 function returns ``true`` if the signature matches, ``false`` otherwise.
 
-Note that function checks if the public key, message, and signature is present
-in the transaction. The transactions needs the
+The transactions which executes this function, needs an
 `ed25519 program <https://edge.docs.solana.com/developing/runtime-facilities/programs#ed25519-program>`_
-to be in the instruction, and also the
+instruction with matching public key, message, and signature.
+In order to examine the instruction, the
 `instructions sysvar <https://edge.docs.solana.com/developing/runtime-facilities/sysvars#instructions>`_
-to be in the accounts.
+needs be in the accounts for the Solidity instruction as well.
 
 .. note::
 
