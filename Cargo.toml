@@ -7,7 +7,7 @@ documentation = "https://solang.readthedocs.io/"
 license = "Apache-2.0"
 build = "build.rs"
 description = "Solang Solidity Compiler"
-keywords = [ "solidity", "compiler", "ewasm", "llvm", "substrate" ]
+keywords = [ "solidity", "compiler", "solana", "substrate", "ewasm" ]
 edition = "2018"
 
 [build-dependencies]

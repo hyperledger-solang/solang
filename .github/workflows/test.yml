@@ -23,6 +23,8 @@ jobs:
         run: cargo fmt --all -- --check
       - name: Run cargo clippy
         run: cargo clippy --tests --bins -- -D warnings
+      - name: Ensure cargo publish is happy
+        run: cargo publish --dry-run
 
   linux:
     name: Linux
