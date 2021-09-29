@@ -20,21 +20,21 @@ fn timestamp() {
 
     vm.constructor("timestamp", &[]);
 
-    let returns = vm.function("mr_now", &[], &[]);
+    let returns = vm.function("mr_now", &[], &[], 0);
 
     assert_eq!(
         returns,
         vec![Token::Uint(ethereum_types::U256::from(1620656423))]
     );
 
-    let returns = vm.function("mr_slot", &[], &[]);
+    let returns = vm.function("mr_slot", &[], &[], 0);
 
     assert_eq!(
         returns,
         vec![Token::Uint(ethereum_types::U256::from(70818331))]
     );
 
-    let returns = vm.function("mr_blocknumber", &[], &[]);
+    let returns = vm.function("mr_blocknumber", &[], &[], 0);
 
     assert_eq!(
         returns,

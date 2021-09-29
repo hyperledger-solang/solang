@@ -36,13 +36,13 @@ fn test_returns() {
 
     let mut vm = build_solidity(file);
     vm.constructor("c1", &[]);
-    let _ = vm.function("assign", &[], &[]);
-    let returns = vm.function("pb1", &[], &[]);
+    let _ = vm.function("assign", &[], &[], 0);
+    let returns = vm.function("pb1", &[], &[], 0);
 
     assert_eq!(returns, vec![Token::Int(ethereum_types::U256::from(5))]);
 
-    let returns = vm.function("test1", &[], &[]);
+    let returns = vm.function("test1", &[], &[], 0);
     assert_eq!(returns, vec![Token::Int(ethereum_types::U256::from(52))]);
-    let returns = vm.function("test2", &[], &[]);
+    let returns = vm.function("test2", &[], &[], 0);
     assert_eq!(returns, vec![Token::Int(ethereum_types::U256::from(5))]);
 }

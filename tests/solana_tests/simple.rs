@@ -21,7 +21,7 @@ fn simple() {
 
     vm.logs.truncate(0);
 
-    vm.function("test", &[], &[]);
+    vm.function("test", &[], &[], 0);
 
     assert_eq!(vm.logs, "Hello from function");
 }
@@ -73,6 +73,7 @@ fn parameters() {
             ethabi::Token::Uint(ethereum_types::U256::from(10)),
         ],
         &[],
+        0,
     );
 
     assert_eq!(vm.logs, "x is 10");
@@ -86,6 +87,7 @@ fn parameters() {
             ethabi::Token::Uint(ethereum_types::U256::from(102)),
         ],
         &[],
+        0,
     );
 
     assert_eq!(vm.logs, "y is 102");
@@ -108,6 +110,7 @@ fn returns() {
         "test",
         &[ethabi::Token::Uint(ethereum_types::U256::from(10))],
         &[],
+        0,
     );
 
     assert_eq!(
@@ -130,6 +133,7 @@ fn returns() {
         "test",
         &[ethabi::Token::Uint(ethereum_types::U256::from(982451653))],
         &[],
+        0,
     );
 
     assert_eq!(
@@ -174,18 +178,18 @@ fn flipper() {
         hex::decode("6fc90ec500000000000000001800000001").unwrap()
     );
 
-    let returns = vm.function("get", &[], &[]);
+    let returns = vm.function("get", &[], &[], 0);
 
     assert_eq!(returns, vec![ethabi::Token::Bool(true)]);
 
-    vm.function("flip", &[], &[]);
+    vm.function("flip", &[], &[], 0);
 
     assert_eq!(
         vm.data()[0..17].to_vec(),
         hex::decode("6fc90ec500000000000000001800000000").unwrap()
     );
 
-    let returns = vm.function("get", &[], &[]);
+    let returns = vm.function("get", &[], &[], 0);
 
     assert_eq!(returns, vec![ethabi::Token::Bool(false)]);
 }
@@ -226,7 +230,7 @@ fn incrementer() {
         &[ethabi::Token::Uint(ethereum_types::U256::from(5))],
     );
 
-    let returns = vm.function("get", &[], &[]);
+    let returns = vm.function("get", &[], &[], 0);
 
     assert_eq!(
         returns,
@@ -237,9 +241,10 @@ fn incrementer() {
         "inc",
         &[ethabi::Token::Uint(ethereum_types::U256::from(7))],
         &[],
+        0,
     );
 
-    let returns = vm.function("get", &[], &[]);
+    let returns = vm.function("get", &[], &[], 0);
 
     assert_eq!(
         returns,

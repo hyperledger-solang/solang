@@ -66,6 +66,7 @@ fn verify() {
             Token::Bytes(signature_bs.clone()),
         ],
         &[],
+        0,
     );
 
     assert_eq!(returns, vec![Token::Bool(false)]);
@@ -95,6 +96,7 @@ fn verify() {
             Token::Bytes(signature_bs.clone()),
         ],
         &[],
+        0,
     );
 
     assert_eq!(returns, vec![Token::Bool(true)]);
@@ -123,6 +125,7 @@ fn verify() {
             Token::Bytes(signature_bs),
         ],
         &[],
+        0,
     );
 
     assert_eq!(returns, vec![Token::Bool(false)]);
