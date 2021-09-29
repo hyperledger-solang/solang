@@ -173,6 +173,7 @@ class Program {
         const data = Buffer.concat([
             this.contractStorageAccount.publicKey.toBuffer(),
             test.payerAccount.publicKey.toBuffer(),
+            Buffer.from('0000000000000000', 'hex'),
             Buffer.from(hash.substr(2, 8), 'hex'),
             this.encode_seeds(seeds),
             Buffer.from(input.replace('0x', ''), 'hex')
@@ -206,6 +207,7 @@ class Program {
         const data = Buffer.concat([
             this.contractStorageAccount.publicKey.toBuffer(),
             test.payerAccount.publicKey.toBuffer(),
+            Buffer.from('0000000000000000', 'hex'),
             Buffer.from('00000000', 'hex'),
             this.encode_seeds(seeds),
             Buffer.from(input.replace('0x', ''), 'hex')
@@ -296,6 +298,7 @@ class Program {
         const data = Buffer.concat([
             this.contractStorageAccount.publicKey.toBuffer(),
             test.payerAccount.publicKey.toBuffer(),
+            Buffer.from('0000000000000000', 'hex'),
             Buffer.from('00000000', 'hex'),
             this.encode_seeds(seeds),
             Buffer.from(input.replace('0x', ''), 'hex')
@@ -363,6 +366,7 @@ class Program {
         const data = Buffer.concat([
             this.contractStorageAccount.publicKey.toBuffer(),
             test.payerAccount.publicKey.toBuffer(),
+            Buffer.from('0000000000000000', 'hex'),
             Buffer.from('00000000', 'hex'),
             this.encode_seeds(seeds),
             Buffer.from(input.replace('0x', ''), 'hex')

@@ -1258,7 +1258,7 @@ impl VirtualMachine {
 
         println!("constructor for {}", hex::encode(&program.data));
 
-        let mut calldata = VirtualMachine::input(&program.data, &account_new(), name, &[]);
+        let mut calldata = VirtualMachine::input(&program.data, &account_new(), 0, name, &[]);
 
         if let Some(constructor) = &program.abi.as_ref().unwrap().constructor {
             calldata.extend(&constructor.encode_input(vec![], args).unwrap());
@@ -1277,7 +1277,7 @@ impl VirtualMachine {
 
         println!("function for {}", hex::encode(&program.data));
 
-        let mut calldata = VirtualMachine::input(&program.data, &account_new(), name, seeds);
+        let mut calldata = VirtualMachine::input(&program.data, &account_new(), 0, name, seeds);
 
         println!("input: {} seeds {:?}", hex::encode(&calldata), seeds);
 
@@ -1306,11 +1306,13 @@ impl VirtualMachine {
     fn input(
         recv: &Account,
         sender: &Account,
+        value: u64,
         name: &str,
         seeds: &[&(Account, Vec<u8>)],
     ) -> Vec<u8> {
         let mut calldata: Vec<u8> = recv.to_vec();
         calldata.extend_from_slice(sender);
+        calldata.extend_from_slice(&value.to_le_bytes());
 
         let mut hasher = Keccak::v256();
         let mut hash = [0u8; 32];

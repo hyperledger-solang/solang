@@ -2554,7 +2554,11 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         ns: &ast::Namespace,
     ) {
         // abi encode the arguments. The
-        let mut tys = vec![ast::Type::Bytes(4), ast::Type::Bytes(1)];
+        let mut tys = vec![
+            ast::Type::Uint(64),
+            ast::Type::Bytes(4),
+            ast::Type::Bytes(1),
+        ];
 
         if let Some(function_no) = constructor_no {
             for param in &ns.functions[function_no].params {
@@ -2562,7 +2566,14 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             }
         };
 
+        let value = if let Some(value) = value {
+            value
+        } else {
+            binary.context.i64_type().const_zero()
+        };
+
         let packed = [
+            value.into(),
             binary
                 .context
                 .i32_type()
@@ -2618,19 +2629,13 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             "space",
         );
 
-        let value = if let Some(value) = value {
-            value
-        } else {
-            binary.context.i64_type().const_zero()
-        };
-
         let sol_params = function.get_last_param().unwrap().into_pointer_value();
 
         let create_contract = binary.module.get_function("create_contract").unwrap();
 
         let arg4 = binary.builder.build_pointer_cast(
             sol_params,
-            create_contract.get_type().get_param_types()[4].into_pointer_type(),
+            create_contract.get_type().get_param_types()[3].into_pointer_type(),
             "",
         );
 
@@ -2641,7 +2646,6 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                 &[
                     payload.into(),
                     malloc_length.into(),
-                    value.into(),
                     space.into(),
                     arg4.into(),
                 ],

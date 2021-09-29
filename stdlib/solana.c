@@ -113,7 +113,7 @@ uint64_t external_call(uint8_t *input, uint32_t input_len, SolParameters *params
 }
 
 // This function creates a new address and calls its constructor.
-uint64_t create_contract(uint8_t *input, uint32_t input_len, uint64_t lamports, uint64_t space, SolParameters *params)
+uint64_t create_contract(uint8_t *input, uint32_t input_len, uint64_t space, SolParameters *params)
 {
     SolAccountInfo *new_acc = NULL;
     const SolSignerSeed *seed = NULL;

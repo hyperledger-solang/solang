@@ -243,6 +243,7 @@ typedef struct
   SolSignerSeed seeds[10];
   int seeds_len;
   const SolAccountInfo *ka_instructions;
+  uint64_t value;
 } SolParameters;
 
 /**
@@ -369,6 +370,9 @@ static uint64_t sol_deserialize(
   params->sender = (SolPubkey *)input;
   input += SIZE_PUBKEY;
   data_len -= SIZE_PUBKEY;
+  params->value = *(uint64_t *)input;
+  input += sizeof(uint64_t);
+  data_len -= sizeof(uint64_t);
 
   // FIXME: check that sender is a signer
 

@@ -1343,6 +1343,7 @@ pub fn emit_function_call(
                                 Builtin::GetAddress,
                                 Vec::new(),
                             ),
+                            value.clone(),
                             Expression::NumberLiteral(*loc, Type::Bytes(4), BigInt::zero()),
                             Expression::NumberLiteral(*loc, Type::Bytes(1), BigInt::zero()),
                             args,
@@ -1351,6 +1352,7 @@ pub fn emit_function_call(
                         tys: vec![
                             Type::Address(false),
                             Type::Address(false),
+                            Type::Uint(64),
                             Type::Bytes(4),
                             Type::Bytes(1),
                             Type::DynamicBytes,
@@ -1410,8 +1412,9 @@ pub fn emit_function_call(
                 let (payload, address) = if ns.target == Target::Solana {
                     tys.insert(0, Type::Address(false));
                     tys.insert(1, Type::Address(false));
-                    tys.insert(2, Type::Bytes(4));
-                    tys.insert(3, Type::Bytes(1));
+                    tys.insert(2, Type::Uint(64));
+                    tys.insert(3, Type::Bytes(4));
+                    tys.insert(4, Type::Bytes(1));
 
                     (
                         Expression::AbiEncode {
@@ -1425,6 +1428,7 @@ pub fn emit_function_call(
                                     Builtin::GetAddress,
                                     Vec::new(),
                                 ),
+                                value.clone(),
                                 Expression::NumberLiteral(*loc, Type::Bytes(4), BigInt::zero()),
                                 Expression::NumberLiteral(*loc, Type::Bytes(1), BigInt::zero()),
                                 Expression::NumberLiteral(
