@@ -2928,8 +2928,19 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
     }
 
     /// Value received
-    fn value_transferred<'b>(&self, binary: &Binary<'b>, ns: &ast::Namespace) -> IntValue<'b> {
-        binary.value_type(ns).const_zero()
+    fn value_transferred<'b>(&self, binary: &Binary<'b>, _ns: &ast::Namespace) -> IntValue<'b> {
+        let parameters = self.sol_parameters(binary);
+
+        binary
+            .builder
+            .build_load(
+                binary
+                    .builder
+                    .build_struct_gep(parameters, 14, "value")
+                    .unwrap(),
+                "value",
+            )
+            .into_int_value()
     }
 
     /// Terminate execution, destroy binary and send remaining funds to addr
@@ -3140,6 +3151,9 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                 );
 
                 binary.builder.build_load(value, "sender_address")
+            }
+            ast::Expression::Builtin(_, _, ast::Builtin::Value, _) => {
+                self.value_transferred(binary, ns).into()
             }
             ast::Expression::Builtin(_, _, ast::Builtin::GetAddress, _) => {
                 let parameters = self.sol_parameters(binary);

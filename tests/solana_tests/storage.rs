@@ -25,11 +25,16 @@ fn string() {
         vec![65, 177, 160, 100, 0, 0, 0, 0, 0, 0, 0, 0, 24, 0, 0, 0, 0, 0, 0, 0]
     );
 
-    let returns = vm.function("get", &[], &[]);
+    let returns = vm.function("get", &[], &[], 0);
 
     assert_eq!(returns, vec![Token::String(String::from(""))]);
 
-    vm.function("set", &[Token::String(String::from("Hello, World!"))], &[]);
+    vm.function(
+        "set",
+        &[Token::String(String::from("Hello, World!"))],
+        &[],
+        0,
+    );
 
     assert_eq!(
         vm.data()[0..20].to_vec(),
@@ -38,15 +43,20 @@ fn string() {
 
     assert_eq!(vm.data()[40..53].to_vec(), b"Hello, World!");
 
-    let returns = vm.function("get", &[], &[]);
+    let returns = vm.function("get", &[], &[], 0);
 
     assert_eq!(returns, vec![Token::String(String::from("Hello, World!"))]);
 
     // try replacing it with a string of the same length. This is a special
     // fast-path handling
-    vm.function("set", &[Token::String(String::from("Hallo, Werld!"))], &[]);
+    vm.function(
+        "set",
+        &[Token::String(String::from("Hallo, Werld!"))],
+        &[],
+        0,
+    );
 
-    let returns = vm.function("get", &[], &[]);
+    let returns = vm.function("get", &[], &[], 0);
 
     assert_eq!(returns, vec![Token::String(String::from("Hallo, Werld!"))]);
 
@@ -57,9 +67,9 @@ fn string() {
 
     // Try setting this to an empty string. This is also a special case where
     // the result should be offset 0
-    vm.function("set", &[Token::String(String::from(""))], &[]);
+    vm.function("set", &[Token::String(String::from(""))], &[], 0);
 
-    let returns = vm.function("get", &[], &[]);
+    let returns = vm.function("get", &[], &[], 0);
 
     assert_eq!(returns, vec![Token::String(String::from(""))]);
 
@@ -101,7 +111,7 @@ fn bytes() {
         vec![11, 66, 182, 57, 0, 0, 0, 0, 0, 0, 0, 0, 24, 0, 0, 0, 0, 0, 0, 0]
     );
 
-    let returns = vm.function("foo_length", &[], &[]);
+    let returns = vm.function("foo_length", &[], &[], 0);
 
     assert_eq!(returns, vec![Token::Uint(ethereum_types::U256::from(0))]);
 
@@ -111,6 +121,7 @@ fn bytes() {
             b"The shoemaker always wears the worst shoes".to_vec(),
         )],
         &[],
+        0,
     );
 
     assert_eq!(
@@ -127,6 +138,7 @@ fn bytes() {
             "get_foo_offset",
             &[Token::Uint(ethereum_types::U256::from(i))],
             &[],
+            0,
         );
 
         assert_eq!(returns, vec![Token::FixedBytes(vec![b])]);
@@ -139,6 +151,7 @@ fn bytes() {
             Token::FixedBytes(b"E".to_vec()),
         ],
         &[],
+        0,
     );
 
     vm.function(
@@ -148,6 +161,7 @@ fn bytes() {
             Token::FixedBytes(b"E".to_vec()),
         ],
         &[],
+        0,
     );
 
     for (i, b) in b"ThE shoEmaker always wears the worst shoes"
@@ -159,6 +173,7 @@ fn bytes() {
             "get_foo_offset",
             &[Token::Uint(ethereum_types::U256::from(i))],
             &[],
+            0,
         );
 
         assert_eq!(returns, vec![Token::FixedBytes(vec![b])]);
@@ -200,6 +215,7 @@ fn bytes_set_subscript_range() {
             Token::FixedBytes(b"E".to_vec()),
         ],
         &[],
+        0,
     );
 }
 
@@ -237,12 +253,14 @@ fn bytes_get_subscript_range() {
             b"The shoemaker always wears the worst shoes".to_vec(),
         )],
         &[],
+        0,
     );
 
     vm.function(
         "get_foo_offset",
         &[Token::Uint(ethereum_types::U256::from(0x80000000u64))],
         &[],
+        0,
     );
 }
 
@@ -293,29 +311,29 @@ fn bytes_push_pop() {
 
     vm.constructor("c", &[]);
 
-    let returns = vm.function("get_bs", &[], &[]);
+    let returns = vm.function("get_bs", &[], &[], 0);
 
     assert_eq!(returns, vec![Token::Bytes(vec!(0x0e, 0xda))]);
 
-    let returns = vm.function("pop", &[], &[]);
+    let returns = vm.function("pop", &[], &[], 0);
 
     assert_eq!(returns, vec![Token::FixedBytes(vec!(0xda))]);
 
-    let returns = vm.function("get_bs", &[], &[]);
+    let returns = vm.function("get_bs", &[], &[], 0);
 
     assert_eq!(returns, vec![Token::Bytes(vec!(0x0e))]);
 
-    vm.function("push", &[Token::FixedBytes(vec![0x41])], &[]);
+    vm.function("push", &[Token::FixedBytes(vec![0x41])], &[], 0);
 
     println!("data:{}", hex::encode(&vm.data()));
 
-    let returns = vm.function("get_bs", &[], &[]);
+    let returns = vm.function("get_bs", &[], &[], 0);
 
     assert_eq!(returns, vec![Token::Bytes(vec!(0x0e, 0x41))]);
 
-    vm.function("push", &[Token::FixedBytes(vec![0x01])], &[]);
+    vm.function("push", &[Token::FixedBytes(vec![0x01])], &[], 0);
 
-    let returns = vm.function("get_bs", &[], &[]);
+    let returns = vm.function("get_bs", &[], &[], 0);
 
     assert_eq!(returns, vec![Token::Bytes(vec!(0x0e, 0x41, 0x01))]);
 }
@@ -336,7 +354,7 @@ fn bytes_empty_pop() {
 
     vm.constructor("c", &[]);
 
-    vm.function("pop", &[], &[]);
+    vm.function("pop", &[], &[], 0);
 }
 
 #[test]
@@ -368,7 +386,7 @@ fn simple_struct() {
 
     vm.constructor("c", &[]);
 
-    vm.function("set_s2", &[], &[]);
+    vm.function("set_s2", &[], &[], 0);
 
     assert_eq!(
         vm.data()[0..32].to_vec(),
@@ -378,7 +396,7 @@ fn simple_struct() {
         ]
     );
 
-    let returns = vm.function("get_s1", &[], &[]);
+    let returns = vm.function("get_s1", &[], &[], 0);
 
     assert_eq!(
         returns,
@@ -395,9 +413,10 @@ fn simple_struct() {
             Token::Uint(ethereum_types::U256::from(3240121)),
         ])],
         &[],
+        0,
     );
 
-    let returns = vm.function("get_s1", &[], &[]);
+    let returns = vm.function("get_s1", &[], &[], 0);
 
     assert_eq!(
         returns,
@@ -443,7 +462,7 @@ fn struct_in_struct() {
 
     vm.constructor("c", &[]);
 
-    vm.function("set_s2", &[], &[]);
+    vm.function("set_s2", &[], &[], 0);
 
     assert_eq!(
         vm.data()[0..52].to_vec(),
@@ -454,7 +473,7 @@ fn struct_in_struct() {
         ]
     );
 
-    let returns = vm.function("get_s1", &[], &[]);
+    let returns = vm.function("get_s1", &[], &[], 0);
 
     assert_eq!(
         returns,
@@ -479,9 +498,10 @@ fn struct_in_struct() {
             Token::Uint(ethereum_types::U256::from(12345678901234567890u64)),
         ])],
         &[],
+        0,
     );
 
-    let returns = vm.function("get_s1", &[], &[]);
+    let returns = vm.function("get_s1", &[], &[], 0);
 
     assert_eq!(
         returns,
@@ -526,7 +546,7 @@ fn string_in_struct() {
 
     vm.constructor("c", &[]);
 
-    vm.function("set_s2", &[], &[]);
+    vm.function("set_s2", &[], &[], 0);
 
     assert_eq!(
         vm.data()[0..64].to_vec(),
@@ -537,7 +557,7 @@ fn string_in_struct() {
         ]
     );
 
-    let returns = vm.function("get_s1", &[], &[]);
+    let returns = vm.function("get_s1", &[], &[], 0);
 
     assert_eq!(
         returns,
@@ -556,9 +576,10 @@ fn string_in_struct() {
             Token::Uint(ethereum_types::U256::from(12345678901234567890u64)),
         ])],
         &[],
+        0,
     );
 
-    let returns = vm.function("get_s1", &[], &[]);
+    let returns = vm.function("get_s1", &[], &[], 0);
 
     assert_eq!(
         returns,
@@ -624,9 +645,9 @@ fn complex_struct() {
 
     vm.constructor("c", &[]);
 
-    vm.function("set_s2", &[], &[]);
+    vm.function("set_s2", &[], &[], 0);
 
-    let returns = vm.function("get_s1", &[], &[]);
+    let returns = vm.function("get_s1", &[], &[], 0);
 
     assert_eq!(
         returns,
@@ -673,9 +694,10 @@ fn complex_struct() {
             Token::String(String::from("yadayada")),
         ],
         &[],
+        0,
     );
 
-    let returns = vm.function("get_s1", &[], &[]);
+    let returns = vm.function("get_s1", &[], &[], 0);
 
     assert_eq!(
         returns,
@@ -700,9 +722,9 @@ fn complex_struct() {
         ]
     );
 
-    vm.function("rm", &[], &[]);
+    vm.function("rm", &[], &[], 0);
 
-    let returns = vm.function("get_s1", &[], &[]);
+    let returns = vm.function("get_s1", &[], &[], 0);
 
     assert_eq!(
         returns,

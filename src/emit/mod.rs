@@ -292,10 +292,10 @@ pub trait TargetRuntime<'a> {
     fn return_data<'b>(&self, bin: &Binary<'b>, function: FunctionValue<'b>) -> PointerValue<'b>;
 
     /// Return the value we received
-    fn value_transferred<'b>(&self, bin: &Binary<'b>, ns: &ast::Namespace) -> IntValue<'b>;
+    fn value_transferred<'b>(&self, binary: &Binary<'b>, ns: &ast::Namespace) -> IntValue<'b>;
 
     /// Terminate execution, destroy bin and send remaining funds to addr
-    fn selfdestruct<'b>(&self, bin: &Binary<'b>, addr: IntValue<'b>, ns: &ast::Namespace);
+    fn selfdestruct<'b>(&self, binary: &Binary<'b>, addr: IntValue<'b>, ns: &ast::Namespace);
 
     /// Crypto Hash
     fn hash<'b>(

@@ -1272,12 +1272,13 @@ impl VirtualMachine {
         name: &str,
         args: &[Token],
         seeds: &[&(Account, Vec<u8>)],
+        value: u64,
     ) -> Vec<Token> {
         let program = &self.stack[0];
 
         println!("function for {}", hex::encode(&program.data));
 
-        let mut calldata = VirtualMachine::input(&program.data, &account_new(), 0, name, seeds);
+        let mut calldata = VirtualMachine::input(&program.data, &account_new(), value, name, seeds);
 
         println!("input: {} seeds {:?}", hex::encode(&calldata), seeds);
 

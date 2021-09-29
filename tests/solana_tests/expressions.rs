@@ -35,7 +35,7 @@ fn interfaceid() {
 
     vm.constructor("foo", &[]);
 
-    let returns = vm.function("get", &[], &[]);
+    let returns = vm.function("get", &[], &[], 0);
 
     assert_eq!(
         returns,

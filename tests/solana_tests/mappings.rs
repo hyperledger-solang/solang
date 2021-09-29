@@ -32,6 +32,7 @@ fn simple_mapping() {
                 Token::Uint(ethereum_types::U256::from(300331 + i)),
             ],
             &[],
+            0,
         );
     }
 
@@ -40,6 +41,7 @@ fn simple_mapping() {
             "get",
             &[Token::Uint(ethereum_types::U256::from(102 + i))],
             &[],
+            0,
         );
 
         assert_eq!(
@@ -48,17 +50,28 @@ fn simple_mapping() {
         );
     }
 
-    let returns = vm.function("get", &[Token::Uint(ethereum_types::U256::from(101))], &[]);
+    let returns = vm.function(
+        "get",
+        &[Token::Uint(ethereum_types::U256::from(101))],
+        &[],
+        0,
+    );
 
     assert_eq!(returns, vec![Token::Uint(ethereum_types::U256::from(0))]);
 
-    vm.function("rm", &[Token::Uint(ethereum_types::U256::from(104))], &[]);
+    vm.function(
+        "rm",
+        &[Token::Uint(ethereum_types::U256::from(104))],
+        &[],
+        0,
+    );
 
     for i in 0..10 {
         let returns = vm.function(
             "get",
             &[Token::Uint(ethereum_types::U256::from(102 + i))],
             &[],
+            0,
         );
 
         if 102 + i != 104 {
@@ -109,7 +122,7 @@ fn less_simple_mapping() {
         &[
             Token::Uint(ethereum_types::U256::from(12313132131321312311213131u128)),
             Token::String(String::from("This is a string which should be a little longer than 32 bytes so we the the abi encoder")),
-        ], &[]
+        ], &[], 0
     );
 
     vm.function(
@@ -119,6 +132,7 @@ fn less_simple_mapping() {
             Token::Int(ethereum_types::U256::from(102)),
         ],
         &[],
+        0,
     );
 
     let returns = vm.function(
@@ -127,6 +141,7 @@ fn less_simple_mapping() {
             12313132131321312311213131u128,
         ))],
         &[],
+        0,
     );
 
     assert_eq!(
@@ -175,7 +190,7 @@ fn string_mapping() {
         &[
             Token::String(String::from("a")),
             Token::String(String::from("This is a string which should be a little longer than 32 bytes so we the the abi encoder")),
-        ], &[]
+        ], &[],0
     );
 
     vm.function(
@@ -185,9 +200,10 @@ fn string_mapping() {
             Token::Int(ethereum_types::U256::from(102)),
         ],
         &[],
+        0,
     );
 
-    let returns = vm.function("get", &[Token::String(String::from("a"))], &[]);
+    let returns = vm.function("get", &[Token::String(String::from("a"))], &[], 0);
 
     assert_eq!(
         returns,
@@ -221,6 +237,7 @@ fn mapping_in_mapping() {
             Token::FixedBytes(vec![0x98]),
         ],
         &[],
+        0,
     );
 
     let returns = vm.function(
@@ -230,6 +247,7 @@ fn mapping_in_mapping() {
             Token::Int(ethereum_types::U256::from(102)),
         ],
         &[],
+        0,
     );
 
     assert_eq!(returns, vec![Token::FixedBytes(vec![0x98])]);
@@ -241,6 +259,7 @@ fn mapping_in_mapping() {
             Token::Int(ethereum_types::U256::from(103)),
         ],
         &[],
+        0,
     );
 
     assert_eq!(returns, vec![Token::FixedBytes(vec![0])]);
@@ -252,6 +271,7 @@ fn mapping_in_mapping() {
             Token::Int(ethereum_types::U256::from(102)),
         ],
         &[],
+        0,
     );
 
     assert_eq!(returns, vec![Token::FixedBytes(vec![0])]);
@@ -294,7 +314,7 @@ fn sparse_array() {
         &[
             Token::Uint(ethereum_types::U256::from(909090909)),
             Token::String(String::from("This is a string which should be a little longer than 32 bytes so we the the abi encoder")),
-        ], &[]
+        ], &[],0
     );
 
     vm.function(
@@ -304,12 +324,14 @@ fn sparse_array() {
             Token::Int(ethereum_types::U256::from(102)),
         ],
         &[],
+        0,
     );
 
     let returns = vm.function(
         "get",
         &[Token::Uint(ethereum_types::U256::from(909090909))],
         &[],
+        0,
     );
 
     assert_eq!(
@@ -358,7 +380,7 @@ fn massive_sparse_array() {
         &[
             Token::Uint(ethereum_types::U256::from(786868768768678687686877u128)),
             Token::String(String::from("This is a string which should be a little longer than 32 bytes so we the the abi encoder")),
-        ], &[]
+        ], &[],0
     );
 
     vm.function(
@@ -368,6 +390,7 @@ fn massive_sparse_array() {
             Token::Int(ethereum_types::U256::from(102)),
         ],
         &[],
+        0,
     );
 
     let returns = vm.function(
@@ -376,6 +399,7 @@ fn massive_sparse_array() {
             786868768768678687686877u128,
         ))],
         &[],
+        0,
     );
 
     assert_eq!(
