@@ -18,7 +18,7 @@ fn timestamp() {
         }"#,
     );
 
-    vm.constructor("timestamp", &[]);
+    vm.constructor("timestamp", &[], 0);
 
     let returns = vm.function("mr_now", &[], &[], 0);
 

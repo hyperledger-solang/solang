@@ -33,7 +33,7 @@ fn interfaceid() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor("foo", &[], 0);
 
     let returns = vm.function("get", &[], &[], 0);
 

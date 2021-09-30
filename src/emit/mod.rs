@@ -335,38 +335,47 @@ pub trait TargetRuntime<'a> {
     /// Helper functions which need access to the trait
 
     /// If we receive a value transfer, and we are "payable", abort with revert
-    fn abort_if_value_transfer(&self, bin: &Binary, function: FunctionValue, ns: &ast::Namespace) {
-        let value = self.value_transferred(bin, ns);
+    fn abort_if_value_transfer(
+        &self,
+        binary: &Binary,
+        function: FunctionValue,
+        ns: &ast::Namespace,
+    ) {
+        let value = self.value_transferred(binary, ns);
 
-        let got_value = bin.builder.build_int_compare(
+        let got_value = binary.builder.build_int_compare(
             IntPredicate::NE,
             value,
-            bin.value_type(ns).const_zero(),
+            binary.value_type(ns).const_zero(),
             "is_value_transfer",
         );
 
-        let not_value_transfer = bin
+        let not_value_transfer = binary
             .context
             .append_basic_block(function, "not_value_transfer");
-        let abort_value_transfer = bin
+        let abort_value_transfer = binary
             .context
             .append_basic_block(function, "abort_value_transfer");
 
-        bin.builder
-            .build_conditional_branch(got_value, abort_value_transfer, not_value_transfer);
+        binary.builder.build_conditional_branch(
+            got_value,
+            abort_value_transfer,
+            not_value_transfer,
+        );
 
-        bin.builder.position_at_end(abort_value_transfer);
+        binary.builder.position_at_end(abort_value_transfer);
 
         self.assert_failure(
-            bin,
-            bin.context
+            binary,
+            binary
+                .context
                 .i8_type()
                 .ptr_type(AddressSpace::Generic)
                 .const_null(),
-            bin.context.i32_type().const_zero(),
+            binary.context.i32_type().const_zero(),
         );
 
-        bin.builder.position_at_end(not_value_transfer);
+        binary.builder.position_at_end(not_value_transfer);
     }
 
     /// Recursively load a type from bin storage
