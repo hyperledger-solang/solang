@@ -839,6 +839,8 @@ fn destructure(
                 // the resolver did not cast the expression
                 let expr = cast(&param.loc, right, &param.ty, true, ns, &mut Vec::new())
                     .expect("sema should have checked cast");
+                // casts to StorageLoad generate LoadStorage instructions
+                let expr = expression(&expr, cfg, contract_no, Some(func), ns, vartab);
 
                 if should_remove_variable(res, func) {
                     continue;
@@ -866,6 +868,8 @@ fn destructure(
                     &mut Vec::new(),
                 )
                 .expect("sema should have checked cast");
+                // casts to StorageLoad generate LoadStorage instructions
+                let expr = expression(&expr, cfg, contract_no, Some(func), ns, vartab);
 
                 if should_remove_assignment(ns, left, func) {
                     continue;
