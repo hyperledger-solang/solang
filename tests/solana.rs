@@ -1253,12 +1253,12 @@ impl VirtualMachine {
         assert_eq!(res, 0);
     }
 
-    fn constructor(&mut self, name: &str, args: &[Token]) {
+    fn constructor(&mut self, name: &str, args: &[Token], value: u64) {
         let program = &self.stack[0];
 
         println!("constructor for {}", hex::encode(&program.data));
 
-        let mut calldata = VirtualMachine::input(&program.data, &account_new(), 0, name, &[]);
+        let mut calldata = VirtualMachine::input(&program.data, &account_new(), value, name, &[]);
 
         if let Some(constructor) = &program.abi.as_ref().unwrap().constructor {
             calldata.extend(&constructor.encode_input(vec![], args).unwrap());

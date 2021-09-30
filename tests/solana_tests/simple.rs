@@ -15,7 +15,7 @@ fn simple() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor("foo", &[], 0);
 
     assert_eq!(vm.logs, "Hello from constructor");
 
@@ -39,7 +39,7 @@ fn format() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor("foo", &[], 0);
 
     assert_eq!(
         vm.logs,
@@ -64,7 +64,7 @@ fn parameters() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor("foo", &[], 0);
 
     vm.function(
         "test",
@@ -104,7 +104,7 @@ fn returns() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor("foo", &[], 0);
 
     let returns = vm.function(
         "test",
@@ -127,7 +127,7 @@ fn returns() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor("foo", &[], 0);
 
     let returns = vm.function(
         "test",
@@ -171,7 +171,7 @@ fn flipper() {
         }"#,
     );
 
-    vm.constructor("flipper", &[ethabi::Token::Bool(true)]);
+    vm.constructor("flipper", &[ethabi::Token::Bool(true)], 0);
 
     assert_eq!(
         vm.data()[0..17].to_vec(),
@@ -228,6 +228,7 @@ fn incrementer() {
     vm.constructor(
         "incrementer",
         &[ethabi::Token::Uint(ethereum_types::U256::from(5))],
+        0,
     );
 
     let returns = vm.function("get", &[], &[], 0);

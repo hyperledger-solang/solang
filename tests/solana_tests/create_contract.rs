@@ -31,7 +31,7 @@ fn simple_create_contract() {
 
     vm.set_program(0);
 
-    vm.constructor("bar0", &[]);
+    vm.constructor("bar0", &[], 0);
 
     let seed = vm.create_empty_account();
 
@@ -84,7 +84,7 @@ fn missing_contract() {
 
     vm.set_program(0);
 
-    vm.constructor("bar0", &[]);
+    vm.constructor("bar0", &[], 0);
 
     let _ = vm.function("test_other", &[], &[], 0);
 }
@@ -111,7 +111,7 @@ fn two_contracts() {
 
     vm.set_program(0);
 
-    vm.constructor("bar0", &[]);
+    vm.constructor("bar0", &[], 0);
 
     let seed1 = vm.create_empty_account();
     let seed2 = vm.create_empty_account();

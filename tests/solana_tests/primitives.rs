@@ -23,7 +23,7 @@ fn assert_false() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor("foo", &[], 0);
 
     vm.function("assert_fails", &[], &[], 0);
 }
@@ -40,7 +40,7 @@ fn assert_true() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor("foo", &[], 0);
 
     vm.function("assert_fails", &[], &[], 0);
 }
@@ -72,7 +72,7 @@ fn boolean() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor("foo", &[], 0);
 
     let returns = vm.function("return_true", &[], &[], 0);
 
@@ -106,7 +106,7 @@ fn address() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor("foo", &[], 0);
 
     let returns = vm.function("return_address", &[], &[], 0);
 
@@ -150,7 +150,7 @@ fn test_enum() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor("foo", &[], 0);
 
     let returns = vm.function("return_enum", &[], &[], 0);
 
@@ -206,7 +206,7 @@ fn bytes() {
 
         let mut vm = build_solidity(&src);
 
-        vm.constructor("test", &[]);
+        vm.constructor("test", &[], 0);
 
         let returns = vm.function("return_literal", &[], &[], 0);
 
@@ -393,7 +393,7 @@ fn uint() {
 
         let mut vm = build_solidity(&src);
 
-        vm.constructor("test", &[]);
+        vm.constructor("test", &[], 0);
 
         println!("width:{}", width);
 
@@ -661,7 +661,7 @@ fn int() {
 
         let mut vm = build_solidity(&src);
 
-        vm.constructor("test", &[]);
+        vm.constructor("test", &[], 0);
 
         for _ in 0..10 {
             let mut a_bs = Vec::new();

@@ -35,7 +35,7 @@ fn packed() {
         }"#,
     );
 
-    vm.constructor("bar", &[]);
+    vm.constructor("bar", &[], 0);
 
     vm.function("test", &[], &[], 0);
     vm.function("test2", &[], &[], 0);
@@ -54,7 +54,7 @@ fn inherited() {
         }"#,
     );
 
-    vm.constructor("bar", &[]);
+    vm.constructor("bar", &[], 0);
 
     vm.function("test", &[], &[], 0);
 
@@ -67,7 +67,7 @@ fn inherited() {
             }"#,
     );
 
-    vm.constructor("bar", &[]);
+    vm.constructor("bar", &[], 0);
 
     vm.function("test", &[], &[], 0);
 }

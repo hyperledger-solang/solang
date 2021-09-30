@@ -42,7 +42,7 @@ fn verify() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor("foo", &[], 0);
 
     let mut csprng = rand::thread_rng();
     let keypair: Keypair = Keypair::generate(&mut csprng);

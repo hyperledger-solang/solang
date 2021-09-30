@@ -77,7 +77,7 @@ fn simple_external_call() {
         }"#,
     );
 
-    vm.constructor("bar1", &[]);
+    vm.constructor("bar1", &[], 0);
 
     vm.function("test_bar", &[Token::String(String::from("yo"))], &[], 0);
 
@@ -89,7 +89,7 @@ fn simple_external_call() {
 
     vm.set_program(0);
 
-    vm.constructor("bar0", &[]);
+    vm.constructor("bar0", &[], 0);
 
     vm.function(
         "test_bar",
@@ -129,7 +129,7 @@ fn external_call_with_returns() {
         }"#,
     );
 
-    vm.constructor("bar1", &[]);
+    vm.constructor("bar1", &[], 0);
 
     let res = vm.function(
         "test_bar",
@@ -144,7 +144,7 @@ fn external_call_with_returns() {
 
     vm.set_program(0);
 
-    vm.constructor("bar0", &[]);
+    vm.constructor("bar0", &[], 0);
 
     let res = vm.function(
         "test_other",
@@ -180,7 +180,7 @@ fn external_raw_call_with_returns() {
         }"#,
     );
 
-    vm.constructor("bar1", &[]);
+    vm.constructor("bar1", &[], 0);
 
     let res = vm.function(
         "test_bar",
@@ -195,7 +195,7 @@ fn external_raw_call_with_returns() {
 
     vm.set_program(0);
 
-    vm.constructor("bar0", &[]);
+    vm.constructor("bar0", &[], 0);
 
     let res = vm.function(
         "test_other",
@@ -243,7 +243,7 @@ fn external_call_with_string_returns() {
         }"#,
     );
 
-    vm.constructor("bar1", &[]);
+    vm.constructor("bar1", &[], 0);
 
     let res = vm.function(
         "test_bar",
@@ -258,7 +258,7 @@ fn external_call_with_string_returns() {
 
     vm.set_program(0);
 
-    vm.constructor("bar0", &[]);
+    vm.constructor("bar0", &[], 0);
 
     let bar0_account = vm.stack[0].data;
 

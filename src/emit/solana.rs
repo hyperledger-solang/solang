@@ -511,7 +511,7 @@ impl SolanaTarget {
                 dispatch_function,
                 &contract.functions,
                 None,
-                |_| false,
+                |func| func.nonpayable,
             );
 
             let function_block = binary
@@ -648,6 +648,14 @@ impl SolanaTarget {
                     .into()],
                 "",
             );
+
+            // is there a not a payable constructor
+            if !contract.contract.functions.iter().any(|function_no| {
+                let f = &contract.ns.functions[*function_no];
+                f.is_constructor() && f.is_payable()
+            }) {
+                self.abort_if_value_transfer(binary, function, contract.ns);
+            }
 
             // There is only one possible constructor
             let ret = if let Some((constructor_function, params)) = contract.constructor {

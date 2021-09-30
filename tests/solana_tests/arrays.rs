@@ -17,7 +17,7 @@ fn fixed_array() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor("foo", &[], 0);
 
     let returns = vm.function("get", &[], &[], 0);
 
@@ -51,7 +51,7 @@ fn fixed_array() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor("foo", &[], 0);
 
     let returns = vm.function("get", &[], &[], 0);
 
@@ -108,7 +108,7 @@ fn fixed_array() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor("foo", &[], 0);
 
     let returns = vm.function("get", &[], &[], 0);
 
@@ -173,7 +173,7 @@ fn dynamic_array_fixed_elements() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor("foo", &[], 0);
 
     let returns = vm.function(
         "get",
@@ -242,7 +242,7 @@ fn fixed_array_dynamic_elements() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor("foo", &[], 0);
 
     let returns = vm.function(
         "get",
@@ -311,7 +311,7 @@ fn dynamic_array_dynamic_elements() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor("foo", &[], 0);
 
     let returns = vm.function(
         "get",
@@ -377,7 +377,7 @@ fn fixed_array_fixed_elements_storage() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor("foo", &[], 0);
 
     vm.function(
         "set_elem",
@@ -491,7 +491,7 @@ fn fixed_array_dynamic_elements_storage() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor("foo", &[], 0);
 
     vm.function(
         "set_elem",
@@ -618,7 +618,7 @@ fn storage_simple_dynamic_array() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor("foo", &[], 0);
 
     let returns = vm.function("len", &[], &[], 0);
 
@@ -743,7 +743,7 @@ fn storage_pop_running_on_empty() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor("foo", &[], 0);
 
     vm.function("pop", &[], &[], 0);
 }
@@ -800,7 +800,7 @@ fn storage_dynamic_array_of_structs() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor("foo", &[], 0);
 
     let returns = vm.function("len", &[], &[], 0);
 

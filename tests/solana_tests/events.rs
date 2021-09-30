@@ -15,7 +15,7 @@ fn simple_event() {
         }"#,
     );
 
-    vm.constructor("c", &[]);
+    vm.constructor("c", &[], 0);
 
     vm.function("go", &[], &[], 0);
 
@@ -64,7 +64,7 @@ fn less_simple_event() {
         }"#,
     );
 
-    vm.constructor("c", &[]);
+    vm.constructor("c", &[], 0);
 
     vm.function("go", &[], &[], 0);
 
