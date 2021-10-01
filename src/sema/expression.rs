@@ -1297,7 +1297,7 @@ pub fn expression(
             res
         }
         pt::Expression::BoolLiteral(loc, v) => Ok(Expression::BoolLiteral(*loc, *v)),
-        pt::Expression::StringLiteral(v) => Ok(string_literal(v, file_no, diagnostics)),
+        pt::Expression::StringLiteral(v) => Ok(string_literal(v, file_no, diagnostics, resolve_to)),
         pt::Expression::HexLiteral(v) => hex_literal(v, diagnostics),
         pt::Expression::NumberLiteral(loc, b) => {
             bigint_to_expression(loc, b, ns, diagnostics, resolve_to)
@@ -2333,6 +2333,7 @@ fn string_literal(
     v: &[pt::StringLiteral],
     file_no: usize,
     diagnostics: &mut Vec<Diagnostic>,
+    resolve_to: Option<&Type>,
 ) -> Expression {
     // Concatenate the strings
     let mut result = Vec::new();
@@ -2345,7 +2346,20 @@ fn string_literal(
 
     let length = result.len();
 
-    Expression::BytesLiteral(loc, Type::Bytes(length as u8), result)
+    if let Some(Type::String) = resolve_to {
+        Expression::AllocDynamicArray(
+            loc,
+            Type::String,
+            Box::new(Expression::NumberLiteral(
+                loc,
+                Type::Uint(32),
+                BigInt::from(length),
+            )),
+            Some(result),
+        )
+    } else {
+        Expression::BytesLiteral(loc, Type::Bytes(length as u8), result)
+    }
 }
 
 fn hex_literal(v: &[pt::HexLiteral], diagnostics: &mut Vec<Diagnostic>) -> Result<Expression, ()> {

@@ -85,4 +85,20 @@ fn casting_destructure() {
             Token::Int(ethereum_types::U256::from(2)),
         ]
     );
+
+    let mut vm = build_solidity(
+        r#"
+        contract foo {
+            function f() public returns (string) {
+                (string a, string b) = ("Hello", "World!");
+                return (a);
+            }
+        }"#,
+    );
+
+    vm.constructor("foo", &[], 0);
+
+    let returns = vm.function("f", &[], &[], 0);
+
+    assert_eq!(returns, vec![Token::String(String::from("Hello")),]);
 }
