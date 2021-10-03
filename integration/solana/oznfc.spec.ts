@@ -1,36 +1,31 @@
 import expect from 'expect';
-import { establishConnection } from './index';
+import { loadContract } from './utils';
 
 describe('Deploy solang contract and test', () => {
     it('Events', async function () {
         this.timeout(50000);
 
-        let conn = await establishConnection();
+        const [token] = await loadContract('Events', 'Events.abi');
 
-        let hash_functions = await conn.loadProgram("bundle.so", "Events.abi");
+        let res = await token.functions.getName();
 
-        // call the constructor
-        await hash_functions.call_constructor(conn, 'Events', []);
+        expect(res.result).toBe("myName");
 
-        let res = await hash_functions.call_function(conn, "getName", []);
+        await token.functions.setName('ozan');
 
-        expect(res["0"]).toBe("myName");
+        res = await token.functions.getName();
 
-        await hash_functions.call_function(conn, "setName", ['ozan']);
+        expect(res.result).toBe('ozan');
 
-        res = await hash_functions.call_function(conn, "getName", []);
+        await token.functions.setSurname('martin');
 
-        expect(res["0"]).toBe('ozan');
+        res = await token.functions.getSurname();
 
-        await hash_functions.call_function(conn, "setSurname", ['martin']);
+        expect(res.result).toBe('martin');
 
-        res = await hash_functions.call_function(conn, "getSurname", []);
+        res = await token.functions.getNames();
 
-        expect(res["0"]).toBe('martin');
-
-        res = await hash_functions.call_function(conn, "getNames", []);
-
-        expect(res["0"]).toBe('ozan');
-        expect(res["1"]).toBe('martin');
+        expect(res.result[0]).toBe('ozan');
+        expect(res.result[1]).toBe('martin');
     });
 });

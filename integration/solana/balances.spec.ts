@@ -1,25 +1,24 @@
 import expect from 'expect';
-import { establishConnection } from './index';
+import { loadContract } from './utils';
+import { ContractFunctionCallOptions } from '@solana/solidity';
 
 describe('Deploy solang contract and test', () => {
     it('balances', async function () {
         this.timeout(50000);
 
-        let conn = await establishConnection();
+        let [token, connection, payerAccount] = await loadContract('balances', 'balances.abi');
 
-        let hash_functions = await conn.loadProgram("bundle.so", "balances.abi");
+        let payer = '0x' + payerAccount.publicKey.toBuffer().toString('hex');
 
-        // call the constructor
-        await hash_functions.call_constructor(conn, 'balances', []);
+        let options: ContractFunctionCallOptions = {
+            accounts: [payerAccount.publicKey],
+        };
 
-        let payer = '0x' + conn.payerAccount.publicKey.toBuffer().toString('hex');
+        let res = await token.functions.get_balance(payer, options);
 
-        let res = await hash_functions.call_function(conn, "get_balance", [payer], [conn.payerAccount.publicKey]);
-        let bal = Number(res[0]);
+        let bal = Number(res.result);
 
-        let rpc_bal = await conn.connection.getBalance(conn.payerAccount.publicKey);
-
-        console.log("bal from rpc " + bal);
+        let rpc_bal = await connection.getBalance(payerAccount.publicKey);
 
         expect(bal).toBe(rpc_bal);
     });
