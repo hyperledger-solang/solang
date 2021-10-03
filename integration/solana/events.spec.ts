@@ -1,25 +1,50 @@
 import expect from 'expect';
-import { establishConnection } from './index';
+import { loadContract } from './utils';
 
 describe('Deploy solang contract and test', () => {
     it('events', async function () {
         this.timeout(50000);
 
-        let conn = await establishConnection();
+        const [token] = await loadContract('events', 'events.abi');
 
-        let event_contract = await conn.loadProgram("bundle.so", "events.abi");
+        await new Promise((resolve) => {
+            let first = true;
+            let listenId = token.addEventListener(async (ev) => {
 
-        // call the constructor
-        await event_contract.call_constructor(conn, 'events', []);
+                if (first) {
+                    expect(Number(ev.args[0])).toEqual(102);
+                    expect(ev.args[1]).toEqual(true);
+                    expect(ev.args[2]).toEqual('foobar');
 
-        let events = await event_contract.call_function_events(conn, "test", []);
+                    first = false;
+                } else {
+                    expect(Number(ev.args[0])).toEqual(500332);
+                    expect(ev.args[1]).toEqual("0x41424344");
+                    expect(ev.args[2]).toEqual("0xcafe0123");
+                }
 
-        expect(events[0]["0"]).toEqual("102");
-        expect(events[0]["1"]).toEqual(true);
-        expect(events[0]["2"]).toEqual("foobar");
+                await token.removeEventListener(listenId);
+                resolve(true);
+            });
 
-        expect(events[1]["0"]).toEqual("500332");
-        expect(events[1]["1"]).toEqual("0x41424344");
-        expect(events[1]["2"]).toEqual("0xcafe0123");
+            token.functions.test();
+        });
+
+        let res = await token.functions.test({ simulate: true });
+
+        expect(res.result).toBeNull();
+        expect(res.events.length).toBe(2);
+
+        let args = res.events[0].args;
+
+        expect(Number(args[0])).toEqual(102);
+        expect(args[1]).toEqual(true);
+        expect(args[2]).toEqual('foobar');
+
+        args = res.events[1].args;
+
+        expect(Number(args[0])).toEqual(500332);
+        expect(args[1]).toEqual("0x41424344");
+        expect(args[2]).toEqual("0xcafe0123");
     });
 });

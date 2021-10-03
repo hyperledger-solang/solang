@@ -1,244 +1,197 @@
 import expect from 'expect';
-import { establishConnection } from './index';
+import { loadContract } from './utils';
 import crypto from 'crypto';
 
 describe('Deploy solang contract and test', () => {
     it('flipper', async function () {
         this.timeout(50000);
 
-        let conn = await establishConnection();
+        let [token] = await loadContract('flipper', 'flipper.abi', [true]);
 
-        let prog = await conn.loadProgram("bundle.so", "flipper.abi");
+        let res = await token.functions.get({ simulate: true });
 
-        // call the constructor
-        await prog.call_constructor(conn, 'flipper', ["true"]);
+        expect(res.result).toBe(true);
 
-        let res = await prog.call_function(conn, "get", []);
+        await token.functions.flip();
 
-        expect(res["__length__"]).toBe(1);
-        expect(res["0"]).toBe(true);
+        res = await token.functions.get({ simulate: true });
 
-        await prog.call_function(conn, "flip", []);
-
-        res = await prog.call_function(conn, "get", []);
-
-        expect(res["__length__"]).toBe(1);
-        expect(res["0"]).toBe(false);
+        expect(res.result).toBe(false);
     });
 
     it('primitives', async function () {
         this.timeout(100000);
 
-        let conn = await establishConnection();
-
-        let prog = await conn.loadProgram("bundle.so", "primitives.abi");
-
-        // call the constructor
-        await prog.call_constructor(conn, 'primitives', []);
+        let [token, _, payerAccount] = await loadContract('primitives', 'primitives.abi', []);
 
         // TEST Basic enums
         // in ethereum, an enum is described as an uint8 so can't use the enum
         // names programmatically. 0 = add, 1 = sub, 2 = mul, 3 = div, 4 = mod, 5 = pow, 6 = shl, 7 = shr
-        let res = await prog.call_function(conn, "is_mul", ["2"]);
-        expect(res["0"]).toBe(true);
+        let res = await token.functions.is_mul(2, { simulate: true });
+        expect(res.result).toBe(true);
 
-        res = await prog.call_function(conn, "return_div", []);
-        expect(res["0"]).toBe("3");
+        res = await token.functions.return_div({ simulate: true });
+        expect(res.result).toBe(3);
 
         // TEST uint and int types, and arithmetic/bitwise ops
-        res = await prog.call_function(conn, "op_i64", ["0", "1000", "4100"]);
-        expect(res["0"]).toBe("5100");
-        res = await prog.call_function(conn, "op_i64", ["1", "1000", "4100"]);
-        expect(res["0"]).toBe("-3100");
-        res = await prog.call_function(conn, "op_i64", ["2", "1000", "4100"]);
-        expect(res["0"]).toBe("4100000");
-        res = await prog.call_function(conn, "op_i64", ["3", "1000", "10"]);
-        expect(res["0"]).toBe("100");
-        res = await prog.call_function(conn, "op_i64", ["4", "1000", "99"]);
-        expect(res["0"]).toBe("10");
-        res = await prog.call_function(conn, "op_i64", ["6", "-1000", "8"]);
-        expect(res["0"]).toBe("-256000");
-        res = await prog.call_function(conn, "op_i64", ["7", "-1000", "8"]);
-        expect(res["0"]).toBe("-4");
+        res = await token.functions.op_i64(0, 1000, 4100, { simulate: true });
+        expect(Number(res.result)).toBe(5100);
+        res = await token.functions.op_i64(1, 1000, 4100, { simulate: true });
+        expect(Number(res.result)).toBe(-3100);
+        res = await token.functions.op_i64(2, 1000, 4100, { simulate: true });
+        expect(Number(res.result)).toBe(4100000);
+        res = await token.functions.op_i64(3, 1000, 10, { simulate: true });
+        expect(Number(res.result)).toBe(100);
+        res = await token.functions.op_i64(4, 1000, 99, { simulate: true });
+        expect(Number(res.result)).toBe(10);
+        res = await token.functions.op_i64(6, - 1000, 8, { simulate: true });
+        expect(Number(res.result)).toBe(-256000);
+        res = await token.functions.op_i64(7, - 1000, 8, { simulate: true });
+        expect(Number(res.result)).toBe(-4);
 
 
-        res = await prog.call_function(conn, "op_u64", ["0", "1000", "4100"]);
-        expect(res["0"]).toBe("5100");
-        res = await prog.call_function(conn, "op_u64", ["1", "1000", "4100"]);
-        expect(res["0"]).toBe("18446744073709548516"); // (2^64)-18446744073709548516 = 3100
-        res = await prog.call_function(conn, "op_u64", ["2", "123456789", "123456789"]);
-        expect(res["0"]).toBe("15241578750190521");
-        res = await prog.call_function(conn, "op_u64", ["3", "123456789", "100"]);
-        expect(res["0"]).toBe("1234567");
-        res = await prog.call_function(conn, "op_u64", ["4", "123456789", "100"]);
-        expect(res["0"]).toBe("89");
-        res = await prog.call_function(conn, "op_u64", ["5", "3", "7"]);
-        expect(res["0"]).toBe("2187");
-        res = await prog.call_function(conn, "op_i64", ["6", "1000", "8"]);
-        expect(res["0"]).toBe("256000");
-        res = await prog.call_function(conn, "op_i64", ["7", "1000", "8"]);
-        expect(res["0"]).toBe("3");
+        res = await token.functions.op_u64(0, 1000, 4100, { simulate: true });
+        expect(Number(res.result)).toBe(5100);
+        res = await token.functions.op_u64(1, 1000, 4100, { simulate: true });
+        expect(Number(res.result)).toBe(18446744073709548516); // (2^64)-18446744073709548516 = 3100
+        res = await token.functions.op_u64(2, 123456789, 123456789, { simulate: true });
+        expect(Number(res.result)).toBe(15241578750190521);
+        res = await token.functions.op_u64(3, 123456789, 100, { simulate: true });
+        expect(Number(res.result)).toBe(1234567);
+        res = await token.functions.op_u64(4, 123456789, 100, { simulate: true });
+        expect(Number(res.result)).toBe(89);
+        res = await token.functions.op_u64(5, 3, 7, { simulate: true });
+        expect(Number(res.result)).toBe(2187);
+        res = await token.functions.op_i64(6, 1000, 8, { simulate: true });
+        expect(Number(res.result)).toBe(256000);
+        res = await token.functions.op_i64(7, 1000, 8, { simulate: true });
+        expect(Number(res.result)).toBe(3);
 
         // now for 256 bit operations
-        res = await prog.call_function(conn, "op_i256", ["0", "1000", "4100"]);
-        expect(res["0"]).toBe("5100");
-        res = await prog.call_function(conn, "op_i256", ["1", "1000", "4100"]);
-        expect(res["0"]).toBe("-3100");
-        res = await prog.call_function(conn, "op_i256", ["2", "1000", "4100"]);
-        expect(res["0"]).toBe("4100000");
-        res = await prog.call_function(conn, "op_i256", ["3", "1000", "10"]);
-        expect(res["0"]).toBe("100");
-        res = await prog.call_function(conn, "op_i256", ["4", "1000", "99"]);
-        expect(res["0"]).toBe("10");
-        res = await prog.call_function(conn, "op_i256", ["6", "-10000000000000", "8"]);
-        expect(res["0"]).toBe("-2560000000000000");
-        res = await prog.call_function(conn, "op_i256", ["7", "-10000000000000", "8"]);
-        expect(res["0"]).toBe("-39062500000");
+        res = await token.functions.op_i256(0, 1000, 4100, { simulate: true });
+        expect(Number(res.result)).toBe(5100);
+        res = await token.functions.op_i256(1, 1000, 4100, { simulate: true });
+        expect(Number(res.result)).toBe(-3100);
+        res = await token.functions.op_i256(2, 1000, 4100, { simulate: true });
+        expect(Number(res.result)).toBe(4100000);
+        res = await token.functions.op_i256(3, 1000, 10, { simulate: true });
+        expect(Number(res.result)).toBe(100);
+        res = await token.functions.op_i256(4, 1000, 99, { simulate: true });
+        expect(Number(res.result)).toBe(10);
+        res = await token.functions.op_i256(6, - 10000000000000, 8, { simulate: true });
+        expect(Number(res.result)).toBe(-2560000000000000);
+        res = await token.functions.op_i256(7, - 10000000000000, 8, { simulate: true });
+        expect(Number(res.result)).toBe(-39062500000);
 
-        res = await prog.call_function(conn, "op_u256", ["0", "1000", "4100"]);
-        expect(res["0"]).toBe("5100");
-        res = await prog.call_function(conn, "op_u256", ["1", "1000", "4100"]);
-        expect(res["0"]).toBe("115792089237316195423570985008687907853269984665640564039457584007913129636836"); // (2^64)-18446744073709548516 = 3100
-        res = await prog.call_function(conn, "op_u256", ["2", "123456789", "123456789"]);
-        expect(res["0"]).toBe("15241578750190521");
-        res = await prog.call_function(conn, "op_u256", ["3", "123456789", "100"]);
-        expect(res["0"]).toBe("1234567");
-        res = await prog.call_function(conn, "op_u256", ["4", "123456789", "100"]);
-        expect(res["0"]).toBe("89");
-        res = await prog.call_function(conn, "op_u256", ["5", "123456789", "9"]);
-        expect(res["0"]).toBe("6662462759719942007440037531362779472290810125440036903063319585255179509");
-        res = await prog.call_function(conn, "op_i256", ["6", "10000000000000", "8"]);
-        expect(res["0"]).toBe("2560000000000000");
-        res = await prog.call_function(conn, "op_i256", ["7", "10000000000000", "8"]);
-        expect(res["0"]).toBe("39062500000");
+        res = await token.functions.op_u256(0, 1000, 4100, { simulate: true });
+        expect(Number(res.result)).toBe(5100);
+        res = await token.functions.op_u256(1, 1000, 4100, { simulate: true });
+        expect(Number(res.result)).toBe(115792089237316195423570985008687907853269984665640564039457584007913129636836); // (2^64)-18446744073709548516 = 3100
+        res = await token.functions.op_u256(2, 123456789, 123456789, { simulate: true });
+        expect(Number(res.result)).toBe(15241578750190521);
+        res = await token.functions.op_u256(3, 123456789, 100, { simulate: true });
+        expect(Number(res.result)).toBe(1234567);
+        res = await token.functions.op_u256(4, 123456789, 100, { simulate: true });
+        expect(Number(res.result)).toBe(89);
+        res = await token.functions.op_u256(5, 123456789, 9, { simulate: true });
+        expect(Number(res.result)).toBe(6662462759719942007440037531362779472290810125440036903063319585255179509);
+        res = await token.functions.op_i256(6, 10000000000000, 8, { simulate: true });
+        expect(Number(res.result)).toBe(2560000000000000);
+        res = await token.functions.op_i256(7, 10000000000000, 8, { simulate: true });
+        expect(Number(res.result)).toBe(39062500000);
 
 
         // TEST bytesN
-        res = await prog.call_function(conn, "return_u8_6", []);
-        expect(res["0"]).toBe("0x414243444546");
+        res = await token.functions.return_u8_6({ simulate: true });
+        expect(res.result).toBe("0x414243444546");
 
         // TEST bytes5
-        res = await prog.call_function(conn, "op_u8_5_shift", ["6", "0xdeadcafe59", "8"]);
-        expect(res["0"]).toBe("0xadcafe5900");
-        res = await prog.call_function(conn, "op_u8_5_shift", ["7", "0xdeadcafe59", "8"]);
-        expect(res["0"]).toBe("0x00deadcafe");
-        res = await prog.call_function(conn, "op_u8_5", ["8", "0xdeadcafe59", "0x0000000006"]);
-        expect(res["0"]).toBe("0xdeadcafe5f");
-        res = await prog.call_function(conn, "op_u8_5", ["9", "0xdeadcafe59", "0x00000000ff"]);
-        expect(res["0"]).toBe("0x0000000059");
-        res = await prog.call_function(conn, "op_u8_5", ["10", "0xdeadcafe59", "0x00000000ff"]);
-        expect(res["0"]).toBe("0xdeadcafea6");
+        res = await token.functions.op_u8_5_shift(6, "0xdeadcafe59", 8, { simulate: true });
+        expect(res.result).toBe("0xadcafe5900");
+        res = await token.functions.op_u8_5_shift(7, "0xdeadcafe59", 8, { simulate: true });
+        expect(res.result).toBe("0x00deadcafe");
+        res = await token.functions.op_u8_5(8, "0xdeadcafe59", "0x0000000006", { simulate: true });
+        expect(res.result).toBe("0xdeadcafe5f");
+        res = await token.functions.op_u8_5(9, "0xdeadcafe59", "0x00000000ff", { simulate: true });
+        expect(res.result).toBe("0x0000000059");
+        res = await token.functions.op_u8_5(10, "0xdeadcafe59", "0x00000000ff", { simulate: true });
+        expect(res.result).toBe("0xdeadcafea6");
 
         // TEST bytes14
-        res = await prog.call_function(conn, "op_u8_14_shift", ["6", "0xdeadcafe123456789abcdefbeef7", "9"]);
-        expect(res["0"]).toBe("0x5b95fc2468acf13579bdf7ddee00");
-        res = await prog.call_function(conn, "op_u8_14_shift", ["7", "0xdeadcafe123456789abcdefbeef7", "9"]);
-        expect(res["0"]).toBe("0x006f56e57f091a2b3c4d5e6f7df7");
-        res = await prog.call_function(conn, "op_u8_14", ["8", "0xdeadcafe123456789abcdefbeef7", "0x00000600"]);
-        expect(res["0"]).toBe("0xdeadcefe123456789abcdefbeef7");
-        res = await prog.call_function(conn, "op_u8_14", ["9", "0xdeadcafe123456789abcdefbeef7", "0x000000000000000000ff"]);
-        expect(res["0"]).toBe("0x000000000000000000bc00000000");
-        res = await prog.call_function(conn, "op_u8_14", ["10", "0xdeadcafe123456789abcdefbeef7", "0xff"]);
-        expect(res["0"]).toBe("0x21adcafe123456789abcdefbeef7");
+        res = await token.functions.op_u8_14_shift(6, "0xdeadcafe123456789abcdefbeef7", "9", { simulate: true });
+        expect(res.result).toBe("0x5b95fc2468acf13579bdf7ddee00");
+        res = await token.functions.op_u8_14_shift(7, "0xdeadcafe123456789abcdefbeef7", "9", { simulate: true });
+        expect(res.result).toBe("0x006f56e57f091a2b3c4d5e6f7df7");
+        res = await token.functions.op_u8_14(8, "0xdeadcafe123456789abcdefbeef7", "0x0000060000000000000000000000", { simulate: true });
+        expect(res.result).toBe("0xdeadcefe123456789abcdefbeef7");
+        res = await token.functions.op_u8_14(9, "0xdeadcafe123456789abcdefbeef7", "0x000000000000000000ff00000000", { simulate: true });
+        expect(res.result).toBe("0x000000000000000000bc00000000");
+        res = await token.functions.op_u8_14(10, "0xdeadcafe123456789abcdefbeef7", "0xff00000000000000000000000000", { simulate: true });
+        expect(res.result).toBe("0x21adcafe123456789abcdefbeef7");
 
         // TEST address type. We need to encoding this has a hex string with the '0x' prefix, since solang maps address
         // to bytes32 type
-        let address = '0x' + conn.payerAccount.publicKey.toBuffer().toString('hex');
-        console.log(`Using address ${address} for testing`)
-        res = await prog.call_function(conn, "address_passthrough", [address]);
-        expect(res["0"]).toBe(address);
+        let address = '0x' + payerAccount.publicKey.toBuffer().toString('hex');
+        res = await token.functions.address_passthrough(address);
+        expect(res.result).toBe(address);
     });
 
     it('store', async function () {
         this.timeout(50000);
 
-        let conn = await establishConnection();
+        const [token] = await loadContract('store', 'store.abi', []);
 
-        let prog = await conn.loadProgram("bundle.so", "store.abi");
+        let res = await token.functions.get_values1({ simulate: true });
 
-        // call the constructor
-        await prog.call_constructor(conn, 'store', []);
+        expect(res.result.toString()).toEqual("0,0,0,0");
 
-        function returns_to_array(res: Object) {
-            let arr = Object.values(res);
-            let length = arr.pop()
-            expect(arr.length).toEqual(length);
-            return arr;
-        }
+        res = await token.functions.get_values2({ simulate: true });
 
-        let res = returns_to_array(await prog.call_function(conn, "get_values1", []));
+        expect(res.result.toString()).toStrictEqual('0,,0xb00b1e,0x00000000,0');
 
-        expect(res).toStrictEqual(["0", "0", "0", "0"]);
+        await token.functions.set_values();
 
-        res = returns_to_array(await prog.call_function(conn, "get_values2", []));
+        res = await token.functions.get_values1({ simulate: true });
 
-        expect(res).toStrictEqual(["0", "", "0xb00b1e", "0x00000000", "0"]);
+        expect(res.result.toString()).toStrictEqual('18446744073709551615,3671129839,32766,57896044618658097711785492504343953926634992332820282019728792003956564819967');
 
-        await prog.call_function(conn, "set_values", []);
+        res = await token.functions.get_values2({ simulate: true });
 
-        res = returns_to_array(await prog.call_function(conn, "get_values1", []));
+        expect(res.result.toString()).toStrictEqual('102,the course of true love never did run smooth,0xb00b1e,0x41424344,1');
 
-        expect(res).toStrictEqual([
-            "18446744073709551615",
-            "3671129839",
-            "32766",
-            "57896044618658097711785492504343953926634992332820282019728792003956564819967"
-        ]);
+        await token.functions.do_ops();
 
-        res = returns_to_array(await prog.call_function(conn, "get_values2", []));
+        res = await token.functions.get_values1({ simulate: true });
 
-        expect(res).toStrictEqual([
-            "102",
-            "the course of true love never did run smooth",
-            "0xb00b1e",
-            "0x41424344",
-            "1",
-        ]);
+        expect(res.result.toString()).toStrictEqual("1,65263,32767,57896044618658097711785492504343953926634992332820282019728792003956564819966");
 
-        await prog.call_function(conn, "do_ops", []);
+        res = await token.functions.get_values2({ simulate: true });
 
-        res = returns_to_array(await prog.call_function(conn, "get_values1", []));
+        expect(res.result.toString()).toStrictEqual("61200,,0xb0ff1e,0x61626364,3");
 
-        expect(res).toStrictEqual([
-            "1",
-            "65263",
-            "32767",
-            "57896044618658097711785492504343953926634992332820282019728792003956564819966",
-        ]);
-
-        res = returns_to_array(await prog.call_function(conn, "get_values2", []));
-
-        expect(res).toStrictEqual([
-            "61200",
-            "",
-            "0xb0ff1e",
-            "0x61626364",
-            "3",
-        ]);
-
-        await prog.call_function(conn, "push_zero", []);
+        await token.functions.push_zero();
 
         let bs = "0xb0ff1e00";
 
         for (let i = 0; i < 20; i++) {
-            res = returns_to_array(await prog.call_function(conn, "get_bs", []));
+            res = await token.functions.get_bs({ simulate: true });
 
-            expect(res).toStrictEqual([bs]);
+            expect(res.result).toStrictEqual(bs);
 
             if (bs.length <= 4 || Math.random() >= 0.5) {
                 let val = ((Math.random() * 256) | 0).toString(16);
 
                 val = val.length == 1 ? "0" + val : val;
 
-                await prog.call_function(conn, "push", ["0x" + val]);
+                await token.functions.push("0x" + val);
 
                 bs += val;
             } else {
-                res = returns_to_array(await prog.call_function(conn, "pop", []));
+                res = await token.functions.pop();
 
                 let last = bs.slice(-2);
 
-                expect(res).toStrictEqual(["0x" + last]);
+                expect(res.result.toString()).toStrictEqual("0x" + last);
 
                 bs = bs.slice(0, -2);
             }
@@ -249,28 +202,16 @@ describe('Deploy solang contract and test', () => {
     it('structs', async function () {
         this.timeout(50000);
 
-        let conn = await establishConnection();
+        const [token] = await loadContract('store', 'store.abi', []);
 
-        let prog = await conn.loadProgram("bundle.so", "store.abi", 8192);
-
-        // call the constructor
-        await prog.call_constructor(conn, 'store', []);
-
-        function returns(res: Object) {
-            let arr = Object.values(res);
-            let length = arr.pop()
-            expect(arr.length).toEqual(length);
-            return JSON.stringify(arr);
-        }
-
-        await prog.call_function(conn, "set_foo1", []);
+        await token.functions.set_foo1();
 
         // get foo1
-        let res = returns(await prog.call_function(conn, "get_both_foos", []));
+        let res = await token.functions.get_both_foos({ simulate: true });
 
         // compare without JSON.stringify() results in "Received: serializes to the same string" error.
         // I have no idea why
-        expect(res).toStrictEqual(JSON.stringify([
+        expect(res.result.toString()).toStrictEqual(([
             [
                 "1",
                 "0x446f6e277420636f756e7420796f757220636869636b656e73206265666f72652074686579206861746368",
@@ -287,9 +228,9 @@ describe('Deploy solang contract and test', () => {
                 "",
                 [false, ""]
             ]
-        ]));
+        ]).toString());
 
-        await prog.call_function(conn, "set_foo2", [
+        await token.functions.set_foo2(
             [
                 "1",
                 "0xb52b073595ccb35eaebb87178227b779",
@@ -299,11 +240,11 @@ describe('Deploy solang contract and test', () => {
                 [true, "Drive someone up the wall"]
             ],
             "nah"
-        ]);
+        );
 
-        res = returns(await prog.call_function(conn, "get_both_foos", []));
+        res = await token.functions.get_both_foos({ simulate: true });
 
-        expect(res).toStrictEqual(JSON.stringify([
+        expect(res.result.toString()).toStrictEqual(([
             [
                 "1",
                 "0x446f6e277420636f756e7420796f757220636869636b656e73206265666f72652074686579206861746368",
@@ -320,13 +261,13 @@ describe('Deploy solang contract and test', () => {
                 "Barking up the wrong tree",
                 [true, "nah"]
             ]
-        ]));
+        ]).toString());
 
-        await prog.call_function(conn, "delete_foo", [true]);
+        await token.functions.delete_foo(true);
 
-        res = returns(await prog.call_function(conn, "get_foo", [false]));
+        res = await token.functions.get_foo(false, { simulate: true });
 
-        expect(res).toStrictEqual(JSON.stringify([
+        expect(res.result.toString()).toStrictEqual(([
             [
                 "1",
                 "0xb52b073595ccb35eaebb87178227b779",
@@ -335,11 +276,11 @@ describe('Deploy solang contract and test', () => {
                 "Barking up the wrong tree",
                 [true, "nah"]
             ],
-        ]));
+        ]).toString());
 
-        res = returns(await prog.call_function(conn, "get_foo", [true]));
+        res = await token.functions.get_foo(true, { simulate: true });
 
-        expect(res).toStrictEqual(JSON.stringify([
+        expect(res.result.toString()).toStrictEqual(([
             [
                 "0",
                 "0x",
@@ -348,15 +289,15 @@ describe('Deploy solang contract and test', () => {
                 "",
                 [false, ""]
             ],
-        ]));
+        ]).toString());
 
-        await prog.call_function(conn, "delete_foo", [false]);
+        await token.functions.delete_foo(false);
 
-        res = returns(await prog.call_function(conn, "get_both_foos", []));
+        res = await token.functions.get_both_foos({ simulate: true });
 
         // compare without JSON.stringify() results in "Received: serializes to the same string" error.
         // I have no idea why
-        expect(res).toStrictEqual(JSON.stringify([
+        expect(res.result.toString()).toStrictEqual(([
             [
                 "0",
                 "0x",
@@ -373,15 +314,15 @@ describe('Deploy solang contract and test', () => {
                 "",
                 [false, ""]
             ]
-        ]));
+        ]).toString());
 
-        await prog.call_function(conn, "struct_literal", []);
+        await token.functions.struct_literal();
 
-        res = returns(await prog.call_function(conn, "get_foo", [true]));
+        res = await token.functions.get_foo(true, { simulate: true });
 
         // compare without JSON.stringify() results in "Received: serializes to the same string" error.
         // I have no idea why
-        expect(res).toStrictEqual(JSON.stringify([
+        expect(res.result.toString()).toStrictEqual(([
             [
                 "3",
                 "0x537570657263616c6966726167696c697374696365787069616c69646f63696f7573",
@@ -390,53 +331,39 @@ describe('Deploy solang contract and test', () => {
                 "Antidisestablishmentarianism",
                 [true, "Pseudopseudohypoparathyroidism"],
             ]
-        ]));
+        ]).toString());
     });
 
 
     it('account storage too small constructor', async function () {
         this.timeout(50000);
 
-        let conn = await establishConnection();
-
-        // storage.sol needs 168 byes
-        let prog = await conn.loadProgram("bundle.so", "store.abi", 100);
-
-        await expect(prog.call_constructor(conn, 'store', []))
+        await expect(loadContract('store', 'store.abi', [], 100))
             .rejects
-            .toThrowError(new Error('failed to send transaction: Transaction simulation failed: Error processing Instruction 0: account data too small for instruction'));
+            .toThrowError(new Error('account data too small for instruction'));
     });
 
     it('account storage too small dynamic alloc', async function () {
         this.timeout(50000);
 
-        let conn = await establishConnection();
+        const [token] = await loadContract('store', 'store.abi', [], 180);
 
         // storage.sol needs 168 bytes on constructor, more for string data
-        let prog = await conn.loadProgram("bundle.so", "store.abi", 180);
-
-        await prog.call_constructor(conn, 'store', []);
 
         // set a load of string which will overflow
-        await expect(prog.call_function(conn, "set_foo1", []))
+        await expect(token.functions.set_foo1())
             .rejects
-            .toThrowError(new Error('failed to send transaction: Transaction simulation failed: Error processing Instruction 0: account data too small for instruction'));
+            .toThrowError(new Error('account data too small for instruction'));
     });
-
 
     it('account storage too small dynamic realloc', async function () {
         this.timeout(50000);
 
-        let conn = await establishConnection();
-
-        // storage.sol needs 168 bytes on constructor, more for string data
-        let prog = await conn.loadProgram("bundle.so", "store.abi", 210);
-
-        await prog.call_constructor(conn, 'store', []);
+        const [token] = await loadContract('store', 'store.abi', [], 210);
 
         async function push_until_bang() {
             for (let i = 0; i < 100; i++) {
-                await prog.call_function(conn, "push", ["0x01"]);
+                await token.functions.push("0x01");
                 console.log("pushed one byte");
             }
         }
@@ -444,18 +371,13 @@ describe('Deploy solang contract and test', () => {
         // do realloc until failure
         await expect(push_until_bang())
             .rejects
-            .toThrowError(new Error('failed to send transaction: Transaction simulation failed: Error processing Instruction 0: account data too small for instruction'));
+            .toThrowError(new Error('account data too small for instruction'));
     });
 
     it('arrays in account storage', async function () {
         this.timeout(50000);
 
-        let conn = await establishConnection();
-
-        // storage.sol needs 168 bytes on constructor, more for string data
-        let prog = await conn.loadProgram("bundle.so", "arrays.abi", 4096);
-
-        await prog.call_constructor(conn, 'arrays', []);
+        const [token] = await loadContract('arrays', 'arrays.abi', []);
 
         let users = [];
 
@@ -471,7 +393,7 @@ describe('Deploy solang contract and test', () => {
                 perms.push(`${p}`);
             }
 
-            await prog.call_function(conn, "addUser", [id, addr, name, perms]);
+            await token.functions.addUser(id, addr, name, perms);
 
 
             users.push([
@@ -479,39 +401,32 @@ describe('Deploy solang contract and test', () => {
             ]);
         }
 
-        function returns(res: Object) {
-            let arr = Object.values(res);
-            let length = arr.pop()
-            expect(arr.length).toEqual(length);
-            return JSON.stringify(arr);
-        }
-
         let user = users[Math.floor(Math.random() * users.length)];
 
-        let res = returns(await prog.call_function(conn, "getUserById", [user[2]]));
+        let res = await token.functions.getUserById(user[2], { simulate: true });
 
-        expect(res).toStrictEqual(JSON.stringify([user]));
+        expect(res.result.toString()).toStrictEqual(user.toString());
 
         if (user[3].length > 0) {
             let perms = user[3];
 
             let p = perms[Math.floor(Math.random() * perms.length)];
 
-            res = returns(await prog.call_function(conn, "hasPermission", [user[2], p]));
+            res = await token.functions.hasPermission(user[2], p, { simulate: true });
 
-            expect(res).toBe(JSON.stringify([true]));
+            expect(res.result).toBe(true);
         }
 
         user = users[Math.floor(Math.random() * users.length)];
 
-        res = returns(await prog.call_function(conn, "getUserByAddress", [user[1]]));
+        res = await token.functions.getUserByAddress(user[1], { simulate: true });
 
-        expect(res).toStrictEqual(JSON.stringify([user]));
+        expect(res.result.toString()).toStrictEqual(user.toString());
 
-        await prog.call_function(conn, "removeUser", [user[2]]);
+        await token.functions.removeUser(user[2]);
 
-        res = returns(await prog.call_function(conn, "userExists", [user[2]]));
+        res = await token.functions.userExists(user[2]);
 
-        expect(res).toBe(JSON.stringify([false]));
+        expect(res.result).toBe(false);
     });
 });

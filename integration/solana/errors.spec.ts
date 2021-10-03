@@ -1,24 +1,39 @@
+import { TransactionError } from '@solana/solidity';
 import expect from 'expect';
-import { establishConnection } from './index';
+import { loadContract } from './utils';
 
 describe('Deploy solang contract and test', () => {
     it('errors', async function () {
         this.timeout(50000);
 
-        let conn = await establishConnection();
+        const [token] = await loadContract('errors', 'errors.abi')
 
-        let errors = await conn.loadProgram("bundle.so", "errors.abi");
+        let res = await token.functions.do_revert(false);
 
-        // call the constructor
-        await errors.call_constructor(conn, 'errors', []);
+        expect(Number(res.result)).toEqual(3124445);
 
-        let res = await errors.call_function(conn, "do_revert", [false]);
+        try {
+            res = await token.functions.do_revert(true, { simulate: true });
+        } catch (e) {
+            expect(e).toBeInstanceOf(TransactionError);
+            if (e instanceof TransactionError) {
+                expect(e.message).toBe('Do the revert thing');
+                expect(e.computeUnitsUsed).toBe(1048);
+                expect(e.logs.length).toBeGreaterThan(1);
+            }
+            return;
+        }
 
-        expect(res["0"]).toBe("3124445");
-
-        let revert_res = await errors.call_function_expect_revert(conn, "do_revert", [true]);
-
-        expect(revert_res).toBe("Do the revert thing");
-
+        try {
+            res = await token.functions.do_revert(true);
+        } catch (e) {
+            expect(e).toBeInstanceOf(TransactionError);
+            if (e instanceof TransactionError) {
+                expect(e.message).toBe('Do the revert thing');
+                expect(e.computeUnitsUsed).toBe(1050);
+                expect(e.logs.length).toBeGreaterThan(1);
+            }
+            return;
+        }
     });
 });
