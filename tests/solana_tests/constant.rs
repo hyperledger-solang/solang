@@ -2,7 +2,7 @@ use crate::{build_solidity, first_error, parse_and_resolve, Target};
 use ethabi::Token;
 
 #[test]
-fn library_constant() {
+fn constant() {
     let mut vm = build_solidity(
         r#"
         library Library {
@@ -23,11 +23,8 @@ fn library_constant() {
     let returns = vm.function("f", &[], &[], 0);
 
     assert_eq!(returns, vec![Token::Uint(ethereum_types::U256::from(42))]);
-}
 
-#[test]
-fn contract_constant() {
-    let ns = parse_and_resolve(
+    let mut vm = build_solidity(
         r#"
         contract Library {
             uint256 public constant STATIC = 42;
@@ -40,14 +37,17 @@ fn contract_constant() {
             }
         }
         "#,
-        Target::Solana,
     );
 
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "conversion from function() internal view returns (uint256) to uint256 not possible",
-    );
+    vm.constructor("foo", &[], 0);
 
+    let returns = vm.function("f", &[], &[], 0);
+
+    assert_eq!(returns, vec![Token::Uint(ethereum_types::U256::from(42))]);
+}
+
+#[test]
+fn contract_constant_call() {
     let ns = parse_and_resolve(
         r#"
         contract Library {

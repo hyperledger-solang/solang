@@ -14,8 +14,8 @@ use std::ops::{Add, Shl, Sub};
 
 use super::address::to_hexstr_eip55;
 use super::ast::{
-    Builtin, CallTy, Contract, Diagnostic, Expression, Function, Mutability, Namespace,
-    StringLocation, Symbol, Type,
+    Builtin, CallTy, Diagnostic, Expression, Function, Mutability, Namespace, StringLocation,
+    Symbol, Type,
 };
 use super::builtin;
 use super::contracts::{is_base, visit_bases};
@@ -4907,10 +4907,9 @@ fn member_access(
         return Ok(expr);
     }
 
-    // is it a constant in a library (unless basecontract is a local variable)
-    match library_constant(e, id, file_no, ns, symtable) {
-        None => (),
-        Some(expr) => return Ok(expr),
+    // is it a constant (unless basecontract is a local variable)
+    if let Some(expr) = contract_constant(e, id, file_no, ns, symtable) {
+        return Ok(expr);
     }
 
     // is it a basecontract.function.selector expression (unless basecontract is a local variable)
@@ -5251,7 +5250,7 @@ fn member_access(
     Err(())
 }
 
-fn library_constant(
+fn contract_constant(
     e: &pt::Expression,
     id: &pt::Identifier,
     file_no: usize,
@@ -5267,18 +5266,10 @@ fn library_constant(
         return None;
     };
 
-    let library_no = ns.resolve_contract(file_no, namespace)?;
+    let contract_no = ns.resolve_contract(file_no, namespace)?;
 
-    let variables = match &mut ns.contracts[library_no] {
-        Contract {
-            ty: pt::ContractTy::Library(_),
-            variables,
-            ..
-        } => variables,
-        _ => return None,
-    };
-
-    let (var_no, constant) = variables
+    let (var_no, constant) = ns.contracts[contract_no]
+        .variables
         .iter_mut()
         .enumerate()
         .find(|(_, constant)| constant.name == id.name)?;
@@ -5288,7 +5279,7 @@ fn library_constant(
     Some(Expression::ConstantVariable(
         constant.loc,
         constant.ty.clone(),
-        Some(library_no),
+        Some(contract_no),
         var_no,
     ))
 }
