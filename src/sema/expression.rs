@@ -14,8 +14,8 @@ use std::ops::{Add, Shl, Sub};
 
 use super::address::to_hexstr_eip55;
 use super::ast::{
-    Builtin, CallTy, Diagnostic, Expression, Function, Mutability, Namespace, StringLocation,
-    Symbol, Type,
+    Builtin, CallTy, Contract, Diagnostic, Expression, Function, Mutability, Namespace,
+    StringLocation, Symbol, Type,
 };
 use super::builtin;
 use super::contracts::{is_base, visit_bases};
@@ -4902,12 +4902,18 @@ fn member_access(
         }
     }
 
-    // is an enum value
+    // is it an enum value
     if let Some(expr) = enum_value(loc, e, id, file_no, contract_no, ns, diagnostics)? {
         return Ok(expr);
     }
 
-    // is it an basecontract.function expression (unless basecontract is a local variable)
+    // is it a constant in a library (unless basecontract is a local variable)
+    match library_constant(e, id, file_no, ns, symtable) {
+        None => (),
+        Some(expr) => return Ok(expr),
+    }
+
+    // is it a basecontract.function.selector expression (unless basecontract is a local variable)
     if let pt::Expression::Variable(namespace) = e {
         if symtable.find(&namespace.name).is_none() {
             if let Some(call_contract_no) = ns.resolve_contract(file_no, namespace) {
@@ -5243,6 +5249,48 @@ fn member_access(
     diagnostics.push(Diagnostic::error(*loc, format!("‘{}’ not found", id.name)));
 
     Err(())
+}
+
+fn library_constant(
+    e: &pt::Expression,
+    id: &pt::Identifier,
+    file_no: usize,
+    ns: &mut Namespace,
+    symtable: &mut Symtable,
+) -> Option<Expression> {
+    let namespace = match e {
+        pt::Expression::Variable(namespace) => namespace,
+        _ => return None,
+    };
+
+    if symtable.find(&namespace.name).is_some() {
+        return None;
+    };
+
+    let library_no = ns.resolve_contract(file_no, namespace)?;
+
+    let variables = match &mut ns.contracts[library_no] {
+        Contract {
+            ty: pt::ContractTy::Library(_),
+            variables,
+            ..
+        } => variables,
+        _ => return None,
+    };
+
+    let (var_no, constant) = variables
+        .iter_mut()
+        .enumerate()
+        .find(|(_, constant)| constant.name == id.name)?;
+
+    constant.read = true;
+
+    Some(Expression::ConstantVariable(
+        constant.loc,
+        constant.ty.clone(),
+        Some(library_no),
+        var_no,
+    ))
 }
 
 /// Resolve an array subscript expression

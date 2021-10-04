@@ -10,6 +10,7 @@ mod destructure;
 mod events;
 mod expressions;
 mod hash;
+mod library;
 mod mappings;
 mod primitives;
 mod signature_verify;
