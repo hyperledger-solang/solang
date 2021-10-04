@@ -1449,7 +1449,7 @@ impl VirtualMachine {
                     .collect();
                 let data = fields[1].clone();
 
-                RawLog { data, topics }
+                RawLog { topics, data }
             })
             .collect()
     }
