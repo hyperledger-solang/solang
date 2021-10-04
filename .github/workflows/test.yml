@@ -22,7 +22,7 @@ jobs:
       - name: Run cargo fmt
         run: cargo fmt --all -- --check
       - name: Run cargo clippy
-        run: cargo clippy --tests --bins -- -D warnings
+        run: cargo clippy --tests --bins -- -D warnings -D clippy::inconsistent-struct-constructor
       - name: Ensure cargo publish is happy
         run: cargo publish --dry-run
 
@@ -63,7 +63,7 @@ jobs:
       run: echo "c:\llvm12.0\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8
     # We run clippy on Linux in the lint job above, but this does not check #[cfg(windows)] items
     - name: Run cargo clippy
-      run: cargo clippy --tests --bins -- -D warnings
+      run: cargo clippy --tests --bins -- -D warnings -D clippy::inconsistent-struct-constructor
     - name: Build
       run: cargo build --verbose
     - name: Run tests
