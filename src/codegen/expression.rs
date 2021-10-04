@@ -470,7 +470,6 @@ pub fn expression(
         | Expression::ExternalFunctionCall { .. }
         | Expression::Builtin(_, _, Builtin::AbiDecode, _) => {
             let mut returns = emit_function_call(expr, contract_no, cfg, func, ns, vartab);
-
             assert_eq!(returns.len(), 1);
 
             returns.remove(0)

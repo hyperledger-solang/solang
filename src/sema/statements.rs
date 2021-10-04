@@ -1,8 +1,8 @@
 use super::ast::*;
 use super::contracts::is_base;
 use super::expression::{
-    available_functions, call_position_args, cast, constructor_named_args, expression,
-    function_call_expr, match_constructor_to_args, named_function_call_expr, new,
+    available_functions, call_expr, call_position_args, cast, constructor_named_args, expression,
+    function_call_expr, match_constructor_to_args, named_call_expr, named_function_call_expr, new,
 };
 use super::symtable::{LoopScopes, Symtable};
 use crate::parser::pt;
@@ -752,21 +752,26 @@ fn statement(
                 return Err(());
             }
 
-            res.push(Statement::Return(
-                *loc,
-                symtable
-                    .returns
-                    .iter()
-                    .map(|pos| {
-                        Expression::Variable(pt::Loc(0, 0, 0), symtable.vars[pos].ty.clone(), *pos)
-                    })
-                    .collect(),
-            ));
+            let exprs = symtable
+                .returns
+                .iter()
+                .map(|pos| {
+                    Expression::Variable(pt::Loc(0, 0, 0), symtable.vars[pos].ty.clone(), *pos)
+                })
+                .collect::<Vec<_>>();
+
+            let expr = if exprs.len() > 1 {
+                Some(Expression::List(pt::Loc(0, 0, 0), exprs))
+            } else {
+                exprs.into_iter().next()
+            };
+
+            res.push(Statement::Return(*loc, expr));
 
             Ok(false)
         }
         pt::Statement::Return(loc, Some(returns)) => {
-            let vals = return_with_values(
+            let expr = return_with_values(
                 returns,
                 loc,
                 file_no,
@@ -783,11 +788,7 @@ fn statement(
                 (*elem).assigned = true;
             }
 
-            for item in &vals {
-                used_variable(ns, item, symtable);
-            }
-
-            res.push(Statement::Return(*loc, vals));
+            res.push(Statement::Return(*loc, Some(expr)));
 
             Ok(false)
         }
@@ -1452,7 +1453,6 @@ fn destructure_values(
                     diagnostics,
                     left_tys[i].as_ref(),
                 )?;
-
                 match e.ty() {
                     Type::Void | Type::Unreachable => {
                         diagnostics.push(Diagnostic::error(
@@ -1492,7 +1492,7 @@ fn destructure_values(
         return Err(());
     }
 
-    // check that the values can be cast
+    // Check that the values can be cast
     for (i, field) in fields.iter().enumerate() {
         if let Some(left_ty) = &left_tys[i] {
             let loc = field.loc().unwrap();
@@ -1506,7 +1506,6 @@ fn destructure_values(
             )?;
         }
     }
-
     Ok(expr)
 }
 
@@ -1562,7 +1561,7 @@ fn resolve_var_decl_ty(
     Ok((var_ty, loc_ty))
 }
 
-/// Parse return statement with values
+/// Resolve return statement
 fn return_with_values(
     returns: &pt::Expression,
     loc: &pt::Loc,
@@ -1573,12 +1572,171 @@ fn return_with_values(
     symtable: &mut Symtable,
     ns: &mut Namespace,
     diagnostics: &mut Vec<Diagnostic>,
-) -> Result<Vec<Expression>, ()> {
-    let returns = parameter_list_to_expr_list(returns, diagnostics)?;
-
+) -> Result<Expression, ()> {
     let no_returns = ns.functions[function_no].returns.len();
+    let expr_returns = match returns {
+        pt::Expression::FunctionCall(loc, ty, args) => {
+            let expr = call_expr(
+                loc,
+                ty,
+                args,
+                true,
+                file_no,
+                contract_no,
+                Some(function_no),
+                ns,
+                symtable,
+                false,
+                unchecked,
+                diagnostics,
+            )?;
+            used_variable(ns, &expr, symtable);
+            expr
+        }
+        pt::Expression::NamedFunctionCall(loc, ty, args) => {
+            let expr = named_call_expr(
+                loc,
+                ty,
+                args,
+                true,
+                file_no,
+                contract_no,
+                Some(function_no),
+                ns,
+                symtable,
+                false,
+                unchecked,
+                diagnostics,
+            )?;
+            used_variable(ns, &expr, symtable);
+            expr
+        }
+        pt::Expression::Ternary(loc, cond, left, right) => {
+            let cond = expression(
+                cond,
+                file_no,
+                contract_no,
+                Some(function_no),
+                ns,
+                symtable,
+                false,
+                unchecked,
+                diagnostics,
+                Some(&Type::Bool),
+            )?;
+            used_variable(ns, &cond, symtable);
 
-    if no_returns > 0 && returns.is_empty() {
+            let left = return_with_values(
+                left,
+                &left.loc(),
+                file_no,
+                contract_no,
+                function_no,
+                unchecked,
+                symtable,
+                ns,
+                diagnostics,
+            )?;
+            used_variable(ns, &left, symtable);
+
+            let right = return_with_values(
+                right,
+                &right.loc(),
+                file_no,
+                contract_no,
+                function_no,
+                unchecked,
+                symtable,
+                ns,
+                diagnostics,
+            )?;
+            used_variable(ns, &right, symtable);
+
+            return Ok(Expression::Ternary(
+                *loc,
+                Type::Unreachable,
+                Box::new(cond),
+                Box::new(left),
+                Box::new(right),
+            ));
+        }
+        _ => {
+            let returns = parameter_list_to_expr_list(returns, diagnostics)?;
+
+            if no_returns > 0 && returns.is_empty() {
+                diagnostics.push(Diagnostic::error(
+                    *loc,
+                    format!(
+                        "missing return value, {} return values expected",
+                        no_returns
+                    ),
+                ));
+                return Err(());
+            }
+
+            if no_returns == 0 && !returns.is_empty() {
+                diagnostics.push(Diagnostic::error(
+                    *loc,
+                    "function has no return values".to_string(),
+                ));
+                return Err(());
+            }
+
+            if no_returns != returns.len() {
+                diagnostics.push(Diagnostic::error(
+                    *loc,
+                    format!(
+                        "incorrect number of return values, expected {} but got {}",
+                        no_returns,
+                        returns.len(),
+                    ),
+                ));
+                return Err(());
+            }
+
+            let mut exprs = Vec::new();
+
+            let return_tys = ns.functions[function_no]
+                .returns
+                .iter()
+                .map(|r| r.ty.clone())
+                .collect::<Vec<_>>();
+
+            for (expr_return, return_ty) in returns.iter().zip(return_tys) {
+                let expr = expression(
+                    expr_return,
+                    file_no,
+                    contract_no,
+                    Some(function_no),
+                    ns,
+                    symtable,
+                    false,
+                    unchecked,
+                    diagnostics,
+                    Some(&return_ty),
+                )?;
+                let expr = cast(loc, expr, &return_ty, true, ns, diagnostics)?;
+                used_variable(ns, &expr, symtable);
+                exprs.push(expr);
+            }
+
+            return Ok(if exprs.len() == 1 {
+                exprs[0].clone()
+            } else {
+                Expression::List(*loc, exprs)
+            });
+        }
+    };
+
+    let mut expr_return_tys = expr_returns.tys();
+    // Return type void or unreachable are synthetic
+    if expr_return_tys.len() == 1
+        && (expr_return_tys[0] == Type::Unreachable || expr_return_tys[0] == Type::Void)
+    {
+        expr_return_tys.truncate(0);
+    }
+
+    if no_returns > 0 && expr_return_tys.is_empty() {
         diagnostics.push(Diagnostic::error(
             *loc,
             format!(
@@ -1589,7 +1747,7 @@ fn return_with_values(
         return Err(());
     }
 
-    if no_returns == 0 && !returns.is_empty() {
+    if no_returns == 0 && !expr_return_tys.is_empty() {
         diagnostics.push(Diagnostic::error(
             *loc,
             "function has no return values".to_string(),
@@ -1597,40 +1755,42 @@ fn return_with_values(
         return Err(());
     }
 
-    if no_returns != returns.len() {
+    if no_returns != expr_return_tys.len() {
         diagnostics.push(Diagnostic::error(
             *loc,
             format!(
                 "incorrect number of return values, expected {} but got {}",
                 no_returns,
-                returns.len()
+                expr_return_tys.len(),
             ),
         ));
         return Err(());
     }
 
-    let mut exprs = Vec::new();
+    let func_returns_tys = ns.functions[function_no]
+        .returns
+        .iter()
+        .map(|r| r.ty.clone())
+        .collect::<Vec<_>>();
 
-    for (i, r) in returns.iter().enumerate() {
-        let ty = ns.functions[function_no].returns[i].ty.clone();
+    // Check that the values can be cast
+    let _ = expr_return_tys
+        .into_iter()
+        .zip(func_returns_tys)
+        .enumerate()
+        .map(|(i, (expr_return_ty, func_return_ty))| {
+            cast(
+                &expr_returns.loc(),
+                Expression::FunctionArg(expr_returns.loc(), expr_return_ty, i),
+                &func_return_ty,
+                true,
+                ns,
+                diagnostics,
+            )
+        })
+        .collect::<Result<Vec<_>, _>>()?;
 
-        let e = expression(
-            r,
-            file_no,
-            contract_no,
-            Some(function_no),
-            ns,
-            symtable,
-            false,
-            unchecked,
-            diagnostics,
-            Some(&ty),
-        )?;
-
-        exprs.push(cast(&r.loc(), e, &ty, true, ns, diagnostics)?);
-    }
-
-    Ok(exprs)
+    Ok(expr_returns)
 }
 
 /// The parser generates parameter lists for lists. Sometimes this needs to be a

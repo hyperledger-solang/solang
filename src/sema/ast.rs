@@ -1389,7 +1389,7 @@ pub enum Statement {
     Destructure(pt::Loc, Vec<DestructureField>, Expression),
     Continue(pt::Loc),
     Break(pt::Loc),
-    Return(pt::Loc, Vec<Expression>),
+    Return(pt::Loc, Option<Expression>),
     Emit {
         loc: pt::Loc,
         event_no: usize,

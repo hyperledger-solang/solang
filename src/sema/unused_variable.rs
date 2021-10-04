@@ -181,12 +181,7 @@ pub fn check_function_call(ns: &mut Namespace, exp: &Expression, symtable: &mut 
             used_variable(ns, gas, symtable);
         }
 
-        Expression::ExternalFunction {
-            loc: _,
-            ty: _,
-            address,
-            ..
-        } => {
+        Expression::ExternalFunction { address, .. } => {
             used_variable(ns, address, symtable);
         }
 

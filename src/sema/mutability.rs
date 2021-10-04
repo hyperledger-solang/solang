@@ -201,10 +201,9 @@ fn recurse_statements(stmts: &[Statement], state: &mut StateCheck) {
                     }
                 }
             }
-            Statement::Return(_, exprs) => {
-                for e in exprs {
-                    e.recurse(state, read_expression);
-                }
+            Statement::Return(_, None) => {}
+            Statement::Return(_, Some(expr)) => {
+                expr.recurse(state, read_expression);
             }
             Statement::TryCatch {
                 expr,
