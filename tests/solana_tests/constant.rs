@@ -21,18 +21,17 @@ fn constant() {
     vm.constructor("foo", &[], 0);
 
     let returns = vm.function("f", &[], &[], 0);
-
     assert_eq!(returns, vec![Token::Uint(ethereum_types::U256::from(42))]);
 
     let mut vm = build_solidity(
         r#"
-        contract Library {
+        contract C {
             uint256 public constant STATIC = 42;
         }
 
         contract foo {
             function f() public returns (uint) {
-                uint a = Library.STATIC;
+                uint a = C.STATIC;
                 return a;
             }
         }
@@ -42,27 +41,45 @@ fn constant() {
     vm.constructor("foo", &[], 0);
 
     let returns = vm.function("f", &[], &[], 0);
-
     assert_eq!(returns, vec![Token::Uint(ethereum_types::U256::from(42))]);
 }
 
 #[test]
-fn contract_constant_call() {
+fn not_constant() {
     let ns = parse_and_resolve(
         r#"
-        contract Library {
+        contract C {
             uint256 public constant STATIC = 42;
         }
 
         contract foo {
             function f() public returns (uint) {
-                uint a = Library.STATIC();
+                uint a = C.STATIC();
                 return a;
             }
         }
         "#,
         Target::Solana,
     );
+    assert_eq!(first_error(ns.diagnostics), "`C' is a contract",);
 
-    assert_eq!(first_error(ns.diagnostics), "`Library' is a contract",);
+    let ns = parse_and_resolve(
+        r#"
+        contract C {
+            uint256 public NOT_CONSTANT = 42;
+        }
+
+        contract foo {
+            function f() public returns (uint) {
+                uint a = C.NOT_CONSTANT;
+                return a;
+            }
+        }
+        "#,
+        Target::Solana,
+    );
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "conversion from function() internal view returns (uint256) to uint256 not possible",
+    );
 }

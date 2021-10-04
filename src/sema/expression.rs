@@ -5272,7 +5272,7 @@ fn contract_constant(
         .variables
         .iter_mut()
         .enumerate()
-        .find(|(_, constant)| constant.name == id.name)?;
+        .find(|(_, variable)| variable.name == id.name && variable.constant)?;
 
     constant.read = true;
 
