@@ -73,12 +73,12 @@ Installing LLVM on Linux
 ________________________
 
 A pre-built version of llvm, specifically configured for Solang, is available at
-`<https://github.com/hyperledger-labs/solang/releases/download/v0.1.8/llvm12.0-linux-intel.tar.xz>`_.
+`<https://github.com/hyperledger-labs/solang/releases/download/v0.1.8/llvm12.0-linux-x86-64.tar.xz>`_.
 After downloading, untar the file in a terminal and add it to your path.
 
 .. code-block:: bash
 
-	tar Jxf llvm12.0-linux-intel.tar.xz
+	tar Jxf llvm12.0-linux-x86-64.tar.xz
 	export PATH=$(pwd)/llvm12.0/bin:$PATH
 
 Installing LLVM on Windows
