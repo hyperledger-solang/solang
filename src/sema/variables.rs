@@ -363,11 +363,11 @@ pub fn var_decl(
             // Create the implicit body - just return the value
             func.body = vec![Statement::Return(
                 pt::Loc(0, 0, 0),
-                vec![if is_constant {
+                Some(if is_constant {
                     expr
                 } else {
                     Expression::StorageLoad(pt::Loc(0, 0, 0), ty.clone(), Box::new(expr))
-                }],
+                }),
             )];
             func.is_accessor = true;
             func.has_body = true;

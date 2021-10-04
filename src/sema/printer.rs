@@ -612,15 +612,11 @@ fn print_statement(stmts: &[Statement], func: &Function, ns: &Namespace) -> Vec<
             }
             Statement::Break(_) => Tree::Leaf(String::from("break")),
             Statement::Continue(_) => Tree::Leaf(String::from("continue")),
-            Statement::Return(_, args) => {
-                if args.is_empty() {
-                    Tree::Leaf(String::from("return"))
-                } else {
-                    let args = args.iter().map(|e| print_expr(e, Some(func), ns)).collect();
-
-                    Tree::Branch(String::from("return"), args)
-                }
-            }
+            Statement::Return(_, None) => Tree::Leaf(String::from("return")),
+            Statement::Return(_, Some(expr)) => Tree::Branch(
+                String::from("return"),
+                vec![print_expr(expr, Some(func), ns)],
+            ),
             Statement::Emit { event_no, args, .. } => {
                 let args = args.iter().map(|e| print_expr(e, Some(func), ns)).collect();
 

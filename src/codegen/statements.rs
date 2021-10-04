@@ -82,16 +82,14 @@ pub fn statement(
                 },
             );
         }
-        Statement::Return(_, values) => {
+        Statement::Return(_, expr) => {
             if let Some(return_instr) = return_override {
                 cfg.add(vartab, return_instr.clone());
             } else {
-                let values = values
-                    .iter()
-                    .map(|expr| expression(expr, cfg, contract_no, Some(func), ns, vartab))
-                    .collect();
-
-                cfg.add(vartab, Instr::Return { value: values });
+                match expr {
+                    None => cfg.add(vartab, Instr::Return { value: Vec::new() }),
+                    Some(expr) => returns(expr, cfg, contract_no, func, ns, vartab, loops),
+                }
             }
         }
         Statement::Expression(_, reachable, expr) => {
@@ -757,6 +755,75 @@ fn if_then_else(
     cfg.set_basic_block(endif);
 }
 
+fn returns(
+    expr: &Expression,
+    cfg: &mut ControlFlowGraph,
+    contract_no: usize,
+    func: &Function,
+    ns: &Namespace,
+    vartab: &mut Vartable,
+    loops: &mut LoopScopes,
+) {
+    // Can only be another function call without returns
+    let uncast_values = match expr {
+        // Explicitly recurse for ternary expressions.
+        // `return a ? b : c` is transformed into pseudo code `a ? return b : return c`
+        Expression::Ternary(_, _, cond, left, right) => {
+            let cond = expression(cond, cfg, contract_no, Some(func), ns, vartab);
+
+            let left_block = cfg.new_basic_block("left".to_string());
+            let right_block = cfg.new_basic_block("right".to_string());
+
+            cfg.add(
+                vartab,
+                Instr::BranchCond {
+                    cond,
+                    true_block: left_block,
+                    false_block: right_block,
+                },
+            );
+
+            vartab.new_dirty_tracker(ns.next_id);
+
+            cfg.set_basic_block(left_block);
+            returns(left, cfg, contract_no, func, ns, vartab, loops);
+
+            cfg.set_basic_block(right_block);
+            returns(right, cfg, contract_no, func, ns, vartab, loops);
+
+            return;
+        }
+
+        Expression::Builtin(_, _, Builtin::AbiDecode, _)
+        | Expression::InternalFunctionCall { .. }
+        | Expression::ExternalFunctionCall { .. }
+        | Expression::ExternalFunctionCallRaw { .. } => {
+            emit_function_call(expr, contract_no, cfg, Some(func), ns, vartab)
+        }
+
+        Expression::List(_, exprs) => exprs.clone(),
+
+        // Can be any other expression
+        _ => {
+            vec![expr.clone()]
+        }
+    };
+
+    let cast_values = func
+        .returns
+        .iter()
+        .zip(uncast_values.into_iter())
+        .map(|(left, right)| {
+            let right = cast(&left.loc, right, &left.ty, true, ns, &mut Vec::new())
+                .expect("sema should have checked cast");
+            // casts to StorageLoad generate LoadStorage instructions
+            expression(&right, cfg, contract_no, Some(func), ns, vartab)
+        })
+        .collect();
+
+    cfg.add(vartab, Instr::Return { value: cast_values });
+}
+
 fn destructure(
     fields: &[DestructureField],
     expr: &Expression,
@@ -880,6 +947,7 @@ fn destructure(
         }
     }
 }
+
 /// Resolve try catch statement
 #[allow(clippy::too_many_arguments)]
 fn try_catch(

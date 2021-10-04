@@ -137,7 +137,7 @@ impl Expression {
         }
     }
 
-    /// Get the returns for a function call
+    /// Return the type for this expression.
     pub fn tys(&self) -> Vec<Type> {
         match self {
             Expression::Builtin(_, returns, _, _)
@@ -153,7 +153,7 @@ impl Expression {
                 }
             }
             Expression::FormatString(_, _) => vec![Type::String],
-            _ => unreachable!(),
+            _ => vec![self.ty()],
         }
     }
 }
@@ -1147,8 +1147,8 @@ fn cast_types(
             Ok(Expression::Cast(*loc, to.clone(), Box::new(expr)))
         }
         // string conversions
+        // (Type::Bytes(_), Type::String) => Ok(Expression::Cast(*loc, to.clone(), Box::new(expr))),
         /*
-        (Type::Bytes(_), Type::String) => Ok(Expression::Cast(*loc, to.clone(), Box::new(expr)),
         (Type::String, Type::Bytes(to_len)) => {
             if let Expression::BytesLiteral(_, from_str) = &expr {
                 if from_str.len() > to_len as usize {
@@ -1915,70 +1915,20 @@ pub fn expression(
                 diagnostics,
             )
         }
-        pt::Expression::NamedFunctionCall(loc, ty, args) => {
-            let mut nullsink = Vec::new();
-
-            // is it a struct literal
-            match ns.resolve_type(file_no, contract_no, true, ty, &mut nullsink) {
-                Ok(Type::Struct(n)) => {
-                    return named_struct_literal(
-                        loc,
-                        n,
-                        args,
-                        file_no,
-                        contract_no,
-                        function_no,
-                        ns,
-                        symtable,
-                        is_constant,
-                        unchecked,
-                        diagnostics,
-                    );
-                }
-                Ok(_) => {
-                    diagnostics.push(Diagnostic::error(
-                        *loc,
-                        "struct or function expected".to_string(),
-                    ));
-                    return Err(());
-                }
-                _ => {}
-            }
-
-            // not a struct literal, remove those errors and try resolving as function call
-            if is_constant {
-                diagnostics.push(Diagnostic::error(
-                    expr.loc(),
-                    "cannot call function in constant expression".to_string(),
-                ));
-                return Err(());
-            }
-
-            let expr = named_function_call_expr(
-                loc,
-                ty,
-                args,
-                file_no,
-                contract_no,
-                function_no,
-                unchecked,
-                ns,
-                symtable,
-                diagnostics,
-            )?;
-
-            check_function_call(ns, &expr, symtable);
-            if expr.tys().len() > 1 {
-                diagnostics.push(Diagnostic::error(
-                    *loc,
-                    "destucturing statement needed for function that returns multiple values"
-                        .to_string(),
-                ));
-                return Err(());
-            }
-
-            Ok(expr)
-        }
+        pt::Expression::NamedFunctionCall(loc, ty, args) => named_call_expr(
+            loc,
+            ty,
+            args,
+            false,
+            file_no,
+            contract_no,
+            function_no,
+            ns,
+            symtable,
+            is_constant,
+            unchecked,
+            diagnostics,
+        ),
         pt::Expression::New(loc, call) => {
             if is_constant {
                 diagnostics.push(Diagnostic::error(
@@ -2038,85 +1988,20 @@ pub fn expression(
             ));
             Err(())
         }
-        pt::Expression::FunctionCall(loc, ty, args) => {
-            let mut nullsink = Vec::new();
-
-            match ns.resolve_type(file_no, contract_no, true, ty, &mut nullsink) {
-                Ok(Type::Struct(n)) => {
-                    return struct_literal(
-                        loc,
-                        n,
-                        args,
-                        file_no,
-                        contract_no,
-                        function_no,
-                        ns,
-                        symtable,
-                        is_constant,
-                        unchecked,
-                        diagnostics,
-                    );
-                }
-                Ok(to) => {
-                    // Cast
-                    return if args.is_empty() {
-                        diagnostics.push(Diagnostic::error(
-                            *loc,
-                            "missing argument to cast".to_string(),
-                        ));
-                        Err(())
-                    } else if args.len() > 1 {
-                        diagnostics.push(Diagnostic::error(
-                            *loc,
-                            "too many arguments to cast".to_string(),
-                        ));
-                        Err(())
-                    } else {
-                        let expr = expression(
-                            &args[0],
-                            file_no,
-                            contract_no,
-                            function_no,
-                            ns,
-                            symtable,
-                            is_constant,
-                            unchecked,
-                            diagnostics,
-                            None,
-                        )?;
-
-                        cast(loc, expr, &to, false, ns, diagnostics)
-                    };
-                }
-                Err(_) => (),
-            }
-
-            let expr = function_call_expr(
-                loc,
-                ty,
-                args,
-                file_no,
-                contract_no,
-                function_no,
-                ns,
-                symtable,
-                is_constant,
-                unchecked,
-                diagnostics,
-            )?;
-
-            check_function_call(ns, &expr, symtable);
-            if expr.tys().len() > 1 {
-                diagnostics.push(Diagnostic::error(
-                    *loc,
-                    "destucturing statement needed for function that returns multiple values"
-                        .to_string(),
-                ));
-                return Err(());
-            }
-
-            Ok(expr)
-        }
+        pt::Expression::FunctionCall(loc, ty, args) => call_expr(
+            loc,
+            ty,
+            args,
+            false,
+            file_no,
+            contract_no,
+            function_no,
+            ns,
+            symtable,
+            is_constant,
+            unchecked,
+            diagnostics,
+        ),
         pt::Expression::ArraySubscript(loc, _, None) => {
             diagnostics.push(Diagnostic::error(
                 *loc,
@@ -7847,6 +7732,176 @@ fn parse_call_args(
     }
 
     Ok(res)
+}
+
+pub fn named_call_expr(
+    loc: &pt::Loc,
+    ty: &pt::Expression,
+    args: &[pt::NamedArgument],
+    is_destructible: bool,
+    file_no: usize,
+    contract_no: Option<usize>,
+    function_no: Option<usize>,
+    ns: &mut Namespace,
+    symtable: &mut Symtable,
+    is_constant: bool,
+    unchecked: bool,
+    diagnostics: &mut Vec<Diagnostic>,
+) -> Result<Expression, ()> {
+    let mut nullsink = Vec::new();
+
+    // is it a struct literal
+    match ns.resolve_type(file_no, contract_no, true, ty, &mut nullsink) {
+        Ok(Type::Struct(n)) => {
+            return named_struct_literal(
+                loc,
+                n,
+                args,
+                file_no,
+                contract_no,
+                function_no,
+                ns,
+                symtable,
+                is_constant,
+                unchecked,
+                diagnostics,
+            );
+        }
+        Ok(_) => {
+            diagnostics.push(Diagnostic::error(
+                *loc,
+                "struct or function expected".to_string(),
+            ));
+            return Err(());
+        }
+        _ => {}
+    }
+
+    // not a struct literal, remove those errors and try resolving as function call
+    if is_constant {
+        diagnostics.push(Diagnostic::error(
+            *loc,
+            "cannot call function in constant expression".to_string(),
+        ));
+        return Err(());
+    }
+
+    let expr = named_function_call_expr(
+        loc,
+        ty,
+        args,
+        file_no,
+        contract_no,
+        function_no,
+        unchecked,
+        ns,
+        symtable,
+        diagnostics,
+    )?;
+
+    check_function_call(ns, &expr, symtable);
+    if expr.tys().len() > 1 && !is_destructible {
+        diagnostics.push(Diagnostic::error(
+            *loc,
+            "destucturing statement needed for function that returns multiple values".to_string(),
+        ));
+        return Err(());
+    }
+
+    Ok(expr)
+}
+
+/// Resolve any callable expression
+pub fn call_expr(
+    loc: &pt::Loc,
+    ty: &pt::Expression,
+    args: &[pt::Expression],
+    is_destructible: bool,
+    file_no: usize,
+    contract_no: Option<usize>,
+    function_no: Option<usize>,
+    ns: &mut Namespace,
+    symtable: &mut Symtable,
+    is_constant: bool,
+    unchecked: bool,
+    diagnostics: &mut Vec<Diagnostic>,
+) -> Result<Expression, ()> {
+    let mut nullsink = Vec::new();
+
+    match ns.resolve_type(file_no, contract_no, true, ty, &mut nullsink) {
+        Ok(Type::Struct(n)) => {
+            return struct_literal(
+                loc,
+                n,
+                args,
+                file_no,
+                contract_no,
+                function_no,
+                ns,
+                symtable,
+                is_constant,
+                unchecked,
+                diagnostics,
+            );
+        }
+        Ok(to) => {
+            // Cast
+            return if args.is_empty() {
+                diagnostics.push(Diagnostic::error(
+                    *loc,
+                    "missing argument to cast".to_string(),
+                ));
+                Err(())
+            } else if args.len() > 1 {
+                diagnostics.push(Diagnostic::error(
+                    *loc,
+                    "too many arguments to cast".to_string(),
+                ));
+                Err(())
+            } else {
+                let expr = expression(
+                    &args[0],
+                    file_no,
+                    contract_no,
+                    function_no,
+                    ns,
+                    symtable,
+                    is_constant,
+                    unchecked,
+                    diagnostics,
+                    None,
+                )?;
+
+                cast(loc, expr, &to, false, ns, diagnostics)
+            };
+        }
+        Err(_) => (),
+    }
+
+    let expr = function_call_expr(
+        loc,
+        ty,
+        args,
+        file_no,
+        contract_no,
+        function_no,
+        ns,
+        symtable,
+        is_constant,
+        unchecked,
+        diagnostics,
+    )?;
+
+    check_function_call(ns, &expr, symtable);
+    if expr.tys().len() > 1 && !is_destructible {
+        diagnostics.push(Diagnostic::error(
+            *loc,
+            "destucturing statement needed for function that returns multiple values".to_string(),
+        ));
+        return Err(());
+    }
+
+    Ok(expr)
 }
 
 /// Resolve function call
