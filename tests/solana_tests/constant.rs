@@ -80,6 +80,6 @@ fn not_constant() {
     );
     assert_eq!(
         first_error(ns.diagnostics),
-        "conversion from function() internal view returns (uint256) to uint256 not possible",
+        "need instance of contract ‘C’ to get variable value ‘NOT_CONSTANT’",
     );
 }
