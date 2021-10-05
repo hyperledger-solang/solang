@@ -2158,3 +2158,33 @@ fn visibility() {
         "visibility ‘private’ of function ‘foo’ is not compatible with visibility ‘internal’"
     );
 }
+
+#[test]
+fn var_or_function() {
+    let mut runtime = build_solidity(
+        r##"
+        contract x is c {
+            function f1() public returns (int64) {
+                return c.selector();
+            }
+
+            function f2() public returns (int64)  {
+                function() internal returns (int64) a = c.selector;
+                return a();
+            }
+        }
+
+        contract c {
+            int64 public selector = 102;
+        }"##,
+    );
+
+    runtime.constructor(0, Vec::new());
+    runtime.function("f1", Vec::new());
+
+    assert_eq!(runtime.vm.output, 102u64.encode());
+
+    runtime.function("f2", Vec::new());
+
+    assert_eq!(runtime.vm.output, 102u64.encode());
+}

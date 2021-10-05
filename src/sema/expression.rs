@@ -4793,7 +4793,7 @@ fn member_access(
     }
 
     // is it a constant (unless basecontract is a local variable)
-    if let Some(expr) = contract_constant(e, id, file_no, ns, symtable) {
+    if let Some(expr) = contract_constant(e, id, file_no, ns, symtable, diagnostics, resolve_to)? {
         return Ok(expr);
     }
 
@@ -5141,32 +5141,63 @@ fn contract_constant(
     file_no: usize,
     ns: &mut Namespace,
     symtable: &mut Symtable,
-) -> Option<Expression> {
+    diagnostics: &mut Vec<Diagnostic>,
+    resolve_to: Option<&Type>,
+) -> Result<Option<Expression>, ()> {
     let namespace = match e {
         pt::Expression::Variable(namespace) => namespace,
-        _ => return None,
+        _ => return Ok(None),
     };
 
     if symtable.find(&namespace.name).is_some() {
-        return None;
-    };
+        return Ok(None);
+    }
 
-    let contract_no = ns.resolve_contract(file_no, namespace)?;
+    if let Some(contract_no) = ns.resolve_contract(file_no, namespace) {
+        if let Some((var_no, var)) = ns.contracts[contract_no]
+            .variables
+            .iter_mut()
+            .enumerate()
+            .find(|(_, variable)| variable.name == id.name)
+        {
+            if !var.constant {
+                let resolve_function = resolve_to
+                    .map(|ty| {
+                        matches!(
+                            ty,
+                            Type::InternalFunction { .. } | Type::ExternalFunction { .. }
+                        )
+                    })
+                    .unwrap_or(false);
 
-    let (var_no, constant) = ns.contracts[contract_no]
-        .variables
-        .iter_mut()
-        .enumerate()
-        .find(|(_, variable)| variable.name == id.name && variable.constant)?;
+                if resolve_function {
+                    // requested function, fall through
+                    return Ok(None);
+                } else {
+                    diagnostics.push(Diagnostic::error(
+                        e.loc(),
+                        format!(
+                            "need instance of contract ‘{}’ to get variable value ‘{}’",
+                            ns.contracts[contract_no].name,
+                            ns.contracts[contract_no].variables[var_no].name,
+                        ),
+                    ));
+                    return Err(());
+                }
+            }
 
-    constant.read = true;
+            var.read = true;
 
-    Some(Expression::ConstantVariable(
-        constant.loc,
-        constant.ty.clone(),
-        Some(contract_no),
-        var_no,
-    ))
+            return Ok(Some(Expression::ConstantVariable(
+                var.loc,
+                var.ty.clone(),
+                Some(contract_no),
+                var_no,
+            )));
+        }
+    }
+
+    Ok(None)
 }
 
 /// Resolve an array subscript expression
