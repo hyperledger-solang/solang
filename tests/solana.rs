@@ -702,20 +702,6 @@ struct SolAccountMeta {
     is_signer: bool,
 }
 
-/// Rust representation of C's SolAccountInfo
-#[derive(Debug)]
-struct SolAccountInfo {
-    key_addr: u64,
-    lamports_addr: u64,
-    data_len: u64,
-    data_addr: u64,
-    owner_addr: u64,
-    rent_epoch: u64,
-    is_signer: bool,
-    is_writable: bool,
-    executable: bool,
-}
-
 /// Rust representation of C's SolSignerSeed
 #[derive(Debug)]
 struct SolSignerSeedC {
@@ -1192,7 +1178,7 @@ impl VirtualMachine {
 
         vm.bind_syscall_context_object(
             Box::new(SyscallAllocFree {
-                allocator: Allocator::new(heap, ebpf::MM_HEAP_START),
+                allocator: Allocator::new(DEFAULT_HEAP_SIZE as u64, ebpf::MM_HEAP_START),
             }),
             None,
         )
