@@ -2,17 +2,14 @@ use std::alloc::Layout;
 
 #[derive(Debug)]
 pub struct Allocator {
-    heap: Vec<u8>,
     start: u64,
     len: u64,
     pos: u64,
 }
 
 impl Allocator {
-    pub fn new(heap: Vec<u8>, virtual_address: u64) -> Self {
-        let len = heap.len() as u64;
+    pub fn new(len: u64, virtual_address: u64) -> Self {
         Allocator {
-            heap,
             start: virtual_address,
             len,
             pos: 0,
