@@ -4787,12 +4787,17 @@ fn member_access(
         }
     }
 
-    // is an enum value
+    // is it an enum value
     if let Some(expr) = enum_value(loc, e, id, file_no, contract_no, ns, diagnostics)? {
         return Ok(expr);
     }
 
-    // is it an basecontract.function expression (unless basecontract is a local variable)
+    // is it a constant (unless basecontract is a local variable)
+    if let Some(expr) = contract_constant(e, id, file_no, ns, symtable) {
+        return Ok(expr);
+    }
+
+    // is it a basecontract.function.selector expression (unless basecontract is a local variable)
     if let pt::Expression::Variable(namespace) = e {
         if symtable.find(&namespace.name).is_none() {
             if let Some(call_contract_no) = ns.resolve_contract(file_no, namespace) {
@@ -5128,6 +5133,40 @@ fn member_access(
     diagnostics.push(Diagnostic::error(*loc, format!("‘{}’ not found", id.name)));
 
     Err(())
+}
+
+fn contract_constant(
+    e: &pt::Expression,
+    id: &pt::Identifier,
+    file_no: usize,
+    ns: &mut Namespace,
+    symtable: &mut Symtable,
+) -> Option<Expression> {
+    let namespace = match e {
+        pt::Expression::Variable(namespace) => namespace,
+        _ => return None,
+    };
+
+    if symtable.find(&namespace.name).is_some() {
+        return None;
+    };
+
+    let contract_no = ns.resolve_contract(file_no, namespace)?;
+
+    let (var_no, constant) = ns.contracts[contract_no]
+        .variables
+        .iter_mut()
+        .enumerate()
+        .find(|(_, variable)| variable.name == id.name && variable.constant)?;
+
+    constant.read = true;
+
+    Some(Expression::ConstantVariable(
+        constant.loc,
+        constant.ty.clone(),
+        Some(contract_no),
+        var_no,
+    ))
 }
 
 /// Resolve an array subscript expression

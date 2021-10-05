@@ -5,6 +5,7 @@ mod assembly;
 mod balance;
 mod builtin;
 mod call;
+mod constant;
 mod create_contract;
 mod destructure;
 mod events;
