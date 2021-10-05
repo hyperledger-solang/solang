@@ -79,9 +79,7 @@ SECTIONS
         CString::new(res_filename.to_str().expect("temp path should be unicode")).unwrap(),
     ];
 
-    if super::elf_linker(&command_line) {
-        panic!("linker failed");
-    }
+    assert!(!super::elf_linker(&command_line), "linker failed");
 
     let mut output = Vec::new();
     // read the whole file

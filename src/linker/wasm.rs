@@ -58,9 +58,7 @@ pub fn link(input: &[u8], name: &str, target: Target) -> Vec<u8> {
     command_line
         .push(CString::new(res_filename.to_str().expect("temp path should be unicode")).unwrap());
 
-    if super::wasm_linker(&command_line) {
-        panic!("linker failed");
-    }
+    assert!(!super::wasm_linker(&command_line), "linker failed");
 
     let mut output = Vec::new();
     // read the whole file
