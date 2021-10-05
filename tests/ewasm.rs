@@ -316,9 +316,10 @@ impl Externals for TestRuntime {
                 match module.invoke_export("main", &[], self) {
                     Err(wasmi::Error::Trap(trap)) => match trap.kind() {
                         TrapKind::Host(host_error) => {
-                            if host_error.downcast_ref::<HostCodeRevert>().is_some() {
-                                panic!("revert executed");
-                            }
+                            assert!(
+                                host_error.downcast_ref::<HostCodeRevert>().is_none(),
+                                "revert executed"
+                            );
                         }
                         _ => panic!("fail to invoke main via create: {}", trap),
                     },
@@ -522,9 +523,7 @@ impl Externals for TestRuntime {
                     topics: Vec::new(),
                 };
 
-                if topic_count > 4 {
-                    panic!("log: wrong topic count {}", topic_count);
-                }
+                assert!(topic_count <= 4, "log: wrong topic count {}", topic_count);
 
                 for topic in 0..topic_count {
                     let topic_ptr: u32 = args.nth_checked(3 + topic as usize)?;
@@ -627,9 +626,11 @@ impl TestRuntime {
         match module.invoke_export("main", &[], self) {
             Err(wasmi::Error::Trap(trap)) => match trap.kind() {
                 TrapKind::Host(host_error) => {
-                    if host_error.downcast_ref::<HostCodeFinish>().is_none() {
-                        panic!("fail to invoke main: {}", host_error);
-                    }
+                    assert!(
+                        host_error.downcast_ref::<HostCodeFinish>().is_some(),
+                        "fail to invoke main: {}",
+                        host_error
+                    );
                 }
                 _ => panic!("fail to invoke main: {}", trap),
             },
@@ -668,9 +669,11 @@ impl TestRuntime {
         match module.invoke_export("main", &[], self) {
             Err(wasmi::Error::Trap(trap)) => match trap.kind() {
                 TrapKind::Host(host_error) => {
-                    if host_error.downcast_ref::<HostCodeFinish>().is_none() {
-                        panic!("fail to invoke main: {}", host_error);
-                    }
+                    assert!(
+                        host_error.downcast_ref::<HostCodeFinish>().is_some(),
+                        "fail to invoke main: {}",
+                        host_error
+                    );
                 }
                 _ => panic!("fail to invoke main: {}", trap),
             },

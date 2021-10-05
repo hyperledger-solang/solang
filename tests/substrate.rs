@@ -137,9 +137,13 @@ impl Externals for TestRuntime {
                     .get_value::<u32>($len_ptr)
                     .expect(&format!("{} len_ptr should be valid", $name));
 
-                if (len as usize) < $buf.len() {
-                    panic!("{} input is {} buffer is {}", $name, $buf.len(), len);
-                }
+                assert!(
+                    (len as usize) >= $buf.len(),
+                    "{} input is {} buffer is {}",
+                    $name,
+                    $buf.len(),
+                    len
+                );
 
                 if let Err(e) = self.vm.memory.set($dest_ptr, $buf) {
                     panic!("{}: {}", $name, e);
@@ -163,9 +167,12 @@ impl Externals for TestRuntime {
                     .get_value::<u32>(len_ptr)
                     .expect("seal_input len_ptr should be valid");
 
-                if (len as usize) < self.vm.input.len() {
-                    panic!("input is {} seal_input buffer {}", self.vm.input.len(), len);
-                }
+                assert!(
+                    (len as usize) >= self.vm.input.len(),
+                    "input is {} seal_input buffer {}",
+                    self.vm.input.len(),
+                    len
+                );
 
                 if let Err(e) = self.vm.memory.set(dest_ptr, &self.vm.input) {
                     panic!("seal_input: {}", e);
@@ -200,9 +207,10 @@ impl Externals for TestRuntime {
                         .get_value::<u32>(len_ptr)
                         .expect("seal_get_storage len_ptr should be valid");
 
-                    if (len as usize) < value.len() {
-                        panic!("seal_get_storage buffer is too small");
-                    }
+                    assert!(
+                        (len as usize) >= value.len(),
+                        "seal_get_storage buffer is too small"
+                    );
 
                     if let Err(e) = self.vm.memory.set(dest_ptr, value) {
                         panic!("seal_get_storage: {}", e);
@@ -431,9 +439,10 @@ impl Externals for TestRuntime {
                     .get_value::<u32>(len_ptr)
                     .expect("seal_random len_ptr should be valid");
 
-                if (len as usize) < hash.len() {
-                    panic!("seal_random dest buffer is too small");
-                }
+                assert!(
+                    (len as usize) >= hash.len(),
+                    "seal_random dest buffer is too small"
+                );
 
                 if let Err(e) = self.vm.memory.set(dest_ptr, &hash) {
                     panic!("seal_random: {}", e);
@@ -459,9 +468,7 @@ impl Externals for TestRuntime {
 
                 let mut address = [0u8; 32];
 
-                if address_len != 32 {
-                    panic!("seal_call: len = {}", address_len);
-                }
+                assert!(address_len == 32, "seal_call: len = {}", address_len);
 
                 if let Err(e) = self.vm.memory.get_into(address_ptr, &mut address) {
                     panic!("seal_call: {}", e);
@@ -469,9 +476,7 @@ impl Externals for TestRuntime {
 
                 let mut value = [0u8; 16];
 
-                if value_len != 16 {
-                    panic!("seal_call: len = {}", value_len);
-                }
+                assert!(value_len == 16, "seal_call: len = {}", value_len);
 
                 if let Err(e) = self.vm.memory.get_into(value_ptr, &mut value) {
                     panic!("seal_call: {}", e);
@@ -548,9 +553,7 @@ impl Externals for TestRuntime {
 
                 let mut address = [0u8; 32];
 
-                if address_len != 32 {
-                    panic!("seal_transfer: len = {}", address_len);
-                }
+                assert!(address_len == 32, "seal_transfer: len = {}", address_len);
 
                 if let Err(e) = self.vm.memory.get_into(address_ptr, &mut address) {
                     panic!("seal_transfer: {}", e);
@@ -558,9 +561,7 @@ impl Externals for TestRuntime {
 
                 let mut value = [0u8; 16];
 
-                if value_len != 16 {
-                    panic!("seal_transfer: len = {}", value_len);
-                }
+                assert!(value_len == 16, "seal_transfer: len = {}", value_len);
 
                 if let Err(e) = self.vm.memory.get_into(value_ptr, &mut value) {
                     panic!("seal_transfer: {}", e);
@@ -596,9 +597,11 @@ impl Externals for TestRuntime {
 
                 let mut codehash = [0u8; 32];
 
-                if codehash_len != 32 {
-                    panic!("seal_instantiate: len = {}", codehash_len);
-                }
+                assert!(
+                    codehash_len == 32,
+                    "seal_instantiate: len = {}",
+                    codehash_len
+                );
 
                 if let Err(e) = self.vm.memory.get_into(codehash_ptr, &mut codehash) {
                     panic!("seal_instantiate: {}", e);
@@ -606,9 +609,7 @@ impl Externals for TestRuntime {
 
                 let mut value = [0u8; 16];
 
-                if value_len != 16 {
-                    panic!("seal_instantiate: len = {}", value_len);
-                }
+                assert!(value_len == 16, "seal_instantiate: len = {}", value_len);
 
                 if let Err(e) = self.vm.memory.get_into(value_ptr, &mut value) {
                     panic!("seal_instantiate: {}", e);
@@ -825,9 +826,7 @@ impl Externals for TestRuntime {
 
                 let mut address = [0u8; 32];
 
-                if address_len != 32 {
-                    panic!("seal_terminate: len = {}", address_len);
-                }
+                assert!(address_len == 32, "seal_terminate: len = {}", address_len);
 
                 if let Err(e) = self.vm.memory.get_into(address_ptr, &mut address) {
                     panic!("seal_terminate: {}", e);
@@ -1046,9 +1045,7 @@ impl TestRuntime {
         println!("input:{}", hex::encode(&self.vm.input));
 
         if let Some(RuntimeValue::I32(ret)) = self.invoke_call(module) {
-            if ret != 0 {
-                panic!("non zero return: {}", ret);
-            }
+            assert!(ret == 0, "non zero return: {}", ret);
         }
     }
 

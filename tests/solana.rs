@@ -507,9 +507,8 @@ impl<'a> SyscallObject<UserError> for SyscallSetReturnData<'a> {
         memory_mapping: &MemoryMapping,
         result: &mut Result<u64, EbpfError<UserError>>,
     ) {
-        if len > 1024 {
-            panic!("sol_set_return_data: length is {}", len);
-        }
+        assert!(len <= 1024, "sol_set_return_data: length is {}", len);
+
         let buf = question_mark!(translate_slice::<u8>(memory_mapping, addr, len), result);
 
         if let Ok(mut context) = self.context.try_borrow_mut() {
