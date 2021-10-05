@@ -1,4 +1,5 @@
 use crate::build_solidity;
+use solang::{file_resolver::FileResolver, Target};
 
 #[test]
 fn simple() {
@@ -250,5 +251,31 @@ fn incrementer() {
     assert_eq!(
         returns,
         vec![ethabi::Token::Uint(ethereum_types::U256::from(12))]
+    );
+}
+
+#[test]
+fn infinite_loop() {
+    let mut cache = FileResolver::new();
+
+    let src = String::from(
+        r#"
+contract line {
+    function foo() public {
+    address x = int32(
+1);
+    }
+}"#,
+    );
+
+    cache.set_file_contents("test.sol", src);
+
+    let ns = solang::parse_and_resolve("test.sol", &mut cache, Target::Solana);
+
+    solang::sema::diagnostics::print_messages(&cache, &ns, false);
+
+    assert_eq!(
+        ns.diagnostics[1].message,
+        "implicit conversion from int32 to address not allowed"
     );
 }

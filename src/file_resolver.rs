@@ -247,19 +247,21 @@ impl FileResolver {
         file: &ast::File,
         loc: &Loc,
     ) -> (String, usize, usize, usize) {
-        let (beg_line_no, mut beg_offset) = file.offset_to_line_column(loc.1);
-        let (end_line_no, mut end_offset) = file.offset_to_line_column(loc.2);
+        let (begin_line, mut begin_column) = file.offset_to_line_column(loc.1);
+        let (end_line, mut end_column) = file.offset_to_line_column(loc.2);
+
         let mut full_line = self.files[file.cache_no]
             .lines()
-            .nth(beg_line_no)
+            .nth(begin_line)
             .unwrap()
             .to_owned();
+
         // If the loc spans across multiple lines, we concatenate them
-        if beg_line_no != end_line_no {
-            for i in beg_offset + 1..end_offset + 1 {
+        if begin_line != end_line {
+            for i in begin_line + 1..=end_line {
                 let line = self.files[file.cache_no].lines().nth(i).unwrap();
-                if i == end_offset {
-                    end_offset += full_line.len();
+                if i == end_line {
+                    end_column += full_line.len();
                 }
                 full_line.push_str(line);
             }
@@ -267,12 +269,14 @@ impl FileResolver {
 
         let old_size = full_line.len();
         full_line = full_line.trim_start().parse().unwrap();
-        // Calculate the size of the symbol we want to highlight
-        let size = end_offset - beg_offset;
-        // Update the offset after trimming the line
-        beg_offset -= old_size - full_line.len();
 
-        (full_line, beg_line_no, beg_offset, size)
+        // Calculate the size of the symbol we want to highlight
+        let size = end_column - begin_column;
+
+        // Update the offset after trimming the line
+        begin_column -= old_size - full_line.len();
+
+        (full_line, begin_line, begin_column, size)
     }
 }
 
