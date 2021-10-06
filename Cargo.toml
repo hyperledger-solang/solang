@@ -39,7 +39,7 @@ tempfile = "3.1"
 libc = "0.2"
 tower-lsp = "0.14"
 tokio = { version = "1.6", features = ["rt", "io-std", "macros"] }
-base58 = "0.1.0"
+base58 = "0.2.0"
 sha2 = "0.9"
 ripemd160 = "0.9"
 bitvec = "0.20"
