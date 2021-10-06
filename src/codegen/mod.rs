@@ -1,3 +1,4 @@
+pub mod available_expressions;
 pub mod cfg;
 mod constant_folding;
 mod dead_storage;
