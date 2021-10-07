@@ -70,8 +70,6 @@ pub fn resolve(
     file_no: usize,
     ns: &mut ast::Namespace,
 ) {
-    resolve_base_contracts(contracts, file_no, ns);
-
     resolve_using(contracts, file_no, ns);
 
     // we need to resolve declarations first, so we call functions/constructors of
@@ -101,7 +99,7 @@ pub fn resolve(
 
 /// Resolve the base contracts list and check for cycles. Returns true if no
 /// issues where found.
-fn resolve_base_contracts(
+pub fn resolve_base_contracts(
     contracts: &[(usize, &pt::ContractDefinition)],
     file_no: usize,
     ns: &mut ast::Namespace,
