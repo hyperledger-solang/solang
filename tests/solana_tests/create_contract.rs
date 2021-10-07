@@ -1,4 +1,4 @@
-use crate::{build_solidity, first_error, parse_and_resolve};
+use crate::{build_solidity, first_error, no_errors, parse_and_resolve};
 use ethabi::Token;
 use solang::Target;
 
@@ -51,6 +51,74 @@ fn simple_create_contract() {
     );
 
     assert_eq!(vm.logs, "Hello xywoleh");
+}
+
+#[test]
+fn base_contract() {
+    let ns = parse_and_resolve(
+        r#"
+        contract Math {
+            enum MathError {
+                NO_ERROR
+            }
+        }
+
+        contract IsMath is Math {
+            struct WithMath {
+                MathError math;
+            }
+        }
+    "#,
+        Target::Solana,
+    );
+
+    no_errors(ns.diagnostics);
+
+    let ns = parse_and_resolve(
+        r#"
+        contract Logic {
+            enum LogicError {
+                LE_ERROR
+            }
+        }
+        contract Math is Logic {
+            enum MathError {
+                NO_ERROR
+            }
+        }
+
+        contract IsMath is Math {
+            struct WithMath {
+                MathError math;
+                LogicError logic;
+            }
+        }
+    "#,
+        Target::Solana,
+    );
+
+    no_errors(ns.diagnostics);
+
+    let ns = parse_and_resolve(
+        r#"
+        contract Logic {
+            struct LogicFields {
+                uint logia;
+            }
+        }
+        contract Math is Logic {
+        }
+
+        contract IsMath is Math {
+            struct WithMath {
+                LogicFields logia;
+            }
+        }
+    "#,
+        Target::Solana,
+    );
+
+    no_errors(ns.diagnostics);
 }
 
 #[test]
