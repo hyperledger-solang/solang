@@ -2855,6 +2855,12 @@ gasleft() returns (uint64)
 
 Returns the amount of gas remaining the current transaction.
 
+.. note::
+    ``gasleft()`` is not available on Solana.
+
+    Gasprice is not used on Solana. There is compute budget which may not be
+    exceeded, but there is no charge based on compute units used.
+
 blockhash(uint64 block) returns (bytes32)
 +++++++++++++++++++++++++++++++++++++++++
 
@@ -2903,8 +2909,15 @@ address ``msg.sender``
 .. _gasprice:
 
 uint128 ``tx.gasprice``
-    The price of one unit of gas. This field cannot be used on Parity Substrate, the explanation
+    The price of one unit of gas, only available with the ewasm target.
+    This field cannot be used on Parity Substrate, the explanation
     is in the warning box below.
+
+.. note::
+    ``tx.gasprice`` is not available on Solana.
+
+    gasprice is not used on Solana. There is compute budget which may not be
+    exceeded, but there is no charge based on compute units used.
 
 uint128 ``tx.gasprice(uint64 gas)``
     The total price of `gas` units of gas.
@@ -2931,7 +2944,7 @@ uint128 ``tx.gasprice(uint64 gas)``
     Note this function is not available on the Ethereum Foundation Solidity compiler.
 
 address ``tx.origin``
-    The address that started this transaction. Not available on Parity Substrate
+    The address that started this transaction. Not available on Parity Substrate or Solana.
 
 
 ``block`` properties

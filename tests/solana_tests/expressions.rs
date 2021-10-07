@@ -188,3 +188,36 @@ fn selector_in_free_function() {
 
     no_errors(ns.diagnostics);
 }
+
+#[test]
+fn tx() {
+    let ns = parse_and_resolve(
+        r#"
+        contract foo {
+            function test() public pure returns (address) {
+                return tx.origin;
+            }
+        }"#,
+        Target::Solana,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "builtin ‘tx.origin’ does not exist"
+    );
+
+    let ns = parse_and_resolve(
+        r#"
+        contract foo {
+            function test() public pure returns (uint64) {
+                return tx.gasprice;
+            }
+        }"#,
+        Target::Solana,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "builtin ‘tx.gasprice’ does not exist"
+    );
+}
