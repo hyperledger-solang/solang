@@ -606,7 +606,10 @@ fn block() {
         Target::Substrate,
     );
 
-    assert_eq!(first_error(ns.diagnostics), "`block\' is not found");
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "builtin ‘block.coinbase’ does not exist"
+    );
 
     let ns = parse_and_resolve(
         r#"
@@ -620,7 +623,10 @@ fn block() {
         Target::Substrate,
     );
 
-    assert_eq!(first_error(ns.diagnostics), "`block\' is not found");
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "builtin ‘block.gaslimit’ does not exist"
+    );
 
     let ns = parse_and_resolve(
         r#"
@@ -634,7 +640,10 @@ fn block() {
         Target::Substrate,
     );
 
-    assert_eq!(first_error(ns.diagnostics), "`block\' is not found");
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "builtin ‘block.difficulty’ does not exist"
+    );
 }
 
 #[test]
@@ -724,7 +733,10 @@ fn tx() {
         Target::Substrate,
     );
 
-    assert_eq!(first_error(ns.diagnostics), "`tx\' is not found");
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "builtin ‘tx.origin’ does not exist"
+    );
 }
 
 #[test]
