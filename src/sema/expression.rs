@@ -4902,6 +4902,15 @@ fn member_access(
         {
             return Ok(Expression::Builtin(*loc, vec![ty], builtin, vec![]));
         }
+
+        if builtin::builtin_namespace(&namespace.name) {
+            diagnostics.push(Diagnostic::error(
+                e.loc(),
+                format!("builtin ‘{}.{}’ does not exist", namespace.name, id.name),
+            ));
+
+            return Err(());
+        }
     }
 
     // is it an enum value

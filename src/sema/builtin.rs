@@ -459,6 +459,13 @@ pub fn builtin_var(
     None
 }
 
+/// Does variable name match any builtin namespace
+pub fn builtin_namespace(namespace: &str) -> bool {
+    BUILTIN_VARIABLE
+        .iter()
+        .any(|p| p.namespace == Some(namespace))
+}
+
 /// Is name reserved for builtins
 pub fn is_reserved(fname: &str) -> bool {
     if fname == "type" || fname == "super" {
