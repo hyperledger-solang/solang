@@ -9,6 +9,7 @@ will be documented here.
 - Added supported for Events on Solana
 - `msg.value`, `block.number`, and `block.slot` are implemented for Solana
 - Verify ed25519 signatures with `signatureVerify()` on Solana
+- Added support for Rational numbers
 
 ### Changed
 - On Solana, the return data is now provided in the program log. As a result,

@@ -13,6 +13,7 @@ mod expressions;
 mod hash;
 mod mappings;
 mod primitives;
+mod rational;
 mod returns;
 mod signature_verify;
 mod simple;
