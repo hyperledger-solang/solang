@@ -2,6 +2,25 @@ use crate::build_solidity;
 use ethabi::Token;
 
 #[test]
+fn simple() {
+    let mut vm = build_solidity(
+        r#"
+        contract foo {
+            int private foo;
+
+            function boom() public view returns (int) {
+                int baz = false? foo : 0;
+                return baz;
+            }
+        }"#,
+    );
+
+    vm.constructor("foo", &[], 0);
+    let returns = vm.function("boom", &[], &[], 0);
+    assert_eq!(returns, vec![Token::Int(ethereum_types::U256::from(0)),]);
+}
+
+#[test]
 fn string() {
     let mut vm = build_solidity(
         r#"
