@@ -18,6 +18,30 @@ fn simple() {
     vm.constructor("foo", &[], 0);
     let returns = vm.function("boom", &[], &[], 0);
     assert_eq!(returns, vec![Token::Int(ethereum_types::U256::from(0)),]);
+
+    let mut vm = build_solidity(
+        r#"
+        contract c {
+            struct Struct {
+                int field;
+            }
+
+            Struct mem;
+            constructor() {
+                mem = Struct(1);
+            }
+
+            function func() public view returns(int) {
+                Struct bar = true? mem: mem;
+                Struct baz = bar;
+                return baz.field;
+            }
+        }"#,
+    );
+
+    vm.constructor("c", &[], 0);
+    let returns = vm.function("func", &[], &[], 0);
+    assert_eq!(returns, vec![Token::Int(ethereum_types::U256::from(1)),]);
 }
 
 #[test]
