@@ -2291,12 +2291,8 @@ pub trait TargetRuntime<'a> {
                 let cond = self
                     .expression(bin, c, vartab, function, ns)
                     .into_int_value();
-                let left = self
-                    .expression(bin, l, vartab, function, ns)
-                    .into_int_value();
-                let right = self
-                    .expression(bin, r, vartab, function, ns)
-                    .into_int_value();
+                let left = self.expression(bin, l, vartab, function, ns);
+                let right = self.expression(bin, r, vartab, function, ns);
 
                 bin.builder.build_select(cond, left, right, "")
             }
