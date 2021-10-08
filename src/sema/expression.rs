@@ -1916,6 +1916,8 @@ pub fn expression(
             let cond = cast(&c.loc(), cond, &Type::Bool, true, ns, diagnostics)?;
 
             let ty = coerce(&left.ty(), &l.loc(), &right.ty(), &r.loc(), ns, diagnostics)?;
+            let left = cast(&l.loc(), left, &ty, true, ns, diagnostics)?;
+            let right = cast(&r.loc(), right, &ty, true, ns, diagnostics)?;
 
             Ok(Expression::Ternary(
                 *loc,
