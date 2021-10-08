@@ -33,14 +33,11 @@ It can be used directly in the
 Solana
 ______
 
-The Solana target requires latest `Solana <https://www.solana.com/>`_ master due to:
+The Solana target requires `Solana <https://www.solana.com/>`_ v1.8.1. There a few missing features:
 
- - https://github.com/solana-labs/solana/pull/19548
- - https://github.com/solana-labs/solana/pull/19764
+- Balance transfers are not implemented
 
-This target is in the early stages right now, however it is under active development.
-All data types are supported, but not all the builtin functions and variables
-have not been implemented yet. This is how to build your Solidity for Solana:
+This is how to build your Solidity for Solana:
 
 .. code-block:: bash
 
