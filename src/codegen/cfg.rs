@@ -1566,7 +1566,7 @@ pub fn generate_modifier_dispatch(
     for stmt in &modifier.body {
         statement(
             stmt,
-            func,
+            modifier,
             &mut cfg,
             contract_no,
             ns,
