@@ -834,18 +834,30 @@ impl<'input> Lexer<'input> {
                             // line comment
                             self.chars.next();
 
-                            let doc_comment_start = match self.chars.peek() {
-                                Some((i, '/')) => Some(i + 1),
+                            let mut newline = false;
+
+                            let doc_comment_start = match self.chars.next() {
+                                Some((i, '/')) => match self.chars.peek() {
+                                    // ///(/)+ is still a line comment
+                                    Some((_, '/')) => None,
+                                    _ => Some(i + 1),
+                                },
+                                Some((_, ch)) if ch == '\n' || ch == '\r' => {
+                                    newline = true;
+                                    None
+                                }
                                 _ => None,
                             };
 
                             let mut last = start + 3;
 
-                            for (i, ch) in &mut self.chars {
-                                if ch == '\n' || ch == '\r' {
-                                    break;
+                            if !newline {
+                                for (i, ch) in &mut self.chars {
+                                    if ch == '\n' || ch == '\r' {
+                                        break;
+                                    }
+                                    last = i;
                                 }
-                                last = i;
                             }
 
                             if let Some(doc_start) = doc_comment_start {
@@ -865,8 +877,11 @@ impl<'input> Lexer<'input> {
                             // multiline comment
                             self.chars.next();
 
-                            let doc_comment_start = match self.chars.peek() {
-                                Some((i, '*')) => Some(i + 1),
+                            let doc_comment_start = match self.chars.next() {
+                                Some((i, '*')) => match self.chars.peek() {
+                                    Some((_, '*')) => None,
+                                    _ => Some(i + 1),
+                                },
                                 _ => None,
                             };
 
@@ -1408,6 +1423,12 @@ fn lexertest() {
             18
         )))
     );
+
+    let tokens = Lexer::new("/************/").next();
+    assert_eq!(tokens, None);
+
+    let tokens = Lexer::new("//////////////").next();
+    assert_eq!(tokens, None);
 
     // some unicode tests
     let tokens = Lexer::new(">=\u{a0} . très\u{2028}αβγδεζηθικλμνξοπρστυφχψω\u{85}カラス")
