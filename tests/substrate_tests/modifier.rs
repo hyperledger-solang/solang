@@ -179,6 +179,37 @@ fn function_modifier() {
 #[test]
 fn chain() {
     let mut runtime = build_solidity(
+        r#"
+        contract c {
+            uint16 public var;
+
+            modifier foo() { 
+                bool boom = true;
+                if (boom) {
+                    _; 
+                }
+            }
+
+            function bar() foo() public {
+                var = 7;
+            }
+        }"#,
+    );
+
+    runtime.constructor(0, Vec::new());
+
+    let slot = [0u8; 32];
+
+    assert_eq!(runtime.store.get(&(runtime.vm.address, slot)), None);
+
+    runtime.function("bar", Vec::new());
+
+    assert_eq!(
+        runtime.store.get(&(runtime.vm.address, slot)).unwrap(),
+        &vec!(7, 0)
+    );
+
+    let mut runtime = build_solidity(
         r##"
         contract c {
             uint16 public var;
