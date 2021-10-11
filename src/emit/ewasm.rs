@@ -1922,6 +1922,24 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
             ast::Expression::Builtin(_, _, ast::Builtin::Value, _) => {
                 single_value_stack!("value", "getCallValue", ns.value_length as u32 * 8)
             }
+            ast::Expression::Builtin(_, _, ast::Builtin::Calldata, _) => binary
+                .builder
+                .build_call(
+                    binary.module.get_function("vector_new").unwrap(),
+                    &[
+                        binary
+                            .builder
+                            .build_load(binary.calldata_len.as_pointer_value(), "calldata_len"),
+                        binary.context.i32_type().const_int(1, false).into(),
+                        binary
+                            .builder
+                            .build_load(binary.calldata_data.as_pointer_value(), "calldata_data"),
+                    ],
+                    "",
+                )
+                .try_as_basic_value()
+                .left()
+                .unwrap(),
             ast::Expression::Builtin(_, _, ast::Builtin::BlockHash, args) => {
                 let block_number = self.expression(binary, &args[0], vartab, function, ns);
 
