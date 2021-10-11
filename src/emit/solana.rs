@@ -3255,6 +3255,38 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                     .left()
                     .unwrap()
             }
+            ast::Expression::Builtin(_, _, ast::Builtin::Signature, _) => {
+                let sol_params = self.sol_parameters(binary);
+
+                let input = binary
+                    .builder
+                    .build_load(
+                        binary
+                            .builder
+                            .build_struct_gep(sol_params, 5, "input")
+                            .unwrap(),
+                        "data",
+                    )
+                    .into_pointer_value();
+
+                let selector = binary.builder.build_load(
+                    binary.builder.build_pointer_cast(
+                        input,
+                        binary.context.i32_type().ptr_type(AddressSpace::Generic),
+                        "selector",
+                    ),
+                    "selector",
+                );
+
+                let bswap = binary.llvm_bswap(32);
+
+                binary
+                    .builder
+                    .build_call(bswap, &[selector], "")
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap()
+            }
             ast::Expression::Builtin(_, _, ast::Builtin::SignatureVerify, args) => {
                 assert_eq!(args.len(), 3);
 

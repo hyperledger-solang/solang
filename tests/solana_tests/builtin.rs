@@ -18,6 +18,9 @@ fn builtins() {
             function msg_data(uint32 x) public returns (bytes) {
                 return msg.data;
             }
+            function sig() public returns (bytes4) {
+                return msg.sig;
+            }
         }"#,
     );
 
@@ -61,5 +64,16 @@ fn builtins() {
             hex::decode("84da38e000000000000000000000000000000000000000000000000000000000deadcafe")
                 .unwrap()
         )]
+    );
+
+    let returns = vm.function("sig", &[], &[], 0);
+
+    if let Token::FixedBytes(v) = &returns[0] {
+        println!("{}", hex::encode(v));
+    }
+
+    assert_eq!(
+        returns,
+        vec![Token::FixedBytes(hex::decode("00a7029b").unwrap())]
     );
 }
