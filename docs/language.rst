@@ -3232,6 +3232,9 @@ The ``selfdestruct()`` function causes the current contract to be deleted, and a
 remaining balance to be sent to `recipient`. This functions does not return, as the
 contract no longer exists.
 
+.. note::
+    This function does not exist on Solana.
+
 String formatting using ``"{}".format()``
 +++++++++++++++++++++++++++++++++++++++++
 

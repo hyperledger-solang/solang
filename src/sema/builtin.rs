@@ -87,7 +87,7 @@ static BUILTIN_FUNCTIONS: [Prototype; 24] = [
         name: "selfdestruct",
         args: &[Type::Address(true)],
         ret: &[Type::Unreachable],
-        target: &[],
+        target: &[Target::Ewasm, Target::Substrate],
         doc: "Destroys current account and deposits any remaining balance to address",
         constant: false,
     },
