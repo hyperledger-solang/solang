@@ -19,7 +19,7 @@ suite('Extension Test Suite', function () {
     await testdiagnos(diagnosdoc1, [
       {
         message: 'unrecognised token `aa\', expected ";", "="',
-        range: toRange(5, 0, 5, 2),
+        range: toRange(4, 0, 5, 2),
         severity: vscode.DiagnosticSeverity.Error,
         source: 'solidity',
       },

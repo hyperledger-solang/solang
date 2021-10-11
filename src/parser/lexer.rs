@@ -1427,6 +1427,9 @@ fn lexertest() {
     let tokens = Lexer::new("/************/").next();
     assert_eq!(tokens, None);
 
+    let tokens = Lexer::new("/**").next();
+    assert_eq!(tokens, Some(Err(LexicalError::EndOfFileInComment(0, 3))));
+
     let tokens = Lexer::new("//////////////").next();
     assert_eq!(tokens, None);
 
