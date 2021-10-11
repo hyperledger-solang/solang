@@ -62,8 +62,14 @@ impl File {
                 break;
             }
 
-            line_no += 1;
+            if loc == *l {
+                col_no -= 1;
+                break;
+            }
+
             col_no = loc - l;
+
+            line_no += 1;
         }
 
         (line_no, col_no)

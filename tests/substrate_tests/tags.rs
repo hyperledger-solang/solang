@@ -1,5 +1,5 @@
 use crate::{first_error, parse_and_resolve};
-use solang::Target;
+use solang::{parser::pt::Loc, Target};
 
 #[test]
 fn contract() {
@@ -65,6 +65,11 @@ fn contract() {
 
     assert_eq!(ns.contracts[0].tags[3].tag, "dev");
     assert_eq!(ns.contracts[0].tags[3].value, "this is a contract");
+
+    let ns = parse_and_resolve("/**\n", Target::Substrate);
+
+    assert_eq!(ns.diagnostics[0].pos, Some(Loc(0, 0, 4)));
+    assert_eq!(ns.diagnostics[0].message, "end of file found in comment");
 }
 
 #[test]
