@@ -2570,7 +2570,7 @@ pub trait TargetRuntime<'a> {
                     ns,
                 )
                 .into(),
-            Expression::Builtin(_, _, Builtin::Signature, _) => {
+            Expression::Builtin(_, _, Builtin::Signature, _) if ns.target != Target::Solana => {
                 // need to byte-reverse selector
                 let selector = bin.build_alloca(function, bin.context.i32_type(), "selector");
 
