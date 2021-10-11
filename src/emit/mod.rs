@@ -2570,23 +2570,6 @@ pub trait TargetRuntime<'a> {
                     ns,
                 )
                 .into(),
-            Expression::Builtin(_, _, Builtin::Calldata, _) if ns.target != Target::Substrate => {
-                bin.builder
-                    .build_call(
-                        bin.module.get_function("vector_new").unwrap(),
-                        &[
-                            bin.builder
-                                .build_load(bin.calldata_len.as_pointer_value(), "calldata_len"),
-                            bin.context.i32_type().const_int(1, false).into(),
-                            bin.builder
-                                .build_load(bin.calldata_data.as_pointer_value(), "calldata_data"),
-                        ],
-                        "",
-                    )
-                    .try_as_basic_value()
-                    .left()
-                    .unwrap()
-            }
             Expression::Builtin(_, _, Builtin::Signature, _) => {
                 // need to byte-reverse selector
                 let selector = bin.build_alloca(function, bin.context.i32_type(), "selector");
