@@ -7,7 +7,8 @@ will be documented here.
 ### Added
 - Added supported for solc import mapppings using `--importmap`
 - Added supported for Events on Solana
-- `msg.value`, `block.number`, and `block.slot` are implemented for Solana
+- `msg.data`, `msg.sig`, `msg.value`, `block.number`, and `block.slot` are
+  implemented for Solana
 - Verify ed25519 signatures with `signatureVerify()` on Solana
 - Added support for Rational numbers
 
@@ -16,6 +17,8 @@ will be documented here.
   RPCs are now are now supported.
 - On the solang command line, the target must be specified.
 - The Solana instruction now includes a 64 bit value field
+- Many fixes to the parser and resolver, so solidity compatibility is much
+  improved, thanks to [sushi-shi](https://github.com/hyperledger-labs/solang/pulls?q=is%3Apr+author%3Asushi-shi+is%3Aclosed).
 
 ### Removed
 - The Sawtooth Sabre target has been removed.
