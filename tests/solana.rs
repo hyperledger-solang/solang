@@ -36,9 +36,9 @@ use tiny_keccak::{Hasher, Keccak};
 
 mod solana_tests;
 
-type Account = [u8; 32];
+pub type Account = [u8; 32];
 
-fn account_new() -> Account {
+pub fn account_new() -> Account {
     let mut rng = rand::thread_rng();
 
     let mut a = [0u8; 32];
@@ -51,6 +51,7 @@ fn account_new() -> Account {
 struct AccountState {
     data: Vec<u8>,
     owner: Option<Account>,
+    lamports: u64,
 }
 
 struct VirtualMachine {
@@ -156,6 +157,7 @@ fn build_solidity(src: &str) -> VirtualMachine {
             AccountState {
                 data: code.clone(),
                 owner: None,
+                lamports: 0,
             },
         );
 
@@ -168,6 +170,7 @@ fn build_solidity(src: &str) -> VirtualMachine {
             AccountState {
                 data: [0u8; 4096].to_vec(),
                 owner: Some(program),
+                lamports: 0,
             },
         );
 
@@ -198,6 +201,7 @@ fn build_solidity(src: &str) -> VirtualMachine {
         AccountState {
             data: bincode::serialize(&clock_layout).unwrap(),
             owner: None,
+            lamports: 0,
         },
     );
 
@@ -250,7 +254,7 @@ fn serialize_parameters(
         // owner
         v.write_all(&acc.owner.unwrap_or([0u8; 32])).unwrap();
         // lamports
-        v.write_u64::<LittleEndian>(0).unwrap();
+        v.write_u64::<LittleEndian>(acc.lamports).unwrap();
 
         // account data
         v.write_u64::<LittleEndian>(acc.data.len() as u64).unwrap();
@@ -1020,6 +1024,7 @@ impl<'a> SyscallObject<UserError> for SyscallInvokeSignedC<'a> {
                             AccountState {
                                 data: vec![0; create_account.space as usize],
                                 owner: Some(create_account.program_id),
+                                lamports: 0,
                             },
                         );
 
@@ -1258,12 +1263,25 @@ impl VirtualMachine {
         args: &[Token],
         seeds: &[&(Account, Vec<u8>)],
         value: u64,
+        sender: Option<&Account>,
     ) -> Vec<Token> {
         let program = &self.stack[0];
 
         println!("function for {}", hex::encode(&program.data));
 
-        let mut calldata = VirtualMachine::input(&program.data, &account_new(), value, name, seeds);
+        let new = account_new();
+
+        let mut calldata = VirtualMachine::input(
+            &program.data,
+            if let Some(sender) = sender {
+                sender
+            } else {
+                &new
+            },
+            value,
+            name,
+            seeds,
+        );
 
         println!("input: {} seeds {:?}", hex::encode(&calldata), seeds);
 
@@ -1354,6 +1372,7 @@ impl VirtualMachine {
             AccountState {
                 data: vec![],
                 owner: Some([0u8; 32]),
+                lamports: 0,
             },
         );
 

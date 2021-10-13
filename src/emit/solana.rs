@@ -3349,6 +3349,46 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                     )
                     .into()
             }
+            ast::Expression::Builtin(_, _, ast::Builtin::Balance, args) => {
+                assert_eq!(args.len(), 1);
+
+                let address = binary.build_alloca(function, binary.address_type(ns), "address");
+
+                binary.builder.build_store(
+                    address,
+                    self.expression(binary, &args[0], vartab, function, ns)
+                        .into_int_value(),
+                );
+
+                let account_lamport = binary.module.get_function("sol_account_lamport").unwrap();
+
+                let parameters = self.sol_parameters(binary);
+
+                let params = account_lamport.get_type().get_param_types();
+
+                let lamport = binary
+                    .builder
+                    .build_call(
+                        account_lamport,
+                        &[
+                            binary
+                                .builder
+                                .build_pointer_cast(address, params[0].into_pointer_type(), "")
+                                .into(),
+                            binary
+                                .builder
+                                .build_pointer_cast(parameters, params[1].into_pointer_type(), "")
+                                .into(),
+                        ],
+                        "",
+                    )
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap()
+                    .into_pointer_value();
+
+                binary.builder.build_load(lamport, "lamport")
+            }
             _ => unimplemented!(),
         }
     }

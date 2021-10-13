@@ -17,7 +17,7 @@ fn simple_event() {
 
     vm.constructor("c", &[], 0);
 
-    vm.function("go", &[], &[], 0);
+    vm.function("go", &[], &[], 0, None);
 
     let log = vm.events();
 
@@ -66,7 +66,7 @@ fn less_simple_event() {
 
     vm.constructor("c", &[], 0);
 
-    vm.function("go", &[], &[], 0);
+    vm.function("go", &[], &[], 0, None);
 
     let log = vm.events();
 

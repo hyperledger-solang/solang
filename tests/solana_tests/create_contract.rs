@@ -35,7 +35,7 @@ fn simple_create_contract() {
 
     let seed = vm.create_empty_account();
 
-    let bar1 = vm.function("test_other", &[], &[&seed], 0);
+    let bar1 = vm.function("test_other", &[], &[&seed], 0, None);
 
     assert_eq!(vm.logs, "bar1 says: yo from bar0");
 
@@ -48,6 +48,7 @@ fn simple_create_contract() {
         &[bar1[0].clone(), Token::String(String::from("xywoleh"))],
         &[],
         0,
+        None,
     );
 
     assert_eq!(vm.logs, "Hello xywoleh");
@@ -154,7 +155,7 @@ fn missing_contract() {
 
     vm.constructor("bar0", &[], 0);
 
-    let _ = vm.function("test_other", &[], &[], 0);
+    let _ = vm.function("test_other", &[], &[], 0, None);
 }
 
 #[test]
@@ -184,7 +185,7 @@ fn two_contracts() {
     let seed1 = vm.create_empty_account();
     let seed2 = vm.create_empty_account();
 
-    let _bar1 = vm.function("test_other", &[], &[&seed1, &seed2], 0);
+    let _bar1 = vm.function("test_other", &[], &[&seed1, &seed2], 0, None);
 
     assert_eq!(vm.logs, "bar1 says: yo from bar0bar1 says: hi from bar0");
 

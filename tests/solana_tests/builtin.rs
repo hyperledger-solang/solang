@@ -26,21 +26,21 @@ fn builtins() {
 
     vm.constructor("timestamp", &[], 0);
 
-    let returns = vm.function("mr_now", &[], &[], 0);
+    let returns = vm.function("mr_now", &[], &[], 0, None);
 
     assert_eq!(
         returns,
         vec![Token::Uint(ethereum_types::U256::from(1620656423))]
     );
 
-    let returns = vm.function("mr_slot", &[], &[], 0);
+    let returns = vm.function("mr_slot", &[], &[], 0, None);
 
     assert_eq!(
         returns,
         vec![Token::Uint(ethereum_types::U256::from(70818331))]
     );
 
-    let returns = vm.function("mr_blocknumber", &[], &[], 0);
+    let returns = vm.function("mr_blocknumber", &[], &[], 0, None);
 
     assert_eq!(
         returns,
@@ -52,6 +52,7 @@ fn builtins() {
         &[Token::Uint(ethereum_types::U256::from(0xdeadcafeu32))],
         &[],
         0,
+        None,
     );
 
     if let Token::Bytes(v) = &returns[0] {
@@ -66,7 +67,7 @@ fn builtins() {
         )]
     );
 
-    let returns = vm.function("sig", &[], &[], 0);
+    let returns = vm.function("sig", &[], &[], 0, None);
 
     if let Token::FixedBytes(v) = &returns[0] {
         println!("{}", hex::encode(v));
