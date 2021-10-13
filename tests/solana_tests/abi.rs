@@ -37,9 +37,9 @@ fn packed() {
 
     vm.constructor("bar", &[], 0);
 
-    vm.function("test", &[], &[], 0);
-    vm.function("test2", &[], &[], 0);
-    vm.function("test3", &[], &[], 0);
+    vm.function("test", &[], &[], 0, None);
+    vm.function("test2", &[], &[], 0, None);
+    vm.function("test3", &[], &[], 0, None);
 }
 
 #[test]
@@ -56,7 +56,7 @@ fn inherited() {
 
     vm.constructor("bar", &[], 0);
 
-    vm.function("test", &[], &[], 0);
+    vm.function("test", &[], &[], 0, None);
 
     let mut vm = build_solidity(
         r#"
@@ -69,5 +69,5 @@ fn inherited() {
 
     vm.constructor("bar", &[], 0);
 
-    vm.function("test", &[], &[], 0);
+    vm.function("test", &[], &[], 0, None);
 }

@@ -16,7 +16,7 @@ fn constants_hash_tests() {
     );
 
     runtime.constructor("tester", &[], 0);
-    runtime.function("test", &[], &[], 0);
+    runtime.function("test", &[], &[], 0, None);
 
     let mut runtime = build_solidity(
         r##"
@@ -30,7 +30,7 @@ fn constants_hash_tests() {
     );
 
     runtime.constructor("tester", &[], 0);
-    runtime.function("test", &[], &[], 0);
+    runtime.function("test", &[], &[], 0, None);
 
     let mut runtime = build_solidity(
         r##"
@@ -44,7 +44,7 @@ fn constants_hash_tests() {
     );
 
     runtime.constructor("tester", &[], 0);
-    runtime.function("test", &[], &[], 0);
+    runtime.function("test", &[], &[], 0, None);
 
     // blake2 hash functions are substrate isms. Ensure they don't exist
     let ns = parse_and_resolve(
@@ -96,7 +96,13 @@ fn hash_tests() {
     );
 
     runtime.constructor("tester", &[], 0);
-    let hash = runtime.function("test", &[Token::Bytes(b"Hello, World!".to_vec())], &[], 0);
+    let hash = runtime.function(
+        "test",
+        &[Token::Bytes(b"Hello, World!".to_vec())],
+        &[],
+        0,
+        None,
+    );
 
     assert_eq!(
         hash,
@@ -117,7 +123,13 @@ fn hash_tests() {
     );
 
     runtime.constructor("tester", &[], 0);
-    let hash = runtime.function("test", &[Token::Bytes(b"Hello, World!".to_vec())], &[], 0);
+    let hash = runtime.function(
+        "test",
+        &[Token::Bytes(b"Hello, World!".to_vec())],
+        &[],
+        0,
+        None,
+    );
 
     assert_eq!(
         hash,
@@ -139,7 +151,13 @@ fn hash_tests() {
     );
 
     runtime.constructor("tester", &[], 0);
-    let hash = runtime.function("test", &[Token::Bytes(b"Hello, World!".to_vec())], &[], 0);
+    let hash = runtime.function(
+        "test",
+        &[Token::Bytes(b"Hello, World!".to_vec())],
+        &[],
+        0,
+        None,
+    );
 
     assert_eq!(
         hash,

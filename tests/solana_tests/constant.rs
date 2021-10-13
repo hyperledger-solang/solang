@@ -20,7 +20,7 @@ fn constant() {
 
     vm.constructor("foo", &[], 0);
 
-    let returns = vm.function("f", &[], &[], 0);
+    let returns = vm.function("f", &[], &[], 0, None);
     assert_eq!(returns, vec![Token::Uint(ethereum_types::U256::from(42))]);
 
     let mut vm = build_solidity(
@@ -40,7 +40,7 @@ fn constant() {
 
     vm.constructor("foo", &[], 0);
 
-    let returns = vm.function("f", &[], &[], 0);
+    let returns = vm.function("f", &[], &[], 0, None);
     assert_eq!(returns, vec![Token::Uint(ethereum_types::U256::from(42))]);
 }
 

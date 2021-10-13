@@ -25,7 +25,7 @@ fn assert_false() {
 
     vm.constructor("foo", &[], 0);
 
-    vm.function("assert_fails", &[], &[], 0);
+    vm.function("assert_fails", &[], &[], 0, None);
 }
 
 #[test]
@@ -42,7 +42,7 @@ fn assert_true() {
 
     vm.constructor("foo", &[], 0);
 
-    vm.function("assert_fails", &[], &[], 0);
+    vm.function("assert_fails", &[], &[], 0, None);
 }
 
 #[test]
@@ -74,16 +74,16 @@ fn boolean() {
 
     vm.constructor("foo", &[], 0);
 
-    let returns = vm.function("return_true", &[], &[], 0);
+    let returns = vm.function("return_true", &[], &[], 0, None);
 
     assert_eq!(returns, vec![ethabi::Token::Bool(true),]);
 
-    let returns = vm.function("return_false", &[], &[], 0);
+    let returns = vm.function("return_false", &[], &[], 0, None);
 
     assert_eq!(returns, vec![ethabi::Token::Bool(false),]);
 
-    vm.function("true_arg", &[ethabi::Token::Bool(true)], &[], 0);
-    vm.function("false_arg", &[ethabi::Token::Bool(false)], &[], 0);
+    vm.function("true_arg", &[ethabi::Token::Bool(true)], &[], 0, None);
+    vm.function("false_arg", &[ethabi::Token::Bool(false)], &[], 0, None);
 }
 
 #[test]
@@ -108,7 +108,7 @@ fn address() {
 
     vm.constructor("foo", &[], 0);
 
-    let returns = vm.function("return_address", &[], &[], 0);
+    let returns = vm.function("return_address", &[], &[], 0, None);
 
     assert_eq!(
         returns,
@@ -126,6 +126,7 @@ fn address() {
         ])],
         &[],
         0,
+        None,
     );
 }
 
@@ -152,7 +153,7 @@ fn test_enum() {
 
     vm.constructor("foo", &[], 0);
 
-    let returns = vm.function("return_enum", &[], &[], 0);
+    let returns = vm.function("return_enum", &[], &[], 0, None);
 
     assert_eq!(
         returns,
@@ -164,6 +165,7 @@ fn test_enum() {
         &[ethabi::Token::Uint(ethereum_types::U256::from(6))],
         &[],
         0,
+        None,
     );
 }
 
@@ -208,7 +210,7 @@ fn bytes() {
 
         vm.constructor("test", &[], 0);
 
-        let returns = vm.function("return_literal", &[], &[], 0);
+        let returns = vm.function("return_literal", &[], &[], 0, None);
 
         assert_eq!(
             returns,
@@ -220,6 +222,7 @@ fn bytes() {
             &[ethabi::Token::FixedBytes(vec![1, 2, 3, 4, 5, 6, 7])],
             &[],
             0,
+            None,
         );
 
         assert_eq!(
@@ -245,6 +248,7 @@ fn bytes() {
                 ],
                 &[],
                 0,
+                None,
             );
 
             let res: Vec<u8> = a.iter().zip(b.iter()).map(|(a, b)| a | b).collect();
@@ -266,6 +270,7 @@ fn bytes() {
                 ],
                 &[],
                 0,
+                None,
             );
 
             let res: Vec<u8> = a.iter().zip(b.iter()).map(|(a, b)| a & b).collect();
@@ -280,6 +285,7 @@ fn bytes() {
                 ],
                 &[],
                 0,
+                None,
             );
 
             let res: Vec<u8> = a.iter().zip(b.iter()).map(|(a, b)| a ^ b).collect();
@@ -298,6 +304,7 @@ fn bytes() {
                 ],
                 &[],
                 0,
+                None,
             );
 
             let mut res = (BigUint::from_bytes_be(&a) << r).to_bytes_be();
@@ -320,6 +327,7 @@ fn bytes() {
                 ],
                 &[],
                 0,
+                None,
             );
 
             let mut res = (BigUint::from_bytes_be(&a) >> r).to_bytes_be();
@@ -416,7 +424,7 @@ fn uint() {
             truncate_uint(&mut a, width);
             truncate_uint(&mut b, width);
 
-            let res = vm.function("pass", &[ethabi::Token::Uint(a)], &[], 0);
+            let res = vm.function("pass", &[ethabi::Token::Uint(a)], &[], 0, None);
 
             println!("{:x} = {:?} o", a, res);
 
@@ -425,6 +433,7 @@ fn uint() {
                 &[ethabi::Token::Uint(a), ethabi::Token::Uint(b)],
                 &[],
                 0,
+                None,
             );
 
             let (mut res, _) = a.overflowing_add(b);
@@ -440,6 +449,7 @@ fn uint() {
                 &[ethabi::Token::Uint(a), ethabi::Token::Uint(b)],
                 &[],
                 0,
+                None,
             );
 
             let (mut res, _) = a.overflowing_sub(b);
@@ -453,6 +463,7 @@ fn uint() {
                 &[ethabi::Token::Uint(a), ethabi::Token::Uint(b)],
                 &[],
                 0,
+                None,
             );
 
             let (mut res, _) = a.overflowing_mul(b);
@@ -466,6 +477,7 @@ fn uint() {
                 &[ethabi::Token::Uint(a), ethabi::Token::Uint(b)],
                 &[],
                 0,
+                None,
             );
 
             let (mut res, _) = a.overflowing_pow(b);
@@ -480,6 +492,7 @@ fn uint() {
                     &[ethabi::Token::Uint(a), ethabi::Token::Uint(b)],
                     &[],
                     0,
+                    None,
                 );
 
                 let mut res = a.div(b);
@@ -493,6 +506,7 @@ fn uint() {
                     &[ethabi::Token::Uint(a), ethabi::Token::Uint(b)],
                     &[],
                     0,
+                    None,
                 );
 
                 let mut res = a.rem(b);
@@ -507,6 +521,7 @@ fn uint() {
                 &[ethabi::Token::Uint(a), ethabi::Token::Uint(b)],
                 &[],
                 0,
+                None,
             );
 
             let mut res = ethereum_types::U256([
@@ -525,6 +540,7 @@ fn uint() {
                 &[ethabi::Token::Uint(a), ethabi::Token::Uint(b)],
                 &[],
                 0,
+                None,
             );
 
             let mut res = ethereum_types::U256([
@@ -543,6 +559,7 @@ fn uint() {
                 &[ethabi::Token::Uint(a), ethabi::Token::Uint(b)],
                 &[],
                 0,
+                None,
             );
 
             let mut res = ethereum_types::U256([
@@ -566,6 +583,7 @@ fn uint() {
                 ],
                 &[],
                 0,
+                None,
             );
 
             let mut res = a.shl(r);
@@ -582,6 +600,7 @@ fn uint() {
                 ],
                 &[],
                 0,
+                None,
             );
 
             let mut res = a.shr(r);
@@ -687,6 +706,7 @@ fn int() {
                 &[ethabi::Token::Int(a), ethabi::Token::Int(b)],
                 &[],
                 0,
+                None,
             );
 
             let res = big_a.clone().add(&big_b);
@@ -700,6 +720,7 @@ fn int() {
                 &[ethabi::Token::Int(a), ethabi::Token::Int(b)],
                 &[],
                 0,
+                None,
             );
 
             let res = bigint_to_eth(&big_a.clone().sub(&big_b), width);
@@ -711,6 +732,7 @@ fn int() {
                 &[ethabi::Token::Int(a), ethabi::Token::Int(b)],
                 &[],
                 0,
+                None,
             );
 
             let res = bigint_to_eth(&big_a.clone().mul(&big_b), width);
@@ -723,6 +745,7 @@ fn int() {
                     &[ethabi::Token::Int(a), ethabi::Token::Int(b)],
                     &[],
                     0,
+                    None,
                 );
 
                 let res = bigint_to_eth(&big_a.clone().div(&big_b), width);
@@ -734,6 +757,7 @@ fn int() {
                     &[ethabi::Token::Int(a), ethabi::Token::Int(b)],
                     &[],
                     0,
+                    None,
                 );
 
                 let res = big_a.clone().rem(&big_b);
@@ -748,6 +772,7 @@ fn int() {
                 &[ethabi::Token::Int(a), ethabi::Token::Int(b)],
                 &[],
                 0,
+                None,
             );
 
             let mut res = ethereum_types::U256([
@@ -766,6 +791,7 @@ fn int() {
                 &[ethabi::Token::Int(a), ethabi::Token::Int(b)],
                 &[],
                 0,
+                None,
             );
 
             let mut res = ethereum_types::U256([
@@ -784,6 +810,7 @@ fn int() {
                 &[ethabi::Token::Int(a), ethabi::Token::Int(b)],
                 &[],
                 0,
+                None,
             );
 
             let mut res = ethereum_types::U256([
@@ -807,6 +834,7 @@ fn int() {
                 ],
                 &[],
                 0,
+                None,
             );
 
             let mut res = a.shl(r);
@@ -823,6 +851,7 @@ fn int() {
                 ],
                 &[],
                 0,
+                None,
             );
 
             let res = bigint_to_eth(&big_a.clone().shr(r), width);

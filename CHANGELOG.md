@@ -9,6 +9,7 @@ will be documented here.
 - Added supported for Events on Solana
 - `msg.data`, `msg.sig`, `msg.value`, `block.number`, and `block.slot` are
   implemented for Solana
+- Implemented retrieving account balances on Solana
 - Verify ed25519 signatures with `signatureVerify()` on Solana
 - Added support for Rational numbers
 

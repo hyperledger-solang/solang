@@ -35,14 +35,14 @@ fn rational() {
 
     vm.constructor("foo", &[], 0);
 
-    let returns = vm.function("test", &[], &[], 0);
+    let returns = vm.function("test", &[], &[], 0, None);
 
     assert_eq!(
         returns,
         vec![ethabi::Token::Uint(ethereum_types::U256::from(4))]
     );
 
-    let returns = vm.function("test2", &[], &[], 0);
+    let returns = vm.function("test2", &[], &[], 0, None);
 
     assert_eq!(
         returns,
@@ -61,7 +61,7 @@ fn rational() {
 
     vm.constructor("foo", &[], 0);
 
-    let returns = vm.function("test", &[], &[], 0);
+    let returns = vm.function("test", &[], &[], 0, None);
 
     assert_eq!(
         returns,
@@ -80,7 +80,7 @@ fn rational() {
 
     vm.constructor("foo", &[], 0);
 
-    let returns = vm.function("test", &[], &[], 0);
+    let returns = vm.function("test", &[], &[], 0, None);
 
     assert_eq!(
         returns,
@@ -99,7 +99,7 @@ fn rational() {
 
     vm.constructor("foo", &[], 0);
 
-    let returns = vm.function("test", &[], &[], 0);
+    let returns = vm.function("test", &[], &[], 0, None);
 
     assert_eq!(
         returns,
@@ -118,7 +118,7 @@ fn rational() {
 
     vm.constructor("foo", &[], 0);
 
-    let returns = vm.function("test", &[], &[], 0);
+    let returns = vm.function("test", &[], &[], 0, None);
 
     assert_eq!(
         returns,
@@ -136,7 +136,7 @@ fn rational() {
 
     vm.constructor("foo", &[], 0);
 
-    let returns = vm.function("test", &[], &[], 0);
+    let returns = vm.function("test", &[], &[], 0, None);
 
     assert_eq!(
         returns,
@@ -154,7 +154,7 @@ fn rational() {
 
     vm.constructor("foo", &[], 0);
 
-    let returns = vm.function("test", &[], &[], 0);
+    let returns = vm.function("test", &[], &[], 0, None);
 
     assert_eq!(
         returns,
@@ -177,6 +177,7 @@ fn rational() {
         &[ethabi::Token::Uint(ethereum_types::U256::from(982451653))],
         &[],
         0,
+        None,
     );
 
     assert_eq!(

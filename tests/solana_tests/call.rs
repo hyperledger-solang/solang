@@ -79,7 +79,13 @@ fn simple_external_call() {
 
     vm.constructor("bar1", &[], 0);
 
-    vm.function("test_bar", &[Token::String(String::from("yo"))], &[], 0);
+    vm.function(
+        "test_bar",
+        &[Token::String(String::from("yo"))],
+        &[],
+        0,
+        None,
+    );
 
     assert_eq!(vm.logs, "bar1 says: yo");
 
@@ -96,6 +102,7 @@ fn simple_external_call() {
         &[Token::String(String::from("uncle beau"))],
         &[],
         0,
+        None,
     );
 
     assert_eq!(vm.logs, "bar0 says: uncle beau");
@@ -107,6 +114,7 @@ fn simple_external_call() {
         &[Token::FixedBytes(bar1_account.to_vec())],
         &[],
         0,
+        None,
     );
 
     assert_eq!(vm.logs, "bar1 says: cross contract call");
@@ -136,6 +144,7 @@ fn external_call_with_returns() {
         &[Token::Int(ethereum_types::U256::from(21))],
         &[],
         0,
+        None,
     );
 
     assert_eq!(res, vec![Token::Int(ethereum_types::U256::from(24))]);
@@ -151,6 +160,7 @@ fn external_call_with_returns() {
         &[Token::FixedBytes(bar1_account.to_vec())],
         &[],
         0,
+        None,
     );
 
     assert_eq!(res, vec![Token::Int(ethereum_types::U256::from(15))]);
@@ -187,6 +197,7 @@ fn external_raw_call_with_returns() {
         &[Token::Int(ethereum_types::U256::from(21))],
         &[],
         0,
+        None,
     );
 
     assert_eq!(res, vec![Token::Int(ethereum_types::U256::from(24))]);
@@ -202,6 +213,7 @@ fn external_raw_call_with_returns() {
         &[Token::FixedBytes(bar1_account.to_vec())],
         &[],
         0,
+        None,
     );
 
     assert_eq!(res, vec![Token::Int(ethereum_types::U256::from(15))]);
@@ -250,6 +262,7 @@ fn external_call_with_string_returns() {
         &[Token::Int(ethereum_types::U256::from(22))],
         &[],
         0,
+        None,
     );
 
     assert_eq!(res, vec![Token::String(String::from("foo:22"))]);
@@ -267,6 +280,7 @@ fn external_call_with_string_returns() {
         &[Token::FixedBytes(bar1_account.to_vec())],
         &[],
         0,
+        None,
     );
 
     assert_eq!(res, vec![Token::String(String::from("foo:7"))]);
@@ -276,6 +290,7 @@ fn external_call_with_string_returns() {
         &[Token::FixedBytes(bar1_account.to_vec())],
         &[],
         0,
+        None,
     );
 
     let res = vm.function(
@@ -283,6 +298,7 @@ fn external_call_with_string_returns() {
         &[Token::FixedBytes(bar1_account.to_vec())],
         &[],
         0,
+        None,
     );
 
     assert_eq!(res[0], Token::FixedBytes(bar0_account.to_vec()));

@@ -67,6 +67,7 @@ fn verify() {
         ],
         &[],
         0,
+        None,
     );
 
     assert_eq!(returns, vec![Token::Bool(false)]);
@@ -83,6 +84,7 @@ fn verify() {
         AccountState {
             data: instructions,
             owner: None,
+            lamports: 0,
         },
     );
 
@@ -97,6 +99,7 @@ fn verify() {
         ],
         &[],
         0,
+        None,
     );
 
     assert_eq!(returns, vec![Token::Bool(true)]);
@@ -114,6 +117,7 @@ fn verify() {
         AccountState {
             data: instructions,
             owner: None,
+            lamports: 0,
         },
     );
 
@@ -126,6 +130,7 @@ fn verify() {
         ],
         &[],
         0,
+        None,
     );
 
     assert_eq!(returns, vec![Token::Bool(false)]);

@@ -12,7 +12,7 @@ fn types() {
 
     vm.constructor("foo", &[], 0);
 
-    let returns = vm.function("f1", &[], &[], 0);
+    let returns = vm.function("f1", &[], &[], 0, None);
 
     assert_eq!(returns, vec![Token::Int(ethereum_types::U256::from(102))]);
 
@@ -25,7 +25,13 @@ fn types() {
 
     vm.constructor("foo", &[], 0);
 
-    let returns = vm.function("f1", &[Token::Uint(ethereum_types::U256::from(2))], &[], 0);
+    let returns = vm.function(
+        "f1",
+        &[Token::Uint(ethereum_types::U256::from(2))],
+        &[],
+        0,
+        None,
+    );
 
     assert_eq!(returns, vec![Token::Int(ethereum_types::U256::from(5))]);
 
@@ -53,6 +59,7 @@ fn types() {
         ],
         &[],
         0,
+        None,
     );
 
     assert_eq!(returns, vec![Token::Int(ethereum_types::U256::from(2))]);
@@ -76,6 +83,7 @@ fn types() {
         &[Token::Int(ethereum_types::U256::from(4000))],
         &[],
         0,
+        None,
     );
 
     assert_eq!(returns, vec![Token::Uint(ethereum_types::U256::from(2))]);
@@ -97,7 +105,7 @@ fn interfaces() {
 
     vm.constructor("foo", &[], 0);
 
-    let returns = vm.function("f1", &[], &[], 0);
+    let returns = vm.function("f1", &[], &[], 0, None);
 
     assert_eq!(returns, vec![Token::FixedBytes(b"ab".to_vec())]);
 }
@@ -113,7 +121,7 @@ fn constant() {
 
     vm.constructor("x", &[], 0);
 
-    let returns = vm.function("z", &[], &[], 0);
+    let returns = vm.function("z", &[], &[], 0, None);
 
     assert_eq!(
         returns,
@@ -132,7 +140,7 @@ fn constant() {
 
     vm.constructor("x", &[], 0);
 
-    let returns = vm.function("z", &[], &[], 0);
+    let returns = vm.function("z", &[], &[], 0, None);
 
     assert_eq!(
         returns,
@@ -151,7 +159,7 @@ fn constant() {
 
     vm.constructor("x", &[], 0);
 
-    let returns = vm.function("z", &[], &[], 0);
+    let returns = vm.function("z", &[], &[], 0, None);
 
     assert_eq!(
         returns,

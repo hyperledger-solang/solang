@@ -226,6 +226,29 @@ uint64_t create_contract(uint8_t *input, uint32_t input_len, uint64_t space, Sol
     return sol_invoke_signed_c(&instruction, params->ka, params->ka_num, NULL, 0);
 }
 
+uint64_t *sol_account_lamport(
+    uint8_t *address,
+    SolParameters *params)
+{
+    SolPubkey pubkey;
+
+    __be32toleN(address, pubkey.x, SIZE_PUBKEY);
+
+    for (int i = 0; i < params->ka_num; i++)
+    {
+        if (SolPubkey_same(&pubkey, params->ka[i].key))
+        {
+            return params->ka[i].lamports;
+        }
+    }
+
+    sol_log_pubkey(&pubkey);
+    sol_log("account missing from transaction");
+    sol_panic();
+
+    return NULL;
+}
+
 struct ed25519_instruction_sig
 {
     uint16_t signature_offset;
