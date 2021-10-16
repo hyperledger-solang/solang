@@ -1,4 +1,4 @@
-# solang - A Solidity to wasm compiler written in rust
+# solang - Solidity to wasm compiler for Solana, Substrate, and ewasm
 
 [![Rocket.Chat](https://open.rocket.chat/images/join-chat.svg)](https://chat.hyperledger.org/channel/solang)
 [![CI](https://github.com/hyperledger-labs/solang/workflows/test/badge.svg)](https://github.com/hyperledger-labs/solang/actions)
