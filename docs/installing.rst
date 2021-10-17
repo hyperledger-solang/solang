@@ -42,7 +42,7 @@ First clone the git repo using:
 
 .. code-block:: bash
 
-  git clone https://github.com/hyperledger-labs/solang
+  git clone --depth 1 https://github.com/hyperledger-labs/solang
 
 Then you can build the image using:
 
@@ -125,7 +125,7 @@ you may need to consult. First if all clone our llvm repository:
 
 .. code-block:: bash
 
-	git clone --branch solana-rustc/12.0-2021-04-15 git://github.com/solana-labs/llvm-project
+	git clone --depth 1 --branch solana-rustc/12.0-2021-04-15 git://github.com/solana-labs/llvm-project
 	cd llvm-project
 
 Now run cmake to create the makefiles. Replace the *installdir* argument to ``CMAKE_INSTALL_PREFIX`` with with a directory where you would like to have llvm installed, and then run the build:
@@ -167,7 +167,7 @@ Once you have the correct llvm version in your path, simply run:
 
 .. code-block:: bash
 
-	git clone https://github.com/hyperledger-labs/solang/
+	git clone --depth 1 https://github.com/hyperledger-labs/solang/
 	cd solang
 	cargo build --release
 
