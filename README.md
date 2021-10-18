@@ -1,4 +1,4 @@
-# solang - Solidity to wasm compiler for Solana, Substrate, and ewasm
+# solang - Solidity Compiler for Solana, Substrate, and ewasm
 
 [![Rocket.Chat](https://open.rocket.chat/images/join-chat.svg)](https://chat.hyperledger.org/channel/solang)
 [![CI](https://github.com/hyperledger-labs/solang/workflows/test/badge.svg)](https://github.com/hyperledger-labs/solang/actions)
@@ -7,12 +7,9 @@
 [![LoC](https://tokei.rs/b1/github/hyperledger-labs/solang?category=lines)](https://github.com/hyperledger-labs/solang)
 
 Welcome to Solang, a new Solidity compiler written in rust which uses
-llvm as the compiler backend. As a result, only the compiler front end
-needs to be written in rust.
-
-Solang can compile Solidity for Solana, Substrate, and ewasm.  Solang is
-source compatible with Solidity 0.7, with some caveats due to
-differences in the underlying blockchain.
+llvm as the compiler backend. Solang can compile Solidity for Solana,
+Substrate, and ewasm. Solang is source compatible with Solidity 0.7, with
+some caveats due to differences in the underlying blockchain.
 
 Solang is under active development right now, and has
 [extensive documentation](https://solang.readthedocs.io/en/latest/).
@@ -49,7 +46,7 @@ solang --target substrate flipper.sol
 Alternatively if you want to use the solang docker image, run:
 
 ```
-docker run --rm -it -v $(pwd):/sources hyperledgerlabs/solang -v -o /sources  --target substrate /sources/flipper.sol
+docker run --rm -it -v $(pwd):/sources hyperledgerlabs/solang -v -o /sources --target substrate /sources/flipper.sol
 ```
 You will have a file called flipper.contract. You can use this directly in
 the [Polkadot UI](https://substrate.dev/substrate-contracts-workshop/#/0/deploy-contract),
