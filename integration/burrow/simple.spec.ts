@@ -1,14 +1,14 @@
 import { strictEqual } from 'assert';
-import { Contract, Burrow } from '@hyperledger/burrow';
+import { Contract, Client } from '@hyperledger/burrow';
 import { readFileSync } from 'fs';
-import { BigNumber } from 'ethers/lib/ethers';
+import { BigNumber } from '@ethersproject/bignumber';
 
 const default_url: string = "localhost:10997";
 const default_account = 'ABE2314B5D38BE9EA2BEDB8E58345C62FA6636BA';
 
-export async function establishConnection(): Promise<Burrow> {
+export async function establishConnection(): Promise<Client> {
     let url = process.env.RPC_URL || default_url;
-    return new Burrow(url, default_account);
+    return new Client(url, default_account);
 }
 
 describe('Deploy solang contract and test', () => {
@@ -149,31 +149,31 @@ describe('Deploy solang contract and test', () => {
 
         // TEST bytesN
         res = await prog.return_u8_6();
-        strictEqual(res[0], '414243444546');
+        strictEqual(res[0].toString('hex'), '414243444546');
 
         // // TEST bytes5
         res = await prog.op_u8_5_shift(6, 'deadcafe59', 8);
-        strictEqual(res[0], 'ADCAFE5900');
+        strictEqual(res[0].toString('hex'), 'adcafe5900');
         res = await prog.op_u8_5_shift(7, 'deadcafe59', 8);
-        strictEqual(res[0], '00DEADCAFE');
+        strictEqual(res[0].toString('hex'), '00deadcafe');
         res = await prog.op_u8_5(8, 'deadcafe59', '0000000006');
-        strictEqual(res[0], 'DEADCAFE5F');
+        strictEqual(res[0].toString('hex'), 'deadcafe5f');
         res = await prog.op_u8_5(9, 'deadcafe59', '00000000ff');
-        strictEqual(res[0], '0000000059');
+        strictEqual(res[0].toString('hex'), '0000000059');
         res = await prog.op_u8_5(10, 'deadcafe59', '00000000ff');
-        strictEqual(res[0], 'DEADCAFEA6');
+        strictEqual(res[0].toString('hex'), 'deadcafea6');
 
         // TEST bytes14
         res = await prog.op_u8_14_shift(6, 'deadcafe123456789abcdefbeef7', 9);
-        strictEqual(res[0], '5B95FC2468ACF13579BDF7DDEE00');
+        strictEqual(res[0].toString('hex'), '5b95fc2468acf13579bdf7ddee00');
         res = await prog.op_u8_14_shift(7, 'deadcafe123456789abcdefbeef7', 9);
-        strictEqual(res[0], '006F56E57F091A2B3C4D5E6F7DF7');
+        strictEqual(res[0].toString('hex'), '006f56e57f091a2b3c4d5e6f7df7');
         res = await prog.op_u8_14(8, 'deadcafe123456789abcdefbeef7', '0000060000000000000000000000');
-        strictEqual(res[0], 'DEADCEFE123456789ABCDEFBEEF7');
+        strictEqual(res[0].toString('hex'), 'deadcefe123456789abcdefbeef7');
         res = await prog.op_u8_14(9, 'deadcafe123456789abcdefbeef7', '000000000000000000ff00000000');
-        strictEqual(res[0], '000000000000000000BC00000000');
+        strictEqual(res[0].toString('hex'), '000000000000000000bc00000000');
         res = await prog.op_u8_14(10, 'deadcafe123456789abcdefbeef7', 'ff00000000000000000000000000');
-        strictEqual(res[0], '21ADCAFE123456789ABCDEFBEEF7');
+        strictEqual(res[0].toString('hex'), '21adcafe123456789abcdefbeef7');
 
         // TEST address type.
         res = await prog.address_passthrough(default_account);
