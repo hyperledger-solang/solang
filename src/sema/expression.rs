@@ -2454,7 +2454,7 @@ fn address_literal(
     if ns.target.is_substrate() {
         match address.from_base58() {
             Ok(v) => {
-                if v.len() != 35 {
+                if v.len() != ns.address_length + 3 {
                     diagnostics.push(Diagnostic::error(
                         *loc,
                         format!(
@@ -2466,13 +2466,16 @@ fn address_literal(
                     return Err(());
                 }
 
-                let hash_data: Vec<u8> =
-                    b"SS58PRE".iter().chain(v[..=32].iter()).cloned().collect();
+                let hash_data: Vec<u8> = b"SS58PRE"
+                    .iter()
+                    .chain(v[..=ns.address_length].iter())
+                    .cloned()
+                    .collect();
 
                 let hash = blake2_rfc::blake2b::blake2b(64, &[], &hash_data);
                 let hash = hash.as_bytes();
 
-                if v[33] != hash[0] || v[34] != hash[1] {
+                if v[ns.address_length + 1] != hash[0] || v[ns.address_length + 2] != hash[1] {
                     diagnostics.push(Diagnostic::error(
                         *loc,
                         format!("address literal {} hash incorrect checksum", address,),
@@ -2483,7 +2486,7 @@ fn address_literal(
                 Ok(Expression::NumberLiteral(
                     *loc,
                     Type::Address(false),
-                    BigInt::from_bytes_be(Sign::Plus, &v[1..33]),
+                    BigInt::from_bytes_be(Sign::Plus, &v[1..ns.address_length + 1]),
                 ))
             }
             Err(FromBase58Error::InvalidBase58Length) => {
@@ -2507,7 +2510,7 @@ fn address_literal(
     } else if ns.target == Target::Solana {
         match address.from_base58() {
             Ok(v) => {
-                if v.len() != 32 {
+                if v.len() != ns.address_length {
                     diagnostics.push(Diagnostic::error(
                         *loc,
                         format!(
