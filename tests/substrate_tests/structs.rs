@@ -21,7 +21,10 @@ fn parse_structs() {
                 uint a;
             }
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -37,7 +40,10 @@ fn parse_structs() {
                 uint storage b;
             }
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -53,7 +59,10 @@ fn parse_structs() {
                 uint calldata b;
             }
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -69,7 +78,10 @@ fn parse_structs() {
                 uint calldata b;
             }
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -83,7 +95,10 @@ fn parse_structs() {
             struct Foo {
             }
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -98,7 +113,10 @@ fn parse_structs() {
                 boolean x;
             }
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(first_error(ns.diagnostics), "type ‘boolean’ not found");
@@ -112,7 +130,10 @@ fn parse_structs() {
                 Foo y;
             }
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -137,7 +158,10 @@ fn parse_structs() {
             bytes4 selector;
             s foo;
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(first_error(ns.diagnostics), "struct ‘s2’ has infinite size");
@@ -155,7 +179,10 @@ fn parse_structs() {
                 Foo a = Foo();
             }
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -176,7 +203,10 @@ fn parse_structs() {
                 Foo a = Foo(true, true, true);
             }
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -197,7 +227,10 @@ fn parse_structs() {
                 Foo a = Foo({ });
             }
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -218,7 +251,10 @@ fn parse_structs() {
                 Foo a = Foo({ x: true, y: 1, z: 2 });
             }
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -239,7 +275,10 @@ fn parse_structs() {
                 Foo a = Foo({ x: true, z: 1 });
             }
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(first_error(ns.diagnostics), "struct ‘Foo’ has no field ‘z’");

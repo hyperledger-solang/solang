@@ -76,6 +76,13 @@ fn main() {
                 .default_value("32"),
         )
         .arg(
+            Arg::with_name("VALUE_LENGTH")
+                .help("Value length on Substrate")
+                .long("value-length")
+                .takes_value(true)
+                .default_value("16"),
+        )
+        .arg(
             Arg::with_name("STD-JSON")
                 .help("mimic solidity json output on stdout")
                 .long("standard-json"),
@@ -164,9 +171,22 @@ fn main() {
         }
     };
 
+    let value_length = matches.value_of("VALUE_LENGTH").unwrap();
+
+    let value_length = match value_length.parse() {
+        Ok(len) if (4..1024).contains(&len) => len,
+        _ => {
+            eprintln!("error: value length ‘{}’ is not valid", value_length);
+            std::process::exit(1);
+        }
+    };
+
     let target = match matches.value_of("TARGET") {
         Some("solana") => solang::Target::Solana,
-        Some("substrate") => solang::Target::Substrate { address_length },
+        Some("substrate") => solang::Target::Substrate {
+            address_length,
+            value_length,
+        },
         Some("ewasm") => solang::Target::Ewasm,
         _ => unreachable!(),
     };
@@ -174,6 +194,14 @@ fn main() {
     if !target.is_substrate() && matches.occurrences_of("ADDRESS_LENGTH") > 0 {
         eprintln!(
             "error: address length cannot be modified for target ‘{}’",
+            target
+        );
+        std::process::exit(1);
+    }
+
+    if !target.is_substrate() && matches.occurrences_of("VALUE_LENGTH") > 0 {
+        eprintln!(
+            "error: value length cannot be modified for target ‘{}’",
             target
         );
         std::process::exit(1);

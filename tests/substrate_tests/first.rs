@@ -7,7 +7,13 @@ use solang::Target;
 #[test]
 fn simple_solidiy_compile_and_run() {
     // try empty file
-    let ns = parse_and_resolve("", Target::Substrate { address_length: 32 });
+    let ns = parse_and_resolve(
+        "",
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
+    );
 
     no_errors(ns.diagnostics);
 

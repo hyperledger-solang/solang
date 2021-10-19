@@ -10,7 +10,10 @@ fn restrictions() {
         library c {
             constructor() {}
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -23,7 +26,10 @@ fn restrictions() {
         library c {
             receive() internal {}
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -36,7 +42,10 @@ fn restrictions() {
         library c {
             fallback() internal {}
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -49,7 +58,10 @@ fn restrictions() {
         library c {
             function f() public payable {}
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -62,7 +74,10 @@ fn restrictions() {
         library c {
             function foo() virtual public {}
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -75,7 +90,10 @@ fn restrictions() {
         library c {
             function foo() override public {}
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -88,7 +106,10 @@ fn restrictions() {
         library c is x {
             fallback() internal {}
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -105,7 +126,10 @@ fn restrictions() {
         contract a is c {
             function bar() public { }
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -118,7 +142,10 @@ fn restrictions() {
         library c {
             int x;
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -174,7 +201,10 @@ fn using() {
         contract c {
             using x for x;
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(first_error(ns.diagnostics), "library ‘x’ not found");
@@ -188,7 +218,10 @@ fn using() {
         contract c {
             using x for x;
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -207,7 +240,10 @@ fn using() {
         contract c {
             using x for asdf;
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(first_error(ns.diagnostics), "type ‘asdf’ not found");
@@ -223,7 +259,10 @@ fn using() {
         contract c {
             using x for x;
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -320,7 +359,10 @@ fn using() {
                 return a > b ? a : b;
             }
         }"##,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(first_error(ns.diagnostics), "method ‘max’ does not exist");
@@ -340,7 +382,10 @@ fn using() {
                 return a > b ? a : b;
             }
         }"##,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -368,7 +413,10 @@ fn using() {
                 return a;
             }
         }"##,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(

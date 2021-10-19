@@ -11,7 +11,10 @@ fn test_virtual() {
         contract c {
             function test() public;
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -24,7 +27,10 @@ fn test_virtual() {
         contract c {
             function test() virtual public {}
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     no_errors(ns.diagnostics);
@@ -35,7 +41,10 @@ fn test_virtual() {
             function test() virtual public;
             function test2() virtual public;
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -62,7 +71,10 @@ fn test_abstract() {
             }
         }
         "#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -86,7 +98,10 @@ fn test_abstract() {
             }
         }
         "#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -120,7 +135,10 @@ fn test_abstract() {
         "a.sol",
         &mut cache,
         inkwell::OptimizationLevel::Default,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
         false,
     );
 
@@ -158,7 +176,10 @@ fn test_abstract() {
         "a.sol",
         &mut cache,
         inkwell::OptimizationLevel::Default,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
         false,
     );
 
@@ -176,7 +197,10 @@ fn test_interface() {
             }
         }
         "#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -190,7 +214,10 @@ fn test_interface() {
             function bar() external {}
         }
         "#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -204,7 +231,10 @@ fn test_interface() {
             function bar() private;
         }
         "#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -218,7 +248,10 @@ fn test_interface() {
             function bar() internal;
         }
         "#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -236,7 +269,10 @@ fn test_interface() {
             function f() internal {}
         }
         "#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -254,7 +290,10 @@ fn test_interface() {
             function f() internal {}
         }
         "#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -268,7 +307,10 @@ fn test_interface() {
             function foo() virtual external;
         }
         "#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -282,7 +324,10 @@ fn test_interface() {
             int x;
         }
         "#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -296,7 +341,10 @@ fn test_interface() {
             int constant x = 1;
         }
         "#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -325,7 +373,10 @@ fn test_interface() {
             function f2(address a) public {}
         }
         "#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     no_errors(ns.diagnostics);
@@ -340,7 +391,10 @@ fn inherit() {
             }
         }
         "#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -355,7 +409,10 @@ fn inherit() {
             }
         }
         "#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(first_error(ns.diagnostics), "contract ‘foo’ not found");
@@ -372,7 +429,10 @@ fn inherit() {
             }
         }
         "#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -392,7 +452,10 @@ fn inherit() {
             }
         }
         "#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -417,7 +480,10 @@ fn inherit() {
             }
         }
         "#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -447,7 +513,10 @@ fn inherit() {
             }
         }
         "#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -470,7 +539,10 @@ fn inherit_types() {
             enum enum_x { x1, x2 }
         }
         "#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     no_errors(ns.diagnostics);
@@ -495,7 +567,10 @@ fn inherit_types() {
             enum enum_x { x1, x2 }
         }
         "#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     no_errors(ns.diagnostics);
@@ -520,7 +595,10 @@ fn inherit_types() {
             enum enum_x { x1, x2 }
         }
         "#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     no_errors(ns.diagnostics);
@@ -537,7 +615,10 @@ fn inherit_types() {
             enum enum_x { x1, x2 }
         }
         "#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(first_error(ns.diagnostics), "type ‘enum_x’ not found");
@@ -555,7 +636,10 @@ fn inherit_types() {
             }
         }
         "#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     no_errors(ns.diagnostics);
@@ -578,7 +662,10 @@ fn inherit_types() {
             }
         }
         "#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(first_error(ns.diagnostics), "already defined ‘foo’");
@@ -598,7 +685,10 @@ fn inherit_variables() {
             }
         }
         "#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     no_errors(ns.diagnostics);
@@ -615,7 +705,10 @@ fn inherit_variables() {
             }
         }
         "#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(first_error(ns.diagnostics), "`foo\' is not found");
@@ -636,7 +729,10 @@ fn inherit_variables() {
             }
         }
         "#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     no_errors(ns.diagnostics);
@@ -657,7 +753,10 @@ fn inherit_variables() {
             }
         }
         "#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     no_errors(ns.diagnostics);
@@ -674,7 +773,10 @@ fn inherit_variables() {
             }
         }
         "#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     no_errors(ns.diagnostics);
@@ -779,7 +881,10 @@ fn call_inherited_function() {
             }
         }
         "#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(first_error(ns.diagnostics), "cannot call private function");
@@ -798,7 +903,10 @@ fn call_inherited_function() {
             }
         }
         "#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(first_error(ns.diagnostics), "cannot call private function");
@@ -821,7 +929,10 @@ fn call_inherited_function() {
             }
         }
         "#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -927,7 +1038,10 @@ fn test_override() {
             }
         }
         "#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -943,7 +1057,10 @@ fn test_override() {
             }
         }
         "#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -963,7 +1080,10 @@ fn test_override() {
             function f() private {}
         }
         "#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -979,7 +1099,10 @@ fn test_override() {
             }
         }
         "#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -1001,7 +1124,10 @@ fn test_override() {
             }
         }
         "#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -1027,7 +1153,10 @@ fn test_override() {
             uint64 public x;
         }
         "#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -1047,7 +1176,10 @@ fn test_override() {
                 x = 2;
             }
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -1075,7 +1207,10 @@ fn test_override() {
             }
         }
         "#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     no_errors(ns.diagnostics);
@@ -1163,7 +1298,10 @@ fn test_override() {
                 function bar(int x) public { print ("foo"); }
         }
         "#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -1181,7 +1319,10 @@ fn test_override() {
                 function bar(int64 x) public override;
         }
         "#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -1212,7 +1353,10 @@ fn multiple_override() {
             }
         }
         "#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -1240,7 +1384,10 @@ fn multiple_override() {
             }
         }
         "#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -1274,7 +1421,10 @@ fn multiple_override() {
             }
         }
         "#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -1302,7 +1452,10 @@ fn multiple_override() {
             }
         }
         "#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -1330,7 +1483,10 @@ fn multiple_override() {
             }
         }
         "#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -1362,7 +1518,10 @@ fn multiple_override() {
             }
         }
         "#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -1394,7 +1553,10 @@ fn multiple_override() {
             }
         }
         "#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -1420,7 +1582,10 @@ fn base_contract() {
                 return a + 102;
             }
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -1439,7 +1604,10 @@ fn base_contract() {
                 return a + 102;
             }
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -1493,7 +1661,10 @@ fn base_contract_on_constructor() {
 
             }
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -1516,7 +1687,10 @@ fn base_contract_on_constructor() {
 
             }
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -1531,7 +1705,10 @@ fn base_contract_on_constructor() {
 
             }
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -1546,7 +1723,10 @@ fn base_contract_on_constructor() {
 
             }
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -1563,7 +1743,10 @@ fn base_contract_on_constructor() {
         contract apex is base {
                 function foo() pure public {}
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -1581,7 +1764,10 @@ fn base_contract_on_constructor() {
             constructor() base(true) base(false) {}
             function foo() pure public {}
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -1707,7 +1893,10 @@ fn base_contract_on_constructor() {
             function get_foo() public returns (int64) { return foo; }
             constructor(int64 z) { foo = z; }
         }"##,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -1730,7 +1919,10 @@ fn base_contract_on_constructor() {
             function get_foo() public returns (int64) { return foo; }
             constructor(int64 z) { foo = z; }
         }"##,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(first_error(ns.diagnostics), "duplicate base contract ‘b’");
@@ -1750,7 +1942,10 @@ fn base_contract_on_constructor() {
             function get_foo() public returns (int64) { return foo; }
             constructor(int64 z) { foo = z; }
         }"##,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -1835,7 +2030,10 @@ fn simple_interface() {
                 return a * 2;
             }
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     no_errors(ns.diagnostics);
@@ -1903,7 +2101,10 @@ fn cast_contract() {
                 return a / b;
             }
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     no_errors(ns.diagnostics);
@@ -1919,7 +2120,10 @@ fn cast_contract() {
                 foo y = x;
             }
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -1932,7 +2136,10 @@ fn cast_contract() {
 fn test_super() {
     let ns = parse_and_resolve(
         r#"contract super {}"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -1944,7 +2151,10 @@ fn test_super() {
         r#"
         function f1() { super.a(); }
         "#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -1963,7 +2173,10 @@ fn test_super() {
                 super.f2();
             }
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(first_error(ns.diagnostics), "unknown function or type ‘f2’");
@@ -2071,7 +2284,10 @@ fn mutability() {
             }
         }
         "#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -2091,7 +2307,10 @@ fn mutability() {
             }
         }
         "#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -2116,7 +2335,10 @@ fn visibility() {
             }
         }
         "#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     no_errors(ns.diagnostics);
@@ -2133,7 +2355,10 @@ fn visibility() {
             }
         }
         "#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -2153,7 +2378,10 @@ fn visibility() {
             }
         }
         "#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(

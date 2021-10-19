@@ -21,7 +21,10 @@ fn external_call_value() {
                 a f = new a();
             }
         }"##,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -44,7 +47,10 @@ fn external_call_value() {
                 a f = new a();
             }
         }"##,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -67,7 +73,10 @@ fn external_call_value() {
                 a f = new a();
             }
         }"##,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -90,7 +99,10 @@ fn external_call_value() {
                 a f = new a();
             }
         }"##,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -113,7 +125,10 @@ fn external_call_value() {
                 a f = new a();
             }
         }"##,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -136,7 +151,10 @@ fn external_call_value() {
                 a f = new a();
             }
         }"##,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -159,7 +177,10 @@ fn external_call_value() {
                 a f = new a();
             }
         }"##,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(first_error(ns.diagnostics), "missing call arguments");
@@ -179,7 +200,10 @@ fn external_call_value() {
                 f.test{value: 1023}(501);
             }
         }"##,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -202,7 +226,10 @@ fn external_call_value() {
                 f.test{value: 1023}({l: 501});
             }
         }"##,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -226,7 +253,10 @@ fn external_call_value() {
                 f.test{value: x}({l: 501});
             }
         }"##,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -249,7 +279,10 @@ fn external_call_value() {
                 f.test{value: 2-2}({l: 501});
             }
         }"##,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     no_errors(ns.diagnostics);
@@ -269,7 +302,10 @@ fn external_call_value() {
                 f.test{value: 0*10}(501);
             }
         }"##,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     no_errors(ns.diagnostics);
@@ -549,7 +585,10 @@ fn this_address() {
                 return payable(this);
             }
         }"##,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     no_errors(ns.diagnostics);
@@ -561,7 +600,10 @@ fn this_address() {
                 return this;
             }
         }"##,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -576,7 +618,10 @@ fn this_address() {
                 this = other;
             }
         }"##,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(first_error(ns.diagnostics), "expression is not assignable");
@@ -665,7 +710,10 @@ fn this_address() {
                 s = n;
             }
         }"##,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -687,7 +735,10 @@ fn this_address() {
                 s = n;
             }
         }"##,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -705,7 +756,10 @@ fn balance() {
                 return j.balance;
             }
         }"##,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -720,7 +774,10 @@ fn balance() {
                 return j.balance;
             }
         }"##,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -735,7 +792,10 @@ fn balance() {
                 return j.balance;
             }
         }"##,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(

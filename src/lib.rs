@@ -23,7 +23,10 @@ pub enum Target {
     /// Solana, see <https://solana.com/>
     Solana,
     /// Parity Substrate, see <https://substrate.dev/>
-    Substrate { address_length: usize },
+    Substrate {
+        address_length: usize,
+        value_length: usize,
+    },
     /// Ethereum ewasm, see <https://github.com/ewasm/design>
     Ewasm,
 }

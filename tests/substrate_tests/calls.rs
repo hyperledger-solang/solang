@@ -183,7 +183,10 @@ fn try_catch_external_calls() {
             }
         }
         "##,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -212,7 +215,10 @@ fn try_catch_external_calls() {
             }
         }
         "##,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -292,7 +298,10 @@ fn try_catch_external_calls() {
             }
         }
         "##,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -321,7 +330,10 @@ fn try_catch_external_calls() {
             }
         }
         "##,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(first_error(ns.diagnostics), "x is already declared");
@@ -349,7 +361,10 @@ fn try_catch_external_calls() {
             }
         }
         "##,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -380,7 +395,10 @@ fn try_catch_external_calls() {
             }
         }
         "##,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -524,7 +542,10 @@ fn try_catch_constructor() {
             }
         }
         "##,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -551,7 +572,10 @@ fn try_catch_constructor() {
             }
         }
         "##,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -655,7 +679,10 @@ fn try_catch_constructor() {
             }
         }
         "##,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -670,7 +697,10 @@ fn try_catch_constructor() {
                 x : 1
             }
         }"##,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -695,7 +725,10 @@ fn try_catch_constructor() {
             }
         }
         "##,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -724,7 +757,10 @@ fn try_catch_constructor() {
             }
         }
         "##,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(first_error(ns.diagnostics), "unexpected code block");
@@ -750,7 +786,10 @@ fn try_catch_constructor() {
             }
         }
         "##,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(first_error(ns.diagnostics), "unexpected code block");
@@ -966,7 +1005,10 @@ fn payable_functions() {
             }
         }
         "##,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -982,7 +1024,10 @@ fn payable_functions() {
             }
         }
         "##,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -998,7 +1043,10 @@ fn payable_functions() {
             }
         }
         "##,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -1014,7 +1062,10 @@ fn payable_functions() {
             }
         }
         "##,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(

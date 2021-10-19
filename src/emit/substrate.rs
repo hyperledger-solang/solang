@@ -3406,7 +3406,11 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                 binary.module.get_function("seal_instantiate").unwrap(),
                 &[
                     codehash.into(),
-                    binary.context.i32_type().const_int(32, false).into(),
+                    binary
+                        .context
+                        .i32_type()
+                        .const_int(ns.address_length as u64, false)
+                        .into(),
                     gas.into(),
                     binary
                         .builder
@@ -3416,7 +3420,11 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                             "value_transfer",
                         )
                         .into(),
-                    binary.context.i32_type().const_int(16, false).into(),
+                    binary
+                        .context
+                        .i32_type()
+                        .const_int(ns.value_length as u64, false)
+                        .into(),
                     input.into(),
                     input_len.into(),
                     address.into(),

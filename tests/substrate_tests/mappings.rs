@@ -22,7 +22,10 @@ fn bad_mapping_declares() {
                 x.data[1] = address(1);
             }
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -35,7 +38,10 @@ fn bad_mapping_declares() {
         contract c {
             mapping(uint[] => address) data;
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -51,7 +57,10 @@ fn bad_mapping_declares() {
             }
             mapping(foo => address) data;
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -65,7 +74,10 @@ fn bad_mapping_declares() {
             mapping(int => address) data;
             mapping(data => address) data2;
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(first_error(ns.diagnostics), "‘data’ is a contract variable");
@@ -77,7 +89,10 @@ fn bad_mapping_declares() {
                 //
             }
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -92,7 +107,10 @@ fn bad_mapping_declares() {
                 //
             }
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -107,7 +125,10 @@ fn bad_mapping_declares() {
                 //
             }
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -122,7 +143,10 @@ fn bad_mapping_declares() {
                 //
             }
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -138,7 +162,10 @@ fn bad_mapping_declares() {
                 //
             }
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -154,7 +181,10 @@ fn bad_mapping_declares() {
                 delete data;
             }
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
