@@ -251,10 +251,7 @@ fn test_cast_errors() {
                 bool is_nonzero = bar;
             }
         }",
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -268,10 +265,7 @@ fn test_cast_errors() {
                 return (foo < bar);
             }
         }",
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -286,10 +280,7 @@ fn test_cast_errors() {
                 return false;
             }
         }",
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     no_errors(ns.diagnostics);
@@ -302,10 +293,7 @@ fn test_cast_errors() {
                 return false;
             }
         }",
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -342,10 +330,7 @@ fn test_cast_errors() {
                 set_x(uint32(b));
             }
         }",
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     no_errors(ns.diagnostics);
@@ -983,10 +968,7 @@ fn power() {
                 return base ** exp;
             }
        }",
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -1000,10 +982,7 @@ fn power() {
                 return base ** exp;
             }
        }",
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -1017,10 +996,7 @@ fn power() {
                 return base ** exp;
             }
        }",
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -1405,10 +1381,7 @@ fn destructure() {
                 (a, b) = (1, 2, 3);
             }
         }",
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -1425,10 +1398,7 @@ fn destructure() {
                 (c, b) = (1, 2);
             }
         }",
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(first_error(ns.diagnostics), "`c\' is not found");
@@ -1442,10 +1412,7 @@ fn destructure() {
                 (a memory, b) = (1, 2);
             }
         }",
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -1462,10 +1429,7 @@ fn destructure() {
                 (a , b) = (1, );
             }
         }",
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(first_error(ns.diagnostics), "stray comma");

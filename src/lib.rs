@@ -42,6 +42,8 @@ impl fmt::Display for Target {
 }
 
 impl PartialEq for Target {
+    // Equality should check if it the same chain, not compare parameters. This
+    // is needed for builtins for example
     fn eq(&self, other: &Self) -> bool {
         match self {
             Target::Solana => matches!(other, Target::Solana),
@@ -52,8 +54,17 @@ impl PartialEq for Target {
 }
 
 impl Target {
+    /// Short-hand for checking for Substrate target
     pub fn is_substrate(&self) -> bool {
         matches!(self, Target::Substrate { .. })
+    }
+
+    /// Create the target Substrate with default parameters
+    pub const fn default_substrate() -> Self {
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        }
     }
 }
 

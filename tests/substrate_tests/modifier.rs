@@ -10,10 +10,7 @@ fn declare() {
         contract c {
             modifier foo() public {}
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -26,10 +23,7 @@ fn declare() {
         contract c {
             modifier foo() internal {}
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -42,10 +36,7 @@ fn declare() {
         contract c {
             modifier foo() payable {}
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -58,10 +49,7 @@ fn declare() {
         contract c {
             modifier foo() pure {}
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -74,10 +62,7 @@ fn declare() {
         contract c {
             modifier foo bar {}
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -90,10 +75,7 @@ fn declare() {
         contract c {
             modifier foo() {}
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(first_error(ns.diagnostics), "missing ‘_’ in modifier");
@@ -109,10 +91,7 @@ fn declare() {
                 }
             }
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     no_errors(ns.diagnostics);
@@ -128,10 +107,7 @@ fn declare() {
                 foo();
             }
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -146,10 +122,7 @@ fn declare() {
                 _;
             }
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -167,10 +140,7 @@ fn function_modifier() {
 
             function bar() foo2 public {}
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(first_error(ns.diagnostics), "unknown modifier ‘foo2’");
@@ -182,10 +152,7 @@ fn function_modifier() {
 
             function bar() foo(1) public {}
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -200,10 +167,7 @@ fn function_modifier() {
 
             function bar(bool x) foo(x) public {}
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -544,10 +508,7 @@ fn mutability() {
 
             function bar() foo(var) public pure {}
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -563,10 +524,7 @@ fn mutability() {
 
             function bar() foo() public pure {}
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -585,10 +543,7 @@ fn mutability() {
         contract apex is base {
             function foo() public override {}
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(

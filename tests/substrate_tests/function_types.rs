@@ -11,10 +11,7 @@ fn decls() {
                 function() public a;
             }
         }",
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -28,10 +25,7 @@ fn decls() {
                 function() private a;
             }
         }",
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -45,10 +39,7 @@ fn decls() {
                 function() returns (bool) internal a;
             }
         }",
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -62,10 +53,7 @@ fn decls() {
                 function() returns (bool) pure a;
             }
         }",
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -79,10 +67,7 @@ fn decls() {
                 function() returns (bool x) a;
             }
         }",
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -96,10 +81,7 @@ fn decls() {
                 function(address tre) returns (bool) a;
             }
         }",
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -113,10 +95,7 @@ fn decls() {
             function foo(function(address) pure internal returns (bool) a) public {
             }
         }",
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -129,10 +108,7 @@ fn decls() {
             function foo() public returns (function(address) pure internal returns (bool) a) {
             }
         }",
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -144,10 +120,7 @@ fn decls() {
         "contract test {
             function(address) pure internal returns (bool) public a;
         }",
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -166,10 +139,7 @@ fn assign() {
                 function(int32) pure a = x;
             }
         }",
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -185,10 +155,7 @@ fn assign() {
                 function(int32) view a = x;
             }
         }",
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -204,10 +171,7 @@ fn assign() {
                 function(int32) a = x;
             }
         }",
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -225,10 +189,7 @@ fn assign() {
                 function(int32) a = x;
             }
         }",
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -246,10 +207,7 @@ fn assign() {
                 function(int32) returns (bool) a = x;
             }
         }",
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -467,10 +425,7 @@ fn ext() {
                 return false;
             }
         }",
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -489,10 +444,7 @@ fn ext() {
                 return false;
             }
         }"##,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -515,10 +467,7 @@ fn ext() {
                 return false;
             }
         }"##,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -676,10 +625,7 @@ fn variable_or_func_type() {
             }
         }
         ",
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     no_errors(ns.diagnostics);
