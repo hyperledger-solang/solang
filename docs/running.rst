@@ -32,6 +32,10 @@ Options:
   This takes one argument, which can either be ``solana``, ``substrate``, or ``ewasm``. The target
   must be specified.
 
+\\-\\-address\-length *length-in-bytes*
+  Change the default address length on Substrate. By default, Substate uses an address of 32 bytes. This option
+  is ignored for any other target.
+
 \\-\\-doc
   Generate documentation for the given Solidity files as a single html page. This uses the
   doccomment tags. The result is saved in ``soldoc.html``. See :ref:`tags` for

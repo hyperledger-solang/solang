@@ -13,7 +13,7 @@ fn contract_name() {
         "contract test {
             function test() public {}
         }",
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -25,7 +25,7 @@ fn contract_name() {
         "contract test {
             enum test { a}
         }",
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -37,7 +37,7 @@ fn contract_name() {
         "contract test {
             bool test;
         }",
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -49,7 +49,7 @@ fn contract_name() {
         "contract test {
             struct test { bool a; }
         }",
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -63,7 +63,7 @@ fn contract_name() {
                 int test;
             }
         }",
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -76,7 +76,7 @@ fn contract_name() {
             function f(int test) public {
             }
         }",
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -90,7 +90,7 @@ fn contract_name() {
                 return 0;
             }
         }",
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -112,7 +112,7 @@ fn contract_name() {
             }
         }
         "#,
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -140,7 +140,7 @@ fn contract_name() {
             }
         }
         "#,
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -168,7 +168,7 @@ fn contract_type() {
                 printer y = printer(x);
             }
         }"#,
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -183,7 +183,7 @@ fn contract_type() {
                 printer x = printer(address(102));
             }
         }"#,
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     no_errors(ns.diagnostics);
@@ -201,7 +201,7 @@ fn contract_type() {
                 address y = 102;
             }
         }"#,
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -222,7 +222,7 @@ fn contract_type() {
                 printer y = 102;
             }
         }"#,
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -237,7 +237,7 @@ fn contract_type() {
                 return new printer();
             }
         }"#,
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -252,7 +252,7 @@ fn contract_type() {
                 return new printer({});
             }
         }"#,
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -277,7 +277,7 @@ fn external_call() {
                 return 1;
             }
         }"##,
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -299,7 +299,7 @@ fn external_call() {
                 return 1;
             }
         }"##,
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -328,7 +328,7 @@ fn external_call() {
                 return x * t;
             }
         }"##,
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -357,7 +357,7 @@ fn external_call() {
                 return x * t;
             }
         }"##,
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(first_error(ns.diagnostics), "duplicate argument name ‘a’");
@@ -529,7 +529,7 @@ fn creation_code() {
                 }
         }
         "##,
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -544,7 +544,7 @@ fn creation_code() {
                     bytes code = type(a).runtimeCode;
             }
         }"##,
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(

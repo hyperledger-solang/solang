@@ -8,7 +8,7 @@ fn variable_size() {
             function foo(int[12131231313213] memory y) public {}
         }
         ",
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -21,7 +21,7 @@ fn variable_size() {
             function foo() public returns (int[12131231313213] memory y) {}
         }
         ",
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -36,7 +36,7 @@ fn variable_size() {
             }
         }
         ",
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -56,7 +56,7 @@ fn immutable() {
             }
         }
         ",
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -73,7 +73,7 @@ fn immutable() {
             }
         }
         ",
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -90,7 +90,7 @@ fn immutable() {
             }
         }
         ",
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -107,7 +107,7 @@ fn immutable() {
             }
         }
         ",
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -126,7 +126,7 @@ fn immutable() {
             }
         }
         ",
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -139,7 +139,7 @@ fn immutable() {
             int immutable public immutable y = 1;
         }
         ",
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -155,7 +155,7 @@ fn override_attribute() {
             int override y = 1;
         }
         ",
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -168,7 +168,7 @@ fn override_attribute() {
             int override internal y = 1;
         }
         ",
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -181,7 +181,7 @@ fn override_attribute() {
             int override private y = 1;
         }
         ",
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -194,7 +194,7 @@ fn override_attribute() {
             int override override y = 1;
         }
         ",
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -213,7 +213,7 @@ fn override_attribute() {
             }
         }
         ",
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -232,7 +232,7 @@ fn override_attribute() {
             }
         }
         ",
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     no_errors(ns.diagnostics);
@@ -250,7 +250,7 @@ fn test_variable_errors() {
                 return a * b;
             }
         }",
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(first_error(ns.diagnostics), "`b' is not found");
@@ -264,7 +264,7 @@ fn test_variable_initializer_errors() {
             uint x = 102;
             uint constant y = x + 5;
         }",
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -280,7 +280,7 @@ fn test_variable_initializer_errors() {
             }
             uint constant y = foo() + 5;
         }",
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -294,7 +294,7 @@ fn test_variable_initializer_errors() {
             uint x = y + 102;
             uint y = 102;
         }",
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(first_error(ns.diagnostics), "`y' is not found");
@@ -305,7 +305,7 @@ fn test_variable_initializer_errors() {
             uint x = y + 102;
             uint constant y = 102;
         }",
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(first_error(ns.diagnostics), "`y' is not found");
@@ -315,7 +315,7 @@ fn test_variable_initializer_errors() {
         "contract test {
             uint x = x + 102;
         }",
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(first_error(ns.diagnostics), "`x' is not found");
@@ -323,28 +323,34 @@ fn test_variable_initializer_errors() {
 
 #[test]
 fn global_constants() {
-    let ns = parse_and_resolve("uint x = 102;", Target::Substrate);
+    let ns = parse_and_resolve("uint x = 102;", Target::Substrate { address_length: 32 });
 
     assert_eq!(
         first_error(ns.diagnostics),
         "global variable must be constant"
     );
 
-    let ns = parse_and_resolve("uint constant public x = 102;", Target::Substrate);
+    let ns = parse_and_resolve(
+        "uint constant public x = 102;",
+        Target::Substrate { address_length: 32 },
+    );
 
     assert_eq!(
         first_error(ns.diagnostics),
         "‘public’: global variable cannot have visibility specifier"
     );
 
-    let ns = parse_and_resolve("uint constant external x = 102;", Target::Substrate);
+    let ns = parse_and_resolve(
+        "uint constant external x = 102;",
+        Target::Substrate { address_length: 32 },
+    );
 
     assert_eq!(
         first_error(ns.diagnostics),
         "‘external’: global variable cannot have visibility specifier"
     );
 
-    let ns = parse_and_resolve("uint constant x;", Target::Substrate);
+    let ns = parse_and_resolve("uint constant x;", Target::Substrate { address_length: 32 });
 
     assert_eq!(
         first_error(ns.diagnostics),
@@ -353,7 +359,7 @@ fn global_constants() {
 
     let ns = parse_and_resolve(
         "uint constant test = 5; contract test {}",
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(

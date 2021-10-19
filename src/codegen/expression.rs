@@ -859,7 +859,7 @@ pub fn expression(
                 &Type::Bool,
             );
 
-            if ns.target == Target::Substrate {
+            if ns.target.is_substrate() {
                 cfg.add(
                     vartab,
                     Instr::ValueTransfer {
@@ -892,7 +892,7 @@ pub fn expression(
             let address = expression(&args[0], cfg, contract_no, func, ns, vartab);
             let value = expression(&args[1], cfg, contract_no, func, ns, vartab);
 
-            if ns.target == Target::Substrate {
+            if ns.target.is_substrate() {
                 cfg.add(
                     vartab,
                     Instr::ValueTransfer {
@@ -1069,7 +1069,7 @@ pub fn expression(
         }
         // The Substrate gas price builtin takes an argument; the others do not
         Expression::Builtin(loc, _, Builtin::Gasprice, expr)
-            if expr.len() == 1 && ns.target != Target::Substrate =>
+            if expr.len() == 1 && !ns.target.is_substrate() =>
         {
             let ty = Type::Value;
             let gasprice = Expression::Builtin(*loc, vec![ty.clone()], Builtin::Gasprice, vec![]);

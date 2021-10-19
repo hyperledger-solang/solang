@@ -312,7 +312,19 @@ fn resolve_pragma(name: &pt::Identifier, value: &pt::StringLiteral, ns: &mut ast
 
 impl ast::Namespace {
     /// Create a namespace and populate with the parameters for the target
-    pub fn new(target: Target, address_length: usize, value_length: usize) -> Self {
+    pub fn new(target: Target) -> Self {
+        let address_length = match target {
+            Target::Ewasm => 20,
+            Target::Substrate { address_length } => address_length,
+            Target::Solana => 32,
+        };
+
+        let value_length = if target == Target::Solana {
+            8 // lamports is u64
+        } else {
+            16 // value is 128 bits
+        };
+
         ast::Namespace {
             target,
             files: Vec::new(),

@@ -22,7 +22,7 @@ fn bad_mapping_declares() {
                 x.data[1] = address(1);
             }
         }"#,
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -35,7 +35,7 @@ fn bad_mapping_declares() {
         contract c {
             mapping(uint[] => address) data;
         }"#,
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -51,7 +51,7 @@ fn bad_mapping_declares() {
             }
             mapping(foo => address) data;
         }"#,
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -65,7 +65,7 @@ fn bad_mapping_declares() {
             mapping(int => address) data;
             mapping(data => address) data2;
         }"#,
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(first_error(ns.diagnostics), "‘data’ is a contract variable");
@@ -77,7 +77,7 @@ fn bad_mapping_declares() {
                 //
             }
         }"#,
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -92,7 +92,7 @@ fn bad_mapping_declares() {
                 //
             }
         }"#,
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -107,7 +107,7 @@ fn bad_mapping_declares() {
                 //
             }
         }"#,
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -122,7 +122,7 @@ fn bad_mapping_declares() {
                 //
             }
         }"#,
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -138,7 +138,7 @@ fn bad_mapping_declares() {
                 //
             }
         }"#,
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -154,7 +154,7 @@ fn bad_mapping_declares() {
                 delete data;
             }
         }"#,
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(

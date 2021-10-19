@@ -11,7 +11,7 @@ pub fn generate_abi(
     verbose: bool,
 ) -> (String, &'static str) {
     match ns.target {
-        Target::Substrate => {
+        Target::Substrate { .. } => {
             if verbose {
                 eprintln!(
                     "info: Generating Substrate ABI for contract {}",

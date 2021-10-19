@@ -1772,7 +1772,7 @@ fn test_highest_bit() {
 
 #[test]
 fn expresson_known_bits() {
-    let ns = Namespace::new(crate::Target::Substrate, 32, 16);
+    let ns = Namespace::new(crate::Target::Substrate { address_length: 32 });
     let loc = crate::parser::pt::Loc(0, 0, 0);
 
     let mut vars: Variables = HashMap::new();

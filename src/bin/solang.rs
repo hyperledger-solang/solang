@@ -69,6 +69,13 @@ fn main() {
                 .required(true),
         )
         .arg(
+            Arg::with_name("ADDRESS_LENGTH")
+                .help("Address length on Substrate")
+                .long("address-length")
+                .takes_value(true)
+                .default_value("32"),
+        )
+        .arg(
             Arg::with_name("STD-JSON")
                 .help("mimic solidity json output on stdout")
                 .long("standard-json"),
@@ -147,12 +154,30 @@ fn main() {
         )
         .get_matches();
 
+    let address_length = matches.value_of("ADDRESS_LENGTH").unwrap();
+
+    let address_length = match address_length.parse() {
+        Ok(len) if (4..1024).contains(&len) => len,
+        _ => {
+            eprintln!("error: address length ‘{}’ is not valid", address_length);
+            std::process::exit(1);
+        }
+    };
+
     let target = match matches.value_of("TARGET") {
         Some("solana") => solang::Target::Solana,
-        Some("substrate") => solang::Target::Substrate,
+        Some("substrate") => solang::Target::Substrate { address_length },
         Some("ewasm") => solang::Target::Ewasm,
         _ => unreachable!(),
     };
+
+    if !target.is_substrate() && matches.occurrences_of("ADDRESS_LENGTH") > 0 {
+        eprintln!(
+            "error: address length cannot be modified for target ‘{}’",
+            target
+        );
+        std::process::exit(1);
+    }
 
     if matches.is_present("LANGUAGESERVER") {
         languageserver::start_server(target);
