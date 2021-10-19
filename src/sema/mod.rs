@@ -313,16 +313,13 @@ fn resolve_pragma(name: &pt::Identifier, value: &pt::StringLiteral, ns: &mut ast
 impl ast::Namespace {
     /// Create a namespace and populate with the parameters for the target
     pub fn new(target: Target) -> Self {
-        let address_length = match target {
-            Target::Ewasm => 20,
-            Target::Substrate { address_length } => address_length,
-            Target::Solana => 32,
-        };
-
-        let value_length = if target == Target::Solana {
-            8 // lamports is u64
-        } else {
-            16 // value is 128 bits
+        let (address_length, value_length) = match target {
+            Target::Ewasm => (20, 16),
+            Target::Substrate {
+                address_length,
+                value_length,
+            } => (address_length, value_length),
+            Target::Solana => (32, 8),
         };
 
         ast::Namespace {

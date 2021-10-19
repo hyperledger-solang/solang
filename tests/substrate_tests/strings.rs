@@ -16,7 +16,10 @@ fn basic_tests() {
                     f[0] = 102;
             }
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -31,7 +34,10 @@ fn basic_tests() {
                     bytes f = new string(2);
             }
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -46,7 +52,10 @@ fn basic_tests() {
                     string f = new bytes(2);
             }
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -61,7 +70,10 @@ fn basic_tests() {
                     string f = string(new bytes(2));
             }
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     no_errors(ns.diagnostics);
@@ -73,7 +85,10 @@ fn basic_tests() {
                     bytes f = bytes(new string(2));
             }
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     no_errors(ns.diagnostics);
@@ -678,7 +693,10 @@ fn string_escape() {
                     string f = "\x";
             }
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -693,7 +711,10 @@ fn string_escape() {
                     string f = "\x9k";
             }
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -708,7 +729,10 @@ fn string_escape() {
                     string f = "\xたこ";
             }
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -723,7 +747,10 @@ fn string_escape() {
                     string f = "\u";
             }
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -738,7 +765,10 @@ fn string_escape() {
                     string f = "\uたこ焼き";
             }
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -753,7 +783,10 @@ fn string_escape() {
                     string f = "\u9kff";
             }
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(

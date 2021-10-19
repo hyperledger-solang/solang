@@ -32,8 +32,12 @@ Options:
   This takes one argument, which can either be ``solana``, ``substrate``, or ``ewasm``. The target
   must be specified.
 
-\\-\\-address\-length *length-in-bytes*
-  Change the default address length on Substrate. By default, Substate uses an address of 32 bytes. This option
+\\-\\-address\\-length *length-in-bytes*
+  Change the default address length on Substrate. By default, Substate uses an address type of 32 bytes. This option
+  is ignored for any other target.
+
+\\-\\-value\\-length *length-in-bytes*
+  Change the default value length on Substrate. By default, Substate uses an value type of 16 bytes. This option
   is ignored for any other target.
 
 \\-\\-doc

@@ -15,7 +15,10 @@ fn test_infinite_loop() {
                 return 0;
             }
         }",
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(first_error(ns.diagnostics), "unreachable statement");

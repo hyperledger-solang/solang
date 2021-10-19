@@ -7,7 +7,10 @@ fn contract() {
         r#"
         /// @barf
         contract test {}"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -25,7 +28,10 @@ fn contract() {
         /// @dev this is
         ///  a contract
         contract test {}"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(ns.contracts[0].tags[0].tag, "notice");
@@ -51,7 +57,10 @@ fn contract() {
          * a contract
          */
         contract test {}"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(ns.contracts[0].tags[0].tag, "notice");
@@ -66,7 +75,13 @@ fn contract() {
     assert_eq!(ns.contracts[0].tags[3].tag, "dev");
     assert_eq!(ns.contracts[0].tags[3].value, "this is a contract");
 
-    let ns = parse_and_resolve("/**\n", Target::Substrate { address_length: 32 });
+    let ns = parse_and_resolve(
+        "/**\n",
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
+    );
 
     assert_eq!(ns.diagnostics[0].pos, Some(Loc(0, 0, 4)));
     assert_eq!(ns.diagnostics[0].message, "end of file found in comment");
@@ -80,7 +95,10 @@ fn struct_tag() {
         struct x {
             uint32 f;
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -94,7 +112,10 @@ fn struct_tag() {
         struct x {
             uint32 f;
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(first_error(ns.diagnostics), "tag ‘@param’ no field ‘g’");
@@ -106,7 +127,10 @@ fn struct_tag() {
         struct x {
             uint32 f;
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -122,7 +146,10 @@ fn struct_tag() {
             uint32 f1;
             uint32 f2;
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(ns.diagnostics.len(), 0);
@@ -144,7 +171,10 @@ fn event_tag() {
         event x (
             uint32 f
         );"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -158,7 +188,10 @@ fn event_tag() {
         event x (
             uint32 f
         );"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(first_error(ns.diagnostics), "tag ‘@param’ no field ‘g’");
@@ -170,7 +203,10 @@ fn event_tag() {
         event x (
             uint32 f
         );"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -186,7 +222,10 @@ fn event_tag() {
             uint32 f1,
             uint32 f2
         );"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     //Event never emitted generates a warning
@@ -211,7 +250,10 @@ fn event_tag() {
                 uint32 f2
             );
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     //Event never emitted generates a warning
@@ -238,7 +280,10 @@ fn enum_tag() {
         enum x {
             foo1
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -252,7 +297,10 @@ fn enum_tag() {
          *  @dev bla bla bla
          * @author f2 bar */
         enum x { x1 }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(ns.diagnostics.len(), 0);
@@ -274,7 +322,10 @@ fn functions() {
             /// @param
             function foo() public {}
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -289,7 +340,10 @@ fn functions() {
             /// @param g
             function foo(int f) public {}
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(first_error(ns.diagnostics), "tag ‘@param’ no field ‘g’");
@@ -303,7 +357,10 @@ fn functions() {
              */
             function foo(int f) public {}
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -317,7 +374,10 @@ fn functions() {
             /// @return so here we are
             function foo() public {}
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -331,7 +391,10 @@ fn functions() {
             /// @return so here we are
             function foo() public returns (int a, bool) {}
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(first_error(ns.diagnostics), "tag ‘@return’ no field ‘so’");
@@ -342,7 +405,10 @@ fn functions() {
             /// @return
             function foo() public returns (int a, bool b) {}
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -357,7 +423,10 @@ fn functions() {
             /// @return a barf
             function foo() public returns (int a, bool b) {}
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -371,7 +440,10 @@ fn functions() {
             /// @inheritdoc
             function foo() public returns (int a, bool b) {}
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -385,7 +457,10 @@ fn functions() {
             /// @inheritdoc b
             function foo() public returns (int a, bool b) {}
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -403,7 +478,10 @@ fn functions() {
         }
 
         contract b {}"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(ns.diagnostics.len(), 5);
@@ -427,7 +505,10 @@ fn variables() {
             /// @param
             int x;
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -445,7 +526,10 @@ fn variables() {
         }
 
         contract b {}"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     //Variable 'y' has never been used (one item error in diagnostic)

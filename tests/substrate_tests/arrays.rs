@@ -22,7 +22,10 @@ fn missing_array_index() {
                     return bar[];
             }
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -39,7 +42,10 @@ fn missing_array_index() {
                     return bar[0];
             }
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -226,7 +232,10 @@ fn data_locations() {
             function bar(uint storage) public returns () {
             }
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -240,7 +249,10 @@ fn data_locations() {
             function bar(uint calldata x) public returns () {
             }
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -255,7 +267,10 @@ fn data_locations() {
             function bar(foo2 memory x) public returns () {
             }
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -270,7 +285,10 @@ fn data_locations() {
             function bar(foo2 x) public returns (uint calldata) {
             }
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -285,7 +303,10 @@ fn data_locations() {
             function bar(foo2 x) public returns (bool calldata) {
             }
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -300,7 +321,10 @@ fn data_locations() {
             function bar(foo2 x) public returns (int storage) {
             }
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -315,7 +339,10 @@ fn data_locations() {
             function bar(int[10] storage x) public returns (int) {
             }
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -330,7 +357,10 @@ fn data_locations() {
             function bar() public returns (int[10] storage x) {
             }
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -345,7 +375,10 @@ fn data_locations() {
             function bar() public returns (foo2[10] storage x) {
             }
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -509,7 +542,10 @@ fn array_dimensions() {
         contract foo {
             bool[10 - 10] x;
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(first_error(ns.diagnostics), "zero size array not permitted");
@@ -519,7 +555,10 @@ fn array_dimensions() {
         contract foo {
             bool[-10 + 10] x;
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -532,7 +571,10 @@ fn array_dimensions() {
         contract foo {
             bool[1 / 10] x;
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(first_error(ns.diagnostics), "zero size array not permitted");
@@ -543,7 +585,10 @@ fn array_dimensions() {
             enum e { e1, e2, e3 }
             e[1 / 0] x;
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(first_error(ns.diagnostics), "divide by zero");
@@ -556,7 +601,10 @@ fn array_dimensions() {
             }
             bar[1 % 0] x;
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(first_error(ns.diagnostics), "divide by zero");
@@ -790,7 +838,10 @@ fn memory_dynamic_array_new() {
                 assert(a.length == 5);
             }
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -807,7 +858,10 @@ fn memory_dynamic_array_new() {
                 assert(a.length == 5);
             }
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -824,7 +878,10 @@ fn memory_dynamic_array_new() {
                 assert(a.length == 5);
             }
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -841,7 +898,10 @@ fn memory_dynamic_array_new() {
                 assert(a.length == 5);
             }
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -858,7 +918,10 @@ fn memory_dynamic_array_new() {
                 assert(a.length == 5);
             }
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -905,7 +968,10 @@ fn memory_dynamic_array_deref() {
                 a[-1] = 5;
             }
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -923,7 +989,10 @@ fn memory_dynamic_array_deref() {
                 a[i] = 5;
             }
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -1098,7 +1167,10 @@ fn dynamic_array_push() {
                 bar.push(102, 20);
             }
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -1228,7 +1300,10 @@ fn dynamic_array_pop() {
                 bar.pop(102);
             }
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -1376,7 +1451,10 @@ fn storage_dynamic_array_push() {
                 bar.push(102, 20);
             }
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -1393,7 +1471,10 @@ fn storage_dynamic_array_push() {
                 bar.push(102);
             }
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -1459,7 +1540,10 @@ fn storage_dynamic_array_push() {
                 s storage n = bar.push(s(-1, false));
             }
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -1480,7 +1564,10 @@ fn storage_dynamic_array_pop() {
                 bar.pop(102);
             }
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -1497,7 +1584,10 @@ fn storage_dynamic_array_pop() {
                 bar.pop();
             }
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -1582,7 +1672,10 @@ fn storage_dynamic_array_pop() {
                 s storage x = bar.pop();
             }
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -1602,7 +1695,10 @@ fn storage_delete() {
                 delete 102;
             }
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -1619,7 +1715,10 @@ fn storage_delete() {
                 int32 x = delete bar;
             }
         }"#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -2015,7 +2114,10 @@ fn lucas() {
         }
     }
     "#,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     no_errors(ns.diagnostics);

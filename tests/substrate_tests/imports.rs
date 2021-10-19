@@ -29,7 +29,10 @@ fn enum_import() {
     let ns = solang::parse_and_resolve(
         "a.sol",
         &mut cache,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     no_errors(ns.diagnostics);
@@ -59,7 +62,10 @@ fn enum_import() {
     let ns = solang::parse_and_resolve(
         "a.sol",
         &mut cache,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     no_errors(ns.diagnostics);
@@ -89,7 +95,10 @@ fn enum_import() {
     let ns = solang::parse_and_resolve(
         "a.sol",
         &mut cache,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     no_errors(ns.diagnostics);
@@ -115,7 +124,10 @@ fn enum_import() {
     let ns = solang::parse_and_resolve(
         "a.sol",
         &mut cache,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -137,7 +149,10 @@ fn enum_import() {
     let ns = solang::parse_and_resolve(
         "a.sol",
         &mut cache,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -158,7 +173,10 @@ fn enum_import() {
     let ns = solang::parse_and_resolve(
         "a.sol",
         &mut cache,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -194,7 +212,10 @@ fn struct_import() {
     let ns = solang::parse_and_resolve(
         "a.sol",
         &mut cache,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     no_errors(ns.diagnostics);
@@ -224,7 +245,10 @@ fn struct_import() {
     let ns = solang::parse_and_resolve(
         "a.sol",
         &mut cache,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(first_error(ns.diagnostics), "type ‘struct_a’ not found");
@@ -265,7 +289,10 @@ fn contract_import() {
     let ns = solang::parse_and_resolve(
         "a.sol",
         &mut cache,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     no_errors(ns.diagnostics);
@@ -312,7 +339,10 @@ fn contract_import() {
     let ns = solang::parse_and_resolve(
         "a.sol",
         &mut cache,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     no_errors(ns.diagnostics);
@@ -359,7 +389,10 @@ fn contract_import() {
     let ns = solang::parse_and_resolve(
         "a.sol",
         &mut cache,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     no_errors(ns.diagnostics);
@@ -386,7 +419,10 @@ fn circular_import() {
     let ns = solang::parse_and_resolve(
         "self.sol",
         &mut cache,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     no_errors(ns.diagnostics);
@@ -431,7 +467,10 @@ fn circular_import() {
     let ns = solang::parse_and_resolve(
         "a.sol",
         &mut cache,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     no_errors(ns.diagnostics);
@@ -469,7 +508,10 @@ fn import_symbol() {
     let ns = solang::parse_and_resolve(
         "a.sol",
         &mut cache,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     no_errors(ns.diagnostics);
@@ -508,7 +550,10 @@ fn import_symbol() {
     let ns = solang::parse_and_resolve(
         "a.sol",
         &mut cache,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     no_errors(ns.diagnostics);
@@ -547,7 +592,10 @@ fn import_symbol() {
     let ns = solang::parse_and_resolve(
         "a.sol",
         &mut cache,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     no_errors(ns.diagnostics);
@@ -596,7 +644,10 @@ fn import_symbol() {
     let ns = solang::parse_and_resolve(
         "a.sol",
         &mut cache,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     no_errors(ns.diagnostics);
@@ -650,7 +701,10 @@ fn enum_import_chain() {
     let ns = solang::parse_and_resolve(
         "a.sol",
         &mut cache,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     no_errors(ns.diagnostics);
@@ -701,7 +755,10 @@ fn enum_import_chain() {
     let ns = solang::parse_and_resolve(
         "a.sol",
         &mut cache,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     assert_eq!(
@@ -754,7 +811,10 @@ fn import_base_dir() {
     let ns = solang::parse_and_resolve(
         "a.sol",
         &mut cache,
-        Target::Substrate { address_length: 32 },
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
     );
 
     no_errors(ns.diagnostics);
