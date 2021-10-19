@@ -12,6 +12,8 @@ will be documented here.
 - Implemented retrieving account balances on Solana
 - Verify ed25519 signatures with `signatureVerify()` on Solana
 - Added support for Rational numbers
+- The address type and value type can changed using `--address-length` and
+  `--value-length` command line arguments (for Substrate only)
 
 ### Changed
 - On Solana, the return data is now provided in the program log. As a result,
