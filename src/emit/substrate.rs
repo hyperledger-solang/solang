@@ -4160,7 +4160,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                 )
             }
             ast::Expression::Builtin(_, _, ast::Builtin::Sender, _) => {
-                get_seal_value!("caller", "seal_caller", 256)
+                get_seal_value!("caller", "seal_caller", ns.address_length as u32 * 8)
             }
             ast::Expression::Builtin(_, _, ast::Builtin::Value, _) => {
                 self.value_transferred(binary, ns).into()
