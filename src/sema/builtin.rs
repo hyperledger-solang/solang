@@ -87,7 +87,7 @@ static BUILTIN_FUNCTIONS: [Prototype; 24] = [
         name: "selfdestruct",
         args: &[Type::Address(true)],
         ret: &[Type::Unreachable],
-        target: &[Target::Ewasm, Target::Substrate],
+        target: &[Target::Ewasm, Target::Substrate { address_length: 0 }],
         doc: "Destroys current account and deposits any remaining balance to address",
         constant: false,
     },
@@ -127,7 +127,7 @@ static BUILTIN_FUNCTIONS: [Prototype; 24] = [
         name: "blake2_128",
         args: &[Type::DynamicBytes],
         ret: &[Type::Bytes(16)],
-        target: &[Target::Substrate],
+        target: &[Target::Substrate { address_length: 0 }],
         doc: "Calculates blake2-128 hash",
         constant: true,
     },
@@ -137,7 +137,7 @@ static BUILTIN_FUNCTIONS: [Prototype; 24] = [
         name: "blake2_256",
         args: &[Type::DynamicBytes],
         ret: &[Type::Bytes(32)],
-        target: &[Target::Substrate],
+        target: &[Target::Substrate { address_length: 0 }],
         doc: "Calculates blake2-256 hash",
         constant: true,
     },
@@ -147,7 +147,7 @@ static BUILTIN_FUNCTIONS: [Prototype; 24] = [
         name: "gasleft",
         args: &[],
         ret: &[Type::Uint(64)],
-        target: &[Target::Substrate, Target::Ewasm],
+        target: &[Target::Substrate { address_length: 0 }, Target::Ewasm],
         doc: "Return remaing gas left in current call",
         constant: false,
     },
@@ -167,7 +167,7 @@ static BUILTIN_FUNCTIONS: [Prototype; 24] = [
         name: "random",
         args: &[Type::DynamicBytes],
         ret: &[Type::Bytes(32)],
-        target: &[Target::Substrate],
+        target: &[Target::Substrate { address_length: 0 }],
         doc: "Returns deterministic random bytes",
         constant: false,
     },
@@ -337,7 +337,7 @@ static BUILTIN_VARIABLE: [Prototype; 14] = [
         name: "tombstone_deposit",
         args: &[],
         ret: &[Type::Value],
-        target: &[Target::Substrate],
+        target: &[Target::Substrate { address_length: 0 }],
         doc: "Deposit required for a tombstone",
         constant: false,
     },
@@ -347,7 +347,7 @@ static BUILTIN_VARIABLE: [Prototype; 14] = [
         name: "minimum_balance",
         args: &[],
         ret: &[Type::Value],
-        target: &[Target::Substrate],
+        target: &[Target::Substrate { address_length: 0 }],
         doc: "Minimum balance required for an account",
         constant: false,
     },
@@ -397,7 +397,7 @@ static BUILTIN_VARIABLE: [Prototype; 14] = [
         name: "gasprice",
         args: &[],
         ret: &[Type::Value],
-        target: &[Target::Substrate, Target::Ewasm],
+        target: &[Target::Substrate { address_length: 0 }, Target::Ewasm],
         doc: "gas price for one gas unit",
         constant: false,
     },
@@ -444,7 +444,7 @@ pub fn builtin_var(
         .find(|p| p.name == fname && p.namespace == namespace)
     {
         if p.target.is_empty() || p.target.contains(&ns.target) {
-            if ns.target == Target::Substrate && p.builtin == Builtin::Gasprice {
+            if ns.target.is_substrate() && p.builtin == Builtin::Gasprice {
                 diagnostics.push(Diagnostic::error(
                     *loc,
                     String::from(
@@ -576,7 +576,7 @@ pub fn resolve_call(
             diagnostics.truncate(marker);
 
             // tx.gasprice(1) is a bad idea, just like tx.gasprice. Warn about this
-            if ns.target == Target::Substrate && func.builtin == Builtin::Gasprice {
+            if ns.target.is_substrate() && func.builtin == Builtin::Gasprice {
                 if let Ok((_, val)) = eval_const_number(&cast_args[0], contract_no, ns) {
                     if val == BigInt::one() {
                         diagnostics.push(Diagnostic::warning(

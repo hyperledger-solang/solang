@@ -11,7 +11,7 @@ fn decls() {
                 function() public a;
             }
         }",
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -25,7 +25,7 @@ fn decls() {
                 function() private a;
             }
         }",
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -39,7 +39,7 @@ fn decls() {
                 function() returns (bool) internal a;
             }
         }",
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -53,7 +53,7 @@ fn decls() {
                 function() returns (bool) pure a;
             }
         }",
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -67,7 +67,7 @@ fn decls() {
                 function() returns (bool x) a;
             }
         }",
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -81,7 +81,7 @@ fn decls() {
                 function(address tre) returns (bool) a;
             }
         }",
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -95,7 +95,7 @@ fn decls() {
             function foo(function(address) pure internal returns (bool) a) public {
             }
         }",
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -108,7 +108,7 @@ fn decls() {
             function foo() public returns (function(address) pure internal returns (bool) a) {
             }
         }",
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -120,7 +120,7 @@ fn decls() {
         "contract test {
             function(address) pure internal returns (bool) public a;
         }",
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -139,7 +139,7 @@ fn assign() {
                 function(int32) pure a = x;
             }
         }",
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -155,7 +155,7 @@ fn assign() {
                 function(int32) view a = x;
             }
         }",
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -171,7 +171,7 @@ fn assign() {
                 function(int32) a = x;
             }
         }",
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -189,7 +189,7 @@ fn assign() {
                 function(int32) a = x;
             }
         }",
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -207,7 +207,7 @@ fn assign() {
                 function(int32) returns (bool) a = x;
             }
         }",
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -425,7 +425,7 @@ fn ext() {
                 return false;
             }
         }",
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -444,7 +444,7 @@ fn ext() {
                 return false;
             }
         }"##,
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -467,7 +467,7 @@ fn ext() {
                 return false;
             }
         }"##,
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -625,7 +625,7 @@ fn variable_or_func_type() {
             }
         }
         ",
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     no_errors(ns.diagnostics);

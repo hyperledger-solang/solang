@@ -18,12 +18,12 @@ use sema::diagnostics;
 use std::fmt;
 
 /// The target chain you want to compile Solidity for.
-#[derive(PartialEq, Clone, Copy)]
+#[derive(Clone, Copy)]
 pub enum Target {
     /// Solana, see <https://solana.com/>
     Solana,
     /// Parity Substrate, see <https://substrate.dev/>
-    Substrate,
+    Substrate { address_length: usize },
     /// Ethereum ewasm, see <https://github.com/ewasm/design>
     Ewasm,
 }
@@ -32,9 +32,25 @@ impl fmt::Display for Target {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Target::Solana => write!(f, "solana"),
-            Target::Substrate => write!(f, "Substrate"),
+            Target::Substrate { .. } => write!(f, "Substrate"),
             Target::Ewasm => write!(f, "ewasm"),
         }
+    }
+}
+
+impl PartialEq for Target {
+    fn eq(&self, other: &Self) -> bool {
+        match self {
+            Target::Solana => matches!(other, Target::Solana),
+            Target::Substrate { .. } => matches!(other, Target::Substrate { .. }),
+            Target::Ewasm => matches!(other, Target::Ewasm),
+        }
+    }
+}
+
+impl Target {
+    pub fn is_substrate(&self) -> bool {
+        matches!(self, Target::Substrate { .. })
     }
 }
 
@@ -105,19 +121,7 @@ pub fn parse_and_resolve(
     resolver: &mut FileResolver,
     target: Target,
 ) -> ast::Namespace {
-    let mut ns = ast::Namespace::new(
-        target,
-        match target {
-            Target::Ewasm => 20,
-            Target::Substrate => 32,
-            Target::Solana => 32,
-        },
-        if target == Target::Solana {
-            8 // lamports is u64
-        } else {
-            16 // value is 128 bits
-        },
-    );
+    let mut ns = ast::Namespace::new(target);
 
     match resolver.resolve_file(None, filename) {
         Err(message) => {

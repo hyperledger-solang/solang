@@ -513,7 +513,7 @@ pub fn statement(
             let mut topics = Vec::new();
             let mut topic_tys = Vec::new();
 
-            if !event.anonymous && ns.target != crate::Target::Substrate {
+            if !event.anonymous && !ns.target.is_substrate() {
                 let mut hasher = Keccak::v256();
                 hasher.update(event.signature.as_bytes());
                 let mut hash = [0u8; 32];

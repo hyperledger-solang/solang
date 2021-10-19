@@ -978,7 +978,7 @@ pub fn resolve_returns(
 fn signatures() {
     use super::*;
 
-    let mut ns = Namespace::new(Target::Ewasm, 20, 16);
+    let mut ns = Namespace::new(Target::Ewasm);
 
     ns.contracts.push(ast::Contract::new(
         "bar",

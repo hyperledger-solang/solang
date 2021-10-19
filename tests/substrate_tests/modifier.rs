@@ -10,7 +10,7 @@ fn declare() {
         contract c {
             modifier foo() public {}
         }"#,
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -23,7 +23,7 @@ fn declare() {
         contract c {
             modifier foo() internal {}
         }"#,
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -36,7 +36,7 @@ fn declare() {
         contract c {
             modifier foo() payable {}
         }"#,
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -49,7 +49,7 @@ fn declare() {
         contract c {
             modifier foo() pure {}
         }"#,
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -62,7 +62,7 @@ fn declare() {
         contract c {
             modifier foo bar {}
         }"#,
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -75,7 +75,7 @@ fn declare() {
         contract c {
             modifier foo() {}
         }"#,
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(first_error(ns.diagnostics), "missing ‘_’ in modifier");
@@ -91,7 +91,7 @@ fn declare() {
                 }
             }
         }"#,
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     no_errors(ns.diagnostics);
@@ -107,7 +107,7 @@ fn declare() {
                 foo();
             }
         }"#,
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -122,7 +122,7 @@ fn declare() {
                 _;
             }
         }"#,
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -140,7 +140,7 @@ fn function_modifier() {
 
             function bar() foo2 public {}
         }"#,
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(first_error(ns.diagnostics), "unknown modifier ‘foo2’");
@@ -152,7 +152,7 @@ fn function_modifier() {
 
             function bar() foo(1) public {}
         }"#,
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -167,7 +167,7 @@ fn function_modifier() {
 
             function bar(bool x) foo(x) public {}
         }"#,
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -183,10 +183,10 @@ fn chain() {
         contract c {
             uint16 public var;
 
-            modifier foo() { 
+            modifier foo() {
                 bool boom = true;
                 if (boom) {
-                    _; 
+                    _;
                 }
             }
 
@@ -508,7 +508,7 @@ fn mutability() {
 
             function bar() foo(var) public pure {}
         }"#,
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -524,7 +524,7 @@ fn mutability() {
 
             function bar() foo() public pure {}
         }"#,
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -543,7 +543,7 @@ fn mutability() {
         contract apex is base {
             function foo() public override {}
         }"#,
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(

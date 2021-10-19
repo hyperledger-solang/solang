@@ -1194,7 +1194,7 @@ pub fn build_solidity(src: &'static str) -> TestRuntime {
         "test.sol",
         &mut cache,
         inkwell::OptimizationLevel::Default,
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
         false,
     );
 
@@ -1231,7 +1231,7 @@ pub fn build_solidity_with_overflow_check(src: &'static str) -> TestRuntime {
         "test.sol",
         &mut cache,
         inkwell::OptimizationLevel::Default,
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
         true,
     );
 

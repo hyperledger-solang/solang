@@ -91,7 +91,7 @@ fn test_literal_overflow() {
         "contract test {
             uint8 foo = 300;
         }",
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -103,7 +103,7 @@ fn test_literal_overflow() {
         "contract test {
             uint16 foo = 0x10000;
         }",
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -115,7 +115,7 @@ fn test_literal_overflow() {
         "contract test {
             int8 foo = 0x8_0;
         }",
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -127,7 +127,7 @@ fn test_literal_overflow() {
         "contract test {
             int8 foo = -129;
         }",
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -139,7 +139,7 @@ fn test_literal_overflow() {
         "contract test {
             int8 foo = 127;
         }",
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     no_errors(ns.diagnostics);
@@ -148,7 +148,7 @@ fn test_literal_overflow() {
         "contract test {
             int8 foo = -128;
         }",
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     no_errors(ns.diagnostics);
@@ -157,7 +157,7 @@ fn test_literal_overflow() {
         "contract test {
             uint8 foo = 255;
         }",
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     no_errors(ns.diagnostics);
@@ -166,7 +166,7 @@ fn test_literal_overflow() {
         "contract test {
             uint8 foo = -1_30;
         }",
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -178,7 +178,7 @@ fn test_literal_overflow() {
         "contract test {
             int64 foo = 1844674_4073709551616;
         }",
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -190,7 +190,7 @@ fn test_literal_overflow() {
         "contract test {
             bytes4 foo = 0xf12233;
         }",
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -202,7 +202,7 @@ fn test_literal_overflow() {
         "contract test {
             bytes4 foo = 0x0122334455;
         }",
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -214,7 +214,7 @@ fn test_literal_overflow() {
         "contract test {
             bytes4 foo = 0x00223344;
         }",
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     no_errors(ns.diagnostics);
@@ -311,7 +311,7 @@ fn address() {
         "contract test {
             address  foo = 0x1844674_4073709551616;
         }",
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -323,7 +323,7 @@ fn address() {
         "contract test {
             address foo = 0xa368df6dfcd5ba7b0bc108af09e98e4655e35a2c3b2e2d5e3eae6c6f7cd8d2d4;
         }",
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -335,7 +335,7 @@ fn address() {
         r#"contract test {
             address foo = address"5GBWmgdFAMqm8ZgAHGobqDqX6tjLxJhv53ygjNtaaAn3sje";
         }"#,
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -347,7 +347,7 @@ fn address() {
         r#"contract test {
             address foo = address"5GBWmgdFAMqm8ZgAHGobqDqX6tjLxJhv53ygjNtaaAn3sj%Z";
         }"#,
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -359,7 +359,7 @@ fn address() {
         r#"contract test {
             address foo = address"5GBWmgdFAMqm8ZgAHGobqDqX6tjLxJhv53ygjNtaaAn3sjZZ";
         }"#,
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -371,7 +371,7 @@ fn address() {
         r#"contract test {
             address foo = address"5GBWmgdFAMqm8ZgAHGobqDqX6tjLxJhv53ygjNtaaAn3sjeZ";
         }"#,
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     no_errors(ns.diagnostics);
@@ -384,7 +384,7 @@ fn address() {
                 return foo > address(0);
             }
         }",
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     no_errors(ns.diagnostics);
@@ -397,7 +397,7 @@ fn address() {
                 return foo + address(1);
             }
         }",
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -413,7 +413,7 @@ fn address() {
                 return foo | address(1);
             }
         }",
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -425,7 +425,7 @@ fn address() {
         "contract test {
             address foo = 0x5b0Ddf2835f0A76c96D6113D47F6482e51a55487;
         }",
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -482,7 +482,7 @@ fn address_payable_type() {
                 address b = a;
             }
         }"##,
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     no_errors(ns.diagnostics);
@@ -499,7 +499,7 @@ fn address_payable_type() {
                 return b == a;
             }
         }"##,
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     no_errors(ns.diagnostics);
@@ -516,7 +516,7 @@ fn address_payable_type() {
             function test() public {
             }
         }"##,
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -536,7 +536,7 @@ fn address_payable_type() {
             function test() public {
             }
         }"##,
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -556,7 +556,7 @@ fn address_payable_type() {
             function test() public {
             }
         }"##,
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     no_errors(ns.diagnostics);
@@ -568,7 +568,7 @@ fn address_payable_type() {
                 address b = address(a);
             }
         }"##,
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     no_errors(ns.diagnostics);
@@ -580,7 +580,7 @@ fn address_payable_type() {
                 address b = a;
             }
         }"##,
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -596,7 +596,7 @@ fn address_payable_type() {
                 address payable b = address payable(a);
             }
         }"##,
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     no_errors(ns.diagnostics);
@@ -665,7 +665,7 @@ fn type_name() {
                 int32 x = type(bool).max;
             }
         }"##,
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -714,7 +714,7 @@ fn units() {
                 int32 x = 1 ether;
             }
         }"##,
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -729,7 +729,7 @@ fn units() {
                 int32 x = 0xa days;
             }
         }"##,
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -744,7 +744,7 @@ fn units() {
                 int32 x = (1 + 2) days;
             }
         }"##,
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(

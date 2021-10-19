@@ -92,7 +92,7 @@ fn test_cast_errors() {
                 return state.foo;
             }
         }",
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(
@@ -107,7 +107,7 @@ fn test_cast_errors() {
                 return state.foo;
             }
         }",
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(first_error(ns.diagnostics), "enum ‘state’ has no fields");
@@ -119,7 +119,7 @@ fn test_cast_errors() {
                 return uint8(state.foo);
             }
         }",
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     no_errors(ns.diagnostics);
@@ -127,7 +127,7 @@ fn test_cast_errors() {
 
 #[test]
 fn incorrect_fields() {
-    let ns = parse_and_resolve("enum state { }", Target::Substrate);
+    let ns = parse_and_resolve("enum state { }", Target::Substrate { address_length: 32 });
 
     assert_eq!(first_error(ns.diagnostics), "enum ‘state’ has no fields");
 
@@ -161,7 +161,7 @@ fn incorrect_fields() {
         foo243, foo244, foo245, foo246, foo247, foo248, foo249, foo250, foo251,
         foo252, foo253, foo254, foo255, foo256
         }"#,
-        Target::Substrate,
+        Target::Substrate { address_length: 32 },
     );
 
     assert_eq!(

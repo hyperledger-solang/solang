@@ -15,7 +15,6 @@ use crate::sema::ast::{
 };
 use crate::sema::contracts::{collect_base_args, visit_bases};
 use crate::sema::symtable::Symtable;
-use crate::Target;
 
 pub type Vars = HashMap<usize, Variable>;
 
@@ -1300,7 +1299,7 @@ fn function_cfg(
     }
 
     cfg.ty = func.ty;
-    cfg.nonpayable = if ns.target == Target::Substrate {
+    cfg.nonpayable = if ns.target.is_substrate() {
         !func.is_constructor() && !func.is_payable()
     } else {
         !func.is_payable()

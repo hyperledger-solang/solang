@@ -2451,7 +2451,7 @@ fn address_literal(
     ns: &mut Namespace,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Result<Expression, ()> {
-    if ns.target == Target::Substrate {
+    if ns.target.is_substrate() {
         match address.from_base58() {
             Ok(v) => {
                 if v.len() != 35 {
@@ -5142,7 +5142,7 @@ fn member_access(
         }
         Type::Address(_) => {
             if id.name == "balance" {
-                if ns.target == crate::Target::Substrate {
+                if ns.target.is_substrate() {
                     let mut is_this = false;
 
                     if let Expression::Cast(_, _, this) = &expr {

@@ -33,7 +33,7 @@ pub fn link(input: &[u8], name: &str, target: Target) -> Vec<u8> {
             command_line.push(CString::new("--export").unwrap());
             command_line.push(CString::new("main").unwrap());
         }
-        Target::Substrate => {
+        Target::Substrate { .. } => {
             command_line.push(CString::new("--export").unwrap());
             command_line.push(CString::new("deploy").unwrap());
             command_line.push(CString::new("--export").unwrap());
@@ -86,7 +86,7 @@ pub fn link(input: &[u8], name: &str, target: Target) -> Vec<u8> {
 
                     *imports[ind].module_mut() = module_name.to_owned();
                 }
-                Target::Substrate => {
+                Target::Substrate { .. } => {
                     if imports[ind].field().starts_with("seal") {
                         *imports[ind].module_mut() = "seal0".to_owned();
                     }

@@ -3941,7 +3941,7 @@ pub trait TargetRuntime<'a> {
                                 )
                                 .into_int_value();
 
-                            let selector = if ns.target == Target::Substrate {
+                            let selector = if ns.target.is_substrate() {
                                 *selector
                             } else {
                                 selector.to_be()
@@ -5219,7 +5219,7 @@ impl<'a> Binary<'a> {
         math_overflow_check: bool,
     ) -> Self {
         match ns.target {
-            Target::Substrate => substrate::SubstrateTarget::build(
+            Target::Substrate { .. } => substrate::SubstrateTarget::build(
                 context,
                 contract,
                 ns,
@@ -6253,7 +6253,7 @@ fn load_stdlib<'a>(context: &'a Context, target: &Target) -> Module<'a> {
             .unwrap();
     }
 
-    if Target::Substrate == *target {
+    if let Target::Substrate { .. } = *target {
         let memory = MemoryBuffer::create_from_memory_range(SUBSTRATE_IR, "substrate");
 
         module
