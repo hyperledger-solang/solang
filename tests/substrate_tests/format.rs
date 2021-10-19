@@ -13,10 +13,7 @@ fn parse() {
                 s.format();
             }
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -31,10 +28,7 @@ fn parse() {
                 string s = "foo{".format();
             }
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(first_error(ns.diagnostics), "missing closing ‘}’");
@@ -46,10 +40,7 @@ fn parse() {
                 string s = "foo{d".format();
             }
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(first_error(ns.diagnostics), "unexpected format char ‘d’");
@@ -61,10 +52,7 @@ fn parse() {
                 string s = "foo{:".format();
             }
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(first_error(ns.diagnostics), "missing format specifier");
@@ -76,10 +64,7 @@ fn parse() {
                 string s = "foo{:}s".format();
             }
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(first_error(ns.diagnostics), "missing argument to format");
@@ -91,10 +76,7 @@ fn parse() {
                 string s = "f{{oo}s".format();
             }
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(first_error(ns.diagnostics), "unmatched ‘}’");
@@ -106,10 +88,7 @@ fn parse() {
                 string s = "f{{oo}}s".format(true);
             }
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -124,10 +103,7 @@ fn parse() {
                 string s = "{}" "{:x}s".format(1, true);
             }
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -142,10 +118,7 @@ fn parse() {
                 string s = "{}" "{:x}s".format(1, 0xcafe);
             }
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     no_errors(ns.diagnostics);

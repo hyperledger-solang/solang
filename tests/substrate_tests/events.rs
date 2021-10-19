@@ -11,10 +11,7 @@ fn event_decl() {
         contract c {
             event foo ();
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     no_errors(ns.diagnostics);
@@ -23,10 +20,7 @@ fn event_decl() {
         r#"
         enum e { a1 }
         event e();"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -40,10 +34,7 @@ fn event_decl() {
         contract c {
             event e();
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -57,10 +48,7 @@ fn event_decl() {
             enum e { a1 }
             event e();
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -73,10 +61,7 @@ fn event_decl() {
         contract c {
             event foo (mapping (bool => uint) x);
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -93,10 +78,7 @@ fn event_decl() {
         contract c {
             event foo (s x);
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -109,10 +91,7 @@ fn event_decl() {
         contract c {
             event foo (bool x, uint32 y, address x);
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -125,10 +104,7 @@ fn event_decl() {
         contract c {
             event foo (bool indexed f1, bool indexed f2, bool indexed f3, bool indexed f4);
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -141,10 +117,7 @@ fn event_decl() {
         contract c {
             event foo (bool indexed f1, bool indexed f2, bool indexed f3);
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     no_errors(ns.diagnostics);
@@ -154,10 +127,7 @@ fn event_decl() {
         contract c {
             event foo (bool indexed f1, bool indexed f2, bool indexed f3, bool indexed f4, bool indexed f5) anonymous;
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -170,10 +140,7 @@ fn event_decl() {
         contract c {
             event foo (bool indexed f1, bool indexed f2, bool indexed f3, bool indexed f4) anonymous;
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     no_errors(ns.diagnostics);
@@ -188,10 +155,7 @@ fn emit() {
                 emit 1 ();
             }
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -207,10 +171,7 @@ fn emit() {
                 emit foo {};
             }
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -226,10 +187,7 @@ fn emit() {
                 emit foo (true);
             }
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -245,10 +203,7 @@ fn emit() {
                 emit foo (true, "ab");
             }
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -264,10 +219,7 @@ fn emit() {
                 emit foo ({a:true, a:"ab"});
             }
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -283,10 +235,7 @@ fn emit() {
                 emit foo ({a:true, b:"ab"});
             }
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -302,10 +251,7 @@ fn emit() {
                 emit foo (true, 102);
             }
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -393,14 +339,7 @@ fn event_imported() {
         .to_string(),
     );
 
-    let ns = solang::parse_and_resolve(
-        "a.sol",
-        &mut cache,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
-    );
+    let ns = solang::parse_and_resolve("a.sol", &mut cache, Target::default_substrate());
 
     no_errors(ns.diagnostics);
 
@@ -430,14 +369,7 @@ fn event_imported() {
         .to_string(),
     );
 
-    let ns = solang::parse_and_resolve(
-        "a.sol",
-        &mut cache,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
-    );
+    let ns = solang::parse_and_resolve("a.sol", &mut cache, Target::default_substrate());
 
     no_errors(ns.diagnostics);
 
@@ -467,14 +399,7 @@ fn event_imported() {
         .to_string(),
     );
 
-    let ns = solang::parse_and_resolve(
-        "a.sol",
-        &mut cache,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
-    );
+    let ns = solang::parse_and_resolve("a.sol", &mut cache, Target::default_substrate());
 
     no_errors(ns.diagnostics);
 
@@ -502,14 +427,7 @@ fn event_imported() {
         .to_string(),
     );
 
-    let ns = solang::parse_and_resolve(
-        "a.sol",
-        &mut cache,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
-    );
+    let ns = solang::parse_and_resolve("a.sol", &mut cache, Target::default_substrate());
 
     no_errors(ns.diagnostics);
 }
@@ -527,10 +445,7 @@ fn inherited() {
                 emit foo(true, 1);
             }
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     no_errors(ns.diagnostics);
@@ -551,10 +466,7 @@ fn signatures() {
                 emit foo(true, 1);
             }
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     no_errors(ns.diagnostics);
@@ -571,10 +483,7 @@ fn signatures() {
                 emit foo(true, 1);
             }
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     no_errors(ns.diagnostics);
@@ -591,10 +500,7 @@ fn signatures() {
                 emit foo(true, 1);
             }
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     no_errors(ns.diagnostics);
@@ -610,10 +516,7 @@ fn signatures() {
                 emit foo(true, 1);
             }
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     no_errors(ns.diagnostics);

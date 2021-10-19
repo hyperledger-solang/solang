@@ -13,10 +13,7 @@ fn abi_decode() {
                 (int a) = abi.decode(hex"00", feh);
             }
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(first_error(ns.diagnostics), "type ‘feh’ not found");
@@ -28,10 +25,7 @@ fn abi_decode() {
                 (int a) = abi.decode(hex"00", (int storage));
             }
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -46,10 +40,7 @@ fn abi_decode() {
                 (int a) = abi.decode(hex"00", (int feh));
             }
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -64,10 +55,7 @@ fn abi_decode() {
                 (int a) = abi.decode(hex"00", (int,));
             }
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(first_error(ns.diagnostics), "missing type");
@@ -79,10 +67,7 @@ fn abi_decode() {
                 (int a) = abi.decode(hex"00", (int,mapping(uint[] => address)));
             }
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -213,10 +198,7 @@ fn abi_encode_with_selector() {
                 bytes x = abi.encodeWithSelector();
             }
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -262,10 +244,7 @@ fn abi_encode_with_signature() {
                 bytes x = abi.encodeWithSignature();
             }
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -313,10 +292,7 @@ fn call() {
                 x.delegatecall(hex"1222");
             }
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -333,10 +309,7 @@ fn call() {
                 x.staticcall(hex"1222");
             }
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -359,10 +332,7 @@ fn call() {
                 print("Baa!");
             }
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -385,10 +355,7 @@ fn call() {
                 print("Baa!");
             }
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -529,10 +496,7 @@ fn block() {
                 assert(b == 14_250_083_331_950_119_597);
             }
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -562,10 +526,7 @@ fn block() {
                 assert(b == 14_250_083_331_950_119_597);
             }
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -595,10 +556,7 @@ fn block() {
                 assert(b == 93_603_701_976_053);
             }
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -628,10 +586,7 @@ fn block() {
                 assert(b == 93_603_701_976_053);
             }
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -648,10 +603,7 @@ fn block() {
                 assert(b == 93_603_701_976_053);
             }
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -668,10 +620,7 @@ fn block() {
                 assert(b == 93_603_701_976_053);
             }
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -688,10 +637,7 @@ fn block() {
                 assert(b == 93_603_701_976_053);
             }
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -735,10 +681,7 @@ fn tx() {
                 int128 b = tx.gasprice;
             }
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -753,10 +696,7 @@ fn tx() {
                 int128 b = tx.gasprice(4-3);
             }
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -773,10 +713,7 @@ fn tx() {
                 assert(b == 14_250_083_331_950_119_597);
             }
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -793,10 +730,7 @@ fn tx() {
                 assert(b == 93_603_701_976_053);
             }
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -830,10 +764,7 @@ fn msg() {
                 assert(b == 14_250_083_331_950_119_597);
             }
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -848,10 +779,7 @@ fn msg() {
                 return msg.value > v;
             }
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     no_errors(ns.diagnostics);
@@ -902,10 +830,7 @@ fn functions() {
                 assert(b == 14_250_083_331_950_119_597);
             }
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -922,10 +847,7 @@ fn functions() {
                 assert(b == 14_250_083_331_950_119_597);
             }
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -940,10 +862,7 @@ fn functions() {
                 bytes32 b = blockhash(1);
             }
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(

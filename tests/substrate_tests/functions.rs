@@ -13,10 +13,7 @@ fn constructors() {
         contract test {
             constructor() internal {}
         }"##,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -29,10 +26,7 @@ fn constructors() {
         contract test {
             constructor() virtual {}
         }"##,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -134,10 +128,7 @@ fn fallback() {
                 result = 356;
             }
         }"##,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -259,10 +250,7 @@ fn mutability() {
                 return foo;
             }
         }",
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -276,10 +264,7 @@ fn mutability() {
                 return 102;
             }
         }",
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -293,10 +278,7 @@ fn mutability() {
                 return foo[0];
             }
         }",
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -312,10 +294,7 @@ fn mutability() {
                 foo = 102;
             }
         }",
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -329,10 +308,7 @@ fn mutability() {
                 foo[0] = 102;
             }
         }",
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -346,10 +322,7 @@ fn mutability() {
                 (bool f, bytes memory res) = a.call(hex"0102");
             }
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -363,10 +336,7 @@ fn mutability() {
                 (f, res) = a.call(hex"0102");
             }
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(ns.diagnostics.len(), 1);
@@ -378,10 +348,7 @@ fn mutability() {
                 return true;
             }
         }"#,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     no_warnings(&ns.diagnostics);
@@ -394,10 +361,7 @@ fn mutability() {
                 return foo;
             }
         }",
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     no_warnings_errors(ns.diagnostics);
@@ -408,10 +372,7 @@ fn mutability() {
                 return 102;
             }
         }",
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     no_warnings_errors(ns.diagnostics);
@@ -422,10 +383,7 @@ fn mutability() {
                 return 102;
             }
         }",
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -437,10 +395,7 @@ fn mutability() {
         "contract test {
             int64 constant public foo = 1844674;
         }",
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     no_warnings_errors(ns.diagnostics);
@@ -468,13 +423,7 @@ fn shadowing() {
         }
     }";
 
-    let ns = parse_and_resolve(
-        src,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
-    );
+    let ns = parse_and_resolve(src, Target::default_substrate());
 
     assert_eq!(
         first_warning(ns.diagnostics),
@@ -514,13 +463,7 @@ fn scopes() {
         }
     }";
 
-    let ns = parse_and_resolve(
-        src,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
-    );
+    let ns = parse_and_resolve(src, Target::default_substrate());
 
     assert_eq!(first_error(ns.diagnostics), "`a\' is not found");
 
@@ -534,13 +477,7 @@ fn scopes() {
         }
     }";
 
-    let ns = parse_and_resolve(
-        src,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
-    );
+    let ns = parse_and_resolve(src, Target::default_substrate());
 
     assert_eq!(first_error(ns.diagnostics), "`i\' is not found");
 }
@@ -557,13 +494,7 @@ fn for_forever() {
         }
     }";
 
-    let ns = parse_and_resolve(
-        src,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
-    );
+    let ns = parse_and_resolve(src, Target::default_substrate());
 
     assert_eq!(first_error(ns.diagnostics), "unreachable statement");
 }
@@ -689,13 +620,7 @@ fn args_and_returns() {
         }
     }";
 
-    let ns = parse_and_resolve(
-        src,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
-    );
+    let ns = parse_and_resolve(src, Target::default_substrate());
 
     assert_eq!(first_error(ns.diagnostics), "arg1 is already declared");
 
@@ -705,13 +630,7 @@ fn args_and_returns() {
         }
     }";
 
-    let ns = parse_and_resolve(
-        src,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
-    );
+    let ns = parse_and_resolve(src, Target::default_substrate());
 
     assert_eq!(first_error(ns.diagnostics), "arg2 is already declared");
 
@@ -721,13 +640,7 @@ fn args_and_returns() {
         }
     }";
 
-    let ns = parse_and_resolve(
-        src,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
-    );
+    let ns = parse_and_resolve(src, Target::default_substrate());
 
     assert_eq!(first_error(ns.diagnostics), "missing return statement");
 
@@ -750,13 +663,7 @@ fn args_and_returns() {
         }
     }";
 
-    let ns = parse_and_resolve(
-        src,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
-    );
+    let ns = parse_and_resolve(src, Target::default_substrate());
 
     assert_eq!(first_error(ns.diagnostics), "missing return statement");
 
@@ -795,13 +702,7 @@ fn named_argument_call() {
         }
     }";
 
-    let ns = parse_and_resolve(
-        src,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
-    );
+    let ns = parse_and_resolve(src, Target::default_substrate());
 
     assert_eq!(
         first_error(ns.diagnostics),
@@ -818,13 +719,7 @@ fn named_argument_call() {
         }
     }";
 
-    let ns = parse_and_resolve(
-        src,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
-    );
+    let ns = parse_and_resolve(src, Target::default_substrate());
 
     assert_eq!(first_error(ns.diagnostics), "unexpected array type");
 
@@ -838,13 +733,7 @@ fn named_argument_call() {
         }
     }";
 
-    let ns = parse_and_resolve(
-        src,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
-    );
+    let ns = parse_and_resolve(src, Target::default_substrate());
 
     assert_eq!(
         first_error(ns.diagnostics),
@@ -861,13 +750,7 @@ fn named_argument_call() {
         }
     }";
 
-    let ns = parse_and_resolve(
-        src,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
-    );
+    let ns = parse_and_resolve(src, Target::default_substrate());
 
     assert_eq!(
         first_error(ns.diagnostics),
@@ -884,13 +767,7 @@ fn named_argument_call() {
         }
     }";
 
-    let ns = parse_and_resolve(
-        src,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
-    );
+    let ns = parse_and_resolve(src, Target::default_substrate());
 
     assert_eq!(
         first_error(ns.diagnostics),
@@ -934,13 +811,7 @@ fn positional_argument_call() {
         }
     }";
 
-    let ns = parse_and_resolve(
-        src,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
-    );
+    let ns = parse_and_resolve(src, Target::default_substrate());
 
     assert_eq!(
         first_error(ns.diagnostics),
@@ -957,13 +828,7 @@ fn positional_argument_call() {
         }
     }";
 
-    let ns = parse_and_resolve(
-        src,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
-    );
+    let ns = parse_and_resolve(src, Target::default_substrate());
 
     assert_eq!(first_error(ns.diagnostics), "expression is not an array");
 
@@ -977,13 +842,7 @@ fn positional_argument_call() {
         }
     }";
 
-    let ns = parse_and_resolve(
-        src,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
-    );
+    let ns = parse_and_resolve(src, Target::default_substrate());
 
     assert_eq!(
         first_error(ns.diagnostics),
@@ -1099,13 +958,7 @@ fn payable() {
             }
         }"##;
 
-    let ns = parse_and_resolve(
-        src,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
-    );
+    let ns = parse_and_resolve(src, Target::default_substrate());
 
     assert_eq!(
         first_error(ns.diagnostics),
@@ -1123,13 +976,7 @@ fn payable() {
             }
         }"##;
 
-    let ns = parse_and_resolve(
-        src,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
-    );
+    let ns = parse_and_resolve(src, Target::default_substrate());
 
     assert_eq!(
         first_error(ns.diagnostics),
@@ -1147,13 +994,7 @@ fn payable() {
             }
         }"##;
 
-    let ns = parse_and_resolve(
-        src,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
-    );
+    let ns = parse_and_resolve(src, Target::default_substrate());
 
     assert_eq!(
         first_error(ns.diagnostics),
@@ -1171,13 +1012,7 @@ fn payable() {
             }
         }"##;
 
-    let ns = parse_and_resolve(
-        src,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
-    );
+    let ns = parse_and_resolve(src, Target::default_substrate());
 
     assert_eq!(
         first_error(ns.diagnostics),
@@ -1192,13 +1027,7 @@ fn payable() {
             }
         }"##;
 
-    let ns = parse_and_resolve(
-        src,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
-    );
+    let ns = parse_and_resolve(src, Target::default_substrate());
 
     assert_eq!(
         first_error(ns.diagnostics),
@@ -1213,13 +1042,7 @@ fn payable() {
             }
         }"##;
 
-    let ns = parse_and_resolve(
-        src,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
-    );
+    let ns = parse_and_resolve(src, Target::default_substrate());
 
     assert_eq!(
         first_error(ns.diagnostics),
@@ -1233,10 +1056,7 @@ fn global_functions() {
         r##"
         function() {}
         "##,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(first_error(ns.diagnostics), "missing function name");
@@ -1245,10 +1065,7 @@ fn global_functions() {
         r##"
         function x();
         "##,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(first_error(ns.diagnostics), "missing function body");
@@ -1257,10 +1074,7 @@ fn global_functions() {
         r##"
         function x() virtual {}
         "##,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -1272,10 +1086,7 @@ fn global_functions() {
         r##"
         function x() override {}
         "##,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -1287,10 +1098,7 @@ fn global_functions() {
         r##"
         function x() feyla {}
         "##,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -1302,10 +1110,7 @@ fn global_functions() {
         r##"
         function x() feyla {}
         "##,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -1319,10 +1124,7 @@ fn global_functions() {
 
         function x() pure { emit foo(true); }
         "##,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -1334,10 +1136,7 @@ fn global_functions() {
         r##"
         function x(int[] storage x) pure returns (int) { return x[1]; }
         "##,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -1354,10 +1153,7 @@ fn global_functions() {
 
         function x(S storage x) view { x.f1 = 102; }
         "##,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -1371,10 +1167,7 @@ fn global_functions() {
         function x(int128) pure { return 102; }
         function x(int128) pure { return 132; }
         "##,
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -1452,10 +1245,7 @@ fn return_not_returns() {
                 return 1;
             }
         }",
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(
@@ -1466,22 +1256,13 @@ fn return_not_returns() {
 
 #[test]
 fn stray_semicolon() {
-    let ns = parse_and_resolve(
-        "struct a { uint32 f1; };",
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
-    );
+    let ns = parse_and_resolve("struct a { uint32 f1; };", Target::default_substrate());
 
     assert_eq!(first_error(ns.diagnostics), "stray semicolon");
 
     let ns = parse_and_resolve(
         "contract x { struct a { uint32 f1; }; }",
-        Target::Substrate {
-            address_length: 32,
-            value_length: 16,
-        },
+        Target::default_substrate(),
     );
 
     assert_eq!(first_error(ns.diagnostics), "stray semicolon");
