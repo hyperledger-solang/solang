@@ -30,7 +30,7 @@ There is a release `v0.1.8` tag and a `latest` tag:
 
 .. code-block:: bash
 
-	docker pull hyperledgerlabs/solang
+	docker pull hyperledgerlabs/solang:latest
 
 The Solang binary is stored at ``/usr/bin/solang`` in this image. The `latest` tag
 gets updated each time there is a commit to the main branch of the Solang git repository.
@@ -64,7 +64,10 @@ Installing the LLVM Libraries
 
 Solang needs a build of
 `llvm with some extra patches <https://github.com/solana-labs/llvm-project/>`_.
-You can either download the pre-built binaries from
+These patches make it possible to generate code for Solana, and fixes some
+concurrency issues in the lld linker.
+
+You can either download the pre-built libraries from
 `github <https://github.com/hyperledger-labs/solang/releases/tag/v0.1.8>`_
 or build your own from source. After that, you need to add the `bin` directory to your
 path, so that the build system of Solang can find the correct version of llvm to use.
@@ -125,7 +128,7 @@ you may need to consult. First if all clone our llvm repository:
 
 .. code-block:: bash
 
-	git clone --branch solana-rustc/12.0-2021-04-15 git://github.com/solana-labs/llvm-project
+	git clone --depth 1 --branch solana-rustc/12.0-2021-04-15 git://github.com/solana-labs/llvm-project
 	cd llvm-project
 
 Now run cmake to create the makefiles. Replace the *installdir* argument to ``CMAKE_INSTALL_PREFIX`` with with a directory where you would like to have llvm installed, and then run the build:

@@ -64,11 +64,14 @@ as the file name.
 Imports
 _______
 
-The ``import`` directive is used to import from other Solidity files. This can be useful to
-keep a single definition in one file, which can be used in multiple other files. Solidity imports
-are somewhat similar to JavaScript ES6, however there is no export statement, or default export.
+The ``import`` directive is used to import items from other Solidity files. This can be useful to
+keep a single definition in one file, which can be used in other files. For example
+you could have an interface in one source file, which several contracts implement or use
+which are in other files. Solidity imports are somewhat similar to JavaScript ES6, however
+there is no export statement, or default export.
 
-The following can be imported:
+The following items are always exported, which means they can be imported into
+another file.
 
 - global constants
 - struct definitions
@@ -96,6 +99,16 @@ with this syntax.
 
     import "defines.sol";
 
+Another method for locating files is using import maps. This maps the first directory
+of an import path to a different location on the file system. Say you add
+the command line option ``--importmap @openzeppelin=/opt/openzeppelin-contracts/contracts``, then
+
+.. code-block::
+
+    import "openzeppelin/interfaces/IERC20.sol";
+
+will automatically map to `/opt/openzeppelin-contracts/contracts/interfaces/IERC20.sol`.
+
 Everything defined in `defines.sol` is now usable in your Solidity file. However, if something with the
 same name is defined in `defines.sol` and also in the current file, you will get a warning. Note that
 that it is legal to import the same file more than once.
@@ -108,9 +121,9 @@ a naming conflict.
 
     import {bar as baz,foo} from "defines.sol";
 
-Rather than renaming individual imports, it is also possible to make all the types in a file
+Rather than renaming individual imports, it is also possible to make all the items in a file
 available under a special import object. In this case, the `bar` defined in `defines.sol` can is
-now visible as `defs.bar`, and `foo` is `defs.foo`. As long as there is no previous type `defs`,
+now visible as `defs.bar`, and `foo` as `defs.foo`. As long as there is no previous item `defs`,
 there can be no naming conflict.
 
 .. code-block:: javascript
@@ -219,8 +232,8 @@ ________________________
 Solidity has a primitive type unique to the language. It is a fixed-length byte array of 1 to 32
 bytes, declared with *bytes* followed by the array length, for example:
 ``bytes32``, ``bytes24``, ``bytes8``, or ``bytes1``. ``byte`` is an alias for ``byte1``, so
-``byte`` is an array of 1 element. The arrays can be initialized with either a hex string or
-a text string.
+``byte`` is an array of 1 element. The arrays can be initialized with either a hex string ``hex"414243"``,
+or a text string ``"ABC"``, or a hex value ``0x414243``.
 
 .. code-block:: javascript
 
@@ -272,8 +285,8 @@ Address and Address Payable Type
 ________________________________
 
 The ``address`` type holds the address of an account. The length of an ``address`` type depends on
-the target being compiled for. On ewasm, an address is 20 bytes. Substrate has an address length
-of 32 bytes. The format of an address literal depends on what target you are building for. On ewasm,
+the target being compiled for. On ewasm, an address is 20 bytes. Solana and Substrate have an address
+length of 32 bytes. The format of an address literal depends on what target you are building for. On ewasm,
 ethereum addresses can be specified with a particular hexadecimal number.
 
 .. code-block:: javascript
@@ -339,7 +352,7 @@ _____
 
 Solidity enums types need to have a definition which lists the possible values it can hold. An enum
 has a type name, and a list of unique values. Enum types can used in public functions, but the value
-is represented as a ``uint8`` in the ABI.
+is represented as a ``uint8`` in the ABI. Enum are limited to 256 values.
 
 .. code-block:: javascript
 

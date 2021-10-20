@@ -3,7 +3,8 @@ Using Solang on the command line
 
 The Solang compiler is run on the command line. The solidity source file
 names are provided as command line arguments; the output is an optimized
-wasm or bpf file which is ready for deployment on a chain, and an abi file.
+wasm or bpf file which is ready for deployment on a chain, and an metadata
+file (also known as the abi).
 
 The following targets are supported right now:
 `Solana <https://www.solana.com/>`_,
@@ -146,12 +147,6 @@ to your solidity files:
 .. code-block:: bash
 
 	  docker run --rm -it -v /local/path:/sources hyperledgerlabs/solang -o /sources /sources/flipper.sol
-
-On podman you might need to add ``:Z`` to your volume argument if SELinux is used, like on Fedora. Also, podman allows relative paths:
-
-.. code-block:: bash
-
-	  podman container run --rm -it -v .:/sources:Z hyperledgerlabs/solang -o /sources /sources/flipper.sol
 
 On Windows, you need to specify absolute paths:
 
