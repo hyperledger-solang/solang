@@ -1,8 +1,7 @@
 Solang Solidity Compiler
 ========================
 
-Welcome to the Solang Solidity Compiler, the portable Solidity compiler.
-Using Solang, you can compile smart contracts written in
+Welcome to the Solang Solidity Compiler. Using Solang, you can compile smart contracts written in
 `Solidity <https://en.wikipedia.org/wiki/Solidity>`_ for
 `Solana <https://www.solana.com/>`_,
 `Parity Substrate <https://substrate.dev/>`_, and
@@ -12,7 +11,7 @@ Using Solang, you can compile smart contracts written in
 
 Solang aims for source file compatibility with the Ethereum EVM Solidity compiler,
 version 0.7. Where differences exists, this is noted in the :ref:`language documentation <language>`.
-The repository can be found on `github <https://github.com/hyperledger-labs/solang>`_
+The source code repository can be found on `github <https://github.com/hyperledger-labs/solang>`_
 and we have a `channel #solang on chat.hyperledger.org <https://chat.hyperledger.org/channel/solang>`_, and
 a `channel #solang-solidity-compiler on Solana Discord <https://discordapp.com/invite/pquxPsq>`_.
 
