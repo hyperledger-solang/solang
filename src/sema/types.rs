@@ -524,10 +524,8 @@ fn enum_decl(
 /// and we have not calculated yet. In this case we will get size 0. So, loop over all the structs
 /// until all the offsets are unchanged.
 fn struct_offsets(ns: &mut Namespace) {
-    let mut changes;
-
-    while {
-        changes = false;
+    loop {
+        let mut changes = false;
         for struct_no in 0..ns.structs.len() {
             let mut offsets = Vec::new();
             let mut offset = BigInt::zero();
@@ -564,8 +562,10 @@ fn struct_offsets(ns: &mut Namespace) {
             }
         }
 
-        changes
-    } {}
+        if !changes {
+            break;
+        }
+    }
 }
 
 impl Type {
