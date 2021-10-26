@@ -165,8 +165,8 @@ jobs:
         asset_name: solang-mac-intel
         tag: ${{ github.ref }}
 
-  docker:
-    name: Docker
+  container:
+    name: Container
     runs-on: ubuntu-20.04
     steps:
     - name: Checkout sources
@@ -174,4 +174,4 @@ jobs:
     - run: docker build . -t ghcr.io/hyperledger-labs/solang:${GITHUB_REF/refs\/tags\//}
     - run: |
         echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin
-        docker push ghcr.io/hyperledgerlabs/solang:${GITHUB_REF/refs\/tags\//}
+        docker push ghcr.io/hyperledger-labs/solang:${GITHUB_REF/refs\/tags\//}

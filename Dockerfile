@@ -6,7 +6,7 @@
 # Ubuntu 18.04 produces a builder image 1.53 GiB and solang image of 84 MiB
 # Debian Buster produces a builder image 2.04 GiB
 
-FROM hyperledgerlabs/solang:ci as builder
+FROM ghcr.io/hyperledger-labs/solang:ci as builder
 
 COPY . src
 WORKDIR /src/stdlib/
