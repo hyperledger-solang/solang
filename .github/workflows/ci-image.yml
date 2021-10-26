@@ -8,7 +8,6 @@ jobs:
       uses: actions/checkout@v1
     - run: docker build -f build/ci.dockerfile -t ghcr.io/hyperledger-labs/solang:ci .
     - name: Push to github container registry
-      if: ${{ github.repository_owner == 'hyperledger-labs' && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
       run: |
           echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin
           docker push ghcr.io/hyperledger-labs/solang:ci

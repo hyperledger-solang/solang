@@ -171,10 +171,7 @@ jobs:
     steps:
     - name: Checkout sources
       uses: actions/checkout@v2
-    - run: docker build . -t hyperledgerlabs/solang:${GITHUB_REF/refs\/tags\//}
-    - name: Login to DockerHub
-      uses: docker/login-action@v1
-      with:
-        username: ${{ secrets.DH_USER }}
-        password: ${{ secrets.DH_KEY }}
-    - run: docker push hyperledgerlabs/solang:${GITHUB_REF/refs\/tags\//}
+    - run: docker build . -t ghcr.io/hyperledger-labs/solang:${GITHUB_REF/refs\/tags\//}
+    - run: |
+        echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin
+        docker push ghcr.io/hyperledgerlabs/solang:${GITHUB_REF/refs\/tags\//}
