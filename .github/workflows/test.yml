@@ -13,7 +13,7 @@ jobs:
   lints:
     name: Lints
     runs-on: ubuntu-20.04
-    container: hyperledgerlabs/solang:ci
+    container: ghcr.io/hyperledger-labs/solang:ci
     steps:
       - name: Checkout sources
         uses: actions/checkout@v2
@@ -29,7 +29,7 @@ jobs:
   linux:
     name: Linux
     runs-on: ubuntu-20.04
-    container: hyperledgerlabs/solang:ci
+    container: ghcr.io/hyperledger-labs/solang:ci
     steps:
     - name: Checkout sources
       # Make sure "git describe --tags" works for solang --version
@@ -122,8 +122,8 @@ jobs:
         name: solang-mac-intel
         path: ./target/debug/solang
 
-  docker:
-    name: Docker
+  container:
+    name: Container
     runs-on: ubuntu-20.04
     steps:
     - name: Checkout sources

@@ -21,16 +21,16 @@ Remember to remove the quarantine attribute using ``xattr -d com.apple.quarantin
 
 `<https://github.com/hyperledger-labs/solang/releases/download/v0.1.8/solang-mac-intel>`_
 
-Using hyperledgerlabs/solang docker hub images
-----------------------------------------------
+Using ghcr.io/hyperledger-labs/solang containers
+------------------------------------------------
 
 New images are automatically made available on
-`docker hub <https://hub.docker.com/repository/docker/hyperledgerlabs/solang/>`_.
+`solang containers <https://github.com/hyperledger-labs/solang/pkgs/container/solang>`_.
 There is a release `v0.1.8` tag and a `latest` tag:
 
 .. code-block:: bash
 
-	docker pull hyperledgerlabs/solang:latest
+	docker pull ghcr.io/hyperledger-labs/solang:latest
 
 The Solang binary is stored at ``/usr/bin/solang`` in this image. The `latest` tag
 gets updated each time there is a commit to the main branch of the Solang git repository.

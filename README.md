@@ -17,7 +17,7 @@ Solang is under active development right now, and has
 ## Simple example
 
 First build [Solang](https://solang.readthedocs.io/en/latest/installing.html)
-or use the docker image, then write the following to flipper.sol:
+or use the container, then write the following to flipper.sol:
 
 ```solidity
 contract flipper {
@@ -43,10 +43,10 @@ Now run:
 solang --target substrate flipper.sol
 ```
 
-Alternatively if you want to use the solang docker image, run:
+Alternatively if you want to use the solang container, run:
 
 ```
-docker run --rm -it -v $(pwd):/sources hyperledgerlabs/solang -v -o /sources --target substrate /sources/flipper.sol
+docker run --rm -it -v $(pwd):/sources ghcr.io/hyperledger-labs/solang -v -o /sources --target substrate /sources/flipper.sol
 ```
 You will have a file called flipper.contract. You can use this directly in
 the [Polkadot UI](https://substrate.dev/substrate-contracts-workshop/#/0/deploy-contract),
