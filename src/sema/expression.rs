@@ -148,14 +148,6 @@ impl Expression {
             | Expression::ExternalFunctionCall { returns, .. } => returns.to_vec(),
             Expression::List(_, list) => list.iter().map(|e| e.ty()).collect(),
             Expression::ExternalFunctionCallRaw { .. } => vec![Type::Bool, Type::DynamicBytes],
-            Expression::DynamicArrayPush(_, _, ty, _) | Expression::DynamicArrayPop(_, _, ty) => {
-                match ty {
-                    Type::Array(..) => vec![ty.array_elem()],
-                    Type::DynamicBytes => vec![Type::Uint(8)],
-                    _ => unreachable!(),
-                }
-            }
-            Expression::FormatString(_, _) => vec![Type::String],
             _ => vec![self.ty()],
         }
     }
