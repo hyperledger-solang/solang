@@ -58,8 +58,8 @@ of the contract in between curly braces ``{`` and ``}``.
 
 When compiling this, Solang will output contract code for both `A` and `B`, irrespective of
 the name of source file. Although multiple contracts maybe defined in one solidity source
-file, it might be convenient to define a single contract in each file with the same name
-as the file name.
+file, it might be convenient to define only single contract in each file, and keep contract
+name the same as the file name (with the `.sol` extension).
 
 Imports
 _______
@@ -103,17 +103,17 @@ Another method for locating files is using import maps. This maps the first dire
 of an import path to a different location on the file system. Say you add
 the command line option ``--importmap @openzeppelin=/opt/openzeppelin-contracts/contracts``, then
 
-.. code-block::
+.. code-block:: javascript
 
     import "openzeppelin/interfaces/IERC20.sol";
 
 will automatically map to `/opt/openzeppelin-contracts/contracts/interfaces/IERC20.sol`.
 
-Everything defined in `defines.sol` is now usable in your Solidity file. However, if something with the
-same name is defined in `defines.sol` and also in the current file, you will get a warning. Note that
-that it is legal to import the same file more than once.
+Everything defined in `defines.sol` is now usable in your Solidity file. However, if an item with the
+same name is defined in `defines.sol` and also in the current file, you will get a warning. It is
+permitted to import the same file more than once.
 
-It is also possible to rename an import. In this case, only type `foo` will be imported, and `bar`
+It is also possible to rename an import. In this case, only item `foo` will be imported, and `bar`
 will be imported as `baz`. This is useful if you have already have a `bar` and you want to avoid
 a naming conflict.
 
@@ -157,6 +157,29 @@ when using Solang.
 
 The `ABIEncoderV2` pragma is not needed with Solang; structures can always be ABI encoded or
 decoded. All other pragma statements are ignored, but generate warnings.
+
+About pragma solidity versions
+++++++++++++++++++++++++++++++
+
+Ethereum Solidity checks the value of ``pragma version`` against the compiler version, and
+gives an error if they do not match. Ethereum Solidity is often revising the language
+in various small ways which make versions incompatible which other. So, the
+version pragma ensures that the compiler version matches what the author of the
+contract was using, and ensures the compiler will give no unexpected errors.
+
+Solang takes a different view:
+
+#. Solang tries to remain compatible with different versions of ethereum solidity;
+   we cannot publish a version of solang for every version of the ethereum solidity
+   compiler.
+#. We also have compatibility issues because we target multiple blockchains, so
+   the version would not be sufficient.
+#. We think that the compiler version should not be a property of the source,
+   but of the build environment. No other language set the compiler version in
+   the source code.
+
+If anything some languages allow conditional compilation based on the compiler
+version, which is much more useful.
 
 Types
 -----
@@ -241,7 +264,7 @@ or a text string ``"ABC"``, or a hex value ``0x414243``.
   bytes4 bar = hex"41_42_43_44";
 
 The ascii value for ``A`` is 41 in hexadecimal. So, in this case, foo and bar
-are initialized to the same value. Underscores are allowed in hex strings; they exist for
+are initialized to the same value. Underscores are allowed in hex strings; they exist to aid
 readability. If the string is shorter than the type, it is padded with zeros. For example:
 
 .. code-block:: javascript
@@ -293,7 +316,7 @@ ethereum addresses can be specified with a particular hexadecimal number.
 
   address foo = 0xE9430d8C01C4E4Bb33E44fd7748942085D82fC91;
 
-The hexadecimal string has to have 40 characters, and not contain any underscores.
+The hexadecimal string should be 40 hexadecimal characters, and not contain any underscores.
 The capitalization, i.e. whether ``a`` to ``f`` values are capitalized, is important.
 It is defined in
 `EIP-55 <https://github.com/ethereum/EIPs/blob/master/EIPS/eip-55.md>`_. For example,
@@ -337,15 +360,15 @@ bytes types and integer types. The ``==`` and ``!=`` operators work for comparin
 
 .. note::
     The type name ``address payable`` cannot be used as a cast in the Ethereum Foundation Solidity compiler,
-    and the cast must be ``payable`` instead. This is
+    and the cast should be declared ``payable`` instead. This is
     `apparently due to a limitation in their parser <https://github.com/ethereum/solidity/pull/4926#discussion_r216586365>`_.
     Solang's generated parser has no such limitation and allows ``address payable`` to be used as a cast,
     but allows ``payable`` to be used as a cast well, for compatibility reasons.
 
 .. note::
 
-    Substrate can be compiled with a different type for Address. If you need support for
-    a different length than the default, please get in touch.
+    Substrate can be compiled with a different type for Address. If your substrate has a different
+    length for address, you can specify ``--address-length`` on the command line.
 
 Enums
 _____
