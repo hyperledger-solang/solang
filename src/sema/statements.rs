@@ -223,11 +223,10 @@ pub fn resolve_function_body(
         }
     }
 
-    if def.body.is_none() {
-        return Ok(());
-    }
-
-    let body = def.body.as_ref().unwrap();
+    let body = match def.body {
+        None => return Ok(()),
+        Some(ref body) => body,
+    };
 
     let mut diagnostics = Vec::new();
 
