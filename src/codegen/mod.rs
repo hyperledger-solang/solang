@@ -199,7 +199,9 @@ fn storage_initializer(contract_no: usize, ns: &mut Namespace, opt: &Options) ->
 
     cfg.add(&mut vartab, Instr::Return { value: Vec::new() });
 
-    cfg.vars = vartab.drain();
+    let (vars, next_id) = vartab.drain();
+    cfg.vars = vars;
+    ns.next_id = next_id;
 
     optimize_and_check_cfg(&mut cfg, ns, None, opt);
 
