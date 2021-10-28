@@ -1098,16 +1098,12 @@ impl ControlFlowGraph {
     }
 }
 
-/// Generate the CFG for a function. If function_no is None, generate the implicit default
-/// constructor
-pub fn generate_cfg(
+/// Checks whether there is a virtual fallback or receive function
+fn is_there_virtual_function(
+    ns: &Namespace,
     contract_no: usize,
     function_no: Option<usize>,
-    cfg_no: usize,
-    all_cfgs: &mut Vec<ControlFlowGraph>,
-    ns: &mut Namespace,
-    opt: &Options,
-) {
+) -> bool {
     let default_constructor = &ns.default_constructor(contract_no);
 
     let func = match function_no {
@@ -1120,7 +1116,7 @@ pub fn generate_cfg(
         // if there is a virtual receive function, and it's not this one, ignore it
         if let Some(receive) = ns.contracts[contract_no].virtual_functions.get("@receive") {
             if Some(*receive) != function_no {
-                return;
+                return true;
             }
         }
     }
@@ -1129,16 +1125,39 @@ pub fn generate_cfg(
         // if there is a virtual fallback function, and it's not this one, ignore it
         if let Some(fallback) = ns.contracts[contract_no].virtual_functions.get("@fallback") {
             if Some(*fallback) != function_no {
-                return;
+                return true;
             }
         }
     }
 
     if func.ty == pt::FunctionTy::Modifier || !func.has_body {
+        return true;
+    }
+
+    false
+}
+
+/// Generate the CFG for a function. If function_no is None, generate the implicit default
+/// constructor
+pub fn generate_cfg(
+    contract_no: usize,
+    function_no: Option<usize>,
+    cfg_no: usize,
+    all_cfgs: &mut Vec<ControlFlowGraph>,
+    ns: &mut Namespace,
+    opt: &Options,
+) {
+    if is_there_virtual_function(ns, contract_no, function_no) {
         return;
     }
 
     let mut cfg = function_cfg(contract_no, function_no, ns);
+
+    let default_constructor = &ns.default_constructor(contract_no);
+    let func = match function_no {
+        Some(function_no) => &ns.functions[function_no],
+        None => default_constructor,
+    };
 
     // if the function is a modifier, generate the modifier chain
     if !func.modifiers.is_empty() {
@@ -1158,7 +1177,7 @@ pub fn generate_cfg(
 
             let modifier = &ns.functions[modifier_no];
 
-            cfg = generate_modifier_dispatch(
+            let (new_cfg, next_id) = generate_modifier_dispatch(
                 contract_no,
                 func,
                 modifier,
@@ -1167,6 +1186,9 @@ pub fn generate_cfg(
                 args,
                 ns,
             );
+
+            cfg = new_cfg;
+            ns.next_id = next_id;
         }
 
         cfg.public = public;
@@ -1238,7 +1260,7 @@ pub fn optimize_and_check_cfg(
 fn function_cfg(
     contract_no: usize,
     function_no: Option<usize>,
-    ns: &Namespace,
+    ns: &mut Namespace,
 ) -> ControlFlowGraph {
     let mut vartab = match function_no {
         Some(function_no) => {
@@ -1468,7 +1490,9 @@ fn function_cfg(
         );
     }
 
-    cfg.vars = vartab.drain();
+    let (vars, next_id) = vartab.drain();
+    cfg.vars = vars;
+    ns.next_id = next_id;
 
     // walk cfg to check for use for before initialize
     cfg
@@ -1483,7 +1507,7 @@ pub fn generate_modifier_dispatch(
     chain_no: usize,
     args: &[Expression],
     ns: &Namespace,
-) -> ControlFlowGraph {
+) -> (ControlFlowGraph, usize) {
     let name = format!(
         "{}::{}::{}::modifier{}::{}",
         &ns.contracts[contract_no].name,
@@ -1576,9 +1600,10 @@ pub fn generate_modifier_dispatch(
         );
     }
 
-    cfg.vars = vartab.drain();
+    let (vars, next_id) = vartab.drain();
+    cfg.vars = vars;
 
-    cfg
+    (cfg, next_id)
 }
 
 #[derive(Clone)]
@@ -1732,8 +1757,8 @@ impl Vartable {
         pos
     }
 
-    pub fn drain(self) -> Vars {
-        self.vars
+    pub fn drain(self) -> (Vars, usize) {
+        (self.vars, self.next_id)
     }
 
     // In order to create phi nodes, we need to track what vars are set in a certain scope

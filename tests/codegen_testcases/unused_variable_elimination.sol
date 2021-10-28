@@ -135,7 +135,7 @@ return 3;
         int f = 4;
 
         int c = 32 +4 *(f = it1+it2);
-// CHECK: ty:int256 %c = (int256 32 + (sext int256 (int64 4 * (trunc int64 (%temp.67 + %temp.68)))))
+// CHECK: ty:int256 %c = (int256 32 + (sext int256 (int64 4 * (trunc int64 (%temp.84 + %temp.85)))))
 // NOT-CHECK: ty:int256 %f = (%temp.10 + %temp.11)
         return c;
     }
@@ -176,7 +176,7 @@ return 3;
     function test14() public returns (int) {
         int[] storage ptrArr = testArr;
 
-// CHECK: store storage slot(%temp.69) ty:int256 storage = int256 3
+// CHECK: store storage slot(%temp.97) ty:int256 storage = int256 3
         ptrArr.push(3);
 
         return ptrArr[0];
