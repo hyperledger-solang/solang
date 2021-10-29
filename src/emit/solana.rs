@@ -2951,6 +2951,38 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             .into_int_value()
     }
 
+    /// Send value to address
+    fn value_transfer<'b>(
+        &self,
+        binary: &Binary<'b>,
+        _function: FunctionValue,
+        success: Option<&mut BasicValueEnum<'b>>,
+        address: PointerValue<'b>,
+        value: IntValue<'b>,
+        _ns: &ast::Namespace,
+    ) {
+        let parameters = self.sol_parameters(binary);
+
+        if let Some(success) = success {
+            *success = binary
+                .builder
+                .build_call(
+                    binary.module.get_function("sol_try_transfer").unwrap(),
+                    &[address.into(), value.into(), parameters.into()],
+                    "success",
+                )
+                .try_as_basic_value()
+                .left()
+                .unwrap();
+        } else {
+            binary.builder.build_call(
+                binary.module.get_function("sol_transfer").unwrap(),
+                &[address.into(), value.into(), parameters.into()],
+                "",
+            );
+        }
+    }
+
     /// Terminate execution, destroy binary and send remaining funds to addr
     fn selfdestruct<'b>(&self, _binary: &Binary<'b>, _addr: IntValue<'b>, _ns: &ast::Namespace) {
         unimplemented!();

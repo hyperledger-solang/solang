@@ -124,7 +124,6 @@ fn base_contract() {
 
 #[test]
 // 64424509440 = 15 << 32 (ERROR_NEW_ACCOUNT_NEEDED)
-#[should_panic(expected = "64424509440")]
 fn missing_contract() {
     let mut vm = build_solidity(
         r#"
@@ -155,7 +154,8 @@ fn missing_contract() {
 
     vm.constructor("bar0", &[], 0);
 
-    let _ = vm.function("test_other", &[], &[], 0, None);
+    let res = vm.function_must_fail("test_other", &[], &[], 0, None);
+    assert_eq!(res, Ok(64424509440));
 }
 
 #[test]

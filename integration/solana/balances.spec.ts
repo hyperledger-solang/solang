@@ -1,6 +1,5 @@
 import expect from 'expect';
 import { loadContract } from './utils';
-import { ContractFunctionCallOptions } from '@solana/solidity';
 
 describe('Deploy solang contract and test', () => {
     it('balances', async function () {
@@ -10,16 +9,24 @@ describe('Deploy solang contract and test', () => {
 
         let payer = '0x' + payerAccount.publicKey.toBuffer().toString('hex');
 
-        let options: ContractFunctionCallOptions = {
+        let res = await token.functions.get_balance(payer, {
             accounts: [payerAccount.publicKey],
-        };
-
-        let res = await token.functions.get_balance(payer, options);
+        });
 
         let bal = Number(res.result);
 
         let rpc_bal = await connection.getBalance(payerAccount.publicKey);
 
         expect(bal).toBe(rpc_bal);
+
+        // @solana/solidity needs a fix for this
+        // res = await token.functions.pay_me({
+        //     value: 1000,
+        //     writableAccounts: [payerAccount.publicKey],
+        // });
+
+        // expect(res.log).toContain('Thank you very much for 1000');
+
+        // expect(await connection.getBalance(token.storageAccount)).toBe(1000);
     });
 });

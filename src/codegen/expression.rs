@@ -859,7 +859,7 @@ pub fn expression(
                 &Type::Bool,
             );
 
-            if ns.target.is_substrate() {
+            if ns.target != Target::Ewasm {
                 cfg.add(
                     vartab,
                     Instr::ValueTransfer {
@@ -869,6 +869,7 @@ pub fn expression(
                     },
                 );
             } else {
+                // Ethereum can only transfer via external call
                 cfg.add(
                     vartab,
                     Instr::ExternalCall {
@@ -892,7 +893,7 @@ pub fn expression(
             let address = expression(&args[0], cfg, contract_no, func, ns, vartab);
             let value = expression(&args[1], cfg, contract_no, func, ns, vartab);
 
-            if ns.target.is_substrate() {
+            if ns.target != Target::Ewasm {
                 cfg.add(
                     vartab,
                     Instr::ValueTransfer {
@@ -902,6 +903,7 @@ pub fn expression(
                     },
                 );
             } else {
+                // Ethereum can only transfer via external call
                 cfg.add(
                     vartab,
                     Instr::ExternalCall {
