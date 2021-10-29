@@ -6787,8 +6787,20 @@ fn method_call_pos_args(
         return Err(());
     }
 
-    if let Type::Address(true) = &var_ty.deref_any() {
+    if let Type::Address(is_payable) = &var_ty.deref_any() {
         if func.name == "transfer" || func.name == "send" {
+            if !is_payable {
+                diagnostics.push(Diagnostic::error(
+                    *loc,
+                    format!(
+                        "method ‘{}’ available on type ‘address payable’ not ‘address’",
+                        func.name,
+                    ),
+                ));
+
+                return Err(());
+            }
+
             if args.len() != 1 {
                 diagnostics.push(Diagnostic::error(
                     *loc,

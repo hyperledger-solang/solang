@@ -56,6 +56,7 @@ struct AccountState {
 
 struct VirtualMachine {
     account_data: HashMap<Account, AccountState>,
+    origin: Account,
     programs: Vec<Contract>,
     stack: Vec<Contract>,
     logs: String,
@@ -207,8 +208,20 @@ fn build_solidity(src: &str) -> VirtualMachine {
 
     let cur = programs.last().unwrap().clone();
 
+    let origin = account_new();
+
+    account_data.insert(
+        origin,
+        AccountState {
+            data: Vec::new(),
+            owner: None,
+            lamports: 0,
+        },
+    );
+
     VirtualMachine {
         account_data,
+        origin,
         programs,
         stack: vec![cur],
         logs: String::new(),
@@ -319,6 +332,8 @@ fn deserialize_parameters(
             let data = input[r.offset..r.offset + r.length].to_vec();
 
             entry.data = data;
+            entry.lamports =
+                u64::from_ne_bytes(input[r.offset - 16..r.offset - 8].try_into().unwrap());
         }
     }
 }
@@ -347,6 +362,24 @@ fn update_parameters(
                 );
             }
         }
+    }
+}
+
+struct SolPanic();
+
+impl SyscallObject<UserError> for SolPanic {
+    fn call(
+        &mut self,
+        _src: u64,
+        _len: u64,
+        _dest: u64,
+        _arg4: u64,
+        _arg5: u64,
+        _memory_mapping: &MemoryMapping,
+        result: &mut Result<u64, EbpfError<UserError>>,
+    ) {
+        println!("sol_panic_()");
+        *result = Err(EbpfError::ExecutionOverrun(0));
     }
 }
 
@@ -1087,7 +1120,8 @@ impl<'a> SyscallObject<UserError> for SyscallInvokeSignedC<'a> {
 
                 context.stack.insert(0, p);
 
-                context.execute(&instruction.data, &[]);
+                let res = context.execute(&instruction.data, &[]);
+                assert_eq!(res, Ok(0));
 
                 let refs = self.refs.try_borrow().unwrap();
 
@@ -1102,7 +1136,11 @@ impl<'a> SyscallObject<UserError> for SyscallInvokeSignedC<'a> {
 }
 
 impl VirtualMachine {
-    fn execute(&mut self, calldata: &[u8], seeds: &[&(Account, Vec<u8>)]) {
+    fn execute(
+        &mut self,
+        calldata: &[u8],
+        seeds: &[&(Account, Vec<u8>)],
+    ) -> Result<u64, EbpfError<UserError>> {
         println!("running bpf with calldata:{}", hex::encode(calldata));
 
         let (mut parameter_bytes, mut refs) = serialize_parameters(calldata, self, seeds);
@@ -1111,6 +1149,10 @@ impl VirtualMachine {
         let program = &self.stack[0];
 
         let mut syscall_registry = SyscallRegistry::default();
+        syscall_registry
+            .register_syscall_by_name(b"sol_panic_", SolPanic::call)
+            .unwrap();
+
         syscall_registry
             .register_syscall_by_name(b"sol_log_", SolLog::call)
             .unwrap();
@@ -1223,9 +1265,7 @@ impl VirtualMachine {
         )
         .unwrap();
 
-        let res = vm
-            .execute_program_interpreted(&mut TestInstructionMeter { remaining: 1000000 })
-            .unwrap();
+        let res = vm.execute_program_interpreted(&mut TestInstructionMeter { remaining: 1000000 });
 
         let mut elf = context.try_borrow_mut().unwrap();
         let refs = refs.try_borrow().unwrap();
@@ -1240,7 +1280,7 @@ impl VirtualMachine {
             println!("return: {}", hex::encode(&return_data));
         }
 
-        assert_eq!(res, 0);
+        res
     }
 
     fn constructor(&mut self, name: &str, args: &[Token], value: u64) {
@@ -1248,13 +1288,14 @@ impl VirtualMachine {
 
         println!("constructor for {}", hex::encode(&program.data));
 
-        let mut calldata = VirtualMachine::input(&program.data, &account_new(), value, name, &[]);
+        let mut calldata = VirtualMachine::input(&program.data, &self.origin, value, name, &[]);
 
         if let Some(constructor) = &program.abi.as_ref().unwrap().constructor {
             calldata.extend(&constructor.encode_input(vec![], args).unwrap());
         };
 
-        self.execute(&calldata, &[]);
+        let res = self.execute(&calldata, &[]);
+        assert!(matches!(res, Ok(0)));
     }
 
     fn function(
@@ -1269,14 +1310,12 @@ impl VirtualMachine {
 
         println!("function for {}", hex::encode(&program.data));
 
-        let new = account_new();
-
         let mut calldata = VirtualMachine::input(
             &program.data,
             if let Some(sender) = sender {
                 sender
             } else {
-                &new
+                &self.origin
             },
             value,
             name,
@@ -1292,7 +1331,8 @@ impl VirtualMachine {
 
         println!("input: {}", hex::encode(&calldata));
 
-        self.execute(&calldata, seeds);
+        let res = self.execute(&calldata, seeds);
+        assert!(matches!(res, Ok(0)));
 
         if let Some((_, return_data)) = &self.return_data {
             println!("return: {}", hex::encode(&return_data));
@@ -1305,6 +1345,42 @@ impl VirtualMachine {
         } else {
             Vec::new()
         }
+    }
+
+    fn function_must_fail(
+        &mut self,
+        name: &str,
+        args: &[Token],
+        seeds: &[&(Account, Vec<u8>)],
+        value: u64,
+        sender: Option<&Account>,
+    ) -> Result<u64, EbpfError<UserError>> {
+        let program = &self.stack[0];
+
+        println!("function for {}", hex::encode(&program.data));
+
+        let mut calldata = VirtualMachine::input(
+            &program.data,
+            if let Some(sender) = sender {
+                sender
+            } else {
+                &self.origin
+            },
+            value,
+            name,
+            seeds,
+        );
+
+        println!("input: {} seeds {:?}", hex::encode(&calldata), seeds);
+
+        match program.abi.as_ref().unwrap().functions[name][0].encode_input(args) {
+            Ok(n) => calldata.extend(&n),
+            Err(x) => panic!("{}", x),
+        };
+
+        println!("input: {}", hex::encode(&calldata));
+
+        self.execute(&calldata, seeds)
     }
 
     fn input(
