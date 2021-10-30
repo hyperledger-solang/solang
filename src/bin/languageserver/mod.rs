@@ -159,7 +159,7 @@ impl SolangServer {
             for arg in protval.args {
                 msg = format!("{}{}", msg, SolangServer::expanded_ty(arg, ns));
             }
-            msg = format!("{}): {}", msg, protval.doc.to_string());
+            msg = format!("{}): {}", msg, protval.doc);
         }
         msg
     }

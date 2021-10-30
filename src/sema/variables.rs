@@ -152,9 +152,9 @@ pub fn var_decl(
                 if let Some(e) = &visibility {
                     ns.diagnostics.push(Diagnostic::error_with_note(
                         v.loc(),
-                        format!("variable visibility redeclared `{}'", v.to_string()),
+                        format!("variable visibility redeclared `{}'", v),
                         e.loc(),
-                        format!("location of previous declaration of `{}'", e.to_string()),
+                        format!("location of previous declaration of `{}'", e),
                     ));
                     return None;
                 }

@@ -111,7 +111,7 @@ impl Symtable {
             if let Some(prev) = self.find(&id.name) {
                 ns.diagnostics.push(Diagnostic::error_with_note(
                     id.loc,
-                    format!("{} is already declared", id.name.to_string()),
+                    format!("{} is already declared", id.name),
                     prev.id.loc,
                     "location of previous declaration".to_string(),
                 ));

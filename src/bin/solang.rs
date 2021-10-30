@@ -232,17 +232,14 @@ fn main() {
     }
 
     if let Err(e) = resolver.add_import_path(PathBuf::from(".")) {
-        eprintln!(
-            "error: cannot add current directory to import path: {}",
-            e.to_string()
-        );
+        eprintln!("error: cannot add current directory to import path: {}", e);
         std::process::exit(1);
     }
 
     if let Some(paths) = matches.values_of("IMPORTPATH") {
         for path in paths {
             if let Err(e) = resolver.add_import_path(PathBuf::from(path)) {
-                eprintln!("error: import path ‘{}’: {}", path, e.to_string());
+                eprintln!("error: import path ‘{}’: {}", path, e);
                 std::process::exit(1);
             }
         }
@@ -252,7 +249,7 @@ fn main() {
         for p in maps {
             if let Some((map, path)) = p.split_once('=') {
                 if let Err(e) = resolver.add_import_map(OsString::from(map), PathBuf::from(path)) {
-                    eprintln!("error: import path ‘{}’: {}", path, e.to_string());
+                    eprintln!("error: import path ‘{}’: {}", path, e);
                     std::process::exit(1);
                 }
             } else {

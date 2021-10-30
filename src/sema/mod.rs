@@ -353,7 +353,7 @@ impl ast::Namespace {
         if builtin::is_reserved(&id.name) {
             self.diagnostics.push(ast::Diagnostic::error(
                 id.loc,
-                format!("‘{}’ shadows name of a builtin", id.name.to_string()),
+                format!("‘{}’ shadows name of a builtin", id.name),
             ));
 
             return false;
@@ -373,7 +373,7 @@ impl ast::Namespace {
 
             self.diagnostics.push(ast::Diagnostic::error_with_notes(
                 id.loc,
-                format!("{} is already defined as a function", id.name.to_string()),
+                format!("{} is already defined as a function", id.name),
                 notes,
             ));
 
@@ -388,10 +388,7 @@ impl ast::Namespace {
                 ast::Symbol::Contract(c, _) => {
                     self.diagnostics.push(ast::Diagnostic::error_with_note(
                         id.loc,
-                        format!(
-                            "{} is already defined as a contract name",
-                            id.name.to_string()
-                        ),
+                        format!("{} is already defined as a contract name", id.name),
                         *c,
                         "location of previous definition".to_string(),
                     ));
@@ -399,7 +396,7 @@ impl ast::Namespace {
                 ast::Symbol::Enum(c, _) => {
                     self.diagnostics.push(ast::Diagnostic::error_with_note(
                         id.loc,
-                        format!("{} is already defined as an enum", id.name.to_string()),
+                        format!("{} is already defined as an enum", id.name),
                         *c,
                         "location of previous definition".to_string(),
                     ));
@@ -407,7 +404,7 @@ impl ast::Namespace {
                 ast::Symbol::Struct(c, _) => {
                     self.diagnostics.push(ast::Diagnostic::error_with_note(
                         id.loc,
-                        format!("{} is already defined as a struct", id.name.to_string()),
+                        format!("{} is already defined as a struct", id.name),
                         *c,
                         "location of previous definition".to_string(),
                     ));
@@ -415,7 +412,7 @@ impl ast::Namespace {
                 ast::Symbol::Event(events) => {
                     self.diagnostics.push(ast::Diagnostic::error_with_note(
                         id.loc,
-                        format!("{} is already defined as an event", id.name.to_string()),
+                        format!("{} is already defined as an event", id.name),
                         events[0].0,
                         "location of previous definition".to_string(),
                     ));
@@ -423,10 +420,7 @@ impl ast::Namespace {
                 ast::Symbol::Variable(c, _, _) => {
                     self.diagnostics.push(ast::Diagnostic::error_with_note(
                         id.loc,
-                        format!(
-                            "{} is already defined as a contract variable",
-                            id.name.to_string()
-                        ),
+                        format!("{} is already defined as a contract variable", id.name),
                         *c,
                         "location of previous definition".to_string(),
                     ));
@@ -434,7 +428,7 @@ impl ast::Namespace {
                 ast::Symbol::Import(loc, _) => {
                     self.diagnostics.push(ast::Diagnostic::error_with_note(
                         id.loc,
-                        format!("{} is already defined as an import", id.name.to_string()),
+                        format!("{} is already defined as an import", id.name),
                         *loc,
                         "location of previous definition".to_string(),
                     ));
@@ -461,7 +455,7 @@ impl ast::Namespace {
 
                 self.diagnostics.push(ast::Diagnostic::warning_with_notes(
                     id.loc,
-                    format!("{} is already defined as a function", id.name.to_string()),
+                    format!("{} is already defined as a function", id.name),
                     notes,
                 ));
             }
@@ -474,10 +468,7 @@ impl ast::Namespace {
                     ast::Symbol::Contract(c, _) => {
                         self.diagnostics.push(ast::Diagnostic::warning_with_note(
                             id.loc,
-                            format!(
-                                "{} is already defined as a contract name",
-                                id.name.to_string()
-                            ),
+                            format!("{} is already defined as a contract name", id.name),
                             *c,
                             "location of previous definition".to_string(),
                         ));
@@ -510,10 +501,7 @@ impl ast::Namespace {
                     ast::Symbol::Variable(c, _, _) => {
                         self.diagnostics.push(ast::Diagnostic::warning_with_note(
                             id.loc,
-                            format!(
-                                "{} is already defined as a contract variable",
-                                id.name.to_string()
-                            ),
+                            format!("{} is already defined as a contract variable", id.name),
                             *c,
                             "location of previous definition".to_string(),
                         ));
@@ -858,7 +846,7 @@ impl ast::Namespace {
         if builtin::is_reserved(&id.name) {
             self.diagnostics.push(ast::Diagnostic::warning(
                 id.loc,
-                format!("‘{}’ shadows name of a builtin", id.name.to_string()),
+                format!("‘{}’ shadows name of a builtin", id.name),
             ));
             return;
         }
@@ -1052,14 +1040,11 @@ impl ast::Namespace {
                                 if let Some(e) = &mutability {
                                     diagnostics.push(ast::Diagnostic::error_with_note(
                                         m.loc(),
-                                        format!(
-                                            "function type mutability redeclared `{}'",
-                                            m.to_string()
-                                        ),
+                                        format!("function type mutability redeclared `{}'", m),
                                         e.loc(),
                                         format!(
                                             "location of previous mutability declaration of `{}'",
-                                            e.to_string()
+                                            e
                                         ),
                                     ));
                                     success = false;
@@ -1081,14 +1066,11 @@ impl ast::Namespace {
                                 if let Some(e) = &visibility {
                                     diagnostics.push(ast::Diagnostic::error_with_note(
                                         v.loc(),
-                                        format!(
-                                            "function type visibility redeclared `{}'",
-                                            v.to_string()
-                                        ),
+                                        format!("function type visibility redeclared `{}'", v),
                                         e.loc(),
                                         format!(
                                             "location of previous visibility declaration of `{}'",
-                                            e.to_string()
+                                            e
                                         ),
                                     ));
                                     success = false;
@@ -1139,20 +1121,14 @@ impl ast::Namespace {
                             pt::FunctionAttribute::Mutability(m) => {
                                 diagnostics.push(ast::Diagnostic::error(
                                     m.loc(),
-                                    format!(
-                                        "mutability `{}' cannot be declared after returns",
-                                        m.to_string()
-                                    ),
+                                    format!("mutability `{}' cannot be declared after returns", m),
                                 ));
                                 success = false;
                             }
                             pt::FunctionAttribute::Visibility(v) => {
                                 diagnostics.push(ast::Diagnostic::error(
                                     v.loc(),
-                                    format!(
-                                        "visibility `{}' cannot be declared after returns",
-                                        v.to_string()
-                                    ),
+                                    format!("visibility `{}' cannot be declared after returns", v),
                                 ));
                                 success = false;
                             }
