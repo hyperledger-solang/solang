@@ -99,7 +99,7 @@ impl FileResolver {
                 return Err(format!(
                     "cannot open file ‘{}’: {}",
                     path.display(),
-                    err_info.to_string()
+                    err_info
                 ));
             }
             Ok(file) => file,
@@ -107,11 +107,7 @@ impl FileResolver {
 
         let mut contents = String::new();
         if let Err(e) = f.read_to_string(&mut contents) {
-            return Err(format!(
-                "failed to read file ‘{}’: {}",
-                path.display(),
-                e.to_string()
-            ));
+            return Err(format!("failed to read file ‘{}’: {}", path.display(), e));
         }
 
         let pos = self.files.len();

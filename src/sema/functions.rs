@@ -104,9 +104,9 @@ pub fn contract_function(
                 if let Some(e) = &mutability {
                     ns.diagnostics.push(Diagnostic::error_with_note(
                         m.loc(),
-                        format!("function redeclared `{}'", m.to_string()),
+                        format!("function redeclared `{}'", m),
                         e.loc(),
-                        format!("location of previous declaration of `{}'", e.to_string()),
+                        format!("location of previous declaration of `{}'", e),
                     ));
                     success = false;
                     continue;
@@ -127,9 +127,9 @@ pub fn contract_function(
                 if let Some(e) = &visibility {
                     ns.diagnostics.push(Diagnostic::error_with_note(
                         v.loc(),
-                        format!("function redeclared `{}'", v.to_string()),
+                        format!("function redeclared `{}'", v),
                         e.loc(),
-                        format!("location of previous declaration of `{}'", e.to_string()),
+                        format!("location of previous declaration of `{}'", e),
                     ));
                     success = false;
                     continue;
@@ -628,9 +628,9 @@ pub fn function(
                 if let Some(e) = &mutability {
                     ns.diagnostics.push(Diagnostic::error_with_note(
                         m.loc(),
-                        format!("function redeclared `{}'", m.to_string()),
+                        format!("function redeclared `{}'", m),
                         e.loc(),
-                        format!("location of previous declaration of `{}'", e.to_string()),
+                        format!("location of previous declaration of `{}'", e),
                     ));
                     success = false;
                     continue;
