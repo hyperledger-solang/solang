@@ -1,11 +1,93 @@
 Target Specific
 ===============
 
+Solana
+______
+
+The Solana target requires `Solana <https://www.solana.com/>`_ v1.8.1.
+
+Solana has the following differences to Ethereum Solidity:
+
+- The address type is 32 bytes, not 20 bytes. This is what Solana calls an "account"
+- An address literal has to be specified using the ``address"36VtvSbE6jVGGQytYWSaDPG7uZphaxEjpJHUUpuUbq4D"`` syntax
+- There is no ``ecrecover()`` builtin function, but there is a ``signatureVerify()`` function which can check ed25519
+  signatures.
+- Solana has no concept of gas, so there is no gas functions
+- Solana balance is stored in a ``uint64``, so ``msg.value``, *address* ``.balance``, ``.transfer()`` and ``.send()``
+  all use uint64 rather than `uint256`.
+
+This is how to build your Solidity for Solana:
+
+.. code-block:: bash
+
+  solang --target solana flipper.sol -v
+
+This will produce two files called `flipper.abi` and `bundle.so`. The first is an ethereum style abi file and the latter being
+the ELF BPF shared object which can be deployed on Solana. For each contract, an abi file will be created; a single `bundle.so`
+is created which contains the code all the contracts provided on the command line.
+
+.. code-block:: bash
+
+    npm install @solana/solidity
+
+Now run the following javascript by saving it to `flipper.js` and running it with ``node flipper.js``.
+
+.. code-block:: javascript
+
+    const { Connection, LAMPORTS_PER_SOL, Keypair } = require('@solana/web3.js');
+    const { Contract, Program } = require('@solana/solidity');
+    const { readFileSync } = require('fs');
+
+    const FLIPPER_ABI = JSON.parse(readFileSync('./flipper.abi', 'utf8'));
+    const PROGRAM_SO = readFileSync('./bundle.so');
+
+    (async function () {
+        console.log('Connecting to your local Solana node ...');
+        const connection = new Connection('http://localhost:8899', 'confirmed');
+
+        const payer = Keypair.generate();
+        while (true) {
+            console.log('Airdropping SOL to a new wallet ...');
+            await connection.requestAirdrop(payer.publicKey, 1 * LAMPORTS_PER_SOL);
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+            if (await connection.getBalance(payer.publicKey)) break;
+        }
+
+        const program = await Program.load(connection, payer, Keypair.generate(), PROGRAM_SO);
+
+        console.log('Program deployment finished, deploying the flipper contract ...');
+
+        const storageKeyPair = Keypair.generate();
+        const deployRes = await program.deployContract({
+            name: "flipper",
+            abi: FLIPPER_ABI,
+            storageKeyPair,
+            constructorArgs: [true],
+            space: 17,
+        });
+
+        const contract = deployRes.contract;
+
+        const res = await contract.functions.get({ simulate: true });
+        console.log('state: ' + res.result);
+
+        await contract.functions.flip();
+
+        const res2 = await contract.functions.get({ simulate: true });
+        console.log('state: ' + res2.result);
+
+        process.exit(0);
+    })();
+
+The contract can be used via the `@solana/solidity <https://www.npmjs.com/package/@solana/solidity>`_  npm package. This
+package has `documentation <https://solana-labs.github.io/solana-solidity.js/>`_ and there
+are `some examples <https://solana-labs.github.io/solana-solidity.js/>`_. There is also
+`solang's integration tests <https://github.com/hyperledger-labs/solang/tree/main/integration/solana>`_.
 
 Parity Substrate
 ________________
 
-Solang works with Parity Substrate 2.0 or later. This target is the most mature and has received the most testing so far.
+Solang works with Parity Substrate 2.0 or later.
 
 The Parity Substrate has the following differences to Ethereum Solidity:
 
@@ -29,53 +111,6 @@ Now you should have a file called ``flipper.contract``. The file contains both t
 It can be used directly in the
 `Polkadot UI <https://substrate.dev/substrate-contracts-workshop/#/0/deploy-contract>`_, as if the contract was written in ink!.
 
-
-Solana
-______
-
-The Solana target requires `Solana <https://www.solana.com/>`_ v1.8.1. There a few missing features:
-
-- Balance transfers are not implemented
-
-This is how to build your Solidity for Solana:
-
-.. code-block:: bash
-
-  solang --target solana flipper.sol -v
-
-This will produce two files called `flipper.abi` and `bundle.so`. The first is an ethereum style abi file and the latter being
-the ELF BPF shared object which can be deployed on Solana. For each contract, an abi file will be created; a single `bundle.so`
-is created which contains the code all the contracts provided on the command line.
-
-The contract storage model in Solana is different from Ethereum; it is consists of a contigious piece of memory, which can be
-accessed directly from the smart contract. This means that there are no `storage slots`, and that a `mapping` must be implemented
-using a simple hashmap. The same hashmap is used for fixed-length arrays which are a larger than 1kb. So, if you declare an
-contract storage array of ``int[10000]``, then this is implemented using a hashmap.
-
-Solana has execution model which allows one program to interact with multiple accounts. Those accounts can
-be used for different purposes. In Solang's case, each time the contract is executed, it needs two accounts.
-One account is the program, which contains the compiled BPF program. The other account contains the contract storage
-variables, and also the return variables for the last invocation.
-
-The output of the compiler will tell you how large the second account needs to be. For the `flipper.sol` example,
-the output contains *"info: contract flipper uses at least 17 bytes account data"*. This means the second account
-should be 17 bytes plus space for the return data, and any dynamic storage. If the account is too small, the transaction
-will fail with the error *account data too small for instruction*.
-
-Before any function on a smart contract can be used, the constructor must be first be called. This ensures that
-the constructor as declared in the solidity code is executed, and that the contract storage account is
-correctly initialized. To call the constructor, abi encode (using ethereum abi encoding) the constructor
-arguments, and pass in two accounts to the call, the 2nd being the contract storage account.
-
-Once that is done, any function on the contract can be called. To do that, abi encode the function call,
-pass this as input, and provide the two accounts on the call, plus any accounts that may be called.
-
-The return data (i.e. the return values or the revert error) is provided in the
-program log in base64. Any emitted events are written to the program log in base64
-too.
-
-There is `an example of this written in node
-<https://github.com/hyperledger-labs/solang/tree/main/integration/solana>`_.
 
 Hyperledger Burrow (ewasm)
 __________________________
