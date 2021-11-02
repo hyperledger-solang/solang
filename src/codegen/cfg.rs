@@ -1617,7 +1617,6 @@ pub enum Storage {
 pub struct Variable {
     pub id: pt::Identifier,
     pub ty: Type,
-    pub pos: usize,
     pub storage: Storage,
 }
 
@@ -1635,21 +1634,20 @@ pub struct DirtyTracker {
 
 impl Vartable {
     pub fn from_symbol_table(sym: &Symtable, next_id: usize) -> Self {
-        let vars = sym
-            .vars
-            .iter()
-            .map(|(no, v)| {
-                (
-                    *no,
-                    Variable {
-                        id: v.id.clone(),
-                        ty: v.ty.clone(),
-                        pos: v.pos,
-                        storage: Storage::Local,
-                    },
-                )
-            })
-            .collect();
+        let mut vars = HashMap::new();
+
+        for (var_no, v) in &sym.vars {
+            let id = Vartable::make_unique(&vars, &v.id, *var_no);
+
+            vars.insert(
+                *var_no,
+                Variable {
+                    id,
+                    ty: v.ty.clone(),
+                    storage: Storage::Local,
+                },
+            );
+        }
 
         Vartable {
             vars,
@@ -1659,17 +1657,28 @@ impl Vartable {
     }
 
     pub fn add_symbol_table(&mut self, sym: &Symtable) {
-        for (no, v) in &sym.vars {
+        for (var_no, v) in &sym.vars {
+            let id = Vartable::make_unique(&self.vars, &v.id, *var_no);
+
             self.vars.insert(
-                *no,
+                *var_no,
                 Variable {
-                    id: v.id.clone(),
+                    id,
                     ty: v.ty.clone(),
-                    pos: v.pos,
                     storage: Storage::Local,
                 },
             );
         }
+    }
+
+    fn make_unique(vars: &Vars, id: &pt::Identifier, no: usize) -> pt::Identifier {
+        let mut id = id.clone();
+
+        if vars.iter().any(|(_, var)| var.id.name == id.name) {
+            id.name = format!("{}.{}", id.name, no);
+        }
+
+        id
     }
 
     pub fn new(next_id: usize) -> Self {
@@ -1681,80 +1690,78 @@ impl Vartable {
     }
 
     pub fn add(&mut self, id: &pt::Identifier, ty: Type) -> Option<usize> {
-        let pos = self.next_id;
+        let var_no = self.next_id;
         self.next_id += 1;
 
+        let id = Vartable::make_unique(&self.vars, id, var_no);
+
         self.vars.insert(
-            pos,
+            var_no,
             Variable {
-                id: id.clone(),
+                id,
                 ty,
-                pos,
                 storage: Storage::Local,
             },
         );
 
-        Some(pos)
+        Some(var_no)
     }
 
     pub fn temp_anonymous(&mut self, ty: &Type) -> usize {
-        let pos = self.next_id;
+        let var_no = self.next_id;
         self.next_id += 1;
 
         self.vars.insert(
-            pos,
+            var_no,
             Variable {
                 id: pt::Identifier {
-                    name: format!("temp.{}", pos),
+                    name: format!("temp.{}", var_no),
                     loc: pt::Loc(0, 0, 0),
                 },
                 ty: ty.clone(),
-                pos,
                 storage: Storage::Local,
             },
         );
 
-        pos
+        var_no
     }
 
     pub fn temp(&mut self, id: &pt::Identifier, ty: &Type) -> usize {
-        let pos = self.next_id;
+        let var_no = self.next_id;
         self.next_id += 1;
 
         self.vars.insert(
-            pos,
+            var_no,
             Variable {
                 id: pt::Identifier {
-                    name: format!("{}.temp.{}", id.name, pos),
+                    name: format!("{}.temp.{}", id.name, var_no),
                     loc: id.loc,
                 },
                 ty: ty.clone(),
-                pos,
                 storage: Storage::Local,
             },
         );
 
-        pos
+        var_no
     }
 
     pub fn temp_name(&mut self, name: &str, ty: &Type) -> usize {
-        let pos = self.next_id;
+        let var_no = self.next_id;
         self.next_id += 1;
 
         self.vars.insert(
-            pos,
+            var_no,
             Variable {
                 id: pt::Identifier {
-                    name: format!("{}.temp.{}", name, pos),
+                    name: format!("{}.temp.{}", name, var_no),
                     loc: pt::Loc(0, 0, 0),
                 },
                 ty: ty.clone(),
-                pos,
                 storage: Storage::Local,
             },
         );
 
-        pos
+        var_no
     }
 
     pub fn drain(self) -> (Vars, usize) {
@@ -1762,10 +1769,10 @@ impl Vartable {
     }
 
     // In order to create phi nodes, we need to track what vars are set in a certain scope
-    pub fn set_dirty(&mut self, pos: usize) {
+    pub fn set_dirty(&mut self, var_no: usize) {
         for e in &mut self.dirty {
-            if pos < e.lim {
-                e.set.insert(pos);
+            if var_no < e.lim {
+                e.set.insert(var_no);
             }
         }
     }
