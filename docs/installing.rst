@@ -128,7 +128,7 @@ you may need to consult. First if all clone our llvm repository:
 
 .. code-block:: bash
 
-	git clone --depth 1 --branch solana-rustc/12.0-2021-04-15 git://github.com/solana-labs/llvm-project
+	git clone --depth 1 --branch solana-rustc/12.0-2021-04-15 https://github.com/solana-labs/llvm-project
 	cd llvm-project
 
 Now run cmake to create the makefiles. Replace the *installdir* argument to ``CMAKE_INSTALL_PREFIX`` with with a directory where you would like to have llvm installed, and then run the build:

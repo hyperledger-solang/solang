@@ -12,7 +12,7 @@ jobs:
     steps:
     - name: Checkout sources
       uses: actions/checkout@v2
-    - run: git clone --depth 1 --branch solana-rustc/12.0-2021-04-15 git://github.com/solana-labs/llvm-project.git
+    - run: git clone --depth 1 --branch solana-rustc/12.0-2021-04-15 https://github.com/solana-labs/llvm-project.git
     - name: Install Ninja
       uses: llvm/actions/install-ninja@main
     - run: cmake -G Ninja -DLLVM_ENABLE_ASSERTIONS=On -DLLVM_ENABLE_TERMINFO=Off
@@ -52,7 +52,7 @@ jobs:
     steps:
     - name: Checkout sources
       uses: actions/checkout@v2
-    - run: git clone --depth 1 --branch solana-rustc/12.0-2021-04-15 git://github.com/solana-labs/llvm-project.git
+    - run: git clone --depth 1 --branch solana-rustc/12.0-2021-04-15 https://github.com/solana-labs/llvm-project.git
       # We may not have enough space to compile llvm, see https://github.com/actions/virtual-environments/issues/326
       working-directory: C:\
     - name: Setup Windows
@@ -95,7 +95,7 @@ jobs:
     steps:
     - name: Checkout sources
       uses: actions/checkout@v2
-    - run: git clone --depth 1 --branch solana-rustc/12.0-2021-04-15 git://github.com/solana-labs/llvm-project.git
+    - run: git clone --depth 1 --branch solana-rustc/12.0-2021-04-15 https://github.com/solana-labs/llvm-project.git
     - name: Install Ninja
       uses: llvm/actions/install-ninja@main
     - run: arch -arm64 cmake -G Ninja -DLLVM_ENABLE_ASSERTIONS=On -DLLVM_ENABLE_TERMINFO=Off
@@ -133,7 +133,7 @@ jobs:
     steps:
     - name: Checkout sources
       uses: actions/checkout@v2
-    - run: git clone --depth 1 --branch solana-rustc/12.0-2021-04-15 git://github.com/solana-labs/llvm-project.git
+    - run: git clone --depth 1 --branch solana-rustc/12.0-2021-04-15 https://github.com/solana-labs/llvm-project.git
     - name: Install Ninja
       uses: llvm/actions/install-ninja@main
     - run: cmake -G Ninja -DLLVM_ENABLE_ASSERTIONS=On -DLLVM_ENABLE_TERMINFO=Off
