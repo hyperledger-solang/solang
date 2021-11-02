@@ -92,6 +92,7 @@ jobs:
   mac-arm:
     name: Mac Arm
     runs-on: macos-arm
+    if: ${{ github.repository_owner == 'hyperledger-labs' }}
     steps:
     - name: Checkout sources
       uses: actions/checkout@v2
