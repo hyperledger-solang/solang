@@ -2,7 +2,7 @@
 All notable changes to [Solang](https://github.com/hyperledger-labs/solang/)
 will be documented here.
 
-## [Unreleased]
+## [0.1.9]
 
 ### Added
 - Added support for solc import mapppings using `--importmap`
