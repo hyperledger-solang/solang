@@ -7,7 +7,9 @@ use std::str;
 
 use inkwell::module::Linkage;
 use inkwell::types::{BasicType, IntType};
-use inkwell::values::{BasicValueEnum, FunctionValue, IntValue, PointerValue, UnnamedAddress};
+use inkwell::values::{
+    BasicMetadataValueEnum, BasicValueEnum, FunctionValue, IntValue, PointerValue, UnnamedAddress,
+};
 use inkwell::{context::Context, types::BasicTypeEnum};
 use inkwell::{AddressSpace, IntPredicate, OptimizationLevel};
 use num_traits::ToPrimitive;
@@ -686,6 +688,9 @@ impl SolanaTarget {
                         .into(),
                 );
 
+                let args: Vec<BasicMetadataValueEnum> =
+                    args.iter().map(|arg| (*arg).into()).collect();
+
                 binary
                     .builder
                     .build_call(constructor_function, &args, "")
@@ -963,7 +968,7 @@ impl SolanaTarget {
                 .builder
                 .build_call(
                     binary.module.get_function("vector_hash").unwrap(),
-                    &[key],
+                    &[key.into()],
                     "hash",
                 )
                 .try_as_basic_value()
@@ -1338,7 +1343,7 @@ impl SolanaTarget {
             .builder
             .build_call(
                 lookup,
-                &[slot.into(), index, offset.into(), parameters.into()],
+                &[slot.into(), index.into(), offset.into(), parameters.into()],
                 "mapping_lookup_res",
             )
             .try_as_basic_value()
@@ -3314,7 +3319,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
 
                 binary
                     .builder
-                    .build_call(bswap, &[selector], "")
+                    .build_call(bswap, &[selector.into()], "")
                     .try_as_basic_value()
                     .left()
                     .unwrap()

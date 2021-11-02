@@ -21,10 +21,12 @@ use inkwell::memory_buffer::MemoryBuffer;
 use inkwell::module::{Linkage, Module};
 use inkwell::passes::PassManager;
 use inkwell::targets::{CodeModel, FileType, RelocMode, TargetTriple};
-use inkwell::types::{BasicType, BasicTypeEnum, FunctionType, IntType, StringRadix};
+use inkwell::types::{
+    BasicMetadataTypeEnum, BasicType, BasicTypeEnum, FunctionType, IntType, StringRadix,
+};
 use inkwell::values::{
-    ArrayValue, BasicValueEnum, CallableValue, FunctionValue, GlobalValue, IntValue, PhiValue,
-    PointerValue,
+    ArrayValue, BasicMetadataValueEnum, BasicValueEnum, CallableValue, FunctionValue, GlobalValue,
+    IntValue, PhiValue, PointerValue,
 };
 use inkwell::AddressSpace;
 use inkwell::IntPredicate;
@@ -1775,7 +1777,7 @@ pub trait TargetRuntime<'a> {
                 let f = self.power(bin, *unchecked, bits, res_ty.is_signed_int());
 
                 bin.builder
-                    .build_call(f, &[left, right], "power")
+                    .build_call(f, &[left.into(), right.into()], "power")
                     .try_as_basic_value()
                     .left()
                     .unwrap()
@@ -3584,8 +3586,8 @@ pub trait TargetRuntime<'a> {
 
                         let mut parms = args
                             .iter()
-                            .map(|p| self.expression(bin, p, &w.vars, function, ns))
-                            .collect::<Vec<BasicValueEnum>>();
+                            .map(|p| self.expression(bin, p, &w.vars, function, ns).into())
+                            .collect::<Vec<BasicMetadataValueEnum>>();
 
                         if !res.is_empty() {
                             for v in f.returns.iter() {
@@ -3665,8 +3667,8 @@ pub trait TargetRuntime<'a> {
 
                         let mut parms = args
                             .iter()
-                            .map(|p| self.expression(bin, p, &w.vars, function, ns))
-                            .collect::<Vec<BasicValueEnum>>();
+                            .map(|p| self.expression(bin, p, &w.vars, function, ns).into())
+                            .collect::<Vec<BasicMetadataValueEnum>>();
 
                         // on Solana, we need to pass the accounts parameter around
                         if let Some(parameters) = bin.parameters {
@@ -4256,9 +4258,11 @@ pub trait TargetRuntime<'a> {
             );
         }
 
+        let meta_args: Vec<BasicMetadataValueEnum> = args.iter().map(|arg| (*arg).into()).collect();
+
         let ret = bin
             .builder
-            .build_call(dest, &args, "")
+            .build_call(dest, &meta_args, "")
             .try_as_basic_value()
             .left()
             .unwrap();
@@ -4502,7 +4506,7 @@ pub trait TargetRuntime<'a> {
 
                         bin.builder.build_call(
                             bin.module.get_function("__memcpy").unwrap(),
-                            &[output.into(), s, len.into()],
+                            &[output.into(), s.into(), len.into()],
                             "",
                         );
 
@@ -5765,8 +5769,8 @@ impl<'a> Binary<'a> {
         // function parameters
         let mut args = params
             .iter()
-            .map(|ty| self.llvm_var(ty, ns))
-            .collect::<Vec<BasicTypeEnum>>();
+            .map(|ty| self.llvm_var(ty, ns).into())
+            .collect::<Vec<BasicMetadataTypeEnum>>();
 
         // add return values
         for ty in returns {
@@ -5789,7 +5793,7 @@ impl<'a> Binary<'a> {
                     .get_struct_type("struct.SolParameters")
                     .unwrap()
                     .ptr_type(AddressSpace::Generic)
-                    .as_basic_type_enum(),
+                    .into(),
             );
         }
 
