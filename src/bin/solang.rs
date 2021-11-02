@@ -1,5 +1,6 @@
 use clap::{App, Arg, ArgMatches};
 use itertools::Itertools;
+use num_traits::cast::ToPrimitive;
 use serde::Serialize;
 use std::collections::HashMap;
 use std::ffi::OsString;
@@ -24,12 +25,18 @@ pub struct EwasmContract {
 #[derive(Serialize)]
 pub struct JsonContract {
     abi: Vec<abi::ethereum::ABI>,
-    ewasm: EwasmContract,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    ewasm: Option<EwasmContract>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    minimum_space: Option<u32>,
 }
 
 #[derive(Serialize)]
 pub struct JsonResult {
     pub errors: Vec<diagnostics::OutputJson>,
+    pub target: String,
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub program: String,
     pub contracts: HashMap<String, HashMap<String, JsonContract>>,
 }
 
@@ -85,6 +92,7 @@ fn main() {
         .arg(
             Arg::with_name("STD-JSON")
                 .help("mimic solidity json output on stdout")
+                .conflicts_with_all(&["VERBOSE", "OUTPUT", "EMIT"])
                 .long("standard-json"),
         )
         .arg(
@@ -214,6 +222,8 @@ fn main() {
     let verbose = matches.is_present("VERBOSE");
     let mut json = JsonResult {
         errors: Vec::new(),
+        target: target.to_string(),
+        program: String::new(),
         contracts: HashMap::new(),
     };
 
@@ -306,7 +316,7 @@ fn main() {
         let mut errors = false;
 
         for filename in matches.values_of("INPUT").unwrap() {
-            match process_filename(filename, &mut resolver, target, &matches, &mut json, &opt) {
+            match process_file(filename, &mut resolver, target, &matches, &mut json, &opt) {
                 Ok(ns) => namespaces.push(ns),
                 Err(_) => {
                     errors = true;
@@ -358,53 +368,57 @@ fn main() {
                     .code(Generate::Linked)
                     .expect("llvm code emit should work");
 
-                let mut file = match File::create(&bin_filename) {
-                    Ok(file) => file,
-                    Err(err) => {
-                        eprintln!(
-                            "error: cannot create file ‘{}’: {}",
-                            bin_filename.display(),
-                            err,
-                        );
-                        std::process::exit(1);
-                    }
-                };
-                file.write_all(&code).unwrap();
-
-                // Write all ABI files
-                for ns in &namespaces {
-                    for contract_no in 0..ns.contracts.len() {
-                        let contract = &ns.contracts[contract_no];
-
-                        if !contract.is_concrete() {
-                            continue;
-                        }
-
-                        let (abi_bytes, abi_ext) =
-                            abi::generate_abi(contract_no, ns, &code, verbose);
-                        let abi_filename = output_file(&matches, &contract.name, abi_ext);
-
-                        if verbose {
+                if matches.is_present("STD-JSON") {
+                    json.program = hex::encode_upper(&code);
+                } else {
+                    let mut file = match File::create(&bin_filename) {
+                        Ok(file) => file,
+                        Err(err) => {
                             eprintln!(
-                                "info: Saving ABI {} for contract {}",
-                                abi_filename.display(),
-                                contract.name
+                                "error: cannot create file ‘{}’: {}",
+                                bin_filename.display(),
+                                err,
                             );
+                            std::process::exit(1);
                         }
+                    };
+                    file.write_all(&code).unwrap();
 
-                        let mut file = match File::create(abi_filename) {
-                            Ok(file) => file,
-                            Err(err) => {
-                                eprintln!(
-                                    "error: cannot create file ‘{}’: {}",
-                                    bin_filename.display(),
-                                    err
-                                );
-                                std::process::exit(1);
+                    // Write all ABI files
+                    for ns in &namespaces {
+                        for contract_no in 0..ns.contracts.len() {
+                            let contract = &ns.contracts[contract_no];
+
+                            if !contract.is_concrete() {
+                                continue;
                             }
-                        };
 
-                        file.write_all(abi_bytes.as_bytes()).unwrap();
+                            let (abi_bytes, abi_ext) =
+                                abi::generate_abi(contract_no, ns, &code, verbose);
+                            let abi_filename = output_file(&matches, &contract.name, abi_ext);
+
+                            if verbose {
+                                eprintln!(
+                                    "info: Saving ABI {} for contract {}",
+                                    abi_filename.display(),
+                                    contract.name
+                                );
+                            }
+
+                            let mut file = match File::create(abi_filename) {
+                                Ok(file) => file,
+                                Err(err) => {
+                                    eprintln!(
+                                        "error: cannot create file ‘{}’: {}",
+                                        bin_filename.display(),
+                                        err
+                                    );
+                                    std::process::exit(1);
+                                }
+                            };
+
+                            file.write_all(abi_bytes.as_bytes()).unwrap();
+                        }
                     }
                 }
             }
@@ -420,7 +434,7 @@ fn output_file(matches: &ArgMatches, stem: &str, ext: &str) -> PathBuf {
     Path::new(matches.value_of("OUTPUT").unwrap_or(".")).join(format!("{}.{}", stem, ext))
 }
 
-fn process_filename(
+fn process_file(
     filename: &str,
     resolver: &mut FileResolver,
     target: solang::Target,
@@ -468,6 +482,17 @@ fn process_filename(
         }
 
         if target == solang::Target::Solana {
+            if matches.is_present("STD-JSON") {
+                json_contracts.insert(
+                    resolved_contract.name.to_owned(),
+                    JsonContract {
+                        abi: abi::ethereum::gen_abi(contract_no, &ns),
+                        ewasm: None,
+                        minimum_space: Some(resolved_contract.fixed_layout_size.to_u32().unwrap()),
+                    },
+                );
+            }
+
             if verbose {
                 eprintln!(
                     "info: contract {} uses at least {} bytes account data",
@@ -504,12 +529,13 @@ fn process_filename(
                 binary.name.to_owned(),
                 JsonContract {
                     abi: abi::ethereum::gen_abi(contract_no, &ns),
-                    ewasm: EwasmContract {
+                    ewasm: Some(EwasmContract {
                         wasm: hex::encode_upper(&resolved_contract.code),
-                    },
+                    }),
+                    minimum_space: None,
                 },
             );
-        } else if target != solang::Target::Solana {
+        } else {
             let bin_filename = output_file(matches, &binary.name, target.file_extension());
 
             if verbose {

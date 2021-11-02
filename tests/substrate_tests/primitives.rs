@@ -430,7 +430,7 @@ fn address() {
 
     assert_eq!(
         first_error(ns.diagnostics),
-        "ethereum address literal ‘0x5b0Ddf2835f0A76c96D6113D47F6482e51a55487’ not supported on target Substrate"
+        "ethereum address literal ‘0x5b0Ddf2835f0A76c96D6113D47F6482e51a55487’ not supported on target substrate"
     );
 
     #[derive(Debug, PartialEq, Encode, Decode)]
