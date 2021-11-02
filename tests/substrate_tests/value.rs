@@ -231,7 +231,7 @@ fn external_call_value() {
 
     assert_eq!(
         first_error(ns.diagnostics),
-        "conversion truncates uint256 to uint128, as value is type uint128 on Substrate"
+        "conversion truncates uint256 to uint128, as value is type uint128 on target substrate"
     );
 
     let ns = parse_and_resolve(

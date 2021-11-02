@@ -934,7 +934,7 @@ fn cast_types(
                         diagnostics.push(Diagnostic::type_error(
                             *loc,
                             format!(
-                                "conversion truncates {} to {}, as value is type {} on {}",
+                                "conversion truncates {} to {}, as value is type {} on target {}",
                                 from.to_string(ns),
                                 to.to_string(ns),
                                 Type::Value.to_string(ns),
