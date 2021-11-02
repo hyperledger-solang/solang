@@ -131,12 +131,12 @@ jobs:
       with:
         # Make sure "git describe --tags" works for solang --version
         fetch-depth: 0
-    - run: docker build . -t ghcr.io/hyperledger-labs/solang:latest
+    - run: docker build . -t ghcr.io/${GITHUB_REPOSITORY}:latest
     - name: Push to github container registry
-      if: ${{ github.repository_owner == 'hyperledger-labs' && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+      if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
       run: |
           echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin
-          docker push ghcr.io/hyperledger-labs/solang:latest
+          docker push ghcr.io/${GITHUB_REPOSITORY}:latest
 
   solana:
     name: Solana Integration test
