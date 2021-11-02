@@ -96,14 +96,6 @@ After unzipping the file, add the bin directory to your path.
 
 	set PATH=%PATH%;C:\llvm12.0\bin
 
-You can use docker for windows to build your own llvm from source. There is
-`dockerfile for building llvm on Windows <https://github.com/hyperledger-labs/solang/blob/main/build/build-llvm-windows.dockerfile>`_.
-This will need `Docker Desktop <https://www.docker.com/products/docker-desktop>`_ installed, and then switched to
-`windows containers <https://docs.docker.com/docker-for-windows/#switch-between-windows-and-linux-containers>`_.
-The result will be an image with llvm compressed in the file ``c:\llvm12.0-win.zip``. Docker on Windows needs Hyper-V
-enabled. If you are running Windows 10 in a virtual machine, be sure to check
-`this blog post <https://www.mess.org/2020/06/22/Hyper-V-in-KVM/>`_.
-
 Installing LLVM on Mac
 ______________________
 
