@@ -18,4 +18,7 @@ RUN cargo build --release
 FROM ubuntu:20.04
 COPY --from=builder /src/target/release/solang /usr/bin/solang
 
+LABEL org.opencontainers.image.title="Solang Solidity Compiler" \
+	org.opencontainers.image.licenses="Apache-2.0"
+
 ENTRYPOINT ["/usr/bin/solang"]

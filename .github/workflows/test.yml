@@ -131,7 +131,9 @@ jobs:
       with:
         # Make sure "git describe --tags" works for solang --version
         fetch-depth: 0
-    - run: docker build . -t ghcr.io/${GITHUB_REPOSITORY}:latest
+    - run: |
+          docker build . -t ghcr.io/${GITHUB_REPOSITORY}:latest \
+            --label org.opencontainers.image.description="Solidity Compiler for Solana, Substrate, and ewasm version $(git describe --tags)"
     - name: Push to github container registry
       if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
       run: |

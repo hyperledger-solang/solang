@@ -1,5 +1,8 @@
 FROM ubuntu:20.04 as builder
 
+LABEL org.opencontainers.image.licenses="Apache-2.0" \
+    org.opencontainers.image.description="CI container for github actions"
+
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update -y
 RUN apt-get upgrade -y
