@@ -2299,7 +2299,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             .build_call(
                 binary.module.get_function("vector_new").unwrap(),
                 &[
-                    length,
+                    length.into(),
                     binary.context.i32_type().const_int(1, false).into(),
                     scratch_buf.into(),
                 ],
@@ -3695,7 +3695,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             .build_call(
                 binary.module.get_function("vector_new").unwrap(),
                 &[
-                    length,
+                    length.into(),
                     binary.context.i32_type().const_int(1, false).into(),
                     scratch_buf.into(),
                 ],
@@ -4025,7 +4025,8 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                         &[
                             binary
                                 .builder
-                                .build_load(binary.calldata_len.as_pointer_value(), "calldata_len"),
+                                .build_load(binary.calldata_len.as_pointer_value(), "calldata_len")
+                                .into(),
                             binary.context.i32_type().const_int(1, false).into(),
                             binary
                                 .builder
@@ -4232,7 +4233,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                                 "subject_data",
                             )
                             .into(),
-                        binary.builder.build_load(subject_len, "subject_len"),
+                        binary.builder.build_load(subject_len, "subject_len").into(),
                         scratch_buf.into(),
                         scratch_len.into(),
                     ],

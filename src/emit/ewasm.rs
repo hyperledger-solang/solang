@@ -9,7 +9,9 @@ use inkwell::attributes::{Attribute, AttributeLoc};
 use inkwell::context::Context;
 use inkwell::module::Linkage;
 use inkwell::types::IntType;
-use inkwell::values::{BasicValueEnum, FunctionValue, IntValue, PointerValue};
+use inkwell::values::{
+    BasicMetadataValueEnum, BasicValueEnum, FunctionValue, IntValue, PointerValue,
+};
 use inkwell::AddressSpace;
 use inkwell::IntPredicate;
 use inkwell::OptimizationLevel;
@@ -163,7 +165,7 @@ impl EwasmTarget {
             .builder
             .build_call(
                 binary.module.get_function("__malloc").unwrap(),
-                &[args_length],
+                &[args_length.into()],
                 "",
             )
             .try_as_basic_value()
@@ -180,7 +182,7 @@ impl EwasmTarget {
             &[
                 args.into(),
                 binary.context.i32_type().const_zero().into(),
-                args_length,
+                args_length.into(),
             ],
             "",
         );
@@ -642,6 +644,8 @@ impl EwasmTarget {
                 &cfg.params,
                 ns,
             );
+
+            let args: Vec<BasicMetadataValueEnum> = args.iter().map(|arg| (*arg).into()).collect();
 
             binary
                 .builder
@@ -1929,11 +1933,13 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
                     &[
                         binary
                             .builder
-                            .build_load(binary.calldata_len.as_pointer_value(), "calldata_len"),
+                            .build_load(binary.calldata_len.as_pointer_value(), "calldata_len")
+                            .into(),
                         binary.context.i32_type().const_int(1, false).into(),
                         binary
                             .builder
-                            .build_load(binary.calldata_data.as_pointer_value(), "calldata_data"),
+                            .build_load(binary.calldata_data.as_pointer_value(), "calldata_data")
+                            .into(),
                     ],
                     "",
                 )
@@ -1950,7 +1956,7 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
                 binary.builder.build_call(
                     binary.module.get_function("getBlockHash").unwrap(),
                     &[
-                        block_number,
+                        block_number.into(),
                         binary
                             .builder
                             .build_pointer_cast(

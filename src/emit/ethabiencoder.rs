@@ -1600,7 +1600,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
 
                 let val = binary
                     .builder
-                    .build_call(bswap, &[arg], "")
+                    .build_call(bswap, &[arg.into()], "")
                     .try_as_basic_value()
                     .left()
                     .unwrap()
@@ -2122,7 +2122,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
 
                 let val = binary
                     .builder
-                    .build_call(bswap, &[arg], "")
+                    .build_call(bswap, &[arg.into()], "")
                     .try_as_basic_value()
                     .left()
                     .unwrap()
@@ -2534,7 +2534,7 @@ impl EthAbiDecoder {
 
                 let mut val = binary
                     .builder
-                    .build_call(bswap, &[val], "")
+                    .build_call(bswap, &[val.into()], "")
                     .try_as_basic_value()
                     .left()
                     .unwrap()
