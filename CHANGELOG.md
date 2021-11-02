@@ -5,8 +5,8 @@ will be documented here.
 ## [Unreleased]
 
 ### Added
-- Added supported for solc import mapppings using `--importmap`
-- Added supported for Events on Solana
+- Added support for solc import mapppings using `--importmap`
+- Added support for Events on Solana
 - `msg.data`, `msg.sig`, `msg.value`, `block.number`, and `block.slot` are
   implemented for Solana
 - Implemented balance transfers using `.send()` and `.transfer()` on Solana
@@ -17,6 +17,7 @@ will be documented here.
   `--value-length` command line arguments (for Substrate only)
 
 ### Changed
+- Solana now requires v1.8.1 or later
 - On Solana, the return data is now provided in the program log. As a result,
   RPCs are now are now supported.
 - On the solang command line, the target must be specified.
