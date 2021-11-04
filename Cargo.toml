@@ -46,6 +46,7 @@ bitvec = "0.20"
 funty = "=1.1.0"
 itertools = "0.10"
 num-rational = "0.4"
+indexmap = "1.7"
 
 [dev-dependencies]
 parity-scale-codec-derive = "2.0.0"

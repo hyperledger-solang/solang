@@ -1,3 +1,4 @@
+use indexmap::IndexMap;
 use num_bigint::BigInt;
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::fmt;
@@ -16,7 +17,7 @@ use crate::sema::ast::{
 use crate::sema::contracts::{collect_base_args, visit_bases};
 use crate::sema::symtable::Symtable;
 
-pub type Vars = HashMap<usize, Variable>;
+pub type Vars = IndexMap<usize, Variable>;
 
 #[derive(Clone)]
 #[allow(clippy::large_enum_variant)]
@@ -322,7 +323,7 @@ impl ControlFlowGraph {
             function_no,
             params: Vec::new(),
             returns: Vec::new(),
-            vars: HashMap::new(),
+            vars: IndexMap::new(),
             blocks: Vec::new(),
             nonpayable: false,
             public: false,
@@ -343,7 +344,7 @@ impl ControlFlowGraph {
             function_no: None,
             params: Vec::new(),
             returns: Vec::new(),
-            vars: HashMap::new(),
+            vars: IndexMap::new(),
             blocks: Vec::new(),
             nonpayable: false,
             public: false,
@@ -366,7 +367,7 @@ impl ControlFlowGraph {
             instr: Vec::new(),
             phis: None,
             transfers: Vec::new(),
-            defs: HashMap::new(),
+            defs: IndexMap::new(),
         });
 
         pos
@@ -1634,7 +1635,7 @@ pub struct DirtyTracker {
 
 impl Vartable {
     pub fn from_symbol_table(sym: &Symtable, next_id: usize) -> Self {
-        let mut vars = HashMap::new();
+        let mut vars = IndexMap::new();
 
         for (var_no, v) in &sym.vars {
             let id = Vartable::make_unique(&vars, &v.id, *var_no);
@@ -1683,7 +1684,7 @@ impl Vartable {
 
     pub fn new(next_id: usize) -> Self {
         Vartable {
-            vars: HashMap::new(),
+            vars: IndexMap::new(),
             dirty: Vec::new(),
             next_id,
         }

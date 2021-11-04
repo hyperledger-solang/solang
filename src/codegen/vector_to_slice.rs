@@ -1,7 +1,8 @@
 use super::cfg::{BasicBlock, ControlFlowGraph, Instr};
 use super::reaching_definitions::{Def, Transfer};
 use crate::sema::ast::{Expression, Namespace, Type};
-use std::collections::{HashMap, HashSet};
+use indexmap::IndexMap;
+use std::collections::HashSet;
 
 /// A vector is a modifiable struct with a length, size and data. A slice is a readonly
 /// pointer to some data, plus the length. By using a slice, often a memcpy can be avoided.
@@ -30,7 +31,7 @@ pub fn vector_to_slice(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
 
 fn find_writable_vectors(
     block: &BasicBlock,
-    vars: &mut HashMap<usize, HashMap<Def, bool>>,
+    vars: &mut IndexMap<usize, IndexMap<Def, bool>>,
     writable: &mut HashSet<Def>,
 ) {
     for instr_no in 0..block.instr.len() {
@@ -108,7 +109,7 @@ fn find_writable_vectors(
 
 fn apply_transfers(
     transfers: &[Transfer],
-    vars: &mut HashMap<usize, HashMap<Def, bool>>,
+    vars: &mut IndexMap<usize, IndexMap<Def, bool>>,
     writable: &mut HashSet<Def>,
 ) {
     for transfer in transfers {
@@ -136,7 +137,7 @@ fn apply_transfers(
                 if let Some(entry) = vars.get_mut(var_no) {
                     entry.insert(*def, false);
                 } else {
-                    let mut v = HashMap::new();
+                    let mut v = IndexMap::new();
                     v.insert(*def, false);
                     vars.insert(*var_no, v);
                 }

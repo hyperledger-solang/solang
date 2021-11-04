@@ -1,6 +1,7 @@
 use super::cfg::{BasicBlock, ControlFlowGraph, Instr};
 use crate::sema::ast::Expression;
-use std::collections::{HashMap, HashSet};
+use indexmap::IndexMap;
+use std::collections::HashSet;
 use std::fmt;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
@@ -36,7 +37,7 @@ impl fmt::Display for Transfer {
     }
 }
 
-pub type VarDefs = HashMap<usize, HashMap<Def, bool>>;
+pub type VarDefs = IndexMap<usize, IndexMap<Def, bool>>;
 
 /// Calculate all the reaching definitions for the contract. This is a flow
 /// analysis which is used for further optimizations
@@ -173,7 +174,7 @@ fn array_var(expr: &Expression) -> Option<usize> {
     }
 }
 
-pub fn apply_transfers(transfers: &[Transfer], vars: &mut HashMap<usize, HashMap<Def, bool>>) {
+pub fn apply_transfers(transfers: &[Transfer], vars: &mut IndexMap<usize, IndexMap<Def, bool>>) {
     for transfer in transfers {
         match transfer {
             Transfer::Kill { var_no } => {
@@ -197,7 +198,7 @@ pub fn apply_transfers(transfers: &[Transfer], vars: &mut HashMap<usize, HashMap
                 if let Some(entry) = vars.get_mut(var_no) {
                     entry.insert(*def, false);
                 } else {
-                    let mut v = HashMap::new();
+                    let mut v = IndexMap::new();
                     v.insert(*def, false);
                     vars.insert(*var_no, v);
                 }

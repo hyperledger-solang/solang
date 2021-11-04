@@ -1,6 +1,5 @@
-use std::collections::HashMap;
-use std::collections::HashSet;
-use std::collections::LinkedList;
+use indexmap::IndexMap;
+use std::collections::{HashMap, HashSet, LinkedList};
 use std::str;
 
 use super::ast::{Diagnostic, Namespace, Type};
@@ -61,7 +60,7 @@ struct VarScope(HashMap<String, usize>, Option<HashSet<usize>>);
 
 #[derive(Default)]
 pub struct Symtable {
-    pub vars: HashMap<usize, Variable>,
+    pub vars: IndexMap<usize, Variable>,
     names: LinkedList<VarScope>,
     pub arguments: Vec<Option<usize>>,
     pub returns: Vec<usize>,
@@ -72,7 +71,7 @@ impl Symtable {
         let mut list = LinkedList::new();
         list.push_front(VarScope(HashMap::new(), None));
         Symtable {
-            vars: HashMap::new(),
+            vars: IndexMap::new(),
             names: list,
             arguments: Vec::new(),
             returns: Vec::new(),
