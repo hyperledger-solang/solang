@@ -1,6 +1,6 @@
 use super::ast::File;
 use crate::parser::pt::Loc;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 impl File {
     pub fn new(path: PathBuf, contents: &str, cache_no: usize) -> Self {
@@ -24,17 +24,17 @@ impl File {
         let (from_line, from_column) = self.offset_to_line_column(loc.1);
         let (to_line, to_column) = self.offset_to_line_column(loc.2);
 
+        #[cfg(windows)]
+        let path = fix_windows_verbatim(&self.path);
+        #[cfg(not(windows))]
+        let path: &Path = &self.path;
+
         if from_line == to_line && from_column == to_column {
-            format!(
-                "{}:{}:{}",
-                self.path.display(),
-                from_line + 1,
-                from_column + 1
-            )
+            format!("{}:{}:{}", path.display(), from_line + 1, from_column + 1)
         } else if from_line == to_line {
             format!(
                 "{}:{}:{}-{}",
-                self.path.display(),
+                path.display(),
                 from_line + 1,
                 from_column + 1,
                 to_column + 1
@@ -42,7 +42,7 @@ impl File {
         } else {
             format!(
                 "{}:{}:{}-{}:{}",
-                self.path.display(),
+                path.display(),
                 from_line + 1,
                 from_column + 1,
                 to_line + 1,
@@ -82,5 +82,35 @@ impl File {
         } else {
             self.line_starts[line_no - 1] + column_no
         }
+    }
+}
+
+/// Windows verbatim paths look like \\?\C:\foo\bar which not very human readable,
+/// so fix up paths. This is a copy of fn fix_windows_verbatim_for_gcc in rust
+/// https://github.com/rust-lang/rust/blob/master/compiler/rustc_fs_util/src/lib.rs#L23
+#[cfg(windows)]
+pub fn fix_windows_verbatim(p: &Path) -> PathBuf {
+    use std::ffi::OsString;
+    use std::path;
+    let mut components = p.components();
+    let prefix = match components.next() {
+        Some(path::Component::Prefix(p)) => p,
+        _ => return p.to_path_buf(),
+    };
+    match prefix.kind() {
+        path::Prefix::VerbatimDisk(disk) => {
+            let mut base = OsString::from(format!("{}:", disk as char));
+            base.push(components.as_path());
+            PathBuf::from(base)
+        }
+        path::Prefix::VerbatimUNC(server, share) => {
+            let mut base = OsString::from(r"\\");
+            base.push(server);
+            base.push(r"\");
+            base.push(share);
+            base.push(components.as_path());
+            PathBuf::from(base)
+        }
+        _ => p.to_path_buf(),
     }
 }
