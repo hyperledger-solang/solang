@@ -17,8 +17,6 @@ describe('Deploy solang contract and test', () => {
 
         console.log("now create child: " + seed.address.toString());
 
-        let child = await conn.createStorageAccount(creator.get_program_key(), 1024);
-
-        await creator.call_function(conn, "create_child", [], [child.publicKey, creator.get_program_key()], [seed], [creator.get_storage_keypair()]);
+        await creator.call_function(conn, "create_child", [], [creator.get_program_key()], [seed], [creator.get_storage_keypair()]);
     });
 });

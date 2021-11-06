@@ -41,7 +41,7 @@ export async function establishConnection(): Promise<TestConnection> {
     return new TestConnection(connection, payerAccount);
 }
 
-export async function createProgramAddress(program: PublicKey): Promise<any> {
+export async function createProgramAddress(program: PublicKey): Promise<{ address: PublicKey, seed: Buffer }> {
     while (true) {
         let seed = crypto.randomBytes(7);
         let pda: any = undefined;
