@@ -2,7 +2,7 @@ use parity_scale_codec::{Decode, Encode};
 use parity_scale_codec_derive::{Decode, Encode};
 use serde_derive::Deserialize;
 
-use crate::{build_solidity, first_error, parse_and_resolve};
+use crate::{build_solidity, first_error, no_errors, parse_and_resolve};
 use solang::Target;
 
 #[derive(Debug, PartialEq, Encode, Decode)]
@@ -141,6 +141,81 @@ fn parse_structs() {
     );
 
     assert_eq!(first_error(ns.diagnostics), "struct ‘s2’ has infinite size");
+
+    // only cycles in a digraph should trigger infinite size errors
+    let ns = parse_and_resolve(
+        r#"
+        contract con {
+            struct Foo {
+                uint256 foo;
+            }
+
+            struct Bar {
+                Foo foo;
+            }
+
+            struct Baz {
+                Foo foo;
+                Bar bar;
+            }
+        }"#,
+        Target::default_substrate(),
+    );
+
+    no_errors(ns.diagnostics);
+
+    let ns = parse_and_resolve(
+        r#"
+        contract con {
+            struct C {
+                uint256 val;
+            }
+
+            struct D {
+                C c;
+            }
+
+            struct B {
+                C c;
+                D d;
+            }
+
+            struct A {
+                D d;
+                B b;
+                C c;
+            }
+        }"#,
+        Target::default_substrate(),
+    );
+
+    no_errors(ns.diagnostics);
+
+    let ns = parse_and_resolve(
+        r#"
+        contract con {
+            struct C {
+                uint256 val;
+                B b;
+            }
+
+            struct D {
+                C c;
+            }
+
+            struct B {
+                D d;
+            }
+
+            struct A {
+                D d;
+                B b;
+                C c;
+            }
+        }"#,
+        Target::default_substrate(),
+    );
+    assert_eq!(first_error(ns.diagnostics), "struct ‘D’ has infinite size");
 
     // literal initializers
     let ns = parse_and_resolve(

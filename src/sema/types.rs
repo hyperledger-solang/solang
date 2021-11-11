@@ -108,20 +108,20 @@ pub fn resolve_fields(delay: ResolveFields, file_no: usize, ns: &mut Namespace) 
 
     // struct can contain other structs, and we have to check for recursiveness,
     // i.e. "struct a { b f1; } struct b { a f1; }"
-    for s in 0..ns.structs.len() {
-        fn check(s: usize, file_no: usize, struct_fields: &mut Vec<usize>, ns: &mut Namespace) {
-            let def = ns.structs[s].clone();
+    for struct_no in 0..ns.structs.len() {
+        fn check(struct_no: usize, structs_visited: &mut Vec<usize>, ns: &mut Namespace) {
+            let def = ns.structs[struct_no].clone();
             let mut types_seen = Vec::new();
 
             for field in &def.fields {
-                if let Type::Struct(n) = field.ty {
-                    if types_seen.contains(&n) {
+                if let Type::Struct(struct_no) = field.ty {
+                    if types_seen.contains(&struct_no) {
                         continue;
                     }
 
-                    types_seen.push(n);
+                    types_seen.push(struct_no);
 
-                    if struct_fields.contains(&n) {
+                    if structs_visited.contains(&struct_no) {
                         ns.diagnostics.push(Diagnostic::error_with_note(
                             def.loc,
                             format!("struct ‘{}’ has infinite size", def.name),
@@ -129,14 +129,15 @@ pub fn resolve_fields(delay: ResolveFields, file_no: usize, ns: &mut Namespace) 
                             format!("recursive field ‘{}’", field.name),
                         ));
                     } else {
-                        struct_fields.push(n);
-                        check(n, file_no, struct_fields, ns);
+                        structs_visited.push(struct_no);
+                        check(struct_no, structs_visited, ns);
+                        let _ = structs_visited.pop();
                     }
                 }
             }
         }
 
-        check(s, file_no, &mut vec![s], ns);
+        check(struct_no, &mut vec![struct_no], ns);
     }
 
     // Do not attempt to call struct offsets if there are any infinitely recursive structs
