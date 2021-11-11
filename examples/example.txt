@@ -1,0 +1,1 @@
+solang.exe -O aggressive --target ewasm flipper.sol

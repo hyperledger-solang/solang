@@ -29,6 +29,8 @@ pub enum Target {
     },
     /// Ethereum ewasm, see <https://github.com/ewasm/design>
     Ewasm,
+    /// Lachain wasm
+    Lachain,
 }
 
 impl fmt::Display for Target {
@@ -37,6 +39,7 @@ impl fmt::Display for Target {
             Target::Solana => write!(f, "solana"),
             Target::Substrate { .. } => write!(f, "substrate"),
             Target::Ewasm => write!(f, "ewasm"),
+            Target::Lachain => write!(f, "LACHAIN"),
         }
     }
 }
@@ -49,6 +52,7 @@ impl PartialEq for Target {
             Target::Solana => matches!(other, Target::Solana),
             Target::Substrate { .. } => matches!(other, Target::Substrate { .. }),
             Target::Ewasm => matches!(other, Target::Ewasm),
+            Target::Lachain => matches!(other, Target::Lachain),
         }
     }
 }

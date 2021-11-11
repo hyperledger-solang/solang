@@ -20,7 +20,17 @@ pub struct Prototype {
 }
 
 // A list of all Solidity builtins functions
-static BUILTIN_FUNCTIONS: [Prototype; 24] = [
+static BUILTIN_FUNCTIONS: [Prototype; 26] = [
+    Prototype {
+        builtin: Builtin::Extcodesize,
+        namespace: None,
+        name: "extcodesize",
+        args: &[Type::Address(false)],
+        ret: &[Type::Uint(64)],
+        target: &[],
+        doc: "Return extcodesize of the address",
+        constant: false,
+    },
     Prototype {
         builtin: Builtin::Assert,
         namespace: None,
@@ -157,7 +167,7 @@ static BUILTIN_FUNCTIONS: [Prototype; 24] = [
         name: "blockhash",
         args: &[Type::Uint(64)],
         ret: &[Type::Bytes(32)],
-        target: &[Target::Ewasm],
+        target: &[Target::Ewasm, Target::Lachain],
         doc: "Returns the block hash for given block number",
         constant: false,
     },
@@ -267,17 +277,27 @@ static BUILTIN_FUNCTIONS: [Prototype; 24] = [
         doc: "ed25519 signature verification",
         constant: false,
     },
+    Prototype {
+        builtin: Builtin::Ecrecover,
+        namespace: None,
+        name: "ecrecover",
+        args: &[Type::Bytes(32), Type::Uint(8), Type::Bytes(32), Type::Bytes(32)],
+        ret: &[Type::Address(true)],
+        target: &[],
+        doc: "Recover the address associated with the public key from elliptic curve signature or return zero on error",
+        constant: false,
+    },
 ];
 
 // A list of all Solidity builtins variables
-static BUILTIN_VARIABLE: [Prototype; 14] = [
+static BUILTIN_VARIABLE: [Prototype; 15] = [
     Prototype {
         builtin: Builtin::BlockCoinbase,
         namespace: Some("block"),
         name: "coinbase",
         args: &[],
         ret: &[Type::Address(true)],
-        target: &[Target::Ewasm],
+        target: &[Target::Ewasm, Target::Lachain],
         doc: "The address of the current block miner",
         constant: false,
     },
@@ -287,7 +307,7 @@ static BUILTIN_VARIABLE: [Prototype; 14] = [
         name: "difficulty",
         args: &[],
         ret: &[Type::Uint(256)],
-        target: &[Target::Ewasm],
+        target: &[Target::Ewasm, Target::Lachain],
         doc: "The difficulty for current block",
         constant: false,
     },
@@ -297,7 +317,7 @@ static BUILTIN_VARIABLE: [Prototype; 14] = [
         name: "gaslimit",
         args: &[],
         ret: &[Type::Uint(64)],
-        target: &[Target::Ewasm],
+        target: &[Target::Ewasm, Target::Lachain],
         doc: "The gas limit",
         constant: false,
     },
@@ -329,6 +349,16 @@ static BUILTIN_VARIABLE: [Prototype; 14] = [
         ret: &[Type::Uint(64)],
         target: &[],
         doc: "Current timestamp in unix epoch (seconds since 1970)",
+        constant: false,
+    },
+    Prototype {
+        builtin: Builtin::ChainId,
+        namespace: Some("block"),
+        name: "chainid",
+        args: &[],
+        ret: &[Type::Uint(64)],
+        target: &[],
+        doc: "Current chain id",
         constant: false,
     },
     Prototype {
@@ -407,7 +437,7 @@ static BUILTIN_VARIABLE: [Prototype; 14] = [
         name: "origin",
         args: &[],
         ret: &[Type::Address(true)],
-        target: &[Target::Ewasm],
+        target: &[Target::Ewasm, Target::Lachain],
         doc: "Original address of sender current transaction",
         constant: false,
     },

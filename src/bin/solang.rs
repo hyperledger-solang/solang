@@ -72,7 +72,7 @@ fn main() {
                 .help("Target to build for")
                 .long("target")
                 .takes_value(true)
-                .possible_values(&["solana", "substrate", "ewasm"])
+                .possible_values(&["solana", "substrate", "ewasm", "lachain"])
                 .required(true),
         )
         .arg(
@@ -196,6 +196,7 @@ fn main() {
             value_length,
         },
         Some("ewasm") => solang::Target::Ewasm,
+        Some("lachain") => solang::Target::Lachain,
         _ => unreachable!(),
     };
 

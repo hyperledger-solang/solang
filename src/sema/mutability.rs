@@ -242,7 +242,8 @@ fn read_expression(expr: &Expression, state: &mut StateCheck) -> bool {
         | Expression::StorageVariable(loc, _, _, _)
         | Expression::StorageLoad(loc, _, _) => state.read(loc),
         Expression::Variable(loc, ty, _) if ty.is_contract_storage() => state.read(loc),
-        Expression::Builtin(loc, _, Builtin::GetAddress, _)
+        Expression::Builtin(loc, _, Builtin::Extcodesize, _)
+        | Expression::Builtin(loc, _, Builtin::GetAddress, _)
         | Expression::Builtin(loc, _, Builtin::BlockNumber, _)
         | Expression::Builtin(loc, _, Builtin::Timestamp, _)
         | Expression::Builtin(loc, _, Builtin::BlockCoinbase, _)
