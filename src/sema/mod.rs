@@ -320,6 +320,7 @@ impl ast::Namespace {
                 value_length,
             } => (address_length, value_length),
             Target::Solana => (32, 8),
+            Target::Lachain => (20, 32),
         };
 
         ast::Namespace {

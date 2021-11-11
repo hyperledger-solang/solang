@@ -1307,6 +1307,7 @@ pub enum StringLocation {
 
 #[derive(PartialEq, Clone, Copy, Debug)]
 pub enum Builtin {
+    Extcodesize,
     GetAddress,
     Balance,
     PayableSend,
@@ -1321,6 +1322,7 @@ pub enum Builtin {
     Keccak256,
     Ripemd160,
     Sha256,
+    Ecrecover,
     Blake2_128,
     Blake2_256,
     Gasleft,
@@ -1330,6 +1332,7 @@ pub enum Builtin {
     BlockNumber,
     Slot,
     Timestamp,
+    ChainId,
     Calldata,
     Sender,
     Signature,

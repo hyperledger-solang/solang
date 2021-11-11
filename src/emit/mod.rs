@@ -34,6 +34,7 @@ use inkwell::OptimizationLevel;
 
 mod ethabiencoder;
 mod ewasm;
+mod lachain;
 mod loop_builder;
 mod solana;
 mod substrate;
@@ -5233,6 +5234,9 @@ impl<'a> Binary<'a> {
             ),
             Target::Ewasm => {
                 ewasm::EwasmTarget::build(context, contract, ns, filename, opt, math_overflow_check)
+            }
+            Target::Lachain => {
+                lachain::LachainTarget::build(context, contract, ns, filename, opt, math_overflow_check)
             }
             Target::Solana => solana::SolanaTarget::build(
                 context,
