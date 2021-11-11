@@ -1,0 +1,4 @@
+*.wasm
+*.abi
+*.so
+*.contract

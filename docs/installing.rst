@@ -8,29 +8,35 @@ Download release binaries
 
 For Linux x86-64, there is a binary available in the github releases:
 
-`<https://github.com/hyperledger-labs/solang/releases/download/v0.1.4/solang_linux>`_
+`<https://github.com/hyperledger-labs/solang/releases/download/v0.1.9/solang-linux>`_
 
-For Windows x64, there is also a binary available:
+For Windows x64, there is a binary available:
 
-`<https://github.com/hyperledger-labs/solang/releases/download/v0.1.4/solang.exe>`_
+`<https://github.com/hyperledger-labs/solang/releases/download/v0.1.9/solang.exe>`_
 
-Using hyperledgerlabs/solang docker hub images
-----------------------------------------------
+For MacOS, there is an arm and intel binary available.
+Remember to remove the quarantine attribute using ``xattr -d com.apple.quarantine solang-mac-arm`` in the terminal.
+
+`<https://github.com/hyperledger-labs/solang/releases/download/v0.1.9/solang-mac-arm>`_
+
+`<https://github.com/hyperledger-labs/solang/releases/download/v0.1.9/solang-mac-intel>`_
+
+Using ghcr.io/hyperledger-labs/solang containers
+------------------------------------------------
 
 New images are automatically made available on
-`docker hub <https://hub.docker.com/repository/docker/hyperledgerlabs/solang/>`_.
-There is a release `v0.1.4` tag and a `latest` tag:
+`solang containers <https://github.com/hyperledger-labs/solang/pkgs/container/solang>`_.
+There is a release `v0.1.9` tag and a `latest` tag:
 
 .. code-block:: bash
 
-	docker pull hyperledgerlabs/solang
+	docker pull ghcr.io/hyperledger-labs/solang:latest
 
 The Solang binary is stored at ``/usr/bin/solang`` in this image. The `latest` tag
-gets updated each time there is a commit to the master branch of the solang
-git repository.
+gets updated each time there is a commit to the main branch of the Solang git repository.
 
-Build Solang from source using Dockerfile
------------------------------------------
+Build Solang using Dockerfile
+-----------------------------
 
 First clone the git repo using:
 
@@ -42,149 +48,86 @@ Then you can build the image using:
 
 .. code-block:: bash
 
-	docker build .
-
-Alternatively this will work with podman too:
-
-.. code-block:: bash
-
-	podman image build .
-
-Building Solang from source from crates.io
-------------------------------------------
-
-The latest solang release is  on `crates.io <https://crates.io/crates/solang>`_.
+	docker image build .
 
 Building Solang from source
 ---------------------------
 
-In order to build solang from source, you will need rust 1.42.0 or higher,
-and llvm version 10 with the WebAssembly target enabled.
-
-So see if you have the correct version of rust, simply execute:
-
-.. code-block:: bash
-
-  rustc --version
+In order to build Solang from source, you will need rust 1.53.0 or higher,
+and a build of llvm based on the Solana llvm tree. There are a few patches which are not upstream yet.
+First, follow the steps below for installing llvm and then proceed from there.
 
 If you do not have the correct version of rust installed, go to `rustup <https://rustup.rs/>`_.
-
-After making sure llvm and rust are installed, just run:
-
-.. code-block:: bash
-
-  cargo build --release
-
-The executable will be in ``target/release/solang``.
-
-Verify that you have the LLVM Libraries installed
--------------------------------------------------
-
-To make sure you have the correct version of the llvm libraries installed, first run:
-
-.. code-block:: bash
-
-  llvm-config --version
-
-The output should be 10.0. Then check if the WebAssembly target is enabled by running:
-
-.. code-block:: bash
-
-  llc --version
-
-You should see wasm32 listed under the targets. Lastly check that the static libraries are installed:
-
-.. code-block:: bash
-
-  llvm-config --link-static --libs
-
-If there is no output, there are no static llvm libraries and building will fail.
 
 Installing the LLVM Libraries
 -----------------------------
 
-If you do not have the llvm libraries installed then you can either install
-your distribution llvm packages, or compile your own. Compiling your own is helpful
-if you want to do Solang development.
+Solang needs a build of
+`llvm with some extra patches <https://github.com/solana-labs/llvm-project/>`_.
+These patches make it possible to generate code for Solana, and fixes some
+concurrency issues in the lld linker.
 
-Any build of llvm 10.0, with the WebAssembly target enabled, should work.
-Note that you will also need clang; the Solidity standard library is written in C,
-and is compiled to wasm by clang. The version of clang *must* be the same as the
-version of llvm which solang links against.
+You can either download the pre-built libraries from
+`github <https://github.com/hyperledger-labs/solang/releases/tag/v0.1.9>`_
+or build your own from source. After that, you need to add the `bin` directory to your
+path, so that the build system of Solang can find the correct version of llvm to use.
 
+Installing LLVM on Linux
+________________________
 
-Installing LLVM on Ubuntu
-_________________________
-
-You will need ubuntu 20.04 (focal) or later. Just run:
-
-.. code-block:: bash
-
-	sudo apt install curl llvm-10-dev clang-10 git zlib1g-dev cargo
-
-Installing LLVM on Debian
-_________________________
-
-You will need at least Debian Bullseye (testing).
+A pre-built version of llvm, specifically configured for Solang, is available at
+`<https://github.com/hyperledger-labs/solang/releases/download/v0.1.9/llvm12.0-linux-x86-64.tar.xz>`_.
+After downloading, untar the file in a terminal and add it to your path.
 
 .. code-block:: bash
 
-	sudo apt-get install llvm-10-dev clang-10 zlib1g-dev pkg-config libssl-dev git cargo
-
-Installing LLVM on Fedora
-_________________________
-
-You will need Fedora 32 or later. Running the following:
-
-.. code-block:: bash
-
-	sudo dnf install cargo llvm-static llvm-devel zlib-devel clang libffi-devel openssl-devel git
-
-.. _llvm-from-source:
+	tar Jxf llvm12.0-linux-x86-64.tar.xz
+	export PATH=$(pwd)/llvm12.0/bin:$PATH
 
 Installing LLVM on Windows
 __________________________
 
-A pre-built version of llvm, specifically configured for Solang, is available on
-`solang.io <https://solang.io/download/llvm10.0.zip>`_. This binary is built using
-the dockerfile used in `Building LLVM using Windows Containers`_. After unzipping
-the file, add the bin directory to your path.
+A pre-built version of llvm, specifically configured for Solang, is available at
+`<https://github.com/hyperledger-labs/solang/releases/download/v0.1.9/llvm12.0-win.zip>`_.
 
-.. code-block::
+After unzipping the file, add the bin directory to your path.
 
-	set PATH=%PATH%;C:\llvm10.0\bin
+.. code-block:: batch
+
+	set PATH=%PATH%;C:\llvm12.0\bin
+
+Installing LLVM on Mac
+______________________
+
+A pre-built version of llvm for intel macs, is available at
+`<https://github.com/hyperledger-labs/solang/releases/download/v0.1.9/llvm12.0-mac-intel.tar.xz>`_ and for arm macs there is
+`<https://github.com/hyperledger-labs/solang/releases/download/v0.1.9/llvm12.0-mac-arm.tar.xz>`_. After downloading,
+untar the file in a terminal and add it to your path like so:
+
+.. code-block:: bash
+
+	tar Jxf llvm12.0-mac-arm.tar.xz
+	xattr -rd com.apple.quarantine llvm12.0
+	export PATH=$(pwd)/llvm12.0/bin:$PATH
+
+.. _llvm-from-source:
 
 Building LLVM from source
 ___________________________
 
-If your distribution does not have the correct llvm library versions, then you have
-to build your own. Building your own llvm libraries does not interfere with any llvm libraries
-installed by your distribution.
-
-The llvm project is a large code base so it will take some time to build.
-
-If you are planning to do development on Solang itself, then building
-llvm libraries can be helpful, see `Debugging issues with LLVM`.
-
-The llvm project itself has a guide to `installing from source <http://www.llvm.org/docs/CMake.html>`_ which you may need to consult.
-First if all clone the llvm repository:
+The llvm project itself has a guide to `installing from source <http://www.llvm.org/docs/CMake.html>`_ which
+you may need to consult. First if all clone our llvm repository:
 
 .. code-block:: bash
 
-	git clone git://github.com/llvm/llvm-project
+	git clone --depth 1 --branch solana-rustc/12.0-2021-04-15 https://github.com/solana-labs/llvm-project
 	cd llvm-project
-
-Now switch to the 10.0 release branch:
-
-.. code-block:: bash
-
-	git checkout -b release_10.x origin/release/10.x
 
 Now run cmake to create the makefiles. Replace the *installdir* argument to ``CMAKE_INSTALL_PREFIX`` with with a directory where you would like to have llvm installed, and then run the build:
 
 .. code-block:: bash
 
-	cmake -G Ninja -DLLVM_ENABLE_ASSERTIONS=On -DLLVM_ENABLE_PROJECTS=clang  \
+	cmake -G Ninja -DLLVM_ENABLE_ASSERTIONS=On '-DLLVM_ENABLE_PROJECTS=clang;lld'  \
 		-DLLVM_ENABLE_TERMINFO=Off -DCMAKE_BUILD_TYPE=Release \
 		-DCMAKE_INSTALL_PREFIX=installdir -B build llvm
 	cmake --build build --target install
@@ -198,38 +141,29 @@ Solang build can find the ``llvm-config`` from this build:
 
 And on Windows, assuming *installdir* was ``C:\Users\User\solang-llvm``:
 
-.. code-block::
+.. code-block:: batch
 
 	set PATH=%PATH%;C:\Users\User\solang-llvm\bin
 
+Building Solang from crates.io
+------------------------------
 
-
-Building LLVM using docker
-__________________________
-
-You can build llvm using docker. A `dockerfile for building llvm on linux <https://github.com/hyperledger-labs/solang/blob/master/scripts/build-llvm-linux.dockerfile>`_
-is in Solang github repo. Simply run the dockerfile:
+The latest Solang release is  on `crates.io <https://crates.io/crates/solang>`_. Once you have the
+correct llvm version in your path, simply run:
 
 .. code-block:: bash
 
-	docker build -f build-llvm-linux.dockerfile .
+	cargo install solang
 
-This will take a few hours. The result will be an image with llvm compressed in ``/llvm10.0.tar.bz2``.
+Building Solang from git
+------------------------
 
-
-Building LLVM using Windows Containers
-______________________________________
-
-You can build llvm using Windows Containers. This requires `Docker Desktop <https://www.docker.com/products/docker-desktop>`_
-and switch to `windows containers <https://docs.docker.com/docker-for-windows/#switch-between-windows-and-linux-containers>`_.
-Docker on Windows needs Hyper-V. If you are running Windows 10 in a virtual machine, be sure to check
-`this blog post <https://www.mess.org/2020/06/22/Hyper-V-in-KVM/>`_.
-
-The `dockerfile for building llvm on Windows <https://github.com/hyperledger-labs/solang/blob/master/scripts/build-llvm-windows.dockerfile>`_
-is in Solang github repo. Simply run the dockerfile:
+Once you have the correct llvm version in your path, simply run:
 
 .. code-block:: bash
 
-	docker build -f build-llvm-windows.dockerfile .
+	git clone https://github.com/hyperledger-labs/solang/
+	cd solang
+	cargo build --release
 
-This will take a few hours. The result will be an image with llvm compressed in ``c:\llvm10.0.zip``.
+The executable will be in ``target/release/solang``.

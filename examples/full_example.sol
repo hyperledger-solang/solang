@@ -126,7 +126,7 @@ contract full_example {
 	function run_queue() public pure returns (uint16) {
 		uint16 count = 0;
 		// no initializer means its 0.
-		int32 n;
+		int32 n=0;
 
 		do {
 			if (get_pid_state(n) == State.Waiting) {

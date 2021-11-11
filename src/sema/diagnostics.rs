@@ -1,6 +1,6 @@
 use super::ast::{Diagnostic, ErrorType, Level, Namespace, Note};
-use file_cache::FileCache;
-use parser::pt::Loc;
+use crate::file_resolver::FileResolver;
+use crate::parser::pt::Loc;
 use serde::Serialize;
 
 impl Level {
@@ -131,27 +131,46 @@ impl Diagnostic {
         }
     }
 
-    fn formated_message(&self, filename: &str, offset_converter: &OffsetToLineColumn) -> String {
+    fn formatted_message(&self, ns: &Namespace, cache: &FileResolver) -> String {
         let mut s = if let Some(pos) = self.pos {
-            let loc = offset_converter.to_string(pos);
+            let loc = ns.files[pos.0].loc_to_string(&pos);
+
+            let (full_line, beg_line_no, beg_offset, type_size) =
+                cache.get_line_and_offset_from_loc(&ns.files[pos.0], &pos);
 
             format!(
-                "{}:{}: {}: {}",
-                filename,
+                "{}: {}: {}\nLine {}:\n\t{}\n\t{:-<7$}{:^<8$}",
                 loc,
                 self.level.to_string(),
-                self.message
+                self.message,
+                beg_line_no + 1,
+                full_line,
+                "",
+                "",
+                beg_offset,
+                type_size
             )
         } else {
             format!("solang: {}: {}", self.level.to_string(), self.message)
         };
 
         for note in &self.notes {
-            let loc = offset_converter.to_string(note.pos);
+            let loc = ns.files[note.pos.0].loc_to_string(&note.pos);
+
+            let (full_line, beg_line_no, beg_offset, type_size) =
+                cache.get_line_and_offset_from_loc(&ns.files[note.pos.0], &note.pos);
 
             s.push_str(&format!(
-                "\n\t{}:{}: {}: {}",
-                filename, loc, "note", note.message
+                "\n\t{}: {}: {}\n\tLine {}:\n\t\t{}\n\t\t{:-<7$}{:^<8$}",
+                loc,
+                "note",
+                note.message,
+                beg_line_no + 1,
+                full_line,
+                "",
+                "",
+                beg_offset,
+                type_size
             ));
         }
 
@@ -159,26 +178,13 @@ impl Diagnostic {
     }
 }
 
-pub fn print_messages(cache: &mut FileCache, ns: &Namespace, debug: bool) {
-    let mut current_file_no = None;
-    let mut offset_converter = OffsetToLineColumn(Vec::new());
-    let mut filename = "";
-
+pub fn print_messages(cache: &FileResolver, ns: &Namespace, debug: bool) {
     for msg in &ns.diagnostics {
         if !debug && msg.level == Level::Debug {
             continue;
         }
 
-        let file_no = msg.pos.map(|pos| pos.0);
-
-        if file_no != current_file_no {
-            filename = &ns.files[file_no.unwrap()];
-
-            offset_converter = OffsetToLineColumn::new(&*cache.get_file_contents(filename));
-            current_file_no = file_no;
-        }
-
-        eprintln!("{}", msg.formated_message(filename, &offset_converter));
+        eprintln!("{}", msg.formatted_message(ns, cache));
     }
 }
 
@@ -206,96 +212,29 @@ pub struct OutputJson {
     pub formattedMessage: String,
 }
 
-pub fn message_as_json(cache: &mut FileCache, ns: &Namespace) -> Vec<OutputJson> {
+pub fn message_as_json(ns: &Namespace, cache: &FileResolver) -> Vec<OutputJson> {
     let mut json = Vec::new();
 
-    let mut current_file_no = None;
-    let mut offset_converter = OffsetToLineColumn(Vec::new());
-    let mut filename = "";
-
     for msg in &ns.diagnostics {
-        if msg.level == Level::Info {
+        if msg.level == Level::Info || msg.level == Level::Debug {
             continue;
         }
 
-        let file_no = msg.pos.map(|pos| pos.0);
-
-        if file_no != current_file_no {
-            filename = &ns.files[file_no.unwrap()];
-
-            offset_converter = OffsetToLineColumn::new(&*cache.get_file_contents(filename));
-            current_file_no = file_no;
-        }
-
-        let loc_json = if let Some(pos) = msg.pos {
-            Some(LocJson {
-                file: filename.to_string(),
-                start: pos.1,
-                end: pos.2,
-            })
-        } else {
-            None
-        };
+        let location = msg.pos.map(|pos| LocJson {
+            file: format!("{}", ns.files[pos.0].path.display()),
+            start: pos.1 + 1,
+            end: pos.2 + 1,
+        });
 
         json.push(OutputJson {
-            sourceLocation: loc_json,
+            sourceLocation: location,
             ty: format!("{:?}", msg.ty),
             component: "general".to_owned(),
             severity: msg.level.to_string().to_owned(),
             message: msg.message.to_owned(),
-            formattedMessage: msg.formated_message(filename, &offset_converter),
+            formattedMessage: msg.formatted_message(ns, cache),
         });
     }
 
     json
-}
-
-/// Convert byte offset in file to line and column number
-pub struct OffsetToLineColumn(Vec<usize>);
-
-impl OffsetToLineColumn {
-    /// Create a new mapping for offset to position.
-    pub fn new(src: &str) -> Self {
-        let mut line_starts = Vec::new();
-
-        for (ind, c) in src.char_indices() {
-            if c == '\n' {
-                line_starts.push(ind);
-            }
-        }
-
-        OffsetToLineColumn(line_starts)
-    }
-
-    /// Give a position as a human readable position
-    pub fn to_string(&self, loc: Loc) -> String {
-        let (from_line, from_column) = self.convert(loc.1);
-        let (to_line, to_column) = self.convert(loc.2);
-
-        if from_line == to_line && from_column == to_column {
-            format!("{}:{}", from_line, from_column)
-        } else if from_line == to_line {
-            format!("{}:{}-{}", from_line, from_column, to_column)
-        } else {
-            format!("{}:{}-{}:{}", from_line, from_column, to_line, to_column)
-        }
-    }
-
-    /// Convert an offset to line and column number
-    pub fn convert(&self, loc: usize) -> (usize, usize) {
-        let mut line_no = 1;
-        let mut col_no = loc + 1;
-
-        // Here we do a linear scan. It should be possible to do binary search
-        for l in &self.0 {
-            if loc < *l {
-                break;
-            }
-
-            line_no += 1;
-            col_no = loc - l;
-        }
-
-        (line_no, col_no)
-    }
 }

@@ -1,11 +1,12 @@
 use num_bigint::BigInt;
 use num_bigint::Sign;
+use num_rational::BigRational;
 use num_traits::One;
 use num_traits::ToPrimitive;
 use num_traits::Zero;
 
 use super::ast::{Diagnostic, Expression, Namespace};
-use parser::pt;
+use crate::parser::pt;
 
 /// Resolve an expression where a compile-time constant is expected
 pub fn eval_const_number(
@@ -14,19 +15,19 @@ pub fn eval_const_number(
     ns: &Namespace,
 ) -> Result<(pt::Loc, BigInt), Diagnostic> {
     match expr {
-        Expression::Add(loc, _, l, r) => Ok((
+        Expression::Add(loc, _, _, l, r) => Ok((
             *loc,
             eval_const_number(l, contract_no, ns)?.1 + eval_const_number(r, contract_no, ns)?.1,
         )),
-        Expression::Subtract(loc, _, l, r) => Ok((
+        Expression::Subtract(loc, _, _, l, r) => Ok((
             *loc,
             eval_const_number(l, contract_no, ns)?.1 - eval_const_number(r, contract_no, ns)?.1,
         )),
-        Expression::Multiply(loc, _, l, r) => Ok((
+        Expression::Multiply(loc, _, _, l, r) => Ok((
             *loc,
             eval_const_number(l, contract_no, ns)?.1 * eval_const_number(r, contract_no, ns)?.1,
         )),
-        Expression::UDivide(loc, _, l, r) | Expression::SDivide(loc, _, l, r) => {
+        Expression::Divide(loc, _, l, r) => {
             let divisor = eval_const_number(r, contract_no, ns)?.1;
 
             if divisor.is_zero() {
@@ -35,7 +36,7 @@ pub fn eval_const_number(
                 Ok((*loc, eval_const_number(l, contract_no, ns)?.1 / divisor))
             }
         }
-        Expression::UModulo(loc, _, l, r) | Expression::SModulo(loc, _, l, r) => {
+        Expression::Modulo(loc, _, l, r) => {
             let divisor = eval_const_number(r, contract_no, ns)?.1;
 
             if divisor.is_zero() {
@@ -56,7 +57,7 @@ pub fn eval_const_number(
             *loc,
             eval_const_number(l, contract_no, ns)?.1 ^ eval_const_number(r, contract_no, ns)?.1,
         )),
-        Expression::Power(loc, _, base, exp) => {
+        Expression::Power(loc, _, _, base, exp) => {
             let b = eval_const_number(base, contract_no, ns)?.1;
             let mut e = eval_const_number(exp, contract_no, ns)?.1;
 
@@ -108,10 +109,11 @@ pub fn eval_const_number(
         Expression::NumberLiteral(loc, _, n) => Ok((*loc, n.clone())),
         Expression::ZeroExt(loc, _, n) => Ok((*loc, eval_const_number(n, contract_no, ns)?.1)),
         Expression::SignExt(loc, _, n) => Ok((*loc, eval_const_number(n, contract_no, ns)?.1)),
+        Expression::Cast(loc, _, n) => Ok((*loc, eval_const_number(n, contract_no, ns)?.1)),
         Expression::Not(loc, n) => Ok((*loc, !eval_const_number(n, contract_no, ns)?.1)),
         Expression::Complement(loc, _, n) => Ok((*loc, !eval_const_number(n, contract_no, ns)?.1)),
         Expression::UnaryMinus(loc, _, n) => Ok((*loc, -eval_const_number(n, contract_no, ns)?.1)),
-        Expression::ConstantVariable(_, _, contract_no, var_no) => {
+        Expression::ConstantVariable(_, _, Some(contract_no), var_no) => {
             let expr = ns.contracts[*contract_no].variables[*var_no]
                 .initializer
                 .as_ref()
@@ -120,9 +122,78 @@ pub fn eval_const_number(
 
             eval_const_number(&expr, Some(*contract_no), ns)
         }
+        Expression::ConstantVariable(_, _, None, var_no) => {
+            let expr = ns.constants[*var_no].initializer.as_ref().unwrap().clone();
+
+            eval_const_number(&expr, None, ns)
+        }
         _ => Err(Diagnostic::error(
             expr.loc(),
             "expression not allowed in constant number expression".to_string(),
+        )),
+    }
+}
+
+/// Resolve an expression where a compile-time constant(rational) is expected
+pub fn eval_const_rational(
+    expr: &Expression,
+    contract_no: Option<usize>,
+    ns: &Namespace,
+) -> Result<(pt::Loc, BigRational), Diagnostic> {
+    match expr {
+        Expression::Add(loc, _, _, l, r) => Ok((
+            *loc,
+            eval_const_rational(l, contract_no, ns)?.1 + eval_const_rational(r, contract_no, ns)?.1,
+        )),
+        Expression::Subtract(loc, _, _, l, r) => Ok((
+            *loc,
+            eval_const_rational(l, contract_no, ns)?.1 - eval_const_rational(r, contract_no, ns)?.1,
+        )),
+        Expression::Multiply(loc, _, _, l, r) => Ok((
+            *loc,
+            eval_const_rational(l, contract_no, ns)?.1 * eval_const_rational(r, contract_no, ns)?.1,
+        )),
+        Expression::Divide(loc, _, l, r) => {
+            let divisor = eval_const_rational(r, contract_no, ns)?.1;
+
+            if divisor.is_zero() {
+                Err(Diagnostic::error(*loc, "divide by zero".to_string()))
+            } else {
+                Ok((*loc, eval_const_rational(l, contract_no, ns)?.1 / divisor))
+            }
+        }
+        Expression::Modulo(loc, _, l, r) => {
+            let divisor = eval_const_rational(r, contract_no, ns)?.1;
+
+            if divisor.is_zero() {
+                Err(Diagnostic::error(*loc, "divide by zero".to_string()))
+            } else {
+                Ok((*loc, eval_const_rational(l, contract_no, ns)?.1 % divisor))
+            }
+        }
+        Expression::NumberLiteral(loc, _, n) => Ok((*loc, BigRational::from_integer(n.clone()))),
+        Expression::RationalNumberLiteral(loc, _, n) => Ok((*loc, n.clone())),
+        Expression::Cast(loc, _, n) => Ok((*loc, eval_const_rational(n, contract_no, ns)?.1)),
+        Expression::UnaryMinus(loc, _, n) => {
+            Ok((*loc, -eval_const_rational(n, contract_no, ns)?.1))
+        }
+        Expression::ConstantVariable(_, _, Some(contract_no), var_no) => {
+            let expr = ns.contracts[*contract_no].variables[*var_no]
+                .initializer
+                .as_ref()
+                .unwrap()
+                .clone();
+
+            eval_const_rational(&expr, Some(*contract_no), ns)
+        }
+        Expression::ConstantVariable(_, _, None, var_no) => {
+            let expr = ns.constants[*var_no].initializer.as_ref().unwrap().clone();
+
+            eval_const_rational(&expr, None, ns)
+        }
+        _ => Err(Diagnostic::error(
+            expr.loc(),
+            "expression not allowed in constant rational number expression".to_string(),
         )),
     }
 }

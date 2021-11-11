@@ -1,9 +1,10 @@
 // ethereum style ABIs
-use parser::pt;
-use sema::ast::{Namespace, Parameter, Type};
+use crate::parser::pt;
+use crate::sema::ast::{Namespace, Parameter, Type};
 use serde::Serialize;
 
 #[derive(Serialize)]
+#[allow(clippy::upper_case_acronyms)]
 pub struct ABIParam {
     pub name: String,
     #[serde(rename = "type")]
@@ -17,18 +18,20 @@ pub struct ABIParam {
 }
 
 #[derive(Serialize)]
+#[allow(clippy::upper_case_acronyms)]
 pub struct ABI {
     #[serde(skip_serializing_if = "String::is_empty")]
     pub name: String,
     #[serde(rename = "type")]
     pub ty: String,
     pub inputs: Vec<ABIParam>,
-    // outputs should be skipped if ty is constructor
-    pub outputs: Vec<ABIParam>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub outputs: Option<Vec<ABIParam>>,
     #[serde(rename = "stateMutability")]
+    #[serde(skip_serializing_if = "String::is_empty")]
     pub mutability: String,
-    #[serde(skip_serializing_if = "is_false")]
-    pub anonymous: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub anonymous: Option<bool>,
 }
 
 #[allow(clippy::trivially_copy_pass_by_ref)]
@@ -59,9 +62,15 @@ pub fn gen_abi(contract_no: usize, ns: &Namespace) -> Vec<ABI> {
             Vec::new()
         };
 
+        let ty = if let Type::Struct(_) = param.ty {
+            String::from("tuple")
+        } else {
+            param.ty.to_signature_string(ns)
+        };
+
         ABIParam {
             name: param.name.to_string(),
-            ty: param.ty.to_signature_string(ns),
+            ty,
             internal_ty: param.ty.to_string(ns),
             components,
             indexed: param.indexed,
@@ -69,19 +78,54 @@ pub fn gen_abi(contract_no: usize, ns: &Namespace) -> Vec<ABI> {
     }
 
     ns.contracts[contract_no]
-        .functions
-        .iter()
-        .filter(|f| {
-            matches!(f.visibility,
-            pt::Visibility::Public(_) | pt::Visibility::External(_))
+        .all_functions
+        .keys()
+        .filter_map(|function_no| {
+            let func = &ns.functions[*function_no];
+
+            if let Some(base_contract_no) = func.contract_no {
+                if ns.contracts[base_contract_no].is_library() {
+                    return None;
+                }
+
+                if func.ty == pt::FunctionTy::Constructor && base_contract_no != contract_no {
+                    return None;
+                }
+            }
+
+            if !matches!(
+                func.visibility,
+                pt::Visibility::Public(_) | pt::Visibility::External(_)
+            ) {
+                return None;
+            }
+
+            if func.ty == pt::FunctionTy::Modifier || !func.has_body {
+                return None;
+            }
+
+            Some(func)
         })
-        .map(|f| ABI {
-            name: f.name.to_owned(),
-            mutability: f.print_mutability(),
-            ty: f.ty.to_string(),
-            inputs: f.params.iter().map(|p| parameter_to_abi(p, ns)).collect(),
-            outputs: f.returns.iter().map(|p| parameter_to_abi(p, ns)).collect(),
-            anonymous: false,
+        .map(|func| ABI {
+            name: func.name.to_owned(),
+            mutability: format!("{}", func.mutability),
+            ty: func.ty.to_string(),
+            inputs: func
+                .params
+                .iter()
+                .map(|p| parameter_to_abi(p, ns))
+                .collect(),
+            outputs: if func.ty == pt::FunctionTy::Function {
+                Some(
+                    func.returns
+                        .iter()
+                        .map(|p| parameter_to_abi(p, ns))
+                        .collect(),
+                )
+            } else {
+                None
+            },
+            anonymous: None,
         })
         .chain(
             ns.contracts[contract_no]
@@ -98,9 +142,9 @@ pub fn gen_abi(contract_no: usize, ns: &Namespace) -> Vec<ABI> {
                             .iter()
                             .map(|p| parameter_to_abi(p, ns))
                             .collect(),
-                        outputs: Vec::new(),
+                        outputs: None,
                         ty: "event".to_owned(),
-                        anonymous: event.anonymous,
+                        anonymous: Some(event.anonymous),
                     }
                 }),
         )

@@ -1,23 +1,20 @@
-extern crate ethabi;
-extern crate ethereum_types;
-extern crate num_derive;
-extern crate num_traits;
-extern crate rand;
-extern crate solang;
-extern crate wasmi;
-
 use ethabi::{decode, RawLog, Token};
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 use rand::Rng;
+use ripemd160::Ripemd160;
+use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::fmt;
+use tiny_keccak::{Hasher, Keccak};
 use wasmi::memory_units::Pages;
 use wasmi::*;
 
-use solang::file_cache::FileCache;
-use solang::sema::diagnostics;
+use solang::file_resolver::FileResolver;
+use solang::sema::{ast, diagnostics};
 use solang::{compile, Target};
+
+mod ewasm_tests;
 
 type Address = [u8; 20];
 
@@ -31,7 +28,7 @@ fn address_new() -> Address {
     a
 }
 
-struct VM {
+struct VirtualMachine {
     memory: MemoryRef,
     cur: Address,
     code: Vec<u8>,
@@ -40,9 +37,9 @@ struct VM {
     returndata: Vec<u8>,
 }
 
-impl VM {
+impl VirtualMachine {
     fn new(code: Vec<u8>, address: Address) -> Self {
-        VM {
+        VirtualMachine {
             memory: MemoryInstance::alloc(Pages(2), Some(Pages(2))).unwrap(),
             input: Vec::new(),
             output: Vec::new(),
@@ -59,7 +56,7 @@ struct TestRuntime {
     value: u128,
     accounts: HashMap<Address, (Vec<u8>, u128)>,
     store: HashMap<(Address, [u8; 32]), [u8; 32]>,
-    vm: VM,
+    vm: VirtualMachine,
     events: Vec<Event>,
 }
 
@@ -223,6 +220,9 @@ impl Externals for TestRuntime {
                 } else {
                     &[0u8; 32]
                 };
+
+                println!("storageLoad {} -> {}", hex::encode(&key), hex::encode(&res));
+
                 self.vm
                     .memory
                     .set(data_ptr, res)
@@ -246,6 +246,12 @@ impl Externals for TestRuntime {
                     .memory
                     .get_into(data_ptr, &mut data)
                     .expect("copy key from wasm memory");
+
+                println!(
+                    "storageStore {} <- {}",
+                    hex::encode(&key),
+                    hex::encode(&data)
+                );
 
                 if data.iter().any(|n| *n != 0) {
                     self.store.insert((self.vm.cur, key), data);
@@ -297,7 +303,7 @@ impl Externals for TestRuntime {
                     .unwrap()
                     .clone();
 
-                let mut vm = VM::new(buf, addr);
+                let mut vm = VirtualMachine::new(buf, addr);
 
                 std::mem::swap(&mut self.vm, &mut vm);
 
@@ -310,9 +316,10 @@ impl Externals for TestRuntime {
                 match module.invoke_export("main", &[], self) {
                     Err(wasmi::Error::Trap(trap)) => match trap.kind() {
                         TrapKind::Host(host_error) => {
-                            if host_error.downcast_ref::<HostCodeRevert>().is_some() {
-                                panic!("revert executed");
-                            }
+                            assert!(
+                                host_error.downcast_ref::<HostCodeRevert>().is_none(),
+                                "revert executed"
+                            );
                         }
                         _ => panic!("fail to invoke main via create: {}", trap),
                     },
@@ -352,7 +359,7 @@ impl Externals for TestRuntime {
                 let mut addr = [0u8; 20];
 
                 if let Err(e) = self.vm.memory.get_into(address_ptr, &mut addr) {
-                    panic!("call: {}", e);
+                    panic!("address: {}", e);
                 }
 
                 println!(
@@ -361,12 +368,41 @@ impl Externals for TestRuntime {
                     hex::encode(&buf)
                 );
 
+                // if the first 19 bytes are 0, it's a precompile
+                if addr[0..19].iter().all(|v| *v == 0) {
+                    match addr[19] {
+                        20 => {
+                            let mut hasher = Keccak::v256();
+                            let mut hash = [0u8; 32];
+                            hasher.update(&buf);
+                            hasher.finalize(&mut hash);
+                            self.vm.returndata = hash.to_vec();
+                            return Ok(Some(RuntimeValue::I32(0)));
+                        }
+                        2 => {
+                            let mut hasher = Sha256::new();
+                            hasher.update(&buf);
+                            self.vm.returndata = hasher.finalize().to_vec();
+                            return Ok(Some(RuntimeValue::I32(0)));
+                        }
+                        3 => {
+                            let mut hasher = Ripemd160::new();
+                            hasher.update(&buf);
+                            self.vm.returndata = hasher.finalize().to_vec();
+                            return Ok(Some(RuntimeValue::I32(0)));
+                        }
+                        n => {
+                            panic!("unknown precompile {}", n);
+                        }
+                    }
+                }
+
                 // when ewasm creates a contract, the abi encoded args are concatenated to the
                 // code. So, find which code is was and use that instead. Otherwise, the
                 // wasm validator will trip
                 let (code, _) = self.accounts.get(&addr).unwrap().clone();
 
-                let mut vm = VM::new(code.to_vec(), addr);
+                let mut vm = VirtualMachine::new(code.to_vec(), addr);
 
                 std::mem::swap(&mut self.vm, &mut vm);
 
@@ -487,9 +523,7 @@ impl Externals for TestRuntime {
                     topics: Vec::new(),
                 };
 
-                if topic_count > 4 {
-                    panic!("log: wrong topic count {}", topic_count);
-                }
+                assert!(topic_count <= 4, "log: wrong topic count {}", topic_count);
 
                 for topic in 0..topic_count {
                     let topic_ptr: u32 = args.nth_checked(3 + topic as usize)?;
@@ -576,7 +610,7 @@ impl TestRuntime {
     fn function(&mut self, name: &str, args: &[Token]) -> Vec<Token> {
         let calldata = match self.abi.functions[name][0].encode_input(args) {
             Ok(n) => n,
-            Err(x) => panic!(format!("{}", x)),
+            Err(x) => panic!("{}", x),
         };
 
         let module = self.create_module(&self.accounts[&self.vm.cur].0);
@@ -591,7 +625,13 @@ impl TestRuntime {
 
         match module.invoke_export("main", &[], self) {
             Err(wasmi::Error::Trap(trap)) => match trap.kind() {
-                TrapKind::Host(_) => {}
+                TrapKind::Host(host_error) => {
+                    assert!(
+                        host_error.downcast_ref::<HostCodeFinish>().is_some(),
+                        "fail to invoke main: {}",
+                        host_error
+                    );
+                }
                 _ => panic!("fail to invoke main: {}", trap),
             },
             Ok(Some(RuntimeValue::I32(0))) => {}
@@ -611,7 +651,7 @@ impl TestRuntime {
     fn function_abi_fail(&mut self, name: &str, args: &[Token], patch: fn(&mut Vec<u8>)) {
         let mut calldata = match self.abi.functions[name][0].encode_input(args) {
             Ok(n) => n,
-            Err(x) => panic!(format!("{}", x)),
+            Err(x) => panic!("{}", x),
         };
 
         patch(&mut calldata);
@@ -628,7 +668,13 @@ impl TestRuntime {
 
         match module.invoke_export("main", &[], self) {
             Err(wasmi::Error::Trap(trap)) => match trap.kind() {
-                TrapKind::Host(_) => {}
+                TrapKind::Host(host_error) => {
+                    assert!(
+                        host_error.downcast_ref::<HostCodeFinish>().is_some(),
+                        "fail to invoke main: {}",
+                        host_error
+                    );
+                }
                 _ => panic!("fail to invoke main: {}", trap),
             },
             Ok(Some(RuntimeValue::I32(3))) => {}
@@ -642,7 +688,7 @@ impl TestRuntime {
     fn function_revert(&mut self, name: &str, args: &[Token]) -> Option<String> {
         let calldata = match self.abi.functions[name][0].encode_input(args) {
             Ok(n) => n,
-            Err(x) => panic!(format!("{}", x)),
+            Err(x) => panic!("{}", x),
         };
 
         let module = self.create_module(&self.accounts[&self.vm.cur].0);
@@ -658,7 +704,7 @@ impl TestRuntime {
         match module.invoke_export("main", &[], self) {
             Err(wasmi::Error::Trap(trap)) => match trap.kind() {
                 TrapKind::Host(host_error) => {
-                    if host_error.downcast_ref::<HostCodeFinish>().is_some() {
+                    if host_error.downcast_ref::<HostCodeRevert>().is_none() {
                         panic!("function was suppose to revert, not finish")
                     }
                 }
@@ -750,32 +796,33 @@ impl TestRuntime {
     }
 }
 
-fn build_solidity(src: &'static str) -> TestRuntime {
-    let mut cache = FileCache::new();
+fn build_solidity(src: &str) -> TestRuntime {
+    let mut cache = FileResolver::new();
 
-    cache.set_file_contents("test.sol".to_string(), src.to_string());
+    cache.set_file_contents("test.sol", src.to_string());
 
     let (res, ns) = compile(
         "test.sol",
         &mut cache,
         inkwell::OptimizationLevel::Default,
         Target::Ewasm,
+        false,
     );
 
-    diagnostics::print_messages(&mut cache, &ns, false);
+    diagnostics::print_messages(&cache, &ns, false);
 
     for v in &res {
         println!("contract size:{}", v.0.len());
     }
 
-    assert_eq!(res.is_empty(), false);
+    assert!(!res.is_empty());
 
     // resolve
     let (bc, abi) = res.last().unwrap().clone();
 
     TestRuntime {
         accounts: HashMap::new(),
-        vm: VM::new(bc, [0u8; 20]),
+        vm: VirtualMachine::new(bc, [0u8; 20]),
         value: 0,
         store: HashMap::new(),
         abi: ethabi::Contract::load(abi.as_bytes()).unwrap(),
@@ -804,6 +851,31 @@ fn simple_solidiy_compile_and_run() {
     assert_eq!(
         returns,
         vec![ethabi::Token::Uint(ethereum_types::U256::from(2))]
+    );
+}
+
+pub fn parse_and_resolve(src: &'static str, target: Target) -> ast::Namespace {
+    let mut cache = FileResolver::new();
+
+    cache.set_file_contents("test.sol", src.to_string());
+
+    solang::parse_and_resolve("test.sol", &mut cache, target)
+}
+
+pub fn first_error(errors: Vec<ast::Diagnostic>) -> String {
+    match errors.iter().find(|m| m.level == ast::Level::Error) {
+        Some(m) => m.message.to_owned(),
+        None => panic!("no errors found"),
+    }
+}
+
+pub fn no_errors(errors: Vec<ast::Diagnostic>) {
+    assert!(
+        errors
+            .iter()
+            .filter(|m| m.level == ast::Level::Error)
+            .count()
+            == 0
     );
 }
 
@@ -1518,8 +1590,7 @@ fn struct_dynamic_array_encode() {
 
                 return x;
             }
-        }
-        "##,
+        }"##,
     );
 
     runtime.constructor(&[]);
@@ -1977,6 +2048,53 @@ fn external_call() {
                 x = a;
             }
 
+            function get_x() public returns (int32) {
+                return 200 * x;
+            }
+        }
+
+        contract c {
+            b x;
+
+            constructor() public {
+                x = new b(102);
+            }
+
+            function test() public returns (int32) {
+                return x.get_x();
+            }
+
+            function enc() public returns (bytes) {
+                return abi.encodeWithSignature("get_x()");
+            }
+        }"##,
+    );
+
+    runtime.constructor(&[]);
+
+    let ret = runtime.function("enc", &[]);
+
+    assert_eq!(
+        ret,
+        vec!(ethabi::Token::Bytes(0x3829050au32.to_be_bytes().into()))
+    );
+
+    let ret = runtime.function("test", &[]);
+
+    assert_eq!(
+        ret,
+        vec!(ethabi::Token::Int(ethereum_types::U256::from(20400)))
+    );
+
+    let mut runtime = build_solidity(
+        r##"
+        contract b {
+            int32 x;
+
+            constructor(int32 a) public {
+                x = a;
+            }
+
             function get_x(int32 t) public returns (int32) {
                 return x * t;
             }
@@ -2183,7 +2301,7 @@ fn selfdestruct() {
     runtime.function("step1", &[]);
     runtime.accounts.get_mut(&runtime.vm.cur).unwrap().1 = 0;
 
-    runtime.function("step2", &[]);
+    runtime.function_revert("step2", &[]);
     runtime.accounts.get_mut(&runtime.vm.cur).unwrap().1 = 511;
 }
 
@@ -2220,6 +2338,58 @@ fn event() {
                 "x" => assert_eq!(
                     log.value,
                     ethabi::Token::Int(ethereum_types::U256::from(102))
+                ),
+                _ => panic!("unexpected field {}", log.name),
+            }
+        }
+    }
+
+    let mut runtime = build_solidity(
+        r##"
+        contract c {
+            event foo (
+                bool indexed y,
+                string indexed x,
+                int[2] indexed z
+            );
+
+            function func() public {
+                emit foo(true, "foobar", [1, 2]);
+            }
+        }"##,
+    );
+
+    runtime.constructor(&[]);
+
+    runtime.function("func", &[]);
+
+    assert_eq!(runtime.events.len(), 1);
+
+    let event = &runtime.abi.events_by_name("foo").unwrap()[0];
+
+    for log in runtime.events() {
+        let decoded = event.parse_log(log).unwrap();
+
+        for log in &decoded.params {
+            match log.name.as_str() {
+                "y" => assert_eq!(log.value, ethabi::Token::Bool(true)),
+                "x" => assert_eq!(
+                    log.value,
+                    ethabi::Token::FixedBytes(
+                        hex::decode(
+                            "38d18acb67d25c8bb9942764b62f18e17054f66a817bd4295423adf9ed98873e"
+                        )
+                        .unwrap()
+                    )
+                ),
+                "z" => assert_eq!(
+                    log.value,
+                    ethabi::Token::FixedBytes(
+                        hex::decode(
+                            "e90b7bceb6e7df5418fb78d8ee546e97c83a08bbccc01a0644d599ccd2a7c2e0"
+                        )
+                        .unwrap()
+                    )
                 ),
                 _ => panic!("unexpected field {}", log.name),
             }

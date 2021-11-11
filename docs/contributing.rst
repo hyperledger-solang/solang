@@ -7,7 +7,7 @@ contribute.
 Target Specific
 ---------------
 
-Solang supports Substrate and ewasm. These targets need testing
+Solang supports Substrate, ewasm, and Solana. These targets need testing
 via integration tests. New targets like
 `Fabric <https://github.com/hyperledger-labs/fabric-chaincode-wasm>`_ need to be
 added, and tests added.

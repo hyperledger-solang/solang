@@ -1,24 +1,19 @@
-Running Solang
-==============
+Using Solang on the command line
+================================
 
 The Solang compiler is run on the command line. The solidity source file
 names are provided as command line arguments; the output is an optimized
-wasm file which is ready for deployment on a chain, and an abi file.
+wasm or bpf file which is ready for deployment on a chain, and an metadata
+file (also known as the abi).
 
-Three targets are supported right now:
-`Ethereum ewasm <https://github.com/ewasm/design>`_,
+The following targets are supported right now:
+`Solana <https://www.solana.com/>`_,
 `Parity Substrate <https://substrate.dev/>`_, and
-`Sawtooth Sabre <https://github.com/hyperledger/sawtooth-sabre>`_.
+`Ethereum ewasm <https://github.com/ewasm/design>`_.
 
-.. note::
 
-  Depending on which target Solang is compiling for, different language
-  features are supported. For example, when compiling for substrate, the
-  constructor can be overloaded with different prototypes. When targetting
-  ewasm or Sawtooth Sabre, only one constructor prototype is allowed.
-
-Using Solang on the command line
---------------------------------
+Usage
+-----
 
 Usage:
 
@@ -35,11 +30,19 @@ Options:
   will be silent if there are no errors or warnings.
 
 \\-\\-target *target*
-  This takes one argument, which can either be ``ewasm``, ``sabre``, or ``substrate``.
-  The default is substrate.
+  This takes one argument, which can either be ``solana``, ``substrate``, or ``ewasm``. The target
+  must be specified.
+
+\\-\\-address\\-length *length-in-bytes*
+  Change the default address length on Substrate. By default, Substate uses an address type of 32 bytes. This option
+  is ignored for any other target.
+
+\\-\\-value\\-length *length-in-bytes*
+  Change the default value length on Substrate. By default, Substate uses an value type of 16 bytes. This option
+  is ignored for any other target.
 
 \\-\\-doc
-  Generate documentation for the given Solidity as a simple html page. This uses the
+  Generate documentation for the given Solidity files as a single html page. This uses the
   doccomment tags. The result is saved in ``soldoc.html``. See :ref:`tags` for
   further information.
 
@@ -54,7 +57,12 @@ Options:
 \\-\\-importpath *directory*
   When resolving ``import`` directives, search this directory. By default ``import``
   will only search the current directory. This option can be specified multiple times
-  and they will be searched in-order.
+  and the directories will be searched in the order specified.
+
+\\-\\-importmap *map=directory*
+  When resolving ``import`` directives, if the first part of the path matches *map*,
+  search the directory provided for the file. This option can be specified multiple times
+  with different values for map.
 
 \\-\\-help, -h
   This displays a short description of all the options
@@ -78,42 +86,58 @@ Options:
   cfg
     Output control flow graph.
 
-  llvm
+  llvm-ir
     Output llvm IR as text.
 
-  bc
+  llvm-bc
     Output llvm bitcode as binary file.
+
+  asm
+    Output assembly text file.
 
   object
     Output wasm object file; this is the contract before final linking.
 
-Running Solang from docker image
-________________________________
+\\-\\-no\\-constant\\-folding
+   Disable the :ref:`constant-folding` codegen optimization
 
-First pull the last Solang image from
-`docker hub <https://hub.docker.com/repository/docker/hyperledgerlabs/solang/>`_:
+\\-\\-no\\-strength\\-reduce
+   Disable the :ref:`strength-reduce` codegen optimization
+
+\\-\\-no\\-dead\\-storage
+   Disable the :ref:`dead-storage` optimization
+
+\\-\\-no\\-vector\\-to\\-slice
+   Disable the :ref:`vector-to-slice` optimization
+
+
+Running Solang using container
+______________________________
+
+First pull the last Solang container from
+`solang containers <https://github.com/hyperledger-labs/solang/pkgs/container/solang>`_:
 
 .. code-block:: bash
 
-        docker pull hyperledgerlabs/solang
+    docker pull ghcr.io/hyperledger-labs/solang
 
 And if you are using podman:
 
 .. code-block:: bash
 
-        podman image pull hyperlederlabs/solang
+    podman image pull ghcr.io/hyperledger-labs/solang
 
 Now you can run Solang like so:
 
 .. code-block:: bash
 
-	docker run --rm -it hyperledgerlabs/solang --version
+	  docker run --rm -it ghcr.io/hyperledger-labs/solang --version
 
 Or podman:
 
 .. code-block:: bash
 
-	podman container run --rm -it hyperledgerlabs/solang --version
+	  podman container run --rm -it ghcr.io/hyperledger-labs/solang --version
 
 If you want to compile some solidity files, the source file needs to be
 available inside the container. You can do this via the -v command line.
@@ -122,124 +146,10 @@ to your solidity files:
 
 .. code-block:: bash
 
-	docker run --rm -it -v /local/path:/sources hyperledgerlabs/solang -o /sources /sources/flipper.sol
-
-On podman you might need to add ``:Z`` to your volume argument if SELinux is used, like on Fedora. Also, podman allows relative paths:
-
-.. code-block:: bash
-
-	podman container run --rm -it -v .:/sources:Z hyperledgerlabs/solang -o /sources /sources/flipper.sol
+	  docker run --rm -it -v /local/path:/sources ghcr.io/hyperledger-labs/solang -o /sources /sources/flipper.sol
 
 On Windows, you need to specify absolute paths:
 
-.. code-block::
+.. code-block:: text
 
-	docker run --rm -it -v C:\Users\User:/sources hyperledgerlabs/solang -o /sources /sources/flipper.sol
-
-
-Using Solang with Substrate
----------------------------
-
-Solang builds contracts for Substrate by default. There is an solidity example
-which can be found in the `examples <https://github.com/hyperledger-labs/solang/tree/master/examples>`_
-directory. Write this to flipper.sol and run:
-
-.. code-block:: bash
-
-  solang --target substrate flipper.sol
-
-Now you should have ``flipper.wasm`` and ``flipper.json``. This can be used
-directly in the `Polkadot UI <https://substrate.dev/substrate-contracts-workshop/#/0/deploying-your-contract?id=putting-your-code-on-the-blockchain>`_, as if the contract was written in ink!.
-
-Using Solang with Sawtooth Sabre
---------------------------------
-
-When using Solang on Sawtooth Sabre, the constructor and function calls must be encoded with Ethereum ABI encoding.
-This can be done in different ways. In this guide we use `ethabi <https://github.com/paritytech/ethabi>`_. This can
-be installed using cargo:
-
-.. code-block:: bash
-
-  cargo install ethabi-cli
-
-In order to abi encode the calls, we need the abi for the contract. Let's compile flipper.sol for Sabre:
-
-.. code-block:: bash
-
-  solang --target sabre --verbose flipper.sol
-
-We now have a file ``flipper.wasm`` and ``flipper.abi``. To deploy this, we need to create the constructor
-ABI encoding. Unfortunately ethabi already falls short here; we cannot encode constructor calls using the cli
-tools. However we can work round this by specify the constructor arguments explicitly. Note that if the
-constructor does not take any arguments, then the constructor data should be empty (0 bytes). So, since the
-constructor in flipper.sol takes a single bool, create it like so:
-
-.. code-block:: bash
-
-  ethabi encode params -v bool true | xxd -r -p > constructor
-
-For flipping the value, create it so:
-
-.. code-block:: bash
-
-  ethabi encode function flipper.abi flip | xxd -r -p  > flip
-
-You'll also need a yaml file with the following contents. Save it to flipper.yaml.
-
-.. code-block:: yaml
-
-  name: flipper
-  version: '1.0'
-  wasm: flipper.wasm
-  inputs:
-  - '12cd3c'
-  outputs:
-  - '12cd3c'
-
-Now we have to start the Sawtooth Sabre environment. First clone the
-`Sawtooth Sabre github repo <https://github.com/hyperledger/sawtooth-sabre/>`_ and then run:
-
-.. code-block:: bash
-
-  docker-compose -f docker-compose-installed.yaml up --build
-
-Now enter the sabre-cli container:
-
-.. code-block:: bash
-
-  docker exec -it sabre-cli bash
-
-To create the flipper contract, run the following:
-
-.. code-block:: bash
-
-  sabre cr --create flipper --owner $(cat /root/.sawtooth/keys/root.pub) --url http://rest-api:9708
-  sabre upload --filename flipper.yaml --url http://rest-api:9708
-  sabre ns --create 12cd3c --url http://rest-api:9708 --owner $(cat /root/.sawtooth/keys/root.pub)
-  sabre perm 12cd3c flipper --read --write --url http://rest-api:9708
-
-To run the constructor, run:
-
-.. code-block:: bash
-
-   sabre exec --contract flipper:1.0 --payload  ./constructor --inputs 12cd3c  --outputs 12cd3c --url http://rest-api:9708
-
-Lastly, to run the flip function:
-
-.. code-block:: bash
-
-  sabre exec --contract flipper:1.0 --payload  ./flip --inputs 12cd3c  --outputs 12cd3c --url http://rest-api:9708
-
-.. warning::
-
-  Returning values from Solidity is not yet implemented, and neither is ``revert()``. If you
-  attempt to call a function which returns a value, it will fail.
-
-Using Solang with Hyperledger Burrow
-------------------------------------
-
-In Burrow, Solang is used transparently by the ``burrow deploy`` tool if it is given the ``--wasm`` argument.
-When building and deploying a Solidity contract, rather than running the ``solc`` compiler, it will run
-the ``solang`` compiler and deploy it as a wasm contract.
-
-This is documented in the `burrow documentation <https://hyperledger.github.io/burrow/#/reference/wasm>`_.
+	docker run --rm -it -v C:\Users\User:/sources ghcr.io/hyperledger-labs/solang -o /sources /sources/flipper.sol

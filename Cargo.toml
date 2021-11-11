@@ -1,21 +1,23 @@
 [package]
 name = "solang"
-version = "0.1.4"
+version = "0.1.9"
 authors = ["Sean Young <sean@mess.org>"]
 homepage = "https://github.com/hyperledger-labs/solang"
 documentation = "https://solang.readthedocs.io/"
-license = "Apache-2.0 OR MIT"
+license = "Apache-2.0"
 build = "build.rs"
 description = "Solang Solidity Compiler"
-keywords = [ "solidity", "compiler", "ewasm", "llvm", "substrate" ]
+keywords = [ "solidity", "compiler", "solana", "substrate", "ewasm" ]
+edition = "2018"
 
 [build-dependencies]
 lalrpop = "0.19"
+cc = "1.0"
 
 [dependencies]
 lalrpop-util = "0.19"
 regex = "1"
-num-bigint = "0.3"
+num-bigint = "0.4"
 num-traits = "0.2"
 num-derive = "0.3"
 parity-wasm = "0.42"
@@ -26,22 +28,40 @@ tiny-keccak = { version = "2.0", features = ["keccak"] }
 serde_json = "1.0"
 serde = "1.0"
 serde_derive = { version = "1.0" }
-inkwell = { version = "0.1.0-llvm10sample", features = ["target-webassembly", "llvm10-0"] }
+inkwell = { version = "^0.1.0-beta.3", features = ["target-webassembly", "target-bpf", "llvm12-0"] }
 blake2-rfc = "0.2.18"
-phf = { version = "0.8", features = ["macros"] }
+phf = { version = "0.10", features = ["macros"] }
 unicode-xid = "0.2.0"
-handlebars = "3.4"
-contract-metadata = "0.1.0"
-semver = { version = "0.10.0", features = ["serde"] }
+handlebars = "4.1"
+contract-metadata = "0.3.0"
+semver = { version = "^1.0.3", features = ["serde"] }
+tempfile = "3.1"
+libc = "0.2"
+tower-lsp = "0.14"
+tokio = { version = "1.6", features = ["rt", "io-std", "macros"] }
+base58 = "0.2.0"
+sha2 = "0.9"
+ripemd160 = "0.9"
+bitvec = "0.20"
+funty = "=1.1.0"
+itertools = "0.10"
+num-rational = "0.4"
+indexmap = "1.7"
 
 [dev-dependencies]
-parity-scale-codec-derive = "1.2"
-parity-scale-codec = "1.3"
-ethabi = "12.0"
-ethereum-types = "0.9"
-wasmi = "0.6"
+parity-scale-codec-derive = "2.0.0"
+parity-scale-codec = "2.0.0"
+ethabi = "13.0"
+ethereum-types = "0.10"
+wasmi = "0.9"
 rand = "0.7"
 sha2 = "0.9"
+# solana_rbpf makes api changes in patch versions
+solana_rbpf = "=0.2.14"
+byteorder = "1.3"
+assert_cmd = "2.0"
+bincode = "1.3"
+ed25519-dalek = "1.0"
 
 [profile.release]
 lto = true

@@ -34,7 +34,7 @@ pub fn tags(lines: &[(usize, CommentType, &str)]) -> Vec<DocComment> {
     // first extract the tags
     let mut tags = Vec::new();
 
-    for (start_offset, line) in to_lines(&lines).into_iter() {
+    for (start_offset, line) in to_lines(lines).into_iter() {
         let mut chars = line.char_indices().peekable();
 
         if let Some((_, '@')) = chars.peek() {

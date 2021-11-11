@@ -1,23 +1,66 @@
-use std::collections::HashMap;
-use std::collections::HashSet;
-use std::collections::LinkedList;
+use indexmap::IndexMap;
+use std::collections::{HashMap, HashSet, LinkedList};
 use std::str;
 
 use super::ast::{Diagnostic, Namespace, Type};
-use parser::pt;
+use crate::parser::pt;
+use crate::sema::ast::Expression;
 
 #[derive(Clone)]
 pub struct Variable {
     pub id: pt::Identifier,
     pub ty: Type,
     pub pos: usize,
+    pub slice: bool,
+    pub assigned: bool,
+    pub read: bool,
+    pub usage_type: VariableUsage,
+    pub initializer: Option<Expression>,
+    pub storage_location: Option<pt::StorageLocation>,
+}
+
+impl Variable {
+    pub fn is_reference(&self) -> bool {
+        // If the variable has the memory or storage keyword, it can be a reference to another variable.
+        // In this case, an assigment may change the value of the variable it is referencing.
+        if matches!(
+            self.storage_location,
+            Some(pt::StorageLocation::Memory(_)) | Some(pt::StorageLocation::Storage(_))
+        ) {
+            if let Some(expr) = &self.initializer {
+                // If the initializer is an array allocation, a constructor or a struct literal,
+                // the variable is not a reference to another.
+                return !matches!(
+                    expr,
+                    Expression::AllocDynamicArray(..)
+                        | Expression::ArrayLiteral(..)
+                        | Expression::Constructor { .. }
+                        | Expression::StructLiteral(..)
+                );
+            }
+        }
+
+        false
+    }
+}
+
+#[derive(Clone)]
+pub enum VariableUsage {
+    Parameter,
+    ReturnVariable,
+    AnonymousReturnVariable,
+    LocalVariable,
+    DestructureVariable,
+    TryCatchReturns,
+    TryCatchErrorString,
+    TryCatchErrorBytes,
 }
 
 struct VarScope(HashMap<String, usize>, Option<HashSet<usize>>);
 
 #[derive(Default)]
 pub struct Symtable {
-    pub vars: HashMap<usize, Variable>,
+    pub vars: IndexMap<usize, Variable>,
     names: LinkedList<VarScope>,
     pub arguments: Vec<Option<usize>>,
     pub returns: Vec<usize>,
@@ -28,14 +71,22 @@ impl Symtable {
         let mut list = LinkedList::new();
         list.push_front(VarScope(HashMap::new(), None));
         Symtable {
-            vars: HashMap::new(),
+            vars: IndexMap::new(),
             names: list,
             arguments: Vec::new(),
             returns: Vec::new(),
         }
     }
 
-    pub fn add(&mut self, id: &pt::Identifier, ty: Type, ns: &mut Namespace) -> Option<usize> {
+    pub fn add(
+        &mut self,
+        id: &pt::Identifier,
+        ty: Type,
+        ns: &mut Namespace,
+        initializer: Option<Expression>,
+        usage_type: VariableUsage,
+        storage_location: Option<pt::StorageLocation>,
+    ) -> Option<usize> {
         let pos = ns.next_id;
         ns.next_id += 1;
 
@@ -45,15 +96,21 @@ impl Symtable {
                 id: id.clone(),
                 ty,
                 pos,
+                slice: false,
+                initializer,
+                assigned: false,
+                usage_type,
+                read: false,
+                storage_location,
             },
         );
 
         // the variable has no name, like unnamed return or parameters values
         if !id.name.is_empty() {
-            if let Some(ref prev) = self.find(&id.name) {
+            if let Some(prev) = self.find(&id.name) {
                 ns.diagnostics.push(Diagnostic::error_with_note(
                     id.loc,
-                    format!("{} is already declared", id.name.to_string()),
+                    format!("{} is already declared", id.name),
                     prev.id.loc,
                     "location of previous declaration".to_string(),
                 ));

@@ -1,18 +1,19 @@
 use super::ast::*;
 use super::contracts::is_base;
 use super::expression::{
-    call_position_args, cast, constructor_named_args, expression, function_call_expr,
-    match_constructor_to_args, named_function_call_expr, new, try_cast,
+    available_functions, call_expr, call_position_args, cast, constructor_named_args, expression,
+    function_call_expr, match_constructor_to_args, named_call_expr, named_function_call_expr, new,
 };
 use super::symtable::{LoopScopes, Symtable};
-use num_bigint::BigInt;
-use parser::pt;
+use crate::parser::pt;
+use crate::sema::symtable::VariableUsage;
+use crate::sema::unused_variable::{assigned_variable, check_function_call, used_variable};
 use std::collections::HashMap;
 
 pub fn resolve_function_body(
     def: &pt::FunctionDefinition,
     file_no: usize,
-    contract_no: usize,
+    contract_no: Option<usize>,
     function_no: usize,
     ns: &mut Namespace,
 ) -> Result<(), ()> {
@@ -26,12 +27,13 @@ pub fn resolve_function_body(
         if let Some(ref name) = p.name {
             if let Some(pos) = symtable.add(
                 name,
-                ns.contracts[contract_no].functions[function_no].params[i]
-                    .ty
-                    .clone(),
+                ns.functions[function_no].params[i].ty.clone(),
                 ns,
+                None,
+                VariableUsage::Parameter,
+                p.storage.clone(),
             ) {
-                ns.check_shadowing(file_no, Some(contract_no), name);
+                ns.check_shadowing(file_no, contract_no, name);
 
                 symtable.arguments.push(Some(pos));
             }
@@ -43,6 +45,7 @@ pub fn resolve_function_body(
     // now that the function arguments have been resolved, we can resolve the bases for
     // constructors.
     if def.ty == pt::FunctionTy::Constructor {
+        let contract_no = contract_no.unwrap();
         let mut resolve_bases: HashMap<usize, pt::Loc> = HashMap::new();
         let mut all_ok = true;
 
@@ -68,37 +71,32 @@ pub fn resolve_function_body(
                             ));
                             all_ok = false;
                         } else if let Some(args) = &base.args {
-                            let mut resolved_args = Vec::new();
-                            let mut ok = true;
-
-                            for arg in args {
-                                if let Ok(e) = expression(
-                                    &arg,
-                                    file_no,
-                                    Some(contract_no),
-                                    ns,
-                                    &symtable,
-                                    false,
-                                ) {
-                                    resolved_args.push(e);
-                                } else {
-                                    ok = false;
-                                    all_ok = false;
-                                }
-                            }
+                            let mut diagnostics = Vec::new();
 
                             // find constructor which matches this
-                            if ok {
-                                if let Ok((Some(constructor_no), args)) =
-                                    match_constructor_to_args(&base.loc, resolved_args, base_no, ns)
-                                {
-                                    ns.contracts[contract_no].functions[function_no]
-                                        .bases
-                                        .insert(base_no, (base.loc, constructor_no, args));
-
-                                    resolve_bases.insert(base_no, base.loc);
+                            if let Ok((Some(constructor_no), args)) = match_constructor_to_args(
+                                &base.loc,
+                                args,
+                                file_no,
+                                base_no,
+                                Some(function_no),
+                                contract_no,
+                                false,
+                                ns,
+                                &mut symtable,
+                                &mut diagnostics,
+                            ) {
+                                for arg in &args {
+                                    used_variable(ns, arg, &mut symtable);
                                 }
+                                ns.functions[function_no]
+                                    .bases
+                                    .insert(base_no, (base.loc, constructor_no, args));
+
+                                resolve_bases.insert(base_no, base.loc);
                             }
+
+                            ns.diagnostics.extend(diagnostics);
                         } else {
                             ns.diagnostics.push(Diagnostic::error(
                                 *loc,
@@ -136,7 +134,7 @@ pub fn resolve_function_body(
                 }
 
                 // does the contract require arguments
-                if ns.contracts[base.contract_no].constructor_needs_arguments() {
+                if ns.contracts[base.contract_no].constructor_needs_arguments(ns) {
                     ns.diagnostics.push(Diagnostic::error(
                         def.loc,
                         format!(
@@ -152,6 +150,7 @@ pub fn resolve_function_body(
     // resolve modifiers on functions
     if def.ty == pt::FunctionTy::Function {
         let mut modifiers = Vec::new();
+        let mut diagnostics = Vec::new();
 
         for attr in &def.attributes {
             if let pt::FunctionAttribute::BaseOrModifier(_, modifier) = attr {
@@ -161,18 +160,22 @@ pub fn resolve_function_body(
                     pt::FunctionTy::Modifier,
                     modifier.args.as_ref().unwrap_or(&Vec::new()),
                     file_no,
-                    contract_no,
+                    available_functions(&modifier.name.name, false, file_no, contract_no, ns),
                     true,
-                    Some(contract_no),
+                    contract_no,
+                    Some(function_no),
+                    false,
                     ns,
-                    &symtable,
+                    &mut symtable,
+                    &mut diagnostics,
                 ) {
                     modifiers.push(e);
                 }
             }
         }
 
-        ns.contracts[contract_no].functions[function_no].modifiers = modifiers;
+        ns.diagnostics.extend(diagnostics);
+        ns.functions[function_no].modifiers = modifiers;
     }
 
     // a function with no return values does not need a return statement
@@ -182,14 +185,20 @@ pub fn resolve_function_body(
     // the end of the function, and return values may be omitted too. Create variables to
     // store the return values
     for (i, p) in def.returns.iter().enumerate() {
-        let ret = &ns.contracts[contract_no].functions[function_no].returns[i];
+        let ret = &ns.functions[function_no].returns[i];
 
         if let Some(ref name) = p.1.as_ref().unwrap().name {
             return_required = false;
 
-            if let Some(pos) = symtable.add(name, ret.ty.clone(), ns) {
-                ns.check_shadowing(file_no, Some(contract_no), name);
-
+            if let Some(pos) = symtable.add(
+                name,
+                ret.ty.clone(),
+                ns,
+                None,
+                VariableUsage::ReturnVariable,
+                None,
+            ) {
+                ns.check_shadowing(file_no, contract_no, name);
                 symtable.returns.push(pos);
             }
         } else {
@@ -199,17 +208,27 @@ pub fn resolve_function_body(
                 name: "".to_owned(),
             };
 
-            let pos = symtable.add(&id, ret.ty.clone(), ns).unwrap();
+            let pos = symtable
+                .add(
+                    &id,
+                    ret.ty.clone(),
+                    ns,
+                    None,
+                    VariableUsage::AnonymousReturnVariable,
+                    None,
+                )
+                .unwrap();
 
             symtable.returns.push(pos);
         }
     }
 
-    if def.body.is_none() {
-        return Ok(());
-    }
+    let body = match def.body {
+        None => return Ok(()),
+        Some(ref body) => body,
+    };
 
-    let body = def.body.as_ref().unwrap();
+    let mut diagnostics = Vec::new();
 
     let reachable = statement(
         body,
@@ -217,18 +236,22 @@ pub fn resolve_function_body(
         file_no,
         contract_no,
         function_no,
+        false,
         &mut symtable,
         &mut loops,
         ns,
-    )?;
+        &mut diagnostics,
+    );
 
-    // ensure we have a return instruction
-    if reachable {
+    ns.diagnostics.extend(diagnostics);
+
+    if reachable? {
+        // ensure we have a return instruction
         if let Some(Statement::Return(_, _)) = res.last() {
             // ok
         } else if return_required {
             ns.diagnostics.push(Diagnostic::error(
-                body.loc(),
+                body.loc().end(),
                 "missing return statement".to_string(),
             ));
             return Err(());
@@ -240,9 +263,11 @@ pub fn resolve_function_body(
                 file_no,
                 contract_no,
                 function_no,
+                false,
                 &mut symtable,
                 &mut loops,
                 ns,
+                &mut Vec::new(),
             )?;
         }
     }
@@ -251,7 +276,7 @@ pub fn resolve_function_body(
         let mut has_underscore = false;
 
         // unsure modifier has underscore
-        fn check_statement(stmt: &mut Statement, has_underscore: &mut bool) -> bool {
+        fn check_statement(stmt: &Statement, has_underscore: &mut bool) -> bool {
             if stmt.is_underscore() {
                 *has_underscore = true;
                 false
@@ -266,18 +291,15 @@ pub fn resolve_function_body(
 
         if !has_underscore {
             ns.diagnostics.push(Diagnostic::error(
-                body.loc(),
+                body.loc().end(),
                 "missing ‘_’ in modifier".to_string(),
             ));
         }
     }
 
-    ns.contracts[contract_no].functions[function_no].body = res;
+    ns.functions[function_no].body = res;
 
-    std::mem::swap(
-        &mut ns.contracts[contract_no].functions[function_no].symtable,
-        &mut symtable,
-    );
+    std::mem::swap(&mut ns.functions[function_no].symtable, &mut symtable);
 
     Ok(())
 }
@@ -287,27 +309,55 @@ fn statement(
     stmt: &pt::Statement,
     res: &mut Vec<Statement>,
     file_no: usize,
-    contract_no: usize,
+    contract_no: Option<usize>,
     function_no: usize,
+    unchecked: bool,
     symtable: &mut Symtable,
     loops: &mut LoopScopes,
     ns: &mut Namespace,
+    diagnostics: &mut Vec<Diagnostic>,
 ) -> Result<bool, ()> {
     match stmt {
         pt::Statement::VariableDefinition(loc, decl, initializer) => {
-            let (var_ty, ty_loc) =
-                resolve_var_decl_ty(&decl.ty, &decl.storage, file_no, contract_no, ns)?;
+            let (var_ty, ty_loc) = resolve_var_decl_ty(
+                &decl.ty,
+                &decl.storage,
+                file_no,
+                contract_no,
+                ns,
+                diagnostics,
+            )?;
 
             let initializer = if let Some(init) = initializer {
-                let expr = expression(init, file_no, Some(contract_no), ns, symtable, false)?;
+                let expr = expression(
+                    init,
+                    file_no,
+                    contract_no,
+                    Some(function_no),
+                    ns,
+                    symtable,
+                    false,
+                    unchecked,
+                    diagnostics,
+                    Some(&var_ty),
+                )?;
 
-                Some(cast(&decl.name.loc, expr, &var_ty, true, ns)?)
+                used_variable(ns, &expr, symtable);
+
+                Some(cast(&expr.loc(), expr, &var_ty, true, ns, diagnostics)?)
             } else {
                 None
             };
 
-            if let Some(pos) = symtable.add(&decl.name, var_ty.clone(), ns) {
-                ns.check_shadowing(file_no, Some(contract_no), &decl.name);
+            if let Some(pos) = symtable.add(
+                &decl.name,
+                var_ty.clone(),
+                ns,
+                initializer.clone(),
+                VariableUsage::LocalVariable,
+                decl.storage.clone(),
+            ) {
+                ns.check_shadowing(file_no, contract_no, &decl.name);
 
                 res.push(Statement::VariableDecl(
                     *loc,
@@ -326,11 +376,15 @@ fn statement(
 
             Ok(true)
         }
-        pt::Statement::Block(_, stmts) => {
+        pt::Statement::Block {
+            statements,
+            unchecked: this_block_unchecked,
+            ..
+        } => {
             symtable.new_scope();
             let mut reachable = true;
 
-            for stmt in stmts {
+            for stmt in statements {
                 if !reachable {
                     ns.diagnostics.push(Diagnostic::error(
                         stmt.loc(),
@@ -339,14 +393,16 @@ fn statement(
                     return Err(());
                 }
                 reachable = statement(
-                    &stmt,
+                    stmt,
                     res,
                     file_no,
                     contract_no,
                     function_no,
+                    unchecked || *this_block_unchecked,
                     symtable,
                     loops,
                     ns,
+                    diagnostics,
                 )?;
             }
 
@@ -359,7 +415,7 @@ fn statement(
                 res.push(Statement::Break(*loc));
                 Ok(false)
             } else {
-                ns.diagnostics.push(Diagnostic::error(
+                diagnostics.push(Diagnostic::error(
                     stmt.loc(),
                     "break statement not in loop".to_string(),
                 ));
@@ -371,7 +427,7 @@ fn statement(
                 res.push(Statement::Continue(*loc));
                 Ok(false)
             } else {
-                ns.diagnostics.push(Diagnostic::error(
+                diagnostics.push(Diagnostic::error(
                     stmt.loc(),
                     "continue statement not in loop".to_string(),
                 ));
@@ -379,9 +435,20 @@ fn statement(
             }
         }
         pt::Statement::While(loc, cond_expr, body) => {
-            let expr = expression(cond_expr, file_no, Some(contract_no), ns, symtable, false)?;
-
-            let cond = cast(&expr.loc(), expr, &Type::Bool, true, ns)?;
+            let expr = expression(
+                cond_expr,
+                file_no,
+                contract_no,
+                Some(function_no),
+                ns,
+                symtable,
+                false,
+                unchecked,
+                diagnostics,
+                Some(&Type::Bool),
+            )?;
+            used_variable(ns, &expr, symtable);
+            let cond = cast(&expr.loc(), expr, &Type::Bool, true, ns, diagnostics)?;
 
             symtable.new_scope();
             let mut body_stmts = Vec::new();
@@ -392,9 +459,11 @@ fn statement(
                 file_no,
                 contract_no,
                 function_no,
+                unchecked,
                 symtable,
                 loops,
                 ns,
+                diagnostics,
             )?;
             symtable.leave_scope();
             loops.leave_scope();
@@ -404,9 +473,20 @@ fn statement(
             Ok(true)
         }
         pt::Statement::DoWhile(loc, body, cond_expr) => {
-            let expr = expression(cond_expr, file_no, Some(contract_no), ns, symtable, false)?;
-
-            let cond = cast(&expr.loc(), expr, &Type::Bool, true, ns)?;
+            let expr = expression(
+                cond_expr,
+                file_no,
+                contract_no,
+                Some(function_no),
+                ns,
+                symtable,
+                false,
+                unchecked,
+                diagnostics,
+                Some(&Type::Bool),
+            )?;
+            used_variable(ns, &expr, symtable);
+            let cond = cast(&expr.loc(), expr, &Type::Bool, true, ns, diagnostics)?;
 
             symtable.new_scope();
             let mut body_stmts = Vec::new();
@@ -417,9 +497,11 @@ fn statement(
                 file_no,
                 contract_no,
                 function_no,
+                unchecked,
                 symtable,
                 loops,
                 ns,
+                diagnostics,
             )?;
             symtable.leave_scope();
             loops.leave_scope();
@@ -428,9 +510,21 @@ fn statement(
             Ok(true)
         }
         pt::Statement::If(loc, cond_expr, then, else_) => {
-            let expr = expression(cond_expr, file_no, Some(contract_no), ns, symtable, false)?;
+            let expr = expression(
+                cond_expr,
+                file_no,
+                contract_no,
+                Some(function_no),
+                ns,
+                symtable,
+                false,
+                unchecked,
+                diagnostics,
+                Some(&Type::Bool),
+            )?;
+            used_variable(ns, &expr, symtable);
 
-            let cond = cast(&expr.loc(), expr, &Type::Bool, true, ns)?;
+            let cond = cast(&expr.loc(), expr, &Type::Bool, true, ns, diagnostics)?;
 
             symtable.new_scope();
             let mut then_stmts = Vec::new();
@@ -440,24 +534,28 @@ fn statement(
                 file_no,
                 contract_no,
                 function_no,
+                unchecked,
                 symtable,
                 loops,
                 ns,
+                diagnostics,
             )?;
             symtable.leave_scope();
 
             let mut else_stmts = Vec::new();
             if let Some(stmts) = else_ {
                 symtable.new_scope();
-                reachable &= statement(
+                reachable |= statement(
                     stmts,
                     &mut else_stmts,
                     file_no,
                     contract_no,
                     function_no,
+                    unchecked,
                     symtable,
                     loops,
                     ns,
+                    diagnostics,
                 )?;
 
                 symtable.leave_scope();
@@ -488,9 +586,11 @@ fn statement(
                     file_no,
                     contract_no,
                     function_no,
+                    unchecked,
                     symtable,
                     loops,
                     ns,
+                    diagnostics,
                 )?;
             }
 
@@ -505,9 +605,11 @@ fn statement(
                     file_no,
                     contract_no,
                     function_no,
+                    unchecked,
                     symtable,
                     loops,
                     ns,
+                    diagnostics,
                 )?;
             }
 
@@ -522,9 +624,11 @@ fn statement(
                     file_no,
                     contract_no,
                     function_no,
+                    unchecked,
                     symtable,
                     loops,
                     ns,
+                    diagnostics,
                 )?;
             }
 
@@ -555,15 +659,28 @@ fn statement(
                     file_no,
                     contract_no,
                     function_no,
+                    unchecked,
                     symtable,
                     loops,
                     ns,
+                    diagnostics,
                 )?;
             }
 
-            let expr = expression(cond_expr, file_no, Some(contract_no), ns, symtable, false)?;
+            let expr = expression(
+                cond_expr,
+                file_no,
+                contract_no,
+                Some(function_no),
+                ns,
+                symtable,
+                false,
+                unchecked,
+                diagnostics,
+                Some(&Type::Bool),
+            )?;
 
-            let cond = cast(&cond_expr.loc(), expr, &Type::Bool, true, ns)?;
+            let cond = cast(&cond_expr.loc(), expr, &Type::Bool, true, ns, diagnostics)?;
 
             // continue goes to next, and if that does exist, cond
             loops.new_scope();
@@ -575,9 +692,11 @@ fn statement(
                     file_no,
                     contract_no,
                     function_no,
+                    unchecked,
                     symtable,
                     loops,
                     ns,
+                    diagnostics,
                 )?,
                 None => true,
             };
@@ -596,9 +715,11 @@ fn statement(
                         file_no,
                         contract_no,
                         function_no,
+                        unchecked,
                         symtable,
                         loops,
                         ns,
+                        diagnostics,
                     )?;
                 }
             }
@@ -617,9 +738,7 @@ fn statement(
             Ok(true)
         }
         pt::Statement::Return(loc, None) => {
-            let no_returns = ns.contracts[contract_no].functions[function_no]
-                .returns
-                .len();
+            let no_returns = ns.functions[function_no].returns.len();
 
             if symtable.returns.len() != no_returns {
                 ns.diagnostics.push(Diagnostic::error(
@@ -632,40 +751,63 @@ fn statement(
                 return Err(());
             }
 
-            res.push(Statement::Return(
-                *loc,
-                symtable
-                    .returns
-                    .iter()
-                    .map(|pos| {
-                        Expression::Variable(pt::Loc(0, 0, 0), symtable.vars[pos].ty.clone(), *pos)
-                    })
-                    .collect(),
-            ));
+            let exprs = symtable
+                .returns
+                .iter()
+                .map(|pos| {
+                    Expression::Variable(pt::Loc(0, 0, 0), symtable.vars[pos].ty.clone(), *pos)
+                })
+                .collect::<Vec<_>>();
+
+            let expr = if exprs.len() > 1 {
+                Some(Expression::List(pt::Loc(0, 0, 0), exprs))
+            } else {
+                exprs.into_iter().next()
+            };
+
+            res.push(Statement::Return(*loc, expr));
 
             Ok(false)
         }
         pt::Statement::Return(loc, Some(returns)) => {
-            let vals = return_with_values(
+            let expr = return_with_values(
                 returns,
                 loc,
                 file_no,
                 contract_no,
                 function_no,
+                unchecked,
                 symtable,
                 ns,
+                diagnostics,
             )?;
 
-            res.push(Statement::Return(*loc, vals));
+            for offset in symtable.returns.iter() {
+                let elem = symtable.vars.get_mut(offset).unwrap();
+                (*elem).assigned = true;
+            }
+
+            res.push(Statement::Return(*loc, Some(expr)));
 
             Ok(false)
         }
         pt::Statement::Expression(loc, expr) => {
             // delete statement
             if let pt::Expression::Delete(_, expr) = expr {
-                let expr = expression(expr, file_no, Some(contract_no), ns, symtable, false)?;
-
-                return if let Type::StorageRef(ty) = expr.ty() {
+                let expr = expression(
+                    expr,
+                    file_no,
+                    contract_no,
+                    Some(function_no),
+                    ns,
+                    symtable,
+                    false,
+                    unchecked,
+                    diagnostics,
+                    None,
+                )?;
+                used_variable(ns, &expr, symtable);
+                return if let Type::StorageRef(_, ty) = expr.ty() {
                     if expr.ty().is_mapping() {
                         ns.diagnostics.push(Diagnostic::error(
                             *loc,
@@ -690,9 +832,7 @@ fn statement(
             // is it an underscore modifier statement
             if let pt::Expression::Variable(id) = expr {
                 if id.name == "_" {
-                    return if ns.contracts[contract_no].functions[function_no].ty
-                        == pt::FunctionTy::Modifier
-                    {
+                    return if ns.functions[function_no].ty == pt::FunctionTy::Modifier {
                         res.push(Statement::Underscore(*loc));
 
                         Ok(true)
@@ -715,8 +855,11 @@ fn statement(
                         expr,
                         file_no,
                         contract_no,
+                        function_no,
+                        unchecked,
                         symtable,
                         ns,
+                        diagnostics,
                     )?);
 
                     // if a noreturn function was called, then the destructure would not resolve
@@ -725,7 +868,18 @@ fn statement(
             }
 
             // the rest
-            let expr = expression(expr, file_no, Some(contract_no), ns, symtable, false)?;
+            let expr = expression(
+                expr,
+                file_no,
+                contract_no,
+                Some(function_no),
+                ns,
+                symtable,
+                false,
+                unchecked,
+                diagnostics,
+                None,
+            )?;
 
             let reachable = expr.ty() != Type::Unreachable;
 
@@ -743,20 +897,39 @@ fn statement(
                 file_no,
                 contract_no,
                 function_no,
+                unchecked,
                 symtable,
                 loops,
                 ns,
+                diagnostics,
             )?;
             res.push(stmt);
 
             Ok(reachable)
         }
         pt::Statement::Emit(loc, ty) => {
-            if let Ok(emit) = emit_event(loc, ty, file_no, contract_no, symtable, ns) {
+            if let Ok(emit) = emit_event(
+                loc,
+                ty,
+                file_no,
+                contract_no,
+                function_no,
+                unchecked,
+                symtable,
+                ns,
+                diagnostics,
+            ) {
                 res.push(emit);
             }
 
             Ok(true)
+        }
+        pt::Statement::Assembly { loc, .. } => {
+            ns.diagnostics.push(Diagnostic::error(
+                *loc,
+                format!("evm assembly not supported on target {}", ns.target),
+            ));
+            Err(())
         }
     }
 }
@@ -766,34 +939,31 @@ fn emit_event(
     loc: &pt::Loc,
     ty: &pt::Expression,
     file_no: usize,
-    contract_no: usize,
+    contract_no: Option<usize>,
+    function_no: usize,
+    unchecked: bool,
     symtable: &mut Symtable,
     ns: &mut Namespace,
+    diagnostics: &mut Vec<Diagnostic>,
 ) -> Result<Statement, ()> {
     match ty {
         pt::Expression::FunctionCall(_, ty, args) => {
             let event_loc = ty.loc();
-            let event_nos = ns.resolve_event(file_no, Some(contract_no), ty)?;
+            let event_nos = ns.resolve_event(file_no, contract_no, ty, diagnostics)?;
 
-            let mut resolved_args = Vec::new();
-
-            for arg in args {
-                let expr = expression(arg, file_no, Some(contract_no), ns, symtable, false)?;
-                resolved_args.push(expr);
-            }
-
-            let mut diagnostics = Vec::new();
+            let mut temp_diagnostics = Vec::new();
 
             for event_no in &event_nos {
-                let event = &ns.events[*event_no];
-                if resolved_args.len() != event.fields.len() {
-                    diagnostics.push(Diagnostic::error(
+                let event = &mut ns.events[*event_no];
+                event.used = true;
+                if args.len() != event.fields.len() {
+                    temp_diagnostics.push(Diagnostic::error(
                         *loc,
                         format!(
                             "event type ‘{}’ has {} fields, {} provided",
                             event.name,
                             event.fields.len(),
-                            resolved_args.len()
+                            args.len()
                         ),
                     ));
                     continue;
@@ -802,20 +972,49 @@ fn emit_event(
 
                 let mut matches = true;
                 // check if arguments can be implicitly casted
-                for (i, arg) in resolved_args.iter().enumerate() {
-                    match try_cast(&arg.loc(), arg.clone(), &event.fields[i].ty, true, ns) {
+                for (i, arg) in args.iter().enumerate() {
+                    let ty = ns.events[*event_no].fields[i].ty.clone();
+
+                    let arg = match expression(
+                        arg,
+                        file_no,
+                        contract_no,
+                        Some(function_no),
+                        ns,
+                        symtable,
+                        false,
+                        unchecked,
+                        &mut temp_diagnostics,
+                        Some(&ty),
+                    ) {
+                        Ok(e) => e,
+                        Err(()) => {
+                            matches = false;
+                            break;
+                        }
+                    };
+                    used_variable(ns, &arg, symtable);
+
+                    match cast(
+                        &arg.loc(),
+                        arg.clone(),
+                        &ty,
+                        true,
+                        ns,
+                        &mut temp_diagnostics,
+                    ) {
                         Ok(expr) => cast_args.push(expr),
-                        Err(e) => {
-                            diagnostics.push(e);
+                        Err(_) => {
                             matches = false;
                         }
                     }
                 }
 
                 if matches {
-                    if !ns.contracts[contract_no].sends_events.contains(event_no) {
-                        ns.contracts[contract_no].sends_events.push(*event_no);
+                    if !ns.functions[function_no].emits_events.contains(event_no) {
+                        ns.functions[function_no].emits_events.push(*event_no);
                     }
+
                     return Ok(Statement::Emit {
                         loc: *loc,
                         event_no: *event_no,
@@ -826,9 +1025,9 @@ fn emit_event(
             }
 
             if event_nos.len() == 1 {
-                ns.diagnostics.extend(diagnostics);
+                diagnostics.extend(temp_diagnostics);
             } else {
-                ns.diagnostics.push(Diagnostic::error(
+                diagnostics.push(Diagnostic::error(
                     *loc,
                     "cannot find event which matches signature".to_string(),
                 ));
@@ -836,7 +1035,7 @@ fn emit_event(
         }
         pt::Expression::NamedFunctionCall(_, ty, args) => {
             let event_loc = ty.loc();
-            let event_nos = ns.resolve_event(file_no, Some(contract_no), ty)?;
+            let event_nos = ns.resolve_event(file_no, contract_no, ty, diagnostics)?;
 
             let mut arguments = HashMap::new();
 
@@ -848,20 +1047,18 @@ fn emit_event(
                     ));
                     return Err(());
                 }
-                arguments.insert(
-                    arg.name.name.to_string(),
-                    expression(&arg.expr, file_no, Some(contract_no), ns, symtable, false)?,
-                );
+                arguments.insert(&arg.name.name, &arg.expr);
             }
 
-            let mut diagnostics = Vec::new();
+            let mut temp_diagnostics = Vec::new();
 
             for event_no in &event_nos {
-                let event = &ns.events[*event_no];
+                let event = &mut ns.events[*event_no];
+                event.used = true;
                 let params_len = event.fields.len();
 
                 if params_len != arguments.len() {
-                    diagnostics.push(Diagnostic::error(
+                    temp_diagnostics.push(Diagnostic::error(
                         *loc,
                         format!(
                             "event expects {} arguments, {} provided",
@@ -877,14 +1074,14 @@ fn emit_event(
 
                 // check if arguments can be implicitly casted
                 for i in 0..params_len {
-                    let param = event.fields[i].clone();
+                    let param = ns.events[*event_no].fields[i].clone();
 
                     if param.name.is_empty() {
-                        ns.diagnostics.push(Diagnostic::error(
+                        temp_diagnostics.push(Diagnostic::error(
                         *loc,
                         format!(
                             "event ‘{}’ cannot emitted by argument name since argument {} has no name",
-                            event.name, i,
+                            ns.events[*event_no].name, i,
                         ),
                     ));
                         matches = false;
@@ -895,26 +1092,51 @@ fn emit_event(
                         Some(a) => a,
                         None => {
                             matches = false;
-                            ns.diagnostics.push(Diagnostic::error(
+                            temp_diagnostics.push(Diagnostic::error(
                                 *loc,
                                 format!(
                                     "missing argument ‘{}’ to event ‘{}’",
-                                    param.name, event.name,
+                                    param.name, ns.events[*event_no].name,
                                 ),
                             ));
                             break;
                         }
                     };
-                    match try_cast(&arg.loc(), arg.clone(), &param.ty, true, ns) {
+
+                    let arg = match expression(
+                        arg,
+                        file_no,
+                        contract_no,
+                        Some(function_no),
+                        ns,
+                        symtable,
+                        false,
+                        unchecked,
+                        &mut temp_diagnostics,
+                        Some(&param.ty),
+                    ) {
+                        Ok(e) => e,
+                        Err(()) => {
+                            matches = false;
+                            break;
+                        }
+                    };
+
+                    used_variable(ns, &arg, symtable);
+
+                    match cast(&arg.loc(), arg, &param.ty, true, ns, &mut temp_diagnostics) {
                         Ok(expr) => cast_args.push(expr),
-                        Err(e) => {
-                            diagnostics.push(e);
+                        Err(_) => {
                             matches = false;
                         }
                     }
                 }
 
                 if matches {
+                    if !ns.functions[function_no].emits_events.contains(event_no) {
+                        ns.functions[function_no].emits_events.push(*event_no);
+                    }
+
                     return Ok(Statement::Emit {
                         loc: *loc,
                         event_no: *event_no,
@@ -925,18 +1147,18 @@ fn emit_event(
             }
 
             if event_nos.len() == 1 {
-                ns.diagnostics.extend(diagnostics);
+                diagnostics.extend(temp_diagnostics);
             } else {
-                ns.diagnostics.push(Diagnostic::error(
+                diagnostics.push(Diagnostic::error(
                     *loc,
                     "cannot find event which matches signature".to_string(),
                 ));
             }
         }
         pt::Expression::FunctionCallBlock(_, ty, block) => {
-            let _ = ns.resolve_event(file_no, Some(contract_no), ty);
+            let _ = ns.resolve_event(file_no, contract_no, ty, diagnostics);
 
-            ns.diagnostics.push(Diagnostic::error(
+            diagnostics.push(Diagnostic::error(
                 block.loc(),
                 "expected event arguments, found code block".to_string(),
             ));
@@ -953,66 +1175,21 @@ fn destructure(
     vars: &[(pt::Loc, Option<pt::Parameter>)],
     expr: &pt::Expression,
     file_no: usize,
-    contract_no: usize,
+    contract_no: Option<usize>,
+    function_no: usize,
+    unchecked: bool,
     symtable: &mut Symtable,
     ns: &mut Namespace,
+    diagnostics: &mut Vec<Diagnostic>,
 ) -> Result<Statement, ()> {
-    let expr = match expr {
-        pt::Expression::FunctionCall(loc, ty, args) => {
-            function_call_expr(loc, ty, args, file_no, Some(contract_no), ns, symtable)?
-        }
-        pt::Expression::NamedFunctionCall(loc, ty, args) => {
-            named_function_call_expr(loc, ty, args, file_no, Some(contract_no), ns, symtable)?
-        }
-        _ => {
-            let mut list = Vec::new();
-
-            for e in parameter_list_to_expr_list(expr, ns)? {
-                let e = expression(e, file_no, Some(contract_no), ns, symtable, false)?;
-
-                match e.ty() {
-                    Type::Void | Type::Unreachable => {
-                        ns.diagnostics.push(Diagnostic::error(
-                            e.loc(),
-                            "function does not return a value".to_string(),
-                        ));
-                        return Err(());
-                    }
-                    _ => (),
-                }
-
-                list.push(e);
-            }
-
-            Expression::List(*loc, list)
-        }
-    };
-
-    let mut tys = expr.tys();
-
-    // Return type void or unreachable are synthetic
-    if tys.len() == 1 && (tys[0] == Type::Unreachable || tys[0] == Type::Void) {
-        tys.truncate(0);
-    }
-
-    if vars.len() != tys.len() {
-        ns.diagnostics.push(Diagnostic::error(
-            *loc,
-            format!(
-                "destructuring assignment has {} elements on the left and {} on the right",
-                vars.len(),
-                tys.len()
-            ),
-        ));
-        return Err(());
-    }
-
-    // first resolve the fields
+    // first resolve the fields so we know the types
     let mut fields = Vec::new();
+    let mut left_tys = Vec::new();
 
-    for (i, e) in vars.iter().enumerate() {
-        match &e.1 {
+    for (_, param) in vars {
+        match param {
             None => {
+                left_tys.push(None);
                 fields.push(DestructureField::None);
             }
             Some(pt::Parameter {
@@ -1022,7 +1199,7 @@ fn destructure(
                 name: None,
             }) => {
                 if let Some(storage) = storage {
-                    ns.diagnostics.push(Diagnostic::error(
+                    diagnostics.push(Diagnostic::error(
                         *storage.loc(),
                         format!("storage modifier ‘{}’ not permitted on assignment", storage),
                     ));
@@ -1030,11 +1207,22 @@ fn destructure(
                 }
 
                 // ty will just be a normal expression, not a type
-                let e = expression(ty, file_no, Some(contract_no), ns, symtable, false)?;
+                let e = expression(
+                    ty,
+                    file_no,
+                    contract_no,
+                    Some(function_no),
+                    ns,
+                    symtable,
+                    false,
+                    unchecked,
+                    diagnostics,
+                    None,
+                )?;
 
                 match &e {
-                    Expression::ConstantVariable(_, _, contract_no, var_no) => {
-                        ns.diagnostics.push(Diagnostic::error(
+                    Expression::ConstantVariable(_, _, Some(contract_no), var_no) => {
+                        diagnostics.push(Diagnostic::error(
                             *loc,
                             format!(
                                 "cannot assign to constant ‘{}’",
@@ -1043,11 +1231,32 @@ fn destructure(
                         ));
                         return Err(());
                     }
-                    Expression::StorageVariable(_, _, _, _) | Expression::Variable(_, _, _) => (),
+                    Expression::ConstantVariable(_, _, None, var_no) => {
+                        diagnostics.push(Diagnostic::error(
+                            *loc,
+                            format!("cannot assign to constant ‘{}’", ns.constants[*var_no].name),
+                        ));
+                        return Err(());
+                    }
+                    Expression::StorageVariable(_, _, var_contract_no, var_no) => {
+                        let store_var = &ns.contracts[*var_contract_no].variables[*var_no];
+
+                        if store_var.immutable && !ns.functions[function_no].is_constructor() {
+                            diagnostics.push(Diagnostic::error(
+                                *loc,
+                                format!(
+                                    "cannot assign to immutable ‘{}’ outside of constructor",
+                                    store_var.name
+                                ),
+                            ));
+                            return Err(());
+                        }
+                    }
+                    Expression::Variable(_, _, _) => (),
                     _ => match e.ty() {
-                        Type::Ref(_) | Type::StorageRef(_) => (),
+                        Type::Ref(_) | Type::StorageRef(false, _) => (),
                         _ => {
-                            ns.diagnostics.push(Diagnostic::error(
+                            diagnostics.push(Diagnostic::error(
                                 *loc,
                                 "expression is not assignable".to_string(),
                             ));
@@ -1056,15 +1265,8 @@ fn destructure(
                     },
                 }
 
-                // here we only CHECK if we can cast the type
-                let _ = cast(
-                    &loc,
-                    Expression::FunctionArg(*loc, tys[i].clone(), i),
-                    e.ty().deref_any(),
-                    true,
-                    ns,
-                )?;
-
+                assigned_variable(ns, &e, symtable);
+                left_tys.push(Some(e.ty()));
                 fields.push(DestructureField::Expression(e));
             }
             Some(pt::Parameter {
@@ -1073,19 +1275,20 @@ fn destructure(
                 storage,
                 name: Some(name),
             }) => {
-                let (ty, ty_loc) = resolve_var_decl_ty(&ty, &storage, file_no, contract_no, ns)?;
+                let (ty, ty_loc) =
+                    resolve_var_decl_ty(ty, storage, file_no, contract_no, ns, diagnostics)?;
 
-                // here we only CHECK if we can cast the type
-                let _ = cast(
-                    loc,
-                    Expression::FunctionArg(e.0, tys[i].clone(), i),
-                    ty.deref_any(),
-                    true,
+                if let Some(pos) = symtable.add(
+                    name,
+                    ty.clone(),
                     ns,
-                )?;
+                    None,
+                    VariableUsage::DestructureVariable,
+                    storage.clone(),
+                ) {
+                    ns.check_shadowing(file_no, contract_no, name);
 
-                if let Some(pos) = symtable.add(&name, ty.clone(), ns) {
-                    ns.check_shadowing(file_no, Some(contract_no), &name);
+                    left_tys.push(Some(ty.clone()));
 
                     fields.push(DestructureField::VariableDecl(
                         pos,
@@ -1103,7 +1306,206 @@ fn destructure(
         }
     }
 
+    let expr = destructure_values(
+        loc,
+        expr,
+        &left_tys,
+        &fields,
+        file_no,
+        contract_no,
+        function_no,
+        unchecked,
+        symtable,
+        ns,
+        diagnostics,
+    )?;
+
     Ok(Statement::Destructure(*loc, fields, expr))
+}
+
+fn destructure_values(
+    loc: &pt::Loc,
+    expr: &pt::Expression,
+    left_tys: &[Option<Type>],
+    fields: &[DestructureField],
+    file_no: usize,
+    contract_no: Option<usize>,
+    function_no: usize,
+    unchecked: bool,
+    symtable: &mut Symtable,
+    ns: &mut Namespace,
+    diagnostics: &mut Vec<Diagnostic>,
+) -> Result<Expression, ()> {
+    let expr = match expr {
+        pt::Expression::FunctionCall(loc, ty, args) => {
+            let res = function_call_expr(
+                loc,
+                ty,
+                args,
+                file_no,
+                contract_no,
+                Some(function_no),
+                ns,
+                symtable,
+                false,
+                unchecked,
+                diagnostics,
+            )?;
+            check_function_call(ns, &res, symtable);
+            res
+        }
+        pt::Expression::NamedFunctionCall(loc, ty, args) => {
+            let res = named_function_call_expr(
+                loc,
+                ty,
+                args,
+                file_no,
+                contract_no,
+                Some(function_no),
+                unchecked,
+                ns,
+                symtable,
+                diagnostics,
+            )?;
+            check_function_call(ns, &res, symtable);
+            res
+        }
+        pt::Expression::Ternary(loc, cond, left, right) => {
+            let cond = expression(
+                cond,
+                file_no,
+                contract_no,
+                Some(function_no),
+                ns,
+                symtable,
+                false,
+                unchecked,
+                diagnostics,
+                Some(&Type::Bool),
+            )?;
+
+            used_variable(ns, &cond, symtable);
+            let left = destructure_values(
+                &left.loc(),
+                left,
+                left_tys,
+                fields,
+                file_no,
+                contract_no,
+                function_no,
+                unchecked,
+                symtable,
+                ns,
+                diagnostics,
+            )?;
+            used_variable(ns, &left, symtable);
+            let right = destructure_values(
+                &right.loc(),
+                right,
+                left_tys,
+                fields,
+                file_no,
+                contract_no,
+                function_no,
+                unchecked,
+                symtable,
+                ns,
+                diagnostics,
+            )?;
+            used_variable(ns, &right, symtable);
+
+            return Ok(Expression::Ternary(
+                *loc,
+                Type::Unreachable,
+                Box::new(cond),
+                Box::new(left),
+                Box::new(right),
+            ));
+        }
+        _ => {
+            let mut list = Vec::new();
+
+            let exprs = parameter_list_to_expr_list(expr, diagnostics)?;
+
+            if exprs.len() != left_tys.len() {
+                diagnostics.push(Diagnostic::error(
+                    *loc,
+                    format!(
+                        "destructuring assignment has {} elements on the left and {} on the right",
+                        left_tys.len(),
+                        exprs.len(),
+                    ),
+                ));
+                return Err(());
+            }
+
+            for (i, e) in exprs.iter().enumerate() {
+                let e = expression(
+                    e,
+                    file_no,
+                    contract_no,
+                    Some(function_no),
+                    ns,
+                    symtable,
+                    false,
+                    unchecked,
+                    diagnostics,
+                    left_tys[i].as_ref(),
+                )?;
+                match e.ty() {
+                    Type::Void | Type::Unreachable => {
+                        diagnostics.push(Diagnostic::error(
+                            e.loc(),
+                            "function does not return a value".to_string(),
+                        ));
+                        return Err(());
+                    }
+                    _ => {
+                        used_variable(ns, &e, symtable);
+                    }
+                }
+
+                list.push(e);
+            }
+
+            Expression::List(*loc, list)
+        }
+    };
+
+    let mut right_tys = expr.tys();
+
+    // Return type void or unreachable are synthetic
+    if right_tys.len() == 1 && (right_tys[0] == Type::Unreachable || right_tys[0] == Type::Void) {
+        right_tys.truncate(0);
+    }
+
+    if left_tys.len() != right_tys.len() {
+        diagnostics.push(Diagnostic::error(
+            *loc,
+            format!(
+                "destructuring assignment has {} elements on the left and {} on the right",
+                left_tys.len(),
+                right_tys.len()
+            ),
+        ));
+        return Err(());
+    }
+
+    // Check that the values can be cast
+    for (i, field) in fields.iter().enumerate() {
+        if let Some(left_ty) = &left_tys[i] {
+            let loc = field.loc().unwrap();
+            let _ = cast(
+                &loc,
+                Expression::FunctionArg(loc, right_tys[i].clone(), i),
+                left_ty,
+                true,
+                ns,
+                diagnostics,
+            )?;
+        }
+    }
+    Ok(expr)
 }
 
 /// Resolve the type of a variable declaration
@@ -1111,15 +1513,16 @@ fn resolve_var_decl_ty(
     ty: &pt::Expression,
     storage: &Option<pt::StorageLocation>,
     file_no: usize,
-    contract_no: usize,
+    contract_no: Option<usize>,
     ns: &mut Namespace,
+    diagnostics: &mut Vec<Diagnostic>,
 ) -> Result<(Type, pt::Loc), ()> {
     let mut loc_ty = ty.loc();
-    let mut var_ty = ns.resolve_type(file_no, Some(contract_no), false, &ty)?;
+    let mut var_ty = ns.resolve_type(file_no, contract_no, false, ty, diagnostics)?;
 
     if let Some(storage) = storage {
         if !var_ty.can_have_data_location() {
-            ns.diagnostics.push(Diagnostic::error(
+            diagnostics.push(Diagnostic::error(
                 *storage.loc(),
                 format!(
                     "data location ‘{}’ only allowed for array, struct or mapping type",
@@ -1131,7 +1534,7 @@ fn resolve_var_decl_ty(
 
         if let pt::StorageLocation::Storage(loc) = storage {
             loc_ty.2 = loc.2;
-            var_ty = Type::StorageRef(Box::new(var_ty));
+            var_ty = Type::StorageRef(false, Box::new(var_ty));
         }
 
         // Note we are completely ignoring memory or calldata data locations. Everything
@@ -1139,17 +1542,17 @@ fn resolve_var_decl_ty(
     }
 
     if var_ty.contains_mapping(ns) && !var_ty.is_contract_storage() {
-        ns.diagnostics.push(Diagnostic::error(
+        diagnostics.push(Diagnostic::error(
             ty.loc(),
             "mapping only allowed in storage".to_string(),
         ));
         return Err(());
     }
 
-    if !var_ty.is_contract_storage() && var_ty.size_hint(ns) > BigInt::from(1024 * 1024) {
-        ns.diagnostics.push(Diagnostic::error(
+    if !var_ty.is_contract_storage() && !var_ty.fits_in_memory(ns) {
+        diagnostics.push(Diagnostic::error(
             ty.loc(),
-            "type to large to fit into memory".to_string(),
+            "type is too large to fit into memory".to_string(),
         ));
         return Err(());
     }
@@ -1157,24 +1560,183 @@ fn resolve_var_decl_ty(
     Ok((var_ty, loc_ty))
 }
 
-/// Parse return statement with values
+/// Resolve return statement
 fn return_with_values(
     returns: &pt::Expression,
     loc: &pt::Loc,
     file_no: usize,
-    contract_no: usize,
+    contract_no: Option<usize>,
     function_no: usize,
+    unchecked: bool,
     symtable: &mut Symtable,
     ns: &mut Namespace,
-) -> Result<Vec<Expression>, ()> {
-    let returns = parameter_list_to_expr_list(returns, ns)?;
+    diagnostics: &mut Vec<Diagnostic>,
+) -> Result<Expression, ()> {
+    let no_returns = ns.functions[function_no].returns.len();
+    let expr_returns = match returns {
+        pt::Expression::FunctionCall(loc, ty, args) => {
+            let expr = call_expr(
+                loc,
+                ty,
+                args,
+                true,
+                file_no,
+                contract_no,
+                Some(function_no),
+                ns,
+                symtable,
+                false,
+                unchecked,
+                diagnostics,
+            )?;
+            used_variable(ns, &expr, symtable);
+            expr
+        }
+        pt::Expression::NamedFunctionCall(loc, ty, args) => {
+            let expr = named_call_expr(
+                loc,
+                ty,
+                args,
+                true,
+                file_no,
+                contract_no,
+                Some(function_no),
+                ns,
+                symtable,
+                false,
+                unchecked,
+                diagnostics,
+            )?;
+            used_variable(ns, &expr, symtable);
+            expr
+        }
+        pt::Expression::Ternary(loc, cond, left, right) => {
+            let cond = expression(
+                cond,
+                file_no,
+                contract_no,
+                Some(function_no),
+                ns,
+                symtable,
+                false,
+                unchecked,
+                diagnostics,
+                Some(&Type::Bool),
+            )?;
+            used_variable(ns, &cond, symtable);
 
-    let no_returns = ns.contracts[contract_no].functions[function_no]
-        .returns
-        .len();
+            let left = return_with_values(
+                left,
+                &left.loc(),
+                file_no,
+                contract_no,
+                function_no,
+                unchecked,
+                symtable,
+                ns,
+                diagnostics,
+            )?;
+            used_variable(ns, &left, symtable);
 
-    if no_returns > 0 && returns.is_empty() {
-        ns.diagnostics.push(Diagnostic::error(
+            let right = return_with_values(
+                right,
+                &right.loc(),
+                file_no,
+                contract_no,
+                function_no,
+                unchecked,
+                symtable,
+                ns,
+                diagnostics,
+            )?;
+            used_variable(ns, &right, symtable);
+
+            return Ok(Expression::Ternary(
+                *loc,
+                Type::Unreachable,
+                Box::new(cond),
+                Box::new(left),
+                Box::new(right),
+            ));
+        }
+        _ => {
+            let returns = parameter_list_to_expr_list(returns, diagnostics)?;
+
+            if no_returns > 0 && returns.is_empty() {
+                diagnostics.push(Diagnostic::error(
+                    *loc,
+                    format!(
+                        "missing return value, {} return values expected",
+                        no_returns
+                    ),
+                ));
+                return Err(());
+            }
+
+            if no_returns == 0 && !returns.is_empty() {
+                diagnostics.push(Diagnostic::error(
+                    *loc,
+                    "function has no return values".to_string(),
+                ));
+                return Err(());
+            }
+
+            if no_returns != returns.len() {
+                diagnostics.push(Diagnostic::error(
+                    *loc,
+                    format!(
+                        "incorrect number of return values, expected {} but got {}",
+                        no_returns,
+                        returns.len(),
+                    ),
+                ));
+                return Err(());
+            }
+
+            let mut exprs = Vec::new();
+
+            let return_tys = ns.functions[function_no]
+                .returns
+                .iter()
+                .map(|r| r.ty.clone())
+                .collect::<Vec<_>>();
+
+            for (expr_return, return_ty) in returns.iter().zip(return_tys) {
+                let expr = expression(
+                    expr_return,
+                    file_no,
+                    contract_no,
+                    Some(function_no),
+                    ns,
+                    symtable,
+                    false,
+                    unchecked,
+                    diagnostics,
+                    Some(&return_ty),
+                )?;
+                let expr = cast(loc, expr, &return_ty, true, ns, diagnostics)?;
+                used_variable(ns, &expr, symtable);
+                exprs.push(expr);
+            }
+
+            return Ok(if exprs.len() == 1 {
+                exprs[0].clone()
+            } else {
+                Expression::List(*loc, exprs)
+            });
+        }
+    };
+
+    let mut expr_return_tys = expr_returns.tys();
+    // Return type void or unreachable are synthetic
+    if expr_return_tys.len() == 1
+        && (expr_return_tys[0] == Type::Unreachable || expr_return_tys[0] == Type::Void)
+    {
+        expr_return_tys.truncate(0);
+    }
+
+    if no_returns > 0 && expr_return_tys.is_empty() {
+        diagnostics.push(Diagnostic::error(
             *loc,
             format!(
                 "missing return value, {} return values expected",
@@ -1184,50 +1746,57 @@ fn return_with_values(
         return Err(());
     }
 
-    if no_returns == 0 && !returns.is_empty() {
-        ns.diagnostics.push(Diagnostic::error(
+    if no_returns == 0 && !expr_return_tys.is_empty() {
+        diagnostics.push(Diagnostic::error(
             *loc,
             "function has no return values".to_string(),
         ));
         return Err(());
     }
 
-    if no_returns != returns.len() {
-        ns.diagnostics.push(Diagnostic::error(
+    if no_returns != expr_return_tys.len() {
+        diagnostics.push(Diagnostic::error(
             *loc,
             format!(
                 "incorrect number of return values, expected {} but got {}",
                 no_returns,
-                returns.len()
+                expr_return_tys.len(),
             ),
         ));
         return Err(());
     }
 
-    let mut exprs = Vec::new();
+    let func_returns_tys = ns.functions[function_no]
+        .returns
+        .iter()
+        .map(|r| r.ty.clone())
+        .collect::<Vec<_>>();
 
-    for (i, r) in returns.iter().enumerate() {
-        let e = expression(r, file_no, Some(contract_no), ns, symtable, false)?;
+    // Check that the values can be cast
+    let _ = expr_return_tys
+        .into_iter()
+        .zip(func_returns_tys)
+        .enumerate()
+        .map(|(i, (expr_return_ty, func_return_ty))| {
+            cast(
+                &expr_returns.loc(),
+                Expression::FunctionArg(expr_returns.loc(), expr_return_ty, i),
+                &func_return_ty,
+                true,
+                ns,
+                diagnostics,
+            )
+        })
+        .collect::<Result<Vec<_>, _>>()?;
 
-        exprs.push(cast(
-            &r.loc(),
-            e,
-            &ns.contracts[contract_no].functions[function_no].returns[i]
-                .ty
-                .clone(),
-            true,
-            ns,
-        )?);
-    }
-
-    Ok(exprs)
+    Ok(expr_returns)
 }
 
 /// The parser generates parameter lists for lists. Sometimes this needs to be a
 /// simple expression list.
 pub fn parameter_list_to_expr_list<'a>(
     e: &'a pt::Expression,
-    ns: &mut Namespace,
+    diagnostics: &mut Vec<Diagnostic>,
 ) -> Result<Vec<&'a pt::Expression>, ()> {
     if let pt::Expression::List(_, v) = &e {
         let mut list = Vec::new();
@@ -1236,14 +1805,13 @@ pub fn parameter_list_to_expr_list<'a>(
         for e in v {
             match &e.1 {
                 None => {
-                    ns.diagnostics
-                        .push(Diagnostic::error(e.0, "stray comma".to_string()));
+                    diagnostics.push(Diagnostic::error(e.0, "stray comma".to_string()));
                     broken = true;
                 }
                 Some(pt::Parameter {
                     name: Some(name), ..
                 }) => {
-                    ns.diagnostics.push(Diagnostic::error(
+                    diagnostics.push(Diagnostic::error(
                         name.loc,
                         "single value expected".to_string(),
                     ));
@@ -1253,7 +1821,7 @@ pub fn parameter_list_to_expr_list<'a>(
                     storage: Some(storage),
                     ..
                 }) => {
-                    ns.diagnostics.push(Diagnostic::error(
+                    diagnostics.push(Diagnostic::error(
                         *storage.loc(),
                         "storage specified not permitted here".to_string(),
                     ));
@@ -1277,25 +1845,28 @@ pub fn parameter_list_to_expr_list<'a>(
 
 /// Parse try catch
 #[allow(clippy::type_complexity)]
+#[allow(clippy::too_many_arguments)]
 fn try_catch(
     loc: &pt::Loc,
     expr: &pt::Expression,
     returns_and_ok: &Option<(Vec<(pt::Loc, Option<pt::Parameter>)>, Box<pt::Statement>)>,
     error_stmt: &Option<Box<(pt::Identifier, pt::Parameter, pt::Statement)>>,
-    catch_stmt: &(pt::Parameter, pt::Statement),
+    catch_stmt: &(Option<pt::Parameter>, pt::Statement),
     file_no: usize,
-    contract_no: usize,
+    contract_no: Option<usize>,
     function_no: usize,
+    unchecked: bool,
     symtable: &mut Symtable,
     loops: &mut LoopScopes,
     ns: &mut Namespace,
+    diagnostics: &mut Vec<Diagnostic>,
 ) -> Result<(Statement, bool), ()> {
     let mut expr = expr;
     let mut ok = None;
 
     while let pt::Expression::FunctionCallBlock(_, e, block) = expr {
         if ok.is_some() {
-            ns.diagnostics.push(Diagnostic::error(
+            diagnostics.push(Diagnostic::error(
                 block.loc(),
                 "unexpected code block".to_string(),
             ));
@@ -1309,10 +1880,39 @@ fn try_catch(
 
     let fcall = match expr {
         pt::Expression::FunctionCall(loc, ty, args) => {
-            function_call_expr(loc, ty, args, file_no, Some(contract_no), ns, symtable)?
+            let res = function_call_expr(
+                loc,
+                ty,
+                args,
+                file_no,
+                contract_no,
+                Some(function_no),
+                ns,
+                symtable,
+                false,
+                unchecked,
+                diagnostics,
+            )?;
+            check_function_call(ns, &res, symtable);
+            res
         }
         pt::Expression::NamedFunctionCall(loc, ty, args) => {
-            named_function_call_expr(loc, ty, args, file_no, Some(contract_no), ns, symtable)?
+            let res = named_function_call_expr(
+                loc,
+                ty,
+                args,
+                file_no,
+                contract_no,
+                Some(function_no),
+                unchecked,
+                ns,
+                symtable,
+                diagnostics,
+            )?;
+
+            check_function_call(ns, &res, symtable);
+
+            res
         }
         pt::Expression::New(loc, call) => {
             let mut call = call.as_ref();
@@ -1333,16 +1933,44 @@ fn try_catch(
 
             match call {
                 pt::Expression::FunctionCall(_, ty, args) => {
-                    new(loc, ty, args, file_no, Some(contract_no), ns, symtable)?
+                    let res = new(
+                        loc,
+                        ty,
+                        args,
+                        file_no,
+                        contract_no,
+                        Some(function_no),
+                        unchecked,
+                        ns,
+                        symtable,
+                        diagnostics,
+                    )?;
+                    check_function_call(ns, &res, symtable);
+
+                    res
                 }
                 pt::Expression::NamedFunctionCall(_, ty, args) => {
-                    constructor_named_args(loc, ty, args, file_no, Some(contract_no), ns, symtable)?
+                    let res = constructor_named_args(
+                        loc,
+                        ty,
+                        args,
+                        file_no,
+                        contract_no,
+                        Some(function_no),
+                        unchecked,
+                        ns,
+                        symtable,
+                        diagnostics,
+                    )?;
+                    check_function_call(ns, &res, symtable);
+
+                    res
                 }
                 _ => unreachable!(),
             }
         }
         _ => {
-            ns.diagnostics.push(Diagnostic::error(
+            diagnostics.push(Diagnostic::error(
                 expr.loc(),
                 "try only supports external calls or constructor calls".to_string(),
             ));
@@ -1354,7 +1982,7 @@ fn try_catch(
 
     if let Some((rets, block)) = returns_and_ok {
         if ok.is_some() {
-            ns.diagnostics.push(Diagnostic::error(
+            diagnostics.push(Diagnostic::error(
                 block.loc(),
                 "unexpected code block".to_string(),
             ));
@@ -1372,7 +2000,7 @@ fn try_catch(
             // position after the expression
             let pos = expr.loc().1;
 
-            ns.diagnostics.push(Diagnostic::error(
+            diagnostics.push(Diagnostic::error(
                 pt::Loc(file_no, pos, pos),
                 "code block missing for no catch".to_string(),
             ));
@@ -1384,31 +2012,34 @@ fn try_catch(
 
     let mut args = match &fcall {
         Expression::ExternalFunctionCall {
-            contract_no,
-            function_no,
+            returns: func_returns,
             ..
         } => {
-            let ftype = &ns.contracts[*contract_no].functions[*function_no];
+            let mut func_returns = func_returns.clone();
 
-            if returns.len() != ftype.returns.len() {
-                ns.diagnostics.push(Diagnostic::error(
+            if func_returns == vec![Type::Void] {
+                func_returns = vec![];
+            }
+
+            if returns.len() != func_returns.len() {
+                diagnostics.push(Diagnostic::error(
                     expr.loc(),
                     format!(
                         "try returns list has {} entries while function returns {} values",
-                        ftype.returns.len(),
-                        returns.len()
+                        returns.len(),
+                        func_returns.len()
                     ),
                 ));
                 return Err(());
             }
 
-            ftype.returns.iter().map(|ret| ret.ty.clone()).collect()
+            func_returns
         }
         Expression::Constructor { contract_no, .. } => match returns.len() {
             0 => Vec::new(),
             1 => vec![Type::Contract(*contract_no)],
             _ => {
-                ns.diagnostics.push(Diagnostic::error(
+                diagnostics.push(Diagnostic::error(
                     expr.loc(),
                     format!(
                         "constructor returns single contract, not {} values",
@@ -1419,7 +2050,7 @@ fn try_catch(
             }
         },
         _ => {
-            ns.diagnostics.push(Diagnostic::error(
+            diagnostics.push(Diagnostic::error(
                 expr.loc(),
                 "try only supports external calls or constructor calls".to_string(),
             ));
@@ -1439,10 +2070,10 @@ fn try_catch(
                 ty, storage, name, ..
             }) => {
                 let (ret_ty, ty_loc) =
-                    resolve_var_decl_ty(&ty, &storage, file_no, contract_no, ns)?;
+                    resolve_var_decl_ty(ty, storage, file_no, contract_no, ns, diagnostics)?;
 
                 if arg_ty != ret_ty {
-                    ns.diagnostics.push(Diagnostic::error(
+                    diagnostics.push(Diagnostic::error(
                         ty.loc(),
                         format!(
                             "type ‘{}’ does not match return value of function ‘{}’",
@@ -1454,8 +2085,15 @@ fn try_catch(
                 }
 
                 if let Some(name) = name {
-                    if let Some(pos) = symtable.add(&name, ret_ty.clone(), ns) {
-                        ns.check_shadowing(file_no, Some(contract_no), &name);
+                    if let Some(pos) = symtable.add(
+                        name,
+                        ret_ty.clone(),
+                        ns,
+                        None,
+                        VariableUsage::TryCatchReturns,
+                        storage.clone(),
+                    ) {
+                        ns.check_shadowing(file_no, contract_no, name);
                         params.push((
                             Some(pos),
                             Parameter {
@@ -1483,7 +2121,7 @@ fn try_catch(
                 }
             }
             None => {
-                ns.diagnostics.push(Diagnostic::error(
+                diagnostics.push(Diagnostic::error(
                     param.0,
                     "missing return type".to_string(),
                 ));
@@ -1499,14 +2137,16 @@ fn try_catch(
     let mut ok_resolved = Vec::new();
 
     let mut finally_reachable = statement(
-        &ok,
+        ok,
         &mut ok_resolved,
         file_no,
         contract_no,
         function_no,
+        unchecked,
         symtable,
         loops,
         ns,
+        diagnostics,
     )?;
 
     symtable.leave_scope();
@@ -1529,6 +2169,7 @@ fn try_catch(
             file_no,
             contract_no,
             ns,
+            diagnostics,
         )?;
 
         if error_ty != Type::String {
@@ -1555,8 +2196,15 @@ fn try_catch(
         };
 
         if let Some(name) = &error_stmt.1.name {
-            if let Some(pos) = symtable.add(&name, Type::String, ns) {
-                ns.check_shadowing(file_no, Some(contract_no), &name);
+            if let Some(pos) = symtable.add(
+                name,
+                Type::String,
+                ns,
+                None,
+                VariableUsage::TryCatchErrorString,
+                error_stmt.1.storage.clone(),
+            ) {
+                ns.check_shadowing(file_no, contract_no, name);
 
                 error_pos = Some(pos);
                 error_param.name = name.name.to_string();
@@ -1570,12 +2218,14 @@ fn try_catch(
             file_no,
             contract_no,
             function_no,
+            unchecked,
             symtable,
             loops,
             ns,
+            diagnostics,
         )?;
 
-        finally_reachable &= reachable;
+        finally_reachable |= reachable;
 
         symtable.leave_scope();
 
@@ -1584,46 +2234,61 @@ fn try_catch(
         None
     };
 
-    let (catch_ty, ty_loc) = resolve_var_decl_ty(
-        &catch_stmt.0.ty,
-        &catch_stmt.0.storage,
-        file_no,
-        contract_no,
-        ns,
-    )?;
-
-    if catch_ty != Type::DynamicBytes {
-        ns.diagnostics.push(Diagnostic::error(
-            catch_stmt.0.ty.loc(),
-            format!(
-                "catch can only take ‘bytes memory’, not ‘{}’",
-                catch_ty.to_string(ns)
-            ),
-        ));
-        return Err(());
-    }
-
-    symtable.new_scope();
-
-    let mut catch_param = Parameter {
-        loc: catch_stmt.0.loc,
-        ty: Type::DynamicBytes,
-        ty_loc,
-        name: "".to_owned(),
-        name_loc: None,
-        indexed: false,
-    };
     let mut catch_param_pos = None;
     let mut catch_stmt_resolved = Vec::new();
 
-    if let Some(name) = &catch_stmt.0.name {
-        if let Some(pos) = symtable.add(&name, catch_ty, ns) {
-            ns.check_shadowing(file_no, Some(contract_no), &name);
-            catch_param_pos = Some(pos);
-            catch_param.name = name.name.to_string();
-            catch_param.name_loc = Some(name.loc);
+    symtable.new_scope();
+
+    let catch_param = if let Some(param) = &catch_stmt.0 {
+        let (catch_ty, ty_loc) = resolve_var_decl_ty(
+            &param.ty,
+            &param.storage,
+            file_no,
+            contract_no,
+            ns,
+            diagnostics,
+        )?;
+
+        if catch_ty != Type::DynamicBytes {
+            diagnostics.push(Diagnostic::error(
+                param.ty.loc(),
+                format!(
+                    "catch can only take ‘bytes memory’, not ‘{}’",
+                    catch_ty.to_string(ns)
+                ),
+            ));
+            return Err(());
         }
-    }
+
+        let mut catch_param = Parameter {
+            loc: param.loc,
+            ty: Type::DynamicBytes,
+            ty_loc,
+            name: "".to_owned(),
+            name_loc: None,
+            indexed: false,
+        };
+
+        if let Some(name) = &param.name {
+            if let Some(pos) = symtable.add(
+                name,
+                catch_ty,
+                ns,
+                None,
+                VariableUsage::TryCatchErrorBytes,
+                param.storage.clone(),
+            ) {
+                ns.check_shadowing(file_no, contract_no, name);
+                catch_param_pos = Some(pos);
+                catch_param.name = name.name.to_string();
+                catch_param.name_loc = Some(name.loc);
+            }
+        }
+
+        Some(catch_param)
+    } else {
+        None
+    };
 
     let reachable = statement(
         &catch_stmt.1,
@@ -1631,12 +2296,14 @@ fn try_catch(
         file_no,
         contract_no,
         function_no,
+        unchecked,
         symtable,
         loops,
         ns,
+        diagnostics,
     )?;
 
-    finally_reachable &= reachable;
+    finally_reachable |= reachable;
 
     symtable.leave_scope();
 

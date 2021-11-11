@@ -172,7 +172,7 @@ pub fn generate_docs(outdir: &str, files: &[ast::Namespace], verbose: bool) {
             for (i, f) in event_decl.fields.iter().enumerate() {
                 field.push(Field {
                     name: &f.name,
-                    ty: f.ty.to_string(&file),
+                    ty: f.ty.to_string(file),
                     indexed: f.indexed,
                     doc: get_tag_no("param", i, &event_decl.tags),
                 });
@@ -180,7 +180,9 @@ pub fn generate_docs(outdir: &str, files: &[ast::Namespace], verbose: bool) {
 
             top.events.push(EventDecl {
                 name: &event_decl.name,
-                contract: event_decl.contract.as_deref(),
+                contract: event_decl
+                    .contract
+                    .map(|contract_no| file.contracts[contract_no].name.as_str()),
                 title: get_tag("title", &event_decl.tags),
                 notice: get_tag("notice", &event_decl.tags),
                 author: get_tag("author", &event_decl.tags),
@@ -202,7 +204,7 @@ pub fn generate_docs(outdir: &str, files: &[ast::Namespace], verbose: bool) {
             for (i, f) in struct_decl.fields.iter().enumerate() {
                 field.push(Field {
                     name: &f.name,
-                    ty: f.ty.to_string(&file),
+                    ty: f.ty.to_string(file),
                     indexed: false,
                     doc: get_tag_no("param", i, &struct_decl.tags),
                 });
@@ -227,9 +229,9 @@ pub fn generate_docs(outdir: &str, files: &[ast::Namespace], verbose: bool) {
             }
 
             let mut field: Vec<&str> = Vec::new();
-            field.resize(enum_decl.values.len(), &"");
+            field.resize(enum_decl.values.len(), "");
             for (value, (_, pos)) in &enum_decl.values {
-                field[*pos] = &value;
+                field[*pos] = value;
             }
 
             top.enums.push(EnumDecl {
@@ -254,7 +256,7 @@ pub fn generate_docs(outdir: &str, files: &[ast::Namespace], verbose: bool) {
             fn map_var<'a>(
                 file: &'a ast::Namespace,
                 base_contract: Option<&'a str>,
-                var: &'a ast::ContractVariable,
+                var: &'a ast::Variable,
             ) -> Variable<'a> {
                 Variable {
                     name: &var.name,
@@ -264,7 +266,7 @@ pub fn generate_docs(outdir: &str, files: &[ast::Namespace], verbose: bool) {
                     notice: get_tag("notice", &var.tags),
                     author: get_tag("author", &var.tags),
                     dev: get_tag("dev", &var.tags),
-                    constant: !var.is_storage(),
+                    constant: var.constant,
                     visibility: format!("{}", var.visibility),
                 }
             }
@@ -279,7 +281,7 @@ pub fn generate_docs(outdir: &str, files: &[ast::Namespace], verbose: bool) {
                 for (i, f) in func.params.iter().enumerate() {
                     params.push(Field {
                         name: &f.name,
-                        ty: f.ty.to_string(&file),
+                        ty: f.ty.to_string(file),
                         indexed: false,
                         doc: get_tag_no("param", i, &func.tags),
                     });
@@ -290,7 +292,7 @@ pub fn generate_docs(outdir: &str, files: &[ast::Namespace], verbose: bool) {
                 for (i, f) in func.returns.iter().enumerate() {
                     returns.push(Field {
                         name: &f.name,
-                        ty: f.ty.to_string(&file),
+                        ty: f.ty.to_string(file),
                         indexed: false,
                         doc: get_tag_no("return", i, &func.tags),
                     });
@@ -299,7 +301,7 @@ pub fn generate_docs(outdir: &str, files: &[ast::Namespace], verbose: bool) {
                 Function {
                     name: &func.name,
                     ty: format!("{}", func.ty),
-                    mutability: func.print_mutability(),
+                    mutability: format!("{}", func.mutability),
                     base_contract,
                     title: get_tag("title", &func.tags),
                     notice: get_tag("notice", &func.tags),
@@ -322,8 +324,15 @@ pub fn generate_docs(outdir: &str, files: &[ast::Namespace], verbose: bool) {
             let functions = contract
                 .functions
                 .iter()
-                .filter(|f| !f.body.is_empty())
-                .map(|f| map_func(file, None, f))
+                .filter_map(|function_no| {
+                    let f = &file.functions[*function_no];
+
+                    if f.has_body {
+                        Some(map_func(file, None, f))
+                    } else {
+                        None
+                    }
+                })
                 .collect();
 
             let bases = visit_bases(contract_no, file);
@@ -346,12 +355,15 @@ pub fn generate_docs(outdir: &str, files: &[ast::Namespace], verbose: bool) {
                     base_variables.push(var);
                 }
 
-                for func in base
-                    .functions
-                    .iter()
-                    .filter(|f| !f.body.is_empty())
-                    .map(|f| map_func(file, Some(&base.name), f))
-                {
+                for func in base.functions.iter().filter_map(|function_no| {
+                    let f = &file.functions[*function_no];
+
+                    if f.has_body {
+                        Some(map_func(file, Some(&base.name), f))
+                    } else {
+                        None
+                    }
+                }) {
                     base_functions.push(func);
                 }
             }

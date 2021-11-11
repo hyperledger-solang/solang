@@ -23,8 +23,10 @@ pub enum CommentType {
 pub enum Token<'input> {
     Identifier(&'input str),
     StringLiteral(&'input str),
+    AddressLiteral(&'input str),
     HexLiteral(&'input str),
     Number(&'input str, &'input str),
+    RationalNumber(&'input str, &'input str, &'input str),
     HexNumber(&'input str),
     DocComment(CommentType, &'input str),
     Divide,
@@ -109,6 +111,7 @@ pub enum Token<'input> {
 
     Equal,
     Assign,
+    ColonAssign,
 
     NotEqual,
     Not,
@@ -168,6 +171,10 @@ pub enum Token<'input> {
     Override,
     Using,
     Modifier,
+    Immutable,
+    Unchecked,
+    Assembly,
+    Let,
 }
 
 impl<'input> fmt::Display for Token<'input> {
@@ -178,8 +185,15 @@ impl<'input> fmt::Display for Token<'input> {
             Token::Identifier(id) => write!(f, "{}", id),
             Token::StringLiteral(s) => write!(f, "\"{}\"", s),
             Token::HexLiteral(hex) => write!(f, "{}", hex),
+            Token::AddressLiteral(address) => write!(f, "{}", address),
             Token::Number(base, exp) if exp.is_empty() => write!(f, "{}", base),
             Token::Number(base, exp) => write!(f, "{}e{}", base, exp),
+            Token::RationalNumber(significand, mantissa, exp) if exp.is_empty() => {
+                write!(f, "{}.{}", significand, mantissa)
+            }
+            Token::RationalNumber(significand, mantissa, exp) => {
+                write!(f, "{}.{}e{}", significand, mantissa, exp)
+            }
             Token::HexNumber(n) => write!(f, "{}", n),
             Token::Uint(w) => write!(f, "uint{}", w),
             Token::Int(w) => write!(f, "int{}", w),
@@ -214,6 +228,7 @@ impl<'input> fmt::Display for Token<'input> {
             Token::Modulo => write!(f, "%"),
             Token::Equal => write!(f, "=="),
             Token::Assign => write!(f, "="),
+            Token::ColonAssign => write!(f, ":="),
             Token::NotEqual => write!(f, "!="),
             Token::Not => write!(f, "!"),
             Token::ShiftLeft => write!(f, "<<"),
@@ -294,6 +309,10 @@ impl<'input> fmt::Display for Token<'input> {
             Token::Override => write!(f, "override"),
             Token::Using => write!(f, "using"),
             Token::Modifier => write!(f, "modifier"),
+            Token::Immutable => write!(f, "immutable"),
+            Token::Unchecked => write!(f, "unchecked"),
+            Token::Assembly => write!(f, "assembly"),
+            Token::Let => write!(f, "let"),
         }
     }
 }
@@ -313,6 +332,8 @@ pub enum LexicalError {
     InvalidCharacterInHexLiteral(usize, char),
     UnrecognisedToken(usize, usize, String),
     MissingExponent(usize, usize),
+    DoublePoints(usize, usize),
+    UnrecognisedDecimal(usize, usize),
     ExpectedFrom(usize, usize, String),
 }
 
@@ -333,6 +354,10 @@ impl fmt::Display for LexicalError {
             LexicalError::UnrecognisedToken(_, _, t) => write!(f, "unrecognised token ‘{}’", t),
             LexicalError::ExpectedFrom(_, _, t) => write!(f, "‘{}’ found where ‘from’ expected", t),
             LexicalError::MissingExponent(_, _) => write!(f, "missing number"),
+            LexicalError::DoublePoints(_, _) => write!(f, "found two dots in number"),
+            LexicalError::UnrecognisedDecimal(_, _) => {
+                write!(f, "expected number after decimal point")
+            }
         }
     }
 }
@@ -348,6 +373,8 @@ impl LexicalError {
             LexicalError::UnrecognisedToken(start, end, _) => Loc(file_no, *start, *end),
             LexicalError::ExpectedFrom(start, end, _) => Loc(file_no, *start, *end),
             LexicalError::MissingExponent(start, end) => Loc(file_no, *start, *end),
+            LexicalError::DoublePoints(start, end) => Loc(file_no, *start, *end),
+            LexicalError::UnrecognisedDecimal(start, end) => Loc(file_no, *start, *end),
         }
     }
 }
@@ -516,6 +543,10 @@ static KEYWORDS: phf::Map<&'static str, Token> = phf_map! {
     "override" => Token::Override,
     "using" => Token::Using,
     "modifier" => Token::Modifier,
+    "immutable" => Token::Immutable,
+    "unchecked" => Token::Unchecked,
+    "assembly" => Token::Assembly,
+    "let" => Token::Let,
 };
 
 impl<'input> Lexer<'input> {
@@ -532,7 +563,8 @@ impl<'input> Lexer<'input> {
         start: usize,
         end: usize,
         ch: char,
-    ) -> Option<Result<(usize, Token<'input>, usize), LexicalError>> {
+    ) -> Result<(usize, Token<'input>, usize), LexicalError> {
+        let mut is_rational = false;
         if ch == '0' {
             if let Some((_, 'x')) = self.chars.peek() {
                 // hex number
@@ -541,10 +573,10 @@ impl<'input> Lexer<'input> {
                 let mut end = match self.chars.next() {
                     Some((end, ch)) if ch.is_ascii_hexdigit() => end,
                     Some((_, _)) => {
-                        return Some(Err(LexicalError::MissingNumber(start, start + 1)));
+                        return Err(LexicalError::MissingNumber(start, start + 1));
                     }
                     None => {
-                        return Some(Err(LexicalError::EndofFileInHex(start, self.input.len())));
+                        return Err(LexicalError::EndofFileInHex(start, self.input.len()));
                     }
                 };
 
@@ -556,12 +588,14 @@ impl<'input> Lexer<'input> {
                     self.chars.next();
                 }
 
-                return Some(Ok((
-                    start,
-                    Token::HexNumber(&self.input[start..=end]),
-                    end + 1,
-                )));
+                return Ok((start, Token::HexNumber(&self.input[start..=end]), end + 1));
             }
+        }
+
+        let mut start = start;
+        if ch == '.' {
+            is_rational = true;
+            start -= 1;
         }
 
         let mut end = end;
@@ -572,16 +606,48 @@ impl<'input> Lexer<'input> {
             end = *i;
             self.chars.next();
         }
+        let mut rational_end = end;
+        let mut end_before_rational = end;
+        let mut rational_start = end;
+        if is_rational {
+            end_before_rational = start - 1;
+            rational_start = start + 1;
+        }
 
-        let base = &self.input[start..=end];
+        if let Some((i, '.')) = self.chars.peek() {
+            if is_rational {
+                return Err(LexicalError::DoublePoints(start, self.input.len()));
+            }
+            rational_start = *i + 1;
+            rational_end = *i + 1;
+            let mut has_number = false;
+            is_rational = true;
+            self.chars.next();
+            while let Some((i, ch)) = self.chars.peek() {
+                if *ch == '.' {
+                    return Err(LexicalError::DoublePoints(start, self.input.len()));
+                }
+                if !ch.is_ascii_digit() {
+                    break;
+                }
+                has_number = true;
+                rational_end = *i;
+                end = *i;
+                self.chars.next();
+            }
+            if !has_number {
+                return Err(LexicalError::UnrecognisedDecimal(start, self.input.len()));
+            }
+        }
 
+        let old_end = end;
         let mut exp_start = end + 1;
 
         if let Some((i, 'e')) = self.chars.peek() {
-            exp_start = i + 1;
+            exp_start = *i + 1;
             self.chars.next();
             while let Some((i, ch)) = self.chars.peek() {
-                if !ch.is_ascii_digit() && *ch != '_' {
+                if !ch.is_ascii_digit() && *ch != '_' && *ch != '-' {
                     break;
                 }
                 end = *i;
@@ -589,20 +655,37 @@ impl<'input> Lexer<'input> {
             }
 
             if exp_start > end {
-                return Some(Err(LexicalError::MissingExponent(start, self.input.len())));
+                return Err(LexicalError::MissingExponent(start, self.input.len()));
             }
         }
 
+        if is_rational {
+            let significand = &self.input[start..=end_before_rational];
+            let mantissa = &self.input[rational_start..=rational_end];
+
+            if mantissa.is_empty() {
+                return Err(LexicalError::UnrecognisedDecimal(start, self.input.len()));
+            }
+            let exp = &self.input[exp_start..=end];
+            return Ok((
+                start,
+                Token::RationalNumber(significand, mantissa, exp),
+                end + 1,
+            ));
+        }
+
+        let base = &self.input[start..=old_end];
         let exp = &self.input[exp_start..=end];
 
-        Some(Ok((start, Token::Number(base, exp), end + 1)))
+        Ok((start, Token::Number(base, exp), end + 1))
     }
 
-    fn lex_string(
+    fn string(
         &mut self,
         token_start: usize,
         string_start: usize,
-    ) -> Option<Result<(usize, Token<'input>, usize), LexicalError>> {
+        quote_char: char,
+    ) -> Result<(usize, Token<'input>, usize), LexicalError> {
         let mut end;
 
         let mut last_was_escape = false;
@@ -611,7 +694,7 @@ impl<'input> Lexer<'input> {
             if let Some((i, ch)) = self.chars.next() {
                 end = i;
                 if !last_was_escape {
-                    if ch == '"' {
+                    if ch == quote_char {
                         break;
                     }
                     last_was_escape = ch == '\\';
@@ -619,18 +702,18 @@ impl<'input> Lexer<'input> {
                     last_was_escape = false;
                 }
             } else {
-                return Some(Err(LexicalError::EndOfFileInString(
+                return Err(LexicalError::EndOfFileInString(
                     token_start,
                     self.input.len(),
-                )));
+                ));
             }
         }
 
-        Some(Ok((
+        Ok((
             token_start,
             Token::StringLiteral(&self.input[string_start..end]),
             end + 1,
-        )))
+        ))
     }
 
     fn next(&mut self) -> Option<Result<(usize, Token<'input>, usize), LexicalError>> {
@@ -655,44 +738,80 @@ impl<'input> Lexer<'input> {
                     let id = &self.input[start..end];
 
                     if id == "unicode" {
-                        if let Some((_, '"')) = self.chars.peek() {
-                            self.chars.next();
+                        match self.chars.peek() {
+                            Some((_, quote_char @ '"')) | Some((_, quote_char @ '\'')) => {
+                                let quote_char = *quote_char;
 
-                            return self.lex_string(start, start + 8);
+                                self.chars.next();
+
+                                return Some(self.string(start, start + 8, quote_char));
+                            }
+                            _ => (),
                         }
                     }
 
                     if id == "hex" {
-                        if let Some((_, '"')) = self.chars.peek() {
-                            self.chars.next();
+                        match self.chars.peek() {
+                            Some((_, quote_char @ '"')) | Some((_, quote_char @ '\'')) => {
+                                let quote_char = *quote_char;
 
-                            while let Some((i, ch)) = self.chars.next() {
-                                if ch == '"' {
-                                    return Some(Ok((
-                                        start,
-                                        Token::HexLiteral(&self.input[start..=i]),
-                                        i + 1,
-                                    )));
-                                }
+                                self.chars.next();
 
-                                if !ch.is_ascii_hexdigit() && ch != '_' {
-                                    // Eat up the remainer of the string
-                                    while let Some((_, ch)) = self.chars.next() {
-                                        if ch == '"' {
-                                            break;
-                                        }
+                                for (i, ch) in &mut self.chars {
+                                    if ch == quote_char {
+                                        return Some(Ok((
+                                            start,
+                                            Token::HexLiteral(&self.input[start..=i]),
+                                            i + 1,
+                                        )));
                                     }
 
-                                    return Some(Err(LexicalError::InvalidCharacterInHexLiteral(
-                                        i, ch,
-                                    )));
-                                }
-                            }
+                                    if !ch.is_ascii_hexdigit() && ch != '_' {
+                                        // Eat up the remainer of the string
+                                        for (_, ch) in &mut self.chars {
+                                            if ch == quote_char {
+                                                break;
+                                            }
+                                        }
 
-                            return Some(Err(LexicalError::EndOfFileInString(
-                                start,
-                                self.input.len(),
-                            )));
+                                        return Some(Err(
+                                            LexicalError::InvalidCharacterInHexLiteral(i, ch),
+                                        ));
+                                    }
+                                }
+
+                                return Some(Err(LexicalError::EndOfFileInString(
+                                    start,
+                                    self.input.len(),
+                                )));
+                            }
+                            _ => (),
+                        }
+                    }
+
+                    if id == "address" {
+                        match self.chars.peek() {
+                            Some((_, quote_char @ '"')) | Some((_, quote_char @ '\'')) => {
+                                let quote_char = *quote_char;
+
+                                self.chars.next();
+
+                                for (i, ch) in &mut self.chars {
+                                    if ch == quote_char {
+                                        return Some(Ok((
+                                            start,
+                                            Token::AddressLiteral(&self.input[start..=i]),
+                                            i + 1,
+                                        )));
+                                    }
+                                }
+
+                                return Some(Err(LexicalError::EndOfFileInString(
+                                    start,
+                                    self.input.len(),
+                                )));
+                            }
+                            _ => (),
                         }
                     }
 
@@ -702,8 +821,8 @@ impl<'input> Lexer<'input> {
                         Some(Ok((start, Token::Identifier(id), end)))
                     };
                 }
-                Some((start, '"')) => {
-                    return self.lex_string(start, start + 1);
+                Some((start, quote_char @ '"')) | Some((start, quote_char @ '\'')) => {
+                    return Some(self.string(start, start + 1, quote_char));
                 }
                 Some((start, '/')) => {
                     match self.chars.peek() {
@@ -715,18 +834,30 @@ impl<'input> Lexer<'input> {
                             // line comment
                             self.chars.next();
 
-                            let doc_comment_start = match self.chars.peek() {
-                                Some((i, '/')) => Some(i + 1),
+                            let mut newline = false;
+
+                            let doc_comment_start = match self.chars.next() {
+                                Some((i, '/')) => match self.chars.peek() {
+                                    // ///(/)+ is still a line comment
+                                    Some((_, '/')) => None,
+                                    _ => Some(i + 1),
+                                },
+                                Some((_, ch)) if ch == '\n' || ch == '\r' => {
+                                    newline = true;
+                                    None
+                                }
                                 _ => None,
                             };
 
                             let mut last = start + 3;
 
-                            while let Some((i, ch)) = self.chars.next() {
-                                if ch == '\n' || ch == '\r' {
-                                    break;
+                            if !newline {
+                                for (i, ch) in &mut self.chars {
+                                    if ch == '\n' || ch == '\r' {
+                                        break;
+                                    }
+                                    last = i;
                                 }
-                                last = i;
                             }
 
                             if let Some(doc_start) = doc_comment_start {
@@ -746,8 +877,11 @@ impl<'input> Lexer<'input> {
                             // multiline comment
                             self.chars.next();
 
-                            let doc_comment_start = match self.chars.peek() {
-                                Some((i, '*')) => Some(i + 1),
+                            let doc_comment_start = match self.chars.next() {
+                                Some((i, '*')) => match self.chars.peek() {
+                                    Some((_, '*')) => None,
+                                    _ => Some(i + 1),
+                                },
                                 _ => None,
                             };
 
@@ -788,7 +922,7 @@ impl<'input> Lexer<'input> {
                     }
                 }
                 Some((start, ch)) if ch.is_ascii_digit() => {
-                    return self.parse_number(start, start, ch)
+                    return Some(self.parse_number(start, start, ch))
                 }
                 Some((i, ';')) => return Some(Ok((i, Token::Semicolon, i + 1))),
                 Some((i, ',')) => return Some(Ok((i, Token::Comma, i + 1))),
@@ -937,10 +1071,25 @@ impl<'input> Lexer<'input> {
                         _ => Some(Ok((i, Token::More, i + 1))),
                     };
                 }
-                Some((i, '.')) => return Some(Ok((i, Token::Member, i + 1))),
+                Some((i, '.')) => {
+                    if let Some((_, a)) = self.chars.peek() {
+                        if a.is_ascii_digit() {
+                            return Some(self.parse_number(i + 1, i + 1, '.'));
+                        }
+                    }
+                    return Some(Ok((i, Token::Member, i + 1)));
+                }
                 Some((i, '[')) => return Some(Ok((i, Token::OpenBracket, i + 1))),
                 Some((i, ']')) => return Some(Ok((i, Token::CloseBracket, i + 1))),
-                Some((i, ':')) => return Some(Ok((i, Token::Colon, i + 1))),
+                Some((i, ':')) => {
+                    return match self.chars.peek() {
+                        Some((_, '=')) => {
+                            self.chars.next();
+                            Some(Ok((i, Token::ColonAssign, i + 2)))
+                        }
+                        _ => Some(Ok((i, Token::Colon, i + 1))),
+                    };
+                }
                 Some((i, '?')) => return Some(Ok((i, Token::Question, i + 1))),
                 Some((_, ch)) if ch.is_whitespace() => (),
                 Some((start, _)) => {
@@ -1068,6 +1217,42 @@ fn lexertest() {
             Ok((11, Token::HexNumber("0x00fead0_12"), 23)),
             Ok((24, Token::Number("00090", ""), 29)),
             Ok((30, Token::Number("0_0", ""), 33))
+        )
+    );
+
+    let tokens = Lexer::new("// foo bar\n0x00fead0_12 9.0008 0_0")
+        .collect::<Vec<Result<(usize, Token, usize), LexicalError>>>();
+
+    assert_eq!(
+        tokens,
+        vec!(
+            Ok((11, Token::HexNumber("0x00fead0_12"), 23)),
+            Ok((24, Token::RationalNumber("9", "0008", ""), 30)),
+            Ok((31, Token::Number("0_0", ""), 34))
+        )
+    );
+
+    let tokens = Lexer::new("// foo bar\n0x00fead0_12 .0008 0.9e2")
+        .collect::<Vec<Result<(usize, Token, usize), LexicalError>>>();
+
+    assert_eq!(
+        tokens,
+        vec!(
+            Ok((11, Token::HexNumber("0x00fead0_12"), 23)),
+            Ok((24, Token::RationalNumber("", "0008", ""), 29)),
+            Ok((30, Token::RationalNumber("0", "9", "2"), 35))
+        )
+    );
+
+    let tokens = Lexer::new("// foo bar\n0x00fead0_12 .0008 0.9e-2")
+        .collect::<Vec<Result<(usize, Token, usize), LexicalError>>>();
+
+    assert_eq!(
+        tokens,
+        vec!(
+            Ok((11, Token::HexNumber("0x00fead0_12"), 23)),
+            Ok((24, Token::RationalNumber("", "0008", ""), 29)),
+            Ok((30, Token::RationalNumber("0", "9", "-2"), 36))
         )
     );
 
@@ -1238,6 +1423,15 @@ fn lexertest() {
             18
         )))
     );
+
+    let tokens = Lexer::new("/************/").next();
+    assert_eq!(tokens, None);
+
+    let tokens = Lexer::new("/**").next();
+    assert_eq!(tokens, Some(Err(LexicalError::EndOfFileInComment(0, 3))));
+
+    let tokens = Lexer::new("//////////////").next();
+    assert_eq!(tokens, None);
 
     // some unicode tests
     let tokens = Lexer::new(">=\u{a0} . très\u{2028}αβγδεζηθικλμνξοπρστυφχψω\u{85}カラス")

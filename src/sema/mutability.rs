@@ -1,17 +1,19 @@
 use super::ast::{
-    Builtin, DestructureField, Diagnostic, Expression, Function, Namespace, Statement,
+    Builtin, DestructureField, Diagnostic, Expression, Function, Mutability, Namespace, Statement,
+    Type,
 };
-use parser::pt;
+use super::diagnostics;
+use crate::parser::pt;
 
 /// check state mutablity
 pub fn mutablity(file_no: usize, ns: &mut Namespace) {
-    for contract_no in 0..ns.contracts.len() {
-        if ns.contracts[contract_no].loc.0 != file_no {
-            continue;
-        }
+    if !diagnostics::any_errors(&ns.diagnostics) {
+        for func in &ns.functions {
+            if func.loc.0 != file_no {
+                continue;
+            }
 
-        for function_no in 0..ns.contracts[contract_no].functions.len() {
-            let diagnostics = check_mutability(contract_no, function_no, ns);
+            let diagnostics = check_mutability(func, ns);
 
             ns.diagnostics.extend(diagnostics);
         }
@@ -36,7 +38,7 @@ impl<'a> StateCheck<'a> {
                 *loc,
                 format!(
                     "function declared ‘{}’ but this expression writes to state",
-                    self.func.print_mutability()
+                    self.func.mutability
                 ),
             ));
         }
@@ -50,7 +52,7 @@ impl<'a> StateCheck<'a> {
                 *loc,
                 format!(
                     "function declared ‘{}’ but this expression reads from state",
-                    self.func.print_mutability()
+                    self.func.mutability
                 ),
             ));
         }
@@ -59,9 +61,7 @@ impl<'a> StateCheck<'a> {
     }
 }
 
-fn check_mutability(contract_no: usize, function_no: usize, ns: &Namespace) -> Vec<Diagnostic> {
-    let func = &ns.contracts[contract_no].functions[function_no];
-
+fn check_mutability(func: &Function, ns: &Namespace) -> Vec<Diagnostic> {
     if func.is_virtual {
         return Vec::new();
     }
@@ -77,66 +77,76 @@ fn check_mutability(contract_no: usize, function_no: usize, ns: &Namespace) -> V
     };
 
     match func.mutability {
-        Some(pt::StateMutability::Pure(_)) => (),
-        Some(pt::StateMutability::Constant(_)) | Some(pt::StateMutability::View(_)) => {
+        Mutability::Pure(_) => (),
+        Mutability::View(_) => {
             state.can_read_state = true;
         }
-        Some(pt::StateMutability::Payable(_)) | None => {
+        Mutability::Payable(_) | Mutability::Nonpayable(_) => {
             state.can_read_state = true;
             state.can_write_state = true;
         }
     };
 
     for arg in &func.modifiers {
-        if let Expression::InternalFunctionCall {
-            contract_no,
-            function_no,
-            signature,
-            args,
-            ..
-        } = &arg
-        {
+        if let Expression::InternalFunctionCall { function, args, .. } = &arg {
             // check the arguments to the modifiers
             for arg in args {
                 arg.recurse(&mut state, read_expression);
             }
 
+            let contract_no = func
+                .contract_no
+                .expect("only functions in contracts have modifiers");
+
             // check the modifier itself
-            let (base_contract_no, function_no) = if let Some(signature) = signature {
-                state.ns.contracts[*contract_no].virtual_functions[signature]
-            } else {
-                (*contract_no, *function_no)
-            };
+            if let Expression::InternalFunction {
+                function_no,
+                signature,
+                ..
+            } = function.as_ref()
+            {
+                let function_no = if let Some(signature) = signature {
+                    state.ns.contracts[contract_no].virtual_functions[signature]
+                } else {
+                    *function_no
+                };
 
-            // modifiers do not have mutability, bases or modifiers itself
-            let func = &ns.contracts[base_contract_no].functions[function_no];
+                // modifiers do not have mutability, bases or modifiers itself
+                let func = &ns.functions[function_no];
 
-            recurse_statements(&func.body, &mut state);
+                recurse_statements(&func.body, &mut state);
+            }
         }
     }
 
     recurse_statements(&func.body, &mut state);
 
-    if pt::FunctionTy::Function == func.ty {
+    if pt::FunctionTy::Function == func.ty && !func.is_accessor {
         if !state.does_write_state && !state.does_read_state {
             match func.mutability {
-                Some(pt::StateMutability::Payable(_)) | Some(pt::StateMutability::Pure(_)) => (),
+                Mutability::Payable(_) | Mutability::Pure(_) => (),
+                Mutability::Nonpayable(_) => {
+                    state.diagnostics.push(Diagnostic::warning(
+                        func.loc,
+                        "function can be declared ‘pure’".to_string(),
+                    ));
+                }
                 _ => {
                     state.diagnostics.push(Diagnostic::warning(
                         func.loc,
                         format!(
                             "function declared ‘{}’ can be declared ‘pure’",
-                            func.print_mutability()
+                            func.mutability
                         ),
                     ));
                 }
             }
         }
 
-        if !state.does_write_state && state.does_read_state && func.mutability.is_none() {
+        if !state.does_write_state && state.does_read_state && func.mutability.is_default() {
             state.diagnostics.push(Diagnostic::warning(
                 func.loc,
-                "function declared can be declared ‘view’".to_string(),
+                "function can be declared ‘view’".to_string(),
             ));
         }
     }
@@ -147,9 +157,13 @@ fn check_mutability(contract_no: usize, function_no: usize, ns: &Namespace) -> V
 fn recurse_statements(stmts: &[Statement], state: &mut StateCheck) {
     for stmt in stmts.iter() {
         match stmt {
+            Statement::Block { statements, .. } => {
+                recurse_statements(statements, state);
+            }
             Statement::VariableDecl(_, _, _, Some(expr)) => {
                 expr.recurse(state, read_expression);
             }
+            Statement::VariableDecl(_, _, _, None) => (),
             Statement::If(_, _, expr, then_, else_) => {
                 expr.recurse(state, read_expression);
                 recurse_statements(then_, state);
@@ -187,10 +201,9 @@ fn recurse_statements(stmts: &[Statement], state: &mut StateCheck) {
                     }
                 }
             }
-            Statement::Return(_, exprs) => {
-                for e in exprs {
-                    e.recurse(state, read_expression);
-                }
+            Statement::Return(_, None) => {}
+            Statement::Return(_, Some(expr)) => {
+                expr.recurse(state, read_expression);
             }
             Statement::TryCatch {
                 expr,
@@ -206,34 +219,31 @@ fn recurse_statements(stmts: &[Statement], state: &mut StateCheck) {
                 }
                 recurse_statements(catch_stmt, state);
             }
-            _ => (),
+            Statement::Emit { loc, .. } => state.write(loc),
+            Statement::Break(_) | Statement::Continue(_) | Statement::Underscore(_) => (),
         }
     }
 }
 
 fn read_expression(expr: &Expression, state: &mut StateCheck) -> bool {
     match expr {
-        Expression::PreIncrement(_, _, expr)
-        | Expression::PreDecrement(_, _, expr)
-        | Expression::PostIncrement(_, _, expr)
-        | Expression::PostDecrement(_, _, expr) => {
+        Expression::PreIncrement(_, _, _, expr)
+        | Expression::PreDecrement(_, _, _, expr)
+        | Expression::PostIncrement(_, _, _, expr)
+        | Expression::PostDecrement(_, _, _, expr) => {
             expr.recurse(state, write_expression);
         }
         Expression::Assign(_, _, left, right) => {
             right.recurse(state, read_expression);
             left.recurse(state, write_expression);
         }
-        Expression::StorageBytesLength(loc, _)
+        Expression::StorageArrayLength { loc, .. }
         | Expression::StorageBytesSubscript(loc, _, _)
         | Expression::StorageVariable(loc, _, _, _)
         | Expression::StorageLoad(loc, _, _) => state.read(loc),
         Expression::Variable(loc, ty, _) if ty.is_contract_storage() => state.read(loc),
-        Expression::StorageBytesPush(loc, _, _) | Expression::StorageBytesPop(loc, _) => {
-            state.write(loc);
-        }
-        Expression::Balance(loc, _, _) | Expression::GetAddress(loc, _) => state.read(loc),
-
-        Expression::Builtin(loc, _, Builtin::BlockNumber, _)
+        Expression::Builtin(loc, _, Builtin::GetAddress, _)
+        | Expression::Builtin(loc, _, Builtin::BlockNumber, _)
         | Expression::Builtin(loc, _, Builtin::Timestamp, _)
         | Expression::Builtin(loc, _, Builtin::BlockCoinbase, _)
         | Expression::Builtin(loc, _, Builtin::BlockDifficulty, _)
@@ -245,52 +255,29 @@ fn read_expression(expr: &Expression, state: &mut StateCheck) -> bool {
         | Expression::Builtin(loc, _, Builtin::GasLimit, _)
         | Expression::Builtin(loc, _, Builtin::TombstoneDeposit, _)
         | Expression::Builtin(loc, _, Builtin::MinimumBalance, _)
+        | Expression::Builtin(loc, _, Builtin::Balance, _)
         | Expression::Builtin(loc, _, Builtin::Random, _) => state.read(loc),
         Expression::Builtin(loc, _, Builtin::PayableSend, _)
         | Expression::Builtin(loc, _, Builtin::PayableTransfer, _)
         | Expression::Builtin(loc, _, Builtin::ArrayPush, _)
         | Expression::Builtin(loc, _, Builtin::ArrayPop, _)
-        | Expression::Builtin(loc, _, Builtin::BytesPush, _)
-        | Expression::Builtin(loc, _, Builtin::BytesPop, _)
         | Expression::Builtin(loc, _, Builtin::SelfDestruct, _) => state.write(loc),
         Expression::Constructor { loc, .. } => {
             state.write(loc);
         }
-        Expression::InternalFunctionCall {
-            loc,
-            contract_no,
-            function_no,
-            signature,
-            ..
-        } => {
-            let (base_contract_no, function_no) = if let Some(signature) = signature {
-                state.ns.contracts[*contract_no].virtual_functions[signature]
-            } else {
-                (*contract_no, *function_no)
-            };
-
-            match &state.ns.contracts[base_contract_no].functions[function_no].mutability {
-                None | Some(pt::StateMutability::Payable(_)) => state.write(loc),
-                Some(pt::StateMutability::View(_)) | Some(pt::StateMutability::Constant(_)) => {
-                    state.read(loc)
-                }
-                Some(pt::StateMutability::Pure(_)) => (),
-            };
-        }
-        Expression::ExternalFunctionCall {
-            loc,
-            contract_no,
-            function_no,
-            ..
-        } => {
-            match &state.ns.contracts[*contract_no].functions[*function_no].mutability {
-                None | Some(pt::StateMutability::Payable(_)) => state.write(loc),
-                Some(pt::StateMutability::View(_)) | Some(pt::StateMutability::Constant(_)) => {
-                    state.read(loc)
-                }
-                Some(pt::StateMutability::Pure(_)) => (),
-            };
-        }
+        Expression::ExternalFunctionCall { loc, function, .. }
+        | Expression::InternalFunctionCall { loc, function, .. } => match function.ty() {
+            Type::ExternalFunction { mutability, .. }
+            | Type::InternalFunction { mutability, .. } => {
+                match mutability {
+                    Mutability::Nonpayable(_) | Mutability::Payable(_) => state.write(loc),
+                    Mutability::View(_) => state.read(loc),
+                    Mutability::Pure(_) => (),
+                };
+            }
+            _ => unreachable!(),
+        },
+        Expression::ExternalFunctionCallRaw { loc, .. } => state.write(loc),
         _ => {
             return true;
         }
@@ -299,17 +286,25 @@ fn read_expression(expr: &Expression, state: &mut StateCheck) -> bool {
 }
 
 fn write_expression(expr: &Expression, state: &mut StateCheck) -> bool {
-    if let Expression::StorageVariable(loc, _, _, _) = expr {
-        state.write(loc);
-        false
-    } else if let Expression::Variable(loc, ty, _) = expr {
-        if ty.is_contract_storage() {
-            state.write(loc);
-            false
-        } else {
-            true
+    match expr {
+        Expression::StructMember(loc, _, expr, _) | Expression::Subscript(loc, _, expr, _) => {
+            if expr.ty().is_contract_storage() {
+                state.write(loc);
+                return false;
+            }
         }
-    } else {
-        true
+        Expression::Variable(loc, ty, _) => {
+            if ty.is_contract_storage() && !expr.ty().is_contract_storage() {
+                state.write(loc);
+                return false;
+            }
+        }
+        Expression::StorageVariable(loc, _, _, _) => {
+            state.write(loc);
+            return false;
+        }
+        _ => (),
     }
+
+    true
 }

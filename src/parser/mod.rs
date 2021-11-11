@@ -3,11 +3,12 @@ pub mod lexer;
 pub mod pt;
 
 #[allow(clippy::all)]
-#[cfg_attr(rustfmt, rustfmt_skip)]
-pub mod solidity;
+pub mod solidity {
+    include!(concat!(env!("OUT_DIR"), "/parser/solidity.rs"));
+}
 
+use crate::sema::ast::Diagnostic;
 use lalrpop_util::ParseError;
-use sema::ast::Diagnostic;
 
 pub fn parse(src: &str, file_no: usize) -> Result<pt::SourceUnit, Vec<Diagnostic>> {
     // parse phase
@@ -15,10 +16,8 @@ pub fn parse(src: &str, file_no: usize) -> Result<pt::SourceUnit, Vec<Diagnostic
 
     let s = solidity::SourceUnitParser::new().parse(src, file_no, lex);
 
-    let mut errors = Vec::new();
-
     if let Err(e) = s {
-        errors.push(match e {
+        let errors = vec![match e {
             ParseError::InvalidToken { location } => Diagnostic::parser_error(
                 pt::Loc(file_no, location, location),
                 "invalid token".to_string(),
@@ -45,7 +44,7 @@ pub fn parse(src: &str, file_no: usize) -> Result<pt::SourceUnit, Vec<Diagnostic
                 pt::Loc(file_no, location, location),
                 format!("unexpected end of file, expecting {}", expected.join(", ")),
             ),
-        });
+        }];
 
         Err(errors)
     } else {
@@ -54,17 +53,14 @@ pub fn parse(src: &str, file_no: usize) -> Result<pt::SourceUnit, Vec<Diagnostic
 }
 
 pub fn box_option<T>(o: Option<T>) -> Option<Box<T>> {
-    match o {
-        None => None,
-        Some(x) => Some(Box::new(x)),
-    }
+    o.map(Box::new)
 }
 
 #[cfg(test)]
 mod test {
-    use parser::lexer;
-    use parser::pt::*;
-    use parser::solidity;
+    use super::lexer;
+    use super::pt::*;
+    use super::solidity;
 
     #[test]
     fn parse_test() {
@@ -79,16 +75,16 @@ mod test {
                     int64 $thing_102;
                 }";
 
-        let lex = lexer::Lexer::new(&src);
+        let lex = lexer::Lexer::new(src);
 
         let e = solidity::SourceUnitParser::new()
-            .parse(&src, 0, lex)
+            .parse(src, 0, lex)
             .unwrap();
 
         let a = SourceUnit(vec![SourceUnitPart::ContractDefinition(Box::new(
             ContractDefinition {
                 doc: vec![],
-                loc: Loc(0, 0, 325),
+                loc: Loc(0, 0, 13),
                 ty: ContractTy::Contract(Loc(0, 0, 8)),
                 name: Identifier {
                     loc: Loc(0, 9, 12),
@@ -142,32 +138,28 @@ mod test {
                             },
                         ],
                     })),
-                    ContractPart::ContractVariableDefinition(Box::new(
-                        ContractVariableDefinition {
-                            doc: vec![],
-                            ty: Expression::Type(Loc(0, 253, 259), Type::String),
-                            attrs: vec![],
-                            name: Identifier {
-                                loc: Loc(0, 260, 268),
-                                name: "__abba_$".to_string(),
-                            },
-                            loc: Loc(0, 253, 268),
-                            initializer: None,
+                    ContractPart::VariableDefinition(Box::new(VariableDefinition {
+                        doc: vec![],
+                        ty: Expression::Type(Loc(0, 253, 259), Type::String),
+                        attrs: vec![],
+                        name: Identifier {
+                            loc: Loc(0, 260, 268),
+                            name: "__abba_$".to_string(),
                         },
-                    )),
-                    ContractPart::ContractVariableDefinition(Box::new(
-                        ContractVariableDefinition {
-                            doc: vec![],
-                            ty: Expression::Type(Loc(0, 290, 295), Type::Int(64)),
-                            attrs: vec![],
-                            name: Identifier {
-                                loc: Loc(0, 296, 306),
-                                name: "$thing_102".to_string(),
-                            },
-                            loc: Loc(0, 290, 306),
-                            initializer: None,
+                        loc: Loc(0, 253, 268),
+                        initializer: None,
+                    })),
+                    ContractPart::VariableDefinition(Box::new(VariableDefinition {
+                        doc: vec![],
+                        ty: Expression::Type(Loc(0, 290, 295), Type::Int(64)),
+                        attrs: vec![],
+                        name: Identifier {
+                            loc: Loc(0, 296, 306),
+                            name: "$thing_102".to_string(),
                         },
-                    )),
+                        loc: Loc(0, 290, 306),
+                        initializer: None,
+                    })),
                 ],
             },
         ))]);

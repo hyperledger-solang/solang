@@ -4,7 +4,7 @@
 #include "stdlib.h"
 
 // 32 bit integer as as scale compact integer
-// https://substrate.dev/docs/en/conceptual/core/codec#vectors-lists-series-sets
+// https://substrate.dev/docs/en/knowledgebase/advanced/codec#compactgeneral-integers
 uint8_t *compact_encode_u32(uint8_t *dest, uint32_t val)
 {
     if (val < 64)
@@ -55,11 +55,9 @@ uint8_t *compact_decode_u32(uint8_t *dest, uint32_t *val)
     return dest;
 }
 
-uint8_t *scale_encode_string(uint8_t *dest, struct vector *s)
+uint8_t *scale_encode_string(uint8_t *dest, uint8_t *data, uint32_t len)
 {
-    uint32_t len = s->len;
     uint8_t *data_dst = compact_encode_u32(dest, len);
-    uint8_t *data = s->data;
 
     while (len--)
     {

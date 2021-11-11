@@ -1,8 +1,20 @@
 use num_bigint::BigInt;
+use num_rational::BigRational;
 use std::fmt;
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
+/// file no, start offset, end offset (in bytes)
 pub struct Loc(pub usize, pub usize, pub usize);
+
+impl Loc {
+    pub fn begin(&self) -> Self {
+        Loc(self.0, self.1, self.1)
+    }
+
+    pub fn end(&self) -> Self {
+        Loc(self.0, self.2, self.2)
+    }
+}
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Identifier {
@@ -28,6 +40,9 @@ pub enum SourceUnitPart {
     EnumDefinition(Box<EnumDefinition>),
     StructDefinition(Box<StructDefinition>),
     EventDefinition(Box<EventDefinition>),
+    FunctionDefinition(Box<FunctionDefinition>),
+    VariableDefinition(Box<VariableDefinition>),
+    StraySemicolon(Loc),
 }
 
 #[derive(Debug, PartialEq)]
@@ -47,25 +62,15 @@ pub enum Type {
     Int(u16),
     Uint(u16),
     Bytes(u8),
+    Rational,
     DynamicBytes,
     Mapping(Loc, Box<Expression>, Box<Expression>),
-}
-
-impl fmt::Display for Type {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Type::Address => write!(f, "address"),
-            Type::Payable => write!(f, "payable"),
-            Type::AddressPayable => write!(f, "address payable"),
-            Type::Bool => write!(f, "bool"),
-            Type::String => write!(f, "string"),
-            Type::Int(n) => write!(f, "int{}", n),
-            Type::Uint(n) => write!(f, "uint{}", n),
-            Type::Bytes(n) => write!(f, "bytes{}", n),
-            Type::DynamicBytes => write!(f, "bytes"),
-            Type::Mapping(_, _, _) => write!(f, "mapping(key => value)"),
-        }
-    }
+    Function {
+        params: Vec<(Loc, Option<Parameter>)>,
+        attributes: Vec<FunctionAttribute>,
+        returns: Vec<(Loc, Option<Parameter>)>,
+        trailing_attributes: Vec<FunctionAttribute>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -117,8 +122,9 @@ pub enum ContractPart {
     StructDefinition(Box<StructDefinition>),
     EventDefinition(Box<EventDefinition>),
     EnumDefinition(Box<EnumDefinition>),
-    ContractVariableDefinition(Box<ContractVariableDefinition>),
+    VariableDefinition(Box<VariableDefinition>),
     FunctionDefinition(Box<FunctionDefinition>),
+    StraySemicolon(Loc),
     Using(Box<Using>),
 }
 
@@ -148,7 +154,7 @@ impl fmt::Display for ContractTy {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Base {
     pub loc: Loc,
     pub name: Identifier,
@@ -190,14 +196,16 @@ pub struct EnumDefinition {
     pub values: Vec<Identifier>,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum VariableAttribute {
     Visibility(Visibility),
     Constant(Loc),
+    Immutable(Loc),
+    Override(Loc),
 }
 
 #[derive(Debug, PartialEq)]
-pub struct ContractVariableDefinition {
+pub struct VariableDefinition {
     pub doc: Vec<DocComment>,
     pub loc: Loc,
     pub ty: Expression,
@@ -288,10 +296,12 @@ pub enum Expression {
     AssignModulo(Loc, Box<Expression>, Box<Expression>),
     BoolLiteral(Loc, bool),
     NumberLiteral(Loc, BigInt),
+    RationalNumberLiteral(Loc, BigRational),
     HexNumberLiteral(Loc, String),
     StringLiteral(Vec<StringLiteral>),
     Type(Loc, Type),
     HexLiteral(Vec<HexLiteral>),
+    AddressLiteral(Loc, String),
     Variable(Identifier),
     List(Loc, Vec<(Loc, Option<Parameter>)>),
     ArrayLiteral(Loc, Vec<Expression>),
@@ -350,13 +360,15 @@ impl Expression {
             | Expression::AssignModulo(loc, _, _)
             | Expression::BoolLiteral(loc, _)
             | Expression::NumberLiteral(loc, _)
+            | Expression::RationalNumberLiteral(loc, _)
             | Expression::HexNumberLiteral(loc, _)
             | Expression::ArrayLiteral(loc, _)
             | Expression::List(loc, _)
             | Expression::Type(loc, _)
             | Expression::Unit(loc, _, _)
             | Expression::This(loc)
-            | Expression::Variable(Identifier { loc, .. }) => *loc,
+            | Expression::Variable(Identifier { loc, .. })
+            | Expression::AddressLiteral(loc, _) => *loc,
             Expression::StringLiteral(v) => v[0].loc,
             Expression::HexLiteral(v) => v[0].loc,
         }
@@ -372,30 +384,30 @@ pub struct Parameter {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub enum StateMutability {
+pub enum Mutability {
     Pure(Loc),
     View(Loc),
     Constant(Loc),
     Payable(Loc),
 }
 
-impl fmt::Display for StateMutability {
+impl fmt::Display for Mutability {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            StateMutability::Pure(_) => write!(f, "pure"),
-            StateMutability::Constant(_) | StateMutability::View(_) => write!(f, "view"),
-            StateMutability::Payable(_) => write!(f, "payable"),
+            Mutability::Pure(_) => write!(f, "pure"),
+            Mutability::Constant(_) | Mutability::View(_) => write!(f, "view"),
+            Mutability::Payable(_) => write!(f, "payable"),
         }
     }
 }
 
-impl StateMutability {
+impl Mutability {
     pub fn loc(&self) -> Loc {
         match self {
-            StateMutability::Pure(loc)
-            | StateMutability::Constant(loc)
-            | StateMutability::View(loc)
-            | StateMutability::Payable(loc) => *loc,
+            Mutability::Pure(loc)
+            | Mutability::Constant(loc)
+            | Mutability::View(loc)
+            | Mutability::Payable(loc) => *loc,
         }
     }
 }
@@ -430,9 +442,9 @@ impl Visibility {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum FunctionAttribute {
-    StateMutability(StateMutability),
+    Mutability(Mutability),
     Visibility(Visibility),
     Virtual(Loc),
     Override(Loc, Vec<Identifier>),
@@ -469,6 +481,7 @@ pub struct FunctionDefinition {
     pub name_loc: Loc,
     pub params: Vec<(Loc, Option<Parameter>)>,
     pub attributes: Vec<FunctionAttribute>,
+    pub return_not_returns: Option<Loc>,
     pub returns: Vec<(Loc, Option<Parameter>)>,
     pub body: Option<Statement>,
 }
@@ -476,7 +489,15 @@ pub struct FunctionDefinition {
 #[derive(Debug, PartialEq, Clone)]
 #[allow(clippy::large_enum_variant, clippy::type_complexity)]
 pub enum Statement {
-    Block(Loc, Vec<Statement>),
+    Block {
+        loc: Loc,
+        unchecked: bool,
+        statements: Vec<Statement>,
+    },
+    Assembly {
+        loc: Loc,
+        assembly: Vec<AssemblyStatement>,
+    },
     Args(Loc, Vec<NamedArgument>),
     If(Loc, Expression, Box<Statement>, Option<Box<Statement>>),
     While(Loc, Expression, Box<Statement>),
@@ -499,14 +520,36 @@ pub enum Statement {
         Expression,
         Option<(Vec<(Loc, Option<Parameter>)>, Box<Statement>)>,
         Option<Box<(Identifier, Parameter, Statement)>>,
-        Box<(Parameter, Statement)>,
+        Box<(Option<Parameter>, Statement)>,
     ),
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum AssemblyStatement {
+    Assign(Loc, AssemblyExpression, AssemblyExpression),
+    LetAssign(Loc, AssemblyExpression, AssemblyExpression),
+    Expression(AssemblyExpression),
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum AssemblyExpression {
+    BoolLiteral(Loc, bool),
+    NumberLiteral(Loc, BigInt),
+    HexNumberLiteral(Loc, String),
+    StringLiteral(StringLiteral),
+    Variable(Identifier),
+    Assign(Loc, Box<AssemblyExpression>, Box<AssemblyExpression>),
+    LetAssign(Loc, Box<AssemblyExpression>, Box<AssemblyExpression>),
+    Function(Loc, Box<AssemblyExpression>, Vec<AssemblyExpression>),
+    Member(Loc, Box<AssemblyExpression>, Identifier),
+    Subscript(Loc, Box<AssemblyExpression>, Box<AssemblyExpression>),
 }
 
 impl Statement {
     pub fn loc(&self) -> Loc {
         match self {
-            Statement::Block(loc, _)
+            Statement::Block { loc, .. }
+            | Statement::Assembly { loc, .. }
             | Statement::Args(loc, _)
             | Statement::If(loc, _, _, _)
             | Statement::While(loc, _, _)

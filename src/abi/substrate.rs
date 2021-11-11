@@ -1,9 +1,9 @@
 // Parity Substrate style ABIs/Abi
+use crate::parser::pt;
+use crate::sema::ast;
+use crate::sema::tags::render;
 use contract_metadata::*;
 use num_traits::ToPrimitive;
-use parser::pt;
-use sema::ast;
-use sema::tags::render;
 use semver::Version;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
@@ -242,21 +242,22 @@ impl Abi {
     }
 
     /// Returns index to builtin type in registry. Type is added if not already present
-    #[allow(dead_code)]
     fn builtin_enum_type(&mut self, e: &ast::EnumDecl) -> usize {
+        let mut variants: Vec<EnumVariant> = e
+            .values
+            .iter()
+            .map(|(key, val)| EnumVariant {
+                name: key.to_owned(),
+                discriminant: val.1,
+            })
+            .collect();
+
+        variants.sort_by(|a, b| a.discriminant.partial_cmp(&b.discriminant).unwrap());
+
         self.register_ty(Type::Enum {
             path: vec![e.name.to_owned()],
             def: EnumDef {
-                variant: Enum {
-                    variants: e
-                        .values
-                        .iter()
-                        .map(|(key, val)| EnumVariant {
-                            name: key.to_owned(),
-                            discriminant: val.1,
-                        })
-                        .collect(),
-                },
+                variant: Enum { variants },
             },
         })
     }
@@ -292,11 +293,14 @@ fn tags(contract_no: usize, tagname: &str, ns: &ast::Namespace) -> Vec<String> {
 
 /// Generate the metadata for Substrate 2.0
 pub fn metadata(contract_no: usize, code: &[u8], ns: &ast::Namespace) -> Value {
-    let hash = blake2_rfc::blake2b::blake2b(32, &[], &code);
+    let hash = blake2_rfc::blake2b::blake2b(32, &[], code);
     let version = Version::parse(env!("CARGO_PKG_VERSION")).unwrap();
     let language = SourceLanguage::new(Language::Solidity, version.clone());
     let compiler = SourceCompiler::new(Compiler::Solang, version);
-    let source = Source::new(hash.as_bytes().try_into().unwrap(), language, compiler);
+    let code_hash: [u8; 32] = hash.as_bytes().try_into().unwrap();
+    let source_wasm = SourceWasm::new(code.to_vec());
+
+    let source = Source::new(Some(source_wasm), CodeHash(code_hash), language, compiler);
     let mut builder = Contract::builder();
 
     // Add our name and tags
@@ -366,7 +370,8 @@ fn gen_abi(contract_no: usize, ns: &ast::Namespace) -> Abi {
         .filter_map(|layout| {
             let var = &ns.contracts[layout.contract_no].variables[layout.var_no];
 
-            if !var.ty.is_mapping() {
+            // mappings and large types cannot be represented
+            if !var.ty.contains_mapping(ns) && var.ty.fits_in_memory(ns) {
                 Some(StorageLayout {
                     name: var.name.to_string(),
                     layout: LayoutField {
@@ -387,16 +392,22 @@ fn gen_abi(contract_no: usize, ns: &ast::Namespace) -> Abi {
     let mut constructors = ns.contracts[contract_no]
         .functions
         .iter()
-        .filter(|f| f.is_constructor())
-        .map(|f| Constructor {
-            name: String::from("new"),
-            selector: render_selector(f),
-            args: f
-                .params
-                .iter()
-                .map(|p| parameter_to_abi(p, ns, &mut abi))
-                .collect(),
-            docs: vec![render(&f.tags)],
+        .filter_map(|function_no| {
+            let f = &ns.functions[*function_no];
+            if f.is_constructor() {
+                Some(Constructor {
+                    name: String::from("new"),
+                    selector: render_selector(f),
+                    args: f
+                        .params
+                        .iter()
+                        .map(|p| parameter_to_abi(p, ns, &mut abi))
+                        .collect(),
+                    docs: vec![render(&f.tags)],
+                })
+            } else {
+                None
+            }
         })
         .collect::<Vec<Constructor>>();
 
@@ -416,12 +427,16 @@ fn gen_abi(contract_no: usize, ns: &ast::Namespace) -> Abi {
     let messages = ns.contracts[contract_no]
         .all_functions
         .keys()
-        .filter_map(|(base_contract_no, function_no)| {
-            if ns.contracts[*base_contract_no].is_library() {
-                None
-            } else {
-                Some(&ns.contracts[*base_contract_no].functions[*function_no])
+        .filter_map(|function_no| {
+            let func = &ns.functions[*function_no];
+
+            if let Some(base_contract_no) = func.contract_no {
+                if ns.contracts[base_contract_no].is_library() {
+                    return None;
+                }
             }
+
+            Some(func)
         })
         .filter(|f| match f.visibility {
             pt::Visibility::Public(_) | pt::Visibility::External(_) => {
@@ -430,11 +445,14 @@ fn gen_abi(contract_no: usize, ns: &ast::Namespace) -> Abi {
             _ => false,
         })
         .map(|f| {
-            let payable = matches!(f.mutability, Some(pt::StateMutability::Payable(_)));
+            let payable = matches!(f.mutability, ast::Mutability::Payable(_));
 
             Message {
                 name: f.name.to_owned(),
-                mutates: f.mutability.is_none() || payable,
+                mutates: matches!(
+                    f.mutability,
+                    ast::Mutability::Payable(_) | ast::Mutability::Nonpayable(_)
+                ),
                 payable,
                 return_type: match f.returns.len() {
                     0 => None,
@@ -487,7 +505,7 @@ fn gen_abi(contract_no: usize, ns: &ast::Namespace) -> Abi {
                 .collect();
             let docs = vec![render(&event.tags)];
 
-            Event { name, args, docs }
+            Event { docs, name, args }
         })
         .collect();
 
@@ -502,22 +520,10 @@ fn gen_abi(contract_no: usize, ns: &ast::Namespace) -> Abi {
 
 fn ty_to_abi(ty: &ast::Type, ns: &ast::Namespace, registry: &mut Abi) -> ParamType {
     match ty {
-        ast::Type::Enum(n) => {
-            /* clike_enums are broken in polkadot. Use u8 for now.
+        ast::Type::Enum(n) => ParamType {
             ty: registry.builtin_enum_type(&ns.enums[*n]),
             display_name: vec![ns.enums[*n].name.to_owned()],
-            */
-            let mut display_name = vec![ns.enums[*n].name.to_owned()];
-
-            if let Some(contract_name) = &ns.enums[*n].contract {
-                display_name.insert(0, contract_name.to_owned());
-            }
-
-            ParamType {
-                ty: registry.builtin_type("u8"),
-                display_name,
-            }
-        }
+        },
         ast::Type::Bytes(n) => {
             let elem = registry.builtin_type("u8");
             ParamType {
@@ -545,7 +551,7 @@ fn ty_to_abi(ty: &ast::Type, ns: &ast::Namespace, registry: &mut Abi) -> ParamTy
 
             param_ty
         }
-        ast::Type::StorageRef(ty) => ty_to_abi(ty, ns, registry),
+        ast::Type::StorageRef(_, ty) => ty_to_abi(ty, ns, registry),
         ast::Type::Ref(ty) => ty_to_abi(ty, ns, registry),
         ast::Type::Bool | ast::Type::Uint(_) | ast::Type::Int(_) => {
             let scalety = match ty {
@@ -606,6 +612,29 @@ fn ty_to_abi(ty: &ast::Type, ns: &ast::Namespace, registry: &mut Abi) -> ParamTy
             ty: registry.builtin_type("str"),
             display_name: vec![String::from("String")],
         },
+        ast::Type::InternalFunction { .. } => ParamType {
+            ty: registry.builtin_type("u32"),
+            display_name: vec![String::from("FunctionSelector")],
+        },
+        ast::Type::ExternalFunction { .. } => {
+            let fields = vec![
+                StructField {
+                    name: None,
+                    ty: ty_to_abi(&ast::Type::Address(false), ns, registry).ty,
+                },
+                StructField {
+                    name: None,
+                    ty: ty_to_abi(&ast::Type::Uint(32), ns, registry).ty,
+                },
+            ];
+
+            let display_name = vec![String::from("ExternalFunction")];
+
+            ParamType {
+                ty: registry.struct_type(display_name.clone(), fields),
+                display_name,
+            }
+        }
         _ => unreachable!(),
     }
 }
@@ -619,7 +648,7 @@ fn parameter_to_abi(param: &ast::Parameter, ns: &ast::Namespace, registry: &mut 
 
 /// Given an u32 selector, generate a byte string like: 0xF81E7E1A
 fn render_selector(f: &ast::Function) -> String {
-    format!("0x{}", hex::encode(f.selector().to_le_bytes()))
+    format!("0x{}", hex::encode(f.selector().to_be_bytes()))
 }
 
 /// Given a selector like "0xF81E7E1A", parse the bytes. This function

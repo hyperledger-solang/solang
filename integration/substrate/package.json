@@ -1,0 +1,29 @@
+{
+  "name": "substrate-tests",
+  "version": "0.0.1",
+  "description": "Integration tests with Solang and Substrate",
+  "main": "index.js",
+  "scripts": {
+    "test": "tsc; ts-mocha -t 20000 *.spec.ts",
+    "build": "solang *.sol --target substrate -v"
+  },
+  "author": "Sean Young <sean@mess.org>",
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "@types/mocha": "^8.0.4",
+    "@types/node": "^14.14.10",
+    "expect": "^26.6.2",
+    "mocha": "^8.2.1",
+    "ts-mocha": "^8.0.0",
+    "jest": "^24.9.0",
+    "ts-jest": "^24.1.0",
+    "typescript": "^4.1.2"
+  },
+  "dependencies": {
+    "@polkadot/api": "^4.13",
+    "@polkadot/api-contract": "^4.13",
+    "@polkadot/types": "^4.13",
+    "@polkadot/keyring": "^6.7",
+    "@polkadot/util-crypto": "^6.7"
+  }
+}

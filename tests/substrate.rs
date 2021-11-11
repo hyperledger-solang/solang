@@ -1,19 +1,4 @@
 // Create WASM virtual machine like substrate
-extern crate blake2_rfc;
-extern crate ethabi;
-extern crate ethereum_types;
-extern crate num_bigint;
-extern crate num_derive;
-extern crate num_traits;
-extern crate parity_scale_codec;
-extern crate parity_scale_codec_derive;
-extern crate rand;
-extern crate serde_derive;
-extern crate sha2;
-extern crate solang;
-extern crate tiny_keccak;
-extern crate wasmi;
-
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 use rand::Rng;
@@ -25,35 +10,12 @@ use wasmi::memory_units::Pages;
 use wasmi::*;
 
 use solang::abi;
-use solang::file_cache::FileCache;
+use solang::file_resolver::FileResolver;
 use solang::sema::ast;
 use solang::sema::diagnostics;
 use solang::{compile, Target};
 
-mod substrate_enums;
-
-#[allow(clippy::unreadable_literal, clippy::naive_bytecount)]
-mod substrate_expressions;
-
-mod substrate_arrays;
-mod substrate_builtins;
-mod substrate_calls;
-mod substrate_contracts;
-mod substrate_events;
-mod substrate_first;
-mod substrate_functions;
-mod substrate_imports;
-mod substrate_inheritance;
-mod substrate_libraries;
-mod substrate_loops;
-mod substrate_mappings;
-mod substrate_modifier;
-mod substrate_primitives;
-mod substrate_strings;
-mod substrate_structs;
-mod substrate_tags;
-mod substrate_value;
-mod substrate_variables;
+mod substrate_tests;
 
 type StorageKey = [u8; 32];
 type Address = [u8; 32];
@@ -118,6 +80,7 @@ enum SubstrateExternal {
     seal_caller,
     seal_tombstone_deposit,
     seal_deposit_event,
+    seal_transfer,
 }
 
 pub struct Event {
@@ -125,7 +88,7 @@ pub struct Event {
     data: Vec<u8>,
 }
 
-pub struct VM {
+pub struct VirtualMachine {
     address: Address,
     caller: Address,
     memory: MemoryRef,
@@ -134,9 +97,9 @@ pub struct VM {
     pub value: u128,
 }
 
-impl VM {
+impl VirtualMachine {
     fn new(address: Address, caller: Address, value: u128) -> Self {
-        VM {
+        VirtualMachine {
             memory: MemoryInstance::alloc(Pages(16), Some(Pages(16))).unwrap(),
             input: Vec::new(),
             output: Vec::new(),
@@ -153,7 +116,7 @@ pub struct TestRuntime {
     pub printbuf: String,
     pub accounts: HashMap<Address, (Vec<u8>, u128)>,
     pub abi: abi::substrate::Abi,
-    pub vm: VM,
+    pub vm: VirtualMachine,
     pub events: Vec<Event>,
 }
 
@@ -174,9 +137,13 @@ impl Externals for TestRuntime {
                     .get_value::<u32>($len_ptr)
                     .expect(&format!("{} len_ptr should be valid", $name));
 
-                if (len as usize) < $buf.len() {
-                    panic!("{} input is {} buffer is {}", $name, $buf.len(), len);
-                }
+                assert!(
+                    (len as usize) >= $buf.len(),
+                    "{} input is {} buffer is {}",
+                    $name,
+                    $buf.len(),
+                    len
+                );
 
                 if let Err(e) = self.vm.memory.set($dest_ptr, $buf) {
                     panic!("{}: {}", $name, e);
@@ -200,9 +167,12 @@ impl Externals for TestRuntime {
                     .get_value::<u32>(len_ptr)
                     .expect("seal_input len_ptr should be valid");
 
-                if (len as usize) < self.vm.input.len() {
-                    panic!("input is {} seal_input buffer {}", self.vm.input.len(), len);
-                }
+                assert!(
+                    (len as usize) >= self.vm.input.len(),
+                    "input is {} seal_input buffer {}",
+                    self.vm.input.len(),
+                    len
+                );
 
                 if let Err(e) = self.vm.memory.set(dest_ptr, &self.vm.input) {
                     panic!("seal_input: {}", e);
@@ -237,11 +207,12 @@ impl Externals for TestRuntime {
                         .get_value::<u32>(len_ptr)
                         .expect("seal_get_storage len_ptr should be valid");
 
-                    if (len as usize) < value.len() {
-                        panic!("seal_get_storage buffer is too small");
-                    }
+                    assert!(
+                        (len as usize) >= value.len(),
+                        "seal_get_storage buffer is too small"
+                    );
 
-                    if let Err(e) = self.vm.memory.set(dest_ptr, &value) {
+                    if let Err(e) = self.vm.memory.set(dest_ptr, value) {
                         panic!("seal_get_storage: {}", e);
                     }
 
@@ -375,7 +346,7 @@ impl Externals for TestRuntime {
                     hex::encode(hash)
                 );
 
-                if let Err(e) = self.vm.memory.set(out_ptr, &hash.as_bytes()) {
+                if let Err(e) = self.vm.memory.set(out_ptr, hash.as_bytes()) {
                     panic!("seal_hash_blake2_128: {}", e);
                 }
 
@@ -402,7 +373,7 @@ impl Externals for TestRuntime {
                     hex::encode(hash)
                 );
 
-                if let Err(e) = self.vm.memory.set(out_ptr, &hash.as_bytes()) {
+                if let Err(e) = self.vm.memory.set(out_ptr, hash.as_bytes()) {
                     panic!("seal_hash_blake2_256: {}", e);
                 }
 
@@ -468,9 +439,10 @@ impl Externals for TestRuntime {
                     .get_value::<u32>(len_ptr)
                     .expect("seal_random len_ptr should be valid");
 
-                if (len as usize) < hash.len() {
-                    panic!("seal_random dest buffer is too small");
-                }
+                assert!(
+                    (len as usize) >= hash.len(),
+                    "seal_random dest buffer is too small"
+                );
 
                 if let Err(e) = self.vm.memory.set(dest_ptr, &hash) {
                     panic!("seal_random: {}", e);
@@ -496,9 +468,7 @@ impl Externals for TestRuntime {
 
                 let mut address = [0u8; 32];
 
-                if address_len != 32 {
-                    panic!("seal_call: len = {}", address_len);
-                }
+                assert!(address_len == 32, "seal_call: len = {}", address_len);
 
                 if let Err(e) = self.vm.memory.get_into(address_ptr, &mut address) {
                     panic!("seal_call: {}", e);
@@ -506,9 +476,7 @@ impl Externals for TestRuntime {
 
                 let mut value = [0u8; 16];
 
-                if value_len != 16 {
-                    panic!("seal_call: len = {}", value_len);
-                }
+                assert!(value_len == 16, "seal_call: len = {}", value_len);
 
                 if let Err(e) = self.vm.memory.get_into(value_ptr, &mut value) {
                     panic!("seal_call: {}", e);
@@ -534,7 +502,7 @@ impl Externals for TestRuntime {
                     hex::encode(&input)
                 );
 
-                let mut vm = VM::new(address, self.vm.address, value);
+                let mut vm = VirtualMachine::new(address, self.vm.address, value);
 
                 std::mem::swap(&mut self.vm, &mut vm);
 
@@ -542,7 +510,26 @@ impl Externals for TestRuntime {
 
                 self.vm.input = input;
 
-                let ret = self.invoke_call(module);
+                let ret = module.invoke_export("call", &[], self);
+
+                let ret = match ret {
+                    Err(wasmi::Error::Trap(trap)) => match trap.kind() {
+                        TrapKind::Host(host_error) => {
+                            if let Some(ret) = host_error.downcast_ref::<HostCodeReturn>() {
+                                Some(RuntimeValue::I32(ret.0))
+                            } else if host_error.downcast_ref::<HostCodeTerminate>().is_some() {
+                                Some(RuntimeValue::I32(1))
+                            } else {
+                                return Err(trap);
+                            }
+                        }
+                        _ => {
+                            return Err(trap);
+                        }
+                    },
+                    Ok(v) => v,
+                    Err(e) => panic!("fail to invoke call: {}", e),
+                };
 
                 let output = self.vm.output.clone();
 
@@ -558,6 +545,41 @@ impl Externals for TestRuntime {
 
                 Ok(ret)
             }
+            Some(SubstrateExternal::seal_transfer) => {
+                let address_ptr: u32 = args.nth_checked(0)?;
+                let address_len: u32 = args.nth_checked(1)?;
+                let value_ptr: u32 = args.nth_checked(2)?;
+                let value_len: u32 = args.nth_checked(3)?;
+
+                let mut address = [0u8; 32];
+
+                assert!(address_len == 32, "seal_transfer: len = {}", address_len);
+
+                if let Err(e) = self.vm.memory.get_into(address_ptr, &mut address) {
+                    panic!("seal_transfer: {}", e);
+                }
+
+                let mut value = [0u8; 16];
+
+                assert!(value_len == 16, "seal_transfer: len = {}", value_len);
+
+                if let Err(e) = self.vm.memory.get_into(value_ptr, &mut value) {
+                    panic!("seal_transfer: {}", e);
+                }
+
+                let value = u128::from_le_bytes(value);
+
+                if !self.accounts.contains_key(&address) {
+                    // substrate would return TransferFailed
+                    return Ok(Some(RuntimeValue::I32(0x5)));
+                }
+
+                if let Some(acc) = self.accounts.get_mut(&address) {
+                    acc.1 += value;
+                }
+
+                Ok(Some(RuntimeValue::I32(0)))
+            }
             Some(SubstrateExternal::seal_instantiate) => {
                 let codehash_ptr: u32 = args.nth_checked(0)?;
                 let codehash_len: u32 = args.nth_checked(1)?;
@@ -570,12 +592,16 @@ impl Externals for TestRuntime {
                 let address_len_ptr: u32 = args.nth_checked(8)?;
                 let output_ptr: u32 = args.nth_checked(9)?;
                 let output_len_ptr: u32 = args.nth_checked(10)?;
+                let salt_ptr: u32 = args.nth_checked(11)?;
+                let salt_len: u32 = args.nth_checked(12)?;
 
                 let mut codehash = [0u8; 32];
 
-                if codehash_len != 32 {
-                    panic!("seal_instantiate: len = {}", codehash_len);
-                }
+                assert!(
+                    codehash_len == 32,
+                    "seal_instantiate: len = {}",
+                    codehash_len
+                );
 
                 if let Err(e) = self.vm.memory.get_into(codehash_ptr, &mut codehash) {
                     panic!("seal_instantiate: {}", e);
@@ -583,9 +609,7 @@ impl Externals for TestRuntime {
 
                 let mut value = [0u8; 16];
 
-                if value_len != 16 {
-                    panic!("seal_instantiate: len = {}", value_len);
-                }
+                assert!(value_len == 16, "seal_instantiate: len = {}", value_len);
 
                 if let Err(e) = self.vm.memory.get_into(value_ptr, &mut value) {
                     panic!("seal_instantiate: {}", e);
@@ -600,15 +624,26 @@ impl Externals for TestRuntime {
                     panic!("seal_instantiate: {}", e);
                 }
 
+                let mut salt = Vec::new();
+                salt.resize(salt_len as usize, 0u8);
+
+                if let Err(e) = self.vm.memory.get_into(salt_ptr, &mut salt) {
+                    panic!("seal_instantiate: {}", e);
+                }
+
                 println!(
-                    "seal_instantiate value:{} input={}",
+                    "seal_instantiate value:{} input={} salt={}",
                     value,
-                    hex::encode(&input)
+                    hex::encode(&input),
+                    hex::encode(&salt),
                 );
 
                 let mut address = [0u8; 32];
 
-                address.copy_from_slice(blake2_rfc::blake2b::blake2b(32, &[], &input).as_bytes());
+                let hash_data: Vec<u8> = input.iter().chain(salt.iter()).cloned().collect();
+
+                address
+                    .copy_from_slice(blake2_rfc::blake2b::blake2b(32, &[], &hash_data).as_bytes());
 
                 if self.accounts.contains_key(&address) {
                     // substrate would return TRAP_RETURN_CODE (0x0100)
@@ -632,7 +667,7 @@ impl Externals for TestRuntime {
                     panic!("seal_instantiate: {}", e);
                 }
 
-                let mut vm = VM::new(address, self.vm.address, value);
+                let mut vm = VirtualMachine::new(address, self.vm.address, value);
 
                 std::mem::swap(&mut self.vm, &mut vm);
 
@@ -640,7 +675,22 @@ impl Externals for TestRuntime {
 
                 self.vm.input = input;
 
-                let ret = self.invoke_deploy(module);
+                let ret = match module.invoke_export("deploy", &[], self) {
+                    Err(wasmi::Error::Trap(trap)) => match trap.kind() {
+                        TrapKind::Host(host_error) => {
+                            if let Some(ret) = host_error.downcast_ref::<HostCodeReturn>() {
+                                Some(RuntimeValue::I32(ret.0))
+                            } else {
+                                return Err(trap);
+                            }
+                        }
+                        _ => {
+                            return Err(trap);
+                        }
+                    },
+                    Ok(v) => v,
+                    Err(e) => panic!("fail to invoke deploy: {}", e),
+                };
 
                 let output = self.vm.output.clone();
 
@@ -776,9 +826,7 @@ impl Externals for TestRuntime {
 
                 let mut address = [0u8; 32];
 
-                if address_len != 32 {
-                    panic!("seal_terminate: len = {}", address_len);
-                }
+                assert!(address_len == 32, "seal_terminate: len = {}", address_len);
 
                 if let Err(e) = self.vm.memory.get_into(address_ptr, &mut address) {
                     panic!("seal_terminate: {}", e);
@@ -881,6 +929,7 @@ impl ModuleImportResolver for TestRuntime {
             "seal_caller" => SubstrateExternal::seal_caller,
             "seal_tombstone_deposit" => SubstrateExternal::seal_tombstone_deposit,
             "seal_deposit_event" => SubstrateExternal::seal_deposit_event,
+            "seal_transfer" => SubstrateExternal::seal_transfer,
             _ => {
                 panic!("{} not implemented", field_name);
             }
@@ -993,28 +1042,30 @@ impl TestRuntime {
 
         self.vm.input = m.selector().into_iter().chain(args).collect();
 
+        println!("input:{}", hex::encode(&self.vm.input));
+
         if let Some(RuntimeValue::I32(ret)) = self.invoke_call(module) {
-            if ret != 0 {
-                panic!(format!("non zero return: {}", ret));
-            }
+            assert!(ret == 0, "non zero return: {}", ret);
         }
     }
 
-    pub fn function_expect_return(&mut self, name: &str, args: Vec<u8>, expected_ret: i32) {
+    pub fn function_expect_failure(&mut self, name: &str, args: Vec<u8>) {
         let m = self.abi.get_function(name).unwrap();
 
         let module = self.create_module(&self.accounts.get(&self.vm.address).unwrap().0);
 
         self.vm.input = m.selector().into_iter().chain(args).collect();
 
-        if let Some(RuntimeValue::I32(ret)) = self.invoke_call(module) {
-            println!(
-                "function_expected_return: got {} expected {}",
-                ret, expected_ret
-            );
-
-            if expected_ret != ret {
-                panic!("non one return")
+        match module.invoke_export("call", &[], self) {
+            Err(wasmi::Error::Trap(trap)) => match trap.kind() {
+                TrapKind::Unreachable => (),
+                _ => panic!("trap: {:?}", trap),
+            },
+            Err(err) => {
+                panic!("unexpected error: {:?}", err);
+            }
+            Ok(v) => {
+                panic!("unexpected return value: {:?}", v);
             }
         }
     }
@@ -1031,16 +1082,21 @@ impl TestRuntime {
         }
     }
 
-    pub fn raw_function_return(&mut self, expect_ret: i32, input: Vec<u8>) {
+    pub fn raw_function_failure(&mut self, input: Vec<u8>) {
         let module = self.create_module(&self.accounts.get(&self.vm.address).unwrap().0);
 
         self.vm.input = input;
 
-        if let Some(RuntimeValue::I32(ret)) = self.invoke_call(module) {
-            println!("got {} expected {}", ret, expect_ret);
-
-            if ret != expect_ret {
-                panic!("return not expected")
+        match module.invoke_export("call", &[], self) {
+            Err(wasmi::Error::Trap(trap)) => match trap.kind() {
+                TrapKind::Unreachable => (),
+                _ => panic!("trap: {:?}", trap),
+            },
+            Err(err) => {
+                panic!("unexpected error: {:?}", err);
+            }
+            Ok(v) => {
+                panic!("unexpected return value: {:?}", v);
             }
         }
     }
@@ -1099,7 +1155,7 @@ impl TestRuntime {
                         }
                         let b = buf[offset + i];
                         hex.push_str(&format!(" {:02x}", b));
-                        if b >= 0x20 && b <= 0x7e {
+                        if b.is_ascii() && !b.is_ascii_control() {
                             chars.push_str(&format!("  {}", b as char));
                         } else {
                             chars.push_str("   ");
@@ -1122,26 +1178,28 @@ impl TestRuntime {
 }
 
 pub fn parse_and_resolve(src: &'static str, target: Target) -> ast::Namespace {
-    let mut cache = FileCache::new();
+    let mut cache = FileResolver::new();
 
-    cache.set_file_contents("test.sol".to_string(), src.to_string());
+    cache.set_file_contents("test.sol", src.to_string());
 
     solang::parse_and_resolve("test.sol", &mut cache, target)
 }
 
 pub fn build_solidity(src: &'static str) -> TestRuntime {
-    let mut cache = FileCache::new();
+    let mut cache = FileResolver::new();
 
-    cache.set_file_contents("test.sol".to_string(), src.to_string());
+    cache.set_file_contents("test.sol", src.to_string());
 
     let (res, ns) = compile(
         "test.sol",
         &mut cache,
         inkwell::OptimizationLevel::Default,
-        Target::Substrate,
+        Target::default_substrate(),
+        false,
     );
 
-    diagnostics::print_messages(&mut cache, &ns, false);
+    diagnostics::print_messages(&cache, &ns, false);
+    no_errors(ns.diagnostics);
 
     assert!(!res.is_empty());
 
@@ -1154,7 +1212,43 @@ pub fn build_solidity(src: &'static str) -> TestRuntime {
         printbuf: String::new(),
         store: HashMap::new(),
         contracts: res,
-        vm: VM::new(address, address_new(), 0),
+        vm: VirtualMachine::new(address, address_new(), 0),
+        abi: abi::substrate::load(&abistr).unwrap(),
+        events: Vec::new(),
+    };
+
+    t.accounts.insert(address, (code, 0));
+
+    t
+}
+
+pub fn build_solidity_with_overflow_check(src: &'static str) -> TestRuntime {
+    let mut cache = FileResolver::new();
+
+    cache.set_file_contents("test.sol", src.to_string());
+
+    let (res, ns) = compile(
+        "test.sol",
+        &mut cache,
+        inkwell::OptimizationLevel::Default,
+        Target::default_substrate(),
+        true,
+    );
+
+    diagnostics::print_messages(&cache, &ns, false);
+
+    assert!(!res.is_empty());
+
+    let abistr = res[0].1.clone();
+    let code = res[0].0.clone();
+    let address = address_new();
+
+    let mut t = TestRuntime {
+        accounts: HashMap::new(),
+        printbuf: String::new(),
+        store: HashMap::new(),
+        contracts: res,
+        vm: VirtualMachine::new(address, address_new(), 0),
         abi: abi::substrate::load(&abistr).unwrap(),
         events: Vec::new(),
     };
@@ -1183,6 +1277,16 @@ pub fn no_errors(errors: Vec<ast::Diagnostic>) {
         errors
             .iter()
             .filter(|m| m.level == ast::Level::Error)
+            .count()
+            == 0
+    );
+}
+
+pub fn no_warnings(errors: &[ast::Diagnostic]) {
+    assert!(
+        errors
+            .iter()
+            .filter(|m| m.level == ast::Level::Warning)
             .count()
             == 0
     );

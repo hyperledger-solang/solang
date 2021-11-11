@@ -1,10 +1,19 @@
-name: test
+name: Build tests
 on: [push, pull_request]
 jobs:
+  repolinter:
+    name: Repolinter
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+      - name: Run repolinter
+        run: npx repolinter --rulesetUrl https://raw.githubusercontent.com/hyperledger-labs/hyperledger-community-management-tools/master/repo_structure/repolint.json
+
   lints:
     name: Lints
-    runs-on: ubuntu-18.04
-    container: hyperledgerlabs/solang:ci
+    runs-on: ubuntu-20.04
+    container: ghcr.io/hyperledger-labs/solang:ci
     steps:
       - name: Checkout sources
         uses: actions/checkout@v2
@@ -13,24 +22,29 @@ jobs:
       - name: Run cargo fmt
         run: cargo fmt --all -- --check
       - name: Run cargo clippy
-        run: cargo clippy -- -D warnings
+        run: cargo clippy --tests --bins -- -D warnings -D clippy::inconsistent-struct-constructor
+      - name: Ensure cargo publish is happy
+        run: cargo publish --dry-run
 
   linux:
     name: Linux
-    runs-on: ubuntu-18.04
-    container: hyperledgerlabs/solang:ci
+    runs-on: ubuntu-20.04
+    container: ghcr.io/hyperledger-labs/solang:ci
     steps:
     - name: Checkout sources
-      uses: actions/checkout@v2
+      # Make sure "git describe --tags" works for solang --version
+      # checkout@v2 requires git 2.18 or higher, which is not in our image
+      uses: actions/checkout@v1
     - name: Rust stable
-      run: rustup default stable
-    - name: Compile stdlib
-      run: clang-10 --target=wasm32 -c -emit-llvm -O3 -ffreestanding -fno-builtin -Wall stdlib.c sha3.c substrate.c ripemd160.c
-      working-directory:  ./stdlib
+      run: rustup default 1.53.0
     - name: Build
       run: cargo build --verbose
     - name: Run tests
       run: cargo test --verbose
+    - uses: actions/upload-artifact@master
+      with:
+        name: solang-linux
+        path: ./target/debug/solang
 
   windows:
     name: Windows
@@ -38,25 +52,216 @@ jobs:
     steps:
     - name: Checkout sources
       uses: actions/checkout@v2
+      with:
+        # Make sure "git describe --tags" works for solang --version
+        fetch-depth: 0
     - name: Download LLVM
-      run: curl -sS -o c:\llvm.zip https://solang.io/download/llvm10.0.zip
+      run: curl -sSL -o c:\llvm.zip https://github.com/hyperledger-labs/solang/releases/download/v0.1.8/llvm12.0-win.zip
     - name: Extract LLVM
       run: unzip c:\llvm.zip -d c:/
     - name: Add LLVM to Path
-      run: echo "c:\llvm10.0\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8
-    - name: Compile stdlib
-      run: clang --target=wasm32 -c -emit-llvm -O3 -ffreestanding -fno-builtin -Wall stdlib.c sha3.c substrate.c ripemd160.c
-      working-directory: ./stdlib
+      run: echo "c:\llvm12.0\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8
+    # We run clippy on Linux in the lint job above, but this does not check #[cfg(windows)] items
+    - name: Run cargo clippy
+      run: cargo clippy --tests --bins -- -D warnings -D clippy::inconsistent-struct-constructor
     - name: Build
       run: cargo build --verbose
     - name: Run tests
       run: cargo test --verbose
+    - uses: actions/upload-artifact@master
+      with:
+        name: solang.exe
+        path: ./target/debug/solang.exe
 
-  docker:
-    name: Docker
-    runs-on: ubuntu-18.04
+  mac-arm:
+    name: Mac Arm
+    runs-on: macos-arm
+    if: ${{ github.repository_owner == 'hyperledger-labs' }}
     steps:
     - name: Checkout sources
       uses: actions/checkout@v2
-    - name: Build dockerfile
-      run: docker build .
+      with:
+        # Make sure "git describe --tags" works for solang --version
+        fetch-depth: 0
+    - name: Download LLVM
+      run: wget -q -O llvm12.0-mac-arm.tar.xz https://github.com/hyperledger-labs/solang/releases/download/v0.1.8/llvm12.0-mac-arm.tar.xz
+    - name: Extract LLVM
+      run: tar Jxf llvm12.0-mac-arm.tar.xz
+    - name: Add LLVM to Path
+      run: echo "$(pwd)/llvm12.0/bin" >> $GITHUB_PATH
+    - name: Build
+      run: cargo build --verbose
+    - name: Run tests
+      run: cargo test --verbose
+    - uses: actions/upload-artifact@master
+      with:
+        name: solang-mac-arm
+        path: ./target/debug/solang
+
+  mac-intel:
+    name: Mac Intel
+    runs-on: macos-latest
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v2
+      with:
+        # Make sure "git describe --tags" works for solang --version
+        fetch-depth: 0
+    - name: Download LLVM
+      run: wget -q -O llvm12.0-mac-intel.tar.xz https://github.com/hyperledger-labs/solang/releases/download/v0.1.8/llvm12.0-mac-intel.tar.xz
+    - name: Extract LLVM
+      run: tar Jxf llvm12.0-mac-intel.tar.xz
+    - name: Add LLVM to Path
+      run: echo "$(pwd)/llvm12.0/bin" >> $GITHUB_PATH
+    - name: Build
+      run: cargo build --verbose
+    - name: Run tests
+      run: cargo test --verbose
+    - uses: actions/upload-artifact@master
+      with:
+        name: solang-mac-intel
+        path: ./target/debug/solang
+
+  container:
+    name: Container
+    runs-on: ubuntu-20.04
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v2
+      with:
+        # Make sure "git describe --tags" works for solang --version
+        fetch-depth: 0
+    - run: |
+          docker build . -t ghcr.io/${GITHUB_REPOSITORY}:latest \
+            --label org.opencontainers.image.description="Solidity Compiler for Solana, Substrate, and ewasm version $(git describe --tags)"
+    - name: Push to github container registry
+      if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+      run: |
+          echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin
+          docker push ghcr.io/${GITHUB_REPOSITORY}:latest
+
+  solana:
+    name: Solana Integration test
+    runs-on: ubuntu-20.04
+    container: ubuntu:20.04
+    needs: linux
+    services:
+      solana:
+        image: solanalabs/solana:v1.8.1
+        ports:
+          - 8899
+          - 8900
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v2
+    - uses: actions/setup-node@v1
+      with:
+        node-version: '14'
+    - uses: actions/download-artifact@master
+      with:
+        name: solang-linux
+        path: bin
+    - run: chmod 755 ./bin/solang
+    - run: echo "$(pwd)/bin" >> $GITHUB_PATH
+    - run: npm install
+      working-directory: ./integration/solana
+    - name: Build Solang contracts
+      run: npm run build
+      working-directory: ./integration/solana
+    - name: Set github env
+      run: echo "RPC_URL=http://solana:8899/" >> $GITHUB_ENV
+    - name: Deploy and test contracts
+      run: npm run test
+      working-directory: ./integration/solana
+
+  substrate:
+    name: Substrate Integration test
+    runs-on: ubuntu-20.04
+    needs: linux
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v2
+      # We can't run substrate as a github actions service, since it requires
+      # command line arguments. See https://github.com/actions/runner/pull/1152
+    - name: Start substrate
+      run: docker run -d -p 9944:9944 parity/substrate:v3.0.0 --dev --ws-external
+    - uses: actions/setup-node@v1
+      with:
+        node-version: '14'
+    - uses: actions/download-artifact@master
+      with:
+        name: solang-linux
+        path: bin
+    - run: chmod 755 ./bin/solang
+    - run: echo "$(pwd)/bin" >> $GITHUB_PATH
+    - run: npm install
+      working-directory: ./integration/substrate
+    - name: Build Solang contracts
+      run: npm run build
+      working-directory: ./integration/substrate
+    - name: Deploy and test contracts
+      run: npm run test
+      working-directory: ./integration/substrate
+
+  burrow:
+    name: Burrow Integration test
+    runs-on: ubuntu-20.04
+    container: ubuntu:20.04
+    needs: linux
+    services:
+      burrow:
+        image: hyperledger/burrow:0.34.4
+        ports:
+          - 10997
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v2
+    - uses: actions/setup-node@v1
+      with:
+        node-version: '14'
+    - uses: actions/download-artifact@master
+      with:
+        name: solang-linux
+        path: bin
+    - run: chmod 755 ./bin/solang
+    - run: echo "$(pwd)/bin" >> $GITHUB_PATH
+    - run: npm install
+      working-directory: ./integration/burrow
+    - name: Build Solang contract
+      run: npm run build
+      working-directory: ./integration/burrow
+    - name: Set github env
+      run: echo "RPC_URL=burrow:10997" >> $GITHUB_ENV
+    - name: Deploy and test contract
+      run: npm run test
+      working-directory: ./integration/burrow
+
+  vscode:
+    name: Visual Code Extension
+    runs-on: ubuntu-20.04
+    needs: linux
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+    - uses: actions/download-artifact@master
+      with:
+        name: solang-linux
+        path: /home/runner/.config/Code/User/globalStorage/solang.solang/
+    - run: chmod 755 $HOME/.config/Code/User/globalStorage/solang.solang/solang
+    - name: Install Node.js
+      uses: actions/setup-node@v1
+      with:
+        node-version: '14'
+    - run: npm install
+      working-directory: ./vscode
+    - run: npm run compile
+      working-directory: ./vscode
+    - name: Run headless test
+      uses: GabrielBB/xvfb-action@v1
+      with:
+        working-directory: ./vscode
+        run: npm test
+    - run: npm install -g vsce
+      working-directory: ./vscode
+    - run: vsce package
+      working-directory: ./vscode

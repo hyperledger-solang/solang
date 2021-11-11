@@ -1,6 +1,6 @@
 Cargo.lock
 examples
-scripts
+build
 target
 .gitnore
 *.wasm

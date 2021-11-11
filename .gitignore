@@ -3,6 +3,3 @@ Cargo.lock
 /target
 **/*.rs.bk
 
-*.wasm
-*.json
-*.abi

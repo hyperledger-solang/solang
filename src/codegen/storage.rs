@@ -4,9 +4,9 @@ use num_traits::One;
 use num_traits::Zero;
 
 use super::cfg::{ControlFlowGraph, Instr, Vartable};
-use super::expression::expression;
-use parser::pt;
-use sema::ast::{Expression, Namespace, Type};
+use super::expression::{expression, load_storage};
+use crate::parser::pt;
+use crate::sema::ast::{Expression, Function, Namespace, Type};
 
 /// Given a storage slot which is the start of the array, calculate the
 /// offset of the array element. This function exists to avoid doing
@@ -19,17 +19,18 @@ pub fn array_offset(
     ns: &Namespace,
 ) -> Expression {
     let elem_size = elem_ty.storage_slots(ns);
-    let slot_ty = Type::Uint(256);
+    let slot_ty = ns.storage_type();
 
     // the index needs to be cast to i256 and multiplied by the number
     // of slots for each element
     if elem_size == BigInt::one() {
-        Expression::Add(*loc, slot_ty, Box::new(start), Box::new(index))
+        Expression::Add(*loc, slot_ty, true, Box::new(start), Box::new(index))
     } else if (elem_size.clone() & (elem_size.clone() - BigInt::one())) == BigInt::zero() {
         // elem_size is power of 2
-        Expression::ShiftLeft(
+        Expression::Add(
             *loc,
             slot_ty.clone(),
+            true,
             Box::new(start),
             Box::new(Expression::ShiftLeft(
                 *loc,
@@ -38,7 +39,7 @@ pub fn array_offset(
                 Box::new(Expression::NumberLiteral(
                     *loc,
                     slot_ty,
-                    BigInt::from_u64(elem_size.bits()).unwrap(),
+                    BigInt::from_u64(elem_size.bits() - 1).unwrap(),
                 )),
             )),
         )
@@ -46,10 +47,12 @@ pub fn array_offset(
         Expression::Add(
             *loc,
             slot_ty.clone(),
+            true,
             Box::new(start),
             Box::new(Expression::Multiply(
                 *loc,
                 slot_ty.clone(),
+                true,
                 Box::new(index),
                 Box::new(Expression::NumberLiteral(*loc, slot_ty, elem_size)),
             )),
@@ -58,25 +61,29 @@ pub fn array_offset(
 }
 
 /// Push() method on dynamic array in storage
-pub fn array_push(
+pub fn storage_slots_array_push(
     loc: &pt::Loc,
     args: &[Expression],
     cfg: &mut ControlFlowGraph,
     contract_no: usize,
+    func: Option<&Function>,
     ns: &Namespace,
     vartab: &mut Vartable,
 ) -> Expression {
     // set array+length to val_expr
-    let slot_ty = Type::Uint(256);
+    let slot_ty = ns.storage_type();
     let length_pos = vartab.temp_anonymous(&slot_ty);
 
-    let var_expr = expression(&args[0], cfg, contract_no, ns, vartab);
+    let var_expr = expression(&args[0], cfg, contract_no, func, ns, vartab);
+
+    let expr = load_storage(loc, &slot_ty, var_expr.clone(), cfg, vartab);
 
     cfg.add(
         vartab,
         Instr::Set {
+            loc: pt::Loc(0, 0, 0),
             res: length_pos,
-            expr: Expression::StorageLoad(*loc, slot_ty.clone(), Box::new(var_expr.clone())),
+            expr,
         },
     );
 
@@ -87,6 +94,7 @@ pub fn array_push(
     cfg.add(
         vartab,
         Instr::Set {
+            loc: pt::Loc(0, 0, 0),
             res: entry_pos,
             expr: array_offset(
                 loc,
@@ -99,47 +107,36 @@ pub fn array_push(
     );
 
     if args.len() == 2 {
-        let expr = expression(&args[1], cfg, contract_no, ns, vartab);
-
-        let pos = vartab.temp_anonymous(&elem_ty);
-
-        cfg.add(vartab, Instr::Set { res: pos, expr });
+        let value = expression(&args[1], cfg, contract_no, func, ns, vartab);
 
         cfg.add(
             vartab,
             Instr::SetStorage {
                 ty: elem_ty.clone(),
-                local: pos,
+                value,
                 storage: Expression::Variable(*loc, slot_ty.clone(), entry_pos),
             },
         );
     }
 
     // increase length
-    let new_length = vartab.temp_anonymous(&slot_ty);
-
-    cfg.add(
-        vartab,
-        Instr::Set {
-            res: new_length,
-            expr: Expression::Add(
-                *loc,
-                slot_ty.clone(),
-                Box::new(Expression::Variable(*loc, slot_ty.clone(), length_pos)),
-                Box::new(Expression::NumberLiteral(
-                    *loc,
-                    slot_ty.clone(),
-                    BigInt::one(),
-                )),
-            ),
-        },
+    let new_length = Expression::Add(
+        *loc,
+        slot_ty.clone(),
+        true,
+        Box::new(Expression::Variable(*loc, slot_ty.clone(), length_pos)),
+        Box::new(Expression::NumberLiteral(
+            *loc,
+            slot_ty.clone(),
+            BigInt::one(),
+        )),
     );
 
     cfg.add(
         vartab,
         Instr::SetStorage {
             ty: slot_ty,
-            local: new_length,
+            value: new_length,
             storage: var_expr,
         },
     );
@@ -152,27 +149,31 @@ pub fn array_push(
 }
 
 /// Pop() method on dynamic array in storage
-pub fn array_pop(
+pub fn storage_slots_array_pop(
     loc: &pt::Loc,
     args: &[Expression],
     cfg: &mut ControlFlowGraph,
     contract_no: usize,
+    func: Option<&Function>,
     ns: &Namespace,
     vartab: &mut Vartable,
 ) -> Expression {
     // set array+length to val_expr
-    let slot_ty = Type::Uint(256);
-    let length_ty = Type::Uint(256);
+    let slot_ty = ns.storage_type();
+    let length_ty = ns.storage_type();
     let length_pos = vartab.temp_anonymous(&slot_ty);
 
     let ty = args[0].ty();
-    let var_expr = expression(&args[0], cfg, contract_no, ns, vartab);
+    let var_expr = expression(&args[0], cfg, contract_no, func, ns, vartab);
+
+    let expr = load_storage(loc, &length_ty, var_expr.clone(), cfg, vartab);
 
     cfg.add(
         vartab,
         Instr::Set {
+            loc: pt::Loc(0, 0, 0),
             res: length_pos,
-            expr: Expression::StorageLoad(*loc, length_ty.clone(), Box::new(var_expr.clone())),
+            expr,
         },
     );
 
@@ -191,8 +192,8 @@ pub fn array_pop(
                     BigInt::zero(),
                 )),
             ),
-            true_: empty_array,
-            false_: has_elements,
+            true_block: empty_array,
+            false_block: has_elements,
         },
     );
 
@@ -205,10 +206,12 @@ pub fn array_pop(
     cfg.add(
         vartab,
         Instr::Set {
+            loc: pt::Loc(0, 0, 0),
             res: new_length,
             expr: Expression::Subtract(
                 *loc,
                 length_ty.clone(),
+                true,
                 Box::new(Expression::Variable(*loc, length_ty.clone(), length_pos)),
                 Box::new(Expression::NumberLiteral(*loc, length_ty, BigInt::one())),
             ),
@@ -223,6 +226,7 @@ pub fn array_pop(
     cfg.add(
         vartab,
         Instr::Set {
+            loc: pt::Loc(0, 0, 0),
             res: entry_pos,
             expr: array_offset(
                 loc,
@@ -236,15 +240,20 @@ pub fn array_pop(
 
     let res_pos = vartab.temp_anonymous(&elem_ty);
 
+    let expr = load_storage(
+        loc,
+        &elem_ty,
+        Expression::Variable(*loc, elem_ty.clone(), entry_pos),
+        cfg,
+        vartab,
+    );
+
     cfg.add(
         vartab,
         Instr::Set {
+            loc: *loc,
             res: res_pos,
-            expr: Expression::StorageLoad(
-                *loc,
-                elem_ty.clone(),
-                Box::new(Expression::Variable(*loc, elem_ty.clone(), entry_pos)),
-            ),
+            expr,
         },
     );
 
@@ -260,8 +269,8 @@ pub fn array_pop(
     cfg.add(
         vartab,
         Instr::SetStorage {
-            ty: slot_ty,
-            local: new_length,
+            ty: slot_ty.clone(),
+            value: Expression::Variable(*loc, slot_ty, new_length),
             storage: var_expr,
         },
     );
@@ -270,43 +279,67 @@ pub fn array_pop(
 }
 
 /// Push() method on dynamic bytes in storage
-pub fn bytes_push(
+pub fn array_push(
     loc: &pt::Loc,
     args: &[Expression],
     cfg: &mut ControlFlowGraph,
     contract_no: usize,
+    func: Option<&Function>,
     ns: &Namespace,
     vartab: &mut Vartable,
 ) -> Expression {
-    let var_expr = expression(&args[0], cfg, contract_no, ns, vartab);
+    let storage = expression(&args[0], cfg, contract_no, func, ns, vartab);
 
-    if args.len() > 1 {
-        let val = expression(&args[1], cfg, contract_no, ns, vartab);
+    let mut ty = args[0].ty().storage_array_elem();
 
-        Expression::StorageBytesPush(*loc, Box::new(var_expr), Box::new(val))
+    let value = if args.len() > 1 {
+        expression(&args[1], cfg, contract_no, func, ns, vartab)
     } else {
-        Expression::StorageBytesPush(
-            *loc,
-            Box::new(var_expr),
-            Box::new(Expression::NumberLiteral(
-                *loc,
-                Type::Bytes(1),
-                BigInt::zero(),
-            )),
-        )
+        ty.deref_any().default(ns).unwrap()
+    };
+
+    if !ty.is_reference_type() {
+        ty = ty.deref_into();
     }
+
+    let res = vartab.temp_anonymous(&ty);
+
+    cfg.add(
+        vartab,
+        Instr::PushStorage {
+            res,
+            storage,
+            value,
+        },
+    );
+
+    Expression::Variable(*loc, ty, res)
 }
 
-/// Pop() method on dynamic bytes in storage
-pub fn bytes_pop(
+/// Pop() method on array or bytes in storage
+pub fn array_pop(
     loc: &pt::Loc,
     args: &[Expression],
     cfg: &mut ControlFlowGraph,
     contract_no: usize,
+    func: Option<&Function>,
     ns: &Namespace,
     vartab: &mut Vartable,
 ) -> Expression {
-    let var_expr = expression(&args[0], cfg, contract_no, ns, vartab);
+    let storage = expression(&args[0], cfg, contract_no, func, ns, vartab);
 
-    Expression::StorageBytesPop(*loc, Box::new(var_expr))
+    let ty = args[0].ty().storage_array_elem().deref_into();
+
+    let res = vartab.temp_anonymous(&ty);
+
+    cfg.add(
+        vartab,
+        Instr::PopStorage {
+            res,
+            ty: ty.clone(),
+            storage,
+        },
+    );
+
+    Expression::Variable(*loc, ty, res)
 }

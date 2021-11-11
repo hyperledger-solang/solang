@@ -1,6 +1,8 @@
 use super::ast::*;
-use hex;
-use parser::pt;
+use super::builtin::{get_prototype, Prototype};
+use crate::parser::pt;
+use crate::Target;
+use num_traits::ToPrimitive;
 
 #[derive(Clone)]
 enum Tree {
@@ -47,53 +49,85 @@ fn print_expr(e: &Expression, func: Option<&Function>, ns: &Namespace) -> Tree {
             "literal bool {}",
             if *b { "true" } else { "false" }
         )),
+        Expression::BytesLiteral(_, Type::String, bs) => Tree::Leaf(format!(
+            "literal string \"{}\"",
+            String::from_utf8_lossy(bs)
+        )),
         Expression::BytesLiteral(_, ty, b) => {
             Tree::Leaf(format!("literal {} {}", ty.to_string(ns), hex::encode(b)))
         }
+        Expression::ArrayLiteral(_, ty, _, values) => Tree::Branch(
+            format!("array literal {}", ty.to_string(ns)),
+            values.iter().map(|e| print_expr(e, func, ns)).collect(),
+        ),
+        Expression::ConstArrayLiteral(_, ty, _, values) => Tree::Branch(
+            format!("const array literal {}", ty.to_string(ns)),
+            values.iter().map(|e| print_expr(e, func, ns)).collect(),
+        ),
         Expression::CodeLiteral(_, contract_no, true) => {
             Tree::Leaf(format!("code runtime {}", ns.contracts[*contract_no].name))
         }
         Expression::CodeLiteral(_, contract_no, false) => {
             Tree::Leaf(format!("code deploy {}", ns.contracts[*contract_no].name))
         }
+        // TODO does not format negative constants correctly
+        Expression::NumberLiteral(_, ty @ Type::Address(_), b) => Tree::Leaf(format!(
+            "literal {} {:#02$x}",
+            ty.to_string(ns),
+            b,
+            ns.address_length * 2 + 2,
+        )),
         Expression::NumberLiteral(_, ty, b) => {
             Tree::Leaf(format!("literal {} {}", ty.to_string(ns), b))
         }
+        Expression::RationalNumberLiteral(_, ty, b) => Tree::Leaf(format!(
+            "literal {} {}",
+            ty.to_string(ns),
+            b.to_f64().unwrap()
+        )),
         Expression::StructLiteral(_, ty, fields) => {
             let fields = fields.iter().map(|e| print_expr(e, func, ns)).collect();
 
             Tree::Branch(format!("struct {}", ty.to_string(ns)), fields)
         }
-        Expression::Add(_, ty, left, right) => Tree::Branch(
-            format!("add {}", ty.to_string(ns)),
+        Expression::Add(_, ty, unchecked, left, right) => Tree::Branch(
+            format!(
+                "add {}{}",
+                if *unchecked { "unchecked " } else { "" },
+                ty.to_string(ns)
+            ),
             vec![print_expr(left, func, ns), print_expr(right, func, ns)],
         ),
-        Expression::Subtract(_, ty, left, right) => Tree::Branch(
-            format!("subtract {}", ty.to_string(ns)),
+        Expression::Subtract(_, ty, unchecked, left, right) => Tree::Branch(
+            format!(
+                "subtract {}{}",
+                if *unchecked { "unchecked " } else { "" },
+                ty.to_string(ns)
+            ),
             vec![print_expr(left, func, ns), print_expr(right, func, ns)],
         ),
-        Expression::Multiply(_, ty, left, right) => Tree::Branch(
-            format!("multiply {}", ty.to_string(ns)),
+        Expression::Multiply(_, ty, unchecked, left, right) => Tree::Branch(
+            format!(
+                "multiply {}{}",
+                if *unchecked { "unchecked " } else { "" },
+                ty.to_string(ns)
+            ),
             vec![print_expr(left, func, ns), print_expr(right, func, ns)],
         ),
-        Expression::UDivide(_, ty, left, right) => Tree::Branch(
-            format!("unsigned divide {}", ty.to_string(ns)),
+        Expression::Divide(_, ty, left, right) => Tree::Branch(
+            format!("divide {}", ty.to_string(ns)),
             vec![print_expr(left, func, ns), print_expr(right, func, ns)],
         ),
-        Expression::SDivide(_, ty, left, right) => Tree::Branch(
-            format!("signed divide {}", ty.to_string(ns)),
+        Expression::Modulo(_, ty, left, right) => Tree::Branch(
+            format!("modulo {}", ty.to_string(ns)),
             vec![print_expr(left, func, ns), print_expr(right, func, ns)],
         ),
-        Expression::UModulo(_, ty, left, right) => Tree::Branch(
-            format!("unsigned modulo {}", ty.to_string(ns)),
-            vec![print_expr(left, func, ns), print_expr(right, func, ns)],
-        ),
-        Expression::SModulo(_, ty, left, right) => Tree::Branch(
-            format!("signed modulo {}", ty.to_string(ns)),
-            vec![print_expr(left, func, ns), print_expr(right, func, ns)],
-        ),
-        Expression::Power(_, ty, left, right) => Tree::Branch(
-            format!("power {}", ty.to_string(ns)),
+        Expression::Power(_, ty, unchecked, left, right) => Tree::Branch(
+            format!(
+                "power {}{}",
+                if *unchecked { "unchecked " } else { "" },
+                ty.to_string(ns)
+            ),
             vec![print_expr(left, func, ns), print_expr(right, func, ns)],
         ),
         Expression::BitwiseOr(_, ty, left, right) => Tree::Branch(
@@ -125,10 +159,15 @@ fn print_expr(e: &Expression, func: Option<&Function>, ns: &Namespace) -> Tree {
             ty.to_string(ns),
             func.unwrap().symtable.vars[pos].id.name
         )),
-        Expression::ConstantVariable(_, ty, base_contract_no, var_no) => Tree::Leaf(format!(
+        Expression::ConstantVariable(_, ty, Some(base_contract_no), var_no) => Tree::Leaf(format!(
             "contract variable {} {}",
             ty.to_string(ns),
             ns.contracts[*base_contract_no].variables[*var_no].name
+        )),
+        Expression::ConstantVariable(_, ty, None, var_no) => Tree::Leaf(format!(
+            "contract variable {} {}",
+            ty.to_string(ns),
+            ns.constants[*var_no].name
         )),
         Expression::StorageVariable(_, ty, base_contract_no, var_no) => Tree::Leaf(format!(
             "storage variable {} {}",
@@ -159,56 +198,64 @@ fn print_expr(e: &Expression, func: Option<&Function>, ns: &Namespace) -> Tree {
             format!("cast {}", ty.to_string(ns)),
             vec![print_expr(expr, func, ns)],
         ),
-        Expression::PreIncrement(_, ty, expr) => Tree::Branch(
-            format!("pre-increment {}", ty.to_string(ns)),
+        Expression::BytesCast(_, ty, from, expr) => Tree::Branch(
+            format!(
+                "bytes cast to {} from {}",
+                ty.to_string(ns),
+                from.to_string(ns)
+            ),
             vec![print_expr(expr, func, ns)],
         ),
-        Expression::PreDecrement(_, ty, expr) => Tree::Branch(
-            format!("pre-decrement {}", ty.to_string(ns)),
+        Expression::PreIncrement(_, ty, unchecked, expr) => Tree::Branch(
+            format!(
+                "pre-increment {}{}",
+                if *unchecked { "unchecked " } else { "" },
+                ty.to_string(ns)
+            ),
             vec![print_expr(expr, func, ns)],
         ),
-        Expression::PostIncrement(_, ty, expr) => Tree::Branch(
-            format!("post-increment {}", ty.to_string(ns)),
+        Expression::PreDecrement(_, ty, unchecked, expr) => Tree::Branch(
+            format!(
+                "pre-decrement {}{}",
+                if *unchecked { "unchecked " } else { "" },
+                ty.to_string(ns)
+            ),
             vec![print_expr(expr, func, ns)],
         ),
-        Expression::PostDecrement(_, ty, expr) => Tree::Branch(
-            format!("post-decrement {}", ty.to_string(ns)),
+        Expression::PostIncrement(_, ty, unchecked, expr) => Tree::Branch(
+            format!(
+                "post-increment {}{}",
+                if *unchecked { "unchecked " } else { "" },
+                ty.to_string(ns)
+            ),
+            vec![print_expr(expr, func, ns)],
+        ),
+        Expression::PostDecrement(_, ty, unchecked, expr) => Tree::Branch(
+            format!(
+                "post-decrement {}{}",
+                if *unchecked { "unchecked " } else { "" },
+                ty.to_string(ns)
+            ),
             vec![print_expr(expr, func, ns)],
         ),
         Expression::Assign(_, ty, left, right) => Tree::Branch(
-            format!("asign {}", ty.to_string(ns)),
+            format!("assign {}", ty.to_string(ns)),
             vec![print_expr(left, func, ns), print_expr(right, func, ns)],
         ),
-        Expression::UMore(_, left, right) => Tree::Branch(
-            String::from("unsigned more"),
+        Expression::More(_, left, right) => Tree::Branch(
+            String::from("more"),
             vec![print_expr(left, func, ns), print_expr(right, func, ns)],
         ),
-        Expression::ULess(_, left, right) => Tree::Branch(
-            String::from("unsigned less"),
+        Expression::Less(_, left, right) => Tree::Branch(
+            String::from("less"),
             vec![print_expr(left, func, ns), print_expr(right, func, ns)],
         ),
-        Expression::UMoreEqual(_, left, right) => Tree::Branch(
-            String::from("unsigned more or equal"),
+        Expression::MoreEqual(_, left, right) => Tree::Branch(
+            String::from("more or equal"),
             vec![print_expr(left, func, ns), print_expr(right, func, ns)],
         ),
-        Expression::ULessEqual(_, left, right) => Tree::Branch(
-            String::from("unsigned less or equal"),
-            vec![print_expr(left, func, ns), print_expr(right, func, ns)],
-        ),
-        Expression::SMore(_, left, right) => Tree::Branch(
-            String::from("signed more"),
-            vec![print_expr(left, func, ns), print_expr(right, func, ns)],
-        ),
-        Expression::SLess(_, left, right) => Tree::Branch(
-            String::from("signed less"),
-            vec![print_expr(left, func, ns), print_expr(right, func, ns)],
-        ),
-        Expression::SMoreEqual(_, left, right) => Tree::Branch(
-            String::from("signed more or equal"),
-            vec![print_expr(left, func, ns), print_expr(right, func, ns)],
-        ),
-        Expression::SLessEqual(_, left, right) => Tree::Branch(
-            String::from("signed less or equal"),
+        Expression::LessEqual(_, left, right) => Tree::Branch(
+            String::from("less or equal"),
             vec![print_expr(left, func, ns), print_expr(right, func, ns)],
         ),
         Expression::Equal(_, left, right) => Tree::Branch(
@@ -238,26 +285,26 @@ fn print_expr(e: &Expression, func: Option<&Function>, ns: &Namespace) -> Tree {
                 print_expr(right, func, ns),
             ],
         ),
-        Expression::ArraySubscript(_, ty, array, index) => Tree::Branch(
-            format!("array subscript {}", ty.to_string(ns)),
+        Expression::Subscript(_, ty, array, index) => Tree::Branch(
+            format!("subscript {}", ty.to_string(ns)),
             vec![
                 Tree::Branch(String::from("array"), vec![print_expr(array, func, ns)]),
                 Tree::Branch(String::from("index"), vec![print_expr(index, func, ns)]),
             ],
         ),
         Expression::StructMember(_, ty, struct_expr, member) => {
-            if let Type::Struct(struct_no) = struct_expr.ty() {
+            if let Type::Struct(struct_no) = struct_expr.ty().deref_any() {
                 Tree::Branch(
-                    format!("array subscript {}", ty.to_string(ns)),
+                    format!("struct member {}", ty.to_string(ns)),
                     vec![
                         Tree::Branch(
                             String::from("struct"),
                             vec![print_expr(struct_expr, func, ns)],
                         ),
                         Tree::Branch(
-                            String::from("member"),
+                            String::from("field"),
                             vec![Tree::Leaf(
-                                ns.structs[struct_no].fields[*member].name.to_owned(),
+                                ns.structs[*struct_no].fields[*member].name.to_owned(),
                             )],
                         ),
                     ],
@@ -274,7 +321,210 @@ fn print_expr(e: &Expression, func: Option<&Function>, ns: &Namespace) -> Tree {
             String::from("logical and"),
             vec![print_expr(left, func, ns), print_expr(right, func, ns)],
         ),
-        _ => Tree::Leaf(String::from("not implemented")),
+        Expression::InternalFunction {
+            function_no,
+            signature,
+            ..
+        } => Tree::Leaf(format!(
+            "function {} {:?}",
+            ns.functions[*function_no].print_name(ns),
+            signature,
+        )),
+        Expression::ExternalFunction { function_no, .. } => Tree::Leaf(format!(
+            "external {}",
+            ns.functions[*function_no].print_name(ns)
+        )),
+        Expression::Builtin(_, _, builtin, args) => {
+            let title = match get_prototype(*builtin) {
+                Some(Prototype {
+                    namespace: None,
+                    name,
+                    ..
+                }) => format!("builtin {}", name),
+                Some(Prototype {
+                    namespace: Some(namespace),
+                    name,
+                    ..
+                }) => format!("builtin {}.{}", namespace, name),
+                _ => String::from("unknown builtin"),
+            };
+            Tree::Branch(
+                title,
+                args.iter().map(|e| print_expr(e, func, ns)).collect(),
+            )
+        }
+        Expression::StringCompare(_, left, right) => Tree::Branch(
+            String::from("string compare"),
+            vec![
+                print_string_location(left, func, ns),
+                print_string_location(right, func, ns),
+            ],
+        ),
+        Expression::StringConcat(_, _, left, right) => Tree::Branch(
+            String::from("string concatenate"),
+            vec![
+                print_string_location(left, func, ns),
+                print_string_location(right, func, ns),
+            ],
+        ),
+        Expression::InterfaceId(_, contract_no) => {
+            Tree::Leaf(format!("interfaceId {}", ns.contracts[*contract_no].name))
+        }
+        Expression::FormatString(_, args) => Tree::Branch(
+            String::from("format"),
+            args.iter()
+                .map(|(_, arg)| print_expr(arg, func, ns))
+                .collect(),
+        ),
+        Expression::StorageArrayLength { array, .. } => Tree::Branch(
+            String::from("storage array length"),
+            vec![print_expr(array, func, ns)],
+        ),
+        Expression::InternalFunctionCall { function, args, .. } => Tree::Branch(
+            String::from("internal function call"),
+            vec![
+                print_expr(function, func, ns),
+                Tree::Branch(
+                    String::from("args"),
+                    args.iter().map(|e| print_expr(e, func, ns)).collect(),
+                ),
+            ],
+        ),
+        Expression::ExternalFunctionCall {
+            function,
+            args,
+            value,
+            ..
+        } => Tree::Branch(
+            String::from("external function call"),
+            vec![
+                print_expr(function, func, ns),
+                print_expr(value, func, ns),
+                Tree::Branch(
+                    String::from("args"),
+                    args.iter().map(|e| print_expr(e, func, ns)).collect(),
+                ),
+            ],
+        ),
+        Expression::ExternalFunctionCallRaw {
+            address,
+            args,
+            value,
+            ..
+        } => Tree::Branch(
+            String::from("external function call raw"),
+            vec![
+                print_expr(address, func, ns),
+                print_expr(value, func, ns),
+                print_expr(args, func, ns),
+            ],
+        ),
+        Expression::Constructor {
+            contract_no,
+            value,
+            salt,
+            space,
+            args,
+            ..
+        } => {
+            let mut list = vec![Tree::Leaf(format!(
+                "contract {}",
+                ns.contracts[*contract_no].name
+            ))];
+
+            if let Some(value) = value {
+                list.push(Tree::Branch(
+                    String::from("value"),
+                    vec![print_expr(value, func, ns)],
+                ));
+            }
+
+            if let Some(salt) = salt {
+                list.push(Tree::Branch(
+                    String::from("salt"),
+                    vec![print_expr(salt, func, ns)],
+                ));
+            }
+
+            if let Some(space) = space {
+                list.push(Tree::Branch(
+                    String::from("space"),
+                    vec![print_expr(space, func, ns)],
+                ));
+            }
+
+            list.push(Tree::Branch(
+                String::from("args"),
+                args.iter().map(|e| print_expr(e, func, ns)).collect(),
+            ));
+
+            Tree::Branch(String::from("constructor"), list)
+        }
+        Expression::AllocDynamicArray(_, ty, expr, None) => Tree::Branch(
+            format!("allocate dynamic array {}", ty.to_string(ns)),
+            vec![print_expr(expr, func, ns)],
+        ),
+        Expression::AllocDynamicArray(_, ty, expr, Some(init)) => Tree::Branch(
+            format!("allocate dynamic array {}", ty.to_string(ns)),
+            vec![
+                print_expr(expr, func, ns),
+                Tree::Leaf(format!("init {}", hex::encode(init))),
+            ],
+        ),
+        Expression::DynamicArrayLength(_, array) => Tree::Branch(
+            String::from("dynamic array length"),
+            vec![print_expr(array, func, ns)],
+        ),
+        Expression::DynamicArraySubscript(_, ty, array, index) => Tree::Branch(
+            format!("dynamic array subscript {}", ty.to_string(ns)),
+            vec![
+                Tree::Branch(String::from("array"), vec![print_expr(array, func, ns)]),
+                Tree::Branch(String::from("index"), vec![print_expr(index, func, ns)]),
+            ],
+        ),
+        Expression::DynamicArrayPush(_, array, ty, value) => Tree::Branch(
+            format!("dynamic array push {}", ty.to_string(ns)),
+            vec![
+                Tree::Branch(String::from("array"), vec![print_expr(array, func, ns)]),
+                Tree::Branch(String::from("value"), vec![print_expr(value, func, ns)]),
+            ],
+        ),
+        Expression::DynamicArrayPop(_, array, ty) => Tree::Branch(
+            format!("dynamic array pop {}", ty.to_string(ns)),
+            vec![Tree::Branch(
+                String::from("array"),
+                vec![print_expr(array, func, ns)],
+            )],
+        ),
+        Expression::StorageBytesSubscript(_, array, index) => Tree::Branch(
+            String::from("storage bytes subscript"),
+            vec![
+                Tree::Branch(String::from("array"), vec![print_expr(array, func, ns)]),
+                Tree::Branch(String::from("index"), vec![print_expr(index, func, ns)]),
+            ],
+        ),
+        Expression::List(_, list) => Tree::Branch(
+            String::from("list"),
+            list.iter().map(|e| print_expr(e, func, ns)).collect(),
+        ),
+        Expression::FunctionArg(_, ty, no) => {
+            Tree::Leaf(format!("func arg #{} {}", no, ty.to_string(ns)))
+        }
+        Expression::InternalFunctionCfg(..)
+        | Expression::ReturnData(..)
+        | Expression::Poison
+        | Expression::Undefined(_)
+        | Expression::AbiEncode { .. }
+        | Expression::Keccak256(..) => {
+            panic!("should not present in ast");
+        }
+    }
+}
+
+fn print_string_location(s: &StringLocation, func: Option<&Function>, ns: &Namespace) -> Tree {
+    match s {
+        StringLocation::CompileTime(val) => Tree::Leaf(format!("hex\"{}\"", hex::encode(val))),
+        StringLocation::RunTime(expr) => print_expr(expr, func, ns),
     }
 }
 
@@ -283,6 +533,14 @@ fn print_statement(stmts: &[Statement], func: &Function, ns: &Namespace) -> Vec<
 
     for stmt in stmts {
         res.push(match stmt {
+            Statement::Block {
+                statements,
+                unchecked,
+                ..
+            } => Tree::Branch(
+                format!("block{}", if *unchecked { " unchecked" } else { "" }),
+                print_statement(statements, func, ns),
+            ),
             Statement::VariableDecl(_, _, p, None) => {
                 Tree::Leaf(format!("declare {} {}", p.ty.to_string(ns), p.name))
             }
@@ -290,20 +548,25 @@ fn print_statement(stmts: &[Statement], func: &Function, ns: &Namespace) -> Vec<
                 format!("declare {} {}", p.ty.to_string(ns), p.name),
                 vec![print_expr(e, Some(func), ns)],
             ),
-            Statement::If(_, _, cond, then_stmt, else_stmt) if else_stmt.is_empty() => {
+            Statement::If(_, reachable, cond, then_stmt, else_stmt) if else_stmt.is_empty() => {
+                let reachable = Tree::Leaf(format!("reachable:{}", reachable));
                 let cond =
                     Tree::Branch(String::from("cond"), vec![print_expr(cond, Some(func), ns)]);
                 let then = Tree::Branch(String::from("then"), print_statement(then_stmt, func, ns));
-                Tree::Branch(String::from("if"), vec![cond, then])
+                Tree::Branch(String::from("if"), vec![cond, then, reachable])
             }
-            Statement::If(_, _, cond, then_stmt, else_stmt) => {
+            Statement::If(_, reachable, cond, then_stmt, else_stmt) => {
+                let reachable = Tree::Leaf(format!("reachable:{}", reachable));
                 let cond =
                     Tree::Branch(String::from("cond"), vec![print_expr(cond, Some(func), ns)]);
                 let then_tree =
                     Tree::Branch(String::from("then"), print_statement(then_stmt, func, ns));
                 let else_tree =
                     Tree::Branch(String::from("else"), print_statement(else_stmt, func, ns));
-                Tree::Branch(String::from("if"), vec![cond, then_tree, else_tree])
+                Tree::Branch(
+                    String::from("if"),
+                    vec![cond, then_tree, else_tree, reachable],
+                )
             }
             Statement::While(_, _, cond, body) => {
                 let cond =
@@ -355,19 +618,18 @@ fn print_statement(stmts: &[Statement], func: &Function, ns: &Namespace) -> Vec<
             }
             Statement::Break(_) => Tree::Leaf(String::from("break")),
             Statement::Continue(_) => Tree::Leaf(String::from("continue")),
-            Statement::Return(_, args) => {
-                if args.is_empty() {
-                    Tree::Leaf(String::from("return"))
-                } else {
-                    let args = args.iter().map(|e| print_expr(e, Some(func), ns)).collect();
-
-                    Tree::Branch(String::from("return"), args)
-                }
-            }
+            Statement::Return(_, None) => Tree::Leaf(String::from("return")),
+            Statement::Return(_, Some(expr)) => Tree::Branch(
+                String::from("return"),
+                vec![print_expr(expr, Some(func), ns)],
+            ),
             Statement::Emit { event_no, args, .. } => {
                 let args = args.iter().map(|e| print_expr(e, Some(func), ns)).collect();
 
-                Tree::Branch(format!("emit {}", ns.events[*event_no].to_string()), args)
+                Tree::Branch(
+                    format!("emit {}", ns.events[*event_no].symbol_name(ns)),
+                    args,
+                )
             }
             Statement::Destructure(_, fields, args) => {
                 let fields = fields
@@ -396,12 +658,10 @@ fn print_statement(stmts: &[Statement], func: &Function, ns: &Namespace) -> Vec<
                 catch_stmt,
                 ..
             } => {
-                let mut list = Vec::new();
-
-                list.push(Tree::Branch(
+                let mut list = vec![Tree::Branch(
                     String::from("expr"),
                     vec![print_expr(expr, Some(func), ns)],
-                ));
+                )];
 
                 if !returns.is_empty() {
                     let returns = returns
@@ -432,11 +692,13 @@ fn print_statement(stmts: &[Statement], func: &Function, ns: &Namespace) -> Vec<
                     ));
                 }
 
-                list.push(Tree::Leaf(format!(
-                    "catch_param: {} {}",
-                    catch_param.ty.to_string(ns),
-                    catch_param.name
-                )));
+                if let Some(param) = catch_param {
+                    list.push(Tree::Leaf(format!(
+                        "catch_param: {} {}",
+                        param.ty.to_string(ns),
+                        param.name
+                    )));
+                }
 
                 list.push(Tree::Branch(
                     String::from("catch_stmt"),
@@ -471,7 +733,7 @@ impl Namespace {
             let fields = s
                 .fields
                 .iter()
-                .map(|p| Tree::Leaf(format!("field {} {}", p.ty.to_string(&self), p.name)))
+                .map(|p| Tree::Leaf(format!("field {} {}", p.ty.to_string(self), p.name)))
                 .collect();
 
             t.push(Tree::Branch(format!("struct {}", s), fields));
@@ -485,7 +747,7 @@ impl Namespace {
                 .map(|p| {
                     Tree::Leaf(format!(
                         "field {} {}{}",
-                        p.ty.to_string(&self),
+                        p.ty.to_string(self),
                         if p.indexed { "indexed " } else { "" },
                         p.name
                     ))
@@ -493,9 +755,20 @@ impl Namespace {
                 .collect();
 
             t.push(Tree::Branch(
-                format!("event {} {}", e, if e.anonymous { "anonymous" } else { "" }),
+                format!(
+                    "event {} {}",
+                    e.symbol_name(self),
+                    if e.anonymous { "anonymous" } else { "" }
+                ),
                 fields,
             ));
+        }
+
+        // functions
+        for func in &self.functions {
+            if func.contract_no.is_none() {
+                t.push(print_func(func, self));
+            }
         }
 
         // contracts
@@ -524,10 +797,7 @@ impl Namespace {
             for var in &c.variables {
                 let name = format!(
                     "variable {} {} {}",
-                    match var.var {
-                        ContractVariableType::Constant => "constant",
-                        ContractVariableType::Storage => "storage",
-                    },
+                    if var.constant { "constant" } else { "storage" },
                     var.ty.to_string(self),
                     var.name
                 );
@@ -563,85 +833,10 @@ impl Namespace {
                 members.push(Tree::Branch(String::from("using"), list));
             }
 
-            for func in &c.functions {
-                let mut list = Vec::new();
+            for function_no in &c.functions {
+                let func = &self.functions[*function_no];
 
-                list.push(Tree::Leaf(format!("visibility {}", func.visibility)));
-
-                if func.ty == pt::FunctionTy::Constructor && func.ty == pt::FunctionTy::Function {
-                    list.push(Tree::Leaf(format!("signature {}", func.signature)));
-                }
-
-                if let Some(mutability) = &func.mutability {
-                    list.push(Tree::Leaf(format!("mutability {}", mutability)));
-                }
-
-                if func.is_virtual {
-                    list.push(Tree::Leaf(String::from("virtual")));
-                }
-
-                if let Some((_, is_override)) = &func.is_override {
-                    if is_override.is_empty() {
-                        list.push(Tree::Leaf(String::from("override")));
-                    } else {
-                        list.push(Tree::Branch(
-                            String::from("override"),
-                            is_override
-                                .iter()
-                                .map(|contract_no| {
-                                    Tree::Leaf(self.contracts[*contract_no].name.clone())
-                                })
-                                .collect(),
-                        ));
-                    }
-                }
-
-                if !func.bases.is_empty() {
-                    let mut list = Vec::new();
-                    for (base_no, (_, _, args)) in &func.bases {
-                        let name = self.contracts[*base_no].name.clone();
-                        if !args.is_empty() {
-                            list.push(Tree::Branch(
-                                name,
-                                args.iter()
-                                    .map(|e| print_expr(e, Some(func), self))
-                                    .collect(),
-                            ));
-                        } else {
-                            list.push(Tree::Leaf(name));
-                        }
-                    }
-                    members.push(Tree::Branch(String::from("bases"), list));
-                }
-
-                if !func.params.is_empty() {
-                    let params = func
-                        .params
-                        .iter()
-                        .map(|p| Tree::Leaf(format!("{} {}", p.ty.to_string(&self), p.name)))
-                        .collect();
-
-                    list.push(Tree::Branch(String::from("params"), params));
-                }
-
-                if !func.returns.is_empty() {
-                    let returns = func
-                        .returns
-                        .iter()
-                        .map(|p| Tree::Leaf(format!("{} {}", p.ty.to_string(&self), p.name)))
-                        .collect();
-
-                    list.push(Tree::Branch(String::from("returns"), returns));
-                }
-
-                if !func.body.is_empty() {
-                    list.push(Tree::Branch(
-                        String::from("body"),
-                        print_statement(&func.body, func, self),
-                    ));
-                }
-
-                members.push(Tree::Branch(format!("{} {}", func.ty, func.name), list));
+                members.push(print_func(func, self));
             }
 
             t.push(Tree::Branch(format!("{} {}", c.ty, c.name), members));
@@ -649,4 +844,86 @@ impl Namespace {
 
         print_tree(&Tree::Branch(filename.to_owned(), t), "", "")
     }
+
+    /// Type storage
+    pub fn storage_type(&self) -> Type {
+        if self.target == Target::Solana {
+            Type::Uint(32)
+        } else {
+            Type::Uint(256)
+        }
+    }
+}
+
+fn print_func(func: &Function, ns: &Namespace) -> Tree {
+    let mut list = vec![Tree::Leaf(format!("visibility {}", func.visibility))];
+
+    if func.ty == pt::FunctionTy::Constructor && func.ty == pt::FunctionTy::Function {
+        list.push(Tree::Leaf(format!("signature {}", func.signature)));
+    }
+
+    list.push(Tree::Leaf(format!("mutability {}", func.mutability)));
+
+    if func.is_virtual {
+        list.push(Tree::Leaf(String::from("virtual")));
+    }
+
+    if let Some((_, is_override)) = &func.is_override {
+        if is_override.is_empty() {
+            list.push(Tree::Leaf(String::from("override")));
+        } else {
+            list.push(Tree::Branch(
+                String::from("override"),
+                is_override
+                    .iter()
+                    .map(|contract_no| Tree::Leaf(ns.contracts[*contract_no].name.clone()))
+                    .collect(),
+            ));
+        }
+    }
+
+    if !func.bases.is_empty() {
+        let mut bases = Vec::new();
+        for (base_no, (_, _, args)) in &func.bases {
+            let name = ns.contracts[*base_no].name.clone();
+            if !args.is_empty() {
+                bases.push(Tree::Branch(
+                    name,
+                    args.iter().map(|e| print_expr(e, Some(func), ns)).collect(),
+                ));
+            } else {
+                bases.push(Tree::Leaf(name));
+            }
+        }
+        list.push(Tree::Branch(String::from("bases"), bases));
+    }
+
+    if !func.params.is_empty() {
+        let params = func
+            .params
+            .iter()
+            .map(|p| Tree::Leaf(format!("{} {}", p.ty.to_string(ns), p.name)))
+            .collect();
+
+        list.push(Tree::Branch(String::from("params"), params));
+    }
+
+    if !func.returns.is_empty() {
+        let returns = func
+            .returns
+            .iter()
+            .map(|p| Tree::Leaf(format!("{} {}", p.ty.to_string(ns), p.name)))
+            .collect();
+
+        list.push(Tree::Branch(String::from("returns"), returns));
+    }
+
+    if !func.body.is_empty() {
+        list.push(Tree::Branch(
+            String::from("body"),
+            print_statement(&func.body, func, ns),
+        ));
+    }
+
+    Tree::Branch(format!("{} {}", func.ty, func.name), list)
 }

@@ -1,5 +1,5 @@
-use sema::ast::Namespace;
-use Target;
+use crate::sema::ast::Namespace;
+use crate::Target;
 
 pub mod ethereum;
 pub mod substrate;
@@ -11,7 +11,7 @@ pub fn generate_abi(
     verbose: bool,
 ) -> (String, &'static str) {
     match ns.target {
-        Target::Substrate => {
+        Target::Substrate { .. } => {
             if verbose {
                 eprintln!(
                     "info: Generating Substrate ABI for contract {}",
@@ -21,7 +21,7 @@ pub fn generate_abi(
 
             let abi = substrate::metadata(contract_no, code, ns);
 
-            (serde_json::to_string_pretty(&abi).unwrap(), "json")
+            (serde_json::to_string_pretty(&abi).unwrap(), "contract")
         }
         _ => {
             if verbose {

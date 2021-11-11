@@ -1,85 +1,101 @@
+use indexmap::IndexMap;
 use num_bigint::BigInt;
-use std::collections::HashMap;
-use std::collections::HashSet;
+use std::collections::{BTreeSet, HashMap, HashSet};
 use std::fmt;
 use std::str;
 
-use super::expression::expression;
 use super::statements::{statement, LoopScopes};
-use hex;
-use parser::pt;
-use sema::ast::{
+use super::{
+    constant_folding, dead_storage, expression::expression, reaching_definitions, strength_reduce,
+    vector_to_slice, Options,
+};
+use crate::codegen::undefined_variable;
+use crate::parser::pt;
+use crate::sema::ast::{
     CallTy, Contract, Expression, Function, Namespace, Parameter, StringLocation, Type,
 };
-use sema::contracts::{collect_base_args, visit_bases};
-use sema::symtable::Symtable;
-use Target;
+use crate::sema::contracts::{collect_base_args, visit_bases};
+use crate::sema::symtable::Symtable;
 
-#[allow(clippy::large_enum_variant)]
+pub type Vars = IndexMap<usize, Variable>;
+
 #[derive(Clone)]
+#[allow(clippy::large_enum_variant)]
 pub enum Instr {
-    ClearStorage {
+    /// Set variable
+    Set {
+        loc: pt::Loc,
+        res: usize,
+        expr: Expression,
+    },
+    /// Call internal function, either static dispatch or dynamic dispatch
+    Call {
+        res: Vec<usize>,
+        return_tys: Vec<Type>,
+        call: InternalCallTy,
+        args: Vec<Expression>,
+    },
+    /// Return
+    Return { value: Vec<Expression> },
+    /// Jump unconditionally
+    Branch { block: usize },
+    /// Jump conditionally
+    BranchCond {
+        cond: Expression,
+        true_block: usize,
+        false_block: usize,
+    },
+    /// Set array element in memory
+    Store { dest: Expression, pos: usize },
+    /// Abort execution
+    AssertFailure { expr: Option<Expression> },
+    /// Print to log message
+    Print { expr: Expression },
+    /// Load storage (this is an instruction rather than an expression
+    /// so that it can be moved around by the dead storage pass
+    LoadStorage {
+        res: usize,
         ty: Type,
         storage: Expression,
     },
+    /// Clear storage at slot for ty (might span multiple slots)
+    ClearStorage { ty: Type, storage: Expression },
+    /// Set storage value at slot
     SetStorage {
         ty: Type,
-        local: usize,
+        value: Expression,
         storage: Expression,
     },
+    /// In storage slot, set the value at the offset
     SetStorageBytes {
-        local: usize,
-        storage: Box<Expression>,
-        offset: Box<Expression>,
+        value: Expression,
+        storage: Expression,
+        offset: Expression,
     },
+    /// Push an element onto a bytes in storage
+    PushStorage {
+        res: usize,
+        value: Expression,
+        storage: Expression,
+    },
+    /// Pop an element from a bytes in storage
+    PopStorage {
+        res: usize,
+        ty: Type,
+        storage: Expression,
+    },
+    /// Push element on memory array
     PushMemory {
         res: usize,
         ty: Type,
         array: usize,
         value: Box<Expression>,
     },
-    PopMemory {
-        res: usize,
-        ty: Type,
-        array: usize,
-    },
-    Set {
-        res: usize,
-        expr: Expression,
-    },
-    Eval {
-        expr: Expression,
-    },
-    Constant {
-        res: usize,
-        constant: usize,
-    },
-    Call {
-        res: Vec<usize>,
-        cfg_no: usize,
-        args: Vec<Expression>,
-    },
-    Return {
-        value: Vec<Expression>,
-    },
-    Branch {
-        bb: usize,
-    },
-    BranchCond {
-        cond: Expression,
-        true_: usize,
-        false_: usize,
-    },
-    Store {
-        dest: Expression,
-        pos: usize,
-    },
-    AssertFailure {
-        expr: Option<Expression>,
-    },
-    Print {
-        expr: Expression,
-    },
+    /// Pop element from memory array. The push builtin returns a reference
+    /// to the new element which is stored in res.
+    PopMemory { res: usize, ty: Type, array: usize },
+    /// Create contract and call constructor. If creating the contract fails,
+    /// either store the result in success or abort success.
     Constructor {
         success: Option<usize>,
         res: usize,
@@ -89,47 +105,164 @@ pub enum Instr {
         value: Option<Expression>,
         gas: Expression,
         salt: Option<Expression>,
+        space: Option<Expression>,
     },
+    /// Call external functions. If the call fails, set the success failure
+    /// or abort if this is None
     ExternalCall {
         success: Option<usize>,
-        address: Expression,
-        contract_no: Option<usize>,
-        function_no: usize,
-        args: Vec<Expression>,
+        address: Option<Expression>,
+        payload: Expression,
         value: Expression,
         gas: Expression,
         callty: CallTy,
     },
+    /// Value transfer; either <address>.send() or <address>.transfer()
+    ValueTransfer {
+        success: Option<usize>,
+        address: Expression,
+        value: Expression,
+    },
+    /// ABI decoder encoded data. If decoding fails, either jump to exception
+    /// or abort if this is None.
     AbiDecode {
         res: Vec<usize>,
         selector: Option<u32>,
-        exception: Option<usize>,
+        exception_block: Option<usize>,
         tys: Vec<Parameter>,
         data: Expression,
     },
-    AbiEncodeVector {
-        res: usize,
-        tys: Vec<Type>,
-        packed: bool,
-        selector: Option<Expression>,
-        args: Vec<Expression>,
-    },
+    /// Insert unreachable instruction after e.g. self-destruct
     Unreachable,
-    SelfDestruct {
-        recipient: Expression,
-    },
-    Hash {
-        res: usize,
-        hash: HashTy,
-        expr: Expression,
-    },
+    /// Self destruct
+    SelfDestruct { recipient: Expression },
+    /// Emit event
     EmitEvent {
         event_no: usize,
         data: Vec<Expression>,
-        data_tys: Vec<Parameter>,
+        data_tys: Vec<Type>,
         topics: Vec<Expression>,
-        topic_tys: Vec<Parameter>,
+        topic_tys: Vec<Type>,
     },
+    /// Do nothing
+    Nop,
+}
+
+impl Instr {
+    pub fn recurse_expressions<T>(
+        &self,
+        cx: &mut T,
+        f: fn(expr: &Expression, ctx: &mut T) -> bool,
+    ) {
+        match self {
+            Instr::BranchCond { cond: expr, .. }
+            | Instr::Store { dest: expr, .. }
+            | Instr::LoadStorage { storage: expr, .. }
+            | Instr::ClearStorage { storage: expr, .. }
+            | Instr::Print { expr }
+            | Instr::AssertFailure { expr: Some(expr) }
+            | Instr::PopStorage { storage: expr, .. }
+            | Instr::AbiDecode { data: expr, .. }
+            | Instr::SelfDestruct { recipient: expr }
+            | Instr::Set { expr, .. } => {
+                expr.recurse(cx, f);
+            }
+
+            Instr::PushMemory { value: expr, .. } => {
+                expr.recurse(cx, f);
+            }
+
+            Instr::SetStorage { value, storage, .. }
+            | Instr::PushStorage { value, storage, .. } => {
+                value.recurse(cx, f);
+                storage.recurse(cx, f);
+            }
+
+            Instr::SetStorageBytes {
+                value,
+                storage,
+                offset,
+            } => {
+                value.recurse(cx, f);
+                storage.recurse(cx, f);
+                offset.recurse(cx, f);
+            }
+
+            Instr::Return { value: exprs } | Instr::Call { args: exprs, .. } => {
+                for expr in exprs {
+                    expr.recurse(cx, f);
+                }
+            }
+
+            Instr::Constructor {
+                args,
+                value,
+                gas,
+                salt,
+                space,
+                ..
+            } => {
+                for arg in args {
+                    arg.recurse(cx, f);
+                }
+                if let Some(expr) = value {
+                    expr.recurse(cx, f);
+                }
+                gas.recurse(cx, f);
+
+                if let Some(expr) = salt {
+                    expr.recurse(cx, f);
+                }
+
+                if let Some(expr) = space {
+                    expr.recurse(cx, f);
+                }
+            }
+
+            Instr::ExternalCall {
+                address,
+                payload,
+                value,
+                gas,
+                ..
+            } => {
+                if let Some(expr) = address {
+                    expr.recurse(cx, f);
+                }
+                payload.recurse(cx, f);
+                value.recurse(cx, f);
+                gas.recurse(cx, f);
+            }
+
+            Instr::ValueTransfer { address, value, .. } => {
+                address.recurse(cx, f);
+                value.recurse(cx, f);
+            }
+
+            Instr::EmitEvent { data, topics, .. } => {
+                for expr in data {
+                    expr.recurse(cx, f);
+                }
+
+                for expr in topics {
+                    expr.recurse(cx, f);
+                }
+            }
+
+            Instr::AssertFailure { expr: None }
+            | Instr::Unreachable
+            | Instr::Nop
+            | Instr::Branch { .. }
+            | Instr::PopMemory { .. } => {}
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+#[allow(clippy::large_enum_variant)]
+pub enum InternalCallTy {
+    Static(usize),
+    Dynamic(Expression),
 }
 
 #[derive(Clone, PartialEq)]
@@ -155,9 +288,11 @@ impl fmt::Display for HashTy {
 
 #[derive(Clone)]
 pub struct BasicBlock {
-    pub phis: Option<HashSet<usize>>,
+    pub phis: Option<BTreeSet<usize>>,
     pub name: String,
     pub instr: Vec<Instr>,
+    pub defs: reaching_definitions::VarDefs,
+    pub transfers: Vec<Vec<reaching_definitions::Transfer>>,
 }
 
 impl BasicBlock {
@@ -169,10 +304,11 @@ impl BasicBlock {
 #[derive(Clone)]
 pub struct ControlFlowGraph {
     pub name: String,
+    pub function_no: Option<usize>,
     pub params: Vec<Parameter>,
     pub returns: Vec<Parameter>,
-    pub vars: HashMap<usize, Variable>,
-    pub bb: Vec<BasicBlock>,
+    pub vars: Vars,
+    pub blocks: Vec<BasicBlock>,
     pub nonpayable: bool,
     pub public: bool,
     pub ty: pt::FunctionTy,
@@ -181,13 +317,14 @@ pub struct ControlFlowGraph {
 }
 
 impl ControlFlowGraph {
-    pub fn new(name: String) -> Self {
+    pub fn new(name: String, function_no: Option<usize>) -> Self {
         let mut cfg = ControlFlowGraph {
             name,
+            function_no,
             params: Vec::new(),
             returns: Vec::new(),
-            vars: HashMap::new(),
-            bb: Vec::new(),
+            vars: IndexMap::new(),
+            blocks: Vec::new(),
             nonpayable: false,
             public: false,
             ty: pt::FunctionTy::Function,
@@ -204,10 +341,11 @@ impl ControlFlowGraph {
     pub fn placeholder() -> Self {
         ControlFlowGraph {
             name: String::new(),
+            function_no: None,
             params: Vec::new(),
             returns: Vec::new(),
-            vars: HashMap::new(),
-            bb: Vec::new(),
+            vars: IndexMap::new(),
+            blocks: Vec::new(),
             nonpayable: false,
             public: false,
             ty: pt::FunctionTy::Function,
@@ -218,24 +356,26 @@ impl ControlFlowGraph {
 
     /// Is this a placeholder
     pub fn is_placeholder(&self) -> bool {
-        self.bb.is_empty()
+        self.blocks.is_empty()
     }
 
     pub fn new_basic_block(&mut self, name: String) -> usize {
-        let pos = self.bb.len();
+        let pos = self.blocks.len();
 
-        self.bb.push(BasicBlock {
+        self.blocks.push(BasicBlock {
             name,
             instr: Vec::new(),
             phis: None,
+            transfers: Vec::new(),
+            defs: IndexMap::new(),
         });
 
         pos
     }
 
-    pub fn set_phis(&mut self, bb: usize, phis: HashSet<usize>) {
+    pub fn set_phis(&mut self, block: usize, phis: BTreeSet<usize>) {
         if !phis.is_empty() {
-            self.bb[bb].phis = Some(phis);
+            self.blocks[block].phis = Some(phis);
         }
     }
 
@@ -247,7 +387,7 @@ impl ControlFlowGraph {
         if let Instr::Set { res, .. } = ins {
             vartab.set_dirty(res);
         }
-        self.bb[self.current].add(ins);
+        self.blocks[self.current].add(ins);
     }
 
     pub fn expr_to_string(&self, contract: &Contract, ns: &Namespace, expr: &Expression) -> String {
@@ -255,9 +395,15 @@ impl ControlFlowGraph {
             Expression::FunctionArg(_, _, pos) => format!("(arg #{})", pos),
             Expression::BoolLiteral(_, false) => "false".to_string(),
             Expression::BoolLiteral(_, true) => "true".to_string(),
+            Expression::BytesLiteral(_, Type::String, s) => {
+                format!("{}", String::from_utf8_lossy(s))
+            }
             Expression::BytesLiteral(_, _, s) => format!("hex\"{}\"", hex::encode(s)),
             Expression::NumberLiteral(_, ty, n) => {
                 format!("{} {}", ty.to_string(ns), n.to_str_radix(10))
+            }
+            Expression::RationalNumberLiteral(_, ty, n) => {
+                format!("{} {}", ty.to_string(ns), n)
             }
             Expression::StructLiteral(_, _, expr) => format!(
                 "struct {{ {} }}",
@@ -284,12 +430,12 @@ impl ControlFlowGraph {
                     .collect::<Vec<String>>()
                     .join(", ")
             ),
-            Expression::Add(_, _, l, r) => format!(
+            Expression::Add(_, _, _, l, r) => format!(
                 "({} + {})",
                 self.expr_to_string(contract, ns, l),
                 self.expr_to_string(contract, ns, r)
             ),
-            Expression::Subtract(_, _, l, r) => format!(
+            Expression::Subtract(_, _, _, l, r) => format!(
                 "({} - {})",
                 self.expr_to_string(contract, ns, l),
                 self.expr_to_string(contract, ns, r)
@@ -319,30 +465,35 @@ impl ControlFlowGraph {
                 self.expr_to_string(contract, ns, l),
                 self.expr_to_string(contract, ns, r)
             ),
-            Expression::Multiply(_, _, l, r) => format!(
+            Expression::Multiply(_, _, _, l, r) => format!(
                 "({} * {})",
                 self.expr_to_string(contract, ns, l),
                 self.expr_to_string(contract, ns, r)
             ),
-            Expression::UDivide(_, _, l, r) | Expression::SDivide(_, _, l, r) => format!(
+            Expression::Divide(_, _, l, r) => format!(
                 "({} / {})",
                 self.expr_to_string(contract, ns, l),
                 self.expr_to_string(contract, ns, r)
             ),
-            Expression::UModulo(_, _, l, r) | Expression::SModulo(_, _, l, r) => format!(
+            Expression::Modulo(_, _, l, r) => format!(
                 "({} % {})",
                 self.expr_to_string(contract, ns, l),
                 self.expr_to_string(contract, ns, r)
             ),
-            Expression::Power(_, _, l, r) => format!(
+            Expression::Power(_, _, _, l, r) => format!(
                 "({} ** {})",
                 self.expr_to_string(contract, ns, l),
                 self.expr_to_string(contract, ns, r)
             ),
             Expression::Variable(_, _, res) => format!("%{}", self.vars[res].id.name),
-            Expression::ConstantVariable(_, _, var_contract_no, var_no) | Expression::StorageVariable(_, _, var_contract_no, var_no) => {
-                format!("${}.{}", ns.contracts[*var_contract_no].name,
-                ns.contracts[*var_contract_no].variables[*var_no].name)
+            Expression::ConstantVariable(_, _, Some(var_contract_no), var_no)
+            | Expression::StorageVariable(_, _, var_contract_no, var_no) => format!(
+                "${}.{}",
+                ns.contracts[*var_contract_no].name,
+                ns.contracts[*var_contract_no].variables[*var_no].name
+            ),
+            Expression::ConstantVariable(_, _, None, var_no) => {
+                format!("${}", ns.constants[*var_no].name)
             }
             Expression::Load(_, _, expr) => {
                 format!("(load {})", self.expr_to_string(contract, ns, expr))
@@ -367,43 +518,23 @@ impl ControlFlowGraph {
                 ty.to_string(ns),
                 self.expr_to_string(contract, ns, e)
             ),
-            Expression::SMore(_, l, r) => format!(
-                "({} >(s) {})",
+            Expression::More(_, l, r) => format!(
+                "({} > {})",
                 self.expr_to_string(contract, ns, l),
                 self.expr_to_string(contract, ns, r)
             ),
-            Expression::SLess(_, l, r) => format!(
-                "({} <(s) {})",
+            Expression::Less(_, l, r) => format!(
+                "({} < {})",
                 self.expr_to_string(contract, ns, l),
                 self.expr_to_string(contract, ns, r)
             ),
-            Expression::SMoreEqual(_, l, r) => format!(
-                "({} >=(s) {})",
+            Expression::MoreEqual(_, l, r) => format!(
+                "({} >= {})",
                 self.expr_to_string(contract, ns, l),
                 self.expr_to_string(contract, ns, r)
             ),
-            Expression::SLessEqual(_, l, r) => format!(
-                "({} <=(s) {})",
-                self.expr_to_string(contract, ns, l),
-                self.expr_to_string(contract, ns, r)
-            ),
-            Expression::UMore(_, l, r) => format!(
-                "({} >(u) {})",
-                self.expr_to_string(contract, ns, l),
-                self.expr_to_string(contract, ns, r)
-            ),
-            Expression::ULess(_, l, r) => format!(
-                "({} <(u) {})",
-                self.expr_to_string(contract, ns, l),
-                self.expr_to_string(contract, ns, r)
-            ),
-            Expression::UMoreEqual(_, l, r) => format!(
-                "({} >=(u) {})",
-                self.expr_to_string(contract, ns, l),
-                self.expr_to_string(contract, ns, r)
-            ),
-            Expression::ULessEqual(_, l, r) => format!(
-                "({} <=(u) {})",
+            Expression::LessEqual(_, l, r) => format!(
+                "({} <= {})",
                 self.expr_to_string(contract, ns, l),
                 self.expr_to_string(contract, ns, r)
             ),
@@ -417,8 +548,9 @@ impl ControlFlowGraph {
                 self.expr_to_string(contract, ns, l),
                 self.expr_to_string(contract, ns, r)
             ),
-            Expression::ArraySubscript(_, _, a, i) => format!(
-                "(array index {}[{}])",
+            Expression::Subscript(_, ty, a, i) => format!(
+                "(subscript {} {}[{}])",
+                ty.to_string(ns),
                 self.expr_to_string(contract, ns, a),
                 self.expr_to_string(contract, ns, i)
             ),
@@ -432,18 +564,10 @@ impl ControlFlowGraph {
                 self.expr_to_string(contract, ns, a),
                 self.expr_to_string(contract, ns, i)
             ),
-            Expression::StorageBytesPush(_, a, i) => format!(
-                "(storage bytes push {} {})",
-                self.expr_to_string(contract, ns, a),
-                self.expr_to_string(contract, ns, i)
-            ),
-            Expression::StorageBytesPop(_, a) => format!(
-                "(storage bytes pop {})",
-                self.expr_to_string(contract, ns, a),
-            ),
-            Expression::StorageBytesLength(_, a) => format!(
-                "(storage bytes length {})",
-                self.expr_to_string(contract, ns, a),
+            Expression::StorageArrayLength { array, elem_ty, .. } => format!(
+                "(storage array length {}[{}])",
+                self.expr_to_string(contract, ns, array),
+                elem_ty.to_string(ns),
             ),
             Expression::StructMember(_, _, a, f) => format!(
                 "(struct {} field {})",
@@ -501,27 +625,43 @@ impl ControlFlowGraph {
                 "(keccak256 {})",
                 exprs
                     .iter()
-                    .map(|e| self.expr_to_string(contract, ns, &e))
+                    .map(|e| self.expr_to_string(contract, ns, e))
                     .collect::<Vec<String>>()
                     .join(", ")
             ),
-            Expression::InternalFunctionCall { contract_no, function_no, signature, args, .. } => {
-                let (base_contract_no, function_no) = if let Some(signature) = signature {
+            Expression::InternalFunction {
+                function_no,
+                signature,
+                ..
+            } => {
+                let function_no = if let Some(signature) = signature {
                     contract.virtual_functions[signature]
                 } else {
-                    (*contract_no, *function_no)
+                    *function_no
                 };
 
-                let cfg_no = contract.all_functions[&(base_contract_no, function_no)];
-
-                format!(
+                ns.functions[function_no].print_name(ns)
+            }
+            Expression::ExternalFunction {
+                address,
+                function_no,
+                ..
+            } => format!(
+                "external {} address {}",
+                self.expr_to_string(contract, ns, address),
+                ns.functions[*function_no].print_name(ns)
+            ),
+            Expression::InternalFunctionCfg(cfg_no) => {
+                format!("function {}", contract.cfg[*cfg_no].name)
+            }
+            Expression::InternalFunctionCall { function, args, .. } => format!(
                 "(call {} ({})",
-                contract.cfg[cfg_no].name,
+                self.expr_to_string(contract, ns, function),
                 args.iter()
-                    .map(|a| self.expr_to_string(contract, ns, &a))
+                    .map(|a| self.expr_to_string(contract, ns, a))
                     .collect::<Vec<String>>()
                     .join(", ")
-            )},
+            ),
             Expression::Constructor {
                 contract_no,
                 constructor_no: Some(constructor_no),
@@ -530,9 +670,9 @@ impl ControlFlowGraph {
             } => format!(
                 "(constructor:{} ({}) ({})",
                 ns.contracts[*contract_no].name,
-                ns.contracts[*contract_no].functions[*constructor_no].signature,
+                ns.functions[*constructor_no].signature,
                 args.iter()
-                    .map(|a| self.expr_to_string(contract, ns, &a))
+                    .map(|a| self.expr_to_string(contract, ns, a))
                     .collect::<Vec<String>>()
                     .join(", ")
             ),
@@ -545,7 +685,7 @@ impl ControlFlowGraph {
                 "(constructor:{} ({})",
                 ns.contracts[*contract_no].name,
                 args.iter()
-                    .map(|a| self.expr_to_string(contract, ns, &a))
+                    .map(|a| self.expr_to_string(contract, ns, a))
                     .collect::<Vec<String>>()
                     .join(", ")
             ),
@@ -558,42 +698,30 @@ impl ControlFlowGraph {
                 },
                 ns.contracts[*contract_no].name,
             ),
-            Expression::ExternalFunctionCall {
-                function_no,
-                contract_no,
-                address,
-                args,
-                ..
-            } => format!(
-                "(external call address:{} {}.{} ({})",
-                self.expr_to_string(contract, ns, address),
-                ns.contracts[*contract_no].name,
-                contract.functions[*function_no].name,
+            Expression::ExternalFunctionCall { function, args, .. } => format!(
+                "(external call {} ({})",
+                self.expr_to_string(contract, ns, function),
                 args.iter()
-                    .map(|a| self.expr_to_string(contract, ns, &a))
+                    .map(|a| self.expr_to_string(contract, ns, a))
                     .collect::<Vec<String>>()
                     .join(", ")
             ),
             Expression::ReturnData(_) => "(external call return data)".to_string(),
-            Expression::GetAddress(_, _) => "(get adddress)".to_string(),
-            Expression::Balance(_, _, addr) => {
-                format!("(balance {})", self.expr_to_string(contract, ns, addr))
-            }
             Expression::Assign(_, _, l, r) => format!(
                 "{} = {}",
                 self.expr_to_string(contract, ns, l),
                 self.expr_to_string(contract, ns, r)
             ),
-            Expression::PostDecrement(_, _, e) => {
+            Expression::PostDecrement(_, _, _, e) => {
                 format!("{}--", self.expr_to_string(contract, ns, e),)
             }
-            Expression::PostIncrement(_, _, e) => {
+            Expression::PostIncrement(_, _, _, e) => {
                 format!("{}++", self.expr_to_string(contract, ns, e),)
             }
-            Expression::PreDecrement(_, _, e) => {
+            Expression::PreDecrement(_, _, _, e) => {
                 format!("--{}", self.expr_to_string(contract, ns, e),)
             }
-            Expression::PreIncrement(_, _, e) => {
+            Expression::PreIncrement(_, _, _, e) => {
                 format!("++{}", self.expr_to_string(contract, ns, e),)
             }
             Expression::Cast(_, ty, e) => format!(
@@ -601,12 +729,40 @@ impl ControlFlowGraph {
                 ty.to_string(ns),
                 self.expr_to_string(contract, ns, e)
             ),
-            Expression::Builtin(_, _, builtin, args) =>
-                format!("(builtin {:?} ({}))", builtin,
-                     args.iter().map(|a| self.expr_to_string(contract, ns, &a)).collect::<Vec<String>>().join(", ")
-            )
-            ,
-            // FIXME BEFORE MERGE
+            Expression::BytesCast(_, ty, from, e) => format!(
+                "{} from:{} ({})",
+                ty.to_string(ns),
+                from.to_string(ns),
+                self.expr_to_string(contract, ns, e)
+            ),
+            Expression::Builtin(_, _, builtin, args) => format!(
+                "(builtin {:?} ({}))",
+                builtin,
+                args.iter()
+                    .map(|a| self.expr_to_string(contract, ns, a))
+                    .collect::<Vec<String>>()
+                    .join(", ")
+            ),
+            Expression::FormatString(_, args) => format!(
+                "(format string {})",
+                args.iter()
+                    .map(|(spec, a)| format!("({} {})", spec, self.expr_to_string(contract, ns, a)))
+                    .collect::<Vec<String>>()
+                    .join(", ")
+            ),
+            Expression::AbiEncode { packed, args, .. } => format!(
+                "(abiencode packed:{} non-packed:{})",
+                packed
+                    .iter()
+                    .map(|expr| self.expr_to_string(contract, ns, expr))
+                    .collect::<Vec<String>>()
+                    .join(", "),
+                args.iter()
+                    .map(|expr| self.expr_to_string(contract, ns, expr))
+                    .collect::<Vec<String>>()
+                    .join(", ")
+            ),
+            Expression::Undefined(_) => "undef".to_string(),
             _ => panic!("{:?}", expr),
         }
     }
@@ -636,54 +792,70 @@ impl ControlFlowGraph {
                     .collect::<Vec<String>>()
                     .join(", ")
             ),
-            Instr::Set { res, expr } => format!(
+            Instr::Set { res, expr, .. } => format!(
                 "ty:{} %{} = {}",
                 self.vars[res].ty.to_string(ns),
                 self.vars[res].id.name,
                 self.expr_to_string(contract, ns, expr)
             ),
-            Instr::Eval { expr } => format!("_ = {}", self.expr_to_string(contract, ns, expr)),
-            Instr::Constant { res, constant } => format!(
-                "%{} = const {}",
-                self.vars[res].id.name,
-                self.expr_to_string(
-                    contract,
-                    ns,
-                    &contract.variables[*constant].initializer.as_ref().unwrap()
-                )
-            ),
-            Instr::Branch { bb } => format!("branch bb{}", bb),
+            Instr::Branch { block } => format!("branch block{}", block),
             Instr::BranchCond {
                 cond,
-                true_,
-                false_,
+                true_block,
+                false_block,
             } => format!(
-                "branchcond {}, bb{}, bb{}",
+                "branchcond {}, block{}, block{}",
                 self.expr_to_string(contract, ns, cond),
-                true_,
-                false_
+                true_block,
+                false_block,
+            ),
+            Instr::LoadStorage { ty, res, storage } => format!(
+                "%{} = load storage slot({}) ty:{}",
+                self.vars[res].id.name,
+                self.expr_to_string(contract, ns, storage),
+                ty.to_string(ns),
             ),
             Instr::ClearStorage { ty, storage } => format!(
                 "clear storage slot({}) ty:{}",
                 self.expr_to_string(contract, ns, storage),
                 ty.to_string(ns),
             ),
-            Instr::SetStorage { ty, local, storage } => format!(
-                "set storage slot({}) ty:{} = %{}",
+            Instr::SetStorage { ty, value, storage } => format!(
+                "store storage slot({}) ty:{} = {}",
                 self.expr_to_string(contract, ns, storage),
                 ty.to_string(ns),
-                self.vars[local].id.name
+                self.expr_to_string(contract, ns, value),
             ),
             Instr::SetStorageBytes {
-                local,
+                value,
                 storage,
                 offset,
             } => format!(
-                "set storage slot({}) offset:{} = %{}",
+                "set storage slot({}) offset:{} = {}",
                 self.expr_to_string(contract, ns, storage),
                 self.expr_to_string(contract, ns, offset),
-                self.vars[local].id.name
+                self.expr_to_string(contract, ns, value),
             ),
+            Instr::PushStorage {
+                res,
+                storage,
+                value,
+            } => {
+                format!(
+                    "%{} = push storage slot({}) = {}",
+                    self.vars[res].id.name,
+                    self.expr_to_string(contract, ns, storage),
+                    self.expr_to_string(contract, ns, value),
+                )
+            }
+            Instr::PopStorage { res, ty, storage } => {
+                format!(
+                    "%{} = pop storage ty:{} slot({})",
+                    self.vars[res].id.name,
+                    ty.to_string(ns),
+                    self.expr_to_string(contract, ns, storage),
+                )
+            }
             Instr::PushMemory {
                 res,
                 ty,
@@ -706,7 +878,12 @@ impl ControlFlowGraph {
             Instr::AssertFailure { expr: Some(expr) } => {
                 format!("assert-failure:{}", self.expr_to_string(contract, ns, expr))
             }
-            Instr::Call { res, cfg_no, args } => format!(
+            Instr::Call {
+                res,
+                call: InternalCallTy::Static(cfg_no),
+                args,
+                ..
+            } => format!(
                 "{} = call {} {}",
                 res.iter()
                     .map(|local| format!("%{}", self.vars[local].id.name))
@@ -718,28 +895,18 @@ impl ControlFlowGraph {
                     .collect::<Vec<String>>()
                     .join(", ")
             ),
-            Instr::ExternalCall {
-                success,
-                address,
-                contract_no: Some(contract_no),
-                function_no,
+            Instr::Call {
+                res,
+                call: InternalCallTy::Dynamic(cfg),
                 args,
-                value,
-                gas,
-                callty,
+                ..
             } => format!(
-                "{} = external call::{} address:{} signature:{} value:{} gas:{} func:{}.{} {}",
-                match success {
-                    Some(i) => format!("%{}", self.vars[i].id.name),
-                    None => "_".to_string(),
-                },
-                callty,
-                self.expr_to_string(contract, ns, address),
-                ns.contracts[*contract_no].functions[*function_no].signature,
-                self.expr_to_string(contract, ns, value),
-                self.expr_to_string(contract, ns, gas),
-                ns.contracts[*contract_no].name,
-                ns.contracts[*contract_no].functions[*function_no].name,
+                "{} = call {} {}",
+                res.iter()
+                    .map(|local| format!("%{}", self.vars[local].id.name))
+                    .collect::<Vec<String>>()
+                    .join(", "),
+                self.expr_to_string(contract, ns, cfg),
                 args.iter()
                     .map(|expr| self.expr_to_string(contract, ns, expr))
                     .collect::<Vec<String>>()
@@ -748,23 +915,48 @@ impl ControlFlowGraph {
             Instr::ExternalCall {
                 success,
                 address,
-                contract_no: None,
+                payload,
                 value,
-                ..
-            } => format!(
-                "{} = external call address:{} value:{}",
-                match success {
-                    Some(i) => format!("%{}", self.vars[i].id.name),
-                    None => "_".to_string(),
-                },
-                self.expr_to_string(contract, ns, address),
-                self.expr_to_string(contract, ns, value),
-            ),
+                gas,
+                callty,
+            } => {
+                format!(
+                    "{} = external call::{} address:{} payload:{} value:{} gas:{}",
+                    match success {
+                        Some(i) => format!("%{}", self.vars[i].id.name),
+                        None => "_".to_string(),
+                    },
+                    callty,
+                    if let Some(address) = address {
+                        self.expr_to_string(contract, ns, address)
+                    } else {
+                        String::new()
+                    },
+                    self.expr_to_string(contract, ns, payload),
+                    self.expr_to_string(contract, ns, value),
+                    self.expr_to_string(contract, ns, gas),
+                )
+            }
+            Instr::ValueTransfer {
+                success,
+                address,
+                value,
+            } => {
+                format!(
+                    "{} = value transfer address:{} value:{}",
+                    match success {
+                        Some(i) => format!("%{}", self.vars[i].id.name),
+                        None => "_".to_string(),
+                    },
+                    self.expr_to_string(contract, ns, address),
+                    self.expr_to_string(contract, ns, value),
+                )
+            }
             Instr::AbiDecode {
                 res,
                 tys,
                 selector,
-                exception,
+                exception_block: exception,
                 data,
             } => format!(
                 "{} = (abidecode:(%{}, {} {} ({}))",
@@ -779,32 +971,14 @@ impl ControlFlowGraph {
                     .collect::<String>(),
                 exception
                     .iter()
-                    .map(|bb| format!("exception:bb{} ", bb))
+                    .map(|block| format!("exception: block{} ", block))
                     .collect::<String>(),
                 tys.iter()
                     .map(|ty| ty.ty.to_string(ns))
                     .collect::<Vec<String>>()
                     .join(", "),
             ),
-            Instr::AbiEncodeVector {
-                res,
-                selector,
-                packed,
-                args,
-                ..
-            } => format!(
-                "{} = (abiencode{}:(%{} {})",
-                format!("%{}", self.vars[res].id.name),
-                if *packed { "packed" } else { "" },
-                match selector {
-                    None => "".to_string(),
-                    Some(expr) => self.expr_to_string(contract, ns, expr),
-                },
-                args.iter()
-                    .map(|expr| self.expr_to_string(contract, ns, expr))
-                    .collect::<Vec<String>>()
-                    .join(", ")
-            ),
+
             Instr::Store { dest, pos } => format!(
                 "store {}, {}",
                 self.expr_to_string(contract, ns, dest),
@@ -820,8 +994,9 @@ impl ControlFlowGraph {
                 gas,
                 salt,
                 value,
+                space,
             } => format!(
-                "%{}, {} = constructor salt:{} value:{} gas:{} {} #{:?} ({})",
+                "%{}, {} = constructor salt:{} value:{} gas:{} space:{} {} #{:?} ({})",
                 self.vars[res].id.name,
                 match success {
                     Some(i) => format!("%{}", self.vars[i].id.name),
@@ -836,6 +1011,10 @@ impl ControlFlowGraph {
                     None => "".to_string(),
                 },
                 self.expr_to_string(contract, ns, gas),
+                match space {
+                    Some(space) => self.expr_to_string(contract, ns, space),
+                    None => "".to_string(),
+                },
                 ns.contracts[*contract_no].name,
                 constructor_no,
                 args.iter()
@@ -848,12 +1027,6 @@ impl ControlFlowGraph {
                 "selfdestruct {}",
                 self.expr_to_string(contract, ns, recipient)
             ),
-            Instr::Hash { res, hash, expr } => format!(
-                "%{} = hash {} {}",
-                self.vars[res].id.name,
-                hash,
-                self.expr_to_string(contract, ns, expr)
-            ),
             Instr::EmitEvent {
                 data,
                 topics,
@@ -861,7 +1034,7 @@ impl ControlFlowGraph {
                 ..
             } => format!(
                 "emit event {} topics {} data {}",
-                ns.events[*event_no],
+                ns.events[*event_no].symbol_name(ns),
                 topics
                     .iter()
                     .map(|expr| self.expr_to_string(contract, ns, expr))
@@ -872,26 +1045,43 @@ impl ControlFlowGraph {
                     .collect::<Vec<String>>()
                     .join(", ")
             ),
+            Instr::Nop => String::from("nop"),
         }
     }
 
     pub fn basic_block_to_string(&self, contract: &Contract, ns: &Namespace, pos: usize) -> String {
-        let mut s = format!("bb{}: # {}\n", pos, self.bb[pos].name);
+        let mut s = format!("block{}: # {}\n", pos, self.blocks[pos].name);
 
-        if let Some(ref phis) = self.bb[pos].phis {
-            s.push_str("# phis: ");
-            let mut first = true;
-            for p in phis {
-                if !first {
-                    s.push_str(", ");
-                }
-                first = false;
-                s.push_str(&self.vars[p].id.name);
-            }
-            s.push_str("\n");
+        if let Some(ref phis) = self.blocks[pos].phis {
+            s.push_str(&format!(
+                "\t# phis: {}\n",
+                phis.iter()
+                    .map(|p| -> &str { &self.vars[p].id.name })
+                    .collect::<Vec<&str>>()
+                    .join(",")
+            ));
         }
 
-        for ins in &self.bb[pos].instr {
+        let defs = &self.blocks[pos].defs;
+
+        if !defs.is_empty() {
+            s.push_str(&format!(
+                "\t# reaching:{}\n",
+                defs.iter()
+                    .map(|(var_no, defs)| format!(
+                        " {}:[{}]",
+                        &self.vars[var_no].id.name,
+                        defs.keys()
+                            .map(|d| format!("{}:{}", d.block_no, d.instr_no))
+                            .collect::<Vec<String>>()
+                            .join(", ")
+                    ))
+                    .collect::<Vec<String>>()
+                    .join(", ")
+            ));
+        }
+
+        for ins in &self.blocks[pos].instr {
             s.push_str(&format!("\t{}\n", self.instr_to_string(contract, ns, ins)));
         }
 
@@ -901,7 +1091,7 @@ impl ControlFlowGraph {
     pub fn to_string(&self, contract: &Contract, ns: &Namespace) -> String {
         let mut s = String::from("");
 
-        for i in 0..self.bb.len() {
+        for i in 0..self.blocks.len() {
             s.push_str(&self.basic_block_to_string(contract, ns, i));
         }
 
@@ -909,45 +1099,66 @@ impl ControlFlowGraph {
     }
 }
 
-/// Generate the CFG for a function. If function_no is None, generate the implicit default
-/// constructor
-pub fn generate_cfg(
+/// Checks whether there is a virtual fallback or receive function
+fn is_there_virtual_function(
+    ns: &Namespace,
     contract_no: usize,
-    base_contract_no: usize,
     function_no: Option<usize>,
-    cfg_no: usize,
-    all_cfgs: &mut Vec<ControlFlowGraph>,
-    ns: &mut Namespace,
-) {
-    let default_constructor = &ns.default_constructor();
+) -> bool {
+    let default_constructor = &ns.default_constructor(contract_no);
 
     let func = match function_no {
-        Some(function_no) => &ns.contracts[base_contract_no].functions[function_no],
+        Some(function_no) => &ns.functions[function_no],
         None => default_constructor,
     };
 
     // if the function is a fallback or receive, then don't bother with the overriden functions; they cannot be used
     if func.ty == pt::FunctionTy::Receive {
+        // if there is a virtual receive function, and it's not this one, ignore it
         if let Some(receive) = ns.contracts[contract_no].virtual_functions.get("@receive") {
-            if !(base_contract_no == receive.0 && function_no == Some(receive.1)) {
-                return;
+            if Some(*receive) != function_no {
+                return true;
             }
         }
     }
 
     if func.ty == pt::FunctionTy::Fallback {
-        if let Some(receive) = ns.contracts[contract_no].virtual_functions.get("@fallback") {
-            if !(base_contract_no == receive.0 && function_no == Some(receive.1)) {
-                return;
+        // if there is a virtual fallback function, and it's not this one, ignore it
+        if let Some(fallback) = ns.contracts[contract_no].virtual_functions.get("@fallback") {
+            if Some(*fallback) != function_no {
+                return true;
             }
         }
     }
 
-    if func.ty == pt::FunctionTy::Modifier {
+    if func.ty == pt::FunctionTy::Modifier || !func.has_body {
+        return true;
+    }
+
+    false
+}
+
+/// Generate the CFG for a function. If function_no is None, generate the implicit default
+/// constructor
+pub fn generate_cfg(
+    contract_no: usize,
+    function_no: Option<usize>,
+    cfg_no: usize,
+    all_cfgs: &mut Vec<ControlFlowGraph>,
+    ns: &mut Namespace,
+    opt: &Options,
+) {
+    if is_there_virtual_function(ns, contract_no, function_no) {
         return;
     }
 
-    let mut cfg = function_cfg(contract_no, base_contract_no, function_no, ns);
+    let mut cfg = function_cfg(contract_no, function_no, ns);
+
+    let default_constructor = &ns.default_constructor(contract_no);
+    let func = match function_no {
+        Some(function_no) => &ns.functions[function_no],
+        None => default_constructor,
+    };
 
     // if the function is a modifier, generate the modifier chain
     if !func.modifiers.is_empty() {
@@ -958,23 +1169,35 @@ pub fn generate_cfg(
 
         cfg.public = false;
 
-        for call in func.modifiers.iter().rev() {
+        for (chain_no, call) in func.modifiers.iter().enumerate().rev() {
             let modifier_cfg_no = all_cfgs.len();
 
             all_cfgs.push(cfg);
 
-            let (modifier_contract_no, modifier_no, args) =
-                resolve_modifier_call(call, &ns.contracts[contract_no]);
-            let modifier = &ns.contracts[modifier_contract_no].functions[modifier_no];
+            let (modifier_no, args) = resolve_modifier_call(call, &ns.contracts[contract_no]);
 
-            cfg =
-                generate_modifier_dispatch(contract_no, func, modifier, modifier_cfg_no, args, ns);
+            let modifier = &ns.functions[modifier_no];
+
+            let (new_cfg, next_id) = generate_modifier_dispatch(
+                contract_no,
+                func,
+                modifier,
+                modifier_cfg_no,
+                chain_no,
+                args,
+                ns,
+            );
+
+            cfg = new_cfg;
+            ns.next_id = next_id;
         }
 
         cfg.public = public;
         cfg.nonpayable = nonpayable;
         cfg.selector = func.selector();
     }
+
+    optimize_and_check_cfg(&mut cfg, ns, function_no, opt);
 
     all_cfgs[cfg_no] = cfg;
 }
@@ -983,25 +1206,53 @@ pub fn generate_cfg(
 fn resolve_modifier_call<'a>(
     call: &'a Expression,
     contract: &Contract,
-) -> (usize, usize, &'a Vec<Expression>) {
-    if let Expression::InternalFunctionCall {
-        contract_no,
-        function_no,
-        signature,
-        args,
-        ..
-    } = call
-    {
-        // is it a virtual function call
-        let (contract_no, function_no) = if let Some(signature) = signature {
-            contract.virtual_functions[signature]
-        } else {
-            (*contract_no, *function_no)
-        };
+) -> (usize, &'a Vec<Expression>) {
+    if let Expression::InternalFunctionCall { function, args, .. } = call {
+        if let Expression::InternalFunction {
+            function_no,
+            signature,
+            ..
+        } = function.as_ref()
+        {
+            // is it a virtual function call
+            let function_no = if let Some(signature) = signature {
+                contract.virtual_functions[signature]
+            } else {
+                *function_no
+            };
 
-        (contract_no, function_no, args)
-    } else {
-        panic!("modifier should internal call");
+            return (function_no, args);
+        }
+    }
+
+    panic!("modifier should resolve to internal call");
+}
+
+/// Detect undefined variables and run codegen optimizer passess
+pub fn optimize_and_check_cfg(
+    cfg: &mut ControlFlowGraph,
+    ns: &mut Namespace,
+    func_no: Option<usize>,
+    opt: &Options,
+) {
+    reaching_definitions::find(cfg);
+    if let Some(function) = func_no {
+        // If there are undefined variables, we raise an error and don't run optimizations
+        if undefined_variable::find_undefined_variables(cfg, ns, function) {
+            return;
+        }
+    }
+    if opt.constant_folding {
+        constant_folding::constant_folding(cfg, ns);
+    }
+    if opt.vector_to_slice {
+        vector_to_slice::vector_to_slice(cfg, ns);
+    }
+    if opt.strength_reduce {
+        strength_reduce::strength_reduce(cfg, ns);
+    }
+    if opt.dead_storage {
+        dead_storage::dead_storage(cfg, ns);
     }
 }
 
@@ -1009,54 +1260,69 @@ fn resolve_modifier_call<'a>(
 /// constructor
 fn function_cfg(
     contract_no: usize,
-    base_contract_no: usize,
     function_no: Option<usize>,
-    ns: &Namespace,
+    ns: &mut Namespace,
 ) -> ControlFlowGraph {
     let mut vartab = match function_no {
-        Some(function_no) => Vartable::new_with_syms(
-            &ns.contracts[base_contract_no].functions[function_no].symtable,
-            ns.next_id,
-        ),
+        Some(function_no) => {
+            Vartable::from_symbol_table(&ns.functions[function_no].symtable, ns.next_id)
+        }
         None => Vartable::new(ns.next_id),
     };
 
     let mut loops = LoopScopes::new();
-    let default_constructor = &ns.default_constructor();
+    let default_constructor = &ns.default_constructor(contract_no);
 
     let func = match function_no {
-        Some(function_no) => &ns.contracts[base_contract_no].functions[function_no],
+        Some(function_no) => &ns.functions[function_no],
         None => default_constructor,
     };
 
     // symbol name
-    let contract_name = &ns.contracts[base_contract_no].name;
+    let contract_name = match func.contract_no {
+        Some(base_contract_no) => format!(
+            "{}::{}",
+            ns.contracts[contract_no].name, ns.contracts[base_contract_no].name
+        ),
+        None => ns.contracts[contract_no].name.to_string(),
+    };
 
     let name = match func.ty {
         pt::FunctionTy::Function => {
-            format!("sol::function::{}::{}", contract_name, func.llvm_symbol(ns))
+            format!("{}::function::{}", contract_name, func.llvm_symbol(ns))
         }
-        pt::FunctionTy::Constructor => format!(
-            "sol::constructor::{}{}",
-            contract_name,
-            func.llvm_symbol(ns)
-        ),
-        _ => format!("sol::{}::{}", contract_name, func.ty),
+        // There can be multiple constructors on Substrate, give them an unique name
+        pt::FunctionTy::Constructor => {
+            format!("{}::constructor::{:08x}", contract_name, func.selector())
+        }
+        _ => format!("{}::{}", contract_name, func.ty),
     };
 
-    let mut cfg = ControlFlowGraph::new(name);
+    let mut cfg = ControlFlowGraph::new(name, function_no);
 
     cfg.params = func.params.clone();
     cfg.returns = func.returns.clone();
     cfg.selector = func.selector();
 
     // a function is public if is not a library and not a base constructor
-    cfg.public = func.is_public()
-        && !ns.contracts[base_contract_no].is_library()
-        && !(func.is_constructor() && contract_no != base_contract_no);
+    cfg.public = if let Some(base_contract_no) = func.contract_no {
+        !ns.contracts[base_contract_no].is_library()
+            && !(func.is_constructor() && contract_no != base_contract_no)
+            && func.is_public()
+    } else {
+        false
+    };
+
+    // if a function is virtual, and it is overriden, do not make it public
+    // Otherwise the runtime function dispatch will have two identical functions to dispatch to
+    if func.is_virtual
+        && Some(ns.contracts[contract_no].virtual_functions[&func.signature]) != function_no
+    {
+        cfg.public = false;
+    }
 
     cfg.ty = func.ty;
-    cfg.nonpayable = if ns.target == Target::Substrate {
+    cfg.nonpayable = if ns.target.is_substrate() {
         !func.is_constructor() && !func.is_payable()
     } else {
         !func.is_payable()
@@ -1069,6 +1335,7 @@ fn function_cfg(
             cfg.add(
                 &mut vartab,
                 Instr::Set {
+                    loc: func.params[i].name_loc.unwrap(),
                     res: *pos,
                     expr: Expression::FunctionArg(var.id.loc, var.ty.clone(), i),
                 },
@@ -1082,7 +1349,7 @@ fn function_cfg(
     // level constructor. This is done because the arguments to base constructor are only
     // known the top level constructor, since the arguments can be specified elsewhere
     // on a constructor for a superior class
-    if func.ty == pt::FunctionTy::Constructor && base_contract_no == contract_no {
+    if func.ty == pt::FunctionTy::Constructor && func.contract_no == Some(contract_no) {
         let mut all_base_args = HashMap::new();
         let mut diagnostics = HashSet::new();
 
@@ -1112,10 +1379,8 @@ fn function_cfg(
             if let Some(base_args) = all_base_args.get(base_no) {
                 // There might be some temporary variables needed from the symbol table where
                 // the constructor arguments were defined
-                if let Some((contract_no, defined_constructor_no)) =
-                    base_args.defined_constructor_no
-                {
-                    let func = &ns.contracts[contract_no].functions[defined_constructor_no];
+                if let Some(defined_constructor_no) = base_args.defined_constructor_no {
+                    let func = &ns.functions[defined_constructor_no];
                     vartab.add_symbol_table(&func.symtable);
                 }
 
@@ -1128,7 +1393,7 @@ fn function_cfg(
                 //   for the argument; this means values are passed automatically to the next
                 //   constructor. We do need the symbol table for the called constructor, therefore
                 //   we have the following two lines which look a bit odd at first
-                let func = &ns.contracts[*base_no].functions[base_args.calling_constructor_no];
+                let func = &ns.functions[base_args.calling_constructor_no];
                 vartab.add_symbol_table(&func.symtable);
 
                 let args: Vec<Expression> = base_args
@@ -1136,13 +1401,21 @@ fn function_cfg(
                     .iter()
                     .enumerate()
                     .map(|(i, a)| {
-                        let expr = expression(a, &mut cfg, contract_no, ns, &mut vartab);
+                        let expr =
+                            expression(a, &mut cfg, contract_no, Some(func), ns, &mut vartab);
 
                         if let Some(id) = &func.symtable.arguments[i] {
                             let ty = expr.ty();
                             let loc = expr.loc();
 
-                            cfg.add(&mut vartab, Instr::Set { res: *id, expr });
+                            cfg.add(
+                                &mut vartab,
+                                Instr::Set {
+                                    loc: func.params[i].name_loc.unwrap_or(pt::Loc(0, 0, 0)),
+                                    res: *id,
+                                    expr,
+                                },
+                            );
                             Expression::Variable(loc, ty, *id)
                         } else {
                             Expression::Poison
@@ -1161,24 +1434,26 @@ fn function_cfg(
             }
 
             if let Some((constructor_no, args)) = gen_base_args.remove(base_no) {
-                let cfg_no = ns.contracts[contract_no].all_functions[&(*base_no, constructor_no)];
+                let cfg_no = ns.contracts[contract_no].all_functions[&constructor_no];
 
                 cfg.add(
                     &mut vartab,
                     Instr::Call {
                         res: Vec::new(),
-                        cfg_no,
+                        return_tys: Vec::new(),
+                        call: InternalCallTy::Static(cfg_no),
                         args,
                     },
                 );
-            } else if let Some(constructor_no) = ns.contracts[*base_no].no_args_constructor() {
-                let cfg_no = ns.contracts[contract_no].all_functions[&(*base_no, constructor_no)];
+            } else if let Some(constructor_no) = ns.contracts[*base_no].no_args_constructor(ns) {
+                let cfg_no = ns.contracts[contract_no].all_functions[&constructor_no];
 
                 cfg.add(
                     &mut vartab,
                     Instr::Call {
                         res: Vec::new(),
-                        cfg_no,
+                        return_tys: Vec::new(),
+                        call: InternalCallTy::Static(cfg_no),
                         args: Vec::new(),
                     },
                 );
@@ -1189,13 +1464,16 @@ fn function_cfg(
     // named returns should be populated
     for (i, pos) in func.symtable.returns.iter().enumerate() {
         if !func.returns[i].name.is_empty() {
-            cfg.add(
-                &mut vartab,
-                Instr::Set {
-                    res: *pos,
-                    expr: func.returns[i].ty.default(ns),
-                },
-            );
+            if let Some(expr) = func.returns[i].ty.default(ns) {
+                cfg.add(
+                    &mut vartab,
+                    Instr::Set {
+                        loc: func.returns[i].name_loc.unwrap(),
+                        res: *pos,
+                        expr,
+                    },
+                );
+            }
         }
     }
 
@@ -1213,7 +1491,9 @@ fn function_cfg(
         );
     }
 
-    cfg.vars = vartab.drain();
+    let (vars, next_id) = vartab.drain();
+    cfg.vars = vars;
+    ns.next_id = next_id;
 
     // walk cfg to check for use for before initialize
     cfg
@@ -1225,21 +1505,24 @@ pub fn generate_modifier_dispatch(
     func: &Function,
     modifier: &Function,
     cfg_no: usize,
+    chain_no: usize,
     args: &[Expression],
     ns: &Namespace,
-) -> ControlFlowGraph {
+) -> (ControlFlowGraph, usize) {
     let name = format!(
-        "sol::modifier::{}::{}::{}",
+        "{}::{}::{}::modifier{}::{}",
         &ns.contracts[contract_no].name,
+        &ns.contracts[func.contract_no.unwrap()].name,
         func.llvm_symbol(ns),
+        chain_no,
         modifier.llvm_symbol(ns)
     );
-    let mut cfg = ControlFlowGraph::new(name);
+    let mut cfg = ControlFlowGraph::new(name, None);
 
     cfg.params = func.params.clone();
     cfg.returns = func.returns.clone();
 
-    let mut vartab = Vartable::new_with_syms(&func.symtable, ns.next_id);
+    let mut vartab = Vartable::from_symbol_table(&func.symtable, ns.next_id);
 
     vartab.add_symbol_table(&modifier.symtable);
     let mut loops = LoopScopes::new();
@@ -1252,6 +1535,7 @@ pub fn generate_modifier_dispatch(
             cfg.add(
                 &mut vartab,
                 Instr::Set {
+                    loc: pt::Loc(0, 0, 0),
                     res: *pos,
                     expr: Expression::FunctionArg(var.id.loc, var.ty.clone(), i),
                 },
@@ -1262,20 +1546,30 @@ pub fn generate_modifier_dispatch(
     // now set the modifier args
     for (i, arg) in modifier.symtable.arguments.iter().enumerate() {
         if let Some(pos) = arg {
-            let expr = expression(&args[i], &mut cfg, contract_no, ns, &mut vartab);
-            cfg.add(&mut vartab, Instr::Set { res: *pos, expr });
+            let expr = expression(&args[i], &mut cfg, contract_no, Some(func), ns, &mut vartab);
+            cfg.add(
+                &mut vartab,
+                Instr::Set {
+                    loc: pt::Loc(0, 0, 0),
+                    res: *pos,
+                    expr,
+                },
+            );
         }
     }
 
     // modifiers do not have return values in their syntax, but the return values from the function
     // need to be passed on. So, we need to create some var
     let mut value = Vec::new();
+    let mut return_tys = Vec::new();
+
     for (i, arg) in func.returns.iter().enumerate() {
         value.push(Expression::Variable(
             arg.loc,
             arg.ty.clone(),
             func.symtable.returns[i],
         ));
+        return_tys.push(arg.ty.clone());
     }
 
     let return_instr = Instr::Return { value };
@@ -1283,7 +1577,8 @@ pub fn generate_modifier_dispatch(
     // create the instruction for the place holder
     let placeholder = Instr::Call {
         res: func.symtable.returns.clone(),
-        cfg_no,
+        call: InternalCallTy::Static(cfg_no),
+        return_tys,
         args: func
             .params
             .iter()
@@ -1295,7 +1590,7 @@ pub fn generate_modifier_dispatch(
     for stmt in &modifier.body {
         statement(
             stmt,
-            func,
+            modifier,
             &mut cfg,
             contract_no,
             ns,
@@ -1306,9 +1601,10 @@ pub fn generate_modifier_dispatch(
         );
     }
 
-    cfg.vars = vartab.drain();
+    let (vars, next_id) = vartab.drain();
+    cfg.vars = vars;
 
-    cfg
+    (cfg, next_id)
 }
 
 #[derive(Clone)]
@@ -1322,39 +1618,37 @@ pub enum Storage {
 pub struct Variable {
     pub id: pt::Identifier,
     pub ty: Type,
-    pub pos: usize,
     pub storage: Storage,
 }
 
 #[derive(Default)]
 pub struct Vartable {
-    vars: HashMap<usize, Variable>,
+    vars: Vars,
     next_id: usize,
     dirty: Vec<DirtyTracker>,
 }
 
 pub struct DirtyTracker {
     lim: usize,
-    set: HashSet<usize>,
+    set: BTreeSet<usize>,
 }
 
 impl Vartable {
-    pub fn new_with_syms(sym: &Symtable, next_id: usize) -> Self {
-        let vars = sym
-            .vars
-            .iter()
-            .map(|(no, v)| {
-                (
-                    *no,
-                    Variable {
-                        id: v.id.clone(),
-                        ty: v.ty.clone(),
-                        pos: v.pos,
-                        storage: Storage::Local,
-                    },
-                )
-            })
-            .collect();
+    pub fn from_symbol_table(sym: &Symtable, next_id: usize) -> Self {
+        let mut vars = IndexMap::new();
+
+        for (var_no, v) in &sym.vars {
+            let id = Vartable::make_unique(&vars, &v.id, *var_no);
+
+            vars.insert(
+                *var_no,
+                Variable {
+                    id,
+                    ty: v.ty.clone(),
+                    storage: Storage::Local,
+                },
+            );
+        }
 
         Vartable {
             vars,
@@ -1364,113 +1658,122 @@ impl Vartable {
     }
 
     pub fn add_symbol_table(&mut self, sym: &Symtable) {
-        for (no, v) in &sym.vars {
+        for (var_no, v) in &sym.vars {
+            let id = Vartable::make_unique(&self.vars, &v.id, *var_no);
+
             self.vars.insert(
-                *no,
+                *var_no,
                 Variable {
-                    id: v.id.clone(),
+                    id,
                     ty: v.ty.clone(),
-                    pos: v.pos,
                     storage: Storage::Local,
                 },
             );
         }
     }
 
+    fn make_unique(vars: &Vars, id: &pt::Identifier, no: usize) -> pt::Identifier {
+        let mut id = id.clone();
+
+        if vars.iter().any(|(_, var)| var.id.name == id.name) {
+            id.name = format!("{}.{}", id.name, no);
+        }
+
+        id
+    }
+
     pub fn new(next_id: usize) -> Self {
         Vartable {
-            vars: HashMap::new(),
+            vars: IndexMap::new(),
             dirty: Vec::new(),
             next_id,
         }
     }
 
     pub fn add(&mut self, id: &pt::Identifier, ty: Type) -> Option<usize> {
-        let pos = self.next_id;
+        let var_no = self.next_id;
         self.next_id += 1;
 
+        let id = Vartable::make_unique(&self.vars, id, var_no);
+
         self.vars.insert(
-            pos,
+            var_no,
             Variable {
-                id: id.clone(),
+                id,
                 ty,
-                pos,
                 storage: Storage::Local,
             },
         );
 
-        Some(pos)
+        Some(var_no)
     }
 
     pub fn temp_anonymous(&mut self, ty: &Type) -> usize {
-        let pos = self.next_id;
+        let var_no = self.next_id;
         self.next_id += 1;
 
         self.vars.insert(
-            pos,
+            var_no,
             Variable {
                 id: pt::Identifier {
-                    name: format!("temp.{}", pos),
+                    name: format!("temp.{}", var_no),
                     loc: pt::Loc(0, 0, 0),
                 },
                 ty: ty.clone(),
-                pos,
                 storage: Storage::Local,
             },
         );
 
-        pos
+        var_no
     }
 
     pub fn temp(&mut self, id: &pt::Identifier, ty: &Type) -> usize {
-        let pos = self.next_id;
+        let var_no = self.next_id;
         self.next_id += 1;
 
         self.vars.insert(
-            pos,
+            var_no,
             Variable {
                 id: pt::Identifier {
-                    name: format!("{}.temp.{}", id.name, pos),
+                    name: format!("{}.temp.{}", id.name, var_no),
                     loc: id.loc,
                 },
                 ty: ty.clone(),
-                pos,
                 storage: Storage::Local,
             },
         );
 
-        pos
+        var_no
     }
 
     pub fn temp_name(&mut self, name: &str, ty: &Type) -> usize {
-        let pos = self.next_id;
+        let var_no = self.next_id;
         self.next_id += 1;
 
         self.vars.insert(
-            pos,
+            var_no,
             Variable {
                 id: pt::Identifier {
-                    name: format!("{}.temp.{}", name, pos),
+                    name: format!("{}.temp.{}", name, var_no),
                     loc: pt::Loc(0, 0, 0),
                 },
                 ty: ty.clone(),
-                pos,
                 storage: Storage::Local,
             },
         );
 
-        pos
+        var_no
     }
 
-    pub fn drain(self) -> HashMap<usize, Variable> {
-        self.vars
+    pub fn drain(self) -> (Vars, usize) {
+        (self.vars, self.next_id)
     }
 
     // In order to create phi nodes, we need to track what vars are set in a certain scope
-    pub fn set_dirty(&mut self, pos: usize) {
+    pub fn set_dirty(&mut self, var_no: usize) {
         for e in &mut self.dirty {
-            if pos < e.lim {
-                e.set.insert(pos);
+            if var_no < e.lim {
+                e.set.insert(var_no);
             }
         }
     }
@@ -1478,11 +1781,52 @@ impl Vartable {
     pub fn new_dirty_tracker(&mut self, lim: usize) {
         self.dirty.push(DirtyTracker {
             lim,
-            set: HashSet::new(),
+            set: BTreeSet::new(),
         });
     }
 
-    pub fn pop_dirty_tracker(&mut self) -> HashSet<usize> {
+    pub fn pop_dirty_tracker(&mut self) -> BTreeSet<usize> {
         self.dirty.pop().unwrap().set
+    }
+}
+
+impl Contract {
+    /// Print the entire contract; storage initializers, constructors and functions and their CFGs
+    pub fn print_cfg(&self, ns: &Namespace) -> String {
+        let mut out = format!("#\n# Contract: {}\n#\n\n", self.name);
+
+        for cfg in &self.cfg {
+            if !cfg.is_placeholder() {
+                out += &format!(
+                    "\n# {} {} public:{} selector:{} nonpayable:{}\n",
+                    cfg.ty,
+                    cfg.name,
+                    cfg.public,
+                    hex::encode(cfg.selector.to_be_bytes()),
+                    cfg.nonpayable,
+                );
+
+                out += &format!(
+                    "# params: {}\n",
+                    cfg.params
+                        .iter()
+                        .map(|p| p.ty.to_string(ns))
+                        .collect::<Vec<String>>()
+                        .join(",")
+                );
+                out += &format!(
+                    "# returns: {}\n",
+                    cfg.returns
+                        .iter()
+                        .map(|p| p.ty.to_string(ns))
+                        .collect::<Vec<String>>()
+                        .join(",")
+                );
+
+                out += &cfg.to_string(self, ns);
+            }
+        }
+
+        out
     }
 }

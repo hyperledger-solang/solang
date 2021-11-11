@@ -1,18 +1,18 @@
-use blake2_rfc;
-use codegen::cfg::HashTy;
+use crate::codegen::cfg::HashTy;
+use crate::parser::pt;
+use crate::sema::ast;
 use inkwell::context::Context;
 use inkwell::module::Linkage;
 use inkwell::types::{BasicType, IntType};
-use inkwell::values::{BasicValueEnum, FunctionValue, IntValue, PointerValue};
+use inkwell::values::{BasicValueEnum, CallableValue, FunctionValue, IntValue, PointerValue};
 use inkwell::AddressSpace;
 use inkwell::IntPredicate;
 use inkwell::OptimizationLevel;
 use num_traits::ToPrimitive;
-use parser::pt;
-use sema::ast;
 use std::collections::HashMap;
+use std::convert::TryFrom;
 
-use super::{Contract, TargetRuntime, Variable};
+use super::{Binary, TargetRuntime, Variable};
 
 // When using the seal api, we use our own scratch buffer.
 const SCRATCH_SIZE: u32 = 32 * 1024;
@@ -28,10 +28,21 @@ impl SubstrateTarget {
         ns: &'a ast::Namespace,
         filename: &'a str,
         opt: OptimizationLevel,
-    ) -> Contract<'a> {
-        let mut c = Contract::new(context, contract, ns, filename, opt, None);
+        math_overflow_check: bool,
+    ) -> Binary<'a> {
+        let mut binary = Binary::new(
+            context,
+            ns.target,
+            &contract.name,
+            filename,
+            opt,
+            math_overflow_check,
+            None,
+        );
 
-        let scratch_len = c.module.add_global(
+        binary.set_early_value_aborts(contract, ns);
+
+        let scratch_len = binary.module.add_global(
             context.i32_type(),
             Some(AddressSpace::Generic),
             "scratch_len",
@@ -39,29 +50,29 @@ impl SubstrateTarget {
         scratch_len.set_linkage(Linkage::Internal);
         scratch_len.set_initializer(&context.i32_type().get_undef());
 
-        c.scratch_len = Some(scratch_len);
+        binary.scratch_len = Some(scratch_len);
 
-        let scratch = c.module.add_global(
+        let scratch = binary.module.add_global(
             context.i8_type().array_type(SCRATCH_SIZE),
             Some(AddressSpace::Generic),
             "scratch",
         );
         scratch.set_linkage(Linkage::Internal);
         scratch.set_initializer(&context.i8_type().array_type(SCRATCH_SIZE).get_undef());
-        c.scratch = Some(scratch);
+        binary.scratch = Some(scratch);
 
         let mut b = SubstrateTarget {
             unique_strings: HashMap::new(),
         };
 
-        b.declare_externals(&c);
+        b.declare_externals(&binary);
 
-        b.emit_functions(&mut c);
+        b.emit_functions(&mut binary, contract, ns);
 
-        b.emit_deploy(&c);
-        b.emit_call(&c);
+        b.emit_deploy(&mut binary, contract, ns);
+        b.emit_call(&binary, contract, ns);
 
-        c.internalize(&[
+        binary.internalize(&[
             "deploy",
             "call",
             "seal_input",
@@ -78,6 +89,7 @@ impl SubstrateTarget {
             "seal_call",
             "seal_value_transferred",
             "seal_minimum_balance",
+            "seal_weight_to_fee",
             "seal_random",
             "seal_address",
             "seal_balance",
@@ -89,105 +101,105 @@ impl SubstrateTarget {
             "seal_tombstone_deposit",
             "seal_terminate",
             "seal_deposit_event",
+            "seal_transfer",
         ]);
 
-        c
+        binary
     }
 
     fn public_function_prelude<'a>(
         &self,
-        contract: &Contract<'a>,
+        binary: &Binary<'a>,
         function: FunctionValue,
         abort_value_transfers: bool,
+        ns: &ast::Namespace,
     ) -> (PointerValue<'a>, IntValue<'a>) {
-        let entry = contract.context.append_basic_block(function, "entry");
+        let entry = binary.context.append_basic_block(function, "entry");
 
-        contract.builder.position_at_end(entry);
+        binary.builder.position_at_end(entry);
 
         // after copying stratch, first thing to do is abort value transfers if constructors not payable
         if abort_value_transfers {
-            self.abort_if_value_transfer(contract, function);
+            self.abort_if_value_transfer(binary, function, ns);
         }
 
         // init our heap
-        contract.builder.build_call(
-            contract.module.get_function("__init_heap").unwrap(),
-            &[],
-            "",
-        );
+        binary
+            .builder
+            .build_call(binary.module.get_function("__init_heap").unwrap(), &[], "");
 
-        let scratch_buf = contract.builder.build_pointer_cast(
-            contract.scratch.unwrap().as_pointer_value(),
-            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+        let scratch_buf = binary.builder.build_pointer_cast(
+            binary.scratch.unwrap().as_pointer_value(),
+            binary.context.i8_type().ptr_type(AddressSpace::Generic),
             "scratch_buf",
         );
-        let scratch_len = contract.scratch_len.unwrap().as_pointer_value();
+        let scratch_len = binary.scratch_len.unwrap().as_pointer_value();
 
         // copy arguments from input buffer
-        contract.builder.build_store(
+        binary.builder.build_store(
             scratch_len,
-            contract
+            binary
                 .context
                 .i32_type()
                 .const_int(SCRATCH_SIZE as u64, false),
         );
 
-        contract.builder.build_call(
-            contract.module.get_function("seal_input").unwrap(),
+        binary.builder.build_call(
+            binary.module.get_function("seal_input").unwrap(),
             &[scratch_buf.into(), scratch_len.into()],
             "",
         );
 
-        let args = contract.builder.build_pointer_cast(
+        let args = binary.builder.build_pointer_cast(
             scratch_buf,
-            contract.context.i32_type().ptr_type(AddressSpace::Generic),
+            binary.context.i32_type().ptr_type(AddressSpace::Generic),
             "",
         );
-        let args_length = contract.builder.build_load(scratch_len, "input_len");
+        let args_length = binary.builder.build_load(scratch_len, "input_len");
 
         // store the length in case someone wants it via msg.data
-        contract.builder.build_store(
-            contract.calldata_len.as_pointer_value(),
+        binary.builder.build_store(
+            binary.calldata_len.as_pointer_value(),
             args_length.into_int_value(),
         );
 
         (args, args_length.into_int_value())
     }
 
-    fn declare_externals(&self, contract: &Contract) {
-        let u8_ptr = contract
+    fn declare_externals(&self, binary: &Binary) {
+        let u8_ptr = binary
             .context
             .i8_type()
             .ptr_type(AddressSpace::Generic)
             .into();
-        let u32_val = contract.context.i32_type().into();
-        let u32_ptr = contract
+        let u32_val = binary.context.i32_type().into();
+        let u32_ptr = binary
             .context
             .i32_type()
             .ptr_type(AddressSpace::Generic)
             .into();
-        let u64_val = contract.context.i64_type().into();
+        let u64_val = binary.context.i64_type().into();
 
-        contract.module.add_function(
+        binary.module.add_function(
             "seal_input",
-            contract
+            binary
                 .context
                 .void_type()
                 .fn_type(&[u8_ptr, u32_ptr], false),
             Some(Linkage::External),
         );
 
-        contract.module.add_function(
+        binary.module.add_function(
             "seal_hash_keccak_256",
-            contract.context.void_type().fn_type(
+            binary.context.void_type().fn_type(
                 &[
-                    contract
+                    binary
                         .context
                         .i8_type()
                         .ptr_type(AddressSpace::Generic)
                         .into(), // src_ptr
-                    contract.context.i32_type().into(), // len
-                    contract
+                    binary.context.i32_type().into(), // len
+                    binary
                         .context
                         .i8_type()
                         .ptr_type(AddressSpace::Generic)
@@ -198,17 +210,17 @@ impl SubstrateTarget {
             Some(Linkage::External),
         );
 
-        contract.module.add_function(
+        binary.module.add_function(
             "seal_hash_sha2_256",
-            contract.context.void_type().fn_type(
+            binary.context.void_type().fn_type(
                 &[
-                    contract
+                    binary
                         .context
                         .i8_type()
                         .ptr_type(AddressSpace::Generic)
                         .into(), // src_ptr
-                    contract.context.i32_type().into(), // len
-                    contract
+                    binary.context.i32_type().into(), // len
+                    binary
                         .context
                         .i8_type()
                         .ptr_type(AddressSpace::Generic)
@@ -219,17 +231,17 @@ impl SubstrateTarget {
             Some(Linkage::External),
         );
 
-        contract.module.add_function(
+        binary.module.add_function(
             "seal_hash_blake2_128",
-            contract.context.void_type().fn_type(
+            binary.context.void_type().fn_type(
                 &[
-                    contract
+                    binary
                         .context
                         .i8_type()
                         .ptr_type(AddressSpace::Generic)
                         .into(), // src_ptr
-                    contract.context.i32_type().into(), // len
-                    contract
+                    binary.context.i32_type().into(), // len
+                    binary
                         .context
                         .i8_type()
                         .ptr_type(AddressSpace::Generic)
@@ -240,17 +252,17 @@ impl SubstrateTarget {
             Some(Linkage::External),
         );
 
-        contract.module.add_function(
+        binary.module.add_function(
             "seal_hash_blake2_256",
-            contract.context.void_type().fn_type(
+            binary.context.void_type().fn_type(
                 &[
-                    contract
+                    binary
                         .context
                         .i8_type()
                         .ptr_type(AddressSpace::Generic)
                         .into(), // src_ptr
-                    contract.context.i32_type().into(), // len
-                    contract
+                    binary.context.i32_type().into(), // len
+                    binary
                         .context
                         .i8_type()
                         .ptr_type(AddressSpace::Generic)
@@ -261,18 +273,18 @@ impl SubstrateTarget {
             Some(Linkage::External),
         );
 
-        contract.module.add_function(
+        binary.module.add_function(
             "seal_random",
-            contract
+            binary
                 .context
                 .void_type()
                 .fn_type(&[u8_ptr, u32_val, u8_ptr, u32_ptr], false),
             Some(Linkage::External),
         );
 
-        contract.module.add_function(
+        binary.module.add_function(
             "seal_set_storage",
-            contract.context.void_type().fn_type(
+            binary.context.void_type().fn_type(
                 &[
                     u8_ptr,  // key_ptr
                     u8_ptr,  // value_ptr
@@ -283,9 +295,9 @@ impl SubstrateTarget {
             Some(Linkage::External),
         );
 
-        contract.module.add_function(
+        binary.module.add_function(
             "seal_println",
-            contract.context.void_type().fn_type(
+            binary.context.void_type().fn_type(
                 &[
                     u8_ptr,  // string_ptr
                     u32_val, // string_len
@@ -295,9 +307,9 @@ impl SubstrateTarget {
             Some(Linkage::External),
         );
 
-        contract.module.add_function(
+        binary.module.add_function(
             "seal_clear_storage",
-            contract.context.void_type().fn_type(
+            binary.context.void_type().fn_type(
                 &[
                     u8_ptr, // key_ptr
                 ],
@@ -306,18 +318,18 @@ impl SubstrateTarget {
             Some(Linkage::External),
         );
 
-        contract.module.add_function(
+        binary.module.add_function(
             "seal_get_storage",
-            contract
+            binary
                 .context
                 .i32_type()
                 .fn_type(&[u8_ptr, u8_ptr, u32_ptr], false),
             Some(Linkage::External),
         );
 
-        contract.module.add_function(
+        binary.module.add_function(
             "seal_return",
-            contract.context.void_type().fn_type(
+            binary.context.void_type().fn_type(
                 &[
                     u32_val, u8_ptr, u32_val, // flags, data ptr, and len
                 ],
@@ -326,9 +338,9 @@ impl SubstrateTarget {
             Some(Linkage::External),
         );
 
-        contract.module.add_function(
+        binary.module.add_function(
             "seal_instantiate",
-            contract.context.i32_type().fn_type(
+            binary.context.i32_type().fn_type(
                 &[
                     u8_ptr, u32_val, // code hash ptr and len
                     u64_val, // gas
@@ -336,15 +348,16 @@ impl SubstrateTarget {
                     u8_ptr, u32_val, // input ptr and len
                     u8_ptr, u32_ptr, // address ptr and len
                     u8_ptr, u32_ptr, // output ptr and len
+                    u8_ptr, u32_val, // salt ptr and len
                 ],
                 false,
             ),
             Some(Linkage::External),
         );
 
-        contract.module.add_function(
+        binary.module.add_function(
             "seal_call",
-            contract.context.i32_type().fn_type(
+            binary.context.i32_type().fn_type(
                 &[
                     u8_ptr, u32_val, // address ptr and len
                     u64_val, // gas
@@ -357,99 +370,111 @@ impl SubstrateTarget {
             Some(Linkage::External),
         );
 
-        contract.module.add_function(
+        binary.module.add_function(
+            "seal_transfer",
+            binary.context.i32_type().fn_type(
+                &[
+                    u8_ptr, u32_val, // address ptr and len
+                    u8_ptr, u32_val, // value ptr and len
+                ],
+                false,
+            ),
+            Some(Linkage::External),
+        );
+
+        binary.module.add_function(
             "seal_value_transferred",
-            contract
+            binary
                 .context
                 .void_type()
                 .fn_type(&[u8_ptr, u32_ptr], false),
             Some(Linkage::External),
         );
 
-        contract.module.add_function(
+        binary.module.add_function(
             "seal_address",
-            contract
+            binary
                 .context
                 .void_type()
                 .fn_type(&[u8_ptr, u32_ptr], false),
             Some(Linkage::External),
         );
 
-        contract.module.add_function(
+        binary.module.add_function(
             "seal_balance",
-            contract
+            binary
                 .context
                 .void_type()
                 .fn_type(&[u8_ptr, u32_ptr], false),
             Some(Linkage::External),
         );
 
-        contract.module.add_function(
+        binary.module.add_function(
             "seal_minimum_balance",
-            contract
+            binary
                 .context
                 .void_type()
                 .fn_type(&[u8_ptr, u32_ptr], false),
             Some(Linkage::External),
         );
 
-        contract.module.add_function(
+        binary.module.add_function(
             "seal_block_number",
-            contract
+            binary
                 .context
                 .void_type()
                 .fn_type(&[u8_ptr, u32_ptr], false),
             Some(Linkage::External),
         );
 
-        contract.module.add_function(
+        binary.module.add_function(
             "seal_now",
-            contract
+            binary
                 .context
                 .void_type()
                 .fn_type(&[u8_ptr, u32_ptr], false),
             Some(Linkage::External),
         );
 
-        contract.module.add_function(
+        binary.module.add_function(
             "seal_tombstone_deposit",
-            contract
+            binary
                 .context
                 .void_type()
                 .fn_type(&[u8_ptr, u32_ptr], false),
             Some(Linkage::External),
         );
 
-        contract.module.add_function(
+        binary.module.add_function(
             "seal_weight_to_fee",
-            contract
+            binary
                 .context
                 .void_type()
                 .fn_type(&[u64_val, u8_ptr, u32_ptr], false),
             Some(Linkage::External),
         );
 
-        contract.module.add_function(
+        binary.module.add_function(
             "seal_gas_left",
-            contract
+            binary
                 .context
                 .void_type()
                 .fn_type(&[u8_ptr, u32_ptr], false),
             Some(Linkage::External),
         );
 
-        contract.module.add_function(
+        binary.module.add_function(
             "seal_caller",
-            contract
+            binary
                 .context
                 .void_type()
                 .fn_type(&[u8_ptr, u32_ptr], false),
             Some(Linkage::External),
         );
 
-        contract.module.add_function(
+        binary.module.add_function(
             "seal_terminate",
-            contract.context.void_type().fn_type(
+            binary.context.void_type().fn_type(
                 &[
                     u8_ptr, u32_val, // address ptr and len
                 ],
@@ -458,9 +483,9 @@ impl SubstrateTarget {
             Some(Linkage::External),
         );
 
-        contract.module.add_function(
+        binary.module.add_function(
             "seal_deposit_event",
-            contract.context.void_type().fn_type(
+            binary.context.void_type().fn_type(
                 &[
                     u8_ptr, u32_val, // topic ptr and len
                     u8_ptr, u32_val, // data ptr and len
@@ -471,90 +496,95 @@ impl SubstrateTarget {
         );
     }
 
-    fn emit_deploy(&mut self, contract: &Contract) {
-        let initializer = self.emit_initializer(contract);
+    fn emit_deploy(&mut self, binary: &mut Binary, contract: &ast::Contract, ns: &ast::Namespace) {
+        let initializer = self.emit_initializer(binary, contract, ns);
 
         // create deploy function
-        let function = contract.module.add_function(
+        let function = binary.module.add_function(
             "deploy",
-            contract.context.void_type().fn_type(&[], false),
+            binary.context.void_type().fn_type(&[], false),
             None,
         );
 
         // deploy always receives an endowment so no value check here
         let (deploy_args, deploy_args_length) =
-            self.public_function_prelude(contract, function, false);
+            self.public_function_prelude(binary, function, false, ns);
 
         // init our storage vars
-        contract.builder.build_call(initializer, &[], "");
+        binary.builder.build_call(initializer, &[], "");
 
-        let fallback_block = contract.context.append_basic_block(function, "fallback");
+        let fallback_block = binary.context.append_basic_block(function, "fallback");
 
         self.emit_function_dispatch(
+            binary,
             contract,
+            ns,
             pt::FunctionTy::Constructor,
             deploy_args,
             deploy_args_length,
             function,
+            &binary.functions,
             Some(fallback_block),
             |_| false,
         );
 
         // emit fallback code
-        contract.builder.position_at_end(fallback_block);
+        binary.builder.position_at_end(fallback_block);
 
         self.assert_failure(
-            contract,
-            contract
+            binary,
+            binary
                 .context
                 .i8_type()
                 .ptr_type(AddressSpace::Generic)
                 .const_null(),
-            contract.context.i32_type().const_zero(),
+            binary.context.i32_type().const_zero(),
         );
     }
 
-    fn emit_call(&mut self, contract: &Contract) {
+    fn emit_call(&mut self, binary: &Binary, contract: &ast::Contract, ns: &ast::Namespace) {
         // create call function
-        let function = contract.module.add_function(
+        let function = binary.module.add_function(
             "call",
-            contract.context.void_type().fn_type(&[], false),
+            binary.context.void_type().fn_type(&[], false),
             None,
         );
 
         let (call_args, call_args_length) = self.public_function_prelude(
-            contract,
+            binary,
             function,
-            contract.function_abort_value_transfers,
+            binary.function_abort_value_transfers,
+            ns,
         );
 
         self.emit_function_dispatch(
+            binary,
             contract,
+            ns,
             pt::FunctionTy::Function,
             call_args,
             call_args_length,
             function,
+            &binary.functions,
             None,
-            |func| !contract.function_abort_value_transfers && func.nonpayable,
+            |func| !binary.function_abort_value_transfers && func.nonpayable,
         );
     }
 
     /// ABI decode a single primitive
     fn decode_primitive<'b>(
         &self,
-        contract: &Contract<'b>,
+        binary: &Binary<'b>,
         ty: &ast::Type,
         src: PointerValue<'b>,
+        ns: &ast::Namespace,
     ) -> (BasicValueEnum<'b>, u64) {
         match ty {
             ast::Type::Bool => {
-                let val = contract.builder.build_int_compare(
+                let val = binary.builder.build_int_compare(
                     IntPredicate::EQ,
-                    contract
-                        .builder
-                        .build_load(src, "abi_bool")
-                        .into_int_value(),
-                    contract.context.i8_type().const_int(1, false),
+                    binary.builder.build_load(src, "abi_bool").into_int_value(),
+                    binary.context.i8_type().const_int(1, false),
                     "bool",
                 );
                 (val.into(), 1)
@@ -565,13 +595,13 @@ impl SubstrateTarget {
             | ast::Type::Int(_) => {
                 let bits = match ty {
                     ast::Type::Uint(n) | ast::Type::Int(n) => *n as u32,
-                    _ => contract.ns.address_length as u32 * 8,
+                    _ => ns.address_length as u32 * 8,
                 };
 
-                let int_type = contract.context.custom_width_int_type(bits);
+                let int_type = binary.context.custom_width_int_type(bits);
 
-                let val = contract.builder.build_load(
-                    contract.builder.build_pointer_cast(
+                let val = binary.builder.build_load(
+                    binary.builder.build_pointer_cast(
                         src,
                         int_type.ptr_type(AddressSpace::Generic),
                         "",
@@ -584,24 +614,24 @@ impl SubstrateTarget {
                 (val, len)
             }
             ast::Type::Bytes(len) => {
-                let int_type = contract.context.custom_width_int_type(*len as u32 * 8);
+                let int_type = binary.context.custom_width_int_type(*len as u32 * 8);
 
-                let buf = contract.builder.build_alloca(int_type, "buf");
+                let buf = binary.builder.build_alloca(int_type, "buf");
 
                 // byte order needs to be reversed. e.g. hex"11223344" should be 0x10 0x11 0x22 0x33 0x44
-                contract.builder.build_call(
-                    contract.module.get_function("__beNtoleN").unwrap(),
+                binary.builder.build_call(
+                    binary.module.get_function("__beNtoleN").unwrap(),
                     &[
                         src.into(),
-                        contract
+                        binary
                             .builder
                             .build_pointer_cast(
                                 buf,
-                                contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                                binary.context.i8_type().ptr_type(AddressSpace::Generic),
                                 "",
                             )
                             .into(),
-                        contract
+                        binary
                             .context
                             .i32_type()
                             .const_int(*len as u64, false)
@@ -611,7 +641,7 @@ impl SubstrateTarget {
                 );
 
                 (
-                    contract.builder.build_load(buf, &format!("bytes{}", len)),
+                    binary.builder.build_load(buf, &format!("bytes{}", len)),
                     *len as u64,
                 )
             }
@@ -619,55 +649,61 @@ impl SubstrateTarget {
         }
     }
 
-    /// Check that data has not overrun end. We do not check if we have more data than provided;
-    /// there could be a salt there for the constructor.
+    /// Check that data has not overrun end, and whether end == data to check we do not have
+    /// trailing data
     fn check_overrun(
         &self,
-        contract: &Contract,
+        binary: &Binary,
         function: FunctionValue,
         data: PointerValue,
         end: PointerValue,
+        end_is_data: bool,
     ) {
-        let in_bounds = contract.builder.build_int_compare(
-            IntPredicate::ULE,
-            contract
+        let in_bounds = binary.builder.build_int_compare(
+            if end_is_data {
+                IntPredicate::EQ
+            } else {
+                IntPredicate::ULE
+            },
+            binary
                 .builder
-                .build_ptr_to_int(data, contract.context.i32_type(), "args"),
-            contract
+                .build_ptr_to_int(data, binary.context.i32_type(), "args"),
+            binary
                 .builder
-                .build_ptr_to_int(end, contract.context.i32_type(), "end"),
+                .build_ptr_to_int(end, binary.context.i32_type(), "end"),
             "is_done",
         );
 
-        let success_block = contract.context.append_basic_block(function, "success");
-        let bail_block = contract.context.append_basic_block(function, "bail");
-        contract
+        let success_block = binary.context.append_basic_block(function, "success");
+        let bail_block = binary.context.append_basic_block(function, "bail");
+        binary
             .builder
             .build_conditional_branch(in_bounds, success_block, bail_block);
 
-        contract.builder.position_at_end(bail_block);
+        binary.builder.position_at_end(bail_block);
 
         self.assert_failure(
-            contract,
-            contract
+            binary,
+            binary
                 .context
                 .i8_type()
                 .ptr_type(AddressSpace::Generic)
                 .const_null(),
-            contract.context.i32_type().const_zero(),
+            binary.context.i32_type().const_zero(),
         );
 
-        contract.builder.position_at_end(success_block);
+        binary.builder.position_at_end(success_block);
     }
 
     /// recursively encode a single ty
     fn decode_ty<'b>(
         &self,
-        contract: &Contract<'b>,
+        binary: &Binary<'b>,
         function: FunctionValue,
         ty: &ast::Type,
         data: &mut PointerValue<'b>,
         end: PointerValue<'b>,
+        ns: &ast::Namespace,
     ) -> BasicValueEnum<'b> {
         match &ty {
             ast::Type::Bool
@@ -676,35 +712,33 @@ impl SubstrateTarget {
             | ast::Type::Int(_)
             | ast::Type::Uint(_)
             | ast::Type::Bytes(_) => {
-                let (arg, arglen) = self.decode_primitive(contract, ty, *data);
+                let (arg, arglen) = self.decode_primitive(binary, ty, *data, ns);
 
                 *data = unsafe {
-                    contract.builder.build_gep(
+                    binary.builder.build_gep(
                         *data,
-                        &[contract.context.i32_type().const_int(arglen, false)],
+                        &[binary.context.i32_type().const_int(arglen, false)],
                         "abi_ptr",
                     )
                 };
 
-                self.check_overrun(contract, function, *data, end);
+                self.check_overrun(binary, function, *data, end, false);
 
                 arg
             }
-            ast::Type::Enum(n) => {
-                self.decode_ty(contract, function, &contract.ns.enums[*n].ty, data, end)
-            }
+            ast::Type::Enum(n) => self.decode_ty(binary, function, &ns.enums[*n].ty, data, end, ns),
             ast::Type::Struct(n) => {
-                let llvm_ty = contract.llvm_type(ty.deref_any());
+                let llvm_ty = binary.llvm_type(ty.deref_any(), ns);
 
                 let size = llvm_ty
                     .size_of()
                     .unwrap()
-                    .const_cast(contract.context.i32_type(), false);
+                    .const_cast(binary.context.i32_type(), false);
 
-                let new = contract
+                let new = binary
                     .builder
                     .build_call(
-                        contract.module.get_function("__malloc").unwrap(),
+                        binary.module.get_function("__malloc").unwrap(),
                         &[size.into()],
                         "",
                     )
@@ -713,46 +747,46 @@ impl SubstrateTarget {
                     .unwrap()
                     .into_pointer_value();
 
-                let dest = contract.builder.build_pointer_cast(
+                let dest = binary.builder.build_pointer_cast(
                     new,
                     llvm_ty.ptr_type(AddressSpace::Generic),
                     "dest",
                 );
 
-                for (i, field) in contract.ns.structs[*n].fields.iter().enumerate() {
+                for (i, field) in ns.structs[*n].fields.iter().enumerate() {
                     let elem = unsafe {
-                        contract.builder.build_gep(
+                        binary.builder.build_gep(
                             dest,
                             &[
-                                contract.context.i32_type().const_zero(),
-                                contract.context.i32_type().const_int(i as u64, false),
+                                binary.context.i32_type().const_zero(),
+                                binary.context.i32_type().const_int(i as u64, false),
                             ],
                             &field.name,
                         )
                     };
 
-                    let val = self.decode_ty(contract, function, &field.ty, data, end);
+                    let val = self.decode_ty(binary, function, &field.ty, data, end, ns);
 
-                    contract.builder.build_store(elem, val);
+                    binary.builder.build_store(elem, val);
                 }
 
                 dest.into()
             }
             ast::Type::Array(_, dim) => {
                 if let Some(d) = &dim[0] {
-                    let llvm_ty = contract.llvm_type(ty.deref_any());
+                    let llvm_ty = binary.llvm_type(ty.deref_any(), ns);
 
                     let size = llvm_ty
                         .size_of()
                         .unwrap()
-                        .const_cast(contract.context.i32_type(), false);
+                        .const_cast(binary.context.i32_type(), false);
 
                     let ty = ty.array_deref();
 
-                    let new = contract
+                    let new = binary
                         .builder
                         .build_call(
-                            contract.module.get_function("__malloc").unwrap(),
+                            binary.module.get_function("__malloc").unwrap(),
                             &[size.into()],
                             "",
                         )
@@ -761,44 +795,44 @@ impl SubstrateTarget {
                         .unwrap()
                         .into_pointer_value();
 
-                    let dest = contract.builder.build_pointer_cast(
+                    let dest = binary.builder.build_pointer_cast(
                         new,
                         llvm_ty.ptr_type(AddressSpace::Generic),
                         "dest",
                     );
 
-                    contract.emit_static_loop_with_pointer(
+                    binary.emit_static_loop_with_pointer(
                         function,
-                        contract.context.i64_type().const_zero(),
-                        contract
+                        binary.context.i64_type().const_zero(),
+                        binary
                             .context
                             .i64_type()
                             .const_int(d.to_u64().unwrap(), false),
                         data,
                         |index: IntValue<'b>, data: &mut PointerValue<'b>| {
                             let elem = unsafe {
-                                contract.builder.build_gep(
+                                binary.builder.build_gep(
                                     dest,
-                                    &[contract.context.i32_type().const_zero(), index],
+                                    &[binary.context.i32_type().const_zero(), index],
                                     "index_access",
                                 )
                             };
 
-                            let val = self.decode_ty(contract, function, &ty, data, end);
-                            contract.builder.build_store(elem, val);
+                            let val = self.decode_ty(binary, function, &ty, data, end, ns);
+                            binary.builder.build_store(elem, val);
                         },
                     );
 
                     dest.into()
                 } else {
-                    let len = contract
+                    let len = binary
                         .builder
-                        .build_alloca(contract.context.i32_type(), "length");
+                        .build_alloca(binary.context.i32_type(), "length");
 
-                    *data = contract
+                    *data = binary
                         .builder
                         .build_call(
-                            contract.module.get_function("compact_decode_u32").unwrap(),
+                            binary.module.get_function("compact_decode_u32").unwrap(),
                             &[(*data).into(), len.into()],
                             "",
                         )
@@ -807,28 +841,25 @@ impl SubstrateTarget {
                         .unwrap()
                         .into_pointer_value();
 
-                    let len = contract
-                        .builder
-                        .build_load(len, "array.len")
-                        .into_int_value();
+                    let len = binary.builder.build_load(len, "array.len").into_int_value();
 
                     // details about our array elements
-                    let elem_ty = contract.llvm_var(&ty.array_elem());
+                    let elem_ty = binary.llvm_var(&ty.array_elem(), ns);
                     let elem_size = elem_ty
                         .size_of()
                         .unwrap()
-                        .const_cast(contract.context.i32_type(), false);
+                        .const_cast(binary.context.i32_type(), false);
 
-                    let init = contract.builder.build_int_to_ptr(
-                        contract.context.i32_type().const_all_ones(),
-                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                    let init = binary.builder.build_int_to_ptr(
+                        binary.context.i32_type().const_all_ones(),
+                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
                         "invalid",
                     );
 
-                    let v = contract
+                    let v = binary
                         .builder
                         .build_call(
-                            contract.module.get_function("vector_new").unwrap(),
+                            binary.module.get_function("vector_new").unwrap(),
                             &[len.into(), elem_size.into(), init.into()],
                             "",
                         )
@@ -837,27 +868,27 @@ impl SubstrateTarget {
                         .unwrap()
                         .into_pointer_value();
 
-                    contract.emit_loop_cond_first_with_pointer(
+                    binary.emit_loop_cond_first_with_pointer(
                         function,
-                        contract.context.i32_type().const_zero(),
+                        binary.context.i32_type().const_zero(),
                         len,
                         data,
                         |elem_no: IntValue<'b>, data: &mut PointerValue<'b>| {
-                            let index = contract.builder.build_int_mul(elem_no, elem_size, "");
+                            let index = binary.builder.build_int_mul(elem_no, elem_size, "");
 
                             let element_start = unsafe {
-                                contract.builder.build_gep(
+                                binary.builder.build_gep(
                                     v,
                                     &[
-                                        contract.context.i32_type().const_zero(),
-                                        contract.context.i32_type().const_int(2, false),
+                                        binary.context.i32_type().const_zero(),
+                                        binary.context.i32_type().const_int(2, false),
                                         index,
                                     ],
                                     "data",
                                 )
                             };
 
-                            let elem = contract.builder.build_pointer_cast(
+                            let elem = binary.builder.build_pointer_cast(
                                 element_start,
                                 elem_ty.ptr_type(AddressSpace::Generic),
                                 "entry",
@@ -865,26 +896,37 @@ impl SubstrateTarget {
 
                             let ty = ty.array_deref();
 
-                            let val = self.decode_ty(contract, function, &ty, data, end);
-                            contract.builder.build_store(elem, val);
+                            let val = self.decode_ty(binary, function, &ty, data, end, ns);
+                            binary.builder.build_store(elem, val);
                         },
                     );
 
-                    v.into()
+                    binary
+                        .builder
+                        .build_pointer_cast(
+                            v,
+                            binary
+                                .module
+                                .get_struct_type("struct.vector")
+                                .unwrap()
+                                .ptr_type(AddressSpace::Generic),
+                            "string",
+                        )
+                        .into()
                 }
             }
             ast::Type::String | ast::Type::DynamicBytes => {
-                let from = contract.builder.build_alloca(
-                    contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                let from = binary.builder.build_alloca(
+                    binary.context.i8_type().ptr_type(AddressSpace::Generic),
                     "from",
                 );
 
-                contract.builder.build_store(from, *data);
+                binary.builder.build_store(from, *data);
 
-                let v = contract
+                let v = binary
                     .builder
                     .build_call(
-                        contract.module.get_function("scale_decode_string").unwrap(),
+                        binary.module.get_function("scale_decode_string").unwrap(),
                         &[from.into()],
                         "",
                     )
@@ -892,18 +934,15 @@ impl SubstrateTarget {
                     .left()
                     .unwrap();
 
-                *data = contract
-                    .builder
-                    .build_load(from, "data")
-                    .into_pointer_value();
+                *data = binary.builder.build_load(from, "data").into_pointer_value();
 
-                self.check_overrun(contract, function, *data, end);
+                self.check_overrun(binary, function, *data, end, false);
 
-                contract
+                binary
                     .builder
                     .build_pointer_cast(
                         v.into_pointer_value(),
-                        contract
+                        binary
                             .module
                             .get_struct_type("struct.vector")
                             .unwrap()
@@ -912,7 +951,65 @@ impl SubstrateTarget {
                     )
                     .into()
             }
-            ast::Type::Ref(ty) => self.decode_ty(contract, function, ty, data, end),
+            ast::Type::Ref(ty) => self.decode_ty(binary, function, ty, data, end, ns),
+            ast::Type::ExternalFunction { .. } => {
+                let address =
+                    self.decode_ty(binary, function, &ast::Type::Address(false), data, end, ns);
+                let selector =
+                    self.decode_ty(binary, function, &ast::Type::Uint(32), data, end, ns);
+
+                let ty = binary.llvm_type(ty, ns);
+
+                let ef = binary
+                    .builder
+                    .build_call(
+                        binary.module.get_function("__malloc").unwrap(),
+                        &[ty.into_pointer_type()
+                            .get_element_type()
+                            .size_of()
+                            .unwrap()
+                            .const_cast(binary.context.i32_type(), false)
+                            .into()],
+                        "",
+                    )
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap()
+                    .into_pointer_value();
+
+                let ef =
+                    binary
+                        .builder
+                        .build_pointer_cast(ef, ty.into_pointer_type(), "function_type");
+
+                let address_member = unsafe {
+                    binary.builder.build_gep(
+                        ef,
+                        &[
+                            binary.context.i32_type().const_zero(),
+                            binary.context.i32_type().const_zero(),
+                        ],
+                        "address",
+                    )
+                };
+
+                binary.builder.build_store(address_member, address);
+
+                let selector_member = unsafe {
+                    binary.builder.build_gep(
+                        ef,
+                        &[
+                            binary.context.i32_type().const_zero(),
+                            binary.context.i32_type().const_int(1, false),
+                        ],
+                        "selector",
+                    )
+                };
+
+                binary.builder.build_store(selector_member, selector);
+
+                ef.into()
+            }
             _ => unreachable!(),
         }
     }
@@ -920,25 +1017,26 @@ impl SubstrateTarget {
     /// ABI encode a single primitive
     fn encode_primitive(
         &self,
-        contract: &Contract,
+        binary: &Binary,
         load: bool,
         ty: &ast::Type,
         dest: PointerValue,
         arg: BasicValueEnum,
+        ns: &ast::Namespace,
     ) -> u64 {
         match ty {
             ast::Type::Bool => {
                 let arg = if load {
-                    contract.builder.build_load(arg.into_pointer_value(), "")
+                    binary.builder.build_load(arg.into_pointer_value(), "")
                 } else {
                     arg
                 };
 
-                contract.builder.build_store(
+                binary.builder.build_store(
                     dest,
-                    contract.builder.build_int_z_extend(
+                    binary.builder.build_int_z_extend(
                         arg.into_int_value(),
-                        contract.context.i8_type(),
+                        binary.context.i8_type(),
                         "bool",
                     ),
                 );
@@ -951,17 +1049,17 @@ impl SubstrateTarget {
             | ast::Type::Int(_) => {
                 let len = match ty {
                     ast::Type::Uint(n) | ast::Type::Int(n) => *n as u64 / 8,
-                    _ => contract.ns.address_length as u64,
+                    _ => ns.address_length as u64,
                 };
 
                 let arg = if load {
-                    contract.builder.build_load(arg.into_pointer_value(), "")
+                    binary.builder.build_load(arg.into_pointer_value(), "")
                 } else {
                     arg
                 };
 
-                contract.builder.build_store(
-                    contract.builder.build_pointer_cast(
+                binary.builder.build_store(
+                    binary.builder.build_pointer_cast(
                         dest,
                         arg.into_int_value()
                             .get_type()
@@ -977,33 +1075,29 @@ impl SubstrateTarget {
                 let val = if load {
                     arg.into_pointer_value()
                 } else {
-                    let temp = contract
+                    let temp = binary
                         .builder
                         .build_alloca(arg.into_int_value().get_type(), &format!("bytes{}", n));
 
-                    contract.builder.build_store(temp, arg.into_int_value());
+                    binary.builder.build_store(temp, arg.into_int_value());
 
                     temp
                 };
 
                 // byte order needs to be reversed. e.g. hex"11223344" should be 0x10 0x11 0x22 0x33 0x44
-                contract.builder.build_call(
-                    contract.module.get_function("__leNtobeN").unwrap(),
+                binary.builder.build_call(
+                    binary.module.get_function("__leNtobeN").unwrap(),
                     &[
-                        contract
+                        binary
                             .builder
                             .build_pointer_cast(
                                 val,
-                                contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                                binary.context.i8_type().ptr_type(AddressSpace::Generic),
                                 "",
                             )
                             .into(),
                         dest.into(),
-                        contract
-                            .context
-                            .i32_type()
-                            .const_int(*n as u64, false)
-                            .into(),
+                        binary.context.i32_type().const_int(*n as u64, false).into(),
                     ],
                     "",
                 );
@@ -1016,9 +1110,14 @@ impl SubstrateTarget {
 
     /// recursively encode argument. The encoded data is written to the data pointer,
     /// and the pointer is updated point after the encoded data.
+    ///
+    /// FIXME: this function takes a "load" arguments, which tells the encoded whether the data should be
+    /// dereferenced. However, this is already encoded by the fact it is a Type::Ref(..) type. So, the load
+    /// argument should be removed from this function.
     pub fn encode_ty<'x>(
         &self,
-        contract: &Contract<'x>,
+        binary: &Binary<'x>,
+        ns: &ast::Namespace,
         load: bool,
         packed: bool,
         function: FunctionValue,
@@ -1033,199 +1132,304 @@ impl SubstrateTarget {
             | ast::Type::Int(_)
             | ast::Type::Uint(_)
             | ast::Type::Bytes(_) => {
-                let arglen = self.encode_primitive(contract, load, ty, *data, arg);
+                let arglen = self.encode_primitive(binary, load, ty, *data, arg, ns);
 
                 *data = unsafe {
-                    contract.builder.build_gep(
+                    binary.builder.build_gep(
                         *data,
-                        &[contract.context.i32_type().const_int(arglen, false)],
+                        &[binary.context.i32_type().const_int(arglen, false)],
                         "",
                     )
                 };
             }
             ast::Type::Enum(n) => {
-                self.encode_primitive(contract, load, &contract.ns.enums[*n].ty, *data, arg);
+                let arglen = self.encode_primitive(binary, load, &ns.enums[*n].ty, *data, arg, ns);
+
+                *data = unsafe {
+                    binary.builder.build_gep(
+                        *data,
+                        &[binary.context.i32_type().const_int(arglen, false)],
+                        "",
+                    )
+                };
             }
-            ast::Type::Array(_, dim) => {
+            ast::Type::Array(_, dim) if dim[0].is_some() => {
                 let arg = if load {
-                    contract.builder.build_load(arg.into_pointer_value(), "")
+                    binary
+                        .builder
+                        .build_load(arg.into_pointer_value(), "")
+                        .into_pointer_value()
+                } else {
+                    arg.into_pointer_value()
+                };
+
+                let null_array = binary.context.append_basic_block(function, "null_array");
+                let normal_array = binary.context.append_basic_block(function, "normal_array");
+                let done_array = binary.context.append_basic_block(function, "done_array");
+
+                let dim = dim[0].as_ref().unwrap().to_u64().unwrap();
+
+                let elem_ty = ty.array_deref();
+
+                let is_null = binary.builder.build_is_null(arg, "is_null");
+
+                binary
+                    .builder
+                    .build_conditional_branch(is_null, null_array, normal_array);
+
+                binary.builder.position_at_end(normal_array);
+
+                let mut normal_data = *data;
+
+                binary.emit_static_loop_with_pointer(
+                    function,
+                    binary.context.i64_type().const_zero(),
+                    binary.context.i64_type().const_int(dim, false),
+                    &mut normal_data,
+                    |index, elem_data| {
+                        let elem = unsafe {
+                            binary.builder.build_gep(
+                                arg,
+                                &[binary.context.i32_type().const_zero(), index],
+                                "index_access",
+                            )
+                        };
+
+                        self.encode_ty(
+                            binary,
+                            ns,
+                            true,
+                            packed,
+                            function,
+                            &elem_ty,
+                            elem.into(),
+                            elem_data,
+                        );
+                    },
+                );
+
+                binary.builder.build_unconditional_branch(done_array);
+
+                let normal_array = binary.builder.get_insert_block().unwrap();
+
+                binary.builder.position_at_end(null_array);
+
+                let mut null_data = *data;
+
+                let elem = binary.default_value(elem_ty.deref_any(), ns);
+
+                binary.emit_static_loop_with_pointer(
+                    function,
+                    binary.context.i64_type().const_zero(),
+                    binary.context.i64_type().const_int(dim, false),
+                    &mut null_data,
+                    |_, elem_data| {
+                        self.encode_ty(
+                            binary, ns, false, packed, function, &elem_ty, elem, elem_data,
+                        );
+                    },
+                );
+
+                binary.builder.build_unconditional_branch(done_array);
+
+                let null_array = binary.builder.get_insert_block().unwrap();
+
+                binary.builder.position_at_end(done_array);
+
+                let either_data = binary.builder.build_phi(
+                    binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                    "either_data",
+                );
+
+                either_data.add_incoming(&[(&normal_data, normal_array), (&null_data, null_array)]);
+
+                *data = either_data.as_basic_value().into_pointer_value()
+            }
+            ast::Type::Array(_, _) => {
+                let arg = if load {
+                    binary.builder.build_load(arg.into_pointer_value(), "")
                 } else {
                     arg
                 };
 
-                if let Some(d) = &dim[0] {
-                    contract.emit_static_loop_with_pointer(
-                        function,
-                        contract.context.i64_type().const_zero(),
-                        contract
-                            .context
-                            .i64_type()
-                            .const_int(d.to_u64().unwrap(), false),
-                        data,
-                        |index, data| {
-                            let elem = unsafe {
-                                contract.builder.build_gep(
-                                    arg.into_pointer_value(),
-                                    &[contract.context.i32_type().const_zero(), index],
-                                    "index_access",
-                                )
-                            };
+                let len = binary.vector_len(arg);
 
-                            let ty = ty.array_deref();
-
-                            self.encode_ty(
-                                contract,
-                                true,
-                                packed,
-                                function,
-                                &ty.deref_any(),
-                                elem.into(),
-                                data,
-                            );
-                        },
-                    );
-                } else {
-                    let len = unsafe {
-                        contract.builder.build_gep(
-                            arg.into_pointer_value(),
-                            &[
-                                contract.context.i32_type().const_zero(),
-                                contract.context.i32_type().const_zero(),
-                            ],
-                            "array.len",
-                        )
-                    };
-
-                    let len = contract
+                if !packed {
+                    *data = binary
                         .builder
-                        .build_load(len, "array.len")
-                        .into_int_value();
-
-                    if !packed {
-                        *data = contract
-                            .builder
-                            .build_call(
-                                contract.module.get_function("compact_encode_u32").unwrap(),
-                                &[(*data).into(), len.into()],
-                                "",
-                            )
-                            .try_as_basic_value()
-                            .left()
-                            .unwrap()
-                            .into_pointer_value();
-                    }
-
-                    // details about our array elements
-                    let elem_ty = ty.array_deref();
-                    let llvm_elem_ty = contract.llvm_var(&elem_ty);
-                    let elem_size = llvm_elem_ty
-                        .into_pointer_type()
-                        .get_element_type()
-                        .size_of()
+                        .build_call(
+                            binary.module.get_function("compact_encode_u32").unwrap(),
+                            &[(*data).into(), len.into()],
+                            "",
+                        )
+                        .try_as_basic_value()
+                        .left()
                         .unwrap()
-                        .const_cast(contract.context.i32_type(), false);
-
-                    contract.emit_static_loop_with_pointer(
-                        function,
-                        contract.context.i32_type().const_zero(),
-                        len,
-                        data,
-                        |elem_no, data| {
-                            let index = contract.builder.build_int_mul(elem_no, elem_size, "");
-
-                            let element_start = unsafe {
-                                contract.builder.build_gep(
-                                    arg.into_pointer_value(),
-                                    &[
-                                        contract.context.i32_type().const_zero(),
-                                        contract.context.i32_type().const_int(2, false),
-                                        index,
-                                    ],
-                                    "data",
-                                )
-                            };
-
-                            let elem = contract.builder.build_pointer_cast(
-                                element_start,
-                                llvm_elem_ty.into_pointer_type(),
-                                "entry",
-                            );
-
-                            let ty = ty.array_deref();
-
-                            self.encode_ty(
-                                contract,
-                                true,
-                                packed,
-                                function,
-                                &ty.deref_any(),
-                                elem.into(),
-                                data,
-                            );
-                        },
-                    );
+                        .into_pointer_value();
                 }
+
+                // details about our array elements
+                let elem_ty = ty.array_deref();
+                let llvm_elem_ty = binary.llvm_var(&elem_ty, ns);
+                let elem_size = llvm_elem_ty
+                    .into_pointer_type()
+                    .get_element_type()
+                    .size_of()
+                    .unwrap()
+                    .const_cast(binary.context.i32_type(), false);
+
+                binary.emit_loop_cond_first_with_pointer(
+                    function,
+                    binary.context.i32_type().const_zero(),
+                    len,
+                    data,
+                    |elem_no, data| {
+                        let index = binary.builder.build_int_mul(elem_no, elem_size, "");
+
+                        let element_start = unsafe {
+                            binary.builder.build_gep(
+                                arg.into_pointer_value(),
+                                &[
+                                    binary.context.i32_type().const_zero(),
+                                    binary.context.i32_type().const_int(2, false),
+                                    index,
+                                ],
+                                "data",
+                            )
+                        };
+
+                        let elem = binary.builder.build_pointer_cast(
+                            element_start,
+                            llvm_elem_ty.into_pointer_type(),
+                            "entry",
+                        );
+
+                        let ty = ty.array_deref();
+
+                        self.encode_ty(
+                            binary,
+                            ns,
+                            true,
+                            packed,
+                            function,
+                            ty.deref_any(),
+                            elem.into(),
+                            data,
+                        );
+                    },
+                );
             }
             ast::Type::Struct(n) => {
                 let arg = if load {
-                    contract.builder.build_load(arg.into_pointer_value(), "")
+                    binary
+                        .builder
+                        .build_load(
+                            arg.into_pointer_value(),
+                            &format!("encode_{}", ns.structs[*n].name),
+                        )
+                        .into_pointer_value()
                 } else {
-                    arg
+                    arg.into_pointer_value()
                 };
 
-                for (i, field) in contract.ns.structs[*n].fields.iter().enumerate() {
+                let null_struct = binary.context.append_basic_block(function, "null_struct");
+                let normal_struct = binary.context.append_basic_block(function, "normal_struct");
+                let done_struct = binary.context.append_basic_block(function, "done_struct");
+
+                let is_null = binary.builder.build_is_null(arg, "is_null");
+
+                binary
+                    .builder
+                    .build_conditional_branch(is_null, null_struct, normal_struct);
+
+                binary.builder.position_at_end(normal_struct);
+
+                let mut normal_data = *data;
+                for (i, field) in ns.structs[*n].fields.iter().enumerate() {
                     let elem = unsafe {
-                        contract.builder.build_gep(
-                            arg.into_pointer_value(),
+                        binary.builder.build_gep(
+                            arg,
                             &[
-                                contract.context.i32_type().const_zero(),
-                                contract.context.i32_type().const_int(i as u64, false),
+                                binary.context.i32_type().const_zero(),
+                                binary.context.i32_type().const_int(i as u64, false),
                             ],
                             &field.name,
                         )
                     };
 
                     self.encode_ty(
-                        contract,
+                        binary,
+                        ns,
                         true,
                         packed,
                         function,
                         &field.ty,
                         elem.into(),
-                        data,
+                        &mut normal_data,
                     );
                 }
+
+                binary.builder.build_unconditional_branch(done_struct);
+
+                let normal_struct = binary.builder.get_insert_block().unwrap();
+
+                binary.builder.position_at_end(null_struct);
+
+                let mut null_data = *data;
+
+                for field in &ns.structs[*n].fields {
+                    let elem = binary.default_value(&field.ty, ns);
+
+                    self.encode_ty(
+                        binary,
+                        ns,
+                        false,
+                        packed,
+                        function,
+                        &field.ty,
+                        elem,
+                        &mut null_data,
+                    );
+                }
+
+                binary.builder.build_unconditional_branch(done_struct);
+
+                let null_struct = binary.builder.get_insert_block().unwrap();
+
+                binary.builder.position_at_end(done_struct);
+
+                let either_data = binary.builder.build_phi(
+                    binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                    "either_data",
+                );
+
+                either_data
+                    .add_incoming(&[(&normal_data, normal_struct), (&null_data, null_struct)]);
+
+                *data = either_data.as_basic_value().into_pointer_value()
             }
             ast::Type::Ref(ty) => {
-                self.encode_ty(contract, load, packed, function, ty, arg, data);
+                self.encode_ty(binary, ns, load, packed, function, ty, arg, data);
             }
             ast::Type::String | ast::Type::DynamicBytes => {
                 let arg = if load {
-                    contract.builder.build_load(arg.into_pointer_value(), "")
+                    binary.builder.build_load(arg.into_pointer_value(), "")
                 } else {
                     arg
                 };
 
-                if !packed {
-                    let function = contract.module.get_function("scale_encode_string").unwrap();
+                let string_len = binary.vector_len(arg);
 
-                    *data = contract
+                let string_data = binary.vector_bytes(arg);
+
+                if !packed {
+                    let function = binary.module.get_function("scale_encode_string").unwrap();
+
+                    *data = binary
                         .builder
                         .build_call(
                             function,
-                            &[
-                                (*data).into(),
-                                // when we call LinkModules2() some types like vector get renamed to vector.1
-                                contract
-                                    .builder
-                                    .build_pointer_cast(
-                                        arg.into_pointer_value(),
-                                        function.get_type().get_param_types()[1]
-                                            .into_pointer_type(),
-                                        "vector",
-                                    )
-                                    .into(),
-                            ],
+                            &[(*data).into(), string_data.into(), string_len.into()],
                             "",
                         )
                         .try_as_basic_value()
@@ -1233,52 +1437,80 @@ impl SubstrateTarget {
                         .unwrap()
                         .into_pointer_value();
                 } else {
-                    let len = unsafe {
-                        contract.builder.build_gep(
-                            arg.into_pointer_value(),
-                            &[
-                                contract.context.i32_type().const_zero(),
-                                contract.context.i32_type().const_zero(),
-                            ],
-                            "string.len",
-                        )
-                    };
-
-                    let p = unsafe {
-                        contract.builder.build_gep(
-                            arg.into_pointer_value(),
-                            &[
-                                contract.context.i32_type().const_zero(),
-                                contract.context.i32_type().const_int(2, false),
-                            ],
-                            "string.data",
-                        )
-                    };
-
-                    let len = contract
-                        .builder
-                        .build_load(len, "array.len")
-                        .into_int_value();
-
-                    contract.builder.build_call(
-                        contract.module.get_function("__memcpy").unwrap(),
+                    binary.builder.build_call(
+                        binary.module.get_function("__memcpy").unwrap(),
                         &[
                             (*data).into(),
-                            contract
+                            binary
                                 .builder
                                 .build_pointer_cast(
-                                    p,
-                                    contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                                    string_data,
+                                    binary.context.i8_type().ptr_type(AddressSpace::Generic),
                                     "",
                                 )
                                 .into(),
-                            len.into(),
+                            string_len.into(),
                         ],
                         "",
                     );
 
-                    *data = unsafe { contract.builder.build_gep(*data, &[len], "") };
+                    *data = unsafe { binary.builder.build_gep(*data, &[string_len], "") };
                 }
+            }
+            ast::Type::ExternalFunction { .. } => {
+                let arg = if load {
+                    binary.builder.build_load(arg.into_pointer_value(), "")
+                } else {
+                    arg
+                };
+
+                let address_member = unsafe {
+                    binary.builder.build_gep(
+                        arg.into_pointer_value(),
+                        &[
+                            binary.context.i32_type().const_zero(),
+                            binary.context.i32_type().const_zero(),
+                        ],
+                        "address",
+                    )
+                };
+
+                let address = binary.builder.build_load(address_member, "address");
+
+                self.encode_ty(
+                    binary,
+                    ns,
+                    false,
+                    false,
+                    function,
+                    &ast::Type::Address(false),
+                    address,
+                    data,
+                );
+
+                let selector_member = unsafe {
+                    binary.builder.build_gep(
+                        arg.into_pointer_value(),
+                        &[
+                            binary.context.i32_type().const_zero(),
+                            binary.context.i32_type().const_int(1, false),
+                        ],
+                        "selector",
+                    )
+                };
+
+                let selector = binary.builder.build_load(selector_member, "selector");
+
+                self.encode_ty(
+                    binary,
+                    ns,
+                    false,
+                    false,
+                    function,
+                    &ast::Type::Uint(32),
+                    selector,
+                    data,
+                );
             }
             _ => unreachable!(),
         };
@@ -1288,6 +1520,10 @@ impl SubstrateTarget {
     /// allocating enough space to do abi encoding. The length for vectors is always
     /// assumed to be five, even when it can be encoded in less bytes. The overhead
     /// of calculating the exact size is not worth reducing the malloc by a few bytes.
+    ///
+    /// FIXME: this function takes a "load" arguments, which tells the encoded whether the data should be
+    /// dereferenced. However, this is already encoded by the fact it is a Type::Ref(..) type. So, the load
+    /// argument should be removed from this function.
     pub fn encoded_length<'x>(
         &self,
         arg: BasicValueEnum<'x>,
@@ -1295,160 +1531,293 @@ impl SubstrateTarget {
         packed: bool,
         ty: &ast::Type,
         function: FunctionValue,
-        contract: &Contract<'x>,
+        binary: &Binary<'x>,
+        ns: &ast::Namespace,
     ) -> IntValue<'x> {
         match ty {
-            ast::Type::Bool => contract.context.i32_type().const_int(1, false),
+            ast::Type::Bool => binary.context.i32_type().const_int(1, false),
             ast::Type::Uint(n) | ast::Type::Int(n) => {
-                contract.context.i32_type().const_int(*n as u64 / 8, false)
+                binary.context.i32_type().const_int(*n as u64 / 8, false)
             }
-            ast::Type::Bytes(n) => contract.context.i32_type().const_int(*n as u64, false),
-            ast::Type::Address(_) | ast::Type::Contract(_) => contract
+            ast::Type::Bytes(n) => binary.context.i32_type().const_int(*n as u64, false),
+            ast::Type::Address(_) | ast::Type::Contract(_) => binary
                 .context
                 .i32_type()
-                .const_int(contract.ns.address_length as u64, false),
-            ast::Type::Enum(n) => self.encoded_length(
-                arg,
-                load,
-                packed,
-                &contract.ns.enums[*n].ty,
-                function,
-                contract,
-            ),
+                .const_int(ns.address_length as u64, false),
+            ast::Type::Enum(n) => {
+                self.encoded_length(arg, load, packed, &ns.enums[*n].ty, function, binary, ns)
+            }
             ast::Type::Struct(n) => {
                 let arg = if load {
-                    contract.builder.build_load(arg.into_pointer_value(), "")
+                    binary
+                        .builder
+                        .build_load(
+                            arg.into_pointer_value(),
+                            &format!("encoded_length_struct_{}", ns.structs[*n].name),
+                        )
+                        .into_pointer_value()
                 } else {
-                    arg
+                    arg.into_pointer_value()
                 };
 
-                let mut sum = contract.context.i32_type().const_zero();
+                let normal_struct = binary.context.append_basic_block(function, "normal_struct");
+                let null_struct = binary.context.append_basic_block(function, "null_struct");
+                let done_struct = binary.context.append_basic_block(function, "done_struct");
 
-                for (i, field) in contract.ns.structs[*n].fields.iter().enumerate() {
+                let is_null = binary.builder.build_is_null(arg, "is_null");
+
+                binary
+                    .builder
+                    .build_conditional_branch(is_null, null_struct, normal_struct);
+
+                binary.builder.position_at_end(normal_struct);
+
+                let mut normal_sum = binary.context.i32_type().const_zero();
+
+                // avoid generating load instructions for structs with only fixed fields
+                for (i, field) in ns.structs[*n].fields.iter().enumerate() {
                     let elem = unsafe {
-                        contract.builder.build_gep(
-                            arg.into_pointer_value(),
+                        binary.builder.build_gep(
+                            arg,
                             &[
-                                contract.context.i32_type().const_zero(),
-                                contract.context.i32_type().const_int(i as u64, false),
+                                binary.context.i32_type().const_zero(),
+                                binary.context.i32_type().const_int(i as u64, false),
                             ],
                             &field.name,
                         )
                     };
 
-                    sum = contract.builder.build_int_add(
-                        sum,
+                    normal_sum = binary.builder.build_int_add(
+                        normal_sum,
                         self.encoded_length(
                             elem.into(),
                             true,
                             packed,
                             &field.ty,
                             function,
-                            contract,
+                            binary,
+                            ns,
                         ),
                         "",
                     );
                 }
 
-                sum
+                binary.builder.build_unconditional_branch(done_struct);
+
+                let normal_struct = binary.builder.get_insert_block().unwrap();
+
+                binary.builder.position_at_end(null_struct);
+
+                let mut null_sum = binary.context.i32_type().const_zero();
+
+                for field in &ns.structs[*n].fields {
+                    null_sum = binary.builder.build_int_add(
+                        null_sum,
+                        self.encoded_length(
+                            binary.default_value(&field.ty, ns),
+                            false,
+                            packed,
+                            &field.ty,
+                            function,
+                            binary,
+                            ns,
+                        ),
+                        "",
+                    );
+                }
+
+                binary.builder.build_unconditional_branch(done_struct);
+
+                let null_struct = binary.builder.get_insert_block().unwrap();
+
+                binary.builder.position_at_end(done_struct);
+
+                let sum = binary.builder.build_phi(binary.context.i32_type(), "sum");
+
+                sum.add_incoming(&[(&normal_sum, normal_struct), (&null_sum, null_struct)]);
+
+                sum.as_basic_value().into_int_value()
             }
-            ast::Type::Array(_, dims) => {
-                let arg = if load {
-                    contract.builder.build_load(arg.into_pointer_value(), "")
-                } else {
-                    arg
-                };
-
-                let mut dynamic_array = false;
-                let mut encoded_length = contract.context.i32_type().const_zero();
-
-                let array_length = match dims.last().unwrap() {
-                    None => {
-                        let len = unsafe {
-                            contract.builder.build_gep(
-                                arg.into_pointer_value(),
-                                &[
-                                    contract.context.i32_type().const_zero(),
-                                    contract.context.i32_type().const_zero(),
-                                ],
-                                "array.len",
-                            )
-                        };
-
-                        dynamic_array = true;
-
-                        // dynamic length array needs length if not packed
-                        if !packed {
-                            encoded_length = contract.context.i32_type().const_int(5, false);
-                        }
-
-                        contract
-                            .builder
-                            .build_load(len, "array.len")
-                            .into_int_value()
-                    }
-                    Some(d) => contract
-                        .context
-                        .i32_type()
-                        .const_int(d.to_u64().unwrap(), false),
-                };
+            ast::Type::Array(_, dims) if dims[0].is_some() => {
+                let array_length = binary
+                    .context
+                    .i32_type()
+                    .const_int(dims[0].as_ref().unwrap().to_u64().unwrap(), false);
 
                 let elem_ty = ty.array_deref();
-                let llvm_elem_ty = contract.llvm_var(&elem_ty);
 
-                if elem_ty.is_dynamic(contract.ns) {
-                    contract.emit_static_loop_with_int(
+                if elem_ty.is_dynamic(ns) {
+                    let arg = if load {
+                        binary
+                            .builder
+                            .build_load(arg.into_pointer_value(), "")
+                            .into_pointer_value()
+                    } else {
+                        arg.into_pointer_value()
+                    };
+
+                    let normal_array = binary.context.append_basic_block(function, "normal_array");
+                    let null_array = binary.context.append_basic_block(function, "null_array");
+                    let done_array = binary.context.append_basic_block(function, "done_array");
+
+                    let is_null = binary.builder.build_is_null(arg, "is_null");
+
+                    binary
+                        .builder
+                        .build_conditional_branch(is_null, null_array, normal_array);
+
+                    binary.builder.position_at_end(normal_array);
+
+                    let mut normal_length = binary.context.i32_type().const_zero();
+
+                    // if the array contains dynamic elements, we have to iterate over
+                    // every one and calculate its length
+                    binary.emit_static_loop_with_int(
                         function,
-                        contract.context.i32_type().const_zero(),
+                        binary.context.i32_type().const_zero(),
                         array_length,
-                        &mut encoded_length,
+                        &mut normal_length,
                         |index, sum| {
-                            let elem = if dynamic_array {
-                                let index = contract.builder.build_int_mul(
-                                    index,
-                                    llvm_elem_ty
-                                        .into_pointer_type()
-                                        .get_element_type()
-                                        .size_of()
-                                        .unwrap()
-                                        .const_cast(contract.context.i32_type(), false),
-                                    "",
-                                );
-
-                                let p = unsafe {
-                                    contract.builder.build_gep(
-                                        arg.into_pointer_value(),
-                                        &[
-                                            contract.context.i32_type().const_zero(),
-                                            contract.context.i32_type().const_int(2, false),
-                                            index,
-                                        ],
-                                        "index_access",
-                                    )
-                                };
-                                contract.builder.build_pointer_cast(
-                                    p,
-                                    llvm_elem_ty.into_pointer_type(),
-                                    "elem",
+                            let elem = unsafe {
+                                binary.builder.build_gep(
+                                    arg,
+                                    &[binary.context.i32_type().const_zero(), index],
+                                    "index_access",
                                 )
-                            } else {
-                                unsafe {
-                                    contract.builder.build_gep(
-                                        arg.into_pointer_value(),
-                                        &[contract.context.i32_type().const_zero(), index],
-                                        "index_access",
-                                    )
-                                }
                             };
 
-                            *sum = contract.builder.build_int_add(
+                            *sum = binary.builder.build_int_add(
                                 self.encoded_length(
                                     elem.into(),
                                     true,
                                     packed,
                                     &elem_ty,
                                     function,
-                                    contract,
+                                    binary,
+                                    ns,
+                                ),
+                                *sum,
+                                "",
+                            );
+                        },
+                    );
+
+                    binary.builder.build_unconditional_branch(done_array);
+
+                    let normal_array = binary.builder.get_insert_block().unwrap();
+
+                    binary.builder.position_at_end(null_array);
+
+                    let elem = binary.default_value(elem_ty.deref_any(), ns);
+
+                    let null_length = binary.builder.build_int_mul(
+                        self.encoded_length(
+                            elem,
+                            false,
+                            packed,
+                            elem_ty.deref_any(),
+                            function,
+                            binary,
+                            ns,
+                        ),
+                        array_length,
+                        "",
+                    );
+
+                    binary.builder.build_unconditional_branch(done_array);
+
+                    let null_array = binary.builder.get_insert_block().unwrap();
+
+                    binary.builder.position_at_end(done_array);
+
+                    let encoded_length = binary
+                        .builder
+                        .build_phi(binary.context.i32_type(), "encoded_length");
+
+                    encoded_length.add_incoming(&[
+                        (&normal_length, normal_array),
+                        (&null_length, null_array),
+                    ]);
+
+                    encoded_length.as_basic_value().into_int_value()
+                } else {
+                    // elements have static length
+                    let elem = binary.default_value(elem_ty.deref_any(), ns);
+
+                    binary.builder.build_int_mul(
+                        self.encoded_length(
+                            elem,
+                            false,
+                            packed,
+                            elem_ty.deref_any(),
+                            function,
+                            binary,
+                            ns,
+                        ),
+                        array_length,
+                        "",
+                    )
+                }
+            }
+            ast::Type::Array(_, dims) if dims[0].is_none() => {
+                let arg = if load {
+                    binary.builder.build_load(arg.into_pointer_value(), "")
+                } else {
+                    arg
+                };
+
+                let mut encoded_length = binary.context.i32_type().const_int(5, false);
+
+                let array_length = binary.vector_len(arg);
+
+                let elem_ty = ty.array_deref();
+                let llvm_elem_ty = binary.llvm_var(&elem_ty, ns);
+
+                if elem_ty.is_dynamic(ns) {
+                    // if the array contains elements of dynamic length, we have to iterate over all of them
+                    binary.emit_loop_cond_first_with_int(
+                        function,
+                        binary.context.i32_type().const_zero(),
+                        array_length,
+                        &mut encoded_length,
+                        |index, sum| {
+                            let index = binary.builder.build_int_mul(
+                                index,
+                                llvm_elem_ty
+                                    .into_pointer_type()
+                                    .get_element_type()
+                                    .size_of()
+                                    .unwrap()
+                                    .const_cast(binary.context.i32_type(), false),
+                                "",
+                            );
+
+                            let p = unsafe {
+                                binary.builder.build_gep(
+                                    arg.into_pointer_value(),
+                                    &[
+                                        binary.context.i32_type().const_zero(),
+                                        binary.context.i32_type().const_int(2, false),
+                                        index,
+                                    ],
+                                    "index_access",
+                                )
+                            };
+                            let elem = binary.builder.build_pointer_cast(
+                                p,
+                                llvm_elem_ty.into_pointer_type(),
+                                "elem",
+                            );
+
+                            *sum = binary.builder.build_int_add(
+                                self.encoded_length(
+                                    elem.into(),
+                                    true,
+                                    packed,
+                                    &elem_ty,
+                                    function,
+                                    binary,
+                                    ns,
                                 ),
                                 *sum,
                                 "",
@@ -1458,46 +1827,20 @@ impl SubstrateTarget {
 
                     encoded_length
                 } else {
-                    let elem = if dynamic_array {
-                        let p = unsafe {
-                            contract.builder.build_gep(
-                                arg.into_pointer_value(),
-                                &[
-                                    contract.context.i32_type().const_zero(),
-                                    contract.context.i32_type().const_int(2, false),
-                                ],
-                                "index_access",
-                            )
-                        };
+                    // elements have static length
+                    let elem = binary.default_value(elem_ty.deref_any(), ns);
 
-                        contract.builder.build_pointer_cast(
-                            p,
-                            llvm_elem_ty.into_pointer_type(),
-                            "elem",
-                        )
-                    } else {
-                        unsafe {
-                            contract.builder.build_gep(
-                                arg.into_pointer_value(),
-                                &[
-                                    contract.context.i32_type().const_zero(),
-                                    contract.context.i32_type().const_zero(),
-                                ],
-                                "index_access",
-                            )
-                        }
-                    };
-
-                    contract.builder.build_int_add(
+                    binary.builder.build_int_add(
                         encoded_length,
-                        contract.builder.build_int_mul(
+                        binary.builder.build_int_mul(
                             self.encoded_length(
-                                elem.into(),
-                                true,
+                                elem,
+                                false,
                                 packed,
-                                &elem_ty,
+                                elem_ty.deref_any(),
                                 function,
-                                contract,
+                                binary,
+                                ns,
                             ),
                             array_length,
                             "",
@@ -1506,10 +1849,10 @@ impl SubstrateTarget {
                     )
                 }
             }
-            ast::Type::Ref(r) => self.encoded_length(arg, load, packed, r, function, contract),
+            ast::Type::Ref(r) => self.encoded_length(arg, load, packed, r, function, binary, ns),
             ast::Type::String | ast::Type::DynamicBytes => {
                 let arg = if load {
-                    contract.builder.build_load(arg.into_pointer_value(), "")
+                    binary.builder.build_load(arg.into_pointer_value(), "")
                 } else {
                     arg
                 };
@@ -1517,31 +1860,24 @@ impl SubstrateTarget {
                 // A string or bytes type has to be encoded by: one compact integer for
                 // the length, followed by the bytes themselves. Here we assume that the
                 // length requires 5 bytes.
-                let len = unsafe {
-                    contract.builder.build_gep(
-                        arg.into_pointer_value(),
-                        &[
-                            contract.context.i32_type().const_zero(),
-                            contract.context.i32_type().const_zero(),
-                        ],
-                        "string.len",
-                    )
-                };
-
-                let len = contract
-                    .builder
-                    .build_load(len, "string.len")
-                    .into_int_value();
+                let len = binary.vector_len(arg);
 
                 if packed {
                     len
                 } else {
-                    contract.builder.build_int_add(
+                    binary.builder.build_int_add(
                         len,
-                        contract.context.i32_type().const_int(5, false),
+                        binary.context.i32_type().const_int(5, false),
                         "",
                     )
                 }
+            }
+            ast::Type::ExternalFunction { .. } => {
+                // address + 4 bytes selector
+                binary
+                    .context
+                    .i32_type()
+                    .const_int(ns.address_length as u64 + 4, false)
             }
             _ => unreachable!(),
         }
@@ -1550,36 +1886,42 @@ impl SubstrateTarget {
     /// Create a unique salt each time this function is called.
     fn contract_unique_salt<'x>(
         &mut self,
-        contract: &'x Contract,
-        contract_no: usize,
+        binary: &'x Binary,
+        binary_no: usize,
+        ns: &ast::Namespace,
     ) -> (PointerValue<'x>, IntValue<'x>) {
-        let counter = *self.unique_strings.get(&contract_no).unwrap_or(&0);
+        let counter = *self.unique_strings.get(&binary_no).unwrap_or(&0);
 
-        let contract_name = &contract.ns.contracts[contract_no].name;
+        let binary_name = &ns.contracts[binary_no].name;
 
-        let unique = format!("{}-{}", contract_name, counter);
+        let unique = format!("{}-{}", binary_name, counter);
 
-        let salt = contract.emit_global_string(
-            &format!("salt_{}_{}", contract_name, counter),
+        let salt = binary.emit_global_string(
+            &format!("salt_{}_{}", binary_name, counter),
             blake2_rfc::blake2b::blake2b(32, &[], unique.as_bytes()).as_bytes(),
             true,
         );
 
-        self.unique_strings.insert(contract_no, counter + 1);
+        self.unique_strings.insert(binary_no, counter + 1);
 
-        (salt, contract.context.i32_type().const_int(32, false))
+        (salt, binary.context.i32_type().const_int(32, false))
     }
 }
 
 impl<'a> TargetRuntime<'a> for SubstrateTarget {
-    fn clear_storage(&self, contract: &Contract, _function: FunctionValue, slot: PointerValue) {
-        contract.builder.build_call(
-            contract.module.get_function("seal_clear_storage").unwrap(),
-            &[contract
+    fn storage_delete_single_slot(
+        &self,
+        binary: &Binary,
+        _function: FunctionValue,
+        slot: PointerValue,
+    ) {
+        binary.builder.build_call(
+            binary.module.get_function("seal_clear_storage").unwrap(),
+            &[binary
                 .builder
                 .build_pointer_cast(
                     slot,
-                    contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                    binary.context.i8_type().ptr_type(AddressSpace::Generic),
                     "",
                 )
                 .into()],
@@ -1589,28 +1931,28 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
     fn set_storage(
         &self,
-        contract: &Contract,
+        binary: &Binary,
         _function: FunctionValue,
         slot: PointerValue,
         dest: PointerValue,
     ) {
         // TODO: check for non-zero
-        contract.builder.build_call(
-            contract.module.get_function("seal_set_storage").unwrap(),
+        binary.builder.build_call(
+            binary.module.get_function("seal_set_storage").unwrap(),
             &[
-                contract
+                binary
                     .builder
                     .build_pointer_cast(
                         slot,
-                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
                         "",
                     )
                     .into(),
-                contract
+                binary
                     .builder
                     .build_pointer_cast(
                         dest,
-                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
                         "",
                     )
                     .into(),
@@ -1618,97 +1960,219 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                     .get_element_type()
                     .into_int_type()
                     .size_of()
-                    .const_cast(contract.context.i32_type(), false)
+                    .const_cast(binary.context.i32_type(), false)
                     .into(),
             ],
             "",
         );
     }
 
-    fn set_storage_string(
+    fn set_storage_extfunc(
         &self,
-        contract: &Contract,
+        binary: &Binary,
         _function: FunctionValue,
         slot: PointerValue,
         dest: PointerValue,
     ) {
-        let len = unsafe {
-            contract.builder.build_gep(
-                dest,
-                &[
-                    contract.context.i32_type().const_zero(),
-                    contract.context.i32_type().const_zero(),
-                ],
-                "ptr.string.len",
-            )
-        };
-
-        let len = contract.builder.build_load(len, "string.len");
-
-        let data = unsafe {
-            contract.builder.build_gep(
-                dest,
-                &[
-                    contract.context.i32_type().const_zero(),
-                    contract.context.i32_type().const_int(2, false),
-                ],
-                "ptr.string.data",
-            )
-        };
-
-        // TODO: check for non-zero
-        contract.builder.build_call(
-            contract.module.get_function("seal_set_storage").unwrap(),
+        binary.builder.build_call(
+            binary.module.get_function("seal_set_storage").unwrap(),
             &[
-                contract
+                binary
                     .builder
                     .build_pointer_cast(
                         slot,
-                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
                         "",
                     )
                     .into(),
-                contract
+                binary
                     .builder
                     .build_pointer_cast(
-                        data,
-                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        dest,
+                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
                         "",
                     )
                     .into(),
-                len,
+                dest.get_type()
+                    .get_element_type()
+                    .size_of()
+                    .unwrap()
+                    .const_cast(binary.context.i32_type(), false)
+                    .into(),
             ],
             "",
         );
+    }
+
+    fn get_storage_extfunc(
+        &self,
+        binary: &Binary<'a>,
+        _function: FunctionValue,
+        slot: PointerValue<'a>,
+        ns: &ast::Namespace,
+    ) -> PointerValue<'a> {
+        let ty = binary.llvm_type(
+            &ast::Type::ExternalFunction {
+                params: Vec::new(),
+                mutability: ast::Mutability::Nonpayable(pt::Loc(0, 0, 0)),
+                returns: Vec::new(),
+            },
+            ns,
+        );
+
+        let len = ty
+            .into_pointer_type()
+            .get_element_type()
+            .size_of()
+            .unwrap()
+            .const_cast(binary.context.i32_type(), false);
+
+        let ef = binary
+            .builder
+            .build_call(
+                binary.module.get_function("__malloc").unwrap(),
+                &[len.into()],
+                "",
+            )
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_pointer_value();
+
+        let scratch_len = binary.scratch_len.unwrap().as_pointer_value();
+        binary.builder.build_store(scratch_len, len);
+
+        let _exists = binary
+            .builder
+            .build_call(
+                binary.module.get_function("seal_get_storage").unwrap(),
+                &[
+                    binary
+                        .builder
+                        .build_pointer_cast(
+                            slot,
+                            binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                            "",
+                        )
+                        .into(),
+                    ef.into(),
+                    scratch_len.into(),
+                ],
+                "",
+            )
+            .try_as_basic_value()
+            .left()
+            .unwrap();
+
+        // TODO: decide behaviour if not exist
+
+        binary
+            .builder
+            .build_pointer_cast(ef, ty.into_pointer_type(), "function_type")
+    }
+
+    fn set_storage_string(
+        &self,
+        binary: &Binary<'a>,
+        function: FunctionValue<'a>,
+        slot: PointerValue<'a>,
+        dest: BasicValueEnum<'a>,
+    ) {
+        let len = binary.vector_len(dest);
+        let data = binary.vector_bytes(dest);
+
+        let exists = binary.builder.build_int_compare(
+            IntPredicate::NE,
+            len,
+            binary.context.i32_type().const_zero(),
+            "exists",
+        );
+
+        let delete_block = binary.context.append_basic_block(function, "delete_block");
+
+        let set_block = binary.context.append_basic_block(function, "set_block");
+
+        let done_storage = binary.context.append_basic_block(function, "done_storage");
+
+        binary
+            .builder
+            .build_conditional_branch(exists, set_block, delete_block);
+
+        binary.builder.position_at_end(set_block);
+
+        binary.builder.build_call(
+            binary.module.get_function("seal_set_storage").unwrap(),
+            &[
+                binary
+                    .builder
+                    .build_pointer_cast(
+                        slot,
+                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "",
+                    )
+                    .into(),
+                binary
+                    .builder
+                    .build_pointer_cast(
+                        data,
+                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "",
+                    )
+                    .into(),
+                len.into(),
+            ],
+            "",
+        );
+
+        binary.builder.build_unconditional_branch(done_storage);
+
+        binary.builder.position_at_end(delete_block);
+
+        binary.builder.build_call(
+            binary.module.get_function("seal_clear_storage").unwrap(),
+            &[binary
+                .builder
+                .build_pointer_cast(
+                    slot,
+                    binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                    "",
+                )
+                .into()],
+            "",
+        );
+
+        binary.builder.build_unconditional_branch(done_storage);
+
+        binary.builder.position_at_end(done_storage);
     }
 
     /// Read from substrate storage
     fn get_storage_int(
         &self,
-        contract: &Contract<'a>,
+        binary: &Binary<'a>,
         function: FunctionValue,
-        slot: PointerValue,
+        slot: PointerValue<'a>,
         ty: IntType<'a>,
     ) -> IntValue<'a> {
-        let scratch_buf = contract.builder.build_pointer_cast(
-            contract.scratch.unwrap().as_pointer_value(),
-            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+        let scratch_buf = binary.builder.build_pointer_cast(
+            binary.scratch.unwrap().as_pointer_value(),
+            binary.context.i8_type().ptr_type(AddressSpace::Generic),
             "scratch_buf",
         );
-        let scratch_len = contract.scratch_len.unwrap().as_pointer_value();
-        let ty_len = ty.size_of().const_cast(contract.context.i32_type(), false);
-        contract.builder.build_store(scratch_len, ty_len);
+        let scratch_len = binary.scratch_len.unwrap().as_pointer_value();
+        let ty_len = ty.size_of().const_cast(binary.context.i32_type(), false);
+        binary.builder.build_store(scratch_len, ty_len);
 
-        let exists = contract
+        let exists = binary
             .builder
             .build_call(
-                contract.module.get_function("seal_get_storage").unwrap(),
+                binary.module.get_function("seal_get_storage").unwrap(),
                 &[
-                    contract
+                    binary
                         .builder
                         .build_pointer_cast(
                             slot,
-                            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                            binary.context.i8_type().ptr_type(AddressSpace::Generic),
                             "",
                         )
                         .into(),
@@ -1721,38 +2185,36 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             .left()
             .unwrap();
 
-        let exists = contract.builder.build_int_compare(
+        let exists = binary.builder.build_int_compare(
             IntPredicate::EQ,
             exists.into_int_value(),
-            contract.context.i32_type().const_zero(),
+            binary.context.i32_type().const_zero(),
             "storage_exists",
         );
 
-        let entry = contract.builder.get_insert_block().unwrap();
-        let retrieve_block = contract.context.append_basic_block(function, "in_storage");
-        let done_storage = contract
-            .context
-            .append_basic_block(function, "done_storage");
+        let entry = binary.builder.get_insert_block().unwrap();
+        let retrieve_block = binary.context.append_basic_block(function, "in_storage");
+        let done_storage = binary.context.append_basic_block(function, "done_storage");
 
-        contract
+        binary
             .builder
             .build_conditional_branch(exists, retrieve_block, done_storage);
 
-        contract.builder.position_at_end(retrieve_block);
+        binary.builder.position_at_end(retrieve_block);
 
-        let dest = contract.builder.build_pointer_cast(
-            contract.scratch.unwrap().as_pointer_value(),
+        let dest = binary.builder.build_pointer_cast(
+            binary.scratch.unwrap().as_pointer_value(),
             ty.ptr_type(AddressSpace::Generic),
             "scratch_ty_buf",
         );
 
-        let loaded_int = contract.builder.build_load(dest, "int");
+        let loaded_int = binary.builder.build_load(dest, "int");
 
-        contract.builder.build_unconditional_branch(done_storage);
+        binary.builder.build_unconditional_branch(done_storage);
 
-        contract.builder.position_at_end(done_storage);
+        binary.builder.position_at_end(done_storage);
 
-        let res = contract.builder.build_phi(ty, "storage_res");
+        let res = binary.builder.build_phi(ty, "storage_res");
 
         res.add_incoming(&[(&loaded_int, retrieve_block), (&ty.const_zero(), entry)]);
 
@@ -1762,35 +2224,35 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
     /// Read string from substrate storage
     fn get_storage_string(
         &self,
-        contract: &Contract<'a>,
-        _function: FunctionValue,
+        binary: &Binary<'a>,
+        function: FunctionValue,
         slot: PointerValue<'a>,
     ) -> PointerValue<'a> {
-        let scratch_buf = contract.builder.build_pointer_cast(
-            contract.scratch.unwrap().as_pointer_value(),
-            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+        let scratch_buf = binary.builder.build_pointer_cast(
+            binary.scratch.unwrap().as_pointer_value(),
+            binary.context.i8_type().ptr_type(AddressSpace::Generic),
             "scratch_buf",
         );
-        let scratch_len = contract.scratch_len.unwrap().as_pointer_value();
+        let scratch_len = binary.scratch_len.unwrap().as_pointer_value();
 
-        contract.builder.build_store(
+        binary.builder.build_store(
             scratch_len,
-            contract
+            binary
                 .context
                 .i32_type()
                 .const_int(SCRATCH_SIZE as u64, false),
         );
 
-        let exists = contract
+        let exists = binary
             .builder
             .build_call(
-                contract.module.get_function("seal_get_storage").unwrap(),
+                binary.module.get_function("seal_get_storage").unwrap(),
                 &[
-                    contract
+                    binary
                         .builder
                         .build_pointer_cast(
                             slot,
-                            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                            binary.context.i8_type().ptr_type(AddressSpace::Generic),
                             "",
                         )
                         .into(),
@@ -1803,27 +2265,42 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             .left()
             .unwrap();
 
-        let exists = contract.builder.build_int_compare(
+        let exists = binary.builder.build_int_compare(
             IntPredicate::EQ,
             exists.into_int_value(),
-            contract.context.i32_type().const_zero(),
+            binary.context.i32_type().const_zero(),
             "storage_exists",
         );
 
-        let length = contract.builder.build_select(
-            exists,
-            contract.builder.build_load(scratch_len, "string_len"),
-            contract.context.i32_type().const_zero().into(),
-            "string_length",
-        );
+        let ty = binary
+            .module
+            .get_struct_type("struct.vector")
+            .unwrap()
+            .ptr_type(AddressSpace::Generic);
 
-        contract
+        let entry = binary.builder.get_insert_block().unwrap();
+
+        let retrieve_block = binary
+            .context
+            .append_basic_block(function, "retrieve_block");
+
+        let done_storage = binary.context.append_basic_block(function, "done_storage");
+
+        binary
+            .builder
+            .build_conditional_branch(exists, retrieve_block, done_storage);
+
+        binary.builder.position_at_end(retrieve_block);
+
+        let length = binary.builder.build_load(scratch_len, "string_len");
+
+        let loaded_string = binary
             .builder
             .build_call(
-                contract.module.get_function("vector_new").unwrap(),
+                binary.module.get_function("vector_new").unwrap(),
                 &[
-                    length,
-                    contract.context.i32_type().const_int(1, false).into(),
+                    length.into(),
+                    binary.context.i32_type().const_int(1, false).into(),
                     scratch_buf.into(),
                 ],
                 "",
@@ -1831,42 +2308,66 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             .try_as_basic_value()
             .left()
             .unwrap()
-            .into_pointer_value()
+            .into_pointer_value();
+
+        binary.builder.build_unconditional_branch(done_storage);
+
+        binary.builder.position_at_end(done_storage);
+
+        let res = binary.builder.build_phi(ty, "storage_res");
+
+        res.add_incoming(&[
+            (&loaded_string, retrieve_block),
+            (
+                &binary
+                    .module
+                    .get_struct_type("struct.vector")
+                    .unwrap()
+                    .ptr_type(AddressSpace::Generic)
+                    .const_null(),
+                entry,
+            ),
+        ]);
+
+        res.as_basic_value().into_pointer_value()
     }
 
     /// Read string from substrate storage
     fn get_storage_bytes_subscript(
         &self,
-        contract: &Contract<'a>,
+        binary: &Binary<'a>,
         function: FunctionValue,
-        slot: PointerValue<'a>,
+        slot: IntValue<'a>,
         index: IntValue<'a>,
     ) -> IntValue<'a> {
-        let scratch_buf = contract.builder.build_pointer_cast(
-            contract.scratch.unwrap().as_pointer_value(),
-            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+        let slot_ptr = binary.builder.build_alloca(slot.get_type(), "slot");
+        binary.builder.build_store(slot_ptr, slot);
+
+        let scratch_buf = binary.builder.build_pointer_cast(
+            binary.scratch.unwrap().as_pointer_value(),
+            binary.context.i8_type().ptr_type(AddressSpace::Generic),
             "scratch_buf",
         );
-        let scratch_len = contract.scratch_len.unwrap().as_pointer_value();
+        let scratch_len = binary.scratch_len.unwrap().as_pointer_value();
 
-        contract.builder.build_store(
+        binary.builder.build_store(
             scratch_len,
-            contract
+            binary
                 .context
                 .i32_type()
                 .const_int(SCRATCH_SIZE as u64, false),
         );
 
-        let exists = contract
+        let exists = binary
             .builder
             .build_call(
-                contract.module.get_function("seal_get_storage").unwrap(),
+                binary.module.get_function("seal_get_storage").unwrap(),
                 &[
-                    contract
+                    binary
                         .builder
                         .build_pointer_cast(
-                            slot,
-                            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                            slot_ptr,
+                            binary.context.i8_type().ptr_type(AddressSpace::Generic),
                             "",
                         )
                         .into(),
@@ -1879,96 +2380,96 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             .left()
             .unwrap();
 
-        let exists = contract.builder.build_int_compare(
+        let exists = binary.builder.build_int_compare(
             IntPredicate::EQ,
             exists.into_int_value(),
-            contract.context.i32_type().const_zero(),
+            binary.context.i32_type().const_zero(),
             "storage_exists",
         );
 
-        let length = contract
+        let length = binary
             .builder
             .build_select(
                 exists,
-                contract.builder.build_load(scratch_len, "string_len"),
-                contract.context.i32_type().const_zero().into(),
+                binary.builder.build_load(scratch_len, "string_len"),
+                binary.context.i32_type().const_zero().into(),
                 "string_length",
             )
             .into_int_value();
 
         // do bounds check on index
         let in_range =
-            contract
+            binary
                 .builder
                 .build_int_compare(IntPredicate::ULT, index, length, "index_in_range");
 
-        let retrieve_block = contract.context.append_basic_block(function, "in_range");
-        let bang_block = contract.context.append_basic_block(function, "bang_block");
+        let retrieve_block = binary.context.append_basic_block(function, "in_range");
+        let bang_block = binary.context.append_basic_block(function, "bang_block");
 
-        contract
+        binary
             .builder
             .build_conditional_branch(in_range, retrieve_block, bang_block);
 
-        contract.builder.position_at_end(bang_block);
+        binary.builder.position_at_end(bang_block);
         self.assert_failure(
-            contract,
-            contract
+            binary,
+            binary
                 .context
                 .i8_type()
                 .ptr_type(AddressSpace::Generic)
                 .const_null(),
-            contract.context.i32_type().const_zero(),
+            binary.context.i32_type().const_zero(),
         );
 
-        contract.builder.position_at_end(retrieve_block);
+        binary.builder.position_at_end(retrieve_block);
 
         let offset = unsafe {
-            contract.builder.build_gep(
-                contract.scratch.unwrap().as_pointer_value(),
-                &[contract.context.i32_type().const_zero(), index],
+            binary.builder.build_gep(
+                binary.scratch.unwrap().as_pointer_value(),
+                &[binary.context.i32_type().const_zero(), index],
                 "data_offset",
             )
         };
 
-        contract
-            .builder
-            .build_load(offset, "value")
-            .into_int_value()
+        binary.builder.build_load(offset, "value").into_int_value()
     }
 
     fn set_storage_bytes_subscript(
         &self,
-        contract: &Contract,
+        binary: &Binary,
         function: FunctionValue,
-        slot: PointerValue,
+        slot: IntValue,
         index: IntValue,
         val: IntValue,
     ) {
-        let scratch_buf = contract.builder.build_pointer_cast(
-            contract.scratch.unwrap().as_pointer_value(),
-            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+        let slot_ptr = binary.builder.build_alloca(slot.get_type(), "slot");
+        binary.builder.build_store(slot_ptr, slot);
+
+        let scratch_buf = binary.builder.build_pointer_cast(
+            binary.scratch.unwrap().as_pointer_value(),
+            binary.context.i8_type().ptr_type(AddressSpace::Generic),
             "scratch_buf",
         );
-        let scratch_len = contract.scratch_len.unwrap().as_pointer_value();
+        let scratch_len = binary.scratch_len.unwrap().as_pointer_value();
 
-        contract.builder.build_store(
+        binary.builder.build_store(
             scratch_len,
-            contract
+            binary
                 .context
                 .i32_type()
                 .const_int(SCRATCH_SIZE as u64, false),
         );
 
-        let exists = contract
+        let exists = binary
             .builder
             .build_call(
-                contract.module.get_function("seal_get_storage").unwrap(),
+                binary.module.get_function("seal_get_storage").unwrap(),
                 &[
-                    contract
+                    binary
                         .builder
                         .build_pointer_cast(
-                            slot,
-                            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                            slot_ptr,
+                            binary.context.i8_type().ptr_type(AddressSpace::Generic),
                             "",
                         )
                         .into(),
@@ -1981,68 +2482,68 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             .left()
             .unwrap();
 
-        let exists = contract.builder.build_int_compare(
+        let exists = binary.builder.build_int_compare(
             IntPredicate::EQ,
             exists.into_int_value(),
-            contract.context.i32_type().const_zero(),
+            binary.context.i32_type().const_zero(),
             "storage_exists",
         );
 
-        let length = contract
+        let length = binary
             .builder
             .build_select(
                 exists,
-                contract.builder.build_load(scratch_len, "string_len"),
-                contract.context.i32_type().const_zero().into(),
+                binary.builder.build_load(scratch_len, "string_len"),
+                binary.context.i32_type().const_zero().into(),
                 "string_length",
             )
             .into_int_value();
 
         // do bounds check on index
         let in_range =
-            contract
+            binary
                 .builder
                 .build_int_compare(IntPredicate::ULT, index, length, "index_in_range");
 
-        let retrieve_block = contract.context.append_basic_block(function, "in_range");
-        let bang_block = contract.context.append_basic_block(function, "bang_block");
+        let retrieve_block = binary.context.append_basic_block(function, "in_range");
+        let bang_block = binary.context.append_basic_block(function, "bang_block");
 
-        contract
+        binary
             .builder
             .build_conditional_branch(in_range, retrieve_block, bang_block);
 
-        contract.builder.position_at_end(bang_block);
+        binary.builder.position_at_end(bang_block);
         self.assert_failure(
-            contract,
-            contract
+            binary,
+            binary
                 .context
                 .i8_type()
                 .ptr_type(AddressSpace::Generic)
                 .const_null(),
-            contract.context.i32_type().const_zero(),
+            binary.context.i32_type().const_zero(),
         );
 
-        contract.builder.position_at_end(retrieve_block);
+        binary.builder.position_at_end(retrieve_block);
 
         let offset = unsafe {
-            contract.builder.build_gep(
-                contract.scratch.unwrap().as_pointer_value(),
-                &[contract.context.i32_type().const_zero(), index],
+            binary.builder.build_gep(
+                binary.scratch.unwrap().as_pointer_value(),
+                &[binary.context.i32_type().const_zero(), index],
                 "data_offset",
             )
         };
 
         // set the result
-        contract.builder.build_store(offset, val);
+        binary.builder.build_store(offset, val);
 
-        contract.builder.build_call(
-            contract.module.get_function("seal_set_storage").unwrap(),
+        binary.builder.build_call(
+            binary.module.get_function("seal_set_storage").unwrap(),
             &[
-                contract
+                binary
                     .builder
                     .build_pointer_cast(
-                        slot,
-                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        slot_ptr,
+                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
                         "",
                     )
                     .into(),
@@ -2054,40 +2555,45 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
     }
 
     /// Push a byte onto a bytes string in storage
-    fn storage_bytes_push(
+    fn storage_push(
         &self,
-        contract: &Contract,
+        binary: &Binary<'a>,
         _function: FunctionValue,
-        slot: PointerValue,
-        val: IntValue,
-    ) {
-        let scratch_buf = contract.builder.build_pointer_cast(
-            contract.scratch.unwrap().as_pointer_value(),
-            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+        _ty: &ast::Type,
+        slot: IntValue<'a>,
+        val: BasicValueEnum<'a>,
+        _ns: &ast::Namespace,
+    ) -> BasicValueEnum<'a> {
+        let slot_ptr = binary.builder.build_alloca(slot.get_type(), "slot");
+        binary.builder.build_store(slot_ptr, slot);
+
+        let scratch_buf = binary.builder.build_pointer_cast(
+            binary.scratch.unwrap().as_pointer_value(),
+            binary.context.i8_type().ptr_type(AddressSpace::Generic),
             "scratch_buf",
         );
-        let scratch_len = contract.scratch_len.unwrap().as_pointer_value();
+        let scratch_len = binary.scratch_len.unwrap().as_pointer_value();
 
         // Since we are going to add one byte, we set the buffer length to one less. This will
         // trap for us if it does not fit, so we don't have to code this ourselves
-        contract.builder.build_store(
+        binary.builder.build_store(
             scratch_len,
-            contract
+            binary
                 .context
                 .i32_type()
                 .const_int(SCRATCH_SIZE as u64 - 1, false),
         );
 
-        let exists = contract
+        let exists = binary
             .builder
             .build_call(
-                contract.module.get_function("seal_get_storage").unwrap(),
+                binary.module.get_function("seal_get_storage").unwrap(),
                 &[
-                    contract
+                    binary
                         .builder
                         .build_pointer_cast(
-                            slot,
-                            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                            slot_ptr,
+                            binary.context.i8_type().ptr_type(AddressSpace::Generic),
                             "",
                         )
                         .into(),
@@ -2100,49 +2606,49 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             .left()
             .unwrap();
 
-        let exists = contract.builder.build_int_compare(
+        let exists = binary.builder.build_int_compare(
             IntPredicate::EQ,
             exists.into_int_value(),
-            contract.context.i32_type().const_zero(),
+            binary.context.i32_type().const_zero(),
             "storage_exists",
         );
 
-        let length = contract
+        let length = binary
             .builder
             .build_select(
                 exists,
-                contract.builder.build_load(scratch_len, "string_len"),
-                contract.context.i32_type().const_zero().into(),
+                binary.builder.build_load(scratch_len, "string_len"),
+                binary.context.i32_type().const_zero().into(),
                 "string_length",
             )
             .into_int_value();
 
         // set the result
         let offset = unsafe {
-            contract.builder.build_gep(
-                contract.scratch.unwrap().as_pointer_value(),
-                &[contract.context.i32_type().const_zero(), length],
+            binary.builder.build_gep(
+                binary.scratch.unwrap().as_pointer_value(),
+                &[binary.context.i32_type().const_zero(), length],
                 "data_offset",
             )
         };
 
-        contract.builder.build_store(offset, val);
+        binary.builder.build_store(offset, val);
 
         // Set the new length
-        let length = contract.builder.build_int_add(
+        let length = binary.builder.build_int_add(
             length,
-            contract.context.i32_type().const_int(1, false),
+            binary.context.i32_type().const_int(1, false),
             "new_length",
         );
 
-        contract.builder.build_call(
-            contract.module.get_function("seal_set_storage").unwrap(),
+        binary.builder.build_call(
+            binary.module.get_function("seal_set_storage").unwrap(),
             &[
-                contract
+                binary
                     .builder
                     .build_pointer_cast(
-                        slot,
-                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        slot_ptr,
+                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
                         "",
                     )
                     .into(),
@@ -2151,40 +2657,47 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             ],
             "",
         );
+
+        val
     }
 
     /// Pop a value from a bytes string
-    fn storage_bytes_pop(
+    fn storage_pop(
         &self,
-        contract: &Contract<'a>,
-        function: FunctionValue,
-        slot: PointerValue<'a>,
-    ) -> IntValue<'a> {
-        let scratch_buf = contract.builder.build_pointer_cast(
-            contract.scratch.unwrap().as_pointer_value(),
-            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+        binary: &Binary<'a>,
+        function: FunctionValue<'a>,
+        _ty: &ast::Type,
+        slot: IntValue<'a>,
+        _ns: &ast::Namespace,
+    ) -> BasicValueEnum<'a> {
+        let slot_ptr = binary.builder.build_alloca(slot.get_type(), "slot");
+        binary.builder.build_store(slot_ptr, slot);
+
+        let scratch_buf = binary.builder.build_pointer_cast(
+            binary.scratch.unwrap().as_pointer_value(),
+            binary.context.i8_type().ptr_type(AddressSpace::Generic),
             "scratch_buf",
         );
-        let scratch_len = contract.scratch_len.unwrap().as_pointer_value();
+        let scratch_len = binary.scratch_len.unwrap().as_pointer_value();
 
-        contract.builder.build_store(
+        binary.builder.build_store(
             scratch_len,
-            contract
+            binary
                 .context
                 .i32_type()
                 .const_int(SCRATCH_SIZE as u64, false),
         );
 
-        let exists = contract
+        let exists = binary
             .builder
             .build_call(
-                contract.module.get_function("seal_get_storage").unwrap(),
+                binary.module.get_function("seal_get_storage").unwrap(),
                 &[
-                    contract
+                    binary
                         .builder
                         .build_pointer_cast(
-                            slot,
-                            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                            slot_ptr,
+                            binary.context.i8_type().ptr_type(AddressSpace::Generic),
                             "",
                         )
                         .into(),
@@ -2197,76 +2710,76 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             .left()
             .unwrap();
 
-        let exists = contract.builder.build_int_compare(
+        let exists = binary.builder.build_int_compare(
             IntPredicate::EQ,
             exists.into_int_value(),
-            contract.context.i32_type().const_zero(),
+            binary.context.i32_type().const_zero(),
             "storage_exists",
         );
 
-        let length = contract
+        let length = binary
             .builder
             .build_select(
                 exists,
-                contract.builder.build_load(scratch_len, "string_len"),
-                contract.context.i32_type().const_zero().into(),
+                binary.builder.build_load(scratch_len, "string_len"),
+                binary.context.i32_type().const_zero().into(),
                 "string_length",
             )
             .into_int_value();
 
         // do bounds check on index
-        let in_range = contract.builder.build_int_compare(
-            IntPredicate::EQ,
-            contract.context.i32_type().const_zero(),
+        let in_range = binary.builder.build_int_compare(
+            IntPredicate::NE,
+            binary.context.i32_type().const_zero(),
             length,
             "index_in_range",
         );
 
-        let retrieve_block = contract.context.append_basic_block(function, "in_range");
-        let bang_block = contract.context.append_basic_block(function, "bang_block");
+        let retrieve_block = binary.context.append_basic_block(function, "in_range");
+        let bang_block = binary.context.append_basic_block(function, "bang_block");
 
-        contract
+        binary
             .builder
             .build_conditional_branch(in_range, retrieve_block, bang_block);
 
-        contract.builder.position_at_end(bang_block);
+        binary.builder.position_at_end(bang_block);
         self.assert_failure(
-            contract,
-            contract
+            binary,
+            binary
                 .context
                 .i8_type()
                 .ptr_type(AddressSpace::Generic)
                 .const_null(),
-            contract.context.i32_type().const_zero(),
+            binary.context.i32_type().const_zero(),
         );
 
-        contract.builder.position_at_end(retrieve_block);
+        binary.builder.position_at_end(retrieve_block);
+
+        // Set the new length
+        let new_length = binary.builder.build_int_sub(
+            length,
+            binary.context.i32_type().const_int(1, false),
+            "new_length",
+        );
 
         let offset = unsafe {
-            contract.builder.build_gep(
-                contract.scratch.unwrap().as_pointer_value(),
-                &[contract.context.i32_type().const_zero(), length],
+            binary.builder.build_gep(
+                binary.scratch.unwrap().as_pointer_value(),
+                &[binary.context.i32_type().const_zero(), new_length],
                 "data_offset",
             )
         };
 
-        let val = contract.builder.build_load(offset, "popped_value");
+        let val = binary.builder.build_load(offset, "popped_value");
 
-        // Set the new length
-        let new_length = contract.builder.build_int_sub(
-            length,
-            contract.context.i32_type().const_int(1, false),
-            "new_length",
-        );
-
-        contract.builder.build_call(
-            contract.module.get_function("seal_set_storage").unwrap(),
+        binary.builder.build_call(
+            binary.module.get_function("seal_set_storage").unwrap(),
             &[
-                contract
+                binary
                     .builder
                     .build_pointer_cast(
-                        slot,
-                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        slot_ptr,
+                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
                         "",
                     )
                     .into(),
@@ -2276,41 +2789,46 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             "",
         );
 
-        val.into_int_value()
+        val
     }
 
     /// Calculate length of storage dynamic bytes
-    fn storage_string_length(
+    fn storage_array_length(
         &self,
-        contract: &Contract<'a>,
+        binary: &Binary<'a>,
         _function: FunctionValue,
-        slot: PointerValue<'a>,
+        slot: IntValue<'a>,
+        _ty: &ast::Type,
+        _ns: &ast::Namespace,
     ) -> IntValue<'a> {
-        let scratch_buf = contract.builder.build_pointer_cast(
-            contract.scratch.unwrap().as_pointer_value(),
-            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+        let slot_ptr = binary.builder.build_alloca(slot.get_type(), "slot");
+        binary.builder.build_store(slot_ptr, slot);
+
+        let scratch_buf = binary.builder.build_pointer_cast(
+            binary.scratch.unwrap().as_pointer_value(),
+            binary.context.i8_type().ptr_type(AddressSpace::Generic),
             "scratch_buf",
         );
-        let scratch_len = contract.scratch_len.unwrap().as_pointer_value();
+        let scratch_len = binary.scratch_len.unwrap().as_pointer_value();
 
-        contract.builder.build_store(
+        binary.builder.build_store(
             scratch_len,
-            contract
+            binary
                 .context
                 .i32_type()
                 .const_int(SCRATCH_SIZE as u64, false),
         );
 
-        let exists = contract
+        let exists = binary
             .builder
             .build_call(
-                contract.module.get_function("seal_get_storage").unwrap(),
+                binary.module.get_function("seal_get_storage").unwrap(),
                 &[
-                    contract
+                    binary
                         .builder
                         .build_pointer_cast(
-                            slot,
-                            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                            slot_ptr,
+                            binary.context.i8_type().ptr_type(AddressSpace::Generic),
                             "",
                         )
                         .into(),
@@ -2323,84 +2841,82 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             .left()
             .unwrap();
 
-        let exists = contract.builder.build_int_compare(
+        let exists = binary.builder.build_int_compare(
             IntPredicate::EQ,
             exists.into_int_value(),
-            contract.context.i32_type().const_zero(),
+            binary.context.i32_type().const_zero(),
             "storage_exists",
         );
 
-        contract
+        binary
             .builder
             .build_select(
                 exists,
-                contract.builder.build_load(scratch_len, "string_len"),
-                contract.context.i32_type().const_zero().into(),
+                binary.builder.build_load(scratch_len, "string_len"),
+                binary.context.i32_type().const_zero().into(),
                 "string_length",
             )
             .into_int_value()
     }
 
-    fn return_empty_abi(&self, contract: &Contract) {
-        contract.builder.build_call(
-            contract.module.get_function("seal_return").unwrap(),
+    fn return_empty_abi(&self, binary: &Binary) {
+        binary.builder.build_call(
+            binary.module.get_function("seal_return").unwrap(),
             &[
-                contract.context.i32_type().const_zero().into(),
-                contract
+                binary.context.i32_type().const_zero().into(),
+                binary
                     .context
                     .i8_type()
                     .ptr_type(AddressSpace::Generic)
                     .const_zero()
                     .into(),
-                contract.context.i32_type().const_zero().into(),
+                binary.context.i32_type().const_zero().into(),
             ],
             "",
         );
 
-        contract.builder.build_unreachable();
+        binary.builder.build_unreachable();
     }
 
-    fn return_u32<'b>(&self, contract: &'b Contract, _ret: IntValue<'b>) {
+    fn return_code<'b>(&self, binary: &'b Binary, _ret: IntValue<'b>) {
         // we can't return specific errors
         self.assert_failure(
-            contract,
-            contract
+            binary,
+            binary
                 .context
                 .i8_type()
                 .ptr_type(AddressSpace::Generic)
                 .const_null(),
-            contract.context.i32_type().const_zero(),
+            binary.context.i32_type().const_zero(),
         );
     }
 
     /// Call the  keccak256 host function
     fn keccak256_hash(
         &self,
-        contract: &Contract,
+        binary: &Binary,
         src: PointerValue,
         length: IntValue,
         dest: PointerValue,
+        _ns: &ast::Namespace,
     ) {
-        contract.builder.build_call(
-            contract
-                .module
-                .get_function("seal_hash_keccak_256")
-                .unwrap(),
+        binary.builder.build_call(
+            binary.module.get_function("seal_hash_keccak_256").unwrap(),
             &[
-                contract
+                binary
                     .builder
                     .build_pointer_cast(
                         src,
-                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
                         "src",
                     )
                     .into(),
                 length.into(),
-                contract
+                binary
                     .builder
                     .build_pointer_cast(
                         dest,
-                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
                         "dest",
                     )
                     .into(),
@@ -2409,110 +2925,120 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         );
     }
 
-    fn return_abi<'b>(&self, contract: &'b Contract, data: PointerValue<'b>, length: IntValue) {
-        contract.builder.build_call(
-            contract.module.get_function("seal_return").unwrap(),
+    fn return_abi<'b>(&self, binary: &'b Binary, data: PointerValue<'b>, length: IntValue) {
+        binary.builder.build_call(
+            binary.module.get_function("seal_return").unwrap(),
             &[
-                contract.context.i32_type().const_zero().into(),
+                binary.context.i32_type().const_zero().into(),
                 data.into(),
                 length.into(),
             ],
             "",
         );
 
-        contract.builder.build_unreachable();
+        binary.builder.build_unreachable();
     }
 
-    fn assert_failure<'b>(&self, contract: &'b Contract, data: PointerValue, length: IntValue) {
-        contract.builder.build_call(
-            contract.module.get_function("seal_return").unwrap(),
-            &[
-                contract.context.i32_type().const_int(1, false).into(),
-                data.into(),
-                length.into(),
-            ],
-            "",
+    fn assert_failure<'b>(&self, binary: &'b Binary, _data: PointerValue, _length: IntValue) {
+        // insert "unreachable" instruction; not that build_unreachable() tells the compiler
+        // that this code path is not reachable and may be discarded.
+        let asm_fn = binary.context.void_type().fn_type(&[], false);
+
+        let asm = binary.context.create_inline_asm(
+            asm_fn,
+            "unreachable".to_string(),
+            "".to_string(),
+            true,
+            false,
+            None,
         );
 
-        contract.builder.build_unreachable();
+        let callable = CallableValue::try_from(asm).unwrap();
+
+        binary.builder.build_call(callable, &[], "unreachable");
+
+        binary.builder.build_unreachable();
     }
 
     fn abi_decode<'b>(
         &self,
-        contract: &Contract<'b>,
+        binary: &Binary<'b>,
         function: FunctionValue,
         args: &mut Vec<BasicValueEnum<'b>>,
         data: PointerValue<'b>,
         datalength: IntValue<'b>,
         spec: &[ast::Parameter],
+        ns: &ast::Namespace,
     ) {
-        let mut argsdata = contract.builder.build_pointer_cast(
+        let mut argsdata = binary.builder.build_pointer_cast(
             data,
-            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+            binary.context.i8_type().ptr_type(AddressSpace::Generic),
             "",
         );
 
-        let argsend = unsafe {
-            contract
-                .builder
-                .build_gep(argsdata, &[datalength], "argsend")
-        };
+        let argsend = unsafe { binary.builder.build_gep(argsdata, &[datalength], "argsend") };
 
         for param in spec {
-            args.push(self.decode_ty(contract, function, &param.ty, &mut argsdata, argsend));
+            args.push(self.decode_ty(binary, function, &param.ty, &mut argsdata, argsend, ns));
         }
+
+        self.check_overrun(binary, function, argsdata, argsend, true);
     }
 
     /// ABI encode into a vector for abi.encode* style builtin functions
     fn abi_encode_to_vector<'b>(
         &self,
-        contract: &Contract<'b>,
-        selector: Option<IntValue<'b>>,
-        function: FunctionValue,
-        packed: bool,
+        binary: &Binary<'b>,
+        function: FunctionValue<'b>,
+        packed: &[BasicValueEnum<'b>],
         args: &[BasicValueEnum<'b>],
         tys: &[ast::Type],
+        ns: &ast::Namespace,
     ) -> PointerValue<'b> {
         // first calculate how much memory we need to allocate
-        let mut length = contract.context.i32_type().const_zero();
+        let mut length = binary.context.i32_type().const_zero();
+
+        debug_assert_eq!(packed.len() + args.len(), tys.len());
+
+        let mut tys_iter = tys.iter();
 
         // note that encoded_length return the exact value for packed encoding
-        for (i, ty) in tys.iter().enumerate() {
-            length = contract.builder.build_int_add(
+        for arg in packed {
+            let ty = tys_iter.next().unwrap();
+
+            length = binary.builder.build_int_add(
                 length,
-                self.encoded_length(args[i], false, packed, &ty, function, contract),
+                self.encoded_length(*arg, false, true, ty, function, binary, ns),
                 "",
             );
         }
 
-        if selector.is_some() {
-            length = contract.builder.build_int_add(
+        for arg in args {
+            let ty = tys_iter.next().unwrap();
+
+            length = binary.builder.build_int_add(
                 length,
-                contract
-                    .context
-                    .i32_type()
-                    .size_of()
-                    .const_cast(contract.context.i32_type(), false),
+                self.encoded_length(*arg, false, false, ty, function, binary, ns),
                 "",
             );
         }
 
-        let malloc_length = contract.builder.build_int_add(
+        let malloc_length = binary.builder.build_int_add(
             length,
-            contract
+            binary
                 .module
                 .get_struct_type("struct.vector")
                 .unwrap()
                 .size_of()
                 .unwrap()
-                .const_cast(contract.context.i32_type(), false),
+                .const_cast(binary.context.i32_type(), false),
             "size",
         );
 
-        let p = contract
+        let p = binary
             .builder
             .build_call(
-                contract.module.get_function("__malloc").unwrap(),
+                binary.module.get_function("__malloc").unwrap(),
                 &[malloc_length.into()],
                 "",
             )
@@ -2521,9 +3047,9 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             .unwrap()
             .into_pointer_value();
 
-        let v = contract.builder.build_pointer_cast(
+        let v = binary.builder.build_pointer_cast(
             p,
-            contract
+            binary
                 .module
                 .get_struct_type("struct.vector")
                 .unwrap()
@@ -2532,129 +3058,91 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         );
 
         // if it's packed, we have the correct length already
-        if packed {
+        if args.is_empty() {
             let data_len = unsafe {
-                contract.builder.build_gep(
+                binary.builder.build_gep(
                     v,
                     &[
-                        contract.context.i32_type().const_zero(),
-                        contract.context.i32_type().const_zero(),
+                        binary.context.i32_type().const_zero(),
+                        binary.context.i32_type().const_zero(),
                     ],
                     "data_len",
                 )
             };
 
-            contract.builder.build_store(data_len, length);
+            binary.builder.build_store(data_len, length);
         }
 
         let data_size = unsafe {
-            contract.builder.build_gep(
+            binary.builder.build_gep(
                 v,
                 &[
-                    contract.context.i32_type().const_zero(),
-                    contract.context.i32_type().const_int(1, false),
+                    binary.context.i32_type().const_zero(),
+                    binary.context.i32_type().const_int(1, false),
                 ],
                 "data_size",
             )
         };
 
-        contract.builder.build_store(data_size, length);
+        binary.builder.build_store(data_size, length);
 
         let data = unsafe {
-            contract.builder.build_gep(
+            binary.builder.build_gep(
                 v,
                 &[
-                    contract.context.i32_type().const_zero(),
-                    contract.context.i32_type().const_int(2, false),
+                    binary.context.i32_type().const_zero(),
+                    binary.context.i32_type().const_int(2, false),
                 ],
                 "data",
             )
         };
 
         // now encode each of the arguments
-        let data = contract.builder.build_pointer_cast(
+        let data = binary.builder.build_pointer_cast(
             data,
-            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+            binary.context.i8_type().ptr_type(AddressSpace::Generic),
             "",
         );
 
         let mut argsdata = data;
 
-        if let Some(selector) = selector {
-            // we need to byte-swap our bytes4 type
+        let mut tys_iter = tys.iter();
 
-            let temp = contract
-                .builder
-                .build_alloca(selector.get_type(), "selector");
+        for arg in packed {
+            let ty = tys_iter.next().unwrap();
 
-            contract.builder.build_store(temp, selector);
-
-            // byte order needs to be reversed. e.g. hex"11223344" should be 0x10 0x11 0x22 0x33 0x44
-            contract.builder.build_call(
-                contract.module.get_function("__leNtobeN").unwrap(),
-                &[
-                    contract
-                        .builder
-                        .build_pointer_cast(
-                            temp,
-                            contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                            "",
-                        )
-                        .into(),
-                    data.into(),
-                    contract.context.i32_type().const_int(4, false).into(),
-                ],
-                "",
-            );
-
-            argsdata = unsafe {
-                contract.builder.build_gep(
-                    argsdata,
-                    &[contract
-                        .context
-                        .i32_type()
-                        .size_of()
-                        .const_cast(contract.context.i32_type(), false)],
-                    "",
-                )
-            };
+            self.encode_ty(binary, ns, false, true, function, ty, *arg, &mut argsdata);
         }
 
-        for (i, ty) in tys.iter().enumerate() {
-            self.encode_ty(
-                contract,
-                false,
-                packed,
-                function,
-                &ty,
-                args[i],
-                &mut argsdata,
-            );
+        for arg in args {
+            let ty = tys_iter.next().unwrap();
+
+            self.encode_ty(binary, ns, false, false, function, ty, *arg, &mut argsdata);
         }
 
-        if !packed {
-            let length = contract.builder.build_int_sub(
-                contract
+        if !args.is_empty() {
+            let length = binary.builder.build_int_sub(
+                binary
                     .builder
-                    .build_ptr_to_int(argsdata, contract.context.i32_type(), "end"),
-                contract
+                    .build_ptr_to_int(argsdata, binary.context.i32_type(), "end"),
+                binary
                     .builder
-                    .build_ptr_to_int(data, contract.context.i32_type(), "begin"),
+                    .build_ptr_to_int(data, binary.context.i32_type(), "begin"),
                 "datalength",
             );
 
             let data_len = unsafe {
-                contract.builder.build_gep(
+                binary.builder.build_gep(
                     v,
                     &[
-                        contract.context.i32_type().const_zero(),
-                        contract.context.i32_type().const_zero(),
+                        binary.context.i32_type().const_zero(),
+                        binary.context.i32_type().const_zero(),
                     ],
                     "data_len",
                 )
             };
 
-            contract.builder.build_store(data_len, length);
+            binary.builder.build_store(data_len, length);
         }
 
         v
@@ -2663,40 +3151,41 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
     ///  ABI encode the return values for the function
     fn abi_encode<'b>(
         &self,
-        contract: &Contract<'b>,
-        selector: Option<u32>,
+        binary: &Binary<'b>,
+        selector: Option<IntValue<'b>>,
         load: bool,
         function: FunctionValue,
         args: &[BasicValueEnum<'b>],
-        spec: &[ast::Parameter],
+        tys: &[ast::Type],
+        ns: &ast::Namespace,
     ) -> (PointerValue<'b>, IntValue<'b>) {
         // first calculate how much memory we need to allocate
-        let mut length = contract.context.i32_type().const_zero();
+        let mut length = binary.context.i32_type().const_zero();
 
         // note that encoded_length overestimates how data we need
-        for (i, field) in spec.iter().enumerate() {
-            length = contract.builder.build_int_add(
+        for (i, ty) in tys.iter().enumerate() {
+            length = binary.builder.build_int_add(
                 length,
-                self.encoded_length(args[i], load, false, &field.ty, function, contract),
+                self.encoded_length(args[i], load, false, ty, function, binary, ns),
                 "",
             );
         }
 
-        if selector.is_some() {
-            length = contract.builder.build_int_add(
+        if let Some(selector) = selector {
+            length = binary.builder.build_int_add(
                 length,
-                contract
-                    .context
-                    .i32_type()
-                    .const_int(std::mem::size_of::<u32>() as u64, false),
+                selector
+                    .get_type()
+                    .size_of()
+                    .const_cast(binary.context.i32_type(), false),
                 "",
             );
         }
 
-        let data = contract
+        let data = binary
             .builder
             .build_call(
-                contract.module.get_function("__malloc").unwrap(),
+                binary.module.get_function("__malloc").unwrap(),
                 &[length.into()],
                 "",
             )
@@ -2709,59 +3198,57 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         let mut argsdata = data;
 
         if let Some(selector) = selector {
-            contract.builder.build_store(
-                contract.builder.build_pointer_cast(
+            binary.builder.build_store(
+                binary.builder.build_pointer_cast(
                     data,
-                    contract.context.i32_type().ptr_type(AddressSpace::Generic),
+                    selector.get_type().ptr_type(AddressSpace::Generic),
                     "",
                 ),
-                contract
-                    .context
-                    .i32_type()
-                    .const_int(selector as u64, false),
+                selector,
             );
 
             argsdata = unsafe {
-                contract.builder.build_gep(
+                binary.builder.build_gep(
                     data,
-                    &[contract
-                        .context
-                        .i32_type()
-                        .const_int(std::mem::size_of_val(&selector) as u64, false)],
+                    &[selector
+                        .get_type()
+                        .size_of()
+                        .const_cast(binary.context.i32_type(), false)],
                     "",
                 )
             };
         }
 
-        for (i, arg) in spec.iter().enumerate() {
+        for (i, ty) in tys.iter().enumerate() {
             self.encode_ty(
-                contract,
+                binary,
+                ns,
                 load,
                 false,
                 function,
-                &arg.ty,
+                ty,
                 args[i],
                 &mut argsdata,
             );
         }
 
         // we cannot use the length returned by encoded_length; calculate actual length
-        let length = contract.builder.build_int_sub(
-            contract
+        let length = binary.builder.build_int_sub(
+            binary
                 .builder
-                .build_ptr_to_int(argsdata, contract.context.i32_type(), "end"),
-            contract
+                .build_ptr_to_int(argsdata, binary.context.i32_type(), "end"),
+            binary
                 .builder
-                .build_ptr_to_int(data, contract.context.i32_type(), "begin"),
+                .build_ptr_to_int(data, binary.context.i32_type(), "begin"),
             "datalength",
         );
 
         (data, length)
     }
 
-    fn print(&self, contract: &Contract, string_ptr: PointerValue, string_len: IntValue) {
-        contract.builder.build_call(
-            contract.module.get_function("seal_println").unwrap(),
+    fn print(&self, binary: &Binary, string_ptr: PointerValue, string_len: IntValue) {
+        binary.builder.build_call(
+            binary.module.get_function("seal_println").unwrap(),
             &[string_ptr.into(), string_len.into()],
             "",
         );
@@ -2769,8 +3256,8 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
     fn create_contract<'b>(
         &mut self,
-        contract: &Contract<'b>,
-        function: FunctionValue,
+        binary: &Binary<'b>,
+        function: FunctionValue<'b>,
         success: Option<&mut BasicValueEnum<'b>>,
         contract_no: usize,
         constructor_no: Option<usize>,
@@ -2779,110 +3266,102 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         gas: IntValue<'b>,
         value: Option<IntValue<'b>>,
         salt: Option<IntValue<'b>>,
+        _space: Option<IntValue<'b>>,
+        ns: &ast::Namespace,
     ) {
-        let resolver_contract = &contract.ns.contracts[contract_no];
+        let created_contract = &ns.contracts[contract_no];
 
         let constructor = match constructor_no {
-            Some(function_no) => &resolver_contract.functions[function_no],
-            None => &resolver_contract.default_constructor.as_ref().unwrap().0,
+            Some(function_no) => &ns.functions[function_no],
+            None => &created_contract.default_constructor.as_ref().unwrap().0,
         };
 
-        let mut args = args.to_vec();
-        let mut params = constructor.params.to_vec();
-        let scratch_buf = contract.builder.build_pointer_cast(
-            contract.scratch.unwrap().as_pointer_value(),
-            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+        let scratch_buf = binary.builder.build_pointer_cast(
+            binary.scratch.unwrap().as_pointer_value(),
+            binary.context.i8_type().ptr_type(AddressSpace::Generic),
             "scratch_buf",
         );
-        let scratch_len = contract.scratch_len.unwrap().as_pointer_value();
+        let scratch_len = binary.scratch_len.unwrap().as_pointer_value();
 
         // salt
-        let salt_ty = ast::Type::Uint(256);
+        let salt_buf =
+            binary.build_alloca(function, binary.context.i8_type().array_type(32), "salt");
+        let salt_buf = binary.builder.build_pointer_cast(
+            salt_buf,
+            binary.context.i8_type().ptr_type(AddressSpace::Generic),
+            "salt_buf",
+        );
+        let salt_len = binary.context.i32_type().const_int(32, false);
 
         if let Some(salt) = salt {
-            args.push(salt.into());
-        } else {
-            let (ptr, len) = self.contract_unique_salt(contract, contract_no);
+            let salt_ty = ast::Type::Uint(256);
 
-            contract.builder.build_store(
-                scratch_len,
-                contract.context.i32_type().const_int(32, false),
-            );
-
-            contract.builder.build_call(
-                contract.module.get_function("seal_random").unwrap(),
-                &[
-                    ptr.into(),
-                    len.into(),
-                    scratch_buf.into(),
-                    scratch_len.into(),
-                ],
-                "random",
-            );
-
-            args.push(
-                contract.builder.build_load(
-                    contract.builder.build_pointer_cast(
-                        scratch_buf,
-                        contract
-                            .context
-                            .custom_width_int_type(256)
-                            .ptr_type(AddressSpace::Generic),
-                        "salt_buf",
-                    ),
+            binary.builder.build_store(
+                binary.builder.build_pointer_cast(
+                    salt_buf,
+                    binary
+                        .llvm_type(&salt_ty, ns)
+                        .ptr_type(AddressSpace::Generic),
                     "salt",
                 ),
+                salt,
+            );
+        } else {
+            let (ptr, len) = self.contract_unique_salt(binary, contract_no, ns);
+
+            binary.builder.build_store(scratch_len, salt_len);
+
+            binary.builder.build_call(
+                binary.module.get_function("seal_random").unwrap(),
+                &[ptr.into(), len.into(), salt_buf.into(), scratch_len.into()],
+                "random",
             );
         }
 
-        params.push(ast::Parameter {
-            loc: pt::Loc(0, 0, 0),
-            ty: salt_ty,
-            ty_loc: pt::Loc(0, 0, 0),
-            name: "salt".to_string(),
-            name_loc: None,
-            indexed: false,
-        });
+        let tys: Vec<ast::Type> = constructor.params.iter().map(|p| p.ty.clone()).collect();
 
         // input
         let (input, input_len) = self.abi_encode(
-            contract,
-            Some(constructor.selector()),
+            binary,
+            Some(
+                binary
+                    .context
+                    .i32_type()
+                    .const_int(constructor.selector().to_be() as u64, false),
+            ),
             false,
             function,
-            &args,
-            &params,
+            args,
+            &tys,
+            ns,
         );
 
-        let value_ptr = contract
+        let value_ptr = binary
             .builder
-            .build_alloca(contract.value_type(), "balance");
+            .build_alloca(binary.value_type(ns), "balance");
 
         // balance is a u128, make sure it's enough to cover existential_deposit
         if let Some(value) = value {
-            contract.builder.build_store(value_ptr, value);
+            binary.builder.build_store(value_ptr, value);
         } else {
-            let scratch_len = contract.scratch_len.unwrap().as_pointer_value();
+            let scratch_len = binary.scratch_len.unwrap().as_pointer_value();
 
-            contract.builder.build_store(
+            binary.builder.build_store(
                 scratch_len,
-                contract
+                binary
                     .context
                     .i32_type()
-                    .const_int(contract.ns.value_length as u64, false),
+                    .const_int(ns.value_length as u64, false),
             );
 
-            contract.builder.build_call(
-                contract
-                    .module
-                    .get_function("seal_minimum_balance")
-                    .unwrap(),
+            binary.builder.build_call(
+                binary.module.get_function("seal_minimum_balance").unwrap(),
                 &[
-                    contract
+                    binary
                         .builder
                         .build_pointer_cast(
                             value_ptr,
-                            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                            binary.context.i8_type().ptr_type(AddressSpace::Generic),
                             "",
                         )
                         .into(),
@@ -2892,71 +3371,68 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             );
         }
 
-        // wasm
-        let target_contract = Contract::build(
-            contract.context,
-            &resolver_contract,
-            contract.ns,
-            "",
-            contract.opt,
-        );
-
-        let wasm = target_contract.wasm(true).expect("compile should succeeed");
+        assert!(!created_contract.code.is_empty());
 
         // code hash
-        let codehash = contract.emit_global_string(
-            &format!("contract_{}_codehash", resolver_contract.name),
-            blake2_rfc::blake2b::blake2b(32, &[], &wasm).as_bytes(),
+        let codehash = binary.emit_global_string(
+            &format!("binary_{}_codehash", created_contract.name),
+            blake2_rfc::blake2b::blake2b(32, &[], &created_contract.code).as_bytes(),
             true,
         );
 
-        let address_len_ptr = contract
+        let address_len_ptr = binary
             .builder
-            .build_alloca(contract.context.i32_type(), "address_len_ptr");
+            .build_alloca(binary.context.i32_type(), "address_len_ptr");
 
-        contract.builder.build_store(
+        binary.builder.build_store(
             address_len_ptr,
-            contract
+            binary
                 .context
                 .i32_type()
-                .const_int(contract.ns.address_length as u64, false),
+                .const_int(ns.address_length as u64, false),
         );
 
-        contract.builder.build_store(
+        binary.builder.build_store(
             scratch_len,
-            contract
+            binary
                 .context
                 .i32_type()
                 .const_int(SCRATCH_SIZE as u64, false),
         );
 
-        // seal_instantiate returns 0x0100 if the contract cannot be instantiated
-        // due to insufficient funds, etc. If the return value is < 0x100, then
-        // this is return value from the constructor (or deploy function) of
-        // the contract
-        let ret = contract
+        let ret = binary
             .builder
             .build_call(
-                contract.module.get_function("seal_instantiate").unwrap(),
+                binary.module.get_function("seal_instantiate").unwrap(),
                 &[
                     codehash.into(),
-                    contract.context.i32_type().const_int(32, false).into(),
+                    binary
+                        .context
+                        .i32_type()
+                        .const_int(ns.address_length as u64, false)
+                        .into(),
                     gas.into(),
-                    contract
+                    binary
                         .builder
                         .build_pointer_cast(
                             value_ptr,
-                            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                            binary.context.i8_type().ptr_type(AddressSpace::Generic),
                             "value_transfer",
                         )
                         .into(),
-                    contract.context.i32_type().const_int(16, false).into(),
+                    binary
+                        .context
+                        .i32_type()
+                        .const_int(ns.value_length as u64, false)
+                        .into(),
                     input.into(),
                     input_len.into(),
                     address.into(),
                     address_len_ptr.into(),
                     scratch_buf.into(),
                     scratch_len.into(),
+                    salt_buf.into(),
+                    salt_len.into(),
                 ],
                 "",
             )
@@ -2965,108 +3441,100 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             .unwrap()
             .into_int_value();
 
-        let is_success = contract.builder.build_int_compare(
+        let is_success = binary.builder.build_int_compare(
             IntPredicate::EQ,
             ret,
-            contract.context.i32_type().const_zero(),
+            binary.context.i32_type().const_zero(),
             "success",
         );
 
-        let success_block = contract.context.append_basic_block(function, "success");
-        let bail_block = contract.context.append_basic_block(function, "bail");
-        contract
-            .builder
-            .build_conditional_branch(is_success, success_block, bail_block);
-
-        contract.builder.position_at_end(success_block);
-
         if let Some(success) = success {
-            // we're in the try path. This means:
-            // return success or not in success variable
-            // do not abort execution
-            //
+            // we're in a try statement. This means:
+            // return success or not in success variable; do not abort execution
             *success = is_success.into();
-
-            let done_block = contract.context.append_basic_block(function, "done");
-            contract.builder.build_unconditional_branch(done_block);
-            contract.builder.position_at_end(bail_block);
-            contract.builder.build_unconditional_branch(done_block);
-            contract.builder.position_at_end(done_block);
         } else {
-            contract.builder.position_at_end(bail_block);
+            let success_block = binary.context.append_basic_block(function, "success");
+            let bail_block = binary.context.append_basic_block(function, "bail");
+
+            binary
+                .builder
+                .build_conditional_branch(is_success, success_block, bail_block);
+
+            binary.builder.position_at_end(bail_block);
 
             self.assert_failure(
-                contract,
+                binary,
                 scratch_buf,
-                contract
+                binary
                     .builder
                     .build_load(scratch_len, "string_len")
                     .into_int_value(),
             );
 
-            contract.builder.position_at_end(success_block);
+            binary.builder.position_at_end(success_block);
         }
     }
 
-    /// Call external contract
+    /// Call external binary
     fn external_call<'b>(
         &self,
-        contract: &Contract<'b>,
+        binary: &Binary<'b>,
         function: FunctionValue,
         success: Option<&mut BasicValueEnum<'b>>,
         payload: PointerValue<'b>,
         payload_len: IntValue<'b>,
-        address: PointerValue<'b>,
+        address: Option<PointerValue<'b>>,
         gas: IntValue<'b>,
         value: IntValue<'b>,
         _ty: ast::CallTy,
+        ns: &ast::Namespace,
     ) {
         // balance is a u128
-        let value_ptr = contract
+        let value_ptr = binary
             .builder
-            .build_alloca(contract.value_type(), "balance");
-        contract.builder.build_store(value_ptr, value);
+            .build_alloca(binary.value_type(ns), "balance");
+        binary.builder.build_store(value_ptr, value);
 
-        let scratch_buf = contract.builder.build_pointer_cast(
-            contract.scratch.unwrap().as_pointer_value(),
-            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+        let scratch_buf = binary.builder.build_pointer_cast(
+            binary.scratch.unwrap().as_pointer_value(),
+            binary.context.i8_type().ptr_type(AddressSpace::Generic),
             "scratch_buf",
         );
-        let scratch_len = contract.scratch_len.unwrap().as_pointer_value();
+        let scratch_len = binary.scratch_len.unwrap().as_pointer_value();
 
-        contract.builder.build_store(
+        binary.builder.build_store(
             scratch_len,
-            contract
+            binary
                 .context
                 .i32_type()
                 .const_int(SCRATCH_SIZE as u64, false),
         );
 
         // do the actual call
-        let ret = contract
+        let ret = binary
             .builder
             .build_call(
-                contract.module.get_function("seal_call").unwrap(),
+                binary.module.get_function("seal_call").unwrap(),
                 &[
-                    address.into(),
-                    contract
+                    address.unwrap().into(),
+                    binary
                         .context
                         .i32_type()
-                        .const_int(contract.ns.address_length as u64, false)
+                        .const_int(ns.address_length as u64, false)
                         .into(),
                     gas.into(),
-                    contract
+                    binary
                         .builder
                         .build_pointer_cast(
                             value_ptr,
-                            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                            binary.context.i8_type().ptr_type(AddressSpace::Generic),
                             "value_transfer",
                         )
                         .into(),
-                    contract
+                    binary
                         .context
                         .i32_type()
-                        .const_int(contract.ns.value_length as u64, false)
+                        .const_int(ns.value_length as u64, false)
                         .into(),
                     payload.into(),
                     payload_len.into(),
@@ -3080,66 +3548,155 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             .unwrap()
             .into_int_value();
 
-        let is_success = contract.builder.build_int_compare(
+        let is_success = binary.builder.build_int_compare(
             IntPredicate::EQ,
             ret,
-            contract.context.i32_type().const_zero(),
+            binary.context.i32_type().const_zero(),
             "success",
         );
 
-        let success_block = contract.context.append_basic_block(function, "success");
-        let bail_block = contract.context.append_basic_block(function, "bail");
-        contract
-            .builder
-            .build_conditional_branch(is_success, success_block, bail_block);
-
-        contract.builder.position_at_end(success_block);
-
         if let Some(success) = success {
-            // we're in the try path. This means:
-            // return success or not in success variable
-            // do not abort execution
-            //
+            // we're in a try statement. This means:
+            // do not abort execution; return success or not in success variable
             *success = is_success.into();
-
-            let done_block = contract.context.append_basic_block(function, "done");
-            contract.builder.build_unconditional_branch(done_block);
-            contract.builder.position_at_end(bail_block);
-            contract.builder.build_unconditional_branch(done_block);
-            contract.builder.position_at_end(done_block);
         } else {
-            contract.builder.position_at_end(bail_block);
+            let success_block = binary.context.append_basic_block(function, "success");
+            let bail_block = binary.context.append_basic_block(function, "bail");
+
+            binary
+                .builder
+                .build_conditional_branch(is_success, success_block, bail_block);
+
+            binary.builder.position_at_end(bail_block);
 
             self.assert_failure(
-                contract,
+                binary,
                 scratch_buf,
-                contract
+                binary
                     .builder
                     .build_load(scratch_len, "string_len")
                     .into_int_value(),
             );
 
-            contract.builder.position_at_end(success_block);
+            binary.builder.position_at_end(success_block);
         }
     }
 
-    fn return_data<'b>(&self, contract: &Contract<'b>) -> PointerValue<'b> {
-        let scratch_buf = contract.builder.build_pointer_cast(
-            contract.scratch.unwrap().as_pointer_value(),
-            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+    /// Send value to address
+    fn value_transfer<'b>(
+        &self,
+        binary: &Binary<'b>,
+        function: FunctionValue,
+        success: Option<&mut BasicValueEnum<'b>>,
+        address: PointerValue<'b>,
+        value: IntValue<'b>,
+        ns: &ast::Namespace,
+    ) {
+        // balance is a u128
+        let value_ptr = binary
+            .builder
+            .build_alloca(binary.value_type(ns), "balance");
+        binary.builder.build_store(value_ptr, value);
+
+        let scratch_buf = binary.builder.build_pointer_cast(
+            binary.scratch.unwrap().as_pointer_value(),
+            binary.context.i8_type().ptr_type(AddressSpace::Generic),
             "scratch_buf",
         );
-        let scratch_len = contract.scratch_len.unwrap().as_pointer_value();
+        let scratch_len = binary.scratch_len.unwrap().as_pointer_value();
 
-        let length = contract.builder.build_load(scratch_len, "string_len");
+        binary.builder.build_store(
+            scratch_len,
+            binary
+                .context
+                .i32_type()
+                .const_int(SCRATCH_SIZE as u64, false),
+        );
 
-        contract
+        // do the actual call
+        let ret = binary
             .builder
             .build_call(
-                contract.module.get_function("vector_new").unwrap(),
+                binary.module.get_function("seal_transfer").unwrap(),
                 &[
-                    length,
-                    contract.context.i32_type().const_int(1, false).into(),
+                    address.into(),
+                    binary
+                        .context
+                        .i32_type()
+                        .const_int(ns.address_length as u64, false)
+                        .into(),
+                    binary
+                        .builder
+                        .build_pointer_cast(
+                            value_ptr,
+                            binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                            "value_transfer",
+                        )
+                        .into(),
+                    binary
+                        .context
+                        .i32_type()
+                        .const_int(ns.value_length as u64, false)
+                        .into(),
+                ],
+                "",
+            )
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_int_value();
+
+        let is_success = binary.builder.build_int_compare(
+            IntPredicate::EQ,
+            ret,
+            binary.context.i32_type().const_zero(),
+            "success",
+        );
+
+        if let Some(success) = success {
+            // we're in a try statement. This means:
+            // do not abort execution; return success or not in success variable
+            *success = is_success.into();
+        } else {
+            let success_block = binary.context.append_basic_block(function, "success");
+            let bail_block = binary.context.append_basic_block(function, "bail");
+
+            binary
+                .builder
+                .build_conditional_branch(is_success, success_block, bail_block);
+
+            binary.builder.position_at_end(bail_block);
+
+            self.assert_failure(
+                binary,
+                scratch_buf,
+                binary
+                    .builder
+                    .build_load(scratch_len, "string_len")
+                    .into_int_value(),
+            );
+
+            binary.builder.position_at_end(success_block);
+        }
+    }
+
+    fn return_data<'b>(&self, binary: &Binary<'b>, _function: FunctionValue) -> PointerValue<'b> {
+        let scratch_buf = binary.builder.build_pointer_cast(
+            binary.scratch.unwrap().as_pointer_value(),
+            binary.context.i8_type().ptr_type(AddressSpace::Generic),
+            "scratch_buf",
+        );
+        let scratch_len = binary.scratch_len.unwrap().as_pointer_value();
+
+        let length = binary.builder.build_load(scratch_len, "string_len");
+
+        binary
+            .builder
+            .build_call(
+                binary.module.get_function("vector_new").unwrap(),
+                &[
+                    length.into(),
+                    binary.context.i32_type().const_int(1, false).into(),
                     scratch_buf.into(),
                 ],
                 "",
@@ -3151,24 +3708,24 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
     }
 
     /// Substrate value is usually 128 bits
-    fn value_transferred<'b>(&self, contract: &Contract<'b>) -> IntValue<'b> {
-        let scratch_buf = contract.builder.build_pointer_cast(
-            contract.scratch.unwrap().as_pointer_value(),
-            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+    fn value_transferred<'b>(&self, binary: &Binary<'b>, ns: &ast::Namespace) -> IntValue<'b> {
+        let scratch_buf = binary.builder.build_pointer_cast(
+            binary.scratch.unwrap().as_pointer_value(),
+            binary.context.i8_type().ptr_type(AddressSpace::Generic),
             "scratch_buf",
         );
-        let scratch_len = contract.scratch_len.unwrap().as_pointer_value();
+        let scratch_len = binary.scratch_len.unwrap().as_pointer_value();
 
-        contract.builder.build_store(
+        binary.builder.build_store(
             scratch_len,
-            contract
+            binary
                 .context
                 .i32_type()
-                .const_int(contract.ns.value_length as u64, false),
+                .const_int(ns.value_length as u64, false),
         );
 
-        contract.builder.build_call(
-            contract
+        binary.builder.build_call(
+            binary
                 .module
                 .get_function("seal_value_transferred")
                 .unwrap(),
@@ -3176,12 +3733,12 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             "value_transferred",
         );
 
-        contract
+        binary
             .builder
             .build_load(
-                contract.builder.build_pointer_cast(
+                binary.builder.build_pointer_cast(
                     scratch_buf,
-                    contract.value_type().ptr_type(AddressSpace::Generic),
+                    binary.value_type(ns).ptr_type(AddressSpace::Generic),
                     "",
                 ),
                 "value_transferred",
@@ -3189,101 +3746,29 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             .into_int_value()
     }
 
-    /// Substrate value is usually 128 bits
-    fn balance<'b>(&self, contract: &Contract<'b>, _addr: IntValue<'b>) -> IntValue<'b> {
-        let scratch_buf = contract.builder.build_pointer_cast(
-            contract.scratch.unwrap().as_pointer_value(),
-            contract.context.i8_type().ptr_type(AddressSpace::Generic),
-            "scratch_buf",
-        );
-        let scratch_len = contract.scratch_len.unwrap().as_pointer_value();
-
-        contract.builder.build_store(
-            scratch_len,
-            contract
-                .context
-                .i32_type()
-                .const_int(contract.ns.value_length as u64, false),
-        );
-
-        contract.builder.build_call(
-            contract.module.get_function("seal_balance").unwrap(),
-            &[scratch_buf.into(), scratch_len.into()],
-            "balance",
-        );
-
-        contract
+    /// Terminate execution, destroy binary and send remaining funds to addr
+    fn selfdestruct<'b>(&self, binary: &Binary<'b>, addr: IntValue<'b>, ns: &ast::Namespace) {
+        let address = binary
             .builder
-            .build_load(
-                contract.builder.build_pointer_cast(
-                    scratch_buf,
-                    contract.value_type().ptr_type(AddressSpace::Generic),
-                    "",
-                ),
-                "balance",
-            )
-            .into_int_value()
-    }
+            .build_alloca(binary.address_type(ns), "address");
 
-    /// Substrate address is usually 256 bits
-    fn get_address<'b>(&self, contract: &Contract<'b>) -> IntValue<'b> {
-        let scratch_buf = contract.builder.build_pointer_cast(
-            contract.scratch.unwrap().as_pointer_value(),
-            contract.context.i8_type().ptr_type(AddressSpace::Generic),
-            "scratch_buf",
-        );
-        let scratch_len = contract.scratch_len.unwrap().as_pointer_value();
+        binary.builder.build_store(address, addr);
 
-        contract.builder.build_store(
-            scratch_len,
-            contract
-                .context
-                .i32_type()
-                .const_int(contract.ns.address_length as u64, false),
-        );
-
-        contract.builder.build_call(
-            contract.module.get_function("seal_address").unwrap(),
-            &[scratch_buf.into(), scratch_len.into()],
-            "address",
-        );
-
-        contract
-            .builder
-            .build_load(
-                contract.builder.build_pointer_cast(
-                    scratch_buf,
-                    contract.address_type().ptr_type(AddressSpace::Generic),
-                    "",
-                ),
-                "self_address",
-            )
-            .into_int_value()
-    }
-
-    /// Terminate execution, destroy contract and send remaining funds to addr
-    fn selfdestruct<'b>(&self, contract: &Contract<'b>, addr: IntValue<'b>) {
-        let address = contract
-            .builder
-            .build_alloca(contract.address_type(), "address");
-
-        contract.builder.build_store(address, addr);
-
-        contract.builder.build_call(
-            contract.module.get_function("seal_terminate").unwrap(),
+        binary.builder.build_call(
+            binary.module.get_function("seal_terminate").unwrap(),
             &[
-                contract
+                binary
                     .builder
                     .build_pointer_cast(
                         address,
-                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
                         "",
                     )
                     .into(),
-                contract
+                binary
                     .context
                     .i32_type()
-                    .const_int(contract.ns.address_length as u64, false)
+                    .const_int(ns.address_length as u64, false)
                     .into(),
             ],
             "terminated",
@@ -3293,10 +3778,13 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
     /// Crypto Hash
     fn hash<'b>(
         &self,
-        contract: &Contract<'b>,
+        binary: &Binary<'b>,
+        _function: FunctionValue<'b>,
+
         hash: HashTy,
         input: PointerValue<'b>,
         input_len: IntValue<'b>,
+        ns: &ast::Namespace,
     ) -> IntValue<'b> {
         let (fname, hashlen) = match hash {
             HashTy::Keccak256 => ("seal_hash_keccak_256", 32),
@@ -3306,56 +3794,75 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             HashTy::Blake2_256 => ("seal_hash_blake2_256", 32),
         };
 
-        let res = contract.builder.build_array_alloca(
-            contract.context.i8_type(),
-            contract.context.i32_type().const_int(hashlen, false),
+        let res = binary.builder.build_array_alloca(
+            binary.context.i8_type(),
+            binary.context.i32_type().const_int(hashlen, false),
             "res",
         );
 
-        contract.builder.build_call(
-            contract.module.get_function(fname).unwrap(),
+        binary.builder.build_call(
+            binary.module.get_function(fname).unwrap(),
             &[input.into(), input_len.into(), res.into()],
             "hash",
         );
 
         // bytes32 needs to reverse bytes
-        let temp = contract
-            .builder
-            .build_alloca(contract.llvm_type(&ast::Type::Bytes(hashlen as u8)), "hash");
+        let temp = binary.builder.build_alloca(
+            binary.llvm_type(&ast::Type::Bytes(hashlen as u8), ns),
+            "hash",
+        );
 
-        contract.builder.build_call(
-            contract.module.get_function("__beNtoleN").unwrap(),
+        binary.builder.build_call(
+            binary.module.get_function("__beNtoleN").unwrap(),
             &[
                 res.into(),
-                contract
+                binary
                     .builder
                     .build_pointer_cast(
                         temp,
-                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
                         "",
                     )
                     .into(),
-                contract.context.i32_type().const_int(hashlen, false).into(),
+                binary.context.i32_type().const_int(hashlen, false).into(),
             ],
             "",
         );
 
-        contract.builder.build_load(temp, "hash").into_int_value()
+        binary.builder.build_load(temp, "hash").into_int_value()
     }
 
-    /// Send event
-    fn send_event<'b>(
+    /// Substrate events should be prefixed with the index of the event in the metadata
+    fn event_id<'b>(
         &self,
-        contract: &Contract<'b>,
+        binary: &Binary<'b>,
+        contract: &ast::Contract,
         event_no: usize,
-        data_ptr: PointerValue<'b>,
-        data_len: IntValue<'b>,
-        topics: Vec<(PointerValue<'b>, IntValue<'b>)>,
-    ) {
-        let event = &contract.ns.events[event_no];
+    ) -> Option<IntValue<'b>> {
+        let event_id = contract
+            .sends_events
+            .iter()
+            .position(|e| *e == event_no)
+            .unwrap();
 
-        let topic_count = topics.len() + if event.anonymous { 0 } else { 1 };
-        let topic_size = contract.context.i32_type().const_int(
+        Some(binary.context.i8_type().const_int(event_id as u64, false))
+    }
+
+    /// Emit event
+    fn emit_event<'b>(
+        &self,
+        binary: &Binary<'b>,
+        contract: &ast::Contract,
+        function: FunctionValue<'b>,
+        event_no: usize,
+        data: &[BasicValueEnum<'b>],
+        data_tys: &[ast::Type],
+        topics: &[BasicValueEnum<'b>],
+        topic_tys: &[ast::Type],
+        ns: &ast::Namespace,
+    ) {
+        let topic_count = topics.len();
+        let topic_size = binary.context.i32_type().const_int(
             if topic_count > 0 {
                 32 * topic_count as u64 + 1
             } else {
@@ -3366,70 +3873,66 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
         let topic_buf = if topic_count > 0 {
             // the topic buffer is a vector of hashes.
-            let topic_buf = contract.builder.build_array_alloca(
-                contract.context.i8_type(),
-                topic_size,
-                "topic",
-            );
+            let topic_buf =
+                binary
+                    .builder
+                    .build_array_alloca(binary.context.i8_type(), topic_size, "topic");
 
             // a vector with scale encoding first has the length. Since we will never have more than
             // 64 topics (we're limited to 4 at the moment), we can assume this is a single byte
-            contract.builder.build_store(
+            binary.builder.build_store(
                 topic_buf,
-                contract
+                binary
                     .context
                     .i8_type()
                     .const_int(topic_count as u64 * 4, false),
             );
 
             let mut dest = unsafe {
-                contract.builder.build_gep(
+                binary.builder.build_gep(
                     topic_buf,
-                    &[contract.context.i32_type().const_int(1, false)],
+                    &[binary.context.i32_type().const_int(1, false)],
                     "dest",
                 )
             };
 
-            if !event.anonymous {
-                let hash = contract.emit_global_string(
-                    &format!("event_{}_signature", event),
-                    blake2_rfc::blake2b::blake2b(32, &[], event.signature.as_bytes()).as_bytes(),
+            binary.builder.build_call(
+                binary.module.get_function("__bzero8").unwrap(),
+                &[
+                    binary
+                        .builder
+                        .build_pointer_cast(
+                            dest,
+                            binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                            "dest",
+                        )
+                        .into(),
+                    binary
+                        .context
+                        .i32_type()
+                        .const_int(topic_count as u64 * 4, false)
+                        .into(),
+                ],
+                "",
+            );
+
+            for (i, topic) in topics.iter().enumerate() {
+                let mut data = dest;
+                self.encode_ty(
+                    binary,
+                    ns,
+                    false,
                     true,
-                );
-
-                contract.builder.build_call(
-                    contract.module.get_function("__memcpy8").unwrap(),
-                    &[
-                        dest.into(),
-                        hash.into(),
-                        contract.context.i32_type().const_int(4, false).into(),
-                    ],
-                    "",
+                    function,
+                    &topic_tys[i],
+                    *topic,
+                    &mut data,
                 );
 
                 dest = unsafe {
-                    contract.builder.build_gep(
+                    binary.builder.build_gep(
                         dest,
-                        &[contract.context.i32_type().const_int(32, false)],
-                        "dest",
-                    )
-                };
-            }
-
-            for (ptr, len) in topics {
-                contract.builder.build_call(
-                    contract
-                        .module
-                        .get_function("seal_hash_blake2_256")
-                        .unwrap(),
-                    &[ptr.into(), len.into(), dest.into()],
-                    "hash",
-                );
-
-                dest = unsafe {
-                    contract.builder.build_gep(
-                        dest,
-                        &[contract.context.i32_type().const_int(32, false)],
+                        &[binary.context.i32_type().const_int(32, false)],
                         "dest",
                     )
                 };
@@ -3437,15 +3940,25 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
             topic_buf
         } else {
-            contract
+            binary
                 .context
                 .i8_type()
                 .ptr_type(AddressSpace::Generic)
                 .const_null()
         };
 
-        contract.builder.build_call(
-            contract.module.get_function("seal_deposit_event").unwrap(),
+        let (data_ptr, data_len) = self.abi_encode(
+            binary,
+            self.event_id(binary, contract, event_no),
+            false,
+            function,
+            data,
+            data_tys,
+            ns,
+        );
+
+        binary.builder.build_call(
+            binary.module.get_function("seal_deposit_event").unwrap(),
             &[
                 topic_buf.into(),
                 topic_size.into(),
@@ -3459,38 +3972,39 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
     /// builtin expressions
     fn builtin<'b>(
         &self,
-        contract: &Contract<'b>,
+        binary: &Binary<'b>,
         expr: &ast::Expression,
         vartab: &HashMap<usize, Variable<'b>>,
         function: FunctionValue<'b>,
+        ns: &ast::Namespace,
     ) -> BasicValueEnum<'b> {
         macro_rules! get_seal_value {
             ($name:literal, $func:literal, $width:expr) => {{
-                let scratch_buf = contract.builder.build_pointer_cast(
-                    contract.scratch.unwrap().as_pointer_value(),
-                    contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                let scratch_buf = binary.builder.build_pointer_cast(
+                    binary.scratch.unwrap().as_pointer_value(),
+                    binary.context.i8_type().ptr_type(AddressSpace::Generic),
                     "scratch_buf",
                 );
-                let scratch_len = contract.scratch_len.unwrap().as_pointer_value();
+                let scratch_len = binary.scratch_len.unwrap().as_pointer_value();
 
-                contract.builder.build_store(
+                binary.builder.build_store(
                     scratch_len,
-                    contract
+                    binary
                         .context
                         .i32_type()
                         .const_int($width as u64 / 8, false),
                 );
 
-                contract.builder.build_call(
-                    contract.module.get_function($func).unwrap(),
+                binary.builder.build_call(
+                    binary.module.get_function($func).unwrap(),
                     &[scratch_buf.into(), scratch_len.into()],
                     $name,
                 );
 
-                contract.builder.build_load(
-                    contract.builder.build_pointer_cast(
+                binary.builder.build_load(
+                    binary.builder.build_pointer_cast(
                         scratch_buf,
-                        contract
+                        binary
                             .context
                             .custom_width_int_type($width)
                             .ptr_type(AddressSpace::Generic),
@@ -3499,26 +4013,26 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                     $name,
                 )
             }};
-        };
+        }
 
         match expr {
             ast::Expression::Builtin(_, _, ast::Builtin::Calldata, _) => {
                 // allocate vector for input
-                let v = contract
+                let v = binary
                     .builder
                     .build_call(
-                        contract.module.get_function("vector_new").unwrap(),
+                        binary.module.get_function("vector_new").unwrap(),
                         &[
-                            contract.builder.build_load(
-                                contract.calldata_len.as_pointer_value(),
-                                "calldata_len",
-                            ),
-                            contract.context.i32_type().const_int(1, false).into(),
-                            contract
+                            binary
+                                .builder
+                                .build_load(binary.calldata_len.as_pointer_value(), "calldata_len")
+                                .into(),
+                            binary.context.i32_type().const_int(1, false).into(),
+                            binary
                                 .builder
                                 .build_int_to_ptr(
-                                    contract.context.i32_type().const_all_ones(),
-                                    contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                                    binary.context.i32_type().const_all_ones(),
+                                    binary.context.i8_type().ptr_type(AddressSpace::Generic),
                                     "no_initializer",
                                 )
                                 .into(),
@@ -3529,37 +4043,48 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                     .left()
                     .unwrap();
 
+                // vector_new should return vector* but after llvm module merging, this can be vector.1*
+                let v = binary.builder.build_pointer_cast(
+                    v.into_pointer_value(),
+                    binary
+                        .module
+                        .get_struct_type("struct.vector")
+                        .unwrap()
+                        .ptr_type(AddressSpace::Generic),
+                    "calldata",
+                );
+
                 let data = unsafe {
-                    contract.builder.build_gep(
-                        v.into_pointer_value(),
+                    binary.builder.build_gep(
+                        v,
                         &[
-                            contract.context.i32_type().const_zero(),
-                            contract.context.i32_type().const_int(2, false),
+                            binary.context.i32_type().const_zero(),
+                            binary.context.i32_type().const_int(2, false),
                         ],
                         "",
                     )
                 };
 
-                let scratch_len = contract.scratch_len.unwrap().as_pointer_value();
+                let scratch_len = binary.scratch_len.unwrap().as_pointer_value();
 
                 // copy arguments from input buffer
-                contract.builder.build_store(
+                binary.builder.build_store(
                     scratch_len,
-                    contract
+                    binary
                         .context
                         .i32_type()
                         .const_int(SCRATCH_SIZE as u64, false),
                 );
 
                 // retrieve the data
-                contract.builder.build_call(
-                    contract.module.get_function("seal_input").unwrap(),
+                binary.builder.build_call(
+                    binary.module.get_function("seal_input").unwrap(),
                     &[
-                        contract
+                        binary
                             .builder
                             .build_pointer_cast(
                                 data,
-                                contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                                binary.context.i8_type().ptr_type(AddressSpace::Generic),
                                 "data",
                             )
                             .into(),
@@ -3568,18 +4093,18 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                     "",
                 );
 
-                v
+                v.into()
             }
             ast::Expression::Builtin(_, _, ast::Builtin::BlockNumber, _) => {
                 let block_number =
                     get_seal_value!("block_number", "seal_block_number", 32).into_int_value();
 
                 // Cast to 64 bit
-                contract
+                binary
                     .builder
                     .build_int_z_extend_or_bit_cast(
                         block_number,
-                        contract.context.i64_type(),
+                        binary.context.i64_type(),
                         "block_number",
                     )
                     .into()
@@ -3588,11 +4113,11 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                 let milliseconds = get_seal_value!("timestamp", "seal_now", 64).into_int_value();
 
                 // Solidity expects the timestamp in seconds, not milliseconds
-                contract
+                binary
                     .builder
                     .build_int_unsigned_div(
                         milliseconds,
-                        contract.context.i64_type().const_int(1000, false),
+                        binary.context.i64_type().const_int(1000, false),
                         "seconds",
                     )
                     .into()
@@ -3604,39 +4129,39 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                 // gasprice is available as "tx.gasprice" which will give you the price for one unit
                 // of gas, or "tx.gasprice(uint64)" which will give you the price of N gas units
                 let gas = if expr.is_empty() {
-                    contract.context.i64_type().const_int(1, false)
+                    binary.context.i64_type().const_int(1, false)
                 } else {
-                    self.expression(contract, &expr[0], vartab, function)
+                    self.expression(binary, &expr[0], vartab, function, ns)
                         .into_int_value()
                 };
 
-                let scratch_buf = contract.builder.build_pointer_cast(
-                    contract.scratch.unwrap().as_pointer_value(),
-                    contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                let scratch_buf = binary.builder.build_pointer_cast(
+                    binary.scratch.unwrap().as_pointer_value(),
+                    binary.context.i8_type().ptr_type(AddressSpace::Generic),
                     "scratch_buf",
                 );
-                let scratch_len = contract.scratch_len.unwrap().as_pointer_value();
+                let scratch_len = binary.scratch_len.unwrap().as_pointer_value();
 
-                contract.builder.build_store(
+                binary.builder.build_store(
                     scratch_len,
-                    contract
+                    binary
                         .context
                         .i32_type()
-                        .const_int(contract.ns.value_length as u64, false),
+                        .const_int(ns.value_length as u64, false),
                 );
 
-                contract.builder.build_call(
-                    contract.module.get_function("seal_weight_to_fee").unwrap(),
+                binary.builder.build_call(
+                    binary.module.get_function("seal_weight_to_fee").unwrap(),
                     &[gas.into(), scratch_buf.into(), scratch_len.into()],
                     "gas_price",
                 );
 
-                contract.builder.build_load(
-                    contract.builder.build_pointer_cast(
+                binary.builder.build_load(
+                    binary.builder.build_pointer_cast(
                         scratch_buf,
-                        contract
+                        binary
                             .context
-                            .custom_width_int_type(contract.ns.value_length as u32 * 8)
+                            .custom_width_int_type(ns.value_length as u32 * 8)
                             .ptr_type(AddressSpace::Generic),
                         "",
                     ),
@@ -3644,88 +4169,149 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                 )
             }
             ast::Expression::Builtin(_, _, ast::Builtin::Sender, _) => {
-                get_seal_value!("caller", "seal_caller", 256)
+                get_seal_value!("caller", "seal_caller", ns.address_length as u32 * 8)
             }
             ast::Expression::Builtin(_, _, ast::Builtin::Value, _) => {
-                self.value_transferred(contract).into()
+                self.value_transferred(binary, ns).into()
             }
             ast::Expression::Builtin(_, _, ast::Builtin::MinimumBalance, _) => get_seal_value!(
                 "minimum_balance",
                 "seal_minimum_balance",
-                contract.ns.value_length as u32 * 8
+                ns.value_length as u32 * 8
             ),
             ast::Expression::Builtin(_, _, ast::Builtin::TombstoneDeposit, _) => get_seal_value!(
                 "tombstone_deposit",
                 "seal_tombstone_deposit",
-                contract.ns.value_length as u32 * 8
+                ns.value_length as u32 * 8
             ),
             ast::Expression::Builtin(_, _, ast::Builtin::Random, args) => {
                 let subject = self
-                    .expression(contract, &args[0], vartab, function)
+                    .expression(binary, &args[0], vartab, function, ns)
                     .into_pointer_value();
 
                 let subject_data = unsafe {
-                    contract.builder.build_gep(
+                    binary.builder.build_gep(
                         subject,
                         &[
-                            contract.context.i32_type().const_zero(),
-                            contract.context.i32_type().const_int(2, false),
+                            binary.context.i32_type().const_zero(),
+                            binary.context.i32_type().const_int(2, false),
                         ],
                         "subject_data",
                     )
                 };
 
                 let subject_len = unsafe {
-                    contract.builder.build_gep(
+                    binary.builder.build_gep(
                         subject,
                         &[
-                            contract.context.i32_type().const_zero(),
-                            contract.context.i32_type().const_zero(),
+                            binary.context.i32_type().const_zero(),
+                            binary.context.i32_type().const_zero(),
                         ],
                         "subject_len",
                     )
                 };
 
-                let scratch_buf = contract.builder.build_pointer_cast(
-                    contract.scratch.unwrap().as_pointer_value(),
-                    contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                let scratch_buf = binary.builder.build_pointer_cast(
+                    binary.scratch.unwrap().as_pointer_value(),
+                    binary.context.i8_type().ptr_type(AddressSpace::Generic),
                     "scratch_buf",
                 );
-                let scratch_len = contract.scratch_len.unwrap().as_pointer_value();
+                let scratch_len = binary.scratch_len.unwrap().as_pointer_value();
 
-                contract.builder.build_store(
-                    scratch_len,
-                    contract.context.i32_type().const_int(32, false),
-                );
+                binary
+                    .builder
+                    .build_store(scratch_len, binary.context.i32_type().const_int(32, false));
 
-                contract.builder.build_call(
-                    contract.module.get_function("seal_random").unwrap(),
+                binary.builder.build_call(
+                    binary.module.get_function("seal_random").unwrap(),
                     &[
-                        contract
+                        binary
                             .builder
                             .build_pointer_cast(
                                 subject_data,
-                                contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                                binary.context.i8_type().ptr_type(AddressSpace::Generic),
                                 "subject_data",
                             )
                             .into(),
-                        contract.builder.build_load(subject_len, "subject_len"),
+                        binary.builder.build_load(subject_len, "subject_len").into(),
                         scratch_buf.into(),
                         scratch_len.into(),
                     ],
                     "random",
                 );
 
-                contract.builder.build_load(
-                    contract.builder.build_pointer_cast(
+                binary.builder.build_load(
+                    binary.builder.build_pointer_cast(
                         scratch_buf,
-                        contract
+                        binary
                             .context
                             .custom_width_int_type(256)
                             .ptr_type(AddressSpace::Generic),
                         "",
                     ),
                     "hash",
+                )
+            }
+            ast::Expression::Builtin(_, _, ast::Builtin::GetAddress, _) => {
+                let scratch_buf = binary.builder.build_pointer_cast(
+                    binary.scratch.unwrap().as_pointer_value(),
+                    binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                    "scratch_buf",
+                );
+                let scratch_len = binary.scratch_len.unwrap().as_pointer_value();
+
+                binary.builder.build_store(
+                    scratch_len,
+                    binary
+                        .context
+                        .i32_type()
+                        .const_int(ns.address_length as u64, false),
+                );
+
+                binary.builder.build_call(
+                    binary.module.get_function("seal_address").unwrap(),
+                    &[scratch_buf.into(), scratch_len.into()],
+                    "address",
+                );
+
+                binary.builder.build_load(
+                    binary.builder.build_pointer_cast(
+                        scratch_buf,
+                        binary.address_type(ns).ptr_type(AddressSpace::Generic),
+                        "",
+                    ),
+                    "self_address",
+                )
+            }
+            ast::Expression::Builtin(_, _, ast::Builtin::Balance, _) => {
+                let scratch_buf = binary.builder.build_pointer_cast(
+                    binary.scratch.unwrap().as_pointer_value(),
+                    binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                    "scratch_buf",
+                );
+                let scratch_len = binary.scratch_len.unwrap().as_pointer_value();
+
+                binary.builder.build_store(
+                    scratch_len,
+                    binary
+                        .context
+                        .i32_type()
+                        .const_int(ns.value_length as u64, false),
+                );
+
+                binary.builder.build_call(
+                    binary.module.get_function("seal_balance").unwrap(),
+                    &[scratch_buf.into(), scratch_len.into()],
+                    "balance",
+                );
+
+                binary.builder.build_load(
+                    binary.builder.build_pointer_cast(
+                        scratch_buf,
+                        binary.value_type(ns).ptr_type(AddressSpace::Generic),
+                        "",
+                    ),
+                    "balance",
                 )
             }
             _ => unimplemented!(),

@@ -6,15 +6,19 @@
 # Ubuntu 18.04 produces a builder image 1.53 GiB and solang image of 84 MiB
 # Debian Buster produces a builder image 2.04 GiB
 
-FROM hyperledgerlabs/solang:ci as builder
+FROM ghcr.io/hyperledger-labs/solang:ci as builder
 
 COPY . src
 WORKDIR /src/stdlib/
-RUN clang-10 --target=wasm32 -c -emit-llvm -O3 -ffreestanding -fno-builtin -Wall stdlib.c sha3.c substrate.c ripemd160.c
+RUN make
 
-RUN cargo install --path /src
+WORKDIR /src
+RUN cargo build --release
 
-FROM ubuntu:18.04
-COPY --from=builder /root/.cargo/bin/solang /usr/bin/solang
+FROM ubuntu:20.04
+COPY --from=builder /src/target/release/solang /usr/bin/solang
+
+LABEL org.opencontainers.image.title="Solang Solidity Compiler" \
+	org.opencontainers.image.licenses="Apache-2.0"
 
 ENTRYPOINT ["/usr/bin/solang"]

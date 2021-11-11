@@ -1,56 +1,69 @@
-extern crate blake2_rfc;
-extern crate clap;
-extern crate contract_metadata;
-extern crate hex;
-extern crate inkwell;
-extern crate lalrpop_util;
-extern crate lazy_static;
-extern crate num_bigint;
-extern crate num_derive;
-extern crate num_traits;
-extern crate parity_wasm;
-extern crate phf;
-extern crate semver;
-extern crate serde;
-extern crate serde_derive;
-extern crate serde_json;
-extern crate tiny_keccak;
-extern crate unicode_xid;
-
 pub mod abi;
 pub mod codegen;
-mod emit;
-pub mod file_cache;
-pub mod link;
+pub mod emit;
+pub mod file_resolver;
+pub mod linker;
 pub mod parser;
+
+// In Sema, we use result unit for returning early
+// when code-misparses. The error will be added to the namespace diagnostics, no need to have anything but unit
+// as error.
+#[allow(clippy::result_unit_err)]
 pub mod sema;
 
-use file_cache::FileCache;
+use file_resolver::FileResolver;
 use inkwell::OptimizationLevel;
 use sema::ast;
 use sema::diagnostics;
 use std::fmt;
 
 /// The target chain you want to compile Solidity for.
-#[derive(PartialEq, Clone, Copy)]
+#[derive(Clone, Copy)]
 pub enum Target {
-    /// Parity Substrate, see https://substrate.dev/
-    Substrate,
-    /// Ethereum ewasm, see https://github.com/ewasm/design
+    /// Solana, see <https://solana.com/>
+    Solana,
+    /// Parity Substrate, see <https://substrate.dev/>
+    Substrate {
+        address_length: usize,
+        value_length: usize,
+    },
+    /// Ethereum ewasm, see <https://github.com/ewasm/design>
     Ewasm,
-    /// Sawtooth Sabre, see https://github.com/hyperledger/sawtooth-sabre
-    Sabre,
-    /// Generate a generic object file for linking
-    Generic,
 }
 
 impl fmt::Display for Target {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Target::Substrate => write!(f, "Substrate"),
+            Target::Solana => write!(f, "solana"),
+            Target::Substrate { .. } => write!(f, "substrate"),
             Target::Ewasm => write!(f, "ewasm"),
-            Target::Sabre => write!(f, "Sawtooth Sabre"),
-            Target::Generic => write!(f, "generic"),
+        }
+    }
+}
+
+impl PartialEq for Target {
+    // Equality should check if it the same chain, not compare parameters. This
+    // is needed for builtins for example
+    fn eq(&self, other: &Self) -> bool {
+        match self {
+            Target::Solana => matches!(other, Target::Solana),
+            Target::Substrate { .. } => matches!(other, Target::Substrate { .. }),
+            Target::Ewasm => matches!(other, Target::Ewasm),
+        }
+    }
+}
+
+impl Target {
+    /// Short-hand for checking for Substrate target
+    pub fn is_substrate(&self) -> bool {
+        matches!(self, Target::Substrate { .. })
+    }
+
+    /// Create the target Substrate with default parameters
+    pub const fn default_substrate() -> Self {
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
         }
     }
 }
@@ -64,38 +77,52 @@ impl fmt::Display for Target {
 /// The ctx is the inkwell llvm context.
 pub fn compile(
     filename: &str,
-    cache: &mut FileCache,
-    opt: OptimizationLevel,
+    resolver: &mut FileResolver,
+    opt_level: OptimizationLevel,
     target: Target,
+    math_overflow_check: bool,
 ) -> (Vec<(Vec<u8>, String)>, ast::Namespace) {
-    let ctx = inkwell::context::Context::create();
-
-    let mut ns = parse_and_resolve(filename, cache, target);
+    let mut ns = parse_and_resolve(filename, resolver, target);
 
     if diagnostics::any_errors(&ns.diagnostics) {
         return (Vec::new(), ns);
     }
 
     // codegen all the contracts
-    for contract_no in 0..ns.contracts.len() {
-        codegen::codegen(contract_no, &mut ns);
-    }
+    codegen::codegen(
+        &mut ns,
+        &codegen::Options {
+            math_overflow_check,
+            opt_level,
+            ..Default::default()
+        },
+    );
 
     let results = (0..ns.contracts.len())
         .filter(|c| ns.contracts[*c].is_concrete())
         .map(|c| {
-            // codegen
-            let contract = emit::Contract::build(&ctx, &ns.contracts[c], &ns, filename, opt);
+            // codegen has already happened
+            assert!(!ns.contracts[c].code.is_empty());
 
-            let bc = contract.wasm(true).expect("llvm wasm emit should work");
+            let code = &ns.contracts[c].code;
+            let (abistr, _) = abi::generate_abi(c, &ns, code, false);
 
-            let (abistr, _) = abi::generate_abi(c, &ns, &bc, false);
-
-            (bc, abistr)
+            (code.clone(), abistr)
         })
         .collect();
 
     (results, ns)
+}
+
+/// Build a single binary out of multiple contracts. This is only possible on Solana
+pub fn compile_many<'a>(
+    context: &'a inkwell::context::Context,
+    namespaces: &'a [ast::Namespace],
+    filename: &str,
+    opt: OptimizationLevel,
+    math_overflow_check: bool,
+) -> emit::Binary<'a> {
+    emit::Binary::build_bundle(context, namespaces, filename, opt, math_overflow_check)
 }
 
 /// Parse and resolve the Solidity source code provided in src, for the target chain as specified in target.
@@ -103,29 +130,26 @@ pub fn compile(
 /// informational messages like `found contact N`.
 ///
 /// Note that multiple contracts can be specified in on solidity source file.
-pub fn parse_and_resolve(filename: &str, cache: &mut FileCache, target: Target) -> ast::Namespace {
-    let mut ns = ast::Namespace::new(
-        target,
-        match target {
-            Target::Ewasm => 20,
-            Target::Substrate => 32,
-            Target::Sabre => 0,    // Sabre has no address type
-            Target::Generic => 20, // Same as ethereum
-        },
-        16,
-    );
+pub fn parse_and_resolve(
+    filename: &str,
+    resolver: &mut FileResolver,
+    target: Target,
+) -> ast::Namespace {
+    let mut ns = ast::Namespace::new(target);
 
-    if let Err(message) = cache.populate_cache(filename) {
-        ns.diagnostics.push(ast::Diagnostic {
-            ty: ast::ErrorType::ParserError,
-            level: ast::Level::Error,
-            message,
-            pos: None,
-            notes: Vec::new(),
-        });
-    } else {
-        // resolve
-        sema::sema(filename, cache, &mut ns);
+    match resolver.resolve_file(None, filename) {
+        Err(message) => {
+            ns.diagnostics.push(ast::Diagnostic {
+                ty: ast::ErrorType::ParserError,
+                level: ast::Level::Error,
+                message,
+                pos: None,
+                notes: Vec::new(),
+            });
+        }
+        Ok(file) => {
+            sema::sema(&file, resolver, &mut ns);
+        }
     }
 
     ns
