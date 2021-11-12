@@ -124,3 +124,59 @@ a allocation. For example:
 This optimization pass can be disabled by running `solang --no-vector-to-slice`. You can see the difference between
 having this optimization pass on by comparing the output of `solang --no-vector-to-slice --emit cfg foo.sol` with
 `solang --emit cfg foo.sol`.
+
+Unused Variable Elimination
+___________________________
+
+During the semantic analysis, Solang detects unused variables and raises warnings for them.
+During codegen, we remove all assignments that have been made to this unused variable. There is an example below:
+
+.. code-block:: javascript
+
+    contract test {
+
+        function test1(int a) public pure returns (int) {
+            int x = 5;
+            x++;
+            if (a > 0) {
+                x = 5;
+            }
+
+            a = (x=3) + a*4;
+
+            return a;
+        }
+    }
+
+The variable 'x' will be removed from the function, as it has never been used. The removal won't affect any
+expressions inside the function.
+
+
+Common Subexpression Elimination
+________________________________
+Solang performs common subexpression elimination by doing two passes over the CFG (Control
+Flow Graph). During the first one, it builds a graph to track existing expressions and detect repeated ones.
+During the second pass, it replaces the repeated expressions by a temporary variable, which assumes the value
+of the expression. To disable this feature, use `solang --no-cse`.
+
+Check out the example below. It contains multiple common subexpressions:
+
+.. code-block:: javascript
+
+    contract {
+
+        function csePass(int a, int b) {
+            int x = a*b-5;
+            if (x > 0) {
+                x = a*b-19;
+            } else {
+                x = a*b*a;
+            }
+
+            return x+a*b;
+        }
+    }
+
+The expression `a*b` is repeated throughout the function and will be saved to a temporary variable.
+This temporary will be placed wherever there is an expression `a*b`. You can see the pass in action when you compile
+this contract and check the CFG, using `solang --emit cfg`.

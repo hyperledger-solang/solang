@@ -1,4 +1,3 @@
-pub mod available_expressions;
 pub mod cfg;
 mod constant_folding;
 mod dead_storage;
@@ -8,6 +7,7 @@ mod reaching_definitions;
 mod statements;
 mod storage;
 mod strength_reduce;
+pub mod subexpression_elimination;
 mod undefined_variable;
 mod unused_variable;
 mod vector_to_slice;
@@ -32,6 +32,7 @@ pub struct Options {
     pub strength_reduce: bool,
     pub vector_to_slice: bool,
     pub math_overflow_check: bool,
+    pub common_subexpression_elimination: bool,
     pub opt_level: inkwell::OptimizationLevel,
 }
 
@@ -43,6 +44,7 @@ impl Default for Options {
             strength_reduce: true,
             vector_to_slice: true,
             math_overflow_check: false,
+            common_subexpression_elimination: true,
             opt_level: inkwell::OptimizationLevel::Default,
         }
     }
