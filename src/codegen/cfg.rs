@@ -9,6 +9,7 @@ use super::{
     constant_folding, dead_storage, expression::expression, reaching_definitions, strength_reduce,
     vector_to_slice, Options,
 };
+use crate::codegen::subexpression_elimination::common_sub_expression_elimination;
 use crate::codegen::undefined_variable;
 use crate::parser::pt;
 use crate::sema::ast::{
@@ -292,6 +293,7 @@ pub struct BasicBlock {
     pub name: String,
     pub instr: Vec<Instr>,
     pub defs: reaching_definitions::VarDefs,
+    pub loop_reaching_variables: HashSet<usize>,
     pub transfers: Vec<Vec<reaching_definitions::Transfer>>,
 }
 
@@ -368,6 +370,7 @@ impl ControlFlowGraph {
             phis: None,
             transfers: Vec::new(),
             defs: IndexMap::new(),
+            loop_reaching_variables: HashSet::new(),
         });
 
         pos
@@ -1253,6 +1256,11 @@ pub fn optimize_and_check_cfg(
     }
     if opt.dead_storage {
         dead_storage::dead_storage(cfg, ns);
+    }
+
+    // If the function is a default constructor, there is nothing to optimize.
+    if opt.common_subexpression_elimination && func_no.is_some() {
+        common_sub_expression_elimination(cfg, ns);
     }
 }
 

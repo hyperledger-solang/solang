@@ -151,10 +151,16 @@ fn main() {
                 .display_order(4),
         )
         .arg(
+            Arg::with_name("COMMONSUBEXPRESSIONELIMINATION")
+                .help("Disable common subexpression elimination")
+                .long("no-cse")
+                .display_order(5),
+        )
+        .arg(
             Arg::with_name("MATHOVERFLOW")
                 .help("Enable math overflow checking")
                 .long("math-overflow")
-                .display_order(5),
+                .display_order(6),
         )
         .arg(
             Arg::with_name("LANGUAGESERVER")
@@ -307,6 +313,7 @@ fn main() {
             strength_reduce: !matches.is_present("STRENGTHREDUCE"),
             constant_folding: !matches.is_present("CONSTANTFOLDING"),
             vector_to_slice: !matches.is_present("VECTORTOSLICE"),
+            common_subexpression_elimination: !matches.is_present("COMMONEXPRESSIONELIMINATION"),
             math_overflow_check,
             opt_level,
         };

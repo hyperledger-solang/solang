@@ -14,6 +14,7 @@ fn parse_and_codegen(src: &'static str) -> Namespace {
         constant_folding: false,
         strength_reduce: false,
         vector_to_slice: false,
+        common_subexpression_elimination: false,
         opt_level: inkwell::OptimizationLevel::Default,
         math_overflow_check: false,
     };

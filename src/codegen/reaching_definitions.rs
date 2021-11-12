@@ -76,6 +76,15 @@ pub fn find(cfg: &mut ControlFlowGraph) {
                     } else {
                         cfg.blocks[edge].defs.insert(*var_no, defs.clone());
                     }
+
+                    // If a definition from a block executed later reaches this block,
+                    // this is a loop. This is an analysis we use later at the
+                    // common subexpression elimination.
+                    for (incoming_def, _) in defs {
+                        if incoming_def.block_no >= edge {
+                            cfg.blocks[edge].loop_reaching_variables.insert(*var_no);
+                        }
+                    }
                 }
             }
         }

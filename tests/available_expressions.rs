@@ -1,6 +1,7 @@
 use num_bigint::{BigInt, Sign};
-use solang::codegen::available_expressions::{AvailableExpression, AvailableExpressionSet};
 use solang::codegen::cfg::Instr;
+use solang::codegen::subexpression_elimination::common_subexpression_tracker::CommonSubExpressionTracker;
+use solang::codegen::subexpression_elimination::{AvailableExpression, AvailableExpressionSet};
 use solang::parser::pt::Loc;
 use solang::sema::ast::{Expression, StringLocation, Type};
 
@@ -24,8 +25,9 @@ fn add_variable_function_arg() {
 
     let mut ave = AvailableExpression::default();
     let mut set = AvailableExpressionSet::default();
+    let mut cst = CommonSubExpressionTracker::default();
 
-    set.process_instruction(&instr, &mut ave);
+    set.process_instruction(&instr, &mut ave, &mut cst);
 
     assert!(set.find_expression(&var).is_some());
     assert!(set.find_expression(&arg).is_some());
@@ -48,8 +50,9 @@ fn add_constants() {
 
     let mut ave = AvailableExpression::default();
     let mut set = AvailableExpressionSet::default();
+    let mut cst = CommonSubExpressionTracker::default();
 
-    set.process_instruction(&instr, &mut ave);
+    set.process_instruction(&instr, &mut ave, &mut cst);
 
     assert!(set.find_expression(&var).is_some());
     assert!(set.find_expression(&num).is_some());
@@ -71,8 +74,9 @@ fn add_commutative() {
 
     let mut ave = AvailableExpression::default();
     let mut set = AvailableExpressionSet::default();
+    let mut cst = CommonSubExpressionTracker::default();
 
-    set.process_instruction(&instr, &mut ave);
+    set.process_instruction(&instr, &mut ave, &mut cst);
 
     assert!(set.find_expression(&expr).is_some());
     assert!(set.find_expression(&expr_other).is_some());
@@ -105,8 +109,9 @@ fn non_commutative() {
 
     let mut ave = AvailableExpression::default();
     let mut set = AvailableExpressionSet::default();
+    let mut cst = CommonSubExpressionTracker::default();
 
-    set.process_instruction(&instr, &mut ave);
+    set.process_instruction(&instr, &mut ave, &mut cst);
 
     assert!(set.find_expression(&sub).is_some());
     assert!(set.find_expression(&num).is_some());
@@ -133,8 +138,9 @@ fn unary_operation() {
 
     let mut ave = AvailableExpression::default();
     let mut set = AvailableExpressionSet::default();
+    let mut cst = CommonSubExpressionTracker::default();
 
-    set.process_instruction(&instr, &mut ave);
+    set.process_instruction(&instr, &mut ave, &mut cst);
 
     assert!(set.find_expression(&cast).is_some());
     assert!(set.find_expression(&exp).is_some());
@@ -162,8 +168,9 @@ fn not_tracked() {
 
     let mut ave = AvailableExpression::default();
     let mut set = AvailableExpressionSet::default();
+    let mut cst = CommonSubExpressionTracker::default();
 
-    set.process_instruction(&instr, &mut ave);
+    set.process_instruction(&instr, &mut ave, &mut cst);
 
     assert!(set.find_expression(&minus).is_none());
     assert!(set.find_expression(&exp).is_none());
@@ -185,8 +192,9 @@ fn invalid() {
 
     let mut ave = AvailableExpression::default();
     let mut set = AvailableExpressionSet::default();
+    let mut cst = CommonSubExpressionTracker::default();
 
-    set.process_instruction(&instr, &mut ave);
+    set.process_instruction(&instr, &mut ave, &mut cst);
 
     assert!(set.find_expression(&arg).is_none());
     assert!(set.find_expression(&exp).is_none());
@@ -259,8 +267,9 @@ fn complex_expression() {
 
     let mut ave = AvailableExpression::default();
     let mut set = AvailableExpressionSet::default();
+    let mut cst = CommonSubExpressionTracker::default();
 
-    set.process_instruction(&instr, &mut ave);
+    set.process_instruction(&instr, &mut ave, &mut cst);
 
     assert!(set.find_expression(&pot).is_some());
     assert!(set.find_expression(&unary).is_some());
@@ -316,8 +325,9 @@ fn string() {
 
     let mut ave = AvailableExpression::default();
     let mut set = AvailableExpressionSet::default();
+    let mut cst = CommonSubExpressionTracker::default();
 
-    set.process_instruction(&instr, &mut ave);
+    set.process_instruction(&instr, &mut ave, &mut cst);
 
     assert!(set.find_expression(&concat).is_some());
     assert!(set.find_expression(&compare).is_some());
@@ -395,8 +405,9 @@ fn kill() {
 
     let mut ave = AvailableExpression::default();
     let mut set = AvailableExpressionSet::default();
+    let mut cst = CommonSubExpressionTracker::default();
 
-    set.process_instruction(&instr, &mut ave);
+    set.process_instruction(&instr, &mut ave, &mut cst);
     set.kill(2);
 
     // Available expressions
@@ -483,9 +494,10 @@ fn clone() {
 
     let mut ave = AvailableExpression::default();
     let mut set = AvailableExpressionSet::default();
+    let mut cst = CommonSubExpressionTracker::default();
 
-    set.process_instruction(&instr, &mut ave);
-    let set_2 = set.clone();
+    set.process_instruction(&instr, &mut ave, &mut cst);
+    let set_2 = set.clone_for_parent_block(1);
 
     // Available expressions
     assert!(set_2.find_expression(&unary).is_some());
@@ -576,10 +588,11 @@ fn intersect() {
 
     let mut ave = AvailableExpression::default();
     let mut set = AvailableExpressionSet::default();
+    let mut cst = CommonSubExpressionTracker::default();
 
-    set.process_instruction(&instr, &mut ave);
-    set.process_instruction(&instr2, &mut ave);
-    let mut set_2 = set.clone();
+    set.process_instruction(&instr, &mut ave, &mut cst);
+    set.process_instruction(&instr2, &mut ave, &mut cst);
+    let mut set_2 = set.clone_for_parent_block(1);
     set.kill(1);
 
     let sum2 = Expression::Add(
@@ -604,8 +617,8 @@ fn intersect() {
         value: Box::new(sub2.clone()),
     };
 
-    set.process_instruction(&instr3, &mut ave);
-    set_2.process_instruction(&instr3, &mut ave);
+    set.process_instruction(&instr3, &mut ave, &mut cst);
+    set_2.process_instruction(&instr3, &mut ave, &mut cst);
 
     set_2.intersect_sets(&set);
 
