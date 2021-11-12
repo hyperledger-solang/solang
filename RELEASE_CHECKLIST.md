@@ -1,6 +1,6 @@
 # Release Checklist
 
-- Update the version in `Cargo.toml`, `docs/conf.py`, and the binary links in `docs/installing.rst`, and `CHANGELOG.md`
+- Update the version in `Cargo.toml`, the binary links in `docs/installing.rst`, and `CHANGELOG.md`
 - Copy the contents of the CHANGELOG for this release into commit message
 - Ensure the cargo publish is happy `cargo publish --dry-run`
 - Try the release github actions by pushing a tag to your solang fork

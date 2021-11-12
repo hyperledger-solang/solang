@@ -13,7 +13,7 @@
 # import os
 # import sys
 # sys.path.insert(0, os.path.abspath('.'))
-
+import os
 
 # -- Project information -----------------------------------------------------
 
@@ -22,8 +22,7 @@ copyright = '2019 - 2021 Sean Young <sean@mess.org>'
 author = 'Sean Young <sean@mess.org>'
 
 # The full version, including alpha/beta/rc tags
-release = '0.1.9'
-
+release = os.popen('git describe --tags').readline().strip()
 
 # -- General configuration ---------------------------------------------------
 
