@@ -192,9 +192,15 @@ impl SolanaTarget {
         binary.internalize(&[
             "entrypoint",
             "sol_log_",
+            "sol_log_pubkey",
+            "sol_invoke_signed_c",
+            "sol_panic_",
             "sol_alloc_free_",
-            // This entry is produced by llvm due to merging of stdlib.bc with solidity llvm ir
-            "sol_alloc_free_.1",
+            "sol_get_return_data",
+            "sol_set_return_data",
+            "sol_sha256",
+            "sol_keccak256",
+            "sol_log_data",
         ]);
 
         binary
