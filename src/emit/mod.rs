@@ -5348,7 +5348,20 @@ impl<'a> Binary<'a> {
         while let Some(f) = func {
             let name = f.get_name().to_str().unwrap();
 
-            if !name.starts_with("llvm.") && export_list.iter().all(|e| e != &name) {
+            if !name.starts_with("llvm.")
+                && export_list.iter().all(|e| {
+                    // symbols may get renamed foo.1 or foo.2, also export those
+                    if let Some(tail) = name.strip_prefix(e) {
+                        if let Some(no) = tail.strip_prefix('.') {
+                            no.parse::<u32>().is_ok()
+                        } else {
+                            tail.is_empty()
+                        }
+                    } else {
+                        false
+                    }
+                })
+            {
                 f.set_linkage(Linkage::Internal);
             }
 
