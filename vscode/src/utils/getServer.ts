@@ -17,13 +17,13 @@ interface Artifact {
 export default async function getServer(context: vscode.ExtensionContext): Promise<string | undefined> {
   const config = vscode.workspace.getConfiguration('solang');
 
-  const platfrom = getPlatform();
-  if (platfrom === undefined) {
+  const platform = getPlatform();
+  if (platform === undefined) {
     await vscode.window.showErrorMessage("Unfortunately we don't ship binaries for your platform yet.");
     return undefined;
   }
 
-  const dest = path.join(context.globalStoragePath, platfrom);
+  const dest = path.join(context.globalStoragePath, platform);
   const exists = await fs.stat(dest).then(
     () => true,
     () => false
@@ -32,15 +32,27 @@ export default async function getServer(context: vscode.ExtensionContext): Promi
     await context.globalState.update('serverVersion', undefined);
   }
 
-  const release = await downloadWithRetryDialog(async () => {
-    return await fetchLatestRelease();
-  });
+  const ourVersion = executableVersion(dest);
+  console.log("Local Solang version: " + ourVersion);
+
+  let release;
+
+  try {
+    release = await fetchLatestRelease();
+  }
+  catch (e) {
+    if (e instanceof Error && ourVersion !== undefined) {
+      // we failed to get the latest release version, but we do have a local copy
+      console.log("Failed to download: " + e.message)
+      return dest;
+    }
+    throw (e);
+  }
+
   console.log("Latest Solang available: " + release.tag_name);
 
   const latestVersion = release.tag_name;
 
-  const ourVersion = executableVersion(dest);
-  console.log("Local Solang version: " + ourVersion);
   if (ourVersion && lte(latestVersion, ourVersion)) {
     return dest;
   }
@@ -56,7 +68,7 @@ export default async function getServer(context: vscode.ExtensionContext): Promi
     }
   }
 
-  const artifact = release.assets.find((artifact: Artifact) => artifact.name === platfrom);
+  const artifact = release.assets.find((artifact: Artifact) => artifact.name === platform);
   assert(!!artifact, `Bad release: ${JSON.stringify(release)}`);
 
   await downloadWithRetryDialog(async () => {
