@@ -310,11 +310,11 @@ fn main() {
 
         let opt = Options {
             dead_storage: !matches.is_present("DEADSTORAGE"),
-            strength_reduce: !matches.is_present("STRENGTHREDUCE"),
             constant_folding: !matches.is_present("CONSTANTFOLDING"),
+            strength_reduce: !matches.is_present("STRENGTHREDUCE"),
             vector_to_slice: !matches.is_present("VECTORTOSLICE"),
-            common_subexpression_elimination: !matches.is_present("COMMONEXPRESSIONELIMINATION"),
             math_overflow_check,
+            common_subexpression_elimination: !matches.is_present("COMMONEXPRESSIONELIMINATION"),
             opt_level,
         };
 
