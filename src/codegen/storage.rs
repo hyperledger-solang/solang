@@ -5,6 +5,7 @@ use num_traits::Zero;
 
 use super::cfg::{ControlFlowGraph, Instr, Vartable};
 use super::expression::{expression, load_storage};
+use super::Options;
 use crate::parser::pt;
 use crate::sema::ast::{Expression, Function, Namespace, Type};
 
@@ -69,14 +70,15 @@ pub fn storage_slots_array_push(
     func: Option<&Function>,
     ns: &Namespace,
     vartab: &mut Vartable,
+    opt: &Options,
 ) -> Expression {
     // set array+length to val_expr
     let slot_ty = ns.storage_type();
     let length_pos = vartab.temp_anonymous(&slot_ty);
 
-    let var_expr = expression(&args[0], cfg, contract_no, func, ns, vartab);
+    let var_expr = expression(&args[0], cfg, contract_no, func, ns, vartab, opt);
 
-    let expr = load_storage(loc, &slot_ty, var_expr.clone(), cfg, vartab);
+    let expr = load_storage(loc, &slot_ty, var_expr.clone(), cfg, vartab, opt);
 
     cfg.add(
         vartab,
@@ -107,7 +109,7 @@ pub fn storage_slots_array_push(
     );
 
     if args.len() == 2 {
-        let value = expression(&args[1], cfg, contract_no, func, ns, vartab);
+        let value = expression(&args[1], cfg, contract_no, func, ns, vartab, opt);
 
         cfg.add(
             vartab,
@@ -157,6 +159,7 @@ pub fn storage_slots_array_pop(
     func: Option<&Function>,
     ns: &Namespace,
     vartab: &mut Vartable,
+    opt: &Options,
 ) -> Expression {
     // set array+length to val_expr
     let slot_ty = ns.storage_type();
@@ -164,9 +167,9 @@ pub fn storage_slots_array_pop(
     let length_pos = vartab.temp_anonymous(&slot_ty);
 
     let ty = args[0].ty();
-    let var_expr = expression(&args[0], cfg, contract_no, func, ns, vartab);
+    let var_expr = expression(&args[0], cfg, contract_no, func, ns, vartab, opt);
 
-    let expr = load_storage(loc, &length_ty, var_expr.clone(), cfg, vartab);
+    let expr = load_storage(loc, &length_ty, var_expr.clone(), cfg, vartab, opt);
 
     cfg.add(
         vartab,
@@ -246,6 +249,7 @@ pub fn storage_slots_array_pop(
         Expression::Variable(*loc, elem_ty.clone(), entry_pos),
         cfg,
         vartab,
+        opt,
     );
 
     cfg.add(
@@ -287,13 +291,14 @@ pub fn array_push(
     func: Option<&Function>,
     ns: &Namespace,
     vartab: &mut Vartable,
+    opt: &Options,
 ) -> Expression {
-    let storage = expression(&args[0], cfg, contract_no, func, ns, vartab);
+    let storage = expression(&args[0], cfg, contract_no, func, ns, vartab, opt);
 
     let mut ty = args[0].ty().storage_array_elem();
 
     let value = if args.len() > 1 {
-        expression(&args[1], cfg, contract_no, func, ns, vartab)
+        expression(&args[1], cfg, contract_no, func, ns, vartab, opt)
     } else {
         ty.deref_any().default(ns).unwrap()
     };
@@ -325,8 +330,9 @@ pub fn array_pop(
     func: Option<&Function>,
     ns: &Namespace,
     vartab: &mut Vartable,
+    opt: &Options,
 ) -> Expression {
-    let storage = expression(&args[0], cfg, contract_no, func, ns, vartab);
+    let storage = expression(&args[0], cfg, contract_no, func, ns, vartab, opt);
 
     let ty = args[0].ty().storage_array_elem().deref_into();
 
