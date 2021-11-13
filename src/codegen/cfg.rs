@@ -1155,7 +1155,7 @@ pub fn generate_cfg(
         return;
     }
 
-    let mut cfg = function_cfg(contract_no, function_no, ns);
+    let mut cfg = function_cfg(contract_no, function_no, ns, opt);
 
     let default_constructor = &ns.default_constructor(contract_no);
     let func = match function_no {
@@ -1189,6 +1189,7 @@ pub fn generate_cfg(
                 chain_no,
                 args,
                 ns,
+                opt,
             );
 
             cfg = new_cfg;
@@ -1270,6 +1271,7 @@ fn function_cfg(
     contract_no: usize,
     function_no: Option<usize>,
     ns: &mut Namespace,
+    opt: &Options,
 ) -> ControlFlowGraph {
     let mut vartab = match function_no {
         Some(function_no) => {
@@ -1410,7 +1412,7 @@ fn function_cfg(
                     .enumerate()
                     .map(|(i, a)| {
                         let expr =
-                            expression(a, &mut cfg, contract_no, Some(func), ns, &mut vartab);
+                            expression(a, &mut cfg, contract_no, Some(func), ns, &mut vartab, opt);
 
                         if let Some(id) = &func.symtable.arguments[i] {
                             let ty = expr.ty();
@@ -1496,6 +1498,7 @@ fn function_cfg(
             &mut loops,
             None,
             None,
+            opt,
         );
     }
 
@@ -1516,6 +1519,7 @@ pub fn generate_modifier_dispatch(
     chain_no: usize,
     args: &[Expression],
     ns: &Namespace,
+    opt: &Options,
 ) -> (ControlFlowGraph, usize) {
     let name = format!(
         "{}::{}::{}::modifier{}::{}",
@@ -1554,7 +1558,15 @@ pub fn generate_modifier_dispatch(
     // now set the modifier args
     for (i, arg) in modifier.symtable.arguments.iter().enumerate() {
         if let Some(pos) = arg {
-            let expr = expression(&args[i], &mut cfg, contract_no, Some(func), ns, &mut vartab);
+            let expr = expression(
+                &args[i],
+                &mut cfg,
+                contract_no,
+                Some(func),
+                ns,
+                &mut vartab,
+                opt,
+            );
             cfg.add(
                 &mut vartab,
                 Instr::Set {
@@ -1606,6 +1618,7 @@ pub fn generate_modifier_dispatch(
             &mut loops,
             Some(&placeholder),
             Some(&return_instr),
+            opt,
         );
     }
 
