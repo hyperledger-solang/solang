@@ -110,6 +110,8 @@ Options:
 \\-\\-no\\-vector\\-to\\-slice
    Disable the :ref:`vector-to-slice` optimization
 
+\\-\\-no\\-cse
+   Disable the :ref:`common-subexpression-elimination` optimization
 
 Running Solang using container
 ______________________________
