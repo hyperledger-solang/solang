@@ -28,7 +28,7 @@ jobs:
       uses: llvm/actions/install-ninja@main
     - run: cmake -G Ninja -DLLVM_ENABLE_ASSERTIONS=On -DLLVM_ENABLE_TERMINFO=Off
         -DLLVM_ENABLE_PROJECTS='clang;lld'
-        -DLLVM_TARGETS_TO_BUILD='WebAssembly\;BPF'
+        -DLLVM_TARGETS_TO_BUILD='WebAssembly;BPF'
         -DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_INSTALL_PREFIX=../llvm12.0 llvm
       working-directory: ./llvm-project/
     - run: cmake --build . --target install
@@ -49,6 +49,7 @@ jobs:
     name: Mac Arm
     needs: create
     runs-on: macos-arm
+    if: ${{ github.repository_owner == 'hyperledger-labs' }}
     steps:
     - run: git clone --depth 1 --branch solana-rustc/12.0-2021-04-15 https://github.com/solana-labs/llvm-project.git
     - name: Install Ninja
