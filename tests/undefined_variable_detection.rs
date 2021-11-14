@@ -7,7 +7,7 @@ use solang::{parse_and_resolve, Target};
 fn parse_and_codegen(src: &'static str) -> Namespace {
     let mut cache = FileResolver::new();
     cache.set_file_contents("test.sol", src.to_string());
-    let mut ns = parse_and_resolve("test.sol", &mut cache, Target::Solana);
+    let mut ns = parse_and_resolve("test.sol", &mut cache, Target::Ewasm);
 
     let opt = Options {
         dead_storage: false,

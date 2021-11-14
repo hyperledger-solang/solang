@@ -8,7 +8,7 @@ fn parse(src: &'static str) -> ast::Namespace {
     let mut cache = FileResolver::new();
     cache.set_file_contents("test.sol", src.to_string());
 
-    parse_and_resolve("test.sol", &mut cache, Target::Solana)
+    parse_and_resolve("test.sol", &mut cache, Target::Ewasm)
 }
 
 fn parse_two_files(src1: &'static str, src2: &'static str) -> ast::Namespace {
@@ -16,7 +16,7 @@ fn parse_two_files(src1: &'static str, src2: &'static str) -> ast::Namespace {
     cache.set_file_contents("test.sol", src1.to_string());
     cache.set_file_contents("test2.sol", src2.to_string());
 
-    parse_and_resolve("test.sol", &mut cache, Target::Solana)
+    parse_and_resolve("test.sol", &mut cache, Target::Ewasm)
 }
 
 fn count_warnings(diagnostics: &[Diagnostic]) -> usize {

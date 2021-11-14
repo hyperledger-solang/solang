@@ -221,3 +221,40 @@ fn tx() {
         "builtin ‘tx.gasprice’ does not exist"
     );
 }
+
+#[test]
+fn pushpop() {
+    let ns = parse_and_resolve(
+        r#"
+        contract foo {
+            function test() public {
+                bytes x;
+
+                x.push();
+            }
+        }"#,
+        Target::Solana,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "‘push()’ not supported on ‘bytes’ on target solana"
+    );
+
+    let ns = parse_and_resolve(
+        r#"
+        contract foo {
+            function test() public {
+                bytes x;
+
+                x.pop();
+            }
+        }"#,
+        Target::Solana,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "‘pop()’ not supported on ‘bytes’ on target solana"
+    );
+}
