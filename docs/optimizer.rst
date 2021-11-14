@@ -125,8 +125,11 @@ This optimization pass can be disabled by running `solang --no-vector-to-slice`.
 having this optimization pass on by comparing the output of `solang --no-vector-to-slice --emit cfg foo.sol` with
 `solang --emit cfg foo.sol`.
 
+.. _unused-variable-elimination:
+
 Unused Variable Elimination
-___________________________
+----------------------------
+
 
 During the semantic analysis, Solang detects unused variables and raises warnings for them.
 During codegen, we remove all assignments that have been made to this unused variable. There is an example below:
@@ -151,9 +154,12 @@ During codegen, we remove all assignments that have been made to this unused var
 The variable 'x' will be removed from the function, as it has never been used. The removal won't affect any
 expressions inside the function.
 
+.. _common-subexpression-elimination:
 
 Common Subexpression Elimination
-________________________________
+---------------------------------
+
+
 Solang performs common subexpression elimination by doing two passes over the CFG (Control
 Flow Graph). During the first one, it builds a graph to track existing expressions and detect repeated ones.
 During the second pass, it replaces the repeated expressions by a temporary variable, which assumes the value
@@ -163,19 +169,19 @@ Check out the example below. It contains multiple common subexpressions:
 
 .. code-block:: javascript
 
-    contract {
+     contract test {
 
-        function csePass(int a, int b) {
-            int x = a*b-5;
-            if (x > 0) {
-                x = a*b-19;
-            } else {
-                x = a*b*a;
-            }
+         function csePass(int a, int b) public pure returns (int) {
+             int x = a*b-5;
+             if (x > 0) {
+                 x = a*b-19;
+             } else {
+                 x = a*b*a;
+             }
 
-            return x+a*b;
-        }
-    }
+             return x+a*b;
+         }
+     }
 
 The expression `a*b` is repeated throughout the function and will be saved to a temporary variable.
 This temporary will be placed wherever there is an expression `a*b`. You can see the pass in action when you compile
