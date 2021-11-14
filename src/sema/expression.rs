@@ -6558,6 +6558,14 @@ fn method_call_pos_args(
 
     if matches!(var_ty, Type::Array(..) | Type::DynamicBytes) {
         if func.name == "push" {
+            if ns.target == Target::Solana {
+                diagnostics.push(Diagnostic::error(
+                    func.loc,
+                    format!("‘push()’ not supported on ‘bytes’ on target {}", ns.target),
+                ));
+                return Err(());
+            }
+
             let elem_ty = match &var_ty {
                 Type::Array(ty, _) => ty,
                 Type::DynamicBytes => &Type::Uint(8),
@@ -6598,6 +6606,14 @@ fn method_call_pos_args(
             ));
         }
         if func.name == "pop" {
+            if ns.target == Target::Solana {
+                diagnostics.push(Diagnostic::error(
+                    func.loc,
+                    format!("‘pop()’ not supported on ‘bytes’ on target {}", ns.target),
+                ));
+                return Err(());
+            }
+
             if !args.is_empty() {
                 diagnostics.push(Diagnostic::error(
                     func.loc,
