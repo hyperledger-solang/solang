@@ -487,7 +487,7 @@ impl Externals for TestRuntime {
             Some(Extern::keccak256) => {
                 let input_ptr: u32 = args.nth_checked(0)?;
                 let input_len: u32 = args.nth_checked(1)?;
-                let result_ptr: u32 = args.nth_checked(2)?;
+                let _result_ptr: u32 = args.nth_checked(2)?;
 
                 let mut buf = Vec::new();
                 buf.resize(input_len as usize, 0u8);
@@ -508,7 +508,7 @@ impl Externals for TestRuntime {
             Some(Extern::ripemd160) => {
                 let input_ptr: u32 = args.nth_checked(0)?;
                 let input_len: u32 = args.nth_checked(1)?;
-                let result_ptr: u32 = args.nth_checked(2)?;
+                let _result_ptr: u32 = args.nth_checked(2)?;
 
                 let mut buf = Vec::new();
                 buf.resize(input_len as usize, 0u8);
@@ -527,7 +527,7 @@ impl Externals for TestRuntime {
             Some(Extern::sha256) => {
                 let input_ptr: u32 = args.nth_checked(0)?;
                 let input_len: u32 = args.nth_checked(1)?;
-                let result_ptr: u32 = args.nth_checked(2)?;
+                let _result_ptr: u32 = args.nth_checked(2)?;
 
                 let mut buf = Vec::new();
                 buf.resize(input_len as usize, 0u8);
