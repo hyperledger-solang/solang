@@ -13,11 +13,11 @@ describe('Deploy solang contract and test', () => {
             accounts: [payerAccount.publicKey],
         });
 
-        let bal = Number(res.result);
+        let bal = Number(res.result[0]);
 
         let rpc_bal = await connection.getBalance(payerAccount.publicKey);
 
-        expect(bal).toBe(rpc_bal);
+        expect(bal + 5000).toBe(rpc_bal);
 
         // @solana/solidity needs a fix for this
         // res = await token.functions.pay_me({

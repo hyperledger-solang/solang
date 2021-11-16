@@ -10,13 +10,13 @@ describe('Deploy solang contract and test', () => {
 
         let res = await token.functions.get({ simulate: true });
 
-        expect(res.result).toBe(true);
+        expect(res.result).toStrictEqual([true]);
 
         await token.functions.flip();
 
         res = await token.functions.get({ simulate: true });
 
-        expect(res.result).toBe(false);
+        expect(res.result).toStrictEqual([false]);
     });
 
     it('primitives', async function () {
@@ -28,112 +28,112 @@ describe('Deploy solang contract and test', () => {
         // in ethereum, an enum is described as an uint8 so can't use the enum
         // names programmatically. 0 = add, 1 = sub, 2 = mul, 3 = div, 4 = mod, 5 = pow, 6 = shl, 7 = shr
         let res = await token.functions.is_mul(2, { simulate: true });
-        expect(res.result).toBe(true);
+        expect(res.result[0]).toBe(true);
 
         res = await token.functions.return_div({ simulate: true });
-        expect(res.result).toBe(3);
+        expect(res.result[0]).toBe(3);
 
         // TEST uint and int types, and arithmetic/bitwise ops
         res = await token.functions.op_i64(0, 1000, 4100, { simulate: true });
-        expect(Number(res.result)).toBe(5100);
+        expect(Number(res.result[0])).toBe(5100);
         res = await token.functions.op_i64(1, 1000, 4100, { simulate: true });
-        expect(Number(res.result)).toBe(-3100);
+        expect(Number(res.result[0])).toBe(-3100);
         res = await token.functions.op_i64(2, 1000, 4100, { simulate: true });
-        expect(Number(res.result)).toBe(4100000);
+        expect(Number(res.result[0])).toBe(4100000);
         res = await token.functions.op_i64(3, 1000, 10, { simulate: true });
-        expect(Number(res.result)).toBe(100);
+        expect(Number(res.result[0])).toBe(100);
         res = await token.functions.op_i64(4, 1000, 99, { simulate: true });
-        expect(Number(res.result)).toBe(10);
+        expect(Number(res.result[0])).toBe(10);
         res = await token.functions.op_i64(6, - 1000, 8, { simulate: true });
-        expect(Number(res.result)).toBe(-256000);
+        expect(Number(res.result[0])).toBe(-256000);
         res = await token.functions.op_i64(7, - 1000, 8, { simulate: true });
-        expect(Number(res.result)).toBe(-4);
+        expect(Number(res.result[0])).toBe(-4);
 
 
         res = await token.functions.op_u64(0, 1000, 4100, { simulate: true });
-        expect(Number(res.result)).toBe(5100);
+        expect(Number(res.result[0])).toBe(5100);
         res = await token.functions.op_u64(1, 1000, 4100, { simulate: true });
-        expect(Number(res.result)).toBe(18446744073709548516); // (2^64)-18446744073709548516 = 3100
+        expect(Number(res.result[0])).toBe(18446744073709548516); // (2^64)-18446744073709548516 = 3100
         res = await token.functions.op_u64(2, 123456789, 123456789, { simulate: true });
-        expect(Number(res.result)).toBe(15241578750190521);
+        expect(Number(res.result[0])).toBe(15241578750190521);
         res = await token.functions.op_u64(3, 123456789, 100, { simulate: true });
-        expect(Number(res.result)).toBe(1234567);
+        expect(Number(res.result[0])).toBe(1234567);
         res = await token.functions.op_u64(4, 123456789, 100, { simulate: true });
-        expect(Number(res.result)).toBe(89);
+        expect(Number(res.result[0])).toBe(89);
         res = await token.functions.op_u64(5, 3, 7, { simulate: true });
-        expect(Number(res.result)).toBe(2187);
+        expect(Number(res.result[0])).toBe(2187);
         res = await token.functions.op_i64(6, 1000, 8, { simulate: true });
-        expect(Number(res.result)).toBe(256000);
+        expect(Number(res.result[0])).toBe(256000);
         res = await token.functions.op_i64(7, 1000, 8, { simulate: true });
-        expect(Number(res.result)).toBe(3);
+        expect(Number(res.result[0])).toBe(3);
 
         // now for 256 bit operations
         res = await token.functions.op_i256(0, 1000, 4100, { simulate: true });
-        expect(Number(res.result)).toBe(5100);
+        expect(Number(res.result[0])).toBe(5100);
         res = await token.functions.op_i256(1, 1000, 4100, { simulate: true });
-        expect(Number(res.result)).toBe(-3100);
+        expect(Number(res.result[0])).toBe(-3100);
         res = await token.functions.op_i256(2, 1000, 4100, { simulate: true });
-        expect(Number(res.result)).toBe(4100000);
+        expect(Number(res.result[0])).toBe(4100000);
         res = await token.functions.op_i256(3, 1000, 10, { simulate: true });
-        expect(Number(res.result)).toBe(100);
+        expect(Number(res.result[0])).toBe(100);
         res = await token.functions.op_i256(4, 1000, 99, { simulate: true });
-        expect(Number(res.result)).toBe(10);
+        expect(Number(res.result[0])).toBe(10);
         res = await token.functions.op_i256(6, - 10000000000000, 8, { simulate: true });
-        expect(Number(res.result)).toBe(-2560000000000000);
+        expect(Number(res.result[0])).toBe(-2560000000000000);
         res = await token.functions.op_i256(7, - 10000000000000, 8, { simulate: true });
-        expect(Number(res.result)).toBe(-39062500000);
+        expect(Number(res.result[0])).toBe(-39062500000);
 
         res = await token.functions.op_u256(0, 1000, 4100, { simulate: true });
-        expect(Number(res.result)).toBe(5100);
+        expect(Number(res.result[0])).toBe(5100);
         res = await token.functions.op_u256(1, 1000, 4100, { simulate: true });
-        expect(Number(res.result)).toBe(115792089237316195423570985008687907853269984665640564039457584007913129636836); // (2^64)-18446744073709548516 = 3100
+        expect(Number(res.result[0])).toBe(115792089237316195423570985008687907853269984665640564039457584007913129636836); // (2^64)-18446744073709548516 = 3100
         res = await token.functions.op_u256(2, 123456789, 123456789, { simulate: true });
-        expect(Number(res.result)).toBe(15241578750190521);
+        expect(Number(res.result[0])).toBe(15241578750190521);
         res = await token.functions.op_u256(3, 123456789, 100, { simulate: true });
-        expect(Number(res.result)).toBe(1234567);
+        expect(Number(res.result[0])).toBe(1234567);
         res = await token.functions.op_u256(4, 123456789, 100, { simulate: true });
-        expect(Number(res.result)).toBe(89);
+        expect(Number(res.result[0])).toBe(89);
         res = await token.functions.op_u256(5, 123456789, 9, { simulate: true });
-        expect(Number(res.result)).toBe(6662462759719942007440037531362779472290810125440036903063319585255179509);
+        expect(Number(res.result[0])).toBe(6662462759719942007440037531362779472290810125440036903063319585255179509);
         res = await token.functions.op_i256(6, 10000000000000, 8, { simulate: true });
-        expect(Number(res.result)).toBe(2560000000000000);
+        expect(Number(res.result[0])).toBe(2560000000000000);
         res = await token.functions.op_i256(7, 10000000000000, 8, { simulate: true });
-        expect(Number(res.result)).toBe(39062500000);
+        expect(Number(res.result[0])).toBe(39062500000);
 
 
         // TEST bytesN
         res = await token.functions.return_u8_6({ simulate: true });
-        expect(res.result).toBe("0x414243444546");
+        expect(res.result[0]).toBe("0x414243444546");
 
         // TEST bytes5
         res = await token.functions.op_u8_5_shift(6, "0xdeadcafe59", 8, { simulate: true });
-        expect(res.result).toBe("0xadcafe5900");
+        expect(res.result[0]).toBe("0xadcafe5900");
         res = await token.functions.op_u8_5_shift(7, "0xdeadcafe59", 8, { simulate: true });
-        expect(res.result).toBe("0x00deadcafe");
+        expect(res.result[0]).toBe("0x00deadcafe");
         res = await token.functions.op_u8_5(8, "0xdeadcafe59", "0x0000000006", { simulate: true });
-        expect(res.result).toBe("0xdeadcafe5f");
+        expect(res.result[0]).toBe("0xdeadcafe5f");
         res = await token.functions.op_u8_5(9, "0xdeadcafe59", "0x00000000ff", { simulate: true });
-        expect(res.result).toBe("0x0000000059");
+        expect(res.result[0]).toBe("0x0000000059");
         res = await token.functions.op_u8_5(10, "0xdeadcafe59", "0x00000000ff", { simulate: true });
-        expect(res.result).toBe("0xdeadcafea6");
+        expect(res.result[0]).toBe("0xdeadcafea6");
 
         // TEST bytes14
         res = await token.functions.op_u8_14_shift(6, "0xdeadcafe123456789abcdefbeef7", "9", { simulate: true });
-        expect(res.result).toBe("0x5b95fc2468acf13579bdf7ddee00");
+        expect(res.result[0]).toBe("0x5b95fc2468acf13579bdf7ddee00");
         res = await token.functions.op_u8_14_shift(7, "0xdeadcafe123456789abcdefbeef7", "9", { simulate: true });
-        expect(res.result).toBe("0x006f56e57f091a2b3c4d5e6f7df7");
+        expect(res.result[0]).toBe("0x006f56e57f091a2b3c4d5e6f7df7");
         res = await token.functions.op_u8_14(8, "0xdeadcafe123456789abcdefbeef7", "0x0000060000000000000000000000", { simulate: true });
-        expect(res.result).toBe("0xdeadcefe123456789abcdefbeef7");
+        expect(res.result[0]).toBe("0xdeadcefe123456789abcdefbeef7");
         res = await token.functions.op_u8_14(9, "0xdeadcafe123456789abcdefbeef7", "0x000000000000000000ff00000000", { simulate: true });
-        expect(res.result).toBe("0x000000000000000000bc00000000");
+        expect(res.result[0]).toBe("0x000000000000000000bc00000000");
         res = await token.functions.op_u8_14(10, "0xdeadcafe123456789abcdefbeef7", "0xff00000000000000000000000000", { simulate: true });
-        expect(res.result).toBe("0x21adcafe123456789abcdefbeef7");
+        expect(res.result[0]).toBe("0x21adcafe123456789abcdefbeef7");
 
         // TEST address type. We need to encoding this has a hex string with the '0x' prefix, since solang maps address
         // to bytes32 type
         let address = '0x' + payerAccount.publicKey.toBuffer().toString('hex');
         res = await token.functions.address_passthrough(address);
-        expect(res.result).toBe(address);
+        expect(res.result[0]).toBe(address);
     });
 
     it('store', async function () {
@@ -176,7 +176,7 @@ describe('Deploy solang contract and test', () => {
         for (let i = 0; i < 20; i++) {
             res = await token.functions.get_bs({ simulate: true });
 
-            expect(res.result).toStrictEqual(bs);
+            expect(res.result).toStrictEqual([bs]);
 
             if (bs.length <= 4 || Math.random() >= 0.5) {
                 let val = ((Math.random() * 256) | 0).toString(16);
@@ -414,7 +414,7 @@ describe('Deploy solang contract and test', () => {
 
             res = await token.functions.hasPermission(user[2], p, { simulate: true });
 
-            expect(res.result).toBe(true);
+            expect(res.result).toStrictEqual([true]);
         }
 
         user = users[Math.floor(Math.random() * users.length)];
@@ -427,6 +427,6 @@ describe('Deploy solang contract and test', () => {
 
         res = await token.functions.userExists(user[2]);
 
-        expect(res.result).toBe(false);
+        expect(res.result).toStrictEqual([false]);
     });
 });
