@@ -9,19 +9,19 @@ describe('Deploy solang contract and test', () => {
 
         let res = await token.functions.getName();
 
-        expect(res.result).toBe("myName");
+        expect(res.result[0]).toBe("myName");
 
         await token.functions.setName('ozan');
 
         res = await token.functions.getName();
 
-        expect(res.result).toBe('ozan');
+        expect(res.result[0]).toBe('ozan');
 
         await token.functions.setSurname('martin');
 
         res = await token.functions.getSurname();
 
-        expect(res.result).toBe('martin');
+        expect(res.result[0]).toBe('martin');
 
         res = await token.functions.getNames();
 
