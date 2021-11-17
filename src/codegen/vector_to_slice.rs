@@ -24,9 +24,7 @@ pub fn vector_to_slice(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
     // Now we have a list of all vectors defs that get written two (via variables)
 
     // walk the cfg and expressions and update the type of vectors
-    for block_no in 0..cfg.blocks.len() {
-        update_vectors_to_slice(block_no, &writable, cfg, ns);
-    }
+    update_vectors_to_slice(&writable, cfg, ns);
 }
 
 fn find_writable_vectors(
@@ -147,38 +145,70 @@ fn apply_transfers(
 }
 
 fn update_vectors_to_slice(
-    block_no: usize,
     writable: &HashSet<Def>,
     cfg: &mut ControlFlowGraph,
     ns: &mut Namespace,
 ) {
-    for instr_no in 0..cfg.blocks[block_no].instr.len() {
-        let cur = Def { block_no, instr_no };
+    let mut defs_to_be_updated: HashSet<Def> = HashSet::new();
 
+    for block_no in 0..cfg.blocks.len() {
+        for instr_no in 0..cfg.blocks[block_no].instr.len() {
+            let cur = Def { block_no, instr_no };
+
+            if let Instr::Set {
+                expr: Expression::AllocDynamicArray(..),
+                ..
+            } = &cfg.blocks[block_no].instr[instr_no]
+            {
+                if !writable.contains(&cur) {
+                    defs_to_be_updated.insert(cur);
+                }
+            }
+        }
+    }
+
+    for block_no in 0..cfg.blocks.len() {
+        if let Some(phis) = &cfg.blocks[block_no].phis {
+            for phi in phis {
+                // if any of the defs is not going to be updated ...
+
+                // note that unreachable blocks do not have reaching defs calculated
+                if cfg.blocks[block_no].defs.contains_key(phi)
+                    && cfg.blocks[block_no].defs[phi]
+                        .iter()
+                        .any(|(def, _)| !defs_to_be_updated.contains(def))
+                {
+                    // don't update any of them
+                    for (def, _) in &cfg.blocks[block_no].defs[phi] {
+                        defs_to_be_updated.remove(def);
+                    }
+                }
+            }
+        }
+    }
+
+    for def in defs_to_be_updated {
         if let Instr::Set {
             loc,
             res,
             expr: Expression::AllocDynamicArray(_, _, len, Some(bs)),
-        } = &cfg.blocks[block_no].instr[instr_no]
+        } = &cfg.blocks[def.block_no].instr[def.instr_no]
         {
-            if !writable.contains(&cur) {
-                let res = *res;
+            let res = *res;
+            cfg.blocks[def.block_no].instr[def.instr_no] = Instr::Set {
+                loc: *loc,
+                res,
+                expr: Expression::AllocDynamicArray(
+                    *loc,
+                    Type::Slice,
+                    len.clone(),
+                    Some(bs.clone()),
+                ),
+            };
 
-                cfg.blocks[block_no].instr[instr_no] = Instr::Set {
-                    loc: *loc,
-                    res,
-                    expr: Expression::AllocDynamicArray(
-                        *loc,
-                        Type::Slice,
-                        len.clone(),
-                        Some(bs.clone()),
-                    ),
-                };
-
-                if let Some(function_no) = cfg.function_no {
-                    if let Some(var) = ns.functions[function_no].symtable.vars.get_mut(&res) {
-                        var.slice = true;
-                    }
+            if let Some(function_no) = cfg.function_no {
+                if let Some(var) = ns.functions[function_no].symtable.vars.get_mut(&res) {
+                    var.slice = true;
                 }
             }
         }
