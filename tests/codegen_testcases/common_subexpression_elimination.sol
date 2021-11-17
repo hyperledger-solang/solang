@@ -29,7 +29,7 @@ contract c1 {
         return x-d + (a-b);
         // CHECK: return ((%x - %d) + %2.cse_temp)
     }
-    
+
 // BEGIN-CHECK: c1::function::test2
     function test2(int a, int b) public pure returns (int) {
         int x;
@@ -118,7 +118,7 @@ contract c1 {
        	for(int i=0; i<10; i++) {
             // CHECK: ty:int256 %t = ((arg #0) - (arg #1))
 			int t = a-b;
-            // CHECK: ty:int256 %i = (%temp.174 + int256 1)
+            // CHECK: ty:int256 %i = (%temp.186 + int256 1)
 			bool e1 = t > 3;
 		}
 
@@ -131,7 +131,7 @@ contract c1 {
         int x;
         x = a+b-54;
         int d = x*(a+b);
-        
+
        	do {
 			int t = a-b;
 			bool e1 = t > 3;
@@ -197,7 +197,7 @@ contract c1 {
         uint p2 = uint(a+b+k);
         // CHECK: ty:int256 %2.cse_temp = int256((%p2 + uint256 9))
         int r1 = int(p2+9) -4;
-        // CHECK: ty:int256 %r1 = (%2.cse_temp - int256 4)        
+        // CHECK: ty:int256 %r1 = (%2.cse_temp - int256 4)
         int r2= int(p2+9) -9;
         // CHECK: ty:int256 %r2 = (%2.cse_temp - int256 9)
 
@@ -242,7 +242,7 @@ contract c1 {
             // CHECK: ty:int256 %2.cse_temp = ((arg #0) * (arg #1))
             int p5 = p3 + a*b+45;
             // CHECK: ty:int256 %p5 = ((%p3 + %2.cse_temp) + int256 45)
-            
+
             // CHECK: return %2.cse_temp
             if (p5 !=0) {
                 // CHECK: ty:uint16 %t1 = (trunc uint16 %p5)
@@ -281,52 +281,52 @@ contract c1 {
         return x-d + (a-b);
     }
 
-    
-    // function get(int a, int b) private pure returns (int) {
-    //     return a+b+1;
-    // }
 
-    // event testEvent(int a, int b, string str);
-    // // BEGIN-CHECK: c1::function::test11
-    // function test11(int a, int b) public returns (int) {
-    //     string ast = "Hello!";
-    //     string bst = "from Solang";
-    //     string cst = ast + bst;
-    //     // CHECK: ty:int256 %1.cse_temp = ((arg #0) / (int256 2 * (arg #1)))
-    //     // CHECK: call c1::c1::function::get__int256_int256 %1.cse_temp, (arg #1)
-    //     int p = a + get(a/(2*b), b);
+    function get(int a, int b) private pure returns (int) {
+        return a+b+1;
+    }
 
-    //     bool e = (ast == bst) || p < 2;
-    //     // CHECK: ty:bool %2.cse_temp = (strcmp (%ast) (%bst))
-    //     // CHECK: branchcond %2.cse_temp, block2, block1
-    //     bool e2 = e;
-    //     // CHECK: branchcond (strcmp (%cst) (%cst)), block3, block4
-    //     if (ast + bst == cst) {
-    //         // CHECK: call c1::c1::function::get__int256_int256 %1.cse_temp, (arg #1)
-    //         require(a + get(a/(2*b), b) < 0);
-    //         emit testEvent(a + get(a/(2*b) -p, b), p, ast+bst);
-    //     }
+    event testEvent(int a, int b, string str);
+    // BEGIN-CHECK: c1::function::test11
+    function test11(int a, int b) public returns (int) {
+        string ast = "Hello!";
+        string bst = "from Solang";
+        string cst = ast + bst;
+        // CHECK: ty:int256 %1.cse_temp = ((arg #0) / (int256 2 * (arg #1)))
+        // CHECK: call c1::c1::function::get__int256_int256 %1.cse_temp, (arg #1)
+        int p = a + get(a/(2*b), b);
 
-    //     // CHECK: branchcond %2.cse_temp, block7, block8
-    //     if (ast == bst) {
-    //         ast = ast + "b";
-    //     }
-    //     // CHECK: call c1::c1::function::get__int256_int256 (%1.cse_temp - %p), (arg #1)
+        bool e = (ast == bst) || p < 2;
+        // CHECK: ty:bool %2.cse_temp = (strcmp (%ast) (%bst))
+        // CHECK: branchcond %2.cse_temp, block2, block1
+        bool e2 = e;
+        // CHECK: branchcond (strcmp (%cst) (%cst)), block3, block4
+        if (ast + bst == cst) {
+            // CHECK: call c1::c1::function::get__int256_int256 %1.cse_temp, (arg #1)
+            require(a + get(a/(2*b), b) < 0);
+            emit testEvent(a + get(a/(2*b) -p, b), p, ast+bst);
+        }
 
-    //     // CHECK: branchcond (strcmp (%ast) (%bst)), block10, block11
-    //     while (ast == bst) {
-    //         ast = ast + "a";
-    //     }
+        // CHECK: branchcond %2.cse_temp, block7, block8
+        if (ast == bst) {
+            ast = ast + "b";
+        }
+        // CHECK: call c1::c1::function::get__int256_int256 (%1.cse_temp - %p), (arg #1)
 
-    //     // CHECK: call c1::c1::function::get__int256_int256 (arg #1), ((arg #0) / (arg #1))
-    //     return get(b, a/b);
-    // }
+        // CHECK: branchcond (strcmp (%ast) (%bst)), block10, block11
+        while (ast == bst) {
+            ast = ast + "a";
+        }
+
+        // CHECK: call c1::c1::function::get__int256_int256 (arg #1), ((arg #0) / (arg #1))
+        return get(b, a/b);
+    }
 
     // BEGIN-CHECK: c1::function::test12
     function test12(int a, int b) public returns (int) {
         int x = a+b;
         bool e = (x == a);
-        // NOT-CHECK: %1.cse_temp = 
+        // NOT-CHECK: %1.cse_temp =
         bool e2 = e;
 
         // CHECK: branchcond (%x == (arg #0))
@@ -348,7 +348,7 @@ contract c1 {
     function testing(bytes b) public returns (string) {
         return string(b);
     }
-    
+
   // BEGIN-CHECK: c1::function::test13
     function test13(int a, int b) public returns (int) {
         string c = "Hello";
@@ -402,7 +402,7 @@ contract c1 {
             string k1 = testing(bytes(string(b1)));
             string k2 = k1;
         }
-        
+
         return 2;
     }
 
@@ -423,11 +423,11 @@ contract c1 {
             bytes32 b2 = bytes32(b3);
             doNothing(b2);
         }
-        
+
         b3 = bytes("d");
         for(int p=0; p<a; ++p) {
             doNothing(b1);
-            // CHECK: ty:bytes32 %b2.143 = bytes from:bytes32 (%b3)
+            // CHECK: ty:bytes32 %b2.155 = bytes from:bytes32 (%b3)
             bytes32 b2 = bytes32(b3);
             doNothing(b2);
         }
@@ -495,7 +495,7 @@ contract c1 {
 
         do {
             // CHECK: ty:int256 %4.cse_temp = (%k / (arg #0)
-            // CHECK: ty:int256 %p.158 = ((((arg #0) - %b) * int256 5) - %4.cse_temp)
+            // CHECK: ty:int256 %p.170 = ((((arg #0) - %b) * int256 5) - %4.cse_temp)
             int p = (a-b)*5-k/a;
             b++;
             bool e2 = p<1;
