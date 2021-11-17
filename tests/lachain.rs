@@ -285,7 +285,7 @@ impl Externals for TestRuntime {
 
                 std::mem::swap(&mut self.vm, &mut vm);
 
-                self.accounts.insert(addr, (res, 0));
+                self.accounts.insert(addr, (code, 0));
 
                 self.vm
                     .memory
@@ -296,10 +296,10 @@ impl Externals for TestRuntime {
             }
             Some(Extern::call) => {
                 //let gas: u64 = args.nth_checked(0)?;
-                let address_ptr: u32 = args.nth_checked(1)?;
+                let address_ptr: u32 = args.nth_checked(0)?;
                 //let value_ptr: u32 = args.nth_checked(2)?;
-                let input_ptr: u32 = args.nth_checked(3)?;
-                let input_len: u32 = args.nth_checked(4)?;
+                let input_ptr: u32 = args.nth_checked(2)?;
+                let input_len: u32 = args.nth_checked(1)?;
 
                 let mut buf = Vec::new();
                 buf.resize(input_len as usize, 0u8);
@@ -2035,7 +2035,7 @@ fn external_call() {
         contract b {
             int32 x;
 
-            constructor(int32 a) public {
+            function init(int32 a) public {
                 x = a;
             }
 
@@ -2047,8 +2047,9 @@ fn external_call() {
         contract c {
             b x;
 
-            constructor() public {
-                x = new b(102);
+            function init() public {
+                x = new b();
+                x.init(102);
             }
 
             function test() public returns (int32) {
@@ -2062,6 +2063,8 @@ fn external_call() {
     );
 
     runtime.constructor(&[]);
+
+    runtime.function("init", &[]);
 
     let ret = runtime.function("enc", &[]);
 
@@ -2082,7 +2085,7 @@ fn external_call() {
         contract b {
             int32 x;
 
-            constructor(int32 a) public {
+            function init(int32 a) public {
                 x = a;
             }
 
@@ -2094,8 +2097,9 @@ fn external_call() {
         contract c {
             b x;
 
-            constructor() public {
-                x = new b(102);
+            function init() public {
+                x = new b();
+                x.init(102);
             }
 
             function test() public returns (int32) {
@@ -2105,6 +2109,8 @@ fn external_call() {
     );
 
     runtime.constructor(&[]);
+
+    runtime.function("init", &[]);
 
     let ret = runtime.function("test", &[]);
 
@@ -2248,7 +2254,7 @@ fn balance() {
     let mut runtime = build_solidity(
         r##"
         contract c {
-            function test() public returns (uint128) {
+            function test() public returns (uint256) {
                 return address(this).balance;
             }
         }"##,
@@ -2263,37 +2269,6 @@ fn balance() {
         ret,
         vec!(ethabi::Token::Uint(ethereum_types::U256::from(512)))
     );
-}
-
-#[test]
-fn selfdestruct() {
-    let mut runtime = build_solidity(
-        r##"
-        contract other {
-            function goaway(address payable recipient) public returns (bool) {
-                selfdestruct(recipient);
-            }
-        }
-
-        contract c {
-            other o;
-            function step1() public {
-                o = new other{value: 511}();
-            }
-
-            function step2() public {
-                o.goaway(payable(address(this)));
-            }
-        }"##,
-    );
-
-    runtime.constructor(&[]);
-
-    runtime.function("step1", &[]);
-    runtime.accounts.get_mut(&runtime.vm.cur).unwrap().1 = 0;
-
-    runtime.function_revert("step2", &[]);
-    runtime.accounts.get_mut(&runtime.vm.cur).unwrap().1 = 511;
 }
 
 #[test]
