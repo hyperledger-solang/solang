@@ -1,4 +1,4 @@
-// RUN: --target substrate --emit cfg --no-strength-reduce
+// RUN: --target substrate --emit cfg
 
 // Tests control commands
 contract c1 {
