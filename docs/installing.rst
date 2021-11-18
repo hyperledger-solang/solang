@@ -76,7 +76,7 @@ Installing LLVM on Linux
 ________________________
 
 A pre-built version of llvm, specifically configured for Solang, is available at
-`<https://github.com/hyperledger-labs/solang/releases/download/v0.1.9/llvm12.0-linux-x86-64.tar.xz>`_.
+`<https://github.com/hyperledger-labs/solang/releases/download/llvm13.0-1/llvm13.0-linux-x86-64.tar.xz>`_.
 After downloading, untar the file in a terminal and add it to your path.
 
 .. code-block:: bash
@@ -88,7 +88,7 @@ Installing LLVM on Windows
 __________________________
 
 A pre-built version of llvm, specifically configured for Solang, is available at
-`<https://github.com/hyperledger-labs/solang/releases/download/v0.1.9/llvm12.0-win.zip>`_.
+`<https://github.com/hyperledger-labs/solang/releases/download/llvm13.0-1/llvm13.0-win.zip>`_.
 
 After unzipping the file, add the bin directory to your path.
 
@@ -100,8 +100,8 @@ Installing LLVM on Mac
 ______________________
 
 A pre-built version of llvm for intel macs, is available at
-`<https://github.com/hyperledger-labs/solang/releases/download/v0.1.9/llvm12.0-mac-intel.tar.xz>`_ and for arm macs there is
-`<https://github.com/hyperledger-labs/solang/releases/download/v0.1.9/llvm12.0-mac-arm.tar.xz>`_. After downloading,
+`<https://github.com/hyperledger-labs/solang/releases/download/llvm13.0-1/llvm13.0-mac-intel.tar.xz>`_ and for arm macs there is
+`<https://github.com/hyperledger-labs/solang/releases/download/llvm13.0-1/llvm13.0-mac-arm.tar.xz>`_. After downloading,
 untar the file in a terminal and add it to your path like so:
 
 .. code-block:: bash
@@ -120,7 +120,7 @@ you may need to consult. First if all clone our llvm repository:
 
 .. code-block:: bash
 
-	git clone --depth 1 --branch solana-rustc/12.0-2021-04-15 https://github.com/solana-labs/llvm-project
+	git clone --depth 1 --branch solana-rustc/13.0-2021-08-08 https://github.com/solana-labs/llvm-project
 	cd llvm-project
 
 Now run cmake to create the makefiles. Replace the *installdir* argument to ``CMAKE_INSTALL_PREFIX`` with with a directory where you would like to have llvm installed, and then run the build:
