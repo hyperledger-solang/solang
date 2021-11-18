@@ -1,4 +1,4 @@
-use crate::build_solidity;
+use crate::{account_new, build_solidity};
 use ethabi::Token;
 
 #[test]
@@ -220,6 +220,55 @@ fn string_mapping() {
             Token::Array(vec![Token::Int(ethereum_types::U256::from(102))]),
         ])]
     );
+}
+
+#[test]
+fn contract_mapping() {
+    let mut vm = build_solidity(
+        r#"
+        interface I {}
+
+        contract foo {
+            mapping (I => string) public map;
+
+            function set(I index, string s) public {
+                map[index] = s;
+            }
+
+            function get(I index) public returns (string) {
+                return map[index];
+            }
+
+            function rm(I index) public {
+                delete map[index];
+            }
+        }"#,
+    );
+
+    vm.constructor("foo", &[], 0);
+
+    let index = Token::FixedBytes(account_new().to_vec());
+
+    vm.function(
+        "set",
+        &[
+            index.clone(),
+            Token::String(String::from("This is a string which should be a little longer than 32 bytes so we the the abi encoder")),
+        ], &[],0, None
+    );
+
+    let returns = vm.function("get", &[index.clone()], &[], 0, None);
+
+    assert_eq!(
+        returns,
+        vec![Token::String(String::from("This is a string which should be a little longer than 32 bytes so we the the abi encoder"))]
+    );
+
+    vm.function("rm", &[index.clone()], &[], 0, None);
+
+    let returns = vm.function("get", &[index], &[], 0, None);
+
+    assert_eq!(returns, vec![Token::String(String::from(""))]);
 }
 
 #[test]
