@@ -818,7 +818,7 @@ impl Type {
 
     pub fn bits(&self, ns: &Namespace) -> u16 {
         match self {
-            Type::Address(_) => ns.address_length as u16 * 8,
+            Type::Contract(_) | Type::Address(_) => ns.address_length as u16 * 8,
             Type::Bool => 1,
             Type::Int(n) => *n,
             Type::Uint(n) => *n,
