@@ -81,8 +81,8 @@ After downloading, untar the file in a terminal and add it to your path.
 
 .. code-block:: bash
 
-	tar Jxf llvm12.0-linux-x86-64.tar.xz
-	export PATH=$(pwd)/llvm12.0/bin:$PATH
+	tar Jxf llvm13.0-linux-x86-64.tar.xz
+	export PATH=$(pwd)/llvm13.0/bin:$PATH
 
 Installing LLVM on Windows
 __________________________
@@ -94,7 +94,7 @@ After unzipping the file, add the bin directory to your path.
 
 .. code-block:: batch
 
-	set PATH=%PATH%;C:\llvm12.0\bin
+	set PATH=%PATH%;C:\llvm13.0\bin
 
 Installing LLVM on Mac
 ______________________
@@ -106,9 +106,9 @@ untar the file in a terminal and add it to your path like so:
 
 .. code-block:: bash
 
-	tar Jxf llvm12.0-mac-arm.tar.xz
-	xattr -rd com.apple.quarantine llvm12.0
-	export PATH=$(pwd)/llvm12.0/bin:$PATH
+	tar Jxf llvm13.0-mac-arm.tar.xz
+	xattr -rd com.apple.quarantine llvm13.0
+	export PATH=$(pwd)/llvm13.0/bin:$PATH
 
 .. _llvm-from-source:
 
