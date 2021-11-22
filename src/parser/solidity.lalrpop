@@ -18,8 +18,8 @@ pub SourceUnit: SourceUnit = {
 
 SourceUnitPart: SourceUnitPart = {
     ContractDefinition => SourceUnitPart::ContractDefinition(<>),
-    PragmaDirective => SourceUnitPart::PragmaDirective(<>.0, <>.1),
-    ImportDirective => SourceUnitPart::ImportDirective(<>),
+    PragmaDirective => <>,
+    ImportDirective => <>,
     EnumDefinition => SourceUnitPart::EnumDefinition(<>),
     StructDefinition => SourceUnitPart::StructDefinition(<>),
     EventDefinition => SourceUnitPart::EventDefinition(<>),
@@ -28,21 +28,21 @@ SourceUnitPart: SourceUnitPart = {
     <l:@L> ";" <r:@R> => SourceUnitPart::StraySemicolon(Loc(file_no, l, r)),
 }
 
-ImportDirective: Import = {
-    "import" <s:StringLiteral> ";" => Import::Plain(s),
-    "import" <s:StringLiteral> "as" <id:Identifier> ";" => Import::GlobalSymbol(s, id),
-    "import" "*" "as" <id:Identifier> <from:Identifier> <s:StringLiteral> ";" =>? {
+ImportDirective: SourceUnitPart = {
+    <doc:DocComments> "import" <s:StringLiteral> ";" => SourceUnitPart::ImportDirective(doc, Import::Plain(s)),
+    <doc:DocComments> "import" <s:StringLiteral> "as" <id:Identifier> ";" =>  SourceUnitPart::ImportDirective(doc, Import::GlobalSymbol(s, id)),
+    <doc:DocComments> "import" "*" "as" <id:Identifier> <from:Identifier> <s:StringLiteral> ";" =>? {
         if from.name != "from" {
             Err(ParseError::User { error: LexicalError::ExpectedFrom(from.loc.0, from.loc.1, from.name)})
         } else {
-            Ok(Import::GlobalSymbol(s, id))
+            Ok(SourceUnitPart::ImportDirective(doc, Import::GlobalSymbol(s, id)))
         }
     },
-    "import" "{" <rename:CommaOne<ImportRename>> "}" <from:Identifier> <s:StringLiteral> ";" =>? {
+    <doc:DocComments> "import" "{" <rename:CommaOne<ImportRename>> "}" <from:Identifier> <s:StringLiteral> ";" =>? {
         if from.name != "from" {
             Err(ParseError::User { error:LexicalError::ExpectedFrom(from.loc.0, from.loc.1, from.name)})
         } else {
-            Ok(Import::Rename(s, rename))
+            Ok(SourceUnitPart::ImportDirective(doc, Import::Rename(s, rename)))
         }
     }
 }
@@ -52,9 +52,9 @@ ImportRename: (Identifier, Option<Identifier>) = {
     <from:Identifier> "as" <to:Identifier> => (from, Some(to)),
 }
 
-PragmaDirective: (Identifier, StringLiteral) = {
+PragmaDirective: SourceUnitPart = {
     // The lexer does special parsing for String literal; it isn't really a string literal
-    "pragma" <i:Identifier> <s:StringLiteral> ";" => (i, s)
+    <doc:DocComments> "pragma" <i:Identifier> <s:StringLiteral> ";" => SourceUnitPart::PragmaDirective(doc, i, s)
 }
 
 DocComments: Vec<DocComment> = {
