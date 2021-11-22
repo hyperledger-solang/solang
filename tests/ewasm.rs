@@ -1516,6 +1516,9 @@ fn storage_structs() {
     // verified on remix
     let mut runtime = build_solidity(
         r##"
+        /**
+         * This is a doccomment
+         */
         pragma solidity 0;
         pragma experimental ABIEncoderV2;
 
