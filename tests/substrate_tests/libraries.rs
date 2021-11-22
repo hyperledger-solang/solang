@@ -1,6 +1,6 @@
 use crate::{build_solidity, first_error, parse_and_resolve};
 use parity_scale_codec::Encode;
-use parity_scale_codec_derive::{Decode, Encode};
+use parity_scale_codec_derive::Decode;
 use solang::Target;
 
 #[test]

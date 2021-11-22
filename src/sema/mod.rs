@@ -1543,7 +1543,7 @@ impl ast::Namespace {
             name,
             params
                 .iter()
-                .map(|p| p.ty.to_signature_string(self))
+                .map(|p| p.ty.to_signature_string(false, self))
                 .collect::<Vec<String>>()
                 .join(",")
         )

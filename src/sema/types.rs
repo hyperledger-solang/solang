@@ -661,7 +661,8 @@ impl Type {
         }
     }
 
-    pub fn to_signature_string(&self, ns: &Namespace) -> String {
+    /// The eth abi file wants to hear "tuple" rather than "(ty, ty)"
+    pub fn to_signature_string(&self, say_tuple: bool, ns: &Namespace) -> String {
         match self {
             Type::Bool => "bool".to_string(),
             Type::Contract(_) | Type::Address(_) if ns.address_length == 20 => {
@@ -674,10 +675,10 @@ impl Type {
             Type::Bytes(n) => format!("bytes{}", n),
             Type::DynamicBytes => "bytes".to_string(),
             Type::String => "string".to_string(),
-            Type::Enum(n) => ns.enums[*n].ty.to_signature_string(ns),
+            Type::Enum(n) => ns.enums[*n].ty.to_signature_string(say_tuple, ns),
             Type::Array(ty, len) => format!(
                 "{}{}",
-                ty.to_signature_string(ns),
+                ty.to_signature_string(say_tuple, ns),
                 len.iter()
                     .map(|l| match l {
                         None => "[]".to_string(),
@@ -687,13 +688,14 @@ impl Type {
             ),
             Type::Ref(r) => r.to_string(ns),
             Type::StorageRef(_, r) => r.to_string(ns),
+            Type::Struct(_) if say_tuple => "tuple".to_string(),
             Type::Struct(struct_no) => {
                 format!(
                     "({})",
                     ns.structs[*struct_no]
                         .fields
                         .iter()
-                        .map(|f| f.ty.to_signature_string(ns))
+                        .map(|f| f.ty.to_signature_string(say_tuple, ns))
                         .collect::<Vec<String>>()
                         .join(",")
                 )
