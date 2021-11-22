@@ -1,4 +1,3 @@
-import { assert } from 'console';
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { promises as fs } from 'fs';
@@ -69,16 +68,19 @@ export default async function getServer(context: vscode.ExtensionContext): Promi
   }
 
   const artifact = release.assets.find((artifact: Artifact) => artifact.name === platform);
-  assert(!!artifact, `Bad release: ${JSON.stringify(release)}`);
 
-  await downloadWithRetryDialog(async () => {
-    await download({
-      url: artifact.browser_download_url,
-      dest,
-      progressTitle: `Downloading Solang Solidity Compiler version ${latestVersion}`,
-      mode: 0o755,
+  if (artifact === undefined) {
+    console.error(`cannot find download for ${platform}`);
+  } else {
+    await downloadWithRetryDialog(async () => {
+      await download({
+        url: artifact.browser_download_url,
+        dest,
+        progressTitle: `Downloading Solang Solidity Compiler version ${latestVersion}`,
+        mode: 0o755,
+      });
     });
-  });
+  }
 
   return dest;
 }
