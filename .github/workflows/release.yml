@@ -16,6 +16,7 @@ jobs:
     - name: Install Ninja
       uses: llvm/actions/install-ninja@main
     - run: cmake -G Ninja -DLLVM_ENABLE_ASSERTIONS=On -DLLVM_ENABLE_TERMINFO=Off
+        -DLLVM_ENABLE_LIBXML2=Off -DLLVM_ENABLE_ZLIB=Off
         -DLLVM_ENABLE_PROJECTS='clang;lld'
         -DLLVM_TARGETS_TO_BUILD='WebAssembly;BPF'
         -DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_INSTALL_PREFIX=../llvm13.0 llvm
@@ -62,6 +63,7 @@ jobs:
     - name: Install Ninja
       uses: llvm/actions/install-ninja@main
     - run: cmake -G Ninja -DLLVM_ENABLE_ASSERTIONS=On -DLLVM_ENABLE_TERMINFO=Off
+        -DLLVM_ENABLE_LIBXML2=Off -DLLVM_ENABLE_ZLIB=Off
         '-DLLVM_ENABLE_PROJECTS=clang;lld'
         -DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_INSTALL_PREFIX=C:/llvm13.0 llvm
       working-directory: C:\llvm-project
@@ -100,6 +102,7 @@ jobs:
     - name: Install Ninja
       uses: llvm/actions/install-ninja@main
     - run: arch -arm64 cmake -G Ninja -DLLVM_ENABLE_ASSERTIONS=On -DLLVM_ENABLE_TERMINFO=Off
+        -DLLVM_ENABLE_LIBXML2=Off -DLLVM_ENABLE_ZLIB=Off
         -DLLVM_ENABLE_PROJECTS='clang;lld'
         -DLLVM_TARGETS_TO_BUILD='WebAssembly;BPF'
         -DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_INSTALL_PREFIX=../llvm13.0 llvm
@@ -138,6 +141,7 @@ jobs:
     - name: Install Ninja
       uses: llvm/actions/install-ninja@main
     - run: cmake -G Ninja -DLLVM_ENABLE_ASSERTIONS=On -DLLVM_ENABLE_TERMINFO=Off
+        -DLLVM_ENABLE_LIBXML2=Off -DLLVM_ENABLE_ZLIB=Off
         -DLLVM_ENABLE_PROJECTS='clang;lld'
         -DLLVM_TARGETS_TO_BUILD='WebAssembly;BPF'
         -DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_INSTALL_PREFIX=../llvm13.0 llvm
