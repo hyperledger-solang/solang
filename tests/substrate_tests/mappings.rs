@@ -1,5 +1,5 @@
 use parity_scale_codec::Encode;
-use parity_scale_codec_derive::{Decode, Encode};
+use parity_scale_codec_derive::Decode;
 use rand::Rng;
 use std::collections::HashMap;
 

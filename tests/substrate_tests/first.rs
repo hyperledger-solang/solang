@@ -1,5 +1,5 @@
 use parity_scale_codec::Encode;
-use parity_scale_codec_derive::{Decode, Encode};
+use parity_scale_codec_derive::Decode;
 
 use crate::{build_solidity, no_errors, parse_and_resolve};
 use solang::Target;

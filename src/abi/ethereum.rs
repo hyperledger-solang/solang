@@ -24,7 +24,8 @@ pub struct ABI {
     pub name: String,
     #[serde(rename = "type")]
     pub ty: String,
-    pub inputs: Vec<ABIParam>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub inputs: Option<Vec<ABIParam>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub outputs: Option<Vec<ABIParam>>,
     #[serde(rename = "stateMutability")]
@@ -62,15 +63,9 @@ pub fn gen_abi(contract_no: usize, ns: &Namespace) -> Vec<ABI> {
             Vec::new()
         };
 
-        let ty = if let Type::Struct(_) = param.ty {
-            String::from("tuple")
-        } else {
-            param.ty.to_signature_string(ns)
-        };
-
         ABIParam {
             name: param.name.to_string(),
-            ty,
+            ty: param.ty.to_signature_string(true, ns),
             internal_ty: param.ty.to_string(ns),
             components,
             indexed: param.indexed,
@@ -110,11 +105,17 @@ pub fn gen_abi(contract_no: usize, ns: &Namespace) -> Vec<ABI> {
             name: func.name.to_owned(),
             mutability: format!("{}", func.mutability),
             ty: func.ty.to_string(),
-            inputs: func
-                .params
-                .iter()
-                .map(|p| parameter_to_abi(p, ns))
-                .collect(),
+            inputs: if func.ty == pt::FunctionTy::Function || func.ty == pt::FunctionTy::Constructor
+            {
+                Some(
+                    func.params
+                        .iter()
+                        .map(|p| parameter_to_abi(p, ns))
+                        .collect(),
+                )
+            } else {
+                None
+            },
             outputs: if func.ty == pt::FunctionTy::Function {
                 Some(
                     func.returns
@@ -137,11 +138,13 @@ pub fn gen_abi(contract_no: usize, ns: &Namespace) -> Vec<ABI> {
                     ABI {
                         name: event.name.to_owned(),
                         mutability: String::new(),
-                        inputs: event
-                            .fields
-                            .iter()
-                            .map(|p| parameter_to_abi(p, ns))
-                            .collect(),
+                        inputs: Some(
+                            event
+                                .fields
+                                .iter()
+                                .map(|p| parameter_to_abi(p, ns))
+                                .collect(),
+                        ),
                         outputs: None,
                         ty: "event".to_owned(),
                         anonymous: Some(event.anonymous),
