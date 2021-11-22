@@ -4168,7 +4168,13 @@ pub trait TargetRuntime<'a> {
 
         match fallback {
             Some((cfg_no, _)) => {
-                bin.builder.build_call(bin.functions[&cfg_no], &[], "");
+                let args = if ns.target == Target::Solana {
+                    vec![function.get_last_param().unwrap().into()]
+                } else {
+                    vec![]
+                };
+
+                bin.builder.build_call(functions[&cfg_no], &args, "");
 
                 self.return_empty_abi(bin);
             }
@@ -4181,7 +4187,13 @@ pub trait TargetRuntime<'a> {
 
         match receive {
             Some((cfg_no, _)) => {
-                bin.builder.build_call(bin.functions[&cfg_no], &[], "");
+                let args = if ns.target == Target::Solana {
+                    vec![function.get_last_param().unwrap().into()]
+                } else {
+                    vec![]
+                };
+
+                bin.builder.build_call(functions[&cfg_no], &args, "");
 
                 self.return_empty_abi(bin);
             }

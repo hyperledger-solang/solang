@@ -1,5 +1,5 @@
 use crate::{account_new, build_solidity, AccountState};
-use ethabi::Token;
+use ethabi::{Function, StateMutability, Token};
 
 #[test]
 fn msg_value() {
@@ -396,4 +396,52 @@ fn transfer_fails_overflow() {
         None,
     );
     assert!(res.is_err());
+}
+
+#[test]
+fn receive() {
+    let mut vm = build_solidity(
+        r#"
+        contract c {
+            fallback() external {
+                print("fallback");
+            }
+
+            receive() external payable {
+                print("receive");
+            }
+        }"#,
+    );
+
+    vm.account_data.get_mut(&vm.origin).unwrap().lamports = 312;
+
+    vm.constructor("c", &[], 0);
+
+    if let Some(abi) = &vm.stack[0].abi {
+        let mut abi = abi.clone();
+
+        #[allow(deprecated)]
+        abi.functions.insert(
+            String::from("extinct"),
+            vec![Function {
+                name: "extinct".to_string(),
+                inputs: vec![],
+                outputs: vec![],
+                constant: false,
+                state_mutability: StateMutability::Payable,
+            }],
+        );
+
+        vm.stack[0].abi = Some(abi);
+    }
+
+    vm.function("extinct", &[], &[], 0, None);
+
+    assert_eq!(vm.logs, "fallback");
+
+    vm.logs.truncate(0);
+
+    vm.function("extinct", &[], &[], 10, None);
+
+    assert_eq!(vm.logs, "receive");
 }
