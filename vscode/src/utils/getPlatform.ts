@@ -1,6 +1,5 @@
 export default function getPlatform(): string | undefined {
   switch (`${process.arch} ${process.platform}`) {
-    case 'ia32 win32':
     case 'x64 win32':
     case 'arm64 win32':
       return 'solang.exe';

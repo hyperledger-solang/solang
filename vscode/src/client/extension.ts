@@ -7,7 +7,6 @@ import { join } from 'path';
 import { LanguageClient, LanguageClientOptions, ServerOptions, Executable } from 'vscode-languageclient';
 import expandPathResolving from '../utils/expandPathResolving';
 import getServer from '../utils/getServer';
-import executableVersion from '../utils/executableVersion';
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
@@ -79,6 +78,3 @@ async function bootstrapServer(context: vscode.ExtensionContext) {
 
   return path;
 }
-
-// this method is called when your extension is deactivated
-export function deactivate() { }
