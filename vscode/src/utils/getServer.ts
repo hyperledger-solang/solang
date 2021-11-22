@@ -22,6 +22,16 @@ export default async function getServer(context: vscode.ExtensionContext): Promi
     return undefined;
   }
 
+  const local = config.get('forceSolangExecutable');
+  if (typeof local == 'string' && local) {
+    const ourVersion = executableVersion(local);
+
+    if (ourVersion) {
+      console.log("Local Solang version: " + ourVersion);
+      return local;
+    }
+  }
+
   const dest = path.join(context.globalStoragePath, platform);
   const exists = await fs.stat(dest).then(
     () => true,

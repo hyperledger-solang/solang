@@ -36,6 +36,11 @@
 					"type": "boolean",
 					"default": false,
 					"description": "Whether to ask for permission before downloading any files from the Internet"
+				},
+				"solang.forceSolangExecutable": {
+					"type": "string",
+					"default": "",
+					"description": "Use the executable at this path and do not download or update solang. Leave this empty for automatic download."
 				}
 			}
 		},
