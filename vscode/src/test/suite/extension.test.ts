@@ -1,8 +1,7 @@
 import * as assert from 'assert';
 
 import * as vscode from 'vscode';
-import { getDocUri, activate, doc, getedits } from './helper';
-import { get } from 'http';
+import { getDocUri, activate } from './helper';
 
 // You can import and use all API from the 'vscode' module
 // as well as import your extension to test it
@@ -10,8 +9,6 @@ import { get } from 'http';
 
 suite('Extension Test Suite', function () {
   vscode.window.showInformationMessage('Start all tests.');
-
-  const docUri = getDocUri('applyedits.sol');
 
   this.timeout(20000);
   const diagnosdoc1 = getDocUri('one.sol');
