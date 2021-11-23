@@ -3,7 +3,6 @@
 import * as vscode from 'vscode';
 import * as rpc from 'vscode-jsonrpc';
 import { promises as fs } from 'fs';
-import { join } from 'path';
 import { LanguageClient, LanguageClientOptions, ServerOptions, Executable } from 'vscode-languageclient';
 import expandPathResolving from '../utils/expandPathResolving';
 import getServer from '../utils/getServer';
@@ -65,7 +64,7 @@ async function bootstrapExtension(context: vscode.ExtensionContext, serverpath: 
 async function bootstrapServer(context: vscode.ExtensionContext) {
   let path
   if (process.env.NODE_ENV === 'test') {
-    path = join(context.globalStoragePath, 'solang')
+    path = 'solang'
   } else {
     path = await getServer(context);
   }
