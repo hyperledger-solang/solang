@@ -5,11 +5,11 @@ describe('Deploy solang contract and test', () => {
     it('events', async function () {
         this.timeout(50000);
 
-        const [token] = await loadContract('events', 'events.abi');
+        const { contract } = await loadContract('events', 'events.abi');
 
         await new Promise((resolve) => {
             let first = true;
-            let listenId = token.addEventListener(async (ev) => {
+            let listenId = contract.addEventListener(async (ev) => {
 
                 if (first) {
                     expect(Number(ev.args[0])).toEqual(102);
@@ -23,14 +23,14 @@ describe('Deploy solang contract and test', () => {
                     expect(ev.args[2]).toEqual("0xcafe0123");
                 }
 
-                await token.removeEventListener(listenId);
+                await contract.removeEventListener(listenId);
                 resolve(true);
             });
 
-            token.functions.test();
+            contract.functions.test();
         });
 
-        let res = await token.functions.test({ simulate: true });
+        let res = await contract.functions.test({ simulate: true });
 
         expect(res.result).toBeNull();
         expect(res.events.length).toBe(2);
