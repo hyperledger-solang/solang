@@ -1,22 +1,31 @@
-import { Keypair } from '@solana/web3.js';
+import { Signer } from '@solana/web3.js';
 import expect from 'expect';
-import { createProgramAddress, establishConnection } from './index';
+import { Contract, createProgramDerivedAddress, ProgramDerivedAddress } from '@solana/solidity';
+import { loadContract } from './utils';
 
-describe('Deploy solang contract and test', () => {
-    it('create_contract', async function () {
-        this.timeout(50000);
+describe('ChildContract', () => {
+    let contract: Contract;
+    let storage: Signer;
 
-        let conn = await establishConnection();
+    let childPDA: ProgramDerivedAddress;
 
-        let creator = await conn.loadProgram("bundle.so", "creator.abi");
+    before(async function () {
+        this.timeout(150000);
+        ({ contract, storage } = await loadContract('creator', 'creator.abi'));
+    });
 
-        // call the constructor
-        await creator.call_constructor(conn, 'creator', []);
+    it('Creates child contract', async function () {
+        childPDA = await createProgramDerivedAddress(contract.program);
 
-        let seed = await createProgramAddress(creator.get_program_key());
+        const { logs } = await contract.functions.create_child({
+            accounts: [contract.program],
+            programDerivedAddresses: [childPDA],
+            signers: [storage],
+        });
 
-        console.log("now create child: " + seed.address.toString());
+        expect(logs.toString()).toContain('In child constructor');
 
-        await creator.call_function(conn, "create_child", [], [creator.get_program_key()], [seed], [creator.get_storage_keypair()]);
+        const info = await contract.connection.getAccountInfo(childPDA.address);
+        console.log('info: ' + info);
     });
 });

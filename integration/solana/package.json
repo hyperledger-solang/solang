@@ -2,7 +2,6 @@
   "name": "solana-tests",
   "version": "0.0.1",
   "description": "Integration tests with Solang and Solana",
-  "main": "index.js",
   "scripts": {
     "test": "tsc; ts-mocha --parallel *.spec.ts",
     "build": "solang *.sol --target solana -v"
@@ -18,7 +17,7 @@
     "typescript": "^4.1.2"
   },
   "dependencies": {
-    "@solana/solidity": "0.0.17",
+    "@solana/solidity": "0.0.18",
     "ethers": "^5.2.0",
     "web3-eth-abi": "^1.3.0",
     "web3-utils": "^1.3.0",

@@ -1,57 +1,47 @@
+import { Contract, publicKeyToHex } from '@solana/solidity';
+import { Keypair } from '@solana/web3.js';
 import expect from 'expect';
-import { establishConnection } from './index';
 import nacl from 'tweetnacl';
-import {
-    Ed25519Program, SYSVAR_INSTRUCTIONS_PUBKEY
-} from '@solana/web3.js';
+import { loadContract } from './utils';
 
-describe('Deploy solang contract and test', () => {
-    it('verify_signature', async function () {
-        this.timeout(50000);
+describe('Signature Check', () => {
+    let contract: Contract;
+    let payer: Keypair;
 
-        // This test depends on: https://github.com/solana-labs/solana/pull/19685
-        //this.skip();
+    before(async function () {
+        this.timeout(150000);
+        ({ contract, payer } = await loadContract('verify_sig', 'verify_sig.abi'));
+    });
 
-        let conn = await establishConnection();
+    it('check valid signature', async function () {
+        const message = Buffer.from('Foobar');
+        const signature = nacl.sign.detached(message, payer.secretKey);
 
-        let prog = await conn.loadProgram("bundle.so", "verify_sig.abi");
-
-        let message = Buffer.from('In the temple of love you hide together');
-
-        let signature = nacl.sign.detached(message, prog.contractStorageAccount.secretKey);
-
-        let instr = Ed25519Program.createInstructionWithPublicKey({
-            publicKey: prog.contractStorageAccount.publicKey.toBuffer(),
-            message,
-            signature,
-        });
-
-        // call the constructor
-        await prog.call_constructor(conn, 'verify_sig', []);
-
-        let res = await prog.call_function(
-            conn,
-            "verify",
-            ['0x' + prog.contractStorageAccount.publicKey.toBuffer().toString('hex'), '0x' + message.toString('hex'), '0x' + Buffer.from(signature).toString('hex')],
-            [SYSVAR_INSTRUCTIONS_PUBKEY],
-            [],
-            [],
-            [instr]
+        const { result } = await contract.functions.verify(
+            publicKeyToHex(payer.publicKey), message, signature,
+            {
+                ed25519sigs: [{ publicKey: payer.publicKey, message, signature }],
+            }
         );
 
-        expect(res["0"]).toBe(true);
+        expect(result).toEqual(true);
+    });
 
-        signature[2] ^= 0x40;
+    it('check invalid signature', async function () {
+        const message = Buffer.from('Foobar');
+        const signature = nacl.sign.detached(message, payer.secretKey);
 
-        res = await prog.call_function(conn,
-            "verify",
-            ['0x' + prog.contractStorageAccount.publicKey.toBuffer().toString('hex'), '0x' + message.toString('hex'), '0x' + Buffer.from(signature).toString('hex')],
-            [SYSVAR_INSTRUCTIONS_PUBKEY],
-            [],
-            [],
-            [instr]
+        const broken_signature = Buffer.from(signature);
+
+        broken_signature[1] ^= 1;
+
+        const { result } = await contract.functions.verify(
+            publicKeyToHex(payer.publicKey), message, broken_signature,
+            {
+                ed25519sigs: [{ publicKey: payer.publicKey, message, signature }],
+            }
         );
 
-        expect(res["0"]).toBe(false);
+        expect(result).toEqual(false);
     });
 });
