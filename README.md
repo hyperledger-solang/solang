@@ -71,37 +71,29 @@ const PROGRAM_SO = readFileSync('./bundle.so');
     const connection = new Connection('http://localhost:8899', 'confirmed');
 
     const payer = Keypair.generate();
-    while (true) {
-        console.log('Airdropping SOL to a new wallet ...');
-        await connection.requestAirdrop(payer.publicKey, 1 * LAMPORTS_PER_SOL);
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        if (await connection.getBalance(payer.publicKey)) break;
-    }
 
-    const program = await Program.load(connection, payer, Keypair.generate(), PROGRAM_SO);
+    console.log('Airdropping SOL to a new wallet ...');
+    const signature = await connection.requestAirdrop(payer.publicKey, LAMPORTS_PER_SOL);
+    await connection.confirmTransaction(signature, 'confirmed');
+
+    const program = Keypair.generate();
+    const storage = Keypair.generate();
+
+    const contract = new Contract(connection, program.publicKey, storage.publicKey, FLIPPER_ABI, payer);
+
+    await contract.load(program, PROGRAM_SO);
 
     console.log('Program deployment finished, deploying the flipper contract ...');
 
-    const storageKeyPair = Keypair.generate();
-    const deployRes = await program.deployContract({
-        name: "flipper",
-        abi: FLIPPER_ABI,
-        storageKeyPair,
-        constructorArgs: [true],
-        space: 17,
-    });
+    await contract.deploy('flipper', [true], program, storage, 17);
 
-    const contract = deployRes.contract;
-
-    const res = await contract.functions.get({ simulate: true });
+    const res = await contract.functions.get();
     console.log('state: ' + res.result);
 
     await contract.functions.flip();
 
-    const res2 = await contract.functions.get({ simulate: true });
+    const res2 = await contract.functions.get();
     console.log('state: ' + res2.result);
-
-    process.exit(0);
 })();
 ```
 
