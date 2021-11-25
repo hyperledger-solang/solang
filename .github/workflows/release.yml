@@ -34,7 +34,7 @@ jobs:
     - name: Add LLVM to Path
       run: echo "$(pwd)/llvm13.0/bin" >> $GITHUB_PATH
     - name: Rust stable
-      run: rustup default 1.53.0
+      run: rustup default 1.56.1
     - name: Build
       run: cargo build --verbose --release
     - name: Run tests
@@ -176,8 +176,8 @@ jobs:
     steps:
     - name: Checkout sources
       uses: actions/checkout@v2
-    - run: |
-        docker build . -t ghcr.io/${GITHUB_REPOSITORY}:${GITHUB_REF/refs\/tags\//} \
+    - run:
+        docker build . -t ghcr.io/${GITHUB_REPOSITORY}:${GITHUB_REF/refs\/tags\//}
             --label org.opencontainers.image.description="Solidity Compiler for Solana, Substrate, and ewasm version $(git describe --tags)"
     - run: |
         echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin
