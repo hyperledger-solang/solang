@@ -12,6 +12,8 @@ COPY . src
 WORKDIR /src/stdlib/
 RUN make
 
+RUN rustup default 1.56.1
+
 WORKDIR /src
 RUN cargo build --release
 

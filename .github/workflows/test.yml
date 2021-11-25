@@ -36,7 +36,7 @@ jobs:
       # checkout@v2 requires git 2.18 or higher, which is not in our image
       uses: actions/checkout@v1
     - name: Rust stable
-      run: rustup default 1.53.0
+      run: rustup default 1.56.1
     - name: Build
       run: cargo build --verbose
     - name: Run tests
