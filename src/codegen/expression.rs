@@ -1,8 +1,11 @@
-use super::cfg::{ControlFlowGraph, Instr, InternalCallTy, Vartable};
 use super::storage::{
     array_offset, array_pop, array_push, storage_slots_array_pop, storage_slots_array_push,
 };
 use super::Options;
+use super::{
+    cfg::{ControlFlowGraph, Instr, InternalCallTy},
+    vartable::Vartable,
+};
 use crate::codegen::unused_variable::should_remove_assignment;
 use crate::parser::pt;
 use crate::sema::ast::{

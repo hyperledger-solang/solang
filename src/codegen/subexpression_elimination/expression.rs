@@ -3,11 +3,7 @@ use crate::sema::ast::{Expression, StringLocation};
 
 impl Expression {
     /// Rebuild a binary expression given the new left and right subexpressions
-    pub(crate) fn rebuild_binary_expression(
-        &self,
-        left: &Expression,
-        right: &Expression,
-    ) -> Expression {
+    pub fn rebuild_binary_expression(&self, left: &Expression, right: &Expression) -> Expression {
         let expr = match self {
             Expression::Add(loc, expr_type, check, ..) => Expression::Add(
                 *loc,
@@ -161,7 +157,7 @@ impl Expression {
     }
 
     /// Rebuild a unary expression give the new operand expression
-    pub(crate) fn rebuild_unary_expression(&self, operand: &Expression) -> Expression {
+    pub fn rebuild_unary_expression(&self, operand: &Expression) -> Expression {
         match self {
             Expression::ZeroExt(loc, expr_type, ..) => {
                 Expression::ZeroExt(*loc, expr_type.clone(), Box::new(operand.clone()))
@@ -201,7 +197,7 @@ impl Expression {
     }
 
     /// Retrieve the operands of a commutative expression
-    pub(crate) fn get_commutative_operands(&self) -> Option<(&Expression, &Expression)> {
+    pub fn get_commutative_operands(&self) -> Option<(&Expression, &Expression)> {
         match self {
             Expression::Add(_, _, _, left, right)
             | Expression::Multiply(_, _, _, left, right)
@@ -218,7 +214,7 @@ impl Expression {
     }
 
     /// Retrieve the operands of a non-commutative expression
-    pub(crate) fn get_non_commutative_operands(&self) -> Option<(&Expression, &Expression)> {
+    pub fn get_non_commutative_operands(&self) -> Option<(&Expression, &Expression)> {
         match self {
             Expression::Subtract(_, _, _, left, right)
             | Expression::Divide(_, _, left, right)
@@ -236,7 +232,7 @@ impl Expression {
     }
 
     /// Retrieve the operands of a unary expression
-    pub(crate) fn get_unary_operand(&self) -> Option<&Expression> {
+    pub fn get_unary_operand(&self) -> Option<&Expression> {
         match self {
             Expression::ZeroExt(_, _, operand)
             | Expression::SignExt(_, _, operand)
@@ -252,7 +248,7 @@ impl Expression {
     }
 
     /// Get the expression type for a constant-like expression
-    pub(crate) fn get_constant_expression_type(&self) -> ExpressionType {
+    pub fn get_constant_expression_type(&self) -> ExpressionType {
         let cte_type = match self {
             Expression::BoolLiteral(_, value) => ConstantType::Bool(*value),
             Expression::NumberLiteral(_, _, value) => ConstantType::Number(value.clone()),

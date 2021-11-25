@@ -16,6 +16,7 @@ pub mod common_subexpression_tracker;
 mod expression;
 mod instruction;
 mod operator;
+mod tests;
 
 /*
 The available expression analysis implemented here builds a graph to track expressions. Each
