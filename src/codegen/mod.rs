@@ -1,4 +1,4 @@
-pub mod cfg;
+pub(crate) mod cfg;
 mod constant_folding;
 mod dead_storage;
 mod expression;
@@ -7,13 +7,17 @@ mod reaching_definitions;
 mod statements;
 mod storage;
 mod strength_reduce;
-pub mod subexpression_elimination;
+pub(crate) mod subexpression_elimination;
 mod undefined_variable;
 mod unused_variable;
+pub(crate) mod vartable;
 mod vector_to_slice;
 
-use self::cfg::{optimize_and_check_cfg, ControlFlowGraph, Instr, Vartable};
-use self::expression::expression;
+use self::{
+    cfg::{optimize_and_check_cfg, ControlFlowGraph, Instr},
+    expression::expression,
+    vartable::Vartable,
+};
 use crate::emit::Generate;
 use crate::sema::ast::{Layout, Namespace};
 use crate::sema::contracts::visit_bases;

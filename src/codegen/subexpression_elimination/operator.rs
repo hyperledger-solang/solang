@@ -37,7 +37,7 @@ pub enum Operator {
 
 impl Expression {
     /// Get the respective Operator from an Expression
-    pub(crate) fn get_ave_operator(&self) -> Operator {
+    pub fn get_ave_operator(&self) -> Operator {
         match self {
             Expression::Add(..) => Operator::Add,
             Expression::Subtract(..) => Operator::Subtract,

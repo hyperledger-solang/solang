@@ -3,9 +3,12 @@ use num_traits::FromPrimitive;
 use num_traits::One;
 use num_traits::Zero;
 
-use super::cfg::{ControlFlowGraph, Instr, Vartable};
 use super::expression::{expression, load_storage};
 use super::Options;
+use super::{
+    cfg::{ControlFlowGraph, Instr},
+    vartable::Vartable,
+};
 use crate::parser::pt;
 use crate::sema::ast::{Expression, Function, Namespace, Type};
 

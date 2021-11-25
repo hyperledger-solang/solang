@@ -1,9 +1,12 @@
 use num_bigint::BigInt;
 use std::collections::LinkedList;
 
-use super::cfg::{ControlFlowGraph, Instr, Vartable};
 use super::expression::{assign_single, emit_function_call, expression};
 use super::Options;
+use super::{
+    cfg::{ControlFlowGraph, Instr},
+    vartable::Vartable,
+};
 use crate::codegen::unused_variable::{
     should_remove_assignment, should_remove_variable, SideEffectsCheckParameters,
 };
@@ -619,12 +622,16 @@ pub fn statement(
             );
         }
         Statement::Underscore(_) => {
-            cfg.add(
-                vartab,
-                placeholder
-                    .expect("placeholder should be provided for modifiers")
-                    .clone(),
-            );
+            // ensure we get phi nodes for the return values
+            if let Some(instr @ Instr::Call { res, .. }) = placeholder {
+                for var_no in res {
+                    vartab.set_dirty(*var_no);
+                }
+
+                cfg.add(vartab, instr.clone());
+            } else {
+                panic!("placeholder should be provided for modifiers");
+            }
         }
     }
 }

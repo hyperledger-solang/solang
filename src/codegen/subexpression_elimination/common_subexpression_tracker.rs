@@ -1,5 +1,8 @@
-use crate::codegen::cfg::{ControlFlowGraph, Instr, Storage, Variable};
 use crate::codegen::subexpression_elimination::{BasicExpression, ExpressionType};
+use crate::codegen::{
+    vartable::{Storage, Variable},
+    ControlFlowGraph, Instr,
+};
 use crate::parser::pt::{Identifier, Loc};
 use crate::sema::ast::{Expression, Namespace, Type};
 use std::collections::HashMap;

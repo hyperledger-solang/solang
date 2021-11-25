@@ -12,6 +12,7 @@ mod events;
 mod expressions;
 mod hash;
 mod mappings;
+mod modifiers;
 mod primitives;
 mod rational;
 mod returns;

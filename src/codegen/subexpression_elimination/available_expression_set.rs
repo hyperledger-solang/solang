@@ -177,7 +177,7 @@ impl AvailableExpressionSet {
     }
 
     /// Add an expression to the graph if it is not there
-    pub(crate) fn gen_expression(
+    pub fn gen_expression(
         &mut self,
         exp: &Expression,
         ave: &mut AvailableExpression,
@@ -409,7 +409,7 @@ impl AvailableExpressionSet {
 
     /// Regenerate expressions, i.e. if there is a common subexpression that can be exchanged by
     /// a temporary, we do it here.
-    pub(crate) fn regenerate_expression(
+    pub fn regenerate_expression(
         &mut self,
         exp: &Expression,
         ave: &mut AvailableExpression,

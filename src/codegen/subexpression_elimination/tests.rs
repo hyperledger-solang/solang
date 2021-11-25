@@ -1,9 +1,11 @@
+#![cfg(test)]
+
+use crate::codegen::cfg::Instr;
+use crate::codegen::subexpression_elimination::common_subexpression_tracker::CommonSubExpressionTracker;
+use crate::codegen::subexpression_elimination::{AvailableExpression, AvailableExpressionSet};
+use crate::parser::pt::Loc;
+use crate::sema::ast::{Expression, StringLocation, Type};
 use num_bigint::{BigInt, Sign};
-use solang::codegen::cfg::Instr;
-use solang::codegen::subexpression_elimination::common_subexpression_tracker::CommonSubExpressionTracker;
-use solang::codegen::subexpression_elimination::{AvailableExpression, AvailableExpressionSet};
-use solang::parser::pt::Loc;
-use solang::sema::ast::{Expression, StringLocation, Type};
 
 #[test]
 fn add_variable_function_arg() {

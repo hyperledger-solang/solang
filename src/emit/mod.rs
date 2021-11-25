@@ -38,8 +38,13 @@ mod loop_builder;
 mod solana;
 mod substrate;
 
-use crate::codegen::cfg::{ControlFlowGraph, HashTy, Instr, InternalCallTy, Storage};
-use crate::linker::link;
+use crate::{
+    codegen::{
+        cfg::{ControlFlowGraph, HashTy, Instr, InternalCallTy},
+        vartable::Storage,
+    },
+    linker::link,
+};
 
 lazy_static::lazy_static! {
     static ref LLVM_INIT: () = {

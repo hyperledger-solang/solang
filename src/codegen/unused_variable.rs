@@ -1,5 +1,5 @@
 use super::Options;
-use crate::codegen::cfg::{ControlFlowGraph, Vartable};
+use crate::codegen::{cfg::ControlFlowGraph, vartable::Vartable};
 use crate::sema::ast::{Expression, Function, Namespace};
 use crate::sema::symtable::VariableUsage;
 use inkwell::OptimizationLevel;
