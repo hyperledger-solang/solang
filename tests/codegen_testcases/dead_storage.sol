@@ -108,7 +108,7 @@ contract deadstorage {
     }
 // CHECK: store storage slot(uint256 6)
 // CHECK: load storage slot(uint256 6)
-// CHECK: push storage slot(uint256 6)
+// CHECK: push storage ty:bytes1 slot:uint256 6
 // CHECK: load storage slot(uint256 6)
 // CHECK: store storage slot(uint256 6)
 

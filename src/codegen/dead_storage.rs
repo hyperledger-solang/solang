@@ -243,7 +243,12 @@ fn instr_transfers(block_no: usize, block: &BasicBlock) -> Vec<Vec<Transfer>> {
                     expr: Some(storage.clone()),
                 }]
             }
-            Instr::PopStorage { res, storage, .. } | Instr::PushStorage { res, storage, .. } => {
+            Instr::PopStorage {
+                res: Some(res),
+                storage,
+                ..
+            }
+            | Instr::PushStorage { res, storage, .. } => {
                 vec![
                     Transfer::Kill { var_no: *res },
                     Transfer::Gen { def, var_no: *res },

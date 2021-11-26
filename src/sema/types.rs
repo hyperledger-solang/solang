@@ -766,6 +766,7 @@ impl Type {
             Type::Bool => BigInt::one(),
             Type::Contract(_) | Type::Address(_) => BigInt::from(ns.address_length),
             Type::Bytes(n) => BigInt::from(*n),
+            Type::Value => BigInt::from(ns.value_length),
             Type::Uint(n) | Type::Int(n) => BigInt::from(n / 8),
             Type::Rational => unreachable!(),
             Type::Array(ty, dims) => {
@@ -791,6 +792,7 @@ impl Type {
                 Type::Address(false).size_of(ns) + Type::Uint(32).size_of(ns)
             }
             Type::Mapping(_, _) => BigInt::zero(),
+            Type::Ref(ty) | Type::StorageRef(_, ty) => ty.size_of(ns),
             _ => unimplemented!(),
         }
     }
@@ -869,10 +871,44 @@ impl Type {
     /// be very large
     pub fn storage_slots(&self, ns: &Namespace) -> BigInt {
         if ns.target == Target::Solana {
-            if self.is_sparse_solana(ns) {
-                BigInt::from(SOLANA_BUCKET_SIZE) * ns.storage_type().storage_slots(ns)
-            } else {
-                self.size_of(ns)
+            match self {
+                Type::Enum(_) => BigInt::one(),
+                Type::Bool => BigInt::one(),
+                Type::Contract(_) | Type::Address(_) => BigInt::from(ns.address_length),
+                Type::Bytes(n) => BigInt::from(*n),
+                Type::Value => BigInt::from(ns.value_length),
+                Type::Uint(n) | Type::Int(n) => BigInt::from(n / 8),
+                Type::Rational => unreachable!(),
+                Type::Array(_, dims) if dims[0].is_none() => BigInt::from(4),
+                Type::Array(ty, dims) => {
+                    let pointer_size = BigInt::from(4);
+                    if self.is_sparse_solana(ns) {
+                        BigInt::from(SOLANA_BUCKET_SIZE) * BigInt::from(4)
+                    } else {
+                        ty.storage_slots(ns).mul(
+                            dims.iter()
+                                .map(|d| match d {
+                                    None => &pointer_size,
+                                    Some(d) => d,
+                                })
+                                .product::<BigInt>(),
+                        )
+                    }
+                }
+                Type::Struct(n) => ns.structs[*n]
+                    .offsets
+                    .last()
+                    .cloned()
+                    .unwrap_or_else(BigInt::zero),
+                Type::String | Type::DynamicBytes => BigInt::from(4),
+                Type::InternalFunction { .. } => BigInt::from(ns.target.ptr_size()),
+                Type::ExternalFunction { .. } => {
+                    // Address and selector
+                    BigInt::from(ns.address_length + 4)
+                }
+                Type::Mapping(_, _) => BigInt::from(SOLANA_BUCKET_SIZE) * BigInt::from(4),
+                Type::Ref(ty) | Type::StorageRef(_, ty) => ty.storage_slots(ns),
+                _ => unimplemented!(),
             }
         } else {
             match self {
@@ -1072,12 +1108,19 @@ impl Type {
     pub fn is_sparse_solana(&self, ns: &Namespace) -> bool {
         match self.deref_any() {
             Type::Mapping(_, _) => true,
+            Type::Array(_, dims) if dims[0].is_none() => false,
             Type::Array(ty, dims) => {
-                if let Some(len) = &dims[0] {
-                    ty.storage_slots(ns) * len >= BigInt::from(SOLANA_SPARSE_ARRAY_SIZE)
-                } else {
-                    false
-                }
+                let pointer_size = BigInt::from(4);
+                let len = ty.storage_slots(ns).mul(
+                    dims.iter()
+                        .map(|d| match d {
+                            None => &pointer_size,
+                            Some(d) => d,
+                        })
+                        .product::<BigInt>(),
+                );
+
+                len >= BigInt::from(SOLANA_SPARSE_ARRAY_SIZE)
             }
             _ => false,
         }

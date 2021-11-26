@@ -1433,7 +1433,7 @@ impl Type {
                     ))
                 }
             }
-            _ => unreachable!(),
+            _ => None,
         }
     }
 }

@@ -193,7 +193,7 @@ pub trait TargetRuntime<'a> {
         function: FunctionValue<'a>,
         ty: &ast::Type,
         slot: IntValue<'a>,
-        val: BasicValueEnum<'a>,
+        val: Option<BasicValueEnum<'a>>,
         ns: &ast::Namespace,
     ) -> BasicValueEnum<'a>;
     fn storage_pop(
@@ -203,7 +203,7 @@ pub trait TargetRuntime<'a> {
         ty: &ast::Type,
         slot: IntValue<'a>,
         ns: &ast::Namespace,
-    ) -> BasicValueEnum<'a>;
+    ) -> Option<BasicValueEnum<'a>>;
     fn storage_array_length(
         &self,
         _bin: &Binary<'a>,
@@ -3249,16 +3249,19 @@ pub trait TargetRuntime<'a> {
                     }
                     Instr::PushStorage {
                         res,
+                        ty,
                         storage,
                         value,
                     } => {
-                        let val = self.expression(bin, value, &w.vars, function, ns);
+                        let val = value
+                            .as_ref()
+                            .map(|expr| self.expression(bin, expr, &w.vars, function, ns));
                         let slot = self
                             .expression(bin, storage, &w.vars, function, ns)
                             .into_int_value();
 
                         w.vars.get_mut(res).unwrap().value =
-                            self.storage_push(bin, function, &value.ty(), slot, val, ns);
+                            self.storage_push(bin, function, ty, slot, val, ns);
                     }
                     Instr::PopStorage { res, ty, storage } => {
                         let slot = self
@@ -3267,7 +3270,9 @@ pub trait TargetRuntime<'a> {
 
                         let value = self.storage_pop(bin, function, ty, slot, ns);
 
-                        w.vars.get_mut(res).unwrap().value = value;
+                        if let Some(res) = res {
+                            w.vars.get_mut(res).unwrap().value = value.unwrap();
+                        }
                     }
                     Instr::PushMemory {
                         res,
