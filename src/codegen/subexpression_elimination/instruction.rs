@@ -44,9 +44,14 @@ impl AvailableExpressionSet {
                 let _ = self.gen_expression(expr, ave, cst);
             }
 
-            Instr::SetStorage { value, storage, .. }
-            | Instr::PushStorage { value, storage, .. } => {
+            Instr::SetStorage { value, storage, .. } => {
                 let _ = self.gen_expression(value, ave, cst);
+                let _ = self.gen_expression(storage, ave, cst);
+            }
+            Instr::PushStorage { value, storage, .. } => {
+                if let Some(value) = value {
+                    let _ = self.gen_expression(value, ave, cst);
+                }
                 let _ = self.gen_expression(storage, ave, cst);
             }
 
@@ -222,11 +227,15 @@ impl AvailableExpressionSet {
 
             Instr::PushStorage {
                 res,
+                ty,
                 value,
                 storage,
             } => Instr::PushStorage {
                 res: *res,
-                value: self.regenerate_expression(value, ave, cst).1,
+                ty: ty.clone(),
+                value: value
+                    .as_ref()
+                    .map(|expr| self.regenerate_expression(expr, ave, cst).1),
                 storage: self.regenerate_expression(storage, ave, cst).1,
             },
 

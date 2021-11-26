@@ -130,7 +130,9 @@ fn instr_transfers(block_no: usize, block: &BasicBlock) -> Vec<Vec<Transfer>> {
             Instr::Set { res, .. } => set_var(&[*res]),
             Instr::Call { res, .. } => set_var(res),
             Instr::AbiDecode { res, .. } => set_var(res),
-            Instr::LoadStorage { res, .. } | Instr::PopStorage { res, .. } => set_var(&[*res]),
+            Instr::LoadStorage { res, .. } | Instr::PopStorage { res: Some(res), .. } => {
+                set_var(&[*res])
+            }
             Instr::PushMemory { array, res, .. } => {
                 let mut v = set_var(&[*res]);
                 v.push(Transfer::Mod { var_no: *array });

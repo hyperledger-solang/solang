@@ -229,7 +229,7 @@ bytes bar;
     function test20() public {
         bytes1 x = bar.push();
 // NOT-CHECK: ty:bytes1 %x
-// CHECK: push storage slot
+// CHECK: push storage ty:bytes1 slot
     }
 
 }

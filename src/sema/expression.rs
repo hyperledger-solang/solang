@@ -6453,9 +6453,15 @@ fn method_call_pos_args(
                     let storage_elem = ty.storage_array_elem();
                     let elem_ty = storage_elem.deref_any();
 
+                    let return_ty = if elem_ty.contains_mapping(ns) {
+                        Type::Void
+                    } else {
+                        elem_ty.clone()
+                    };
+
                     return Ok(Expression::Builtin(
                         func.loc,
-                        vec![elem_ty.clone()],
+                        vec![return_ty],
                         Builtin::ArrayPop,
                         vec![var_expr],
                     ));

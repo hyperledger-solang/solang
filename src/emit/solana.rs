@@ -1642,7 +1642,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         function: FunctionValue<'a>,
         ty: &ast::Type,
         slot: IntValue<'a>,
-        val: BasicValueEnum<'a>,
+        val: Option<BasicValueEnum<'a>>,
         ns: &ast::Namespace,
     ) -> BasicValueEnum<'a> {
         let data = self.contract_storage_data(binary);
@@ -1675,7 +1675,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         let member_size = binary
             .context
             .i32_type()
-            .const_int(ty.size_of(ns).to_u64().unwrap(), false);
+            .const_int(ty.storage_slots(ns).to_u64().unwrap(), false);
         let new_length = binary
             .builder
             .build_int_add(length, member_size, "new_length");
@@ -1729,14 +1729,16 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             "",
         );
 
-        self.storage_store(binary, ty, &mut new_offset, val, function, ns);
+        if let Some(val) = val {
+            self.storage_store(binary, ty, &mut new_offset, val, function, ns);
+        }
 
         if ty.is_reference_type() {
             // Caller expects a reference to storage; note that storage_store() should not modify
             // new_offset even if the argument is mut
             new_offset.into()
         } else {
-            val
+            val.unwrap()
         }
     }
 
@@ -1747,7 +1749,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         ty: &ast::Type,
         slot: IntValue<'a>,
         ns: &ast::Namespace,
-    ) -> BasicValueEnum<'a> {
+    ) -> Option<BasicValueEnum<'a>> {
         let data = self.contract_storage_data(binary);
         let account = self.contract_storage_account(binary);
 
@@ -1804,7 +1806,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         let member_size = binary
             .context
             .i32_type()
-            .const_int(ty.size_of(ns).to_u64().unwrap(), false);
+            .const_int(ty.storage_slots(ns).to_u64().unwrap(), false);
 
         binary.builder.position_at_end(retrieve_block);
 
@@ -1814,7 +1816,11 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
 
         let mut new_offset = binary.builder.build_int_add(offset, new_length, "");
 
-        let val = self.storage_load(binary, ty, &mut new_offset, function, ns);
+        let val = if !ty.contains_mapping(ns) {
+            Some(self.storage_load(binary, ty, &mut new_offset, function, ns))
+        } else {
+            None
+        };
 
         // delete existing storage -- pointers need to be freed
         //self.storage_free(binary, ty, account, data, new_offset, function, false);
@@ -1862,7 +1868,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         let member_size = binary
             .context
             .i32_type()
-            .const_int(elem_ty.size_of(ns).to_u64().unwrap(), false);
+            .const_int(elem_ty.storage_slots(ns).to_u64().unwrap(), false);
 
         let length_bytes = binary
             .builder

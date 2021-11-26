@@ -285,7 +285,7 @@ pub fn storage_slots_array_pop(
     Expression::Variable(*loc, elem_ty, res_pos)
 }
 
-/// Push() method on dynamic bytes in storage
+/// Push() method on array or bytes in storage
 pub fn array_push(
     loc: &pt::Loc,
     args: &[Expression],
@@ -301,9 +301,17 @@ pub fn array_push(
     let mut ty = args[0].ty().storage_array_elem();
 
     let value = if args.len() > 1 {
-        expression(&args[1], cfg, contract_no, func, ns, vartab, opt)
+        Some(expression(
+            &args[1],
+            cfg,
+            contract_no,
+            func,
+            ns,
+            vartab,
+            opt,
+        ))
     } else {
-        ty.deref_any().default(ns).unwrap()
+        ty.deref_any().default(ns)
     };
 
     if !ty.is_reference_type() {
@@ -316,6 +324,7 @@ pub fn array_push(
         vartab,
         Instr::PushStorage {
             res,
+            ty: ty.deref_any().clone(),
             storage,
             value,
         },
@@ -339,7 +348,11 @@ pub fn array_pop(
 
     let ty = args[0].ty().storage_array_elem().deref_into();
 
-    let res = vartab.temp_anonymous(&ty);
+    let res = if !ty.contains_mapping(ns) {
+        Some(vartab.temp_anonymous(&ty))
+    } else {
+        None
+    };
 
     cfg.add(
         vartab,
@@ -350,5 +363,9 @@ pub fn array_pop(
         },
     );
 
-    Expression::Variable(*loc, ty, res)
+    if let Some(res) = res {
+        Expression::Variable(*loc, ty, res)
+    } else {
+        Expression::Undefined(ty)
+    }
 }

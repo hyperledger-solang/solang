@@ -72,15 +72,16 @@ pub enum Instr {
         storage: Expression,
         offset: Expression,
     },
-    /// Push an element onto a bytes in storage
+    /// Push an element onto an array in storage
     PushStorage {
         res: usize,
-        value: Expression,
+        ty: Type,
+        value: Option<Expression>,
         storage: Expression,
     },
-    /// Pop an element from a bytes in storage
+    /// Pop an element from an array in storage
     PopStorage {
-        res: usize,
+        res: Option<usize>,
         ty: Type,
         storage: Expression,
     },
@@ -172,9 +173,14 @@ impl Instr {
                 expr.recurse(cx, f);
             }
 
-            Instr::SetStorage { value, storage, .. }
-            | Instr::PushStorage { value, storage, .. } => {
+            Instr::SetStorage { value, storage, .. } => {
                 value.recurse(cx, f);
+                storage.recurse(cx, f);
+            }
+            Instr::PushStorage { value, storage, .. } => {
+                if let Some(value) = value {
+                    value.recurse(cx, f);
+                }
                 storage.recurse(cx, f);
             }
 
@@ -840,20 +846,41 @@ impl ControlFlowGraph {
             ),
             Instr::PushStorage {
                 res,
+                ty,
                 storage,
                 value,
             } => {
                 format!(
-                    "%{} = push storage slot({}) = {}",
+                    "%{} = push storage ty:{} slot:{} = {}",
                     self.vars[res].id.name,
+                    ty.to_string(ns),
                     self.expr_to_string(contract, ns, storage),
-                    self.expr_to_string(contract, ns, value),
+                    if let Some(value) = value {
+                        self.expr_to_string(contract, ns, value)
+                    } else {
+                        String::from("empty")
+                    }
                 )
             }
-            Instr::PopStorage { res, ty, storage } => {
+            Instr::PopStorage {
+                res: Some(res),
+                ty,
+                storage,
+            } => {
                 format!(
                     "%{} = pop storage ty:{} slot({})",
                     self.vars[res].id.name,
+                    ty.to_string(ns),
+                    self.expr_to_string(contract, ns, storage),
+                )
+            }
+            Instr::PopStorage {
+                res: None,
+                ty,
+                storage,
+            } => {
+                format!(
+                    "pop storage ty:{} slot({})",
                     ty.to_string(ns),
                     self.expr_to_string(contract, ns, storage),
                 )

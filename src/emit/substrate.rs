@@ -2561,9 +2561,11 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         _function: FunctionValue,
         _ty: &ast::Type,
         slot: IntValue<'a>,
-        val: BasicValueEnum<'a>,
+        val: Option<BasicValueEnum<'a>>,
         _ns: &ast::Namespace,
     ) -> BasicValueEnum<'a> {
+        let val = val.unwrap();
+
         let slot_ptr = binary.builder.build_alloca(slot.get_type(), "slot");
         binary.builder.build_store(slot_ptr, slot);
 
@@ -2669,7 +2671,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         _ty: &ast::Type,
         slot: IntValue<'a>,
         _ns: &ast::Namespace,
-    ) -> BasicValueEnum<'a> {
+    ) -> Option<BasicValueEnum<'a>> {
         let slot_ptr = binary.builder.build_alloca(slot.get_type(), "slot");
         binary.builder.build_store(slot_ptr, slot);
 
@@ -2789,7 +2791,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             "",
         );
 
-        val
+        Some(val)
     }
 
     /// Calculate length of storage dynamic bytes
