@@ -1,6 +1,5 @@
-use crate::{build_solidity, first_error, parse_and_resolve};
+use crate::build_solidity;
 use ethabi::Token;
-use solang::Target;
 
 #[test]
 fn return_single() {
@@ -87,93 +86,6 @@ fn return_ternary() {
             Token::Uint(ethereum_types::U256::from(6)),
             Token::Uint(ethereum_types::U256::from(4)),
         ]
-    );
-}
-
-#[test]
-fn return_err() {
-    let ns = parse_and_resolve(
-        r#"
-        contract foo {
-            uint private val = 0;
-
-            function get() public {
-                return val;
-            }
-        }"#,
-        Target::Solana,
-    );
-
-    assert_eq!(first_error(ns.diagnostics), "function has no return values",);
-
-    let ns = parse_and_resolve(
-        r#"
-        contract foo {
-            uint private val = 0;
-
-            function get() public returns (uint, uint) {
-                return (val, val, val);
-            }
-        }"#,
-        Target::Solana,
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "incorrect number of return values, expected 2 but got 3",
-    );
-
-    let ns = parse_and_resolve(
-        r#"
-        contract foo {
-            uint private val = 0;
-            function f() public returns (uint, uint, uint) {
-                return (val, val, val);
-            }
-
-            function get() public returns (uint, uint) {
-                return f();
-            }
-        }"#,
-        Target::Solana,
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "incorrect number of return values, expected 2 but got 3",
-    );
-
-    let ns = parse_and_resolve(
-        r#"
-        contract foo {
-            uint private val = 0;
-            function f() public returns (uint, uint, uint) {
-                return (val, val, val);
-            }
-
-            function get() public {
-                return f();
-            }
-        }"#,
-        Target::Solana,
-    );
-
-    assert_eq!(first_error(ns.diagnostics), "function has no return values",);
-
-    let ns = parse_and_resolve(
-        r#"
-        contract foo {
-            function f() public returns (uint, uint, uint) {
-                int a = 43;
-                return uint(a);
-            }
-        }"#,
-        Target::Solana,
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "incorrect number of return values, expected 3 but got 1",
     );
 }
 

@@ -1,4 +1,4 @@
-use crate::{build_solidity, first_error, parse_and_resolve, Target};
+use crate::build_solidity;
 use ethabi::Token;
 
 #[test]
@@ -167,32 +167,5 @@ fn constant() {
             255, 206, 178, 91, 165, 156, 178, 193, 7, 94, 233, 48, 117, 76, 48, 215, 255, 45, 61,
             225
         ])]
-    );
-
-    let ns = parse_and_resolve(
-        r#"
-        contract x {
-            bytes32 public constant z = blockhash(1);
-        }"#,
-        Target::Solana,
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "cannot call function in constant expression"
-    );
-
-    let ns = parse_and_resolve(
-        r#"
-        contract x {
-            bytes foo;
-            bytes32 public constant z = keccak256(foo);
-        }"#,
-        Target::Solana,
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "cannot read contract variable ‘foo’ in constant expression"
     );
 }

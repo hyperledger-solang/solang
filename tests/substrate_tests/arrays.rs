@@ -2,51 +2,13 @@ use parity_scale_codec::Encode;
 use parity_scale_codec_derive::Decode;
 use rand::Rng;
 
-use crate::{build_solidity, first_error, no_errors, parse_and_resolve};
-use solang::Target;
+use crate::build_solidity;
 
 #[derive(Debug, PartialEq, Encode, Decode)]
 struct Val32(u32);
 
 #[derive(Debug, PartialEq, Encode, Decode)]
 struct Val8(u8);
-
-#[test]
-fn missing_array_index() {
-    let ns = parse_and_resolve(
-        r#"
-        contract c {
-            function foo() public returns (uint) {
-                    uint8[4] memory bar = [ 1, 2, 3, 4 ];
-
-                    return bar[];
-            }
-        }"#,
-        Target::default_substrate(),
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "expected expression before ‘]’ token"
-    );
-
-    let ns = parse_and_resolve(
-        r#"
-        contract c {
-            function foo() public returns (uint8) {
-                    uint8[4] memory bar = [ 1, 2, 3, 4, 5 ];
-
-                    return bar[0];
-            }
-        }"#,
-        Target::default_substrate(),
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "conversion from uint8[5] to uint8[4] not possible"
-    );
-}
 
 #[test]
 fn const_array_array() {
@@ -219,142 +181,6 @@ fn enum_arrays() {
 }
 
 #[test]
-fn data_locations() {
-    let ns = parse_and_resolve(
-        r#"
-        contract foo {
-            function bar(uint storage) public returns () {
-            }
-        }"#,
-        Target::default_substrate(),
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "data location ‘storage’ can only be specified for array, struct or mapping"
-    );
-
-    let ns = parse_and_resolve(
-        r#"
-        contract foo {
-            function bar(uint calldata x) public returns () {
-            }
-        }"#,
-        Target::default_substrate(),
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "data location ‘calldata’ can only be specified for array, struct or mapping"
-    );
-
-    let ns = parse_and_resolve(
-        r#"
-        contract foo {
-            enum foo2 { bar1, bar2 }
-            function bar(foo2 memory x) public returns () {
-            }
-        }"#,
-        Target::default_substrate(),
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "data location ‘memory’ can only be specified for array, struct or mapping"
-    );
-
-    let ns = parse_and_resolve(
-        r#"
-        contract foo {
-            enum foo2 { bar1, bar2 }
-            function bar(foo2 x) public returns (uint calldata) {
-            }
-        }"#,
-        Target::default_substrate(),
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "data location ‘calldata’ can only be specified for array, struct or mapping"
-    );
-
-    let ns = parse_and_resolve(
-        r#"
-        contract foo {
-            enum foo2 { bar1, bar2 }
-            function bar(foo2 x) public returns (bool calldata) {
-            }
-        }"#,
-        Target::default_substrate(),
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "data location ‘calldata’ can only be specified for array, struct or mapping"
-    );
-
-    let ns = parse_and_resolve(
-        r#"
-        contract foo {
-            enum foo2 { bar1, bar2 }
-            function bar(foo2 x) public returns (int storage) {
-            }
-        }"#,
-        Target::default_substrate(),
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "data location ‘storage’ can only be specified for array, struct or mapping"
-    );
-
-    let ns = parse_and_resolve(
-        r#"
-        contract foo {
-            enum foo2 { bar1, bar2 }
-            function bar(int[10] storage x) public returns (int) {
-            }
-        }"#,
-        Target::default_substrate(),
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "parameter of type ‘storage’ not allowed public or external functions"
-    );
-
-    let ns = parse_and_resolve(
-        r#"
-        contract foo {
-            enum foo2 { bar1, bar2 }
-            function bar() public returns (int[10] storage x) {
-            }
-        }"#,
-        Target::default_substrate(),
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "return type of type ‘storage’ not allowed public or external functions"
-    );
-
-    let ns = parse_and_resolve(
-        r#"
-        contract foo {
-            enum foo2 { bar1, bar2 }
-            function bar() public returns (foo2[10] storage x) {
-            }
-        }"#,
-        Target::default_substrate(),
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "return type of type ‘storage’ not allowed public or external functions"
-    );
-}
-
-#[test]
 fn storage_ref_arg() {
     let mut runtime = build_solidity(
         r##"
@@ -504,63 +330,6 @@ fn memory_to_storage() {
 
 #[test]
 fn array_dimensions() {
-    let ns = parse_and_resolve(
-        r#"
-        contract foo {
-            bool[10 - 10] x;
-        }"#,
-        Target::default_substrate(),
-    );
-
-    assert_eq!(first_error(ns.diagnostics), "zero size array not permitted");
-
-    let ns = parse_and_resolve(
-        r#"
-        contract foo {
-            bool[-10 + 10] x;
-        }"#,
-        Target::default_substrate(),
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "negative literal -10 not allowed for unsigned type ‘uint256’"
-    );
-
-    let ns = parse_and_resolve(
-        r#"
-        contract foo {
-            bool[1 / 10] x;
-        }"#,
-        Target::default_substrate(),
-    );
-
-    assert_eq!(first_error(ns.diagnostics), "zero size array not permitted");
-
-    let ns = parse_and_resolve(
-        r#"
-        contract foo {
-            enum e { e1, e2, e3 }
-            e[1 / 0] x;
-        }"#,
-        Target::default_substrate(),
-    );
-
-    assert_eq!(first_error(ns.diagnostics), "divide by zero");
-
-    let ns = parse_and_resolve(
-        r#"
-        contract foo {
-            struct bar {
-                int32 x;
-            }
-            bar[1 % 0] x;
-        }"#,
-        Target::default_substrate(),
-    );
-
-    assert_eq!(first_error(ns.diagnostics), "divide by zero");
-
     let mut runtime = build_solidity(
         r##"
         contract storage_refs {
@@ -781,91 +550,6 @@ fn struct_array_struct_abi() {
 
 #[test]
 fn memory_dynamic_array_new() {
-    let ns = parse_and_resolve(
-        r#"
-        contract foo {
-            function test() public {
-                int32[] memory a = new int32[]();
-
-                assert(a.length == 5);
-            }
-        }"#,
-        Target::default_substrate(),
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "new dynamic array should have a single length argument"
-    );
-
-    let ns = parse_and_resolve(
-        r#"
-        contract foo {
-            function test() public {
-                int32[] memory a = new int32[](1, 2);
-
-                assert(a.length == 5);
-            }
-        }"#,
-        Target::default_substrate(),
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "new dynamic array should have a single length argument"
-    );
-
-    let ns = parse_and_resolve(
-        r#"
-        contract foo {
-            function test() public {
-                int32[] memory a = new int32[](hex"ab");
-
-                assert(a.length == 5);
-            }
-        }"#,
-        Target::default_substrate(),
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "implicit conversion to uint32 from bytes1 not allowed"
-    );
-
-    let ns = parse_and_resolve(
-        r#"
-        contract foo {
-            function test() public {
-                int32[] memory a = new int32[](-1);
-
-                assert(a.length == 5);
-            }
-        }"#,
-        Target::default_substrate(),
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "negative literal -1 not allowed for unsigned type ‘uint32’"
-    );
-
-    let ns = parse_and_resolve(
-        r#"
-        contract foo {
-            function test() public {
-                int32[] memory a = new bool(1);
-
-                assert(a.length == 5);
-            }
-        }"#,
-        Target::default_substrate(),
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "new cannot allocate type ‘bool’"
-    );
-
     let mut runtime = build_solidity(
         r#"
         contract foo {
@@ -896,41 +580,6 @@ fn memory_dynamic_array_new() {
 
 #[test]
 fn memory_dynamic_array_deref() {
-    let ns = parse_and_resolve(
-        r#"
-        contract foo {
-            function test() public {
-                int32[] memory a = new int32[](2);
-
-                a[-1] = 5;
-            }
-        }"#,
-        Target::default_substrate(),
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "negative literal -1 not allowed for unsigned type ‘uint32’"
-    );
-
-    let ns = parse_and_resolve(
-        r#"
-        contract foo {
-            function test() public {
-                int32[] memory a = new int32[](2);
-                int32 i = 1;
-
-                a[i] = 5;
-            }
-        }"#,
-        Target::default_substrate(),
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "array subscript must be an unsigned integer, not ‘int32’"
-    );
-
     // The Ethereum Foundation solc allows you to create arrays of length 0
     let mut runtime = build_solidity(
         r#"
@@ -1089,23 +738,6 @@ fn storage_dynamic_array_length() {
 
 #[test]
 fn dynamic_array_push() {
-    let ns = parse_and_resolve(
-        r#"
-        contract foo {
-            function test() public {
-                int[] bar = new int[](2);
-                assert(bar.length == 0);
-                bar.push(102, 20);
-            }
-        }"#,
-        Target::default_substrate(),
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "method ‘push()’ takes at most 1 argument"
-    );
-
     let mut runtime = build_solidity(
         r#"
         pragma solidity 0;
@@ -1220,22 +852,6 @@ fn dynamic_array_push() {
 
 #[test]
 fn dynamic_array_pop() {
-    let ns = parse_and_resolve(
-        r#"
-        contract foo {
-            function test() public {
-                int[] bar = new int[](1);
-                bar.pop(102);
-            }
-        }"#,
-        Target::default_substrate(),
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "method ‘pop()’ does not take any arguments"
-    );
-
     let mut runtime = build_solidity(
         r#"
         pragma solidity 0;
@@ -1366,41 +982,6 @@ fn dynamic_array_pop_bounds() {
 
 #[test]
 fn storage_dynamic_array_push() {
-    let ns = parse_and_resolve(
-        r#"
-        contract foo {
-            int32[] bar;
-
-            function test() public {
-                assert(bar.length == 0);
-                bar.push(102, 20);
-            }
-        }"#,
-        Target::default_substrate(),
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "method ‘push()’ takes at most 1 argument"
-    );
-
-    let ns = parse_and_resolve(
-        r#"
-        contract foo {
-            int32[4] bar;
-
-            function test() public {
-                bar.push(102);
-            }
-        }"#,
-        Target::default_substrate(),
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "method ‘push()’ not allowed on fixed length array"
-    );
-
     let mut runtime = build_solidity(
         r#"
         pragma solidity 0;
@@ -1445,66 +1026,10 @@ fn storage_dynamic_array_push() {
     );
 
     runtime.function("test", Vec::new());
-
-    let ns = parse_and_resolve(
-        r#"
-        contract foo {
-            struct s {
-                int32 f1;
-                bool f2;
-            }
-            s[] bar;
-
-            function test() public {
-                s storage n = bar.push(s(-1, false));
-            }
-        }"#,
-        Target::default_substrate(),
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "function or method does not return a value"
-    );
 }
 
 #[test]
 fn storage_dynamic_array_pop() {
-    let ns = parse_and_resolve(
-        r#"
-        contract foo {
-            int32[] bar;
-
-            function test() public {
-                assert(bar.length == 0);
-                bar.pop(102);
-            }
-        }"#,
-        Target::default_substrate(),
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "method ‘pop()’ does not take any arguments"
-    );
-
-    let ns = parse_and_resolve(
-        r#"
-        contract foo {
-            int32[4] bar;
-
-            function test() public {
-                bar.pop();
-            }
-        }"#,
-        Target::default_substrate(),
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "method ‘pop()’ not allowed on fixed length array"
-    );
-
     let mut runtime = build_solidity(
         r#"
         pragma solidity 0;
@@ -1567,66 +1092,10 @@ fn storage_dynamic_array_pop() {
 
     // We should have one entry for the length; pop should have removed the 102 entry
     assert_eq!(runtime.store.len(), 1);
-
-    // pop returns the dereferenced value, not a reference to storage
-    let ns = parse_and_resolve(
-        r#"
-        contract foo {
-            struct s {
-                bool f1;
-                int32 f2;
-            }
-            s[] bar;
-
-            function test() public {
-                s storage x = bar.pop();
-            }
-        }"#,
-        Target::default_substrate(),
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "conversion from struct foo.s to struct foo.s storage not possible"
-    );
 }
 
 #[test]
 fn storage_delete() {
-    let ns = parse_and_resolve(
-        r#"
-        contract foo {
-            int32[] bar;
-
-            function test() public {
-                delete 102;
-            }
-        }"#,
-        Target::default_substrate(),
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "argument to ‘delete’ should be storage reference"
-    );
-
-    let ns = parse_and_resolve(
-        r#"
-        contract foo {
-            int32[] bar;
-
-            function test() public {
-                int32 x = delete bar;
-            }
-        }"#,
-        Target::default_substrate(),
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "delete not allowed in expression"
-    );
-
     // ensure that structs and fixed arrays are wiped by pop
     let mut runtime = build_solidity(
         r#"
@@ -1988,35 +1457,4 @@ fn alloc_size_from_storage() {
     runtime.constructor(0, Vec::new());
     runtime.function("contfunc", Vec::new());
     assert_eq!(runtime.vm.output, vec![0u64].encode());
-}
-
-#[test]
-fn lucas() {
-    let ns = parse_and_resolve(
-        r#"contract Test {
-        bytes byteArr;
-        bytes32 baRR;
-
-        function get() public  {
-            string memory s = "Test";
-            byteArr = bytes(s);
-            uint16 a = 1;
-            uint8 b;
-            b = uint8(a);
-
-            uint256 c;
-            c = b;
-            bytes32 b32;
-            b32 = bytes32(byteArr);
-            baRR = bytes32(c);
-            uint i1 = 1;
-            uint i2 = 1;
-            assert(b32[(i1*i2)-i1] == bytes1(baRR));
-        }
-    }
-    "#,
-        Target::default_substrate(),
-    );
-
-    no_errors(ns.diagnostics);
 }

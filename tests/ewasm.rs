@@ -10,9 +10,7 @@ use tiny_keccak::{Hasher, Keccak};
 use wasmi::memory_units::Pages;
 use wasmi::*;
 
-use solang::file_resolver::FileResolver;
-use solang::sema::{ast, diagnostics};
-use solang::{compile, Target};
+use solang::{compile, file_resolver::FileResolver, sema::diagnostics, Target};
 
 mod ewasm_tests;
 
@@ -851,31 +849,6 @@ fn simple_solidiy_compile_and_run() {
     assert_eq!(
         returns,
         vec![ethabi::Token::Uint(ethereum_types::U256::from(2))]
-    );
-}
-
-pub fn parse_and_resolve(src: &'static str, target: Target) -> ast::Namespace {
-    let mut cache = FileResolver::new();
-
-    cache.set_file_contents("test.sol", src.to_string());
-
-    solang::parse_and_resolve("test.sol", &mut cache, target)
-}
-
-pub fn first_error(errors: Vec<ast::Diagnostic>) -> String {
-    match errors.iter().find(|m| m.level == ast::Level::Error) {
-        Some(m) => m.message.to_owned(),
-        None => panic!("no errors found"),
-    }
-}
-
-pub fn no_errors(errors: Vec<ast::Diagnostic>) {
-    assert!(
-        errors
-            .iter()
-            .filter(|m| m.level == ast::Level::Error)
-            .count()
-            == 0
     );
 }
 

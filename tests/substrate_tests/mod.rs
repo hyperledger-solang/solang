@@ -21,6 +21,5 @@ mod modifier;
 mod primitives;
 mod strings;
 mod structs;
-mod tags;
 mod value;
 mod variables;

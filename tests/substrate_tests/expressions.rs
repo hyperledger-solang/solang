@@ -1,12 +1,9 @@
 use parity_scale_codec::{Decode, Encode};
 
-use crate::{
-    build_solidity, build_solidity_with_overflow_check, first_error, no_errors, parse_and_resolve,
-};
+use crate::{build_solidity, build_solidity_with_overflow_check};
 use num_bigint::BigInt;
 use num_bigint::Sign;
 use rand::Rng;
-use solang::Target;
 
 #[test]
 fn celcius_and_fahrenheit() {
@@ -240,99 +237,6 @@ fn expressions() {
     runtime.function("test_comparisons", Vec::new());
 
     runtime.function("increments", Vec::new());
-}
-
-#[test]
-fn test_cast_errors() {
-    let ns = parse_and_resolve(
-        "contract test {
-            function foo(uint bar) public {
-                bool is_nonzero = bar;
-            }
-        }",
-        Target::default_substrate(),
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "conversion from uint256 to bool not possible"
-    );
-
-    let ns = parse_and_resolve(
-        "contract test {
-            function foobar(uint foo, int bar) public returns (bool) {
-                return (foo < bar);
-            }
-        }",
-        Target::default_substrate(),
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "implicit conversion would change sign from uint256 to int256"
-    );
-
-    let ns = parse_and_resolve(
-        "contract test {
-            function foobar(int32 foo, uint16 bar) public returns (bool) {
-                foo = bar;
-                return false;
-            }
-        }",
-        Target::default_substrate(),
-    );
-
-    no_errors(ns.diagnostics);
-
-    // int16 can be negative, so cannot be stored in uint32
-    let ns = parse_and_resolve(
-        "contract test {
-            function foobar(uint32 foo, int16 bar) public returns (bool) {
-                foo = bar;
-                return false;
-            }
-        }",
-        Target::default_substrate(),
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "implicit conversion would change sign from int16 to uint32"
-    );
-
-    let ns = parse_and_resolve(
-        "contract foo {
-            uint bar;
-
-            function set_bar(uint32 b) public {
-                bar = b;
-            }
-
-            function get_bar() public returns (uint32) {
-                return uint32(bar);
-            }
-        }
-
-        contract foo2 {
-            enum X { Y1, Y2, Y3}
-            X y;
-
-            function set_x(uint32 b) public {
-                y = X(b);
-            }
-
-            function get_x() public returns (uint32) {
-                return uint32(y);
-            }
-
-            function set_enum_x(X b) public {
-                set_x(uint32(b));
-            }
-        }",
-        Target::default_substrate(),
-    );
-
-    no_errors(ns.diagnostics);
 }
 
 #[test]
@@ -960,48 +864,6 @@ fn power() {
     runtime.function("power_with_cast", Vec::new());
 
     assert_eq!(runtime.vm.output, Val(0x1_0000_0000).encode());
-
-    let ns = parse_and_resolve(
-        "contract test {
-            function power(uint64 base, int64 exp) public returns (uint64) {
-                return base ** exp;
-            }
-       }",
-        Target::default_substrate(),
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "exponation (**) is not allowed with signed types"
-    );
-
-    let ns = parse_and_resolve(
-        "contract test {
-            function power(int64 base, uint64 exp) public returns (int64) {
-                return base ** exp;
-            }
-       }",
-        Target::default_substrate(),
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "exponation (**) is not allowed with signed types"
-    );
-
-    let ns = parse_and_resolve(
-        "contract test {
-            function power(int64 base, int64 exp) public returns (int64) {
-                return base ** exp;
-            }
-       }",
-        Target::default_substrate(),
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "exponation (**) is not allowed with signed types"
-    );
 }
 
 #[test]
@@ -1371,68 +1233,6 @@ fn div() {
 
 #[test]
 fn destructure() {
-    let ns = parse_and_resolve(
-        "contract test {
-            function foo(uint bar) public {
-                int a;
-                int b;
-
-                (a, b) = (1, 2, 3);
-            }
-        }",
-        Target::default_substrate(),
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "destructuring assignment has 2 elements on the left and 3 on the right"
-    );
-
-    let ns = parse_and_resolve(
-        "contract test {
-            function foo(uint bar) public {
-                int a;
-                int b;
-
-                (c, b) = (1, 2);
-            }
-        }",
-        Target::default_substrate(),
-    );
-
-    assert_eq!(first_error(ns.diagnostics), "`c\' is not found");
-
-    let ns = parse_and_resolve(
-        "contract test {
-            function foo(uint bar) public {
-                int a;
-                int b;
-
-                (a memory, b) = (1, 2);
-            }
-        }",
-        Target::default_substrate(),
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "storage modifier ‘memory’ not permitted on assignment"
-    );
-
-    let ns = parse_and_resolve(
-        "contract test {
-            function foo(uint bar) public {
-                int a;
-                int b;
-
-                (a , b) = (1, );
-            }
-        }",
-        Target::default_substrate(),
-    );
-
-    assert_eq!(first_error(ns.diagnostics), "stray comma");
-
     // The minus sign can be a unary negative or subtract.
     let mut runtime = build_solidity(
         r#"

@@ -1,7 +1,6 @@
 mod abi;
 mod accessor;
 mod arrays;
-mod assembly;
 mod balance;
 mod builtin;
 mod call;

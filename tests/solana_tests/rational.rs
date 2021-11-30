@@ -1,23 +1,7 @@
-use crate::{build_solidity, first_error, parse_and_resolve};
+use crate::build_solidity;
 
 #[test]
 fn rational() {
-    let ns = parse_and_resolve(
-        r#"
-        contract foo {
-            function test() public returns (uint) {
-                uint y = 0.1;
-                return y;
-            }
-        }"#,
-        crate::Target::Solana,
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "conversion to uint256 from rational not allowed"
-    );
-
     let mut vm = build_solidity(
         r#"
         contract foo {
