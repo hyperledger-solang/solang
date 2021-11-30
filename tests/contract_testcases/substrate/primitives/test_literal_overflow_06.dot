@@ -1,0 +1,12 @@
+strict digraph "tests/contract_testcases/substrate/primitives/test_literal_overflow_06.sol" {
+	contract [label="contract test\ntests/contract_testcases/substrate/primitives/test_literal_overflow_06.sol:1:1-15"]
+	var [label="variable foo\nvisibility internal\ntests/contract_testcases/substrate/primitives/test_literal_overflow_06.sol:2:13-28"]
+	number_literal [label="uint8 literal: 255\ntests/contract_testcases/substrate/primitives/test_literal_overflow_06.sol:2:25-28"]
+	diagnostic [label="found contract ‘test’\nlevel Debug\ntests/contract_testcases/substrate/primitives/test_literal_overflow_06.sol:1:1-15"]
+	diagnostic_7 [label="storage variable 'foo' has been assigned, but never read\nlevel Warning\ntests/contract_testcases/substrate/primitives/test_literal_overflow_06.sol:2:13-28"]
+	contracts -> contract
+	contract -> var [label="variable"]
+	var -> number_literal [label="initializer"]
+	diagnostics -> diagnostic [label="Debug"]
+	diagnostics -> diagnostic_7 [label="Warning"]
+}

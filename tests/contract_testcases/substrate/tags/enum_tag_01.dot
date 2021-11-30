@@ -1,0 +1,6 @@
+strict digraph "tests/contract_testcases/substrate/tags/enum_tag_01.sol" {
+	x [label="name: x\ntests/contract_testcases/substrate/tags/enum_tag_01.sol:5:9-22\nvalue: x1"]
+	tags [label="dev: bla bla bla\nauthor: f2 bar"]
+	enums -> x
+	x -> tags [label="tags"]
+}

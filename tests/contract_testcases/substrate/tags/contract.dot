@@ -1,0 +1,6 @@
+strict digraph "tests/contract_testcases/substrate/tags/contract.sol" {
+	contract [label="contract test\ntests/contract_testcases/substrate/tags/contract.sol:3:9-23"]
+	diagnostic [label="tag ‘@barf’ is not valid for contract\nlevel Error\ntests/contract_testcases/substrate/tags/contract.sol:1:1-2:4"]
+	contracts -> contract
+	diagnostics -> diagnostic [label="Error"]
+}

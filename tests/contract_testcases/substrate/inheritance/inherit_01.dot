@@ -1,0 +1,6 @@
+strict digraph "tests/contract_testcases/substrate/inheritance/inherit_01.sol" {
+	contract [label="contract a\ntests/contract_testcases/substrate/inheritance/inherit_01.sol:2:9-26"]
+	diagnostic [label="contract ‘foo’ not found\nlevel Error\ntests/contract_testcases/substrate/inheritance/inherit_01.sol:2:23-26"]
+	contracts -> contract
+	diagnostics -> diagnostic [label="Error"]
+}

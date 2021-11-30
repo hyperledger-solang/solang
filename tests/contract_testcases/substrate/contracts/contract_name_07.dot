@@ -1,0 +1,22 @@
+strict digraph "tests/contract_testcases/substrate/contracts/contract_name_07.sol" {
+	contract [label="contract a\ntests/contract_testcases/substrate/contracts/contract_name_07.sol:2:9-20"]
+	x [label="function x\ncontract: a\ntests/contract_testcases/substrate/contracts/contract_name_07.sol:3:13-32\nsignature x()\nvisibility public\nmutability nonpayable"]
+	var_decl [label="variable decl contract b y\ntests/contract_testcases/substrate/contracts/contract_name_07.sol:4:17-30"]
+	constructor [label="constructor contract b\ntests/contract_testcases/substrate/contracts/contract_name_07.sol:4:23-30"]
+	contract_5 [label="contract b\ntests/contract_testcases/substrate/contracts/contract_name_07.sol:8:9-20"]
+	x_6 [label="function x\ncontract: b\ntests/contract_testcases/substrate/contracts/contract_name_07.sol:9:13-32\nsignature x()\nvisibility public\nmutability nonpayable"]
+	diagnostic [label="found contract ‘a’\nlevel Debug\ntests/contract_testcases/substrate/contracts/contract_name_07.sol:2:9-20"]
+	diagnostic_9 [label="found contract ‘b’\nlevel Debug\ntests/contract_testcases/substrate/contracts/contract_name_07.sol:8:9-20"]
+	diagnostic_10 [label="local variable 'y' has been assigned, but never read\nlevel Warning\ntests/contract_testcases/substrate/contracts/contract_name_07.sol:4:19-20"]
+	diagnostic_11 [label="circular reference creating contract ‘a’\nlevel Error\ntests/contract_testcases/substrate/contracts/contract_name_07.sol:10:23-30"]
+	contracts -> contract
+	contract -> x [label="function"]
+	x -> var_decl [label="body"]
+	var_decl -> constructor [label="init"]
+	contracts -> contract_5
+	contract_5 -> x_6 [label="function"]
+	diagnostics -> diagnostic [label="Debug"]
+	diagnostics -> diagnostic_9 [label="Debug"]
+	diagnostics -> diagnostic_10 [label="Warning"]
+	diagnostics -> diagnostic_11 [label="Error"]
+}

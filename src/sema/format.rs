@@ -249,7 +249,7 @@ impl<'a> Iterator for FormatIterator<'a> {
     fn next(&mut self) -> Option<Self::Item> {
         if let Some((offset, ch)) = self.literal.next() {
             let mut loc = self.loc;
-            loc.0 += offset;
+            loc.1 += offset;
 
             return Some((loc, ch));
         }
@@ -260,7 +260,7 @@ impl<'a> Iterator for FormatIterator<'a> {
 
             if let Some((offset, ch)) = self.literal.next() {
                 let mut loc = self.loc;
-                loc.0 += offset;
+                loc.1 += offset;
 
                 return Some((loc, ch));
             }

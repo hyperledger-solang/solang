@@ -1,0 +1,14 @@
+strict digraph "tests/contract_testcases/substrate/tags/functions_04.sol" {
+	contract [label="contract c\ntests/contract_testcases/substrate/tags/functions_04.sol:2:9-20"]
+	foo [label="function foo\ncontract: c\ntests/contract_testcases/substrate/tags/functions_04.sol:4:13-56\nsignature foo()\nvisibility public\nmutability nonpayable"]
+	returns [label="returns\nint256 a\nbool "]
+	diagnostic [label="found contract ‘c’\nlevel Debug\ntests/contract_testcases/substrate/tags/functions_04.sol:2:9-20"]
+	diagnostic_6 [label="tag ‘@return’ no field ‘so’\nlevel Error\ntests/contract_testcases/substrate/tags/functions_04.sol:1:1-2:6"]
+	diagnostic_7 [label="return variable 'a' has never been assigned\nlevel Warning\ntests/contract_testcases/substrate/tags/functions_04.sol:4:48-49"]
+	contracts -> contract
+	contract -> foo [label="function"]
+	foo -> returns [label="returns"]
+	diagnostics -> diagnostic [label="Debug"]
+	diagnostics -> diagnostic_6 [label="Error"]
+	diagnostics -> diagnostic_7 [label="Warning"]
+}

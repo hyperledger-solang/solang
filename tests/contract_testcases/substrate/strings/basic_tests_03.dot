@@ -1,0 +1,20 @@
+strict digraph "tests/contract_testcases/substrate/strings/basic_tests_03.sol" {
+	contract [label="contract c\ntests/contract_testcases/substrate/strings/basic_tests_03.sol:2:9-20"]
+	foo [label="function foo\ncontract: c\ntests/contract_testcases/substrate/strings/basic_tests_03.sol:3:13-34\nsignature foo()\nvisibility public\nmutability nonpayable"]
+	var_decl [label="variable decl string f\ntests/contract_testcases/substrate/strings/basic_tests_03.sol:4:21-52"]
+	cast [label="cast string\ntests/contract_testcases/substrate/strings/basic_tests_03.sol:4:32-52"]
+	alloc_array [label="alloc array bytes\ntests/contract_testcases/substrate/strings/basic_tests_03.sol:4:39-51"]
+	number_literal [label="uint32 literal: 2\ntests/contract_testcases/substrate/strings/basic_tests_03.sol:4:49-50"]
+	diagnostic [label="found contract ‘c’\nlevel Debug\ntests/contract_testcases/substrate/strings/basic_tests_03.sol:2:9-20"]
+	diagnostic_9 [label="local variable 'f' has been assigned, but never read\nlevel Warning\ntests/contract_testcases/substrate/strings/basic_tests_03.sol:4:28-29"]
+	diagnostic_10 [label="function can be declared ‘pure’\nlevel Warning\ntests/contract_testcases/substrate/strings/basic_tests_03.sol:3:13-34"]
+	contracts -> contract
+	contract -> foo [label="function"]
+	foo -> var_decl [label="body"]
+	var_decl -> cast [label="init"]
+	cast -> alloc_array [label="expr"]
+	alloc_array -> number_literal [label="length"]
+	diagnostics -> diagnostic [label="Debug"]
+	diagnostics -> diagnostic_9 [label="Warning"]
+	diagnostics -> diagnostic_10 [label="Warning"]
+}

@@ -8,8 +8,8 @@ use num_traits::ToPrimitive;
 use num_traits::Zero;
 use std::cmp;
 use std::cmp::Ordering;
-use std::collections::HashMap;
 use std::collections::HashSet;
+use std::collections::{BTreeMap, HashMap};
 use std::ops::{Add, Shl, Sub};
 
 use super::address::to_hexstr_eip55;
@@ -3666,7 +3666,7 @@ pub fn constructor_named_args(
         ns.contracts[contract_no].creates.push(no);
     }
 
-    let mut arguments: HashMap<&String, &pt::Expression> = HashMap::new();
+    let mut arguments: BTreeMap<&String, &pt::Expression> = BTreeMap::new();
 
     for arg in args {
         if let Some(prev) = arguments.get(&arg.name.name) {

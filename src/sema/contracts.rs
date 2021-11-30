@@ -2,7 +2,7 @@ use crate::parser::pt;
 use inkwell::OptimizationLevel;
 use num_bigint::BigInt;
 use num_traits::Zero;
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::convert::TryInto;
 use tiny_keccak::{Hasher, Keccak};
 
@@ -272,7 +272,7 @@ pub fn is_base(base: usize, parent: usize, ns: &ast::Namespace) -> bool {
 fn check_inheritance(contract_no: usize, ns: &mut ast::Namespace) {
     let mut function_syms: HashMap<String, ast::Symbol> = HashMap::new();
     let mut variable_syms: HashMap<String, ast::Symbol> = HashMap::new();
-    let mut override_needed: HashMap<String, Vec<(usize, usize)>> = HashMap::new();
+    let mut override_needed: BTreeMap<String, Vec<(usize, usize)>> = BTreeMap::new();
 
     for base_contract_no in visit_bases(contract_no, ns) {
         // find file number where contract is defined
@@ -885,8 +885,8 @@ pub struct BaseOrModifier<'a> {
 pub fn collect_base_args<'a>(
     contract_no: usize,
     constructor_no: Option<usize>,
-    base_args: &mut HashMap<usize, BaseOrModifier<'a>>,
-    diagnostics: &mut HashSet<ast::Diagnostic>,
+    base_args: &mut BTreeMap<usize, BaseOrModifier<'a>>,
+    diagnostics: &mut BTreeSet<ast::Diagnostic>,
     ns: &'a ast::Namespace,
 ) {
     let contract = &ns.contracts[contract_no];
@@ -978,7 +978,7 @@ fn check_base_args(contract_no: usize, ns: &mut ast::Namespace) {
         return;
     }
 
-    let mut diagnostics = HashSet::new();
+    let mut diagnostics = BTreeSet::new();
     let base_args_needed = visit_bases(contract_no, ns)
         .into_iter()
         .filter(|base_no| {
@@ -992,7 +992,7 @@ fn check_base_args(contract_no: usize, ns: &mut ast::Namespace) {
             .iter()
             .filter(|function_no| ns.functions[**function_no].is_constructor())
         {
-            let mut base_args = HashMap::new();
+            let mut base_args = BTreeMap::new();
 
             collect_base_args(
                 contract_no,
@@ -1015,7 +1015,7 @@ fn check_base_args(contract_no: usize, ns: &mut ast::Namespace) {
             }
         }
     } else {
-        let mut base_args = HashMap::new();
+        let mut base_args = BTreeMap::new();
 
         collect_base_args(contract_no, None, &mut base_args, &mut diagnostics, ns);
 

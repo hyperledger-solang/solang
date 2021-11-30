@@ -1,0 +1,12 @@
+strict digraph "tests/contract_testcases/substrate/primitives/test_literal_overflow_08.sol" {
+	contract [label="contract test\ntests/contract_testcases/substrate/primitives/test_literal_overflow_08.sol:1:1-15"]
+	var [label="variable foo\nvisibility internal\ntests/contract_testcases/substrate/primitives/test_literal_overflow_08.sol:2:13-46"]
+	diagnostic [label="found contract ‘test’\nlevel Debug\ntests/contract_testcases/substrate/primitives/test_literal_overflow_08.sol:1:1-15"]
+	diagnostic_6 [label="literal 18446744073709551616 is too large to fit into type ‘int64’\nlevel Error\ntests/contract_testcases/substrate/primitives/test_literal_overflow_08.sol:2:25-46"]
+	diagnostic_7 [label="storage variable 'foo' has never been used\nlevel Warning\ntests/contract_testcases/substrate/primitives/test_literal_overflow_08.sol:2:13-46"]
+	contracts -> contract
+	contract -> var [label="variable"]
+	diagnostics -> diagnostic [label="Debug"]
+	diagnostics -> diagnostic_6 [label="Error"]
+	diagnostics -> diagnostic_7 [label="Warning"]
+}

@@ -1,0 +1,22 @@
+strict digraph "tests/contract_testcases/substrate/inheritance/test_override_03.sol" {
+	contract [label="contract base\ntests/contract_testcases/substrate/inheritance/test_override_03.sol:2:9-23"]
+	foo [label="function foo\ncontract: base\ntests/contract_testcases/substrate/inheritance/test_override_03.sol:3:13-69\nsignature foo(uint64)\nvisibility private\nmutability nonpayable\noverride"]
+	parameters [label="parameters\nuint64 a"]
+	returns [label="returns\nuint64 "]
+	return [label="return\ntests/contract_testcases/substrate/inheritance/test_override_03.sol:4:17-31"]
+	add [label="add\nuint64\ntests/contract_testcases/substrate/inheritance/test_override_03.sol:4:26-27"]
+	variable [label="variable: a\nuint64\ntests/contract_testcases/substrate/inheritance/test_override_03.sol:4:24-25"]
+	number_literal [label="uint64 literal: 102\ntests/contract_testcases/substrate/inheritance/test_override_03.sol:4:28-31"]
+	diagnostic [label="found contract ‘base’\nlevel Debug\ntests/contract_testcases/substrate/inheritance/test_override_03.sol:2:9-23"]
+	diagnostic_11 [label="function ‘foo’ does not override anything\nlevel Error\ntests/contract_testcases/substrate/inheritance/test_override_03.sol:3:13-69"]
+	contracts -> contract
+	contract -> foo [label="function"]
+	foo -> parameters [label="parameters"]
+	foo -> returns [label="returns"]
+	foo -> return [label="body"]
+	return -> add [label="expr"]
+	add -> variable [label="left"]
+	add -> number_literal [label="right"]
+	diagnostics -> diagnostic [label="Debug"]
+	diagnostics -> diagnostic_11 [label="Error"]
+}

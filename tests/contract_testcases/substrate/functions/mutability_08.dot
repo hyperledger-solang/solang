@@ -1,0 +1,20 @@
+strict digraph "tests/contract_testcases/substrate/functions/mutability_08.sol" {
+	contract [label="contract test\ntests/contract_testcases/substrate/functions/mutability_08.sol:1:1-15"]
+	var [label="variable foo\nvisibility internal\ntests/contract_testcases/substrate/functions/mutability_08.sol:2:13-32"]
+	number_literal [label="int64 literal: 1844674\ntests/contract_testcases/substrate/functions/mutability_08.sol:2:25-32"]
+	bar [label="function bar\ncontract: test\ntests/contract_testcases/substrate/functions/mutability_08.sol:4:13-58\nsignature bar()\nvisibility public\nmutability payable"]
+	returns [label="returns\nint64 "]
+	return [label="return\ntests/contract_testcases/substrate/functions/mutability_08.sol:5:17-27"]
+	storage_load [label="storage load int64\ntests/contract_testcases/substrate/functions/mutability_08.sol:5:17-27"]
+	storage_var [label="storage variable\ntest.foo\nint64 storage\ntests/contract_testcases/substrate/functions/mutability_08.sol:5:24-27"]
+	diagnostic [label="found contract ‘test’\nlevel Debug\ntests/contract_testcases/substrate/functions/mutability_08.sol:1:1-15"]
+	contracts -> contract
+	contract -> var [label="variable"]
+	var -> number_literal [label="initializer"]
+	contract -> bar [label="function"]
+	bar -> returns [label="returns"]
+	bar -> return [label="body"]
+	return -> storage_load [label="expr"]
+	storage_load -> storage_var [label="expr"]
+	diagnostics -> diagnostic [label="Debug"]
+}

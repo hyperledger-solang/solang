@@ -1,0 +1,6 @@
+strict digraph "tests/contract_testcases/substrate/variables/global_constants_03.sol" {
+	diagnostic [label="missing initializer for constant\nlevel Error\ntests/contract_testcases/substrate/variables/global_constants_03.sol:1:1-16"]
+	diagnostic_4 [label="global constant 'x' has never been used\nlevel Warning\ntests/contract_testcases/substrate/variables/global_constants_03.sol:1:1-16"]
+	diagnostics -> diagnostic [label="Error"]
+	diagnostics -> diagnostic_4 [label="Warning"]
+}

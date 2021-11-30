@@ -1,0 +1,7 @@
+
+        contract c {
+            receive() external  {
+
+            }
+        }
+        

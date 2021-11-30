@@ -1,0 +1,12 @@
+strict digraph "tests/contract_testcases/substrate/structs/parse_structs_15.sol" {
+	Foo [label="name:Foo\ncontract: test_struct_parsing\ntests/contract_testcases/substrate/structs/parse_structs_15.sol:3:20-23\nfield name:x ty:bool\nfield name:y ty:int32"]
+	contract [label="contract test_struct_parsing\ntests/contract_testcases/substrate/structs/parse_structs_15.sol:2:9-38"]
+	f [label="function f\ncontract: test_struct_parsing\ntests/contract_testcases/substrate/structs/parse_structs_15.sol:8:13-33\nsignature f()\nvisibility private\nmutability nonpayable"]
+	diagnostic [label="found contract ‘test_struct_parsing’\nlevel Debug\ntests/contract_testcases/substrate/structs/parse_structs_15.sol:2:9-38"]
+	diagnostic_7 [label="struct ‘Foo’ has no field ‘z’\nlevel Error\ntests/contract_testcases/substrate/structs/parse_structs_15.sol:9:40-41"]
+	structs -> Foo
+	contracts -> contract
+	contract -> f [label="function"]
+	diagnostics -> diagnostic [label="Debug"]
+	diagnostics -> diagnostic_7 [label="Error"]
+}

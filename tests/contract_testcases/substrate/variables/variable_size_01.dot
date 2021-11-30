@@ -1,0 +1,8 @@
+strict digraph "tests/contract_testcases/substrate/variables/variable_size_01.sol" {
+	contract [label="contract x\ntests/contract_testcases/substrate/variables/variable_size_01.sol:1:1-12"]
+	diagnostic [label="found contract ‘x’\nlevel Debug\ntests/contract_testcases/substrate/variables/variable_size_01.sol:1:1-12"]
+	diagnostic_5 [label="type is too large to fit into memory\nlevel Error\ntests/contract_testcases/substrate/variables/variable_size_01.sol:2:44-63"]
+	contracts -> contract
+	diagnostics -> diagnostic [label="Debug"]
+	diagnostics -> diagnostic_5 [label="Error"]
+}

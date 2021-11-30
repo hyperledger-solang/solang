@@ -1,0 +1,8 @@
+strict digraph "tests/contract_testcases/substrate/contracts/contract_name.sol" {
+	contract [label="contract test\ntests/contract_testcases/substrate/contracts/contract_name.sol:1:1-15"]
+	diagnostic [label="found contract ‘test’\nlevel Debug\ntests/contract_testcases/substrate/contracts/contract_name.sol:1:1-15"]
+	diagnostic_5 [label="function cannot have same name as the contract\nlevel Error\ntests/contract_testcases/substrate/contracts/contract_name.sol:2:13-35"]
+	contracts -> contract
+	diagnostics -> diagnostic [label="Debug"]
+	diagnostics -> diagnostic_5 [label="Error"]
+}

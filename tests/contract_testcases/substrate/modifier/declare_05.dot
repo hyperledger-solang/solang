@@ -1,0 +1,10 @@
+strict digraph "tests/contract_testcases/substrate/modifier/declare_05.sol" {
+	contract [label="contract c\ntests/contract_testcases/substrate/modifier/declare_05.sol:2:9-20"]
+	foo [label="modifier foo\ncontract: c\ntests/contract_testcases/substrate/modifier/declare_05.sol:3:13-28\nmutability nonpayable"]
+	diagnostic [label="found contract ‘c’\nlevel Debug\ntests/contract_testcases/substrate/modifier/declare_05.sol:2:9-20"]
+	diagnostic_5 [label="missing ‘_’ in modifier\nlevel Error\ntests/contract_testcases/substrate/modifier/declare_05.sol:3:30"]
+	contracts -> contract
+	contract -> foo [label="modifier"]
+	diagnostics -> diagnostic [label="Debug"]
+	diagnostics -> diagnostic_5 [label="Error"]
+}

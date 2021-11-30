@@ -1,0 +1,28 @@
+strict digraph "tests/contract_testcases/substrate/inheritance/visibility_01.sol" {
+	contract [label="contract y\ntests/contract_testcases/substrate/inheritance/visibility_01.sol:2:9-29"]
+	foo [label="function foo\ncontract: y\ntests/contract_testcases/substrate/inheritance/visibility_01.sol:3:13-58\nsignature foo()\nvisibility external\nmutability nonpayable\nvirtual"]
+	returns [label="returns\nint256 "]
+	contract_4 [label="contract x\ntests/contract_testcases/substrate/inheritance/visibility_01.sol:6:9-24"]
+	base [label="base y\ntests/contract_testcases/substrate/inheritance/visibility_01.sol:6:23-24"]
+	foo_6 [label="function foo\ncontract: x\ntests/contract_testcases/substrate/inheritance/visibility_01.sol:7:13-59\nsignature foo()\nvisibility internal\nmutability nonpayable\noverride"]
+	returns_7 [label="returns\nint256 "]
+	return [label="return\ntests/contract_testcases/substrate/inheritance/visibility_01.sol:8:17-27"]
+	number_literal [label="int256 literal: 102\ntests/contract_testcases/substrate/inheritance/visibility_01.sol:8:24-27"]
+	diagnostic [label="found abstract contract ‘y’\nlevel Debug\ntests/contract_testcases/substrate/inheritance/visibility_01.sol:2:9-29"]
+	diagnostic_12 [label="found contract ‘x’\nlevel Debug\ntests/contract_testcases/substrate/inheritance/visibility_01.sol:6:9-24"]
+	diagnostic_13 [label="visibility ‘internal’ of function ‘foo’ is not compatible with visibility ‘external’\nlevel Error\ntests/contract_testcases/substrate/inheritance/visibility_01.sol:7:13-59"]
+	note [label="location of base function\ntests/contract_testcases/substrate/inheritance/visibility_01.sol:3:13-58"]
+	contracts -> contract
+	contract -> foo [label="function"]
+	foo -> returns [label="returns"]
+	contracts -> contract_4
+	contract_4 -> base [label="base"]
+	contract_4 -> foo_6 [label="function"]
+	foo_6 -> returns_7 [label="returns"]
+	foo_6 -> return [label="body"]
+	return -> number_literal [label="expr"]
+	diagnostics -> diagnostic [label="Debug"]
+	diagnostics -> diagnostic_12 [label="Debug"]
+	diagnostics -> diagnostic_13 [label="Error"]
+	diagnostic_13 -> note [label="note"]
+}

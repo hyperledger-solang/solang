@@ -66,6 +66,16 @@ impl Target {
             value_length: 16,
         }
     }
+
+    /// Creates a target from a string
+    pub fn from(name: &str) -> Option<Self> {
+        match name {
+            "solana" => Some(Target::Solana),
+            "substrate" => Some(Target::default_substrate()),
+            "ewasm" => Some(Target::Ewasm),
+            _ => None,
+        }
+    }
 }
 
 /// Compile a solidity file to list of wasm files and their ABIs. The filename is only used for error messages;

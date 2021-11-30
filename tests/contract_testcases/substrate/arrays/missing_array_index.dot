@@ -1,0 +1,12 @@
+strict digraph "tests/contract_testcases/substrate/arrays/missing_array_index.sol" {
+	contract [label="contract c\ntests/contract_testcases/substrate/arrays/missing_array_index.sol:2:9-20"]
+	foo [label="function foo\ncontract: c\ntests/contract_testcases/substrate/arrays/missing_array_index.sol:3:13-49\nsignature foo()\nvisibility public\nmutability nonpayable"]
+	returns [label="returns\nuint256 "]
+	diagnostic [label="found contract ‘c’\nlevel Debug\ntests/contract_testcases/substrate/arrays/missing_array_index.sol:2:9-20"]
+	diagnostic_6 [label="expected expression before ‘]’ token\nlevel Error\ntests/contract_testcases/substrate/arrays/missing_array_index.sol:6:28-33"]
+	contracts -> contract
+	contract -> foo [label="function"]
+	foo -> returns [label="returns"]
+	diagnostics -> diagnostic [label="Debug"]
+	diagnostics -> diagnostic_6 [label="Error"]
+}

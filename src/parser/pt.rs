@@ -2,7 +2,7 @@ use num_bigint::BigInt;
 use num_rational::BigRational;
 use std::fmt;
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
+#[derive(Debug, PartialEq, PartialOrd, Ord, Eq, Hash, Clone, Copy)]
 /// file no, start offset, end offset (in bytes)
 pub struct Loc(pub usize, pub usize, pub usize);
 

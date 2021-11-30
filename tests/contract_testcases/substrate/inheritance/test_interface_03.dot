@@ -1,0 +1,8 @@
+strict digraph "tests/contract_testcases/substrate/inheritance/test_interface_03.sol" {
+	contract [label="contract foo\ntests/contract_testcases/substrate/inheritance/test_interface_03.sol:2:9-23"]
+	diagnostic [label="found interface ‘foo’\nlevel Debug\ntests/contract_testcases/substrate/inheritance/test_interface_03.sol:2:9-23"]
+	diagnostic_5 [label="functions must be declared ‘external’ in an interface\nlevel Error\ntests/contract_testcases/substrate/inheritance/test_interface_03.sol:3:13-36"]
+	contracts -> contract
+	diagnostics -> diagnostic [label="Debug"]
+	diagnostics -> diagnostic_5 [label="Error"]
+}

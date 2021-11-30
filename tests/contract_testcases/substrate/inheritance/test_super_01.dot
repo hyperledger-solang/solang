@@ -1,0 +1,6 @@
+strict digraph "tests/contract_testcases/substrate/inheritance/test_super_01.sol" {
+	f1 [label="function f1\ntests/contract_testcases/substrate/inheritance/test_super_01.sol:2:9-23\nsignature f1()\nvisibility internal\nmutability nonpayable"]
+	diagnostic [label="super not available outside contracts\nlevel Error\ntests/contract_testcases/substrate/inheritance/test_super_01.sol:2:25-34"]
+	free_functions -> f1 [label="function"]
+	diagnostics -> diagnostic [label="Error"]
+}

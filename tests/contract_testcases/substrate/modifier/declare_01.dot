@@ -1,0 +1,12 @@
+strict digraph "tests/contract_testcases/substrate/modifier/declare_01.sol" {
+	contract [label="contract c\ntests/contract_testcases/substrate/modifier/declare_01.sol:2:9-20"]
+	foo [label="modifier foo\ncontract: c\ntests/contract_testcases/substrate/modifier/declare_01.sol:3:13-36\nmutability nonpayable"]
+	diagnostic [label="found contract ‘c’\nlevel Debug\ntests/contract_testcases/substrate/modifier/declare_01.sol:2:9-20"]
+	diagnostic_5 [label="‘internal’: modifiers can not have visibility\nlevel Error\ntests/contract_testcases/substrate/modifier/declare_01.sol:3:28-36"]
+	diagnostic_6 [label="missing ‘_’ in modifier\nlevel Error\ntests/contract_testcases/substrate/modifier/declare_01.sol:3:39"]
+	contracts -> contract
+	contract -> foo [label="modifier"]
+	diagnostics -> diagnostic [label="Debug"]
+	diagnostics -> diagnostic_5 [label="Error"]
+	diagnostics -> diagnostic_6 [label="Error"]
+}

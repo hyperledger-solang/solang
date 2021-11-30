@@ -1,0 +1,12 @@
+strict digraph "tests/contract_testcases/substrate/contracts/contract_name_01.sol" {
+	test [label="name: test\ncontract: test\ntests/contract_testcases/substrate/contracts/contract_name_01.sol:2:13-27\nvalue: a"]
+	contract [label="contract test\ntests/contract_testcases/substrate/contracts/contract_name_01.sol:1:1-15"]
+	diagnostic [label="test is already defined as a contract name\nlevel Warning\ntests/contract_testcases/substrate/contracts/contract_name_01.sol:2:18-22"]
+	note [label="location of previous definition\ntests/contract_testcases/substrate/contracts/contract_name_01.sol:1:1-15"]
+	diagnostic_8 [label="found contract ‘test’\nlevel Debug\ntests/contract_testcases/substrate/contracts/contract_name_01.sol:1:1-15"]
+	enums -> test
+	contracts -> contract
+	diagnostics -> diagnostic [label="Warning"]
+	diagnostic -> note [label="note"]
+	diagnostics -> diagnostic_8 [label="Debug"]
+}

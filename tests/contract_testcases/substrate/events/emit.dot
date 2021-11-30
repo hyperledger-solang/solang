@@ -1,0 +1,10 @@
+strict digraph "tests/contract_testcases/substrate/events/emit.sol" {
+	contract [label="contract c\ntests/contract_testcases/substrate/events/emit.sol:2:9-20"]
+	f [label="function f\ncontract: c\ntests/contract_testcases/substrate/events/emit.sol:3:13-32\nsignature f()\nvisibility public\nmutability nonpayable"]
+	diagnostic [label="found contract ‘c’\nlevel Debug\ntests/contract_testcases/substrate/events/emit.sol:2:9-20"]
+	diagnostic_5 [label="expression found where type expected\nlevel Error\ntests/contract_testcases/substrate/events/emit.sol:4:22-23"]
+	contracts -> contract
+	contract -> f [label="function"]
+	diagnostics -> diagnostic [label="Debug"]
+	diagnostics -> diagnostic_5 [label="Error"]
+}

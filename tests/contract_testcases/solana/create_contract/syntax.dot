@@ -1,0 +1,14 @@
+strict digraph "tests/contract_testcases/solana/create_contract/syntax.sol" {
+	contract [label="contract y\ntests/contract_testcases/solana/create_contract/syntax.sol:2:9-20"]
+	f [label="function f\ncontract: y\ntests/contract_testcases/solana/create_contract/syntax.sol:3:13-32\nsignature f()\nvisibility public\nmutability nonpayable"]
+	contract_3 [label="contract x\ntests/contract_testcases/solana/create_contract/syntax.sol:7:9-20"]
+	diagnostic [label="found contract ‘y’\nlevel Debug\ntests/contract_testcases/solana/create_contract/syntax.sol:2:9-20"]
+	diagnostic_6 [label="found contract ‘x’\nlevel Debug\ntests/contract_testcases/solana/create_contract/syntax.sol:7:9-20"]
+	diagnostic_7 [label="‘gas’ not permitted for external calls or constructors on solana\nlevel Error\ntests/contract_testcases/solana/create_contract/syntax.sol:4:29-37"]
+	contracts -> contract
+	contract -> f [label="function"]
+	contracts -> contract_3
+	diagnostics -> diagnostic [label="Debug"]
+	diagnostics -> diagnostic_6 [label="Debug"]
+	diagnostics -> diagnostic_7 [label="Error"]
+}

@@ -1,0 +1,24 @@
+strict digraph "tests/contract_testcases/substrate/inheritance/cast_contract_01.sol" {
+	contract [label="contract IFoo\ntests/contract_testcases/substrate/inheritance/cast_contract_01.sol:2:9-24"]
+	bar [label="function bar\ncontract: IFoo\ntests/contract_testcases/substrate/inheritance/cast_contract_01.sol:3:13-64\nsignature bar(uint32)\nvisibility external\nmutability pure\nvirtual"]
+	parameters [label="parameters\nuint32 "]
+	returns [label="returns\nuint32 "]
+	contract_5 [label="contract foo\ntests/contract_testcases/substrate/inheritance/cast_contract_01.sol:6:9-23"]
+	bar_6 [label="function bar\ncontract: foo\ntests/contract_testcases/substrate/inheritance/cast_contract_01.sol:7:13-62\nsignature bar(bytes32)\nvisibility public\nmutability pure"]
+	parameters_7 [label="parameters\ncontract IFoo x"]
+	returns_8 [label="returns\nuint32 "]
+	diagnostic [label="found interface ‘IFoo’\nlevel Debug\ntests/contract_testcases/substrate/inheritance/cast_contract_01.sol:2:9-24"]
+	diagnostic_11 [label="found contract ‘foo’\nlevel Debug\ntests/contract_testcases/substrate/inheritance/cast_contract_01.sol:6:9-23"]
+	diagnostic_12 [label="implicit conversion not allowed since contract foo is not a base contract of contract IFoo\nlevel Error\ntests/contract_testcases/substrate/inheritance/cast_contract_01.sol:8:25-26"]
+	contracts -> contract
+	contract -> bar [label="function"]
+	bar -> parameters [label="parameters"]
+	bar -> returns [label="returns"]
+	contracts -> contract_5
+	contract_5 -> bar_6 [label="function"]
+	bar_6 -> parameters_7 [label="parameters"]
+	bar_6 -> returns_8 [label="returns"]
+	diagnostics -> diagnostic [label="Debug"]
+	diagnostics -> diagnostic_11 [label="Debug"]
+	diagnostics -> diagnostic_12 [label="Error"]
+}

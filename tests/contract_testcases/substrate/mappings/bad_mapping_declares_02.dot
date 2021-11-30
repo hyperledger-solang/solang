@@ -1,0 +1,10 @@
+strict digraph "tests/contract_testcases/substrate/mappings/bad_mapping_declares_02.sol" {
+	foo [label="name:foo\ncontract: c\ntests/contract_testcases/substrate/mappings/bad_mapping_declares_02.sol:3:20-23\nfield name:x ty:int256"]
+	contract [label="contract c\ntests/contract_testcases/substrate/mappings/bad_mapping_declares_02.sol:2:9-20"]
+	diagnostic [label="found contract ‘c’\nlevel Debug\ntests/contract_testcases/substrate/mappings/bad_mapping_declares_02.sol:2:9-20"]
+	diagnostic_7 [label="key of mapping cannot be struct type\nlevel Error\ntests/contract_testcases/substrate/mappings/bad_mapping_declares_02.sol:6:21-24"]
+	structs -> foo
+	contracts -> contract
+	diagnostics -> diagnostic [label="Debug"]
+	diagnostics -> diagnostic_7 [label="Error"]
+}
