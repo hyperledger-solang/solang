@@ -1501,6 +1501,32 @@ fn function_cfg(
         );
     }
 
+    if func
+        .body
+        .last()
+        .map(|stmt| stmt.reachable())
+        .unwrap_or(true)
+    {
+        // add implicit return
+        cfg.add(
+            &mut vartab,
+            Instr::Return {
+                value: func
+                    .symtable
+                    .returns
+                    .iter()
+                    .map(|pos| {
+                        Expression::Variable(
+                            pt::Loc(0, 0, 0),
+                            func.symtable.vars[pos].ty.clone(),
+                            *pos,
+                        )
+                    })
+                    .collect::<Vec<_>>(),
+            },
+        );
+    }
+
     let (vars, next_id) = vartab.drain();
     cfg.vars = vars;
     ns.next_id = next_id;
@@ -1621,6 +1647,31 @@ pub fn generate_modifier_dispatch(
         );
     }
 
+    if modifier
+        .body
+        .last()
+        .map(|stmt| stmt.reachable())
+        .unwrap_or(true)
+    {
+        // add implicit return
+        cfg.add(
+            &mut vartab,
+            Instr::Return {
+                value: func
+                    .symtable
+                    .returns
+                    .iter()
+                    .map(|pos| {
+                        Expression::Variable(
+                            pt::Loc(0, 0, 0),
+                            func.symtable.vars[pos].ty.clone(),
+                            *pos,
+                        )
+                    })
+                    .collect::<Vec<_>>(),
+            },
+        );
+    }
     let (vars, next_id) = vartab.drain();
     cfg.vars = vars;
 
@@ -1665,5 +1716,23 @@ impl Contract {
         }
 
         out
+    }
+
+    /// Get the storage slot for a variable, possibly from base contract
+    pub fn get_storage_slot(
+        &self,
+        var_contract_no: usize,
+        var_no: usize,
+        ns: &Namespace,
+    ) -> Expression {
+        if let Some(layout) = self
+            .layout
+            .iter()
+            .find(|l| l.contract_no == var_contract_no && l.var_no == var_no)
+        {
+            Expression::NumberLiteral(pt::Loc(0, 0, 0), ns.storage_type(), layout.slot.clone())
+        } else {
+            panic!("get_storage_slot called on non-storage variable");
+        }
     }
 }

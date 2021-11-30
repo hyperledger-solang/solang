@@ -245,31 +245,12 @@ pub fn resolve_function_body(
 
     ns.diagnostics.extend(diagnostics);
 
-    if reachable? {
-        // ensure we have a return instruction
-        if let Some(Statement::Return(_, _)) = res.last() {
-            // ok
-        } else if return_required {
-            ns.diagnostics.push(Diagnostic::error(
-                body.loc().end(),
-                "missing return statement".to_string(),
-            ));
-            return Err(());
-        } else {
-            // add implicit return
-            statement(
-                &pt::Statement::Return(pt::Loc(0, 0, 0), None),
-                &mut res,
-                file_no,
-                contract_no,
-                function_no,
-                false,
-                &mut symtable,
-                &mut loops,
-                ns,
-                &mut Vec::new(),
-            )?;
-        }
+    if reachable? && return_required {
+        ns.diagnostics.push(Diagnostic::error(
+            body.loc().end(),
+            "missing return statement".to_string(),
+        ));
+        return Err(());
     }
 
     if def.ty == pt::FunctionTy::Modifier {
@@ -751,21 +732,7 @@ fn statement(
                 return Err(());
             }
 
-            let exprs = symtable
-                .returns
-                .iter()
-                .map(|pos| {
-                    Expression::Variable(pt::Loc(0, 0, 0), symtable.vars[pos].ty.clone(), *pos)
-                })
-                .collect::<Vec<_>>();
-
-            let expr = if exprs.len() > 1 {
-                Some(Expression::List(pt::Loc(0, 0, 0), exprs))
-            } else {
-                exprs.into_iter().next()
-            };
-
-            res.push(Statement::Return(*loc, expr));
+            res.push(Statement::Return(*loc, None));
 
             Ok(false)
         }
