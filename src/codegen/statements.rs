@@ -1,7 +1,7 @@
 use num_bigint::BigInt;
 use std::collections::LinkedList;
 
-use super::expression::{assign_single, emit_function_call, expression};
+use super::expression::{assign_single, default_gas, emit_function_call, expression};
 use super::Options;
 use super::{
     cfg::{ControlFlowGraph, Instr},
@@ -1036,7 +1036,11 @@ fn try_catch(
             } = function.ty()
             {
                 let value = expression(value, cfg, callee_contract_no, Some(func), ns, vartab, opt);
-                let gas = expression(gas, cfg, callee_contract_no, Some(func), ns, vartab, opt);
+                let gas = if let Some(gas) = gas {
+                    expression(gas, cfg, callee_contract_no, Some(func), ns, vartab, opt)
+                } else {
+                    default_gas(ns)
+                };
                 let function = expression(
                     function,
                     cfg,
@@ -1157,7 +1161,11 @@ fn try_catch(
                 expression(value, cfg, callee_contract_no, Some(func), ns, vartab, opt)
             });
 
-            let gas = expression(gas, cfg, callee_contract_no, Some(func), ns, vartab, opt);
+            let gas = if let Some(gas) = gas {
+                expression(gas, cfg, callee_contract_no, Some(func), ns, vartab, opt)
+            } else {
+                default_gas(ns)
+            };
             let salt = salt
                 .as_ref()
                 .map(|salt| expression(salt, cfg, callee_contract_no, Some(func), ns, vartab, opt));

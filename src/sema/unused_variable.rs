@@ -135,7 +135,9 @@ pub fn check_function_call(ns: &mut Namespace, exp: &Expression, symtable: &mut 
             for arg in args {
                 used_variable(ns, arg, symtable);
             }
-            used_variable(ns, gas, symtable);
+            if let Some(gas) = gas {
+                used_variable(ns, gas, symtable);
+            }
             used_variable(ns, value, symtable);
             check_function_call(ns, function, symtable);
         }
@@ -153,7 +155,9 @@ pub fn check_function_call(ns: &mut Namespace, exp: &Expression, symtable: &mut 
             for arg in args {
                 used_variable(ns, arg, symtable);
             }
-            used_variable(ns, gas, symtable);
+            if let Some(gas) = gas {
+                used_variable(ns, gas, symtable);
+            }
             if let Some(expr) = value {
                 used_variable(ns, expr, symtable);
             }
@@ -178,7 +182,9 @@ pub fn check_function_call(ns: &mut Namespace, exp: &Expression, symtable: &mut 
             used_variable(ns, args, symtable);
             used_variable(ns, address, symtable);
             used_variable(ns, value, symtable);
-            used_variable(ns, gas, symtable);
+            if let Some(gas) = gas {
+                used_variable(ns, gas, symtable);
+            }
         }
 
         Expression::ExternalFunction { address, .. } => {

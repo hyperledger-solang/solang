@@ -1172,7 +1172,9 @@ impl Dot {
                     self.add_expression(arg, func, ns, node, format!("arg #{}", no));
                 }
 
-                self.add_expression(gas, func, ns, node, String::from("gas"));
+                if let Some(gas) = gas {
+                    self.add_expression(gas, func, ns, node, String::from("gas"));
+                }
                 self.add_expression(value, func, ns, node, String::from("value"));
             }
             Expression::ExternalFunctionCallRaw {
@@ -1196,7 +1198,9 @@ impl Dot {
 
                 self.add_expression(address, func, ns, node, String::from("address"));
                 self.add_expression(args, func, ns, node, String::from("args"));
-                self.add_expression(gas, func, ns, node, String::from("gas"));
+                if let Some(gas) = gas {
+                    self.add_expression(gas, func, ns, node, String::from("gas"));
+                }
                 self.add_expression(value, func, ns, node, String::from("value"));
             }
             Expression::Constructor {
@@ -1233,7 +1237,9 @@ impl Dot {
                 if let Some(space) = space {
                     self.add_expression(space, func, ns, node, String::from("space"));
                 }
-                self.add_expression(gas, func, ns, node, String::from("gas"));
+                if let Some(gas) = gas {
+                    self.add_expression(gas, func, ns, node, String::from("gas"));
+                }
             }
 
             Expression::FormatString(loc, args) => {

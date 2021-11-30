@@ -7378,14 +7378,7 @@ fn method_call_named_args(
                     }
                 };
 
-                match cast(
-                    &pt::Loc(0, 0, 0),
-                    arg.clone(),
-                    &param.ty,
-                    true,
-                    ns,
-                    diagnostics,
-                ) {
+                match cast(&arg.loc(), arg.clone(), &param.ty, true, ns, diagnostics) {
                     Ok(expr) => cast_args.push(expr),
                     Err(()) => {
                         matches = false;
@@ -7710,7 +7703,7 @@ pub fn collect_call_args<'a>(
 }
 
 struct CallArgs {
-    gas: Box<Expression>,
+    gas: Option<Box<Expression>>,
     salt: Option<Box<Expression>>,
     value: Option<Box<Expression>>,
     space: Option<Box<Expression>>,
@@ -7745,16 +7738,7 @@ fn parse_call_args(
     }
 
     let mut res = CallArgs {
-        gas: Box::new(Expression::NumberLiteral(
-            pt::Loc(0, 0, 0),
-            Type::Uint(64),
-            // See EIP150
-            if ns.target == Target::Ewasm {
-                BigInt::from(i64::MAX)
-            } else {
-                BigInt::zero()
-            },
-        )),
+        gas: None,
         value: None,
         salt: None,
         space: None,
@@ -7813,7 +7797,14 @@ fn parse_call_args(
                     Some(&ty),
                 )?;
 
-                res.gas = Box::new(cast(&arg.expr.loc(), expr, &ty, true, ns, diagnostics)?);
+                res.gas = Some(Box::new(cast(
+                    &arg.expr.loc(),
+                    expr,
+                    &ty,
+                    true,
+                    ns,
+                    diagnostics,
+                )?));
             }
             "space" => {
                 if ns.target != Target::Solana {
