@@ -1,5 +1,5 @@
 use indexmap::IndexMap;
-use std::collections::{BTreeSet, HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::fmt;
 use std::str;
 
@@ -1359,8 +1359,8 @@ fn function_cfg(
     // known the top level constructor, since the arguments can be specified elsewhere
     // on a constructor for a superior class
     if func.ty == pt::FunctionTy::Constructor && func.contract_no == Some(contract_no) {
-        let mut all_base_args = HashMap::new();
-        let mut diagnostics = HashSet::new();
+        let mut all_base_args = BTreeMap::new();
+        let mut diagnostics = BTreeSet::new();
 
         // Find all the resolved arguments for base contracts. These can be attached
         // to the contract, or the constructor. Contracts can have multiple constructors

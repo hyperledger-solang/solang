@@ -1,0 +1,8 @@
+strict digraph "tests/contract_testcases/substrate/libraries/restrictions_02.sol" {
+	contract [label="contract c\ntests/contract_testcases/substrate/libraries/restrictions_02.sol:2:9-19"]
+	diagnostic [label="found library ‘c’\nlevel Debug\ntests/contract_testcases/substrate/libraries/restrictions_02.sol:2:9-19"]
+	diagnostic_5 [label="fallback not allowed in a library\nlevel Error\ntests/contract_testcases/substrate/libraries/restrictions_02.sol:3:13-32"]
+	contracts -> contract
+	diagnostics -> diagnostic [label="Debug"]
+	diagnostics -> diagnostic_5 [label="Error"]
+}

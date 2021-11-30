@@ -1,0 +1,8 @@
+strict digraph "tests/contract_testcases/substrate/inheritance/test_interface_04.sol" {
+	contract [label="contract foo\ntests/contract_testcases/substrate/inheritance/test_interface_04.sol:2:9-27"]
+	contract_3 [label="contract a\ntests/contract_testcases/substrate/inheritance/test_interface_04.sol:6:9-29"]
+	diagnostic [label="interface ‘foo’ cannot have abstract contract ‘a’ as a base\nlevel Error\ntests/contract_testcases/substrate/inheritance/test_interface_04.sol:2:26-27"]
+	contracts -> contract
+	contracts -> contract_3
+	diagnostics -> diagnostic [label="Error"]
+}

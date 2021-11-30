@@ -1,0 +1,8 @@
+strict digraph "tests/contract_testcases/substrate/functions/return_not_returns.sol" {
+	contract [label="contract test\ntests/contract_testcases/substrate/functions/return_not_returns.sol:1:1-15"]
+	diagnostic [label="found contract ‘test’\nlevel Debug\ntests/contract_testcases/substrate/functions/return_not_returns.sol:1:1-15"]
+	diagnostic_5 [label="‘return’ unexpected. Did you mean ‘returns’?\nlevel Error\ntests/contract_testcases/substrate/functions/return_not_returns.sol:2:40-46"]
+	contracts -> contract
+	diagnostics -> diagnostic [label="Debug"]
+	diagnostics -> diagnostic_5 [label="Error"]
+}

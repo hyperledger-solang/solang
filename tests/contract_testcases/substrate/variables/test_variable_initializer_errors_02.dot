@@ -1,0 +1,18 @@
+strict digraph "tests/contract_testcases/substrate/variables/test_variable_initializer_errors_02.sol" {
+	contract [label="contract test\ntests/contract_testcases/substrate/variables/test_variable_initializer_errors_02.sol:1:1-15"]
+	var [label="variable x\nvisibility internal\ntests/contract_testcases/substrate/variables/test_variable_initializer_errors_02.sol:2:13-29"]
+	var_4 [label="variable y\nvisibility internal\ntests/contract_testcases/substrate/variables/test_variable_initializer_errors_02.sol:3:13-25"]
+	number_literal [label="uint256 literal: 102\ntests/contract_testcases/substrate/variables/test_variable_initializer_errors_02.sol:3:22-25"]
+	diagnostic [label="found contract ‘test’\nlevel Debug\ntests/contract_testcases/substrate/variables/test_variable_initializer_errors_02.sol:1:1-15"]
+	diagnostic_8 [label="`y' is not found\nlevel Error\ntests/contract_testcases/substrate/variables/test_variable_initializer_errors_02.sol:2:22-23"]
+	diagnostic_9 [label="storage variable 'x' has never been used\nlevel Warning\ntests/contract_testcases/substrate/variables/test_variable_initializer_errors_02.sol:2:13-29"]
+	diagnostic_10 [label="storage variable 'y' has been assigned, but never read\nlevel Warning\ntests/contract_testcases/substrate/variables/test_variable_initializer_errors_02.sol:3:13-25"]
+	contracts -> contract
+	contract -> var [label="variable"]
+	contract -> var_4 [label="variable"]
+	var_4 -> number_literal [label="initializer"]
+	diagnostics -> diagnostic [label="Debug"]
+	diagnostics -> diagnostic_8 [label="Error"]
+	diagnostics -> diagnostic_9 [label="Warning"]
+	diagnostics -> diagnostic_10 [label="Warning"]
+}

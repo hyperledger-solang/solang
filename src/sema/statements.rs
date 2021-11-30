@@ -8,7 +8,7 @@ use super::symtable::{LoopScopes, Symtable};
 use crate::parser::pt;
 use crate::sema::symtable::VariableUsage;
 use crate::sema::unused_variable::{assigned_variable, check_function_call, used_variable};
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 pub fn resolve_function_body(
     def: &pt::FunctionDefinition,
@@ -46,7 +46,7 @@ pub fn resolve_function_body(
     // constructors.
     if def.ty == pt::FunctionTy::Constructor {
         let contract_no = contract_no.unwrap();
-        let mut resolve_bases: HashMap<usize, pt::Loc> = HashMap::new();
+        let mut resolve_bases: BTreeMap<usize, pt::Loc> = BTreeMap::new();
         let mut all_ok = true;
 
         for attr in &def.attributes {

@@ -1,0 +1,8 @@
+strict digraph "tests/contract_testcases/substrate/calls/payable_functions_03.sol" {
+	contract [label="contract c\ntests/contract_testcases/substrate/calls/payable_functions_03.sol:2:9-20"]
+	diagnostic [label="found contract ‘c’\nlevel Debug\ntests/contract_testcases/substrate/calls/payable_functions_03.sol:2:9-20"]
+	diagnostic_5 [label="fallback function must be declared external\nlevel Error\ntests/contract_testcases/substrate/calls/payable_functions_03.sol:3:13-30"]
+	contracts -> contract
+	diagnostics -> diagnostic [label="Debug"]
+	diagnostics -> diagnostic_5 [label="Error"]
+}

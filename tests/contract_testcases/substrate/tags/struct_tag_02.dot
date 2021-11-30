@@ -1,0 +1,8 @@
+strict digraph "tests/contract_testcases/substrate/tags/struct_tag_02.sol" {
+	x [label="name:x\ntests/contract_testcases/substrate/tags/struct_tag_02.sol:4:16-17\nfield name:f ty:uint32"]
+	tags [label="param: asdad"]
+	diagnostic [label="duplicate tag ‘@param’ for ‘f’\nlevel Error\ntests/contract_testcases/substrate/tags/struct_tag_02.sol:1:1-2:5"]
+	structs -> x
+	x -> tags [label="tags"]
+	diagnostics -> diagnostic [label="Error"]
+}

@@ -1,0 +1,10 @@
+strict digraph "tests/contract_testcases/substrate/arrays/data_locations_05.sol" {
+	foo2 [label="name: foo2\ncontract: foo\ntests/contract_testcases/substrate/arrays/data_locations_05.sol:3:13-37\nvalue: bar1\nvalue: bar2"]
+	contract [label="contract foo\ntests/contract_testcases/substrate/arrays/data_locations_05.sol:2:9-22"]
+	diagnostic [label="found contract ‘foo’\nlevel Debug\ntests/contract_testcases/substrate/arrays/data_locations_05.sol:2:9-22"]
+	diagnostic_7 [label="data location ‘storage’ can only be specified for array, struct or mapping\nlevel Error\ntests/contract_testcases/substrate/arrays/data_locations_05.sol:4:54-61"]
+	enums -> foo2
+	contracts -> contract
+	diagnostics -> diagnostic [label="Debug"]
+	diagnostics -> diagnostic_7 [label="Error"]
+}

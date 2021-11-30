@@ -1,0 +1,12 @@
+strict digraph "tests/contract_testcases/substrate/libraries/restrictions_08.sol" {
+	contract [label="contract c\ntests/contract_testcases/substrate/libraries/restrictions_08.sol:2:9-19"]
+	var [label="variable x\nvisibility internal\ntests/contract_testcases/substrate/libraries/restrictions_08.sol:3:13-18"]
+	diagnostic [label="found library ‘c’\nlevel Debug\ntests/contract_testcases/substrate/libraries/restrictions_08.sol:2:9-19"]
+	diagnostic_6 [label="library ‘c’ is not allowed to have state variable ‘x’\nlevel Error\ntests/contract_testcases/substrate/libraries/restrictions_08.sol:3:13-18"]
+	diagnostic_7 [label="storage variable 'x' has never been used\nlevel Warning\ntests/contract_testcases/substrate/libraries/restrictions_08.sol:3:13-18"]
+	contracts -> contract
+	contract -> var [label="variable"]
+	diagnostics -> diagnostic [label="Debug"]
+	diagnostics -> diagnostic_6 [label="Error"]
+	diagnostics -> diagnostic_7 [label="Warning"]
+}

@@ -468,15 +468,6 @@ fn process_file(
         diagnostics::print_messages(resolver, &ns, verbose);
     }
 
-    if ns.contracts.is_empty() || diagnostics::any_errors(&ns.diagnostics) {
-        return Err(());
-    }
-
-    if let Some("ast") = matches.value_of("EMIT") {
-        println!("{}", ns.print(filename));
-        return Ok(ns);
-    }
-
     if let Some("ast-dot") = matches.value_of("EMIT") {
         let filepath = PathBuf::from(filename);
         let stem = filepath.file_stem().unwrap().to_string_lossy();
@@ -486,10 +477,33 @@ fn process_file(
             eprintln!("info: Saving graphviz dot {}", dot_filename.display());
         }
 
-        if let Err(err) = ns.dotgraphviz(&dot_filename) {
+        let dot = ns.dotgraphviz();
+
+        let mut file = match File::create(&dot_filename) {
+            Ok(file) => file,
+            Err(err) => {
+                eprintln!(
+                    "error: cannot create file ‘{}’: {}",
+                    dot_filename.display(),
+                    err,
+                );
+                std::process::exit(1);
+            }
+        };
+
+        if let Err(err) = file.write_all(dot.as_bytes()) {
             eprintln!("{}: error: {}", dot_filename.display(), err);
             std::process::exit(1);
         }
+        return Ok(ns);
+    }
+
+    if ns.contracts.is_empty() || diagnostics::any_errors(&ns.diagnostics) {
+        return Err(());
+    }
+
+    if let Some("ast") = matches.value_of("EMIT") {
+        println!("{}", ns.print(filename));
         return Ok(ns);
     }
 

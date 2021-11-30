@@ -1,0 +1,8 @@
+strict digraph "tests/contract_testcases/substrate/libraries/restrictions_07.sol" {
+	contract [label="contract c\ntests/contract_testcases/substrate/libraries/restrictions_07.sol:2:9-19"]
+	contract_3 [label="contract a\ntests/contract_testcases/substrate/libraries/restrictions_07.sol:6:9-24"]
+	diagnostic [label="library ‘c’ cannot be used as base contract for contract ‘a’\nlevel Error\ntests/contract_testcases/substrate/libraries/restrictions_07.sol:6:23-24"]
+	contracts -> contract
+	contracts -> contract_3
+	diagnostics -> diagnostic [label="Error"]
+}

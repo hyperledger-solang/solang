@@ -1,0 +1,4 @@
+
+        library c {
+            int x;
+        }

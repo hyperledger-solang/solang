@@ -1,0 +1,1 @@
+uint constant test = 5; contract test {}

@@ -1,0 +1,4 @@
+strict digraph "tests/contract_testcases/substrate/functions/global_functions_04.sol" {
+	diagnostic [label="function modifiers or base contracts are only allowed on functions in contracts\nlevel Error\ntests/contract_testcases/substrate/functions/global_functions_04.sol:2:22-27"]
+	diagnostics -> diagnostic [label="Error"]
+}

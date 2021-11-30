@@ -1,0 +1,28 @@
+strict digraph "tests/contract_testcases/substrate/value/external_call_value_09.sol" {
+	contract [label="contract a\ntests/contract_testcases/substrate/value/external_call_value_09.sol:2:9-20"]
+	test [label="function test\ncontract: a\ntests/contract_testcases/substrate/value/external_call_value_09.sol:3:13-50\nsignature test(int32)\nvisibility public\nmutability payable"]
+	parameters [label="parameters\nint32 l"]
+	contract_4 [label="contract b\ntests/contract_testcases/substrate/value/external_call_value_09.sol:7:9-20"]
+	var [label="variable x\nvisibility internal\ntests/contract_testcases/substrate/value/external_call_value_09.sol:8:13-18"]
+	test_6 [label="function test\ncontract: b\ntests/contract_testcases/substrate/value/external_call_value_09.sol:10:13-35\nsignature test()\nvisibility public\nmutability nonpayable"]
+	diagnostic [label="found contract ‘a’\nlevel Debug\ntests/contract_testcases/substrate/value/external_call_value_09.sol:2:9-20"]
+	diagnostic_9 [label="found contract ‘b’\nlevel Debug\ntests/contract_testcases/substrate/value/external_call_value_09.sol:7:9-20"]
+	diagnostic_10 [label="function parameter 'l' has never been read\nlevel Warning\ntests/contract_testcases/substrate/value/external_call_value_09.sol:3:33-34"]
+	diagnostic_11 [label="declaration of ‘x’ shadows state variable\nlevel Warning\ntests/contract_testcases/substrate/value/external_call_value_09.sol:11:25-26"]
+	note [label="previous declaration of state variable\ntests/contract_testcases/substrate/value/external_call_value_09.sol:8:13-18"]
+	diagnostic_13 [label="conversion truncates uint256 to uint128, as value is type uint128 on target substrate\nlevel Error\ntests/contract_testcases/substrate/value/external_call_value_09.sol:13:31-32"]
+	diagnostic_14 [label="storage variable 'x' has never been used\nlevel Warning\ntests/contract_testcases/substrate/value/external_call_value_09.sol:8:13-18"]
+	contracts -> contract
+	contract -> test [label="function"]
+	test -> parameters [label="parameters"]
+	contracts -> contract_4
+	contract_4 -> var [label="variable"]
+	contract_4 -> test_6 [label="function"]
+	diagnostics -> diagnostic [label="Debug"]
+	diagnostics -> diagnostic_9 [label="Debug"]
+	diagnostics -> diagnostic_10 [label="Warning"]
+	diagnostics -> diagnostic_11 [label="Warning"]
+	diagnostic_11 -> note [label="note"]
+	diagnostics -> diagnostic_13 [label="Error"]
+	diagnostics -> diagnostic_14 [label="Warning"]
+}

@@ -1,0 +1,14 @@
+strict digraph "tests/contract_testcases/substrate/value/balance_02.sol" {
+	contract [label="contract b\ntests/contract_testcases/substrate/value/balance_02.sol:2:9-20"]
+	step1 [label="function step1\ncontract: b\ntests/contract_testcases/substrate/value/balance_02.sol:3:13-71\nsignature step1(bytes32)\nvisibility public\nmutability nonpayable"]
+	parameters [label="parameters\naddress payable j"]
+	returns [label="returns\nuint128 "]
+	diagnostic [label="found contract ‘b’\nlevel Debug\ntests/contract_testcases/substrate/value/balance_02.sol:2:9-20"]
+	diagnostic_7 [label="substrate can only retrieve balance of this, like ‘address(this).balance’\nlevel Error\ntests/contract_testcases/substrate/value/balance_02.sol:4:24-25"]
+	contracts -> contract
+	contract -> step1 [label="function"]
+	step1 -> parameters [label="parameters"]
+	step1 -> returns [label="returns"]
+	diagnostics -> diagnostic [label="Debug"]
+	diagnostics -> diagnostic_7 [label="Error"]
+}

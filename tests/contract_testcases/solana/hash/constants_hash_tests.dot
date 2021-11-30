@@ -1,0 +1,10 @@
+strict digraph "tests/contract_testcases/solana/hash/constants_hash_tests.sol" {
+	contract [label="contract tester\ntests/contract_testcases/solana/hash/constants_hash_tests.sol:2:9-25"]
+	test [label="function test\ncontract: tester\ntests/contract_testcases/solana/hash/constants_hash_tests.sol:3:13-35\nsignature test()\nvisibility public\nmutability nonpayable"]
+	diagnostic [label="found contract ‘tester’\nlevel Debug\ntests/contract_testcases/solana/hash/constants_hash_tests.sol:2:9-25"]
+	diagnostic_5 [label="unknown function or type ‘blake2_256’\nlevel Error\ntests/contract_testcases/solana/hash/constants_hash_tests.sol:4:32-42"]
+	contracts -> contract
+	contract -> test [label="function"]
+	diagnostics -> diagnostic [label="Debug"]
+	diagnostics -> diagnostic_5 [label="Error"]
+}

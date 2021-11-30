@@ -1,0 +1,10 @@
+strict digraph "tests/contract_testcases/substrate/builtins/abi_encode_with_signature.sol" {
+	contract [label="contract printer\ntests/contract_testcases/substrate/builtins/abi_encode_with_signature.sol:2:9-26"]
+	test [label="function test\ncontract: printer\ntests/contract_testcases/substrate/builtins/abi_encode_with_signature.sol:3:13-35\nsignature test()\nvisibility public\nmutability nonpayable"]
+	diagnostic [label="found contract ‘printer’\nlevel Debug\ntests/contract_testcases/substrate/builtins/abi_encode_with_signature.sol:2:9-26"]
+	diagnostic_5 [label="function requires one ‘string’ signature argument\nlevel Error\ntests/contract_testcases/substrate/builtins/abi_encode_with_signature.sol:4:27-52"]
+	contracts -> contract
+	contract -> test [label="function"]
+	diagnostics -> diagnostic [label="Debug"]
+	diagnostics -> diagnostic_5 [label="Error"]
+}

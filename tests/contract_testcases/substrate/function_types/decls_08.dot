@@ -1,0 +1,8 @@
+strict digraph "tests/contract_testcases/substrate/function_types/decls_08.sol" {
+	contract [label="contract test\ntests/contract_testcases/substrate/function_types/decls_08.sol:1:1-15"]
+	diagnostic [label="found contract ‘test’\nlevel Debug\ntests/contract_testcases/substrate/function_types/decls_08.sol:1:1-15"]
+	diagnostic_5 [label="variable of type internal function cannot be ‘public’\nlevel Error\ntests/contract_testcases/substrate/function_types/decls_08.sol:2:13-66"]
+	contracts -> contract
+	diagnostics -> diagnostic [label="Debug"]
+	diagnostics -> diagnostic_5 [label="Error"]
+}

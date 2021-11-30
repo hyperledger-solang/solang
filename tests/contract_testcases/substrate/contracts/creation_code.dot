@@ -1,0 +1,26 @@
+strict digraph "tests/contract_testcases/substrate/contracts/creation_code.sol" {
+	contract [label="contract a\ntests/contract_testcases/substrate/contracts/creation_code.sol:2:9-20"]
+	test [label="function test\ncontract: a\ntests/contract_testcases/substrate/contracts/creation_code.sol:3:13-35\nsignature test()\nvisibility public\nmutability nonpayable"]
+	var_decl [label="variable decl bytes code\ntests/contract_testcases/substrate/contracts/creation_code.sol:4:21-54"]
+	code_literal [label="code literal contract b\ntests/contract_testcases/substrate/contracts/creation_code.sol:4:34-54"]
+	contract_5 [label="contract b\ntests/contract_testcases/substrate/contracts/creation_code.sol:8:9-20"]
+	var [label="variable x\nvisibility internal\ntests/contract_testcases/substrate/contracts/creation_code.sol:9:17-22"]
+	test_7 [label="function test\ncontract: b\ntests/contract_testcases/substrate/contracts/creation_code.sol:11:17-39\nsignature test()\nvisibility public\nmutability nonpayable"]
+	diagnostic [label="found contract ‘a’\nlevel Debug\ntests/contract_testcases/substrate/contracts/creation_code.sol:2:9-20"]
+	diagnostic_10 [label="found contract ‘b’\nlevel Debug\ntests/contract_testcases/substrate/contracts/creation_code.sol:8:9-20"]
+	diagnostic_11 [label="local variable 'code' has been assigned, but never read\nlevel Warning\ntests/contract_testcases/substrate/contracts/creation_code.sol:4:27-31"]
+	diagnostic_12 [label="circular reference creating contract ‘a’\nlevel Error\ntests/contract_testcases/substrate/contracts/creation_code.sol:12:31-38"]
+	diagnostic_13 [label="storage variable 'x' has never been used\nlevel Warning\ntests/contract_testcases/substrate/contracts/creation_code.sol:9:17-22"]
+	contracts -> contract
+	contract -> test [label="function"]
+	test -> var_decl [label="body"]
+	var_decl -> code_literal [label="init"]
+	contracts -> contract_5
+	contract_5 -> var [label="variable"]
+	contract_5 -> test_7 [label="function"]
+	diagnostics -> diagnostic [label="Debug"]
+	diagnostics -> diagnostic_10 [label="Debug"]
+	diagnostics -> diagnostic_11 [label="Warning"]
+	diagnostics -> diagnostic_12 [label="Error"]
+	diagnostics -> diagnostic_13 [label="Warning"]
+}

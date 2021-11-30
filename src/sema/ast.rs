@@ -159,7 +159,7 @@ pub struct Function {
     pub params: Vec<Parameter>,
     pub returns: Vec<Parameter>,
     // constructor arguments for base contracts, only present on constructors
-    pub bases: HashMap<usize, (pt::Loc, usize, Vec<Expression>)>,
+    pub bases: BTreeMap<usize, (pt::Loc, usize, Vec<Expression>)>,
     // modifiers for functions
     pub modifiers: Vec<Expression>,
     pub is_virtual: bool,
@@ -213,7 +213,7 @@ impl Function {
             visibility,
             params,
             returns,
-            bases: HashMap::new(),
+            bases: BTreeMap::new(),
             modifiers: Vec::new(),
             is_virtual: false,
             is_accessor: false,
@@ -1517,7 +1517,7 @@ impl Statement {
     }
 }
 
-#[derive(Debug, Eq, Hash, PartialEq)]
+#[derive(Debug, Eq, Hash, PartialOrd, Ord, PartialEq)]
 pub enum Level {
     Debug,
     Info,
@@ -1525,7 +1525,7 @@ pub enum Level {
     Error,
 }
 
-#[derive(Debug, Eq, Hash, PartialEq)]
+#[derive(Debug, Eq, Hash, PartialOrd, Ord, PartialEq)]
 pub enum ErrorType {
     None,
     ParserError,
@@ -1535,13 +1535,13 @@ pub enum ErrorType {
     Warning,
 }
 
-#[derive(Debug, Eq, Hash, PartialEq)]
+#[derive(Debug, Eq, Hash, PartialOrd, Ord, PartialEq)]
 pub struct Note {
     pub pos: pt::Loc,
     pub message: String,
 }
 
-#[derive(Debug, Eq, Hash, PartialEq)]
+#[derive(Debug, Eq, Hash, PartialOrd, Ord, PartialEq)]
 pub struct Diagnostic {
     pub level: Level,
     pub ty: ErrorType,

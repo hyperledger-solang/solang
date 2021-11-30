@@ -1,0 +1,10 @@
+strict digraph "tests/contract_testcases/solana/expressions/pushpop.sol" {
+	contract [label="contract foo\ntests/contract_testcases/solana/expressions/pushpop.sol:2:9-22"]
+	test [label="function test\ncontract: foo\ntests/contract_testcases/solana/expressions/pushpop.sol:3:13-35\nsignature test()\nvisibility public\nmutability nonpayable"]
+	diagnostic [label="found contract ‘foo’\nlevel Debug\ntests/contract_testcases/solana/expressions/pushpop.sol:2:9-22"]
+	diagnostic_5 [label="‘push()’ not supported on ‘bytes’ on target solana\nlevel Error\ntests/contract_testcases/solana/expressions/pushpop.sol:6:19-23"]
+	contracts -> contract
+	contract -> test [label="function"]
+	diagnostics -> diagnostic [label="Debug"]
+	diagnostics -> diagnostic_5 [label="Error"]
+}

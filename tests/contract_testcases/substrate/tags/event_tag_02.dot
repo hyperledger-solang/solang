@@ -1,0 +1,10 @@
+strict digraph "tests/contract_testcases/substrate/tags/event_tag_02.sol" {
+	x [label="name:x\ntests/contract_testcases/substrate/tags/event_tag_02.sol:4:15-16\nfield name:f ty:uint32 indexed:no"]
+	tags [label="param: asdad"]
+	diagnostic [label="duplicate tag ‘@param’ for ‘f’\nlevel Error\ntests/contract_testcases/substrate/tags/event_tag_02.sol:1:1-2:5"]
+	diagnostic_7 [label="event 'x' has never been emitted\nlevel Warning\ntests/contract_testcases/substrate/tags/event_tag_02.sol:4:15-16"]
+	events -> x
+	x -> tags [label="tags"]
+	diagnostics -> diagnostic [label="Error"]
+	diagnostics -> diagnostic_7 [label="Warning"]
+}

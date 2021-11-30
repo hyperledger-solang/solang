@@ -1,0 +1,10 @@
+strict digraph "tests/contract_testcases/substrate/builtins/abi_decode_02.sol" {
+	contract [label="contract printer\ntests/contract_testcases/substrate/builtins/abi_decode_02.sol:2:9-26"]
+	test [label="function test\ncontract: printer\ntests/contract_testcases/substrate/builtins/abi_decode_02.sol:3:13-35\nsignature test()\nvisibility public\nmutability nonpayable"]
+	diagnostic [label="found contract ‘printer’\nlevel Debug\ntests/contract_testcases/substrate/builtins/abi_decode_02.sol:2:9-26"]
+	diagnostic_5 [label="unexpected identifier ‘feh’ in type\nlevel Error\ntests/contract_testcases/substrate/builtins/abi_decode_02.sol:4:52-55"]
+	contracts -> contract
+	contract -> test [label="function"]
+	diagnostics -> diagnostic [label="Debug"]
+	diagnostics -> diagnostic_5 [label="Error"]
+}

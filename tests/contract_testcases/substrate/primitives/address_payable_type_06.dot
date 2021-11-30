@@ -1,0 +1,8 @@
+strict digraph "tests/contract_testcases/substrate/primitives/address_payable_type_06.sol" {
+	contract [label="contract c\ntests/contract_testcases/substrate/primitives/address_payable_type_06.sol:2:9-20"]
+	diagnostic [label="found contract ‘c’\nlevel Debug\ntests/contract_testcases/substrate/primitives/address_payable_type_06.sol:2:9-20"]
+	diagnostic_5 [label="‘payable’ cannot be used for type declarations, only casting. use ‘address payable’\nlevel Error\ntests/contract_testcases/substrate/primitives/address_payable_type_06.sol:3:27-34"]
+	contracts -> contract
+	diagnostics -> diagnostic [label="Debug"]
+	diagnostics -> diagnostic_5 [label="Error"]
+}

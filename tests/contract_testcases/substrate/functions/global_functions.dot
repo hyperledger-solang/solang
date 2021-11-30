@@ -1,0 +1,4 @@
+strict digraph "tests/contract_testcases/substrate/functions/global_functions.sol" {
+	diagnostic [label="missing function name\nlevel Error\ntests/contract_testcases/substrate/functions/global_functions.sol:2:9-19"]
+	diagnostics -> diagnostic [label="Error"]
+}

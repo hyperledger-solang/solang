@@ -1,0 +1,16 @@
+strict digraph "tests/contract_testcases/solana/create_contract/base_contract.sol" {
+	MathError [label="name: MathError\ncontract: Math\ntests/contract_testcases/solana/create_contract/base_contract.sol:3:13-5:14\nvalue: NO_ERROR"]
+	WithMath [label="name:WithMath\ncontract: IsMath\ntests/contract_testcases/solana/create_contract/base_contract.sol:9:20-28\nfield name:math ty:enum Math.MathError"]
+	contract [label="contract Math\ntests/contract_testcases/solana/create_contract/base_contract.sol:2:9-23"]
+	contract_7 [label="contract IsMath\ntests/contract_testcases/solana/create_contract/base_contract.sol:8:9-32"]
+	base [label="base Math\ntests/contract_testcases/solana/create_contract/base_contract.sol:8:28-32"]
+	diagnostic [label="found contract ‘Math’\nlevel Debug\ntests/contract_testcases/solana/create_contract/base_contract.sol:2:9-23"]
+	diagnostic_11 [label="found contract ‘IsMath’\nlevel Debug\ntests/contract_testcases/solana/create_contract/base_contract.sol:8:9-32"]
+	enums -> MathError
+	structs -> WithMath
+	contracts -> contract
+	contracts -> contract_7
+	contract_7 -> base [label="base"]
+	diagnostics -> diagnostic [label="Debug"]
+	diagnostics -> diagnostic_11 [label="Debug"]
+}

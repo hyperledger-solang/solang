@@ -1,0 +1,22 @@
+strict digraph "tests/contract_testcases/substrate/functions/args_and_returns_01.sol" {
+	contract [label="contract args\ntests/contract_testcases/substrate/functions/args_and_returns_01.sol:2:5-19"]
+	foo [label="function foo\ncontract: args\ntests/contract_testcases/substrate/functions/args_and_returns_01.sol:3:9-79\nsignature foo(bool,uint256)\nvisibility public\nmutability nonpayable"]
+	parameters [label="parameters\nbool arg1\nuint256 arg2"]
+	returns [label="returns\naddress arg2\nuint256 "]
+	diagnostic [label="found contract ‘args’\nlevel Debug\ntests/contract_testcases/substrate/functions/args_and_returns_01.sol:2:5-19"]
+	diagnostic_7 [label="arg2 is already declared\nlevel Error\ntests/contract_testcases/substrate/functions/args_and_returns_01.sol:3:68-72"]
+	note [label="location of previous declaration\ntests/contract_testcases/substrate/functions/args_and_returns_01.sol:3:38-42"]
+	diagnostic_9 [label="function parameter 'arg1' has never been read\nlevel Warning\ntests/contract_testcases/substrate/functions/args_and_returns_01.sol:3:27-31"]
+	diagnostic_10 [label="function parameter 'arg2' has never been read\nlevel Warning\ntests/contract_testcases/substrate/functions/args_and_returns_01.sol:3:38-42"]
+	diagnostic_11 [label="return variable 'arg2' has never been assigned\nlevel Warning\ntests/contract_testcases/substrate/functions/args_and_returns_01.sol:3:68-72"]
+	contracts -> contract
+	contract -> foo [label="function"]
+	foo -> parameters [label="parameters"]
+	foo -> returns [label="returns"]
+	diagnostics -> diagnostic [label="Debug"]
+	diagnostics -> diagnostic_7 [label="Error"]
+	diagnostic_7 -> note [label="note"]
+	diagnostics -> diagnostic_9 [label="Warning"]
+	diagnostics -> diagnostic_10 [label="Warning"]
+	diagnostics -> diagnostic_11 [label="Warning"]
+}

@@ -1,0 +1,14 @@
+strict digraph "tests/contract_testcases/substrate/inheritance/inherit_types_03.sol" {
+	enum_x [label="name: enum_x\ncontract: b\ntests/contract_testcases/substrate/inheritance/inherit_types_03.sol:9:13-35\nvalue: x1\nvalue: x2"]
+	contract [label="contract a\ntests/contract_testcases/substrate/inheritance/inherit_types_03.sol:2:9-20"]
+	contract_5 [label="contract b\ntests/contract_testcases/substrate/inheritance/inherit_types_03.sol:8:9-20"]
+	diagnostic [label="found contract ‘a’\nlevel Debug\ntests/contract_testcases/substrate/inheritance/inherit_types_03.sol:2:9-20"]
+	diagnostic_8 [label="type ‘enum_x’ not found\nlevel Error\ntests/contract_testcases/substrate/inheritance/inherit_types_03.sol:3:45-51"]
+	diagnostic_9 [label="found contract ‘b’\nlevel Debug\ntests/contract_testcases/substrate/inheritance/inherit_types_03.sol:8:9-20"]
+	enums -> enum_x
+	contracts -> contract
+	contracts -> contract_5
+	diagnostics -> diagnostic [label="Debug"]
+	diagnostics -> diagnostic_8 [label="Error"]
+	diagnostics -> diagnostic_9 [label="Debug"]
+}

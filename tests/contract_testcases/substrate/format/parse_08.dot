@@ -1,0 +1,22 @@
+strict digraph "tests/contract_testcases/substrate/format/parse_08.sol" {
+	contract [label="contract c\ntests/contract_testcases/substrate/format/parse_08.sol:2:9-20"]
+	foo [label="function foo\ncontract: c\ntests/contract_testcases/substrate/format/parse_08.sol:3:13-34\nsignature foo()\nvisibility public\nmutability nonpayable"]
+	var_decl [label="variable decl string s\ntests/contract_testcases/substrate/format/parse_08.sol:4:17-58"]
+	string_format [label="string format\ntests/contract_testcases/substrate/format/parse_08.sol:4:28-58"]
+	number_literal [label="uint8 literal: 1\ntests/contract_testcases/substrate/format/parse_08.sol:4:48-49"]
+	number_literal_6 [label="uint16 literal: 51966\ntests/contract_testcases/substrate/format/parse_08.sol:4:51-57"]
+	bytes_literal [label="string literal: 73\ntests/contract_testcases/substrate/format/parse_08.sol:4:28-58"]
+	diagnostic [label="found contract ‘c’\nlevel Debug\ntests/contract_testcases/substrate/format/parse_08.sol:2:9-20"]
+	diagnostic_10 [label="local variable 's' has been assigned, but never read\nlevel Warning\ntests/contract_testcases/substrate/format/parse_08.sol:4:24-25"]
+	diagnostic_11 [label="function can be declared ‘pure’\nlevel Warning\ntests/contract_testcases/substrate/format/parse_08.sol:3:13-34"]
+	contracts -> contract
+	contract -> foo [label="function"]
+	foo -> var_decl [label="body"]
+	var_decl -> string_format [label="init"]
+	string_format -> number_literal [label="arg #0"]
+	string_format -> number_literal_6 [label="arg #1"]
+	string_format -> bytes_literal [label="arg #2"]
+	diagnostics -> diagnostic [label="Debug"]
+	diagnostics -> diagnostic_10 [label="Warning"]
+	diagnostics -> diagnostic_11 [label="Warning"]
+}

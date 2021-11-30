@@ -1,0 +1,10 @@
+strict digraph "tests/contract_testcases/substrate/calls/try_catch_constructor_03.sol" {
+	contract [label="contract c\ntests/contract_testcases/substrate/calls/try_catch_constructor_03.sol:2:9-20"]
+	f [label="function f\ncontract: c\ntests/contract_testcases/substrate/calls/try_catch_constructor_03.sol:3:13-32\nsignature f()\nvisibility public\nmutability nonpayable"]
+	diagnostic [label="found contract ‘c’\nlevel Debug\ntests/contract_testcases/substrate/calls/try_catch_constructor_03.sol:2:9-20"]
+	diagnostic_5 [label="expected code block, not list of named arguments\nlevel Error\ntests/contract_testcases/substrate/calls/try_catch_constructor_03.sol:3:33-5:14"]
+	contracts -> contract
+	contract -> f [label="function"]
+	diagnostics -> diagnostic [label="Debug"]
+	diagnostics -> diagnostic_5 [label="Error"]
+}

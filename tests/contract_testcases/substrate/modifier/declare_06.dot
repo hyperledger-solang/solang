@@ -1,0 +1,20 @@
+strict digraph "tests/contract_testcases/substrate/modifier/declare_06.sol" {
+	contract [label="contract c\ntests/contract_testcases/substrate/modifier/declare_06.sol:2:9-20"]
+	foo [label="modifier foo\ncontract: c\ntests/contract_testcases/substrate/modifier/declare_06.sol:3:13-34\nmutability nonpayable"]
+	parameters [label="parameters\nbool x"]
+	if [label="if\ntests/contract_testcases/substrate/modifier/declare_06.sol:4:17-8:18"]
+	bool_literal [label="bool literal: true\ntests/contract_testcases/substrate/modifier/declare_06.sol:4:21-25"]
+	while [label="while\ntests/contract_testcases/substrate/modifier/declare_06.sol:5:21-7:22"]
+	variable [label="variable: x\nbool\ntests/contract_testcases/substrate/modifier/declare_06.sol:5:28-29"]
+	underscore [label="undersore\ntests/contract_testcases/substrate/modifier/declare_06.sol:6:25-26"]
+	diagnostic [label="found contract ‘c’\nlevel Debug\ntests/contract_testcases/substrate/modifier/declare_06.sol:2:9-20"]
+	contracts -> contract
+	contract -> foo [label="modifier"]
+	foo -> parameters [label="parameters"]
+	foo -> if [label="body"]
+	if -> bool_literal [label="cond"]
+	if -> while [label="then"]
+	while -> variable [label="cond"]
+	while -> underscore [label="body"]
+	diagnostics -> diagnostic [label="Debug"]
+}

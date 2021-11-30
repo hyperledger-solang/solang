@@ -1,0 +1,10 @@
+strict digraph "tests/contract_testcases/substrate/arrays/memory_dynamic_array_new_03.sol" {
+	contract [label="contract foo\ntests/contract_testcases/substrate/arrays/memory_dynamic_array_new_03.sol:2:9-22"]
+	test [label="function test\ncontract: foo\ntests/contract_testcases/substrate/arrays/memory_dynamic_array_new_03.sol:3:13-35\nsignature test()\nvisibility public\nmutability nonpayable"]
+	diagnostic [label="found contract ‘foo’\nlevel Debug\ntests/contract_testcases/substrate/arrays/memory_dynamic_array_new_03.sol:2:9-22"]
+	diagnostic_5 [label="negative literal -1 not allowed for unsigned type ‘uint32’\nlevel Error\ntests/contract_testcases/substrate/arrays/memory_dynamic_array_new_03.sol:4:48-49"]
+	contracts -> contract
+	contract -> test [label="function"]
+	diagnostics -> diagnostic [label="Debug"]
+	diagnostics -> diagnostic_5 [label="Error"]
+}

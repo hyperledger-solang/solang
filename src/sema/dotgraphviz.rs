@@ -1,6 +1,5 @@
 use super::ast::*;
 use crate::parser::pt;
-use std::{fs::File, io, io::Write, path::Path};
 
 struct Node {
     name: String,
@@ -29,42 +28,36 @@ struct Dot {
 }
 
 impl Dot {
-    fn write(&self, path: &Path) -> Result<(), io::Error> {
-        let mut file = File::create(path)?;
-
-        writeln!(&mut file, "strict digraph \"{}\" {{", self.filename)?;
+    fn write(&self) -> String {
+        let mut result = format!("strict digraph \"{}\" {{\n", self.filename);
 
         for node in &self.nodes {
             if !node.labels.is_empty() {
-                writeln!(
-                    &mut file,
-                    "\t{} [label=\"{}\"]",
+                result.push_str(&format!(
+                    "\t{} [label=\"{}\"]\n",
                     node.name,
                     node.labels.join("\\n")
-                )
-                .unwrap();
+                ));
             }
         }
 
         for edge in &self.edges {
             if let Some(label) = &edge.label {
-                writeln!(
-                    &mut file,
-                    "\t{} -> {} [label=\"{}\"]",
+                result.push_str(&format!(
+                    "\t{} -> {} [label=\"{}\"]\n",
                     self.nodes[edge.from].name, self.nodes[edge.to].name, label
-                )?;
+                ));
             } else {
-                writeln!(
-                    &mut file,
-                    "\t{} -> {}",
+                result.push_str(&format!(
+                    "\t{} -> {}\n",
                     self.nodes[edge.from].name, self.nodes[edge.to].name
-                )?;
+                ));
             }
         }
 
-        writeln!(&mut file, "}}")?;
+        result.push_str("}\n");
 
-        Ok(())
+        result
     }
 
     fn add_node(
@@ -100,6 +93,21 @@ impl Dot {
         }
 
         no
+    }
+
+    fn add_tags(&mut self, tags: &[Tag], parent: usize) {
+        if !tags.is_empty() {
+            let labels = tags
+                .iter()
+                .map(|tag| format!("{}: {}", tag.tag, tag.value))
+                .collect();
+
+            self.add_node(
+                Node::new("tags", labels),
+                Some(parent),
+                Some(String::from("tags")),
+            );
+        }
     }
 
     fn add_function(&mut self, func: &Function, ns: &Namespace, parent: usize) {
@@ -138,6 +146,8 @@ impl Dot {
             Some(parent),
             Some(format!("{}", func.ty)),
         );
+
+        self.add_tags(&func.tags, func_node);
 
         // parameters
         if !func.params.is_empty() {
@@ -181,7 +191,7 @@ impl Dot {
             );
 
             for (no, arg) in args.iter().enumerate() {
-                self.add_expression(arg, None, ns, node, format!("arg #{}", no));
+                self.add_expression(arg, Some(func), ns, node, format!("arg #{}", no));
             }
         }
 
@@ -1621,7 +1631,7 @@ impl Dot {
 }
 
 impl Namespace {
-    pub fn dotgraphviz(&self, path: &Path) -> Result<(), io::Error> {
+    pub fn dotgraphviz(&self) -> String {
         let mut dot = Dot {
             filename: format!("{}", self.files[0].path.display()),
             nodes: Vec::new(),
@@ -1647,7 +1657,9 @@ impl Namespace {
 
                 let e = Node::new(&decl.name, labels);
 
-                dot.add_node(e, Some(enums), None);
+                let node = dot.add_node(e, Some(enums), None);
+
+                dot.add_tags(&decl.tags, node);
             }
         }
 
@@ -1675,7 +1687,9 @@ impl Namespace {
 
                 let e = Node::new(&decl.name, labels);
 
-                dot.add_node(e, Some(structs), None);
+                let node = dot.add_node(e, Some(structs), None);
+
+                dot.add_tags(&decl.tags, node);
             }
         }
 
@@ -1708,13 +1722,15 @@ impl Namespace {
 
                 let e = Node::new(&decl.name, labels);
 
-                dot.add_node(e, Some(events), None);
+                let node = dot.add_node(e, Some(events), None);
+
+                dot.add_tags(&decl.tags, node);
             }
         }
 
         // free functions
         if !self.functions.iter().any(|func| func.contract_no.is_some()) {
-            let functions = dot.add_node(Node::new("free functions", Vec::new()), None, None);
+            let functions = dot.add_node(Node::new("free_functions", Vec::new()), None, None);
 
             for func in &self.functions {
                 if func.contract_no.is_none() {
@@ -1738,6 +1754,8 @@ impl Namespace {
                 Some(contracts),
                 None,
             );
+
+            dot.add_tags(&c.tags, contract);
 
             for base in &c.bases {
                 let node = dot.add_node(
@@ -1783,6 +1801,8 @@ impl Namespace {
                 if let Some(initializer) = &var.initializer {
                     dot.add_expression(initializer, None, self, node, String::from("initializer"));
                 }
+
+                dot.add_tags(&var.tags, node);
             }
 
             for (library, ty) in &c.using {
@@ -1849,6 +1869,6 @@ impl Namespace {
             }
         }
 
-        dot.write(path)
+        dot.write()
     }
 }

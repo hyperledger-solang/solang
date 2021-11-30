@@ -1,0 +1,12 @@
+strict digraph "tests/contract_testcases/substrate/inheritance/base_contract_on_constructor_02.sol" {
+	contract [label="contract apex\ntests/contract_testcases/substrate/inheritance/base_contract_on_constructor_02.sol:2:9-23"]
+	node_2 [label="constructor \ncontract: apex\ntests/contract_testcases/substrate/inheritance/base_contract_on_constructor_02.sol:3:13-38\nsignature ()\nvisibility public\nmutability nonpayable"]
+	diagnostic [label="found contract ‘apex’\nlevel Debug\ntests/contract_testcases/substrate/inheritance/base_contract_on_constructor_02.sol:2:9-23"]
+	diagnostic_5 [label="‘public’: visibility for constructors is ignored\nlevel Warning\ntests/contract_testcases/substrate/inheritance/base_contract_on_constructor_02.sol:3:27-33"]
+	diagnostic_6 [label="contract ‘apex’ is not a base contract of ‘apex’\nlevel Error\ntests/contract_testcases/substrate/inheritance/base_contract_on_constructor_02.sol:3:34-38"]
+	contracts -> contract
+	contract -> node_2 [label="constructor"]
+	diagnostics -> diagnostic [label="Debug"]
+	diagnostics -> diagnostic_5 [label="Warning"]
+	diagnostics -> diagnostic_6 [label="Error"]
+}

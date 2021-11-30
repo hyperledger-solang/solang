@@ -1,0 +1,8 @@
+strict digraph "tests/contract_testcases/substrate/libraries/restrictions_05.sol" {
+	contract [label="contract c\ntests/contract_testcases/substrate/libraries/restrictions_05.sol:2:9-19"]
+	diagnostic [label="found library ‘c’\nlevel Debug\ntests/contract_testcases/substrate/libraries/restrictions_05.sol:2:9-19"]
+	diagnostic_5 [label="function in a library cannot override\nlevel Error\ntests/contract_testcases/substrate/libraries/restrictions_05.sol:3:28-36"]
+	contracts -> contract
+	diagnostics -> diagnostic [label="Debug"]
+	diagnostics -> diagnostic_5 [label="Error"]
+}

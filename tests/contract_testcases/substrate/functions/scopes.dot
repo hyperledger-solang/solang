@@ -1,0 +1,12 @@
+strict digraph "tests/contract_testcases/substrate/functions/scopes.sol" {
+	contract [label="contract test\ntests/contract_testcases/substrate/functions/scopes.sol:2:5-19"]
+	goodset [label="function goodset\ncontract: test\ntests/contract_testcases/substrate/functions/scopes.sol:3:9-49\nsignature goodset()\nvisibility public\nmutability nonpayable"]
+	returns [label="returns\nbool "]
+	diagnostic [label="found contract ‘test’\nlevel Debug\ntests/contract_testcases/substrate/functions/scopes.sol:2:5-19"]
+	diagnostic_6 [label="`a' is not found\nlevel Error\ntests/contract_testcases/substrate/functions/scopes.sol:7:20-21"]
+	contracts -> contract
+	contract -> goodset [label="function"]
+	goodset -> returns [label="returns"]
+	diagnostics -> diagnostic [label="Debug"]
+	diagnostics -> diagnostic_6 [label="Error"]
+}

@@ -1,0 +1,6 @@
+strict digraph "tests/contract_testcases/substrate/functions/stray_semicolon.sol" {
+	a [label="name:a\ntests/contract_testcases/substrate/functions/stray_semicolon.sol:1:8-9\nfield name:f1 ty:uint32"]
+	diagnostic [label="stray semicolon\nlevel Error\ntests/contract_testcases/substrate/functions/stray_semicolon.sol:1:24-25"]
+	structs -> a
+	diagnostics -> diagnostic [label="Error"]
+}

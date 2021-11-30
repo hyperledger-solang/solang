@@ -1,0 +1,18 @@
+strict digraph "tests/contract_testcases/solana/accessor/constant.sol" {
+	contract [label="contract x\ntests/contract_testcases/solana/accessor/constant.sol:2:9-20"]
+	var [label="variable z\nvisibility public\nconstant\ntests/contract_testcases/solana/accessor/constant.sol:3:13-53"]
+	z [label="function z\ncontract: x\ntests/contract_testcases/solana/accessor/constant.sol:3:37-38\nsignature z()\nvisibility public\nmutability view"]
+	returns [label="returns\nbytes32 "]
+	return [label="return\ntests/contract_testcases/solana/accessor/constant.sol:1:1"]
+	constant [label="constant variable\nx.z\nbytes32\ntests/contract_testcases/solana/accessor/constant.sol:1:1"]
+	diagnostic [label="found contract ‘x’\nlevel Debug\ntests/contract_testcases/solana/accessor/constant.sol:2:9-20"]
+	diagnostic_9 [label="cannot call function in constant expression\nlevel Error\ntests/contract_testcases/solana/accessor/constant.sol:3:41-53"]
+	contracts -> contract
+	contract -> var [label="variable"]
+	contract -> z [label="function"]
+	z -> returns [label="returns"]
+	z -> return [label="body"]
+	return -> constant [label="expr"]
+	diagnostics -> diagnostic [label="Debug"]
+	diagnostics -> diagnostic_9 [label="Error"]
+}
