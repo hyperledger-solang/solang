@@ -459,24 +459,6 @@ impl Contract {
         matches!(self.ty, pt::ContractTy::Library(_))
     }
 
-    /// Get the storage slot for a variable, possibly from base contract
-    pub fn get_storage_slot(
-        &self,
-        var_contract_no: usize,
-        var_no: usize,
-        ns: &Namespace,
-    ) -> Expression {
-        if let Some(layout) = self
-            .layout
-            .iter()
-            .find(|l| l.contract_no == var_contract_no && l.var_no == var_no)
-        {
-            Expression::NumberLiteral(pt::Loc(0, 0, 0), ns.storage_type(), layout.slot.clone())
-        } else {
-            panic!("get_storage_slot called on non-storage variable");
-        }
-    }
-
     /// Does the constructor require arguments. Should be false is there is no constructor
     pub fn constructor_needs_arguments(&self, ns: &Namespace) -> bool {
         self.have_constructor(ns) && self.no_args_constructor(ns).is_none()

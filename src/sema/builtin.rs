@@ -557,7 +557,7 @@ pub fn resolve_call(
             };
 
             match cast(
-                &pt::Loc(0, 0, 0),
+                &arg.loc(),
                 arg.clone(),
                 &func.args[i],
                 true,
