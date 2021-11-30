@@ -1670,7 +1670,11 @@ pub fn emit_function_call(
             } else {
                 default_gas(ns)
             };
-            let value = expression(value, cfg, callee_contract_no, func, ns, vartab, opt);
+            let value = if let Some(value) = value {
+                expression(value, cfg, callee_contract_no, func, ns, vartab, opt)
+            } else {
+                Expression::NumberLiteral(pt::Loc(0, 0, 0), Type::Value, BigInt::zero())
+            };
 
             let success = vartab.temp_name("success", &Type::Bool);
 
@@ -1750,7 +1754,11 @@ pub fn emit_function_call(
                 } else {
                     default_gas(ns)
                 };
-                let value = expression(value, cfg, callee_contract_no, func, ns, vartab, opt);
+                let value = if let Some(value) = value {
+                    expression(value, cfg, callee_contract_no, func, ns, vartab, opt)
+                } else {
+                    Expression::NumberLiteral(pt::Loc(0, 0, 0), Type::Value, BigInt::zero())
+                };
 
                 let dest_func = &ns.functions[*function_no];
 
@@ -1861,7 +1869,11 @@ pub fn emit_function_call(
                 } else {
                     default_gas(ns)
                 };
-                let value = expression(value, cfg, callee_contract_no, func, ns, vartab, opt);
+                let value = if let Some(value) = value {
+                    expression(value, cfg, callee_contract_no, func, ns, vartab, opt)
+                } else {
+                    Expression::NumberLiteral(pt::Loc(0, 0, 0), Type::Value, BigInt::zero())
+                };
 
                 let selector = Expression::Builtin(
                     *loc,

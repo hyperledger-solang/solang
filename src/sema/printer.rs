@@ -390,34 +390,19 @@ fn print_expr(e: &Expression, func: Option<&Function>, ns: &Namespace) -> Tree {
                 ),
             ],
         ),
-        Expression::ExternalFunctionCall {
-            function,
-            args,
-            value,
-            ..
-        } => Tree::Branch(
+        Expression::ExternalFunctionCall { function, args, .. } => Tree::Branch(
             String::from("external function call"),
             vec![
                 print_expr(function, func, ns),
-                print_expr(value, func, ns),
                 Tree::Branch(
                     String::from("args"),
                     args.iter().map(|e| print_expr(e, func, ns)).collect(),
                 ),
             ],
         ),
-        Expression::ExternalFunctionCallRaw {
-            address,
-            args,
-            value,
-            ..
-        } => Tree::Branch(
+        Expression::ExternalFunctionCallRaw { address, args, .. } => Tree::Branch(
             String::from("external function call raw"),
-            vec![
-                print_expr(address, func, ns),
-                print_expr(value, func, ns),
-                print_expr(args, func, ns),
-            ],
+            vec![print_expr(address, func, ns), print_expr(args, func, ns)],
         ),
         Expression::Constructor {
             contract_no,

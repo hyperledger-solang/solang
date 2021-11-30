@@ -138,7 +138,9 @@ pub fn check_function_call(ns: &mut Namespace, exp: &Expression, symtable: &mut 
             if let Some(gas) = gas {
                 used_variable(ns, gas, symtable);
             }
-            used_variable(ns, value, symtable);
+            if let Some(value) = value {
+                used_variable(ns, value, symtable);
+            }
             check_function_call(ns, function, symtable);
         }
 
@@ -181,7 +183,9 @@ pub fn check_function_call(ns: &mut Namespace, exp: &Expression, symtable: &mut 
         } => {
             used_variable(ns, args, symtable);
             used_variable(ns, address, symtable);
-            used_variable(ns, value, symtable);
+            if let Some(value) = value {
+                used_variable(ns, value, symtable);
+            }
             if let Some(gas) = gas {
                 used_variable(ns, gas, symtable);
             }

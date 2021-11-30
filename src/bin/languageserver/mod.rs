@@ -741,8 +741,9 @@ impl SolangServer {
                     for expp in args {
                         SolangServer::construct_expr(expp, lookup_tbl, symtab, fnc_map, ns);
                     }
-
-                    SolangServer::construct_expr(value, lookup_tbl, symtab, fnc_map, ns);
+                    if let Some(value) = value {
+                        SolangServer::construct_expr(value, lookup_tbl, symtab, fnc_map, ns);
+                    }
                     if let Some(gas) = gas {
                         SolangServer::construct_expr(gas, lookup_tbl, symtab, fnc_map, ns);
                     }
@@ -758,7 +759,9 @@ impl SolangServer {
             } => {
                 SolangServer::construct_expr(args, lookup_tbl, symtab, fnc_map, ns);
                 SolangServer::construct_expr(address, lookup_tbl, symtab, fnc_map, ns);
-                SolangServer::construct_expr(value, lookup_tbl, symtab, fnc_map, ns);
+                if let Some(value) = value {
+                    SolangServer::construct_expr(value, lookup_tbl, symtab, fnc_map, ns);
+                }
                 if let Some(gas) = gas {
                     SolangServer::construct_expr(gas, lookup_tbl, symtab, fnc_map, ns);
                 }

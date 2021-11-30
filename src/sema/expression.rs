@@ -5662,13 +5662,9 @@ fn call_function_type(
                 return Err(());
             }
 
-            value
+            Some(value)
         } else {
-            Box::new(Expression::NumberLiteral(
-                pt::Loc(0, 0, 0),
-                Type::Value,
-                BigInt::zero(),
-            ))
+            None
         };
 
         if params.len() != args.len() {
@@ -6726,13 +6722,9 @@ fn method_call_pos_args(
                         return Err(());
                     }
 
-                    value
+                    Some(value)
                 } else {
-                    Box::new(Expression::NumberLiteral(
-                        pt::Loc(0, 0, 0),
-                        Type::Value,
-                        BigInt::zero(),
-                    ))
+                    None
                 };
 
                 let func = &ns.functions[function_no];
@@ -6936,21 +6928,13 @@ fn method_call_pos_args(
                 diagnostics,
             )?;
 
-            let value = call_args.value.unwrap_or_else(|| {
-                Box::new(Expression::NumberLiteral(
-                    pt::Loc(0, 0, 0),
-                    Type::Value,
-                    BigInt::zero(),
-                ))
-            });
-
             return Ok(Expression::ExternalFunctionCallRaw {
                 loc: *loc,
                 ty,
                 args: Box::new(args),
                 address: Box::new(var_expr),
                 gas: call_args.gas,
-                value,
+                value: call_args.value,
             });
         }
     }
@@ -7412,13 +7396,9 @@ fn method_call_named_args(
                         return Err(());
                     }
 
-                    value
+                    Some(value)
                 } else {
-                    Box::new(Expression::NumberLiteral(
-                        pt::Loc(0, 0, 0),
-                        Type::Value,
-                        BigInt::zero(),
-                    ))
+                    None
                 };
 
                 let func = &ns.functions[function_no];

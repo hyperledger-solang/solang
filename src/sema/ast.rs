@@ -584,7 +584,7 @@ pub enum Expression {
         returns: Vec<Type>,
         function: Box<Expression>,
         args: Vec<Expression>,
-        value: Box<Expression>,
+        value: Option<Box<Expression>>,
         gas: Option<Box<Expression>>,
     },
     ExternalFunctionCallRaw {
@@ -592,7 +592,7 @@ pub enum Expression {
         ty: CallTy,
         address: Box<Expression>,
         args: Box<Expression>,
-        value: Box<Expression>,
+        value: Option<Box<Expression>>,
         gas: Option<Box<Expression>>,
     },
     Constructor {
@@ -948,7 +948,7 @@ impl Expression {
                     returns: returns.clone(),
                     function: Box::new(filter(function, ctx)),
                     args: args.iter().map(|e| filter(e, ctx)).collect(),
-                    value: Box::new(filter(value, ctx)),
+                    value: value.as_ref().map(|value| Box::new(filter(value, ctx))),
                     gas: gas.as_ref().map(|gas| Box::new(filter(gas, ctx))),
                 },
                 Expression::ExternalFunctionCallRaw {
@@ -963,7 +963,7 @@ impl Expression {
                     ty: ty.clone(),
                     address: Box::new(filter(address, ctx)),
                     args: Box::new(filter(args, ctx)),
-                    value: Box::new(filter(value, ctx)),
+                    value: value.as_ref().map(|value| Box::new(filter(value, ctx))),
                     gas: gas.as_ref().map(|gas| Box::new(filter(gas, ctx))),
                 },
                 Expression::Constructor {
@@ -1128,7 +1128,9 @@ impl Expression {
                         e.recurse(cx, f);
                     }
                     function.recurse(cx, f);
-                    value.recurse(cx, f);
+                    if let Some(value) = value {
+                        value.recurse(cx, f);
+                    }
                     if let Some(gas) = gas {
                         gas.recurse(cx, f);
                     }
@@ -1142,7 +1144,9 @@ impl Expression {
                 } => {
                     args.recurse(cx, f);
                     address.recurse(cx, f);
-                    value.recurse(cx, f);
+                    if let Some(value) = value {
+                        value.recurse(cx, f);
+                    }
                     if let Some(gas) = gas {
                         gas.recurse(cx, f);
                     }
