@@ -1066,9 +1066,9 @@ impl ast::Namespace {
                             pt::FunctionAttribute::Visibility(v) => {
                                 if let Some(e) = &visibility {
                                     diagnostics.push(ast::Diagnostic::error_with_note(
-                                        v.loc(),
+                                        v.loc().unwrap(),
                                         format!("function type visibility redeclared `{}'", v),
-                                        e.loc(),
+                                        e.loc().unwrap(),
                                         format!(
                                             "location of previous visibility declaration of `{}'",
                                             e
@@ -1089,7 +1089,7 @@ impl ast::Namespace {
                         Some(pt::Visibility::External(_)) => true,
                         Some(v) => {
                             diagnostics.push(ast::Diagnostic::error(
-                                v.loc(),
+                                v.loc().unwrap(),
                                 format!("function type cannot have visibility attribute `{}'", v),
                             ));
                             success = false;
@@ -1128,7 +1128,7 @@ impl ast::Namespace {
                             }
                             pt::FunctionAttribute::Visibility(v) => {
                                 diagnostics.push(ast::Diagnostic::error(
-                                    v.loc(),
+                                    v.loc().unwrap(),
                                     format!("visibility `{}' cannot be declared after returns", v),
                                 ));
                                 success = false;
@@ -1524,7 +1524,7 @@ impl ast::Namespace {
             vec![],
             pt::FunctionTy::Constructor,
             None,
-            pt::Visibility::Public(pt::Loc(0, 0, 0)),
+            pt::Visibility::Public(None),
             Vec::new(),
             Vec::new(),
             self,

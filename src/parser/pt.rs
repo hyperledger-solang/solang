@@ -414,10 +414,10 @@ impl Mutability {
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Visibility {
-    External(Loc),
-    Public(Loc),
-    Internal(Loc),
-    Private(Loc),
+    External(Option<Loc>),
+    Public(Option<Loc>),
+    Internal(Option<Loc>),
+    Private(Option<Loc>),
 }
 
 impl fmt::Display for Visibility {
@@ -432,7 +432,7 @@ impl fmt::Display for Visibility {
 }
 
 impl Visibility {
-    pub fn loc(&self) -> Loc {
+    pub fn loc(&self) -> Option<Loc> {
         match self {
             Visibility::Public(loc)
             | Visibility::External(loc)
