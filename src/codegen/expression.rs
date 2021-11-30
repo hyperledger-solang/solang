@@ -256,7 +256,11 @@ pub fn expression(
                 .iter()
                 .map(|v| expression(v, cfg, *contract_no, func, ns, vartab, opt))
                 .collect();
-            let gas = expression(gas, cfg, *contract_no, func, ns, vartab, opt);
+            let gas = if let Some(gas) = gas {
+                expression(gas, cfg, *contract_no, func, ns, vartab, opt)
+            } else {
+                default_gas(ns)
+            };
             let value = value
                 .as_ref()
                 .map(|value| expression(value, cfg, *contract_no, func, ns, vartab, opt));
@@ -1661,7 +1665,11 @@ pub fn emit_function_call(
         } => {
             let args = expression(args, cfg, callee_contract_no, func, ns, vartab, opt);
             let address = expression(address, cfg, callee_contract_no, func, ns, vartab, opt);
-            let gas = expression(gas, cfg, callee_contract_no, func, ns, vartab, opt);
+            let gas = if let Some(gas) = gas {
+                expression(gas, cfg, callee_contract_no, func, ns, vartab, opt)
+            } else {
+                default_gas(ns)
+            };
             let value = expression(value, cfg, callee_contract_no, func, ns, vartab, opt);
 
             let success = vartab.temp_name("success", &Type::Bool);
@@ -1737,7 +1745,11 @@ pub fn emit_function_call(
                     .map(|a| expression(a, cfg, callee_contract_no, func, ns, vartab, opt))
                     .collect();
                 let address = expression(address, cfg, callee_contract_no, func, ns, vartab, opt);
-                let gas = expression(gas, cfg, callee_contract_no, func, ns, vartab, opt);
+                let gas = if let Some(gas) = gas {
+                    expression(gas, cfg, callee_contract_no, func, ns, vartab, opt)
+                } else {
+                    default_gas(ns)
+                };
                 let value = expression(value, cfg, callee_contract_no, func, ns, vartab, opt);
 
                 let dest_func = &ns.functions[*function_no];
@@ -1844,7 +1856,11 @@ pub fn emit_function_call(
                     .map(|a| expression(a, cfg, callee_contract_no, func, ns, vartab, opt))
                     .collect();
                 let function = expression(function, cfg, callee_contract_no, func, ns, vartab, opt);
-                let gas = expression(gas, cfg, callee_contract_no, func, ns, vartab, opt);
+                let gas = if let Some(gas) = gas {
+                    expression(gas, cfg, callee_contract_no, func, ns, vartab, opt)
+                } else {
+                    default_gas(ns)
+                };
                 let value = expression(value, cfg, callee_contract_no, func, ns, vartab, opt);
 
                 let selector = Expression::Builtin(
@@ -1957,6 +1973,19 @@ pub fn emit_function_call(
         }
         _ => unreachable!(),
     }
+}
+
+pub fn default_gas(ns: &Namespace) -> Expression {
+    Expression::NumberLiteral(
+        pt::Loc(0, 0, 0),
+        Type::Uint(64),
+        // See EIP150
+        if ns.target == Target::Ewasm {
+            BigInt::from(i64::MAX)
+        } else {
+            BigInt::zero()
+        },
+    )
 }
 
 /// Codegen for an array subscript expression

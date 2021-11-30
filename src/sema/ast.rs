@@ -585,7 +585,7 @@ pub enum Expression {
         function: Box<Expression>,
         args: Vec<Expression>,
         value: Box<Expression>,
-        gas: Box<Expression>,
+        gas: Option<Box<Expression>>,
     },
     ExternalFunctionCallRaw {
         loc: pt::Loc,
@@ -593,14 +593,14 @@ pub enum Expression {
         address: Box<Expression>,
         args: Box<Expression>,
         value: Box<Expression>,
-        gas: Box<Expression>,
+        gas: Option<Box<Expression>>,
     },
     Constructor {
         loc: pt::Loc,
         contract_no: usize,
         constructor_no: Option<usize>,
         args: Vec<Expression>,
-        gas: Box<Expression>,
+        gas: Option<Box<Expression>>,
         value: Option<Box<Expression>>,
         salt: Option<Box<Expression>>,
         space: Option<Box<Expression>>,
@@ -949,7 +949,7 @@ impl Expression {
                     function: Box::new(filter(function, ctx)),
                     args: args.iter().map(|e| filter(e, ctx)).collect(),
                     value: Box::new(filter(value, ctx)),
-                    gas: Box::new(filter(gas, ctx)),
+                    gas: gas.as_ref().map(|gas| Box::new(filter(gas, ctx))),
                 },
                 Expression::ExternalFunctionCallRaw {
                     loc,
@@ -964,7 +964,7 @@ impl Expression {
                     address: Box::new(filter(address, ctx)),
                     args: Box::new(filter(args, ctx)),
                     value: Box::new(filter(value, ctx)),
-                    gas: Box::new(filter(gas, ctx)),
+                    gas: gas.as_ref().map(|gas| Box::new(filter(gas, ctx))),
                 },
                 Expression::Constructor {
                     loc,
@@ -981,7 +981,7 @@ impl Expression {
                     constructor_no: *constructor_no,
                     args: args.iter().map(|e| filter(e, ctx)).collect(),
                     value: value.as_ref().map(|e| Box::new(filter(e, ctx))),
-                    gas: Box::new(filter(gas, ctx)),
+                    gas: gas.as_ref().map(|e| Box::new(filter(e, ctx))),
                     salt: salt.as_ref().map(|e| Box::new(filter(e, ctx))),
                     space: space.as_ref().map(|e| Box::new(filter(e, ctx))),
                 },
@@ -1129,7 +1129,9 @@ impl Expression {
                     }
                     function.recurse(cx, f);
                     value.recurse(cx, f);
-                    gas.recurse(cx, f);
+                    if let Some(gas) = gas {
+                        gas.recurse(cx, f);
+                    }
                 }
                 Expression::ExternalFunctionCallRaw {
                     address,
@@ -1141,7 +1143,9 @@ impl Expression {
                     args.recurse(cx, f);
                     address.recurse(cx, f);
                     value.recurse(cx, f);
-                    gas.recurse(cx, f);
+                    if let Some(gas) = gas {
+                        gas.recurse(cx, f);
+                    }
                 }
                 Expression::Constructor {
                     args,
@@ -1156,7 +1160,9 @@ impl Expression {
                     if let Some(value) = value {
                         value.recurse(cx, f);
                     }
-                    gas.recurse(cx, f);
+                    if let Some(gas) = gas {
+                        gas.recurse(cx, f);
+                    }
                     if let Some(salt) = salt {
                         salt.recurse(cx, f);
                     }

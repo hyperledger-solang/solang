@@ -743,7 +743,9 @@ impl SolangServer {
                     }
 
                     SolangServer::construct_expr(value, lookup_tbl, symtab, fnc_map, ns);
-                    SolangServer::construct_expr(gas, lookup_tbl, symtab, fnc_map, ns);
+                    if let Some(gas) = gas {
+                        SolangServer::construct_expr(gas, lookup_tbl, symtab, fnc_map, ns);
+                    }
                 }
             }
             ast::Expression::ExternalFunctionCallRaw {
@@ -757,7 +759,9 @@ impl SolangServer {
                 SolangServer::construct_expr(args, lookup_tbl, symtab, fnc_map, ns);
                 SolangServer::construct_expr(address, lookup_tbl, symtab, fnc_map, ns);
                 SolangServer::construct_expr(value, lookup_tbl, symtab, fnc_map, ns);
-                SolangServer::construct_expr(gas, lookup_tbl, symtab, fnc_map, ns);
+                if let Some(gas) = gas {
+                    SolangServer::construct_expr(gas, lookup_tbl, symtab, fnc_map, ns);
+                }
             }
             ast::Expression::Constructor {
                 loc: _,
@@ -769,7 +773,9 @@ impl SolangServer {
                 salt,
                 space,
             } => {
-                SolangServer::construct_expr(gas, lookup_tbl, symtab, fnc_map, ns);
+                if let Some(gas) = gas {
+                    SolangServer::construct_expr(gas, lookup_tbl, symtab, fnc_map, ns);
+                }
                 for expp in args {
                     SolangServer::construct_expr(expp, lookup_tbl, symtab, fnc_map, ns);
                 }
