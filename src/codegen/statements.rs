@@ -1035,7 +1035,11 @@ fn try_catch(
                 ..
             } = function.ty()
             {
-                let value = expression(value, cfg, callee_contract_no, Some(func), ns, vartab, opt);
+                let value = if let Some(value) = value {
+                    expression(value, cfg, callee_contract_no, Some(func), ns, vartab, opt)
+                } else {
+                    Expression::NumberLiteral(pt::Loc(0, 0, 0), Type::Value, BigInt::zero())
+                };
                 let gas = if let Some(gas) = gas {
                     expression(gas, cfg, callee_contract_no, Some(func), ns, vartab, opt)
                 } else {

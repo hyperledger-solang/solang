@@ -1175,7 +1175,9 @@ impl Dot {
                 if let Some(gas) = gas {
                     self.add_expression(gas, func, ns, node, String::from("gas"));
                 }
-                self.add_expression(value, func, ns, node, String::from("value"));
+                if let Some(value) = value {
+                    self.add_expression(value, func, ns, node, String::from("value"));
+                }
             }
             Expression::ExternalFunctionCallRaw {
                 loc,
@@ -1201,7 +1203,9 @@ impl Dot {
                 if let Some(gas) = gas {
                     self.add_expression(gas, func, ns, node, String::from("gas"));
                 }
-                self.add_expression(value, func, ns, node, String::from("value"));
+                if let Some(value) = value {
+                    self.add_expression(value, func, ns, node, String::from("value"));
+                }
             }
             Expression::Constructor {
                 loc,
