@@ -487,7 +487,7 @@ fn process_file(
         }
 
         if let Err(err) = ns.dotgraphviz(&dot_filename) {
-            eprintln!("{}: error: {}", dot_filename.display(), err.to_string());
+            eprintln!("{}: error: {}", dot_filename.display(), err);
             std::process::exit(1);
         }
         return Ok(ns);
