@@ -214,10 +214,10 @@ VariableDefinition: Box<VariableDefinition> = {
 }
 
 Visibility: Visibility = {
-    <l:@L> "public" <r:@R> => Visibility::Public(Loc(file_no, l, r)),
-    <l:@L> "external" <r:@R> => Visibility::External(Loc(file_no, l, r)),
-    <l:@L> "internal" <r:@R> => Visibility::Internal(Loc(file_no, l, r)),
-    <l:@L> "private" <r:@R> => Visibility::Private(Loc(file_no, l, r)),
+    <l:@L> "public" <r:@R> => Visibility::Public(Some(Loc(file_no, l, r))),
+    <l:@L> "external" <r:@R> => Visibility::External(Some(Loc(file_no, l, r))),
+    <l:@L> "internal" <r:@R> => Visibility::Internal(Some(Loc(file_no, l, r))),
+    <l:@L> "private" <r:@R> => Visibility::Private(Some(Loc(file_no, l, r))),
 }
 
 VariableAttribute: VariableAttribute = {

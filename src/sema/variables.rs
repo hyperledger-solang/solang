@@ -136,14 +136,14 @@ pub fn var_decl(
             }
             pt::VariableAttribute::Visibility(v) if contract_no.is_none() => {
                 ns.diagnostics.push(Diagnostic::error(
-                    v.loc(),
+                    v.loc().unwrap(),
                     format!("‘{}’: global variable cannot have visibility specifier", v),
                 ));
                 return None;
             }
             pt::VariableAttribute::Visibility(pt::Visibility::External(loc)) => {
                 ns.diagnostics.push(Diagnostic::error(
-                    *loc,
+                    loc.unwrap(),
                     "variable cannot be declared external".to_string(),
                 ));
                 return None;
@@ -151,9 +151,9 @@ pub fn var_decl(
             pt::VariableAttribute::Visibility(v) => {
                 if let Some(e) = &visibility {
                     ns.diagnostics.push(Diagnostic::error_with_note(
-                        v.loc(),
+                        v.loc().unwrap(),
                         format!("variable visibility redeclared `{}'", v),
-                        e.loc(),
+                        e.loc().unwrap(),
                         format!("location of previous declaration of `{}'", e),
                     ));
                     return None;
@@ -176,7 +176,7 @@ pub fn var_decl(
 
     let visibility = match visibility {
         Some(v) => v,
-        None => pt::Visibility::Internal(s.ty.loc()),
+        None => pt::Visibility::Internal(Some(s.ty.loc())),
     };
 
     if let pt::Visibility::Public(_) = &visibility {

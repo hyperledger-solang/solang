@@ -126,9 +126,9 @@ pub fn contract_function(
             pt::FunctionAttribute::Visibility(v) => {
                 if let Some(e) = &visibility {
                     ns.diagnostics.push(Diagnostic::error_with_note(
-                        v.loc(),
+                        v.loc().unwrap(),
                         format!("function redeclared `{}'", v),
-                        e.loc(),
+                        e.loc().unwrap(),
                         format!("location of previous declaration of `{}'", e),
                     ));
                     success = false;
@@ -217,14 +217,14 @@ pub fn contract_function(
         Some(v) => {
             if func.ty == pt::FunctionTy::Modifier {
                 ns.diagnostics.push(Diagnostic::error(
-                    v.loc(),
+                    v.loc().unwrap(),
                     format!("‘{}’: modifiers can not have visibility", v),
                 ));
 
                 pt::Visibility::Internal(v.loc())
             } else if func.ty == pt::FunctionTy::Constructor {
                 ns.diagnostics.push(Diagnostic::warning(
-                    v.loc(),
+                    v.loc().unwrap(),
                     format!("‘{}’: visibility for constructors is ignored", v),
                 ));
 
@@ -235,8 +235,8 @@ pub fn contract_function(
         }
         None => {
             match func.ty {
-                pt::FunctionTy::Constructor => pt::Visibility::Public(pt::Loc(0, 0, 0)),
-                pt::FunctionTy::Modifier => pt::Visibility::Internal(pt::Loc(0, 0, 0)),
+                pt::FunctionTy::Constructor => pt::Visibility::Public(None),
+                pt::FunctionTy::Modifier => pt::Visibility::Internal(None),
                 _ => {
                     ns.diagnostics.push(Diagnostic::error(
                         func.loc,
@@ -245,7 +245,7 @@ pub fn contract_function(
 
                     success = false;
                     // continue processing while assuming it's a public
-                    pt::Visibility::Public(pt::Loc(0, 0, 0))
+                    pt::Visibility::Public(None)
                 }
             }
         }
@@ -649,7 +649,7 @@ pub fn function(
             }
             pt::FunctionAttribute::Visibility(v) => {
                 ns.diagnostics.push(Diagnostic::error(
-                    v.loc(),
+                    v.loc().unwrap(),
                     format!(
                         "‘{}’: only functions in contracts can have a visibility specifier",
                         v
@@ -736,7 +736,7 @@ pub fn function(
         doc,
         func.ty,
         mutability,
-        pt::Visibility::Internal(func.loc),
+        pt::Visibility::Internal(None),
         params,
         returns,
         ns,
@@ -994,7 +994,7 @@ fn signatures() {
         vec![],
         pt::FunctionTy::Function,
         None,
-        pt::Visibility::Public(pt::Loc(0, 0, 0)),
+        pt::Visibility::Public(None),
         vec![
             Parameter {
                 loc: pt::Loc(0, 0, 0),
