@@ -1,16 +1,10 @@
 use parity_scale_codec::Encode;
 use parity_scale_codec_derive::Decode;
 
-use crate::{build_solidity, no_errors, parse_and_resolve};
-use solang::Target;
+use crate::build_solidity;
 
 #[test]
 fn simple_solidiy_compile_and_run() {
-    // try empty file
-    let ns = parse_and_resolve("", Target::default_substrate());
-
-    no_errors(ns.diagnostics);
-
     #[derive(Debug, PartialEq, Encode, Decode)]
     struct FooReturn {
         value: u32,

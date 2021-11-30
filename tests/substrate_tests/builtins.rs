@@ -1,80 +1,10 @@
 use parity_scale_codec::Encode;
 use parity_scale_codec_derive::Decode;
 
-use crate::{build_solidity, first_error, first_warning, no_errors, parse_and_resolve};
-use solang::Target;
+use crate::build_solidity;
 
 #[test]
 fn abi_decode() {
-    let ns = parse_and_resolve(
-        r#"
-        contract printer {
-            function test() public {
-                (int a) = abi.decode(hex"00", feh);
-            }
-        }"#,
-        Target::default_substrate(),
-    );
-
-    assert_eq!(first_error(ns.diagnostics), "type ‘feh’ not found");
-
-    let ns = parse_and_resolve(
-        r#"
-        contract printer {
-            function test() public {
-                (int a) = abi.decode(hex"00", (int storage));
-            }
-        }"#,
-        Target::default_substrate(),
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "storage modifier ‘storage’ not allowed"
-    );
-
-    let ns = parse_and_resolve(
-        r#"
-        contract printer {
-            function test() public {
-                (int a) = abi.decode(hex"00", (int feh));
-            }
-        }"#,
-        Target::default_substrate(),
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "unexpected identifier ‘feh’ in type"
-    );
-
-    let ns = parse_and_resolve(
-        r#"
-        contract printer {
-            function test() public {
-                (int a) = abi.decode(hex"00", (int,));
-            }
-        }"#,
-        Target::default_substrate(),
-    );
-
-    assert_eq!(first_error(ns.diagnostics), "missing type");
-
-    let ns = parse_and_resolve(
-        r#"
-        contract printer {
-            function test() public {
-                (int a) = abi.decode(hex"00", (int,mapping(uint[] => address)));
-            }
-        }"#,
-        Target::default_substrate(),
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "key of mapping cannot be array type"
-    );
-
     let mut runtime = build_solidity(
         r##"
         contract bar {
@@ -191,21 +121,6 @@ fn abi_encode_packed() {
 
 #[test]
 fn abi_encode_with_selector() {
-    let ns = parse_and_resolve(
-        r#"
-        contract printer {
-            function test() public {
-                bytes x = abi.encodeWithSelector();
-            }
-        }"#,
-        Target::default_substrate(),
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "function requires one ‘bytes4’ selector argument"
-    );
-
     let mut runtime = build_solidity(
         r##"
         contract bar {
@@ -237,21 +152,6 @@ fn abi_encode_with_selector() {
 
 #[test]
 fn abi_encode_with_signature() {
-    let ns = parse_and_resolve(
-        r#"
-        contract printer {
-            function test() public {
-                bytes x = abi.encodeWithSignature();
-            }
-        }"#,
-        Target::default_substrate(),
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "function requires one ‘string’ signature argument"
-    );
-
     let mut runtime = build_solidity(
         r##"
         contract bar {
@@ -283,86 +183,6 @@ fn abi_encode_with_signature() {
 
 #[test]
 fn call() {
-    let ns = parse_and_resolve(
-        r#"
-        contract main {
-            function test() public {
-                address x = address(0);
-
-                x.delegatecall(hex"1222");
-            }
-        }"#,
-        Target::default_substrate(),
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "method ‘delegatecall’ does not exist"
-    );
-
-    let ns = parse_and_resolve(
-        r#"
-        contract main {
-            function test() public {
-                address x = address(0);
-
-                x.staticcall(hex"1222");
-            }
-        }"#,
-        Target::default_substrate(),
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "method ‘staticcall’ does not exist"
-    );
-
-    let ns = parse_and_resolve(
-        r#"
-        contract superior {
-            function test() public {
-                inferior i = new inferior();
-
-                bytes x = address(i).call(hex"1222");
-            }
-        }
-
-        contract inferior {
-            function baa() public {
-                print("Baa!");
-            }
-        }"#,
-        Target::default_substrate(),
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "destucturing statement needed for function that returns multiple values"
-    );
-
-    let ns = parse_and_resolve(
-        r#"
-        contract superior {
-            function test() public {
-                inferior i = new inferior();
-
-            (bytes x, bool y) = address(i).call(hex"1222");
-            }
-        }
-
-        contract inferior {
-            function baa() public {
-                print("Baa!");
-            }
-        }"#,
-        Target::default_substrate(),
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "conversion from bool to bytes not possible"
-    );
-
     let mut runtime = build_solidity(
         r##"
         contract superior {
@@ -487,23 +307,6 @@ fn block() {
 
     runtime.function("test", Vec::new());
 
-    let ns = parse_and_resolve(
-        r#"
-        contract bar {
-            function test() public {
-                int64 b = block.number;
-
-                assert(b == 14_250_083_331_950_119_597);
-            }
-        }"#,
-        Target::default_substrate(),
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "implicit conversion would change sign from uint64 to int64"
-    );
-
     let mut runtime = build_solidity(
         r##"
         contract bar {
@@ -516,23 +319,6 @@ fn block() {
     );
 
     runtime.function("test", Vec::new());
-
-    let ns = parse_and_resolve(
-        r#"
-        contract bar {
-            function test() public {
-                int64 b = block.timestamp;
-
-                assert(b == 14_250_083_331_950_119_597);
-            }
-        }"#,
-        Target::default_substrate(),
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "implicit conversion would change sign from uint64 to int64"
-    );
 
     let mut runtime = build_solidity(
         r##"
@@ -547,23 +333,6 @@ fn block() {
 
     runtime.function("test", Vec::new());
 
-    let ns = parse_and_resolve(
-        r#"
-        contract bar {
-            function test() public {
-                int64 b = block.tombstone_deposit;
-
-                assert(b == 93_603_701_976_053);
-            }
-        }"#,
-        Target::default_substrate(),
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "implicit conversion would change sign from uint128 to int64"
-    );
-
     let mut runtime = build_solidity(
         r##"
         contract bar {
@@ -576,74 +345,6 @@ fn block() {
     );
 
     runtime.function("test", Vec::new());
-
-    let ns = parse_and_resolve(
-        r#"
-        contract bar {
-            function test() public {
-                int64 b = block.minimum_balance;
-
-                assert(b == 93_603_701_976_053);
-            }
-        }"#,
-        Target::default_substrate(),
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "implicit conversion would change sign from uint128 to int64"
-    );
-
-    let ns = parse_and_resolve(
-        r#"
-        contract bar {
-            function test() public {
-                int64 b = block.coinbase;
-
-                assert(b == 93_603_701_976_053);
-            }
-        }"#,
-        Target::default_substrate(),
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "builtin ‘block.coinbase’ does not exist"
-    );
-
-    let ns = parse_and_resolve(
-        r#"
-        contract bar {
-            function test() public {
-                int64 b = block.gaslimit;
-
-                assert(b == 93_603_701_976_053);
-            }
-        }"#,
-        Target::default_substrate(),
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "builtin ‘block.gaslimit’ does not exist"
-    );
-
-    let ns = parse_and_resolve(
-        r#"
-        contract bar {
-            function test() public {
-                int64 b = block.difficulty;
-
-                assert(b == 93_603_701_976_053);
-            }
-        }"#,
-        Target::default_substrate(),
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "builtin ‘block.difficulty’ does not exist"
-    );
 }
 
 #[test]
@@ -673,70 +374,6 @@ fn tx() {
     );
 
     runtime.function("test", Vec::new());
-
-    let ns = parse_and_resolve(
-        r#"
-        contract bar {
-            function test() public {
-                int128 b = tx.gasprice;
-            }
-        }"#,
-        Target::default_substrate(),
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "use the function ‘tx.gasprice(gas)’ in stead, as ‘tx.gasprice’ may round down to zero. See https://solang.readthedocs.io/en/latest/language.html#gasprice"
-    );
-
-    let ns = parse_and_resolve(
-        r#"
-        contract bar {
-            function test() public {
-                int128 b = tx.gasprice(4-3);
-            }
-        }"#,
-        Target::default_substrate(),
-    );
-
-    assert_eq!(
-        first_warning(ns.diagnostics),
-        "the function call ‘tx.gasprice(1)’ may round down to zero. See https://solang.readthedocs.io/en/latest/language.html#gasprice"
-    );
-
-    let ns = parse_and_resolve(
-        r#"
-        contract bar {
-            function test() public {
-                int64 b = tx.gasprice(100);
-
-                assert(b == 14_250_083_331_950_119_597);
-            }
-        }"#,
-        Target::default_substrate(),
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "implicit conversion would change sign from uint128 to int64"
-    );
-
-    let ns = parse_and_resolve(
-        r#"
-        contract bar {
-            function test() public {
-                int64 b = tx.origin;
-
-                assert(b == 93_603_701_976_053);
-            }
-        }"#,
-        Target::default_substrate(),
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "builtin ‘tx.origin’ does not exist"
-    );
 }
 
 #[test]
@@ -754,35 +391,6 @@ fn msg() {
 
     runtime.vm.value = 145_594_775_678_703_046_797_448_357_509_034_994_219;
     runtime.function("test", Vec::new());
-
-    let ns = parse_and_resolve(
-        r#"
-        contract bar {
-            function test() public {
-                int64 b = msg.value;
-
-                assert(b == 14_250_083_331_950_119_597);
-            }
-        }"#,
-        Target::default_substrate(),
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "implicit conversion would change sign from uint128 to int64"
-    );
-
-    let ns = parse_and_resolve(
-        r#"
-        contract bar {
-            function test(uint128 v) public returns (bool) {
-                return msg.value > v;
-            }
-        }"#,
-        Target::default_substrate(),
-    );
-
-    no_errors(ns.diagnostics);
 
     let mut runtime = build_solidity(
         r##"
@@ -820,55 +428,6 @@ fn functions() {
     );
 
     runtime.function("test", Vec::new());
-
-    let ns = parse_and_resolve(
-        r#"
-        contract bar {
-            function test() public {
-                int64 b = gasleft();
-
-                assert(b == 14_250_083_331_950_119_597);
-            }
-        }"#,
-        Target::default_substrate(),
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "implicit conversion would change sign from uint64 to int64"
-    );
-
-    let ns = parse_and_resolve(
-        r#"
-        contract bar {
-            function test() public {
-                int64 b = gasleft(1);
-
-                assert(b == 14_250_083_331_950_119_597);
-            }
-        }"#,
-        Target::default_substrate(),
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "builtin function ‘gasleft’ expects 0 arguments, 1 provided"
-    );
-
-    let ns = parse_and_resolve(
-        r#"
-        contract bar {
-            function test() public {
-                bytes32 b = blockhash(1);
-            }
-        }"#,
-        Target::default_substrate(),
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "unknown function or type ‘blockhash’"
-    );
 
     let mut runtime = build_solidity(
         r##"

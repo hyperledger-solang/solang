@@ -1,4 +1,4 @@
-use crate::{build_solidity, first_error, parse_and_resolve, Target};
+use crate::build_solidity;
 use ethabi::Token;
 
 #[test]
@@ -42,44 +42,4 @@ fn constant() {
 
     let returns = vm.function("f", &[], &[], 0, None);
     assert_eq!(returns, vec![Token::Uint(ethereum_types::U256::from(42))]);
-}
-
-#[test]
-fn not_constant() {
-    let ns = parse_and_resolve(
-        r#"
-        contract C {
-            uint256 public constant STATIC = 42;
-        }
-
-        contract foo {
-            function f() public returns (uint) {
-                uint a = C.STATIC();
-                return a;
-            }
-        }
-        "#,
-        Target::Solana,
-    );
-    assert_eq!(first_error(ns.diagnostics), "`C' is a contract",);
-
-    let ns = parse_and_resolve(
-        r#"
-        contract C {
-            uint256 public NOT_CONSTANT = 42;
-        }
-
-        contract foo {
-            function f() public returns (uint) {
-                uint a = C.NOT_CONSTANT;
-                return a;
-            }
-        }
-        "#,
-        Target::Solana,
-    );
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "need instance of contract ‘C’ to get variable value ‘NOT_CONSTANT’",
-    );
 }

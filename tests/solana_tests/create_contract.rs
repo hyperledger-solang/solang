@@ -1,6 +1,5 @@
-use crate::{build_solidity, first_error, no_errors, parse_and_resolve};
+use crate::build_solidity;
 use ethabi::Token;
-use solang::Target;
 
 #[test]
 fn simple_create_contract() {
@@ -52,74 +51,6 @@ fn simple_create_contract() {
     );
 
     assert_eq!(vm.logs, "Hello xywoleh");
-}
-
-#[test]
-fn base_contract() {
-    let ns = parse_and_resolve(
-        r#"
-        contract Math {
-            enum MathError {
-                NO_ERROR
-            }
-        }
-
-        contract IsMath is Math {
-            struct WithMath {
-                MathError math;
-            }
-        }
-    "#,
-        Target::Solana,
-    );
-
-    no_errors(ns.diagnostics);
-
-    let ns = parse_and_resolve(
-        r#"
-        contract Logic {
-            enum LogicError {
-                LE_ERROR
-            }
-        }
-        contract Math is Logic {
-            enum MathError {
-                NO_ERROR
-            }
-        }
-
-        contract IsMath is Math {
-            struct WithMath {
-                MathError math;
-                LogicError logic;
-            }
-        }
-    "#,
-        Target::Solana,
-    );
-
-    no_errors(ns.diagnostics);
-
-    let ns = parse_and_resolve(
-        r#"
-        contract Logic {
-            struct LogicFields {
-                uint logia;
-            }
-        }
-        contract Math is Logic {
-        }
-
-        contract IsMath is Math {
-            struct WithMath {
-                LogicFields logia;
-            }
-        }
-    "#,
-        Target::Solana,
-    );
-
-    no_errors(ns.diagnostics);
 }
 
 #[test]
@@ -190,41 +121,4 @@ fn two_contracts() {
     assert_eq!(vm.logs, "bar1 says: yo from bar0bar1 says: hi from bar0");
 
     vm.logs.truncate(0);
-}
-
-#[test]
-fn syntax() {
-    let ns = parse_and_resolve(
-        r#"
-        contract y {
-            function f() public {
-                x a = new x{gas: 102}();
-            }
-        }
-        contract x {}
-    "#,
-        Target::Solana,
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "‘gas’ not permitted for external calls or constructors on solana"
-    );
-
-    let ns = parse_and_resolve(
-        r#"
-        contract y {
-            function f() public {
-                x a = new x{salt: 102}();
-            }
-        }
-        contract x {}
-    "#,
-        Target::Solana,
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "‘salt’ not permitted for external calls or constructors on solana"
-    );
 }

@@ -1,6 +1,5 @@
-use crate::{build_solidity, first_error, parse_and_resolve};
+use crate::build_solidity;
 use ethabi::Token;
-use solang::Target;
 
 #[test]
 fn constants_hash_tests() {
@@ -45,41 +44,6 @@ fn constants_hash_tests() {
 
     runtime.constructor("tester", &[], 0);
     runtime.function("test", &[], &[], 0, None);
-
-    // blake2 hash functions are substrate isms. Ensure they don't exist
-    let ns = parse_and_resolve(
-        r##"
-        contract tester {
-            function test() public {
-                bytes32 hash = blake2_256("Hello, World!");
-
-                assert(hash == hex"527a6a4b9a6da75607546842e0e00105350b1aaf");
-            }
-        }"##,
-        Target::Solana,
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "unknown function or type ‘blake2_256’"
-    );
-
-    let ns = parse_and_resolve(
-        r##"
-        contract tester {
-            function test() public {
-                bytes32 hash = blake2_128("Hello, World!");
-
-                assert(hash == hex"527a6a4b9a6da75607546842e0e00105350b1aaf");
-            }
-        }"##,
-        Target::Solana,
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "unknown function or type ‘blake2_128’"
-    );
 }
 
 #[test]
