@@ -83,6 +83,10 @@ Options:
   ast
     Output Abstract Syntax Tree, the parsed and resolved input
 
+  ast-dot
+    Output Abstract Syntax Tree as a graphviz dot file. This can be viewed with xdot
+    or any other tool that can visualize graphviz dot files.
+
   cfg
     Output control flow graph.
 
