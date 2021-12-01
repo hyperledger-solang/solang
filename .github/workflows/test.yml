@@ -5,7 +5,7 @@ on:
       - main
   pull_request:
   workflow_dispatch:
-  
+
 jobs:
   repolinter:
     name: Repolinter
@@ -134,9 +134,31 @@ jobs:
         name: solang-mac-intel
         path: ./target/debug/solang
 
+  image-multiarch:
+    name: Multiarch Container Image
+    runs-on: macos-arm
+    if: ${{ github.repository_owner == 'hyperledger-labs' }}
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v2
+      with:
+        # Make sure "git describe --tags" works for solang --version
+        fetch-depth: 0
+    - run: echo "::set-output name=push::--push"
+      id: push
+      if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    - run: |
+        echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin
+        docker buildx build . \
+          ${{steps.push.outputs.push}} \
+          -t ghcr.io/${GITHUB_REPOSITORY}:latest \
+          --platform linux/arm64,linux/amd64 \
+          --label org.opencontainers.image.description="Solidity Compiler for Solana, Substrate, and ewasm version $(git describe --tags)"
+
   image:
     name: Container Image
     runs-on: ubuntu-20.04
+    if: ${{ github.repository_owner != 'hyperledger-labs' }}
     steps:
     - name: Checkout sources
       uses: actions/checkout@v2
@@ -144,13 +166,9 @@ jobs:
         # Make sure "git describe --tags" works for solang --version
         fetch-depth: 0
     - run:
-          docker build . -t ghcr.io/${GITHUB_REPOSITORY}:latest
-            --label org.opencontainers.image.description="Solidity Compiler for Solana, Substrate, and ewasm version $(git describe --tags)"
-    - name: Push to github container registry
-      if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-      run: |
-          echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin
-          docker push ghcr.io/${GITHUB_REPOSITORY}:latest
+        docker build .
+          -t ghcr.io/${GITHUB_REPOSITORY}:latest
+          --label org.opencontainers.image.description="Solidity Compiler for Solana, Substrate, and ewasm version $(git describe --tags)"
 
   solana:
     name: Solana Integration test
