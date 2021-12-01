@@ -2,12 +2,10 @@ name: Build and push ci image
 on: [workflow_dispatch]
 jobs:
   build-push-ci-image:
-    runs-on: ubuntu-20.04
+    runs-on: macos-arm
     steps:
     - name: Checkout sources
       uses: actions/checkout@v1
-    - run: docker build -t ghcr.io/${GITHUB_REPOSITORY}:ci .github/
-    - name: Push to github container registry
-      run: |
+    - run: |
           echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin
-          docker push ghcr.io/${GITHUB_REPOSITORY}:ci
+          docker buildx build --platform linux/amd64,linux/arm64 -t ghcr.io/${GITHUB_REPOSITORY}:ci --push .github
