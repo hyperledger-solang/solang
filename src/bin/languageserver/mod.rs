@@ -879,6 +879,11 @@ impl SolangServer {
         }
 
         for fnc in &ns.functions {
+            if fnc.is_accessor {
+                // accessor functions are synthetic; ignore them, all the locations are fake
+                continue;
+            }
+
             for parm in &fnc.params {
                 let msg = SolangServer::expanded_ty(&parm.ty, ns);
                 lookup_tbl.push((parm.loc.1, parm.loc.2, msg));

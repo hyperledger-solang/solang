@@ -1515,27 +1515,6 @@ impl ast::Namespace {
         }
     }
 
-    /// Phoney default constructor
-    pub fn default_constructor(&self, contract_no: usize) -> ast::Function {
-        let mut func = ast::Function::new(
-            pt::Loc(0, 0, 0),
-            "".to_owned(),
-            Some(contract_no),
-            vec![],
-            pt::FunctionTy::Constructor,
-            None,
-            pt::Visibility::Public(None),
-            Vec::new(),
-            Vec::new(),
-            self,
-        );
-
-        func.body = vec![ast::Statement::Return(pt::Loc(0, 0, 0), None)];
-        func.has_body = true;
-
-        func
-    }
-
     /// Generate the signature for the given name and parameters. Can be used
     /// for both events and functions
     pub fn signature(&self, name: &str, params: &[ast::Parameter]) -> String {

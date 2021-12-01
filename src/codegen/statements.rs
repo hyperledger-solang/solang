@@ -1438,6 +1438,29 @@ impl Type {
     }
 }
 
+impl Namespace {
+    /// Phoney default constructor
+    pub fn default_constructor(&self, contract_no: usize) -> Function {
+        let mut func = Function::new(
+            pt::Loc(0, 0, 0),
+            "".to_owned(),
+            Some(contract_no),
+            vec![],
+            pt::FunctionTy::Constructor,
+            None,
+            pt::Visibility::Public(None),
+            Vec::new(),
+            Vec::new(),
+            self,
+        );
+
+        func.body = vec![Statement::Return(pt::Loc(0, 0, 0), None)];
+        func.has_body = true;
+
+        func
+    }
+}
+
 /// This function looks for expressions that have side effects during code execution and
 /// processes them.
 /// They must be added to the cfg event if we remove the assignment
