@@ -771,6 +771,7 @@ impl LachainTarget {
             .cfg
             .iter()
             .enumerate()
+            .rev()
             .find(|(_, cfg)| cfg.ty == pt::FunctionTy::Constructor)
         {
             let mut args = Vec::new();
