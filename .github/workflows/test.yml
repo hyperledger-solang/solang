@@ -1,5 +1,5 @@
 name: Build tests
-on: [push, pull_request]
+on: [push, pull_request, workflow_dispatch]
 jobs:
   repolinter:
     name: Repolinter
