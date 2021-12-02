@@ -8,7 +8,7 @@ license = "Apache-2.0"
 build = "build.rs"
 description = "Solang Solidity Compiler"
 keywords = [ "solidity", "compiler", "solana", "substrate", "ewasm" ]
-edition = "2018"
+edition = "2021"
 
 [build-dependencies]
 lalrpop = "0.19"
