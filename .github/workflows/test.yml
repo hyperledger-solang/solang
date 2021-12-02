@@ -61,6 +61,12 @@ jobs:
       run: unzip c:\llvm.zip -d c:/
     - name: Add LLVM to Path
       run: echo "c:\llvm13.0\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8
+    - name: Stable with rustfmt and clippy
+      uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: stable
+        components: clippy
     # We run clippy on Linux in the lint job above, but this does not check #[cfg(windows)] items
     - name: Run cargo clippy
       run: cargo clippy --tests --bins -- -D warnings -D clippy::inconsistent-struct-constructor
@@ -122,8 +128,8 @@ jobs:
         name: solang-mac-intel
         path: ./target/debug/solang
 
-  container:
-    name: Container
+  image:
+    name: Container Image
     runs-on: ubuntu-20.04
     steps:
     - name: Checkout sources
@@ -131,8 +137,8 @@ jobs:
       with:
         # Make sure "git describe --tags" works for solang --version
         fetch-depth: 0
-    - run: |
-          docker build . -t ghcr.io/${GITHUB_REPOSITORY}:latest \
+    - run:
+          docker build . -t ghcr.io/${GITHUB_REPOSITORY}:latest
             --label org.opencontainers.image.description="Solidity Compiler for Solana, Substrate, and ewasm version $(git describe --tags)"
     - name: Push to github container registry
       if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}

@@ -5,7 +5,7 @@ use std::ffi::OsString;
 use std::fs::File;
 use std::io;
 use std::io::{prelude::*, Error, ErrorKind};
-use std::path::{Component, Path, PathBuf};
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 pub struct FileResolver {
@@ -138,7 +138,7 @@ impl FileResolver {
                 if let (Some(mapping), import_path) = import {
                     if first_part == mapping {
                         // match!
-                        if let Ok(full_path) = join_fold(import_path, &relpath).canonicalize() {
+                        if let Ok(full_path) = import_path.join(&relpath).canonicalize() {
                             self.load_file(&full_path)?;
                             let base = full_path
                                 .parent()
@@ -165,7 +165,7 @@ impl FileResolver {
         {
             if self.import_paths.is_empty() {
                 // we have no import paths, resolve by what's in the cache
-                let full_path = join_fold(base, &path);
+                let full_path = base.join(&path);
                 let base = (&full_path.parent())
                     .expect("path should include filename")
                     .to_path_buf();
@@ -178,9 +178,9 @@ impl FileResolver {
             }
 
             if let (None, import_path) = &self.import_paths[*import_no] {
-                let import_path = join_fold(import_path, base);
+                let import_path = import_path.join(base);
 
-                if let Ok(full_path) = join_fold(&import_path, &path).canonicalize() {
+                if let Ok(full_path) = import_path.join(&path).canonicalize() {
                     self.load_file(&full_path)?;
                     let base = full_path
                         .parent()
@@ -218,7 +218,7 @@ impl FileResolver {
             let import_no = (i + start_import_no) % self.import_paths.len();
 
             if let (None, import_path) = &self.import_paths[import_no] {
-                if let Ok(full_path) = join_fold(import_path, &path).canonicalize() {
+                if let Ok(full_path) = import_path.join(&path).canonicalize() {
                     let base = full_path
                         .parent()
                         .expect("path should include filename")
@@ -274,99 +274,4 @@ impl FileResolver {
 
         (full_line, begin_line, begin_column, size)
     }
-}
-
-// see https://github.com/rust-lang/rust/pull/89270
-fn join_fold(left: &Path, right: &Path) -> PathBuf {
-    let mut buf = Vec::new();
-    let mut has_prefix = false;
-
-    for c in left.components() {
-        match c {
-            Component::Prefix(_) => {
-                has_prefix = true;
-                buf.push(c);
-            }
-            Component::Normal(_) | Component::RootDir => {
-                buf.push(c);
-            }
-            Component::CurDir => (),
-            Component::ParentDir => {
-                if let Some(Component::Normal(_)) = buf.last() {
-                    buf.pop();
-                } else {
-                    buf.push(c);
-                }
-            }
-        }
-    }
-
-    for c in right.components() {
-        match c {
-            Component::Prefix(_) => {
-                buf = vec![c];
-                has_prefix = true;
-            }
-            Component::RootDir => {
-                if has_prefix {
-                    buf.push(c);
-                } else {
-                    buf = vec![c];
-                }
-            }
-            Component::CurDir => (),
-            Component::ParentDir => match buf.last() {
-                Some(Component::RootDir) => (),
-                Some(Component::Prefix(_) | Component::ParentDir) | None => buf.push(c),
-                _ => {
-                    let _ = buf.pop();
-                }
-            },
-            Component::Normal(_) => {
-                buf.push(c);
-            }
-        }
-    }
-
-    buf.iter().collect()
-}
-
-#[test]
-#[cfg(not(windows))]
-fn test_join() {
-    let x = join_fold(&PathBuf::from("/foo//"), &PathBuf::from("bar"));
-
-    assert_eq!(x.to_string_lossy(), r"/foo/bar");
-
-    let x = join_fold(&PathBuf::from("/foo//"), &PathBuf::from("/../bar"));
-
-    assert_eq!(x.to_string_lossy(), r"/bar");
-}
-
-#[test]
-#[cfg(windows)]
-fn test_win_join() {
-    let x = join_fold(&PathBuf::from("/foo//"), &PathBuf::from("bar"));
-
-    assert_eq!(x.to_string_lossy(), r"\foo\bar");
-
-    let x = join_fold(&PathBuf::from("/foo//"), &PathBuf::from("/../bar"));
-
-    assert_eq!(x.to_string_lossy(), r"\bar");
-
-    let x = join_fold(&PathBuf::from("C:/foo//"), &PathBuf::from("bar"));
-
-    assert_eq!(x.to_string_lossy(), r"C:\foo\bar");
-
-    let x = join_fold(&PathBuf::from("C:"), &PathBuf::from("bar/../foo"));
-
-    assert_eq!(x.to_string_lossy(), r"C:foo");
-
-    let x = join_fold(&PathBuf::from("C:"), &PathBuf::from("/bar/../foo"));
-
-    assert_eq!(x.to_string_lossy(), r"C:\foo");
-
-    let x = join_fold(&PathBuf::from("C:"), &PathBuf::from("../foo"));
-
-    assert_eq!(x.to_string_lossy(), r"C:..\foo");
 }
