@@ -10,11 +10,12 @@ use sha2::{Digest, Sha256};
 use solana_helpers::allocator_bump::Allocator;
 use solana_rbpf::{
     ebpf,
+    elf::Executable,
     error::EbpfError,
     memory_region::{AccessType, MemoryMapping},
     question_mark,
     user_error::UserError,
-    vm::{Config, EbpfVm, Executable, SyscallObject, SyscallRegistry, TestInstructionMeter},
+    vm::{Config, EbpfVm, SyscallObject, SyscallRegistry, TestInstructionMeter},
 };
 use solang::{
     abi::generate_abi,
@@ -1189,7 +1190,7 @@ impl VirtualMachine {
             .register_syscall_by_name(b"sol_log_data", SyscallLogData::call)
             .unwrap();
 
-        let executable = <dyn Executable<UserError, TestInstructionMeter>>::from_elf(
+        let executable = Executable::<UserError, TestInstructionMeter>::from_elf(
             &self.account_data[&program.program].data,
             None,
             Config::default(),
@@ -1198,7 +1199,7 @@ impl VirtualMachine {
         .expect("should work");
 
         let mut vm = EbpfVm::<UserError, TestInstructionMeter>::new(
-            executable.as_ref(),
+            &executable,
             &mut heap,
             &mut parameter_bytes,
         )
