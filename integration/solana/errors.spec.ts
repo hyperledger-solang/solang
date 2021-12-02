@@ -18,7 +18,8 @@ describe('Deploy solang contract and test', () => {
             expect(e).toBeInstanceOf(TransactionError);
             if (e instanceof TransactionError) {
                 expect(e.message).toBe('Do the revert thing');
-                expect(e.computeUnitsUsed).toBe(1050);
+                expect(e.computeUnitsUsed).toBeGreaterThan(1000);
+                expect(e.computeUnitsUsed).toBeLessThan(1100);
                 expect(e.logs.length).toBeGreaterThan(1);
             }
             return;
@@ -30,7 +31,8 @@ describe('Deploy solang contract and test', () => {
             expect(e).toBeInstanceOf(TransactionError);
             if (e instanceof TransactionError) {
                 expect(e.message).toBe('Do the revert thing');
-                expect(e.computeUnitsUsed).toBe(1050);
+                expect(e.computeUnitsUsed).toBeGreaterThan(1000);
+                expect(e.computeUnitsUsed).toBeLessThan(1100);
                 expect(e.logs.length).toBeGreaterThan(1);
             }
             return;
