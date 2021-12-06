@@ -12,7 +12,7 @@ contract UniswapV2Factory is IUniswapV2Factory {
 
     event PairCreated(address indexed token0, address indexed token1, address pair, uint);
 
-    function initUniswapV2Factory(address _feeToSetter) public {
+    constructor(address _feeToSetter) public {
         feeToSetter = _feeToSetter;
     }
 
@@ -27,7 +27,6 @@ contract UniswapV2Factory is IUniswapV2Factory {
         require(getPair[token0][token1] == address(0), 'UniswapV2: PAIR_EXISTS'); // single check is sufficient
         bytes32 salt = keccak256(abi.encode(token0, token1));
         pair = address(new UniswapV2Pair{salt: uint256(salt)}());
-        IUniswapV2Pair(pair).initUniswapV2Pair();
         IUniswapV2Pair(pair).initialize(token0, token1);
         getPair[token0][token1] = pair;
         getPair[token1][token0] = pair; // populate mapping in the reverse direction

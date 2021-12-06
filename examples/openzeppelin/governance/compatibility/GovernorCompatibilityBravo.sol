@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
+// OpenZeppelin Contracts v4.4.0 (governance/compatibility/GovernorCompatibilityBravo.sol)
 
 pragma solidity ^0.8.0;
 
 import "../../utils/Counters.sol";
 import "../../utils/math/SafeCast.sol";
 import "../extensions/IGovernorTimelock.sol";
-import "../extensions/GovernorProposalThreshold.sol";
 import "../Governor.sol";
 import "./IGovernorCompatibilityBravo.sol";
 
@@ -15,14 +15,11 @@ import "./IGovernorCompatibilityBravo.sol";
  * This compatibility layer includes a voting system and requires a {IGovernorTimelock} compatible module to be added
  * through inheritance. It does not include token bindings, not does it include any variable upgrade patterns.
  *
+ * NOTE: When using this module, you may need to enable the Solidity optimizer to avoid hitting the contract size limit.
+ *
  * _Available since v4.3._
  */
-abstract contract GovernorCompatibilityBravo is
-    IGovernorTimelock,
-    IGovernorCompatibilityBravo,
-    Governor,
-    GovernorProposalThreshold
-{
+abstract contract GovernorCompatibilityBravo is IGovernorTimelock, IGovernorCompatibilityBravo, Governor {
     using Counters for Counters.Counter;
     using Timers for Timers.BlockNumber;
 
@@ -61,7 +58,7 @@ abstract contract GovernorCompatibilityBravo is
         uint256[] memory values,
         bytes[] memory calldatas,
         string memory description
-    ) public virtual override(IGovernor, Governor, GovernorProposalThreshold) returns (uint256) {
+    ) public virtual override(IGovernor, Governor) returns (uint256) {
         _storeProposal(_msgSender(), targets, values, new string[](calldatas.length), calldatas, description);
         return super.propose(targets, values, calldatas, description);
     }
@@ -168,16 +165,6 @@ abstract contract GovernorCompatibilityBravo is
 
     // ==================================================== Views =====================================================
     /**
-     * @dev Part of the Governor Bravo's interface: _"The number of votes required in order for a voter to become a proposer"_.
-     */
-    function proposalThreshold()
-        public
-        view
-        virtual
-        override(IGovernorCompatibilityBravo, GovernorProposalThreshold)
-        returns (uint256);
-
-    /**
      * @dev See {IGovernorCompatibilityBravo-proposals}.
      */
     function proposals(uint256 proposalId)
@@ -260,7 +247,7 @@ abstract contract GovernorCompatibilityBravo is
      */
     function _quorumReached(uint256 proposalId) internal view virtual override returns (bool) {
         ProposalDetails storage details = _proposalDetails[proposalId];
-        return quorum(proposalSnapshot(proposalId)) < details.forVotes;
+        return quorum(proposalSnapshot(proposalId)) <= details.forVotes;
     }
 
     /**

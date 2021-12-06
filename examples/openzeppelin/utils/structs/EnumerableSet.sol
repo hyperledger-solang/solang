@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+// OpenZeppelin Contracts v4.4.0 (utils/structs/EnumerableSet.sol)
 
 pragma solidity ^0.8.0;
 
@@ -272,11 +273,10 @@ library EnumerableSet {
      */
     function values(AddressSet storage set) internal view returns (address[] memory) {
         bytes32[] memory store = _values(set._inner);
-        uint32 storeLength = store.length;
+        address[] memory result;
 
-        address[] memory result = new address[](storeLength);
-        for (uint i = 0; i < storeLength; i++) {
-            result[i] = address(uint160(uint256(store[i])));
+        assembly {
+            result := store
         }
 
         return result;
@@ -346,11 +346,10 @@ library EnumerableSet {
      */
     function values(UintSet storage set) internal view returns (uint256[] memory) {
         bytes32[] memory store = _values(set._inner);
-        uint32 storeLength = store.length;
+        uint256[] memory result;
 
-        uint256[] memory result = new uint256[](storeLength);
-        for (uint i = 0; i < storeLength; i++) {
-            result[i] = uint256(store[i]);
+        assembly {
+            result := store
         }
 
         return result;
