@@ -9,15 +9,15 @@ import './interfaces/IERC20.sol';
 import './interfaces/IWETH.sol';
 
 contract UniswapV2Router01 is IUniswapV2Router01 {
-    address public override factory;
-    address public override WETH;
+    address public immutable override factory;
+    address public immutable override WETH;
 
     modifier ensure(uint deadline) {
         require(deadline >= block.timestamp, 'UniswapV2Router: EXPIRED');
         _;
     }
 
-    function init(address _factory, address _WETH) public {
+    constructor(address _factory, address _WETH) public {
         factory = _factory;
         WETH = _WETH;
     }
@@ -66,7 +66,7 @@ contract UniswapV2Router01 is IUniswapV2Router01 {
         uint deadline
     ) external override ensure(deadline) returns (uint amountA, uint amountB, uint liquidity) {
         (amountA, amountB) = _addLiquidity(tokenA, tokenB, amountADesired, amountBDesired, amountAMin, amountBMin);
-        address pair = IUniswapV2Factory(factory).getPair(tokenA, tokenB);
+        address pair = UniswapV2Library.pairFor(factory, tokenA, tokenB);
         TransferHelper.safeTransferFrom(tokenA, msg.sender, pair, amountA);
         TransferHelper.safeTransferFrom(tokenB, msg.sender, pair, amountB);
         liquidity = IUniswapV2Pair(pair).mint(to);

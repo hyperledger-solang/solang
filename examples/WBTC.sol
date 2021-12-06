@@ -84,12 +84,12 @@ interface IERC20Metadata is IERC20 {
     /**
      * @dev Returns the name of the token.
      */
-    function name() external view returns (bytes32);
+    function name() external view returns (string memory);
 
     /**
      * @dev Returns the symbol of the token.
      */
-    function symbol() external view returns (bytes32);
+    function symbol() external view returns (string memory);
 
     /**
      * @dev Returns the decimals places of the token.
@@ -152,7 +152,7 @@ contract WBTC is Context, IERC20, IERC20Metadata {
     /**
      * @dev Returns the name of the token.
      */
-    function name() public view virtual override returns (bytes32) {
+    function name() public view virtual override returns (string memory) {
         return "Wrapped BTC";
     }
 
@@ -160,7 +160,7 @@ contract WBTC is Context, IERC20, IERC20Metadata {
      * @dev Returns the symbol of the token, usually a shorter version of the
      * name.
      */
-    function symbol() public view virtual override returns (bytes32) {
+    function symbol() public view virtual override returns (string memory) {
         return "WBTC";
     }
 

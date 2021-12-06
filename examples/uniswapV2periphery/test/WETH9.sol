@@ -16,10 +16,10 @@
 pragma solidity =0.6.6;
 
 contract WETH9 {
-  /**
+    /**
      * @dev Returns the name of the token.
      */
-    function name() public pure returns (bytes32) {
+    function name() public pure returns (string memory) {
         return "Wrapped Ether";
     }
 
@@ -27,7 +27,7 @@ contract WETH9 {
      * @dev Returns the symbol of the token, usually a shorter version of the
      * name.
      */
-    function symbol() public pure returns (bytes32) {
+    function symbol() public pure returns (string memory) {
         return "WETH";
     }
 
@@ -56,9 +56,9 @@ contract WETH9 {
     mapping (address => uint)                       public  balanceOf;
     mapping (address => mapping (address => uint))  public  allowance;
 
-    receive() external payable {
-        deposit();
-    }
+    // function() public payable {
+    //     deposit();
+    // }
     function deposit() public payable {
         balanceOf[msg.sender] += msg.value;
         emit Deposit(msg.sender, msg.value);
