@@ -4,7 +4,7 @@ use num_traits::cast::ToPrimitive;
 use serde::Serialize;
 use std::collections::HashMap;
 use std::ffi::OsString;
-use std::fs::File;
+use std::fs::{create_dir_all, File};
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 
@@ -380,17 +380,7 @@ fn main() {
                 if matches.is_present("STD-JSON") {
                     json.program = hex::encode_upper(&code);
                 } else {
-                    let mut file = match File::create(&bin_filename) {
-                        Ok(file) => file,
-                        Err(err) => {
-                            eprintln!(
-                                "error: cannot create file ‘{}’: {}",
-                                bin_filename.display(),
-                                err,
-                            );
-                            std::process::exit(1);
-                        }
-                    };
+                    let mut file = create_file(&bin_filename);
                     file.write_all(&code).unwrap();
 
                     // Write all ABI files
@@ -414,17 +404,7 @@ fn main() {
                                 );
                             }
 
-                            let mut file = match File::create(abi_filename) {
-                                Ok(file) => file,
-                                Err(err) => {
-                                    eprintln!(
-                                        "error: cannot create file ‘{}’: {}",
-                                        bin_filename.display(),
-                                        err
-                                    );
-                                    std::process::exit(1);
-                                }
-                            };
+                            let mut file = create_file(&abi_filename);
 
                             file.write_all(abi_bytes.as_bytes()).unwrap();
                         }
@@ -479,17 +459,7 @@ fn process_file(
 
         let dot = ns.dotgraphviz();
 
-        let mut file = match File::create(&dot_filename) {
-            Ok(file) => file,
-            Err(err) => {
-                eprintln!(
-                    "error: cannot create file ‘{}’: {}",
-                    dot_filename.display(),
-                    err,
-                );
-                std::process::exit(1);
-            }
-        };
+        let mut file = create_file(&dot_filename);
 
         if let Err(err) = file.write_all(dot.as_bytes()) {
             eprintln!("{}: error: {}", dot_filename.display(), err);
@@ -585,17 +555,7 @@ fn process_file(
                 );
             }
 
-            let mut file = match File::create(&bin_filename) {
-                Ok(file) => file,
-                Err(err) => {
-                    eprintln!(
-                        "error: cannot create file ‘{}’: {}",
-                        bin_filename.display(),
-                        err,
-                    );
-                    std::process::exit(1);
-                }
-            };
+            let mut file = create_file(&bin_filename);
             file.write_all(&resolved_contract.code).unwrap();
 
             let (abi_bytes, abi_ext) =
@@ -610,17 +570,7 @@ fn process_file(
                 );
             }
 
-            let mut file = match File::create(&abi_filename) {
-                Ok(file) => file,
-                Err(err) => {
-                    eprintln!(
-                        "error: cannot create file ‘{}’: {}",
-                        abi_filename.display(),
-                        err,
-                    );
-                    std::process::exit(1);
-                }
-            };
+            let mut file = create_file(&abi_filename);
             file.write_all(abi_bytes.as_bytes()).unwrap();
         }
     }
@@ -741,7 +691,7 @@ fn save_intermediates(binary: &solang::emit::Binary, matches: &ArgMatches) -> bo
                 );
             }
 
-            let mut file = File::create(obj_filename).unwrap();
+            let mut file = create_file(&obj_filename);
             file.write_all(&obj).unwrap();
             true
         }
@@ -764,7 +714,7 @@ fn save_intermediates(binary: &solang::emit::Binary, matches: &ArgMatches) -> bo
                 );
             }
 
-            let mut file = File::create(obj_filename).unwrap();
+            let mut file = create_file(&obj_filename);
             file.write_all(&obj).unwrap();
             true
         }
@@ -772,5 +722,26 @@ fn save_intermediates(binary: &solang::emit::Binary, matches: &ArgMatches) -> bo
         Some("ast") => true,
         Some("ast-dot") => true,
         _ => false,
+    }
+}
+
+fn create_file(path: &Path) -> File {
+    if let Some(parent) = path.parent() {
+        if let Err(err) = create_dir_all(parent) {
+            eprintln!(
+                "error: cannot create output directory ‘{}’: {}",
+                parent.display(),
+                err
+            );
+            std::process::exit(1);
+        }
+    }
+
+    match File::create(path) {
+        Ok(file) => file,
+        Err(err) => {
+            eprintln!("error: cannot create file ‘{}’: {}", path.display(), err,);
+            std::process::exit(1);
+        }
     }
 }
