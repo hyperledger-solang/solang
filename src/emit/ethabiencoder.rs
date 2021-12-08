@@ -642,25 +642,6 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
             self.encode_packed_ty(binary, self.load_args, function, ty, *arg, &mut output, ns);
         }
 
-        // We use a little trick here. The length might or might not include the selector.
-        // The length will be a multiple of 32 plus the selector (4). So by dividing by 8,
-        // we lose the selector.
-        binary.builder.build_call(
-            binary.module.get_function("__bzero8").unwrap(),
-            &[
-                output.into(),
-                binary
-                    .builder
-                    .build_int_unsigned_div(
-                        self.length,
-                        binary.context.i32_type().const_int(8, false),
-                        "",
-                    )
-                    .into(),
-            ],
-            "",
-        );
-
         let mut output = output;
         let mut offset = self.offset;
         let mut dynamic = unsafe { binary.builder.build_gep(output, &[self.offset], "") };
