@@ -175,28 +175,21 @@ impl FileResolver {
                     base,
                     import_no: 0,
                 });
+            } else if let Ok(full_path) = base.join(&path).canonicalize() {
+                self.load_file(&full_path)?;
+                let base = (&full_path.parent())
+                    .expect("path should include filename")
+                    .to_path_buf();
+
+                return Ok(ResolvedFile {
+                    full_path,
+                    base,
+                    import_no: 0,
+                });
             }
 
-            if let (None, import_path) = &self.import_paths[*import_no] {
-                let import_path = import_path.join(base);
-
-                if let Ok(full_path) = import_path.join(&path).canonicalize() {
-                    self.load_file(&full_path)?;
-                    let base = full_path
-                        .parent()
-                        .expect("path should include filename")
-                        .to_path_buf();
-
-                    return Ok(ResolvedFile {
-                        full_path,
-                        base,
-                        import_no: *import_no,
-                    });
-                }
-            }
-
-            // start with the next import
-            start_import_no = *import_no + 1;
+            // start with this import
+            start_import_no = *import_no;
         }
 
         if self.import_paths.is_empty() {
