@@ -342,6 +342,14 @@ pub fn var_decl(
             let mut params = Vec::new();
             let ty = collect_parameters(&ty, &mut params, &mut expr, ns);
 
+            if ty.contains_mapping(ns) {
+                // we can't return a mapping
+                ns.diagnostics.push(Diagnostic::decl_error(
+                    s.loc,
+                    "mapping in a struct variable cannot be public".to_string(),
+                ));
+            }
+
             let mut func = Function::new(
                 s.name.loc,
                 s.name.name.to_owned(),
