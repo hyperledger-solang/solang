@@ -244,30 +244,35 @@ pub fn storage_slots_array_pop(
         },
     );
 
-    let res_pos = vartab.temp_anonymous(&elem_ty);
+    let val = if !elem_ty.contains_mapping(ns) {
+        let res_pos = vartab.temp_anonymous(&elem_ty);
 
-    let expr = load_storage(
-        loc,
-        &elem_ty,
-        Expression::Variable(*loc, elem_ty.clone(), entry_pos),
-        cfg,
-        vartab,
-        opt,
-    );
+        let expr = load_storage(
+            loc,
+            &elem_ty,
+            Expression::Variable(*loc, elem_ty.clone(), entry_pos),
+            cfg,
+            vartab,
+            opt,
+        );
 
-    cfg.add(
-        vartab,
-        Instr::Set {
-            loc: *loc,
-            res: res_pos,
-            expr,
-        },
-    );
+        cfg.add(
+            vartab,
+            Instr::Set {
+                loc: *loc,
+                res: res_pos,
+                expr,
+            },
+        );
+        Expression::Variable(*loc, elem_ty.clone(), res_pos)
+    } else {
+        Expression::Undefined(elem_ty.clone())
+    };
 
     cfg.add(
         vartab,
         Instr::ClearStorage {
-            ty: elem_ty.clone(),
+            ty: elem_ty,
             storage: Expression::Variable(*loc, slot_ty.clone(), entry_pos),
         },
     );
@@ -282,7 +287,7 @@ pub fn storage_slots_array_pop(
         },
     );
 
-    Expression::Variable(*loc, elem_ty, res_pos)
+    val
 }
 
 /// Push() method on array or bytes in storage

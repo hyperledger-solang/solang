@@ -1,6 +1,6 @@
 import fs, { PathLike } from 'fs';
 import { ApiPromise, WsProvider, Keyring } from '@polkadot/api';
-import { CodePromise, ContractPromise } from '@polkadot/api-contract';
+import { CodePromise } from '@polkadot/api-contract';
 import { SubmittableExtrinsic } from '@polkadot/api/types';
 import { ISubmittableResult } from '@polkadot/types/types';
 import { KeyringPair } from '@polkadot/keyring/types';
@@ -11,6 +11,11 @@ export const gasLimit: bigint = 200000n * 1000000n;
 export function aliceKeypair(): KeyringPair {
   const keyring = new Keyring({ type: 'sr25519' });
   return keyring.addFromUri('//Alice');
+}
+
+export function daveKeypair(): KeyringPair {
+  const keyring = new Keyring({ type: 'sr25519' });
+  return keyring.addFromUri('//Dave');
 }
 
 export async function createConnection(): Promise<ApiPromise> {

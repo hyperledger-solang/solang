@@ -1,5 +1,5 @@
 import expect from 'expect';
-import { gasLimit, createConnection, deploy, transaction, aliceKeypair, } from './index';
+import { gasLimit, createConnection, deploy, aliceKeypair, daveKeypair, } from './index';
 import { ContractPromise } from '@polkadot/api-contract';
 
 describe('Deploy primitives contract and test', () => {
@@ -8,6 +8,7 @@ describe('Deploy primitives contract and test', () => {
 
         let conn = await createConnection();
         const alice = aliceKeypair();
+        const dave = daveKeypair();
 
         let deployed_contract = await deploy(conn, alice, 'primitives.contract');
 
@@ -122,6 +123,13 @@ describe('Deploy primitives contract and test', () => {
 
         res = await contract.query.addressPassthrough(alice.address, {}, default_account);
         expect(res.output?.toJSON()).toEqual(default_account);
+
+        res = await contract.query.addressPassthrough(alice.address, {}, dave.address);
+        expect(res.output?.toJSON()).toEqual(dave.address);
+
+        res = await contract.query.addressPassthrough(alice.address, {}, alice.address);
+        expect(res.output?.toJSON()).toEqual(alice.address);
+
         conn.disconnect();
     });
 });

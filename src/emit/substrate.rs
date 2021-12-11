@@ -3601,21 +3601,6 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             .build_alloca(binary.value_type(ns), "balance");
         binary.builder.build_store(value_ptr, value);
 
-        let scratch_buf = binary.builder.build_pointer_cast(
-            binary.scratch.unwrap().as_pointer_value(),
-            binary.context.i8_type().ptr_type(AddressSpace::Generic),
-            "scratch_buf",
-        );
-        let scratch_len = binary.scratch_len.unwrap().as_pointer_value();
-
-        binary.builder.build_store(
-            scratch_len,
-            binary
-                .context
-                .i32_type()
-                .const_int(SCRATCH_SIZE as u64, false),
-        );
-
         // do the actual call
         let ret = binary
             .builder
@@ -3672,11 +3657,12 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
             self.assert_failure(
                 binary,
-                scratch_buf,
                 binary
-                    .builder
-                    .build_load(scratch_len, "string_len")
-                    .into_int_value(),
+                    .context
+                    .i8_type()
+                    .ptr_type(AddressSpace::Generic)
+                    .const_null(),
+                binary.context.i32_type().const_zero(),
             );
 
             binary.builder.position_at_end(success_block);
@@ -3712,15 +3698,14 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
     /// Substrate value is usually 128 bits
     fn value_transferred<'b>(&self, binary: &Binary<'b>, ns: &ast::Namespace) -> IntValue<'b> {
-        let scratch_buf = binary.builder.build_pointer_cast(
-            binary.scratch.unwrap().as_pointer_value(),
-            binary.context.i8_type().ptr_type(AddressSpace::Generic),
-            "scratch_buf",
-        );
-        let scratch_len = binary.scratch_len.unwrap().as_pointer_value();
+        let value = binary.builder.build_alloca(binary.value_type(ns), "value");
+
+        let value_len = binary
+            .builder
+            .build_alloca(binary.context.i32_type(), "value_len");
 
         binary.builder.build_store(
-            scratch_len,
+            value_len,
             binary
                 .context
                 .i32_type()
@@ -3732,20 +3717,23 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                 .module
                 .get_function("seal_value_transferred")
                 .unwrap(),
-            &[scratch_buf.into(), scratch_len.into()],
+            &[
+                binary
+                    .builder
+                    .build_pointer_cast(
+                        value,
+                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "",
+                    )
+                    .into(),
+                value_len.into(),
+            ],
             "value_transferred",
         );
 
         binary
             .builder
-            .build_load(
-                binary.builder.build_pointer_cast(
-                    scratch_buf,
-                    binary.value_type(ns).ptr_type(AddressSpace::Generic),
-                    "",
-                ),
-                "value_transferred",
-            )
+            .build_load(value, "value_transferred")
             .into_int_value()
     }
 
