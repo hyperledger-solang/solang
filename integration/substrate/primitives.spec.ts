@@ -1,5 +1,5 @@
 import expect from 'expect';
-import { gasLimit, createConnection, deploy, aliceKeypair, daveKeypair, } from './index';
+import { createConnection, deploy, aliceKeypair, daveKeypair, } from './index';
 import { ContractPromise } from '@polkadot/api-contract';
 
 describe('Deploy primitives contract and test', () => {
