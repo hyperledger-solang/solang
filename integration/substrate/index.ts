@@ -29,7 +29,7 @@ export async function deploy(api: ApiPromise, pair: KeyringPair, file: PathLike,
 
   const code = new CodePromise(api, contractJson, null);
 
-  const tx = code.tx.new({ gasLimit, value: 1000_000_000_000_000_000n }, ...params);
+  const tx = code.tx.new({ gasLimit, value: BigInt(1e18) }, ...params);
 
   return new Promise(async (resolve, reject) => {
     const unsub = await tx.signAndSend(pair, (result: any) => {
