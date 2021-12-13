@@ -7,43 +7,46 @@ fn main() {
         .process()
         .unwrap();
 
-    // compile our linker
-    let cxxflags = Command::new("llvm-config")
-        .args(&["--cxxflags"])
-        .output()
-        .expect("could not execute llvm-config");
+    #[cfg(feature = "llvm")]
+    {
+        // compile our linker
+        let cxxflags = Command::new("llvm-config")
+            .args(&["--cxxflags"])
+            .output()
+            .expect("could not execute llvm-config");
 
-    let cxxflags = String::from_utf8(cxxflags.stdout).unwrap();
+        let cxxflags = String::from_utf8(cxxflags.stdout).unwrap();
 
-    let mut build = cc::Build::new();
+        let mut build = cc::Build::new();
 
-    build.file("src/linker/linker.cpp").cpp(true);
+        build.file("src/linker/linker.cpp").cpp(true);
 
-    if !cfg!(target_os = "windows") {
-        build.flag("-Wno-unused-parameter");
-    }
+        if !cfg!(target_os = "windows") {
+            build.flag("-Wno-unused-parameter");
+        }
 
-    for flag in cxxflags.split_whitespace() {
-        build.flag(flag);
-    }
+        for flag in cxxflags.split_whitespace() {
+            build.flag(flag);
+        }
 
-    build.compile("liblinker.a");
+        build.compile("liblinker.a");
 
-    // add the llvm linker
-    let libdir = Command::new("llvm-config")
-        .args(&["--libdir"])
-        .output()
-        .unwrap();
-    let libdir = String::from_utf8(libdir.stdout).unwrap();
+        // add the llvm linker
+        let libdir = Command::new("llvm-config")
+            .args(&["--libdir"])
+            .output()
+            .unwrap();
+        let libdir = String::from_utf8(libdir.stdout).unwrap();
 
-    println!("cargo:libdir={}", libdir);
-    for lib in &["lldELF", "lldDriver", "lldCore", "lldCommon", "lldWasm"] {
-        println!("cargo:rustc-link-lib=static={}", lib);
-    }
+        println!("cargo:libdir={}", libdir);
+        for lib in &["lldELF", "lldDriver", "lldCore", "lldCommon", "lldWasm"] {
+            println!("cargo:rustc-link-lib=static={}", lib);
+        }
 
-    // And all the symbols were not using, needed by Windows and debug builds
-    for lib in &["lldReaderWriter", "lldMachO", "lldYAML"] {
-        println!("cargo:rustc-link-lib=static={}", lib);
+        // And all the symbols were not using, needed by Windows and debug builds
+        for lib in &["lldReaderWriter", "lldMachO", "lldYAML"] {
+            println!("cargo:rustc-link-lib=static={}", lib);
+        }
     }
 
     let output = Command::new("git")

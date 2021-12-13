@@ -1,4 +1,4 @@
-use solang::codegen::{codegen, Options};
+use solang::codegen::{codegen, OptimizationLevel, Options};
 use solang::file_resolver::FileResolver;
 use solang::sema::ast::Diagnostic;
 use solang::sema::ast::{Level, Namespace};
@@ -15,7 +15,7 @@ fn parse_and_codegen(src: &'static str) -> Namespace {
         strength_reduce: false,
         vector_to_slice: false,
         common_subexpression_elimination: false,
-        opt_level: inkwell::OptimizationLevel::Default,
+        opt_level: OptimizationLevel::Default,
         math_overflow_check: false,
     };
 
