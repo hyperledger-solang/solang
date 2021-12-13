@@ -1,8 +1,7 @@
 use super::Options;
-use crate::codegen::{cfg::ControlFlowGraph, vartable::Vartable};
+use crate::codegen::{cfg::ControlFlowGraph, vartable::Vartable, OptimizationLevel};
 use crate::sema::ast::{Expression, Function, Namespace};
 use crate::sema::symtable::VariableUsage;
-use inkwell::OptimizationLevel;
 
 /// This struct saves the parameters to call 'check_side_effects_expressions'
 /// using 'expression.recurse'

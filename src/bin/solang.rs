@@ -9,7 +9,7 @@ use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 
 use solang::abi;
-use solang::codegen::{codegen, Options};
+use solang::codegen::{codegen, OptimizationLevel, Options};
 use solang::emit::Generate;
 use solang::file_resolver::FileResolver;
 use solang::sema::{ast::Namespace, diagnostics};
@@ -303,10 +303,10 @@ fn main() {
         }
     } else {
         let opt_level = match matches.value_of("OPT").unwrap() {
-            "none" => inkwell::OptimizationLevel::None,
-            "less" => inkwell::OptimizationLevel::Less,
-            "default" => inkwell::OptimizationLevel::Default,
-            "aggressive" => inkwell::OptimizationLevel::Aggressive,
+            "none" => OptimizationLevel::None,
+            "less" => OptimizationLevel::Less,
+            "default" => OptimizationLevel::Default,
+            "aggressive" => OptimizationLevel::Aggressive,
             _ => unreachable!(),
         };
 
@@ -345,7 +345,7 @@ fn main() {
                 &context,
                 &namespaces,
                 "bundle.sol",
-                opt_level,
+                opt_level.into(),
                 math_overflow_check,
             );
 
@@ -525,7 +525,7 @@ fn process_file(
             &ns,
             &context,
             filename,
-            opt.opt_level,
+            opt.opt_level.into(),
             opt.math_overflow_check,
         );
 

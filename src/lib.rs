@@ -1,7 +1,9 @@
 pub mod abi;
 pub mod codegen;
+#[cfg(feature = "llvm")]
 pub mod emit;
 pub mod file_resolver;
+#[cfg(feature = "llvm")]
 pub mod linker;
 pub mod parser;
 
@@ -12,7 +14,6 @@ pub mod parser;
 pub mod sema;
 
 use file_resolver::FileResolver;
-use inkwell::OptimizationLevel;
 use sema::ast;
 use sema::diagnostics;
 use std::fmt;
@@ -76,6 +77,27 @@ impl Target {
             _ => None,
         }
     }
+
+    /// File extension
+    pub fn file_extension(&self) -> &'static str {
+        match self {
+            // Solana uses ELF dynamic shared object (BPF)
+            Target::Solana => "so",
+            // Everything else generates webassembly
+            _ => "wasm",
+        }
+    }
+
+    /// Size of a pointer in bytes
+    pub fn ptr_size(&self) -> usize {
+        if *self == Target::Solana {
+            // Solana is BPF, which is 64 bit
+            64
+        } else {
+            // All others are WebAssembly in 32 bit mode
+            32
+        }
+    }
 }
 
 /// Compile a solidity file to list of wasm files and their ABIs. The filename is only used for error messages;
@@ -85,10 +107,11 @@ impl Target {
 /// compiler warnings, errors and informational messages are also provided.
 ///
 /// The ctx is the inkwell llvm context.
+#[cfg(feature = "llvm")]
 pub fn compile(
     filename: &str,
     resolver: &mut FileResolver,
-    opt_level: OptimizationLevel,
+    opt_level: inkwell::OptimizationLevel,
     target: Target,
     math_overflow_check: bool,
 ) -> (Vec<(Vec<u8>, String)>, ast::Namespace) {
@@ -103,7 +126,7 @@ pub fn compile(
         &mut ns,
         &codegen::Options {
             math_overflow_check,
-            opt_level,
+            opt_level: opt_level.into(),
             ..Default::default()
         },
     );
@@ -125,11 +148,12 @@ pub fn compile(
 }
 
 /// Build a single binary out of multiple contracts. This is only possible on Solana
+#[cfg(feature = "llvm")]
 pub fn compile_many<'a>(
     context: &'a inkwell::context::Context,
     namespaces: &'a [ast::Namespace],
     filename: &str,
-    opt: OptimizationLevel,
+    opt: inkwell::OptimizationLevel,
     math_overflow_check: bool,
 ) -> emit::Binary<'a> {
     emit::Binary::build_bundle(context, namespaces, filename, opt, math_overflow_check)

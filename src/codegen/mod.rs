@@ -18,6 +18,7 @@ use self::{
     expression::expression,
     vartable::Vartable,
 };
+#[cfg(feature = "llvm")]
 use crate::emit::Generate;
 use crate::sema::ast::{Layout, Namespace};
 use crate::sema::contracts::visit_bases;
@@ -30,6 +31,38 @@ use num_traits::Zero;
 // The sizeof(struct account_data_header)
 pub const SOLANA_FIRST_OFFSET: u64 = 16;
 
+#[derive(Debug, PartialEq, Eq, Copy, Clone)]
+pub enum OptimizationLevel {
+    None = 0,
+    Less = 1,
+    Default = 2,
+    Aggressive = 3,
+}
+
+#[cfg(feature = "llvm")]
+impl From<OptimizationLevel> for inkwell::OptimizationLevel {
+    fn from(level: OptimizationLevel) -> Self {
+        match level {
+            OptimizationLevel::None => inkwell::OptimizationLevel::None,
+            OptimizationLevel::Less => inkwell::OptimizationLevel::Less,
+            OptimizationLevel::Default => inkwell::OptimizationLevel::Default,
+            OptimizationLevel::Aggressive => inkwell::OptimizationLevel::Aggressive,
+        }
+    }
+}
+
+#[cfg(feature = "llvm")]
+impl From<inkwell::OptimizationLevel> for OptimizationLevel {
+    fn from(level: inkwell::OptimizationLevel) -> Self {
+        match level {
+            inkwell::OptimizationLevel::None => OptimizationLevel::None,
+            inkwell::OptimizationLevel::Less => OptimizationLevel::Less,
+            inkwell::OptimizationLevel::Default => OptimizationLevel::Default,
+            inkwell::OptimizationLevel::Aggressive => OptimizationLevel::Aggressive,
+        }
+    }
+}
+
 pub struct Options {
     pub dead_storage: bool,
     pub constant_folding: bool,
@@ -37,7 +70,7 @@ pub struct Options {
     pub vector_to_slice: bool,
     pub math_overflow_check: bool,
     pub common_subexpression_elimination: bool,
-    pub opt_level: inkwell::OptimizationLevel,
+    pub opt_level: OptimizationLevel,
 }
 
 impl Default for Options {
@@ -49,7 +82,7 @@ impl Default for Options {
             vector_to_slice: true,
             math_overflow_check: false,
             common_subexpression_elimination: true,
-            opt_level: inkwell::OptimizationLevel::Default,
+            opt_level: OptimizationLevel::Default,
         }
     }
 }
@@ -94,23 +127,28 @@ pub fn codegen(ns: &mut Namespace, opt: &Options) {
 
             // Solana creates a single bundle
             if ns.target != Target::Solana {
-                let context = inkwell::context::Context::create();
+                #[cfg(not(feature = "llvm"))]
+                panic!("LLVM feature is not enabled");
+                #[cfg(feature = "llvm")]
+                {
+                    let context = inkwell::context::Context::create();
 
-                let filename = ns.files[0].path.to_string_lossy();
+                    let filename = ns.files[0].path.to_string_lossy();
 
-                let binary = ns.contracts[contract_no].emit(
-                    ns,
-                    &context,
-                    &filename,
-                    opt.opt_level,
-                    opt.math_overflow_check,
-                );
+                    let binary = ns.contracts[contract_no].emit(
+                        ns,
+                        &context,
+                        &filename,
+                        opt.opt_level.into(),
+                        opt.math_overflow_check,
+                    );
 
-                let code = binary.code(Generate::Linked).expect("llvm build");
+                    let code = binary.code(Generate::Linked).expect("llvm build");
 
-                drop(binary);
+                    drop(binary);
 
-                ns.contracts[contract_no].code = code;
+                    ns.contracts[contract_no].code = code;
+                }
             }
 
             contracts_done[contract_no] = true;

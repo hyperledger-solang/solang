@@ -6344,25 +6344,4 @@ impl Target {
             ""
         }
     }
-
-    /// File extension
-    pub fn file_extension(&self) -> &'static str {
-        match self {
-            // Solana uses ELF dynamic shared object (BPF)
-            Target::Solana => "so",
-            // Everything else generates webassembly
-            _ => "wasm",
-        }
-    }
-
-    /// Size of a pointer in bytes
-    pub fn ptr_size(&self) -> usize {
-        if *self == Target::Solana {
-            // Solana is BPF, which is 64 bit
-            64
-        } else {
-            // All others are WebAssembly in 32 bit mode
-            32
-        }
-    }
 }

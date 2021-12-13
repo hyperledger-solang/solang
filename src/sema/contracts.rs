@@ -1,5 +1,4 @@
 use crate::parser::pt;
-use inkwell::OptimizationLevel;
 use num_bigint::BigInt;
 use num_traits::Zero;
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
@@ -13,6 +12,7 @@ use super::functions;
 use super::statements;
 use super::symtable::Symtable;
 use super::variables;
+#[cfg(feature = "llvm")]
 use crate::emit;
 use crate::sema::unused_variable::emit_warning_local_variable;
 
@@ -42,12 +42,13 @@ impl ast::Contract {
     }
 
     /// Generate contract code for this contract
+    #[cfg(feature = "llvm")]
     pub fn emit<'a>(
         &'a self,
         ns: &'a ast::Namespace,
         context: &'a inkwell::context::Context,
         filename: &'a str,
-        opt: OptimizationLevel,
+        opt: inkwell::OptimizationLevel,
         math_overflow_check: bool,
     ) -> emit::Binary {
         emit::Binary::build(context, self, ns, filename, opt, math_overflow_check)
