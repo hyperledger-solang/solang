@@ -27,26 +27,21 @@ describe('Deploy create_contract contract and test', () => {
 
         let contract = new ContractPromise(conn, deploy_contract.abi, deploy_contract.address);
 
-        let res0 = await contract.query.childAsU256(alice.address, {});
-
-        console.log("child: " + res0.output?.toString());
-
         let tx = contract.tx.createChild({ gasLimit });
 
-        await transaction(tx, alice).then(null,
-            (res) => {
-                console.log("nah: " + JSON.stringify(res));
-            }
-        );
+        await transaction(tx, alice);
 
-        let res1 = await contract.query.childAsU256(alice.address, {});
+        let res2 = await contract.query.callChild(alice.address, {});
 
-        let child_adress = res1.output?.toString();
+        expect(res2.output?.toJSON()).toStrictEqual("child");
 
-        console.log("child: " + child_adress);
+        // child was created with a balance of 1e15, verify
+        res2 = await contract.query.c(alice.address, {});
 
-        // let res2 = await contract.query.callChild(alice.address, {});
+        let child = res2.output!.toString();
 
-        // expect(res2.output?.toJSON()).toStrictEqual("child");
+        let { data: { free: childBalance } } = await conn.query.system.account(child);
+
+        expect(BigInt(1e15) - childBalance.toBigInt()).toBeLessThan(1e11);
     });
 });
