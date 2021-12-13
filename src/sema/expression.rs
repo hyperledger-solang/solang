@@ -2409,8 +2409,9 @@ fn hex_number_literal(
     // hex values are allowed for bytesN but the length must match
     if let Some(Type::Bytes(length)) = resolve_to {
         let expected_length = *length as usize * 2;
+        let val = BigInt::from_str_radix(&s, 16).unwrap();
 
-        return if s.len() != expected_length {
+        return if !val.is_zero() && s.len() != expected_length {
             diagnostics.push(Diagnostic::error(
                 *loc,
                 format!(
@@ -2420,11 +2421,7 @@ fn hex_number_literal(
             ));
             Err(())
         } else {
-            Ok(Expression::NumberLiteral(
-                *loc,
-                Type::Bytes(*length),
-                BigInt::from_str_radix(&s, 16).unwrap(),
-            ))
+            Ok(Expression::NumberLiteral(*loc, Type::Bytes(*length), val))
         };
     }
 
