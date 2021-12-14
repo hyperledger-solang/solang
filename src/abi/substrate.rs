@@ -556,8 +556,10 @@ fn ty_to_abi(ty: &ast::Type, ns: &ast::Namespace, registry: &mut Abi) -> ParamTy
         ast::Type::Bool | ast::Type::Uint(_) | ast::Type::Int(_) => {
             let scalety = match ty {
                 ast::Type::Bool => "bool".into(),
-                ast::Type::Uint(n) => format!("u{}", n),
-                ast::Type::Int(n) => format!("i{}", n),
+                // Substrate doesn't like primitive types which aren't a power of 2
+                // The abi encoder/decoder fixes this automatically
+                ast::Type::Uint(n) => format!("u{}", n.next_power_of_two()),
+                ast::Type::Int(n) => format!("i{}", n.next_power_of_two()),
                 _ => unreachable!(),
             };
 
