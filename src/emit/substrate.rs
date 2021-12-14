@@ -609,7 +609,12 @@ impl SubstrateTarget {
                     "",
                 );
 
-                let len = bits as u64 / 8;
+                // substrate only supports power-of-two types; step over the
+                // the remainer
+
+                // FIXME: we should do some type-checking here and ensure that the
+                // encoded value fits into our smaller type
+                let len = bits.next_power_of_two() as u64 / 8;
 
                 (val, len)
             }
@@ -1058,18 +1063,39 @@ impl SubstrateTarget {
                     arg
                 };
 
+                // substrate only supports power-of-two types; upcast to correct type
+                let power_of_two_len = len.next_power_of_two();
+
+                let arg = if len == power_of_two_len {
+                    arg.into_int_value()
+                } else if ty.is_signed_int() {
+                    binary.builder.build_int_s_extend(
+                        arg.into_int_value(),
+                        binary
+                            .context
+                            .custom_width_int_type(power_of_two_len as u32 * 8),
+                        "",
+                    )
+                } else {
+                    binary.builder.build_int_z_extend(
+                        arg.into_int_value(),
+                        binary
+                            .context
+                            .custom_width_int_type(power_of_two_len as u32 * 8),
+                        "",
+                    )
+                };
+
                 binary.builder.build_store(
                     binary.builder.build_pointer_cast(
                         dest,
-                        arg.into_int_value()
-                            .get_type()
-                            .ptr_type(AddressSpace::Generic),
+                        arg.get_type().ptr_type(AddressSpace::Generic),
                         "",
                     ),
-                    arg.into_int_value(),
+                    arg,
                 );
 
-                len
+                power_of_two_len
             }
             ast::Type::Bytes(n) => {
                 let val = if load {
