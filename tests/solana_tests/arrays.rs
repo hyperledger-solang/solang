@@ -1001,3 +1001,31 @@ fn storage_dynamic_array_of_structs() {
 
     assert_eq!(returns, vec![Token::Uint(ethereum_types::U256::from(0))]);
 }
+
+#[test]
+fn array_literal() {
+    let mut vm = build_solidity(
+        r#"
+        contract foo {
+            int64 constant foo = 1;
+            int64 bar = 2;
+
+            function list() public returns (int64[3]) {
+                return [foo, bar, 3];
+            }
+        }"#,
+    );
+
+    vm.constructor("foo", &[], 0);
+
+    let returns = vm.function("list", &[], &[], 0, None);
+
+    assert_eq!(
+        returns,
+        vec![Token::FixedArray(vec![
+            Token::Int(ethereum_types::U256::from(1)),
+            Token::Int(ethereum_types::U256::from(2)),
+            Token::Int(ethereum_types::U256::from(3))
+        ])]
+    );
+}
