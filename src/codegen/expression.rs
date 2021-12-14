@@ -202,6 +202,22 @@ pub fn expression(
                 .map(|e| expression(e, cfg, contract_no, func, ns, vartab, opt))
                 .collect(),
         ),
+        Expression::ArrayLiteral(loc, ty, lengths, args) => Expression::ArrayLiteral(
+            *loc,
+            ty.clone(),
+            lengths.clone(),
+            args.iter()
+                .map(|e| expression(e, cfg, contract_no, func, ns, vartab, opt))
+                .collect(),
+        ),
+        Expression::ConstArrayLiteral(loc, ty, lengths, args) => Expression::ConstArrayLiteral(
+            *loc,
+            ty.clone(),
+            lengths.clone(),
+            args.iter()
+                .map(|e| expression(e, cfg, contract_no, func, ns, vartab, opt))
+                .collect(),
+        ),
         Expression::Assign(_, _, left, right) => {
             // If we reach this condition, the assignment is inside an expression.
             if let Some(function) = func {
