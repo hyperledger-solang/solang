@@ -20,7 +20,7 @@ pub struct Prototype {
 }
 
 // A list of all Solidity builtins functions
-static BUILTIN_FUNCTIONS: [Prototype; 26] = [
+static BUILTIN_FUNCTIONS: [Prototype; 27] = [
     Prototype {
         builtin: Builtin::Extcodesize,
         namespace: None,
@@ -69,6 +69,16 @@ static BUILTIN_FUNCTIONS: [Prototype; 26] = [
         ret: &[Type::Void],
         target: &[],
         doc: "Abort execution if argument evaulates to false. Report string when aborting",
+        constant: false,
+    },
+    Prototype {
+        builtin: Builtin::Return2,
+        namespace: None,
+        name: "return2",
+        args: &[Type::DynamicBytes],
+        ret: &[Type::Unreachable],
+        target: &[],
+        doc: "Stop execution and return data",
         constant: false,
     },
     Prototype {

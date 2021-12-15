@@ -1399,6 +1399,7 @@ pub fn process_side_effects_expressions(
             // PayableTransfer, Revert, Require and SelfDestruct do not occur inside an expression
             // for they return no value. They should not bother the unused variable elimination.
             | Builtin::PayableTransfer
+            | Builtin::Return2
             | Builtin::Revert
             | Builtin::Require
             | Builtin::SelfDestruct => {
