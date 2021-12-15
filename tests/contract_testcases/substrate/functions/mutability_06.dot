@@ -1,6 +1,6 @@
 strict digraph "tests/contract_testcases/substrate/functions/mutability_06.sol" {
 	contract [label="contract c\ntests/contract_testcases/substrate/functions/mutability_06.sol:1:1-12"]
-	add [label="function add\ncontract: c\ntests/contract_testcases/substrate/functions/mutability_06.sol:2:13-71\nsignature add(bytes32)\nvisibility public\nmutability nonpayable"]
+	add [label="function add\ncontract: c\ntests/contract_testcases/substrate/functions/mutability_06.sol:2:13-71\nsignature add(address)\nvisibility public\nmutability nonpayable"]
 	parameters [label="parameters\naddress a"]
 	returns [label="returns\nbool f\nbytes res"]
 	destructure [label="destructure\ntests/contract_testcases/substrate/functions/mutability_06.sol:3:17-45"]
