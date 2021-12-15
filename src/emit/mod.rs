@@ -3545,6 +3545,21 @@ pub trait TargetRuntime<'a> {
                         );
                         bin.builder.build_store(size_field, new_len);
                     }
+                    Instr::Return2 { expr: None } => {
+                        self.return_abi(
+                            bin,
+                            bin.context
+                                .i8_type()
+                                .ptr_type(AddressSpace::Generic)
+                                .const_null(),
+                            bin.context.i32_type().const_zero(),
+                        );
+                    }
+                    Instr::Return2 { expr: Some(expr) } => {
+                        let expr = self.expression(bin, expr, &w.vars, function, ns);
+
+                        self.return_abi(bin, bin.vector_bytes(expr), bin.vector_len(expr));
+                    }
                     Instr::AssertFailure { expr: None } => {
                         self.assert_failure(
                             bin,
