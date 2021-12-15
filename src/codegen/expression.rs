@@ -16,7 +16,6 @@ use crate::sema::expression::{bigint_to_expression, cast, cast_shift_arg};
 use crate::Target;
 use num_bigint::BigInt;
 use num_traits::{FromPrimitive, One, ToPrimitive, Zero};
-use std::collections::BTreeSet;
 use std::ops::Mul;
 
 pub fn expression(
@@ -870,6 +869,7 @@ fn expr_or(
 ) -> Expression {
     let boolty = Type::Bool;
     let l = expression(left, cfg, contract_no, func, ns, vartab, opt);
+    vartab.new_dirty_tracker(ns.next_id);
     let pos = vartab.temp(
         &pt::Identifier {
             name: "or".to_owned(),
@@ -905,7 +905,7 @@ fn expr_or(
             expr: r,
         },
     );
-    let mut phis = BTreeSet::new();
+    let mut phis = vartab.pop_dirty_tracker();
     phis.insert(pos);
     cfg.set_phis(end_or, phis);
     cfg.add(vartab, Instr::Branch { block: end_or });
@@ -926,6 +926,7 @@ fn and(
 ) -> Expression {
     let boolty = Type::Bool;
     let l = expression(left, cfg, contract_no, func, ns, vartab, opt);
+    vartab.new_dirty_tracker(ns.next_id);
     let pos = vartab.temp(
         &pt::Identifier {
             name: "and".to_owned(),
@@ -961,7 +962,7 @@ fn and(
             expr: r,
         },
     );
-    let mut phis = BTreeSet::new();
+    let mut phis = vartab.pop_dirty_tracker();
     phis.insert(pos);
     cfg.set_phis(end_and, phis);
     cfg.add(vartab, Instr::Branch { block: end_and });
