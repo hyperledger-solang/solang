@@ -1316,6 +1316,7 @@ pub enum Builtin {
     ArrayPop,
     Assert,
     Print,
+    Return2,
     Revert,
     Require,
     SelfDestruct,

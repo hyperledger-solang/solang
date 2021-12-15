@@ -100,6 +100,7 @@ fn find_writable_vectors(
             | Instr::Unreachable
             | Instr::Print { .. }
             | Instr::AssertFailure { .. }
+            | Instr::Return2 { .. }
             | Instr::ValueTransfer { .. } => {
                 apply_transfers(&block.transfers[instr_no], vars, writable);
             }

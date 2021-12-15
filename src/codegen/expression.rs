@@ -831,6 +831,15 @@ pub fn expression(
 
             Expression::Poison
         }
+        Expression::Builtin(_, _, Builtin::Return2, args) => {
+            let expr = args
+                .get(0)
+                .map(|s| expression(s, cfg, contract_no, func, ns, vartab));
+
+            cfg.add(vartab, Instr::Return2 { expr });
+
+            Expression::Poison
+        }
         Expression::Builtin(_, _, Builtin::Revert, args) => {
             let expr = args
                 .get(0)
