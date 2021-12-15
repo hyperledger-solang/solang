@@ -6,7 +6,7 @@ strict digraph "tests/contract_testcases/substrate/contracts/contract_type_02.so
 	alloc_array [label="alloc array string\ninitializer: 496e20662e746573742829\ntests/contract_testcases/substrate/contracts/contract_type_02.sol:4:23-36"]
 	number_literal [label="uint32 literal: 11\ntests/contract_testcases/substrate/contracts/contract_type_02.sol:4:23-36"]
 	contract_7 [label="contract foo\ntests/contract_testcases/substrate/contracts/contract_type_02.sol:8:9-22"]
-	test1 [label="function test1\ncontract: foo\ntests/contract_testcases/substrate/contracts/contract_type_02.sol:9:13-45\nsignature test1(bytes32)\nvisibility public\nmutability nonpayable"]
+	test1 [label="function test1\ncontract: foo\ntests/contract_testcases/substrate/contracts/contract_type_02.sol:9:13-45\nsignature test1(address)\nvisibility public\nmutability nonpayable"]
 	parameters [label="parameters\ncontract printer x"]
 	diagnostic [label="found contract ‘printer’\nlevel Debug\ntests/contract_testcases/substrate/contracts/contract_type_02.sol:2:9-26"]
 	diagnostic_12 [label="found contract ‘foo’\nlevel Debug\ntests/contract_testcases/substrate/contracts/contract_type_02.sol:8:9-22"]

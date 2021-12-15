@@ -1,6 +1,6 @@
 strict digraph "tests/contract_testcases/substrate/primitives/address_payable_type_01.sol" {
 	contract [label="contract c\ntests/contract_testcases/substrate/primitives/address_payable_type_01.sol:2:9-20"]
-	test1 [label="function test1\ncontract: c\ntests/contract_testcases/substrate/primitives/address_payable_type_01.sol:3:13-79\nsignature test1(bytes32,bytes32)\nvisibility public\nmutability nonpayable"]
+	test1 [label="function test1\ncontract: c\ntests/contract_testcases/substrate/primitives/address_payable_type_01.sol:3:13-79\nsignature test1(address,address)\nvisibility public\nmutability nonpayable"]
 	parameters [label="parameters\naddress payable a\naddress b"]
 	returns [label="returns\nbool "]
 	return [label="return\ntests/contract_testcases/substrate/primitives/address_payable_type_01.sol:4:17-30"]
@@ -8,7 +8,7 @@ strict digraph "tests/contract_testcases/substrate/primitives/address_payable_ty
 	cast [label="cast address\ntests/contract_testcases/substrate/primitives/address_payable_type_01.sol:4:24-25"]
 	variable [label="variable: a\naddress payable\ntests/contract_testcases/substrate/primitives/address_payable_type_01.sol:4:24-25"]
 	variable_9 [label="variable: b\naddress\ntests/contract_testcases/substrate/primitives/address_payable_type_01.sol:4:29-30"]
-	test2 [label="function test2\ncontract: c\ntests/contract_testcases/substrate/primitives/address_payable_type_01.sol:7:13-79\nsignature test2(bytes32,bytes32)\nvisibility public\nmutability nonpayable"]
+	test2 [label="function test2\ncontract: c\ntests/contract_testcases/substrate/primitives/address_payable_type_01.sol:7:13-79\nsignature test2(address,address)\nvisibility public\nmutability nonpayable"]
 	parameters_11 [label="parameters\naddress payable a\naddress b"]
 	returns_12 [label="returns\nbool "]
 	return_13 [label="return\ntests/contract_testcases/substrate/primitives/address_payable_type_01.sol:8:17-30"]
