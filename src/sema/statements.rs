@@ -3,6 +3,7 @@ use super::contracts::is_base;
 use super::expression::{
     available_functions, call_expr, call_position_args, cast, constructor_named_args, expression,
     function_call_expr, match_constructor_to_args, named_call_expr, named_function_call_expr, new,
+    ResolveTo,
 };
 use super::symtable::{LoopScopes, Symtable};
 use crate::parser::pt;
@@ -320,7 +321,7 @@ fn statement(
                     false,
                     unchecked,
                     diagnostics,
-                    Some(&var_ty),
+                    ResolveTo::Type(&var_ty),
                 )?;
 
                 used_variable(ns, &expr, symtable);
@@ -426,7 +427,7 @@ fn statement(
                 false,
                 unchecked,
                 diagnostics,
-                Some(&Type::Bool),
+                ResolveTo::Type(&Type::Bool),
             )?;
             used_variable(ns, &expr, symtable);
             let cond = cast(&expr.loc(), expr, &Type::Bool, true, ns, diagnostics)?;
@@ -464,7 +465,7 @@ fn statement(
                 false,
                 unchecked,
                 diagnostics,
-                Some(&Type::Bool),
+                ResolveTo::Type(&Type::Bool),
             )?;
             used_variable(ns, &expr, symtable);
             let cond = cast(&expr.loc(), expr, &Type::Bool, true, ns, diagnostics)?;
@@ -501,7 +502,7 @@ fn statement(
                 false,
                 unchecked,
                 diagnostics,
-                Some(&Type::Bool),
+                ResolveTo::Type(&Type::Bool),
             )?;
             used_variable(ns, &expr, symtable);
 
@@ -658,7 +659,7 @@ fn statement(
                 false,
                 unchecked,
                 diagnostics,
-                Some(&Type::Bool),
+                ResolveTo::Type(&Type::Bool),
             )?;
 
             let cond = cast(&cond_expr.loc(), expr, &Type::Bool, true, ns, diagnostics)?;
@@ -771,7 +772,7 @@ fn statement(
                     false,
                     unchecked,
                     diagnostics,
-                    None,
+                    ResolveTo::Unknown,
                 )?;
                 used_variable(ns, &expr, symtable);
                 return if let Type::StorageRef(_, ty) = expr.ty() {
@@ -834,7 +835,7 @@ fn statement(
                 }
             }
 
-            // the rest
+            // the rest. We don't care about the result
             let expr = expression(
                 expr,
                 file_no,
@@ -845,7 +846,7 @@ fn statement(
                 false,
                 unchecked,
                 diagnostics,
-                None,
+                ResolveTo::Discard,
             )?;
 
             let reachable = expr.ty() != Type::Unreachable;
@@ -933,7 +934,7 @@ fn emit_event(
                     false,
                     unchecked,
                     &mut temp_diagnostics,
-                    None,
+                    ResolveTo::Unknown,
                 );
             }
 
@@ -977,7 +978,7 @@ fn emit_event(
                         false,
                         unchecked,
                         &mut temp_diagnostics,
-                        Some(&ty),
+                        ResolveTo::Type(&ty),
                     ) {
                         Ok(e) => e,
                         Err(()) => {
@@ -1053,7 +1054,7 @@ fn emit_event(
                     false,
                     unchecked,
                     &mut temp_diagnostics,
-                    None,
+                    ResolveTo::Unknown,
                 );
 
                 arguments.insert(&arg.name.name, &arg.expr);
@@ -1128,7 +1129,7 @@ fn emit_event(
                         false,
                         unchecked,
                         &mut temp_diagnostics,
-                        Some(&param.ty),
+                        ResolveTo::Type(&param.ty),
                     ) {
                         Ok(e) => e,
                         Err(()) => {
@@ -1232,7 +1233,7 @@ fn destructure(
                     false,
                     unchecked,
                     diagnostics,
-                    None,
+                    ResolveTo::Unknown,
                 )?;
 
                 match &e {
@@ -1365,6 +1366,7 @@ fn destructure_values(
                 false,
                 unchecked,
                 diagnostics,
+                ResolveTo::Unknown,
             )?;
             check_function_call(ns, &res, symtable);
             res
@@ -1396,7 +1398,7 @@ fn destructure_values(
                 false,
                 unchecked,
                 diagnostics,
-                Some(&Type::Bool),
+                ResolveTo::Type(&Type::Bool),
             )?;
 
             used_variable(ns, &cond, symtable);
@@ -1465,7 +1467,11 @@ fn destructure_values(
                     false,
                     unchecked,
                     diagnostics,
-                    left_tys[i].as_ref(),
+                    if let Some(ty) = left_tys[i].as_ref() {
+                        ResolveTo::Type(ty)
+                    } else {
+                        ResolveTo::Unknown
+                    },
                 )?;
                 match e.ty() {
                     Type::Void | Type::Unreachable => {
@@ -1603,6 +1609,7 @@ fn return_with_values(
                 false,
                 unchecked,
                 diagnostics,
+                ResolveTo::Unknown,
             )?;
             used_variable(ns, &expr, symtable);
             expr
@@ -1636,7 +1643,7 @@ fn return_with_values(
                 false,
                 unchecked,
                 diagnostics,
-                Some(&Type::Bool),
+                ResolveTo::Type(&Type::Bool),
             )?;
             used_variable(ns, &cond, symtable);
 
@@ -1727,7 +1734,7 @@ fn return_with_values(
                     false,
                     unchecked,
                     diagnostics,
-                    Some(&return_ty),
+                    ResolveTo::Type(&return_ty),
                 )?;
                 let expr = cast(loc, expr, &return_ty, true, ns, diagnostics)?;
                 used_variable(ns, &expr, symtable);
@@ -1907,6 +1914,7 @@ fn try_catch(
                 false,
                 unchecked,
                 diagnostics,
+                ResolveTo::Unknown,
             )?;
             check_function_call(ns, &res, symtable);
             res

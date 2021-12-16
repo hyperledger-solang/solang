@@ -407,11 +407,11 @@ pub fn bigint_to_expression(
     n: &BigInt,
     ns: &Namespace,
     diagnostics: &mut Vec<Diagnostic>,
-    resolve_to: Option<&Type>,
+    resolve_to: ResolveTo,
 ) -> Result<Expression, ()> {
     let bits = n.bits();
 
-    if let Some(resolve_to) = resolve_to {
+    if let ResolveTo::Type(resolve_to) = resolve_to {
         if !resolve_to.is_integer() {
             diagnostics.push(Diagnostic::error(
                 *loc,
@@ -507,9 +507,9 @@ pub fn bigdecimal_to_expression(
     n: &BigRational,
     ns: &Namespace,
     diagnostics: &mut Vec<Diagnostic>,
-    resolve_to: Option<&Type>,
+    resolve_to: ResolveTo,
 ) -> Result<Expression, ()> {
-    if let Some(resolve_to) = resolve_to {
+    if let ResolveTo::Type(resolve_to) = resolve_to {
         if !resolve_to.is_rational() {
             diagnostics.push(Diagnostic::error(
                 *loc,
@@ -1335,6 +1335,14 @@ pub fn compatible_mutability(left: &Mutability, right: &Mutability) -> bool {
     )
 }
 
+/// When resolving an expression, what type are we looking for
+#[derive(PartialEq, Clone, Copy)]
+pub enum ResolveTo<'a> {
+    Unknown,        // We don't know what we're looking for, best effort
+    Discard,        // We won't be using the result. For example, an expression as a statement/
+    Type(&'a Type), // We will be wanting this type please, e.g. `int64 x = 1;`
+}
+
 /// Resolve a parsed expression into an AST expression. The resolve_to argument is a hint to what
 /// type the result should be.
 pub fn expression(
@@ -1347,7 +1355,7 @@ pub fn expression(
     is_constant: bool,
     unchecked: bool,
     diagnostics: &mut Vec<Diagnostic>,
-    resolve_to: Option<&Type>,
+    resolve_to: ResolveTo,
 ) -> Result<Expression, ()> {
     match expr {
         pt::Expression::ArrayLiteral(loc, exprs) => {
@@ -1564,7 +1572,7 @@ pub fn expression(
                 is_constant,
                 unchecked,
                 diagnostics,
-                None,
+                ResolveTo::Unknown,
             )?;
             let right = expression(
                 r,
@@ -1576,7 +1584,7 @@ pub fn expression(
                 is_constant,
                 unchecked,
                 diagnostics,
-                None,
+                ResolveTo::Unknown,
             )?;
 
             check_var_usage_expression(ns, &left, &right, symtable);
@@ -1608,7 +1616,7 @@ pub fn expression(
                 is_constant,
                 unchecked,
                 diagnostics,
-                None,
+                ResolveTo::Unknown,
             )?;
             let right = expression(
                 r,
@@ -1620,7 +1628,7 @@ pub fn expression(
                 is_constant,
                 unchecked,
                 diagnostics,
-                None,
+                ResolveTo::Unknown,
             )?;
 
             check_var_usage_expression(ns, &left, &right, symtable);
@@ -1652,7 +1660,7 @@ pub fn expression(
                 is_constant,
                 unchecked,
                 diagnostics,
-                None,
+                ResolveTo::Unknown,
             )?;
             let right = expression(
                 r,
@@ -1664,7 +1672,7 @@ pub fn expression(
                 is_constant,
                 unchecked,
                 diagnostics,
-                None,
+                ResolveTo::Unknown,
             )?;
             check_var_usage_expression(ns, &left, &right, symtable);
 
@@ -1696,7 +1704,7 @@ pub fn expression(
                 is_constant,
                 unchecked,
                 diagnostics,
-                None,
+                ResolveTo::Unknown,
             )?;
             let right = expression(
                 r,
@@ -1708,7 +1716,7 @@ pub fn expression(
                 is_constant,
                 unchecked,
                 diagnostics,
-                None,
+                ResolveTo::Unknown,
             )?;
             check_var_usage_expression(ns, &left, &right, symtable);
 
@@ -2088,6 +2096,7 @@ pub fn expression(
             is_constant,
             unchecked,
             diagnostics,
+            resolve_to,
         ),
         pt::Expression::ArraySubscript(loc, _, None) => {
             diagnostics.push(Diagnostic::error(
@@ -2305,7 +2314,7 @@ fn string_literal(
     v: &[pt::StringLiteral],
     file_no: usize,
     diagnostics: &mut Vec<Diagnostic>,
-    resolve_to: Option<&Type>,
+    resolve_to: ResolveTo,
 ) -> Expression {
     // Concatenate the strings
     let mut result = Vec::new();
@@ -2318,7 +2327,7 @@ fn string_literal(
 
     let length = result.len();
 
-    if let Some(Type::String) = resolve_to {
+    if let ResolveTo::Type(Type::String) = resolve_to {
         Expression::AllocDynamicArray(
             loc,
             Type::String,
@@ -2365,7 +2374,7 @@ fn hex_number_literal(
     n: &str,
     ns: &mut Namespace,
     diagnostics: &mut Vec<Diagnostic>,
-    resolve_to: Option<&Type>,
+    resolve_to: ResolveTo,
 ) -> Result<Expression, ()> {
     // ns.address_length is in bytes; double for hex and two for the leading 0x
     if n.starts_with("0x") && !n.chars().any(|c| c == '_') && n.len() == 42 {
@@ -2407,7 +2416,7 @@ fn hex_number_literal(
     let s: String = n.chars().skip(2).filter(|v| *v != '_').collect();
 
     // hex values are allowed for bytesN but the length must match
-    if let Some(Type::Bytes(length)) = resolve_to {
+    if let ResolveTo::Type(Type::Bytes(length)) = resolve_to {
         let expected_length = *length as usize * 2;
         let val = BigInt::from_str_radix(&s, 16).unwrap();
 
@@ -2552,7 +2561,7 @@ fn variable(
     symtable: &mut Symtable,
     is_constant: bool,
     diagnostics: &mut Vec<Diagnostic>,
-    resolve_to: Option<&Type>,
+    resolve_to: ResolveTo,
 ) -> Result<Expression, ()> {
     if let Some(v) = symtable.find(&id.name) {
         return if is_constant {
@@ -2571,7 +2580,7 @@ fn variable(
     }
 
     // are we trying to resolve a function type?
-    let function_first = if let Some(resolve_to) = resolve_to {
+    let function_first = if let ResolveTo::Type(resolve_to) = resolve_to {
         matches!(
             resolve_to,
             Type::InternalFunction { .. } | Type::ExternalFunction { .. }
@@ -2684,7 +2693,7 @@ fn subtract(
     is_constant: bool,
     unchecked: bool,
     diagnostics: &mut Vec<Diagnostic>,
-    resolve_to: Option<&Type>,
+    resolve_to: ResolveTo,
 ) -> Result<Expression, ()> {
     let left = expression(
         l,
@@ -2757,7 +2766,7 @@ fn bitwise_or(
     is_constant: bool,
     unchecked: bool,
     diagnostics: &mut Vec<Diagnostic>,
-    resolve_to: Option<&Type>,
+    resolve_to: ResolveTo,
 ) -> Result<Expression, ()> {
     let left = expression(
         l,
@@ -2817,7 +2826,7 @@ fn bitwise_and(
     is_constant: bool,
     unchecked: bool,
     diagnostics: &mut Vec<Diagnostic>,
-    resolve_to: Option<&Type>,
+    resolve_to: ResolveTo,
 ) -> Result<Expression, ()> {
     let left = expression(
         l,
@@ -2877,7 +2886,7 @@ fn bitwise_xor(
     is_constant: bool,
     unchecked: bool,
     diagnostics: &mut Vec<Diagnostic>,
-    resolve_to: Option<&Type>,
+    resolve_to: ResolveTo,
 ) -> Result<Expression, ()> {
     let left = expression(
         l,
@@ -2937,7 +2946,7 @@ fn shift_left(
     is_constant: bool,
     unchecked: bool,
     diagnostics: &mut Vec<Diagnostic>,
-    resolve_to: Option<&Type>,
+    resolve_to: ResolveTo,
 ) -> Result<Expression, ()> {
     let left = expression(
         l,
@@ -2961,7 +2970,7 @@ fn shift_left(
         is_constant,
         unchecked,
         diagnostics,
-        None,
+        ResolveTo::Unknown,
     )?;
 
     check_var_usage_expression(ns, &left, &right, symtable);
@@ -2992,7 +3001,7 @@ fn shift_right(
     is_constant: bool,
     unchecked: bool,
     diagnostics: &mut Vec<Diagnostic>,
-    resolve_to: Option<&Type>,
+    resolve_to: ResolveTo,
 ) -> Result<Expression, ()> {
     let left = expression(
         l,
@@ -3016,7 +3025,7 @@ fn shift_right(
         is_constant,
         unchecked,
         diagnostics,
-        None,
+        ResolveTo::Unknown,
     )?;
 
     check_var_usage_expression(ns, &left, &right, symtable);
@@ -3048,7 +3057,7 @@ fn multiply(
     is_constant: bool,
     unchecked: bool,
     diagnostics: &mut Vec<Diagnostic>,
-    resolve_to: Option<&Type>,
+    resolve_to: ResolveTo,
 ) -> Result<Expression, ()> {
     let left = expression(
         l,
@@ -3101,7 +3110,7 @@ fn multiply(
     }
 
     // If we don't know what type the result is going to be, make any possible result fit.
-    if resolve_to.is_none() {
+    if resolve_to == ResolveTo::Unknown {
         let bits = std::cmp::min(256, ty.bits(ns) * 2);
 
         if ty.is_signed_int() {
@@ -3117,7 +3126,7 @@ fn multiply(
                 is_constant,
                 unchecked,
                 diagnostics,
-                Some(&Type::Int(bits)),
+                ResolveTo::Type(&Type::Int(bits)),
             )
         } else {
             multiply(
@@ -3132,7 +3141,7 @@ fn multiply(
                 is_constant,
                 unchecked,
                 diagnostics,
-                Some(&Type::Uint(bits)),
+                ResolveTo::Type(&Type::Uint(bits)),
             )
         }
     } else {
@@ -3158,7 +3167,7 @@ fn divide(
     is_constant: bool,
     unchecked: bool,
     diagnostics: &mut Vec<Diagnostic>,
-    resolve_to: Option<&Type>,
+    resolve_to: ResolveTo,
 ) -> Result<Expression, ()> {
     let left = expression(
         l,
@@ -3218,7 +3227,7 @@ fn modulo(
     is_constant: bool,
     unchecked: bool,
     diagnostics: &mut Vec<Diagnostic>,
-    resolve_to: Option<&Type>,
+    resolve_to: ResolveTo,
 ) -> Result<Expression, ()> {
     let left = expression(
         l,
@@ -3278,7 +3287,7 @@ fn power(
     is_constant: bool,
     unchecked: bool,
     diagnostics: &mut Vec<Diagnostic>,
-    resolve_to: Option<&Type>,
+    resolve_to: ResolveTo,
 ) -> Result<Expression, ()> {
     let mut base = expression(
         b,
@@ -3295,7 +3304,7 @@ fn power(
 
     // If we don't know what type the result is going to be, assume
     // the result is 256 bits
-    if resolve_to.is_none() {
+    if resolve_to == ResolveTo::Unknown {
         if base.ty().is_signed_int() {
             base = expression(
                 b,
@@ -3307,7 +3316,7 @@ fn power(
                 is_constant,
                 unchecked,
                 diagnostics,
-                Some(&Type::Int(256)),
+                ResolveTo::Type(&Type::Int(256)),
             )?;
         } else {
             base = expression(
@@ -3320,7 +3329,7 @@ fn power(
                 is_constant,
                 unchecked,
                 diagnostics,
-                Some(&Type::Uint(256)),
+                ResolveTo::Type(&Type::Uint(256)),
             )?;
         };
     }
@@ -3519,7 +3528,7 @@ pub fn match_constructor_to_args(
                 false,
                 unchecked,
                 diagnostics,
-                Some(&params[i].ty),
+                ResolveTo::Type(&params[i].ty),
             ) {
                 Ok(v) => v,
                 Err(()) => {
@@ -3731,7 +3740,7 @@ pub fn constructor_named_args(
                 false,
                 unchecked,
                 diagnostics,
-                Some(&param.ty),
+                ResolveTo::Type(&param.ty),
             ) {
                 Ok(e) => e,
                 Err(()) => {
@@ -3803,7 +3812,7 @@ pub fn type_name_expr(
     contract_no: Option<usize>,
     ns: &mut Namespace,
     diagnostics: &mut Vec<Diagnostic>,
-    resolve_to: Option<&Type>,
+    resolve_to: ResolveTo,
 ) -> Result<Expression, ()> {
     if args.is_empty() {
         diagnostics.push(Diagnostic::error(
@@ -4024,7 +4033,7 @@ pub fn new(
         false,
         unchecked,
         diagnostics,
-        Some(&Type::Uint(32)),
+        ResolveTo::Type(&Type::Uint(32)),
     )?;
 
     used_variable(ns, &size_expr, symtable);
@@ -4063,7 +4072,7 @@ fn equal(
         is_constant,
         unchecked,
         diagnostics,
-        None,
+        ResolveTo::Unknown,
     )?;
     let right = expression(
         r,
@@ -4075,7 +4084,7 @@ fn equal(
         is_constant,
         unchecked,
         diagnostics,
-        None,
+        ResolveTo::Unknown,
     )?;
 
     check_var_usage_expression(ns, &left, &right, symtable);
@@ -4176,7 +4185,7 @@ fn addition(
     is_constant: bool,
     unchecked: bool,
     diagnostics: &mut Vec<Diagnostic>,
-    resolve_to: Option<&Type>,
+    resolve_to: ResolveTo,
 ) -> Result<Expression, ()> {
     let mut left = expression(
         l,
@@ -4269,7 +4278,7 @@ fn addition(
     )?;
 
     // If we don't know what type the result is going to be
-    if resolve_to.is_none() {
+    if resolve_to == ResolveTo::Unknown {
         let bits = std::cmp::min(256, ty.bits(ns) * 2);
         let resolve_to = if ty.is_signed_int() {
             Type::Int(bits)
@@ -4287,7 +4296,7 @@ fn addition(
             is_constant,
             unchecked,
             diagnostics,
-            Some(&resolve_to),
+            ResolveTo::Type(&resolve_to),
         )?;
         right = expression(
             r,
@@ -4299,7 +4308,7 @@ fn addition(
             is_constant,
             unchecked,
             diagnostics,
-            Some(&resolve_to),
+            ResolveTo::Type(&resolve_to),
         )?;
     }
 
@@ -4335,7 +4344,7 @@ pub fn assign_single(
         false,
         unchecked,
         diagnostics,
-        None,
+        ResolveTo::Unknown,
     )?;
     assigned_variable(ns, &var, symtable);
 
@@ -4350,7 +4359,7 @@ pub fn assign_single(
         false,
         unchecked,
         diagnostics,
-        Some(var_ty.deref_any()),
+        ResolveTo::Type(var_ty.deref_any()),
     )?;
     used_variable(ns, &val, symtable);
     match &var {
@@ -4471,7 +4480,7 @@ fn assign_expr(
         false,
         unchecked,
         diagnostics,
-        None,
+        ResolveTo::Unknown,
     )?;
     assigned_variable(ns, &var, symtable);
     let var_ty = var.ty();
@@ -4480,9 +4489,9 @@ fn assign_expr(
         expr,
         pt::Expression::AssignShiftLeft(_, _, _) | pt::Expression::AssignShiftRight(_, _, _)
     ) {
-        None
+        ResolveTo::Unknown
     } else {
-        Some(var_ty.deref_any())
+        ResolveTo::Type(var_ty.deref_any())
     };
 
     let set = expression(
@@ -4710,7 +4719,7 @@ fn incr_decr(
         false,
         unchecked,
         diagnostics,
-        None,
+        ResolveTo::Unknown,
     )?;
     used_variable(ns, &var, symtable);
     let var_ty = var.ty();
@@ -4887,7 +4896,7 @@ fn member_access(
     is_constant: bool,
     unchecked: bool,
     diagnostics: &mut Vec<Diagnostic>,
-    resolve_to: Option<&Type>,
+    resolve_to: ResolveTo,
 ) -> Result<Expression, ()> {
     // is it a builtin special variable like "block.timestamp"
     if let pt::Expression::Variable(namespace) = e {
@@ -5035,7 +5044,13 @@ fn member_access(
                         //So the variable is also assigned a value to be read from 'length'
                         assigned_variable(ns, &expr, symtable);
                         used_variable(ns, &expr, symtable);
-                        bigint_to_expression(loc, d, ns, diagnostics, Some(&Type::Uint(32)))
+                        bigint_to_expression(
+                            loc,
+                            d,
+                            ns,
+                            diagnostics,
+                            ResolveTo::Type(&Type::Uint(32)),
+                        )
                     }
                 };
             }
@@ -5262,7 +5277,7 @@ fn contract_constant(
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
-    resolve_to: Option<&Type>,
+    resolve_to: ResolveTo,
 ) -> Result<Option<Expression>, ()> {
     let namespace = match e {
         pt::Expression::Variable(namespace) => namespace,
@@ -5281,14 +5296,14 @@ fn contract_constant(
             .find(|(_, variable)| variable.name == id.name)
         {
             if !var.constant {
-                let resolve_function = resolve_to
-                    .map(|ty| {
-                        matches!(
-                            ty,
-                            Type::InternalFunction { .. } | Type::ExternalFunction { .. }
-                        )
-                    })
-                    .unwrap_or(false);
+                let resolve_function = if let ResolveTo::Type(ty) = resolve_to {
+                    matches!(
+                        ty,
+                        Type::InternalFunction { .. } | Type::ExternalFunction { .. }
+                    )
+                } else {
+                    false
+                };
 
                 if resolve_function {
                     // requested function, fall through
@@ -5344,7 +5359,7 @@ fn array_subscript(
         is_constant,
         unchecked,
         diagnostics,
-        None,
+        ResolveTo::Unknown,
     )?;
     let array_ty = array.ty();
 
@@ -5380,7 +5395,7 @@ fn array_subscript(
         is_constant,
         unchecked,
         diagnostics,
-        Some(&index_width_ty),
+        ResolveTo::Type(&index_width_ty),
     )?;
 
     let index_ty = index.ty();
@@ -5511,7 +5526,7 @@ fn struct_literal(
                 is_constant,
                 unchecked,
                 diagnostics,
-                Some(&struct_def.fields[i].ty),
+                ResolveTo::Type(&struct_def.fields[i].ty),
             )?;
             used_variable(ns, &expr, symtable);
             fields.push(cast(
@@ -5556,7 +5571,7 @@ fn call_function_type(
         false,
         unchecked,
         diagnostics,
-        None,
+        ResolveTo::Unknown,
     )?;
 
     let mut ty = function.ty();
@@ -5606,7 +5621,7 @@ fn call_function_type(
                 false,
                 unchecked,
                 diagnostics,
-                Some(&params[i]),
+                ResolveTo::Type(&params[i]),
             )?;
 
             cast_args.push(cast(
@@ -5690,7 +5705,7 @@ fn call_function_type(
                 false,
                 unchecked,
                 diagnostics,
-                Some(&params[i]),
+                ResolveTo::Type(&params[i]),
             )?;
 
             cast_args.push(cast(
@@ -5848,7 +5863,7 @@ pub fn call_position_args(
                 false,
                 unchecked,
                 &mut errors,
-                Some(&ty),
+                ResolveTo::Type(&ty),
             ) {
                 Ok(e) => e,
                 Err(_) => {
@@ -6020,7 +6035,7 @@ fn function_call_with_named_args(
                 false,
                 unchecked,
                 &mut errors,
-                Some(&ty),
+                ResolveTo::Type(&ty),
             ) {
                 Ok(e) => e,
                 Err(()) => {
@@ -6142,7 +6157,7 @@ fn named_struct_literal(
                         is_constant,
                         unchecked,
                         diagnostics,
-                        Some(&f.ty),
+                        ResolveTo::Type(&f.ty),
                     )?;
                     used_variable(ns, &expr, symtable);
                     fields[i] = cast(loc, expr, &f.ty, true, ns, diagnostics)?;
@@ -6179,6 +6194,7 @@ fn method_call_pos_args(
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
+    resolve_to: ResolveTo,
 ) -> Result<Expression, ()> {
     if let pt::Expression::Variable(namespace) = var {
         if builtin::is_builtin_call(Some(&namespace.name), &func.name, ns) {
@@ -6309,7 +6325,7 @@ fn method_call_pos_args(
         false,
         unchecked,
         diagnostics,
-        None,
+        ResolveTo::Unknown,
     )?;
     let var_ty = var_expr.ty();
 
@@ -6392,7 +6408,7 @@ fn method_call_pos_args(
                                 false,
                                 unchecked,
                                 diagnostics,
-                                Some(&elem_ty),
+                                ResolveTo::Type(&elem_ty),
                             )?;
 
                             builtin_args.push(cast(
@@ -6450,7 +6466,7 @@ fn method_call_pos_args(
                     let storage_elem = ty.storage_array_elem();
                     let elem_ty = storage_elem.deref_any();
 
-                    let return_ty = if elem_ty.contains_mapping(ns) {
+                    let return_ty = if resolve_to == ResolveTo::Discard {
                         Type::Void
                     } else {
                         elem_ty.clone()
@@ -6503,7 +6519,7 @@ fn method_call_pos_args(
                                 false,
                                 unchecked,
                                 diagnostics,
-                                Some(&elem_ty),
+                                ResolveTo::Type(&elem_ty),
                             )?;
 
                             builtin_args.push(cast(
@@ -6583,7 +6599,7 @@ fn method_call_pos_args(
                         false,
                         unchecked,
                         diagnostics,
-                        Some(elem_ty),
+                        ResolveTo::Type(elem_ty),
                     )?;
 
                     cast(&args[0].loc(), val_expr, elem_ty, true, ns, diagnostics)?
@@ -6683,7 +6699,7 @@ fn method_call_pos_args(
                     false,
                     unchecked,
                     diagnostics,
-                    Some(&ty),
+                    ResolveTo::Type(&ty),
                 ) {
                     Ok(e) => e,
                     Err(_) => {
@@ -6843,7 +6859,7 @@ fn method_call_pos_args(
                 false,
                 unchecked,
                 diagnostics,
-                Some(&Type::Value),
+                ResolveTo::Type(&Type::Value),
             )?;
 
             let value = cast(&args[0].loc(), expr, &Type::Value, true, ns, diagnostics)?;
@@ -6919,7 +6935,7 @@ fn method_call_pos_args(
                 false,
                 unchecked,
                 diagnostics,
-                Some(&Type::DynamicBytes),
+                ResolveTo::Type(&Type::DynamicBytes),
             )?;
 
             let args = cast(
@@ -7071,7 +7087,7 @@ fn resolve_using(
                     false,
                     context.unchecked,
                     &mut errors,
-                    Some(&ty),
+                    ResolveTo::Type(&ty),
                 ) {
                     Ok(e) => e,
                     Err(()) => {
@@ -7268,7 +7284,7 @@ fn method_call_named_args(
         false,
         unchecked,
         diagnostics,
-        None,
+        ResolveTo::Unknown,
     )?;
     let var_ty = var_expr.ty();
 
@@ -7356,7 +7372,7 @@ fn method_call_named_args(
                     false,
                     unchecked,
                     diagnostics,
-                    Some(&param.ty),
+                    ResolveTo::Type(&param.ty),
                 ) {
                     Ok(e) => e,
                     Err(()) => {
@@ -7499,7 +7515,7 @@ fn resolve_array_literal(
     is_constant: bool,
     unchecked: bool,
     diagnostics: &mut Vec<Diagnostic>,
-    resolve_to: Option<&Type>,
+    resolve_to: ResolveTo,
 ) -> Result<Expression, ()> {
     let mut dims = Box::new(Vec::new());
     let mut flattened = Vec::new();
@@ -7516,7 +7532,11 @@ fn resolve_array_literal(
 
     let mut flattened = flattened.iter();
 
-    let resolve_to = resolve_to.map(|ty| if let Type::Array(ty, _) = ty { ty } else { ty });
+    let resolve_to = if let ResolveTo::Type(Type::Array(elem_ty, _)) = resolve_to {
+        ResolveTo::Type(elem_ty)
+    } else {
+        resolve_to
+    };
 
     // We follow the solidity scheme were everthing gets implicitly converted to the
     // type of the first element
@@ -7533,7 +7553,7 @@ fn resolve_array_literal(
         resolve_to,
     )?;
 
-    let ty = if let Some(ty) = resolve_to {
+    let ty = if let ResolveTo::Type(ty) = resolve_to {
         ty.clone()
     } else {
         first.ty()
@@ -7553,7 +7573,7 @@ fn resolve_array_literal(
             is_constant,
             unchecked,
             diagnostics,
-            Some(&ty),
+            ResolveTo::Type(&ty),
         )?;
         used_variable(ns, &other, symtable);
 
@@ -7742,7 +7762,7 @@ fn parse_call_args(
                     false,
                     unchecked,
                     diagnostics,
-                    Some(&ty),
+                    ResolveTo::Type(&ty),
                 )?;
 
                 res.value = Some(Box::new(cast(
@@ -7777,7 +7797,7 @@ fn parse_call_args(
                     false,
                     unchecked,
                     diagnostics,
-                    Some(&ty),
+                    ResolveTo::Type(&ty),
                 )?;
 
                 res.gas = Some(Box::new(cast(
@@ -7821,7 +7841,7 @@ fn parse_call_args(
                     false,
                     unchecked,
                     diagnostics,
-                    Some(&ty),
+                    ResolveTo::Type(&ty),
                 )?;
 
                 res.space = Some(Box::new(cast(
@@ -7865,7 +7885,7 @@ fn parse_call_args(
                     false,
                     unchecked,
                     diagnostics,
-                    Some(&ty),
+                    ResolveTo::Type(&ty),
                 )?;
 
                 res.salt = Some(Box::new(cast(
@@ -7981,6 +8001,7 @@ pub fn call_expr(
     is_constant: bool,
     unchecked: bool,
     diagnostics: &mut Vec<Diagnostic>,
+    resolve_to: ResolveTo,
 ) -> Result<Expression, ()> {
     let mut nullsink = Vec::new();
 
@@ -8025,7 +8046,7 @@ pub fn call_expr(
                     is_constant,
                     unchecked,
                     diagnostics,
-                    None,
+                    ResolveTo::Unknown,
                 )?;
 
                 cast(loc, expr, &to, false, ns, diagnostics)
@@ -8046,6 +8067,7 @@ pub fn call_expr(
         is_constant,
         unchecked,
         diagnostics,
+        resolve_to,
     )?;
 
     check_function_call(ns, &expr, symtable);
@@ -8073,6 +8095,7 @@ pub fn function_call_expr(
     is_constant: bool,
     unchecked: bool,
     diagnostics: &mut Vec<Diagnostic>,
+    resolve_to: ResolveTo,
 ) -> Result<Expression, ()> {
     let (ty, call_args, call_args_loc) = collect_call_args(ty, diagnostics)?;
 
@@ -8100,6 +8123,7 @@ pub fn function_call_expr(
                 ns,
                 symtable,
                 diagnostics,
+                resolve_to,
             )
         }
         pt::Expression::Variable(id) => {
@@ -8336,7 +8360,7 @@ fn mapping_subscript(
                 is_constant,
                 unchecked,
                 diagnostics,
-                Some(key_ty),
+                ResolveTo::Type(key_ty),
             )?,
             key_ty,
             true,
