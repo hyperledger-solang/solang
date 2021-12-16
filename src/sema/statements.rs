@@ -916,9 +916,34 @@ fn emit_event(
     match ty {
         pt::Expression::FunctionCall(_, ty, args) => {
             let event_loc = ty.loc();
-            let event_nos = ns.resolve_event(file_no, contract_no, ty, diagnostics)?;
 
             let mut temp_diagnostics = Vec::new();
+
+            let event_nos = ns.resolve_event(file_no, contract_no, ty, &mut temp_diagnostics);
+
+            // check if arguments are valid expressions
+            for arg in args {
+                let _ = expression(
+                    arg,
+                    file_no,
+                    contract_no,
+                    Some(function_no),
+                    ns,
+                    symtable,
+                    false,
+                    unchecked,
+                    &mut temp_diagnostics,
+                    None,
+                );
+            }
+
+            if !temp_diagnostics.is_empty() {
+                diagnostics.extend(temp_diagnostics);
+                return Err(());
+            }
+
+            // resolving the event type succeeded, so we can safely unwrap it
+            let event_nos = event_nos.unwrap();
 
             for event_no in &event_nos {
                 let event = &mut ns.events[*event_no];
@@ -1002,22 +1027,45 @@ fn emit_event(
         }
         pt::Expression::NamedFunctionCall(_, ty, args) => {
             let event_loc = ty.loc();
-            let event_nos = ns.resolve_event(file_no, contract_no, ty, diagnostics)?;
 
+            let mut temp_diagnostics = Vec::new();
+
+            let event_nos = ns.resolve_event(file_no, contract_no, ty, &mut temp_diagnostics);
+
+            // check if arguments are valid expressions
             let mut arguments = HashMap::new();
 
             for arg in args {
                 if arguments.contains_key(&arg.name.name) {
-                    ns.diagnostics.push(Diagnostic::error(
+                    temp_diagnostics.push(Diagnostic::error(
                         arg.name.loc,
                         format!("duplicate argument with name ‘{}’", arg.name.name),
                     ));
-                    return Err(());
                 }
+
+                let _ = expression(
+                    &arg.expr,
+                    file_no,
+                    contract_no,
+                    Some(function_no),
+                    ns,
+                    symtable,
+                    false,
+                    unchecked,
+                    &mut temp_diagnostics,
+                    None,
+                );
+
                 arguments.insert(&arg.name.name, &arg.expr);
             }
 
-            let mut temp_diagnostics = Vec::new();
+            if !temp_diagnostics.is_empty() {
+                diagnostics.extend(temp_diagnostics);
+                return Err(());
+            }
+
+            // resolving the event type succeeded, so we can safely unwrap it
+            let event_nos = event_nos.unwrap();
 
             for event_no in &event_nos {
                 let event = &mut ns.events[*event_no];
