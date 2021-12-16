@@ -12,7 +12,7 @@ use crate::sema::ast::{
     Builtin, CallTy, Expression, FormatArg, Function, Namespace, Parameter, StringLocation, Type,
 };
 use crate::sema::eval::{eval_const_number, eval_const_rational};
-use crate::sema::expression::{bigint_to_expression, cast, cast_shift_arg};
+use crate::sema::expression::{bigint_to_expression, cast, cast_shift_arg, ResolveTo};
 use crate::Target;
 use num_bigint::BigInt;
 use num_traits::{FromPrimitive, One, ToPrimitive, Zero};
@@ -331,7 +331,7 @@ pub fn expression(
                     &BigInt::from_u8(length).unwrap(),
                     ns,
                     &mut Vec::new(),
-                    Some(ty),
+                    ResolveTo::Type(ty),
                 )
                 .unwrap(),
                 Type::DynamicBytes => Expression::StorageArrayLength {
@@ -354,7 +354,8 @@ pub fn expression(
                         }
                     }
                     Some(length) => {
-                        bigint_to_expression(loc, length, ns, &mut Vec::new(), Some(ty)).unwrap()
+                        bigint_to_expression(loc, length, ns, &mut Vec::new(), ResolveTo::Type(ty))
+                            .unwrap()
                     }
                 },
                 _ => unreachable!(),
@@ -569,11 +570,11 @@ pub fn expression(
                 storage_slots_array_push(loc, args, cfg, contract_no, func, ns, vartab, opt)
             }
         }
-        Expression::Builtin(loc, _, Builtin::ArrayPop, args) => {
+        Expression::Builtin(loc, ty, Builtin::ArrayPop, args) => {
             if ns.target == Target::Solana || args[0].ty().is_storage_bytes() {
-                array_pop(loc, args, cfg, contract_no, func, ns, vartab, opt)
+                array_pop(loc, args, &ty[0], cfg, contract_no, func, ns, vartab, opt)
             } else {
-                storage_slots_array_pop(loc, args, cfg, contract_no, func, ns, vartab, opt)
+                storage_slots_array_pop(loc, args, &ty[0], cfg, contract_no, func, ns, vartab, opt)
             }
         }
         Expression::Builtin(_, _, Builtin::Assert, args) => {
@@ -2049,10 +2050,14 @@ fn array_subscript(
     let index_width = index_ty.bits(ns);
 
     let array_length = match array_ty.deref_any() {
-        Type::Bytes(n) => {
-            bigint_to_expression(&array.loc(), &BigInt::from(*n), ns, &mut Vec::new(), None)
-                .unwrap()
-        }
+        Type::Bytes(n) => bigint_to_expression(
+            &array.loc(),
+            &BigInt::from(*n),
+            ns,
+            &mut Vec::new(),
+            ResolveTo::Unknown,
+        )
+        .unwrap(),
         Type::Array(_, _) => match array_ty.array_length() {
             None => {
                 if let Type::StorageRef(_, _) = array_ty {
@@ -2075,7 +2080,9 @@ fn array_subscript(
                     Expression::DynamicArrayLength(*loc, Box::new(array.clone()))
                 }
             }
-            Some(l) => bigint_to_expression(loc, l, ns, &mut Vec::new(), None).unwrap(),
+            Some(l) => {
+                bigint_to_expression(loc, l, ns, &mut Vec::new(), ResolveTo::Unknown).unwrap()
+            }
         },
         Type::DynamicBytes => Expression::DynamicArrayLength(*loc, Box::new(array.clone())),
         _ => {

@@ -1,5 +1,5 @@
 use super::ast::{Diagnostic, Expression, FormatArg, Namespace, Type};
-use super::expression::{cast, expression};
+use super::expression::{cast, expression, ResolveTo};
 use super::symtable::Symtable;
 use crate::parser::pt;
 
@@ -37,7 +37,7 @@ pub fn string_format(
             false,
             unchecked,
             diagnostics,
-            None,
+            ResolveTo::Unknown,
         )?;
 
         let ty = expr.ty();

@@ -157,6 +157,7 @@ pub fn storage_slots_array_push(
 pub fn storage_slots_array_pop(
     loc: &pt::Loc,
     args: &[Expression],
+    return_ty: &Type,
     cfg: &mut ControlFlowGraph,
     contract_no: usize,
     func: Option<&Function>,
@@ -244,7 +245,7 @@ pub fn storage_slots_array_pop(
         },
     );
 
-    let val = if !elem_ty.contains_mapping(ns) {
+    let val = if *return_ty != Type::Void {
         let res_pos = vartab.temp_anonymous(&elem_ty);
 
         let expr = load_storage(
@@ -342,6 +343,7 @@ pub fn array_push(
 pub fn array_pop(
     loc: &pt::Loc,
     args: &[Expression],
+    return_ty: &Type,
     cfg: &mut ControlFlowGraph,
     contract_no: usize,
     func: Option<&Function>,
@@ -353,7 +355,7 @@ pub fn array_pop(
 
     let ty = args[0].ty().storage_array_elem().deref_into();
 
-    let res = if !ty.contains_mapping(ns) {
+    let res = if *return_ty != Type::Void {
         Some(vartab.temp_anonymous(&ty))
     } else {
         None

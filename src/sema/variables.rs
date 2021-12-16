@@ -1,7 +1,7 @@
 use super::ast::{
     Diagnostic, Expression, Function, Namespace, Parameter, Statement, Symbol, Type, Variable,
 };
-use super::expression::{cast, expression};
+use super::expression::{cast, expression, ResolveTo};
 use super::symtable::Symtable;
 use super::tags::resolve_tags;
 use crate::parser::pt;
@@ -233,7 +233,7 @@ pub fn var_decl(
             is_constant,
             false,
             &mut diagnostics,
-            Some(&ty),
+            ResolveTo::Type(&ty),
         ) {
             Ok(res) => {
                 // implicitly conversion to correct ty

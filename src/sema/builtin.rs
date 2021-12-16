@@ -1,6 +1,6 @@
 use super::ast::{Builtin, Diagnostic, Expression, Namespace, Type};
 use super::eval::eval_const_number;
-use super::expression::{cast, expression};
+use super::expression::{cast, expression, ResolveTo};
 use super::symtable::Symtable;
 use crate::parser::pt;
 use crate::Target;
@@ -547,7 +547,7 @@ pub fn resolve_call(
                 is_constant,
                 unchecked,
                 diagnostics,
-                Some(&func.args[i]),
+                ResolveTo::Type(&func.args[i]),
             ) {
                 Ok(e) => e,
                 Err(()) => {
@@ -676,7 +676,7 @@ pub fn resolve_method_call(
                 false,
                 unchecked,
                 diagnostics,
-                Some(&Type::DynamicBytes),
+                ResolveTo::Type(&Type::DynamicBytes),
             )?,
             &Type::DynamicBytes,
             true,
@@ -770,7 +770,7 @@ pub fn resolve_method_call(
                     false,
                     unchecked,
                     diagnostics,
-                    Some(&Type::Bytes(4)),
+                    ResolveTo::Type(&Type::Bytes(4)),
                 )?;
 
                 resolved_args.insert(
@@ -806,7 +806,7 @@ pub fn resolve_method_call(
                     false,
                     unchecked,
                     diagnostics,
-                    Some(&Type::String),
+                    ResolveTo::Type(&Type::String),
                 )?;
 
                 resolved_args.insert(
@@ -843,7 +843,7 @@ pub fn resolve_method_call(
             false,
             unchecked,
             diagnostics,
-            None,
+            ResolveTo::Unknown,
         )?;
         let ty = expr.ty();
 

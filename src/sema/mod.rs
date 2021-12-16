@@ -28,7 +28,7 @@ mod variables;
 
 use self::contracts::visit_bases;
 use self::eval::eval_const_number;
-use self::expression::expression;
+use self::expression::{expression, ResolveTo};
 use self::functions::{resolve_params, resolve_returns};
 use self::symtable::Symtable;
 use self::variables::var_decl;
@@ -1491,7 +1491,7 @@ impl ast::Namespace {
             true,
             true,
             diagnostics,
-            Some(&ast::Type::Uint(256)),
+            ResolveTo::Type(&ast::Type::Uint(256)),
         )?;
 
         match size_expr.ty() {
