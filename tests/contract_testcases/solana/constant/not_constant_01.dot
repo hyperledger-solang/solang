@@ -12,7 +12,7 @@ strict digraph "tests/contract_testcases/solana/constant/not_constant_01.sol" {
 	returns_11 [label="returns\nuint256 "]
 	diagnostic [label="found contract ‘C’\nlevel Debug\ntests/contract_testcases/solana/constant/not_constant_01.sol:2:9-20"]
 	diagnostic_14 [label="found contract ‘foo’\nlevel Debug\ntests/contract_testcases/solana/constant/not_constant_01.sol:6:9-22"]
-	diagnostic_15 [label="need instance of contract ‘C’ to get variable value ‘NOT_CONSTANT’\nlevel Error\ntests/contract_testcases/solana/constant/not_constant_01.sol:8:26-27"]
+	diagnostic_15 [label="need instance of contract ‘C’ to get variable value ‘NOT_CONSTANT’\nlevel Error\ntests/contract_testcases/solana/constant/not_constant_01.sol:8:26-40"]
 	contracts -> contract
 	contract -> var [label="variable"]
 	var -> number_literal [label="initializer"]
