@@ -6,8 +6,7 @@ use std::convert::TryInto;
 use tiny_keccak::{Hasher, Keccak};
 
 use super::ast;
-use super::expression::compatible_mutability;
-use super::expression::match_constructor_to_args;
+use super::expression::{compatible_mutability, match_constructor_to_args, ExprContext};
 use super::functions;
 use super::statements;
 use super::symtable::Symtable;
@@ -201,6 +200,14 @@ fn resolve_base_args(
 
     // for every contract, if we have a base which resolved successfully, resolve any constructor args
     for (contract_no, def) in contracts {
+        let context = ExprContext {
+            function_no: None,
+            contract_no: Some(*contract_no),
+            file_no,
+            unchecked: false,
+            constant: false,
+        };
+
         for base in &def.base {
             let name = &base.name;
             if let Some(base_no) = ns.resolve_contract(file_no, name) {
@@ -216,11 +223,8 @@ fn resolve_base_args(
                         if let Ok((Some(constructor_no), args)) = match_constructor_to_args(
                             &base.loc,
                             args,
-                            file_no,
                             base_no,
-                            None,
-                            *contract_no,
-                            false,
+                            &context,
                             ns,
                             &mut symtable,
                             &mut diagnostics,

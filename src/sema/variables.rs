@@ -1,7 +1,7 @@
 use super::ast::{
     Diagnostic, Expression, Function, Namespace, Parameter, Statement, Symbol, Type, Variable,
 };
-use super::expression::{cast, expression, ResolveTo};
+use super::expression::{cast, expression, ExprContext, ResolveTo};
 use super::symtable::Symtable;
 use super::tags::resolve_tags;
 use crate::parser::pt;
@@ -96,7 +96,7 @@ pub fn var_decl(
         }
     };
 
-    let mut is_constant = false;
+    let mut constant = false;
     let mut visibility: Option<pt::Visibility> = None;
     let mut has_immutable: Option<pt::Loc> = None;
     let mut has_override: Option<pt::Loc> = None;
@@ -104,13 +104,13 @@ pub fn var_decl(
     for attr in attrs {
         match &attr {
             pt::VariableAttribute::Constant(loc) => {
-                if is_constant {
+                if constant {
                     ns.diagnostics.push(Diagnostic::error(
                         *loc,
                         "duplicate constant attribute".to_string(),
                     ));
                 }
-                is_constant = true;
+                constant = true;
             }
             pt::VariableAttribute::Immutable(loc) => {
                 if let Some(prev) = &has_immutable {
@@ -165,12 +165,12 @@ pub fn var_decl(
     }
 
     if let Some(loc) = &has_immutable {
-        if is_constant {
+        if constant {
             ns.diagnostics.push(Diagnostic::error(
                 *loc,
                 "variable cannot be declared both ‘immutable’ and ‘constant’".to_string(),
             ));
-            is_constant = false;
+            constant = false;
         }
     }
 
@@ -190,7 +190,7 @@ pub fn var_decl(
     }
 
     if contract_no.is_none() {
-        if !is_constant {
+        if !constant {
             ns.diagnostics.push(Diagnostic::error(
                 s.ty.loc(),
                 "global variable must be constant".to_string(),
@@ -222,16 +222,19 @@ pub fn var_decl(
 
     let initializer = if let Some(initializer) = &s.initializer {
         let mut diagnostics = Vec::new();
+        let context = ExprContext {
+            file_no,
+            unchecked: false,
+            contract_no,
+            function_no: None,
+            constant,
+        };
 
         match expression(
             initializer,
-            file_no,
-            contract_no,
-            None,
+            &context,
             ns,
             symtable,
-            is_constant,
-            false,
             &mut diagnostics,
             ResolveTo::Type(&ty),
         ) {
@@ -251,7 +254,7 @@ pub fn var_decl(
             }
         }
     } else {
-        if is_constant {
+        if constant {
             ns.diagnostics.push(Diagnostic::decl_error(
                 s.loc,
                 "missing initializer for constant".to_string(),
@@ -291,7 +294,7 @@ pub fn var_decl(
         tags,
         visibility: visibility.clone(),
         ty: ty.clone(),
-        constant: is_constant,
+        constant,
         immutable: has_immutable.is_some(),
         assigned: initializer.is_some(),
         initializer,
@@ -323,7 +326,7 @@ pub fn var_decl(
     if success && matches!(visibility, pt::Visibility::Public(_)) {
         if let Some(contract_no) = contract_no {
             // The accessor function returns the value of the storage variable, constant or not.
-            let mut expr = if is_constant {
+            let mut expr = if constant {
                 Expression::ConstantVariable(pt::Loc(0, 0, 0), ty.clone(), Some(contract_no), pos)
             } else {
                 Expression::StorageVariable(
@@ -363,7 +366,7 @@ pub fn var_decl(
             // Create the implicit body - just return the value
             func.body = vec![Statement::Return(
                 pt::Loc(0, 0, 0),
-                Some(if is_constant {
+                Some(if constant {
                     expr
                 } else {
                     Expression::StorageLoad(pt::Loc(0, 0, 0), ty.clone(), Box::new(expr))
@@ -389,7 +392,7 @@ pub fn var_decl(
     }
 
     // Return true if the value is constant
-    Some(is_constant)
+    Some(constant)
 }
 
 /// For accessor functions, create the parameter list and the return expression

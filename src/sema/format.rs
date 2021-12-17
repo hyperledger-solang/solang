@@ -1,5 +1,5 @@
 use super::ast::{Diagnostic, Expression, FormatArg, Namespace, Type};
-use super::expression::{cast, expression, ResolveTo};
+use super::expression::{cast, expression, ExprContext, ResolveTo};
 use super::symtable::Symtable;
 use crate::parser::pt;
 
@@ -15,10 +15,7 @@ pub fn string_format(
     loc: &pt::Loc,
     literals: &[pt::StringLiteral],
     args: &[pt::Expression],
-    file_no: usize,
-    contract_no: Option<usize>,
-    function_no: Option<usize>,
-    unchecked: bool,
+    context: &ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
@@ -27,18 +24,7 @@ pub fn string_format(
     let mut resolved_args = Vec::new();
 
     for arg in args {
-        let expr = expression(
-            arg,
-            file_no,
-            contract_no,
-            function_no,
-            ns,
-            symtable,
-            false,
-            unchecked,
-            diagnostics,
-            ResolveTo::Unknown,
-        )?;
+        let expr = expression(arg, context, ns, symtable, diagnostics, ResolveTo::Unknown)?;
 
         let ty = expr.ty();
 
