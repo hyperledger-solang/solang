@@ -634,22 +634,15 @@ fn print_statement(stmts: &[Statement], func: &Function, ns: &Namespace) -> Vec<
                     vec![Tree::Branch(String::from("fields"), fields), args],
                 )
             }
-            Statement::TryCatch {
-                expr,
-                returns,
-                ok_stmt,
-                error,
-                catch_param,
-                catch_stmt,
-                ..
-            } => {
+            Statement::TryCatch(_, _, try_catch) => {
                 let mut list = vec![Tree::Branch(
                     String::from("expr"),
-                    vec![print_expr(expr, Some(func), ns)],
+                    vec![print_expr(&try_catch.expr, Some(func), ns)],
                 )];
 
-                if !returns.is_empty() {
-                    let returns = returns
+                if !try_catch.returns.is_empty() {
+                    let returns = try_catch
+                        .returns
                         .iter()
                         .map(|(_, param)| {
                             Tree::Leaf(format!("{} {}", param.ty.to_string(ns), param.name))
@@ -661,10 +654,10 @@ fn print_statement(stmts: &[Statement], func: &Function, ns: &Namespace) -> Vec<
 
                 list.push(Tree::Branch(
                     String::from("ok_stmt"),
-                    print_statement(ok_stmt, func, ns),
+                    print_statement(&try_catch.ok_stmt, func, ns),
                 ));
 
-                if let Some((_, param, stmt)) = &error {
+                if let Some((_, param, stmt)) = &try_catch.error {
                     list.push(Tree::Leaf(format!(
                         "error_param: {} {}",
                         param.ty.to_string(ns),
@@ -677,7 +670,7 @@ fn print_statement(stmts: &[Statement], func: &Function, ns: &Namespace) -> Vec<
                     ));
                 }
 
-                if let Some(param) = catch_param {
+                if let Some(param) = &try_catch.catch_param {
                     list.push(Tree::Leaf(format!(
                         "catch_param: {} {}",
                         param.ty.to_string(ns),
@@ -687,7 +680,7 @@ fn print_statement(stmts: &[Statement], func: &Function, ns: &Namespace) -> Vec<
 
                 list.push(Tree::Branch(
                     String::from("catch_stmt"),
-                    print_statement(catch_stmt, func, ns),
+                    print_statement(&try_catch.catch_stmt, func, ns),
                 ));
 
                 Tree::Branch(String::from("try-catch"), list)

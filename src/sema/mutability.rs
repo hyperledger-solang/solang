@@ -205,19 +205,13 @@ fn recurse_statements(stmts: &[Statement], state: &mut StateCheck) {
             Statement::Return(_, Some(expr)) => {
                 expr.recurse(state, read_expression);
             }
-            Statement::TryCatch {
-                expr,
-                ok_stmt,
-                error,
-                catch_stmt,
-                ..
-            } => {
-                expr.recurse(state, read_expression);
-                recurse_statements(ok_stmt, state);
-                if let Some((_, _, s)) = error {
+            Statement::TryCatch(_, _, try_catch) => {
+                try_catch.expr.recurse(state, read_expression);
+                recurse_statements(&try_catch.ok_stmt, state);
+                if let Some((_, _, s)) = &try_catch.error {
                     recurse_statements(s, state);
                 }
-                recurse_statements(catch_stmt, state);
+                recurse_statements(&try_catch.catch_stmt, state);
             }
             Statement::Emit { loc, .. } => state.write(loc),
             Statement::Break(_) | Statement::Continue(_) | Statement::Underscore(_) => (),

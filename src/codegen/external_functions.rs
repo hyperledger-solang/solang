@@ -117,8 +117,8 @@ fn check_statement(stmt: &Statement, call_list: &mut Vec<usize>) -> bool {
                 e.recurse(call_list, check_expression);
             }
         }
-        Statement::TryCatch { expr, .. } => {
-            expr.recurse(call_list, check_expression);
+        Statement::TryCatch(_, _, try_catch) => {
+            try_catch.expr.recurse(call_list, check_expression);
         }
         Statement::Emit { args, .. } => {
             for e in args {

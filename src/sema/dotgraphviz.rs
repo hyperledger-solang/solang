@@ -1554,24 +1554,21 @@ impl Dot {
                         self.add_expression(arg, Some(func), ns, parent, format!("arg #{}", no));
                     }
                 }
-                Statement::TryCatch {
-                    loc,
-                    expr,
-                    returns,
-                    ok_stmt,
-                    error,
-                    catch_param,
-                    catch_stmt,
-                    ..
-                } => {
+                Statement::TryCatch(loc, _, try_catch) => {
                     let labels = vec![String::from("try"), ns.files[loc.0].loc_to_string(loc)];
 
-                    self.add_expression(expr, Some(func), ns, parent, String::from("expr"));
+                    self.add_expression(
+                        &try_catch.expr,
+                        Some(func),
+                        ns,
+                        parent,
+                        String::from("expr"),
+                    );
 
                     parent =
                         self.add_node(Node::new("try", labels), Some(parent), Some(parent_rel));
 
-                    for (no, (_, param)) in returns.iter().enumerate() {
+                    for (no, (_, param)) in try_catch.returns.iter().enumerate() {
                         let parent_rel = format!("return #{}", no);
 
                         self.add_node(
@@ -1584,9 +1581,9 @@ impl Dot {
                         );
                     }
 
-                    self.add_statement(ok_stmt, func, ns, parent, String::from("ok"));
+                    self.add_statement(&try_catch.ok_stmt, func, ns, parent, String::from("ok"));
 
-                    if let Some((_, param, stmt)) = error {
+                    if let Some((_, param, stmt)) = &try_catch.error {
                         self.add_node(
                             Node::new(
                                 "error_param",
@@ -1599,7 +1596,7 @@ impl Dot {
                         self.add_statement(stmt, func, ns, parent, String::from("error"));
                     }
 
-                    if let Some(param) = catch_param {
+                    if let Some(param) = &try_catch.catch_param {
                         self.add_node(
                             Node::new(
                                 "catch_param",
@@ -1610,7 +1607,13 @@ impl Dot {
                         );
                     }
 
-                    self.add_statement(catch_stmt, func, ns, parent, String::from("catch"));
+                    self.add_statement(
+                        &try_catch.catch_stmt,
+                        func,
+                        ns,
+                        parent,
+                        String::from("catch"),
+                    );
                 }
                 Statement::Underscore(loc) => {
                     let labels = vec![

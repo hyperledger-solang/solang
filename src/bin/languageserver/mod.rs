@@ -309,25 +309,15 @@ impl SolangServer {
                     SolangServer::construct_expr(arg, lookup_tbl, symtab, fnc_map, ns);
                 }
             }
-            ast::Statement::TryCatch {
-                loc: _,
-                reachable: _,
-                expr,
-                returns: _,
-                ok_stmt,
-                error,
-                catch_param: _,
-                catch_param_pos: _,
-                catch_stmt,
-            } => {
-                SolangServer::construct_expr(expr, lookup_tbl, symtab, fnc_map, ns);
-                for vecstmt in catch_stmt {
+            ast::Statement::TryCatch(_, _, try_stmt) => {
+                SolangServer::construct_expr(&try_stmt.expr, lookup_tbl, symtab, fnc_map, ns);
+                for vecstmt in &try_stmt.catch_stmt {
                     SolangServer::construct_stmt(vecstmt, lookup_tbl, symtab, fnc_map, ns);
                 }
-                for vecstmt in ok_stmt {
+                for vecstmt in &try_stmt.ok_stmt {
                     SolangServer::construct_stmt(vecstmt, lookup_tbl, symtab, fnc_map, ns);
                 }
-                if let Some(okstmt) = error {
+                if let Some(okstmt) = &try_stmt.error {
                     for stmts in &okstmt.2 {
                         SolangServer::construct_stmt(stmts, lookup_tbl, symtab, fnc_map, ns);
                     }

@@ -1393,18 +1393,19 @@ pub enum Statement {
         event_loc: pt::Loc,
         args: Vec<Expression>,
     },
-    TryCatch {
-        loc: pt::Loc,
-        reachable: bool,
-        expr: Expression,
-        returns: Vec<(Option<usize>, Parameter)>,
-        ok_stmt: Vec<Statement>,
-        error: Option<(Option<usize>, Parameter, Vec<Statement>)>,
-        catch_param: Option<Parameter>,
-        catch_param_pos: Option<usize>,
-        catch_stmt: Vec<Statement>,
-    },
+    TryCatch(pt::Loc, bool, TryCatch),
     Underscore(pt::Loc),
+}
+
+#[derive(Clone, Debug)]
+pub struct TryCatch {
+    pub expr: Expression,
+    pub returns: Vec<(Option<usize>, Parameter)>,
+    pub ok_stmt: Vec<Statement>,
+    pub error: Option<(Option<usize>, Parameter, Vec<Statement>)>,
+    pub catch_param: Option<Parameter>,
+    pub catch_param_pos: Option<usize>,
+    pub catch_stmt: Vec<Statement>,
 }
 
 #[derive(Clone, Debug)]
@@ -1469,23 +1470,18 @@ impl Statement {
                         stmt.recurse(cx, f);
                     }
                 }
-                Statement::TryCatch {
-                    ok_stmt,
-                    catch_stmt,
-                    error,
-                    ..
-                } => {
-                    for stmt in ok_stmt {
+                Statement::TryCatch(_, _, try_catch) => {
+                    for stmt in &try_catch.ok_stmt {
                         stmt.recurse(cx, f);
                     }
 
-                    if let Some((_, _, error)) = error {
+                    if let Some((_, _, error)) = &try_catch.error {
                         for stmt in error {
                             stmt.recurse(cx, f);
                         }
                     }
 
-                    for stmt in catch_stmt {
+                    for stmt in &try_catch.catch_stmt {
                         stmt.recurse(cx, f);
                     }
                 }
@@ -1512,7 +1508,7 @@ impl Statement {
             Statement::Emit { .. } => true,
             Statement::Delete(_, _, _) => true,
             Statement::Continue(_) | Statement::Break(_) | Statement::Return(_, _) => false,
-            Statement::For { reachable, .. } | Statement::TryCatch { reachable, .. } => *reachable,
+            Statement::For { reachable, .. } | Statement::TryCatch(_, reachable, _) => *reachable,
         }
     }
 }
