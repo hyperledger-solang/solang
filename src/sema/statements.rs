@@ -2065,17 +2065,19 @@ fn try_catch(
 
     symtable.leave_scope();
 
-    let stmt = Statement::TryCatch {
-        loc: *loc,
-        expr: fcall,
-        reachable: finally_reachable,
-        returns: params,
-        error: error_resolved,
-        ok_stmt: ok_resolved,
-        catch_param,
-        catch_param_pos,
-        catch_stmt: catch_stmt_resolved,
-    };
+    let stmt = Statement::TryCatch(
+        *loc,
+        finally_reachable,
+        TryCatch {
+            expr: fcall,
+            returns: params,
+            error: error_resolved,
+            ok_stmt: ok_resolved,
+            catch_param,
+            catch_param_pos,
+            catch_stmt: catch_stmt_resolved,
+        },
+    );
 
     Ok((stmt, finally_reachable))
 }

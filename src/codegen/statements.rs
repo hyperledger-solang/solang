@@ -12,7 +12,8 @@ use crate::codegen::unused_variable::{
 };
 use crate::parser::pt;
 use crate::sema::ast::{
-    Builtin, CallTy, DestructureField, Expression, Function, Namespace, Parameter, Statement, Type,
+    Builtin, CallTy, DestructureField, Expression, Function, Namespace, Parameter, Statement,
+    TryCatch, Type,
 };
 use crate::sema::expression::cast;
 use num_traits::Zero;
@@ -500,21 +501,8 @@ pub fn statement(
         Statement::Destructure(_, fields, expr) => {
             destructure(fields, expr, cfg, contract_no, func, ns, vartab, loops, opt)
         }
-        Statement::TryCatch {
-            expr,
-            returns,
-            ok_stmt,
-            error,
-            catch_param_pos,
-            catch_stmt,
-            ..
-        } => try_catch(
-            expr,
-            returns,
-            ok_stmt,
-            error,
-            catch_param_pos,
-            catch_stmt,
+        Statement::TryCatch(_, _, try_stmt) => try_catch(
+            try_stmt,
             func,
             cfg,
             contract_no,
@@ -991,14 +979,8 @@ fn destructure(
 }
 
 /// Resolve try catch statement
-#[allow(clippy::too_many_arguments)]
 fn try_catch(
-    fcall: &Expression,
-    returns: &[(Option<usize>, Parameter)],
-    ok_stmt: &[Statement],
-    error: &Option<(Option<usize>, Parameter, Vec<Statement>)>,
-    catch_param_pos: &Option<usize>,
-    catch_stmt: &[Statement],
+    try_stmt: &TryCatch,
     func: &Function,
     cfg: &mut ControlFlowGraph,
     callee_contract_no: usize,
@@ -1011,7 +993,7 @@ fn try_catch(
 ) {
     let success = vartab.temp(
         &pt::Identifier {
-            loc: fcall.loc(),
+            loc: try_stmt.expr.loc(),
             name: "success".to_owned(),
         },
         &Type::Bool,
@@ -1021,7 +1003,7 @@ fn try_catch(
     let catch_block = cfg.new_basic_block("catch".to_string());
     let finally_block = cfg.new_basic_block("finally".to_string());
 
-    match &fcall {
+    match &try_stmt.expr {
         Expression::ExternalFunctionCall {
             loc,
             function,
@@ -1100,7 +1082,7 @@ fn try_catch(
                 cfg.add(
                     vartab,
                     Instr::BranchCond {
-                        cond: Expression::Variable(fcall.loc(), Type::Bool, success),
+                        cond: Expression::Variable(try_stmt.expr.loc(), Type::Bool, success),
                         true_block: success_block,
                         false_block: catch_block,
                     },
@@ -1111,7 +1093,7 @@ fn try_catch(
                 if func_returns != vec![Type::Void] {
                     let mut res = Vec::new();
 
-                    for ret in returns {
+                    for ret in &try_stmt.returns {
                         res.push(match ret {
                             (Some(pos), _) => *pos,
                             (None, param) => vartab.temp_anonymous(&param.ty),
@@ -1156,7 +1138,7 @@ fn try_catch(
             space,
             ..
         } => {
-            let address_res = match returns.get(0) {
+            let address_res = match try_stmt.returns.get(0) {
                 Some((Some(pos), _)) => *pos,
                 _ => vartab.temp_anonymous(&Type::Contract(*contract_no)),
             };
@@ -1200,7 +1182,7 @@ fn try_catch(
             cfg.add(
                 vartab,
                 Instr::BranchCond {
-                    cond: Expression::Variable(fcall.loc(), Type::Bool, success),
+                    cond: Expression::Variable(try_stmt.expr.loc(), Type::Bool, success),
                     true_block: success_block,
                     false_block: catch_block,
                 },
@@ -1215,7 +1197,7 @@ fn try_catch(
 
     let mut finally_reachable = true;
 
-    for stmt in ok_stmt {
+    for stmt in &try_stmt.ok_stmt {
         statement(
             stmt,
             func,
@@ -1243,7 +1225,7 @@ fn try_catch(
 
     cfg.set_basic_block(catch_block);
 
-    if let Some((error_param_pos, error_param, error_stmt)) = error {
+    if let Some((error_param_pos, error_param, error_stmt)) = &try_stmt.error {
         let no_reason_block = cfg.new_basic_block("no_reason".to_string());
 
         let error_var = match error_param_pos {
@@ -1292,12 +1274,12 @@ fn try_catch(
         cfg.set_basic_block(no_reason_block);
     }
 
-    if let Some(pos) = catch_param_pos {
+    if let Some(res) = try_stmt.catch_param_pos {
         cfg.add(
             vartab,
             Instr::Set {
                 loc: pt::Loc(0, 0, 0),
-                res: *pos,
+                res,
                 expr: Expression::ReturnData(pt::Loc(0, 0, 0)),
             },
         );
@@ -1305,7 +1287,7 @@ fn try_catch(
 
     let mut reachable = true;
 
-    for stmt in catch_stmt {
+    for stmt in &try_stmt.catch_stmt {
         statement(
             stmt,
             func,
@@ -1332,10 +1314,10 @@ fn try_catch(
     }
 
     let mut set = vartab.pop_dirty_tracker();
-    if let Some(pos) = catch_param_pos {
+    if let Some(pos) = &try_stmt.catch_param_pos {
         set.remove(pos);
     }
-    if let Some((Some(pos), _, _)) = error {
+    if let Some((Some(pos), _, _)) = &try_stmt.error {
         set.remove(pos);
     }
     cfg.set_phis(finally_block, set);
