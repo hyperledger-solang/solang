@@ -4052,6 +4052,7 @@ fn member_access(
 
     // is it a constant (unless basecontract is a local variable)
     if let Some(expr) = contract_constant(
+        loc,
         e,
         id,
         context.file_no,
@@ -4388,6 +4389,7 @@ fn member_access(
 }
 
 fn contract_constant(
+    loc: &pt::Loc,
     e: &pt::Expression,
     id: &pt::Identifier,
     file_no: usize,
@@ -4427,7 +4429,7 @@ fn contract_constant(
                     return Ok(None);
                 } else {
                     diagnostics.push(Diagnostic::error(
-                        e.loc(),
+                        *loc,
                         format!(
                             "need instance of contract ‘{}’ to get variable value ‘{}’",
                             ns.contracts[contract_no].name,
@@ -4441,7 +4443,7 @@ fn contract_constant(
             var.read = true;
 
             return Ok(Some(Expression::ConstantVariable(
-                var.loc,
+                *loc,
                 var.ty.clone(),
                 Some(contract_no),
                 var_no,
