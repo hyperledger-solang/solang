@@ -28,7 +28,7 @@ mod variables;
 
 use self::contracts::visit_bases;
 use self::eval::eval_const_number;
-use self::expression::{expression, ResolveTo};
+use self::expression::{expression, ExprContext, ResolveTo};
 use self::functions::{resolve_params, resolve_returns};
 use self::symtable::Symtable;
 use self::variables::var_decl;
@@ -1480,16 +1480,19 @@ impl ast::Namespace {
         diagnostics: &mut Vec<ast::Diagnostic>,
     ) -> Result<ArrayDimension, ()> {
         let mut symtable = Symtable::new();
+        let context = ExprContext {
+            file_no,
+            unchecked: true,
+            contract_no,
+            function_no,
+            constant: true,
+        };
 
         let size_expr = expression(
             expr,
-            file_no,
-            contract_no,
-            function_no,
+            &context,
             self,
             &mut symtable,
-            true,
-            true,
             diagnostics,
             ResolveTo::Type(&ast::Type::Uint(256)),
         )?;

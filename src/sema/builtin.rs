@@ -1,6 +1,6 @@
 use super::ast::{Builtin, Diagnostic, Expression, Namespace, Type};
 use super::eval::eval_const_number;
-use super::expression::{cast, expression, ResolveTo};
+use super::expression::{cast, expression, ExprContext, ResolveTo};
 use super::symtable::Symtable;
 use crate::parser::pt;
 use crate::Target;
@@ -488,16 +488,12 @@ pub fn is_reserved(fname: &str) -> bool {
 /// Resolve a builtin call
 pub fn resolve_call(
     loc: &pt::Loc,
-    file_no: usize,
     namespace: Option<&str>,
     id: &str,
     args: &[pt::Expression],
-    contract_no: Option<usize>,
-    function_no: Option<usize>,
+    context: &ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
-    is_constant: bool,
-    unchecked: bool,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Result<Expression, ()> {
     let matches = BUILTIN_FUNCTIONS
@@ -508,7 +504,7 @@ pub fn resolve_call(
     let marker = diagnostics.len();
 
     for func in &matches {
-        if is_constant && !func.constant {
+        if context.constant && !func.constant {
             diagnostics.push(Diagnostic::error(
                 *loc,
                 format!(
@@ -539,13 +535,9 @@ pub fn resolve_call(
         for (i, arg) in args.iter().enumerate() {
             let arg = match expression(
                 arg,
-                file_no,
-                contract_no,
-                function_no,
+                context,
                 ns,
                 symtable,
-                is_constant,
-                unchecked,
                 diagnostics,
                 ResolveTo::Type(&func.args[i]),
             ) {
@@ -577,7 +569,7 @@ pub fn resolve_call(
 
             // tx.gasprice(1) is a bad idea, just like tx.gasprice. Warn about this
             if ns.target.is_substrate() && func.builtin == Builtin::Gasprice {
-                if let Ok((_, val)) = eval_const_number(&cast_args[0], contract_no, ns) {
+                if let Ok((_, val)) = eval_const_number(&cast_args[0], context.contract_no, ns) {
                     if val == BigInt::one() {
                         diagnostics.push(Diagnostic::warning(
                             *loc,
@@ -615,13 +607,10 @@ pub fn resolve_call(
 /// this. It is only used in for this specific call.
 pub fn resolve_method_call(
     loc: &pt::Loc,
-    file_no: usize,
     namespace: &str,
     name: &str,
     args: &[pt::Expression],
-    contract_no: Option<usize>,
-    function_no: Option<usize>,
-    unchecked: bool,
+    context: &ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
@@ -630,16 +619,12 @@ pub fn resolve_method_call(
     if namespace != "abi" {
         return resolve_call(
             loc,
-            file_no,
             Some(namespace),
             name,
             args,
-            contract_no,
-            function_no,
+            context,
             ns,
             symtable,
-            false,
-            unchecked,
             diagnostics,
         );
     }
@@ -668,13 +653,9 @@ pub fn resolve_method_call(
             &args[0].loc(),
             expression(
                 &args[0],
-                file_no,
-                contract_no,
-                function_no,
+                context,
                 ns,
                 symtable,
-                false,
-                unchecked,
                 diagnostics,
                 ResolveTo::Type(&Type::DynamicBytes),
             )?,
@@ -691,8 +672,13 @@ pub fn resolve_method_call(
             pt::Expression::List(_, list) => {
                 for (loc, param) in list {
                     if let Some(param) = param {
-                        let ty =
-                            ns.resolve_type(file_no, contract_no, false, &param.ty, diagnostics)?;
+                        let ty = ns.resolve_type(
+                            context.file_no,
+                            context.contract_no,
+                            false,
+                            &param.ty,
+                            diagnostics,
+                        )?;
 
                         if let Some(storage) = &param.storage {
                             diagnostics.push(Diagnostic::error(
@@ -727,7 +713,13 @@ pub fn resolve_method_call(
                 }
             }
             _ => {
-                let ty = ns.resolve_type(file_no, contract_no, false, &args[1], diagnostics)?;
+                let ty = ns.resolve_type(
+                    context.file_no,
+                    context.contract_no,
+                    false,
+                    &args[1],
+                    diagnostics,
+                )?;
 
                 if ty.is_mapping() {
                     diagnostics.push(Diagnostic::error(
@@ -762,13 +754,9 @@ pub fn resolve_method_call(
             if let Some(selector) = args_iter.next() {
                 let selector = expression(
                     selector,
-                    file_no,
-                    contract_no,
-                    function_no,
+                    context,
                     ns,
                     symtable,
-                    false,
-                    unchecked,
                     diagnostics,
                     ResolveTo::Type(&Type::Bytes(4)),
                 )?;
@@ -798,13 +786,9 @@ pub fn resolve_method_call(
             if let Some(signature) = args_iter.next() {
                 let signature = expression(
                     signature,
-                    file_no,
-                    contract_no,
-                    function_no,
+                    context,
                     ns,
                     symtable,
-                    false,
-                    unchecked,
                     diagnostics,
                     ResolveTo::Type(&Type::String),
                 )?;
@@ -833,18 +817,7 @@ pub fn resolve_method_call(
     }
 
     for arg in args_iter {
-        let mut expr = expression(
-            arg,
-            file_no,
-            contract_no,
-            function_no,
-            ns,
-            symtable,
-            false,
-            unchecked,
-            diagnostics,
-            ResolveTo::Unknown,
-        )?;
+        let mut expr = expression(arg, context, ns, symtable, diagnostics, ResolveTo::Unknown)?;
         let ty = expr.ty();
 
         if ty.is_mapping() {
