@@ -1,3 +1,4 @@
+use super::lexer::CommentType;
 use num_bigint::BigInt;
 use num_rational::BigRational;
 use std::fmt;
@@ -522,6 +523,7 @@ pub enum Statement {
         Option<Box<(Identifier, Parameter, Statement)>>,
         Box<(Option<Parameter>, Statement)>,
     ),
+    DocComment(Loc, CommentType, String),
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -550,18 +552,19 @@ impl Statement {
         match self {
             Statement::Block { loc, .. }
             | Statement::Assembly { loc, .. }
-            | Statement::Args(loc, _)
-            | Statement::If(loc, _, _, _)
-            | Statement::While(loc, _, _)
-            | Statement::Expression(loc, _)
-            | Statement::VariableDefinition(loc, _, _)
-            | Statement::For(loc, _, _, _, _)
-            | Statement::DoWhile(loc, _, _)
+            | Statement::Args(loc, ..)
+            | Statement::If(loc, ..)
+            | Statement::While(loc, ..)
+            | Statement::Expression(loc, ..)
+            | Statement::VariableDefinition(loc, ..)
+            | Statement::For(loc, ..)
+            | Statement::DoWhile(loc, ..)
             | Statement::Continue(loc)
             | Statement::Break(loc)
-            | Statement::Return(loc, _)
-            | Statement::Emit(loc, _)
-            | Statement::Try(loc, _, _, _, _) => *loc,
+            | Statement::Return(loc, ..)
+            | Statement::Emit(loc, ..)
+            | Statement::Try(loc, ..)
+            | Statement::DocComment(loc, ..) => *loc,
         }
     }
 }
