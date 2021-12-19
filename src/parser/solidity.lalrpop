@@ -61,7 +61,7 @@ DocComments: Vec<DocComment> = {
     SingleDocComment* => tags(&<>)
 }
 
-SingleDocComment: (usize, CommentType, &'input str)= {
+SingleDocComment: (usize, CommentType, &'input str) = {
     <l:@L> <c:DocComment> => (l, c.0, c.1)
 }
 
@@ -685,7 +685,8 @@ ClosedStatement: Statement = {
 
 Statement: Statement = {
     OpenStatement,
-    ClosedStatement
+    ClosedStatement,
+    <l:@L> <c:DocComment> <r:@R> => Statement::DocComment(Loc(file_no, l, r), c.0, c.1.to_string()),
 }
 
 SimpleStatement: Statement = {
