@@ -1804,12 +1804,12 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             binary.context.i32_type().const_zero(),
         );
 
+        binary.builder.position_at_end(retrieve_block);
+
         let member_size = binary
             .context
             .i32_type()
             .const_int(ty.storage_slots(ns).to_u64().unwrap(), false);
-
-        binary.builder.position_at_end(retrieve_block);
 
         let new_length = binary
             .builder
@@ -1824,7 +1824,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         };
 
         // delete existing storage -- pointers need to be freed
-        //self.storage_free(binary, ty, data, old_elem_offset, function, false, ns);
+        self.storage_free(binary, ty, data, old_elem_offset, function, false, ns);
 
         // we can assume pointer will stay the same after realloc to smaller size
         binary.builder.build_call(
