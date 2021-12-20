@@ -853,7 +853,7 @@ impl SolanaTarget {
             }
         } else if let ast::Type::Struct(struct_no) = ty {
             for (i, field) in ns.structs[*struct_no].fields.iter().enumerate() {
-                let field_offset = ns.structs[*struct_no].offsets[i].to_u64().unwrap();
+                let field_offset = ns.structs[*struct_no].storage_offsets[i].to_u64().unwrap();
 
                 let offset = binary.builder.build_int_add(
                     slot,
@@ -1748,6 +1748,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         function: FunctionValue<'a>,
         ty: &ast::Type,
         slot: IntValue<'a>,
+        load: bool,
         ns: &ast::Namespace,
     ) -> Option<BasicValueEnum<'a>> {
         let data = self.contract_storage_data(binary);
@@ -1814,16 +1815,16 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             .builder
             .build_int_sub(length, member_size, "new_length");
 
-        let mut new_offset = binary.builder.build_int_add(offset, new_length, "");
+        let mut old_elem_offset = binary.builder.build_int_add(offset, new_length, "");
 
-        let val = if !ty.contains_mapping(ns) {
-            Some(self.storage_load(binary, ty, &mut new_offset, function, ns))
+        let val = if load {
+            Some(self.storage_load(binary, ty, &mut old_elem_offset, function, ns))
         } else {
             None
         };
 
         // delete existing storage -- pointers need to be freed
-        //self.storage_free(binary, ty, account, data, new_offset, function, false);
+        //self.storage_free(binary, ty, data, old_elem_offset, function, false, ns);
 
         // we can assume pointer will stay the same after realloc to smaller size
         binary.builder.build_call(
@@ -1985,7 +1986,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                 );
 
                 for (i, field) in ns.structs[*struct_no].fields.iter().enumerate() {
-                    let field_offset = ns.structs[*struct_no].offsets[i].to_u64().unwrap();
+                    let field_offset = ns.structs[*struct_no].storage_offsets[i].to_u64().unwrap();
 
                     let mut offset = binary.builder.build_int_add(
                         *slot,
@@ -2377,7 +2378,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             builder.finish(binary);
         } else if let ast::Type::Struct(struct_no) = ty {
             for (i, field) in ns.structs[*struct_no].fields.iter().enumerate() {
-                let field_offset = ns.structs[*struct_no].offsets[i].to_u64().unwrap();
+                let field_offset = ns.structs[*struct_no].storage_offsets[i].to_u64().unwrap();
 
                 let mut offset = binary.builder.build_int_add(
                     *slot,

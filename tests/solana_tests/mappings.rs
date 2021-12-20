@@ -508,6 +508,14 @@ fn mapping_in_dynamic_array() {
 
     vm.constructor("foo", &[], 0);
 
+    vm.function(
+        "setNumber",
+        &[Token::Int(ethereum_types::U256::from(2147483647))],
+        &[],
+        0,
+        None,
+    );
+
     vm.function("push", &[], &[], 0, None);
     vm.function("push", &[], &[], 0, None);
 
@@ -592,4 +600,152 @@ fn mapping_in_dynamic_array() {
             assert_eq!(returns, vec![Token::Uint(ethereum_types::U256::from(0))]);
         }
     }
+
+    let returns = vm.function("number", &[], &[], 0, None);
+
+    assert_eq!(
+        returns,
+        vec![Token::Int(ethereum_types::U256::from(2147483647))]
+    );
+}
+
+#[test]
+fn mapping_in_struct_in_dynamic_array() {
+    let mut vm = build_solidity(
+        r#"
+        contract foo {
+            struct A {
+                mapping(uint256 => uint256) a;
+            }
+
+            A[] private map;
+            int64 public number;
+
+            function set(uint64 array_no, uint64 index, uint64 val) public {
+                map[array_no].a[index] = val;
+            }
+
+            function get(uint64 array_no, uint64 index) public returns (uint256) {
+                return map[array_no].a[index];
+            }
+
+            function rm(uint64 array_no, uint64 index) public {
+                delete map[array_no].a[index];
+            }
+
+            function push() public {
+                map.push();
+            }
+
+            function pop() public {
+                map.pop();
+            }
+
+            function setNumber(int64 x) public {
+                number = x;
+            }
+        }"#,
+    );
+
+    vm.constructor("foo", &[], 0);
+
+    vm.function(
+        "setNumber",
+        &[Token::Int(ethereum_types::U256::from(2147483647))],
+        &[],
+        0,
+        None,
+    );
+
+    vm.function("push", &[], &[], 0, None);
+    vm.function("push", &[], &[], 0, None);
+
+    for array_no in 0..2 {
+        for i in 0..10 {
+            vm.function(
+                "set",
+                &[
+                    Token::Uint(ethereum_types::U256::from(array_no)),
+                    Token::Uint(ethereum_types::U256::from(102 + i + array_no * 500)),
+                    Token::Uint(ethereum_types::U256::from(300331 + i)),
+                ],
+                &[],
+                0,
+                None,
+            );
+        }
+    }
+
+    for array_no in 0..2 {
+        for i in 0..10 {
+            let returns = vm.function(
+                "get",
+                &[
+                    Token::Uint(ethereum_types::U256::from(array_no)),
+                    Token::Uint(ethereum_types::U256::from(102 + i + array_no * 500)),
+                ],
+                &[],
+                0,
+                None,
+            );
+
+            assert_eq!(
+                returns,
+                vec![Token::Uint(ethereum_types::U256::from(300331 + i))]
+            );
+        }
+    }
+
+    let returns = vm.function(
+        "get",
+        &[
+            Token::Uint(ethereum_types::U256::from(0)),
+            Token::Uint(ethereum_types::U256::from(101)),
+        ],
+        &[],
+        0,
+        None,
+    );
+
+    assert_eq!(returns, vec![Token::Uint(ethereum_types::U256::from(0))]);
+
+    vm.function(
+        "rm",
+        &[
+            Token::Uint(ethereum_types::U256::from(0)),
+            Token::Uint(ethereum_types::U256::from(104)),
+        ],
+        &[],
+        0,
+        None,
+    );
+
+    for i in 0..10 {
+        let returns = vm.function(
+            "get",
+            &[
+                Token::Uint(ethereum_types::U256::from(0)),
+                Token::Uint(ethereum_types::U256::from(102 + i)),
+            ],
+            &[],
+            0,
+            None,
+        );
+
+        if 102 + i != 104 {
+            assert_eq!(
+                returns,
+                vec![Token::Uint(ethereum_types::U256::from(300331 + i))]
+            );
+        } else {
+            assert_eq!(returns, vec![Token::Uint(ethereum_types::U256::from(0))]);
+        }
+    }
+
+    let returns = vm.function("number", &[], &[], 0, None);
+
+    assert_eq!(
+        returns,
+        vec![Token::Int(ethereum_types::U256::from(2147483647))]
+    );
 }

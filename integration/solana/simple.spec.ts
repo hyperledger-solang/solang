@@ -347,7 +347,7 @@ describe('Deploy solang contract and test', () => {
     it('account storage too small dynamic alloc', async function () {
         this.timeout(50000);
 
-        const { contract } = await loadContract('store', 'store.abi', [], 180);
+        const { contract } = await loadContract('store', 'store.abi', [], 200);
 
         // storage.sol needs 168 bytes on constructor, more for string data
 
