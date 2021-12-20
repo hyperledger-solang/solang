@@ -1374,11 +1374,18 @@ impl Type {
                 Some(Expression::BytesLiteral(pt::Loc(0, 0, 0), self.clone(), l))
             }
             Type::Enum(e) => ns.enums[*e].ty.default(ns),
-            Type::Struct(_) => Some(Expression::StructLiteral(
-                pt::Loc(0, 0, 0),
-                self.clone(),
-                Vec::new(),
-            )),
+            Type::Struct(struct_no) => {
+                // make sure all our fields have default values
+                for field in &ns.structs[*struct_no].fields {
+                    field.ty.default(ns)?;
+                }
+
+                Some(Expression::StructLiteral(
+                    pt::Loc(0, 0, 0),
+                    self.clone(),
+                    Vec::new(),
+                ))
+            }
             Type::Ref(_) => unreachable!(),
             Type::StorageRef(_, _) => None,
             Type::String | Type::DynamicBytes => Some(Expression::AllocDynamicArray(
@@ -1394,7 +1401,9 @@ impl Type {
             Type::InternalFunction { .. } | Type::Contract(_) | Type::ExternalFunction { .. } => {
                 None
             }
-            Type::Array(_, dims) => {
+            Type::Array(ty, dims) => {
+                ty.default(ns)?;
+
                 if dims[0].is_none() {
                     Some(Expression::AllocDynamicArray(
                         pt::Loc(0, 0, 0),

@@ -202,6 +202,7 @@ pub trait TargetRuntime<'a> {
         function: FunctionValue<'a>,
         ty: &ast::Type,
         slot: IntValue<'a>,
+        load: bool,
         ns: &ast::Namespace,
     ) -> Option<BasicValueEnum<'a>>;
     fn storage_array_length(
@@ -3268,7 +3269,7 @@ pub trait TargetRuntime<'a> {
                             .expression(bin, storage, &w.vars, function, ns)
                             .into_int_value();
 
-                        let value = self.storage_pop(bin, function, ty, slot, ns);
+                        let value = self.storage_pop(bin, function, ty, slot, res.is_some(), ns);
 
                         if let Some(res) = res {
                             w.vars.get_mut(res).unwrap().value = value.unwrap();

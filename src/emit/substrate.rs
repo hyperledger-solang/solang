@@ -2696,6 +2696,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         function: FunctionValue<'a>,
         _ty: &ast::Type,
         slot: IntValue<'a>,
+        load: bool,
         _ns: &ast::Namespace,
     ) -> Option<BasicValueEnum<'a>> {
         let slot_ptr = binary.builder.build_alloca(slot.get_type(), "slot");
@@ -2790,15 +2791,19 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             "new_length",
         );
 
-        let offset = unsafe {
-            binary.builder.build_gep(
-                binary.scratch.unwrap().as_pointer_value(),
-                &[binary.context.i32_type().const_zero(), new_length],
-                "data_offset",
-            )
-        };
+        let val = if load {
+            let offset = unsafe {
+                binary.builder.build_gep(
+                    binary.scratch.unwrap().as_pointer_value(),
+                    &[binary.context.i32_type().const_zero(), new_length],
+                    "data_offset",
+                )
+            };
 
-        let val = binary.builder.build_load(offset, "popped_value");
+            Some(binary.builder.build_load(offset, "popped_value"))
+        } else {
+            None
+        };
 
         binary.builder.build_call(
             binary.module.get_function("seal_set_storage").unwrap(),
@@ -2817,7 +2822,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             "",
         );
 
-        Some(val)
+        val
     }
 
     /// Calculate length of storage dynamic bytes

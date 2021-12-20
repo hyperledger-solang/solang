@@ -55,6 +55,7 @@ pub fn resolve_typenames<'a>(
                         contract: None,
                         fields: Vec::new(),
                         offsets: Vec::new(),
+                        storage_offsets: Vec::new(),
                     });
 
                     delay.structs.push((pos, def, None));
@@ -199,6 +200,7 @@ fn resolve_contract<'a>(
                         contract: Some(def.name.name.to_owned()),
                         fields: Vec::new(),
                         offsets: Vec::new(),
+                        storage_offsets: Vec::new(),
                     });
 
                     delay.structs.push((pos, s, Some(contract_no)));
@@ -528,6 +530,7 @@ fn struct_offsets(ns: &mut Namespace) {
     loop {
         let mut changes = false;
         for struct_no in 0..ns.structs.len() {
+            // first in-memory
             let mut offsets = Vec::new();
             let mut offset = BigInt::zero();
             let mut largest_alignment = 0;
@@ -555,10 +558,44 @@ fn struct_offsets(ns: &mut Namespace) {
                 }
             }
 
-            offsets.push(offset.clone());
+            offsets.push(offset);
 
             if ns.structs[struct_no].offsets != offsets {
                 ns.structs[struct_no].offsets = offsets;
+                changes = true;
+            }
+
+            let mut storage_offsets = Vec::new();
+            let mut offset = BigInt::zero();
+            let mut largest_alignment = BigInt::zero();
+
+            for field in &ns.structs[struct_no].fields {
+                let alignment = field.ty.storage_align(ns);
+                largest_alignment = std::cmp::max(alignment.clone(), largest_alignment.clone());
+                let remainder = offset.clone() % alignment.clone();
+
+                if remainder > BigInt::zero() {
+                    offset += alignment - remainder;
+                }
+
+                storage_offsets.push(offset.clone());
+
+                offset += field.ty.storage_slots(ns);
+            }
+
+            // add entry for overall size
+            if largest_alignment > BigInt::one() {
+                let remainder = offset.clone() % largest_alignment.clone();
+
+                if remainder > BigInt::zero() {
+                    offset += largest_alignment - remainder;
+                }
+            }
+
+            storage_offsets.push(offset);
+
+            if ns.structs[struct_no].storage_offsets != storage_offsets {
+                ns.structs[struct_no].storage_offsets = storage_offsets;
                 changes = true;
             }
         }
@@ -896,7 +933,7 @@ impl Type {
                     }
                 }
                 Type::Struct(n) => ns.structs[*n]
-                    .offsets
+                    .storage_offsets
                     .last()
                     .cloned()
                     .unwrap_or_else(BigInt::zero),
@@ -932,6 +969,49 @@ impl Type {
                 }
                 _ => BigInt::one(),
             }
+        }
+    }
+
+    /// Alignment of elements in storage
+    pub fn storage_align(&self, ns: &Namespace) -> BigInt {
+        if ns.target == Target::Solana {
+            let length = match self {
+                Type::Enum(_) => BigInt::one(),
+                Type::Bool => BigInt::one(),
+                Type::Contract(_) | Type::Address(_) => BigInt::from(ns.address_length),
+                Type::Bytes(n) => BigInt::from(*n),
+                Type::Value => BigInt::from(ns.value_length),
+                Type::Uint(n) | Type::Int(n) => BigInt::from(n / 8),
+                Type::Rational => unreachable!(),
+                Type::Array(_, dims) if dims[0].is_none() => BigInt::from(4),
+                Type::Array(ty, _) => {
+                    if self.is_sparse_solana(ns) {
+                        BigInt::from(4)
+                    } else {
+                        ty.storage_align(ns)
+                    }
+                }
+                Type::Struct(n) => ns.structs[*n]
+                    .fields
+                    .iter()
+                    .map(|field| field.ty.storage_align(ns))
+                    .max()
+                    .unwrap(),
+                Type::String | Type::DynamicBytes => BigInt::from(4),
+                Type::InternalFunction { .. } => BigInt::from(ns.target.ptr_size()),
+                Type::ExternalFunction { .. } => BigInt::from(ns.address_length),
+                Type::Mapping(_, _) => BigInt::from(4),
+                Type::Ref(ty) | Type::StorageRef(_, ty) => ty.storage_align(ns),
+                _ => unimplemented!(),
+            };
+
+            if length > BigInt::from(8) {
+                BigInt::from(8)
+            } else {
+                length
+            }
+        } else {
+            BigInt::one()
         }
     }
 

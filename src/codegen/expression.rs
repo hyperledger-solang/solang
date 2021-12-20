@@ -433,7 +433,7 @@ pub fn expression(
         Expression::StructMember(loc, ty, var, field_no) if ty.is_contract_storage() => {
             if let Type::Struct(struct_no) = var.ty().deref_any() {
                 let offset = if ns.target == Target::Solana {
-                    ns.structs[*struct_no].offsets[*field_no].clone()
+                    ns.structs[*struct_no].storage_offsets[*field_no].clone()
                 } else {
                     ns.structs[*struct_no].fields[..*field_no]
                         .iter()

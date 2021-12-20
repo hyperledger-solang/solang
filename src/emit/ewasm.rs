@@ -887,6 +887,7 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
         _function: FunctionValue<'a>,
         _ty: &ast::Type,
         _slot: IntValue<'a>,
+        _load: bool,
         _ns: &ast::Namespace,
     ) -> Option<BasicValueEnum<'a>> {
         unimplemented!();
