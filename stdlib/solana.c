@@ -668,7 +668,8 @@ uint64_t account_data_realloc(SolAccountInfo *ai, uint32_t offset, uint32_t size
 {
     if (!size)
     {
-        account_data_free(ai, offset);
+        account_data_free(ai->data, offset);
+        *res = 0;
         return 0;
     }
 
@@ -837,17 +838,17 @@ void validate_heap(void *data, uint32_t offs[100], uint32_t lens[100])
     {
         struct chunk *chk = data + offset;
 
-        //printf("chunk: offset:%x prev:%x next:%x length:%x allocated:%d\n", offset, chk->offset_prev, chk->offset_next, chk->length, chk->allocated);
+        // printf("chunk: offset:%x prev:%x next:%x length:%x allocated:%d\n", offset, chk->offset_prev, chk->offset_next, chk->length, chk->allocated);
         if (chk->length == 0 || chk->offset_next == 0)
         {
             assert(chk->length == 0 && chk->offset_next == 0 && chk->offset_prev == last_offset);
-            //printf("last object at 0x%08x\n", offset);
+            // printf("last object at 0x%08x\n", offset);
             return;
         }
 
         assert(chk->offset_prev == last_offset && chk->length != 0);
 
-        //printf("found object length %x at 0x%08lx allocated %d\n", chk->length, offset + sizeof(struct chunk), chk->allocated);
+        // printf("found object length %x at 0x%08lx allocated %d\n", chk->length, offset + sizeof(struct chunk), chk->allocated);
 
         assert(chk->offset_next - offset - sizeof(struct chunk) >= chk->length);
 
@@ -913,14 +914,14 @@ int main()
         int n = rand() % 100;
         if (offs[n] == 0)
         {
-            //printf("STEP: alloc %d\n", n);
+            // printf("STEP: alloc %d\n", n);
             offs[n] = account_data_alloc(&ai, 100);
             memset(data + offs[n], n, 100);
             lens[n] = 100;
         }
         else if (rand() % 2)
         {
-            //printf("STEP: free %d (0x%x)\n", n, offs[n]);
+            // printf("STEP: free %d (0x%x)\n", n, offs[n]);
             account_data_free(&ai, offs[n]);
             offs[n] = 0;
         }

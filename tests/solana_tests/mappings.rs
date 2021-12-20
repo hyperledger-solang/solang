@@ -503,6 +503,10 @@ fn mapping_in_dynamic_array() {
             function setNumber(int64 x) public {
                 number = x;
             }
+
+            function length() public returns (uint64) {
+                return map.length;
+            }
         }"#,
     );
 
@@ -600,6 +604,19 @@ fn mapping_in_dynamic_array() {
             assert_eq!(returns, vec![Token::Uint(ethereum_types::U256::from(0))]);
         }
     }
+
+    let returns = vm.function("length", &[], &[], 0, None);
+    assert_eq!(returns, vec![Token::Uint(ethereum_types::U256::from(2))]);
+
+    vm.function("pop", &[], &[], 0, None);
+
+    let returns = vm.function("length", &[], &[], 0, None);
+    assert_eq!(returns, vec![Token::Uint(ethereum_types::U256::from(1))]);
+
+    vm.function("pop", &[], &[], 0, None);
+
+    let returns = vm.function("length", &[], &[], 0, None);
+    assert_eq!(returns, vec![Token::Uint(ethereum_types::U256::from(0))]);
 
     let returns = vm.function("number", &[], &[], 0, None);
 
@@ -741,6 +758,9 @@ fn mapping_in_struct_in_dynamic_array() {
             assert_eq!(returns, vec![Token::Uint(ethereum_types::U256::from(0))]);
         }
     }
+
+    vm.function("pop", &[], &[], 0, None);
+    vm.function("pop", &[], &[], 0, None);
 
     let returns = vm.function("number", &[], &[], 0, None);
 
