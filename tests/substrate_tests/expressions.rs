@@ -1486,3 +1486,25 @@ fn address_compare() {
 
     assert_eq!(runtime.vm.output, Args(address0, address1).encode());
 }
+
+#[test]
+fn address_pass_by_value() {
+    let mut runtime = build_solidity(
+        r#"
+        contract addr {
+            function bar() public {
+                address left = address(1);
+
+                foo(left);
+
+                assert(left == address(1));
+            }
+
+            function foo(address a) internal {
+                a = address(2);
+            }
+        }"#,
+    );
+
+    runtime.function("bar", Vec::new());
+}
