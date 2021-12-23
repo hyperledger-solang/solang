@@ -2,11 +2,11 @@
 
 pragma solidity 0.6.12;
 
-import "../openzeppelin/token/ERC20/IERC20.sol";
-import "../openzeppelin/token/ERC20/utils/SafeERC20.sol";
-import "../openzeppelin/utils/structs/EnumerableSet.sol";
-import "../openzeppelin/utils/math/SafeMath.sol";
-import "../openzeppelin/access/Ownable.sol";
+import "./openzeppelin/token/ERC20/IERC20.sol";
+import "./openzeppelin/token/ERC20/utils/SafeERC20.sol";
+import "./openzeppelin/utils/structs/EnumerableSet.sol";
+import "./openzeppelin/utils/math/SafeMath.sol";
+import "./openzeppelin/access/Ownable.sol";
 import "./SushiToken.sol";
 
 interface IMigratorChef {
@@ -83,15 +83,13 @@ contract MasterChef is Ownable {
         uint256 amount
     );
 
-    function initMasterChef(
+    constructor(
         SushiToken _sushi,
         address _devaddr,
         uint256 _sushiPerBlock,
         uint256 _startBlock,
         uint256 _bonusEndBlock
     ) public {
-        initOwnable();
-
         sushi = _sushi;
         devaddr = _devaddr;
         sushiPerBlock = _sushiPerBlock;
@@ -114,7 +112,7 @@ contract MasterChef is Ownable {
             massUpdatePools();
         }
         uint256 lastRewardBlock =
-            block.number > startBlock ? uint256(block.number) : startBlock;
+            block.number > startBlock ? block.number : startBlock;
         totalAllocPoint = totalAllocPoint.add(_allocPoint);
         poolInfo.push(
             PoolInfo({

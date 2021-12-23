@@ -1,6 +1,7 @@
 use crate::codegen::cfg::HashTy;
 use crate::parser::pt;
 use crate::sema::ast;
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::str;
 
@@ -8,7 +9,7 @@ use inkwell::attributes::{Attribute, AttributeLoc};
 use inkwell::context::Context;
 use inkwell::module::Linkage;
 use inkwell::types::IntType;
-use inkwell::values::{BasicValueEnum, FunctionValue, IntValue, PointerValue};
+use inkwell::values::{BasicMetadataValueEnum, BasicValueEnum, FunctionValue, IntValue, PointerValue};
 use inkwell::AddressSpace;
 use inkwell::IntPredicate;
 use inkwell::OptimizationLevel;
@@ -56,7 +57,79 @@ impl LachainTarget {
         b.function_dispatch(&runtime_code, contract, ns);
 
         runtime_code.internalize(&["start"]);
-        runtime_code
+        
+        let runtime_bs = runtime_code.code(Generate::Linked).unwrap();
+
+        // Now we have the runtime code, create the deployer
+        let mut b = LachainTarget {
+            abi: ethabiencoder::EthAbiDecoder { bswap: false },
+        };
+        let mut deploy_code = Binary::new(
+            context,
+            ns.target,
+            &contract.name,
+            filename,
+            opt,
+            math_overflow_check,
+            Some(Box::new(runtime_code)),
+        );
+
+        deploy_code.set_early_value_aborts(contract, ns);
+
+        // externals
+        b.declare_externals(&mut deploy_code);
+
+        // FIXME: this emits the constructors, as well as the functions. In Ethereum Solidity,
+        // no functions can be called from the constructor. We should either disallow this too
+        // and not emit functions, or use lto linking to optimize any unused functions away.
+        b.emit_functions(&mut deploy_code, contract, ns);
+
+        b.deployer_dispatch(&mut deploy_code, contract, &runtime_bs, ns);
+
+        deploy_code.internalize(&[
+            "start",
+            "get_extcodesize",
+            "save_storage",
+            "load_storage",
+            "save_storage_string",
+            "load_storage_string",
+            "get_storage_string_size",
+            "get_call_size",
+            "get_code_size",
+            "get_return_size",
+            "copy_call_value",
+            "copy_code_value",
+            "copy_return_value",
+            "invoke_contract",
+            "invoke_static_contract",
+            "invoke_delegate_contract",
+            "transfer",
+            "get_msgvalue",
+            "get_address",
+            "get_sender",
+            "get_external_balance",
+            "get_gas_left",
+            "get_tx_gas_price",
+            "get_tx_origin",
+            "get_block_number",
+            "get_block_hash",
+            "get_block_gas_limit",
+            "get_block_difficulty",
+            "get_block_coinbase_address",
+            "get_block_timestamp",
+            "get_chain_id",
+            "create",
+            "create2",
+            "write_log",
+            "set_return",
+            "crypto_keccak256",
+            "crypto_ripemd160",
+            "crypto_sha256",
+            "crypto_recover",
+            "system_halt",
+        ]);
+
+        deploy_code
     }
 
     fn runtime_prelude<'a>(
@@ -131,6 +204,83 @@ impl LachainTarget {
         (args, args_length.into_int_value())
     }
 
+    fn deployer_prelude<'a>(
+        &self,
+        binary: &mut Binary<'a>,
+        function: FunctionValue,
+        ns: &ast::Namespace,
+    ) -> (PointerValue<'a>, IntValue<'a>) {
+        let entry = binary.context.append_basic_block(function, "entry");
+
+        binary.builder.position_at_end(entry);
+
+        // first thing to do is abort value transfers if constructors not payable
+        if binary.constructor_abort_value_transfers {
+            self.abort_if_value_transfer(binary, function, ns);
+        }
+
+        // init our heap
+        binary
+            .builder
+            .build_call(binary.module.get_function("__init_heap").unwrap(), &[], "");
+
+        // The code_size will need to be patched later
+        let code_size = binary.context.i32_type().const_int(0x4000, false);
+
+        // copy arguments from scratch buffer
+        let args_length = binary.builder.build_int_sub(
+            binary
+                .builder
+                .build_call(
+                    binary.module.get_function("get_code_size").unwrap(),
+                    &[],
+                    "codesize",
+                )
+                .try_as_basic_value()
+                .left()
+                .unwrap()
+                .into_int_value(),
+            code_size,
+            "",
+        );
+
+        binary
+            .builder
+            .build_store(binary.calldata_len.as_pointer_value(), args_length);
+
+        let args = binary
+            .builder
+            .build_call(
+                binary.module.get_function("__malloc").unwrap(),
+                &[args_length.into()],
+                "",
+            )
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_pointer_value();
+
+        binary
+            .builder
+            .build_store(binary.calldata_data.as_pointer_value(), args);
+
+        binary.builder.build_call(
+            binary.module.get_function("copy_code_value").unwrap(),
+            &[args.into(), code_size.into(), args_length.into()],
+            "",
+        );
+
+        let args = binary.builder.build_pointer_cast(
+            args,
+            binary.context.i32_type().ptr_type(AddressSpace::Generic),
+            "",
+        );
+
+        binary.code_size = RefCell::new(Some(code_size));
+
+        (args, args_length)
+    }
+
     fn declare_externals(&self, binary: &mut Binary) {
         let u8_ptr_ty = binary.context.i8_type().ptr_type(AddressSpace::Generic);
         let u32_ty = binary.context.i32_type();
@@ -201,6 +351,12 @@ impl LachainTarget {
         );
 
         binary.module.add_function(
+            "get_code_size",
+            u32_ty.fn_type(&[], false),
+            Some(Linkage::External),
+        );
+
+        binary.module.add_function(
             "get_return_size",
             u32_ty.fn_type(&[], false),
             Some(Linkage::External),
@@ -213,6 +369,19 @@ impl LachainTarget {
                     u32_ty.into(),    // from
                     u32_ty.into(),    // to
                     u8_ptr_ty.into(), // offset
+                ],
+                false,
+            ),
+            Some(Linkage::External),
+        );
+
+        binary.module.add_function(
+            "copy_code_value",
+            void_ty.fn_type(
+                &[
+                    u8_ptr_ty.into(), // resultOffset
+                    u32_ty.into(),    // dataOffset
+                    u32_ty.into(),    // length
                 ],
                 false,
             ),
@@ -575,6 +744,81 @@ impl LachainTarget {
                 Some(Linkage::External),
             )
             .add_attribute(AttributeLoc::Function, noreturn);
+    }
+
+    fn deployer_dispatch(
+        &mut self,
+        binary: &mut Binary,
+        contract: &ast::Contract,
+        runtime: &[u8],
+        ns: &ast::Namespace,
+    ) {
+        let initializer = self.emit_initializer(binary, contract, ns);
+
+        // create start function
+        let ret = binary.context.void_type();
+        let ftype = ret.fn_type(&[], false);
+        let function = binary.module.add_function("start", ftype, None);
+
+        // FIXME: If there is no constructor, do not copy the calldata (but check calldatasize == 0)
+        let (argsdata, length) = self.deployer_prelude(binary, function, ns);
+
+        // init our storage vars
+        binary.builder.build_call(initializer, &[], "");
+
+        // lachain only allows one constructor, hence find()
+        if let Some((cfg_no, cfg)) = contract
+            .cfg
+            .iter()
+            .enumerate()
+            .rev()
+            .find(|(_, cfg)| cfg.ty == pt::FunctionTy::Constructor)
+        {
+            let mut args = Vec::new();
+
+            // insert abi decode
+            self.abi.decode(
+                binary,
+                function,
+                &mut args,
+                argsdata,
+                length,
+                &cfg.params,
+                ns,
+            );
+
+            let args: Vec<BasicMetadataValueEnum> = args.iter().map(|arg| (*arg).into()).collect();
+
+            binary
+                .builder
+                .build_call(binary.functions[&cfg_no], &args, "");
+        }
+
+        // the deploy code should return the runtime wasm code
+        let runtime_code = binary.emit_global_string("runtime_code", runtime, true);
+
+        binary.builder.build_call(
+            binary.module.get_function("set_return").unwrap(),
+            &[
+                runtime_code.into(),
+                binary
+                    .context
+                    .i32_type()
+                    .const_int(runtime.len() as u64, false)
+                    .into(),
+            ],
+            "",
+        );
+
+        binary.builder.build_call(
+            binary.module.get_function("system_halt").unwrap(),
+            &[binary.context.i32_type().const_zero().into()],
+            "",
+        );
+
+        // since system_halt is marked noreturn, this should be optimized away
+        // however it is needed to create valid LLVM IR
+        binary.builder.build_unreachable();
     }
 
     fn function_dispatch(

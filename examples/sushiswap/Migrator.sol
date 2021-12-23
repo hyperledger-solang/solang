@@ -39,7 +39,7 @@ contract Migrator {
         if (lp == 0) return pair;
         desiredLiquidity = lp;
         orig.transferFrom(msg.sender, address(orig), lp);
-        orig.burn(address(pair));
+        (,) = orig.burn(address(pair));
         pair.mint(msg.sender);
         desiredLiquidity = uint256(-1);
         return pair;

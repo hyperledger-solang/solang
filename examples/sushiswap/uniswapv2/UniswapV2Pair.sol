@@ -129,11 +129,11 @@ contract UniswapV2Pair is UniswapV2ERC20 {
                 require(liquidity > 0 && liquidity != uint256(-1), "Bad desired liquidity");
             } else {
                 require(migrator == address(0), "Must not have migrator");
-                liquidity = Math.sqrt(amount0.mul(amount1)).sub(MINIMUM_LIQUIDITY);
+                liquidity = Math.sqrt(amount0 * amount1) - MINIMUM_LIQUIDITY;
                 _mint(address(0), MINIMUM_LIQUIDITY); // permanently lock the first MINIMUM_LIQUIDITY tokens
             }
         } else {
-            liquidity = Math.min(amount0.mul(_totalSupply) / _reserve0, amount1.mul(_totalSupply) / _reserve1);
+            liquidity = Math.min(amount0 * _totalSupply / _reserve0, amount1 * _totalSupply / _reserve1);
         }
         require(liquidity > 0, 'UniswapV2: INSUFFICIENT_LIQUIDITY_MINTED');
         _mint(to, liquidity);

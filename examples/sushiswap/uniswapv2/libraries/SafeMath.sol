@@ -6,14 +6,24 @@ pragma solidity =0.6.12;
 
 library SafeMathUniswap {
     function add(uint x, uint y) internal pure returns (uint z) {
-        require((z = x + y) >= x, 'ds-math-add-overflow');
+        z = x + y;
+
+        require(z >= x, 'ds-math-add-overflow');
     }
 
     function sub(uint x, uint y) internal pure returns (uint z) {
-        require((z = x - y) <= x, 'ds-math-sub-underflow');
+        z = x - y;
+
+        require(z <= x, 'ds-math-sub-underflow');
     }
 
     function mul(uint x, uint y) internal pure returns (uint z) {
-        require(y == 0 || (z = x * y) / y == x, 'ds-math-mul-overflow');
+        if (y == 0) {
+            return 0;
+        }
+
+        z = x * y;
+
+        require(z / y == x, 'ds-math-mul-overflow');
     }
 }

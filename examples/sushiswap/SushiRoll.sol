@@ -2,8 +2,8 @@
 
 pragma solidity 0.6.12;
 
-import "../openzeppelin/token/ERC20/IERC20.sol";
-import "../openzeppelin/token/ERC20/utils/SafeERC20.sol";
+import "./openzeppelin/token/ERC20/IERC20.sol";
+import "./openzeppelin/token/ERC20/utils/SafeERC20.sol";
 import "./uniswapv2/interfaces/IUniswapV2Pair.sol";
 import "./uniswapv2/interfaces/IUniswapV2Router01.sol";
 import "./uniswapv2/interfaces/IUniswapV2Factory.sol";
@@ -16,7 +16,7 @@ contract SushiRoll {
     IUniswapV2Router01 public oldRouter;
     IUniswapV2Router01 public router;
 
-    function initSushiRoll(IUniswapV2Router01 _oldRouter, IUniswapV2Router01 _router) public {
+    constructor(IUniswapV2Router01 _oldRouter, IUniswapV2Router01 _router) public {
         oldRouter = _oldRouter;
         router = _router;
     }

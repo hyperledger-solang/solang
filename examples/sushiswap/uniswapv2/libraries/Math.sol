@@ -6,7 +6,11 @@ pragma solidity =0.6.12;
 
 library Math {
     function min(uint x, uint y) internal pure returns (uint z) {
-        z = x < y ? x : y;
+        if (x < y) {
+            z = x;
+        } else {
+            z = y;
+        }
     }
 
     // babylonian method (https://en.wikipedia.org/wiki/Methods_of_computing_square_roots#Babylonian_method)

@@ -144,9 +144,9 @@ contract SushiMakerKashi is Ownable {
         (address token0, address token1) = fromToken < toToken ? (fromToken, toToken) : (toToken, fromToken);
         IUniswapV2Pair pair =
             IUniswapV2Pair(
-                uint256(
+                address(uint256(
                     keccak256(abi.encodePacked(hex"ff", factory, keccak256(abi.encodePacked(token0, token1)), pairCodeHash))
-                )
+                ))
             );
         
         (uint256 reserve0, uint256 reserve1, ) = pair.getReserves();

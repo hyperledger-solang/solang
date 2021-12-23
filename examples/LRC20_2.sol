@@ -84,12 +84,12 @@ interface IERC20Metadata is IERC20 {
     /**
      * @dev Returns the name of the token.
      */
-    function name() external view returns (bytes32);
+    function name() external view returns (string memory);
 
     /**
      * @dev Returns the symbol of the token.
      */
-    function symbol() external view returns (bytes32);
+    function symbol() external view returns (string memory);
 
     /**
      * @dev Returns the decimals places of the token.
@@ -110,11 +110,6 @@ interface IERC20Metadata is IERC20 {
 abstract contract Context {
     function _msgSender() internal view virtual returns (address) {
         return msg.sender;
-    }
-
-    function _msgData() internal view virtual returns (bytes memory) {
-        this; // silence state mutability warning without generating bytecode - see https://github.com/ethereum/solidity/issues/2691
-        return msg.data;
     }
 }
 
@@ -152,7 +147,7 @@ contract LRC20_2 is Context, IERC20, IERC20Metadata {
     /**
      * @dev Returns the name of the token.
      */
-    function name() public view virtual override returns (bytes32) {
+    function name() public view virtual override returns (string memory) {
         return "LAtoken2";
     }
 
@@ -160,7 +155,7 @@ contract LRC20_2 is Context, IERC20, IERC20Metadata {
      * @dev Returns the symbol of the token, usually a shorter version of the
      * name.
      */
-    function symbol() public view virtual override returns (bytes32) {
+    function symbol() public view virtual override returns (string memory) {
         return "LA2";
     }
 
