@@ -273,10 +273,10 @@ library EnumerableSet {
      */
     function values(AddressSet storage set) internal view returns (address[] memory) {
         bytes32[] memory store = _values(set._inner);
-        address[] memory result;
+        address[] memory result = new address[](store.length);
 
-        assembly {
-            result := store
+        for(uint256 i = 0; i < store.length; i += 1) {
+            result[i] = address(bytes20(store[i]));
         }
 
         return result;
@@ -346,10 +346,10 @@ library EnumerableSet {
      */
     function values(UintSet storage set) internal view returns (uint256[] memory) {
         bytes32[] memory store = _values(set._inner);
-        uint256[] memory result;
+        uint256[] memory result = new uint256[](store.length);
 
-        assembly {
-            result := store
+        for(uint256 i = 0; i < store.length; i += 1) {
+            result[i] = uint256(store[i]);
         }
 
         return result;

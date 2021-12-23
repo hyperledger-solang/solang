@@ -2,11 +2,11 @@
 
 pragma solidity 0.6.12;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
-import "@openzeppelin/contracts/utils/EnumerableSet.sol";
-import "@openzeppelin/contracts/math/SafeMath.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "./openzeppelin/token/ERC20/IERC20.sol";
+import "./openzeppelin/token/ERC20/utils/SafeERC20.sol";
+import "./openzeppelin/utils/structs/EnumerableSet.sol";
+import "./openzeppelin/utils/math/SafeMath.sol";
+import "./openzeppelin/access/Ownable.sol";
 import "./SushiToken.sol";
 
 interface IMigratorChef {
@@ -281,11 +281,11 @@ contract MasterChef is Ownable {
 
     // Safe sushi transfer function, just in case if rounding error causes pool to not have enough SUSHIs.
     function safeSushiTransfer(address _to, uint256 _amount) internal {
-        uint256 sushiBal = sushi.balanceOf(address(this));
+        uint256 sushiBal = IERC20(address(sushi)).balanceOf(address(this));
         if (_amount > sushiBal) {
-            sushi.transfer(_to, sushiBal);
+            IERC20(address(sushi)).transfer(_to, sushiBal);
         } else {
-            sushi.transfer(_to, _amount);
+            IERC20(address(sushi)).transfer(_to, _amount);
         }
     }
 

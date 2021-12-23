@@ -29,10 +29,8 @@ library Address {
         // construction, since the code is only stored at the end of the
         // constructor execution.
 
-        uint256 size;
-        assembly {
-            size := extcodesize(account)
-        }
+        uint256 size = extcodesize(account);
+
         return size > 0;
     }
 
@@ -139,7 +137,7 @@ library Address {
      *
      * _Available since v3.3._
      */
-    function functionStaticCall(address target, bytes memory data) internal view returns (bytes memory) {
+    function functionStaticCall(address target, bytes memory data) internal returns (bytes memory) {
         return functionStaticCall(target, data, "Address: low-level static call failed");
     }
 
@@ -153,7 +151,7 @@ library Address {
         address target,
         bytes memory data,
         string memory errorMessage
-    ) internal view returns (bytes memory) {
+    ) internal returns (bytes memory) {
         require(isContract(target), "Address: static call to non-contract");
 
         (bool success, bytes memory returndata) = target.staticcall(data);
@@ -205,10 +203,7 @@ library Address {
             if (returndata.length > 0) {
                 // The easiest way to bubble the revert reason is using memory via assembly
 
-                assembly {
-                    let returndata_size := mload(returndata)
-                    revert(add(32, returndata), returndata_size)
-                }
+                revert(errorMessage);
             } else {
                 revert(errorMessage);
             }
