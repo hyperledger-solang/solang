@@ -169,6 +169,7 @@ contract UniswapV2Router02 is IUniswapV2Router02 {
         (amountToken, amountETH) = removeLiquidityETH(token, liquidity, amountTokenMin, amountETHMin, to, deadline);
     }
 
+    /*
     // **** REMOVE LIQUIDITY (supporting fee-on-transfer tokens) ****
     function removeLiquidityETHSupportingFeeOnTransferTokens(
         address token,
@@ -207,6 +208,7 @@ contract UniswapV2Router02 is IUniswapV2Router02 {
             token, liquidity, amountTokenMin, amountETHMin, to, deadline
         );
     }
+    */
 
     // **** SWAP ****
     // requires the initial amount to have already been sent to the first pair
@@ -328,6 +330,7 @@ contract UniswapV2Router02 is IUniswapV2Router02 {
         if (msg.value > amounts[0]) TransferHelper.safeTransferETH(msg.sender, msg.value - amounts[0]);
     }
 
+    /*
     // **** SWAP (supporting fee-on-transfer tokens) ****
     // requires the initial amount to have already been sent to the first pair
     function _swapSupportingFeeOnTransferTokens(address[] memory path, address _to) internal virtual {
@@ -410,6 +413,7 @@ contract UniswapV2Router02 is IUniswapV2Router02 {
         IWETH(WETH).withdraw(amountOut);
         TransferHelper.safeTransferETH(to, amountOut);
     }
+    */
 
     // **** LIBRARY FUNCTIONS ****
     function quote(uint amountA, uint reserveA, uint reserveB) public pure virtual override returns (uint amountB) {
