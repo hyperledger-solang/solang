@@ -614,9 +614,6 @@ impl ControlFlowGraph {
                     Err(_) => format!("hex\"{}\"", hex::encode(init)),
                 }
             ),
-            Expression::DynamicArrayLength(_, a) => {
-                format!("(darray {} len)", self.expr_to_string(contract, ns, a))
-            }
             Expression::StringCompare(_, l, r) => format!(
                 "(strcmp ({}) ({}))",
                 self.location_to_string(contract, ns, l),

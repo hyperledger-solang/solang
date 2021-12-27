@@ -474,10 +474,6 @@ pub fn expression(
             string_location(left, cfg, contract_no, func, ns, vartab, opt),
             string_location(right, cfg, contract_no, func, ns, vartab, opt),
         ),
-        Expression::DynamicArrayLength(loc, expr) => Expression::DynamicArrayLength(
-            *loc,
-            Box::new(expression(expr, cfg, contract_no, func, ns, vartab, opt)),
-        ),
         Expression::Or(loc, left, right) => {
             expr_or(left, cfg, contract_no, func, ns, vartab, loc, right, opt)
         }
@@ -2087,14 +2083,24 @@ fn array_subscript(
                         array_length
                     }
                 } else {
-                    Expression::DynamicArrayLength(*loc, Box::new(array.clone()))
+                    Expression::Builtin(
+                        *loc,
+                        vec![Type::Uint(32)],
+                        Builtin::ArrayLength,
+                        vec![array.clone()],
+                    )
                 }
             }
             Some(l) => {
                 bigint_to_expression(loc, l, ns, &mut Vec::new(), ResolveTo::Unknown).unwrap()
             }
         },
-        Type::DynamicBytes => Expression::DynamicArrayLength(*loc, Box::new(array.clone())),
+        Type::DynamicBytes => Expression::Builtin(
+            *loc,
+            vec![Type::Uint(32)],
+            Builtin::ArrayLength,
+            vec![array.clone()],
+        ),
         _ => {
             unreachable!();
         }

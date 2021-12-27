@@ -1,7 +1,7 @@
 use crate::codegen::cfg::{ControlFlowGraph, Instr};
 use crate::codegen::reaching_definitions::{apply_transfers, VarDefs};
 use crate::parser::pt::{Loc, StorageLocation};
-use crate::sema::ast::{Diagnostic, ErrorType, Expression, Level, Namespace, Note};
+use crate::sema::ast::{Builtin, Diagnostic, ErrorType, Expression, Level, Namespace, Note};
 use crate::sema::symtable;
 use std::collections::HashMap;
 
@@ -96,7 +96,7 @@ pub fn find_undefined_variables_in_expression(
         }
 
         // This is a method call whose array will never be undefined
-        Expression::DynamicArrayLength(..) => false,
+        Expression::Builtin(_, _, Builtin::ArrayLength, _) => false,
 
         _ => true,
     }
