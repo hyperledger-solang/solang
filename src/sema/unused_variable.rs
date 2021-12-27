@@ -210,15 +210,6 @@ pub fn check_function_call(ns: &mut Namespace, exp: &Expression, symtable: &mut 
             }
         },
 
-        Expression::DynamicArrayPush(_, array, _, arg) => {
-            assigned_variable(ns, array, symtable);
-            used_variable(ns, arg, symtable);
-        }
-
-        Expression::DynamicArrayPop(_, array, _) => {
-            used_variable(ns, array, symtable);
-        }
-
         Expression::FormatString(_, args) => {
             for (_, expr) in args {
                 used_variable(ns, expr, symtable);

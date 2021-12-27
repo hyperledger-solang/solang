@@ -467,20 +467,6 @@ fn print_expr(e: &Expression, func: Option<&Function>, ns: &Namespace) -> Tree {
                 Tree::Branch(String::from("index"), vec![print_expr(index, func, ns)]),
             ],
         ),
-        Expression::DynamicArrayPush(_, array, ty, value) => Tree::Branch(
-            format!("dynamic array push {}", ty.to_string(ns)),
-            vec![
-                Tree::Branch(String::from("array"), vec![print_expr(array, func, ns)]),
-                Tree::Branch(String::from("value"), vec![print_expr(value, func, ns)]),
-            ],
-        ),
-        Expression::DynamicArrayPop(_, array, ty) => Tree::Branch(
-            format!("dynamic array pop {}", ty.to_string(ns)),
-            vec![Tree::Branch(
-                String::from("array"),
-                vec![print_expr(array, func, ns)],
-            )],
-        ),
         Expression::StorageBytesSubscript(_, array, index) => Tree::Branch(
             String::from("storage bytes subscript"),
             vec![

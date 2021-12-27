@@ -605,7 +605,7 @@ pub fn resolve_call(
 /// to handle the special case "abi.decode(foo, (int32, bool, address))" where the
 /// second argument is a type list. The generic expression resolver cannot deal with
 /// this. It is only used in for this specific call.
-pub fn resolve_method_call(
+pub fn resolve_namespace_call(
     loc: &pt::Loc,
     namespace: &str,
     name: &str,

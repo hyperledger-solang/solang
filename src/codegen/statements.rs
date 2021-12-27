@@ -1464,9 +1464,7 @@ pub fn process_side_effects_expressions(
         | Expression::ExternalFunctionCall { .. }
         | Expression::ExternalFunctionCallRaw { .. }
         | Expression::Constructor { .. }
-        | Expression::Assign(..)
-        | Expression::DynamicArrayPop(..)
-        | Expression::DynamicArrayPush(..) => {
+        | Expression::Assign(..) => {
             let _ = expression(
                 exp,
                 ctx.cfg,

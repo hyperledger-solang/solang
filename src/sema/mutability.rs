@@ -253,9 +253,14 @@ fn read_expression(expr: &Expression, state: &mut StateCheck) -> bool {
         | Expression::Builtin(loc, _, Builtin::Random, _) => state.read(loc),
         Expression::Builtin(loc, _, Builtin::PayableSend, _)
         | Expression::Builtin(loc, _, Builtin::PayableTransfer, _)
-        | Expression::Builtin(loc, _, Builtin::ArrayPush, _)
-        | Expression::Builtin(loc, _, Builtin::ArrayPop, _)
         | Expression::Builtin(loc, _, Builtin::SelfDestruct, _) => state.write(loc),
+        Expression::Builtin(loc, _, Builtin::ArrayPush, args)
+        | Expression::Builtin(loc, _, Builtin::ArrayPop, args)
+            if args[0].ty().is_contract_storage() =>
+        {
+            state.write(loc)
+        }
+
         Expression::Constructor { loc, .. } => {
             state.write(loc);
         }

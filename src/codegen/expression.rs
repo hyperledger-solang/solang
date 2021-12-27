@@ -478,45 +478,6 @@ pub fn expression(
             *loc,
             Box::new(expression(expr, cfg, contract_no, func, ns, vartab, opt)),
         ),
-        Expression::DynamicArrayPush(loc, array, ty, value) => memory_array_push(
-            ty,
-            vartab,
-            array,
-            cfg,
-            contract_no,
-            func,
-            ns,
-            value,
-            loc,
-            opt,
-        ),
-        Expression::DynamicArrayPop(loc, array, ty) => {
-            let elem_ty = match ty {
-                Type::Array(..) => match ty.array_elem() {
-                    elem @ Type::Struct(..) => Type::Ref(Box::new(elem)),
-                    elem => elem,
-                },
-                Type::DynamicBytes => Type::Uint(8),
-                _ => unreachable!(),
-            };
-            let address_res = vartab.temp_anonymous(&elem_ty);
-
-            let address_arr = match expression(array, cfg, contract_no, func, ns, vartab, opt) {
-                Expression::Variable(_, _, pos) => pos,
-                _ => unreachable!(),
-            };
-
-            cfg.add(
-                vartab,
-                Instr::PopMemory {
-                    res: address_res,
-                    ty: ty.clone(),
-                    array: address_arr,
-                },
-            );
-
-            Expression::Variable(*loc, elem_ty, address_res)
-        }
         Expression::Or(loc, left, right) => {
             expr_or(left, cfg, contract_no, func, ns, vartab, loc, right, opt)
         }
@@ -574,18 +535,64 @@ pub fn expression(
             Box::new(expression(e, cfg, contract_no, func, ns, vartab, opt)),
         ),
         // for some built-ins, we have to inline special case code
-        Expression::Builtin(loc, _, Builtin::ArrayPush, args) => {
-            if ns.target == Target::Solana || args[0].ty().is_storage_bytes() {
-                array_push(loc, args, cfg, contract_no, func, ns, vartab, opt)
+        Expression::Builtin(loc, ty, Builtin::ArrayPush, args) => {
+            if args[0].ty().is_contract_storage() {
+                if ns.target == Target::Solana || args[0].ty().is_storage_bytes() {
+                    array_push(loc, args, cfg, contract_no, func, ns, vartab, opt)
+                } else {
+                    storage_slots_array_push(loc, args, cfg, contract_no, func, ns, vartab, opt)
+                }
             } else {
-                storage_slots_array_push(loc, args, cfg, contract_no, func, ns, vartab, opt)
+                memory_array_push(
+                    &ty[0],
+                    vartab,
+                    &args[0],
+                    cfg,
+                    contract_no,
+                    func,
+                    ns,
+                    &args[1],
+                    loc,
+                    opt,
+                )
             }
         }
         Expression::Builtin(loc, ty, Builtin::ArrayPop, args) => {
-            if ns.target == Target::Solana || args[0].ty().is_storage_bytes() {
-                array_pop(loc, args, &ty[0], cfg, contract_no, func, ns, vartab, opt)
+            if args[0].ty().is_contract_storage() {
+                if ns.target == Target::Solana || args[0].ty().is_storage_bytes() {
+                    array_pop(loc, args, &ty[0], cfg, contract_no, func, ns, vartab, opt)
+                } else {
+                    storage_slots_array_pop(
+                        loc,
+                        args,
+                        &ty[0],
+                        cfg,
+                        contract_no,
+                        func,
+                        ns,
+                        vartab,
+                        opt,
+                    )
+                }
             } else {
-                storage_slots_array_pop(loc, args, &ty[0], cfg, contract_no, func, ns, vartab, opt)
+                let address_res = vartab.temp_anonymous(&ty[0]);
+
+                let address_arr =
+                    match expression(&args[0], cfg, contract_no, func, ns, vartab, opt) {
+                        Expression::Variable(_, _, pos) => pos,
+                        _ => unreachable!(),
+                    };
+
+                cfg.add(
+                    vartab,
+                    Instr::PopMemory {
+                        res: address_res,
+                        ty: args[0].ty(),
+                        array: address_arr,
+                    },
+                );
+
+                Expression::Variable(*loc, ty[0].clone(), address_res)
             }
         }
         Expression::Builtin(_, _, Builtin::Assert, args) => {
@@ -679,15 +686,7 @@ fn memory_array_push(
     loc: &pt::Loc,
     opt: &Options,
 ) -> Expression {
-    let elem_ty = match ty {
-        Type::Array(..) => match ty.array_elem() {
-            elem @ Type::Struct(..) => Type::Ref(Box::new(elem)),
-            elem => elem,
-        },
-        Type::DynamicBytes => Type::Uint(8),
-        _ => unreachable!(),
-    };
-    let address_res = vartab.temp_anonymous(&elem_ty);
+    let address_res = vartab.temp_anonymous(ty);
     let address_arr = match expression(array, cfg, contract_no, func, ns, vartab, opt) {
         Expression::Variable(_, _, pos) => pos,
         _ => unreachable!(),
@@ -697,12 +696,12 @@ fn memory_array_push(
         vartab,
         Instr::PushMemory {
             res: address_res,
-            ty: ty.clone(),
+            ty: array.ty(),
             array: address_arr,
             value: Box::new(value),
         },
     );
-    Expression::Variable(*loc, elem_ty, address_res)
+    Expression::Variable(*loc, ty.clone(), address_res)
 }
 
 fn post_incdec(
