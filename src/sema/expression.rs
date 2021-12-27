@@ -82,7 +82,6 @@ impl Expression {
             | Expression::Ternary(_, ty, _, _, _)
             | Expression::StructMember(_, ty, _, _)
             | Expression::AllocDynamicArray(_, ty, _, _)
-            | Expression::DynamicArraySubscript(_, ty, _, _)
             | Expression::PreIncrement(_, ty, ..)
             | Expression::PreDecrement(_, ty, ..)
             | Expression::PostIncrement(_, ty, ..)

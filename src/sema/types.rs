@@ -1076,6 +1076,16 @@ impl Type {
         matches!(self, Type::StorageRef(_, _))
     }
 
+    /// Is this a reference to contract storage?
+    pub fn is_dynamic_memory(&self) -> bool {
+        match self {
+            Type::DynamicBytes => true,
+            Type::Array(_, dim) if dim.len() == 1 && dim[0].is_none() => true,
+            Type::Ref(ty) => ty.is_dynamic_memory(),
+            _ => false,
+        }
+    }
+
     /// Is this a storage bytes string
     pub fn is_storage_bytes(&self) -> bool {
         if let Type::StorageRef(_, ty) = self {

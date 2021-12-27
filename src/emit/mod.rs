@@ -2327,6 +2327,44 @@ pub trait TargetRuntime<'a> {
 
                     self.storage_subscript(bin, function, ty, array, index, ns)
                         .into()
+                } else if ty.is_dynamic_memory() {
+                    let array = self.expression(bin, a, vartab, function, ns);
+
+                    let elem_ty = ty.array_deref();
+
+                    let ty = bin.llvm_var(&elem_ty, ns);
+
+                    let mut array_index = self
+                        .expression(bin, i, vartab, function, ns)
+                        .into_int_value();
+
+                    // bounds checking already done; we can down-cast if necessary
+                    if array_index.get_type().get_bit_width() > 32 {
+                        array_index = bin.builder.build_int_truncate(
+                            array_index,
+                            bin.context.i32_type(),
+                            "index",
+                        );
+                    }
+
+                    let index = bin.builder.build_int_mul(
+                        array_index,
+                        ty.into_pointer_type()
+                            .get_element_type()
+                            .size_of()
+                            .unwrap()
+                            .const_cast(bin.context.i32_type(), false),
+                        "",
+                    );
+
+                    let elem = unsafe {
+                        bin.builder
+                            .build_gep(bin.vector_bytes(array), &[index], "index_access")
+                    };
+
+                    bin.builder
+                        .build_pointer_cast(elem, ty.into_pointer_type(), "elem")
+                        .into()
                 } else {
                     let array = self
                         .expression(bin, a, vartab, function, ns)
@@ -2354,43 +2392,6 @@ pub trait TargetRuntime<'a> {
                     .expression(bin, a, vartab, function, ns)
                     .into_int_value();
                 self.get_storage_bytes_subscript(bin, function, slot, index)
-                    .into()
-            }
-            Expression::DynamicArraySubscript(_, elem_ty, a, i) => {
-                let array = self.expression(bin, a, vartab, function, ns);
-
-                let ty = bin.llvm_var(elem_ty, ns);
-
-                let mut array_index = self
-                    .expression(bin, i, vartab, function, ns)
-                    .into_int_value();
-
-                // bounds checking already done; we can down-cast if necessary
-                if array_index.get_type().get_bit_width() > 32 {
-                    array_index = bin.builder.build_int_truncate(
-                        array_index,
-                        bin.context.i32_type(),
-                        "index",
-                    );
-                }
-
-                let index = bin.builder.build_int_mul(
-                    array_index,
-                    ty.into_pointer_type()
-                        .get_element_type()
-                        .size_of()
-                        .unwrap()
-                        .const_cast(bin.context.i32_type(), false),
-                    "",
-                );
-
-                let elem = unsafe {
-                    bin.builder
-                        .build_gep(bin.vector_bytes(array), &[index], "index_access")
-                };
-
-                bin.builder
-                    .build_pointer_cast(elem, ty.into_pointer_type(), "elem")
                     .into()
             }
             Expression::StructMember(_, _, a, i) => {

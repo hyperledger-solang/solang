@@ -2311,9 +2311,9 @@ fn array_subscript(
                 Box::new(array),
                 Box::new(Expression::Variable(index_loc, coerced_ty, pos)),
             ),
-            Type::DynamicBytes | Type::Array(_, _) => Expression::DynamicArraySubscript(
+            Type::DynamicBytes | Type::Array(_, _) => Expression::Subscript(
                 *loc,
-                array_ty.array_deref(),
+                array_ty.clone(),
                 Box::new(array),
                 Box::new(Expression::Variable(index_loc, coerced_ty, pos)),
             ),

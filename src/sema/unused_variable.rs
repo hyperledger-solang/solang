@@ -21,7 +21,6 @@ pub fn assigned_variable(ns: &mut Namespace, exp: &Expression, symtable: &mut Sy
         }
 
         Expression::Subscript(_, _, array, index)
-        | Expression::DynamicArraySubscript(_, _, array, index)
         | Expression::StorageBytesSubscript(_, array, index) => {
             assigned_variable(ns, array, symtable);
             used_variable(ns, index, symtable);
@@ -67,7 +66,6 @@ pub fn used_variable(ns: &mut Namespace, exp: &Expression, symtable: &mut Symtab
         }
 
         Expression::Subscript(_, _, array, index)
-        | Expression::DynamicArraySubscript(_, _, array, index)
         | Expression::StorageBytesSubscript(_, array, index) => {
             used_variable(ns, array, symtable);
             used_variable(ns, index, symtable);
