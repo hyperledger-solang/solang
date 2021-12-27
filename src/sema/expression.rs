@@ -89,13 +89,6 @@ impl Expression {
             | Expression::PostDecrement(_, ty, ..)
             | Expression::Keccak256(_, ty, _)
             | Expression::Assign(_, ty, _, _) => ty.clone(),
-            Expression::DynamicArrayPush(_, _, ty, _) | Expression::DynamicArrayPop(_, _, ty) => {
-                match ty {
-                    Type::Array(..) => ty.array_elem(),
-                    Type::DynamicBytes => Type::Uint(8),
-                    _ => unreachable!(),
-                }
-            }
             Expression::Subscript(_, ty, _, _) if ty.is_contract_storage() => {
                 ty.storage_array_elem()
             }
@@ -5304,7 +5297,7 @@ fn method_call_pos_args(
                 return Err(());
             }
 
-            return builtin::resolve_method_call(
+            return builtin::resolve_namespace_call(
                 loc,
                 &namespace.name,
                 &func.name,
@@ -5677,11 +5670,11 @@ fn method_call_pos_args(
                 }
             };
 
-            return Ok(Expression::DynamicArrayPush(
+            return Ok(Expression::Builtin(
                 *loc,
-                Box::new(var_expr),
-                var_ty.clone(),
-                Box::new(val),
+                vec![elem_ty.clone()],
+                Builtin::ArrayPush,
+                vec![var_expr, val],
             ));
         }
         if func.name == "pop" {
@@ -5701,10 +5694,17 @@ fn method_call_pos_args(
                 return Err(());
             }
 
-            return Ok(Expression::DynamicArrayPop(
+            let elem_ty = match &var_ty {
+                Type::Array(ty, _) => ty,
+                Type::DynamicBytes => &Type::Uint(8),
+                _ => unreachable!(),
+            };
+
+            return Ok(Expression::Builtin(
                 *loc,
-                Box::new(var_expr),
-                var_ty,
+                vec![elem_ty.clone()],
+                Builtin::ArrayPop,
+                vec![var_expr],
             ));
         }
     }

@@ -549,8 +549,6 @@ pub enum Expression {
     AllocDynamicArray(pt::Loc, Type, Box<Expression>, Option<Vec<u8>>),
     DynamicArrayLength(pt::Loc, Box<Expression>),
     DynamicArraySubscript(pt::Loc, Type, Box<Expression>, Box<Expression>),
-    DynamicArrayPush(pt::Loc, Box<Expression>, Type, Box<Expression>),
-    DynamicArrayPop(pt::Loc, Box<Expression>, Type),
     StorageBytesSubscript(pt::Loc, Box<Expression>, Box<Expression>),
     StorageArrayLength {
         loc: pt::Loc,
@@ -846,17 +844,6 @@ impl Expression {
                         Box::new(filter(right, ctx)),
                     )
                 }
-                Expression::DynamicArrayPush(loc, array, ty, value) => {
-                    Expression::DynamicArrayPush(
-                        *loc,
-                        Box::new(filter(array, ctx)),
-                        ty.clone(),
-                        Box::new(filter(value, ctx)),
-                    )
-                }
-                Expression::DynamicArrayPop(loc, array, ty) => {
-                    Expression::DynamicArrayPop(*loc, Box::new(filter(array, ctx)), ty.clone())
-                }
                 Expression::StorageBytesSubscript(loc, storage, index) => {
                     Expression::StorageBytesSubscript(
                         *loc,
@@ -1089,12 +1076,10 @@ impl Expression {
                 Expression::AllocDynamicArray(_, _, expr, _)
                 | Expression::DynamicArrayLength(_, expr) => expr.recurse(cx, f),
                 Expression::DynamicArraySubscript(_, _, left, right)
-                | Expression::StorageBytesSubscript(_, left, right)
-                | Expression::DynamicArrayPush(_, left, _, right) => {
+                | Expression::StorageBytesSubscript(_, left, right) => {
                     left.recurse(cx, f);
                     right.recurse(cx, f);
                 }
-                Expression::DynamicArrayPop(_, expr, _) => expr.recurse(cx, f),
                 Expression::StorageArrayLength { array, .. } => array.recurse(cx, f),
                 Expression::StringCompare(_, left, right)
                 | Expression::StringConcat(_, _, left, right) => {
@@ -1242,8 +1227,6 @@ impl Expression {
             | Expression::AllocDynamicArray(loc, _, _, _)
             | Expression::DynamicArrayLength(loc, _)
             | Expression::DynamicArraySubscript(loc, _, _, _)
-            | Expression::DynamicArrayPush(loc, _, _, _)
-            | Expression::DynamicArrayPop(loc, _, _)
             | Expression::StorageBytesSubscript(loc, _, _)
             | Expression::StorageArrayLength { loc, .. }
             | Expression::StringCompare(loc, _, _)

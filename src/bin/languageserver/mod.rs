@@ -608,13 +608,6 @@ impl SolangServer {
                 SolangServer::construct_expr(expr1, lookup_tbl, symtab, fnc_map, ns);
                 SolangServer::construct_expr(expr2, lookup_tbl, symtab, fnc_map, ns);
             }
-            ast::Expression::DynamicArrayPush(_locs, expr1, _typ, expr2) => {
-                SolangServer::construct_expr(expr1, lookup_tbl, symtab, fnc_map, ns);
-                SolangServer::construct_expr(expr2, lookup_tbl, symtab, fnc_map, ns);
-            }
-            ast::Expression::DynamicArrayPop(_locs, expr1, _typ) => {
-                SolangServer::construct_expr(expr1, lookup_tbl, symtab, fnc_map, ns);
-            }
             ast::Expression::StorageBytesSubscript(_locs, expr1, expr2) => {
                 SolangServer::construct_expr(expr1, lookup_tbl, symtab, fnc_map, ns);
                 SolangServer::construct_expr(expr2, lookup_tbl, symtab, fnc_map, ns);
