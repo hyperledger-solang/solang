@@ -547,7 +547,6 @@ pub enum Expression {
     StructMember(pt::Loc, Type, Box<Expression>, usize),
 
     AllocDynamicArray(pt::Loc, Type, Box<Expression>, Option<Vec<u8>>),
-    DynamicArrayLength(pt::Loc, Box<Expression>),
     StorageBytesSubscript(pt::Loc, Box<Expression>, Box<Expression>),
     StorageArrayLength {
         loc: pt::Loc,
@@ -832,9 +831,6 @@ impl Expression {
                         initializer.clone(),
                     )
                 }
-                Expression::DynamicArrayLength(loc, expr) => {
-                    Expression::DynamicArrayLength(*loc, Box::new(filter(expr, ctx)))
-                }
                 Expression::StorageBytesSubscript(loc, storage, index) => {
                     Expression::StorageBytesSubscript(
                         *loc,
@@ -1064,8 +1060,7 @@ impl Expression {
                 }
                 Expression::StructMember(_, _, expr, _) => expr.recurse(cx, f),
 
-                Expression::AllocDynamicArray(_, _, expr, _)
-                | Expression::DynamicArrayLength(_, expr) => expr.recurse(cx, f),
+                Expression::AllocDynamicArray(_, _, expr, _) => expr.recurse(cx, f),
                 Expression::StorageBytesSubscript(_, left, right) => {
                     left.recurse(cx, f);
                     right.recurse(cx, f);
@@ -1215,7 +1210,6 @@ impl Expression {
             | Expression::StructMember(loc, _, _, _)
             | Expression::Or(loc, _, _)
             | Expression::AllocDynamicArray(loc, _, _, _)
-            | Expression::DynamicArrayLength(loc, _)
             | Expression::StorageBytesSubscript(loc, _, _)
             | Expression::StorageArrayLength { loc, .. }
             | Expression::StringCompare(loc, _, _)
@@ -1279,6 +1273,7 @@ pub enum Builtin {
     PayableTransfer,
     ArrayPush,
     ArrayPop,
+    ArrayLength,
     Assert,
     Print,
     Revert,

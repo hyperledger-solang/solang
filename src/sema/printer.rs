@@ -456,10 +456,6 @@ fn print_expr(e: &Expression, func: Option<&Function>, ns: &Namespace) -> Tree {
                 Tree::Leaf(format!("init {}", hex::encode(init))),
             ],
         ),
-        Expression::DynamicArrayLength(_, array) => Tree::Branch(
-            String::from("dynamic array length"),
-            vec![print_expr(array, func, ns)],
-        ),
         Expression::StorageBytesSubscript(_, array, index) => Tree::Branch(
             String::from("storage bytes subscript"),
             vec![

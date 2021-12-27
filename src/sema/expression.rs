@@ -92,7 +92,6 @@ impl Expression {
                 ty.storage_array_elem()
             }
             Expression::Subscript(_, ty, _, _) => ty.array_deref(),
-            Expression::DynamicArrayLength(_, _) => Type::Uint(32),
             Expression::StorageArrayLength { ty, .. } => ty.clone(),
             Expression::StorageBytesSubscript(_, _, _) => {
                 Type::StorageRef(false, Box::new(Type::Bytes(1)))
@@ -4214,7 +4213,12 @@ fn member_access(
         Type::Array(_, dim) => {
             if id.name == "length" {
                 return match dim.last().unwrap() {
-                    None => Ok(Expression::DynamicArrayLength(*loc, Box::new(expr))),
+                    None => Ok(Expression::Builtin(
+                        *loc,
+                        vec![Type::Uint(32)],
+                        Builtin::ArrayLength,
+                        vec![expr],
+                    )),
                     Some(d) => {
                         //We should not eliminate an array from the code when 'length' is called
                         //So the variable is also assigned a value to be read from 'length'
@@ -4233,7 +4237,12 @@ fn member_access(
         }
         Type::String | Type::DynamicBytes => {
             if id.name == "length" {
-                return Ok(Expression::DynamicArrayLength(*loc, Box::new(expr)));
+                return Ok(Expression::Builtin(
+                    *loc,
+                    vec![Type::Uint(32)],
+                    Builtin::ArrayLength,
+                    vec![expr],
+                ));
             }
         }
         Type::StorageRef(immutable, r) => match *r {

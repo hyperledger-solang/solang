@@ -71,8 +71,13 @@ pub fn used_variable(ns: &mut Namespace, exp: &Expression, symtable: &mut Symtab
             used_variable(ns, index, symtable);
         }
 
-        Expression::DynamicArrayLength(_, array)
-        | Expression::StorageArrayLength {
+        Expression::Builtin(_, _, Builtin::ArrayLength, args) => {
+            //We should not eliminate an array from the code when 'length' is called
+            //So the variable is also assigned
+            assigned_variable(ns, &args[0], symtable);
+            used_variable(ns, &args[0], symtable);
+        }
+        Expression::StorageArrayLength {
             loc: _,
             ty: _,
             array,

@@ -2549,8 +2549,8 @@ pub trait TargetRuntime<'a> {
                     bin.vector_new(size, elem_size, init.as_ref()).into()
                 }
             }
-            Expression::DynamicArrayLength(_, a) => {
-                let array = self.expression(bin, a, vartab, function, ns);
+            Expression::Builtin(_, _, Builtin::ArrayLength, args) => {
+                let array = self.expression(bin, &args[0], vartab, function, ns);
 
                 bin.vector_len(array).into()
             }

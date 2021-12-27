@@ -372,7 +372,7 @@ contract c1 {
             string k = testing(bytes(c));
             string p = "a" +k;
             // CHECK: ty:string %p = (concat ((alloc string uint32 1 "a")) (%k))
-            // CHECK: branchcond ((darray %p len) == uint32 2), block11, block12
+            // CHECK: branchcond ((builtin ArrayLength (%p)) == uint32 2), block11, block12
             if(p.length == 2) {
                 // CHECK: ty:string %p1 = (concat ((alloc string uint32 1 "a")) (%k))
                 string p1 = "a" + k;
