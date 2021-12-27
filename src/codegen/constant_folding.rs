@@ -944,20 +944,6 @@ fn expression(
                 false,
             )
         }
-        Expression::DynamicArraySubscript(loc, ty, array, index) => {
-            let array = expression(array, vars, pos, cfg, ns);
-            let index = expression(index, vars, pos, cfg, ns);
-
-            (
-                Expression::DynamicArraySubscript(
-                    *loc,
-                    ty.clone(),
-                    Box::new(array.0),
-                    Box::new(index.0),
-                ),
-                false,
-            )
-        }
         Expression::StorageBytesSubscript(loc, array, index) => {
             let array = expression(array, vars, pos, cfg, ns);
             let index = expression(index, vars, pos, cfg, ns);

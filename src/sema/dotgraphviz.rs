@@ -937,22 +937,7 @@ impl Dot {
 
                 self.add_expression(expr, func, ns, node, String::from("expr"));
             }
-            Expression::DynamicArraySubscript(loc, ty, array, index) => {
-                let node = self.add_node(
-                    Node::new(
-                        "subscript",
-                        vec![
-                            format!("array subscript {}", ty.to_string(ns)),
-                            ns.files[loc.0].loc_to_string(loc),
-                        ],
-                    ),
-                    Some(parent),
-                    Some(parent_rel),
-                );
 
-                self.add_expression(array, func, ns, node, String::from("array"));
-                self.add_expression(index, func, ns, node, String::from("index"));
-            }
             Expression::StorageBytesSubscript(loc, array, index) => {
                 let node = self.add_node(
                     Node::new(
