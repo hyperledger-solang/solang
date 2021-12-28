@@ -271,8 +271,8 @@ impl SolangServer {
             }
             ast::Statement::Continue(_locs) => {}
             ast::Statement::Break(_) => {}
-            ast::Statement::Return(_locs, None) => {}
-            ast::Statement::Return(_locs, Some(expr)) => {
+            ast::Statement::Return(_, None) => {}
+            ast::Statement::Return(_, Some(expr)) => {
                 SolangServer::construct_expr(expr, lookup_tbl, symtab, fnc_map, ns);
             }
             ast::Statement::Emit {

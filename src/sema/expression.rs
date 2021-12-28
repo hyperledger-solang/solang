@@ -5415,6 +5415,13 @@ fn method_call_pos_args(
     }
 
     let var_expr = expression(var, context, ns, symtable, diagnostics, ResolveTo::Unknown)?;
+
+    if let Some(expr) =
+        builtin::resolve_method_call(&var_expr, func, args, context, ns, symtable, diagnostics)?
+    {
+        return Ok(expr);
+    }
+
     let var_ty = var_expr.ty();
 
     if matches!(var_ty, Type::Bytes(_) | Type::String) && func.name == "format" {

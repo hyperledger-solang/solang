@@ -2554,6 +2554,41 @@ pub trait TargetRuntime<'a> {
 
                 bin.vector_len(array).into()
             }
+            Expression::Builtin(
+                _,
+                returns,
+                Builtin::ReadInt8
+                | Builtin::ReadInt16LE
+                | Builtin::ReadInt32LE
+                | Builtin::ReadInt64LE
+                | Builtin::ReadInt128LE
+                | Builtin::ReadInt256LE
+                | Builtin::ReadAddress
+                | Builtin::ReadUint16LE
+                | Builtin::ReadUint32LE
+                | Builtin::ReadUint64LE
+                | Builtin::ReadUint128LE
+                | Builtin::ReadUint256LE,
+                args,
+            ) => {
+                let v = self.expression(bin, &args[0], vartab, function, ns);
+                let offset = self
+                    .expression(bin, &args[1], vartab, function, ns)
+                    .into_int_value();
+
+                let data = bin.vector_bytes(v);
+
+                let start = unsafe { bin.builder.build_gep(data, &[offset], "start") };
+
+                let start = bin.builder.build_pointer_cast(
+                    start,
+                    bin.llvm_type(&returns[0], ns)
+                        .ptr_type(AddressSpace::Generic),
+                    "start",
+                );
+
+                bin.builder.build_load(start, "value")
+            }
             Expression::Keccak256(_, _, exprs) => {
                 let mut length = bin.context.i32_type().const_zero();
                 let mut values: Vec<(BasicValueEnum, IntValue, ast::Type)> = Vec::new();
@@ -4314,6 +4349,25 @@ pub trait TargetRuntime<'a> {
                             bin, contract, function, *event_no, &data, data_tys, &topics,
                             topic_tys, ns,
                         );
+                    }
+                    Instr::WriteBuffer { buf, offset, value } => {
+                        let v = self.expression(bin, buf, &w.vars, function, ns);
+                        let data = bin.vector_bytes(v);
+
+                        let offset = self
+                            .expression(bin, offset, &w.vars, function, ns)
+                            .into_int_value();
+                        let value = self.expression(bin, value, &w.vars, function, ns);
+
+                        let start = unsafe { bin.builder.build_gep(data, &[offset], "start") };
+
+                        let start = bin.builder.build_pointer_cast(
+                            start,
+                            value.get_type().ptr_type(AddressSpace::Generic),
+                            "start",
+                        );
+
+                        bin.builder.build_store(start, value);
                     }
                 }
             }

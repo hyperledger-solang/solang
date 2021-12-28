@@ -145,6 +145,12 @@ pub enum Instr {
         topics: Vec<Expression>,
         topic_tys: Vec<Type>,
     },
+    /// Write Buffer
+    WriteBuffer {
+        buf: Expression,
+        offset: Expression,
+        value: Expression,
+    },
     /// Do nothing
     Nop,
 }
@@ -253,6 +259,11 @@ impl Instr {
                 for expr in topics {
                     expr.recurse(cx, f);
                 }
+            }
+
+            Instr::WriteBuffer { offset, value, .. } => {
+                value.recurse(cx, f);
+                offset.recurse(cx, f);
             }
 
             Instr::AssertFailure { expr: None }
@@ -1050,6 +1061,12 @@ impl ControlFlowGraph {
             Instr::SelfDestruct { recipient } => format!(
                 "selfdestruct {}",
                 self.expr_to_string(contract, ns, recipient)
+            ),
+            Instr::WriteBuffer { buf, offset, value } => format!(
+                "writebuffer buffer:{} offset:{} value:{}",
+                self.expr_to_string(contract, ns, buf),
+                self.expr_to_string(contract, ns, offset),
+                self.expr_to_string(contract, ns, value)
             ),
             Instr::EmitEvent {
                 data,

@@ -1486,7 +1486,19 @@ pub fn process_side_effects_expressions(
             | Builtin::PayableTransfer
             | Builtin::Revert
             | Builtin::Require
-            | Builtin::SelfDestruct => {
+            | Builtin::SelfDestruct
+            | Builtin::WriteInt8
+            | Builtin::WriteInt16LE
+            | Builtin::WriteInt32LE
+            | Builtin::WriteInt64LE
+            | Builtin::WriteInt128LE
+            | Builtin::WriteInt256LE
+            | Builtin::WriteUint16LE
+            | Builtin::WriteUint32LE
+            | Builtin::WriteUint64LE
+            | Builtin::WriteUint128LE
+            | Builtin::WriteUint256LE
+            | Builtin::WriteAddress => {
                 let _ = expression(exp, ctx.cfg, ctx.contract_no, ctx.func, ctx.ns, ctx.vartab, ctx.opt);
                 false
             }

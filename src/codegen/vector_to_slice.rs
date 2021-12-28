@@ -78,6 +78,15 @@ fn find_writable_vectors(
 
                 apply_transfers(&block.transfers[instr_no], vars, writable);
             }
+            Instr::WriteBuffer { buf, .. } => {
+                if let Expression::Variable(_, _, var_no) = buf {
+                    if let Some(entry) = vars.get_mut(var_no) {
+                        writable.extend(entry.keys());
+                    }
+                }
+
+                apply_transfers(&block.transfers[instr_no], vars, writable);
+            }
             // These instructions are fine with vectors
             Instr::Set { .. }
             | Instr::Nop
