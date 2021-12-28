@@ -1352,12 +1352,131 @@ fn expr_builtin(
     builtin: &Builtin,
     opt: &Options,
 ) -> Expression {
-    let args = args
-        .iter()
-        .map(|v| expression(v, cfg, contract_no, func, ns, vartab, opt))
-        .collect();
+    match builtin {
+        Builtin::WriteInt8
+        | Builtin::WriteInt16LE
+        | Builtin::WriteInt32LE
+        | Builtin::WriteInt64LE
+        | Builtin::WriteInt128LE
+        | Builtin::WriteInt256LE
+        | Builtin::WriteAddress
+        | Builtin::WriteUint16LE
+        | Builtin::WriteUint32LE
+        | Builtin::WriteUint64LE
+        | Builtin::WriteUint128LE
+        | Builtin::WriteUint256LE => {
+            let buf = expression(&args[0], cfg, contract_no, func, ns, vartab, opt);
+            let offset = expression(&args[2], cfg, contract_no, func, ns, vartab, opt);
 
-    Expression::Builtin(*loc, tys.to_vec(), *builtin, args)
+            // range check
+            let cond = Expression::LessEqual(
+                *loc,
+                Box::new(Expression::Add(
+                    *loc,
+                    Type::Uint(32),
+                    false,
+                    Box::new(offset.clone()),
+                    Box::new(Expression::NumberLiteral(
+                        *loc,
+                        Type::Uint(32),
+                        BigInt::from(args[1].ty().bits(ns) / 8),
+                    )),
+                )),
+                Box::new(Expression::Builtin(
+                    *loc,
+                    vec![Type::Uint(32)],
+                    Builtin::ArrayLength,
+                    vec![buf.clone()],
+                )),
+            );
+
+            let out_of_bounds = cfg.new_basic_block("out_of_bounds".to_string());
+            let in_bounds = cfg.new_basic_block("in_bounds".to_string());
+
+            cfg.add(
+                vartab,
+                Instr::BranchCond {
+                    cond,
+                    true_block: in_bounds,
+                    false_block: out_of_bounds,
+                },
+            );
+
+            cfg.set_basic_block(out_of_bounds);
+            cfg.add(vartab, Instr::AssertFailure { expr: None });
+
+            cfg.set_basic_block(in_bounds);
+
+            let value = expression(&args[1], cfg, contract_no, func, ns, vartab, opt);
+            cfg.add(vartab, Instr::WriteBuffer { buf, value, offset });
+
+            Expression::Undefined(tys[0].clone())
+        }
+        Builtin::ReadInt8
+        | Builtin::ReadInt16LE
+        | Builtin::ReadInt32LE
+        | Builtin::ReadInt64LE
+        | Builtin::ReadInt128LE
+        | Builtin::ReadInt256LE
+        | Builtin::ReadAddress
+        | Builtin::ReadUint16LE
+        | Builtin::ReadUint32LE
+        | Builtin::ReadUint64LE
+        | Builtin::ReadUint128LE
+        | Builtin::ReadUint256LE => {
+            let buf = expression(&args[0], cfg, contract_no, func, ns, vartab, opt);
+            let offset = expression(&args[1], cfg, contract_no, func, ns, vartab, opt);
+
+            // range check
+            let cond = Expression::LessEqual(
+                *loc,
+                Box::new(Expression::Add(
+                    *loc,
+                    Type::Uint(32),
+                    false,
+                    Box::new(offset.clone()),
+                    Box::new(Expression::NumberLiteral(
+                        *loc,
+                        Type::Uint(32),
+                        BigInt::from(tys[0].bits(ns) / 8),
+                    )),
+                )),
+                Box::new(Expression::Builtin(
+                    *loc,
+                    vec![Type::Uint(32)],
+                    Builtin::ArrayLength,
+                    vec![buf.clone()],
+                )),
+            );
+
+            let out_of_bounds = cfg.new_basic_block("out_of_bounds".to_string());
+            let in_bounds = cfg.new_basic_block("in_bounds".to_string());
+
+            cfg.add(
+                vartab,
+                Instr::BranchCond {
+                    cond,
+                    true_block: in_bounds,
+                    false_block: out_of_bounds,
+                },
+            );
+
+            cfg.set_basic_block(out_of_bounds);
+            cfg.add(vartab, Instr::AssertFailure { expr: None });
+
+            cfg.set_basic_block(in_bounds);
+
+            Expression::Builtin(*loc, tys.to_vec(), *builtin, vec![buf, offset])
+        }
+        _ => {
+            let args = args
+                .iter()
+                .map(|v| expression(v, cfg, contract_no, func, ns, vartab, opt))
+                .collect();
+
+            Expression::Builtin(*loc, tys.to_vec(), *builtin, args)
+        }
+    }
 }
 
 fn format_string(

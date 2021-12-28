@@ -127,6 +127,14 @@ impl AvailableExpressionSet {
                 }
             }
 
+            Instr::WriteBuffer {
+                buf, offset, value, ..
+            } => {
+                let _ = self.gen_expression(buf, ave, cst);
+                let _ = self.gen_expression(offset, ave, cst);
+                let _ = self.gen_expression(value, ave, cst);
+            }
+
             Instr::AssertFailure { expr: None }
             | Instr::Unreachable
             | Instr::Nop

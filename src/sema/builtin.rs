@@ -10,6 +10,7 @@ use num_traits::One;
 pub struct Prototype {
     pub builtin: Builtin,
     pub namespace: Option<&'static str>,
+    pub method: Option<Type>,
     pub name: &'static str,
     pub args: &'static [Type],
     pub ret: &'static [Type],
@@ -24,6 +25,7 @@ static BUILTIN_FUNCTIONS: [Prototype; 24] = [
     Prototype {
         builtin: Builtin::Assert,
         namespace: None,
+        method: None,
         name: "assert",
         args: &[Type::Bool],
         ret: &[Type::Void],
@@ -34,6 +36,7 @@ static BUILTIN_FUNCTIONS: [Prototype; 24] = [
     Prototype {
         builtin: Builtin::Print,
         namespace: None,
+        method: None,
         name: "print",
         args: &[Type::String],
         ret: &[Type::Void],
@@ -44,6 +47,7 @@ static BUILTIN_FUNCTIONS: [Prototype; 24] = [
     Prototype {
         builtin: Builtin::Require,
         namespace: None,
+        method: None,
         name: "require",
         args: &[Type::Bool],
         ret: &[Type::Void],
@@ -54,6 +58,7 @@ static BUILTIN_FUNCTIONS: [Prototype; 24] = [
     Prototype {
         builtin: Builtin::Require,
         namespace: None,
+        method: None,
         name: "require",
         args: &[Type::Bool, Type::String],
         ret: &[Type::Void],
@@ -64,6 +69,7 @@ static BUILTIN_FUNCTIONS: [Prototype; 24] = [
     Prototype {
         builtin: Builtin::Revert,
         namespace: None,
+        method: None,
         name: "revert",
         args: &[],
         ret: &[Type::Unreachable],
@@ -74,6 +80,7 @@ static BUILTIN_FUNCTIONS: [Prototype; 24] = [
     Prototype {
         builtin: Builtin::Revert,
         namespace: None,
+        method: None,
         name: "revert",
         args: &[Type::String],
         ret: &[Type::Unreachable],
@@ -84,6 +91,7 @@ static BUILTIN_FUNCTIONS: [Prototype; 24] = [
     Prototype {
         builtin: Builtin::SelfDestruct,
         namespace: None,
+        method: None,
         name: "selfdestruct",
         args: &[Type::Address(true)],
         ret: &[Type::Unreachable],
@@ -94,6 +102,7 @@ static BUILTIN_FUNCTIONS: [Prototype; 24] = [
     Prototype {
         builtin: Builtin::Keccak256,
         namespace: None,
+        method: None,
         name: "keccak256",
         args: &[Type::DynamicBytes],
         ret: &[Type::Bytes(32)],
@@ -104,6 +113,7 @@ static BUILTIN_FUNCTIONS: [Prototype; 24] = [
     Prototype {
         builtin: Builtin::Ripemd160,
         namespace: None,
+        method: None,
         name: "ripemd160",
         args: &[Type::DynamicBytes],
         ret: &[Type::Bytes(20)],
@@ -114,6 +124,7 @@ static BUILTIN_FUNCTIONS: [Prototype; 24] = [
     Prototype {
         builtin: Builtin::Sha256,
         namespace: None,
+        method: None,
         name: "sha256",
         args: &[Type::DynamicBytes],
         ret: &[Type::Bytes(32)],
@@ -124,6 +135,7 @@ static BUILTIN_FUNCTIONS: [Prototype; 24] = [
     Prototype {
         builtin: Builtin::Blake2_128,
         namespace: None,
+        method: None,
         name: "blake2_128",
         args: &[Type::DynamicBytes],
         ret: &[Type::Bytes(16)],
@@ -134,6 +146,7 @@ static BUILTIN_FUNCTIONS: [Prototype; 24] = [
     Prototype {
         builtin: Builtin::Blake2_256,
         namespace: None,
+        method: None,
         name: "blake2_256",
         args: &[Type::DynamicBytes],
         ret: &[Type::Bytes(32)],
@@ -144,6 +157,7 @@ static BUILTIN_FUNCTIONS: [Prototype; 24] = [
     Prototype {
         builtin: Builtin::Gasleft,
         namespace: None,
+        method: None,
         name: "gasleft",
         args: &[],
         ret: &[Type::Uint(64)],
@@ -154,6 +168,7 @@ static BUILTIN_FUNCTIONS: [Prototype; 24] = [
     Prototype {
         builtin: Builtin::BlockHash,
         namespace: None,
+        method: None,
         name: "blockhash",
         args: &[Type::Uint(64)],
         ret: &[Type::Bytes(32)],
@@ -164,6 +179,7 @@ static BUILTIN_FUNCTIONS: [Prototype; 24] = [
     Prototype {
         builtin: Builtin::Random,
         namespace: None,
+        method: None,
         name: "random",
         args: &[Type::DynamicBytes],
         ret: &[Type::Bytes(32)],
@@ -174,6 +190,7 @@ static BUILTIN_FUNCTIONS: [Prototype; 24] = [
     Prototype {
         builtin: Builtin::AbiDecode,
         namespace: Some("abi"),
+        method: None,
         name: "decode",
         args: &[Type::DynamicBytes],
         ret: &[],
@@ -184,6 +201,7 @@ static BUILTIN_FUNCTIONS: [Prototype; 24] = [
     Prototype {
         builtin: Builtin::AbiEncode,
         namespace: Some("abi"),
+        method: None,
         name: "encode",
         args: &[],
         ret: &[],
@@ -195,6 +213,7 @@ static BUILTIN_FUNCTIONS: [Prototype; 24] = [
     Prototype {
         builtin: Builtin::AbiEncodePacked,
         namespace: Some("abi"),
+        method: None,
         name: "encodePacked",
         args: &[],
         ret: &[],
@@ -206,6 +225,7 @@ static BUILTIN_FUNCTIONS: [Prototype; 24] = [
     Prototype {
         builtin: Builtin::AbiEncodeWithSelector,
         namespace: Some("abi"),
+        method: None,
         name: "encodeWithSelector",
         args: &[Type::Bytes(4)],
         ret: &[],
@@ -217,6 +237,7 @@ static BUILTIN_FUNCTIONS: [Prototype; 24] = [
     Prototype {
         builtin: Builtin::AbiEncodeWithSignature,
         namespace: Some("abi"),
+        method: None,
         name: "encodeWithSignature",
         args: &[Type::String],
         ret: &[],
@@ -228,6 +249,7 @@ static BUILTIN_FUNCTIONS: [Prototype; 24] = [
     Prototype {
         builtin: Builtin::Gasprice,
         namespace: Some("tx"),
+        method: None,
         name: "gasprice",
         args: &[Type::Uint(64)],
         ret: &[Type::Value],
@@ -238,6 +260,7 @@ static BUILTIN_FUNCTIONS: [Prototype; 24] = [
     Prototype {
         builtin: Builtin::MulMod,
         namespace: None,
+        method: None,
         name: "mulmod",
         args: &[Type::Uint(256), Type::Uint(256), Type::Uint(256)],
         ret: &[Type::Uint(256)],
@@ -249,6 +272,7 @@ static BUILTIN_FUNCTIONS: [Prototype; 24] = [
     Prototype {
         builtin: Builtin::AddMod,
         namespace: None,
+        method: None,
         name: "addmod",
         args: &[Type::Uint(256), Type::Uint(256), Type::Uint(256)],
         ret: &[Type::Uint(256)],
@@ -260,6 +284,7 @@ static BUILTIN_FUNCTIONS: [Prototype; 24] = [
     Prototype {
         builtin: Builtin::SignatureVerify,
         namespace: None,
+        method: None,
         name: "signatureVerify",
         args: &[Type::Address(false), Type::DynamicBytes, Type::DynamicBytes],
         ret: &[Type::Bool],
@@ -274,6 +299,7 @@ static BUILTIN_VARIABLE: [Prototype; 14] = [
     Prototype {
         builtin: Builtin::BlockCoinbase,
         namespace: Some("block"),
+        method: None,
         name: "coinbase",
         args: &[],
         ret: &[Type::Address(true)],
@@ -284,6 +310,7 @@ static BUILTIN_VARIABLE: [Prototype; 14] = [
     Prototype {
         builtin: Builtin::BlockDifficulty,
         namespace: Some("block"),
+        method: None,
         name: "difficulty",
         args: &[],
         ret: &[Type::Uint(256)],
@@ -294,6 +321,7 @@ static BUILTIN_VARIABLE: [Prototype; 14] = [
     Prototype {
         builtin: Builtin::GasLimit,
         namespace: Some("block"),
+        method: None,
         name: "gaslimit",
         args: &[],
         ret: &[Type::Uint(64)],
@@ -304,6 +332,7 @@ static BUILTIN_VARIABLE: [Prototype; 14] = [
     Prototype {
         builtin: Builtin::BlockNumber,
         namespace: Some("block"),
+        method: None,
         name: "number",
         args: &[],
         ret: &[Type::Uint(64)],
@@ -314,6 +343,7 @@ static BUILTIN_VARIABLE: [Prototype; 14] = [
     Prototype {
         builtin: Builtin::Slot,
         namespace: Some("block"),
+        method: None,
         name: "slot",
         args: &[],
         ret: &[Type::Uint(64)],
@@ -324,6 +354,7 @@ static BUILTIN_VARIABLE: [Prototype; 14] = [
     Prototype {
         builtin: Builtin::Timestamp,
         namespace: Some("block"),
+        method: None,
         name: "timestamp",
         args: &[],
         ret: &[Type::Uint(64)],
@@ -334,6 +365,7 @@ static BUILTIN_VARIABLE: [Prototype; 14] = [
     Prototype {
         builtin: Builtin::TombstoneDeposit,
         namespace: Some("block"),
+        method: None,
         name: "tombstone_deposit",
         args: &[],
         ret: &[Type::Value],
@@ -344,6 +376,7 @@ static BUILTIN_VARIABLE: [Prototype; 14] = [
     Prototype {
         builtin: Builtin::MinimumBalance,
         namespace: Some("block"),
+        method: None,
         name: "minimum_balance",
         args: &[],
         ret: &[Type::Value],
@@ -354,6 +387,7 @@ static BUILTIN_VARIABLE: [Prototype; 14] = [
     Prototype {
         builtin: Builtin::Calldata,
         namespace: Some("msg"),
+        method: None,
         name: "data",
         args: &[],
         ret: &[Type::DynamicBytes],
@@ -364,6 +398,7 @@ static BUILTIN_VARIABLE: [Prototype; 14] = [
     Prototype {
         builtin: Builtin::Sender,
         namespace: Some("msg"),
+        method: None,
         name: "sender",
         args: &[],
         ret: &[Type::Address(true)],
@@ -374,6 +409,7 @@ static BUILTIN_VARIABLE: [Prototype; 14] = [
     Prototype {
         builtin: Builtin::Signature,
         namespace: Some("msg"),
+        method: None,
         name: "sig",
         args: &[],
         ret: &[Type::Bytes(4)],
@@ -384,6 +420,7 @@ static BUILTIN_VARIABLE: [Prototype; 14] = [
     Prototype {
         builtin: Builtin::Value,
         namespace: Some("msg"),
+        method: None,
         name: "value",
         args: &[],
         ret: &[Type::Value],
@@ -394,6 +431,7 @@ static BUILTIN_VARIABLE: [Prototype; 14] = [
     Prototype {
         builtin: Builtin::Gasprice,
         namespace: Some("tx"),
+        method: None,
         name: "gasprice",
         args: &[],
         ret: &[Type::Value],
@@ -404,11 +442,291 @@ static BUILTIN_VARIABLE: [Prototype; 14] = [
     Prototype {
         builtin: Builtin::Origin,
         namespace: Some("tx"),
+        method: None,
         name: "origin",
         args: &[],
         ret: &[Type::Address(true)],
         target: &[Target::Ewasm],
         doc: "Original address of sender current transaction",
+        constant: false,
+    },
+];
+
+// A list of all Solidity builtins methods
+static BUILTIN_METHODS: [Prototype; 25] = [
+    Prototype {
+        builtin: Builtin::ReadInt8,
+        namespace: None,
+        method: Some(Type::DynamicBytes),
+        name: "readInt8",
+        args: &[Type::Uint(32)],
+        ret: &[Type::Int(8)],
+        target: &[],
+        doc: "Reads a signed 8-bit integer from the specified offset",
+        constant: false,
+    },
+    Prototype {
+        builtin: Builtin::ReadInt16LE,
+        namespace: None,
+        method: Some(Type::DynamicBytes),
+        name: "readInt16LE",
+        args: &[Type::Uint(32)],
+        ret: &[Type::Int(16)],
+        target: &[],
+        doc: "Reads a signed 16-bit integer from the specified offset as little endian",
+        constant: false,
+    },
+    Prototype {
+        builtin: Builtin::ReadInt32LE,
+        namespace: None,
+        method: Some(Type::DynamicBytes),
+        name: "readInt32LE",
+        args: &[Type::Uint(32)],
+        ret: &[Type::Int(32)],
+        target: &[],
+        doc: "Reads a signed 32-bit integer from the specified offset as little endian",
+        constant: false,
+    },
+    Prototype {
+        builtin: Builtin::ReadInt64LE,
+        namespace: None,
+        method: Some(Type::DynamicBytes),
+        name: "readInt64LE",
+        args: &[Type::Uint(32)],
+        ret: &[Type::Int(64)],
+        target: &[],
+        doc: "Reads a signed 64-bit integer from the specified offset as little endian",
+        constant: false,
+    },
+    Prototype {
+        builtin: Builtin::ReadInt128LE,
+        namespace: None,
+        method: Some(Type::DynamicBytes),
+        name: "readInt128LE",
+        args: &[Type::Uint(32)],
+        ret: &[Type::Int(128)],
+        target: &[],
+        doc: "Reads a signed 128-bit integer from the specified offset as little endian",
+        constant: false,
+    },
+    Prototype {
+        builtin: Builtin::ReadInt256LE,
+        namespace: None,
+        method: Some(Type::DynamicBytes),
+        name: "readInt256LE",
+        args: &[Type::Uint(32)],
+        ret: &[Type::Int(256)],
+        target: &[],
+        doc: "Reads a signed 256-bit integer from the specified offset as little endian",
+        constant: false,
+    },
+    Prototype {
+        builtin: Builtin::ReadUint8,
+        namespace: None,
+        method: Some(Type::DynamicBytes),
+        name: "readUint8",
+        args: &[Type::Uint(32)],
+        ret: &[Type::Uint(8)],
+        target: &[],
+        doc: "Reads an unsigned 8-bit integer from the specified offset",
+        constant: false,
+    },
+    Prototype {
+        builtin: Builtin::ReadUint16LE,
+        namespace: None,
+        method: Some(Type::DynamicBytes),
+        name: "readUint16LE",
+        args: &[Type::Uint(32)],
+        ret: &[Type::Uint(16)],
+        target: &[],
+        doc: "Reads an unsigned 16-bit integer from the specified offset as little endian",
+        constant: false,
+    },
+    Prototype {
+        builtin: Builtin::ReadUint32LE,
+        namespace: None,
+        method: Some(Type::DynamicBytes),
+        name: "readUint32LE",
+        args: &[Type::Uint(32)],
+        ret: &[Type::Uint(32)],
+        target: &[],
+        doc: "Reads an unsigned 32-bit integer from the specified offset as little endian",
+        constant: false,
+    },
+    Prototype {
+        builtin: Builtin::ReadUint64LE,
+        namespace: None,
+        method: Some(Type::DynamicBytes),
+        name: "readUint64LE",
+        args: &[Type::Uint(32)],
+        ret: &[Type::Uint(64)],
+        target: &[],
+        doc: "Reads an unsigned 64-bit integer from the specified offset as ltitle endian",
+        constant: false,
+    },
+    Prototype {
+        builtin: Builtin::ReadUint128LE,
+        namespace: None,
+        method: Some(Type::DynamicBytes),
+        name: "readUint128LE",
+        args: &[Type::Uint(32)],
+        ret: &[Type::Uint(128)],
+        target: &[],
+        doc: "Reads an unsigned 128-bit integer from the specified offset as little endian",
+        constant: false,
+    },
+    Prototype {
+        builtin: Builtin::ReadUint256LE,
+        namespace: None,
+        method: Some(Type::DynamicBytes),
+        name: "readUint256LE",
+        args: &[Type::Uint(32)],
+        ret: &[Type::Uint(256)],
+        target: &[],
+        doc: "Reads an unsigned 256-bit integer from the specified offset as little endian",
+        constant: false,
+    },
+    Prototype {
+        builtin: Builtin::ReadAddress,
+        namespace: None,
+        method: Some(Type::DynamicBytes),
+        name: "readAddress",
+        args: &[Type::Uint(32)],
+        ret: &[Type::Address(false)],
+        target: &[],
+        doc: "Reads an address from the specified offset",
+        constant: false,
+    },
+    Prototype {
+        builtin: Builtin::WriteInt8,
+        namespace: None,
+        method: Some(Type::DynamicBytes),
+        name: "writeInt8",
+        args: &[Type::Int(8), Type::Uint(32)],
+        ret: &[],
+        target: &[],
+        doc: "Writes a signed 8-bit integer to the specified offset",
+        constant: false,
+    },
+    Prototype {
+        builtin: Builtin::WriteInt16LE,
+        namespace: None,
+        method: Some(Type::DynamicBytes),
+        name: "writeInt16LE",
+        args: &[Type::Int(16), Type::Uint(32)],
+        ret: &[],
+        target: &[],
+        doc: "Writes a signed 16-bit integer to the specified offset as little endian",
+        constant: false,
+    },
+    Prototype {
+        builtin: Builtin::WriteInt32LE,
+        namespace: None,
+        method: Some(Type::DynamicBytes),
+        name: "writeInt32LE",
+        args: &[Type::Int(32), Type::Uint(32)],
+        ret: &[],
+        target: &[],
+        doc: "Writes a signed 32-bit integer to the specified offset as little endian",
+        constant: false,
+    },
+    Prototype {
+        builtin: Builtin::WriteInt64LE,
+        namespace: None,
+        method: Some(Type::DynamicBytes),
+        name: "writeInt64LE",
+        args: &[Type::Int(64), Type::Uint(32)],
+        ret: &[],
+        target: &[],
+        doc: "Writes a signed 64-bit integer to the specified offset as little endian",
+        constant: false,
+    },
+    Prototype {
+        builtin: Builtin::WriteInt128LE,
+        namespace: None,
+        method: Some(Type::DynamicBytes),
+        name: "writeInt128LE",
+        args: &[Type::Int(128), Type::Uint(32)],
+        ret: &[],
+        target: &[],
+        doc: "Writes a signed 128-bit integer to the specified offset as little endian",
+        constant: false,
+    },
+    Prototype {
+        builtin: Builtin::WriteInt256LE,
+        namespace: None,
+        method: Some(Type::DynamicBytes),
+        name: "writeInt256LE",
+        args: &[Type::Int(256), Type::Uint(32)],
+        ret: &[],
+        target: &[],
+        doc: "Writes a signed 256-bit integer to the specified offset as little endian",
+        constant: false,
+    },
+    Prototype {
+        builtin: Builtin::WriteUint16LE,
+        namespace: None,
+        method: Some(Type::DynamicBytes),
+        name: "writeUint16LE",
+        args: &[Type::Uint(16), Type::Uint(32)],
+        ret: &[],
+        target: &[],
+        doc: "Writes an unsigned 16-bit integer to the specified offset as little endian",
+        constant: false,
+    },
+    Prototype {
+        builtin: Builtin::WriteUint32LE,
+        namespace: None,
+        method: Some(Type::DynamicBytes),
+        name: "writeUint32LE",
+        args: &[Type::Uint(32), Type::Uint(32)],
+        ret: &[],
+        target: &[],
+        doc: "Writes an unsigned 32-bit integer to the specified offset as little endian",
+        constant: false,
+    },
+    Prototype {
+        builtin: Builtin::WriteUint64LE,
+        namespace: None,
+        method: Some(Type::DynamicBytes),
+        name: "writeUint64LE",
+        args: &[Type::Uint(64), Type::Uint(32)],
+        ret: &[],
+        target: &[],
+        doc: "Writes an unsigned 64-bit integer to the specified offset as little endian",
+        constant: false,
+    },
+    Prototype {
+        builtin: Builtin::WriteUint128LE,
+        namespace: None,
+        method: Some(Type::DynamicBytes),
+        name: "writeUint128LE",
+        args: &[Type::Uint(128), Type::Uint(32)],
+        ret: &[],
+        target: &[],
+        doc: "Writes an unsigned 128-bit integer to the specified offset as little endian",
+        constant: false,
+    },
+    Prototype {
+        builtin: Builtin::WriteUint256LE,
+        namespace: None,
+        method: Some(Type::DynamicBytes),
+        name: "writeUint256LE",
+        args: &[Type::Uint(256), Type::Uint(32)],
+        ret: &[],
+        target: &[],
+        doc: "Writes an unsigned 256-bit integer to the specified offset as little endian",
+        constant: false,
+    },
+    Prototype {
+        builtin: Builtin::WriteAddress,
+        namespace: None,
+        method: Some(Type::DynamicBytes),
+        name: "writeAddress",
+        args: &[Type::Address(false), Type::Uint(32)],
+        ret: &[],
+        target: &[],
+        doc: "Writes an address to the specified offset",
         constant: false,
     },
 ];
@@ -429,6 +747,7 @@ pub fn get_prototype(builtin: Builtin) -> Option<&'static Prototype> {
         .iter()
         .find(|p| p.builtin == builtin)
         .or_else(|| BUILTIN_VARIABLE.iter().find(|p| p.builtin == builtin))
+        .or_else(|| BUILTIN_METHODS.iter().find(|p| p.builtin == builtin))
 }
 
 /// Does variable name match builtin
@@ -472,17 +791,19 @@ pub fn is_reserved(fname: &str) -> bool {
         return true;
     }
 
-    let is_builtin_function = BUILTIN_FUNCTIONS
-        .iter()
-        .any(|p| (p.name == fname && p.namespace == None) || (p.namespace == Some(fname)));
+    let is_builtin_function = BUILTIN_FUNCTIONS.iter().any(|p| {
+        (p.name == fname && p.namespace.is_none() && p.method.is_none())
+            || (p.namespace == Some(fname))
+    });
 
     if is_builtin_function {
         return true;
     }
 
-    BUILTIN_VARIABLE
-        .iter()
-        .any(|p| (p.name == fname && p.namespace == None) || (p.namespace == Some(fname)))
+    BUILTIN_VARIABLE.iter().any(|p| {
+        (p.name == fname && p.namespace.is_none() && p.method.is_none())
+            || (p.namespace == Some(fname))
+    })
 }
 
 /// Resolve a builtin call
@@ -498,7 +819,7 @@ pub fn resolve_call(
 ) -> Result<Expression, ()> {
     let matches = BUILTIN_FUNCTIONS
         .iter()
-        .filter(|p| p.name == id && p.namespace == namespace)
+        .filter(|p| p.name == id && p.namespace == namespace && p.method.is_none())
         .collect::<Vec<&Prototype>>();
 
     let marker = diagnostics.len();
@@ -601,7 +922,7 @@ pub fn resolve_call(
     Err(())
 }
 
-/// Resolve a builtin method call. The takes the unresolved arguments, since it has
+/// Resolve a builtin namespace call. The takes the unresolved arguments, since it has
 /// to handle the special case "abi.decode(foo, (int32, bool, address))" where the
 /// second argument is a type list. The generic expression resolver cannot deal with
 /// this. It is only used in for this specific call.
@@ -845,4 +1166,117 @@ pub fn resolve_namespace_call(
         builtin,
         resolved_args,
     ))
+}
+
+/// Resolve a builtin call
+pub fn resolve_method_call(
+    expr: &Expression,
+    id: &pt::Identifier,
+    args: &[pt::Expression],
+    context: &ExprContext,
+    ns: &mut Namespace,
+    symtable: &mut Symtable,
+    diagnostics: &mut Vec<Diagnostic>,
+) -> Result<Option<Expression>, ()> {
+    let expr_ty = expr.ty();
+    let matches: Vec<_> = BUILTIN_METHODS
+        .iter()
+        .filter(|func| func.name == id.name && func.method.as_ref() == Some(&expr_ty))
+        .collect();
+    let marker = diagnostics.len();
+
+    for func in &matches {
+        if context.constant && !func.constant {
+            diagnostics.push(Diagnostic::error(
+                id.loc,
+                format!(
+                    "cannot call function ‘{}’ in constant expression",
+                    func.name
+                ),
+            ));
+            return Err(());
+        }
+
+        if func.args.len() != args.len() {
+            diagnostics.push(Diagnostic::error(
+                id.loc,
+                format!(
+                    "builtin function ‘{}’ expects {} arguments, {} provided",
+                    func.name,
+                    func.args.len(),
+                    args.len()
+                ),
+            ));
+            continue;
+        }
+
+        let mut matches = true;
+        let mut cast_args = Vec::new();
+
+        // check if arguments can be implicitly casted
+        for (i, arg) in args.iter().enumerate() {
+            let arg = match expression(
+                arg,
+                context,
+                ns,
+                symtable,
+                diagnostics,
+                ResolveTo::Type(&func.args[i]),
+            ) {
+                Ok(e) => e,
+                Err(()) => {
+                    matches = false;
+                    continue;
+                }
+            };
+
+            match cast(
+                &arg.loc(),
+                arg.clone(),
+                &func.args[i],
+                true,
+                ns,
+                diagnostics,
+            ) {
+                Ok(expr) => cast_args.push(expr),
+                Err(()) => {
+                    matches = false;
+                    continue;
+                }
+            }
+        }
+
+        if matches {
+            diagnostics.truncate(marker);
+
+            cast_args.insert(0, expr.clone());
+
+            let returns = if func.ret.is_empty() {
+                vec![Type::Void]
+            } else {
+                func.ret.to_vec()
+            };
+
+            return Ok(Some(Expression::Builtin(
+                id.loc,
+                returns,
+                func.builtin,
+                cast_args,
+            )));
+        }
+    }
+
+    match matches.len() {
+        0 => Ok(None),
+        1 => Err(()),
+        _ => {
+            diagnostics.truncate(marker);
+            diagnostics.push(Diagnostic::error(
+                id.loc,
+                "cannot find overloaded function which matches signature".to_string(),
+            ));
+
+            Err(())
+        }
+    }
 }

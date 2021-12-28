@@ -3241,6 +3241,150 @@ mulmod(uint x, uint y, uint, k) returns (uint)
 
 Multiply x with y, and then divides by k. x * y will not overflow.
 
+Encoding and decoding values from bytes buffer
+______________________________________________
+
+The ``abi.encode()`` and friends functions do not allow you to write or read data
+from an arbitrary offset, so the Solang dialect has the following functions. These
+methods are available on a ``bytes`` type.
+
+These functions are inspired by the `node buffer api <https://nodejs.org/api/buffer.html>`_.
+
+.. code-block:: javascript
+
+    contract c {
+        function f() public returns (bytes) {
+            bytes data = new bytes(10);
+            data.writeUint32LE(102, 0);
+            data.writeUint64LE(0xdeadcafe, 4);
+            return data;
+        }
+
+        function g(bytes data) public returns (uint64) {
+            return data.readUint64LE(1);
+        }
+    }
+
+readInt8(uint32 offset)
++++++++++++++++++++++++
+
+Read a signed ``int8`` from the specified offset.
+
+readInt16LE(uint32 offset)
+++++++++++++++++++++++++++
+
+Read a signed ``int16`` from the specified offset in little endian order.
+
+readInt32LE(uint32 offset)
+++++++++++++++++++++++++++
+
+Read a signed ``int32`` from the specified offset in little endian order.
+
+readInt64LE(uint32 offset)
+++++++++++++++++++++++++++
+
+Read a signed ``int64`` from the specified offset in little endian order.
+
+readInt128LE(uint32 offset)
++++++++++++++++++++++++++++
+
+Read a signed ``int128`` from the specified offset in little endian order.
+
+readInt256LE(uint32 offset)
++++++++++++++++++++++++++++
+
+Read a signed ``int256`` from the specified offset in little endian order.
+
+readUint16LE(uint32 offset)
++++++++++++++++++++++++++++
+
+Read an unsigned ``uint16`` from the specified offset in little endian order.
+
+readUint32LE(uint32 offset)
++++++++++++++++++++++++++++
+
+Read an unsigned ``uint32`` from the specified offset in little endian order.
+
+readUint64LE(uint32 offset)
++++++++++++++++++++++++++++
+
+Read an unsigned ``uint64`` from the specified offset in little endian order.
+
+readUint128LE(uint32 offset)
+++++++++++++++++++++++++++++
+
+Read an unsigned ``uint128`` from the specified offset in little endian order.
+
+readUint256LE(uint32 offset)
+++++++++++++++++++++++++++++
+
+Read an unsigned ``uint256`` from the specified offset in little endian order.
+
+readAddress(uint32 offset)
+++++++++++++++++++++++++++
+
+Read an ``address`` from the specified offset.
+
+writeInt8(int8 value, uint32 offset)
+++++++++++++++++++++++++++++++++++++
+
+Write a signed ``int8`` to the specified offset.
+
+writeInt16LE(int16 value, uint32 offset)
+++++++++++++++++++++++++++++++++++++++++
+
+Write a signed ``int16`` to the specified offset in little endian order.
+
+writeInt32LE(int32 value, uint32 offset)
+++++++++++++++++++++++++++++++++++++++++
+
+Write a signed ``int32`` to the specified offset in little endian order.
+
+writeInt64LE(int64 value, uint32 offset)
+++++++++++++++++++++++++++++++++++++++++
+
+Write a signed ``int64`` to the specified offset in little endian order.
+
+writeInt128LE(int128 value, uint32 offset)
+++++++++++++++++++++++++++++++++++++++++++
+
+Write a signed ``int128`` to the specified offset in little endian order.
+
+writeInt256LE(int256 value, uint32 offset)
+++++++++++++++++++++++++++++++++++++++++++
+
+Write a signed ``int256`` to the specified offset in little endian order.
+
+writeUint16LE(uint16 value, uint32 offset)
+++++++++++++++++++++++++++++++++++++++++++
+
+Write an unsigned ``uint16`` to the specified offset in little endian order.
+
+writeUint32LE(uint32 value, uint32 offset)
+++++++++++++++++++++++++++++++++++++++++++
+
+Write an unsigned ``uint32`` to the specified offset in little endian order.
+
+writeUint64LE(uint64 value, uint32 offset)
+++++++++++++++++++++++++++++++++++++++++++
+
+Write an unsigned ``uint64`` to the specified offset in little endian order.
+
+writeUint128LE(uint128 value, uint32 offset)
+++++++++++++++++++++++++++++++++++++++++++++
+
+Write an unsigned ``uint128`` to the specified offset in little endian order.
+
+writeUint256LE(uint256 value, uint32 offset)
+++++++++++++++++++++++++++++++++++++++++++++
+
+Write an unsigned ``uint256`` to the specified offset in little endian order.
+
+writeAddress(address value, uint32 offset)
+++++++++++++++++++++++++++++++++++++++++++
+
+Write an ``address`` to the specified offset.
+
 Miscellaneous
 _____________
 
