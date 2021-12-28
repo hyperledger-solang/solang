@@ -4357,6 +4357,7 @@ pub trait TargetRuntime<'a> {
         bin: &mut Binary<'a>,
         contract: &ast::Contract,
         ns: &ast::Namespace,
+        emit_constructors_only: bool,
     ) {
         let mut defines = Vec::new();
 
@@ -4387,6 +4388,10 @@ pub trait TargetRuntime<'a> {
         }
 
         for (func_decl, cfg) in defines {
+            if emit_constructors_only && cfg.ty != pt::FunctionTy::Constructor {
+                continue;
+            }
+
             self.emit_cfg(bin, contract, cfg, func_decl, ns);
         }
     }

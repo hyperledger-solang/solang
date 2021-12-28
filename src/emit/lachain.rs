@@ -52,7 +52,7 @@ impl LachainTarget {
 
         // This also emits the constructors. We are relying on DCE to eliminate them from
         // the final code.
-        b.emit_functions(&mut runtime_code, contract, ns);
+        b.emit_functions(&mut runtime_code, contract, ns, false);
 
         b.function_dispatch(&runtime_code, contract, ns);
 
@@ -82,7 +82,7 @@ impl LachainTarget {
         // FIXME: this emits the constructors, as well as the functions. In Ethereum Solidity,
         // no functions can be called from the constructor. We should either disallow this too
         // and not emit functions, or use lto linking to optimize any unused functions away.
-        b.emit_functions(&mut deploy_code, contract, ns);
+        b.emit_functions(&mut deploy_code, contract, ns, true);
 
         b.deployer_dispatch(&mut deploy_code, contract, &runtime_bs, ns);
 

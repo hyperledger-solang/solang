@@ -67,7 +67,7 @@ impl SubstrateTarget {
 
         b.declare_externals(&binary);
 
-        b.emit_functions(&mut binary, contract, ns);
+        b.emit_functions(&mut binary, contract, ns, false);
 
         b.emit_deploy(&mut binary, contract, ns);
         b.emit_call(&binary, contract, ns);
