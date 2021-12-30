@@ -22,7 +22,11 @@ fn formatted_message(diagnostic: &Diagnostic, ns: &Namespace, cache: &FileResolv
             type_size
         )
     } else {
-        format!("solang: {}: {}", diagnostic.level.to_string(), diagnostic.message)
+        format!(
+            "solang: {}: {}",
+            diagnostic.level.to_string(),
+            diagnostic.message
+        )
     };
 
     for note in &diagnostic.notes {

@@ -1,7 +1,7 @@
 use super::symtable::Symtable;
 use crate::codegen::cfg::ControlFlowGraph;
-use crate::parser::pt;
 pub use crate::parser::diagnostics::*;
+use crate::parser::pt;
 use crate::Target;
 use num_bigint::BigInt;
 use num_rational::BigRational;
