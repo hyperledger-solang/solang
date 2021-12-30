@@ -1,9 +1,9 @@
 //! Solidity file parser
 
+pub mod diagnostics;
 mod doc;
 pub mod lexer;
 pub mod pt;
-pub mod diagnostics;
 pub use diagnostics::Diagnostic;
 
 #[allow(clippy::all)]
@@ -55,7 +55,6 @@ pub fn parse(src: &str, file_no: usize) -> Result<pt::SourceUnit, Vec<Diagnostic
         Ok(s.unwrap())
     }
 }
-
 
 pub fn box_option<T>(o: Option<T>) -> Option<Box<T>> {
     o.map(Box::new)

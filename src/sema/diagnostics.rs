@@ -1,6 +1,5 @@
-use super::ast::{Diagnostic, ErrorType, Level, Namespace, Note};
+use super::ast::{Diagnostic, Level, Namespace};
 use crate::file_resolver::FileResolver;
-use crate::parser::pt::Loc;
 use serde::Serialize;
 
 fn formatted_message(diagnostic: &Diagnostic, ns: &Namespace, cache: &FileResolver) -> String {

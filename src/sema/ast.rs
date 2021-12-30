@@ -1,6 +1,7 @@
 use super::symtable::Symtable;
 use crate::codegen::cfg::ControlFlowGraph;
 use crate::parser::pt;
+pub use crate::parser::diagnostics::*;
 use crate::Target;
 use num_bigint::BigInt;
 use num_rational::BigRational;
@@ -1506,39 +1507,6 @@ impl Statement {
             Statement::For { reachable, .. } | Statement::TryCatch(_, reachable, _) => *reachable,
         }
     }
-}
-
-#[derive(Debug, Eq, Hash, PartialOrd, Ord, PartialEq)]
-pub enum Level {
-    Debug,
-    Info,
-    Warning,
-    Error,
-}
-
-#[derive(Debug, Eq, Hash, PartialOrd, Ord, PartialEq)]
-pub enum ErrorType {
-    None,
-    ParserError,
-    SyntaxError,
-    DeclarationError,
-    TypeError,
-    Warning,
-}
-
-#[derive(Debug, Eq, Hash, PartialOrd, Ord, PartialEq)]
-pub struct Note {
-    pub pos: pt::Loc,
-    pub message: String,
-}
-
-#[derive(Debug, Eq, Hash, PartialOrd, Ord, PartialEq)]
-pub struct Diagnostic {
-    pub level: Level,
-    pub ty: ErrorType,
-    pub pos: Option<pt::Loc>,
-    pub message: String,
-    pub notes: Vec<Note>,
 }
 
 #[derive(PartialEq, Clone, Debug)]
