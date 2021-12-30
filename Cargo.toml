@@ -69,3 +69,6 @@ lto = true
 [features]
 default = ["llvm"]
 llvm = ["inkwell", "libc"]
+
+[workspace]
+members = ["solang-parser"]
