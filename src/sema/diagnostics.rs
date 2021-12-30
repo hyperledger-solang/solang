@@ -3,179 +3,50 @@ use crate::file_resolver::FileResolver;
 use crate::parser::pt::Loc;
 use serde::Serialize;
 
-impl Level {
-    pub fn to_string(&self) -> &'static str {
-        match self {
-            Level::Debug => "debug",
-            Level::Info => "info",
-            Level::Warning => "warning",
-            Level::Error => "error",
-        }
-    }
-}
+fn formatted_message(diagnostic: &Diagnostic, ns: &Namespace, cache: &FileResolver) -> String {
+    let mut s = if let Some(pos) = diagnostic.pos {
+        let loc = ns.files[pos.0].loc_to_string(&pos);
 
-impl Diagnostic {
-    pub fn debug(pos: Loc, message: String) -> Self {
-        Diagnostic {
-            level: Level::Debug,
-            ty: ErrorType::None,
-            pos: Some(pos),
-            message,
-            notes: Vec::new(),
-        }
-    }
+        let (full_line, beg_line_no, beg_offset, type_size) =
+            cache.get_line_and_offset_from_loc(&ns.files[pos.0], &pos);
 
-    pub fn info(pos: Loc, message: String) -> Self {
-        Diagnostic {
-            level: Level::Info,
-            ty: ErrorType::None,
-            pos: Some(pos),
-            message,
-            notes: Vec::new(),
-        }
-    }
+        format!(
+            "{}: {}: {}\nLine {}:\n\t{}\n\t{:-<7$}{:^<8$}",
+            loc,
+            diagnostic.level.to_string(),
+            diagnostic.message,
+            beg_line_no + 1,
+            full_line,
+            "",
+            "",
+            beg_offset,
+            type_size
+        )
+    } else {
+        format!("solang: {}: {}", diagnostic.level.to_string(), diagnostic.message)
+    };
 
-    pub fn parser_error(pos: Loc, message: String) -> Self {
-        Diagnostic {
-            level: Level::Error,
-            ty: ErrorType::ParserError,
-            pos: Some(pos),
-            message,
-            notes: Vec::new(),
-        }
-    }
+    for note in &diagnostic.notes {
+        let loc = ns.files[note.pos.0].loc_to_string(&note.pos);
 
-    pub fn error(pos: Loc, message: String) -> Self {
-        Diagnostic {
-            level: Level::Error,
-            ty: ErrorType::SyntaxError,
-            pos: Some(pos),
-            message,
-            notes: Vec::new(),
-        }
+        let (full_line, beg_line_no, beg_offset, type_size) =
+            cache.get_line_and_offset_from_loc(&ns.files[note.pos.0], &note.pos);
+
+        s.push_str(&format!(
+            "\n\t{}: {}: {}\n\tLine {}:\n\t\t{}\n\t\t{:-<7$}{:^<8$}",
+            loc,
+            "note",
+            note.message,
+            beg_line_no + 1,
+            full_line,
+            "",
+            "",
+            beg_offset,
+            type_size
+        ));
     }
 
-    pub fn decl_error(pos: Loc, message: String) -> Self {
-        Diagnostic {
-            level: Level::Error,
-            ty: ErrorType::DeclarationError,
-            pos: Some(pos),
-            message,
-            notes: Vec::new(),
-        }
-    }
-
-    pub fn type_error(pos: Loc, message: String) -> Self {
-        Diagnostic {
-            level: Level::Error,
-            ty: ErrorType::TypeError,
-            pos: Some(pos),
-            message,
-            notes: Vec::new(),
-        }
-    }
-
-    pub fn warning(pos: Loc, message: String) -> Self {
-        Diagnostic {
-            level: Level::Warning,
-            ty: ErrorType::Warning,
-            pos: Some(pos),
-            message,
-            notes: Vec::new(),
-        }
-    }
-
-    pub fn warning_with_note(pos: Loc, message: String, note_pos: Loc, note: String) -> Self {
-        Diagnostic {
-            level: Level::Warning,
-            ty: ErrorType::Warning,
-            pos: Some(pos),
-            message,
-            notes: vec![Note {
-                pos: note_pos,
-                message: note,
-            }],
-        }
-    }
-
-    pub fn warning_with_notes(pos: Loc, message: String, notes: Vec<Note>) -> Self {
-        Diagnostic {
-            level: Level::Warning,
-            ty: ErrorType::Warning,
-            pos: Some(pos),
-            message,
-            notes,
-        }
-    }
-
-    pub fn error_with_note(pos: Loc, message: String, note_pos: Loc, note: String) -> Self {
-        Diagnostic {
-            level: Level::Error,
-            ty: ErrorType::None,
-            pos: Some(pos),
-            message,
-            notes: vec![Note {
-                pos: note_pos,
-                message: note,
-            }],
-        }
-    }
-
-    pub fn error_with_notes(pos: Loc, message: String, notes: Vec<Note>) -> Self {
-        Diagnostic {
-            level: Level::Error,
-            ty: ErrorType::None,
-            pos: Some(pos),
-            message,
-            notes,
-        }
-    }
-
-    fn formatted_message(&self, ns: &Namespace, cache: &FileResolver) -> String {
-        let mut s = if let Some(pos) = self.pos {
-            let loc = ns.files[pos.0].loc_to_string(&pos);
-
-            let (full_line, beg_line_no, beg_offset, type_size) =
-                cache.get_line_and_offset_from_loc(&ns.files[pos.0], &pos);
-
-            format!(
-                "{}: {}: {}\nLine {}:\n\t{}\n\t{:-<7$}{:^<8$}",
-                loc,
-                self.level.to_string(),
-                self.message,
-                beg_line_no + 1,
-                full_line,
-                "",
-                "",
-                beg_offset,
-                type_size
-            )
-        } else {
-            format!("solang: {}: {}", self.level.to_string(), self.message)
-        };
-
-        for note in &self.notes {
-            let loc = ns.files[note.pos.0].loc_to_string(&note.pos);
-
-            let (full_line, beg_line_no, beg_offset, type_size) =
-                cache.get_line_and_offset_from_loc(&ns.files[note.pos.0], &note.pos);
-
-            s.push_str(&format!(
-                "\n\t{}: {}: {}\n\tLine {}:\n\t\t{}\n\t\t{:-<7$}{:^<8$}",
-                loc,
-                "note",
-                note.message,
-                beg_line_no + 1,
-                full_line,
-                "",
-                "",
-                beg_offset,
-                type_size
-            ));
-        }
-
-        s
-    }
+    s
 }
 
 pub fn print_messages(cache: &FileResolver, ns: &Namespace, debug: bool) {
@@ -184,7 +55,7 @@ pub fn print_messages(cache: &FileResolver, ns: &Namespace, debug: bool) {
             continue;
         }
 
-        eprintln!("{}", msg.formatted_message(ns, cache));
+        eprintln!("{}", formatted_message(msg, ns, cache));
     }
 }
 
@@ -232,7 +103,7 @@ pub fn message_as_json(ns: &Namespace, cache: &FileResolver) -> Vec<OutputJson> 
             component: "general".to_owned(),
             severity: msg.level.to_string().to_owned(),
             message: msg.message.to_owned(),
-            formattedMessage: msg.formatted_message(ns, cache),
+            formattedMessage: formatted_message(msg, ns, cache),
         });
     }
 
