@@ -1133,10 +1133,11 @@ impl TestRuntime {
                 next, prev, length, allocated
             );
 
-            let buf = self
-                .vm
+            let mut buf = vec![0u8; length as usize];
+
+            self.vm
                 .memory
-                .get(current_elem + 16, length as usize)
+                .get_into(current_elem + 16, &mut buf)
                 .unwrap();
 
             if allocated == 0 {
