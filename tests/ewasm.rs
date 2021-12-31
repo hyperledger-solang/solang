@@ -2,7 +2,7 @@ use ethabi::{decode, RawLog, Token};
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 use rand::Rng;
-use ripemd160::Ripemd160;
+use ripemd::Ripemd160;
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::fmt;

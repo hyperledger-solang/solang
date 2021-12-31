@@ -4,7 +4,7 @@ use crate::parser::pt::Loc;
 use crate::sema::ast::{Builtin, Diagnostic, Expression, Namespace, StringLocation, Type};
 use num_bigint::{BigInt, Sign};
 use num_traits::{ToPrimitive, Zero};
-use ripemd160::Ripemd160;
+use ripemd::Ripemd160;
 use sha2::{Digest, Sha256};
 use std::ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Rem, Shl, Shr, Sub};
 use tiny_keccak::{Hasher, Keccak};
