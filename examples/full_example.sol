@@ -93,17 +93,17 @@ contract full_example {
 	}
 
 	/// This mocks a pid state
-	function get_pid_state(int64 _pid) pure private returns (State) {
-		int64 n = 8;
-		for (int16 i = 1; i < 10; ++i) {
+	function get_pid_state(uint64 _pid) pure private returns (State) {
+		uint64 n = 8;
+		for (uint16 i = 1; i < 10; ++i) {
 			if ((i % 3) == 0) {
-				n *= _pid / int64(i);
+				n *= _pid / uint64(i);
 			} else {
 				n /= 3;
 			}
 		}
 
-		return State(n % int64(State.StateCount));
+		return State(n % uint64(State.StateCount));
 	}
 
 	/// Overloaded function with different return value!
@@ -112,7 +112,7 @@ contract full_example {
 	}
 
 	function reap_processes() public {
-		int32 n = 0;
+		uint32 n = 0;
 
 		while (n < 100) {
 			if (get_pid_state(n) == State.Zombie) {
@@ -126,7 +126,7 @@ contract full_example {
 	function run_queue() public pure returns (uint16) {
 		uint16 count = 0;
 		// no initializer means its 0.
-		int32 n=0;
+		uint32 n=0;
 
 		do {
 			if (get_pid_state(n) == State.Waiting) {
@@ -150,18 +150,18 @@ contract full_example {
 	card card2 = card({s: suit.club, v: value.two});
 
 	// This function does a lot of copying
-	function set_card1(card c) public returns (card previous) {
+	function set_card1(card memory c) public returns (card memory previous) {
 		previous = card1;
 		card1 = c;
 	}
 
 	/// return the ace of spades
-	function ace_of_spaces() public pure returns (card) {
+	function ace_of_spaces() public pure returns (card memory) {
 		return card({s: suit.spades, v: value.ace });
 	}
 
 	/// score card
-	function score_card(card c) public pure returns (uint32 score) {
+	function score_card(card memory c) public pure returns (uint32 score) {
 		if (c.s == suit.hearts) {
 			if (c.v == value.ace) {
 				score = 14;
