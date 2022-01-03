@@ -4362,7 +4362,7 @@ pub trait TargetRuntime<'a> {
         let mut defines = Vec::new();
 
         for (cfg_no, cfg) in contract.cfg.iter().enumerate() {
-            if !cfg.is_placeholder() {
+            if !cfg.is_placeholder() && (!emit_constructors_only || cfg.ty == pt::FunctionTy::Constructor) {
                 let ftype = bin.function_type(
                     &cfg.params
                         .iter()
@@ -4388,10 +4388,6 @@ pub trait TargetRuntime<'a> {
         }
 
         for (func_decl, cfg) in defines {
-            if emit_constructors_only && cfg.ty != pt::FunctionTy::Constructor {
-                continue;
-            }
-
             self.emit_cfg(bin, contract, cfg, func_decl, ns);
         }
     }
