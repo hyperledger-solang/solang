@@ -3,8 +3,7 @@ use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 use rand::Rng;
 use sha2::{Digest, Sha256};
-use std::collections::HashMap;
-use std::fmt;
+use std::{collections::HashMap, ffi::OsStr, fmt};
 use tiny_keccak::{Hasher, Keccak};
 use wasmi::memory_units::Pages;
 use wasmi::*;
@@ -1184,7 +1183,7 @@ pub fn build_solidity(src: &'static str) -> TestRuntime {
     cache.set_file_contents("test.sol", src.to_string());
 
     let (res, ns) = compile(
-        "test.sol",
+        OsStr::new("test.sol"),
         &mut cache,
         inkwell::OptimizationLevel::Default,
         Target::default_substrate(),
@@ -1221,7 +1220,7 @@ pub fn build_solidity_with_overflow_check(src: &'static str) -> TestRuntime {
     cache.set_file_contents("test.sol", src.to_string());
 
     let (res, ns) = compile(
-        "test.sol",
+        OsStr::new("test.sol"),
         &mut cache,
         inkwell::OptimizationLevel::Default,
         Target::default_substrate(),

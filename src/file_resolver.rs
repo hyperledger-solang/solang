@@ -1,7 +1,7 @@
 use crate::parser::pt::Loc;
 use crate::sema::ast;
 use std::collections::HashMap;
-use std::ffi::OsString;
+use std::ffi::{OsStr, OsString};
 use std::fs::File;
 use std::io;
 use std::io::{prelude::*, Error, ErrorKind};
@@ -125,7 +125,7 @@ impl FileResolver {
     pub fn resolve_file(
         &mut self,
         parent: Option<&ResolvedFile>,
-        filename: &str,
+        filename: &OsStr,
     ) -> Result<ResolvedFile, String> {
         let path = PathBuf::from(filename);
 
@@ -227,7 +227,7 @@ impl FileResolver {
             }
         }
 
-        Err(format!("file not found ‘{}’", filename))
+        Err(format!("file not found ‘{}’", filename.to_string_lossy()))
     }
 
     /// Get line and the target symbol's offset from loc

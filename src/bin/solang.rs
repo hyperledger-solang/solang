@@ -3,7 +3,7 @@ use itertools::Itertools;
 use num_traits::cast::ToPrimitive;
 use serde::Serialize;
 use std::collections::HashMap;
-use std::ffi::OsString;
+use std::ffi::{OsStr, OsString};
 use std::fs::{create_dir_all, File};
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
@@ -46,14 +46,15 @@ fn main() {
         .author(env!("CARGO_PKG_AUTHORS"))
         .about(env!("CARGO_PKG_DESCRIPTION"))
         .arg(
-            Arg::with_name("INPUT")
+            Arg::new("INPUT")
                 .help("Solidity input files")
                 .required(true)
                 .conflicts_with("LANGUAGESERVER")
-                .multiple(true),
+                .allow_invalid_utf8(true)
+                .multiple_values(true),
         )
         .arg(
-            Arg::with_name("EMIT")
+            Arg::new("EMIT")
                 .help("Emit compiler state at early stage")
                 .long("emit")
                 .takes_value(true)
@@ -62,15 +63,15 @@ fn main() {
                 ]),
         )
         .arg(
-            Arg::with_name("OPT")
+            Arg::new("OPT")
                 .help("Set llvm optimizer level")
-                .short("O")
+                .short('O')
                 .takes_value(true)
                 .possible_values(&["none", "less", "default", "aggressive"])
                 .default_value("default"),
         )
         .arg(
-            Arg::with_name("TARGET")
+            Arg::new("TARGET")
                 .help("Target to build for")
                 .long("target")
                 .takes_value(true)
@@ -78,100 +79,99 @@ fn main() {
                 .required(true),
         )
         .arg(
-            Arg::with_name("ADDRESS_LENGTH")
+            Arg::new("ADDRESS_LENGTH")
                 .help("Address length on Substrate")
                 .long("address-length")
                 .takes_value(true)
                 .default_value("32"),
         )
         .arg(
-            Arg::with_name("VALUE_LENGTH")
+            Arg::new("VALUE_LENGTH")
                 .help("Value length on Substrate")
                 .long("value-length")
                 .takes_value(true)
                 .default_value("16"),
         )
         .arg(
-            Arg::with_name("STD-JSON")
+            Arg::new("STD-JSON")
                 .help("mimic solidity json output on stdout")
                 .conflicts_with_all(&["VERBOSE", "OUTPUT", "EMIT"])
                 .long("standard-json"),
         )
         .arg(
-            Arg::with_name("VERBOSE")
+            Arg::new("VERBOSE")
                 .help("show debug messages")
-                .short("v")
+                .short('v')
                 .long("verbose"),
         )
         .arg(
-            Arg::with_name("OUTPUT")
+            Arg::new("OUTPUT")
                 .help("output directory")
-                .short("o")
+                .short('o')
                 .long("output")
                 .takes_value(true),
         )
         .arg(
-            Arg::with_name("IMPORTPATH")
+            Arg::new("IMPORTPATH")
                 .help("Directory to search for solidity files")
-                .short("I")
+                .short('I')
                 .long("importpath")
                 .takes_value(true)
-                .multiple(true)
-                .require_delimiter(true),
+                .allow_invalid_utf8(true)
+                .multiple_occurrences(true),
         )
         .arg(
-            Arg::with_name("IMPORTMAP")
+            Arg::new("IMPORTMAP")
                 .help("Map directory to search for solidity files [format: map=path]")
-                .short("m")
+                .short('m')
                 .long("importmap")
                 .takes_value(true)
-                .multiple(true)
-                .require_delimiter(true),
+                .multiple_occurrences(true),
         )
         .arg(
-            Arg::with_name("CONSTANTFOLDING")
+            Arg::new("CONSTANTFOLDING")
                 .help("Disable constant folding codegen optimization")
                 .long("no-constant-folding")
                 .display_order(1),
         )
         .arg(
-            Arg::with_name("STRENGTHREDUCE")
+            Arg::new("STRENGTHREDUCE")
                 .help("Disable strength reduce codegen optimization")
                 .long("no-strength-reduce")
                 .display_order(2),
         )
         .arg(
-            Arg::with_name("DEADSTORAGE")
+            Arg::new("DEADSTORAGE")
                 .help("Disable dead storage codegen optimization")
                 .long("no-dead-storage")
                 .display_order(3),
         )
         .arg(
-            Arg::with_name("VECTORTOSLICE")
+            Arg::new("VECTORTOSLICE")
                 .help("Disable vector to slice codegen optimization")
                 .long("no-vector-to-slice")
                 .display_order(4),
         )
         .arg(
-            Arg::with_name("COMMONSUBEXPRESSIONELIMINATION")
+            Arg::new("COMMONSUBEXPRESSIONELIMINATION")
                 .help("Disable common subexpression elimination")
                 .long("no-cse")
                 .display_order(5),
         )
         .arg(
-            Arg::with_name("MATHOVERFLOW")
+            Arg::new("MATHOVERFLOW")
                 .help("Enable math overflow checking")
                 .long("math-overflow")
                 .display_order(6),
         )
         .arg(
-            Arg::with_name("LANGUAGESERVER")
+            Arg::new("LANGUAGESERVER")
                 .help("Start language server on stdin/stdout")
                 .conflicts_with_all(&["STD-JSON", "OUTPUT", "EMIT", "OPT", "INPUT"])
                 .long("language-server"),
         )
         .arg(
-            Arg::with_name("DOC")
+            Arg::new("DOC")
                 .help("Generate documention for contracts using doc comments")
                 .long("doc"),
         )
@@ -243,7 +243,7 @@ fn main() {
 
     let mut resolver = FileResolver::new();
 
-    for filename in matches.values_of("INPUT").unwrap() {
+    for filename in matches.values_of_os("INPUT").unwrap() {
         if let Ok(path) = PathBuf::from(filename).canonicalize() {
             let _ = resolver.add_import_path(path.parent().unwrap().to_path_buf());
         }
@@ -254,10 +254,10 @@ fn main() {
         std::process::exit(1);
     }
 
-    if let Some(paths) = matches.values_of("IMPORTPATH") {
+    if let Some(paths) = matches.values_of_os("IMPORTPATH") {
         for path in paths {
             if let Err(e) = resolver.add_import_path(PathBuf::from(path)) {
-                eprintln!("error: import path ‘{}’: {}", path, e);
+                eprintln!("error: import path ‘{}’: {}", path.to_string_lossy(), e);
                 std::process::exit(1);
             }
         }
@@ -282,13 +282,13 @@ fn main() {
         let mut success = true;
         let mut files = Vec::new();
 
-        for filename in matches.values_of("INPUT").unwrap() {
+        for filename in matches.values_of_os("INPUT").unwrap() {
             let ns = solang::parse_and_resolve(filename, &mut resolver, target);
 
             diagnostics::print_messages(&resolver, &ns, verbose);
 
             if ns.contracts.is_empty() {
-                eprintln!("{}: error: no contracts found", filename);
+                eprintln!("{}: error: no contracts found", filename.to_string_lossy());
                 success = false;
             } else if diagnostics::any_errors(&ns.diagnostics) {
                 success = false;
@@ -316,7 +316,7 @@ fn main() {
             strength_reduce: !matches.is_present("STRENGTHREDUCE"),
             vector_to_slice: !matches.is_present("VECTORTOSLICE"),
             math_overflow_check,
-            common_subexpression_elimination: !matches.is_present("COMMONEXPRESSIONELIMINATION"),
+            common_subexpression_elimination: !matches.is_present("COMMONSUBEXPRESSIONELIMINATION"),
             opt_level,
         };
 
@@ -324,7 +324,7 @@ fn main() {
 
         let mut errors = false;
 
-        for filename in matches.values_of("INPUT").unwrap() {
+        for filename in matches.values_of_os("INPUT").unwrap() {
             match process_file(filename, &mut resolver, target, &matches, &mut json, &opt) {
                 Ok(ns) => namespaces.push(ns),
                 Err(_) => {
@@ -424,7 +424,7 @@ fn output_file(matches: &ArgMatches, stem: &str, ext: &str) -> PathBuf {
 }
 
 fn process_file(
-    filename: &str,
+    filename: &OsStr,
     resolver: &mut FileResolver,
     target: solang::Target,
     matches: &ArgMatches,
@@ -473,7 +473,7 @@ fn process_file(
     }
 
     if let Some("ast") = matches.value_of("EMIT") {
-        println!("{}", ns.print(filename));
+        println!("{}", ns.print(&filename.to_string_lossy()));
         return Ok(ns);
     }
 
@@ -520,11 +520,12 @@ fn process_file(
         }
 
         let context = inkwell::context::Context::create();
+        let filename_string = filename.to_string_lossy();
 
         let binary = resolved_contract.emit(
             &ns,
             &context,
-            filename,
+            &filename_string,
             opt.opt_level.into(),
             opt.math_overflow_check,
         );
@@ -575,7 +576,8 @@ fn process_file(
         }
     }
 
-    json.contracts.insert(filename.to_owned(), json_contracts);
+    json.contracts
+        .insert(filename.to_string_lossy().to_string(), json_contracts);
 
     Ok(ns)
 }
