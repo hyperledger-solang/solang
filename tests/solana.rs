@@ -26,13 +26,16 @@ use solang::{
     sema::diagnostics,
     Target,
 };
-use std::alloc::Layout;
-use std::cell::RefCell;
-use std::collections::HashMap;
-use std::convert::TryInto;
-use std::io::Write;
-use std::mem::{align_of, size_of};
-use std::rc::Rc;
+use std::{
+    alloc::Layout,
+    cell::RefCell,
+    collections::HashMap,
+    convert::TryInto,
+    ffi::OsStr,
+    io::Write,
+    mem::{align_of, size_of},
+    rc::Rc,
+};
 use tiny_keccak::{Hasher, Keccak};
 
 mod solana_tests;
@@ -116,7 +119,7 @@ fn build_solidity(src: &str) -> VirtualMachine {
 
     cache.set_file_contents("test.sol", src.to_string());
 
-    let mut ns = solang::parse_and_resolve("test.sol", &mut cache, Target::Solana);
+    let mut ns = solang::parse_and_resolve(OsStr::new("test.sol"), &mut cache, Target::Solana);
 
     // codegen all the contracts; some additional errors/warnings will be detected here
     codegen(&mut ns, &Options::default());

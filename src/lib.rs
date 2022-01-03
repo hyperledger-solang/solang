@@ -15,7 +15,7 @@ pub mod sema;
 use file_resolver::FileResolver;
 use sema::ast;
 use sema::diagnostics;
-use std::fmt;
+use std::{ffi::OsStr, fmt};
 
 /// The target chain you want to compile Solidity for.
 #[derive(Clone, Copy)]
@@ -108,7 +108,7 @@ impl Target {
 /// The ctx is the inkwell llvm context.
 #[cfg(feature = "llvm")]
 pub fn compile(
-    filename: &str,
+    filename: &OsStr,
     resolver: &mut FileResolver,
     opt_level: inkwell::OptimizationLevel,
     target: Target,
@@ -164,7 +164,7 @@ pub fn compile_many<'a>(
 ///
 /// Note that multiple contracts can be specified in on solidity source file.
 pub fn parse_and_resolve(
-    filename: &str,
+    filename: &OsStr,
     resolver: &mut FileResolver,
     target: Target,
 ) -> ast::Namespace {

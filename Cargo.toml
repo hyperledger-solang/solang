@@ -19,7 +19,7 @@ num-bigint = "0.4"
 num-traits = "0.2"
 num-derive = "0.3"
 parity-wasm = "0.42"
-clap = "2.33"
+clap = "3.0"
 lazy_static = "1.4"
 hex = "0.4"
 tiny-keccak = { version = "2.0", features = ["keccak"] }

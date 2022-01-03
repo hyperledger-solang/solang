@@ -4,7 +4,7 @@ use ast::{Diagnostic, Mutability};
 use num_bigint::BigInt;
 use num_traits::Signed;
 use num_traits::Zero;
-use std::collections::HashMap;
+use std::{collections::HashMap, ffi::OsStr};
 
 mod address;
 pub mod ast;
@@ -176,7 +176,7 @@ fn resolve_import(
         pt::Import::Rename(f, _) => f,
     };
 
-    let import_file_no = match resolver.resolve_file(parent, &filename.string) {
+    let import_file_no = match resolver.resolve_file(parent, OsStr::new(&filename.string)) {
         Err(message) => {
             ns.diagnostics
                 .push(ast::Diagnostic::error(filename.loc, message));

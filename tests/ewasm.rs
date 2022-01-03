@@ -5,6 +5,7 @@ use rand::Rng;
 use ripemd::Ripemd160;
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
+use std::ffi::OsStr;
 use std::fmt;
 use tiny_keccak::{Hasher, Keccak};
 use wasmi::memory_units::Pages;
@@ -800,7 +801,7 @@ fn build_solidity(src: &str) -> TestRuntime {
     cache.set_file_contents("test.sol", src.to_string());
 
     let (res, ns) = compile(
-        "test.sol",
+        OsStr::new("test.sol"),
         &mut cache,
         inkwell::OptimizationLevel::Default,
         Target::Ewasm,

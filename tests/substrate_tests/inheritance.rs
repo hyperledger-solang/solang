@@ -3,6 +3,7 @@ use parity_scale_codec::Encode;
 use parity_scale_codec_derive::Decode;
 use solang::file_resolver::FileResolver;
 use solang::Target;
+use std::ffi::OsStr;
 
 #[test]
 fn test_abstract() {
@@ -29,7 +30,7 @@ fn test_abstract() {
     );
 
     let (contracts, ns) = solang::compile(
-        "a.sol",
+        OsStr::new("a.sol"),
         &mut cache,
         inkwell::OptimizationLevel::Default,
         Target::default_substrate(),
@@ -67,7 +68,7 @@ fn test_abstract() {
     );
 
     let (contracts, ns) = solang::compile(
-        "a.sol",
+        OsStr::new("a.sol"),
         &mut cache,
         inkwell::OptimizationLevel::Default,
         Target::default_substrate(),

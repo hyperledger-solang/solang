@@ -1,5 +1,6 @@
 use solang::{file_resolver::FileResolver, parse_and_resolve, Target};
 use std::{
+    ffi::OsStr,
     fs::{read_dir, File},
     io::{self, Read},
     path::PathBuf,
@@ -55,7 +56,7 @@ fn parse_file(path: PathBuf, target: Target) -> io::Result<()> {
     // The files may have had their end of lines mangled on Windows
     cache.set_file_contents(&filename, source.replace("\r\n", "\n"));
 
-    let ns = parse_and_resolve(&filename, &mut cache, target);
+    let ns = parse_and_resolve(OsStr::new(&filename), &mut cache, target);
 
     let mut path = path;
 

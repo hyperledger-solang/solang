@@ -3,11 +3,12 @@ use solang::file_resolver::FileResolver;
 use solang::sema::ast::Diagnostic;
 use solang::sema::ast::{Level, Namespace};
 use solang::{parse_and_resolve, Target};
+use std::ffi::OsStr;
 
 fn parse_and_codegen(src: &'static str) -> Namespace {
     let mut cache = FileResolver::new();
     cache.set_file_contents("test.sol", src.to_string());
-    let mut ns = parse_and_resolve("test.sol", &mut cache, Target::Ewasm);
+    let mut ns = parse_and_resolve(OsStr::new("test.sol"), &mut cache, Target::Ewasm);
 
     let opt = Options {
         dead_storage: false,
