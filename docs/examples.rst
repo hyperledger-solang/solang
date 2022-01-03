@@ -12,10 +12,10 @@ written in Solidity:
 .. include:: ../examples/flipper.sol
   :code: javascript
 
-Full Example
-------------
+Example
+-------
 
-This example exists to show the language features that Solang supports.
+A few simple arithmetic functions.
 
-.. include:: ../examples/full_example.sol
+.. include:: ../examples/example.sol
   :code: javascript
