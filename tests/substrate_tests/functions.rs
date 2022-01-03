@@ -288,7 +288,7 @@ fn test_loops() {
 }
 
 #[test]
-fn test_full_example() {
+fn test_example() {
     #[derive(Debug, PartialEq, Encode, Decode)]
     struct Val32(i32);
 
@@ -299,7 +299,7 @@ fn test_full_example() {
     struct ValBool(bool);
 
     // parse
-    let src = include_str!("../../examples/full_example.sol");
+    let src = include_str!("../../examples/example.sol");
 
     let mut runtime = build_solidity(src);
 

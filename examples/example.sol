@@ -1,11 +1,5 @@
-// full_example.sol
-
-/*
- This is an example contract to show all the features that the
- Solang Solidity Compiler supports.
-*/
-
-contract full_example {
+// example.sol
+contract example {
 	// Process state
 	enum State {
 		Running,
