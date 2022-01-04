@@ -4691,7 +4691,7 @@ fn struct_literal(
 
     let ty = Type::Struct(struct_no);
 
-    if ty.is_builtin(ns) {
+    if ty.contains_builtins(ns).is_some() {
         diagnostics.push(Diagnostic::error(
             *loc,
             format!(
@@ -5269,8 +5269,18 @@ fn named_struct_literal(
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Result<Expression, ()> {
     let struct_def = ns.structs[struct_no].clone();
+    let ty = Type::Struct(struct_no);
 
-    if args.len() != struct_def.fields.len() {
+    if ty.contains_builtins(ns).is_some() {
+        diagnostics.push(Diagnostic::error(
+            *loc,
+            format!(
+                "builtin struct ‘{}’ cannot be created using struct literal",
+                struct_def.name,
+            ),
+        ));
+        Err(())
+    } else if args.len() != struct_def.fields.len() {
         diagnostics.push(Diagnostic::error(
             *loc,
             format!(
@@ -5315,7 +5325,6 @@ fn named_struct_literal(
                 }
             }
         }
-        let ty = Type::Struct(struct_no);
         Ok(Expression::StructLiteral(*loc, ty, fields))
     }
 }
