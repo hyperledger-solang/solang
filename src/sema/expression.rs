@@ -4640,7 +4640,12 @@ fn array_subscript(
                     Box::new(index),
                 ))
             } else {
-                let elem_ty = array_ty.array_deref();
+                let mut elem_ty = array_ty.array_deref();
+
+                if elem_ty.is_builtin(ns) {
+                    // AccountInfo is an array of structures, not an array of pointers to structures
+                    elem_ty = elem_ty.deref_any().clone();
+                }
 
                 let array = cast(
                     &array.loc(),

@@ -2387,23 +2387,18 @@ pub trait TargetRuntime<'a> {
                     }
                 }
             }
+            Expression::StructMember(_, _, a, _) if a.ty().is_builtin(ns) => {
+                self.builtin(bin, e, vartab, function, ns)
+            }
             Expression::StructMember(_, _, a, i) => {
                 let struct_ptr = self
                     .expression(bin, a, vartab, function, ns)
                     .into_pointer_value();
 
-                unsafe {
-                    bin.builder
-                        .build_gep(
-                            struct_ptr,
-                            &[
-                                bin.context.i32_type().const_zero(),
-                                bin.context.i32_type().const_int(*i as u64, false),
-                            ],
-                            "struct member",
-                        )
-                        .into()
-                }
+                bin.builder
+                    .build_struct_gep(struct_ptr, *i as u32, "struct member")
+                    .unwrap()
+                    .into()
             }
             Expression::Ternary(_, _, c, l, r) => {
                 let cond = self
@@ -6250,6 +6245,13 @@ impl<'a> Binary<'a> {
 
     /// Return the llvm type for the resolved type.
     fn llvm_type(&self, ty: &ast::Type, ns: &ast::Namespace) -> BasicTypeEnum<'a> {
+        if ty.is_builtin(ns) {
+            return self
+                .module
+                .get_struct_type("struct.SolAccountInfo")
+                .unwrap()
+                .into();
+        }
         match ty {
             ast::Type::Bool => BasicTypeEnum::IntType(self.context.bool_type()),
             ast::Type::Int(n) | ast::Type::Uint(n) => {

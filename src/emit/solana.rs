@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use std::str;
 
 use inkwell::module::Linkage;
-use inkwell::types::{BasicType, IntType};
+use inkwell::types::{AnyType, BasicType, IntType};
 use inkwell::values::{
     ArrayValue, BasicMetadataValueEnum, BasicValueEnum, FunctionValue, IntValue, PointerValue,
     UnnamedAddress,
@@ -1434,6 +1434,124 @@ impl SolanaTarget {
         binary.builder.position_at_end(rc_zero);
 
         binary.builder.build_load(offset, "offset").into_int_value()
+    }
+
+    /// AccountInfo struct member
+    fn account_info_member<'b>(
+        &self,
+        binary: &Binary<'b>,
+        account_info: PointerValue<'b>,
+        member: usize,
+        ns: &ast::Namespace,
+    ) -> BasicValueEnum<'b> {
+        match member {
+            // key
+            0 => {
+                let key = binary
+                    .builder
+                    .build_struct_gep(account_info, 0, "key")
+                    .unwrap();
+
+                binary.builder.build_load(
+                    binary.builder.build_pointer_cast(
+                        key,
+                        binary.address_type(ns).ptr_type(AddressSpace::Generic),
+                        "address",
+                    ),
+                    "key",
+                )
+            }
+            // lamports
+            1 => binary.builder.build_load(
+                binary
+                    .builder
+                    .build_struct_gep(account_info, 1, "lamports")
+                    .unwrap(),
+                "lamports",
+            ),
+            // data
+            2 => {
+                println!("type:{}", account_info.get_type().print_to_string());
+                let data_len = binary
+                    .builder
+                    .build_int_truncate(
+                        binary
+                            .builder
+                            .build_load(
+                                binary
+                                    .builder
+                                    .build_struct_gep(account_info, 2, "data_len")
+                                    .unwrap(),
+                                "data_len",
+                            )
+                            .into_int_value(),
+                        binary.context.i32_type(),
+                        "data_len",
+                    )
+                    .into();
+
+                let data = binary.builder.build_load(
+                    binary
+                        .builder
+                        .build_struct_gep(account_info, 3, "data")
+                        .unwrap(),
+                    "data",
+                );
+
+                binary
+                    .llvm_type(&ast::Type::Slice, ns)
+                    .into_struct_type()
+                    .const_named_struct(&[data, data_len])
+                    .into()
+            }
+            // owner
+            3 => {
+                let owner = binary
+                    .builder
+                    .build_struct_gep(account_info, 4, "owner")
+                    .unwrap();
+
+                binary.builder.build_load(
+                    binary.builder.build_pointer_cast(
+                        owner,
+                        binary.address_type(ns).ptr_type(AddressSpace::Generic),
+                        "address",
+                    ),
+                    "owner",
+                )
+            }
+            // rent epoch
+            4 => {
+                let rent_epoch = binary
+                    .builder
+                    .build_struct_gep(account_info, 5, "rent_epoch")
+                    .unwrap();
+
+                binary.builder.build_load(rent_epoch, "rent_epoch")
+            }
+            // remaining fields are bool
+            _ => {
+                let bool_field = binary
+                    .builder
+                    .build_struct_gep(account_info, member as u32 + 1, "bool_field")
+                    .unwrap();
+
+                let value = binary
+                    .builder
+                    .build_load(bool_field, "bool_field")
+                    .into_int_value();
+
+                binary
+                    .builder
+                    .build_int_compare(
+                        IntPredicate::NE,
+                        value,
+                        value.get_type().const_zero(),
+                        "is_non_zero",
+                    )
+                    .into()
+            }
+        }
     }
 }
 
@@ -3475,6 +3593,13 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                     .builder
                     .build_int_truncate(ka_num, binary.context.i32_type(), "ka_num_32bits")
                     .into()
+            }
+            ast::Expression::StructMember(_, _, a, member) => {
+                let account_info = self
+                    .expression(binary, a, vartab, function, ns)
+                    .into_pointer_value();
+
+                self.account_info_member(binary, account_info, *member, ns)
             }
             _ => unimplemented!(),
         }
