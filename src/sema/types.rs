@@ -1142,14 +1142,23 @@ impl Type {
         }
     }
 
+    /// Is this structure a builtin
+    pub fn is_builtin(&self, ns: &Namespace) -> bool {
+        match self {
+            Type::Struct(n) => ns.structs[*n].loc.is_none(),
+            Type::StorageRef(_, r) | Type::Ref(r) => r.is_builtin(ns),
+            _ => false,
+        }
+    }
+
     /// Does the type contain any builtin type
     pub fn contains_builtins<'a>(&'a self, ns: &'a Namespace) -> Option<&'a Type> {
         match self {
-            Type::Struct(n) if ns.structs[*n].is_builtin() => Some(self),
             Type::Array(ty, _) => ty.contains_builtins(ns),
             Type::Mapping(key, value) => key
                 .contains_builtins(ns)
                 .or_else(|| value.contains_builtins(ns)),
+            Type::Struct(n) if ns.structs[*n].loc.is_none() => Some(self),
             Type::Struct(n) => ns.structs[*n]
                 .fields
                 .iter()

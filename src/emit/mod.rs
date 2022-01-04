@@ -2542,7 +2542,7 @@ pub trait TargetRuntime<'a> {
                     bin.vector_new(size, elem_size, init.as_ref()).into()
                 }
             }
-            Expression::Builtin(_, _, Builtin::ArrayLength, args) => {
+            Expression::Builtin(_, tys, Builtin::ArrayLength, args) if !tys[0].is_builtin(ns) => {
                 let array = self.expression(bin, &args[0], vartab, function, ns);
 
                 bin.vector_len(array).into()

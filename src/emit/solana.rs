@@ -3445,6 +3445,37 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
 
                 binary.builder.build_load(lamport, "lamport")
             }
+            ast::Expression::Builtin(_, _, ast::Builtin::Accounts, _) => {
+                let parameters = self.sol_parameters(binary);
+
+                unsafe {
+                    binary.builder.build_gep(
+                        parameters,
+                        &[
+                            binary.context.i32_type().const_int(0, false),
+                            binary.context.i32_type().const_int(0, false),
+                            binary.context.i32_type().const_int(0, false),
+                        ],
+                        "account",
+                    )
+                }
+                .into()
+            }
+            ast::Expression::Builtin(_, _, ast::Builtin::ArrayLength, _) => {
+                let parameters = self.sol_parameters(binary);
+
+                let ka_num = binary
+                    .builder
+                    .build_struct_gep(parameters, 1, "ka_num")
+                    .unwrap();
+
+                let ka_num = binary.builder.build_load(ka_num, "ka_num").into_int_value();
+
+                binary
+                    .builder
+                    .build_int_truncate(ka_num, binary.context.i32_type(), "ka_num_32bits")
+                    .into()
+            }
             _ => unimplemented!(),
         }
     }

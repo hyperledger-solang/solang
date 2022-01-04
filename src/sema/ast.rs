@@ -61,13 +61,6 @@ pub struct StructDecl {
     pub storage_offsets: Vec<BigInt>,
 }
 
-impl StructDecl {
-    /// Is this structure a builtin
-    pub fn is_builtin(&self) -> bool {
-        self.loc.is_none()
-    }
-}
-
 #[derive(PartialEq, Clone, Debug)]
 pub struct EventDecl {
     pub tags: Vec<Tag>,

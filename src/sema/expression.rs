@@ -4671,7 +4671,9 @@ fn struct_literal(
 ) -> Result<Expression, ()> {
     let struct_def = ns.structs[struct_no].clone();
 
-    if struct_def.is_builtin() {
+    let ty = Type::Struct(struct_no);
+
+    if ty.is_builtin(ns) {
         diagnostics.push(Diagnostic::error(
             *loc,
             format!(
@@ -4713,8 +4715,6 @@ fn struct_literal(
                 diagnostics,
             )?);
         }
-
-        let ty = Type::Struct(struct_no);
 
         Ok(Expression::StructLiteral(*loc, ty, fields))
     }
