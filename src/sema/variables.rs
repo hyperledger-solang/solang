@@ -235,6 +235,7 @@ pub fn var_decl(
             contract_no,
             function_no: None,
             constant,
+            lvalue: false,
         };
 
         match expression(
@@ -374,6 +375,7 @@ pub fn var_decl(
                     ty: ty.clone(),
                     ty_loc: s.ty.loc(),
                     indexed: false,
+                    readonly: false,
                 }],
                 ns,
             );
@@ -440,6 +442,7 @@ fn collect_parameters<'a>(
                 ty: key.as_ref().clone(),
                 ty_loc: pt::Loc(0, 0, 0),
                 indexed: false,
+                readonly: false,
             });
 
             collect_parameters(value, params, expr, ns)
@@ -470,6 +473,7 @@ fn collect_parameters<'a>(
                     ty: Type::Uint(256),
                     ty_loc: pt::Loc(0, 0, 0),
                     indexed: false,
+                    readonly: false,
                 });
             }
 

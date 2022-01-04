@@ -308,6 +308,7 @@ pub fn struct_decl(
             ty,
             ty_loc: field.ty.loc(),
             indexed: false,
+            readonly: false,
         });
     }
 
@@ -403,6 +404,7 @@ fn event_decl(
             ty,
             ty_loc: field.ty.loc(),
             indexed: field.indexed,
+            readonly: false,
         });
     }
 

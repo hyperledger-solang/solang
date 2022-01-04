@@ -872,6 +872,7 @@ pub fn resolve_params(
                     ty,
                     ty_loc,
                     indexed: false,
+                    readonly: false,
                 });
             }
             Err(()) => success = false,
@@ -986,6 +987,7 @@ pub fn resolve_returns(
                     ty,
                     ty_loc,
                     indexed: false,
+                    readonly: false,
                 });
             }
             Err(()) => success = false,
@@ -1024,6 +1026,7 @@ fn signatures() {
                 ty: Type::Uint(8),
                 ty_loc: pt::Loc(0, 0, 0),
                 indexed: false,
+                readonly: false,
             },
             Parameter {
                 loc: pt::Loc(0, 0, 0),
@@ -1032,6 +1035,7 @@ fn signatures() {
                 ty: Type::Address(false),
                 ty_loc: pt::Loc(0, 0, 0),
                 indexed: false,
+                readonly: false,
             },
         ],
         Vec::new(),

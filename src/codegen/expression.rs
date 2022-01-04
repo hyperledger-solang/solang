@@ -2093,6 +2093,7 @@ pub fn emit_function_call(
                             name: String::new(),
                             name_loc: None,
                             indexed: false,
+                            readonly: false,
                         });
                     }
 
@@ -2142,6 +2143,7 @@ pub fn emit_function_call(
                             ty: ty.clone(),
                             ty_loc: *loc,
                             indexed: false,
+                            readonly: false,
                         })
                         .collect(),
                     data,

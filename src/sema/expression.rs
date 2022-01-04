@@ -1402,12 +1402,14 @@ pub struct ExprContext {
     pub file_no: usize,
     // Are we resolving a contract, and if so, which one
     pub contract_no: Option<usize>,
-    // Are resolving the body of a function, and if os, which one
+    /// Are resolving the body of a function, and if os, which one
     pub function_no: Option<usize>,
-    // Are we currently in an unchecked block
+    /// Are we currently in an unchecked block
     pub unchecked: bool,
-    // Are we evaluating a constant expression
+    /// Are we evaluating a constant expression
     pub constant: bool,
+    /// Are we resolving an l-value
+    pub lvalue: bool,
 }
 
 /// Resolve a parsed expression into an AST expression. The resolve_to argument is a hint to what
@@ -3529,7 +3531,7 @@ fn addition(
 }
 
 /// Resolve an assignment
-pub fn assign_single(
+fn assign_single(
     loc: &pt::Loc,
     left: &pt::Expression,
     right: &pt::Expression,
@@ -3538,12 +3540,12 @@ pub fn assign_single(
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Result<Expression, ()> {
-    let mut context = context.clone();
-    context.constant = false;
+    let mut lcontext = context.clone();
+    lcontext.lvalue = true;
 
     let var = expression(
         left,
-        &context,
+        &lcontext,
         ns,
         symtable,
         diagnostics,
@@ -3554,7 +3556,7 @@ pub fn assign_single(
     let var_ty = var.ty();
     let val = expression(
         right,
-        &context,
+        context,
         ns,
         symtable,
         diagnostics,
@@ -3666,12 +3668,12 @@ fn assign_expr(
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Result<Expression, ()> {
-    let mut context = context.clone();
-    context.constant = false;
+    let mut lcontext = context.clone();
+    lcontext.lvalue = true;
 
     let var = expression(
         left,
-        &context,
+        &lcontext,
         ns,
         symtable,
         diagnostics,
@@ -3689,7 +3691,7 @@ fn assign_expr(
         ResolveTo::Type(var_ty.deref_any())
     };
 
-    let set = expression(right, &context, ns, symtable, diagnostics, resolve_to)?;
+    let set = expression(right, context, ns, symtable, diagnostics, resolve_to)?;
     used_variable(ns, &set, symtable);
     let set_type = set.ty();
 
@@ -3904,7 +3906,7 @@ fn incr_decr(
 
     let mut context = context.clone();
 
-    context.constant = false;
+    context.lvalue = true;
 
     let var = expression(v, &context, ns, symtable, diagnostics, ResolveTo::Unknown)?;
     used_variable(ns, &var, symtable);
@@ -4319,12 +4321,28 @@ fn member_access(
                 .enumerate()
                 .find(|f| id.name == f.1.name)
             {
-                return Ok(Expression::StructMember(
-                    id.loc,
-                    Type::Ref(Box::new(f.ty.clone())),
-                    Box::new(expr),
-                    i,
-                ));
+                return if context.lvalue && f.readonly {
+                    diagnostics.push(Diagnostic::error(
+                        id.loc,
+                        format!("struct ‘{}’ field ‘{}’ is readonly", ns.structs[n], id.name),
+                    ));
+                    Err(())
+                } else if f.readonly {
+                    // readonly fields return the value, not a reference
+                    Ok(Expression::StructMember(
+                        id.loc,
+                        f.ty.clone(),
+                        Box::new(expr),
+                        i,
+                    ))
+                } else {
+                    Ok(Expression::StructMember(
+                        id.loc,
+                        Type::Ref(Box::new(f.ty.clone())),
+                        Box::new(expr),
+                        i,
+                    ))
+                };
             } else {
                 diagnostics.push(Diagnostic::error(
                     id.loc,

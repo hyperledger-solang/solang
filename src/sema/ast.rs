@@ -122,6 +122,7 @@ pub struct Parameter {
     pub ty: Type,
     pub ty_loc: pt::Loc,
     pub indexed: bool,
+    pub readonly: bool,
 }
 
 #[derive(PartialEq, Eq, Clone, Hash, Debug)]

@@ -1311,6 +1311,7 @@ impl Namespace {
                 ty: Type::Address(false),
                 ty_loc: pt::Loc(0, 0, 0),
                 indexed: false,
+                readonly: true,
             },
             Parameter {
                 loc: pt::Loc(0, 0, 0),
@@ -1319,6 +1320,7 @@ impl Namespace {
                 ty: Type::Uint(64),
                 ty_loc: pt::Loc(0, 0, 0),
                 indexed: false,
+                readonly: false,
             },
             Parameter {
                 loc: pt::Loc(0, 0, 0),
@@ -1327,6 +1329,7 @@ impl Namespace {
                 ty: Type::DynamicBytes,
                 ty_loc: pt::Loc(0, 0, 0),
                 indexed: false,
+                readonly: false,
             },
             Parameter {
                 loc: pt::Loc(0, 0, 0),
@@ -1335,6 +1338,7 @@ impl Namespace {
                 ty: Type::Address(false),
                 ty_loc: pt::Loc(0, 0, 0),
                 indexed: false,
+                readonly: true,
             },
             Parameter {
                 loc: pt::Loc(0, 0, 0),
@@ -1343,6 +1347,7 @@ impl Namespace {
                 ty: Type::Uint(64),
                 ty_loc: pt::Loc(0, 0, 0),
                 indexed: false,
+                readonly: true,
             },
             Parameter {
                 loc: pt::Loc(0, 0, 0),
@@ -1351,6 +1356,7 @@ impl Namespace {
                 ty: Type::Bool,
                 ty_loc: pt::Loc(0, 0, 0),
                 indexed: false,
+                readonly: true,
             },
             Parameter {
                 loc: pt::Loc(0, 0, 0),
@@ -1359,6 +1365,7 @@ impl Namespace {
                 ty: Type::Bool,
                 ty_loc: pt::Loc(0, 0, 0),
                 indexed: false,
+                readonly: true,
             },
             Parameter {
                 loc: pt::Loc(0, 0, 0),
@@ -1367,6 +1374,7 @@ impl Namespace {
                 ty: Type::Bool,
                 ty_loc: pt::Loc(0, 0, 0),
                 indexed: false,
+                readonly: true,
             },
         ];
 

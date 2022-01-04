@@ -1492,6 +1492,7 @@ impl ast::Namespace {
             contract_no,
             function_no,
             constant: true,
+            lvalue: false,
         };
 
         let size_expr = expression(
