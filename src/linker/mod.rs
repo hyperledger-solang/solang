@@ -2,12 +2,11 @@ mod bpf;
 mod wasm;
 
 use crate::Target;
+use once_cell::sync::Lazy;
 use std::ffi::CString;
 use std::sync::Mutex;
 
-lazy_static::lazy_static! {
-    static ref LINKER_MUTEX: Mutex<i32> = Mutex::new(0i32);
-}
+static LINKER_MUTEX: Lazy<Mutex<i32>> = Lazy::new(|| Mutex::new(0i32));
 
 /// Take an object file and turn it into a final linked binary ready for deployment
 pub fn link(input: &[u8], name: &str, target: Target) -> Vec<u8> {

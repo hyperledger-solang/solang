@@ -4671,7 +4671,16 @@ fn struct_literal(
 ) -> Result<Expression, ()> {
     let struct_def = ns.structs[struct_no].clone();
 
-    if args.len() != struct_def.fields.len() {
+    if struct_def.is_builtin() {
+        diagnostics.push(Diagnostic::error(
+            *loc,
+            format!(
+                "builtin struct ‘{}’ cannot be created using struct literal",
+                struct_def.name,
+            ),
+        ));
+        Err(())
+    } else if args.len() != struct_def.fields.len() {
         diagnostics.push(Diagnostic::error(
             *loc,
             format!(

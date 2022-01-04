@@ -52,13 +52,20 @@ pub enum Type {
 pub struct StructDecl {
     pub tags: Vec<Tag>,
     pub name: String,
-    pub loc: pt::Loc,
+    pub loc: Option<pt::Loc>,
     pub contract: Option<String>,
     pub fields: Vec<Parameter>,
     // List of offsets of the fields, last entry is the offset for the struct overall size
     pub offsets: Vec<BigInt>,
     // Same, but now in storage
     pub storage_offsets: Vec<BigInt>,
+}
+
+impl StructDecl {
+    /// Is this structure a builtin
+    pub fn is_builtin(&self) -> bool {
+        self.loc.is_none()
+    }
 }
 
 #[derive(PartialEq, Clone, Debug)]
@@ -1329,6 +1336,7 @@ pub enum Builtin {
     WriteUint128LE,
     WriteUint256LE,
     WriteAddress,
+    Accounts,
 }
 
 #[derive(PartialEq, Clone, Debug)]

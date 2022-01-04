@@ -51,7 +51,7 @@ pub fn resolve_typenames<'a>(
                     ns.structs.push(StructDecl {
                         tags: Vec::new(),
                         name: def.name.name.to_owned(),
-                        loc: def.name.loc,
+                        loc: Some(def.name.loc),
                         contract: None,
                         fields: Vec::new(),
                         offsets: Vec::new(),
@@ -124,7 +124,7 @@ pub fn resolve_fields(delay: ResolveFields, file_no: usize, ns: &mut Namespace) 
 
                     if structs_visited.contains(&struct_no) {
                         ns.diagnostics.push(Diagnostic::error_with_note(
-                            def.loc,
+                            def.loc.unwrap(),
                             format!("struct ‘{}’ has infinite size", def.name),
                             field.loc,
                             format!("recursive field ‘{}’", field.name),
@@ -196,7 +196,7 @@ fn resolve_contract<'a>(
                     ns.structs.push(StructDecl {
                         tags: Vec::new(),
                         name: s.name.name.to_owned(),
-                        loc: s.name.loc,
+                        loc: Some(s.name.loc),
                         contract: Some(def.name.name.to_owned()),
                         fields: Vec::new(),
                         offsets: Vec::new(),
@@ -833,7 +833,7 @@ impl Type {
             }
             Type::Mapping(_, _) => BigInt::zero(),
             Type::Ref(ty) | Type::StorageRef(_, ty) => ty.size_of(ns),
-            _ => unimplemented!(),
+            _ => unimplemented!("sizeof on {:?}", self),
         }
     }
 
@@ -1139,6 +1139,23 @@ impl Type {
                 .any(|f| f.ty.contains_internal_function(ns)),
             Type::StorageRef(_, r) | Type::Ref(r) => r.contains_internal_function(ns),
             _ => false,
+        }
+    }
+
+    /// Does the type contain any builtin type
+    pub fn contains_builtins<'a>(&'a self, ns: &'a Namespace) -> Option<&'a Type> {
+        match self {
+            Type::Struct(n) if ns.structs[*n].is_builtin() => Some(self),
+            Type::Array(ty, _) => ty.contains_builtins(ns),
+            Type::Mapping(key, value) => key
+                .contains_builtins(ns)
+                .or_else(|| value.contains_builtins(ns)),
+            Type::Struct(n) => ns.structs[*n]
+                .fields
+                .iter()
+                .find_map(|f| f.ty.contains_builtins(ns)),
+            Type::StorageRef(_, r) | Type::Ref(r) => r.contains_builtins(ns),
+            _ => None,
         }
     }
 

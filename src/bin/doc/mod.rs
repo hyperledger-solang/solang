@@ -195,31 +195,33 @@ pub fn generate_docs(outdir: &str, files: &[ast::Namespace], verbose: bool) {
 
         // structs
         for struct_decl in &file.structs {
-            if top.structs.iter().any(|e| e.loc == struct_decl.loc) {
-                continue;
-            }
+            if let Some(loc) = struct_decl.loc {
+                if top.structs.iter().any(|e| e.loc == loc) {
+                    continue;
+                }
 
-            let mut field = Vec::new();
+                let mut field = Vec::new();
 
-            for (i, f) in struct_decl.fields.iter().enumerate() {
-                field.push(Field {
-                    name: &f.name,
-                    ty: f.ty.to_string(file),
-                    indexed: false,
-                    doc: get_tag_no("param", i, &struct_decl.tags),
+                for (i, f) in struct_decl.fields.iter().enumerate() {
+                    field.push(Field {
+                        name: &f.name,
+                        ty: f.ty.to_string(file),
+                        indexed: false,
+                        doc: get_tag_no("param", i, &struct_decl.tags),
+                    });
+                }
+
+                top.structs.push(StructDecl {
+                    name: &struct_decl.name,
+                    contract: struct_decl.contract.as_deref(),
+                    title: get_tag("title", &struct_decl.tags),
+                    notice: get_tag("notice", &struct_decl.tags),
+                    author: get_tag("author", &struct_decl.tags),
+                    dev: get_tag("dev", &struct_decl.tags),
+                    loc,
+                    field,
                 });
             }
-
-            top.structs.push(StructDecl {
-                name: &struct_decl.name,
-                contract: struct_decl.contract.as_deref(),
-                title: get_tag("title", &struct_decl.tags),
-                notice: get_tag("notice", &struct_decl.tags),
-                author: get_tag("author", &struct_decl.tags),
-                dev: get_tag("dev", &struct_decl.tags),
-                loc: struct_decl.loc,
-                field,
-            });
         }
 
         // enum

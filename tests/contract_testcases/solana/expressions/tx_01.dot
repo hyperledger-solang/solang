@@ -3,10 +3,10 @@ strict digraph "tests/contract_testcases/solana/expressions/tx_01.sol" {
 	test [label="function test\ncontract: foo\ntests/contract_testcases/solana/expressions/tx_01.sol:3:13-57\nsignature test()\nvisibility public\nmutability pure"]
 	returns [label="returns\nuint64 "]
 	diagnostic [label="found contract ‘foo’\nlevel Debug\ntests/contract_testcases/solana/expressions/tx_01.sol:2:9-22"]
-	diagnostic_6 [label="builtin ‘tx.gasprice’ does not exist\nlevel Error\ntests/contract_testcases/solana/expressions/tx_01.sol:4:24-26"]
+	diagnostic_7 [label="builtin ‘tx.gasprice’ does not exist\nlevel Error\ntests/contract_testcases/solana/expressions/tx_01.sol:4:24-26"]
 	contracts -> contract
 	contract -> test [label="function"]
 	test -> returns [label="returns"]
 	diagnostics -> diagnostic [label="Debug"]
-	diagnostics -> diagnostic_6 [label="Error"]
+	diagnostics -> diagnostic_7 [label="Error"]
 }

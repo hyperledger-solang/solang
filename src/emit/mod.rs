@@ -36,6 +36,7 @@ mod ewasm;
 mod loop_builder;
 mod solana;
 mod substrate;
+use once_cell::sync::OnceCell;
 
 use crate::{
     codegen::{
@@ -45,12 +46,7 @@ use crate::{
     linker::link,
 };
 
-lazy_static::lazy_static! {
-    static ref LLVM_INIT: () = {
-        inkwell::targets::Target::initialize_webassembly(&Default::default());
-        inkwell::targets::Target::initialize_bpf(&Default::default());
-    };
-}
+static LLVM_INIT: OnceCell<()> = OnceCell::new();
 
 #[derive(Clone)]
 pub struct Variable<'a> {
@@ -5744,7 +5740,10 @@ impl<'a> Binary<'a> {
         math_overflow_check: bool,
         runtime: Option<Box<Binary<'a>>>,
     ) -> Self {
-        lazy_static::initialize(&LLVM_INIT);
+        LLVM_INIT.get_or_init(|| {
+            inkwell::targets::Target::initialize_webassembly(&Default::default());
+            inkwell::targets::Target::initialize_bpf(&Default::default());
+        });
 
         let triple = target.llvm_target_triple();
         let module = context.create_module(name);
