@@ -31,6 +31,15 @@ pub enum DocComment {
     Block { comments: Vec<SingleDocComment> },
 }
 
+impl DocComment {
+    pub fn comments(&self) -> Vec<&SingleDocComment> {
+        match self {
+            DocComment::Line { comment } => vec![comment],
+            DocComment::Block { comments } => comments.iter().collect(),
+        }
+    }
+}
+
 #[derive(Debug, PartialEq, Clone)]
 pub struct SingleDocComment {
     pub offset: usize,
