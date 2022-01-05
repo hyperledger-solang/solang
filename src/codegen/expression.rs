@@ -418,9 +418,10 @@ pub fn expression(
                 function_no: *function_no,
             }
         }
-        Expression::Subscript(loc, ty, array, index) => array_subscript(
+        Expression::Subscript(loc, elem_ty, array_ty, array, index) => array_subscript(
             loc,
-            ty,
+            elem_ty,
+            array_ty,
             array,
             index,
             cfg,
@@ -2146,6 +2147,7 @@ pub fn default_gas(ns: &Namespace) -> Expression {
 /// Codegen for an array subscript expression
 fn array_subscript(
     loc: &pt::Loc,
+    elem_ty: &Type,
     array_ty: &Type,
     array: &Expression,
     index: &Expression,
@@ -2161,7 +2163,13 @@ fn array_subscript(
         let index = expression(index, cfg, contract_no, func, ns, vartab, opt);
 
         return if ns.target == Target::Solana {
-            Expression::Subscript(*loc, array_ty.clone(), Box::new(array), Box::new(index))
+            Expression::Subscript(
+                *loc,
+                elem_ty.clone(),
+                array_ty.clone(),
+                Box::new(array),
+                Box::new(index),
+            )
         } else {
             Expression::Keccak256(*loc, array_ty.clone(), vec![array, index])
         };
@@ -2295,7 +2303,13 @@ fn array_subscript(
                 )
                 .unwrap();
 
-                Expression::Subscript(*loc, array_ty.clone(), Box::new(array), Box::new(index))
+                Expression::Subscript(
+                    *loc,
+                    elem_ty,
+                    array_ty.clone(),
+                    Box::new(array),
+                    Box::new(index),
+                )
             } else {
                 let index = cast(
                     &index_loc,
@@ -2325,7 +2339,13 @@ fn array_subscript(
                         )),
                     )
                 } else {
-                    Expression::Subscript(*loc, array_ty.clone(), Box::new(array), Box::new(index))
+                    Expression::Subscript(
+                        *loc,
+                        elem_ty,
+                        array_ty.clone(),
+                        Box::new(array),
+                        Box::new(index),
+                    )
                 }
             }
         } else {
@@ -2432,12 +2452,14 @@ fn array_subscript(
             }
             Type::Array(_, dim) if dim.last().unwrap().is_some() => Expression::Subscript(
                 *loc,
+                elem_ty.clone(),
                 array_ty.clone(),
                 Box::new(array),
                 Box::new(Expression::Variable(index_loc, coerced_ty, pos)),
             ),
             Type::DynamicBytes | Type::Array(_, _) => Expression::Subscript(
                 *loc,
+                elem_ty.clone(),
                 array_ty.clone(),
                 Box::new(array),
                 Box::new(Expression::Variable(index_loc, coerced_ty, pos)),

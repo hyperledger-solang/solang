@@ -20,7 +20,7 @@ pub fn assigned_variable(ns: &mut Namespace, exp: &Expression, symtable: &mut Sy
             assigned_variable(ns, str, symtable);
         }
 
-        Expression::Subscript(_, _, array, index)
+        Expression::Subscript(_, _, _, array, index)
         | Expression::StorageBytesSubscript(_, array, index) => {
             assigned_variable(ns, array, symtable);
             used_variable(ns, index, symtable);
@@ -65,7 +65,7 @@ pub fn used_variable(ns: &mut Namespace, exp: &Expression, symtable: &mut Symtab
             used_variable(ns, str, symtable);
         }
 
-        Expression::Subscript(_, _, array, index)
+        Expression::Subscript(_, _, _, array, index)
         | Expression::StorageBytesSubscript(_, array, index) => {
             used_variable(ns, array, symtable);
             used_variable(ns, index, symtable);

@@ -868,7 +868,7 @@ impl Dot {
                 self.add_expression(left, func, ns, node, String::from("left"));
                 self.add_expression(right, func, ns, node, String::from("right"));
             }
-            Expression::Subscript(loc, ty, array, index) => {
+            Expression::Subscript(loc, _, ty, array, index) => {
                 let node = self.add_node(
                     Node::new(
                         "subscript",

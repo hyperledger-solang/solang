@@ -588,7 +588,7 @@ impl SolangServer {
                 SolangServer::construct_expr(expr3, lookup_tbl, symtab, fnc_map, ns);
             }
 
-            ast::Expression::Subscript(_locs, _typ, expr1, expr2) => {
+            ast::Expression::Subscript(_locs, _, _, expr1, expr2) => {
                 SolangServer::construct_expr(expr1, lookup_tbl, symtab, fnc_map, ns);
                 SolangServer::construct_expr(expr2, lookup_tbl, symtab, fnc_map, ns);
             }
