@@ -90,9 +90,6 @@ impl Expression {
             | Expression::Assign(_, ty, _, _) => ty.clone(),
             Expression::Subscript(_, ty, _, _, _) => ty.clone(),
             Expression::StorageArrayLength { ty, .. } => ty.clone(),
-            Expression::StorageBytesSubscript(_, _, _) => {
-                Type::StorageRef(false, Box::new(Type::Bytes(1)))
-            }
             Expression::ExternalFunctionCallRaw { .. } => {
                 panic!("two return values");
             }
@@ -550,18 +547,20 @@ pub fn cast(
 
     // If it's a storage reference then load the value. The expr is the storage slot
     if let Type::StorageRef(_, r) = from {
-        if let Expression::StorageBytesSubscript(_, _, _) = expr {
-            return Ok(expr);
-        } else {
-            return cast(
-                loc,
-                Expression::StorageLoad(*loc, *r, Box::new(expr)),
-                to,
-                implicit,
-                ns,
-                diagnostics,
-            );
+        if let Expression::Subscript(_, _, ty, ..) = &expr {
+            if ty.is_storage_bytes() {
+                return Ok(expr);
+            }
         }
+
+        return cast(
+            loc,
+            Expression::StorageLoad(*loc, *r, Box::new(expr)),
+            to,
+            implicit,
+            ns,
+            diagnostics,
+        );
     }
 
     // Special case: when converting literal sign can change if it fits
@@ -4574,8 +4573,10 @@ fn array_subscript(
     };
 
     if array_ty.is_storage_bytes() {
-        return Ok(Expression::StorageBytesSubscript(
+        return Ok(Expression::Subscript(
             *loc,
+            Type::StorageRef(false, Box::new(Type::Bytes(1))),
+            array_ty,
             Box::new(array),
             Box::new(cast(
                 &index.loc(),

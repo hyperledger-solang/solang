@@ -548,7 +548,6 @@ pub enum Expression {
     StructMember(pt::Loc, Type, Box<Expression>, usize),
 
     AllocDynamicArray(pt::Loc, Type, Box<Expression>, Option<Vec<u8>>),
-    StorageBytesSubscript(pt::Loc, Box<Expression>, Box<Expression>),
     StorageArrayLength {
         loc: pt::Loc,
         ty: Type,
@@ -835,13 +834,6 @@ impl Expression {
                         initializer.clone(),
                     )
                 }
-                Expression::StorageBytesSubscript(loc, storage, index) => {
-                    Expression::StorageBytesSubscript(
-                        *loc,
-                        Box::new(filter(storage, ctx)),
-                        Box::new(filter(index, ctx)),
-                    )
-                }
                 Expression::StorageArrayLength {
                     loc,
                     ty,
@@ -1065,10 +1057,6 @@ impl Expression {
                 Expression::StructMember(_, _, expr, _) => expr.recurse(cx, f),
 
                 Expression::AllocDynamicArray(_, _, expr, _) => expr.recurse(cx, f),
-                Expression::StorageBytesSubscript(_, left, right) => {
-                    left.recurse(cx, f);
-                    right.recurse(cx, f);
-                }
                 Expression::StorageArrayLength { array, .. } => array.recurse(cx, f),
                 Expression::StringCompare(_, left, right)
                 | Expression::StringConcat(_, _, left, right) => {
@@ -1214,7 +1202,6 @@ impl Expression {
             | Expression::StructMember(loc, _, _, _)
             | Expression::Or(loc, _, _)
             | Expression::AllocDynamicArray(loc, _, _, _)
-            | Expression::StorageBytesSubscript(loc, _, _)
             | Expression::StorageArrayLength { loc, .. }
             | Expression::StringCompare(loc, _, _)
             | Expression::StringConcat(loc, _, _, _)

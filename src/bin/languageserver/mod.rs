@@ -601,10 +601,6 @@ impl SolangServer {
             ast::Expression::AllocDynamicArray(_locs, _typ, expr1, _valvec) => {
                 SolangServer::construct_expr(expr1, lookup_tbl, symtab, fnc_map, ns);
             }
-            ast::Expression::StorageBytesSubscript(_locs, expr1, expr2) => {
-                SolangServer::construct_expr(expr1, lookup_tbl, symtab, fnc_map, ns);
-                SolangServer::construct_expr(expr2, lookup_tbl, symtab, fnc_map, ns);
-            }
             ast::Expression::StorageArrayLength { array, .. } => {
                 SolangServer::construct_expr(array, lookup_tbl, symtab, fnc_map, ns);
             }

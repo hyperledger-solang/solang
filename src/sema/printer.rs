@@ -456,13 +456,6 @@ fn print_expr(e: &Expression, func: Option<&Function>, ns: &Namespace) -> Tree {
                 Tree::Leaf(format!("init {}", hex::encode(init))),
             ],
         ),
-        Expression::StorageBytesSubscript(_, array, index) => Tree::Branch(
-            String::from("storage bytes subscript"),
-            vec![
-                Tree::Branch(String::from("array"), vec![print_expr(array, func, ns)]),
-                Tree::Branch(String::from("index"), vec![print_expr(index, func, ns)]),
-            ],
-        ),
         Expression::List(_, list) => Tree::Branch(
             String::from("list"),
             list.iter().map(|e| print_expr(e, func, ns)).collect(),

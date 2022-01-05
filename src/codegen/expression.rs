@@ -459,11 +459,6 @@ pub fn expression(
             Box::new(expression(var, cfg, contract_no, func, ns, vartab, opt)),
             *member,
         ),
-        Expression::StorageBytesSubscript(loc, var, index) => Expression::StorageBytesSubscript(
-            *loc,
-            Box::new(expression(var, cfg, contract_no, func, ns, vartab, opt)),
-            Box::new(expression(index, cfg, contract_no, func, ns, vartab, opt)),
-        ),
         Expression::StringCompare(loc, left, right) => Expression::StringCompare(
             *loc,
             string_location(left, cfg, contract_no, func, ns, vartab, opt),
@@ -1626,6 +1621,13 @@ pub fn assign_single(
 
             let pos = vartab.temp_anonymous(ty);
 
+            // Set a subscript in storage bytes needs special handling
+            let set_storage_bytes = if let Expression::Subscript(_, _, array_ty, _, _) = &left {
+                array_ty.is_storage_bytes()
+            } else {
+                false
+            };
+
             let dest = expression(left, cfg, contract_no, func, ns, vartab, opt);
             let right = expression(right, cfg, contract_no, func, ns, vartab, opt);
 
@@ -1639,8 +1641,8 @@ pub fn assign_single(
             );
 
             match left_ty {
-                Type::StorageRef(_, _) => {
-                    if let Expression::StorageBytesSubscript(_, array, index) = dest {
+                Type::StorageRef(_, _) if set_storage_bytes => {
+                    if let Expression::Subscript(_, _, _, array, index) = dest {
                         // Set a byte in a byte array
                         cfg.add(
                             vartab,
@@ -1651,15 +1653,18 @@ pub fn assign_single(
                             },
                         );
                     } else {
-                        cfg.add(
-                            vartab,
-                            Instr::SetStorage {
-                                value: Expression::Variable(left.loc(), ty.clone(), pos),
-                                ty: ty.deref_any().clone(),
-                                storage: dest,
-                            },
-                        );
+                        unreachable!();
                     }
+                }
+                Type::StorageRef(_, _) => {
+                    cfg.add(
+                        vartab,
+                        Instr::SetStorage {
+                            value: Expression::Variable(left.loc(), ty.clone(), pos),
+                            ty: ty.deref_any().clone(),
+                            storage: dest,
+                        },
+                    );
                 }
                 Type::Ref(_) => {
                     cfg.add(vartab, Instr::Store { pos, dest });
@@ -2158,6 +2163,16 @@ fn array_subscript(
     vartab: &mut Vartable,
     opt: &Options,
 ) -> Expression {
+    if array_ty.is_storage_bytes() {
+        return Expression::Subscript(
+            *loc,
+            elem_ty.clone(),
+            array_ty.clone(),
+            Box::new(expression(array, cfg, contract_no, func, ns, vartab, opt)),
+            Box::new(expression(index, cfg, contract_no, func, ns, vartab, opt)),
+        );
+    }
+
     if array_ty.is_mapping() {
         let array = expression(array, cfg, contract_no, func, ns, vartab, opt);
         let index = expression(index, cfg, contract_no, func, ns, vartab, opt);
