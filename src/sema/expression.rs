@@ -88,10 +88,7 @@ impl Expression {
             | Expression::PostDecrement(_, ty, ..)
             | Expression::Keccak256(_, ty, _)
             | Expression::Assign(_, ty, _, _) => ty.clone(),
-            Expression::Subscript(_, ty, _, _) if ty.is_contract_storage() => {
-                ty.storage_array_elem()
-            }
-            Expression::Subscript(_, ty, _, _) => ty.array_deref(),
+            Expression::Subscript(_, ty, _, _, _) => ty.clone(),
             Expression::StorageArrayLength { ty, .. } => ty.clone(),
             Expression::StorageBytesSubscript(_, _, _) => {
                 Type::StorageRef(false, Box::new(Type::Bytes(1)))
@@ -4606,13 +4603,18 @@ fn array_subscript(
     match array_ty.deref_any() {
         Type::Bytes(_) | Type::Array(_, _) | Type::DynamicBytes => {
             if array_ty.is_contract_storage() {
+                let elem_ty = array_ty.storage_array_elem();
+
                 Ok(Expression::Subscript(
                     *loc,
+                    elem_ty,
                     array_ty,
                     Box::new(array),
                     Box::new(index),
                 ))
             } else {
+                let elem_ty = array_ty.array_deref();
+
                 let array = cast(
                     &array.loc(),
                     array,
@@ -4624,6 +4626,7 @@ fn array_subscript(
 
                 Ok(Expression::Subscript(
                     *loc,
+                    elem_ty,
                     array_ty,
                     Box::new(array),
                     Box::new(index),
@@ -7222,6 +7225,7 @@ fn mapping_subscript(
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Result<Expression, ()> {
     let ty = mapping.ty();
+    let elem_ty = ty.storage_array_elem();
 
     if let Type::Mapping(key_ty, _) = ty.deref_any() {
         let index_expr = cast(
@@ -7242,6 +7246,7 @@ fn mapping_subscript(
 
         Ok(Expression::Subscript(
             *loc,
+            elem_ty,
             ty,
             Box::new(mapping),
             Box::new(index_expr),

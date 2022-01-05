@@ -544,7 +544,7 @@ pub enum Expression {
         Box<Expression>,
         Box<Expression>,
     ),
-    Subscript(pt::Loc, Type, Box<Expression>, Box<Expression>),
+    Subscript(pt::Loc, Type, Type, Box<Expression>, Box<Expression>),
     StructMember(pt::Loc, Type, Box<Expression>, usize),
 
     AllocDynamicArray(pt::Loc, Type, Box<Expression>, Option<Vec<u8>>),
@@ -815,12 +815,15 @@ impl Expression {
                     Box::new(filter(left, ctx)),
                     Box::new(filter(right, ctx)),
                 ),
-                Expression::Subscript(loc, ty, left, right) => Expression::Subscript(
-                    *loc,
-                    ty.clone(),
-                    Box::new(filter(left, ctx)),
-                    Box::new(filter(right, ctx)),
-                ),
+                Expression::Subscript(loc, elem_ty, array_ty, left, right) => {
+                    Expression::Subscript(
+                        *loc,
+                        elem_ty.clone(),
+                        array_ty.clone(),
+                        Box::new(filter(left, ctx)),
+                        Box::new(filter(right, ctx)),
+                    )
+                }
                 Expression::StructMember(loc, ty, expr, field) => {
                     Expression::StructMember(*loc, ty.clone(), Box::new(filter(expr, ctx)), *field)
                 }
@@ -1055,7 +1058,7 @@ impl Expression {
                     left.recurse(cx, f);
                     right.recurse(cx, f);
                 }
-                Expression::Subscript(_, _, left, right) => {
+                Expression::Subscript(_, _, _, left, right) => {
                     left.recurse(cx, f);
                     right.recurse(cx, f);
                 }
@@ -1207,7 +1210,7 @@ impl Expression {
             | Expression::Complement(loc, _, _)
             | Expression::UnaryMinus(loc, _, _)
             | Expression::Ternary(loc, _, _, _, _)
-            | Expression::Subscript(loc, _, _, _)
+            | Expression::Subscript(loc, ..)
             | Expression::StructMember(loc, _, _, _)
             | Expression::Or(loc, _, _)
             | Expression::AllocDynamicArray(loc, _, _, _)

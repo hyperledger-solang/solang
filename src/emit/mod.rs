@@ -2318,7 +2318,7 @@ pub trait TargetRuntime<'a> {
                     .build_right_shift(left, right, *signed, "")
                     .into()
             }
-            Expression::Subscript(_, ty, a, i) => {
+            Expression::Subscript(_, _, ty, a, i) => {
                 if ty.is_contract_storage() {
                     let array = self
                         .expression(bin, a, vartab, function, ns)

@@ -416,6 +416,7 @@ fn collect_parameters<'a>(
 
             *expr = Expression::Subscript(
                 pt::Loc(0, 0, 0),
+                ty.storage_array_elem(),
                 Type::StorageRef(false, Box::new(ty.clone())),
                 Box::new(map),
                 Box::new(Expression::FunctionArg(
@@ -443,6 +444,7 @@ fn collect_parameters<'a>(
 
                 *expr = Expression::Subscript(
                     pt::Loc(0, 0, 0),
+                    ty.storage_array_elem(),
                     ty.clone(),
                     Box::new(map),
                     Box::new(Expression::FunctionArg(

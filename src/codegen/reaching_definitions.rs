@@ -178,7 +178,7 @@ fn instr_transfers(block_no: usize, block: &BasicBlock) -> Vec<Vec<Transfer>> {
 fn array_var(expr: &Expression) -> Option<usize> {
     match expr {
         Expression::Variable(_, _, var_no) => Some(*var_no),
-        Expression::Subscript(_, _, expr, _) | Expression::StructMember(_, _, expr, _) => {
+        Expression::Subscript(_, _, _, expr, _) | Expression::StructMember(_, _, expr, _) => {
             array_var(expr)
         }
         _ => None,
