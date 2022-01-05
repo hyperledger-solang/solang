@@ -36,10 +36,7 @@ pub fn should_remove_assignment(
 
         Expression::StructMember(_, _, str, _) => should_remove_assignment(ns, str, func, opt),
 
-        Expression::Subscript(_, _, _, array, _)
-        | Expression::StorageBytesSubscript(_, array, _) => {
-            should_remove_assignment(ns, array, func, opt)
-        }
+        Expression::Subscript(_, _, _, array, _) => should_remove_assignment(ns, array, func, opt),
 
         Expression::StorageLoad(_, _, expr)
         | Expression::Load(_, _, expr)

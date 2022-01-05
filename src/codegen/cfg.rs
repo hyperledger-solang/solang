@@ -576,11 +576,6 @@ impl ControlFlowGraph {
                 self.expr_to_string(contract, ns, a),
                 self.expr_to_string(contract, ns, i)
             ),
-            Expression::StorageBytesSubscript(_, a, i) => format!(
-                "(storage bytes index {}[{}])",
-                self.expr_to_string(contract, ns, a),
-                self.expr_to_string(contract, ns, i)
-            ),
             Expression::StorageArrayLength { array, elem_ty, .. } => format!(
                 "(storage array length {}[{}])",
                 self.expr_to_string(contract, ns, array),

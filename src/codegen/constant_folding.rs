@@ -942,15 +942,7 @@ fn expression(
                 false,
             )
         }
-        Expression::StorageBytesSubscript(loc, array, index) => {
-            let array = expression(array, vars, pos, cfg, ns);
-            let index = expression(index, vars, pos, cfg, ns);
 
-            (
-                Expression::StorageBytesSubscript(*loc, Box::new(array.0), Box::new(index.0)),
-                false,
-            )
-        }
         Expression::StorageArrayLength {
             loc,
             ty,

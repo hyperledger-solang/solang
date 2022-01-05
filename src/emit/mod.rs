@@ -2318,8 +2318,17 @@ pub trait TargetRuntime<'a> {
                     .build_right_shift(left, right, *signed, "")
                     .into()
             }
-            Expression::Subscript(_, _, ty, a, i) => {
-                if ty.is_contract_storage() {
+            Expression::Subscript(_, elem_ty, ty, a, i) => {
+                if ty.is_storage_bytes() {
+                    let index = self
+                        .expression(bin, i, vartab, function, ns)
+                        .into_int_value();
+                    let slot = self
+                        .expression(bin, a, vartab, function, ns)
+                        .into_int_value();
+                    self.get_storage_bytes_subscript(bin, function, slot, index)
+                        .into()
+                } else if ty.is_contract_storage() {
                     let array = self
                         .expression(bin, a, vartab, function, ns)
                         .into_int_value();
@@ -2330,9 +2339,7 @@ pub trait TargetRuntime<'a> {
                 } else if ty.is_dynamic_memory() {
                     let array = self.expression(bin, a, vartab, function, ns);
 
-                    let elem_ty = ty.array_deref();
-
-                    let ty = bin.llvm_var(&elem_ty, ns);
+                    let ty = bin.llvm_var(elem_ty, ns);
 
                     let mut array_index = self
                         .expression(bin, i, vartab, function, ns)
@@ -2383,16 +2390,6 @@ pub trait TargetRuntime<'a> {
                             .into()
                     }
                 }
-            }
-            Expression::StorageBytesSubscript(_, a, i) => {
-                let index = self
-                    .expression(bin, i, vartab, function, ns)
-                    .into_int_value();
-                let slot = self
-                    .expression(bin, a, vartab, function, ns)
-                    .into_int_value();
-                self.get_storage_bytes_subscript(bin, function, slot, index)
-                    .into()
             }
             Expression::StructMember(_, _, a, i) => {
                 let struct_ptr = self
