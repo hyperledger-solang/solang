@@ -1,17 +1,18 @@
 //! Solidity file parser
 
+use lalrpop_util::ParseError;
+
+pub use diagnostics::Diagnostic;
+
 pub mod diagnostics;
 mod doc;
 pub mod lexer;
 pub mod pt;
-pub use diagnostics::Diagnostic;
 
 #[allow(clippy::all)]
 pub mod solidity {
     include!(concat!(env!("OUT_DIR"), "/solidity.rs"));
 }
-
-use lalrpop_util::ParseError;
 
 /// Parse soldiity file content
 pub fn parse(src: &str, file_no: usize) -> Result<pt::SourceUnit, Vec<Diagnostic>> {
@@ -68,7 +69,19 @@ mod test {
 
     #[test]
     fn parse_test() {
-        let src = "contract foo {
+        let src = "/// @title Foo
+                /// @description Foo
+                /// Bar
+                contract foo {
+                    /**
+                    @title Jurisdiction
+                    */
+                    /// @author Anon
+                    /**
+                    @description Data for
+                    jurisdiction
+                    @dev It's a struct
+                    */
                     struct Jurisdiction {
                         bool exists;
                         uint keyIdx;
@@ -81,62 +94,106 @@ mod test {
 
         let lex = lexer::Lexer::new(src);
 
-        let e = solidity::SourceUnitParser::new()
+        let actual_parse_tree = solidity::SourceUnitParser::new()
             .parse(src, 0, lex)
             .unwrap();
 
-        let a = SourceUnit(vec![SourceUnitPart::ContractDefinition(Box::new(
+        let expected_parse_tree = SourceUnit(vec![SourceUnitPart::ContractDefinition(Box::new(
             ContractDefinition {
-                doc: vec![],
-                loc: Loc(0, 0, 13),
-                ty: ContractTy::Contract(Loc(0, 0, 8)),
+                doc: vec![
+                    DocComment::Line {
+                        comment: SingleDocComment {
+                            offset: 0,
+                            tag: "title".to_string(),
+                            value: "Foo".to_string(),
+                        },
+                    },
+                    DocComment::Line {
+                        comment: SingleDocComment {
+                            offset: 0,
+                            tag: "description".to_string(),
+                            value: "Foo Bar".to_string(),
+                        },
+                    },
+                ],
+                loc: Loc(0, 92, 105),
+                ty: ContractTy::Contract(Loc(0, 92, 100)),
                 name: Identifier {
-                    loc: Loc(0, 9, 12),
+                    loc: Loc(0, 101, 104),
                     name: "foo".to_string(),
                 },
                 base: Vec::new(),
                 parts: vec![
                     ContractPart::StructDefinition(Box::new(StructDefinition {
-                        doc: vec![],
+                        doc: vec![
+                            DocComment::Block {
+                                comments: vec![SingleDocComment {
+                                    offset: 0,
+                                    tag: "title".to_string(),
+                                    value: "Jurisdiction".to_string(),
+                                }],
+                            },
+                            DocComment::Line {
+                                comment: SingleDocComment {
+                                    offset: 0,
+                                    tag: "author".to_string(),
+                                    value: "Anon".to_string(),
+                                },
+                            },
+                            DocComment::Block {
+                                comments: vec![
+                                    SingleDocComment {
+                                        offset: 0,
+                                        tag: "description".to_string(),
+                                        value: "Data for jurisdiction".to_string(),
+                                    },
+                                    SingleDocComment {
+                                        offset: 0,
+                                        tag: "dev".to_string(),
+                                        value: "It's a struct".to_string(),
+                                    },
+                                ],
+                            },
+                        ],
                         name: Identifier {
-                            loc: Loc(0, 42, 54),
+                            loc: Loc(0, 419, 431),
                             name: "Jurisdiction".to_string(),
                         },
-                        loc: Loc(0, 35, 232),
+                        loc: Loc(0, 412, 609),
                         fields: vec![
                             VariableDeclaration {
-                                loc: Loc(0, 81, 92),
-                                ty: Expression::Type(Loc(0, 81, 85), Type::Bool),
+                                loc: Loc(0, 458, 469),
+                                ty: Expression::Type(Loc(0, 458, 462), Type::Bool),
                                 storage: None,
                                 name: Identifier {
-                                    loc: Loc(0, 86, 92),
+                                    loc: Loc(0, 463, 469),
                                     name: "exists".to_string(),
                                 },
                             },
                             VariableDeclaration {
-                                loc: Loc(0, 118, 129),
-                                ty: Expression::Type(Loc(0, 118, 122), Type::Uint(256)),
+                                loc: Loc(0, 495, 506),
+                                ty: Expression::Type(Loc(0, 495, 499), Type::Uint(256)),
                                 storage: None,
                                 name: Identifier {
-                                    loc: Loc(0, 123, 129),
+                                    loc: Loc(0, 500, 506),
                                     name: "keyIdx".to_string(),
                                 },
                             },
                             VariableDeclaration {
-                                loc: Loc(0, 155, 169),
-                                ty: Expression::Type(Loc(0, 155, 161), Type::Bytes(2)),
+                                loc: Loc(0, 532, 546),
+                                ty: Expression::Type(Loc(0, 532, 538), Type::Bytes(2)),
                                 storage: None,
                                 name: Identifier {
-                                    loc: Loc(0, 162, 169),
+                                    loc: Loc(0, 539, 546),
                                     name: "country".to_string(),
                                 },
                             },
                             VariableDeclaration {
-                                loc: Loc(0, 195, 209),
-                                ty: Expression::Type(Loc(0, 195, 202), Type::Bytes(32)),
+                                loc: Loc(0, 572, 586),
+                                ty: Expression::Type(Loc(0, 572, 579), Type::Bytes(32)),
                                 storage: None,
                                 name: Identifier {
-                                    loc: Loc(0, 203, 209),
+                                    loc: Loc(0, 580, 586),
                                     name: "region".to_string(),
                                 },
                             },
@@ -144,30 +201,30 @@ mod test {
                     })),
                     ContractPart::VariableDefinition(Box::new(VariableDefinition {
                         doc: vec![],
-                        ty: Expression::Type(Loc(0, 253, 259), Type::String),
+                        ty: Expression::Type(Loc(0, 630, 636), Type::String),
                         attrs: vec![],
                         name: Identifier {
-                            loc: Loc(0, 260, 268),
+                            loc: Loc(0, 637, 645),
                             name: "__abba_$".to_string(),
                         },
-                        loc: Loc(0, 253, 268),
+                        loc: Loc(0, 630, 645),
                         initializer: None,
                     })),
                     ContractPart::VariableDefinition(Box::new(VariableDefinition {
                         doc: vec![],
-                        ty: Expression::Type(Loc(0, 290, 295), Type::Int(64)),
+                        ty: Expression::Type(Loc(0, 667, 672), Type::Int(64)),
                         attrs: vec![],
                         name: Identifier {
-                            loc: Loc(0, 296, 306),
+                            loc: Loc(0, 673, 683),
                             name: "$thing_102".to_string(),
                         },
-                        loc: Loc(0, 290, 306),
+                        loc: Loc(0, 667, 683),
                         initializer: None,
                     })),
                 ],
             },
         ))]);
 
-        assert_eq!(e, a);
+        assert_eq!(actual_parse_tree, expected_parse_tree);
     }
 }
