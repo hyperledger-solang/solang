@@ -68,7 +68,7 @@ pub fn tags(lines: &[(usize, CommentType, &str)]) -> Vec<DocComment> {
                     tag: line[tag_start + 1..tag_end + 1].to_owned(),
                     value: line[tag_end + 1..].trim().to_owned(),
                 });
-            } else if single_tags.len() > 0 || tags.len() > 0 {
+            } else if !single_tags.is_empty() || !tags.is_empty() {
                 let line = line.trim();
                 if !line.is_empty() {
                     let single_doc_comment = if let Some(single_tag) = single_tags.last_mut() {
@@ -83,7 +83,7 @@ pub fn tags(lines: &[(usize, CommentType, &str)]) -> Vec<DocComment> {
                     };
 
                     if let Some(comment) = single_doc_comment {
-                        comment.value.push(' ');
+                        comment.value.push('\n');
                         comment.value.push_str(line);
                     }
                 }
@@ -97,7 +97,7 @@ pub fn tags(lines: &[(usize, CommentType, &str)]) -> Vec<DocComment> {
         }
 
         match ty {
-            CommentType::Line if single_tags.len() > 0 => tags.push(DocComment::Line {
+            CommentType::Line if !single_tags.is_empty() => tags.push(DocComment::Line {
                 comment: single_tags[0].to_owned(),
             }),
             CommentType::Block => tags.push(DocComment::Block {

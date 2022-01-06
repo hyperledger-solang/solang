@@ -112,7 +112,7 @@ mod test {
                         comment: SingleDocComment {
                             offset: 0,
                             tag: "description".to_string(),
-                            value: "Foo Bar".to_string(),
+                            value: "Foo\nBar".to_string(),
                         },
                     },
                 ],
@@ -145,7 +145,7 @@ mod test {
                                     SingleDocComment {
                                         offset: 0,
                                         tag: "description".to_string(),
-                                        value: "Data for jurisdiction".to_string(),
+                                        value: "Data for\njurisdiction".to_string(),
                                     },
                                     SingleDocComment {
                                         offset: 0,
