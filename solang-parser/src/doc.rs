@@ -67,24 +67,23 @@ pub fn tags(lines: &[(usize, CommentType, &str)]) -> Vec<DocComment> {
                     tag: line[tag_start + 1..tag_end + 1].to_owned(),
                     value: line[tag_end + 1..].trim().to_owned(),
                 });
-            } else if let Some(tag) = tags_buffer.last_mut() {
+            } else if tags_buffer.len() > 0 || tags.len() > 0 {
                 let line = line.trim();
                 if !line.is_empty() {
-                    tag.value.push(' ');
-                    tag.value.push_str(line.trim());
-                }
-            } else if let Some(tag) = tags.last_mut() {
-                let line = line.trim();
-                if !line.is_empty() {
-                    match tag {
-                        DocComment::Line { comment } => {
-                            comment.value.push(' ');
-                            comment.value.push_str(line.trim());
+                    let single_doc_comment = if let Some(tag_buffered) = tags_buffer.last_mut() {
+                        Some(tag_buffered)
+                    } else if let Some(tag) = tags.last_mut() {
+                        match tag {
+                            DocComment::Line { comment } => Some(comment),
+                            DocComment::Block { comments } => comments.last_mut(),
                         }
-                        DocComment::Block { comments } => {
-                            comments[0].value.push(' ');
-                            comments[0].value.push_str(line.trim());
-                        }
+                    } else {
+                        None
+                    };
+
+                    if let Some(comment) = single_doc_comment {
+                        comment.value.push(' ');
+                        comment.value.push_str(line);
                     }
                 }
             } else {
@@ -97,7 +96,7 @@ pub fn tags(lines: &[(usize, CommentType, &str)]) -> Vec<DocComment> {
         }
 
         match ty {
-            CommentType::Line if !tags_buffer.is_empty() => tags.push(DocComment::Line {
+            CommentType::Line if tags_buffer.len() > 0 => tags.push(DocComment::Line {
                 comment: tags_buffer[0].to_owned(),
             }),
             CommentType::Block => tags.push(DocComment::Block {
