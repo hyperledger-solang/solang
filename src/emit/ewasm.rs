@@ -1338,11 +1338,6 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
             },
         );
 
-        // address needs its bytes reordered
-        let be_address = binary
-            .builder
-            .build_alloca(binary.address_type(ns), "be_address");
-
         // call create
         let ret = binary
             .builder
@@ -1362,9 +1357,9 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
                     binary
                         .builder
                         .build_pointer_cast(
-                            be_address,
+                            address,
                             binary.context.i8_type().ptr_type(AddressSpace::Generic),
-                            "be_address",
+                            "address",
                         )
                         .into(),
                 ],
@@ -1374,30 +1369,6 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
             .left()
             .unwrap()
             .into_int_value();
-
-        binary.builder.build_call(
-            binary.module.get_function("__beNtoleN").unwrap(),
-            &[
-                binary
-                    .builder
-                    .build_pointer_cast(
-                        be_address,
-                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
-                        "",
-                    )
-                    .into(),
-                binary
-                    .builder
-                    .build_pointer_cast(
-                        address,
-                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
-                        "",
-                    )
-                    .into(),
-                binary.context.i32_type().const_int(20, false).into(),
-            ],
-            "",
-        );
 
         let is_success = binary.builder.build_int_compare(
             IntPredicate::EQ,
@@ -1444,35 +1415,6 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
         callty: ast::CallTy,
         ns: &ast::Namespace,
     ) {
-        // address needs its bytes reordered
-        let be_address = binary
-            .builder
-            .build_alloca(binary.address_type(ns), "be_address");
-
-        binary.builder.build_call(
-            binary.module.get_function("__leNtobeN").unwrap(),
-            &[
-                binary
-                    .builder
-                    .build_pointer_cast(
-                        address.unwrap(),
-                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
-                        "",
-                    )
-                    .into(),
-                binary
-                    .builder
-                    .build_pointer_cast(
-                        be_address,
-                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
-                        "",
-                    )
-                    .into(),
-                binary.context.i32_type().const_int(20, false).into(),
-            ],
-            "",
-        );
-
         let ret;
 
         if callty == ast::CallTy::Regular {
@@ -1494,7 +1436,7 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
                         binary
                             .builder
                             .build_pointer_cast(
-                                be_address,
+                                address.unwrap(),
                                 binary.context.i8_type().ptr_type(AddressSpace::Generic),
                                 "address",
                             )
@@ -1533,7 +1475,7 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
                         binary
                             .builder
                             .build_pointer_cast(
-                                be_address,
+                                address.unwrap(),
                                 binary.context.i8_type().ptr_type(AddressSpace::Generic),
                                 "address",
                             )
