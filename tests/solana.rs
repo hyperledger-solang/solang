@@ -259,7 +259,7 @@ fn serialize_parameters(
         // dup_info
         v.write_u8(0xff).unwrap();
         // signer
-        v.write_u8(1).unwrap();
+        v.write_u8(0).unwrap();
         // is_writable
         v.write_u8(1).unwrap();
         // executable

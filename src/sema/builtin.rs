@@ -1329,7 +1329,7 @@ impl Namespace {
                 ty: Type::DynamicBytes,
                 ty_loc: pt::Loc(0, 0, 0),
                 indexed: false,
-                readonly: false,
+                readonly: true,
             },
             Parameter {
                 loc: pt::Loc(0, 0, 0),
@@ -1360,7 +1360,7 @@ impl Namespace {
             },
             Parameter {
                 loc: pt::Loc(0, 0, 0),
-                name: String::from("is_writabe"),
+                name: String::from("is_writable"),
                 name_loc: None,
                 ty: Type::Bool,
                 ty_loc: pt::Loc(0, 0, 0),
@@ -1393,6 +1393,6 @@ impl Namespace {
             name: String::from("AccountInfo"),
         };
 
-        assert!(self.add_symbol(0, None, &id, Symbol::Struct(pt::Loc(0, 0, 0), struct_no),));
+        assert!(self.add_symbol(0, None, &id, Symbol::Struct(pt::Loc(0, 0, 0), struct_no)));
     }
 }

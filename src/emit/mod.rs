@@ -2332,6 +2332,19 @@ pub trait TargetRuntime<'a> {
 
                     self.storage_subscript(bin, function, ty, array, index, ns)
                         .into()
+                } else if elem_ty.is_builtin(ns) {
+                    let array = self
+                        .expression(bin, a, vartab, function, ns)
+                        .into_pointer_value();
+                    let index = self
+                        .expression(bin, i, vartab, function, ns)
+                        .into_int_value();
+
+                    unsafe {
+                        bin.builder
+                            .build_gep(array, &[index], "account_info")
+                            .into()
+                    }
                 } else if ty.is_dynamic_memory() {
                     let array = self.expression(bin, a, vartab, function, ns);
 
@@ -2537,7 +2550,9 @@ pub trait TargetRuntime<'a> {
                     bin.vector_new(size, elem_size, init.as_ref()).into()
                 }
             }
-            Expression::Builtin(_, tys, Builtin::ArrayLength, args) if !tys[0].is_builtin(ns) => {
+            Expression::Builtin(_, _, Builtin::ArrayLength, args)
+                if !args[0].ty().array_deref().is_builtin(ns) =>
+            {
                 let array = self.expression(bin, &args[0], vartab, function, ns);
 
                 bin.vector_len(array).into()

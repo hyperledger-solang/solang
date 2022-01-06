@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use std::str;
 
 use inkwell::module::Linkage;
-use inkwell::types::{AnyType, BasicType, IntType};
+use inkwell::types::{BasicType, IntType};
 use inkwell::values::{
     ArrayValue, BasicMetadataValueEnum, BasicValueEnum, FunctionValue, IntValue, PointerValue,
     UnnamedAddress,
@@ -1440,6 +1440,7 @@ impl SolanaTarget {
     fn account_info_member<'b>(
         &self,
         binary: &Binary<'b>,
+        function: FunctionValue<'b>,
         account_info: PointerValue<'b>,
         member: usize,
         ns: &ast::Namespace,
@@ -1449,8 +1450,14 @@ impl SolanaTarget {
             0 => {
                 let key = binary
                     .builder
-                    .build_struct_gep(account_info, 0, "key")
-                    .unwrap();
+                    .build_load(
+                        binary
+                            .builder
+                            .build_struct_gep(account_info, 0, "key")
+                            .unwrap(),
+                        "key",
+                    )
+                    .into_pointer_value();
 
                 binary.builder.build_load(
                     binary.builder.build_pointer_cast(
@@ -1471,24 +1478,20 @@ impl SolanaTarget {
             ),
             // data
             2 => {
-                println!("type:{}", account_info.get_type().print_to_string());
-                let data_len = binary
-                    .builder
-                    .build_int_truncate(
-                        binary
-                            .builder
-                            .build_load(
-                                binary
-                                    .builder
-                                    .build_struct_gep(account_info, 2, "data_len")
-                                    .unwrap(),
-                                "data_len",
-                            )
-                            .into_int_value(),
-                        binary.context.i32_type(),
-                        "data_len",
-                    )
-                    .into();
+                let data_len = binary.builder.build_int_truncate(
+                    binary
+                        .builder
+                        .build_load(
+                            binary
+                                .builder
+                                .build_struct_gep(account_info, 2, "data_len")
+                                .unwrap(),
+                            "data_len",
+                        )
+                        .into_int_value(),
+                    binary.context.i32_type(),
+                    "data_len",
+                );
 
                 let data = binary.builder.build_load(
                     binary
@@ -1498,18 +1501,36 @@ impl SolanaTarget {
                     "data",
                 );
 
-                binary
-                    .llvm_type(&ast::Type::Slice, ns)
-                    .into_struct_type()
-                    .const_named_struct(&[data, data_len])
-                    .into()
+                let slice_alloca = binary.build_alloca(
+                    function,
+                    binary.llvm_type(&ast::Type::Slice, ns),
+                    "slice_alloca",
+                );
+                let data_elem = binary
+                    .builder
+                    .build_struct_gep(slice_alloca, 0, "data")
+                    .unwrap();
+                binary.builder.build_store(data_elem, data);
+                let data_len_elem = binary
+                    .builder
+                    .build_struct_gep(slice_alloca, 1, "data_len")
+                    .unwrap();
+                binary.builder.build_store(data_len_elem, data_len);
+
+                binary.builder.build_load(slice_alloca, "data_slice")
             }
             // owner
             3 => {
                 let owner = binary
                     .builder
-                    .build_struct_gep(account_info, 4, "owner")
-                    .unwrap();
+                    .build_load(
+                        binary
+                            .builder
+                            .build_struct_gep(account_info, 4, "owner")
+                            .unwrap(),
+                        "owner",
+                    )
+                    .into_pointer_value();
 
                 binary.builder.build_load(
                     binary.builder.build_pointer_cast(
@@ -3574,7 +3595,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                             binary.context.i32_type().const_int(0, false),
                             binary.context.i32_type().const_int(0, false),
                         ],
-                        "account",
+                        "accounts",
                     )
                 }
                 .into()
@@ -3599,7 +3620,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                     .expression(binary, a, vartab, function, ns)
                     .into_pointer_value();
 
-                self.account_info_member(binary, account_info, *member, ns)
+                self.account_info_member(binary, function, account_info, *member, ns)
             }
             _ => unimplemented!(),
         }
