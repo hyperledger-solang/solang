@@ -1924,11 +1924,32 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
             }};
         }
 
-        macro_rules! single_value_stack {
+        macro_rules! single_int_stack {
             ($name:literal, $func:literal, $width:expr) => {{
                 let value = binary
                     .builder
                     .build_alloca(binary.context.custom_width_int_type($width), $name);
+
+                binary.builder.build_call(
+                    binary.module.get_function($func).unwrap(),
+                    &[binary
+                        .builder
+                        .build_pointer_cast(
+                            value,
+                            binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                            "",
+                        )
+                        .into()],
+                    $name,
+                );
+
+                binary.builder.build_load(value, $name)
+            }};
+        }
+
+        macro_rules! single_address_stack {
+            ($name:literal, $func:literal) => {{
+                let value = binary.builder.build_alloca(binary.address_type(ns), $name);
 
                 binary.builder.build_call(
                     binary.module.get_function($func).unwrap(),
@@ -1961,22 +1982,22 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
                 straight_call!("time_stamp", "getBlockTimestamp")
             }
             ast::Expression::Builtin(_, _, ast::Builtin::BlockDifficulty, _) => {
-                single_value_stack!("block_difficulty", "getBlockDifficulty", 256)
+                single_int_stack!("block_difficulty", "getBlockDifficulty", 256)
             }
             ast::Expression::Builtin(_, _, ast::Builtin::Origin, _) => {
-                single_value_stack!("origin", "getTxOrigin", ns.address_length as u32 * 8)
+                single_address_stack!("origin", "getTxOrigin")
             }
             ast::Expression::Builtin(_, _, ast::Builtin::Sender, _) => {
-                single_value_stack!("caller", "getCaller", ns.address_length as u32 * 8)
+                single_address_stack!("caller", "getCaller")
             }
             ast::Expression::Builtin(_, _, ast::Builtin::BlockCoinbase, _) => {
-                single_value_stack!("coinbase", "getBlockCoinbase", ns.address_length as u32 * 8)
+                single_address_stack!("coinbase", "getBlockCoinbase")
             }
             ast::Expression::Builtin(_, _, ast::Builtin::Gasprice, _) => {
-                single_value_stack!("gas_price", "getTxGasPrice", ns.value_length as u32 * 8)
+                single_int_stack!("gas_price", "getTxGasPrice", ns.value_length as u32 * 8)
             }
             ast::Expression::Builtin(_, _, ast::Builtin::Value, _) => {
-                single_value_stack!("value", "getCallValue", ns.value_length as u32 * 8)
+                single_int_stack!("value", "getCallValue", ns.value_length as u32 * 8)
             }
             ast::Expression::Builtin(_, _, ast::Builtin::Calldata, _) => binary
                 .builder
