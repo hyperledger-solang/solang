@@ -17,7 +17,7 @@ mod ewasm_tests;
 
 type Address = [u8; 20];
 
-fn address_new() -> Address {
+pub fn address_new() -> Address {
     let mut rng = rand::thread_rng();
 
     let mut a = [0u8; 20];
@@ -53,6 +53,7 @@ struct TestRuntime {
     abi: ethabi::Contract,
     contracts: Vec<Vec<u8>>,
     value: u128,
+    caller: Address,
     accounts: HashMap<Address, (Vec<u8>, u128)>,
     store: HashMap<(Address, [u8; 32]), [u8; 32]>,
     vm: VirtualMachine,
@@ -81,6 +82,7 @@ pub enum Extern {
     returnDataCopy,
     getReturnDataSize,
     getCallValue,
+    getCaller,
     getAddress,
     getExternalBalance,
     selfDestruct,
@@ -464,6 +466,18 @@ impl Externals for TestRuntime {
 
                 Ok(None)
             }
+            Some(Extern::getCaller) => {
+                let address_ptr: u32 = args.nth_checked(0)?;
+
+                println!("getCaller: {}", hex::encode(&self.caller));
+
+                self.vm
+                    .memory
+                    .set(address_ptr, &self.caller[..])
+                    .expect("set address");
+
+                Ok(None)
+            }
             Some(Extern::getExternalBalance) => {
                 let address_ptr: u32 = args.nth_checked(0)?;
                 let balance_ptr: u32 = args.nth_checked(1)?;
@@ -572,6 +586,7 @@ impl ModuleImportResolver for TestRuntime {
             "returnDataCopy" => Extern::returnDataCopy,
             "getReturnDataSize" => Extern::getReturnDataSize,
             "getCallValue" => Extern::getCallValue,
+            "getCaller" => Extern::getCaller,
             "getAddress" => Extern::getAddress,
             "getExternalBalance" => Extern::getExternalBalance,
             "selfDestruct" => Extern::selfDestruct,
@@ -827,6 +842,7 @@ fn build_solidity(src: &str) -> TestRuntime {
         abi: ethabi::Contract::load(abi.as_bytes()).unwrap(),
         contracts: res.into_iter().map(|v| v.0).collect(),
         events: Vec::new(),
+        caller: address_new(),
     }
 }
 

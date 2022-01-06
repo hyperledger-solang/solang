@@ -1101,7 +1101,16 @@ fn payable_send(
             Instr::ExternalCall {
                 success: Some(success),
                 address: Some(address),
-                payload: Expression::BytesLiteral(*loc, Type::DynamicBytes, vec![]),
+                payload: Expression::AllocDynamicArray(
+                    *loc,
+                    Type::DynamicBytes,
+                    Box::new(Expression::NumberLiteral(
+                        *loc,
+                        Type::Uint(32),
+                        BigInt::from(0),
+                    )),
+                    Some(vec![]),
+                ),
                 value,
                 gas: Expression::NumberLiteral(*loc, Type::Uint(64), BigInt::from(i64::MAX)),
                 callty: CallTy::Regular,
@@ -1139,7 +1148,16 @@ fn payable_transfer(
             Instr::ExternalCall {
                 success: None,
                 address: Some(address),
-                payload: Expression::BytesLiteral(*loc, Type::DynamicBytes, vec![]),
+                payload: Expression::AllocDynamicArray(
+                    *loc,
+                    Type::DynamicBytes,
+                    Box::new(Expression::NumberLiteral(
+                        *loc,
+                        Type::Uint(32),
+                        BigInt::from(0),
+                    )),
+                    Some(vec![]),
+                ),
                 value,
                 gas: Expression::NumberLiteral(*loc, Type::Uint(64), BigInt::from(i64::MAX)),
                 callty: CallTy::Regular,
