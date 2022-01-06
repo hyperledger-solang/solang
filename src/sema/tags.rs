@@ -13,7 +13,7 @@ pub fn resolve_tags(
 ) -> Vec<Tag> {
     let mut res: Vec<Tag> = Vec::new();
 
-    for c in doc.iter() {
+    for c in doc.iter().flat_map(pt::DocComment::comments) {
         match c.tag.as_str() {
             "notice" | "author" | "title" | "dev" => {
                 // fold fields with the same name

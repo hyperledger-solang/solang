@@ -1,7 +1,9 @@
-use crate::lexer::CommentType;
+use std::fmt;
+
 use num_bigint::BigInt;
 use num_rational::BigRational;
-use std::fmt;
+
+use crate::lexer::CommentType;
 
 #[derive(Debug, PartialEq, PartialOrd, Ord, Eq, Hash, Clone, Copy)]
 /// file no, start offset, end offset (in bytes)
@@ -24,7 +26,22 @@ pub struct Identifier {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct DocComment {
+pub enum DocComment {
+    Line { comment: SingleDocComment },
+    Block { comments: Vec<SingleDocComment> },
+}
+
+impl DocComment {
+    pub fn comments(&self) -> Vec<&SingleDocComment> {
+        match self {
+            DocComment::Line { comment } => vec![comment],
+            DocComment::Block { comments } => comments.iter().collect(),
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct SingleDocComment {
     pub offset: usize,
     pub tag: String,
     pub value: String,

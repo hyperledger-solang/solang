@@ -99,7 +99,7 @@ impl Dot {
         if !tags.is_empty() {
             let labels = tags
                 .iter()
-                .map(|tag| format!("{}: {}", tag.tag, tag.value))
+                .map(|tag| format!("{}: {}", tag.tag, tag.value.replace('\n', " ")))
                 .collect();
 
             self.add_node(
