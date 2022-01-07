@@ -4,8 +4,13 @@ will be documented here.
 
 ## [Unreleased]
 
+### Added
+- On Solana, the accounts that were passed into the transactions are listed in
+  the `tx.accounts` builtin. There is also a builtin struct `AccountInfo`
+
 ### Changed
 - Solang now uses LLVM 13.0, based on the [Solana LLVM tree](https://github.com/solana-labs/llvm-project/)
+
 
 ## [0.1.9]
 
