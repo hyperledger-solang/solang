@@ -2990,6 +2990,37 @@ uint128 ``tx.gasprice(uint64 gas)``
 address ``tx.origin``
     The address that started this transaction. Not available on Parity Substrate or Solana.
 
+AccountInfo[] ``tx.accounts``
+    Only available on Solana.
+
+    The account info of all the accounts passed into the transaction. ``AccountInfo`` is a builtin
+    structure with the following fields:
+
+    address ``key``
+        The address (or public key) of the account
+
+    uint64 ``lamports``
+        The lamports of the accounts. This field can be modified, however the lamports need to be
+        balanced for all accounts by the end of the transaction.
+
+    bytes ``data```
+        The account data. This field can be modified, but use with caution.
+
+    address ``owner``
+        The program that owns this account
+
+    uint64 ``rent_epoch``
+        The next epoch when rent is due.
+
+    bool ``is_signer``
+        Did this account sign the transaction
+
+    bool ``is_writable``
+        Is this account writable in this transaction
+
+    bool ``executable``
+        Is this account a program
+
 
 ``block`` properties
 ++++++++++++++++++++++

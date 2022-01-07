@@ -206,6 +206,7 @@ fn resolve_base_args(
             file_no,
             unchecked: false,
             constant: false,
+            lvalue: false,
         };
 
         for base in &def.base {

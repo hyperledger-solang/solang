@@ -1594,28 +1594,30 @@ impl Namespace {
             let structs = dot.add_node(Node::new("structs", Vec::new()), None, None);
 
             for decl in &self.structs {
-                let mut labels = vec![
-                    format!("name:{}", decl.name),
-                    self.files[decl.loc.0].loc_to_string(&decl.loc),
-                ];
+                if let Some(loc) = &decl.loc {
+                    let mut labels = vec![
+                        format!("name:{}", decl.name),
+                        self.files[loc.0].loc_to_string(loc),
+                    ];
 
-                if let Some(contract) = &decl.contract {
-                    labels.insert(1, format!("contract: {}", contract));
+                    if let Some(contract) = &decl.contract {
+                        labels.insert(1, format!("contract: {}", contract));
+                    }
+
+                    for field in &decl.fields {
+                        labels.push(format!(
+                            "field name:{} ty:{}",
+                            field.name,
+                            field.ty.to_string(self)
+                        ));
+                    }
+
+                    let e = Node::new(&decl.name, labels);
+
+                    let node = dot.add_node(e, Some(structs), None);
+
+                    dot.add_tags(&decl.tags, node);
                 }
-
-                for field in &decl.fields {
-                    labels.push(format!(
-                        "field name:{} ty:{}",
-                        field.name,
-                        field.ty.to_string(self)
-                    ));
-                }
-
-                let e = Node::new(&decl.name, labels);
-
-                let node = dot.add_node(e, Some(structs), None);
-
-                dot.add_tags(&decl.tags, node);
             }
         }
 

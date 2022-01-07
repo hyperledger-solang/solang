@@ -2,15 +2,15 @@ strict digraph "tests/contract_testcases/solana/expressions/selector_in_free_fun
 	contract [label="contract I\ntests/contract_testcases/solana/expressions/selector_in_free_function.sol:2:9-21"]
 	X [label="function X\ncontract: I\ntests/contract_testcases/solana/expressions/selector_in_free_function.sol:3:13-39\nsignature X(bytes)\nvisibility external\nmutability nonpayable\nvirtual"]
 	parameters [label="parameters\nbytes "]
-	contract_4 [label="contract foo\ntests/contract_testcases/solana/expressions/selector_in_free_function.sol:10:9-22"]
+	contract_5 [label="contract foo\ntests/contract_testcases/solana/expressions/selector_in_free_function.sol:10:9-22"]
 	diagnostic [label="found interface ‘I’\nlevel Debug\ntests/contract_testcases/solana/expressions/selector_in_free_function.sol:2:9-21"]
-	diagnostic_7 [label="found contract ‘foo’\nlevel Debug\ntests/contract_testcases/solana/expressions/selector_in_free_function.sol:10:9-22"]
-	diagnostic_8 [label="function can be declared ‘pure’\nlevel Warning\ntests/contract_testcases/solana/expressions/selector_in_free_function.sol:6:9-38"]
+	diagnostic_8 [label="found contract ‘foo’\nlevel Debug\ntests/contract_testcases/solana/expressions/selector_in_free_function.sol:10:9-22"]
+	diagnostic_9 [label="function can be declared ‘pure’\nlevel Warning\ntests/contract_testcases/solana/expressions/selector_in_free_function.sol:6:9-38"]
 	contracts -> contract
 	contract -> X [label="function"]
 	X -> parameters [label="parameters"]
-	contracts -> contract_4
+	contracts -> contract_5
 	diagnostics -> diagnostic [label="Debug"]
-	diagnostics -> diagnostic_7 [label="Debug"]
-	diagnostics -> diagnostic_8 [label="Warning"]
+	diagnostics -> diagnostic_8 [label="Debug"]
+	diagnostics -> diagnostic_9 [label="Warning"]
 }

@@ -152,11 +152,11 @@ impl SolangServer {
         let prot = get_prototype(*bltn);
 
         if let Some(protval) = prot {
-            for ret in protval.ret {
+            for ret in &protval.ret {
                 msg = format!("{} {}", msg, SolangServer::expanded_ty(ret, ns));
             }
             msg = format!("{} {} (", msg, protval.name);
-            for arg in protval.args {
+            for arg in &protval.args {
                 msg = format!("{}{}", msg, SolangServer::expanded_ty(arg, ns));
             }
             msg = format!("{}): {}", msg, protval.doc);
@@ -842,12 +842,14 @@ impl SolangServer {
         }
 
         for strct in &ns.structs {
-            for filds in &strct.fields {
-                SolangServer::construct_strct(filds, lookup_tbl, ns);
-            }
+            if let Some(loc) = &strct.loc {
+                for filds in &strct.fields {
+                    SolangServer::construct_strct(filds, lookup_tbl, ns);
+                }
 
-            let msg_tg = render(&strct.tags[..]);
-            lookup_tbl.push((strct.loc.1, (strct.loc.1 + strct.name.len()), msg_tg));
+                let msg_tg = render(&strct.tags[..]);
+                lookup_tbl.push((loc.1, (loc.1 + strct.name.len()), msg_tg));
+            }
         }
 
         for fnc in &ns.functions {

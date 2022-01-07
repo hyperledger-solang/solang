@@ -323,7 +323,7 @@ impl ast::Namespace {
             Target::Solana => (32, 8),
         };
 
-        ast::Namespace {
+        let mut ns = ast::Namespace {
             target,
             files: Vec::new(),
             enums: Vec::new(),
@@ -340,7 +340,13 @@ impl ast::Namespace {
             next_id: 0,
             var_constants: HashMap::new(),
             hover_overrides: HashMap::new(),
+        };
+
+        if target == Target::Solana {
+            ns.add_solana_builtins();
         }
+
+        ns
     }
 
     /// Add symbol to symbol table; either returns true for success, or adds an appropriate error
@@ -1486,6 +1492,7 @@ impl ast::Namespace {
             contract_no,
             function_no,
             constant: true,
+            lvalue: false,
         };
 
         let size_expr = expression(

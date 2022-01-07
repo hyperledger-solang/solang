@@ -4470,7 +4470,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                     "balance",
                 )
             }
-            _ => unimplemented!(),
+            _ => unreachable!("{:?}", expr),
         }
     }
 }

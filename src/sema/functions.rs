@@ -799,12 +799,23 @@ pub fn resolve_params(
 
         match ns.resolve_type(file_no, contract_no, false, &p.ty, diagnostics) {
             Ok(ty) => {
-                if !is_internal && ty.contains_internal_function(ns) {
-                    diagnostics.push(Diagnostic::error(
+                if !is_internal {
+                    if ty.contains_internal_function(ns) {
+                        diagnostics.push(Diagnostic::error(
                         p.ty.loc(),
                         "parameter of type ‘function internal’ not allowed public or external functions".to_string(),
                     ));
-                    success = false;
+                        success = false;
+                    }
+
+                    if let Some(ty) = ty.contains_builtins(ns) {
+                        let message = format!(
+                            "parameter of type ‘{}’ not alowed in public or external functions",
+                            ty.to_string(ns)
+                        );
+                        ns.diagnostics.push(Diagnostic::error(p.ty.loc(), message));
+                        success = false
+                    }
                 }
 
                 let ty = if !ty.can_have_data_location() {
@@ -861,6 +872,7 @@ pub fn resolve_params(
                     ty,
                     ty_loc,
                     indexed: false,
+                    readonly: false,
                 });
             }
             Err(()) => success = false,
@@ -896,15 +908,25 @@ pub fn resolve_returns(
 
         match ns.resolve_type(file_no, contract_no, false, &r.ty, diagnostics) {
             Ok(ty) => {
-                if !is_internal && ty.contains_internal_function(ns) {
-                    diagnostics.push(Diagnostic::error(
+                if !is_internal {
+                    if ty.contains_internal_function(ns) {
+                        diagnostics.push(Diagnostic::error(
                         r.ty.loc(),
-                        "return type ‘function internal’ not allowed public or external functions"
+                        "return type ‘function internal’ not allowed in public or external functions"
                             .to_string(),
                     ));
-                    success = false;
-                }
+                        success = false;
+                    }
 
+                    if let Some(ty) = ty.contains_builtins(ns) {
+                        let message = format!(
+                            "return type ‘{}’ not allowed in public or external functions",
+                            ty.to_string(ns)
+                        );
+                        ns.diagnostics.push(Diagnostic::error(r.ty.loc(), message));
+                        success = false
+                    }
+                }
                 let ty = if !ty.can_have_data_location() {
                     if let Some(storage) = &r.storage {
                         diagnostics.push(Diagnostic::error(
@@ -965,6 +987,7 @@ pub fn resolve_returns(
                     ty,
                     ty_loc,
                     indexed: false,
+                    readonly: false,
                 });
             }
             Err(()) => success = false,
@@ -1003,6 +1026,7 @@ fn signatures() {
                 ty: Type::Uint(8),
                 ty_loc: pt::Loc(0, 0, 0),
                 indexed: false,
+                readonly: false,
             },
             Parameter {
                 loc: pt::Loc(0, 0, 0),
@@ -1011,6 +1035,7 @@ fn signatures() {
                 ty: Type::Address(false),
                 ty_loc: pt::Loc(0, 0, 0),
                 indexed: false,
+                readonly: false,
             },
         ],
         Vec::new(),

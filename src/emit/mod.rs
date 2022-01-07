@@ -36,6 +36,7 @@ mod ewasm;
 mod loop_builder;
 mod solana;
 mod substrate;
+use once_cell::sync::OnceCell;
 
 use crate::{
     codegen::{
@@ -45,12 +46,7 @@ use crate::{
     linker::link,
 };
 
-lazy_static::lazy_static! {
-    static ref LLVM_INIT: () = {
-        inkwell::targets::Target::initialize_webassembly(&Default::default());
-        inkwell::targets::Target::initialize_bpf(&Default::default());
-    };
-}
+static LLVM_INIT: OnceCell<()> = OnceCell::new();
 
 #[derive(Clone)]
 pub struct Variable<'a> {
@@ -2336,6 +2332,19 @@ pub trait TargetRuntime<'a> {
 
                     self.storage_subscript(bin, function, ty, array, index, ns)
                         .into()
+                } else if elem_ty.is_builtin(ns) {
+                    let array = self
+                        .expression(bin, a, vartab, function, ns)
+                        .into_pointer_value();
+                    let index = self
+                        .expression(bin, i, vartab, function, ns)
+                        .into_int_value();
+
+                    unsafe {
+                        bin.builder
+                            .build_gep(array, &[index], "account_info")
+                            .into()
+                    }
                 } else if ty.is_dynamic_memory() {
                     let array = self.expression(bin, a, vartab, function, ns);
 
@@ -2391,23 +2400,18 @@ pub trait TargetRuntime<'a> {
                     }
                 }
             }
+            Expression::StructMember(_, _, a, _) if a.ty().is_builtin(ns) => {
+                self.builtin(bin, e, vartab, function, ns)
+            }
             Expression::StructMember(_, _, a, i) => {
                 let struct_ptr = self
                     .expression(bin, a, vartab, function, ns)
                     .into_pointer_value();
 
-                unsafe {
-                    bin.builder
-                        .build_gep(
-                            struct_ptr,
-                            &[
-                                bin.context.i32_type().const_zero(),
-                                bin.context.i32_type().const_int(*i as u64, false),
-                            ],
-                            "struct member",
-                        )
-                        .into()
-                }
+                bin.builder
+                    .build_struct_gep(struct_ptr, *i as u32, "struct member")
+                    .unwrap()
+                    .into()
             }
             Expression::Ternary(_, _, c, l, r) => {
                 let cond = self
@@ -2546,7 +2550,9 @@ pub trait TargetRuntime<'a> {
                     bin.vector_new(size, elem_size, init.as_ref()).into()
                 }
             }
-            Expression::Builtin(_, _, Builtin::ArrayLength, args) => {
+            Expression::Builtin(_, _, Builtin::ArrayLength, args)
+                if !args[0].ty().array_deref().is_builtin(ns) =>
+            {
                 let array = self.expression(bin, &args[0], vartab, function, ns);
 
                 bin.vector_len(array).into()
@@ -5744,7 +5750,10 @@ impl<'a> Binary<'a> {
         math_overflow_check: bool,
         runtime: Option<Box<Binary<'a>>>,
     ) -> Self {
-        lazy_static::initialize(&LLVM_INIT);
+        LLVM_INIT.get_or_init(|| {
+            inkwell::targets::Target::initialize_webassembly(&Default::default());
+            inkwell::targets::Target::initialize_bpf(&Default::default());
+        });
 
         let triple = target.llvm_target_triple();
         let module = context.create_module(name);
@@ -6251,6 +6260,13 @@ impl<'a> Binary<'a> {
 
     /// Return the llvm type for the resolved type.
     fn llvm_type(&self, ty: &ast::Type, ns: &ast::Namespace) -> BasicTypeEnum<'a> {
+        if ty.is_builtin(ns) {
+            return self
+                .module
+                .get_struct_type("struct.SolAccountInfo")
+                .unwrap()
+                .into();
+        }
         match ty {
             ast::Type::Bool => BasicTypeEnum::IntType(self.context.bool_type()),
             ast::Type::Int(n) | ast::Type::Uint(n) => {

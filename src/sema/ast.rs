@@ -52,7 +52,7 @@ pub enum Type {
 pub struct StructDecl {
     pub tags: Vec<Tag>,
     pub name: String,
-    pub loc: pt::Loc,
+    pub loc: Option<pt::Loc>,
     pub contract: Option<String>,
     pub fields: Vec<Parameter>,
     // List of offsets of the fields, last entry is the offset for the struct overall size
@@ -122,6 +122,7 @@ pub struct Parameter {
     pub ty: Type,
     pub ty_loc: pt::Loc,
     pub indexed: bool,
+    pub readonly: bool,
 }
 
 #[derive(PartialEq, Eq, Clone, Hash, Debug)]
@@ -1329,6 +1330,7 @@ pub enum Builtin {
     WriteUint128LE,
     WriteUint256LE,
     WriteAddress,
+    Accounts,
 }
 
 #[derive(PartialEq, Clone, Debug)]

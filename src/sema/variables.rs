@@ -218,6 +218,13 @@ pub fn var_decl(
             ),
         ));
         return None;
+    } else if let Some(ty) = ty.contains_builtins(ns) {
+        let message = format!(
+            "variable of cannot be builtin of type ‘{}’",
+            ty.to_string(ns)
+        );
+        ns.diagnostics.push(Diagnostic::error(s.ty.loc(), message));
+        return None;
     }
 
     let initializer = if let Some(initializer) = &s.initializer {
@@ -228,6 +235,7 @@ pub fn var_decl(
             contract_no,
             function_no: None,
             constant,
+            lvalue: false,
         };
 
         match expression(
@@ -367,6 +375,7 @@ pub fn var_decl(
                     ty: ty.clone(),
                     ty_loc: s.ty.loc(),
                     indexed: false,
+                    readonly: false,
                 }],
                 ns,
             );
@@ -433,6 +442,7 @@ fn collect_parameters<'a>(
                 ty: key.as_ref().clone(),
                 ty_loc: pt::Loc(0, 0, 0),
                 indexed: false,
+                readonly: false,
             });
 
             collect_parameters(value, params, expr, ns)
@@ -463,6 +473,7 @@ fn collect_parameters<'a>(
                     ty: Type::Uint(256),
                     ty_loc: pt::Loc(0, 0, 0),
                     indexed: false,
+                    readonly: false,
                 });
             }
 

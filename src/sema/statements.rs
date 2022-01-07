@@ -27,6 +27,7 @@ pub fn resolve_function_body(
         function_no: Some(function_no),
         unchecked: false,
         constant: false,
+        lvalue: false,
     };
 
     // first add function parameters
@@ -344,6 +345,7 @@ fn statement(
                         name: decl.name.name.to_owned(),
                         name_loc: Some(decl.name.loc),
                         indexed: false,
+                        readonly: false,
                     },
                     initializer,
                 ));
@@ -1085,6 +1087,9 @@ fn destructure(
     let mut fields = Vec::new();
     let mut left_tys = Vec::new();
 
+    let mut lcontext = context.clone();
+    lcontext.lvalue = true;
+
     for (_, param) in vars {
         match param {
             None => {
@@ -1106,7 +1111,7 @@ fn destructure(
                 }
 
                 // ty will just be a normal expression, not a type
-                let e = expression(ty, context, ns, symtable, diagnostics, ResolveTo::Unknown)?;
+                let e = expression(ty, &lcontext, ns, symtable, diagnostics, ResolveTo::Unknown)?;
 
                 match &e {
                     Expression::ConstantVariable(_, _, Some(contract_no), var_no) => {
@@ -1188,6 +1193,7 @@ fn destructure(
                             ty,
                             ty_loc,
                             indexed: false,
+                            readonly: false,
                         },
                     ));
                 }
@@ -1878,6 +1884,7 @@ fn try_catch(
                                 name: name.name.to_string(),
                                 name_loc: Some(name.loc),
                                 indexed: false,
+                                readonly: false,
                             },
                         ));
                     }
@@ -1891,6 +1898,7 @@ fn try_catch(
                             indexed: false,
                             name: "".to_string(),
                             name_loc: None,
+                            readonly: false,
                         },
                     ));
                 }
@@ -1964,6 +1972,7 @@ fn try_catch(
             name: "".to_string(),
             name_loc: None,
             indexed: false,
+            readonly: false,
         };
 
         if let Some(name) = &error_stmt.1.name {
@@ -2029,6 +2038,7 @@ fn try_catch(
             name: "".to_owned(),
             name_loc: None,
             indexed: false,
+            readonly: false,
         };
 
         if let Some(name) = &param.name {

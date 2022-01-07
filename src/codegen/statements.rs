@@ -1109,6 +1109,7 @@ fn try_catch(
                             name_loc: None,
                             loc: pt::Loc(0, 0, 0),
                             indexed: false,
+                            readonly: false,
                         })
                         .collect();
 

@@ -1,5 +1,6 @@
 mod abi;
 mod accessor;
+mod account_info;
 mod arrays;
 mod balance;
 mod builtin;

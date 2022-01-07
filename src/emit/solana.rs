@@ -1435,6 +1435,145 @@ impl SolanaTarget {
 
         binary.builder.build_load(offset, "offset").into_int_value()
     }
+
+    /// AccountInfo struct member
+    fn account_info_member<'b>(
+        &self,
+        binary: &Binary<'b>,
+        function: FunctionValue<'b>,
+        account_info: PointerValue<'b>,
+        member: usize,
+        ns: &ast::Namespace,
+    ) -> BasicValueEnum<'b> {
+        match member {
+            // key
+            0 => {
+                let key = binary
+                    .builder
+                    .build_load(
+                        binary
+                            .builder
+                            .build_struct_gep(account_info, 0, "key")
+                            .unwrap(),
+                        "key",
+                    )
+                    .into_pointer_value();
+
+                binary.builder.build_load(
+                    binary.builder.build_pointer_cast(
+                        key,
+                        binary.address_type(ns).ptr_type(AddressSpace::Generic),
+                        "address",
+                    ),
+                    "key",
+                )
+            }
+            // lamports
+            1 => binary.builder.build_load(
+                binary
+                    .builder
+                    .build_struct_gep(account_info, 1, "lamports")
+                    .unwrap(),
+                "lamports",
+            ),
+            // data
+            2 => {
+                let data_len = binary.builder.build_int_truncate(
+                    binary
+                        .builder
+                        .build_load(
+                            binary
+                                .builder
+                                .build_struct_gep(account_info, 2, "data_len")
+                                .unwrap(),
+                            "data_len",
+                        )
+                        .into_int_value(),
+                    binary.context.i32_type(),
+                    "data_len",
+                );
+
+                let data = binary.builder.build_load(
+                    binary
+                        .builder
+                        .build_struct_gep(account_info, 3, "data")
+                        .unwrap(),
+                    "data",
+                );
+
+                let slice_alloca = binary.build_alloca(
+                    function,
+                    binary.llvm_type(&ast::Type::Slice, ns),
+                    "slice_alloca",
+                );
+                let data_elem = binary
+                    .builder
+                    .build_struct_gep(slice_alloca, 0, "data")
+                    .unwrap();
+                binary.builder.build_store(data_elem, data);
+                let data_len_elem = binary
+                    .builder
+                    .build_struct_gep(slice_alloca, 1, "data_len")
+                    .unwrap();
+                binary.builder.build_store(data_len_elem, data_len);
+
+                binary.builder.build_load(slice_alloca, "data_slice")
+            }
+            // owner
+            3 => {
+                let owner = binary
+                    .builder
+                    .build_load(
+                        binary
+                            .builder
+                            .build_struct_gep(account_info, 4, "owner")
+                            .unwrap(),
+                        "owner",
+                    )
+                    .into_pointer_value();
+
+                binary.builder.build_load(
+                    binary.builder.build_pointer_cast(
+                        owner,
+                        binary.address_type(ns).ptr_type(AddressSpace::Generic),
+                        "address",
+                    ),
+                    "owner",
+                )
+            }
+            // rent epoch
+            4 => {
+                let rent_epoch = binary
+                    .builder
+                    .build_struct_gep(account_info, 5, "rent_epoch")
+                    .unwrap();
+
+                binary.builder.build_load(rent_epoch, "rent_epoch")
+            }
+            // remaining fields are bool
+            _ => {
+                let bool_field = binary
+                    .builder
+                    .build_struct_gep(account_info, member as u32 + 1, "bool_field")
+                    .unwrap();
+
+                let value = binary
+                    .builder
+                    .build_load(bool_field, "bool_field")
+                    .into_int_value();
+
+                binary
+                    .builder
+                    .build_int_compare(
+                        IntPredicate::NE,
+                        value,
+                        value.get_type().const_zero(),
+                        "is_non_zero",
+                    )
+                    .into()
+            }
+        }
+    }
 }
 
 impl<'a> TargetRuntime<'a> for SolanaTarget {
@@ -3444,6 +3583,44 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                     .into_pointer_value();
 
                 binary.builder.build_load(lamport, "lamport")
+            }
+            ast::Expression::Builtin(_, _, ast::Builtin::Accounts, _) => {
+                let parameters = self.sol_parameters(binary);
+
+                unsafe {
+                    binary.builder.build_gep(
+                        parameters,
+                        &[
+                            binary.context.i32_type().const_int(0, false),
+                            binary.context.i32_type().const_int(0, false),
+                            binary.context.i32_type().const_int(0, false),
+                        ],
+                        "accounts",
+                    )
+                }
+                .into()
+            }
+            ast::Expression::Builtin(_, _, ast::Builtin::ArrayLength, _) => {
+                let parameters = self.sol_parameters(binary);
+
+                let ka_num = binary
+                    .builder
+                    .build_struct_gep(parameters, 1, "ka_num")
+                    .unwrap();
+
+                let ka_num = binary.builder.build_load(ka_num, "ka_num").into_int_value();
+
+                binary
+                    .builder
+                    .build_int_truncate(ka_num, binary.context.i32_type(), "ka_num_32bits")
+                    .into()
+            }
+            ast::Expression::StructMember(_, _, a, member) => {
+                let account_info = self
+                    .expression(binary, a, vartab, function, ns)
+                    .into_pointer_value();
+
+                self.account_info_member(binary, function, account_info, *member, ns)
             }
             _ => unimplemented!(),
         }
