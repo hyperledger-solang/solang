@@ -624,6 +624,7 @@ pub enum Expression {
 impl Expression {
     /// Recurse over expression and copy each element through a filter. This allows the optimizer passes to create
     /// copies of expressions while modifying the results slightly
+    #[must_use]
     pub fn copy_filter<T, F>(&self, ctx: &mut T, filter: F) -> Expression
     where
         F: Fn(&Expression, &mut T) -> Expression,

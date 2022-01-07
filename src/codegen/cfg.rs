@@ -1349,8 +1349,8 @@ fn function_cfg(
 
     // a function is public if is not a library and not a base constructor
     cfg.public = if let Some(base_contract_no) = func.contract_no {
-        !ns.contracts[base_contract_no].is_library()
-            && !(func.is_constructor() && contract_no != base_contract_no)
+        !(ns.contracts[base_contract_no].is_library()
+            || func.is_constructor() && contract_no != base_contract_no)
             && func.is_public()
     } else {
         false

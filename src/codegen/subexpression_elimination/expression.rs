@@ -3,6 +3,7 @@ use crate::sema::ast::{Expression, StringLocation};
 
 impl Expression {
     /// Rebuild a binary expression given the new left and right subexpressions
+    #[must_use]
     pub fn rebuild_binary_expression(&self, left: &Expression, right: &Expression) -> Expression {
         let expr = match self {
             Expression::Add(loc, expr_type, check, ..) => Expression::Add(
@@ -157,6 +158,7 @@ impl Expression {
     }
 
     /// Rebuild a unary expression give the new operand expression
+    #[must_use]
     pub fn rebuild_unary_expression(&self, operand: &Expression) -> Expression {
         match self {
             Expression::ZeroExt(loc, expr_type, ..) => {

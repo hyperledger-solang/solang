@@ -304,7 +304,7 @@ pub fn metadata(contract_no: usize, code: &[u8], ns: &ast::Namespace) -> Value {
     let mut builder = Contract::builder();
 
     // Add our name and tags
-    builder.name(ns.contracts[contract_no].name.to_string());
+    builder.name(&ns.contracts[contract_no].name);
 
     let mut description = tags(contract_no, "title", ns);
 
