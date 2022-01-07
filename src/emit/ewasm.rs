@@ -1415,9 +1415,7 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
         callty: ast::CallTy,
         ns: &ast::Namespace,
     ) {
-        let ret;
-
-        if callty == ast::CallTy::Regular {
+        let ret = if callty == ast::CallTy::Regular {
             // needs value
 
             // value is a u128
@@ -1427,7 +1425,7 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
             binary.builder.build_store(value_ptr, value);
 
             // call create
-            ret = binary
+            binary
                 .builder
                 .build_call(
                     binary.module.get_function("call").unwrap(),
@@ -1457,9 +1455,9 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
                 .try_as_basic_value()
                 .left()
                 .unwrap()
-                .into_int_value();
+                .into_int_value()
         } else {
-            ret = binary
+            binary
                 .builder
                 .build_call(
                     binary
@@ -1488,8 +1486,8 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
                 .try_as_basic_value()
                 .left()
                 .unwrap()
-                .into_int_value();
-        }
+                .into_int_value()
+        };
 
         let is_success = binary.builder.build_int_compare(
             IntPredicate::EQ,

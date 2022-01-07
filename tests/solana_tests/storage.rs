@@ -176,8 +176,7 @@ fn bytes() {
     );
 
     for (i, b) in b"The shoemaker always wears the worst shoes"
-        .to_vec()
-        .into_iter()
+        .iter()
         .enumerate()
     {
         let returns = vm.function(
@@ -188,7 +187,7 @@ fn bytes() {
             None,
         );
 
-        assert_eq!(returns, vec![Token::FixedBytes(vec![b])]);
+        assert_eq!(returns, vec![Token::FixedBytes(vec![*b])]);
     }
 
     vm.function(
@@ -214,8 +213,7 @@ fn bytes() {
     );
 
     for (i, b) in b"ThE shoEmaker always wears the worst shoes"
-        .to_vec()
-        .into_iter()
+        .iter()
         .enumerate()
     {
         let returns = vm.function(
@@ -226,7 +224,7 @@ fn bytes() {
             None,
         );
 
-        assert_eq!(returns, vec![Token::FixedBytes(vec![b])]);
+        assert_eq!(returns, vec![Token::FixedBytes(vec![*b])]);
     }
 }
 

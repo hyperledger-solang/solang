@@ -10,10 +10,12 @@ use crate::lexer::CommentType;
 pub struct Loc(pub usize, pub usize, pub usize);
 
 impl Loc {
+    #[must_use]
     pub fn begin(&self) -> Self {
         Loc(self.0, self.1, self.1)
     }
 
+    #[must_use]
     pub fn end(&self) -> Self {
         Loc(self.0, self.2, self.2)
     }

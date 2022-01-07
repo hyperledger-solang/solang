@@ -742,7 +742,8 @@ impl Type {
         }
     }
 
-    /// Give the type of an memory array after dereference.
+    /// Give the type of an memory array after dereference
+    #[must_use]
     pub fn array_deref(&self) -> Self {
         match self {
             Type::String | Type::DynamicBytes => Type::Ref(Box::new(Type::Uint(8))),
@@ -757,6 +758,7 @@ impl Type {
     }
 
     /// Given an array, return the type of its elements
+    #[must_use]
     pub fn array_elem(&self) -> Self {
         match self {
             Type::Array(ty, dim) if dim.len() > 1 => {
@@ -769,6 +771,7 @@ impl Type {
 
     /// Give the type of an storage array after dereference. This can only be used on
     /// array types and will cause a panic otherwise.
+    #[must_use]
     pub fn storage_array_elem(&self) -> Self {
         match self {
             Type::Mapping(_, v) => Type::StorageRef(false, v.clone()),
@@ -1149,6 +1152,7 @@ impl Type {
     }
 
     /// If the type is Ref or StorageRef, get the underlying type
+    #[must_use]
     pub fn deref_into(self) -> Self {
         match self {
             Type::StorageRef(_, r) => *r,
