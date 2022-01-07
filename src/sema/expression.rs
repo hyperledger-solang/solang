@@ -1775,6 +1775,14 @@ pub fn expression(
 
             Err(())
         }
+        pt::Expression::ArraySlice(loc, ..) => {
+            diagnostics.push(Diagnostic::error(
+                *loc,
+                "slice not supported yet".to_string(),
+            ));
+
+            Err(())
+        }
         pt::Expression::ArraySubscript(loc, array, Some(index)) => {
             array_subscript(loc, array, index, context, ns, symtable, diagnostics)
         }

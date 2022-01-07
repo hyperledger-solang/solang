@@ -29,8 +29,6 @@ jobs:
         run: cargo fmt --all -- --check
       - name: Run cargo clippy
         run: cargo clippy --tests --bins -- -D warnings -D clippy::inconsistent-struct-constructor
-      - name: Ensure cargo publish is happy
-        run: cargo publish --dry-run
 
   linux:
     name: Linux
