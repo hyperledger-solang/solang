@@ -29,20 +29,20 @@ SourceUnitPart: SourceUnitPart = {
 }
 
 ImportDirective: SourceUnitPart = {
-    <doc:DocComments> <l:@L> "import" <s:StringLiteral> ";" <r:@L> => SourceUnitPart::ImportDirective(doc, Import::Plain(s), Loc(file_no, l, r)),
-    <doc:DocComments> <l:@L> "import" <s:StringLiteral> "as" <id:Identifier> ";" <r:@L> =>  SourceUnitPart::ImportDirective(doc, Import::GlobalSymbol(s, id), Loc(file_no, l, r)),
+    <doc:DocComments> <l:@L> "import" <s:StringLiteral> ";" <r:@L> => SourceUnitPart::ImportDirective(doc, Import::Plain(s, Loc(file_no, l, r))),
+    <doc:DocComments> <l:@L> "import" <s:StringLiteral> "as" <id:Identifier> ";" <r:@L> =>  SourceUnitPart::ImportDirective(doc, Import::GlobalSymbol(s, id, Loc(file_no, l, r))),
     <doc:DocComments> <l:@L> "import" "*" "as" <id:Identifier> <from:Identifier> <s:StringLiteral> ";" <r:@L> =>? {
         if from.name != "from" {
             Err(ParseError::User { error: LexicalError::ExpectedFrom(from.loc.0, from.loc.1, from.name)})
         } else {
-            Ok(SourceUnitPart::ImportDirective(doc, Import::GlobalSymbol(s, id), Loc(file_no, l, r)))
+            Ok(SourceUnitPart::ImportDirective(doc, Import::GlobalSymbol(s, id, Loc(file_no, l, r))))
         }
     },
     <doc:DocComments> <l:@L> "import" "{" <rename:CommaOne<ImportRename>> "}" <from:Identifier> <s:StringLiteral> ";" <r:@L> =>? {
         if from.name != "from" {
             Err(ParseError::User { error:LexicalError::ExpectedFrom(from.loc.0, from.loc.1, from.name)})
         } else {
-            Ok(SourceUnitPart::ImportDirective(doc, Import::Rename(s, rename), Loc(file_no, l, r)))
+            Ok(SourceUnitPart::ImportDirective(doc, Import::Rename(s, rename, Loc(file_no, l, r))))
         }
     }
 }
