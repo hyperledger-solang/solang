@@ -171,9 +171,9 @@ fn resolve_import(
     ns: &mut ast::Namespace,
 ) {
     let filename = match import {
-        pt::Import::Plain(f) => f,
-        pt::Import::GlobalSymbol(f, _) => f,
-        pt::Import::Rename(f, _) => f,
+        pt::Import::Plain(f, _) => f,
+        pt::Import::GlobalSymbol(f, _, _) => f,
+        pt::Import::Rename(f, _, _) => f,
     };
 
     let import_file_no = match resolver.resolve_file(parent, OsStr::new(&filename.string)) {
@@ -201,7 +201,7 @@ fn resolve_import(
     };
 
     match import {
-        pt::Import::Rename(_, renames) => {
+        pt::Import::Rename(_, renames, _) => {
             for (from, rename_to) in renames {
                 if let Some(import) =
                     ns.variable_symbols
@@ -235,7 +235,7 @@ fn resolve_import(
                 }
             }
         }
-        pt::Import::Plain(_) => {
+        pt::Import::Plain(_, _) => {
             // find all the exports for the file
             let exports = ns
                 .variable_symbols
@@ -270,7 +270,7 @@ fn resolve_import(
                 ns.add_symbol(file_no, contract_no, &new_symbol, symbol);
             }
         }
-        pt::Import::GlobalSymbol(_, symbol) => {
+        pt::Import::GlobalSymbol(_, symbol, _) => {
             ns.check_shadowing(file_no, None, symbol);
 
             ns.add_symbol(
