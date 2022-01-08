@@ -38,11 +38,11 @@ ImportDirective: SourceUnitPart = {
             Ok(SourceUnitPart::ImportDirective(doc, Import::GlobalSymbol(s, id), Loc(file_no, l, r)))
         }
     },
-    <doc:DocComments> "import" "{" <rename:CommaOne<ImportRename>> "}" <from:Identifier> <s:StringLiteral> ";" =>? {
+    <doc:DocComments> <l:@L> "import" "{" <rename:CommaOne<ImportRename>> "}" <from:Identifier> <s:StringLiteral> ";" <r:@L> =>? {
         if from.name != "from" {
             Err(ParseError::User { error:LexicalError::ExpectedFrom(from.loc.0, from.loc.1, from.name)})
         } else {
-            Ok(SourceUnitPart::ImportDirective(doc, Import::Rename(s, rename)))
+            Ok(SourceUnitPart::ImportDirective(doc, Import::Rename(s, rename), Loc(file_no, l, r)))
         }
     }
 }
