@@ -94,7 +94,7 @@ jobs:
         # Make sure "git describe --tags" works for solang --version
         fetch-depth: 0
     - name: Download LLVM
-      run: wget -q -O llvm13.0-mac-arm.tar.xz https://github.com/hyperledger-labs/solang/releases/download/llvm13.0-1/llvm13.0-mac-arm.tar.xz
+      run: curl -L --output llvm13.0-mac-arm.tar.xz https://github.com/hyperledger-labs/solang/releases/download/llvm13.0-1/llvm13.0-mac-arm.tar.xz
     - name: Extract LLVM
       run: tar Jxf llvm13.0-mac-arm.tar.xz
     - name: Add LLVM to Path
