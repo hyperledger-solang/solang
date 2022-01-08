@@ -67,9 +67,9 @@ pub enum SourceUnitPart {
 
 #[derive(Debug, PartialEq)]
 pub enum Import {
-    Plain(StringLiteral),
-    GlobalSymbol(StringLiteral, Identifier),
-    Rename(StringLiteral, Vec<(Identifier, Option<Identifier>)>),
+    Plain(StringLiteral, Loc),
+    GlobalSymbol(StringLiteral, Identifier, Loc),
+    Rename(StringLiteral, Vec<(Identifier, Option<Identifier>)>, Loc),
 }
 
 #[derive(Debug, PartialEq, Clone)]
