@@ -6,8 +6,8 @@ on:
 name: Build Release Binaries
 
 jobs:
-  linux:
-    name: Linux
+  linux-x86-64:
+    name: Linux x86-64
     runs-on: ubuntu-20.04
     steps:
     - name: Checkout sources
@@ -44,7 +44,47 @@ jobs:
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
         file: target/release/solang
-        asset_name: solang-linux
+        asset_name: solang-linux-x86-64
+        tag: ${{ github.ref }}
+
+  linux-arm64:
+    name: Linux arm64
+    runs-on: linux-arm64
+    if: ${{ github.repository_owner == 'hyperledger-labs' }}
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v2
+    - run: git clone --depth 1 --branch solana-rustc/13.0-2021-08-08 https://github.com/solana-labs/llvm-project.git
+    - run: cmake -G Ninja -DLLVM_ENABLE_ASSERTIONS=On -DLLVM_ENABLE_TERMINFO=Off
+        -DLLVM_ENABLE_LIBXML2=Off -DLLVM_ENABLE_ZLIB=Off
+        -DLLVM_ENABLE_PROJECTS='clang;lld'
+        -DLLVM_TARGETS_TO_BUILD='WebAssembly;BPF'
+        -DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_INSTALL_PREFIX=../llvm13.0 llvm
+      working-directory: ./llvm-project/
+    - run: cmake --build . --target install
+      working-directory: ./llvm-project/
+    - run: tar Jcf ./llvm13.0-linux-arm64.tar.xz ./llvm13.0/
+    - name: Upload llvm
+      uses: svenstaro/upload-release-action@v2
+      with:
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        file: llvm13.0-linux-arm64.tar.xz
+        asset_name: llvm13.0-linux-arm64.tar.xz
+        tag: ${{ github.ref }}
+    - name: Add LLVM to Path
+      run: echo "$(pwd)/llvm13.0/bin" >> $GITHUB_PATH
+    - name: Rust stable
+      run: rustup default 1.56.1
+    - name: Build
+      run: cargo build --verbose --release
+    - name: Run tests
+      run: cargo test --verbose --release
+    - name: Upload binary
+      uses: svenstaro/upload-release-action@v2
+      with:
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        file: target/release/solang
+        asset_name: solang-linux-arm64
         tag: ${{ github.ref }}
 
   windows:
