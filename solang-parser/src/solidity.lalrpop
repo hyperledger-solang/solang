@@ -699,15 +699,12 @@ SimpleStatement: Statement = {
     }
 }
 
-Catch: Box<(Option<Parameter>, Statement)> = {
-    "catch" <param:("(" <Parameter> ")")?> <block:BlockStatement> => {
-        Box::new((param, block))
-    }
-}
-
-CatchError: (Identifier, Parameter, Statement) = {
-    "catch" <id:Identifier> "(" <param:Parameter> ")" <block:BlockStatement> => {
-        (id, param, block)
+CatchClause: CatchClause = {
+    <l:@L> "catch" <param:("(" <Parameter> ")")?> <block:BlockStatement> <r:@R> => {
+        CatchClause::Simple(Loc(file_no, l, r), param, block)
+    },
+    <l:@L> "catch" <id:Identifier> "(" <param:Parameter> ")" <block:BlockStatement> <r:@R> => {
+        CatchClause::Named(Loc(file_no, l, r), id, param, block)
     }
 }
 
@@ -744,11 +741,8 @@ NonIfStatement: Statement = {
     <l:@L> "return" <e:Expression> <r:@R> ";" => {
         Statement::Return(Loc(file_no, l, r), Some(e))
     },
-    <l:@L> "try" <e:TryExpression> <returns:TryReturns?> <catch:Catch?> <errors:CatchError+> <r:@R> => {
-        Statement::Try(Loc(file_no, l, r), e, returns, errors, catch)
-    },
-    <l:@L> "try" <e:TryExpression> <returns:TryReturns?> <errors:CatchError*> <catch:Catch> <r:@R> => {
-        Statement::Try(Loc(file_no, l, r), e, returns, errors, Some(catch))
+    <l:@L> "try" <e:TryExpression> <returns:TryReturns?> <clauses:CatchClause+> <r:@R> => {
+        Statement::Try(Loc(file_no, l, r), e, returns, clauses)
     },
     <l:@L> "emit" <ty:FunctionCall> <r:@R> ";" => {
         Statement::Emit(Loc(file_no, l, r), ty)

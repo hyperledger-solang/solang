@@ -546,10 +546,15 @@ pub enum Statement {
         Loc,
         Expression,
         Option<(Vec<(Loc, Option<Parameter>)>, Box<Statement>)>,
-        Vec<(Identifier, Parameter, Statement)>,
-        Option<Box<(Option<Parameter>, Statement)>>,
+        Vec<CatchClause>,
     ),
     DocComment(Loc, CommentType, String),
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum CatchClause {
+    Simple(Loc, Option<Parameter>, Statement),
+    Named(Loc, Identifier, Parameter, Statement),
 }
 
 #[derive(Debug, PartialEq, Clone)]
