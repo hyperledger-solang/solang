@@ -762,6 +762,12 @@ AssemblyStatement: AssemblyStatement = {
     <l:@L> "for" <init:AssemblyBlock> <cond:AssemblyExpression2> <post_iter:AssemblyBlock> <body:AssemblyBlock> <r:@R> => {
         AssemblyStatement::For(Loc(file_no, l, r), init, cond, post_iter, Box::new(body))
     },
+    <l:@L> "switch" <expr:AssemblyExpression2> <default:AssemblySwitchDefault> <r:@R> => {
+        AssemblyStatement::Switch(Loc(file_no, l, r), expr, Vec::new(), Some(default))
+    },
+    <l:@L> "switch" <expr:AssemblyExpression2> <cases:AssemblySwitchCase+> <default:AssemblySwitchDefault?> <r:@R> => {
+        AssemblyStatement::Switch(Loc(file_no, l, r), expr, cases, default)
+    },
     <l:@L> "leave" <r:@R> => {
         AssemblyStatement::Leave(Loc(file_no, l, r))
     },
@@ -774,6 +780,18 @@ AssemblyStatement: AssemblyStatement = {
     <expr:AssemblyExpression1> => {
         AssemblyStatement::Expression(expr)
     },
+}
+
+AssemblySwitchCase: AssemblySwitch = {
+    "case" <case:AssemblyExpression0> <body:AssemblyBlock> => {
+        AssemblySwitch::Case(case, Box::new(body))
+    }
+}
+
+AssemblySwitchDefault: AssemblySwitch = {
+    "default" <body:AssemblyBlock> => {
+        AssemblySwitch::Default(Box::new(body))
+    }
 }
 
 AssemblyBlock: Vec<AssemblyStatement> = {
@@ -945,7 +963,6 @@ extern {
         "function" => Token::Function,
         "returns" => Token::Returns,
         "return" => Token::Return,
-        "leave" => Token::Leave,
         "if" => Token::If,
         "for" => Token::For,
         "while" => Token::While,
@@ -983,5 +1000,9 @@ extern {
         "unchecked" => Token::Unchecked,
         "assembly" => Token::Assembly,
         "let" => Token::Let,
+        "leave" => Token::Leave,
+        "switch" => Token::Switch,
+        "case" => Token::Case,
+        "default" => Token::Default,
     }
 }

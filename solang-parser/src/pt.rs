@@ -565,6 +565,12 @@ pub enum AssemblyStatement {
         AssemblyBlock,
         Box<AssemblyBlock>,
     ),
+    Switch(
+        Loc,
+        AssemblyExpression,
+        Vec<AssemblySwitch>,
+        Option<AssemblySwitch>,
+    ),
     Leave(Loc),
     Break(Loc),
     Continue(Loc),
@@ -585,6 +591,12 @@ pub enum AssemblyExpression {
 }
 
 pub type AssemblyBlock = Vec<AssemblyStatement>;
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum AssemblySwitch {
+    Case(AssemblyExpression, Box<AssemblyBlock>),
+    Default(Box<AssemblyBlock>),
+}
 
 impl Statement {
     pub fn loc(&self) -> Loc {

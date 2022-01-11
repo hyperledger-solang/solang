@@ -66,7 +66,6 @@ pub enum Token<'input> {
     Throw,
     Emit,
     Return,
-    Leave,
     Returns,
 
     Uint(u16),
@@ -176,6 +175,10 @@ pub enum Token<'input> {
     Unchecked,
     Assembly,
     Let,
+    Leave,
+    Switch,
+    Case,
+    Default,
 }
 
 impl<'input> fmt::Display for Token<'input> {
@@ -277,7 +280,6 @@ impl<'input> fmt::Display for Token<'input> {
             Token::Throw => write!(f, "throw"),
             Token::Emit => write!(f, "emit"),
             Token::Return => write!(f, "return"),
-            Token::Leave => write!(f, "leave"),
             Token::Returns => write!(f, "returns"),
             Token::True => write!(f, "true"),
             Token::False => write!(f, "false"),
@@ -315,6 +317,10 @@ impl<'input> fmt::Display for Token<'input> {
             Token::Unchecked => write!(f, "unchecked"),
             Token::Assembly => write!(f, "assembly"),
             Token::Let => write!(f, "let"),
+            Token::Leave => write!(f, "leave"),
+            Token::Switch => write!(f, "switch"),
+            Token::Case => write!(f, "case"),
+            Token::Default => write!(f, "default"),
         }
     }
 }
@@ -421,10 +427,12 @@ static KEYWORDS: phf::Map<&'static str, Token> = phf_map! {
     "bytes" => Token::DynamicBytes,
     "byte" => Token::Bytes(1),
     "calldata" => Token::Calldata,
+    "case" => Token::Case,
     "constant" => Token::Constant,
     "constructor" => Token::Constructor,
     "continue" => Token::Continue,
     "contract" => Token::Contract,
+    "default" => Token::Default,
     "delete" => Token::Delete,
     "do" => Token::Do,
     "else" => Token::Else,
@@ -488,6 +496,7 @@ static KEYWORDS: phf::Map<&'static str, Token> = phf_map! {
     "storage" => Token::Storage,
     "string" => Token::String,
     "struct" => Token::Struct,
+    "switch" => Token::Switch,
     "throw" => Token::Throw,
     "true" => Token::True,
     "uint8" => Token::Uint(8),
