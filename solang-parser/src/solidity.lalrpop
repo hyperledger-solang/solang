@@ -756,6 +756,9 @@ AssemblyStatement: AssemblyStatement = {
     <l:@L> "let" <left:AssemblyExpression0> ":=" <right:AssemblyExpression2> <r:@R> => {
         AssemblyStatement::LetAssign(Loc(file_no, l, r), left, right)
     },
+    <l:@L> "if" <cond:AssemblyExpression0> "{" <body:AssemblyStatement> "}" <r:@R> => {
+        AssemblyStatement::If(Loc(file_no, l, r), cond, Box::new(body))
+    },
     <expr:AssemblyExpression1> => {
         AssemblyStatement::Expression(expr)
     },

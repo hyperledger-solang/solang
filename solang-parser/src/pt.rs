@@ -557,6 +557,7 @@ pub enum AssemblyStatement {
     Assign(Loc, AssemblyExpression, AssemblyExpression),
     LetAssign(Loc, AssemblyExpression, AssemblyExpression),
     Expression(AssemblyExpression),
+    If(Loc, AssemblyExpression, Box<AssemblyStatement>),
 }
 
 #[derive(Debug, PartialEq, Clone)]
