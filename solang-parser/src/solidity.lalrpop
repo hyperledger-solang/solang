@@ -719,11 +719,11 @@ NonIfStatement: Statement = {
     <l:@L> "unchecked" "{" <statements:Statement*> "}" <r:@R> => {
         Statement::Block { loc: Loc(file_no, l, r), unchecked: true, statements }
     },
-    <l:@L> "assembly" "{" <assembly:AssemblyStatement*> "}" <r:@R> => {
+    <l:@L> "assembly" <assembly:AssemblyBlock> <r:@R> => {
         Statement::Assembly { loc: Loc(file_no, l, r), assembly }
     },
     <SimpleStatement> ";" => <>,
-    <l:@L>"do" <b:Statement> "while" "(" <e:Expression> ")" <r:@R> ";" => {
+    <l:@L> "do" <b:Statement> "while" "(" <e:Expression> ")" <r:@R> ";" => {
         Statement::DoWhile(Loc(file_no, l, r), Box::new(b), e)
     },
     <l:@L> "continue" <r:@R> ";" => {
@@ -756,12 +756,28 @@ AssemblyStatement: AssemblyStatement = {
     <l:@L> "let" <left:AssemblyExpression0> ":=" <right:AssemblyExpression2> <r:@R> => {
         AssemblyStatement::LetAssign(Loc(file_no, l, r), left, right)
     },
-    <l:@L> "if" <cond:AssemblyExpression0> "{" <body:AssemblyStatement> "}" <r:@R> => {
+    <l:@L> "if" <cond:AssemblyExpression2> <body:AssemblyBlock> <r:@R> => {
         AssemblyStatement::If(Loc(file_no, l, r), cond, Box::new(body))
+    },
+    <l:@L> "for" <init:AssemblyBlock> <cond:AssemblyExpression2> <post_iter:AssemblyBlock> <body:AssemblyBlock> <r:@R> => {
+        AssemblyStatement::For(Loc(file_no, l, r), init, cond, post_iter, Box::new(body))
+    },
+    <l:@L> "leave" <r:@R> => {
+        AssemblyStatement::Leave(Loc(file_no, l, r))
+    },
+    <l:@L> "break" <r:@R> => {
+        AssemblyStatement::Break(Loc(file_no, l, r))
+    },
+    <l:@L> "continue" <r:@R> => {
+        AssemblyStatement::Continue(Loc(file_no, l, r))
     },
     <expr:AssemblyExpression1> => {
         AssemblyStatement::Expression(expr)
     },
+}
+
+AssemblyBlock: Vec<AssemblyStatement> = {
+    "{" <AssemblyStatement*> "}" => <>
 }
 
 AssemblyExpression2: AssemblyExpression = {
@@ -929,6 +945,7 @@ extern {
         "function" => Token::Function,
         "returns" => Token::Returns,
         "return" => Token::Return,
+        "leave" => Token::Leave,
         "if" => Token::If,
         "for" => Token::For,
         "while" => Token::While,

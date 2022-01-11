@@ -66,6 +66,7 @@ pub enum Token<'input> {
     Throw,
     Emit,
     Return,
+    Leave,
     Returns,
 
     Uint(u16),
@@ -276,6 +277,7 @@ impl<'input> fmt::Display for Token<'input> {
             Token::Throw => write!(f, "throw"),
             Token::Emit => write!(f, "emit"),
             Token::Return => write!(f, "return"),
+            Token::Leave => write!(f, "leave"),
             Token::Returns => write!(f, "returns"),
             Token::True => write!(f, "true"),
             Token::False => write!(f, "false"),
@@ -471,6 +473,7 @@ static KEYWORDS: phf::Map<&'static str, Token> = phf_map! {
     "interface" => Token::Interface,
     "internal" => Token::Internal,
     "int" => Token::Int(256),
+    "leave" => Token::Leave,
     "library" => Token::Library,
     "mapping" => Token::Mapping,
     "memory" => Token::Memory,

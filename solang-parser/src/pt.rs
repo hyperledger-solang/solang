@@ -523,7 +523,7 @@ pub enum Statement {
     },
     Assembly {
         loc: Loc,
-        assembly: Vec<AssemblyStatement>,
+        assembly: AssemblyBlock,
     },
     Args(Loc, Vec<NamedArgument>),
     If(Loc, Expression, Box<Statement>, Option<Box<Statement>>),
@@ -557,7 +557,17 @@ pub enum AssemblyStatement {
     Assign(Loc, AssemblyExpression, AssemblyExpression),
     LetAssign(Loc, AssemblyExpression, AssemblyExpression),
     Expression(AssemblyExpression),
-    If(Loc, AssemblyExpression, Box<AssemblyStatement>),
+    If(Loc, AssemblyExpression, Box<AssemblyBlock>),
+    For(
+        Loc,
+        AssemblyBlock,
+        AssemblyExpression,
+        AssemblyBlock,
+        Box<AssemblyBlock>,
+    ),
+    Leave(Loc),
+    Break(Loc),
+    Continue(Loc),
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -573,6 +583,8 @@ pub enum AssemblyExpression {
     Member(Loc, Box<AssemblyExpression>, Identifier),
     Subscript(Loc, Box<AssemblyExpression>, Box<AssemblyExpression>),
 }
+
+pub type AssemblyBlock = Vec<AssemblyStatement>;
 
 impl Statement {
     pub fn loc(&self) -> Loc {
