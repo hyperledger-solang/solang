@@ -46,6 +46,33 @@ jobs:
         asset_name: llvm13.0-linux-x86-64.tar.xz
         asset_content_type: application/x-xz
 
+  linux-arm64:
+    name: Linux arm64
+    runs-on: linux-arm64
+    if: ${{ github.repository_owner == 'hyperledger-labs' }}
+    needs: create
+    steps:
+    - run: git clone --depth 1 --branch solana-rustc/13.0-2021-08-08 https://github.com/solana-labs/llvm-project.git
+    - run: cmake -G Ninja -DLLVM_ENABLE_ASSERTIONS=On -DLLVM_ENABLE_TERMINFO=Off
+        -DLLVM_ENABLE_LIBXML2=Off -DLLVM_ENABLE_ZLIB=Off
+        -DLLVM_ENABLE_PROJECTS='clang;lld'
+        -DLLVM_TARGETS_TO_BUILD='WebAssembly;BPF'
+        -DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_INSTALL_PREFIX=../llvm13.0 llvm
+      working-directory: ./llvm-project/
+    - run: cmake --build . --target install
+      working-directory: ./llvm-project/
+    - run: tar Jcf ./llvm13.0-linux-arm64.tar.xz ./llvm13.0/
+    - name: Upload Release Asset
+      id: upload-release-asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ needs.create.outputs.upload_url }}
+        asset_path: ./llvm13.0-linux-arm64.tar.xz
+        asset_name: llvm13.0-linux-arm64.tar.xz
+        asset_content_type: application/x-xz
+
   mac-arm:
     name: Mac Arm
     needs: create

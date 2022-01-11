@@ -7,10 +7,13 @@ will be documented here.
 ### Added
 - On Solana, the accounts that were passed into the transactions are listed in
   the `tx.accounts` builtin. There is also a builtin struct `AccountInfo`
+- A new common subexpression elimination pass was added, thanks to
+  [LucasSte](https://github.com/hyperledger-labs/solang/pull/550)
+- A graphviz dot file can be generated from the ast, using `--emit ast-dot`
 
 ### Changed
 - Solang now uses LLVM 13.0, based on the [Solana LLVM tree](https://github.com/solana-labs/llvm-project/)
-
+- The ast datastructure has been simplified.
 
 ## [0.1.9]
 
