@@ -625,7 +625,7 @@ fn print_statement(stmts: &[Statement], func: &Function, ns: &Namespace) -> Vec<
                     print_statement(&try_catch.ok_stmt, func, ns),
                 ));
 
-                if let Some((_, param, stmt)) = &try_catch.error {
+                for (_, param, stmt) in &try_catch.errors {
                     list.push(Tree::Leaf(format!(
                         "error_param: {} {}",
                         param.ty.to_string(ns),

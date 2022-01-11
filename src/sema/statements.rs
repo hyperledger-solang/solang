@@ -763,12 +763,12 @@ fn statement(
 
             Ok(reachable)
         }
-        pt::Statement::Try(loc, expr, returns_and_ok, error_stmt, catch_stmt) => {
+        pt::Statement::Try(loc, expr, returns_and_ok, error_stmts, catch_stmt) => {
             let (stmt, reachable) = try_catch(
                 loc,
                 expr,
                 returns_and_ok,
-                error_stmt,
+                error_stmts,
                 catch_stmt,
                 context,
                 symtable,
@@ -1671,7 +1671,7 @@ fn try_catch(
     loc: &pt::Loc,
     expr: &pt::Expression,
     returns_and_ok: &Option<(Vec<(pt::Loc, Option<pt::Parameter>)>, Box<pt::Statement>)>,
-    error_stmt: &Option<Box<(pt::Identifier, pt::Parameter, pt::Statement)>>,
+    error_stmts: &[(pt::Identifier, pt::Parameter, pt::Statement)],
     catch_stmt: &Option<Box<(Option<pt::Parameter>, pt::Statement)>>,
     context: &ExprContext,
     symtable: &mut Symtable,
@@ -1932,85 +1932,95 @@ fn try_catch(
 
     symtable.leave_scope();
 
-    let error_resolved = if let Some(error_stmt) = error_stmt.as_ref().map(|stmt| stmt.deref()) {
-        if error_stmt.0.name != "Error" {
-            ns.diagnostics.push(Diagnostic::error(
-                error_stmt.0.loc,
-                format!(
-                    "only catch ‘Error’ is supported, not ‘{}’",
-                    error_stmt.0.name
-                ),
-            ));
-            return Err(());
-        }
-
-        let (error_ty, ty_loc) = resolve_var_decl_ty(
-            &error_stmt.1.ty,
-            &error_stmt.1.storage,
-            context,
-            ns,
-            diagnostics,
-        )?;
-
-        if error_ty != Type::String {
-            ns.diagnostics.push(Diagnostic::error(
-                error_stmt.1.ty.loc(),
-                format!(
-                    "catch Error(...) can only take ‘string memory’, not ‘{}’",
-                    error_ty.to_string(ns)
-                ),
-            ));
-        }
-
-        symtable.new_scope();
-
-        let mut error_pos = None;
-        let mut error_stmt_resolved = Vec::new();
-        let mut error_param = Parameter {
-            loc: error_stmt.0.loc,
-            ty: Type::String,
-            ty_loc,
-            name: "".to_string(),
-            name_loc: None,
-            indexed: false,
-            readonly: false,
-        };
-
-        if let Some(name) = &error_stmt.1.name {
-            if let Some(pos) = symtable.add(
-                name,
-                Type::String,
-                ns,
-                None,
-                VariableUsage::TryCatchErrorString,
-                error_stmt.1.storage.clone(),
-            ) {
-                ns.check_shadowing(context.file_no, context.contract_no, name);
-
-                error_pos = Some(pos);
-                error_param.name = name.name.to_string();
-                error_param.name_loc = Some(name.loc);
+    let errors_resolved = error_stmts
+        .iter()
+        .map(|error_stmt| {
+            if !matches!(error_stmt.0.name.as_str(), "Error" | "Panic") {
+                ns.diagnostics.push(Diagnostic::error(
+                    error_stmt.0.loc,
+                    format!(
+                        "only catch ‘Error’ or ‘Panic’ is supported, not ‘{}’",
+                        error_stmt.0.name
+                    ),
+                ));
+                return Err(());
             }
-        }
 
-        let reachable = statement(
-            &error_stmt.2,
-            &mut error_stmt_resolved,
-            context,
-            symtable,
-            loops,
-            ns,
-            diagnostics,
-        )?;
+            let (error_ty, ty_loc) = resolve_var_decl_ty(
+                &error_stmt.1.ty,
+                &error_stmt.1.storage,
+                context,
+                ns,
+                diagnostics,
+            )?;
 
-        finally_reachable |= reachable;
+            if error_stmt.0.name == "Error" && error_ty != Type::String {
+                ns.diagnostics.push(Diagnostic::error(
+                    error_stmt.1.ty.loc(),
+                    format!(
+                        "catch Error(...) can only take ‘string memory’, not ‘{}’",
+                        error_ty.to_string(ns)
+                    ),
+                ));
+            }
+            if error_stmt.0.name == "Panic" && error_ty != Type::Uint(256) {
+                ns.diagnostics.push(Diagnostic::error(
+                    error_stmt.1.ty.loc(),
+                    format!(
+                        "catch Panic(...) can only take ‘uint256’, not ‘{}’",
+                        error_ty.to_string(ns)
+                    ),
+                ));
+            }
 
-        symtable.leave_scope();
+            symtable.new_scope();
 
-        Some((error_pos, error_param, error_stmt_resolved))
-    } else {
-        None
-    };
+            let mut error_pos = None;
+            let mut error_stmt_resolved = Vec::new();
+            let mut error_param = Parameter {
+                loc: error_stmt.0.loc,
+                ty: Type::String,
+                ty_loc,
+                name: "".to_string(),
+                name_loc: None,
+                indexed: false,
+                readonly: false,
+            };
+
+            if let Some(name) = &error_stmt.1.name {
+                if let Some(pos) = symtable.add(
+                    name,
+                    Type::String,
+                    ns,
+                    None,
+                    VariableUsage::TryCatchErrorString,
+                    error_stmt.1.storage.clone(),
+                ) {
+                    ns.check_shadowing(context.file_no, context.contract_no, name);
+
+                    error_pos = Some(pos);
+                    error_param.name = name.name.to_string();
+                    error_param.name_loc = Some(name.loc);
+                }
+            }
+
+            let reachable = statement(
+                &error_stmt.2,
+                &mut error_stmt_resolved,
+                context,
+                symtable,
+                loops,
+                ns,
+                diagnostics,
+            )?;
+
+            finally_reachable |= reachable;
+
+            symtable.leave_scope();
+
+            Ok((error_pos, error_param, error_stmt_resolved))
+        })
+        .collect::<Result<Vec<_>, _>>()?;
 
     let mut catch_param = None;
     let mut catch_param_pos = None;
@@ -2084,7 +2094,7 @@ fn try_catch(
         TryCatch {
             expr: fcall,
             returns: params,
-            error: error_resolved,
+            errors: errors_resolved,
             ok_stmt: ok_resolved,
             catch_param,
             catch_param_pos,

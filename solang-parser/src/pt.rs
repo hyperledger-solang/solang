@@ -546,7 +546,7 @@ pub enum Statement {
         Loc,
         Expression,
         Option<(Vec<(Loc, Option<Parameter>)>, Box<Statement>)>,
-        Option<Box<(Identifier, Parameter, Statement)>>,
+        Vec<(Identifier, Parameter, Statement)>,
         Option<Box<(Option<Parameter>, Statement)>>,
     ),
     DocComment(Loc, CommentType, String),
