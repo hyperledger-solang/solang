@@ -2,7 +2,7 @@ use crate::{build_solidity, no_errors};
 use parity_scale_codec::Encode;
 use parity_scale_codec_derive::Decode;
 use solang::file_resolver::FileResolver;
-use solang::Target;
+use solang::{Options, Target};
 use std::ffi::OsStr;
 
 #[test]
@@ -35,6 +35,7 @@ fn test_abstract() {
         inkwell::OptimizationLevel::Default,
         Target::default_substrate(),
         false,
+        &Options::default(),
     );
 
     no_errors(ns.diagnostics);
@@ -73,6 +74,7 @@ fn test_abstract() {
         inkwell::OptimizationLevel::Default,
         Target::default_substrate(),
         false,
+        &Options::default(),
     );
 
     no_errors(ns.diagnostics);

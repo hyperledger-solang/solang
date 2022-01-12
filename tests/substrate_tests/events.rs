@@ -1,7 +1,7 @@
 use crate::{build_solidity, no_errors};
 use parity_scale_codec::Encode;
 use parity_scale_codec_derive::Decode;
-use solang::{file_resolver::FileResolver, Target};
+use solang::{file_resolver::FileResolver, Options, Target};
 use std::ffi::OsStr;
 
 #[test]
@@ -86,8 +86,12 @@ fn event_imported() {
         .to_string(),
     );
 
-    let ns =
-        solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_substrate());
+    let ns = solang::parse_and_resolve(
+        OsStr::new("a.sol"),
+        &mut cache,
+        Target::default_substrate(),
+        &Options::default(),
+    );
 
     no_errors(ns.diagnostics);
 
@@ -117,8 +121,12 @@ fn event_imported() {
         .to_string(),
     );
 
-    let ns =
-        solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_substrate());
+    let ns = solang::parse_and_resolve(
+        OsStr::new("a.sol"),
+        &mut cache,
+        Target::default_substrate(),
+        &Options::default(),
+    );
 
     no_errors(ns.diagnostics);
 
@@ -148,8 +156,12 @@ fn event_imported() {
         .to_string(),
     );
 
-    let ns =
-        solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_substrate());
+    let ns = solang::parse_and_resolve(
+        OsStr::new("a.sol"),
+        &mut cache,
+        Target::default_substrate(),
+        &Options::default(),
+    );
 
     no_errors(ns.diagnostics);
 
@@ -177,8 +189,12 @@ fn event_imported() {
         .to_string(),
     );
 
-    let ns =
-        solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_substrate());
+    let ns = solang::parse_and_resolve(
+        OsStr::new("a.sol"),
+        &mut cache,
+        Target::default_substrate(),
+        &Options::default(),
+    );
 
     no_errors(ns.diagnostics);
 }

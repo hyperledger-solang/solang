@@ -11,7 +11,7 @@ use tiny_keccak::{Hasher, Keccak};
 use wasmi::memory_units::Pages;
 use wasmi::*;
 
-use solang::{compile, file_resolver::FileResolver, sema::diagnostics, Target};
+use solang::{compile, file_resolver::FileResolver, sema::diagnostics, Options, Target};
 
 mod ewasm_tests;
 
@@ -821,6 +821,7 @@ fn build_solidity(src: &str) -> TestRuntime {
         inkwell::OptimizationLevel::Default,
         Target::Ewasm,
         false,
+        &Options::default(),
     );
 
     diagnostics::print_messages(&cache, &ns, false);

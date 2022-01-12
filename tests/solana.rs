@@ -18,13 +18,8 @@ use solana_rbpf::{
     vm::{Config, EbpfVm, SyscallObject, SyscallRegistry, TestInstructionMeter},
 };
 use solang::{
-    abi::generate_abi,
-    codegen::{codegen, Options},
-    compile_many,
-    emit::Generate,
-    file_resolver::FileResolver,
-    sema::diagnostics,
-    Target,
+    abi::generate_abi, codegen::codegen, compile_many, emit::Generate, file_resolver::FileResolver,
+    sema::diagnostics, Options, Target,
 };
 use std::{
     alloc::Layout,
@@ -119,7 +114,12 @@ fn build_solidity(src: &str) -> VirtualMachine {
 
     cache.set_file_contents("test.sol", src.to_string());
 
-    let mut ns = solang::parse_and_resolve(OsStr::new("test.sol"), &mut cache, Target::Solana);
+    let mut ns = solang::parse_and_resolve(
+        OsStr::new("test.sol"),
+        &mut cache,
+        Target::Solana,
+        &Options::default(),
+    );
 
     // codegen all the contracts; some additional errors/warnings will be detected here
     codegen(&mut ns, &Options::default());

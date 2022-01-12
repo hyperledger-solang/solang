@@ -12,7 +12,7 @@ use solang::abi;
 use solang::file_resolver::FileResolver;
 use solang::sema::ast;
 use solang::sema::diagnostics;
-use solang::{compile, Target};
+use solang::{compile, Options, Target};
 
 mod substrate_tests;
 
@@ -1188,6 +1188,7 @@ pub fn build_solidity(src: &'static str) -> TestRuntime {
         inkwell::OptimizationLevel::Default,
         Target::default_substrate(),
         false,
+        &Options::default(),
     );
 
     diagnostics::print_messages(&cache, &ns, false);
@@ -1225,6 +1226,7 @@ pub fn build_solidity_with_overflow_check(src: &'static str) -> TestRuntime {
         inkwell::OptimizationLevel::Default,
         Target::default_substrate(),
         true,
+        &Options::default(),
     );
 
     diagnostics::print_messages(&cache, &ns, false);

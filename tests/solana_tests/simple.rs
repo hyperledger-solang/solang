@@ -1,5 +1,5 @@
 use crate::build_solidity;
-use solang::{file_resolver::FileResolver, Target};
+use solang::{file_resolver::FileResolver, Options, Target};
 use std::ffi::OsStr;
 
 #[test]
@@ -275,7 +275,12 @@ contract line {
 
     cache.set_file_contents("test.sol", src);
 
-    let ns = solang::parse_and_resolve(OsStr::new("test.sol"), &mut cache, Target::Solana);
+    let ns = solang::parse_and_resolve(
+        OsStr::new("test.sol"),
+        &mut cache,
+        Target::Solana,
+        &Options::default(),
+    );
 
     solang::sema::diagnostics::print_messages(&cache, &ns, false);
 

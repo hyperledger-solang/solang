@@ -1,14 +1,19 @@
-use solang::codegen::{codegen, OptimizationLevel, Options};
+use solang::codegen::codegen;
 use solang::file_resolver::FileResolver;
 use solang::sema::ast::Diagnostic;
 use solang::sema::ast::{Level, Namespace};
-use solang::{parse_and_resolve, Target};
+use solang::{parse_and_resolve, OptimizationLevel, Options, Target};
 use std::ffi::OsStr;
 
 fn parse_and_codegen(src: &'static str) -> Namespace {
     let mut cache = FileResolver::new();
     cache.set_file_contents("test.sol", src.to_string());
-    let mut ns = parse_and_resolve(OsStr::new("test.sol"), &mut cache, Target::Ewasm);
+    let mut ns = parse_and_resolve(
+        OsStr::new("test.sol"),
+        &mut cache,
+        Target::Ewasm,
+        &Options::default(),
+    );
 
     let opt = Options {
         dead_storage: false,
@@ -16,6 +21,7 @@ fn parse_and_codegen(src: &'static str) -> Namespace {
         strength_reduce: false,
         vector_to_slice: false,
         common_subexpression_elimination: false,
+        implicit_type_cast_check: false,
         opt_level: OptimizationLevel::Default,
         math_overflow_check: false,
     };

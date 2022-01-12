@@ -1,6 +1,6 @@
 use crate::{first_error, no_errors};
 use solang::file_resolver::FileResolver;
-use solang::Target;
+use solang::{Options, Target};
 use std::ffi::OsStr;
 
 #[test]
@@ -27,8 +27,12 @@ fn enum_import() {
         .to_string(),
     );
 
-    let ns =
-        solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_substrate());
+    let ns = solang::parse_and_resolve(
+        OsStr::new("a.sol"),
+        &mut cache,
+        Target::default_substrate(),
+        &Options::default(),
+    );
 
     no_errors(ns.diagnostics);
 
@@ -54,8 +58,12 @@ fn enum_import() {
         .to_string(),
     );
 
-    let ns =
-        solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_substrate());
+    let ns = solang::parse_and_resolve(
+        OsStr::new("a.sol"),
+        &mut cache,
+        Target::default_substrate(),
+        &Options::default(),
+    );
 
     no_errors(ns.diagnostics);
 
@@ -81,8 +89,12 @@ fn enum_import() {
         .to_string(),
     );
 
-    let ns =
-        solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_substrate());
+    let ns = solang::parse_and_resolve(
+        OsStr::new("a.sol"),
+        &mut cache,
+        Target::default_substrate(),
+        &Options::default(),
+    );
 
     no_errors(ns.diagnostics);
 
@@ -104,8 +116,12 @@ fn enum_import() {
         .to_string(),
     );
 
-    let ns =
-        solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_substrate());
+    let ns = solang::parse_and_resolve(
+        OsStr::new("a.sol"),
+        &mut cache,
+        Target::default_substrate(),
+        &Options::default(),
+    );
 
     assert_eq!(
         first_error(ns.diagnostics),
@@ -123,8 +139,12 @@ fn enum_import() {
         .to_string(),
     );
 
-    let ns =
-        solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_substrate());
+    let ns = solang::parse_and_resolve(
+        OsStr::new("a.sol"),
+        &mut cache,
+        Target::default_substrate(),
+        &Options::default(),
+    );
 
     assert_eq!(
         first_error(ns.diagnostics),
@@ -141,8 +161,12 @@ fn enum_import() {
         .to_string(),
     );
 
-    let ns =
-        solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_substrate());
+    let ns = solang::parse_and_resolve(
+        OsStr::new("a.sol"),
+        &mut cache,
+        Target::default_substrate(),
+        &Options::default(),
+    );
 
     assert_eq!(
         first_error(ns.diagnostics),
@@ -174,8 +198,12 @@ fn struct_import() {
         .to_string(),
     );
 
-    let ns =
-        solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_substrate());
+    let ns = solang::parse_and_resolve(
+        OsStr::new("a.sol"),
+        &mut cache,
+        Target::default_substrate(),
+        &Options::default(),
+    );
 
     no_errors(ns.diagnostics);
 
@@ -201,8 +229,12 @@ fn struct_import() {
         .to_string(),
     );
 
-    let ns =
-        solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_substrate());
+    let ns = solang::parse_and_resolve(
+        OsStr::new("a.sol"),
+        &mut cache,
+        Target::default_substrate(),
+        &Options::default(),
+    );
 
     assert_eq!(first_error(ns.diagnostics), "type ‘struct_a’ not found");
 }
@@ -239,8 +271,12 @@ fn contract_import() {
         .to_string(),
     );
 
-    let ns =
-        solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_substrate());
+    let ns = solang::parse_and_resolve(
+        OsStr::new("a.sol"),
+        &mut cache,
+        Target::default_substrate(),
+        &Options::default(),
+    );
 
     no_errors(ns.diagnostics);
 
@@ -283,8 +319,12 @@ fn contract_import() {
         .to_string(),
     );
 
-    let ns =
-        solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_substrate());
+    let ns = solang::parse_and_resolve(
+        OsStr::new("a.sol"),
+        &mut cache,
+        Target::default_substrate(),
+        &Options::default(),
+    );
 
     no_errors(ns.diagnostics);
 
@@ -327,8 +367,12 @@ fn contract_import() {
         .to_string(),
     );
 
-    let ns =
-        solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_substrate());
+    let ns = solang::parse_and_resolve(
+        OsStr::new("a.sol"),
+        &mut cache,
+        Target::default_substrate(),
+        &Options::default(),
+    );
 
     no_errors(ns.diagnostics);
 }
@@ -355,6 +399,7 @@ fn circular_import() {
         OsStr::new("self.sol"),
         &mut cache,
         Target::default_substrate(),
+        &Options::default(),
     );
 
     no_errors(ns.diagnostics);
@@ -396,8 +441,12 @@ fn circular_import() {
         .to_string(),
     );
 
-    let ns =
-        solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_substrate());
+    let ns = solang::parse_and_resolve(
+        OsStr::new("a.sol"),
+        &mut cache,
+        Target::default_substrate(),
+        &Options::default(),
+    );
 
     no_errors(ns.diagnostics);
 }
@@ -431,8 +480,12 @@ fn import_symbol() {
         .to_string(),
     );
 
-    let ns =
-        solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_substrate());
+    let ns = solang::parse_and_resolve(
+        OsStr::new("a.sol"),
+        &mut cache,
+        Target::default_substrate(),
+        &Options::default(),
+    );
 
     no_errors(ns.diagnostics);
 
@@ -467,8 +520,12 @@ fn import_symbol() {
         .to_string(),
     );
 
-    let ns =
-        solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_substrate());
+    let ns = solang::parse_and_resolve(
+        OsStr::new("a.sol"),
+        &mut cache,
+        Target::default_substrate(),
+        &Options::default(),
+    );
 
     no_errors(ns.diagnostics);
 
@@ -503,8 +560,12 @@ fn import_symbol() {
         .to_string(),
     );
 
-    let ns =
-        solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_substrate());
+    let ns = solang::parse_and_resolve(
+        OsStr::new("a.sol"),
+        &mut cache,
+        Target::default_substrate(),
+        &Options::default(),
+    );
 
     no_errors(ns.diagnostics);
 
@@ -549,8 +610,12 @@ fn import_symbol() {
         .to_string(),
     );
 
-    let ns =
-        solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_substrate());
+    let ns = solang::parse_and_resolve(
+        OsStr::new("a.sol"),
+        &mut cache,
+        Target::default_substrate(),
+        &Options::default(),
+    );
 
     no_errors(ns.diagnostics);
 }
@@ -600,8 +665,12 @@ fn enum_import_chain() {
         .to_string(),
     );
 
-    let ns =
-        solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_substrate());
+    let ns = solang::parse_and_resolve(
+        OsStr::new("a.sol"),
+        &mut cache,
+        Target::default_substrate(),
+        &Options::default(),
+    );
 
     no_errors(ns.diagnostics);
 
@@ -648,8 +717,12 @@ fn enum_import_chain() {
         .to_string(),
     );
 
-    let ns =
-        solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_substrate());
+    let ns = solang::parse_and_resolve(
+        OsStr::new("a.sol"),
+        &mut cache,
+        Target::default_substrate(),
+        &Options::default(),
+    );
 
     assert_eq!(
         first_error(ns.diagnostics),
@@ -698,8 +771,12 @@ fn import_base_dir() {
         .to_string(),
     );
 
-    let ns =
-        solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_substrate());
+    let ns = solang::parse_and_resolve(
+        OsStr::new("a.sol"),
+        &mut cache,
+        Target::default_substrate(),
+        &Options::default(),
+    );
 
     no_errors(ns.diagnostics);
 }
