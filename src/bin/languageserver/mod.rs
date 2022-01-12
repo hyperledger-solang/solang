@@ -57,10 +57,12 @@ impl SolangServer {
 
             let os_str = path.file_name().unwrap();
 
-            let mut ns = parse_and_resolve(os_str, &mut resolver, self.target);
+            let opt = &Default::default();
+
+            let mut ns = parse_and_resolve(os_str, &mut resolver, self.target, opt);
 
             // codegen all the contracts; some additional errors/warnings will be detected here
-            codegen(&mut ns, &Default::default());
+            codegen(&mut ns, opt);
 
             let diags = ns
                 .diagnostics

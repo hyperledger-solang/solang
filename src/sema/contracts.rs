@@ -14,6 +14,7 @@ use super::variables;
 #[cfg(feature = "llvm")]
 use crate::emit;
 use crate::sema::unused_variable::emit_warning_local_variable;
+use crate::Options;
 
 impl ast::Contract {
     /// Create a new contract, abstract contract, interface or library
@@ -69,19 +70,20 @@ pub fn resolve(
     contracts: &[(usize, &pt::ContractDefinition)],
     file_no: usize,
     ns: &mut ast::Namespace,
+    opt: &Options,
 ) {
-    resolve_using(contracts, file_no, ns);
+    resolve_using(contracts, file_no, ns, opt);
 
     // we need to resolve declarations first, so we call functions/constructors of
     // contracts before they are declared
     let mut function_bodies = Vec::new();
 
     for (contract_no, def) in contracts {
-        function_bodies.extend(resolve_declarations(def, file_no, *contract_no, ns));
+        function_bodies.extend(resolve_declarations(def, file_no, *contract_no, ns, opt));
     }
 
     // Resolve base contract constructor arguments on contract definition (not constructor definitions)
-    resolve_base_args(contracts, file_no, ns);
+    resolve_base_args(contracts, file_no, ns, opt);
 
     // Now we have all the declarations, we can handle base contracts
     for (contract_no, _) in contracts {
@@ -89,7 +91,7 @@ pub fn resolve(
     }
 
     // Now we can resolve the bodies
-    if !resolve_bodies(function_bodies, file_no, ns) {
+    if !resolve_bodies(function_bodies, file_no, ns, opt) {
         // only if we could resolve all the bodies
         for (contract_no, _) in contracts {
             check_base_args(*contract_no, ns);
@@ -195,6 +197,7 @@ fn resolve_base_args(
     contracts: &[(usize, &pt::ContractDefinition)],
     file_no: usize,
     ns: &mut ast::Namespace,
+    opt: &Options,
 ) {
     let mut diagnostics = Vec::new();
 
@@ -229,6 +232,7 @@ fn resolve_base_args(
                             ns,
                             &mut symtable,
                             &mut diagnostics,
+                            opt,
                         ) {
                             ns.contracts[*contract_no].bases[pos].constructor =
                                 Some((constructor_no, args));
@@ -734,6 +738,7 @@ fn resolve_declarations<'a>(
     file_no: usize,
     contract_no: usize,
     ns: &mut ast::Namespace,
+    opt: &Options,
 ) -> Vec<(usize, usize, &'a pt::FunctionDefinition)> {
     ns.diagnostics.push(ast::Diagnostic::debug(
         def.loc,
@@ -744,13 +749,13 @@ fn resolve_declarations<'a>(
     let mut resolve_bodies = Vec::new();
 
     // resolve state variables. We may need a constant to resolve a function type
-    variables::contract_variables(def, file_no, contract_no, ns);
+    variables::contract_variables(def, file_no, contract_no, ns, opt);
 
     // resolve function signatures
     for parts in &def.parts {
         if let pt::ContractPart::FunctionDefinition(ref f) = parts {
             if let Some(function_no) =
-                functions::contract_function(def, f, file_no, contract_no, ns)
+                functions::contract_function(def, f, file_no, contract_no, ns, opt)
             {
                 if f.body.is_some() {
                     resolve_bodies.push((contract_no, function_no, f.as_ref()));
@@ -793,6 +798,7 @@ fn resolve_using(
     contracts: &[(usize, &pt::ContractDefinition)],
     file_no: usize,
     ns: &mut ast::Namespace,
+    opt: &Options,
 ) {
     for (contract_no, def) in contracts {
         for part in &def.parts {
@@ -819,6 +825,7 @@ fn resolve_using(
                             false,
                             expr,
                             &mut diagnostics,
+                            opt,
                         ) {
                             Ok(ast::Type::Contract(contract_no))
                                 if ns.contracts[contract_no].is_library() =>
@@ -859,11 +866,12 @@ fn resolve_bodies(
     bodies: Vec<(usize, usize, &pt::FunctionDefinition)>,
     file_no: usize,
     ns: &mut ast::Namespace,
+    opt: &Options,
 ) -> bool {
     let mut broken = false;
 
     for (contract_no, function_no, def) in bodies {
-        if statements::resolve_function_body(def, file_no, Some(contract_no), function_no, ns)
+        if statements::resolve_function_body(def, file_no, Some(contract_no), function_no, ns, opt)
             .is_err()
         {
             broken = true;

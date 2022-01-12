@@ -27,6 +27,7 @@ use crate::parser::pt;
 use crate::sema::unused_variable::{
     assigned_variable, check_function_call, check_var_usage_expression, used_variable,
 };
+use crate::Options;
 use crate::Target;
 use base58::{FromBase58, FromBase58Error};
 use num_rational::BigRational;
@@ -526,6 +527,7 @@ pub fn cast(
     implicit: bool,
     ns: &Namespace,
     diagnostics: &mut Vec<Diagnostic>,
+    opt: &Options,
 ) -> Result<Expression, ()> {
     let from = expr.ty();
 
@@ -542,6 +544,7 @@ pub fn cast(
             implicit,
             ns,
             diagnostics,
+            opt,
         );
     }
 
@@ -560,6 +563,7 @@ pub fn cast(
             implicit,
             ns,
             diagnostics,
+            opt,
         );
     }
 
@@ -567,7 +571,7 @@ pub fn cast(
     match (&expr, &from, to) {
         (&Expression::NumberLiteral(_, _, ref n), p, &Type::Uint(to_len)) if p.is_primitive() => {
             return if n.sign() == Sign::Minus {
-                if implicit {
+                if implicit && opt.implicit_type_cast_check {
                     diagnostics.push(Diagnostic::type_error(
                         *loc,
                         format!(
@@ -659,7 +663,7 @@ pub fn cast(
             if p.is_primitive() =>
         {
             // note: negative values are allowed
-            return if implicit {
+            return if implicit && opt.implicit_type_cast_check {
                 diagnostics.push(Diagnostic::type_error(
                     *loc,
                     String::from("implicit conversion from int to address not allowed"),
@@ -684,7 +688,7 @@ pub fn cast(
         }
         // Literal strings can be implicitly lengthened
         (&Expression::BytesLiteral(_, _, ref bs), p, &Type::Bytes(to_len)) if p.is_primitive() => {
-            return if bs.len() > to_len as usize && implicit {
+            return if bs.len() > to_len as usize && implicit && opt.implicit_type_cast_check {
                 diagnostics.push(Diagnostic::type_error(
                     *loc,
                     format!(
@@ -726,7 +730,7 @@ pub fn cast(
         _ => (),
     };
 
-    cast_types(loc, expr, from, to.clone(), implicit, ns, diagnostics)
+    cast_types(loc, expr, from, to.clone(), implicit, ns, diagnostics, opt)
 }
 
 /// Do casting between types (no literals)
@@ -738,6 +742,7 @@ fn cast_types(
     implicit: bool,
     ns: &Namespace,
     diagnostics: &mut Vec<Diagnostic>,
+    opt: &Options,
 ) -> Result<Expression, ()> {
     let address_bits = ns.address_length as u16 * 8;
 
@@ -745,7 +750,7 @@ fn cast_types(
     match (&from, &to) {
         (Type::Uint(from_width), Type::Enum(enum_no))
         | (Type::Int(from_width), Type::Enum(enum_no)) => {
-            if implicit {
+            if implicit && opt.implicit_type_cast_check {
                 diagnostics.push(Diagnostic::type_error(
                     *loc,
                     format!(
@@ -793,7 +798,7 @@ fn cast_types(
         }
         (Type::Enum(enum_no), Type::Uint(to_width))
         | (Type::Enum(enum_no), Type::Int(to_width)) => {
-            if implicit {
+            if implicit && opt.implicit_type_cast_check {
                 diagnostics.push(Diagnostic::type_error(
                     *loc,
                     format!(
@@ -818,7 +823,7 @@ fn cast_types(
         (Type::Uint(8), Type::Bytes(1)) => Ok(expr),
         (Type::Uint(from_len), Type::Uint(to_len)) => match from_len.cmp(to_len) {
             Ordering::Greater => {
-                if implicit {
+                if implicit && opt.implicit_type_cast_check {
                     diagnostics.push(Diagnostic::type_error(
                         *loc,
                         format!(
@@ -837,7 +842,7 @@ fn cast_types(
         },
         (Type::Int(from_len), Type::Int(to_len)) => match from_len.cmp(to_len) {
             Ordering::Greater => {
-                if implicit {
+                if implicit && opt.implicit_type_cast_check {
                     diagnostics.push(Diagnostic::type_error(
                         *loc,
                         format!(
@@ -858,7 +863,7 @@ fn cast_types(
             Ok(Expression::ZeroExt(*loc, to.clone(), Box::new(expr)))
         }
         (Type::Int(from_len), Type::Uint(to_len)) => {
-            if implicit {
+            if implicit && opt.implicit_type_cast_check {
                 diagnostics.push(Diagnostic::type_error(
                     *loc,
                     format!(
@@ -877,7 +882,7 @@ fn cast_types(
             }
         }
         (Type::Uint(from_len), Type::Int(to_len)) => {
-            if implicit {
+            if implicit && opt.implicit_type_cast_check {
                 diagnostics.push(Diagnostic::type_error(
                     *loc,
                     format!(
@@ -902,7 +907,7 @@ fn cast_types(
 
             match from_len.cmp(&to_len) {
                 Ordering::Greater => {
-                    if implicit {
+                    if implicit && opt.implicit_type_cast_check {
                         diagnostics.push(Diagnostic::type_error(
                             *loc,
                             format!(
@@ -924,7 +929,7 @@ fn cast_types(
             let from_len = ns.value_length * 8;
             let to_len = *to_len as usize;
 
-            if implicit {
+            if implicit && opt.implicit_type_cast_check {
                 diagnostics.push(Diagnostic::type_error(
                     *loc,
                     format!(
@@ -949,7 +954,7 @@ fn cast_types(
 
             match from_len.cmp(&to_len) {
                 Ordering::Greater => {
-                    if implicit {
+                    if implicit && opt.implicit_type_cast_check {
                         diagnostics.push(Diagnostic::type_error(
                             *loc,
                             format!(
@@ -971,7 +976,7 @@ fn cast_types(
         }
         // Casting int to address
         (Type::Uint(from_len), Type::Address(_)) | (Type::Int(from_len), Type::Address(_)) => {
-            if implicit {
+            if implicit && opt.implicit_type_cast_check {
                 diagnostics.push(Diagnostic::type_error(
                     *loc,
                     format!(
@@ -1007,7 +1012,7 @@ fn cast_types(
         }
         // Casting address to int
         (Type::Address(_), Type::Uint(to_len)) | (Type::Address(_), Type::Int(to_len)) => {
-            if implicit {
+            if implicit && opt.implicit_type_cast_check {
                 diagnostics.push(Diagnostic::type_error(
                     *loc,
                     format!(
@@ -1044,7 +1049,7 @@ fn cast_types(
         }
         // Lengthing or shorting a fixed bytes array
         (Type::Bytes(from_len), Type::Bytes(to_len)) => {
-            if implicit {
+            if implicit && opt.implicit_type_cast_check {
                 diagnostics.push(Diagnostic::type_error(
                     *loc,
                     format!(
@@ -1097,7 +1102,7 @@ fn cast_types(
                             big_number.to_integer(),
                         );
 
-                        return cast(loc, expr, &to, true, ns, diagnostics);
+                        return cast(loc, expr, &to, true, ns, diagnostics, opt);
                     }
 
                     diagnostics.push(Diagnostic::type_error(
@@ -1127,7 +1132,7 @@ fn cast_types(
         // cast and if it is the same size (i.e. no conversion required)
         (Type::Bytes(from_len), Type::Uint(to_len))
         | (Type::Bytes(from_len), Type::Int(to_len)) => {
-            if implicit {
+            if implicit && opt.implicit_type_cast_check {
                 diagnostics.push(Diagnostic::type_error(
                     *loc,
                     format!(
@@ -1155,7 +1160,7 @@ fn cast_types(
         // cast and if it is the same size (i.e. no conversion required)
         (Type::Uint(from_len), Type::Bytes(to_len))
         | (Type::Int(from_len), Type::Bytes(to_len)) => {
-            if implicit {
+            if implicit && opt.implicit_type_cast_check {
                 diagnostics.push(Diagnostic::type_error(
                     *loc,
                     format!(
@@ -1182,7 +1187,7 @@ fn cast_types(
         // Explicit conversion from bytesN to address only allowed with expliciy
         // cast and if it is the same size (i.e. no conversion required)
         (Type::Bytes(from_len), Type::Address(_)) => {
-            if implicit {
+            if implicit && opt.implicit_type_cast_check {
                 diagnostics.push(Diagnostic::type_error(
                     *loc,
                     format!(
@@ -1210,7 +1215,7 @@ fn cast_types(
         (Type::Address(false), Type::Address(true))
         | (Type::Address(_), Type::Contract(_))
         | (Type::Contract(_), Type::Address(_)) => {
-            if implicit {
+            if implicit && opt.implicit_type_cast_check {
                 diagnostics.push(Diagnostic::type_error(
                     *loc,
                     format!(
@@ -1226,7 +1231,10 @@ fn cast_types(
         }
         // Conversion between contracts is allowed if it is a base
         (Type::Contract(contract_no_from), Type::Contract(contract_no_to)) => {
-            if implicit && !is_base(*contract_no_to, *contract_no_from, ns) {
+            if implicit
+                && !is_base(*contract_no_to, *contract_no_from, ns)
+                && opt.implicit_type_cast_check
+            {
                 diagnostics.push(Diagnostic::type_error(
                     *loc,
                     format!(
@@ -1247,7 +1255,7 @@ fn cast_types(
         // Explicit conversion to bytesN from int/uint only allowed with expliciy
         // cast and if it is the same size (i.e. no conversion required)
         (Type::Address(_), Type::Bytes(to_len)) => {
-            if implicit {
+            if implicit && opt.implicit_type_cast_check {
                 diagnostics.push(Diagnostic::type_error(
                     *loc,
                     format!(
@@ -1421,11 +1429,20 @@ pub fn expression(
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
     resolve_to: ResolveTo,
+    opt: &Options,
 ) -> Result<Expression, ()> {
     match expr {
         pt::Expression::ArrayLiteral(loc, exprs) => {
-            let res =
-                resolve_array_literal(loc, exprs, context, ns, symtable, diagnostics, resolve_to);
+            let res = resolve_array_literal(
+                loc,
+                exprs,
+                context,
+                ns,
+                symtable,
+                diagnostics,
+                resolve_to,
+                opt,
+            );
 
             if let Ok(exp) = &res {
                 used_variable(ns, exp, symtable);
@@ -1455,43 +1472,147 @@ pub fn expression(
         pt::Expression::Variable(id) => {
             variable(id, context, ns, symtable, diagnostics, resolve_to)
         }
-        pt::Expression::Add(loc, l, r) => {
-            addition(loc, l, r, context, ns, symtable, diagnostics, resolve_to)
-        }
-        pt::Expression::Subtract(loc, l, r) => {
-            subtract(loc, l, r, context, ns, symtable, diagnostics, resolve_to)
-        }
-        pt::Expression::BitwiseOr(loc, l, r) => {
-            bitwise_or(loc, l, r, context, ns, symtable, diagnostics, resolve_to)
-        }
-        pt::Expression::BitwiseAnd(loc, l, r) => {
-            bitwise_and(loc, l, r, context, ns, symtable, diagnostics, resolve_to)
-        }
-        pt::Expression::BitwiseXor(loc, l, r) => {
-            bitwise_xor(loc, l, r, context, ns, symtable, diagnostics, resolve_to)
-        }
-        pt::Expression::ShiftLeft(loc, l, r) => {
-            shift_left(loc, l, r, context, ns, symtable, diagnostics, resolve_to)
-        }
-        pt::Expression::ShiftRight(loc, l, r) => {
-            shift_right(loc, l, r, context, ns, symtable, diagnostics, resolve_to)
-        }
-        pt::Expression::Multiply(loc, l, r) => {
-            multiply(loc, l, r, context, ns, symtable, diagnostics, resolve_to)
-        }
-        pt::Expression::Divide(loc, l, r) => {
-            divide(loc, l, r, context, ns, symtable, diagnostics, resolve_to)
-        }
-        pt::Expression::Modulo(loc, l, r) => {
-            modulo(loc, l, r, context, ns, symtable, diagnostics, resolve_to)
-        }
-        pt::Expression::Power(loc, b, e) => {
-            power(loc, b, e, context, ns, symtable, diagnostics, resolve_to)
-        }
+        pt::Expression::Add(loc, l, r) => addition(
+            loc,
+            l,
+            r,
+            context,
+            ns,
+            symtable,
+            diagnostics,
+            resolve_to,
+            opt,
+        ),
+        pt::Expression::Subtract(loc, l, r) => subtract(
+            loc,
+            l,
+            r,
+            context,
+            ns,
+            symtable,
+            diagnostics,
+            resolve_to,
+            opt,
+        ),
+        pt::Expression::BitwiseOr(loc, l, r) => bitwise_or(
+            loc,
+            l,
+            r,
+            context,
+            ns,
+            symtable,
+            diagnostics,
+            resolve_to,
+            opt,
+        ),
+        pt::Expression::BitwiseAnd(loc, l, r) => bitwise_and(
+            loc,
+            l,
+            r,
+            context,
+            ns,
+            symtable,
+            diagnostics,
+            resolve_to,
+            opt,
+        ),
+        pt::Expression::BitwiseXor(loc, l, r) => bitwise_xor(
+            loc,
+            l,
+            r,
+            context,
+            ns,
+            symtable,
+            diagnostics,
+            resolve_to,
+            opt,
+        ),
+        pt::Expression::ShiftLeft(loc, l, r) => shift_left(
+            loc,
+            l,
+            r,
+            context,
+            ns,
+            symtable,
+            diagnostics,
+            resolve_to,
+            opt,
+        ),
+        pt::Expression::ShiftRight(loc, l, r) => shift_right(
+            loc,
+            l,
+            r,
+            context,
+            ns,
+            symtable,
+            diagnostics,
+            resolve_to,
+            opt,
+        ),
+        pt::Expression::Multiply(loc, l, r) => multiply(
+            loc,
+            l,
+            r,
+            context,
+            ns,
+            symtable,
+            diagnostics,
+            resolve_to,
+            opt,
+        ),
+        pt::Expression::Divide(loc, l, r) => divide(
+            loc,
+            l,
+            r,
+            context,
+            ns,
+            symtable,
+            diagnostics,
+            resolve_to,
+            opt,
+        ),
+        pt::Expression::Modulo(loc, l, r) => modulo(
+            loc,
+            l,
+            r,
+            context,
+            ns,
+            symtable,
+            diagnostics,
+            resolve_to,
+            opt,
+        ),
+        pt::Expression::Power(loc, b, e) => power(
+            loc,
+            b,
+            e,
+            context,
+            ns,
+            symtable,
+            diagnostics,
+            resolve_to,
+            opt,
+        ),
         // compare
         pt::Expression::More(loc, l, r) => {
-            let left = expression(l, context, ns, symtable, diagnostics, ResolveTo::Unknown)?;
-            let right = expression(r, context, ns, symtable, diagnostics, ResolveTo::Unknown)?;
+            let left = expression(
+                l,
+                context,
+                ns,
+                symtable,
+                diagnostics,
+                ResolveTo::Unknown,
+                opt,
+            )?;
+            let right = expression(
+                r,
+                context,
+                ns,
+                symtable,
+                diagnostics,
+                ResolveTo::Unknown,
+                opt,
+            )?;
 
             check_var_usage_expression(ns, &left, &right, symtable);
             let ty = coerce_number(
@@ -1507,13 +1628,29 @@ pub fn expression(
 
             Ok(Expression::More(
                 *loc,
-                Box::new(cast(&l.loc(), left, &ty, true, ns, diagnostics)?),
-                Box::new(cast(&r.loc(), right, &ty, true, ns, diagnostics)?),
+                Box::new(cast(&l.loc(), left, &ty, true, ns, diagnostics, opt)?),
+                Box::new(cast(&r.loc(), right, &ty, true, ns, diagnostics, opt)?),
             ))
         }
         pt::Expression::Less(loc, l, r) => {
-            let left = expression(l, context, ns, symtable, diagnostics, ResolveTo::Unknown)?;
-            let right = expression(r, context, ns, symtable, diagnostics, ResolveTo::Unknown)?;
+            let left = expression(
+                l,
+                context,
+                ns,
+                symtable,
+                diagnostics,
+                ResolveTo::Unknown,
+                opt,
+            )?;
+            let right = expression(
+                r,
+                context,
+                ns,
+                symtable,
+                diagnostics,
+                ResolveTo::Unknown,
+                opt,
+            )?;
 
             check_var_usage_expression(ns, &left, &right, symtable);
 
@@ -1530,13 +1667,29 @@ pub fn expression(
 
             Ok(Expression::Less(
                 *loc,
-                Box::new(cast(&l.loc(), left, &ty, true, ns, diagnostics)?),
-                Box::new(cast(&r.loc(), right, &ty, true, ns, diagnostics)?),
+                Box::new(cast(&l.loc(), left, &ty, true, ns, diagnostics, opt)?),
+                Box::new(cast(&r.loc(), right, &ty, true, ns, diagnostics, opt)?),
             ))
         }
         pt::Expression::MoreEqual(loc, l, r) => {
-            let left = expression(l, context, ns, symtable, diagnostics, ResolveTo::Unknown)?;
-            let right = expression(r, context, ns, symtable, diagnostics, ResolveTo::Unknown)?;
+            let left = expression(
+                l,
+                context,
+                ns,
+                symtable,
+                diagnostics,
+                ResolveTo::Unknown,
+                opt,
+            )?;
+            let right = expression(
+                r,
+                context,
+                ns,
+                symtable,
+                diagnostics,
+                ResolveTo::Unknown,
+                opt,
+            )?;
             check_var_usage_expression(ns, &left, &right, symtable);
 
             let ty = coerce_number(
@@ -1552,13 +1705,29 @@ pub fn expression(
 
             Ok(Expression::MoreEqual(
                 *loc,
-                Box::new(cast(&l.loc(), left, &ty, true, ns, diagnostics)?),
-                Box::new(cast(&r.loc(), right, &ty, true, ns, diagnostics)?),
+                Box::new(cast(&l.loc(), left, &ty, true, ns, diagnostics, opt)?),
+                Box::new(cast(&r.loc(), right, &ty, true, ns, diagnostics, opt)?),
             ))
         }
         pt::Expression::LessEqual(loc, l, r) => {
-            let left = expression(l, context, ns, symtable, diagnostics, ResolveTo::Unknown)?;
-            let right = expression(r, context, ns, symtable, diagnostics, ResolveTo::Unknown)?;
+            let left = expression(
+                l,
+                context,
+                ns,
+                symtable,
+                diagnostics,
+                ResolveTo::Unknown,
+                opt,
+            )?;
+            let right = expression(
+                r,
+                context,
+                ns,
+                symtable,
+                diagnostics,
+                ResolveTo::Unknown,
+                opt,
+            )?;
             check_var_usage_expression(ns, &left, &right, symtable);
 
             let ty = coerce_number(
@@ -1574,28 +1743,30 @@ pub fn expression(
 
             Ok(Expression::LessEqual(
                 *loc,
-                Box::new(cast(&l.loc(), left, &ty, true, ns, diagnostics)?),
-                Box::new(cast(&r.loc(), right, &ty, true, ns, diagnostics)?),
+                Box::new(cast(&l.loc(), left, &ty, true, ns, diagnostics, opt)?),
+                Box::new(cast(&r.loc(), right, &ty, true, ns, diagnostics, opt)?),
             ))
         }
-        pt::Expression::Equal(loc, l, r) => equal(loc, l, r, context, ns, symtable, diagnostics),
+        pt::Expression::Equal(loc, l, r) => {
+            equal(loc, l, r, context, ns, symtable, diagnostics, opt)
+        }
 
         pt::Expression::NotEqual(loc, l, r) => Ok(Expression::Not(
             *loc,
-            Box::new(equal(loc, l, r, context, ns, symtable, diagnostics)?),
+            Box::new(equal(loc, l, r, context, ns, symtable, diagnostics, opt)?),
         )),
         // unary expressions
         pt::Expression::Not(loc, e) => {
-            let expr = expression(e, context, ns, symtable, diagnostics, resolve_to)?;
+            let expr = expression(e, context, ns, symtable, diagnostics, resolve_to, opt)?;
 
             used_variable(ns, &expr, symtable);
             Ok(Expression::Not(
                 *loc,
-                Box::new(cast(loc, expr, &Type::Bool, true, ns, diagnostics)?),
+                Box::new(cast(loc, expr, &Type::Bool, true, ns, diagnostics, opt)?),
             ))
         }
         pt::Expression::Complement(loc, e) => {
-            let expr = expression(e, context, ns, symtable, diagnostics, resolve_to)?;
+            let expr = expression(e, context, ns, symtable, diagnostics, resolve_to, opt)?;
 
             used_variable(ns, &expr, symtable);
             let expr_ty = expr.ty();
@@ -1620,7 +1791,7 @@ pub fn expression(
                 bigdecimal_to_expression(loc, &-r, ns, diagnostics, resolve_to)
             }
             e => {
-                let expr = expression(e, context, ns, symtable, diagnostics, resolve_to)?;
+                let expr = expression(e, context, ns, symtable, diagnostics, resolve_to, opt)?;
 
                 used_variable(ns, &expr, symtable);
                 let expr_type = expr.ty();
@@ -1637,7 +1808,7 @@ pub fn expression(
             }
         },
         pt::Expression::UnaryPlus(loc, e) => {
-            let expr = expression(e, context, ns, symtable, diagnostics, resolve_to)?;
+            let expr = expression(e, context, ns, symtable, diagnostics, resolve_to, opt)?;
             used_variable(ns, &expr, symtable);
             let expr_type = expr.ty();
 
@@ -1647,17 +1818,17 @@ pub fn expression(
         }
 
         pt::Expression::Ternary(loc, c, l, r) => {
-            let left = expression(l, context, ns, symtable, diagnostics, resolve_to)?;
-            let right = expression(r, context, ns, symtable, diagnostics, resolve_to)?;
+            let left = expression(l, context, ns, symtable, diagnostics, resolve_to, opt)?;
+            let right = expression(r, context, ns, symtable, diagnostics, resolve_to, opt)?;
             check_var_usage_expression(ns, &left, &right, symtable);
-            let cond = expression(c, context, ns, symtable, diagnostics, resolve_to)?;
+            let cond = expression(c, context, ns, symtable, diagnostics, resolve_to, opt)?;
             used_variable(ns, &cond, symtable);
 
-            let cond = cast(&c.loc(), cond, &Type::Bool, true, ns, diagnostics)?;
+            let cond = cast(&c.loc(), cond, &Type::Bool, true, ns, diagnostics, opt)?;
 
             let ty = coerce(&left.ty(), &l.loc(), &right.ty(), &r.loc(), ns, diagnostics)?;
-            let left = cast(&l.loc(), left, &ty, true, ns, diagnostics)?;
-            let right = cast(&r.loc(), right, &ty, true, ns, diagnostics)?;
+            let left = cast(&l.loc(), left, &ty, true, ns, diagnostics, opt)?;
+            let right = cast(&r.loc(), right, &ty, true, ns, diagnostics, opt)?;
 
             Ok(Expression::Ternary(
                 *loc,
@@ -1681,7 +1852,7 @@ pub fn expression(
                 return Err(());
             };
 
-            incr_decr(var, expr, context, ns, symtable, diagnostics)
+            incr_decr(var, expr, context, ns, symtable, diagnostics, opt)
         }
 
         // assignment
@@ -1694,7 +1865,7 @@ pub fn expression(
                 return Err(());
             };
 
-            assign_single(loc, var, e, context, ns, symtable, diagnostics)
+            assign_single(loc, var, e, context, ns, symtable, diagnostics, opt)
         }
 
         pt::Expression::AssignAdd(loc, var, e)
@@ -1715,11 +1886,19 @@ pub fn expression(
                 return Err(());
             };
 
-            assign_expr(loc, var, expr, e, context, ns, symtable, diagnostics)
+            assign_expr(loc, var, expr, e, context, ns, symtable, diagnostics, opt)
         }
-        pt::Expression::NamedFunctionCall(loc, ty, args) => {
-            named_call_expr(loc, ty, args, false, context, ns, symtable, diagnostics)
-        }
+        pt::Expression::NamedFunctionCall(loc, ty, args) => named_call_expr(
+            loc,
+            ty,
+            args,
+            false,
+            context,
+            ns,
+            symtable,
+            diagnostics,
+            opt,
+        ),
         pt::Expression::New(loc, call) => {
             if context.constant {
                 diagnostics.push(Diagnostic::error(
@@ -1731,7 +1910,7 @@ pub fn expression(
 
             match call.as_ref() {
                 pt::Expression::FunctionCall(_, ty, args) => {
-                    let res = new(loc, ty, args, context, ns, symtable, diagnostics);
+                    let res = new(loc, ty, args, context, ns, symtable, diagnostics, opt);
 
                     if let Ok(exp) = &res {
                         check_function_call(ns, exp, symtable);
@@ -1739,8 +1918,16 @@ pub fn expression(
                     res
                 }
                 pt::Expression::NamedFunctionCall(_, ty, args) => {
-                    let res =
-                        constructor_named_args(loc, ty, args, context, ns, symtable, diagnostics);
+                    let res = constructor_named_args(
+                        loc,
+                        ty,
+                        args,
+                        context,
+                        ns,
+                        symtable,
+                        diagnostics,
+                        opt,
+                    );
 
                     if let Ok(exp) = &res {
                         check_function_call(ns, exp, symtable);
@@ -1768,6 +1955,7 @@ pub fn expression(
             symtable,
             diagnostics,
             resolve_to,
+            opt,
         ),
         pt::Expression::ArraySubscript(loc, _, None) => {
             diagnostics.push(Diagnostic::error(
@@ -1786,28 +1974,38 @@ pub fn expression(
             Err(())
         }
         pt::Expression::ArraySubscript(loc, array, Some(index)) => {
-            array_subscript(loc, array, index, context, ns, symtable, diagnostics)
+            array_subscript(loc, array, index, context, ns, symtable, diagnostics, opt)
         }
-        pt::Expression::MemberAccess(loc, e, id) => {
-            member_access(loc, e, id, context, ns, symtable, diagnostics, resolve_to)
-        }
+        pt::Expression::MemberAccess(loc, e, id) => member_access(
+            loc,
+            e,
+            id,
+            context,
+            ns,
+            symtable,
+            diagnostics,
+            resolve_to,
+            opt,
+        ),
         pt::Expression::Or(loc, left, right) => {
             let boolty = Type::Bool;
             let l = cast(
                 loc,
-                expression(left, context, ns, symtable, diagnostics, resolve_to)?,
+                expression(left, context, ns, symtable, diagnostics, resolve_to, opt)?,
                 &boolty,
                 true,
                 ns,
                 diagnostics,
+                opt,
             )?;
             let r = cast(
                 loc,
-                expression(right, context, ns, symtable, diagnostics, resolve_to)?,
+                expression(right, context, ns, symtable, diagnostics, resolve_to, opt)?,
                 &boolty,
                 true,
                 ns,
                 diagnostics,
+                opt,
             )?;
 
             check_var_usage_expression(ns, &l, &r, symtable);
@@ -1818,19 +2016,21 @@ pub fn expression(
             let boolty = Type::Bool;
             let l = cast(
                 loc,
-                expression(left, context, ns, symtable, diagnostics, resolve_to)?,
+                expression(left, context, ns, symtable, diagnostics, resolve_to, opt)?,
                 &boolty,
                 true,
                 ns,
                 diagnostics,
+                opt,
             )?;
             let r = cast(
                 loc,
-                expression(right, context, ns, symtable, diagnostics, resolve_to)?,
+                expression(right, context, ns, symtable, diagnostics, resolve_to, opt)?,
                 &boolty,
                 true,
                 ns,
                 diagnostics,
+                opt,
             )?;
             check_var_usage_expression(ns, &l, &r, symtable);
 
@@ -2304,9 +2504,10 @@ fn subtract(
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
     resolve_to: ResolveTo,
+    opt: &Options,
 ) -> Result<Expression, ()> {
-    let left = expression(l, context, ns, symtable, diagnostics, resolve_to)?;
-    let right = expression(r, context, ns, symtable, diagnostics, resolve_to)?;
+    let left = expression(l, context, ns, symtable, diagnostics, resolve_to, opt)?;
+    let right = expression(r, context, ns, symtable, diagnostics, resolve_to, opt)?;
 
     check_var_usage_expression(ns, &left, &right, symtable);
 
@@ -2337,8 +2538,8 @@ fn subtract(
         *loc,
         ty.clone(),
         context.unchecked,
-        Box::new(cast(&l.loc(), left, &ty, true, ns, diagnostics)?),
-        Box::new(cast(&r.loc(), right, &ty, true, ns, diagnostics)?),
+        Box::new(cast(&l.loc(), left, &ty, true, ns, diagnostics, opt)?),
+        Box::new(cast(&r.loc(), right, &ty, true, ns, diagnostics, opt)?),
     ))
 }
 
@@ -2351,9 +2552,10 @@ fn bitwise_or(
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
     resolve_to: ResolveTo,
+    opt: &Options,
 ) -> Result<Expression, ()> {
-    let left = expression(l, context, ns, symtable, diagnostics, resolve_to)?;
-    let right = expression(r, context, ns, symtable, diagnostics, resolve_to)?;
+    let left = expression(l, context, ns, symtable, diagnostics, resolve_to, opt)?;
+    let right = expression(r, context, ns, symtable, diagnostics, resolve_to, opt)?;
 
     check_var_usage_expression(ns, &left, &right, symtable);
 
@@ -2371,8 +2573,8 @@ fn bitwise_or(
     Ok(Expression::BitwiseOr(
         *loc,
         ty.clone(),
-        Box::new(cast(&l.loc(), left, &ty, true, ns, diagnostics)?),
-        Box::new(cast(&r.loc(), right, &ty, true, ns, diagnostics)?),
+        Box::new(cast(&l.loc(), left, &ty, true, ns, diagnostics, opt)?),
+        Box::new(cast(&r.loc(), right, &ty, true, ns, diagnostics, opt)?),
     ))
 }
 
@@ -2385,9 +2587,10 @@ fn bitwise_and(
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
     resolve_to: ResolveTo,
+    opt: &Options,
 ) -> Result<Expression, ()> {
-    let left = expression(l, context, ns, symtable, diagnostics, resolve_to)?;
-    let right = expression(r, context, ns, symtable, diagnostics, resolve_to)?;
+    let left = expression(l, context, ns, symtable, diagnostics, resolve_to, opt)?;
+    let right = expression(r, context, ns, symtable, diagnostics, resolve_to, opt)?;
 
     check_var_usage_expression(ns, &left, &right, symtable);
 
@@ -2405,8 +2608,8 @@ fn bitwise_and(
     Ok(Expression::BitwiseAnd(
         *loc,
         ty.clone(),
-        Box::new(cast(&l.loc(), left, &ty, true, ns, diagnostics)?),
-        Box::new(cast(&r.loc(), right, &ty, true, ns, diagnostics)?),
+        Box::new(cast(&l.loc(), left, &ty, true, ns, diagnostics, opt)?),
+        Box::new(cast(&r.loc(), right, &ty, true, ns, diagnostics, opt)?),
     ))
 }
 
@@ -2419,9 +2622,10 @@ fn bitwise_xor(
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
     resolve_to: ResolveTo,
+    opt: &Options,
 ) -> Result<Expression, ()> {
-    let left = expression(l, context, ns, symtable, diagnostics, resolve_to)?;
-    let right = expression(r, context, ns, symtable, diagnostics, resolve_to)?;
+    let left = expression(l, context, ns, symtable, diagnostics, resolve_to, opt)?;
+    let right = expression(r, context, ns, symtable, diagnostics, resolve_to, opt)?;
 
     check_var_usage_expression(ns, &left, &right, symtable);
 
@@ -2439,8 +2643,8 @@ fn bitwise_xor(
     Ok(Expression::BitwiseXor(
         *loc,
         ty.clone(),
-        Box::new(cast(&l.loc(), left, &ty, true, ns, diagnostics)?),
-        Box::new(cast(&r.loc(), right, &ty, true, ns, diagnostics)?),
+        Box::new(cast(&l.loc(), left, &ty, true, ns, diagnostics, opt)?),
+        Box::new(cast(&r.loc(), right, &ty, true, ns, diagnostics, opt)?),
     ))
 }
 
@@ -2453,9 +2657,18 @@ fn shift_left(
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
     resolve_to: ResolveTo,
+    opt: &Options,
 ) -> Result<Expression, ()> {
-    let left = expression(l, context, ns, symtable, diagnostics, resolve_to)?;
-    let right = expression(r, context, ns, symtable, diagnostics, ResolveTo::Unknown)?;
+    let left = expression(l, context, ns, symtable, diagnostics, resolve_to, opt)?;
+    let right = expression(
+        r,
+        context,
+        ns,
+        symtable,
+        diagnostics,
+        ResolveTo::Unknown,
+        opt,
+    )?;
 
     check_var_usage_expression(ns, &left, &right, symtable);
     // left hand side may be bytes/int/uint
@@ -2482,9 +2695,18 @@ fn shift_right(
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
     resolve_to: ResolveTo,
+    opt: &Options,
 ) -> Result<Expression, ()> {
-    let left = expression(l, context, ns, symtable, diagnostics, resolve_to)?;
-    let right = expression(r, context, ns, symtable, diagnostics, ResolveTo::Unknown)?;
+    let left = expression(l, context, ns, symtable, diagnostics, resolve_to, opt)?;
+    let right = expression(
+        r,
+        context,
+        ns,
+        symtable,
+        diagnostics,
+        ResolveTo::Unknown,
+        opt,
+    )?;
 
     check_var_usage_expression(ns, &left, &right, symtable);
 
@@ -2512,9 +2734,10 @@ fn multiply(
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
     resolve_to: ResolveTo,
+    opt: &Options,
 ) -> Result<Expression, ()> {
-    let left = expression(l, context, ns, symtable, diagnostics, resolve_to)?;
-    let right = expression(r, context, ns, symtable, diagnostics, resolve_to)?;
+    let left = expression(l, context, ns, symtable, diagnostics, resolve_to, opt)?;
+    let right = expression(r, context, ns, symtable, diagnostics, resolve_to, opt)?;
 
     check_var_usage_expression(ns, &left, &right, symtable);
 
@@ -2555,6 +2778,7 @@ fn multiply(
                 symtable,
                 diagnostics,
                 ResolveTo::Type(&Type::Int(bits)),
+                opt,
             )
         } else {
             multiply(
@@ -2566,6 +2790,7 @@ fn multiply(
                 symtable,
                 diagnostics,
                 ResolveTo::Type(&Type::Uint(bits)),
+                opt,
             )
         }
     } else {
@@ -2573,8 +2798,8 @@ fn multiply(
             *loc,
             ty.clone(),
             context.unchecked,
-            Box::new(cast(&l.loc(), left, &ty, true, ns, diagnostics)?),
-            Box::new(cast(&r.loc(), right, &ty, true, ns, diagnostics)?),
+            Box::new(cast(&l.loc(), left, &ty, true, ns, diagnostics, opt)?),
+            Box::new(cast(&r.loc(), right, &ty, true, ns, diagnostics, opt)?),
         ))
     }
 }
@@ -2588,9 +2813,10 @@ fn divide(
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
     resolve_to: ResolveTo,
+    opt: &Options,
 ) -> Result<Expression, ()> {
-    let left = expression(l, context, ns, symtable, diagnostics, resolve_to)?;
-    let right = expression(r, context, ns, symtable, diagnostics, resolve_to)?;
+    let left = expression(l, context, ns, symtable, diagnostics, resolve_to, opt)?;
+    let right = expression(r, context, ns, symtable, diagnostics, resolve_to, opt)?;
 
     check_var_usage_expression(ns, &left, &right, symtable);
 
@@ -2608,8 +2834,8 @@ fn divide(
     Ok(Expression::Divide(
         *loc,
         ty.clone(),
-        Box::new(cast(&l.loc(), left, &ty, true, ns, diagnostics)?),
-        Box::new(cast(&r.loc(), right, &ty, true, ns, diagnostics)?),
+        Box::new(cast(&l.loc(), left, &ty, true, ns, diagnostics, opt)?),
+        Box::new(cast(&r.loc(), right, &ty, true, ns, diagnostics, opt)?),
     ))
 }
 
@@ -2622,9 +2848,10 @@ fn modulo(
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
     resolve_to: ResolveTo,
+    opt: &Options,
 ) -> Result<Expression, ()> {
-    let left = expression(l, context, ns, symtable, diagnostics, resolve_to)?;
-    let right = expression(r, context, ns, symtable, diagnostics, resolve_to)?;
+    let left = expression(l, context, ns, symtable, diagnostics, resolve_to, opt)?;
+    let right = expression(r, context, ns, symtable, diagnostics, resolve_to, opt)?;
 
     check_var_usage_expression(ns, &left, &right, symtable);
 
@@ -2642,8 +2869,8 @@ fn modulo(
     Ok(Expression::Modulo(
         *loc,
         ty.clone(),
-        Box::new(cast(&l.loc(), left, &ty, true, ns, diagnostics)?),
-        Box::new(cast(&r.loc(), right, &ty, true, ns, diagnostics)?),
+        Box::new(cast(&l.loc(), left, &ty, true, ns, diagnostics, opt)?),
+        Box::new(cast(&r.loc(), right, &ty, true, ns, diagnostics, opt)?),
     ))
 }
 
@@ -2656,8 +2883,9 @@ fn power(
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
     resolve_to: ResolveTo,
+    opt: &Options,
 ) -> Result<Expression, ()> {
-    let mut base = expression(b, context, ns, symtable, diagnostics, resolve_to)?;
+    let mut base = expression(b, context, ns, symtable, diagnostics, resolve_to, opt)?;
 
     // If we don't know what type the result is going to be, assume
     // the result is 256 bits
@@ -2670,6 +2898,7 @@ fn power(
                 symtable,
                 diagnostics,
                 ResolveTo::Type(&Type::Int(256)),
+                opt,
             )?;
         } else {
             base = expression(
@@ -2679,11 +2908,12 @@ fn power(
                 symtable,
                 diagnostics,
                 ResolveTo::Type(&Type::Uint(256)),
+                opt,
             )?;
         };
     }
 
-    let exp = expression(e, context, ns, symtable, diagnostics, resolve_to)?;
+    let exp = expression(e, context, ns, symtable, diagnostics, resolve_to, opt)?;
 
     check_var_usage_expression(ns, &base, &exp, symtable);
 
@@ -2714,8 +2944,8 @@ fn power(
         *loc,
         ty.clone(),
         context.unchecked,
-        Box::new(cast(&b.loc(), base, &ty, true, ns, diagnostics)?),
-        Box::new(cast(&e.loc(), exp, &ty, true, ns, diagnostics)?),
+        Box::new(cast(&b.loc(), base, &ty, true, ns, diagnostics, opt)?),
+        Box::new(cast(&e.loc(), exp, &ty, true, ns, diagnostics, opt)?),
     ))
 }
 
@@ -2729,6 +2959,7 @@ fn constructor(
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
+    opt: &Options,
 ) -> Result<Expression, ()> {
     // The current contract cannot be constructed with new. In order to create
     // the contract, we need the code hash of the contract. Part of that code
@@ -2782,7 +3013,7 @@ fn constructor(
         ns.contracts[context_contract_no].creates.push(no);
     }
 
-    match match_constructor_to_args(loc, args, no, context, ns, symtable, diagnostics) {
+    match match_constructor_to_args(loc, args, no, context, ns, symtable, diagnostics, opt) {
         Ok((constructor_no, cast_args)) => Ok(Expression::Constructor {
             loc: *loc,
             contract_no: no,
@@ -2806,6 +3037,7 @@ pub fn match_constructor_to_args(
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
+    opt: &Options,
 ) -> Result<(Option<usize>, Vec<Expression>), ()> {
     let marker = diagnostics.len();
 
@@ -2846,6 +3078,7 @@ pub fn match_constructor_to_args(
                 symtable,
                 diagnostics,
                 ResolveTo::Type(&params[i].ty),
+                opt,
             ) {
                 Ok(v) => v,
                 Err(()) => {
@@ -2861,6 +3094,7 @@ pub fn match_constructor_to_args(
                 true,
                 ns,
                 diagnostics,
+                opt,
             ) {
                 Ok(expr) => cast_args.push(expr),
                 Err(()) => {
@@ -2911,12 +3145,20 @@ pub fn constructor_named_args(
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
+    opt: &Options,
 ) -> Result<Expression, ()> {
     let (ty, call_args, _) = collect_call_args(ty, diagnostics)?;
 
-    let call_args = parse_call_args(&call_args, false, context, ns, symtable, diagnostics)?;
+    let call_args = parse_call_args(&call_args, false, context, ns, symtable, diagnostics, opt)?;
 
-    let no = match ns.resolve_type(context.file_no, context.contract_no, false, ty, diagnostics)? {
+    let no = match ns.resolve_type(
+        context.file_no,
+        context.contract_no,
+        false,
+        ty,
+        diagnostics,
+        opt,
+    )? {
         Type::Contract(n) => n,
         _ => {
             diagnostics.push(Diagnostic::error(*loc, "contract expected".to_string()));
@@ -3041,6 +3283,7 @@ pub fn constructor_named_args(
                 symtable,
                 diagnostics,
                 ResolveTo::Type(&param.ty),
+                opt,
             ) {
                 Ok(e) => e,
                 Err(()) => {
@@ -3049,7 +3292,7 @@ pub fn constructor_named_args(
                 }
             };
 
-            match cast(&arg.loc(), arg, &param.ty, true, ns, diagnostics) {
+            match cast(&arg.loc(), arg, &param.ty, true, ns, diagnostics, opt) {
                 Ok(expr) => cast_args.push(expr),
                 Err(()) => {
                     matches = false;
@@ -3105,6 +3348,7 @@ pub fn type_name_expr(
     ns: &mut Namespace,
     diagnostics: &mut Vec<Diagnostic>,
     resolve_to: ResolveTo,
+    opt: &Options,
 ) -> Result<Expression, ()> {
     if args.is_empty() {
         diagnostics.push(Diagnostic::error(
@@ -3128,6 +3372,7 @@ pub fn type_name_expr(
         false,
         &args[0],
         diagnostics,
+        opt,
     )?;
 
     match (&ty, field.name.as_str()) {
@@ -3238,10 +3483,18 @@ pub fn new(
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
+    opt: &Options,
 ) -> Result<Expression, ()> {
     let (ty, call_args, call_args_loc) = collect_call_args(ty, diagnostics)?;
 
-    let ty = ns.resolve_type(context.file_no, context.contract_no, false, ty, diagnostics)?;
+    let ty = ns.resolve_type(
+        context.file_no,
+        context.contract_no,
+        false,
+        ty,
+        diagnostics,
+        opt,
+    )?;
 
     match &ty {
         Type::Array(ty, dim) => {
@@ -3266,9 +3519,20 @@ pub fn new(
         }
         Type::String | Type::DynamicBytes => {}
         Type::Contract(n) => {
-            let call_args = parse_call_args(&call_args, false, context, ns, symtable, diagnostics)?;
+            let call_args =
+                parse_call_args(&call_args, false, context, ns, symtable, diagnostics, opt)?;
 
-            return constructor(loc, *n, args, call_args, context, ns, symtable, diagnostics);
+            return constructor(
+                loc,
+                *n,
+                args,
+                call_args,
+                context,
+                ns,
+                symtable,
+                diagnostics,
+                opt,
+            );
         }
         _ => {
             diagnostics.push(Diagnostic::error(
@@ -3303,11 +3567,20 @@ pub fn new(
         symtable,
         diagnostics,
         ResolveTo::Type(&Type::Uint(32)),
+        opt,
     )?;
 
     used_variable(ns, &size_expr, symtable);
 
-    let size = cast(&size_loc, size_expr, &Type::Uint(32), true, ns, diagnostics)?;
+    let size = cast(
+        &size_loc,
+        size_expr,
+        &Type::Uint(32),
+        true,
+        ns,
+        diagnostics,
+        opt,
+    )?;
 
     Ok(Expression::AllocDynamicArray(
         *loc,
@@ -3326,9 +3599,26 @@ fn equal(
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
+    opt: &Options,
 ) -> Result<Expression, ()> {
-    let left = expression(l, context, ns, symtable, diagnostics, ResolveTo::Unknown)?;
-    let right = expression(r, context, ns, symtable, diagnostics, ResolveTo::Unknown)?;
+    let left = expression(
+        l,
+        context,
+        ns,
+        symtable,
+        diagnostics,
+        ResolveTo::Unknown,
+        opt,
+    )?;
+    let right = expression(
+        r,
+        context,
+        ns,
+        symtable,
+        diagnostics,
+        ResolveTo::Unknown,
+        opt,
+    )?;
 
     check_var_usage_expression(ns, &left, &right, symtable);
 
@@ -3354,6 +3644,7 @@ fn equal(
                     true,
                     ns,
                     diagnostics,
+                    opt,
                 )?)),
                 StringLocation::CompileTime(l.clone()),
             ));
@@ -3373,6 +3664,7 @@ fn equal(
                     true,
                     ns,
                     diagnostics,
+                    opt,
                 )?)),
                 StringLocation::CompileTime(literal.clone()),
             ));
@@ -3392,6 +3684,7 @@ fn equal(
                     true,
                     ns,
                     diagnostics,
+                    opt,
                 )?)),
                 StringLocation::RunTime(Box::new(cast(
                     &r.loc(),
@@ -3400,6 +3693,7 @@ fn equal(
                     true,
                     ns,
                     diagnostics,
+                    opt,
                 )?)),
             ));
         }
@@ -3410,8 +3704,8 @@ fn equal(
 
     Ok(Expression::Equal(
         *loc,
-        Box::new(cast(&l.loc(), left, &ty, true, ns, diagnostics)?),
-        Box::new(cast(&r.loc(), right, &ty, true, ns, diagnostics)?),
+        Box::new(cast(&l.loc(), left, &ty, true, ns, diagnostics, opt)?),
+        Box::new(cast(&r.loc(), right, &ty, true, ns, diagnostics, opt)?),
     ))
 }
 
@@ -3425,9 +3719,10 @@ fn addition(
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
     resolve_to: ResolveTo,
+    opt: &Options,
 ) -> Result<Expression, ()> {
-    let mut left = expression(l, context, ns, symtable, diagnostics, resolve_to)?;
-    let mut right = expression(r, context, ns, symtable, diagnostics, resolve_to)?;
+    let mut left = expression(l, context, ns, symtable, diagnostics, resolve_to, opt)?;
+    let mut right = expression(r, context, ns, symtable, diagnostics, resolve_to, opt)?;
     check_var_usage_expression(ns, &left, &right, symtable);
 
     // Concatenate stringliteral with stringliteral
@@ -3510,6 +3805,7 @@ fn addition(
             symtable,
             diagnostics,
             ResolveTo::Type(&resolve_to),
+            opt,
         )?;
         right = expression(
             r,
@@ -3518,6 +3814,7 @@ fn addition(
             symtable,
             diagnostics,
             ResolveTo::Type(&resolve_to),
+            opt,
         )?;
     }
 
@@ -3525,8 +3822,8 @@ fn addition(
         *loc,
         ty.clone(),
         context.unchecked,
-        Box::new(cast(&l.loc(), left, &ty, true, ns, diagnostics)?),
-        Box::new(cast(&r.loc(), right, &ty, true, ns, diagnostics)?),
+        Box::new(cast(&l.loc(), left, &ty, true, ns, diagnostics, opt)?),
+        Box::new(cast(&r.loc(), right, &ty, true, ns, diagnostics, opt)?),
     ))
 }
 
@@ -3539,6 +3836,7 @@ fn assign_single(
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
+    opt: &Options,
 ) -> Result<Expression, ()> {
     let mut lcontext = context.clone();
     lcontext.lvalue = true;
@@ -3550,6 +3848,7 @@ fn assign_single(
         symtable,
         diagnostics,
         ResolveTo::Unknown,
+        opt,
     )?;
     assigned_variable(ns, &var, symtable);
 
@@ -3561,6 +3860,7 @@ fn assign_single(
         symtable,
         diagnostics,
         ResolveTo::Type(var_ty.deref_any()),
+        opt,
     )?;
     used_variable(ns, &val, symtable);
     match &var {
@@ -3610,6 +3910,7 @@ fn assign_single(
                     true,
                     ns,
                     diagnostics,
+                    opt,
                 )?),
             ))
         }
@@ -3617,14 +3918,14 @@ fn assign_single(
             *loc,
             var_ty.clone(),
             Box::new(var.clone()),
-            Box::new(cast(&right.loc(), val, var_ty, true, ns, diagnostics)?),
+            Box::new(cast(&right.loc(), val, var_ty, true, ns, diagnostics, opt)?),
         )),
         _ => match &var_ty {
             Type::Ref(r_ty) => Ok(Expression::Assign(
                 *loc,
                 var_ty.clone(),
                 Box::new(var),
-                Box::new(cast(&right.loc(), val, r_ty, true, ns, diagnostics)?),
+                Box::new(cast(&right.loc(), val, r_ty, true, ns, diagnostics, opt)?),
             )),
             Type::StorageRef(immutable, r_ty) => {
                 if *immutable {
@@ -3643,7 +3944,7 @@ fn assign_single(
                     *loc,
                     var_ty.clone(),
                     Box::new(var),
-                    Box::new(cast(&right.loc(), val, r_ty, true, ns, diagnostics)?),
+                    Box::new(cast(&right.loc(), val, r_ty, true, ns, diagnostics, opt)?),
                 ))
             }
             _ => {
@@ -3667,6 +3968,7 @@ fn assign_expr(
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
+    opt: &Options,
 ) -> Result<Expression, ()> {
     let mut lcontext = context.clone();
     lcontext.lvalue = true;
@@ -3678,6 +3980,7 @@ fn assign_expr(
         symtable,
         diagnostics,
         ResolveTo::Unknown,
+        opt,
     )?;
     assigned_variable(ns, &var, symtable);
     let var_ty = var.ty();
@@ -3691,7 +3994,7 @@ fn assign_expr(
         ResolveTo::Type(var_ty.deref_any())
     };
 
-    let set = expression(right, context, ns, symtable, diagnostics, resolve_to)?;
+    let set = expression(right, context, ns, symtable, diagnostics, resolve_to, opt)?;
     used_variable(ns, &set, symtable);
     let set_type = set.ty();
 
@@ -3717,7 +4020,7 @@ fn assign_expr(
                     Expression::Trunc(*loc, ty.clone(), Box::new(set))
                 }
             }
-            _ => cast(&right.loc(), set, ty, true, ns, diagnostics)?,
+            _ => cast(&right.loc(), set, ty, true, ns, diagnostics, opt)?,
         };
 
         Ok(match expr {
@@ -3818,7 +4121,7 @@ fn assign_expr(
                     Type::Void,
                     Box::new(var.clone()),
                     Box::new(op(
-                        cast(loc, var, r_ty, true, ns, diagnostics)?,
+                        cast(loc, var, r_ty, true, ns, diagnostics, opt)?,
                         r_ty,
                         ns,
                         diagnostics,
@@ -3851,7 +4154,7 @@ fn assign_expr(
                         Type::Void,
                         Box::new(var.clone()),
                         Box::new(op(
-                            cast(loc, var, r_ty, true, ns, diagnostics)?,
+                            cast(loc, var, r_ty, true, ns, diagnostics, opt)?,
                             r_ty,
                             ns,
                             diagnostics,
@@ -3885,6 +4188,7 @@ fn incr_decr(
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
+    opt: &Options,
 ) -> Result<Expression, ()> {
     let op = |e: Expression, ty: Type| -> Expression {
         match expr {
@@ -3908,7 +4212,15 @@ fn incr_decr(
 
     context.lvalue = true;
 
-    let var = expression(v, &context, ns, symtable, diagnostics, ResolveTo::Unknown)?;
+    let var = expression(
+        v,
+        &context,
+        ns,
+        symtable,
+        diagnostics,
+        ResolveTo::Unknown,
+        opt,
+    )?;
     used_variable(ns, &var, symtable);
     let var_ty = var.ty();
 
@@ -4081,6 +4393,7 @@ fn member_access(
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
     resolve_to: ResolveTo,
+    opt: &Options,
 ) -> Result<Expression, ()> {
     // is it a builtin special variable like "block.timestamp"
     if let pt::Expression::Variable(namespace) = e {
@@ -4183,12 +4496,12 @@ fn member_access(
     if let pt::Expression::FunctionCall(_, name, args) = e {
         if let pt::Expression::Variable(func_name) = name.as_ref() {
             if func_name.name == "type" {
-                return type_name_expr(loc, args, id, context, ns, diagnostics, resolve_to);
+                return type_name_expr(loc, args, id, context, ns, diagnostics, resolve_to, opt);
             }
         }
     }
 
-    let expr = expression(e, context, ns, symtable, diagnostics, resolve_to)?;
+    let expr = expression(e, context, ns, symtable, diagnostics, resolve_to, opt)?;
     let expr_ty = expr.ty();
 
     // Dereference if need to. This could be struct-in-struct for
@@ -4552,6 +4865,7 @@ fn array_subscript(
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
+    opt: &Options,
 ) -> Result<Expression, ()> {
     let array = expression(
         array,
@@ -4560,11 +4874,12 @@ fn array_subscript(
         symtable,
         diagnostics,
         ResolveTo::Unknown,
+        opt,
     )?;
     let array_ty = array.ty();
 
     if array.ty().is_mapping() {
-        return mapping_subscript(loc, array, index, context, ns, symtable, diagnostics);
+        return mapping_subscript(loc, array, index, context, ns, symtable, diagnostics, opt);
     }
 
     let index_width_ty = if array_ty.is_contract_storage() && !array_ty.is_storage_bytes() {
@@ -4580,6 +4895,7 @@ fn array_subscript(
         symtable,
         diagnostics,
         ResolveTo::Type(&index_width_ty),
+        opt,
     )?;
 
     let index_ty = index.ty();
@@ -4611,6 +4927,7 @@ fn array_subscript(
                 false,
                 ns,
                 diagnostics,
+                opt,
             )?),
         ));
     }
@@ -4624,6 +4941,7 @@ fn array_subscript(
             true,
             ns,
             diagnostics,
+            opt,
         )?;
     }
 
@@ -4654,6 +4972,7 @@ fn array_subscript(
                     true,
                     ns,
                     diagnostics,
+                    opt,
                 )?;
 
                 Ok(Expression::Subscript(
@@ -4691,6 +5010,7 @@ fn struct_literal(
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
+    opt: &Options,
 ) -> Result<Expression, ()> {
     let struct_def = ns.structs[struct_no].clone();
 
@@ -4727,6 +5047,7 @@ fn struct_literal(
                 symtable,
                 diagnostics,
                 ResolveTo::Type(&struct_def.fields[i].ty),
+                opt,
             )?;
             used_variable(ns, &expr, symtable);
             fields.push(cast(
@@ -4736,6 +5057,7 @@ fn struct_literal(
                 true,
                 ns,
                 diagnostics,
+                opt,
             )?);
         }
 
@@ -4755,15 +5077,24 @@ fn call_function_type(
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
+    opt: &Options,
 ) -> Result<Expression, ()> {
-    let mut function = expression(expr, context, ns, symtable, diagnostics, ResolveTo::Unknown)?;
+    let mut function = expression(
+        expr,
+        context,
+        ns,
+        symtable,
+        diagnostics,
+        ResolveTo::Unknown,
+        opt,
+    )?;
 
     let mut ty = function.ty();
 
     match ty {
         Type::StorageRef(_, real_ty) | Type::Ref(real_ty) => {
             ty = *real_ty;
-            function = cast(&expr.loc(), function, &ty, true, ns, diagnostics)?;
+            function = cast(&expr.loc(), function, &ty, true, ns, diagnostics, opt)?;
         }
         _ => (),
     };
@@ -4802,6 +5133,7 @@ fn call_function_type(
                 symtable,
                 diagnostics,
                 ResolveTo::Type(&params[i]),
+                opt,
             )?;
 
             cast_args.push(cast(
@@ -4811,6 +5143,7 @@ fn call_function_type(
                 true,
                 ns,
                 diagnostics,
+                opt,
             )?);
         }
 
@@ -4830,7 +5163,7 @@ fn call_function_type(
         mutability,
     } = ty
     {
-        let call_args = parse_call_args(call_args, true, context, ns, symtable, diagnostics)?;
+        let call_args = parse_call_args(call_args, true, context, ns, symtable, diagnostics, opt)?;
 
         let value = if let Some(value) = call_args.value {
             if !value.const_zero(context.contract_no, ns)
@@ -4874,6 +5207,7 @@ fn call_function_type(
                 symtable,
                 diagnostics,
                 ResolveTo::Type(&params[i]),
+                opt,
             )?;
 
             cast_args.push(cast(
@@ -4883,6 +5217,7 @@ fn call_function_type(
                 true,
                 ns,
                 diagnostics,
+                opt,
             )?);
         }
 
@@ -4982,6 +5317,7 @@ pub fn call_position_args(
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
+    opt: &Options,
 ) -> Result<Expression, ()> {
     let mut name_matches = 0;
     let mut errors = Vec::new();
@@ -5025,6 +5361,7 @@ pub fn call_position_args(
                 symtable,
                 &mut errors,
                 ResolveTo::Type(&ty),
+                opt,
             ) {
                 Ok(e) => e,
                 Err(_) => {
@@ -5033,7 +5370,7 @@ pub fn call_position_args(
                 }
             };
 
-            match cast(&arg.loc(), arg.clone(), &ty, true, ns, &mut errors) {
+            match cast(&arg.loc(), arg.clone(), &ty, true, ns, &mut errors, opt) {
                 Ok(expr) => cast_args.push(expr),
                 Err(_) => {
                     matches = false;
@@ -5116,6 +5453,7 @@ fn function_call_with_named_args(
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
+    opt: &Options,
 ) -> Result<Expression, ()> {
     let mut arguments = HashMap::new();
 
@@ -5190,6 +5528,7 @@ fn function_call_with_named_args(
                 symtable,
                 &mut errors,
                 ResolveTo::Type(&ty),
+                opt,
             ) {
                 Ok(e) => e,
                 Err(()) => {
@@ -5198,7 +5537,7 @@ fn function_call_with_named_args(
                 }
             };
 
-            match cast(&arg.loc(), arg, &ty, true, ns, &mut errors) {
+            match cast(&arg.loc(), arg, &ty, true, ns, &mut errors, opt) {
                 Ok(expr) => cast_args.push(expr),
                 Err(_) => {
                     matches = false;
@@ -5272,6 +5611,7 @@ fn named_struct_literal(
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
+    opt: &Options,
 ) -> Result<Expression, ()> {
     let struct_def = ns.structs[struct_no].clone();
     let ty = Type::Struct(struct_no);
@@ -5314,9 +5654,10 @@ fn named_struct_literal(
                         symtable,
                         diagnostics,
                         ResolveTo::Type(&f.ty),
+                        opt,
                     )?;
                     used_variable(ns, &expr, symtable);
-                    fields[i] = cast(loc, expr, &f.ty, true, ns, diagnostics)?;
+                    fields[i] = cast(loc, expr, &f.ty, true, ns, diagnostics, opt)?;
                 }
                 None => {
                     diagnostics.push(Diagnostic::error(
@@ -5347,6 +5688,7 @@ fn method_call_pos_args(
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
     resolve_to: ResolveTo,
+    opt: &Options,
 ) -> Result<Expression, ()> {
     if let pt::Expression::Variable(namespace) = var {
         if builtin::is_builtin_call(Some(&namespace.name), &func.name, ns) {
@@ -5367,6 +5709,7 @@ fn method_call_pos_args(
                 ns,
                 symtable,
                 diagnostics,
+                opt,
             );
         }
 
@@ -5392,6 +5735,7 @@ fn method_call_pos_args(
                     ns,
                     symtable,
                     diagnostics,
+                    opt,
                 );
             } else {
                 diagnostics.push(Diagnostic::error(
@@ -5430,6 +5774,7 @@ fn method_call_pos_args(
                     ns,
                     symtable,
                     diagnostics,
+                    opt,
                 );
             }
 
@@ -5461,17 +5806,33 @@ fn method_call_pos_args(
                         ns,
                         symtable,
                         diagnostics,
+                        opt,
                     );
                 }
             }
         }
     }
 
-    let var_expr = expression(var, context, ns, symtable, diagnostics, ResolveTo::Unknown)?;
+    let var_expr = expression(
+        var,
+        context,
+        ns,
+        symtable,
+        diagnostics,
+        ResolveTo::Unknown,
+        opt,
+    )?;
 
-    if let Some(expr) =
-        builtin::resolve_method_call(&var_expr, func, args, context, ns, symtable, diagnostics)?
-    {
+    if let Some(expr) = builtin::resolve_method_call(
+        &var_expr,
+        func,
+        args,
+        context,
+        ns,
+        symtable,
+        diagnostics,
+        opt,
+    )? {
         return Ok(expr);
     }
 
@@ -5487,7 +5848,7 @@ fn method_call_pos_args(
                 return Err(());
             }
 
-            string_format(loc, bs, args, context, ns, symtable, diagnostics)
+            string_format(loc, bs, args, context, ns, symtable, diagnostics, opt)
         } else {
             diagnostics.push(Diagnostic::error(
                 *loc,
@@ -5542,6 +5903,7 @@ fn method_call_pos_args(
                                 symtable,
                                 diagnostics,
                                 ResolveTo::Type(&elem_ty),
+                                opt,
                             )?;
 
                             builtin_args.push(cast(
@@ -5551,6 +5913,7 @@ fn method_call_pos_args(
                                 true,
                                 ns,
                                 diagnostics,
+                                opt,
                             )?);
 
                             Type::Void
@@ -5649,6 +6012,7 @@ fn method_call_pos_args(
                                 symtable,
                                 diagnostics,
                                 ResolveTo::Type(&elem_ty),
+                                opt,
                             )?;
 
                             builtin_args.push(cast(
@@ -5658,6 +6022,7 @@ fn method_call_pos_args(
                                 true,
                                 ns,
                                 diagnostics,
+                                opt,
                             )?);
 
                             Type::Void
@@ -5725,9 +6090,18 @@ fn method_call_pos_args(
                         symtable,
                         diagnostics,
                         ResolveTo::Type(elem_ty),
+                        opt,
                     )?;
 
-                    cast(&args[0].loc(), val_expr, elem_ty, true, ns, diagnostics)?
+                    cast(
+                        &args[0].loc(),
+                        val_expr,
+                        elem_ty,
+                        true,
+                        ns,
+                        diagnostics,
+                        opt,
+                    )?
                 }
                 _ => {
                     diagnostics.push(Diagnostic::error(
@@ -5778,7 +6152,7 @@ fn method_call_pos_args(
     }
 
     if let Type::Contract(ext_contract_no) = &var_ty.deref_any() {
-        let call_args = parse_call_args(call_args, true, context, ns, symtable, diagnostics)?;
+        let call_args = parse_call_args(call_args, true, context, ns, symtable, diagnostics, opt)?;
 
         let marker = diagnostics.len();
         let mut name_match = 0;
@@ -5818,6 +6192,7 @@ fn method_call_pos_args(
                     symtable,
                     diagnostics,
                     ResolveTo::Type(&ty),
+                    opt,
                 ) {
                     Ok(e) => e,
                     Err(_) => {
@@ -5826,7 +6201,7 @@ fn method_call_pos_args(
                     }
                 };
 
-                match cast(&arg.loc(), arg, &ty, true, ns, diagnostics) {
+                match cast(&arg.loc(), arg, &ty, true, ns, diagnostics, opt) {
                     Ok(expr) => cast_args.push(expr),
                     Err(()) => {
                         matches = false;
@@ -5882,6 +6257,7 @@ fn method_call_pos_args(
                             true,
                             ns,
                             diagnostics,
+                            opt,
                         )?),
                     }),
                     args: cast_args,
@@ -5904,6 +6280,7 @@ fn method_call_pos_args(
             symtable,
             diagnostics,
             ns,
+            opt,
         ) {
             Ok(Some(expr)) => {
                 diagnostics.truncate(marker);
@@ -5969,9 +6346,18 @@ fn method_call_pos_args(
                 symtable,
                 diagnostics,
                 ResolveTo::Type(&Type::Value),
+                opt,
             )?;
 
-            let value = cast(&args[0].loc(), expr, &Type::Value, true, ns, diagnostics)?;
+            let value = cast(
+                &args[0].loc(),
+                expr,
+                &Type::Value,
+                true,
+                ns,
+                diagnostics,
+                opt,
+            )?;
 
             return if func.name == "transfer" {
                 Ok(Expression::Builtin(
@@ -6000,7 +6386,8 @@ fn method_call_pos_args(
         };
 
         if let Some(ty) = ty {
-            let call_args = parse_call_args(call_args, true, context, ns, symtable, diagnostics)?;
+            let call_args =
+                parse_call_args(call_args, true, context, ns, symtable, diagnostics, opt)?;
 
             if ty != CallTy::Regular && call_args.value.is_some() {
                 diagnostics.push(Diagnostic::error(
@@ -6031,6 +6418,7 @@ fn method_call_pos_args(
                 symtable,
                 diagnostics,
                 ResolveTo::Type(&Type::DynamicBytes),
+                opt,
             )?;
 
             let args = cast(
@@ -6040,6 +6428,7 @@ fn method_call_pos_args(
                 true,
                 ns,
                 diagnostics,
+                opt,
             )?;
 
             return Ok(Expression::ExternalFunctionCallRaw {
@@ -6067,6 +6456,7 @@ fn method_call_pos_args(
             symtable,
             diagnostics,
             ns,
+            opt,
         ) {
             Ok(Some(expr)) => {
                 return Ok(expr);
@@ -6096,6 +6486,7 @@ fn resolve_using(
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
     ns: &mut Namespace,
+    opt: &Options,
 ) -> Result<Option<Expression>, ()> {
     // first collect all possible libraries that match the using directive type
     // Use HashSet for deduplication.
@@ -6147,6 +6538,7 @@ fn resolve_using(
                 true,
                 ns,
                 &mut errors,
+                opt,
             ) {
                 Ok(e) => cast_args.push(e),
                 Err(()) => continue,
@@ -6163,6 +6555,7 @@ fn resolve_using(
                     symtable,
                     &mut errors,
                     ResolveTo::Type(&ty),
+                    opt,
                 ) {
                     Ok(e) => e,
                     Err(()) => {
@@ -6171,7 +6564,7 @@ fn resolve_using(
                     }
                 };
 
-                match cast(&arg.loc(), arg.clone(), &ty, true, ns, &mut errors) {
+                match cast(&arg.loc(), arg.clone(), &ty, true, ns, &mut errors, opt) {
                     Ok(expr) => cast_args.push(expr),
                     Err(_) => {
                         matches = false;
@@ -6241,6 +6634,7 @@ fn method_call_named_args(
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
+    opt: &Options,
 ) -> Result<Expression, ()> {
     if let pt::Expression::Variable(namespace) = var {
         // is it a call to super
@@ -6264,6 +6658,7 @@ fn method_call_named_args(
                     ns,
                     symtable,
                     diagnostics,
+                    opt,
                 );
             } else {
                 diagnostics.push(Diagnostic::error(
@@ -6301,6 +6696,7 @@ fn method_call_named_args(
                     ns,
                     symtable,
                     diagnostics,
+                    opt,
                 );
             }
 
@@ -6331,17 +6727,26 @@ fn method_call_named_args(
                         ns,
                         symtable,
                         diagnostics,
+                        opt,
                     );
                 }
             }
         }
     }
 
-    let var_expr = expression(var, context, ns, symtable, diagnostics, ResolveTo::Unknown)?;
+    let var_expr = expression(
+        var,
+        context,
+        ns,
+        symtable,
+        diagnostics,
+        ResolveTo::Unknown,
+        opt,
+    )?;
     let var_ty = var_expr.ty();
 
     if let Type::Contract(external_contract_no) = &var_ty.deref_any() {
-        let call_args = parse_call_args(call_args, true, context, ns, symtable, diagnostics)?;
+        let call_args = parse_call_args(call_args, true, context, ns, symtable, diagnostics, opt)?;
 
         let mut arguments = HashMap::new();
 
@@ -6411,6 +6816,7 @@ fn method_call_named_args(
                     symtable,
                     diagnostics,
                     ResolveTo::Type(&param.ty),
+                    opt,
                 ) {
                     Ok(e) => e,
                     Err(()) => {
@@ -6419,7 +6825,15 @@ fn method_call_named_args(
                     }
                 };
 
-                match cast(&arg.loc(), arg.clone(), &param.ty, true, ns, diagnostics) {
+                match cast(
+                    &arg.loc(),
+                    arg.clone(),
+                    &param.ty,
+                    true,
+                    ns,
+                    diagnostics,
+                    opt,
+                ) {
                     Ok(expr) => cast_args.push(expr),
                     Err(()) => {
                         matches = false;
@@ -6477,6 +6891,7 @@ fn method_call_named_args(
                             true,
                             ns,
                             diagnostics,
+                            opt,
                         )?),
                     }),
                     args: cast_args,
@@ -6551,11 +6966,19 @@ fn resolve_array_literal(
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
     resolve_to: ResolveTo,
+    opt: &Options,
 ) -> Result<Expression, ()> {
     let mut dims = Box::new(Vec::new());
     let mut flattened = Vec::new();
 
-    check_subarrays(exprs, &mut Some(&mut dims), &mut flattened, ns, diagnostics)?;
+    check_subarrays(
+        exprs,
+        &mut Some(&mut dims),
+        &mut flattened,
+        ns,
+        diagnostics,
+        opt,
+    )?;
 
     if flattened.is_empty() {
         diagnostics.push(Diagnostic::error(
@@ -6582,6 +7005,7 @@ fn resolve_array_literal(
         symtable,
         diagnostics,
         resolve_to,
+        opt,
     )?;
 
     let ty = if let ResolveTo::Type(ty) = resolve_to {
@@ -6594,11 +7018,19 @@ fn resolve_array_literal(
     let mut exprs = vec![first];
 
     for e in flattened {
-        let mut other = expression(e, context, ns, symtable, diagnostics, ResolveTo::Type(&ty))?;
+        let mut other = expression(
+            e,
+            context,
+            ns,
+            symtable,
+            diagnostics,
+            ResolveTo::Type(&ty),
+            opt,
+        )?;
         used_variable(ns, &other, symtable);
 
         if other.ty() != ty {
-            other = cast(&e.loc(), other, &ty, true, ns, diagnostics)?;
+            other = cast(&e.loc(), other, &ty, true, ns, diagnostics, opt)?;
         }
 
         exprs.push(other);
@@ -6626,10 +7058,11 @@ fn check_subarrays<'a>(
     flatten: &mut Vec<&'a pt::Expression>,
     ns: &Namespace,
     diagnostics: &mut Vec<Diagnostic>,
+    opt: &Options,
 ) -> Result<(), ()> {
     if let Some(pt::Expression::ArrayLiteral(_, first)) = exprs.get(0) {
         // ensure all elements are array literals of the same length
-        check_subarrays(first, dims, flatten, ns, diagnostics)?;
+        check_subarrays(first, dims, flatten, ns, diagnostics, opt)?;
 
         for (i, e) in exprs.iter().enumerate().skip(1) {
             if let pt::Expression::ArrayLiteral(_, other) = e {
@@ -6642,7 +7075,7 @@ fn check_subarrays<'a>(
                     ));
                     return Err(());
                 }
-                check_subarrays(other, &mut None, flatten, ns, diagnostics)?;
+                check_subarrays(other, &mut None, flatten, ns, diagnostics, opt)?;
             } else {
                 diagnostics.push(Diagnostic::error(
                     e.loc(),
@@ -6740,6 +7173,7 @@ fn parse_call_args(
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
+    opt: &Options,
 ) -> Result<CallArgs, ()> {
     let mut args: HashMap<&String, &pt::NamedArgument> = HashMap::new();
 
@@ -6776,6 +7210,7 @@ fn parse_call_args(
                     symtable,
                     diagnostics,
                     ResolveTo::Type(&ty),
+                    opt,
                 )?;
 
                 res.value = Some(Box::new(cast(
@@ -6785,6 +7220,7 @@ fn parse_call_args(
                     true,
                     ns,
                     diagnostics,
+                    opt,
                 )?));
             }
             "gas" => {
@@ -6807,6 +7243,7 @@ fn parse_call_args(
                     symtable,
                     diagnostics,
                     ResolveTo::Type(&ty),
+                    opt,
                 )?;
 
                 res.gas = Some(Box::new(cast(
@@ -6816,6 +7253,7 @@ fn parse_call_args(
                     true,
                     ns,
                     diagnostics,
+                    opt,
                 )?));
             }
             "space" => {
@@ -6847,6 +7285,7 @@ fn parse_call_args(
                     symtable,
                     diagnostics,
                     ResolveTo::Type(&ty),
+                    opt,
                 )?;
 
                 res.space = Some(Box::new(cast(
@@ -6856,6 +7295,7 @@ fn parse_call_args(
                     true,
                     ns,
                     diagnostics,
+                    opt,
                 )?));
             }
             "salt" => {
@@ -6887,6 +7327,7 @@ fn parse_call_args(
                     symtable,
                     diagnostics,
                     ResolveTo::Type(&ty),
+                    opt,
                 )?;
 
                 res.salt = Some(Box::new(cast(
@@ -6896,6 +7337,7 @@ fn parse_call_args(
                     true,
                     ns,
                     diagnostics,
+                    opt,
                 )?));
             }
             _ => {
@@ -6920,6 +7362,7 @@ pub fn named_call_expr(
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
+    opt: &Options,
 ) -> Result<Expression, ()> {
     let mut nullsink = Vec::new();
 
@@ -6930,9 +7373,10 @@ pub fn named_call_expr(
         true,
         ty,
         &mut nullsink,
+        opt,
     ) {
         Ok(Type::Struct(n)) => {
-            return named_struct_literal(loc, n, args, context, ns, symtable, diagnostics);
+            return named_struct_literal(loc, n, args, context, ns, symtable, diagnostics, opt);
         }
         Ok(_) => {
             diagnostics.push(Diagnostic::error(
@@ -6953,7 +7397,7 @@ pub fn named_call_expr(
         return Err(());
     }
 
-    let expr = named_function_call_expr(loc, ty, args, context, ns, symtable, diagnostics)?;
+    let expr = named_function_call_expr(loc, ty, args, context, ns, symtable, diagnostics, opt)?;
 
     check_function_call(ns, &expr, symtable);
     if expr.tys().len() > 1 && !is_destructible {
@@ -6978,6 +7422,7 @@ pub fn call_expr(
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
     resolve_to: ResolveTo,
+    opt: &Options,
 ) -> Result<Expression, ()> {
     let mut nullsink = Vec::new();
 
@@ -6987,9 +7432,10 @@ pub fn call_expr(
         true,
         ty,
         &mut nullsink,
+        opt,
     ) {
         Ok(Type::Struct(n)) => {
-            return struct_literal(loc, n, args, context, ns, symtable, diagnostics);
+            return struct_literal(loc, n, args, context, ns, symtable, diagnostics, opt);
         }
         Ok(to) => {
             // Cast
@@ -7013,9 +7459,10 @@ pub fn call_expr(
                     symtable,
                     diagnostics,
                     ResolveTo::Unknown,
+                    opt,
                 )?;
 
-                cast(loc, expr, &to, false, ns, diagnostics)
+                cast(loc, expr, &to, false, ns, diagnostics, opt)
             };
         }
         Err(_) => (),
@@ -7030,6 +7477,7 @@ pub fn call_expr(
         symtable,
         diagnostics,
         resolve_to,
+        opt,
     )?;
 
     check_function_call(ns, &expr, symtable);
@@ -7054,6 +7502,7 @@ pub fn function_call_expr(
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
     resolve_to: ResolveTo,
+    opt: &Options,
 ) -> Result<Expression, ()> {
     let (ty, call_args, call_args_loc) = collect_call_args(ty, diagnostics)?;
 
@@ -7079,6 +7528,7 @@ pub fn function_call_expr(
                 symtable,
                 diagnostics,
                 resolve_to,
+                opt,
             )
         }
         pt::Expression::Variable(id) => {
@@ -7094,6 +7544,7 @@ pub fn function_call_expr(
                         ns,
                         symtable,
                         diagnostics,
+                        opt,
                     )?;
 
                     if expr.tys().len() > 1 {
@@ -7133,6 +7584,7 @@ pub fn function_call_expr(
                     ns,
                     symtable,
                     diagnostics,
+                    opt,
                 )
             } else {
                 if let Some(loc) = call_args_loc {
@@ -7154,6 +7606,7 @@ pub fn function_call_expr(
                     ns,
                     symtable,
                     diagnostics,
+                    opt,
                 )
             }
         }
@@ -7167,6 +7620,7 @@ pub fn function_call_expr(
             ns,
             symtable,
             diagnostics,
+            opt,
         ),
     }
 }
@@ -7180,6 +7634,7 @@ pub fn named_function_call_expr(
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
+    opt: &Options,
 ) -> Result<Expression, ()> {
     let (ty, call_args, call_args_loc) = collect_call_args(ty, diagnostics)?;
 
@@ -7195,6 +7650,7 @@ pub fn named_function_call_expr(
             ns,
             symtable,
             diagnostics,
+            opt,
         ),
         pt::Expression::Variable(id) => {
             if let Some(loc) = call_args_loc {
@@ -7215,6 +7671,7 @@ pub fn named_function_call_expr(
                 ns,
                 symtable,
                 diagnostics,
+                opt,
             )
         }
         pt::Expression::ArraySubscript(_, _, _) => {
@@ -7273,6 +7730,7 @@ fn mapping_subscript(
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
+    opt: &Options,
 ) -> Result<Expression, ()> {
     let ty = mapping.ty();
     let elem_ty = ty.storage_array_elem();
@@ -7287,11 +7745,13 @@ fn mapping_subscript(
                 symtable,
                 diagnostics,
                 ResolveTo::Type(key_ty),
+                opt,
             )?,
             key_ty,
             true,
             ns,
             diagnostics,
+            opt,
         )?;
 
         Ok(Expression::Subscript(

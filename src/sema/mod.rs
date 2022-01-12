@@ -1,4 +1,5 @@
 use crate::parser::{parse, pt};
+use crate::Options;
 use crate::Target;
 use ast::{Diagnostic, Mutability};
 use num_bigint::BigInt;
@@ -43,8 +44,13 @@ pub const SOLANA_SPARSE_ARRAY_SIZE: u64 = 1024;
 
 /// Load a file file from the cache, parse and resolve it. The file must be present in
 /// the cache.
-pub fn sema(file: &ResolvedFile, resolver: &mut FileResolver, ns: &mut ast::Namespace) {
-    sema_file(file, resolver, ns);
+pub fn sema(
+    file: &ResolvedFile,
+    resolver: &mut FileResolver,
+    ns: &mut ast::Namespace,
+    opt: &Options,
+) {
+    sema_file(file, resolver, ns, opt);
 
     // Checks for unused variables
     check_unused_namespace_variables(ns);
@@ -52,7 +58,12 @@ pub fn sema(file: &ResolvedFile, resolver: &mut FileResolver, ns: &mut ast::Name
 }
 
 /// Parse and resolve a file and its imports in a recursive manner.
-fn sema_file(file: &ResolvedFile, resolver: &mut FileResolver, ns: &mut ast::Namespace) {
+fn sema_file(
+    file: &ResolvedFile,
+    resolver: &mut FileResolver,
+    ns: &mut ast::Namespace,
+    opt: &Options,
+) {
     let file_no = ns.files.len();
 
     let (source_code, file_cache_no) = resolver.get_file_contents_and_number(&file.full_path);
@@ -97,7 +108,7 @@ fn sema_file(file: &ResolvedFile, resolver: &mut FileResolver, ns: &mut ast::Nam
                 resolve_pragma(name, value, ns);
             }
             pt::SourceUnitPart::ImportDirective(_, import) => {
-                resolve_import(import, Some(file), file_no, resolver, ns);
+                resolve_import(import, Some(file), file_no, resolver, ns, opt);
             }
             _ => (),
         }
@@ -107,7 +118,7 @@ fn sema_file(file: &ResolvedFile, resolver: &mut FileResolver, ns: &mut ast::Nam
 
     // once all the types are resolved, we can resolve the structs and events. This is because
     // struct fields or event fields can have types defined elsewhere.
-    types::resolve_fields(fields, file_no, ns);
+    types::resolve_fields(fields, file_no, ns, opt);
 
     // give up if we failed
     if diagnostics::any_errors(&ns.diagnostics) {
@@ -120,23 +131,23 @@ fn sema_file(file: &ResolvedFile, resolver: &mut FileResolver, ns: &mut ast::Nam
     for part in &pt.0 {
         match part {
             pt::SourceUnitPart::FunctionDefinition(func) => {
-                if let Some(func_no) = functions::function(func, file_no, ns) {
+                if let Some(func_no) = functions::function(func, file_no, ns, opt) {
                     resolve_bodies.push((func_no, func));
                 }
             }
             pt::SourceUnitPart::VariableDefinition(var) => {
-                var_decl(None, var, file_no, None, ns, &mut Symtable::new());
+                var_decl(None, var, file_no, None, ns, &mut Symtable::new(), opt);
             }
             _ => (),
         }
     }
 
     // now resolve the contracts
-    contracts::resolve(&contracts_to_resolve, file_no, ns);
+    contracts::resolve(&contracts_to_resolve, file_no, ns, opt);
 
     // now we can resolve the body of functions outside of contracts
     for (func_no, func) in resolve_bodies {
-        let _ = statements::resolve_function_body(func, file_no, None, func_no, ns);
+        let _ = statements::resolve_function_body(func, file_no, None, func_no, ns, opt);
     }
 
     // check for stray semi colons
@@ -169,6 +180,7 @@ fn resolve_import(
     file_no: usize,
     resolver: &mut FileResolver,
     ns: &mut ast::Namespace,
+    opt: &Options,
 ) {
     let filename = match import {
         pt::Import::Plain(f, _) => f,
@@ -185,7 +197,7 @@ fn resolve_import(
         }
         Ok(file) => {
             if !ns.files.iter().any(|f| f.path == file.full_path) {
-                sema_file(&file, resolver, ns);
+                sema_file(&file, resolver, ns, opt);
 
                 // give up if we failed
                 if diagnostics::any_errors(&ns.diagnostics) {
@@ -586,9 +598,10 @@ impl ast::Namespace {
         contract_no: Option<usize>,
         expr: &pt::Expression,
         diagnostics: &mut Vec<ast::Diagnostic>,
+        opt: &Options,
     ) -> Result<Vec<usize>, ()> {
         let (namespace, id, dimensions) =
-            self.expr_to_type(file_no, contract_no, expr, diagnostics)?;
+            self.expr_to_type(file_no, contract_no, expr, diagnostics, opt)?;
 
         if !dimensions.is_empty() {
             diagnostics.push(ast::Diagnostic::decl_error(
@@ -963,6 +976,7 @@ impl ast::Namespace {
         casting: bool,
         id: &pt::Expression,
         diagnostics: &mut Vec<ast::Diagnostic>,
+        opt: &Options,
     ) -> Result<ast::Type, ()> {
         fn resolve_dimensions(
             ast_dimensions: &[Option<(pt::Loc, BigInt)>],
@@ -995,15 +1009,17 @@ impl ast::Namespace {
         }
 
         let (namespace, id, dimensions) =
-            self.expr_to_type(file_no, contract_no, id, diagnostics)?;
+            self.expr_to_type(file_no, contract_no, id, diagnostics, opt)?;
 
         if let pt::Expression::Type(loc, ty) = &id {
             assert!(namespace.is_empty());
 
             let ty = match ty {
                 pt::Type::Mapping(_, k, v) => {
-                    let key = self.resolve_type(file_no, contract_no, false, k, diagnostics)?;
-                    let value = self.resolve_type(file_no, contract_no, false, v, diagnostics)?;
+                    let key =
+                        self.resolve_type(file_no, contract_no, false, k, diagnostics, opt)?;
+                    let value =
+                        self.resolve_type(file_no, contract_no, false, v, diagnostics, opt)?;
 
                     match key {
                         ast::Type::Mapping(_, _) => {
@@ -1110,6 +1126,7 @@ impl ast::Namespace {
                         contract_no,
                         self,
                         diagnostics,
+                        opt,
                     );
 
                     let (returns, returns_success) = resolve_returns(
@@ -1119,6 +1136,7 @@ impl ast::Namespace {
                         contract_no,
                         self,
                         diagnostics,
+                        opt,
                     );
 
                     // trailing attribute should not be there
@@ -1417,6 +1435,7 @@ impl ast::Namespace {
         contract_no: Option<usize>,
         expr: &'a pt::Expression,
         diagnostics: &mut Vec<ast::Diagnostic>,
+        opt: &Options,
     ) -> Result<(Vec<&'a pt::Identifier>, pt::Expression, Vec<ArrayDimension>), ()> {
         let mut expr = expr;
         let mut dimensions = vec![];
@@ -1435,6 +1454,7 @@ impl ast::Namespace {
                         None,
                         index,
                         diagnostics,
+                        opt,
                     )?);
 
                     r.as_ref()
@@ -1484,6 +1504,7 @@ impl ast::Namespace {
         function_no: Option<usize>,
         expr: &pt::Expression,
         diagnostics: &mut Vec<ast::Diagnostic>,
+        opt: &Options,
     ) -> Result<ArrayDimension, ()> {
         let mut symtable = Symtable::new();
         let context = ExprContext {
@@ -1502,6 +1523,7 @@ impl ast::Namespace {
             &mut symtable,
             diagnostics,
             ResolveTo::Type(&ast::Type::Uint(256)),
+            opt,
         )?;
 
         match size_expr.ty() {

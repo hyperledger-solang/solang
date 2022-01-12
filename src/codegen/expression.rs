@@ -1310,7 +1310,7 @@ fn abi_encode_with_signature(
         vec![args_iter.next().unwrap().clone()],
     );
     let hash = expression(&hash, cfg, contract_no, func, ns, vartab, opt);
-    let selector = cast(loc, hash, &Type::Bytes(4), false, ns, &mut Vec::new()).unwrap();
+    let selector = cast(loc, hash, &Type::Bytes(4), false, ns, &mut Vec::new(), opt).unwrap();
     let args = args_iter
         .map(|v| expression(v, cfg, contract_no, func, ns, vartab, opt))
         .collect();
@@ -2285,7 +2285,16 @@ fn array_subscript(
         Instr::Set {
             loc: pt::Loc(0, 0, 0),
             res: pos,
-            expr: cast(&index.loc(), index, &coerced_ty, false, ns, &mut Vec::new()).unwrap(),
+            expr: cast(
+                &index.loc(),
+                index,
+                &coerced_ty,
+                false,
+                ns,
+                &mut Vec::new(),
+                opt,
+            )
+            .unwrap(),
         },
     );
 
@@ -2308,6 +2317,7 @@ fn array_subscript(
                         false,
                         ns,
                         &mut Vec::new(),
+                        opt,
                     )
                     .unwrap(),
                 ),
@@ -2335,6 +2345,7 @@ fn array_subscript(
                     false,
                     ns,
                     &mut Vec::new(),
+                    opt,
                 )
                 .unwrap();
 
@@ -2353,6 +2364,7 @@ fn array_subscript(
                     false,
                     ns,
                     &mut Vec::new(),
+                    opt,
                 )
                 .unwrap();
 
@@ -2410,6 +2422,7 @@ fn array_subscript(
                                         false,
                                         ns,
                                         &mut Vec::new(),
+                                        opt,
                                     )
                                     .unwrap(),
                                 ),
@@ -2434,6 +2447,7 @@ fn array_subscript(
                     false,
                     ns,
                     &mut Vec::new(),
+                    opt,
                 )
                 .unwrap(),
                 elem_ty,

@@ -3,6 +3,7 @@ use super::eval::eval_const_number;
 use super::expression::{cast, expression, ExprContext, ResolveTo};
 use super::symtable::Symtable;
 use crate::parser::pt;
+use crate::Options;
 use crate::Target;
 use num_bigint::BigInt;
 use num_traits::One;
@@ -834,6 +835,7 @@ pub fn resolve_call(
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
+    opt: &Options,
 ) -> Result<Expression, ()> {
     let matches = BUILTIN_FUNCTIONS
         .iter()
@@ -879,6 +881,7 @@ pub fn resolve_call(
                 symtable,
                 diagnostics,
                 ResolveTo::Type(&func.args[i]),
+                opt,
             ) {
                 Ok(e) => e,
                 Err(()) => {
@@ -894,6 +897,7 @@ pub fn resolve_call(
                 true,
                 ns,
                 diagnostics,
+                opt,
             ) {
                 Ok(expr) => cast_args.push(expr),
                 Err(()) => {
@@ -953,6 +957,7 @@ pub fn resolve_namespace_call(
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
+    opt: &Options,
 ) -> Result<Expression, ()> {
     // The abi.* functions need special handling, others do not
     if namespace != "abi" {
@@ -965,6 +970,7 @@ pub fn resolve_namespace_call(
             ns,
             symtable,
             diagnostics,
+            opt,
         );
     }
 
@@ -997,11 +1003,13 @@ pub fn resolve_namespace_call(
                 symtable,
                 diagnostics,
                 ResolveTo::Type(&Type::DynamicBytes),
+                opt,
             )?,
             &Type::DynamicBytes,
             true,
             ns,
             diagnostics,
+            opt,
         )?;
 
         let mut tys = Vec::new();
@@ -1017,6 +1025,7 @@ pub fn resolve_namespace_call(
                             false,
                             &param.ty,
                             diagnostics,
+                            opt,
                         )?;
 
                         if let Some(storage) = &param.storage {
@@ -1058,6 +1067,7 @@ pub fn resolve_namespace_call(
                     false,
                     &args[1],
                     diagnostics,
+                    opt,
                 )?;
 
                 if ty.is_mapping() {
@@ -1098,6 +1108,7 @@ pub fn resolve_namespace_call(
                     symtable,
                     diagnostics,
                     ResolveTo::Type(&Type::Bytes(4)),
+                    opt,
                 )?;
 
                 resolved_args.insert(
@@ -1109,6 +1120,7 @@ pub fn resolve_namespace_call(
                         true,
                         ns,
                         diagnostics,
+                        opt,
                     )?,
                 );
             } else {
@@ -1130,6 +1142,7 @@ pub fn resolve_namespace_call(
                     symtable,
                     diagnostics,
                     ResolveTo::Type(&Type::String),
+                    opt,
                 )?;
 
                 resolved_args.insert(
@@ -1141,6 +1154,7 @@ pub fn resolve_namespace_call(
                         true,
                         ns,
                         diagnostics,
+                        opt,
                     )?,
                 );
             } else {
@@ -1156,7 +1170,15 @@ pub fn resolve_namespace_call(
     }
 
     for arg in args_iter {
-        let mut expr = expression(arg, context, ns, symtable, diagnostics, ResolveTo::Unknown)?;
+        let mut expr = expression(
+            arg,
+            context,
+            ns,
+            symtable,
+            diagnostics,
+            ResolveTo::Unknown,
+            opt,
+        )?;
         let ty = expr.ty();
 
         if ty.is_mapping() {
@@ -1168,11 +1190,11 @@ pub fn resolve_namespace_call(
             return Err(());
         }
 
-        expr = cast(&arg.loc(), expr, ty.deref_any(), true, ns, diagnostics)?;
+        expr = cast(&arg.loc(), expr, ty.deref_any(), true, ns, diagnostics, opt)?;
 
         // A string or hex literal should be encoded as a string
         if let Expression::BytesLiteral(_, _, _) = &expr {
-            expr = cast(&arg.loc(), expr, &Type::String, true, ns, diagnostics)?;
+            expr = cast(&arg.loc(), expr, &Type::String, true, ns, diagnostics, opt)?;
         }
 
         resolved_args.push(expr);
@@ -1195,6 +1217,7 @@ pub fn resolve_method_call(
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
+    opt: &Options,
 ) -> Result<Option<Expression>, ()> {
     let expr_ty = expr.ty();
     let matches: Vec<_> = BUILTIN_METHODS
@@ -1240,6 +1263,7 @@ pub fn resolve_method_call(
                 symtable,
                 diagnostics,
                 ResolveTo::Type(&func.args[i]),
+                opt,
             ) {
                 Ok(e) => e,
                 Err(()) => {
@@ -1255,6 +1279,7 @@ pub fn resolve_method_call(
                 true,
                 ns,
                 diagnostics,
+                opt,
             ) {
                 Ok(expr) => cast_args.push(expr),
                 Err(()) => {

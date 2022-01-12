@@ -9,10 +9,13 @@ use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 
 use solang::abi;
-use solang::codegen::{codegen, OptimizationLevel, Options};
+use solang::codegen::codegen;
 use solang::emit::Generate;
 use solang::file_resolver::FileResolver;
 use solang::sema::{ast::Namespace, diagnostics};
+
+use solang::OptimizationLevel;
+use solang::Options;
 
 mod doc;
 mod languageserver;
@@ -165,6 +168,12 @@ fn main() {
                 .display_order(6),
         )
         .arg(
+            Arg::new("IMPLICITTYPECAST")
+                .help("Disable implicit type cast checking")
+                .long("no-implicit-type-cast-check")
+                .display_order(7),
+        )
+        .arg(
             Arg::new("LANGUAGESERVER")
                 .help("Start language server on stdin/stdout")
                 .conflicts_with_all(&["STD-JSON", "OUTPUT", "EMIT", "OPT", "INPUT"])
@@ -283,7 +292,8 @@ fn main() {
         let mut files = Vec::new();
 
         for filename in matches.values_of_os("INPUT").unwrap() {
-            let ns = solang::parse_and_resolve(filename, &mut resolver, target);
+            let opt = &Default::default();
+            let ns = solang::parse_and_resolve(filename, &mut resolver, target, opt);
 
             diagnostics::print_messages(&resolver, &ns, verbose);
 
@@ -317,6 +327,7 @@ fn main() {
             vector_to_slice: !matches.is_present("VECTORTOSLICE"),
             math_overflow_check,
             common_subexpression_elimination: !matches.is_present("COMMONSUBEXPRESSIONELIMINATION"),
+            implicit_type_cast_check: !matches.is_present("IMPLICITTYPECAST"),
             opt_level,
         };
 
@@ -436,7 +447,7 @@ fn process_file(
     let mut json_contracts = HashMap::new();
 
     // resolve phase
-    let mut ns = solang::parse_and_resolve(filename, resolver, target);
+    let mut ns = solang::parse_and_resolve(filename, resolver, target, opt);
 
     // codegen all the contracts; some additional errors/warnings will be detected here
     codegen(&mut ns, opt);

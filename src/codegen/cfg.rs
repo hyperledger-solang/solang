@@ -1286,7 +1286,7 @@ pub fn optimize_and_check_cfg(
         vector_to_slice::vector_to_slice(cfg, ns);
     }
     if opt.strength_reduce {
-        strength_reduce::strength_reduce(cfg, ns);
+        strength_reduce::strength_reduce(cfg, ns, opt);
     }
     if opt.dead_storage {
         dead_storage::dead_storage(cfg, ns);

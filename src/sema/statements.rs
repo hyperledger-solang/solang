@@ -9,6 +9,7 @@ use super::symtable::{LoopScopes, Symtable};
 use crate::parser::pt;
 use crate::sema::symtable::VariableUsage;
 use crate::sema::unused_variable::{assigned_variable, check_function_call, used_variable};
+use crate::Options;
 use std::collections::{BTreeMap, HashMap};
 
 pub fn resolve_function_body(
@@ -17,6 +18,7 @@ pub fn resolve_function_body(
     contract_no: Option<usize>,
     function_no: usize,
     ns: &mut Namespace,
+    opt: &Options,
 ) -> Result<(), ()> {
     let mut symtable = Symtable::new();
     let mut loops = LoopScopes::new();
@@ -91,6 +93,7 @@ pub fn resolve_function_body(
                                 ns,
                                 &mut symtable,
                                 &mut diagnostics,
+                                opt,
                             ) {
                                 for arg in &args {
                                     used_variable(ns, arg, &mut symtable);
@@ -177,6 +180,7 @@ pub fn resolve_function_body(
                     ns,
                     &mut symtable,
                     &mut diagnostics,
+                    opt,
                 ) {
                     modifiers.push(e);
                 }
@@ -247,6 +251,7 @@ pub fn resolve_function_body(
         &mut loops,
         ns,
         &mut diagnostics,
+        opt,
     );
 
     ns.diagnostics.extend(diagnostics);
@@ -300,13 +305,14 @@ fn statement(
     loops: &mut LoopScopes,
     ns: &mut Namespace,
     diagnostics: &mut Vec<Diagnostic>,
+    opt: &Options,
 ) -> Result<bool, ()> {
     let function_no = context.function_no.unwrap();
 
     match stmt {
         pt::Statement::VariableDefinition(loc, decl, initializer) => {
             let (var_ty, ty_loc) =
-                resolve_var_decl_ty(&decl.ty, &decl.storage, context, ns, diagnostics)?;
+                resolve_var_decl_ty(&decl.ty, &decl.storage, context, ns, diagnostics, opt)?;
 
             let initializer = if let Some(init) = initializer {
                 let expr = expression(
@@ -316,11 +322,20 @@ fn statement(
                     symtable,
                     diagnostics,
                     ResolveTo::Type(&var_ty),
+                    opt,
                 )?;
 
                 used_variable(ns, &expr, symtable);
 
-                Some(cast(&expr.loc(), expr, &var_ty, true, ns, diagnostics)?)
+                Some(cast(
+                    &expr.loc(),
+                    expr,
+                    &var_ty,
+                    true,
+                    ns,
+                    diagnostics,
+                    opt,
+                )?)
             } else {
                 None
             };
@@ -372,7 +387,7 @@ fn statement(
                     ));
                     return Err(());
                 }
-                reachable = statement(stmt, res, &context, symtable, loops, ns, diagnostics)?;
+                reachable = statement(stmt, res, &context, symtable, loops, ns, diagnostics, opt)?;
             }
 
             symtable.leave_scope();
@@ -411,9 +426,10 @@ fn statement(
                 symtable,
                 diagnostics,
                 ResolveTo::Type(&Type::Bool),
+                opt,
             )?;
             used_variable(ns, &expr, symtable);
-            let cond = cast(&expr.loc(), expr, &Type::Bool, true, ns, diagnostics)?;
+            let cond = cast(&expr.loc(), expr, &Type::Bool, true, ns, diagnostics, opt)?;
 
             symtable.new_scope();
             let mut body_stmts = Vec::new();
@@ -426,6 +442,7 @@ fn statement(
                 loops,
                 ns,
                 diagnostics,
+                opt,
             )?;
             symtable.leave_scope();
             loops.leave_scope();
@@ -442,9 +459,10 @@ fn statement(
                 symtable,
                 diagnostics,
                 ResolveTo::Type(&Type::Bool),
+                opt,
             )?;
             used_variable(ns, &expr, symtable);
-            let cond = cast(&expr.loc(), expr, &Type::Bool, true, ns, diagnostics)?;
+            let cond = cast(&expr.loc(), expr, &Type::Bool, true, ns, diagnostics, opt)?;
 
             symtable.new_scope();
             let mut body_stmts = Vec::new();
@@ -457,6 +475,7 @@ fn statement(
                 loops,
                 ns,
                 diagnostics,
+                opt,
             )?;
             symtable.leave_scope();
             loops.leave_scope();
@@ -472,10 +491,11 @@ fn statement(
                 symtable,
                 diagnostics,
                 ResolveTo::Type(&Type::Bool),
+                opt,
             )?;
             used_variable(ns, &expr, symtable);
 
-            let cond = cast(&expr.loc(), expr, &Type::Bool, true, ns, diagnostics)?;
+            let cond = cast(&expr.loc(), expr, &Type::Bool, true, ns, diagnostics, opt)?;
 
             symtable.new_scope();
             let mut then_stmts = Vec::new();
@@ -487,6 +507,7 @@ fn statement(
                 loops,
                 ns,
                 diagnostics,
+                opt,
             )?;
             symtable.leave_scope();
 
@@ -501,6 +522,7 @@ fn statement(
                     loops,
                     ns,
                     diagnostics,
+                    opt,
                 )?;
 
                 symtable.leave_scope();
@@ -533,6 +555,7 @@ fn statement(
                     loops,
                     ns,
                     diagnostics,
+                    opt,
                 )?;
             }
 
@@ -549,6 +572,7 @@ fn statement(
                     loops,
                     ns,
                     diagnostics,
+                    opt,
                 )?;
             }
 
@@ -565,6 +589,7 @@ fn statement(
                     loops,
                     ns,
                     diagnostics,
+                    opt,
                 )?;
             }
 
@@ -597,6 +622,7 @@ fn statement(
                     loops,
                     ns,
                     diagnostics,
+                    opt,
                 )?;
             }
 
@@ -607,9 +633,18 @@ fn statement(
                 symtable,
                 diagnostics,
                 ResolveTo::Type(&Type::Bool),
+                opt,
             )?;
 
-            let cond = cast(&cond_expr.loc(), expr, &Type::Bool, true, ns, diagnostics)?;
+            let cond = cast(
+                &cond_expr.loc(),
+                expr,
+                &Type::Bool,
+                true,
+                ns,
+                diagnostics,
+                opt,
+            )?;
 
             // continue goes to next, and if that does exist, cond
             loops.new_scope();
@@ -623,6 +658,7 @@ fn statement(
                     loops,
                     ns,
                     diagnostics,
+                    opt,
                 )?,
                 None => true,
             };
@@ -643,6 +679,7 @@ fn statement(
                         loops,
                         ns,
                         diagnostics,
+                        opt,
                     )?;
                 }
             }
@@ -679,7 +716,7 @@ fn statement(
             Ok(false)
         }
         pt::Statement::Return(loc, Some(returns)) => {
-            let expr = return_with_values(returns, loc, context, symtable, ns, diagnostics)?;
+            let expr = return_with_values(returns, loc, context, symtable, ns, diagnostics, opt)?;
 
             for offset in symtable.returns.iter() {
                 let elem = symtable.vars.get_mut(offset).unwrap();
@@ -693,8 +730,15 @@ fn statement(
         pt::Statement::Expression(loc, expr) => {
             // delete statement
             if let pt::Expression::Delete(_, expr) = expr {
-                let expr =
-                    expression(expr, context, ns, symtable, diagnostics, ResolveTo::Unknown)?;
+                let expr = expression(
+                    expr,
+                    context,
+                    ns,
+                    symtable,
+                    diagnostics,
+                    ResolveTo::Unknown,
+                    opt,
+                )?;
                 used_variable(ns, &expr, symtable);
                 return if let Type::StorageRef(_, ty) = expr.ty() {
                     if expr.ty().is_mapping() {
@@ -746,6 +790,7 @@ fn statement(
                         symtable,
                         ns,
                         diagnostics,
+                        opt,
                     )?);
 
                     // if a noreturn function was called, then the destructure would not resolve
@@ -754,7 +799,15 @@ fn statement(
             }
 
             // the rest. We don't care about the result
-            let expr = expression(expr, context, ns, symtable, diagnostics, ResolveTo::Discard)?;
+            let expr = expression(
+                expr,
+                context,
+                ns,
+                symtable,
+                diagnostics,
+                ResolveTo::Discard,
+                opt,
+            )?;
 
             let reachable = expr.ty() != Type::Unreachable;
 
@@ -774,13 +827,14 @@ fn statement(
                 loops,
                 ns,
                 diagnostics,
+                opt,
             )?;
             res.push(stmt);
 
             Ok(reachable)
         }
         pt::Statement::Emit(loc, ty) => {
-            if let Ok(emit) = emit_event(loc, ty, context, symtable, ns, diagnostics) {
+            if let Ok(emit) = emit_event(loc, ty, context, symtable, ns, diagnostics, opt) {
                 res.push(emit);
             }
 
@@ -805,6 +859,7 @@ fn emit_event(
     symtable: &mut Symtable,
     ns: &mut Namespace,
     diagnostics: &mut Vec<Diagnostic>,
+    opt: &Options,
 ) -> Result<Statement, ()> {
     let function_no = context.function_no.unwrap();
 
@@ -819,6 +874,7 @@ fn emit_event(
                 context.contract_no,
                 ty,
                 &mut temp_diagnostics,
+                opt,
             );
 
             // check if arguments are valid expressions
@@ -830,6 +886,7 @@ fn emit_event(
                     symtable,
                     &mut temp_diagnostics,
                     ResolveTo::Unknown,
+                    opt,
                 );
             }
 
@@ -870,6 +927,7 @@ fn emit_event(
                         symtable,
                         &mut temp_diagnostics,
                         ResolveTo::Type(&ty),
+                        opt,
                     ) {
                         Ok(e) => e,
                         Err(()) => {
@@ -886,6 +944,7 @@ fn emit_event(
                         true,
                         ns,
                         &mut temp_diagnostics,
+                        opt,
                     ) {
                         Ok(expr) => cast_args.push(expr),
                         Err(_) => {
@@ -927,6 +986,7 @@ fn emit_event(
                 context.contract_no,
                 ty,
                 &mut temp_diagnostics,
+                opt,
             );
 
             // check if arguments are valid expressions
@@ -947,6 +1007,7 @@ fn emit_event(
                     symtable,
                     &mut temp_diagnostics,
                     ResolveTo::Unknown,
+                    opt,
                 );
 
                 arguments.insert(&arg.name.name, &arg.expr);
@@ -1018,6 +1079,7 @@ fn emit_event(
                         symtable,
                         &mut temp_diagnostics,
                         ResolveTo::Type(&param.ty),
+                        opt,
                     ) {
                         Ok(e) => e,
                         Err(()) => {
@@ -1028,7 +1090,15 @@ fn emit_event(
 
                     used_variable(ns, &arg, symtable);
 
-                    match cast(&arg.loc(), arg, &param.ty, true, ns, &mut temp_diagnostics) {
+                    match cast(
+                        &arg.loc(),
+                        arg,
+                        &param.ty,
+                        true,
+                        ns,
+                        &mut temp_diagnostics,
+                        opt,
+                    ) {
                         Ok(expr) => cast_args.push(expr),
                         Err(_) => {
                             matches = false;
@@ -1060,7 +1130,7 @@ fn emit_event(
             }
         }
         pt::Expression::FunctionCallBlock(_, ty, block) => {
-            let _ = ns.resolve_event(context.file_no, context.contract_no, ty, diagnostics);
+            let _ = ns.resolve_event(context.file_no, context.contract_no, ty, diagnostics, opt);
 
             diagnostics.push(Diagnostic::error(
                 block.loc(),
@@ -1082,6 +1152,7 @@ fn destructure(
     symtable: &mut Symtable,
     ns: &mut Namespace,
     diagnostics: &mut Vec<Diagnostic>,
+    opt: &Options,
 ) -> Result<Statement, ()> {
     // first resolve the fields so we know the types
     let mut fields = Vec::new();
@@ -1111,7 +1182,15 @@ fn destructure(
                 }
 
                 // ty will just be a normal expression, not a type
-                let e = expression(ty, &lcontext, ns, symtable, diagnostics, ResolveTo::Unknown)?;
+                let e = expression(
+                    ty,
+                    &lcontext,
+                    ns,
+                    symtable,
+                    diagnostics,
+                    ResolveTo::Unknown,
+                    opt,
+                )?;
 
                 match &e {
                     Expression::ConstantVariable(_, _, Some(contract_no), var_no) => {
@@ -1170,7 +1249,7 @@ fn destructure(
                 storage,
                 name: Some(name),
             }) => {
-                let (ty, ty_loc) = resolve_var_decl_ty(ty, storage, context, ns, diagnostics)?;
+                let (ty, ty_loc) = resolve_var_decl_ty(ty, storage, context, ns, diagnostics, opt)?;
 
                 if let Some(pos) = symtable.add(
                     name,
@@ -1210,6 +1289,7 @@ fn destructure(
         symtable,
         ns,
         diagnostics,
+        opt,
     )?;
 
     Ok(Statement::Destructure(*loc, fields, expr))
@@ -1224,6 +1304,7 @@ fn destructure_values(
     symtable: &mut Symtable,
     ns: &mut Namespace,
     diagnostics: &mut Vec<Diagnostic>,
+    opt: &Options,
 ) -> Result<Expression, ()> {
     let expr = match expr {
         pt::Expression::FunctionCall(loc, ty, args) => {
@@ -1236,12 +1317,14 @@ fn destructure_values(
                 symtable,
                 diagnostics,
                 ResolveTo::Unknown,
+                opt,
             )?;
             check_function_call(ns, &res, symtable);
             res
         }
         pt::Expression::NamedFunctionCall(loc, ty, args) => {
-            let res = named_function_call_expr(loc, ty, args, context, ns, symtable, diagnostics)?;
+            let res =
+                named_function_call_expr(loc, ty, args, context, ns, symtable, diagnostics, opt)?;
             check_function_call(ns, &res, symtable);
             res
         }
@@ -1253,6 +1336,7 @@ fn destructure_values(
                 symtable,
                 diagnostics,
                 ResolveTo::Type(&Type::Bool),
+                opt,
             )?;
 
             used_variable(ns, &cond, symtable);
@@ -1265,6 +1349,7 @@ fn destructure_values(
                 symtable,
                 ns,
                 diagnostics,
+                opt,
             )?;
             used_variable(ns, &left, symtable);
             let right = destructure_values(
@@ -1276,6 +1361,7 @@ fn destructure_values(
                 symtable,
                 ns,
                 diagnostics,
+                opt,
             )?;
             used_variable(ns, &right, symtable);
 
@@ -1316,6 +1402,7 @@ fn destructure_values(
                     } else {
                         ResolveTo::Unknown
                     },
+                    opt,
                 )?;
                 match e.ty() {
                     Type::Void | Type::Unreachable => {
@@ -1367,6 +1454,7 @@ fn destructure_values(
                 true,
                 ns,
                 diagnostics,
+                opt,
             )?;
         }
     }
@@ -1380,10 +1468,17 @@ fn resolve_var_decl_ty(
     context: &ExprContext,
     ns: &mut Namespace,
     diagnostics: &mut Vec<Diagnostic>,
+    opt: &Options,
 ) -> Result<(Type, pt::Loc), ()> {
     let mut loc_ty = ty.loc();
-    let mut var_ty =
-        ns.resolve_type(context.file_no, context.contract_no, false, ty, diagnostics)?;
+    let mut var_ty = ns.resolve_type(
+        context.file_no,
+        context.contract_no,
+        false,
+        ty,
+        diagnostics,
+        opt,
+    )?;
 
     if let Some(storage) = storage {
         if !var_ty.can_have_data_location() {
@@ -1433,6 +1528,7 @@ fn return_with_values(
     symtable: &mut Symtable,
     ns: &mut Namespace,
     diagnostics: &mut Vec<Diagnostic>,
+    opt: &Options,
 ) -> Result<Expression, ()> {
     let function_no = context.function_no.unwrap();
 
@@ -1449,12 +1545,14 @@ fn return_with_values(
                 symtable,
                 diagnostics,
                 ResolveTo::Unknown,
+                opt,
             )?;
             used_variable(ns, &expr, symtable);
             expr
         }
         pt::Expression::NamedFunctionCall(loc, ty, args) => {
-            let expr = named_call_expr(loc, ty, args, true, context, ns, symtable, diagnostics)?;
+            let expr =
+                named_call_expr(loc, ty, args, true, context, ns, symtable, diagnostics, opt)?;
             used_variable(ns, &expr, symtable);
             expr
         }
@@ -1466,14 +1564,16 @@ fn return_with_values(
                 symtable,
                 diagnostics,
                 ResolveTo::Type(&Type::Bool),
+                opt,
             )?;
             used_variable(ns, &cond, symtable);
 
-            let left = return_with_values(left, &left.loc(), context, symtable, ns, diagnostics)?;
+            let left =
+                return_with_values(left, &left.loc(), context, symtable, ns, diagnostics, opt)?;
             used_variable(ns, &left, symtable);
 
             let right =
-                return_with_values(right, &right.loc(), context, symtable, ns, diagnostics)?;
+                return_with_values(right, &right.loc(), context, symtable, ns, diagnostics, opt)?;
             used_variable(ns, &right, symtable);
 
             return Ok(Expression::Ternary(
@@ -1534,8 +1634,9 @@ fn return_with_values(
                     symtable,
                     diagnostics,
                     ResolveTo::Type(&return_ty),
+                    opt,
                 )?;
-                let expr = cast(loc, expr, &return_ty, true, ns, diagnostics)?;
+                let expr = cast(loc, expr, &return_ty, true, ns, diagnostics, opt)?;
                 used_variable(ns, &expr, symtable);
                 exprs.push(expr);
             }
@@ -1606,6 +1707,7 @@ fn return_with_values(
                 true,
                 ns,
                 diagnostics,
+                opt,
             )
         })
         .collect::<Result<Vec<_>, _>>()?;
@@ -1677,6 +1779,7 @@ fn try_catch(
     loops: &mut LoopScopes,
     ns: &mut Namespace,
     diagnostics: &mut Vec<Diagnostic>,
+    opt: &Options,
 ) -> Result<(Statement, bool), ()> {
     let mut expr = expr;
     let mut ok = None;
@@ -1706,12 +1809,14 @@ fn try_catch(
                 symtable,
                 diagnostics,
                 ResolveTo::Unknown,
+                opt,
             )?;
             check_function_call(ns, &res, symtable);
             res
         }
         pt::Expression::NamedFunctionCall(loc, ty, args) => {
-            let res = named_function_call_expr(loc, ty, args, context, ns, symtable, diagnostics)?;
+            let res =
+                named_function_call_expr(loc, ty, args, context, ns, symtable, diagnostics, opt)?;
 
             check_function_call(ns, &res, symtable);
 
@@ -1736,14 +1841,22 @@ fn try_catch(
 
             match call {
                 pt::Expression::FunctionCall(_, ty, args) => {
-                    let res = new(loc, ty, args, context, ns, symtable, diagnostics)?;
+                    let res = new(loc, ty, args, context, ns, symtable, diagnostics, opt)?;
                     check_function_call(ns, &res, symtable);
 
                     res
                 }
                 pt::Expression::NamedFunctionCall(_, ty, args) => {
-                    let res =
-                        constructor_named_args(loc, ty, args, context, ns, symtable, diagnostics)?;
+                    let res = constructor_named_args(
+                        loc,
+                        ty,
+                        args,
+                        context,
+                        ns,
+                        symtable,
+                        diagnostics,
+                        opt,
+                    )?;
                     check_function_call(ns, &res, symtable);
 
                     res
@@ -1851,7 +1964,8 @@ fn try_catch(
             Some(pt::Parameter {
                 ty, storage, name, ..
             }) => {
-                let (ret_ty, ty_loc) = resolve_var_decl_ty(ty, storage, context, ns, diagnostics)?;
+                let (ret_ty, ty_loc) =
+                    resolve_var_decl_ty(ty, storage, context, ns, diagnostics, opt)?;
 
                 if arg_ty != ret_ty {
                     diagnostics.push(Diagnostic::error(
@@ -1927,6 +2041,7 @@ fn try_catch(
         loops,
         ns,
         diagnostics,
+        opt,
     )?;
 
     symtable.leave_scope();
@@ -1949,6 +2064,7 @@ fn try_catch(
             context,
             ns,
             diagnostics,
+            opt,
         )?;
 
         if error_ty != Type::String {
@@ -2000,6 +2116,7 @@ fn try_catch(
             loops,
             ns,
             diagnostics,
+            opt,
         )?;
 
         finally_reachable |= reachable;
@@ -2018,7 +2135,7 @@ fn try_catch(
 
     let catch_param = if let Some(param) = &catch_stmt.0 {
         let (catch_ty, ty_loc) =
-            resolve_var_decl_ty(&param.ty, &param.storage, context, ns, diagnostics)?;
+            resolve_var_decl_ty(&param.ty, &param.storage, context, ns, diagnostics, opt)?;
 
         if catch_ty != Type::DynamicBytes {
             diagnostics.push(Diagnostic::error(
@@ -2070,6 +2187,7 @@ fn try_catch(
         loops,
         ns,
         diagnostics,
+        opt,
     )?;
 
     finally_reachable |= reachable;

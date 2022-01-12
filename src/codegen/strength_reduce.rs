@@ -1,6 +1,7 @@
 use super::cfg::{ControlFlowGraph, Instr};
 use crate::sema::ast::{Expression, Namespace, Type};
 use crate::sema::expression::cast;
+use crate::Options;
 use bitvec::prelude::*;
 use itertools::Itertools;
 use num_bigint::{BigInt, Sign};
@@ -64,7 +65,7 @@ use std::fmt;
 const MAX_VALUES: usize = 100;
 
 /// some information when hovering over a variable.
-pub fn strength_reduce(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
+pub fn strength_reduce(cfg: &mut ControlFlowGraph, ns: &mut Namespace, opt: &Options) {
     // reaching definitions for integer calculations
     let mut block_vars = HashMap::new();
     let mut vars = HashMap::new();
@@ -74,7 +75,7 @@ pub fn strength_reduce(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
     // now we have all the reaching values for the top of each block
     // we can now step through each block and do any strength reduction where possible
     for (block_no, vars) in block_vars.into_iter() {
-        block_reduce(block_no, cfg, vars, ns);
+        block_reduce(block_no, cfg, vars, ns, opt);
     }
 }
 
@@ -85,39 +86,40 @@ fn block_reduce(
     cfg: &mut ControlFlowGraph,
     mut vars: Variables,
     ns: &mut Namespace,
+    opt: &Options,
 ) {
     for instr in &mut cfg.blocks[block_no].instr {
         match instr {
             Instr::Set { expr, .. } => {
-                *expr = expression_reduce(expr, &vars, ns);
+                *expr = expression_reduce(expr, &vars, ns, opt);
             }
             Instr::Call { args, .. } => {
                 *args = args
                     .iter()
-                    .map(|e| expression_reduce(e, &vars, ns))
+                    .map(|e| expression_reduce(e, &vars, ns, opt))
                     .collect();
             }
             Instr::Return { value } => {
                 *value = value
                     .iter()
-                    .map(|e| expression_reduce(e, &vars, ns))
+                    .map(|e| expression_reduce(e, &vars, ns, opt))
                     .collect();
             }
             Instr::Store { dest, .. } => {
-                *dest = expression_reduce(dest, &vars, ns);
+                *dest = expression_reduce(dest, &vars, ns, opt);
             }
             Instr::AssertFailure { expr: Some(expr) } => {
-                *expr = expression_reduce(expr, &vars, ns);
+                *expr = expression_reduce(expr, &vars, ns, opt);
             }
             Instr::Print { expr } => {
-                *expr = expression_reduce(expr, &vars, ns);
+                *expr = expression_reduce(expr, &vars, ns, opt);
             }
             Instr::ClearStorage { storage, .. } => {
-                *storage = expression_reduce(storage, &vars, ns);
+                *storage = expression_reduce(storage, &vars, ns, opt);
             }
             Instr::SetStorage { storage, value, .. } => {
-                *value = expression_reduce(value, &vars, ns);
-                *storage = expression_reduce(storage, &vars, ns);
+                *value = expression_reduce(value, &vars, ns, opt);
+                *storage = expression_reduce(storage, &vars, ns, opt);
             }
             Instr::SetStorageBytes {
                 storage,
@@ -125,21 +127,21 @@ fn block_reduce(
                 offset,
                 ..
             } => {
-                *value = expression_reduce(value, &vars, ns);
-                *storage = expression_reduce(storage, &vars, ns);
-                *offset = expression_reduce(offset, &vars, ns);
+                *value = expression_reduce(value, &vars, ns, opt);
+                *storage = expression_reduce(storage, &vars, ns, opt);
+                *offset = expression_reduce(offset, &vars, ns, opt);
             }
             Instr::PushStorage { storage, value, .. } => {
                 if let Some(value) = value {
-                    *value = expression_reduce(value, &vars, ns);
+                    *value = expression_reduce(value, &vars, ns, opt);
                 }
-                *storage = expression_reduce(storage, &vars, ns);
+                *storage = expression_reduce(storage, &vars, ns, opt);
             }
             Instr::PopStorage { storage, .. } => {
-                *storage = expression_reduce(storage, &vars, ns);
+                *storage = expression_reduce(storage, &vars, ns, opt);
             }
             Instr::PushMemory { value, .. } => {
-                *value = Box::new(expression_reduce(value, &vars, ns));
+                *value = Box::new(expression_reduce(value, &vars, ns, opt));
             }
             Instr::Constructor {
                 args,
@@ -150,15 +152,15 @@ fn block_reduce(
             } => {
                 *args = args
                     .iter()
-                    .map(|e| expression_reduce(e, &vars, ns))
+                    .map(|e| expression_reduce(e, &vars, ns, opt))
                     .collect();
                 if let Some(value) = value {
-                    *value = expression_reduce(value, &vars, ns);
+                    *value = expression_reduce(value, &vars, ns, opt);
                 }
                 if let Some(salt) = salt {
-                    *salt = expression_reduce(salt, &vars, ns);
+                    *salt = expression_reduce(salt, &vars, ns, opt);
                 }
-                *gas = expression_reduce(gas, &vars, ns);
+                *gas = expression_reduce(gas, &vars, ns, opt);
             }
             Instr::ExternalCall {
                 address,
@@ -167,29 +169,29 @@ fn block_reduce(
                 gas,
                 ..
             } => {
-                *value = expression_reduce(value, &vars, ns);
+                *value = expression_reduce(value, &vars, ns, opt);
                 if let Some(address) = address {
-                    *address = expression_reduce(address, &vars, ns);
+                    *address = expression_reduce(address, &vars, ns, opt);
                 }
-                *payload = expression_reduce(payload, &vars, ns);
-                *gas = expression_reduce(gas, &vars, ns);
+                *payload = expression_reduce(payload, &vars, ns, opt);
+                *gas = expression_reduce(gas, &vars, ns, opt);
             }
             Instr::ValueTransfer { address, value, .. } => {
-                *address = expression_reduce(address, &vars, ns);
-                *value = expression_reduce(value, &vars, ns);
+                *address = expression_reduce(address, &vars, ns, opt);
+                *value = expression_reduce(value, &vars, ns, opt);
             }
             Instr::AbiDecode { data, .. } => {
-                *data = expression_reduce(data, &vars, ns);
+                *data = expression_reduce(data, &vars, ns, opt);
             }
             Instr::EmitEvent { topics, data, .. } => {
                 *topics = topics
                     .iter()
-                    .map(|e| expression_reduce(e, &vars, ns))
+                    .map(|e| expression_reduce(e, &vars, ns, opt))
                     .collect();
 
                 *data = data
                     .iter()
-                    .map(|e| expression_reduce(e, &vars, ns))
+                    .map(|e| expression_reduce(e, &vars, ns, opt))
                     .collect();
             }
             _ => (),
@@ -200,7 +202,12 @@ fn block_reduce(
 }
 
 /// Walk through an expression, and do the replacements for the expensive operations
-fn expression_reduce(expr: &Expression, vars: &Variables, ns: &mut Namespace) -> Expression {
+fn expression_reduce(
+    expr: &Expression,
+    vars: &Variables,
+    ns: &mut Namespace,
+    opt: &Options,
+) -> Expression {
     let filter = |expr: &Expression, ns: &mut Namespace| -> Expression {
         match expr {
             Expression::Multiply(loc, ty, unchecked, left, right) => {
@@ -269,6 +276,7 @@ fn expression_reduce(expr: &Expression, vars: &Variables, ns: &mut Namespace) ->
                                                 false,
                                                 ns,
                                                 &mut Vec::new(),
+                                                opt,
                                             )
                                             .unwrap(),
                                         ),
@@ -280,6 +288,7 @@ fn expression_reduce(expr: &Expression, vars: &Variables, ns: &mut Namespace) ->
                                                 false,
                                                 ns,
                                                 &mut Vec::new(),
+                                                opt,
                                             )
                                             .unwrap(),
                                         ),
@@ -316,6 +325,7 @@ fn expression_reduce(expr: &Expression, vars: &Variables, ns: &mut Namespace) ->
                                             false,
                                             ns,
                                             &mut Vec::new(),
+                                            opt,
                                         )
                                         .unwrap(),
                                     ),
@@ -327,6 +337,7 @@ fn expression_reduce(expr: &Expression, vars: &Variables, ns: &mut Namespace) ->
                                             false,
                                             ns,
                                             &mut Vec::new(),
+                                            opt,
                                         )
                                         .unwrap(),
                                     ),
@@ -403,6 +414,7 @@ fn expression_reduce(expr: &Expression, vars: &Variables, ns: &mut Namespace) ->
                                                 false,
                                                 ns,
                                                 &mut Vec::new(),
+                                                opt,
                                             )
                                             .unwrap(),
                                         ),
@@ -414,6 +426,7 @@ fn expression_reduce(expr: &Expression, vars: &Variables, ns: &mut Namespace) ->
                                                 false,
                                                 ns,
                                                 &mut Vec::new(),
+                                                opt,
                                             )
                                             .unwrap(),
                                         ),
@@ -446,6 +459,7 @@ fn expression_reduce(expr: &Expression, vars: &Variables, ns: &mut Namespace) ->
                                             false,
                                             ns,
                                             &mut Vec::new(),
+                                            opt,
                                         )
                                         .unwrap(),
                                     ),
@@ -457,6 +471,7 @@ fn expression_reduce(expr: &Expression, vars: &Variables, ns: &mut Namespace) ->
                                             false,
                                             ns,
                                             &mut Vec::new(),
+                                            opt,
                                         )
                                         .unwrap(),
                                     ),
@@ -531,6 +546,7 @@ fn expression_reduce(expr: &Expression, vars: &Variables, ns: &mut Namespace) ->
                                                 false,
                                                 ns,
                                                 &mut Vec::new(),
+                                                opt,
                                             )
                                             .unwrap(),
                                         ),
@@ -542,6 +558,7 @@ fn expression_reduce(expr: &Expression, vars: &Variables, ns: &mut Namespace) ->
                                                 false,
                                                 ns,
                                                 &mut Vec::new(),
+                                                opt,
                                             )
                                             .unwrap(),
                                         ),
@@ -574,6 +591,7 @@ fn expression_reduce(expr: &Expression, vars: &Variables, ns: &mut Namespace) ->
                                             false,
                                             ns,
                                             &mut Vec::new(),
+                                            opt,
                                         )
                                         .unwrap(),
                                     ),
@@ -585,6 +603,7 @@ fn expression_reduce(expr: &Expression, vars: &Variables, ns: &mut Namespace) ->
                                             false,
                                             ns,
                                             &mut Vec::new(),
+                                            opt,
                                         )
                                         .unwrap(),
                                     ),

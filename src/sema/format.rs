@@ -2,6 +2,7 @@ use super::ast::{Diagnostic, Expression, FormatArg, Namespace, Type};
 use super::expression::{cast, expression, ExprContext, ResolveTo};
 use super::symtable::Symtable;
 use crate::parser::pt;
+use crate::Options;
 
 use std::iter::Peekable;
 use std::slice::Iter;
@@ -19,16 +20,26 @@ pub fn string_format(
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
+    opt: &Options,
 ) -> Result<Expression, ()> {
     // first resolve the arguments. We can't say anything about the format string if the args are broken
     let mut resolved_args = Vec::new();
 
     for arg in args {
-        let expr = expression(arg, context, ns, symtable, diagnostics, ResolveTo::Unknown)?;
+        let expr = expression(
+            arg,
+            context,
+            ns,
+            symtable,
+            diagnostics,
+            ResolveTo::Unknown,
+            opt,
+        )?;
 
         let ty = expr.ty();
 
-        resolved_args.push(cast(&arg.loc(), expr, ty.deref_any(), true, ns, diagnostics).unwrap());
+        resolved_args
+            .push(cast(&arg.loc(), expr, ty.deref_any(), true, ns, diagnostics, opt).unwrap());
     }
 
     let mut format_iterator = FormatIterator::new(literals).peekable();

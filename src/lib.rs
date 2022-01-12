@@ -17,6 +17,65 @@ use sema::ast;
 use sema::diagnostics;
 use std::{ffi::OsStr, fmt};
 
+/// Compilation options
+#[derive(Debug, PartialEq, Eq, Copy, Clone)]
+pub enum OptimizationLevel {
+    None = 0,
+    Less = 1,
+    Default = 2,
+    Aggressive = 3,
+}
+
+#[cfg(feature = "llvm")]
+impl From<OptimizationLevel> for inkwell::OptimizationLevel {
+    fn from(level: OptimizationLevel) -> Self {
+        match level {
+            OptimizationLevel::None => inkwell::OptimizationLevel::None,
+            OptimizationLevel::Less => inkwell::OptimizationLevel::Less,
+            OptimizationLevel::Default => inkwell::OptimizationLevel::Default,
+            OptimizationLevel::Aggressive => inkwell::OptimizationLevel::Aggressive,
+        }
+    }
+}
+
+#[cfg(feature = "llvm")]
+impl From<inkwell::OptimizationLevel> for OptimizationLevel {
+    fn from(level: inkwell::OptimizationLevel) -> Self {
+        match level {
+            inkwell::OptimizationLevel::None => OptimizationLevel::None,
+            inkwell::OptimizationLevel::Less => OptimizationLevel::Less,
+            inkwell::OptimizationLevel::Default => OptimizationLevel::Default,
+            inkwell::OptimizationLevel::Aggressive => OptimizationLevel::Aggressive,
+        }
+    }
+}
+
+pub struct Options {
+    pub dead_storage: bool,
+    pub constant_folding: bool,
+    pub strength_reduce: bool,
+    pub vector_to_slice: bool,
+    pub math_overflow_check: bool,
+    pub common_subexpression_elimination: bool,
+    pub implicit_type_cast_check: bool,
+    pub opt_level: OptimizationLevel,
+}
+
+impl Default for Options {
+    fn default() -> Self {
+        Options {
+            dead_storage: true,
+            constant_folding: true,
+            strength_reduce: true,
+            vector_to_slice: true,
+            math_overflow_check: false,
+            common_subexpression_elimination: true,
+            implicit_type_cast_check: true,
+            opt_level: OptimizationLevel::Default,
+        }
+    }
+}
+
 /// The target chain you want to compile Solidity for.
 #[derive(Clone, Copy)]
 pub enum Target {
@@ -113,8 +172,9 @@ pub fn compile(
     opt_level: inkwell::OptimizationLevel,
     target: Target,
     math_overflow_check: bool,
+    opt: &Options,
 ) -> (Vec<(Vec<u8>, String)>, ast::Namespace) {
-    let mut ns = parse_and_resolve(filename, resolver, target);
+    let mut ns = parse_and_resolve(filename, resolver, target, opt);
 
     if diagnostics::any_errors(&ns.diagnostics) {
         return (Vec::new(), ns);
@@ -123,7 +183,7 @@ pub fn compile(
     // codegen all the contracts
     codegen::codegen(
         &mut ns,
-        &codegen::Options {
+        &Options {
             math_overflow_check,
             opt_level: opt_level.into(),
             ..Default::default()
@@ -167,6 +227,7 @@ pub fn parse_and_resolve(
     filename: &OsStr,
     resolver: &mut FileResolver,
     target: Target,
+    opt: &Options,
 ) -> ast::Namespace {
     let mut ns = ast::Namespace::new(target);
 
@@ -181,7 +242,7 @@ pub fn parse_and_resolve(
             });
         }
         Ok(file) => {
-            sema::sema(&file, resolver, &mut ns);
+            sema::sema(&file, resolver, &mut ns, opt);
         }
     }
 

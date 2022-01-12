@@ -9,6 +9,7 @@ use super::{
     SOLANA_SPARSE_ARRAY_SIZE,
 };
 use crate::parser::pt;
+use crate::Options;
 use crate::Target;
 use num_bigint::BigInt;
 use num_traits::{One, Zero};
@@ -98,10 +99,10 @@ pub fn resolve_typenames<'a>(
     delay
 }
 
-pub fn resolve_fields(delay: ResolveFields, file_no: usize, ns: &mut Namespace) {
+pub fn resolve_fields(delay: ResolveFields, file_no: usize, ns: &mut Namespace, opt: &Options) {
     // now we can resolve the fields for the structs
     for (pos, def, contract) in delay.structs {
-        if let Some((tags, fields)) = struct_decl(def, file_no, contract, ns) {
+        if let Some((tags, fields)) = struct_decl(def, file_no, contract, ns, opt) {
             ns.structs[pos].tags = tags;
             ns.structs[pos].fields = fields;
         }
@@ -148,7 +149,7 @@ pub fn resolve_fields(delay: ResolveFields, file_no: usize, ns: &mut Namespace) 
 
     // now we can resolve the fields for the events
     for (pos, def, contract) in delay.events {
-        if let Some((tags, fields)) = event_decl(def, file_no, contract, ns) {
+        if let Some((tags, fields)) = event_decl(def, file_no, contract, ns, opt) {
             ns.events[pos].signature = ns.signature(&ns.events[pos].name, &fields);
             ns.events[pos].fields = fields;
             ns.events[pos].tags = tags;
@@ -256,6 +257,7 @@ pub fn struct_decl(
     file_no: usize,
     contract_no: Option<usize>,
     ns: &mut Namespace,
+    opt: &Options,
 ) -> Option<(Vec<Tag>, Vec<Parameter>)> {
     let mut valid = true;
     let mut fields: Vec<Parameter> = Vec::new();
@@ -263,7 +265,14 @@ pub fn struct_decl(
     for field in &def.fields {
         let mut diagnostics = Vec::new();
 
-        let ty = match ns.resolve_type(file_no, contract_no, false, &field.ty, &mut diagnostics) {
+        let ty = match ns.resolve_type(
+            file_no,
+            contract_no,
+            false,
+            &field.ty,
+            &mut diagnostics,
+            opt,
+        ) {
             Ok(s) => s,
             Err(()) => {
                 ns.diagnostics.extend(diagnostics);
@@ -349,6 +358,7 @@ fn event_decl(
     file_no: usize,
     contract_no: Option<usize>,
     ns: &mut Namespace,
+    opt: &Options,
 ) -> Option<(Vec<Tag>, Vec<Parameter>)> {
     let mut valid = true;
     let mut fields: Vec<Parameter> = Vec::new();
@@ -357,7 +367,14 @@ fn event_decl(
     for field in &def.fields {
         let mut diagnostics = Vec::new();
 
-        let ty = match ns.resolve_type(file_no, contract_no, false, &field.ty, &mut diagnostics) {
+        let ty = match ns.resolve_type(
+            file_no,
+            contract_no,
+            false,
+            &field.ty,
+            &mut diagnostics,
+            opt,
+        ) {
             Ok(s) => s,
             Err(()) => {
                 ns.diagnostics.extend(diagnostics);

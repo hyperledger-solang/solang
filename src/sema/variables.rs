@@ -5,12 +5,14 @@ use super::expression::{cast, expression, ExprContext, ResolveTo};
 use super::symtable::Symtable;
 use super::tags::resolve_tags;
 use crate::parser::pt;
+use crate::Options;
 
 pub fn contract_variables(
     def: &pt::ContractDefinition,
     file_no: usize,
     contract_no: usize,
     ns: &mut Namespace,
+    opt: &Options,
 ) -> bool {
     let mut broken = false;
     let mut symtable = Symtable::new();
@@ -30,7 +32,15 @@ pub fn contract_variables(
                 continue;
             }
 
-            match var_decl(Some(def), s, file_no, Some(contract_no), ns, &mut symtable) {
+            match var_decl(
+                Some(def),
+                s,
+                file_no,
+                Some(contract_no),
+                ns,
+                &mut symtable,
+                opt,
+            ) {
                 None => {
                     broken = true;
                 }
@@ -58,6 +68,7 @@ pub fn var_decl(
     contract_no: Option<usize>,
     ns: &mut Namespace,
     symtable: &mut Symtable,
+    opt: &Options,
 ) -> Option<bool> {
     let mut attrs = s.attrs.clone();
     let mut ty = s.ty.clone();
@@ -88,7 +99,7 @@ pub fn var_decl(
 
     let mut diagnostics = Vec::new();
 
-    let ty = match ns.resolve_type(file_no, contract_no, false, &ty, &mut diagnostics) {
+    let ty = match ns.resolve_type(file_no, contract_no, false, &ty, &mut diagnostics, opt) {
         Ok(s) => s,
         Err(()) => {
             ns.diagnostics.extend(diagnostics);
@@ -245,10 +256,11 @@ pub fn var_decl(
             symtable,
             &mut diagnostics,
             ResolveTo::Type(&ty),
+            opt,
         ) {
             Ok(res) => {
                 // implicitly conversion to correct ty
-                match cast(&s.loc, res, &ty, true, ns, &mut diagnostics) {
+                match cast(&s.loc, res, &ty, true, ns, &mut diagnostics, opt) {
                     Ok(res) => Some(res),
                     Err(_) => {
                         ns.diagnostics.extend(diagnostics);

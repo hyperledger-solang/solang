@@ -2,6 +2,7 @@ use super::ast::{Diagnostic, Function, Mutability, Namespace, Parameter, Symbol,
 use super::contracts::is_base;
 use super::tags::resolve_tags;
 use crate::parser::pt;
+use crate::Options;
 use crate::Target;
 
 /// Resolve function declaration in a contract
@@ -11,6 +12,7 @@ pub fn contract_function(
     file_no: usize,
     contract_no: usize,
     ns: &mut Namespace,
+    opt: &Options,
 ) -> Option<usize> {
     let mut success = true;
 
@@ -290,6 +292,7 @@ pub fn contract_function(
         Some(contract_no),
         ns,
         &mut diagnostics,
+        opt,
     );
 
     let (returns, returns_success) = resolve_returns(
@@ -299,6 +302,7 @@ pub fn contract_function(
         Some(contract_no),
         ns,
         &mut diagnostics,
+        opt,
     );
 
     ns.diagnostics.extend(diagnostics);
@@ -617,6 +621,7 @@ pub fn function(
     func: &pt::FunctionDefinition,
     file_no: usize,
     ns: &mut Namespace,
+    opt: &Options,
 ) -> Option<usize> {
     let mut success = true;
 
@@ -689,10 +694,17 @@ pub fn function(
     let mut diagnostics = Vec::new();
 
     let (params, params_success) =
-        resolve_params(&func.params, true, file_no, None, ns, &mut diagnostics);
+        resolve_params(&func.params, true, file_no, None, ns, &mut diagnostics, opt);
 
-    let (returns, returns_success) =
-        resolve_returns(&func.returns, true, file_no, None, ns, &mut diagnostics);
+    let (returns, returns_success) = resolve_returns(
+        &func.returns,
+        true,
+        file_no,
+        None,
+        ns,
+        &mut diagnostics,
+        opt,
+    );
 
     ns.diagnostics.extend(diagnostics);
 
@@ -781,6 +793,7 @@ pub fn resolve_params(
     contract_no: Option<usize>,
     ns: &mut Namespace,
     diagnostics: &mut Vec<Diagnostic>,
+    opt: &Options,
 ) -> (Vec<Parameter>, bool) {
     let mut params = Vec::new();
     let mut success = true;
@@ -797,7 +810,7 @@ pub fn resolve_params(
 
         let mut ty_loc = p.ty.loc();
 
-        match ns.resolve_type(file_no, contract_no, false, &p.ty, diagnostics) {
+        match ns.resolve_type(file_no, contract_no, false, &p.ty, diagnostics, opt) {
             Ok(ty) => {
                 if !is_internal {
                     if ty.contains_internal_function(ns) {
@@ -890,6 +903,7 @@ pub fn resolve_returns(
     contract_no: Option<usize>,
     ns: &mut Namespace,
     diagnostics: &mut Vec<Diagnostic>,
+    opt: &Options,
 ) -> (Vec<Parameter>, bool) {
     let mut resolved_returns = Vec::new();
     let mut success = true;
@@ -906,7 +920,7 @@ pub fn resolve_returns(
 
         let mut ty_loc = r.ty.loc();
 
-        match ns.resolve_type(file_no, contract_no, false, &r.ty, diagnostics) {
+        match ns.resolve_type(file_no, contract_no, false, &r.ty, diagnostics, opt) {
             Ok(ty) => {
                 if !is_internal {
                     if ty.contains_internal_function(ns) {

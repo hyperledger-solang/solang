@@ -833,7 +833,7 @@ fn returns(
         .iter()
         .zip(uncast_values.into_iter())
         .map(|(left, right)| {
-            let right = cast(&left.loc, right, &left.ty, true, ns, &mut Vec::new())
+            let right = cast(&left.loc, right, &left.ty, true, ns, &mut Vec::new(), opt)
                 .expect("sema should have checked cast");
             // casts to StorageLoad generate LoadStorage instructions
             expression(&right, cfg, contract_no, Some(func), ns, vartab, opt)
@@ -934,7 +934,7 @@ fn destructure(
             }
             DestructureField::VariableDecl(res, param) => {
                 // the resolver did not cast the expression
-                let expr = cast(&param.loc, right, &param.ty, true, ns, &mut Vec::new())
+                let expr = cast(&param.loc, right, &param.ty, true, ns, &mut Vec::new(), opt)
                     .expect("sema should have checked cast");
                 // casts to StorageLoad generate LoadStorage instructions
                 let expr = expression(&expr, cfg, contract_no, Some(func), ns, vartab, opt);
@@ -963,6 +963,7 @@ fn destructure(
                     true,
                     ns,
                     &mut Vec::new(),
+                    opt,
                 )
                 .expect("sema should have checked cast");
                 // casts to StorageLoad generate LoadStorage instructions
