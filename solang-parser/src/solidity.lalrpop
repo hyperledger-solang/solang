@@ -54,7 +54,7 @@ ImportRename: (Identifier, Option<Identifier>) = {
 
 PragmaDirective: SourceUnitPart = {
     // The lexer does special parsing for String literal; it isn't really a string literal
-    <doc:DocComments> "pragma" <i:Identifier> <s:StringLiteral> ";" => SourceUnitPart::PragmaDirective(doc, i, s)
+    <doc:DocComments> <l:@L> "pragma" <i:Identifier> <s:StringLiteral> ";" <r:@L> => SourceUnitPart::PragmaDirective(doc, i, s, Loc(file_no, l, r))
 }
 
 DocComments: Vec<DocComment> = {
