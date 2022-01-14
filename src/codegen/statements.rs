@@ -1226,7 +1226,7 @@ fn try_catch(
 
     cfg.set_basic_block(catch_block);
 
-    if let Some((error_param_pos, error_param, error_stmt)) = &try_stmt.error {
+    for (error_param_pos, error_param, error_stmt) in &try_stmt.errors {
         let no_reason_block = cfg.new_basic_block("no_reason".to_string());
 
         let error_var = match error_param_pos {
@@ -1318,8 +1318,10 @@ fn try_catch(
     if let Some(pos) = &try_stmt.catch_param_pos {
         set.remove(pos);
     }
-    if let Some((Some(pos), _, _)) = &try_stmt.error {
-        set.remove(pos);
+    for (pos, _, _) in &try_stmt.errors {
+        if let Some(pos) = pos {
+            set.remove(pos);
+        }
     }
     cfg.set_phis(finally_block, set);
 

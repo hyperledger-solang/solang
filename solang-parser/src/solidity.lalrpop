@@ -54,7 +54,7 @@ ImportRename: (Identifier, Option<Identifier>) = {
 
 PragmaDirective: SourceUnitPart = {
     // The lexer does special parsing for String literal; it isn't really a string literal
-    <doc:DocComments> "pragma" <i:Identifier> <s:StringLiteral> ";" => SourceUnitPart::PragmaDirective(doc, i, s)
+    <doc:DocComments> <l:@L> "pragma" <i:Identifier> <s:StringLiteral> ";" <r:@L> => SourceUnitPart::PragmaDirective(Loc(file_no, l, r), doc, i, s)
 }
 
 DocComments: Vec<DocComment> = {
@@ -699,9 +699,12 @@ SimpleStatement: Statement = {
     }
 }
 
-CatchError: (Identifier, Parameter, Statement) = {
-    "catch" <id:Identifier> "(" <param:Parameter> ")" <block:BlockStatement> => {
-        (id, param, block)
+CatchClause: CatchClause = {
+    <l:@L> "catch" <param:("(" <Parameter> ")")?> <block:BlockStatement> <r:@R> => {
+        CatchClause::Simple(Loc(file_no, l, r), param, block)
+    },
+    <l:@L> "catch" <id:Identifier> "(" <param:Parameter> ")" <block:BlockStatement> <r:@R> => {
+        CatchClause::Named(Loc(file_no, l, r), id, param, block)
     }
 }
 
@@ -738,11 +741,8 @@ NonIfStatement: Statement = {
     <l:@L> "return" <e:Expression> <r:@R> ";" => {
         Statement::Return(Loc(file_no, l, r), Some(e))
     },
-    <l:@L> "try" <e:TryExpression> <returns:TryReturns?> <error:CatchError?>
-        "catch" <p:("(" <Parameter> ")")?> <b:BlockStatement> <r:@R> => {
-            Statement::Try(Loc(file_no, l, r), e, returns,
-                box_option(error),
-                Box::new((p, b)))
+    <l:@L> "try" <e:TryExpression> <returns:TryReturns?> <clauses:CatchClause+> <r:@R> => {
+        Statement::Try(Loc(file_no, l, r), e, returns, clauses)
     },
     <l:@L> "emit" <ty:FunctionCall> <r:@R> ";" => {
         Statement::Emit(Loc(file_no, l, r), ty)

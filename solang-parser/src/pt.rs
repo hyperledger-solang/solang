@@ -55,7 +55,7 @@ pub struct SourceUnit(pub Vec<SourceUnitPart>);
 #[derive(Debug, PartialEq)]
 pub enum SourceUnitPart {
     ContractDefinition(Box<ContractDefinition>),
-    PragmaDirective(Vec<DocComment>, Identifier, StringLiteral),
+    PragmaDirective(Loc, Vec<DocComment>, Identifier, StringLiteral),
     ImportDirective(Vec<DocComment>, Import),
     EnumDefinition(Box<EnumDefinition>),
     StructDefinition(Box<StructDefinition>),
@@ -546,10 +546,15 @@ pub enum Statement {
         Loc,
         Expression,
         Option<(Vec<(Loc, Option<Parameter>)>, Box<Statement>)>,
-        Option<Box<(Identifier, Parameter, Statement)>>,
-        Box<(Option<Parameter>, Statement)>,
+        Vec<CatchClause>,
     ),
     DocComment(Loc, CommentType, String),
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum CatchClause {
+    Simple(Loc, Option<Parameter>, Statement),
+    Named(Loc, Identifier, Parameter, Statement),
 }
 
 #[derive(Debug, PartialEq, Clone)]

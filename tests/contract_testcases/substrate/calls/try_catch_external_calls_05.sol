@@ -7,6 +7,8 @@
                     x = bla;
                 } catch Error(bytes memory f) {
                     x = 105;
+                } catch Panic(uint128 code) {
+                    x = 106;
                 } catch (string) {
                     x = 2;
                 }
@@ -19,4 +21,3 @@
                 return (102, true);
             }
         }
-        

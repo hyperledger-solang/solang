@@ -317,7 +317,7 @@ impl SolangServer {
                 for vecstmt in &try_stmt.ok_stmt {
                     SolangServer::construct_stmt(vecstmt, lookup_tbl, symtab, fnc_map, ns);
                 }
-                if let Some(okstmt) = &try_stmt.error {
+                for okstmt in &try_stmt.errors {
                     for stmts in &okstmt.2 {
                         SolangServer::construct_stmt(stmts, lookup_tbl, symtab, fnc_map, ns);
                     }
