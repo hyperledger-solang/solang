@@ -55,7 +55,7 @@ pub struct SourceUnit(pub Vec<SourceUnitPart>);
 #[derive(Debug, PartialEq)]
 pub enum SourceUnitPart {
     ContractDefinition(Box<ContractDefinition>),
-    PragmaDirective(Vec<DocComment>, Identifier, StringLiteral, Loc),
+    PragmaDirective(Loc, Vec<DocComment>, Identifier, StringLiteral),
     ImportDirective(Vec<DocComment>, Import),
     EnumDefinition(Box<EnumDefinition>),
     StructDefinition(Box<StructDefinition>),
