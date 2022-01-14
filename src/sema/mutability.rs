@@ -208,7 +208,7 @@ fn recurse_statements(stmts: &[Statement], state: &mut StateCheck) {
             Statement::TryCatch(_, _, try_catch) => {
                 try_catch.expr.recurse(state, read_expression);
                 recurse_statements(&try_catch.ok_stmt, state);
-                if let Some((_, _, s)) = &try_catch.error {
+                for (_, _, s) in &try_catch.errors {
                     recurse_statements(s, state);
                 }
                 recurse_statements(&try_catch.catch_stmt, state);

@@ -1506,7 +1506,7 @@ impl Dot {
 
                     self.add_statement(&try_catch.ok_stmt, func, ns, parent, String::from("ok"));
 
-                    if let Some((_, param, stmt)) = &try_catch.error {
+                    for (_, param, stmt) in &try_catch.errors {
                         self.add_node(
                             Node::new(
                                 "error_param",
