@@ -90,6 +90,18 @@ mod test {
                     }
                     string __abba_$;
                     int64 $thing_102;
+                }
+                
+                function bar() {
+                    try sum(1, 1) returns (uint sum) {
+                        assert(sum == 2);
+                    } catch (bytes memory b) {
+                        revert('meh');
+                    } catch Error(string memory error) {
+                        revert(error);
+                    } catch Panic(uint x) {
+                        revert('feh');
+                    }
                 }";
 
         let lex = lexer::Lexer::new(src);
@@ -98,8 +110,8 @@ mod test {
             .parse(src, 0, lex)
             .unwrap();
 
-        let expected_parse_tree = SourceUnit(vec![SourceUnitPart::ContractDefinition(Box::new(
-            ContractDefinition {
+        let expected_parse_tree = SourceUnit(vec![
+            SourceUnitPart::ContractDefinition(Box::new(ContractDefinition {
                 doc: vec![
                     DocComment::Line {
                         comment: SingleDocComment {
@@ -222,8 +234,179 @@ mod test {
                         initializer: None,
                     })),
                 ],
-            },
-        ))]);
+            })),
+            SourceUnitPart::FunctionDefinition(Box::new(FunctionDefinition {
+                doc: vec![],
+                loc: Loc(0, 736, 751),
+                ty: FunctionTy::Function,
+                name: Some(Identifier {
+                    loc: Loc(0, 745, 748),
+                    name: "bar".to_string(),
+                }),
+                name_loc: Loc(0, 745, 748),
+                params: vec![],
+                attributes: vec![],
+                return_not_returns: None,
+                returns: vec![],
+                body: Some(Statement::Block {
+                    loc: Loc(0, 751, 1154),
+                    unchecked: false,
+                    statements: vec![Statement::Try(
+                        Loc(0, 773, 1136),
+                        Expression::FunctionCall(
+                            Loc(0, 777, 786),
+                            Box::new(Expression::Variable(Identifier {
+                                loc: Loc(0, 777, 780),
+                                name: "sum".to_string(),
+                            })),
+                            vec![
+                                Expression::NumberLiteral(Loc(0, 781, 782), 1.into()),
+                                Expression::NumberLiteral(Loc(0, 784, 785), 1.into()),
+                            ],
+                        ),
+                        Some((
+                            vec![(
+                                Loc(0, 796, 804),
+                                Some(Parameter {
+                                    loc: Loc(0, 796, 804),
+                                    ty: Expression::Type(Loc(0, 796, 800), Type::Uint(256)),
+                                    storage: None,
+                                    name: Some(Identifier {
+                                        loc: Loc(0, 801, 804),
+                                        name: "sum".to_string(),
+                                    }),
+                                }),
+                            )],
+                            Box::new(Statement::Block {
+                                loc: Loc(0, 806, 871),
+                                unchecked: false,
+                                statements: vec![Statement::Expression(
+                                    Loc(0, 832, 848),
+                                    Expression::FunctionCall(
+                                        Loc(0, 832, 848),
+                                        Box::new(Expression::Variable(Identifier {
+                                            loc: Loc(0, 832, 838),
+                                            name: "assert".to_string(),
+                                        })),
+                                        vec![Expression::Equal(
+                                            Loc(0, 843, 845),
+                                            Box::new(Expression::Variable(Identifier {
+                                                loc: Loc(0, 839, 842),
+                                                name: "sum".to_string(),
+                                            })),
+                                            Box::new(Expression::NumberLiteral(
+                                                Loc(0, 846, 847),
+                                                2.into(),
+                                            )),
+                                        )],
+                                    ),
+                                )],
+                            }),
+                        )),
+                        vec![
+                            CatchClause::Simple(
+                                Loc(0, 872, 957),
+                                Some(Parameter {
+                                    loc: Loc(0, 879, 893),
+                                    ty: Expression::Type(Loc(0, 879, 884), Type::DynamicBytes),
+                                    storage: Some(StorageLocation::Memory(Loc(0, 885, 891))),
+                                    name: Some(Identifier {
+                                        loc: Loc(0, 892, 893),
+                                        name: "b".to_string(),
+                                    }),
+                                }),
+                                Statement::Block {
+                                    loc: Loc(0, 895, 957),
+                                    unchecked: false,
+                                    statements: vec![Statement::Expression(
+                                        Loc(0, 921, 934),
+                                        Expression::FunctionCall(
+                                            Loc(0, 921, 934),
+                                            Box::new(Expression::Variable(Identifier {
+                                                loc: Loc(0, 921, 927),
+                                                name: "revert".to_string(),
+                                            })),
+                                            vec![Expression::StringLiteral(vec![StringLiteral {
+                                                loc: Loc(0, 928, 933),
+                                                string: "meh".to_string(),
+                                            }])],
+                                        ),
+                                    )],
+                                },
+                            ),
+                            CatchClause::Named(
+                                Loc(0, 958, 1053),
+                                Identifier {
+                                    loc: Loc(0, 964, 969),
+                                    name: "Error".to_string(),
+                                },
+                                Parameter {
+                                    loc: Loc(0, 970, 989),
+                                    ty: Expression::Type(Loc(0, 970, 976), Type::String),
+                                    storage: Some(StorageLocation::Memory(Loc(0, 977, 983))),
+                                    name: Some(Identifier {
+                                        loc: Loc(0, 984, 989),
+                                        name: "error".to_string(),
+                                    }),
+                                },
+                                Statement::Block {
+                                    loc: Loc(0, 991, 1053),
+                                    unchecked: false,
+                                    statements: vec![Statement::Expression(
+                                        Loc(0, 1017, 1030),
+                                        Expression::FunctionCall(
+                                            Loc(0, 1017, 1030),
+                                            Box::new(Expression::Variable(Identifier {
+                                                loc: Loc(0, 1017, 1023),
+                                                name: "revert".to_string(),
+                                            })),
+                                            vec![Expression::Variable(Identifier {
+                                                loc: Loc(0, 1024, 1029),
+                                                name: "error".to_string(),
+                                            })],
+                                        ),
+                                    )],
+                                },
+                            ),
+                            CatchClause::Named(
+                                Loc(0, 1054, 1136),
+                                Identifier {
+                                    loc: Loc(0, 1060, 1065),
+                                    name: "Panic".to_string(),
+                                },
+                                Parameter {
+                                    loc: Loc(0, 1066, 1072),
+                                    ty: Expression::Type(Loc(0, 1066, 1070), Type::Uint(256)),
+                                    storage: None,
+                                    name: Some(Identifier {
+                                        loc: Loc(0, 1071, 1072),
+                                        name: "x".to_string(),
+                                    }),
+                                },
+                                Statement::Block {
+                                    loc: Loc(0, 1074, 1136),
+                                    unchecked: false,
+                                    statements: vec![Statement::Expression(
+                                        Loc(0, 1100, 1113),
+                                        Expression::FunctionCall(
+                                            Loc(0, 1100, 1113),
+                                            Box::new(Expression::Variable(Identifier {
+                                                loc: Loc(0, 1100, 1106),
+                                                name: "revert".to_string(),
+                                            })),
+                                            vec![Expression::StringLiteral(vec![StringLiteral {
+                                                loc: Loc(0, 1107, 1112),
+                                                string: "feh".to_string(),
+                                            }])],
+                                        ),
+                                    )],
+                                },
+                            ),
+                        ],
+                    )],
+                }),
+            })),
+        ]);
 
         assert_eq!(actual_parse_tree, expected_parse_tree);
     }
