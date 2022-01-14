@@ -90,6 +90,27 @@ mod test {
                     }
                     string __abba_$;
                     int64 $thing_102;
+                }
+                
+                function bar() {
+                    assembly {
+                        let x := 0
+                        for { let i := 0 } lt(i, 0x100) { i := add(i, 0x20) } {
+                            x := add(x, mload(i))
+        
+                            if gt(i, 0x10) {
+                                break
+                            }
+                        }    
+                        
+                        switch x
+                        case 0 {
+                            revert(0, 0)
+                        }
+                        default {
+                            leave
+                        }
+                    }
                 }";
 
         let lex = lexer::Lexer::new(src);
@@ -98,8 +119,8 @@ mod test {
             .parse(src, 0, lex)
             .unwrap();
 
-        let expected_parse_tree = SourceUnit(vec![SourceUnitPart::ContractDefinition(Box::new(
-            ContractDefinition {
+        let expected_parse_tree = SourceUnit(vec![
+            SourceUnitPart::ContractDefinition(Box::new(ContractDefinition {
                 doc: vec![
                     DocComment::Line {
                         comment: SingleDocComment {
@@ -222,8 +243,183 @@ mod test {
                         initializer: None,
                     })),
                 ],
-            },
-        ))]);
+            })),
+            SourceUnitPart::FunctionDefinition(Box::new(FunctionDefinition {
+                doc: vec![],
+                loc: Loc(0, 736, 751),
+                ty: FunctionTy::Function,
+                name: Some(Identifier {
+                    loc: Loc(0, 745, 748),
+                    name: "bar".to_string(),
+                }),
+                name_loc: Loc(0, 745, 748),
+                params: vec![],
+                attributes: vec![],
+                return_not_returns: None,
+                returns: vec![],
+                body: Some(Statement::Block {
+                    loc: Loc(0, 751, 1392),
+                    unchecked: false,
+                    statements: vec![Statement::Assembly {
+                        loc: Loc(0, 773, 1374),
+                        assembly: vec![
+                            AssemblyStatement::LetAssign(
+                                Loc(0, 808, 818),
+                                AssemblyExpression::Variable(Identifier {
+                                    loc: Loc(0, 812, 813),
+                                    name: "x".to_string(),
+                                }),
+                                AssemblyExpression::NumberLiteral(Loc(0, 817, 818), 0.into()),
+                            ),
+                            AssemblyStatement::For(
+                                Loc(0, 843, 1096),
+                                vec![AssemblyStatement::LetAssign(
+                                    Loc(0, 849, 859),
+                                    AssemblyExpression::Variable(Identifier {
+                                        loc: Loc(0, 853, 854),
+                                        name: "i".to_string(),
+                                    }),
+                                    AssemblyExpression::NumberLiteral(Loc(0, 858, 859), 0.into()),
+                                )],
+                                AssemblyExpression::Function(
+                                    Loc(0, 862, 874),
+                                    Box::new(AssemblyExpression::Variable(Identifier {
+                                        loc: Loc(0, 862, 864),
+                                        name: "lt".to_string(),
+                                    })),
+                                    vec![
+                                        AssemblyExpression::Variable(Identifier {
+                                            loc: Loc(0, 865, 866),
+                                            name: "i".to_string(),
+                                        }),
+                                        AssemblyExpression::HexNumberLiteral(
+                                            Loc(0, 868, 873),
+                                            "0x100".to_string(),
+                                        ),
+                                    ],
+                                ),
+                                vec![AssemblyStatement::Assign(
+                                    Loc(0, 877, 894),
+                                    AssemblyExpression::Variable(Identifier {
+                                        loc: Loc(0, 877, 878),
+                                        name: "i".to_string(),
+                                    }),
+                                    AssemblyExpression::Function(
+                                        Loc(0, 882, 894),
+                                        Box::new(AssemblyExpression::Variable(Identifier {
+                                            loc: Loc(0, 882, 885),
+                                            name: "add".to_string(),
+                                        })),
+                                        vec![
+                                            AssemblyExpression::Variable(Identifier {
+                                                loc: Loc(0, 886, 887),
+                                                name: "i".to_string(),
+                                            }),
+                                            AssemblyExpression::HexNumberLiteral(
+                                                Loc(0, 889, 893),
+                                                "0x20".to_string(),
+                                            ),
+                                        ],
+                                    ),
+                                )],
+                                Box::new(vec![
+                                    AssemblyStatement::Assign(
+                                        Loc(0, 927, 948),
+                                        AssemblyExpression::Variable(Identifier {
+                                            loc: Loc(0, 927, 928),
+                                            name: "x".to_string(),
+                                        }),
+                                        AssemblyExpression::Function(
+                                            Loc(0, 932, 948),
+                                            Box::new(AssemblyExpression::Variable(Identifier {
+                                                loc: Loc(0, 932, 935),
+                                                name: "add".to_string(),
+                                            })),
+                                            vec![
+                                                AssemblyExpression::Variable(Identifier {
+                                                    loc: Loc(0, 936, 937),
+                                                    name: "x".to_string(),
+                                                }),
+                                                AssemblyExpression::Function(
+                                                    Loc(0, 939, 947),
+                                                    Box::new(AssemblyExpression::Variable(
+                                                        Identifier {
+                                                            loc: Loc(0, 939, 944),
+                                                            name: "mload".to_string(),
+                                                        },
+                                                    )),
+                                                    vec![AssemblyExpression::Variable(
+                                                        Identifier {
+                                                            loc: Loc(0, 945, 946),
+                                                            name: "i".to_string(),
+                                                        },
+                                                    )],
+                                                ),
+                                            ],
+                                        ),
+                                    ),
+                                    AssemblyStatement::If(
+                                        Loc(0, 986, 1070),
+                                        AssemblyExpression::Function(
+                                            Loc(0, 989, 1000),
+                                            Box::new(AssemblyExpression::Variable(Identifier {
+                                                loc: Loc(0, 989, 991),
+                                                name: "gt".to_string(),
+                                            })),
+                                            vec![
+                                                AssemblyExpression::Variable(Identifier {
+                                                    loc: Loc(0, 992, 993),
+                                                    name: "i".to_string(),
+                                                }),
+                                                AssemblyExpression::HexNumberLiteral(
+                                                    Loc(0, 995, 999),
+                                                    "0x10".to_string(),
+                                                ),
+                                            ],
+                                        ),
+                                        Box::new(vec![AssemblyStatement::Break(Loc(
+                                            0, 1035, 1040,
+                                        ))]),
+                                    ),
+                                ]),
+                            ),
+                            AssemblyStatement::Switch(
+                                Loc(0, 1150, 1352),
+                                AssemblyExpression::Variable(Identifier {
+                                    loc: Loc(0, 1157, 1158),
+                                    name: "x".to_string(),
+                                }),
+                                vec![AssemblySwitch::Case(
+                                    AssemblyExpression::NumberLiteral(Loc(0, 1188, 1189), 0.into()),
+                                    Box::new(vec![AssemblyStatement::Expression(
+                                        AssemblyExpression::Function(
+                                            Loc(0, 1220, 1232),
+                                            Box::new(AssemblyExpression::Variable(Identifier {
+                                                loc: Loc(0, 1220, 1226),
+                                                name: "revert".to_string(),
+                                            })),
+                                            vec![
+                                                AssemblyExpression::NumberLiteral(
+                                                    Loc(0, 1227, 1228),
+                                                    0.into(),
+                                                ),
+                                                AssemblyExpression::NumberLiteral(
+                                                    Loc(0, 1230, 1231),
+                                                    0.into(),
+                                                ),
+                                            ],
+                                        ),
+                                    )]),
+                                )],
+                                Some(AssemblySwitch::Default(Box::new(vec![
+                                    AssemblyStatement::Leave(Loc(0, 1321, 1326)),
+                                ]))),
+                            ),
+                        ],
+                    }],
+                }),
+            })),
+        ]);
 
         assert_eq!(actual_parse_tree, expected_parse_tree);
     }
