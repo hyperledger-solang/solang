@@ -93,7 +93,7 @@ fn sema_file(file: &ResolvedFile, resolver: &mut FileResolver, ns: &mut ast::Nam
     // resolve pragmas and imports
     for part in &pt.0 {
         match part {
-            pt::SourceUnitPart::PragmaDirective(_, name, value) => {
+            pt::SourceUnitPart::PragmaDirective(_, _, name, value) => {
                 resolve_pragma(name, value, ns);
             }
             pt::SourceUnitPart::ImportDirective(_, import) => {
