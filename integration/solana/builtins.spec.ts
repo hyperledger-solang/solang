@@ -1,10 +1,10 @@
 import expect from 'expect';
-import { loadContract } from './utils';
+import { loadContract } from './setup';
 
-describe('Deploy solang contract and test', () => {
+describe('Deploy solang contract and test', function () {
+    this.timeout(500000);
+
     it('builtins', async function () {
-        this.timeout(50000);
-
         let { contract, connection } = await loadContract('builtins', 'builtins.abi');
 
         // call the constructor

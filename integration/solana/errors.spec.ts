@@ -1,11 +1,11 @@
 import { TransactionError } from '@solana/solidity';
 import expect from 'expect';
-import { loadContract } from './utils';
+import { loadContract } from './setup';
 
-describe('Deploy solang contract and test', () => {
+describe('Deploy solang contract and test', function () {
+    this.timeout(500000);
+
     it('errors', async function () {
-        this.timeout(50000);
-
         const { contract } = await loadContract('errors', 'errors.abi')
 
         let res = await contract.functions.do_revert(false);

@@ -1,10 +1,10 @@
 import expect from 'expect';
-import { loadContract } from './utils';
+import { loadContract } from './setup';
 
-describe('Deploy solang contract and test', () => {
+describe('Deploy solang contract and test', function () {
+    this.timeout(500000);
+
     it('events', async function () {
-        this.timeout(50000);
-
         const { contract } = await loadContract('events', 'events.abi');
 
         await new Promise((resolve) => {

@@ -1,10 +1,10 @@
 import expect from 'expect';
-import { loadContract, load2ndContract } from './utils';
+import { loadContract, load2ndContract } from './setup';
 
-describe('Deploy solang contract and test', () => {
+describe('Deploy solang contract and test', function () {
+    this.timeout(100000);
+
     it('external_call', async function () {
-        this.timeout(100000);
-
         const { contract: caller, connection, payer, program } = await loadContract('caller', 'caller.abi');
 
         const callee = await load2ndContract(connection, program, payer, 'callee', 'callee.abi');

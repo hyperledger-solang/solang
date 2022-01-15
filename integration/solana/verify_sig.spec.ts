@@ -2,14 +2,15 @@ import { Contract, publicKeyToHex } from '@solana/solidity';
 import { Keypair } from '@solana/web3.js';
 import expect from 'expect';
 import nacl from 'tweetnacl';
-import { loadContract } from './utils';
+import { loadContract } from './setup';
 
-describe('Signature Check', () => {
+describe('Signature Check', function () {
+    this.timeout(150000);
+
     let contract: Contract;
     let payer: Keypair;
 
     before(async function () {
-        this.timeout(150000);
         ({ contract, payer } = await loadContract('verify_sig', 'verify_sig.abi'));
     });
 
