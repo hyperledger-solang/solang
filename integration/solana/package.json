@@ -3,17 +3,17 @@
   "version": "0.0.1",
   "description": "Integration tests with Solang and Solana",
   "scripts": {
-    "test": "tsc; ts-mocha --parallel *.spec.ts",
+    "test": "tsc; ts-node setup.ts; mocha --parallel *.spec.ts",
     "build": "solang *.sol --target solana -v"
   },
   "author": "Sean Young <sean@mess.org>",
   "license": "MIT",
   "devDependencies": {
-    "@types/mocha": "^8.0.4",
+    "@types/mocha": "^9.1.0",
     "@types/node": "^14.14.10",
     "expect": "^26.6.2",
-    "mocha": "^8.2.1",
-    "ts-mocha": "^8.0.0",
+    "mocha": "^9.1.0",
+    "ts-node": "^10.4.0",
     "typescript": "^4.1.2"
   },
   "dependencies": {

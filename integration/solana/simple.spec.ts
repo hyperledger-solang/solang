@@ -1,12 +1,12 @@
 import expect from 'expect';
-import { loadContract } from './utils';
+import { loadContract } from './setup';
 import crypto from 'crypto';
 import { publicKeyToHex } from '@solana/solidity';
 
-describe('Deploy solang contract and test', () => {
-    it('flipper', async function () {
-        this.timeout(50000);
+describe('Deploy solang contract and test', function () {
+    this.timeout(500000);
 
+    it('flipper', async function () {
         let { contract } = await loadContract('flipper', 'flipper.abi', [true]);
 
         let res = await contract.functions.get({ simulate: true });
@@ -21,8 +21,6 @@ describe('Deploy solang contract and test', () => {
     });
 
     it('primitives', async function () {
-        this.timeout(100000);
-
         let { contract, payer } = await loadContract('primitives', 'primitives.abi', []);
 
         // TEST Basic enums
@@ -138,8 +136,6 @@ describe('Deploy solang contract and test', () => {
     });
 
     it('store', async function () {
-        this.timeout(50000);
-
         const { contract } = await loadContract('store', 'store.abi', []);
 
         let res = await contract.functions.get_values1({ simulate: true });
@@ -201,8 +197,6 @@ describe('Deploy solang contract and test', () => {
     });
 
     it('structs', async function () {
-        this.timeout(50000);
-
         const { contract } = await loadContract('store', 'store.abi', []);
 
         await contract.functions.set_foo1();
@@ -337,16 +331,12 @@ describe('Deploy solang contract and test', () => {
 
 
     it('account storage too small constructor', async function () {
-        this.timeout(50000);
-
         await expect(loadContract('store', 'store.abi', [], 100))
             .rejects
             .toThrowError(new Error('account data too small for instruction'));
     });
 
     it('account storage too small dynamic alloc', async function () {
-        this.timeout(50000);
-
         const { contract } = await loadContract('store', 'store.abi', [], 200);
 
         // storage.sol needs 168 bytes on constructor, more for string data
@@ -358,8 +348,6 @@ describe('Deploy solang contract and test', () => {
     });
 
     it('account storage too small dynamic realloc', async function () {
-        this.timeout(50000);
-
         const { contract } = await loadContract('store', 'store.abi', [], 210);
 
         async function push_until_bang() {
@@ -375,8 +363,6 @@ describe('Deploy solang contract and test', () => {
     });
 
     it('arrays in account storage', async function () {
-        this.timeout(50000);
-
         const { contract } = await loadContract('arrays', 'arrays.abi', []);
 
         let users = [];

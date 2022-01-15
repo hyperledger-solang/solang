@@ -1,11 +1,11 @@
 import expect from 'expect';
 import { publicKeyToHex } from '@solana/solidity';
-import { loadContract } from './utils';
+import { loadContract } from './setup';
 
-describe('Deploy solang contract and test', () => {
+describe('Deploy solang contract and test', function () {
+    this.timeout(500000);
+
     it('balances', async function () {
-        this.timeout(50000);
-
         let { contract, connection, payer } = await loadContract('balances', 'balances.abi');
 
         let res = await contract.functions.get_balance(publicKeyToHex(payer.publicKey), {

@@ -1,4 +1,4 @@
-import { Connection, Keypair, LAMPORTS_PER_SOL } from '@solana/web3.js';
+import { Connection, Keypair, LAMPORTS_PER_SOL, BpfLoader, BPF_LOADER_PROGRAM_ID } from '@solana/web3.js';
 import { Contract } from '@solana/solidity';
 import fs from 'fs';
 
@@ -7,16 +7,15 @@ const PROGRAM_SO: Buffer = fs.readFileSync('bundle.so');
 
 export async function loadContract(name: string, abifile: string, args: any[] = [], space: number = 8192):
     Promise<{ contract: Contract, connection: Connection, payer: Keypair, program: Keypair, storage: Keypair }> {
+
     const abi = JSON.parse(fs.readFileSync(abifile, 'utf8'));
 
     const connection = new Connection(endpoint, 'confirmed');
 
-    const payerAccount = await newAccountWithLamports(connection, 10000000000);
-    const program = Keypair.generate();
+    const payerAccount = load_key('payer.json');
+    const program = load_key('program.json');
     const storage = Keypair.generate();
     const contract = new Contract(connection, program.publicKey, storage.publicKey, abi, payerAccount);
-
-    await contract.load(program, PROGRAM_SO);
 
     await contract.deploy(name, args, program, storage, space);
 
@@ -34,15 +33,44 @@ export async function load2ndContract(connection: Connection, program: Keypair, 
     return contract;
 }
 
-async function newAccountWithLamports(
-    connection: Connection,
-    lamports: number = LAMPORTS_PER_SOL
-): Promise<Keypair> {
+function load_key(filename: string): Keypair {
+    const contents = fs.readFileSync(filename).toString();
+    const bs = Uint8Array.from(contents.split(',').map(v => Number(v)));
+
+    return Keypair.fromSecretKey(bs);
+}
+
+async function newAccountWithLamports(connection: Connection): Promise<Keypair> {
     const account = Keypair.generate();
 
     console.log('Airdropping SOL to a new wallet ...');
-    const signature = await connection.requestAirdrop(account.publicKey, lamports);
+    let signature = await connection.requestAirdrop(account.publicKey, LAMPORTS_PER_SOL);
+    await connection.confirmTransaction(signature, 'confirmed');
+    signature = await connection.requestAirdrop(account.publicKey, LAMPORTS_PER_SOL);
+    await connection.confirmTransaction(signature, 'confirmed');
+    signature = await connection.requestAirdrop(account.publicKey, LAMPORTS_PER_SOL);
     await connection.confirmTransaction(signature, 'confirmed');
 
     return account;
+}
+
+
+async function setup() {
+    const connection = new Connection(endpoint, 'confirmed');
+    const payer = await newAccountWithLamports(connection);
+
+    const program = Keypair.generate();
+
+    console.log('Loading bundle.so ...');
+    await BpfLoader.load(connection, payer, program, PROGRAM_SO, BPF_LOADER_PROGRAM_ID);
+    console.log('Done loading bundle.so ...');
+
+    fs.writeFileSync('payer.json', String(payer.secretKey));
+    fs.writeFileSync('program.json', String(program.secretKey));
+}
+
+if (require.main === module) {
+    (async () => {
+        await setup();
+    })();
 }

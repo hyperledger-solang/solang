@@ -1,16 +1,17 @@
 import { Signer } from '@solana/web3.js';
 import expect from 'expect';
 import { Contract, createProgramDerivedAddress, ProgramDerivedAddress } from '@solana/solidity';
-import { loadContract } from './utils';
+import { loadContract } from './setup';
 
-describe('ChildContract', () => {
+describe('ChildContract', function () {
+    this.timeout(150000);
+
     let contract: Contract;
     let storage: Signer;
 
     let childPDA: ProgramDerivedAddress;
 
     before(async function () {
-        this.timeout(150000);
         ({ contract, storage } = await loadContract('creator', 'creator.abi'));
     });
 
