@@ -59,6 +59,7 @@ PragmaDirective: SourceUnitPart = {
 }
 
 SingleComment: Comment = {
+    // TODO: no clone?
     <l:@L> <c:Comment> => comments(&vec![(l, c.0, c.1)])[0].clone()
 }
 
@@ -158,6 +159,7 @@ ContractPart: ContractPart = {
     ConstructorDefinition => ContractPart::FunctionDefinition(<>),
     <l:@L> ";" <r:@R> => ContractPart::StraySemicolon(Loc(file_no, l, r)),
     Using => ContractPart::Using(<>),
+    SingleComment => ContractPart::Comment(<>),
 }
 
 Bases: Vec<Base> = {
@@ -693,6 +695,7 @@ Statement: Statement = {
     OpenStatement,
     ClosedStatement,
     <l:@L> <c:DocComment> <r:@R> => Statement::DocComment(Loc(file_no, l, r), c.0, c.1.to_string()),
+    <l:@L> <c:SingleComment> <r:@R> => Statement::Comment(Loc(file_no, l, r), c),
 }
 
 SimpleStatement: Statement = {

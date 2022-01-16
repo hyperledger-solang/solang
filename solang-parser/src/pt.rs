@@ -152,6 +152,7 @@ pub enum ContractPart {
     FunctionDefinition(Box<FunctionDefinition>),
     StraySemicolon(Loc),
     Using(Box<Using>),
+    Comment(Comment),
 }
 
 #[derive(Debug, PartialEq)]
@@ -555,6 +556,7 @@ pub enum Statement {
         Vec<CatchClause>,
     ),
     DocComment(Loc, CommentType, String),
+    Comment(Loc, Comment),
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -626,7 +628,8 @@ impl Statement {
             | Statement::Return(loc, ..)
             | Statement::Emit(loc, ..)
             | Statement::Try(loc, ..)
-            | Statement::DocComment(loc, ..) => *loc,
+            | Statement::DocComment(loc, ..)
+            | Statement::Comment(loc, ..) => *loc,
         }
     }
 }

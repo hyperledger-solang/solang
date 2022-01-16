@@ -366,6 +366,14 @@ fn statement(
             context.unchecked |= *unchecked;
 
             for stmt in statements {
+                // Comments are always reachable and shouldn't affect reachability
+                if matches!(
+                    stmt,
+                    pt::Statement::DocComment(..) | pt::Statement::Comment(..)
+                ) {
+                    continue;
+                }
+
                 if !reachable {
                     ns.diagnostics.push(Diagnostic::error(
                         stmt.loc(),
@@ -793,7 +801,7 @@ fn statement(
             ));
             Err(())
         }
-        pt::Statement::DocComment(..) => Ok(true),
+        pt::Statement::DocComment(..) | pt::Statement::Comment(..) => Ok(true),
     }
 }
 
