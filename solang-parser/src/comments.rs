@@ -1,42 +1,54 @@
-// Parse the fields f
 use crate::lexer::CommentType;
-use crate::pt::{DocComment, SingleDocComment};
+use crate::pt::{Comment, DocComment, SingleDocComment};
+
+fn to_line(start: usize, ty: CommentType, comment: &str) -> (CommentType, Vec<(usize, &str)>) {
+    let mut grouped_comments = Vec::new();
+
+    match ty {
+        CommentType::Line => grouped_comments.push((start, comment.trim())),
+        CommentType::Block => {
+            let mut start = start;
+
+            for s in comment.lines() {
+                if let Some((i, _)) = s
+                    .char_indices()
+                    .find(|(_, ch)| !ch.is_whitespace() && *ch != '*')
+                {
+                    grouped_comments.push((start + i, s[i..].trim_end()));
+                }
+
+                start += s.len();
+            }
+        }
+    }
+
+    (ty, grouped_comments)
+}
 
 /// Convert the comment to lines, stripping
 fn to_lines<'a>(
     comments: &[(usize, CommentType, &'a str)],
 ) -> Vec<(CommentType, Vec<(usize, &'a str)>)> {
-    let mut res = Vec::new();
+    comments
+        .iter()
+        .map(|(start, ty, comment)| to_line(*start, *ty, comment))
+        .collect()
+}
 
-    for (start, ty, comment) in comments.iter() {
-        let mut grouped_comments = Vec::new();
-
-        match ty {
-            CommentType::Line => grouped_comments.push((*start, comment.trim())),
-            CommentType::Block => {
-                let mut start = *start;
-
-                for s in comment.lines() {
-                    if let Some((i, _)) = s
-                        .char_indices()
-                        .find(|(_, ch)| !ch.is_whitespace() && *ch != '*')
-                    {
-                        grouped_comments.push((start + i, s[i..].trim_end()));
-                    }
-
-                    start += s.len();
-                }
-            }
-        }
-
-        res.push((*ty, grouped_comments));
-    }
-
-    res
+pub fn comments(lines: &[(usize, CommentType, &str)]) -> Vec<Comment> {
+    lines
+        .iter()
+        .filter_map(|(start, ty, comment)| match to_line(*start, *ty, comment) {
+            (CommentType::Line, comments) if comments.len() == 1 => Some(Comment::Line {
+                comment: comments[0].1.to_string(),
+            }),
+            _ => None,
+        })
+        .collect()
 }
 
 // Parse the DocComments tags
-pub fn tags(lines: &[(usize, CommentType, &str)]) -> Vec<DocComment> {
+pub fn docs(lines: &[(usize, CommentType, &str)]) -> Vec<DocComment> {
     // first extract the tags
     let mut tags = Vec::new();
 

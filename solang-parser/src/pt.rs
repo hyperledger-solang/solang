@@ -28,6 +28,11 @@ pub struct Identifier {
 }
 
 #[derive(Debug, PartialEq, Clone)]
+pub enum Comment {
+    Line { comment: String },
+}
+
+#[derive(Debug, PartialEq, Clone)]
 pub enum DocComment {
     Line { comment: SingleDocComment },
     Block { comments: Vec<SingleDocComment> },
@@ -63,6 +68,7 @@ pub enum SourceUnitPart {
     FunctionDefinition(Box<FunctionDefinition>),
     VariableDefinition(Box<VariableDefinition>),
     StraySemicolon(Loc),
+    Comment(Comment),
 }
 
 #[derive(Debug, PartialEq)]

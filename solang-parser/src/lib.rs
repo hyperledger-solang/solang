@@ -4,8 +4,8 @@ use lalrpop_util::ParseError;
 
 pub use diagnostics::Diagnostic;
 
+mod comments;
 pub mod diagnostics;
-mod doc;
 pub mod lexer;
 pub mod pt;
 
@@ -69,7 +69,8 @@ mod test {
 
     #[test]
     fn parse_test() {
-        let src = "/// @title Foo
+        let src = "// SPDX-License-Identifier: MIT
+                /// @title Foo
                 /// @description Foo
                 /// Bar
                 contract foo {
@@ -92,6 +93,7 @@ mod test {
                     int64 $thing_102;
                 }
                 
+                //// nice bar function
                 function bar() {
                     try sum(1, 1) returns (uint sum) {
                         assert(sum == 2);
@@ -130,6 +132,9 @@ mod test {
             .unwrap();
 
         let expected_parse_tree = SourceUnit(vec![
+            SourceUnitPart::Comment(Comment::Line {
+                comment: "SPDX-License-Identifier: MIT".to_string(),
+            }),
             SourceUnitPart::ContractDefinition(Box::new(ContractDefinition {
                 doc: vec![
                     DocComment::Line {
@@ -147,10 +152,10 @@ mod test {
                         },
                     },
                 ],
-                loc: Loc(0, 92, 105),
-                ty: ContractTy::Contract(Loc(0, 92, 100)),
+                loc: Loc(0, 140, 153),
+                ty: ContractTy::Contract(Loc(0, 140, 148)),
                 name: Identifier {
-                    loc: Loc(0, 101, 104),
+                    loc: Loc(0, 149, 152),
                     name: "foo".to_string(),
                 },
                 base: Vec::new(),
@@ -187,44 +192,44 @@ mod test {
                             },
                         ],
                         name: Identifier {
-                            loc: Loc(0, 419, 431),
+                            loc: Loc(0, 467, 479),
                             name: "Jurisdiction".to_string(),
                         },
-                        loc: Loc(0, 412, 609),
+                        loc: Loc(0, 460, 657),
                         fields: vec![
                             VariableDeclaration {
-                                loc: Loc(0, 458, 469),
-                                ty: Expression::Type(Loc(0, 458, 462), Type::Bool),
+                                loc: Loc(0, 506, 517),
+                                ty: Expression::Type(Loc(0, 506, 510), Type::Bool),
                                 storage: None,
                                 name: Identifier {
-                                    loc: Loc(0, 463, 469),
+                                    loc: Loc(0, 511, 517),
                                     name: "exists".to_string(),
                                 },
                             },
                             VariableDeclaration {
-                                loc: Loc(0, 495, 506),
-                                ty: Expression::Type(Loc(0, 495, 499), Type::Uint(256)),
+                                loc: Loc(0, 543, 554),
+                                ty: Expression::Type(Loc(0, 543, 547), Type::Uint(256)),
                                 storage: None,
                                 name: Identifier {
-                                    loc: Loc(0, 500, 506),
+                                    loc: Loc(0, 548, 554),
                                     name: "keyIdx".to_string(),
                                 },
                             },
                             VariableDeclaration {
-                                loc: Loc(0, 532, 546),
-                                ty: Expression::Type(Loc(0, 532, 538), Type::Bytes(2)),
+                                loc: Loc(0, 580, 594),
+                                ty: Expression::Type(Loc(0, 580, 586), Type::Bytes(2)),
                                 storage: None,
                                 name: Identifier {
-                                    loc: Loc(0, 539, 546),
+                                    loc: Loc(0, 587, 594),
                                     name: "country".to_string(),
                                 },
                             },
                             VariableDeclaration {
-                                loc: Loc(0, 572, 586),
-                                ty: Expression::Type(Loc(0, 572, 579), Type::Bytes(32)),
+                                loc: Loc(0, 620, 634),
+                                ty: Expression::Type(Loc(0, 620, 627), Type::Bytes(32)),
                                 storage: None,
                                 name: Identifier {
-                                    loc: Loc(0, 580, 586),
+                                    loc: Loc(0, 628, 634),
                                     name: "region".to_string(),
                                 },
                             },
@@ -232,90 +237,93 @@ mod test {
                     })),
                     ContractPart::VariableDefinition(Box::new(VariableDefinition {
                         doc: vec![],
-                        ty: Expression::Type(Loc(0, 630, 636), Type::String),
+                        ty: Expression::Type(Loc(0, 678, 684), Type::String),
                         attrs: vec![],
                         name: Identifier {
-                            loc: Loc(0, 637, 645),
+                            loc: Loc(0, 685, 693),
                             name: "__abba_$".to_string(),
                         },
-                        loc: Loc(0, 630, 645),
+                        loc: Loc(0, 678, 693),
                         initializer: None,
                     })),
                     ContractPart::VariableDefinition(Box::new(VariableDefinition {
                         doc: vec![],
-                        ty: Expression::Type(Loc(0, 667, 672), Type::Int(64)),
+                        ty: Expression::Type(Loc(0, 715, 720), Type::Int(64)),
                         attrs: vec![],
                         name: Identifier {
-                            loc: Loc(0, 673, 683),
+                            loc: Loc(0, 721, 731),
                             name: "$thing_102".to_string(),
                         },
-                        loc: Loc(0, 667, 683),
+                        loc: Loc(0, 715, 731),
                         initializer: None,
                     })),
                 ],
             })),
+            SourceUnitPart::Comment(Comment::Line {
+                comment: "nice bar function".to_string(),
+            }),
             SourceUnitPart::FunctionDefinition(Box::new(FunctionDefinition {
                 doc: vec![],
-                loc: Loc(0, 736, 751),
+                loc: Loc(0, 823, 838),
                 ty: FunctionTy::Function,
                 name: Some(Identifier {
-                    loc: Loc(0, 745, 748),
+                    loc: Loc(0, 832, 835),
                     name: "bar".to_string(),
                 }),
-                name_loc: Loc(0, 745, 748),
+                name_loc: Loc(0, 832, 835),
                 params: vec![],
                 attributes: vec![],
                 return_not_returns: None,
                 returns: vec![],
                 body: Some(Statement::Block {
-                    loc: Loc(0, 751, 1777),
+                    loc: Loc(0, 838, 1864),
                     unchecked: false,
                     statements: vec![
                         Statement::Try(
-                            Loc(0, 773, 1136),
+                            Loc(0, 860, 1223),
                             Expression::FunctionCall(
-                                Loc(0, 777, 786),
+                                Loc(0, 864, 873),
                                 Box::new(Expression::Variable(Identifier {
-                                    loc: Loc(0, 777, 780),
+                                    loc: Loc(0, 864, 867),
                                     name: "sum".to_string(),
                                 })),
                                 vec![
-                                    Expression::NumberLiteral(Loc(0, 781, 782), 1.into()),
-                                    Expression::NumberLiteral(Loc(0, 784, 785), 1.into()),
+                                    Expression::NumberLiteral(Loc(0, 868, 869), 1.into()),
+                                    Expression::NumberLiteral(Loc(0, 871, 872), 1.into()),
                                 ],
                             ),
                             Some((
                                 vec![(
-                                    Loc(0, 796, 804),
+                                    Loc(0, 883, 891),
                                     Some(Parameter {
-                                        loc: Loc(0, 796, 804),
-                                        ty: Expression::Type(Loc(0, 796, 800), Type::Uint(256)),
+                                        loc: Loc(0, 883, 891),
+                                        ty: Expression::Type(Loc(0, 883, 887), Type::Uint(256)),
                                         storage: None,
                                         name: Some(Identifier {
-                                            loc: Loc(0, 801, 804),
+                                            loc: Loc(0, 888, 891),
                                             name: "sum".to_string(),
                                         }),
                                     }),
                                 )],
                                 Box::new(Statement::Block {
-                                    loc: Loc(0, 806, 871),
+                                    loc: Loc(0, 893, 958),
                                     unchecked: false,
                                     statements: vec![Statement::Expression(
-                                        Loc(0, 832, 848),
+                                        Loc(0, 919, 935),
                                         Expression::FunctionCall(
-                                            Loc(0, 832, 848),
+                                            Loc(0, 919, 935),
                                             Box::new(Expression::Variable(Identifier {
-                                                loc: Loc(0, 832, 838),
+                                                loc: Loc(0, 919, 925),
                                                 name: "assert".to_string(),
                                             })),
                                             vec![Expression::Equal(
-                                                Loc(0, 843, 845),
+                                                Loc(0, 930, 932),
                                                 Box::new(Expression::Variable(Identifier {
-                                                    loc: Loc(0, 839, 842),
+                                                    loc: Loc(0, 926, 929),
                                                     name: "sum".to_string(),
                                                 })),
                                                 Box::new(Expression::NumberLiteral(
-                                                    Loc(0, 846, 847),
+                                                    Loc(0, 933, 934),
                                                     2.into(),
                                                 )),
                                             )],
@@ -325,30 +333,30 @@ mod test {
                             )),
                             vec![
                                 CatchClause::Simple(
-                                    Loc(0, 872, 957),
+                                    Loc(0, 959, 1044),
                                     Some(Parameter {
-                                        loc: Loc(0, 879, 893),
-                                        ty: Expression::Type(Loc(0, 879, 884), Type::DynamicBytes),
-                                        storage: Some(StorageLocation::Memory(Loc(0, 885, 891))),
+                                        loc: Loc(0, 966, 980),
+                                        ty: Expression::Type(Loc(0, 966, 971), Type::DynamicBytes),
+                                        storage: Some(StorageLocation::Memory(Loc(0, 972, 978))),
                                         name: Some(Identifier {
-                                            loc: Loc(0, 892, 893),
+                                            loc: Loc(0, 979, 980),
                                             name: "b".to_string(),
                                         }),
                                     }),
                                     Statement::Block {
-                                        loc: Loc(0, 895, 957),
+                                        loc: Loc(0, 982, 1044),
                                         unchecked: false,
                                         statements: vec![Statement::Expression(
-                                            Loc(0, 921, 934),
+                                            Loc(0, 1008, 1021),
                                             Expression::FunctionCall(
-                                                Loc(0, 921, 934),
+                                                Loc(0, 1008, 1021),
                                                 Box::new(Expression::Variable(Identifier {
-                                                    loc: Loc(0, 921, 927),
+                                                    loc: Loc(0, 1008, 1014),
                                                     name: "revert".to_string(),
                                                 })),
                                                 vec![Expression::StringLiteral(vec![
                                                     StringLiteral {
-                                                        loc: Loc(0, 928, 933),
+                                                        loc: Loc(0, 1015, 1020),
                                                         string: "meh".to_string(),
                                                     },
                                                 ])],
@@ -357,33 +365,33 @@ mod test {
                                     },
                                 ),
                                 CatchClause::Named(
-                                    Loc(0, 958, 1053),
+                                    Loc(0, 1045, 1140),
                                     Identifier {
-                                        loc: Loc(0, 964, 969),
+                                        loc: Loc(0, 1051, 1056),
                                         name: "Error".to_string(),
                                     },
                                     Parameter {
-                                        loc: Loc(0, 970, 989),
-                                        ty: Expression::Type(Loc(0, 970, 976), Type::String),
-                                        storage: Some(StorageLocation::Memory(Loc(0, 977, 983))),
+                                        loc: Loc(0, 1057, 1076),
+                                        ty: Expression::Type(Loc(0, 1057, 1063), Type::String),
+                                        storage: Some(StorageLocation::Memory(Loc(0, 1064, 1070))),
                                         name: Some(Identifier {
-                                            loc: Loc(0, 984, 989),
+                                            loc: Loc(0, 1071, 1076),
                                             name: "error".to_string(),
                                         }),
                                     },
                                     Statement::Block {
-                                        loc: Loc(0, 991, 1053),
+                                        loc: Loc(0, 1078, 1140),
                                         unchecked: false,
                                         statements: vec![Statement::Expression(
-                                            Loc(0, 1017, 1030),
+                                            Loc(0, 1104, 1117),
                                             Expression::FunctionCall(
-                                                Loc(0, 1017, 1030),
+                                                Loc(0, 1104, 1117),
                                                 Box::new(Expression::Variable(Identifier {
-                                                    loc: Loc(0, 1017, 1023),
+                                                    loc: Loc(0, 1104, 1110),
                                                     name: "revert".to_string(),
                                                 })),
                                                 vec![Expression::Variable(Identifier {
-                                                    loc: Loc(0, 1024, 1029),
+                                                    loc: Loc(0, 1111, 1116),
                                                     name: "error".to_string(),
                                                 })],
                                             ),
@@ -391,34 +399,34 @@ mod test {
                                     },
                                 ),
                                 CatchClause::Named(
-                                    Loc(0, 1054, 1136),
+                                    Loc(0, 1141, 1223),
                                     Identifier {
-                                        loc: Loc(0, 1060, 1065),
+                                        loc: Loc(0, 1147, 1152),
                                         name: "Panic".to_string(),
                                     },
                                     Parameter {
-                                        loc: Loc(0, 1066, 1072),
-                                        ty: Expression::Type(Loc(0, 1066, 1070), Type::Uint(256)),
+                                        loc: Loc(0, 1153, 1159),
+                                        ty: Expression::Type(Loc(0, 1153, 1157), Type::Uint(256)),
                                         storage: None,
                                         name: Some(Identifier {
-                                            loc: Loc(0, 1071, 1072),
+                                            loc: Loc(0, 1158, 1159),
                                             name: "x".to_string(),
                                         }),
                                     },
                                     Statement::Block {
-                                        loc: Loc(0, 1074, 1136),
+                                        loc: Loc(0, 1161, 1223),
                                         unchecked: false,
                                         statements: vec![Statement::Expression(
-                                            Loc(0, 1100, 1113),
+                                            Loc(0, 1187, 1200),
                                             Expression::FunctionCall(
-                                                Loc(0, 1100, 1113),
+                                                Loc(0, 1187, 1200),
                                                 Box::new(Expression::Variable(Identifier {
-                                                    loc: Loc(0, 1100, 1106),
+                                                    loc: Loc(0, 1187, 1193),
                                                     name: "revert".to_string(),
                                                 })),
                                                 vec![Expression::StringLiteral(vec![
                                                     StringLiteral {
-                                                        loc: Loc(0, 1107, 1112),
+                                                        loc: Loc(0, 1194, 1199),
                                                         string: "feh".to_string(),
                                                     },
                                                 ])],
@@ -429,65 +437,65 @@ mod test {
                             ],
                         ),
                         Statement::Assembly {
-                            loc: Loc(0, 1158, 1759),
+                            loc: Loc(0, 1245, 1846),
                             assembly: vec![
                                 AssemblyStatement::LetAssign(
-                                    Loc(0, 1193, 1203),
+                                    Loc(0, 1280, 1290),
                                     AssemblyExpression::Variable(Identifier {
-                                        loc: Loc(0, 1197, 1198),
+                                        loc: Loc(0, 1284, 1285),
                                         name: "x".to_string(),
                                     }),
-                                    AssemblyExpression::NumberLiteral(Loc(0, 1202, 1203), 0.into()),
+                                    AssemblyExpression::NumberLiteral(Loc(0, 1289, 1290), 0.into()),
                                 ),
                                 AssemblyStatement::For(
-                                    Loc(0, 1228, 1481),
+                                    Loc(0, 1315, 1568),
                                     vec![AssemblyStatement::LetAssign(
-                                        Loc(0, 1234, 1244),
+                                        Loc(0, 1321, 1331),
                                         AssemblyExpression::Variable(Identifier {
-                                            loc: Loc(0, 1238, 1239),
+                                            loc: Loc(0, 1325, 1326),
                                             name: "i".to_string(),
                                         }),
                                         AssemblyExpression::NumberLiteral(
-                                            Loc(0, 1243, 1244),
+                                            Loc(0, 1330, 1331),
                                             0.into(),
                                         ),
                                     )],
                                     AssemblyExpression::Function(
-                                        Loc(0, 1247, 1259),
+                                        Loc(0, 1334, 1346),
                                         Box::new(AssemblyExpression::Variable(Identifier {
-                                            loc: Loc(0, 1247, 1249),
+                                            loc: Loc(0, 1334, 1336),
                                             name: "lt".to_string(),
                                         })),
                                         vec![
                                             AssemblyExpression::Variable(Identifier {
-                                                loc: Loc(0, 1250, 1251),
+                                                loc: Loc(0, 1337, 1338),
                                                 name: "i".to_string(),
                                             }),
                                             AssemblyExpression::HexNumberLiteral(
-                                                Loc(0, 1253, 1258),
+                                                Loc(0, 1340, 1345),
                                                 "0x100".to_string(),
                                             ),
                                         ],
                                     ),
                                     vec![AssemblyStatement::Assign(
-                                        Loc(0, 1262, 1279),
+                                        Loc(0, 1349, 1366),
                                         AssemblyExpression::Variable(Identifier {
-                                            loc: Loc(0, 1262, 1263),
+                                            loc: Loc(0, 1349, 1350),
                                             name: "i".to_string(),
                                         }),
                                         AssemblyExpression::Function(
-                                            Loc(0, 1267, 1279),
+                                            Loc(0, 1354, 1366),
                                             Box::new(AssemblyExpression::Variable(Identifier {
-                                                loc: Loc(0, 1267, 1270),
+                                                loc: Loc(0, 1354, 1357),
                                                 name: "add".to_string(),
                                             })),
                                             vec![
                                                 AssemblyExpression::Variable(Identifier {
-                                                    loc: Loc(0, 1271, 1272),
+                                                    loc: Loc(0, 1358, 1359),
                                                     name: "i".to_string(),
                                                 }),
                                                 AssemblyExpression::HexNumberLiteral(
-                                                    Loc(0, 1274, 1278),
+                                                    Loc(0, 1361, 1365),
                                                     "0x20".to_string(),
                                                 ),
                                             ],
@@ -495,35 +503,35 @@ mod test {
                                     )],
                                     Box::new(vec![
                                         AssemblyStatement::Assign(
-                                            Loc(0, 1312, 1333),
+                                            Loc(0, 1399, 1420),
                                             AssemblyExpression::Variable(Identifier {
-                                                loc: Loc(0, 1312, 1313),
+                                                loc: Loc(0, 1399, 1400),
                                                 name: "x".to_string(),
                                             }),
                                             AssemblyExpression::Function(
-                                                Loc(0, 1317, 1333),
+                                                Loc(0, 1404, 1420),
                                                 Box::new(AssemblyExpression::Variable(
                                                     Identifier {
-                                                        loc: Loc(0, 1317, 1320),
+                                                        loc: Loc(0, 1404, 1407),
                                                         name: "add".to_string(),
                                                     },
                                                 )),
                                                 vec![
                                                     AssemblyExpression::Variable(Identifier {
-                                                        loc: Loc(0, 1321, 1322),
+                                                        loc: Loc(0, 1408, 1409),
                                                         name: "x".to_string(),
                                                     }),
                                                     AssemblyExpression::Function(
-                                                        Loc(0, 1324, 1332),
+                                                        Loc(0, 1411, 1419),
                                                         Box::new(AssemblyExpression::Variable(
                                                             Identifier {
-                                                                loc: Loc(0, 1324, 1329),
+                                                                loc: Loc(0, 1411, 1416),
                                                                 name: "mload".to_string(),
                                                             },
                                                         )),
                                                         vec![AssemblyExpression::Variable(
                                                             Identifier {
-                                                                loc: Loc(0, 1330, 1331),
+                                                                loc: Loc(0, 1417, 1418),
                                                                 name: "i".to_string(),
                                                             },
                                                         )],
@@ -532,59 +540,59 @@ mod test {
                                             ),
                                         ),
                                         AssemblyStatement::If(
-                                            Loc(0, 1371, 1455),
+                                            Loc(0, 1458, 1542),
                                             AssemblyExpression::Function(
-                                                Loc(0, 1374, 1385),
+                                                Loc(0, 1461, 1472),
                                                 Box::new(AssemblyExpression::Variable(
                                                     Identifier {
-                                                        loc: Loc(0, 1374, 1376),
+                                                        loc: Loc(0, 1461, 1463),
                                                         name: "gt".to_string(),
                                                     },
                                                 )),
                                                 vec![
                                                     AssemblyExpression::Variable(Identifier {
-                                                        loc: Loc(0, 1377, 1378),
+                                                        loc: Loc(0, 1464, 1465),
                                                         name: "i".to_string(),
                                                     }),
                                                     AssemblyExpression::HexNumberLiteral(
-                                                        Loc(0, 1380, 1384),
+                                                        Loc(0, 1467, 1471),
                                                         "0x10".to_string(),
                                                     ),
                                                 ],
                                             ),
                                             Box::new(vec![AssemblyStatement::Break(Loc(
-                                                0, 1420, 1425,
+                                                0, 1507, 1512,
                                             ))]),
                                         ),
                                     ]),
                                 ),
                                 AssemblyStatement::Switch(
-                                    Loc(0, 1535, 1737),
+                                    Loc(0, 1622, 1824),
                                     AssemblyExpression::Variable(Identifier {
-                                        loc: Loc(0, 1542, 1543),
+                                        loc: Loc(0, 1629, 1630),
                                         name: "x".to_string(),
                                     }),
                                     vec![AssemblySwitch::Case(
                                         AssemblyExpression::NumberLiteral(
-                                            Loc(0, 1573, 1574),
+                                            Loc(0, 1660, 1661),
                                             0.into(),
                                         ),
                                         Box::new(vec![AssemblyStatement::Expression(
                                             AssemblyExpression::Function(
-                                                Loc(0, 1605, 1617),
+                                                Loc(0, 1692, 1704),
                                                 Box::new(AssemblyExpression::Variable(
                                                     Identifier {
-                                                        loc: Loc(0, 1605, 1611),
+                                                        loc: Loc(0, 1692, 1698),
                                                         name: "revert".to_string(),
                                                     },
                                                 )),
                                                 vec![
                                                     AssemblyExpression::NumberLiteral(
-                                                        Loc(0, 1612, 1613),
+                                                        Loc(0, 1699, 1700),
                                                         0.into(),
                                                     ),
                                                     AssemblyExpression::NumberLiteral(
-                                                        Loc(0, 1615, 1616),
+                                                        Loc(0, 1702, 1703),
                                                         0.into(),
                                                     ),
                                                 ],
@@ -592,7 +600,7 @@ mod test {
                                         )]),
                                     )],
                                     Some(AssemblySwitch::Default(Box::new(vec![
-                                        AssemblyStatement::Leave(Loc(0, 1706, 1711)),
+                                        AssemblyStatement::Leave(Loc(0, 1793, 1798)),
                                     ]))),
                                 ),
                             ],

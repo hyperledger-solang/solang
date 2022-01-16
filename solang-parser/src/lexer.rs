@@ -1,12 +1,13 @@
+use std::fmt;
+use std::iter::Peekable;
+use std::str::CharIndices;
+
 //
 // Solidity custom lexer. Solidity needs a custom lexer for two reasons:
 //  - comments and doc comments
 //  - pragma value is [^;]+
 //
 use phf::phf_map;
-use std::fmt;
-use std::iter::Peekable;
-use std::str::CharIndices;
 use unicode_xid::UnicodeXID;
 
 use crate::pt::Loc;
@@ -29,6 +30,7 @@ pub enum Token<'input> {
     RationalNumber(&'input str, &'input str, &'input str),
     HexNumber(&'input str),
     DocComment(CommentType, &'input str),
+    Comment(CommentType, &'input str),
     Divide,
     Contract,
     Library,
@@ -186,6 +188,8 @@ impl<'input> fmt::Display for Token<'input> {
         match self {
             Token::DocComment(CommentType::Line, s) => write!(f, "///{}", s),
             Token::DocComment(CommentType::Block, s) => write!(f, "/**{}\n*/", s),
+            Token::Comment(CommentType::Line, s) => write!(f, "///{}", s),
+            Token::Comment(CommentType::Block, s) => write!(f, "/*{}\n*/", s),
             Token::Identifier(id) => write!(f, "{}", id),
             Token::StringLiteral(s) => write!(f, "\"{}\"", s),
             Token::HexLiteral(hex) => write!(f, "{}", hex),
@@ -847,21 +851,38 @@ impl<'input> Lexer<'input> {
                             self.chars.next();
 
                             let mut newline = false;
-
-                            let doc_comment_start = match self.chars.next() {
-                                Some((i, '/')) => match self.chars.peek() {
-                                    // ///(/)+ is still a line comment
-                                    Some((_, '/')) => None,
-                                    _ => Some(i + 1),
-                                },
-                                Some((_, ch)) if ch == '\n' || ch == '\r' => {
-                                    newline = true;
-                                    None
+                            let mut text_start = None;
+                            let mut consecutive_slashes = 2;
+                            while let Some((i, ch)) = self.chars.next() {
+                                match ch {
+                                    '/' => {
+                                        consecutive_slashes += 1;
+                                        text_start = Some(i + 1);
+                                    }
+                                    '\n' | '\r' => {
+                                        newline = true;
+                                        break;
+                                    }
+                                    _ => {
+                                        text_start = Some(i);
+                                        break;
+                                    }
                                 }
-                                _ => None,
-                            };
+                            }
 
-                            let mut last = start + 3;
+                            let (comment_start, doc_comment_start) =
+                                if let Some(text_start) = text_start {
+                                    // ///(/)+ is still a line comment
+                                    if consecutive_slashes == 3 {
+                                        (None, Some(text_start))
+                                    } else {
+                                        (Some(text_start), None)
+                                    }
+                                } else {
+                                    (None, None)
+                                };
+
+                            let mut last = start + consecutive_slashes;
 
                             if !newline {
                                 for (i, ch) in &mut self.chars {
@@ -875,10 +896,21 @@ impl<'input> Lexer<'input> {
                             if let Some(doc_start) = doc_comment_start {
                                 if last > doc_start {
                                     return Some(Ok((
-                                        start + 3,
+                                        start + consecutive_slashes,
                                         Token::DocComment(
                                             CommentType::Line,
                                             &self.input[doc_start..=last],
+                                        ),
+                                        last + 1,
+                                    )));
+                                }
+                            } else if let Some(comment_start) = comment_start {
+                                if last > comment_start {
+                                    return Some(Ok((
+                                        start + consecutive_slashes,
+                                        Token::Comment(
+                                            CommentType::Line,
+                                            &self.input[comment_start..=last],
                                         ),
                                         last + 1,
                                     )));
@@ -1226,6 +1258,7 @@ fn lexertest() {
     assert_eq!(
         tokens,
         vec!(
+            Ok((2, Token::Comment(CommentType::Line, " foo bar"), 10)),
             Ok((11, Token::HexNumber("0x00fead0_12"), 23)),
             Ok((24, Token::Number("00090", ""), 29)),
             Ok((30, Token::Number("0_0", ""), 33))
@@ -1238,6 +1271,7 @@ fn lexertest() {
     assert_eq!(
         tokens,
         vec!(
+            Ok((2, Token::Comment(CommentType::Line, " foo bar"), 10)),
             Ok((11, Token::HexNumber("0x00fead0_12"), 23)),
             Ok((24, Token::RationalNumber("9", "0008", ""), 30)),
             Ok((31, Token::Number("0_0", ""), 34))
@@ -1250,6 +1284,7 @@ fn lexertest() {
     assert_eq!(
         tokens,
         vec!(
+            Ok((2, Token::Comment(CommentType::Line, " foo bar"), 10)),
             Ok((11, Token::HexNumber("0x00fead0_12"), 23)),
             Ok((24, Token::RationalNumber("", "0008", ""), 29)),
             Ok((30, Token::RationalNumber("0", "9", "2"), 35))
@@ -1262,6 +1297,7 @@ fn lexertest() {
     assert_eq!(
         tokens,
         vec!(
+            Ok((2, Token::Comment(CommentType::Line, " foo bar"), 10)),
             Ok((11, Token::HexNumber("0x00fead0_12"), 23)),
             Ok((24, Token::RationalNumber("", "0008", ""), 29)),
             Ok((30, Token::RationalNumber("0", "9", "-2"), 36))
@@ -1409,11 +1445,14 @@ fn lexertest() {
 
     assert_eq!(
         tokens,
-        vec!(Ok((
-            3,
-            Token::DocComment(CommentType::Line, " jadajadadjada"),
-            17
-        )))
+        vec!(
+            Ok((
+                3,
+                Token::DocComment(CommentType::Line, " jadajadadjada"),
+                17
+            )),
+            Ok((20, Token::Comment(CommentType::Line, " bar"), 24)),
+        )
     );
 
     let tokens =

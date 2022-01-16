@@ -7,7 +7,7 @@ use lalrpop_util::ParseError;
 use super::pt::*;
 use super::box_option;
 use super::lexer::{Token, LexicalError, CommentType};
-use super::doc::tags;
+use super::comments::{comments, docs};
 use num_rational::BigRational;
 
 grammar<'input>(input: &'input str, file_no: usize);
@@ -26,6 +26,7 @@ SourceUnitPart: SourceUnitPart = {
     FunctionDefinition => SourceUnitPart::FunctionDefinition(<>),
     VariableDefinition => SourceUnitPart::VariableDefinition(<>),
     <l:@L> ";" <r:@R> => SourceUnitPart::StraySemicolon(Loc(file_no, l, r)),
+    SingleComment => SourceUnitPart::Comment(<>),
 }
 
 ImportDirective: SourceUnitPart = {
@@ -57,8 +58,12 @@ PragmaDirective: SourceUnitPart = {
     <doc:DocComments> <l:@L> "pragma" <i:Identifier> <s:StringLiteral> ";" <r:@L> => SourceUnitPart::PragmaDirective(Loc(file_no, l, r), doc, i, s)
 }
 
+SingleComment: Comment = {
+    <l:@L> <c:Comment> => comments(&vec![(l, c.0, c.1)])[0].clone()
+}
+
 DocComments: Vec<DocComment> = {
-    SingleDocComment* => tags(&<>)
+    SingleDocComment* => docs(&<>)
 }
 
 SingleDocComment: (usize, CommentType, &'input str) = {
@@ -929,6 +934,7 @@ extern {
         "." => Token::Member,
         "," => Token::Comma,
         DocComment => Token::DocComment(<CommentType>, <&'input str>),
+        Comment => Token::Comment(<CommentType>, <&'input str>),
         Uint => Token::Uint(<u16>),
         Int => Token::Int(<u16>),
         Bytes => Token::Bytes(<u8>),
