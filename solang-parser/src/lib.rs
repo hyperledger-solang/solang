@@ -133,7 +133,7 @@ mod test {
 
         let expected_parse_tree = SourceUnit(vec![
             SourceUnitPart::Comment(Comment::Line {
-                comment: "SPDX-License-Identifier: MIT".to_string(),
+                comment: " SPDX-License-Identifier: MIT".to_string(),
             }),
             SourceUnitPart::ContractDefinition(Box::new(ContractDefinition {
                 doc: vec![
@@ -260,7 +260,7 @@ mod test {
                 ],
             })),
             SourceUnitPart::Comment(Comment::Line {
-                comment: "nice bar function".to_string(),
+                comment: "// nice bar function".to_string(),
             }),
             SourceUnitPart::FunctionDefinition(Box::new(FunctionDefinition {
                 doc: vec![],

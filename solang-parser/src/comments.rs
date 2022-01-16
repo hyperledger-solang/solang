@@ -1,11 +1,23 @@
 use crate::lexer::CommentType;
 use crate::pt::{Comment, DocComment, SingleDocComment};
 
-fn to_line(start: usize, ty: CommentType, comment: &str) -> (CommentType, Vec<(usize, &str)>) {
+fn to_line(
+    start: usize,
+    ty: CommentType,
+    comment: &str,
+    trim_start: bool,
+) -> (CommentType, Vec<(usize, &str)>) {
     let mut grouped_comments = Vec::new();
 
     match ty {
-        CommentType::Line => grouped_comments.push((start, comment.trim())),
+        CommentType::Line => grouped_comments.push((
+            start,
+            if trim_start {
+                comment.trim()
+            } else {
+                comment.trim_end()
+            },
+        )),
         CommentType::Block => {
             let mut start = start;
 
@@ -31,19 +43,21 @@ fn to_lines<'a>(
 ) -> Vec<(CommentType, Vec<(usize, &'a str)>)> {
     comments
         .iter()
-        .map(|(start, ty, comment)| to_line(*start, *ty, comment))
+        .map(|(start, ty, comment)| to_line(*start, *ty, comment, true))
         .collect()
 }
 
 pub fn comments(lines: &[(usize, CommentType, &str)]) -> Vec<Comment> {
     lines
         .iter()
-        .filter_map(|(start, ty, comment)| match to_line(*start, *ty, comment) {
-            (CommentType::Line, comments) if comments.len() == 1 => Some(Comment::Line {
-                comment: comments[0].1.to_string(),
-            }),
-            _ => None,
-        })
+        .filter_map(
+            |(start, ty, comment)| match to_line(*start, *ty, comment, false) {
+                (CommentType::Line, comments) if comments.len() == 1 => Some(Comment::Line {
+                    comment: comments[0].1.to_string(),
+                }),
+                _ => None,
+            },
+        )
         .collect()
 }
 

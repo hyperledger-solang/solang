@@ -876,13 +876,13 @@ impl<'input> Lexer<'input> {
                                     if consecutive_slashes == 3 {
                                         (None, Some(text_start))
                                     } else {
-                                        (Some(text_start), None)
+                                        (Some(text_start - consecutive_slashes + 2), None)
                                     }
                                 } else {
                                     (None, None)
                                 };
 
-                            let mut last = start + consecutive_slashes;
+                            let mut last = start + consecutive_slashes - 1;
 
                             if !newline {
                                 for (i, ch) in &mut self.chars {
@@ -907,7 +907,7 @@ impl<'input> Lexer<'input> {
                             } else if let Some(comment_start) = comment_start {
                                 if last > comment_start {
                                     return Some(Ok((
-                                        start + consecutive_slashes,
+                                        comment_start,
                                         Token::Comment(
                                             CommentType::Line,
                                             &self.input[comment_start..=last],
@@ -1482,7 +1482,14 @@ fn lexertest() {
     assert_eq!(tokens, Some(Err(LexicalError::EndOfFileInComment(0, 3))));
 
     let tokens = Lexer::new("//////////////").next();
-    assert_eq!(tokens, None);
+    assert_eq!(
+        tokens,
+        Some(Ok((
+            2,
+            Token::Comment(CommentType::Line, "////////////"),
+            14
+        )))
+    );
 
     // some unicode tests
     let tokens = Lexer::new(">=\u{a0} . très\u{2028}αβγδεζηθικλμνξοπρστυφχψω\u{85}カラス")
