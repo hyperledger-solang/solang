@@ -59,8 +59,7 @@ PragmaDirective: SourceUnitPart = {
 }
 
 SingleComment: Comment = {
-    // TODO: no clone?
-    <l:@L> <c:Comment> => comments(&vec![(l, c.0, c.1)])[0].clone()
+    <l:@L> <c:Comment> => comments(&vec![(l, c.0, c.1)]).remove(0)
 }
 
 DocComments: Vec<DocComment> = {
