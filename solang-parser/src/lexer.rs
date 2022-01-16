@@ -853,7 +853,7 @@ impl<'input> Lexer<'input> {
                             let mut newline = false;
                             let mut text_start = None;
                             let mut consecutive_slashes = 2;
-                            while let Some((i, ch)) = self.chars.next() {
+                            for (i, ch) in &mut self.chars {
                                 match ch {
                                     '/' => {
                                         consecutive_slashes += 1;
