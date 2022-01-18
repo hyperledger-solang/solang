@@ -8,11 +8,11 @@ contract UniswapV2ERC20 {
     using SafeMathUniswap for uint;
 
     function name() public pure returns (string memory) {
-        return 'SushiSwap LP Token';
+        return 'LaDEX LP Token';
     }
 
     function symbol() public pure returns (string memory) {
-        return 'SLP';
+        return 'LaLP';
     }
 
     function decimals() public pure returns (uint8) {
@@ -37,7 +37,7 @@ contract UniswapV2ERC20 {
         DOMAIN_SEPARATOR = keccak256(
             abi.encode(
                 keccak256('EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)'),
-                keccak256(bytes('SushiSwap LP Token')),
+                keccak256(bytes('LaDEX LP Token')),
                 keccak256(bytes('1')),
                 chainId,
                 address(this)
@@ -87,16 +87,16 @@ contract UniswapV2ERC20 {
     }
 
     function permit(address owner, address spender, uint value, uint deadline, uint8 v, bytes32 r, bytes32 s) external {
-        //require(deadline >= block.timestamp, 'UniswapV2: EXPIRED');
-        //bytes32 digest = keccak256(
-        //    abi.encodePacked(
-        //        '\x19\x01',
-        //        DOMAIN_SEPARATOR,
-        //        keccak256(abi.encode(PERMIT_TYPEHASH, owner, spender, value, nonces[owner]++, deadline))
-        //    )
-        //);
-        //address recoveredAddress = ecrecover(digest, v, r, s);
-        //require(recoveredAddress != address(0) && recoveredAddress == owner, 'UniswapV2: INVALID_SIGNATURE');
+        require(deadline >= block.timestamp, 'UniswapV2: EXPIRED');
+        bytes32 digest = keccak256(
+            abi.encodePacked(
+                '\x19\x01',
+                DOMAIN_SEPARATOR,
+                keccak256(abi.encode(PERMIT_TYPEHASH, owner, spender, value, nonces[owner]++, deadline))
+            )
+        );
+        address recoveredAddress = ecrecover(digest, v, r, s);
+        require(recoveredAddress != address(0) && recoveredAddress == owner, 'UniswapV2: INVALID_SIGNATURE');
         _approve(owner, spender, value);
     }
 }
