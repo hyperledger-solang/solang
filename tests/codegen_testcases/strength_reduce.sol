@@ -64,7 +64,7 @@ contract test {
 
 // BEGIN-CHECK: test::function::f6
     function f6() pure public {
-        for (uint i = 1e9; i < 1e9+10; i++) {
+        for (uint i = 1E9; i < 1E9+10; i++) {
             print("i:{}".format(i / 32768));
         }
 // CHECK: (%i >> uint256 15)
