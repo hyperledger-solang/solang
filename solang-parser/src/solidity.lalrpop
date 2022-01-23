@@ -29,16 +29,16 @@ SourceUnitPart: SourceUnitPart = {
 }
 
 ImportDirective: SourceUnitPart = {
-    <doc:DocComments> <l:@L> "import" <s:StringLiteral> ";" <r:@L> => SourceUnitPart::ImportDirective(doc, Import::Plain(s, Loc(file_no, l, r))),
-    <doc:DocComments> <l:@L> "import" <s:StringLiteral> "as" <id:Identifier> ";" <r:@L> =>  SourceUnitPart::ImportDirective(doc, Import::GlobalSymbol(s, id, Loc(file_no, l, r))),
-    <doc:DocComments> <l:@L> "import" "*" "as" <id:Identifier> <from:Identifier> <s:StringLiteral> ";" <r:@L> =>? {
+    <doc:DocComments> <l:@L> "import" <s:StringLiteral> <r:@R> ";" => SourceUnitPart::ImportDirective(doc, Import::Plain(s, Loc(file_no, l, r))),
+    <doc:DocComments> <l:@L> "import" <s:StringLiteral> "as" <id:Identifier> <r:@R> ";" =>  SourceUnitPart::ImportDirective(doc, Import::GlobalSymbol(s, id, Loc(file_no, l, r))),
+    <doc:DocComments> <l:@L> "import" "*" "as" <id:Identifier> <from:Identifier> <s:StringLiteral> <r:@R> ";" =>? {
         if from.name != "from" {
             Err(ParseError::User { error: LexicalError::ExpectedFrom(from.loc.0, from.loc.1, from.name)})
         } else {
             Ok(SourceUnitPart::ImportDirective(doc, Import::GlobalSymbol(s, id, Loc(file_no, l, r))))
         }
     },
-    <doc:DocComments> <l:@L> "import" "{" <rename:CommaOne<ImportRename>> "}" <from:Identifier> <s:StringLiteral> ";" <r:@L> =>? {
+    <doc:DocComments> <l:@L> "import" "{" <rename:CommaOne<ImportRename>> "}" <from:Identifier> <s:StringLiteral> <r:@R> ";" =>? {
         if from.name != "from" {
             Err(ParseError::User { error:LexicalError::ExpectedFrom(from.loc.0, from.loc.1, from.name)})
         } else {
@@ -54,7 +54,7 @@ ImportRename: (Identifier, Option<Identifier>) = {
 
 PragmaDirective: SourceUnitPart = {
     // The lexer does special parsing for String literal; it isn't really a string literal
-    <doc:DocComments> <l:@L> "pragma" <i:Identifier> <s:StringLiteral> ";" <r:@L> => SourceUnitPart::PragmaDirective(Loc(file_no, l, r), doc, i, s)
+    <doc:DocComments> <l:@L> "pragma" <i:Identifier> <s:StringLiteral> <r:@R> ";" => SourceUnitPart::PragmaDirective(Loc(file_no, l, r), doc, i, s)
 }
 
 DocComments: Vec<DocComment> = {
@@ -182,7 +182,7 @@ EventParameter: EventParameter = {
 }
 
 EventDefinition: Box<EventDefinition> = {
-    <doc:DocComments> <l:@L> "event" <name:Identifier> "(" <v:Comma<EventParameter>> ")" <a:"anonymous"?> ";" <r:@R> => {
+    <doc:DocComments> <l:@L> "event" <name:Identifier> "(" <v:Comma<EventParameter>> ")" <a:"anonymous"?> <r:@R> ";" => {
         Box::new(EventDefinition{
             loc: Loc(file_no, l, r), doc, name, fields: v, anonymous: a.is_some()
         })
@@ -196,7 +196,7 @@ EnumDefinition: Box<EnumDefinition> = {
 }
 
 VariableDefinition: Box<VariableDefinition> = {
-    <doc:DocComments> <l:@L> <ty:NoFunctionTyPrecedence0> <attrs:VariableAttribute*> <name:Identifier> <e:("=" <Expression>)?> <r:@R>";" => {
+    <doc:DocComments> <l:@L> <ty:NoFunctionTyPrecedence0> <attrs:VariableAttribute*> <name:Identifier> <e:("=" <Expression>)?> <r:@R> ";" => {
         Box::new(VariableDefinition{
             doc, loc: Loc(file_no, l, r), ty, attrs, name, initializer: e,
         })
@@ -206,7 +206,7 @@ VariableDefinition: Box<VariableDefinition> = {
     //     // f is a variable with internal visibility referencing an external function
     //     function() external internal f;
     // }
-    <doc:DocComments> <l:@L> <ty:FunctionTyPrecedence0> <name:Identifier> <e:("=" <Expression>)?> <r:@R>";" => {
+    <doc:DocComments> <l:@L> <ty:FunctionTyPrecedence0> <name:Identifier> <e:("=" <Expression>)?> <r:@R> ";" => {
         Box::new(VariableDefinition{
             doc, loc: Loc(file_no, l, r), ty, attrs: Vec::new(), name, initializer: e,
         })
@@ -679,7 +679,7 @@ ClosedStatement: Statement = {
     <l:@L> "for" "(" <b:SimpleStatement?> ";" <c:Expression?> ";" <n:SimpleStatement?> ")" <block:ClosedStatement> <r:@R> => {
         Statement::For(Loc(file_no, l, r), box_option(b), box_option(c), box_option(n), Some(Box::new(block)))
     },
-    <l:@L> "for" "(" <b:SimpleStatement?> ";" <c:Expression?> ";" <n:SimpleStatement?> ")" ";" <r:@R> => {
+    <l:@L> "for" "(" <b:SimpleStatement?> ";" <c:Expression?> ";" <n:SimpleStatement?> ")" <r:@R> ";" => {
         Statement::For(Loc(file_no, l, r), box_option(b), box_option(c), box_option(n), None)
     }
 }
