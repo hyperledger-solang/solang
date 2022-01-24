@@ -655,7 +655,7 @@ impl<'input> Lexer<'input> {
         let old_end = end;
         let mut exp_start = end + 1;
 
-        if let Some((i, 'e')) = self.chars.peek() {
+        if let Some((i, 'e' | 'E')) = self.chars.peek() {
             exp_start = *i + 1;
             self.chars.next();
             while let Some((i, ch)) = self.chars.peek() {
