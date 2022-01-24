@@ -6,20 +6,12 @@ import "../interfaces/IERC20.sol";
 library SafeERC20 {
     function safeSymbol(IERC20 token) internal returns(string memory) {
         (bool success, bytes memory data) = address(token).staticcall(abi.encodeWithSelector(0x95d89b41));
-        if (success && data.length > 0) {
-            return abi.decode(data, (string));
-        }
-        
-        return "???";
+        return success && data.length > 0 ? abi.decode(data, (string)) : "???";
     }
 
     function safeName(IERC20 token) internal returns(string memory) {
         (bool success, bytes memory data) = address(token).staticcall(abi.encodeWithSelector(0x06fdde03));
-        if (success && data.length > 0) {
-            return abi.decode(data, (string));
-        }
-
-        return "???";
+        return success && data.length > 0 ? abi.decode(data, (string)) : "???";
     }
 
     function safeDecimals(IERC20 token) public returns (uint8) {

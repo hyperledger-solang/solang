@@ -20,7 +20,7 @@ contract Ownable is OwnableData {
     // E1: OK
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
-    function initOwnable() internal {
+    constructor () internal {
         owner = msg.sender;
         emit OwnershipTransferred(address(0), msg.sender);
     }

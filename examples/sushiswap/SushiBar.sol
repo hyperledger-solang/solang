@@ -2,21 +2,19 @@
 
 pragma solidity 0.6.12;
 
-import "../openzeppelin/token/ERC20/IERC20.sol";
-import "../openzeppelin/token/ERC20/ERC20.sol";
-import "../openzeppelin/utils/math/SafeMath.sol";
+import "./openzeppelin/token/ERC20/IERC20.sol";
+import "./openzeppelin/token/ERC20/ERC20.sol";
+import "./openzeppelin/utils/math/SafeMath.sol";
 
 // SushiBar is the coolest bar in town. You come in with some Sushi, and leave with more! The longer you stay, the more Sushi you get.
 //
 // This contract handles swapping to and from xSushi, SushiSwap's staking token.
-contract SushiBar is ERC20 {
+contract SushiBar is ERC20("SushiBar", "xSUSHI"){
     using SafeMath for uint256;
     IERC20 public sushi;
 
     // Define the Sushi token contract
-    function initSushiBar(IERC20 _sushi) public {
-        initERC20("SushiBar", "xSUSHI");
-
+    constructor(IERC20 _sushi) public {
         sushi = _sushi;
     }
 

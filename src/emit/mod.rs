@@ -4357,11 +4357,12 @@ pub trait TargetRuntime<'a> {
         bin: &mut Binary<'a>,
         contract: &ast::Contract,
         ns: &ast::Namespace,
+        emit_constructors_only: bool,
     ) {
         let mut defines = Vec::new();
 
         for (cfg_no, cfg) in contract.cfg.iter().enumerate() {
-            if !cfg.is_placeholder() {
+            if !cfg.is_placeholder() && (!emit_constructors_only || cfg.ty == pt::FunctionTy::Constructor) {
                 let ftype = bin.function_type(
                     &cfg.params
                         .iter()

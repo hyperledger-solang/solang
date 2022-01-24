@@ -71,7 +71,7 @@ impl SolanaTarget {
         // externals
         target.declare_externals(&mut binary);
 
-        target.emit_functions(&mut binary, contract, ns);
+        target.emit_functions(&mut binary, contract, ns, false);
 
         let storage_initializer = target.emit_initializer(&mut binary, contract, ns);
 
@@ -159,7 +159,7 @@ impl SolanaTarget {
                     continue;
                 }
 
-                target.emit_functions(&mut binary, contract, ns);
+                target.emit_functions(&mut binary, contract, ns, false);
 
                 let storage_initializer = target.emit_initializer(&mut binary, contract, ns);
 

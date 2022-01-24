@@ -7,9 +7,18 @@ import './libraries/SafeMath.sol';
 contract UniswapV2ERC20 {
     using SafeMathUniswap for uint;
 
-    string public constant name = 'SushiSwap LP Token';
-    string public constant symbol = 'SLP';
-    uint8 public constant decimals = 18;
+    function name() public pure returns (string memory) {
+        return 'LaDEX LP Token';
+    }
+
+    function symbol() public pure returns (string memory) {
+        return 'LaLP';
+    }
+
+    function decimals() public pure returns (uint8) {
+        return 18;
+    }
+
     uint  public totalSupply;
     mapping(address => uint) public balanceOf;
     mapping(address => mapping(address => uint)) public allowance;
@@ -23,14 +32,12 @@ contract UniswapV2ERC20 {
     event Transfer(address indexed from, address indexed to, uint value);
 
     constructor() public {
-        uint chainId;
-        assembly {
-            chainId := chainid()
-        }
+        uint chainId = block.chainid;
+
         DOMAIN_SEPARATOR = keccak256(
             abi.encode(
                 keccak256('EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)'),
-                keccak256(bytes(name)),
+                keccak256(bytes('LaDEX LP Token')),
                 keccak256(bytes('1')),
                 chainId,
                 address(this)
