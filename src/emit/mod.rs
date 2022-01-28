@@ -956,13 +956,19 @@ pub trait TargetRuntime<'a> {
                 self.set_storage(bin, function, slot_ptr, m);
             }
             ast::Type::Address(_) | ast::Type::Contract(_) => {
-                let address = bin.builder.build_alloca(bin.address_type(ns), "address");
+                if dest.is_pointer_value() {
+                    bin.builder.build_store(slot_ptr, *slot);
 
-                bin.builder.build_store(address, dest.into_array_value());
+                    self.set_storage(bin, function, slot_ptr, dest.into_pointer_value());
+                } else {
+                    let address = bin.builder.build_alloca(bin.address_type(ns), "address");
 
-                bin.builder.build_store(slot_ptr, *slot);
+                    bin.builder.build_store(address, dest.into_array_value());
 
-                self.set_storage(bin, function, slot_ptr, address);
+                    bin.builder.build_store(slot_ptr, *slot);
+
+                    self.set_storage(bin, function, slot_ptr, address);
+                }
             }
             _ => {
                 bin.builder.build_store(slot_ptr, *slot);
