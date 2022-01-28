@@ -1,4 +1,4 @@
-use solang::{file_resolver::FileResolver, parse_and_resolve, Target};
+use solang::{codegen, file_resolver::FileResolver, parse_and_resolve, sema::ast::Level, Target};
 use std::{
     ffi::OsStr,
     fs::{read_dir, File},
@@ -56,7 +56,19 @@ fn parse_file(path: PathBuf, target: Target) -> io::Result<()> {
     // The files may have had their end of lines mangled on Windows
     cache.set_file_contents(&filename, source.replace("\r\n", "\n"));
 
-    let ns = parse_and_resolve(OsStr::new(&filename), &mut cache, target);
+    let mut ns = parse_and_resolve(OsStr::new(&filename), &mut cache, target);
+
+    if ns.diagnostics.iter().all(|diag| diag.level != Level::Error) {
+        // codegen all the contracts
+        codegen::codegen(
+            &mut ns,
+            &codegen::Options {
+                math_overflow_check: false,
+                opt_level: codegen::OptimizationLevel::Default,
+                ..Default::default()
+            },
+        );
+    }
 
     let mut path = path;
 
@@ -64,10 +76,9 @@ fn parse_file(path: PathBuf, target: Target) -> io::Result<()> {
 
     let generated_dot = ns.dotgraphviz();
 
+    // uncomment the next three lines to regenerate the test data
     // use std::io::Write;
-
     // let mut file = File::create(&path)?;
-
     // file.write_all(generated_dot.as_bytes())?;
 
     let mut file = File::open(&path)?;
