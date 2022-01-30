@@ -177,6 +177,16 @@ fn resolve_contract<'a>(
         Symbol::Contract(def.loc, contract_no),
     );
 
+    if is_windows_reserved(&def.name.name) {
+        ns.diagnostics.push(Diagnostic::error(
+            def.name.loc,
+            format!(
+                "contract name ‘{}’ is reserved file name on Windows",
+                def.name.name
+            ),
+        ));
+    }
+
     for parts in &def.parts {
         match parts {
             pt::ContractPart::EnumDefinition(ref e) => {
@@ -1252,4 +1262,14 @@ impl Type {
             _ => false,
         }
     }
+}
+
+/// These names cannot be used on Windows, even with an extension.
+/// shamelessly stolen from cargo
+fn is_windows_reserved(name: &str) -> bool {
+    [
+        "con", "prn", "aux", "nul", "com1", "com2", "com3", "com4", "com5", "com6", "com7", "com8",
+        "com9", "lpt1", "lpt2", "lpt3", "lpt4", "lpt5", "lpt6", "lpt7", "lpt8", "lpt9",
+    ]
+    .contains(&name.to_ascii_lowercase().as_str())
 }

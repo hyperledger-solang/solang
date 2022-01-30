@@ -3,10 +3,10 @@ strict digraph "tests/contract_testcases/substrate/structs/parse_structs_08.sol"
 	Bar [label="name:Bar\ncontract: con\ntests/contract_testcases/substrate/structs/parse_structs_08.sol:7:20-23\nfield name:foo ty:struct con.Foo"]
 	Baz [label="name:Baz\ncontract: con\ntests/contract_testcases/substrate/structs/parse_structs_08.sol:11:20-23\nfield name:foo ty:struct con.Foo\nfield name:bar ty:struct con.Bar"]
 	contract [label="contract con\ntests/contract_testcases/substrate/structs/parse_structs_08.sol:2:9-22"]
-	diagnostic [label="found contract ‘con’\nlevel Debug\ntests/contract_testcases/substrate/structs/parse_structs_08.sol:2:9-22"]
+	diagnostic [label="contract name ‘con’ is reserved file name on Windows\nlevel Error\ntests/contract_testcases/substrate/structs/parse_structs_08.sol:2:18-21"]
 	structs -> Foo
 	structs -> Bar
 	structs -> Baz
 	contracts -> contract
-	diagnostics -> diagnostic [label="Debug"]
+	diagnostics -> diagnostic [label="Error"]
 }
