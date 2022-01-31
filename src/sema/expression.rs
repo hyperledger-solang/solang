@@ -361,6 +361,12 @@ fn coerce_number(
         (Type::Bytes(left_length), Type::Bytes(right_length)) if allow_bytes => {
             return Ok(Type::Bytes(std::cmp::max(*left_length, *right_length)));
         }
+        (Type::Bytes(_), _) if allow_bytes => {
+            return Ok(l.clone());
+        }
+        (_, Type::Bytes(_)) if allow_bytes => {
+            return Ok(r.clone());
+        }
         (Type::Rational, Type::Int(_)) => {
             return Ok(Type::Rational);
         }
