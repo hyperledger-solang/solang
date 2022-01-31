@@ -518,6 +518,7 @@ pub enum Expression {
     ZeroExt(pt::Loc, Type, Box<Expression>),
     SignExt(pt::Loc, Type, Box<Expression>),
     Trunc(pt::Loc, Type, Box<Expression>),
+    CheckingTrunc(pt::Loc, Type, Box<Expression>),
     Cast(pt::Loc, Type, Box<Expression>),
     BytesCast(pt::Loc, Type, Type, Box<Expression>),
 
@@ -1188,6 +1189,7 @@ impl Expression {
             | Expression::ZeroExt(loc, _, _)
             | Expression::SignExt(loc, _, _)
             | Expression::Trunc(loc, _, _)
+            | Expression::CheckingTrunc(loc, _, _)
             | Expression::Cast(loc, _, _)
             | Expression::BytesCast(loc, _, _, _)
             | Expression::More(loc, _, _)

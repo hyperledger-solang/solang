@@ -476,6 +476,9 @@ pub fn expression(
         Expression::And(loc, left, right) => {
             and(left, cfg, contract_no, func, ns, vartab, loc, right, opt)
         }
+        Expression::CheckingTrunc(loc, ty, e) => {
+            checking_trunc(loc, e, ty, cfg, contract_no, func, ns, vartab, opt)
+        }
         Expression::Trunc(loc, ty, e) => Expression::Trunc(
             *loc,
             ty.clone(),
@@ -1491,6 +1494,74 @@ fn expr_builtin(
             Expression::Builtin(*loc, tys.to_vec(), *builtin, args)
         }
     }
+}
+
+fn checking_trunc(
+    loc: &pt::Loc,
+    expr: &Expression,
+    ty: &Type,
+    cfg: &mut ControlFlowGraph,
+    contract_no: usize,
+    func: Option<&Function>,
+    ns: &Namespace,
+    vartab: &mut Vartable,
+    opt: &Options,
+) -> Expression {
+    let bits = match ty {
+        Type::Uint(bits) => *bits as u32,
+        Type::Value => (ns.value_length as u32 * 8),
+        _ => unreachable!(),
+    };
+
+    let source_ty = expr.ty();
+
+    let overflow = Expression::NumberLiteral(*loc, source_ty.clone(), BigInt::from(2u32).pow(bits));
+
+    let pos = vartab.temp(
+        &pt::Identifier {
+            name: "value".to_owned(),
+            loc: *loc,
+        },
+        &source_ty,
+    );
+
+    let expr = expression(expr, cfg, contract_no, func, ns, vartab, opt);
+
+    cfg.add(
+        vartab,
+        Instr::Set {
+            loc: pt::Loc(0, 0, 0),
+            res: pos,
+            expr,
+        },
+    );
+
+    let out_of_bounds = cfg.new_basic_block("out_of_bounds".to_string());
+    let in_bounds = cfg.new_basic_block("in_bounds".to_string());
+
+    cfg.add(
+        vartab,
+        Instr::BranchCond {
+            cond: Expression::MoreEqual(
+                *loc,
+                Box::new(Expression::Variable(*loc, source_ty.clone(), pos)),
+                Box::new(overflow),
+            ),
+            true_block: out_of_bounds,
+            false_block: in_bounds,
+        },
+    );
+
+    cfg.set_basic_block(out_of_bounds);
+    cfg.add(vartab, Instr::AssertFailure { expr: None });
+
+    cfg.set_basic_block(in_bounds);
+
+    Expression::Trunc(
+        *loc,
+        ty.clone(),
+        Box::new(Expression::Variable(*loc, source_ty, pos)),
+    )
 }
 
 fn format_string(

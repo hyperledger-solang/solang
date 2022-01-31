@@ -190,6 +190,10 @@ fn print_expr(e: &Expression, func: Option<&Function>, ns: &Namespace) -> Tree {
             format!("sign extend {}", ty.to_string(ns)),
             vec![print_expr(expr, func, ns)],
         ),
+        Expression::CheckingTrunc(_, ty, expr) => Tree::Branch(
+            format!("checking truncate {}", ty.to_string(ns)),
+            vec![print_expr(expr, func, ns)],
+        ),
         Expression::Trunc(_, ty, expr) => Tree::Branch(
             format!("truncate {}", ty.to_string(ns)),
             vec![print_expr(expr, func, ns)],
