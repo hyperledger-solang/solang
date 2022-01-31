@@ -3901,6 +3901,8 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             ],
             "terminated",
         );
+
+        binary.builder.build_unreachable();
     }
 
     /// Crypto Hash
