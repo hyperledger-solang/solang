@@ -142,3 +142,41 @@ fn read_buffer() {
     let res = vm.function_must_fail("test2", &[Token::Bytes(buf)], &[], 0, None);
     assert_eq!(res, Ok(4294967296));
 }
+
+#[test]
+fn bytes_compare() {
+    let mut vm = build_solidity(
+        r#"
+        contract foo {
+            function test1(bytes4 bs) public returns (bool) {
+                return bs != 0;
+            }
+
+            function test2(bytes4 bs) public returns (bool) {
+                return bs == 0;
+            }
+        }"#,
+    );
+
+    vm.constructor("foo", &[], 0);
+
+    let returns = vm.function(
+        "test1",
+        &[Token::FixedBytes([0xbc, 0xbc, 0xbd, 0xbe].to_vec())],
+        &[],
+        0,
+        None,
+    );
+
+    assert_eq!(returns, vec![Token::Bool(true)]);
+
+    let returns = vm.function(
+        "test2",
+        &[Token::FixedBytes([0xbc, 0xbc, 0xbd, 0xbe].to_vec())],
+        &[],
+        0,
+        None,
+    );
+
+    assert_eq!(returns, vec![Token::Bool(false)]);
+}
