@@ -75,6 +75,7 @@ impl Expression {
             | Expression::ZeroExt(_, ty, _)
             | Expression::SignExt(_, ty, _)
             | Expression::Trunc(_, ty, _)
+            | Expression::CheckingTrunc(_, ty, _)
             | Expression::Cast(_, ty, _)
             | Expression::BytesCast(_, _, ty, _)
             | Expression::Complement(_, ty, _)
@@ -949,21 +950,18 @@ fn cast_types(
 
             match from_len.cmp(&to_len) {
                 Ordering::Greater => {
-                    if implicit {
-                        diagnostics.push(Diagnostic::type_error(
-                            *loc,
-                            format!(
-                                "conversion truncates {} to {}, as value is type {} on target {}",
-                                from.to_string(ns),
-                                to.to_string(ns),
-                                Type::Value.to_string(ns),
-                                ns.target
-                            ),
-                        ));
-                        Err(())
-                    } else {
-                        Ok(Expression::Trunc(*loc, to.clone(), Box::new(expr)))
-                    }
+                    diagnostics.push(Diagnostic::warning(
+                        *loc,
+                        format!(
+                            "conversion truncates {} to {}, as value is type {} on target {}",
+                            from.to_string(ns),
+                            to.to_string(ns),
+                            Type::Value.to_string(ns),
+                            ns.target
+                        ),
+                    ));
+
+                    Ok(Expression::CheckingTrunc(*loc, to.clone(), Box::new(expr)))
                 }
                 Ordering::Less => Ok(Expression::SignExt(*loc, to.clone(), Box::new(expr))),
                 Ordering::Equal => Ok(Expression::Cast(*loc, to.clone(), Box::new(expr))),

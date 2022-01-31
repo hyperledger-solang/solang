@@ -628,6 +628,21 @@ impl Dot {
 
                 self.add_expression(expr, func, ns, node, String::from("expr"));
             }
+            Expression::CheckingTrunc(loc, ty, expr) => {
+                let node = self.add_node(
+                    Node::new(
+                        "trunc",
+                        vec![
+                            format!("checking truncate {}", ty.to_string(ns)),
+                            ns.files[loc.0].loc_to_string(loc),
+                        ],
+                    ),
+                    Some(parent),
+                    Some(parent_rel),
+                );
+
+                self.add_expression(expr, func, ns, node, String::from("expr"));
+            }
             Expression::Cast(loc, ty, expr) => {
                 let node = self.add_node(
                     Node::new(

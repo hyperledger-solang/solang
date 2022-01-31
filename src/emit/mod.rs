@@ -4190,7 +4190,7 @@ pub trait TargetRuntime<'a> {
                             .expression(bin, address, &w.vars, function, ns)
                             .into_array_value();
 
-                        let addr = bin.builder.build_alloca(bin.address_type(ns), "address");
+                        let addr = bin.build_alloca(function, bin.address_type(ns), "address");
 
                         bin.builder.build_store(
                             bin.builder.build_pointer_cast(
