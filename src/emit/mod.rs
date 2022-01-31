@@ -4328,7 +4328,7 @@ pub trait TargetRuntime<'a> {
                         }
                     }
                     Instr::Unreachable => {
-                        bin.builder.build_unreachable();
+                        // Nothing to do; unreachable instruction should have already been inserteds
                     }
                     Instr::SelfDestruct { recipient } => {
                         let recipient = self

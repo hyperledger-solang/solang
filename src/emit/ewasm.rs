@@ -1670,6 +1670,8 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
                 .into()],
             "terminated",
         );
+
+        binary.builder.build_unreachable();
     }
 
     /// Crypto Hash
