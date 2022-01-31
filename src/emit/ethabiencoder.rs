@@ -1,4 +1,4 @@
-use crate::sema::ast;
+use crate::{sema::ast, Target};
 use inkwell::types::BasicType;
 use inkwell::values::{BasicValueEnum, FunctionValue, IntValue, PointerValue};
 use inkwell::AddressSpace;
@@ -2429,7 +2429,7 @@ impl EthAbiDecoder {
             "next_offset",
         );
 
-        self.check_overrun(binary, function, new_offset, length);
+        self.check_overrun(binary, function, new_offset, length, ns);
 
         let data = unsafe { binary.builder.build_gep(data, &[*offset], "") };
 
@@ -3030,7 +3030,7 @@ impl EthAbiDecoder {
                     .builder
                     .build_int_add(dataoffset, string_len, "stringend");
 
-                self.check_overrun(binary, function, string_end, length);
+                self.check_overrun(binary, function, string_end, length, ns);
 
                 let string_start = unsafe {
                     binary
@@ -3087,6 +3087,7 @@ impl EthAbiDecoder {
         function: FunctionValue,
         offset: IntValue,
         end: IntValue,
+        ns: &ast::Namespace,
     ) {
         let in_bounds = binary
             .builder
@@ -3100,9 +3101,30 @@ impl EthAbiDecoder {
 
         binary.builder.position_at_end(bail_block);
 
-        binary
-            .builder
-            .build_return(Some(&binary.return_values[&ReturnCode::AbiEncodingInvalid]));
+        if ns.target == Target::Ewasm {
+            // TODO: should we pass in a panic message?
+            binary.builder.build_call(
+                binary.module.get_function("revert").unwrap(),
+                &[
+                    binary
+                        .context
+                        .i8_type()
+                        .ptr_type(AddressSpace::Generic)
+                        .const_null()
+                        .into(),
+                    binary.context.i32_type().const_zero().into(),
+                ],
+                "",
+            );
+
+            // since revert is marked noreturn, this should be optimized away
+            // however it is needed to create valid LLVM IR
+            binary.builder.build_unreachable();
+        } else {
+            binary
+                .builder
+                .build_return(Some(&binary.return_values[&ReturnCode::AbiEncodingInvalid]));
+        }
 
         binary.builder.position_at_end(success_block);
     }
