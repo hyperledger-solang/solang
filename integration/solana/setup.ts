@@ -12,8 +12,8 @@ export async function loadContract(name: string, abifile: string, args: any[] = 
 
     const connection = new Connection(endpoint, 'confirmed');
 
-    const payerAccount = load_key('payer.json');
-    const program = load_key('program.json');
+    const payerAccount = load_key('payer.key');
+    const program = load_key('program.key');
     const storage = Keypair.generate();
     const contract = new Contract(connection, program.publicKey, storage.publicKey, abi, payerAccount);
 
@@ -65,8 +65,8 @@ async function setup() {
     await BpfLoader.load(connection, payer, program, PROGRAM_SO, BPF_LOADER_PROGRAM_ID);
     console.log('Done loading bundle.so ...');
 
-    fs.writeFileSync('payer.json', String(payer.secretKey));
-    fs.writeFileSync('program.json', String(program.secretKey));
+    fs.writeFileSync('payer.key', String(payer.secretKey));
+    fs.writeFileSync('program.key', String(program.secretKey));
 }
 
 if (require.main === module) {

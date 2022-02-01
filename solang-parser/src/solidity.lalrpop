@@ -30,15 +30,15 @@ SourceUnitPart: SourceUnitPart = {
 
 ImportDirective: SourceUnitPart = {
     <doc:DocComments> <l:@L> "import" <s:StringLiteral> <r:@R> ";" => SourceUnitPart::ImportDirective(doc, Import::Plain(s, Loc(file_no, l, r))),
-    <doc:DocComments> <l:@L> "import" <s:StringLiteral> "as" <id:Identifier> <r:@R> ";" =>  SourceUnitPart::ImportDirective(doc, Import::GlobalSymbol(s, id, Loc(file_no, l, r))),
-    <doc:DocComments> <l:@L> "import" "*" "as" <id:Identifier> <from:Identifier> <s:StringLiteral> <r:@R> ";" =>? {
+    <doc:DocComments> <l:@L> "import" <s:StringLiteral> "as" <id:SolIdentifier> <r:@R> ";" =>  SourceUnitPart::ImportDirective(doc, Import::GlobalSymbol(s, id, Loc(file_no, l, r))),
+    <doc:DocComments> <l:@L> "import" "*" "as" <id:SolIdentifier> <from:SolIdentifier> <s:StringLiteral> <r:@R> ";" =>? {
         if from.name != "from" {
             Err(ParseError::User { error: LexicalError::ExpectedFrom(from.loc.0, from.loc.1, from.name)})
         } else {
             Ok(SourceUnitPart::ImportDirective(doc, Import::GlobalSymbol(s, id, Loc(file_no, l, r))))
         }
     },
-    <doc:DocComments> <l:@L> "import" "{" <rename:CommaOne<ImportRename>> "}" <from:Identifier> <s:StringLiteral> <r:@R> ";" =>? {
+    <doc:DocComments> <l:@L> "import" "{" <rename:CommaOne<ImportRename>> "}" <from:SolIdentifier> <s:StringLiteral> <r:@R> ";" =>? {
         if from.name != "from" {
             Err(ParseError::User { error:LexicalError::ExpectedFrom(from.loc.0, from.loc.1, from.name)})
         } else {
@@ -48,13 +48,13 @@ ImportDirective: SourceUnitPart = {
 }
 
 ImportRename: (Identifier, Option<Identifier>) = {
-    <Identifier> => (<>, None),
-    <from:Identifier> "as" <to:Identifier> => (from, Some(to)),
+    <SolIdentifier> => (<>, None),
+    <from:SolIdentifier> "as" <to:SolIdentifier> => (from, Some(to)),
 }
 
 PragmaDirective: SourceUnitPart = {
     // The lexer does special parsing for String literal; it isn't really a string literal
-    <doc:DocComments> <l:@L> "pragma" <i:Identifier> <s:StringLiteral> <r:@R> ";" => SourceUnitPart::PragmaDirective(Loc(file_no, l, r), doc, i, s)
+    <doc:DocComments> <l:@L> "pragma" <i:SolIdentifier> <s:StringLiteral> <r:@R> ";" => SourceUnitPart::PragmaDirective(Loc(file_no, l, r), doc, i, s)
 }
 
 DocComments: Vec<DocComment> = {
@@ -124,14 +124,22 @@ Identifier: Identifier = {
     <l:@L> <n:identifier> <r:@R> => Identifier{loc: Loc(file_no, l, r), name: n.to_string()}
 }
 
+SolIdentifier: Identifier = {
+    <l:@L> <n:identifier> <r:@R> => Identifier{loc: Loc(file_no, l, r), name: n.to_string()},
+    <l:@L> "switch" <r:@R> => Identifier{loc: Loc(file_no, l, r), name: "switch".to_string()},
+    <l:@L> "leave" <r:@R> => Identifier{loc: Loc(file_no, l, r), name: "leave".to_string()},
+    <l:@L> "case" <r:@R> => Identifier{loc: Loc(file_no, l, r), name: "case".to_string()},
+    <l:@L> "default" <r:@R> => Identifier{loc: Loc(file_no, l, r), name: "default".to_string()},
+}
+
 VariableDeclaration: VariableDeclaration = {
-    <l:@L> <ty:Precedence0> <storage:StorageLocation?> <name:Identifier> <r:@R> => VariableDeclaration {
+    <l:@L> <ty:Precedence0> <storage:StorageLocation?> <name:SolIdentifier> <r:@R> => VariableDeclaration {
         loc: Loc(file_no, l, r), ty, storage, name
     },
 }
 
 StructDefinition: Box<StructDefinition> = {
-    <doc:DocComments> <l:@L> "struct" <name:Identifier> "{" <fields:(<VariableDeclaration> ";")*> "}" <r:@R> => {
+    <doc:DocComments> <l:@L> "struct" <name:SolIdentifier> "{" <fields:(<VariableDeclaration> ";")*> "}" <r:@R> => {
         Box::new(StructDefinition{loc: Loc(file_no, l, r), doc, name, fields})
     }
 }
@@ -161,7 +169,7 @@ Bases: Vec<Base> = {
 }
 
 Base: Base = {
-    <l:@L> <name:Identifier> <args:("(" <Comma<Expression>> ")")?> <r:@R> => Base {
+    <l:@L> <name:SolIdentifier> <args:("(" <Comma<Expression>> ")")?> <r:@R> => Base {
         loc: Loc(file_no, l, r),
         name,
         args
@@ -169,20 +177,20 @@ Base: Base = {
 }
 
 ContractDefinition: Box<ContractDefinition> = {
-    <doc:DocComments> <l:@L> <ty:ContractTy> <name:Identifier> <base:Bases> <r:@R>
+    <doc:DocComments> <l:@L> <ty:ContractTy> <name:SolIdentifier> <base:Bases> <r:@R>
     "{" <parts:(<ContractPart>)*> "}" => {
         Box::new(ContractDefinition{doc, loc: Loc(file_no, l, r), ty, name, base, parts})
     }
 }
 
 EventParameter: EventParameter = {
-    <l:@L> <ty:Precedence0> <i:"indexed"?> <name:Identifier?> <r:@R> => EventParameter{
+    <l:@L> <ty:Precedence0> <i:"indexed"?> <name:SolIdentifier?> <r:@R> => EventParameter{
         loc: Loc(file_no, l, r), ty, indexed: i.is_some(), name
     }
 }
 
 EventDefinition: Box<EventDefinition> = {
-    <doc:DocComments> <l:@L> "event" <name:Identifier> "(" <v:Comma<EventParameter>> ")" <a:"anonymous"?> <r:@R> ";" => {
+    <doc:DocComments> <l:@L> "event" <name:SolIdentifier> "(" <v:Comma<EventParameter>> ")" <a:"anonymous"?> <r:@R> ";" => {
         Box::new(EventDefinition{
             loc: Loc(file_no, l, r), doc, name, fields: v, anonymous: a.is_some()
         })
@@ -190,13 +198,13 @@ EventDefinition: Box<EventDefinition> = {
 }
 
 EnumDefinition: Box<EnumDefinition> = {
-    <doc:DocComments> <l:@L> "enum" <name:Identifier> "{" <values:Comma<Identifier>> "}" <r:@R> => {
+    <doc:DocComments> <l:@L> "enum" <name:SolIdentifier> "{" <values:Comma<SolIdentifier>> "}" <r:@R> => {
         Box::new(EnumDefinition{loc: Loc(file_no, l, r), doc, name, values})
     }
 }
 
 VariableDefinition: Box<VariableDefinition> = {
-    <doc:DocComments> <l:@L> <ty:NoFunctionTyPrecedence0> <attrs:VariableAttribute*> <name:Identifier> <e:("=" <Expression>)?> <r:@R> ";" => {
+    <doc:DocComments> <l:@L> <ty:NoFunctionTyPrecedence0> <attrs:VariableAttribute*> <name:SolIdentifier> <e:("=" <Expression>)?> <r:@R> ";" => {
         Box::new(VariableDefinition{
             doc, loc: Loc(file_no, l, r), ty, attrs, name, initializer: e,
         })
@@ -206,7 +214,7 @@ VariableDefinition: Box<VariableDefinition> = {
     //     // f is a variable with internal visibility referencing an external function
     //     function() external internal f;
     // }
-    <doc:DocComments> <l:@L> <ty:FunctionTyPrecedence0> <name:Identifier> <e:("=" <Expression>)?> <r:@R> ";" => {
+    <doc:DocComments> <l:@L> <ty:FunctionTyPrecedence0> <name:SolIdentifier> <e:("=" <Expression>)?> <r:@R> ";" => {
         Box::new(VariableDefinition{
             doc, loc: Loc(file_no, l, r), ty, attrs: Vec::new(), name, initializer: e,
         })
@@ -327,7 +335,7 @@ Precedence2: Expression = {
 }
 
 NamedArgument: NamedArgument = {
-    <l:@L> <name:Identifier> ":" <expr:Expression> <r:@R> => {
+    <l:@L> <name:SolIdentifier> ":" <expr:Expression> <r:@R> => {
         NamedArgument{ loc: Loc(file_no, l, r), name, expr }
     }
 }
@@ -359,7 +367,7 @@ NoFunctionTyPrecedence0: Expression = {
     <FunctionCall> => <>,
     <a:@L> <e:Precedence0> "[" <i:Expression?> "]" <b:@R> => Expression::ArraySubscript(Loc(file_no, a, b), Box::new(e), box_option(i)),
     <a:@L> <e:Precedence0> "[" <l:Expression?> ":" <r:Expression?> "]" <b:@R> => Expression::ArraySlice(Loc(file_no, a, b), Box::new(e), box_option(l), box_option(r)),
-    <a:@L> <e:Precedence0> "." <i:Identifier> <b:@R> => Expression::MemberAccess(Loc(file_no, a, b), Box::new(e), i),
+    <a:@L> <e:Precedence0> "." <i:SolIdentifier> <b:@R> => Expression::MemberAccess(Loc(file_no, a, b), Box::new(e), i),
     // Solidity has ".address" members on external function types. Address is a keyword, so special casing needed
     <a:@L> <e:Precedence0> "." <al:@L> "address" <b:@R> => {
         Expression::MemberAccess(Loc(file_no, a, b), Box::new(e),
@@ -379,7 +387,7 @@ NoFunctionTyPrecedence0: Expression = {
     <a:@L> "[" <v:CommaOne<Expression>> "]" <b:@R> => {
         Expression::ArrayLiteral(Loc(file_no, a, b), v)
     },
-    <Identifier> => Expression::Variable(<>),
+    <SolIdentifier> => Expression::Variable(<>),
     <l:@L> <e:Precedence0> <u:Unit> <r:@R> => Expression::Unit(Loc(file_no, l, r), Box::new(e), u),
     <l:@L> <n:number> <r:@R> => {
         let base: String = n.0.chars().filter(|v| *v != '_').collect();
@@ -498,7 +506,7 @@ HexLiteral: HexLiteral = {
 // and as an added bonus we can generate error messages about missing parameters/returns
 // to functions
 Parameter: Parameter = {
-    <l:@L> <ty:Expression> <storage:StorageLocation?> <name:Identifier?> <r:@R> => {
+    <l:@L> <ty:Expression> <storage:StorageLocation?> <name:SolIdentifier?> <r:@R> => {
         let loc = Loc(file_no, l, r);
         Parameter{loc, ty, storage, name}
     }
@@ -526,7 +534,7 @@ FunctionAttribute: FunctionAttribute = {
     Visibility => FunctionAttribute::Visibility(<>),
     <l:@L> "virtual" <r:@R> => FunctionAttribute::Virtual(Loc(file_no, <>)),
     <l:@L> "override" <r:@R> => FunctionAttribute::Override(Loc(file_no, <>), Vec::new()),
-    <l:@L> "override" "(" <list:CommaOne<Identifier>> ")" <r:@R> => FunctionAttribute::Override(Loc(file_no, l, r), list),
+    <l:@L> "override" "(" <list:CommaOne<SolIdentifier>> ")" <r:@R> => FunctionAttribute::Override(Loc(file_no, l, r), list),
     <l:@L> <base:Base> <r:@R> => FunctionAttribute::BaseOrModifier(Loc(file_no, l, r), base),
 }
 
@@ -550,7 +558,7 @@ returns: Option<Loc> = {
 // Modifiers can't have attributes or return values, but we parse them anyway so we can give nice
 // error messages. The parameter list is optional
 ModifierDefinition: Box<FunctionDefinition> = {
-    <doc:DocComments> <l:@L> "modifier" <nl:@L> <name:Identifier> <nr:@R> <params:ParameterList?>
+    <doc:DocComments> <l:@L> "modifier" <nl:@L> <name:SolIdentifier> <nr:@R> <params:ParameterList?>
     <attributes:FunctionAttribute*>
     <returns:(returns ParameterList)?> <r:@R> <body:BlockStatementOrSemiColon> => {
         let params = params.unwrap_or(Vec::new());
@@ -572,7 +580,7 @@ ModifierDefinition: Box<FunctionDefinition> = {
 }
 
 ConstructorDefinition: Box<FunctionDefinition> = {
-    <doc:DocComments> <l:@L> <ty:FunctionTy> <nl:@L> <name:Identifier?> <nr:@R> <params:ParameterList>
+    <doc:DocComments> <l:@L> <ty:FunctionTy> <nl:@L> <name:SolIdentifier?> <nr:@R> <params:ParameterList>
     <attributes:FunctionAttribute*>
     <returns:(returns ParameterList)?> <r:@R> <body:BlockStatementOrSemiColon> => {
         let (return_not_returns, returns) = returns.unwrap_or((None, Vec::new()));
@@ -593,7 +601,7 @@ ConstructorDefinition: Box<FunctionDefinition> = {
 }
 
 FunctionDefinition: Box<FunctionDefinition> = {
-    <doc:DocComments> <l:@L> "function" <nl:@L> <name:Identifier> <nr:@R> <params:ParameterList>
+    <doc:DocComments> <l:@L> "function" <nl:@L> <name:SolIdentifier> <nr:@R> <params:ParameterList>
     <attributes:FunctionAttribute*>
     <returns:(returns ParameterList)?> <r:@R> <body:BlockStatementOrSemiColon> => {
         let (return_not_returns, returns) = returns.unwrap_or((None, Vec::new()));
@@ -637,12 +645,12 @@ FunctionDefinition: Box<FunctionDefinition> = {
 }
 
 Using: Box<Using> = {
-    <l:@L> "using" <library:Identifier> "for" <ty:Precedence0> <r:@R> ";" => Box::new(Using {
+    <l:@L> "using" <library:SolIdentifier> "for" <ty:Precedence0> <r:@R> ";" => Box::new(Using {
         loc: Loc(file_no, l, r),
         library,
         ty: Some(ty),
     }),
-    <l:@L> "using" <library:Identifier> "for" "*" <r:@R> ";" => Box::new(Using {
+    <l:@L> "using" <library:SolIdentifier> "for" "*" <r:@R> ";" => Box::new(Using {
         loc: Loc(file_no, l, r),
         library,
         ty: None,
@@ -703,7 +711,7 @@ CatchClause: CatchClause = {
     <l:@L> "catch" <param:("(" <Parameter> ")")?> <block:BlockStatement> <r:@R> => {
         CatchClause::Simple(Loc(file_no, l, r), param, block)
     },
-    <l:@L> "catch" <id:Identifier> "(" <param:Parameter> ")" <block:BlockStatement> <r:@R> => {
+    <l:@L> "catch" <id:SolIdentifier> "(" <param:Parameter> ")" <block:BlockStatement> <r:@R> => {
         CatchClause::Named(Loc(file_no, l, r), id, param, block)
     }
 }
@@ -747,6 +755,11 @@ NonIfStatement: Statement = {
     <l:@L> "emit" <ty:FunctionCall> <r:@R> ";" => {
         Statement::Emit(Loc(file_no, l, r), ty)
     },
+}
+
+AsmIdentifier: Identifier = {
+    <l:@L> <n:identifier> <r:@R> => Identifier{loc: Loc(file_no, l, r), name: n.to_string()},
+    <l:@L> "return" <r:@R> => Identifier{loc: Loc(file_no, l, r), name: "return".to_string()},
 }
 
 AssemblyStatement: AssemblyStatement = {
@@ -839,11 +852,11 @@ AssemblyExpression0: AssemblyExpression = {
     <StringLiteral> => {
         AssemblyExpression::StringLiteral(<>)
     },
-    <Identifier> => AssemblyExpression::Variable(<>),
+    <AsmIdentifier> => AssemblyExpression::Variable(<>),
     <l:@L> <array:AssemblyExpression0> "[" <index:AssemblyExpression1> "]" <r:@R> => {
         AssemblyExpression::Subscript(Loc(file_no, l, r), Box::new(array), Box::new(index))
     },
-    <l:@L> <array:AssemblyExpression0> "." <member:Identifier> <r:@R> => {
+    <l:@L> <array:AssemblyExpression0> "." <member:AsmIdentifier> <r:@R> => {
         AssemblyExpression::Member(Loc(file_no, l, r), Box::new(array), member)
     },
 }

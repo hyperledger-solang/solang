@@ -1,0 +1,10 @@
+strict digraph "tests/contract_testcases/solana/return_in_asm.sol" {
+	contract [label="contract Contract\ntests/contract_testcases/solana/return_in_asm.sol:1:1-19"]
+	node_3 [label="constructor \ncontract: Contract\ntests/contract_testcases/solana/return_in_asm.sol:2:5-19\nsignature ()\nvisibility public\nmutability nonpayable"]
+	diagnostic [label="found contract ‘Contract’\nlevel Debug\ntests/contract_testcases/solana/return_in_asm.sol:1:1-19"]
+	diagnostic_6 [label="evm assembly not supported on target solana\nlevel Error\ntests/contract_testcases/solana/return_in_asm.sol:3:9-5:10"]
+	contracts -> contract
+	contract -> node_3 [label="constructor"]
+	diagnostics -> diagnostic [label="Debug"]
+	diagnostics -> diagnostic_6 [label="Error"]
+}
