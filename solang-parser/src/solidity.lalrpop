@@ -247,7 +247,7 @@ Precedence15: Expression = {
 }
 
 Precedence14: Expression = {
-    <c:Precedence14> <a:@L> "?" <l:Precedence13> ":" <b:@R> <r:Precedence13> => Expression::Ternary(Loc(file_no, a, b), Box::new(c), Box::new(l), Box::new(r)),
+    <c:Precedence14> <a:@L> "?" <l:Expression> ":" <b:@R> <r:Expression> => Expression::Ternary(Loc(file_no, a, b), Box::new(c), Box::new(l), Box::new(r)),
     Precedence13,
 }
 
