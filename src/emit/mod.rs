@@ -2419,15 +2419,6 @@ pub trait TargetRuntime<'a> {
                     .unwrap()
                     .into()
             }
-            Expression::Ternary(_, _, c, l, r) => {
-                let cond = self
-                    .expression(bin, c, vartab, function, ns)
-                    .into_int_value();
-                let left = self.expression(bin, l, vartab, function, ns);
-                let right = self.expression(bin, r, vartab, function, ns);
-
-                bin.builder.build_select(cond, left, right, "")
-            }
             Expression::ConstArrayLiteral(_, _, dims, exprs) => {
                 // For const arrays (declared with "constant" keyword, we should create a global constant
                 let mut dims = dims.iter();
@@ -3104,7 +3095,28 @@ pub trait TargetRuntime<'a> {
             Expression::FormatString(_, args) => {
                 self.format_string(bin, args, vartab, function, ns)
             }
-            _ => panic!("{:?} not implemented", e),
+            Expression::Ternary(..)
+            | Expression::CheckingTrunc(..)
+            | Expression::RationalNumberLiteral(..)
+            | Expression::ConstantVariable(..)
+            | Expression::StorageVariable(..)
+            | Expression::PreDecrement(..)
+            | Expression::PostDecrement(..)
+            | Expression::PreIncrement(..)
+            | Expression::PostIncrement(..)
+            | Expression::Assign(..)
+            | Expression::InternalFunction { .. }
+            | Expression::InternalFunctionCall { .. }
+            | Expression::ExternalFunctionCall { .. }
+            | Expression::ExternalFunctionCallRaw { .. }
+            | Expression::Constructor { .. }
+            | Expression::InterfaceId(..)
+            | Expression::List(..)
+            | Expression::Undefined(..)
+            | Expression::Poison
+            | Expression::BytesCast(..) => {
+                unreachable!("should not exist in cfg")
+            }
         }
     }
 

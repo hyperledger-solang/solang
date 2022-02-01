@@ -1,5 +1,6 @@
 use crate::build_solidity;
 use ethabi::Token;
+use rand::Rng;
 
 #[test]
 fn interfaceid() {
@@ -179,4 +180,43 @@ fn bytes_compare() {
     );
 
     assert_eq!(returns, vec![Token::Bool(false)]);
+}
+
+#[test]
+fn assignment_in_ternary() {
+    let mut rng = rand::thread_rng();
+
+    let mut vm = build_solidity(
+        r#"
+        contract foo {
+            function minimum(uint64 x, uint64 y) public pure returns (uint64 z) {
+                x >= y ? z = y : z = x;
+            }
+        }"#,
+    );
+
+    vm.constructor("foo", &[], 0);
+
+    for _ in 0..10 {
+        let left = rng.gen::<u64>();
+        let right = rng.gen::<u64>();
+
+        let returns = vm.function(
+            "minimum",
+            &[
+                Token::Uint(ethereum_types::U256::from(left)),
+                Token::Uint(ethereum_types::U256::from(right)),
+            ],
+            &[],
+            0,
+            None,
+        );
+
+        assert_eq!(
+            returns,
+            vec![Token::Uint(ethereum_types::U256::from(std::cmp::min(
+                left, right
+            )))]
+        );
+    }
 }
