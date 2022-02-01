@@ -1615,13 +1615,68 @@ fn ternary(
     right: &Expression,
     opt: &Options,
 ) -> Expression {
-    Expression::Ternary(
-        *loc,
-        ty.clone(),
-        Box::new(expression(cond, cfg, contract_no, func, ns, vartab, opt)),
-        Box::new(expression(left, cfg, contract_no, func, ns, vartab, opt)),
-        Box::new(expression(right, cfg, contract_no, func, ns, vartab, opt)),
-    )
+    let cond = expression(cond, cfg, contract_no, func, ns, vartab, opt);
+
+    vartab.new_dirty_tracker(ns.next_id);
+
+    let pos = vartab.temp(
+        &pt::Identifier {
+            name: "ternary_result".to_owned(),
+            loc: *loc,
+        },
+        ty,
+    );
+
+    let left_block = cfg.new_basic_block("left_value".to_string());
+    let right_block = cfg.new_basic_block("right_value".to_string());
+    let done_block = cfg.new_basic_block("ternary_done".to_string());
+
+    cfg.add(
+        vartab,
+        Instr::BranchCond {
+            cond,
+            true_block: left_block,
+            false_block: right_block,
+        },
+    );
+
+    cfg.set_basic_block(left_block);
+
+    let expr = expression(left, cfg, contract_no, func, ns, vartab, opt);
+
+    cfg.add(
+        vartab,
+        Instr::Set {
+            loc: pt::Loc(0, 0, 0),
+            res: pos,
+            expr,
+        },
+    );
+
+    cfg.add(vartab, Instr::Branch { block: done_block });
+
+    cfg.set_basic_block(right_block);
+
+    let expr = expression(right, cfg, contract_no, func, ns, vartab, opt);
+
+    cfg.add(
+        vartab,
+        Instr::Set {
+            loc: pt::Loc(0, 0, 0),
+            res: pos,
+            expr,
+        },
+    );
+
+    cfg.add(vartab, Instr::Branch { block: done_block });
+
+    cfg.set_basic_block(done_block);
+
+    let mut phis = vartab.pop_dirty_tracker();
+    phis.insert(pos);
+    cfg.set_phis(done_block, phis);
+
+    Expression::Variable(*loc, ty.clone(), pos)
 }
 
 fn interfaceid(ns: &Namespace, contract_no: &usize, loc: &pt::Loc) -> Expression {

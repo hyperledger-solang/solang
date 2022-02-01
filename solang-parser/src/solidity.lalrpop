@@ -236,26 +236,22 @@ VariableAttribute: VariableAttribute = {
 }
 
 Expression: Expression = {
-    Precedence15,
-}
-
-Precedence15: Expression = {
-    <l:Precedence14> <a:@L> "=" <b:@R> <r:Precedence15> => Expression::Assign(Loc(file_no, a, b), Box::new(l), Box::new(r)),
-    <l:Precedence14> <a:@L> "|=" <b:@R> <r:Precedence15> => Expression::AssignOr(Loc(file_no, a, b), Box::new(l), Box::new(r)),
-    <l:Precedence14> <a:@L> "^=" <b:@R> <r:Precedence15> => Expression::AssignXor(Loc(file_no, a, b), Box::new(l), Box::new(r)),
-    <l:Precedence14> <a:@L> "&=" <b:@R> <r:Precedence15> => Expression::AssignAnd(Loc(file_no, a, b), Box::new(l), Box::new(r)),
-    <l:Precedence14> <a:@L> "<<=" <b:@R> <r:Precedence15> => Expression::AssignShiftLeft(Loc(file_no, a, b), Box::new(l), Box::new(r)),
-    <l:Precedence14> <a:@L> ">>=" <b:@R> <r:Precedence15> => Expression::AssignShiftRight(Loc(file_no, a, b), Box::new(l), Box::new(r)),
-    <l:Precedence14> <a:@L> "+=" <b:@R> <r:Precedence15> => Expression::AssignAdd(Loc(file_no, a, b), Box::new(l), Box::new(r)),
-    <l:Precedence14> <a:@L> "-=" <b:@R> <r:Precedence15> => Expression::AssignSubtract(Loc(file_no, a, b), Box::new(l), Box::new(r)),
-    <l:Precedence14> <a:@L> "*=" <b:@R> <r:Precedence15> => Expression::AssignMultiply(Loc(file_no, a, b), Box::new(l), Box::new(r)),
-    <l:Precedence14> <a:@L> "/=" <b:@R> <r:Precedence15> => Expression::AssignDivide(Loc(file_no, a, b), Box::new(l), Box::new(r)),
-    <l:Precedence14> <a:@L> "%=" <b:@R> <r:Precedence15> => Expression::AssignModulo(Loc(file_no, a, b), Box::new(l), Box::new(r)),
     Precedence14,
 }
 
 Precedence14: Expression = {
-    <c:Precedence14> <a:@L> "?" <l:Precedence13> ":" <b:@R> <r:Precedence13> => Expression::Ternary(Loc(file_no, a, b), Box::new(c), Box::new(l), Box::new(r)),
+    <l:Precedence13> <a:@L> "=" <b:@R> <r:Precedence14> => Expression::Assign(Loc(file_no, a, b), Box::new(l), Box::new(r)),
+    <l:Precedence13> <a:@L> "|=" <b:@R> <r:Precedence14> => Expression::AssignOr(Loc(file_no, a, b), Box::new(l), Box::new(r)),
+    <l:Precedence13> <a:@L> "^=" <b:@R> <r:Precedence14> => Expression::AssignXor(Loc(file_no, a, b), Box::new(l), Box::new(r)),
+    <l:Precedence13> <a:@L> "&=" <b:@R> <r:Precedence14> => Expression::AssignAnd(Loc(file_no, a, b), Box::new(l), Box::new(r)),
+    <l:Precedence13> <a:@L> "<<=" <b:@R> <r:Precedence14> => Expression::AssignShiftLeft(Loc(file_no, a, b), Box::new(l), Box::new(r)),
+    <l:Precedence13> <a:@L> ">>=" <b:@R> <r:Precedence14> => Expression::AssignShiftRight(Loc(file_no, a, b), Box::new(l), Box::new(r)),
+    <l:Precedence13> <a:@L> "+=" <b:@R> <r:Precedence14> => Expression::AssignAdd(Loc(file_no, a, b), Box::new(l), Box::new(r)),
+    <l:Precedence13> <a:@L> "-=" <b:@R> <r:Precedence14> => Expression::AssignSubtract(Loc(file_no, a, b), Box::new(l), Box::new(r)),
+    <l:Precedence13> <a:@L> "*=" <b:@R> <r:Precedence14> => Expression::AssignMultiply(Loc(file_no, a, b), Box::new(l), Box::new(r)),
+    <l:Precedence13> <a:@L> "/=" <b:@R> <r:Precedence14> => Expression::AssignDivide(Loc(file_no, a, b), Box::new(l), Box::new(r)),
+    <l:Precedence13> <a:@L> "%=" <b:@R> <r:Precedence14> => Expression::AssignModulo(Loc(file_no, a, b), Box::new(l), Box::new(r)),
+    <c:Precedence13> <a:@L> "?" <l:Precedence14> ":" <b:@R> <r:Precedence14> => Expression::Ternary(Loc(file_no, a, b), Box::new(c), Box::new(l), Box::new(r)),
     Precedence13,
 }
 
