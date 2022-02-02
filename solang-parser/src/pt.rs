@@ -28,6 +28,12 @@ pub struct Identifier {
 }
 
 #[derive(Debug, PartialEq, Clone)]
+pub enum Comment {
+    Line(Loc, String),
+    Block(Loc, String),
+}
+
+#[derive(Debug, PartialEq, Clone)]
 pub enum DocComment {
     Line { comment: SingleDocComment },
     Block { comments: Vec<SingleDocComment> },

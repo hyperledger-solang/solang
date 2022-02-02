@@ -63,7 +63,7 @@ fn sema_file(file: &ResolvedFile, resolver: &mut FileResolver, ns: &mut ast::Nam
         file_cache_no,
     ));
 
-    let pt = match parse(&source_code, file_no) {
+    let (pt, _) = match parse(&source_code, file_no) {
         Ok(s) => s,
         Err(errors) => {
             ns.diagnostics.extend(errors);
