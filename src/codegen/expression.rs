@@ -911,11 +911,11 @@ fn expr_or(
             expr: r,
         },
     );
+    cfg.add(vartab, Instr::Branch { block: end_or });
+    cfg.set_basic_block(end_or);
     let mut phis = vartab.pop_dirty_tracker();
     phis.insert(pos);
     cfg.set_phis(end_or, phis);
-    cfg.add(vartab, Instr::Branch { block: end_or });
-    cfg.set_basic_block(end_or);
     Expression::Variable(*loc, boolty, pos)
 }
 
@@ -968,11 +968,11 @@ fn and(
             expr: r,
         },
     );
+    cfg.add(vartab, Instr::Branch { block: end_and });
+    cfg.set_basic_block(end_and);
     let mut phis = vartab.pop_dirty_tracker();
     phis.insert(pos);
     cfg.set_phis(end_and, phis);
-    cfg.add(vartab, Instr::Branch { block: end_and });
-    cfg.set_basic_block(end_and);
     Expression::Variable(*loc, boolty, pos)
 }
 
