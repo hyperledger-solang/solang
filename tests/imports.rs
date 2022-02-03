@@ -78,7 +78,7 @@ fn import_map() {
 
     println!("stderr: {}", stderr);
 
-    assert!(stderr.contains("import_map.sol:1:8-21: error: file not found ‘foo/bar.sol’"));
+    assert!(stderr.contains("file not found ‘foo/bar.sol’"));
 }
 
 #[test]
@@ -110,5 +110,5 @@ fn import() {
 
     println!("stderr: {}", stderr);
 
-    assert!(stderr.contains("error: file not found ‘bar.sol’"));
+    assert!(stderr.contains("file not found ‘bar.sol’"));
 }

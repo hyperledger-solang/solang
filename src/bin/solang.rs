@@ -285,7 +285,7 @@ fn main() {
         for filename in matches.values_of_os("INPUT").unwrap() {
             let ns = solang::parse_and_resolve(filename, &mut resolver, target);
 
-            diagnostics::print_messages(&resolver, &ns, verbose);
+            diagnostics::print_diagnostics(&resolver, &ns, verbose);
 
             if ns.contracts.is_empty() {
                 eprintln!("{}: error: no contracts found", filename.to_string_lossy());
@@ -334,8 +334,13 @@ fn main() {
         }
 
         if errors {
-            eprintln!("error: not all contracts are valid");
-            std::process::exit(1);
+            if matches.is_present("STD-JSON") {
+                println!("{}", serde_json::to_string(&json).unwrap());
+                std::process::exit(0);
+            } else {
+                eprintln!("error: not all contracts are valid");
+                std::process::exit(1);
+            }
         }
 
         if target == solang::Target::Solana {
@@ -442,10 +447,10 @@ fn process_file(
     codegen(&mut ns, opt);
 
     if matches.is_present("STD-JSON") {
-        let mut out = diagnostics::message_as_json(&ns, resolver);
+        let mut out = diagnostics::diagnostics_as_json(&ns, resolver);
         json.errors.append(&mut out);
     } else {
-        diagnostics::print_messages(resolver, &ns, verbose);
+        diagnostics::print_diagnostics(resolver, &ns, verbose);
     }
 
     if let Some("ast-dot") = matches.value_of("EMIT") {

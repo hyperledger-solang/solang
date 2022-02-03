@@ -1,9 +1,9 @@
 use super::ast::File;
 use crate::parser::pt::Loc;
-use std::path::{Path, PathBuf};
+use std::{fmt, path};
 
 impl File {
-    pub fn new(path: PathBuf, contents: &str, cache_no: usize) -> Self {
+    pub fn new(path: path::PathBuf, contents: &str, cache_no: usize) -> Self {
         let mut line_starts = Vec::new();
 
         for (ind, c) in contents.char_indices() {
@@ -24,17 +24,12 @@ impl File {
         let (from_line, from_column) = self.offset_to_line_column(loc.1);
         let (to_line, to_column) = self.offset_to_line_column(loc.2);
 
-        #[cfg(windows)]
-        let path = fix_windows_verbatim(&self.path);
-        #[cfg(not(windows))]
-        let path: &Path = &self.path;
-
         if from_line == to_line && from_column == to_column {
-            format!("{}:{}:{}", path.display(), from_line + 1, from_column + 1)
+            format!("{}:{}:{}", self, from_line + 1, from_column + 1)
         } else if from_line == to_line {
             format!(
                 "{}:{}:{}-{}",
-                path.display(),
+                self,
                 from_line + 1,
                 from_column + 1,
                 to_column + 1
@@ -42,7 +37,7 @@ impl File {
         } else {
             format!(
                 "{}:{}:{}-{}:{}",
-                path.display(),
+                self,
                 from_line + 1,
                 from_column + 1,
                 to_line + 1,
@@ -85,13 +80,24 @@ impl File {
     }
 }
 
+impl fmt::Display for File {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        #[cfg(not(windows))]
+        let res = write!(f, "{}", self.path.display());
+
+        #[cfg(windows)]
+        let res = write!(f, "{}", fix_windows_verbatim(&self.path).display());
+
+        res
+    }
+}
+
 /// Windows verbatim paths look like \\?\C:\foo\bar which not very human readable,
 /// so fix up paths. This is a copy of fn fix_windows_verbatim_for_gcc in rust
 /// https://github.com/rust-lang/rust/blob/master/compiler/rustc_fs_util/src/lib.rs#L23
 #[cfg(windows)]
-pub fn fix_windows_verbatim(p: &Path) -> PathBuf {
+fn fix_windows_verbatim(p: &path::Path) -> path::PathBuf {
     use std::ffi::OsString;
-    use std::path;
     let mut components = p.components();
     let prefix = match components.next() {
         Some(path::Component::Prefix(p)) => p,
@@ -101,7 +107,7 @@ pub fn fix_windows_verbatim(p: &Path) -> PathBuf {
         path::Prefix::VerbatimDisk(disk) => {
             let mut base = OsString::from(format!("{}:", disk as char));
             base.push(components.as_path());
-            PathBuf::from(base)
+            path::PathBuf::from(base)
         }
         path::Prefix::VerbatimUNC(server, share) => {
             let mut base = OsString::from(r"\\");
@@ -109,7 +115,7 @@ pub fn fix_windows_verbatim(p: &Path) -> PathBuf {
             base.push(r"\");
             base.push(share);
             base.push(components.as_path());
-            PathBuf::from(base)
+            path::PathBuf::from(base)
         }
         _ => p.to_path_buf(),
     }
