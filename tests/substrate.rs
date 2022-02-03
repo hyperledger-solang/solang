@@ -1190,7 +1190,8 @@ pub fn build_solidity(src: &'static str) -> TestRuntime {
         false,
     );
 
-    diagnostics::print_messages(&cache, &ns, false);
+    diagnostics::print_diagnostics_plain(&cache, &ns, false);
+
     no_errors(ns.diagnostics);
 
     assert!(!res.is_empty());
@@ -1227,7 +1228,7 @@ pub fn build_solidity_with_overflow_check(src: &'static str) -> TestRuntime {
         true,
     );
 
-    diagnostics::print_messages(&cache, &ns, false);
+    diagnostics::print_diagnostics_plain(&cache, &ns, false);
 
     assert!(!res.is_empty());
 

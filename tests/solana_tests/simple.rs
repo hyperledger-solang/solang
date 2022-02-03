@@ -277,7 +277,7 @@ contract line {
 
     let ns = solang::parse_and_resolve(OsStr::new("test.sol"), &mut cache, Target::Solana);
 
-    solang::sema::diagnostics::print_messages(&cache, &ns, false);
+    solang::sema::diagnostics::print_diagnostics_plain(&cache, &ns, false);
 
     assert_eq!(
         ns.diagnostics[1].message,
