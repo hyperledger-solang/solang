@@ -415,7 +415,7 @@ pub fn contract_function(
         .collect();
 
     let doc = resolve_tags(
-        func.loc.0,
+        func.loc.file_no(),
         "function",
         &func.doc,
         Some(&params),
@@ -720,7 +720,7 @@ pub fn function(
     };
 
     let doc = resolve_tags(
-        func.loc.0,
+        func.loc.file_no(),
         "function",
         &func.doc,
         Some(&params),
@@ -839,7 +839,7 @@ pub fn resolve_params(
                         success = false;
                     }
 
-                    ty_loc.2 = loc.2;
+                    ty_loc.use_end_from(&loc);
 
                     Type::StorageRef(false, Box::new(ty))
                 } else {
@@ -864,11 +864,7 @@ pub fn resolve_params(
 
                 params.push(Parameter {
                     loc: *loc,
-                    name: p
-                        .name
-                        .as_ref()
-                        .map_or("".to_string(), |id| id.name.to_string()),
-                    name_loc: p.name.as_ref().map(|id| id.loc),
+                    name: p.name.clone(),
                     ty,
                     ty_loc,
                     indexed: false,
@@ -950,7 +946,7 @@ pub fn resolve_returns(
                                 success = false;
                             }
 
-                            ty_loc.2 = loc.2;
+                            ty_loc.use_end_from(&loc);
 
                             Type::StorageRef(false, Box::new(ty))
                         }
@@ -979,11 +975,7 @@ pub fn resolve_returns(
 
                 resolved_returns.push(Parameter {
                     loc: *loc,
-                    name: r
-                        .name
-                        .as_ref()
-                        .map_or("".to_string(), |id| id.name.to_string()),
-                    name_loc: r.name.as_ref().map(|id| id.loc),
+                    name: r.name.clone(),
                     ty,
                     ty_loc,
                     indexed: false,
@@ -1005,13 +997,13 @@ fn signatures() {
 
     ns.contracts.push(ast::Contract::new(
         "bar",
-        pt::ContractTy::Contract(pt::Loc(0, 0, 0)),
+        pt::ContractTy::Contract(pt::Loc::Implicit),
         Vec::new(),
-        pt::Loc(0, 0, 0),
+        pt::Loc::Implicit,
     ));
 
     let fdecl = Function::new(
-        pt::Loc(0, 0, 0),
+        pt::Loc::Implicit,
         "foo".to_owned(),
         None,
         vec![],
@@ -1020,20 +1012,18 @@ fn signatures() {
         pt::Visibility::Public(None),
         vec![
             Parameter {
-                loc: pt::Loc(0, 0, 0),
-                name: "".to_string(),
-                name_loc: None,
+                loc: pt::Loc::Implicit,
+                name: None,
                 ty: Type::Uint(8),
-                ty_loc: pt::Loc(0, 0, 0),
+                ty_loc: pt::Loc::Implicit,
                 indexed: false,
                 readonly: false,
             },
             Parameter {
-                loc: pt::Loc(0, 0, 0),
-                name: "".to_string(),
-                name_loc: None,
+                loc: pt::Loc::Implicit,
+                name: None,
                 ty: Type::Address(false),
-                ty_loc: pt::Loc(0, 0, 0),
+                ty_loc: pt::Loc::Implicit,
                 indexed: false,
                 readonly: false,
             },

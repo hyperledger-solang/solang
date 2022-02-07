@@ -237,7 +237,7 @@ fn generate_unused_warning(loc: Loc, text: &str, notes: Vec<Note>) -> Diagnostic
     Diagnostic {
         level: Level::Warning,
         ty: ErrorType::Warning,
-        pos: Some(loc),
+        pos: loc,
         message: text.parse().unwrap(),
         notes,
     }
@@ -429,7 +429,7 @@ pub fn check_unused_events(ns: &mut Namespace) {
             // is there a global event with the same name
             if let Some(ast::Symbol::Event(events)) =
                 ns.variable_symbols
-                    .get(&(event.loc.0, None, event.name.to_owned()))
+                    .get(&(event.loc.file_no(), None, event.name.to_owned()))
             {
                 for e in events {
                     let other_no = e.1;
@@ -442,7 +442,7 @@ pub fn check_unused_events(ns: &mut Namespace) {
 
             // is there a base contract with the same name
             for base_no in visit_bases(contract_no, ns) {
-                let base_file_no = ns.contracts[base_no].loc.0;
+                let base_file_no = ns.contracts[base_no].loc.file_no();
 
                 if let Some(ast::Symbol::Event(events)) =
                     ns.variable_symbols

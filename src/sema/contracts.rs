@@ -282,7 +282,7 @@ fn check_inheritance(contract_no: usize, ns: &mut ast::Namespace) {
 
     for base_contract_no in visit_bases(contract_no, ns) {
         // find file number where contract is defined
-        let contract_file_no = ns.contracts[base_contract_no].loc.0;
+        let contract_file_no = ns.contracts[base_contract_no].loc.file_no();
 
         // find all syms for this contract
         for ((file_no, iter_contract_no, name), sym) in

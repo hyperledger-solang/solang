@@ -308,7 +308,9 @@ fn print_expr(e: &Expression, func: Option<&Function>, ns: &Namespace) -> Tree {
                         Tree::Branch(
                             String::from("field"),
                             vec![Tree::Leaf(
-                                ns.structs[*struct_no].fields[*member].name.to_owned(),
+                                ns.structs[*struct_no].fields[*member]
+                                    .name_as_str()
+                                    .to_owned(),
                             )],
                         ),
                     ],
@@ -498,11 +500,13 @@ fn print_statement(stmts: &[Statement], func: &Function, ns: &Namespace) -> Vec<
                 format!("block{}", if *unchecked { " unchecked" } else { "" }),
                 print_statement(statements, func, ns),
             ),
-            Statement::VariableDecl(_, _, p, None) => {
-                Tree::Leaf(format!("declare {} {}", p.ty.to_string(ns), p.name))
-            }
+            Statement::VariableDecl(_, _, p, None) => Tree::Leaf(format!(
+                "declare {} {}",
+                p.ty.to_string(ns),
+                p.name_as_str()
+            )),
             Statement::VariableDecl(_, _, p, Some(e)) => Tree::Branch(
-                format!("declare {} {}", p.ty.to_string(ns), p.name),
+                format!("declare {} {}", p.ty.to_string(ns), p.name_as_str()),
                 vec![print_expr(e, Some(func), ns)],
             ),
             Statement::If(_, reachable, cond, then_stmt, else_stmt) if else_stmt.is_empty() => {
@@ -595,7 +599,7 @@ fn print_statement(stmts: &[Statement], func: &Function, ns: &Namespace) -> Vec<
                         DestructureField::None => Tree::Leaf(String::from("")),
                         DestructureField::Expression(e) => print_expr(e, Some(func), ns),
                         DestructureField::VariableDecl(_, p) => {
-                            Tree::Leaf(format!("{} {}", p.ty.to_string(ns), p.name))
+                            Tree::Leaf(format!("{} {}", p.ty.to_string(ns), p.name_as_str()))
                         }
                     })
                     .collect();
@@ -617,7 +621,11 @@ fn print_statement(stmts: &[Statement], func: &Function, ns: &Namespace) -> Vec<
                         .returns
                         .iter()
                         .map(|(_, param)| {
-                            Tree::Leaf(format!("{} {}", param.ty.to_string(ns), param.name))
+                            Tree::Leaf(format!(
+                                "{} {}",
+                                param.ty.to_string(ns),
+                                param.name_as_str()
+                            ))
                         })
                         .collect();
 
@@ -633,7 +641,7 @@ fn print_statement(stmts: &[Statement], func: &Function, ns: &Namespace) -> Vec<
                     list.push(Tree::Leaf(format!(
                         "error_param: {} {}",
                         param.ty.to_string(ns),
-                        param.name
+                        param.name_as_str()
                     )));
 
                     list.push(Tree::Branch(
@@ -646,7 +654,7 @@ fn print_statement(stmts: &[Statement], func: &Function, ns: &Namespace) -> Vec<
                     list.push(Tree::Leaf(format!(
                         "catch_param: {} {}",
                         param.ty.to_string(ns),
-                        param.name
+                        param.name_as_str()
                     )));
                 }
 
@@ -683,7 +691,13 @@ impl Namespace {
             let fields = s
                 .fields
                 .iter()
-                .map(|p| Tree::Leaf(format!("field {} {}", p.ty.to_string(self), p.name)))
+                .map(|p| {
+                    Tree::Leaf(format!(
+                        "field {} {}",
+                        p.ty.to_string(self),
+                        p.name_as_str()
+                    ))
+                })
                 .collect();
 
             t.push(Tree::Branch(format!("struct {}", s), fields));
@@ -699,7 +713,7 @@ impl Namespace {
                         "field {} {}{}",
                         p.ty.to_string(self),
                         if p.indexed { "indexed " } else { "" },
-                        p.name
+                        p.name_as_str()
                     ))
                 })
                 .collect();
@@ -852,7 +866,7 @@ fn print_func(func: &Function, ns: &Namespace) -> Tree {
         let params = func
             .params
             .iter()
-            .map(|p| Tree::Leaf(format!("{} {}", p.ty.to_string(ns), p.name)))
+            .map(|p| Tree::Leaf(format!("{} {}", p.ty.to_string(ns), p.name_as_str())))
             .collect();
 
         list.push(Tree::Branch(String::from("params"), params));
@@ -862,7 +876,7 @@ fn print_func(func: &Function, ns: &Namespace) -> Tree {
         let returns = func
             .returns
             .iter()
-            .map(|p| Tree::Leaf(format!("{} {}", p.ty.to_string(ns), p.name)))
+            .map(|p| Tree::Leaf(format!("{} {}", p.ty.to_string(ns), p.name_as_str())))
             .collect();
 
         list.push(Tree::Branch(String::from("returns"), returns));

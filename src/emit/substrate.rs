@@ -774,7 +774,7 @@ impl SubstrateTarget {
                                 binary.context.i32_type().const_zero(),
                                 binary.context.i32_type().const_int(i as u64, false),
                             ],
-                            &field.name,
+                            field.name_as_str(),
                         )
                     };
 
@@ -1402,7 +1402,7 @@ impl SubstrateTarget {
                                 binary.context.i32_type().const_zero(),
                                 binary.context.i32_type().const_int(i as u64, false),
                             ],
-                            &field.name,
+                            field.name_as_str(),
                         )
                     };
 
@@ -1632,7 +1632,7 @@ impl SubstrateTarget {
                                 binary.context.i32_type().const_zero(),
                                 binary.context.i32_type().const_int(i as u64, false),
                             ],
-                            &field.name,
+                            field.name_as_str(),
                         )
                     };
 
@@ -2073,7 +2073,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         let ty = binary.llvm_type(
             &ast::Type::ExternalFunction {
                 params: Vec::new(),
-                mutability: ast::Mutability::Nonpayable(pt::Loc(0, 0, 0)),
+                mutability: ast::Mutability::Nonpayable(pt::Loc::Codegen),
                 returns: Vec::new(),
             },
             ns,

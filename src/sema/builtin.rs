@@ -1305,74 +1305,90 @@ impl Namespace {
 
         let fields = vec![
             Parameter {
-                loc: pt::Loc(0, 0, 0),
-                name: String::from("key"),
-                name_loc: None,
+                loc: pt::Loc::Builtin,
+                name: Some(pt::Identifier {
+                    name: String::from("key"),
+                    loc: pt::Loc::Builtin,
+                }),
                 ty: Type::Address(false),
-                ty_loc: pt::Loc(0, 0, 0),
+                ty_loc: pt::Loc::Builtin,
                 indexed: false,
                 readonly: true,
             },
             Parameter {
-                loc: pt::Loc(0, 0, 0),
-                name: String::from("lamports"),
-                name_loc: None,
+                loc: pt::Loc::Builtin,
+                name: Some(pt::Identifier {
+                    name: String::from("lamports"),
+                    loc: pt::Loc::Builtin,
+                }),
                 ty: Type::Uint(64),
-                ty_loc: pt::Loc(0, 0, 0),
+                ty_loc: pt::Loc::Builtin,
                 indexed: false,
                 readonly: false,
             },
             Parameter {
-                loc: pt::Loc(0, 0, 0),
-                name: String::from("data"),
-                name_loc: None,
+                loc: pt::Loc::Builtin,
+                name: Some(pt::Identifier {
+                    name: String::from("data"),
+                    loc: pt::Loc::Builtin,
+                }),
                 ty: Type::DynamicBytes,
-                ty_loc: pt::Loc(0, 0, 0),
+                ty_loc: pt::Loc::Builtin,
                 indexed: false,
                 readonly: true,
             },
             Parameter {
-                loc: pt::Loc(0, 0, 0),
-                name: String::from("owner"),
-                name_loc: None,
+                loc: pt::Loc::Builtin,
+                name: Some(pt::Identifier {
+                    name: String::from("owner"),
+                    loc: pt::Loc::Builtin,
+                }),
                 ty: Type::Address(false),
-                ty_loc: pt::Loc(0, 0, 0),
+                ty_loc: pt::Loc::Builtin,
                 indexed: false,
                 readonly: true,
             },
             Parameter {
-                loc: pt::Loc(0, 0, 0),
-                name: String::from("rent_epoch"),
-                name_loc: None,
+                loc: pt::Loc::Builtin,
+                name: Some(pt::Identifier {
+                    name: String::from("rent_epoch"),
+                    loc: pt::Loc::Builtin,
+                }),
                 ty: Type::Uint(64),
-                ty_loc: pt::Loc(0, 0, 0),
+                ty_loc: pt::Loc::Builtin,
                 indexed: false,
                 readonly: true,
             },
             Parameter {
-                loc: pt::Loc(0, 0, 0),
-                name: String::from("is_signer"),
-                name_loc: None,
+                loc: pt::Loc::Builtin,
+                name: Some(pt::Identifier {
+                    name: String::from("is_signer"),
+                    loc: pt::Loc::Builtin,
+                }),
                 ty: Type::Bool,
-                ty_loc: pt::Loc(0, 0, 0),
+                ty_loc: pt::Loc::Builtin,
                 indexed: false,
                 readonly: true,
             },
             Parameter {
-                loc: pt::Loc(0, 0, 0),
-                name: String::from("is_writable"),
-                name_loc: None,
+                loc: pt::Loc::Builtin,
+                name: Some(pt::Identifier {
+                    name: String::from("is_writable"),
+                    loc: pt::Loc::Builtin,
+                }),
                 ty: Type::Bool,
-                ty_loc: pt::Loc(0, 0, 0),
+                ty_loc: pt::Loc::Builtin,
                 indexed: false,
                 readonly: true,
             },
             Parameter {
-                loc: pt::Loc(0, 0, 0),
-                name: String::from("executable"),
-                name_loc: None,
+                loc: pt::Loc::Builtin,
+                name: Some(pt::Identifier {
+                    name: String::from("executable"),
+                    loc: pt::Loc::Builtin,
+                }),
                 ty: Type::Bool,
-                ty_loc: pt::Loc(0, 0, 0),
+                ty_loc: pt::Loc::Builtin,
                 indexed: false,
                 readonly: true,
             },
@@ -1380,7 +1396,7 @@ impl Namespace {
 
         self.structs.push(StructDecl {
             tags: Vec::new(),
-            loc: None,
+            loc: pt::Loc::Builtin,
             contract: None,
             name: String::from("AccountInfo"),
             fields,
@@ -1389,10 +1405,10 @@ impl Namespace {
         });
 
         let id = pt::Identifier {
-            loc: pt::Loc(0, 0, 0),
+            loc: pt::Loc::Builtin,
             name: String::from("AccountInfo"),
         };
 
-        assert!(self.add_symbol(0, None, &id, Symbol::Struct(pt::Loc(0, 0, 0), struct_no)));
+        assert!(self.add_symbol(0, None, &id, Symbol::Struct(pt::Loc::Builtin, struct_no)));
     }
 }

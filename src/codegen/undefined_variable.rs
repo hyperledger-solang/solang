@@ -122,7 +122,7 @@ fn add_diagnostic(
             Diagnostic {
                 level: Level::Error,
                 ty: ErrorType::TypeError,
-                pos: Some(var.id.loc),
+                pos: var.id.loc,
                 message: format!("Variable '{}' is undefined", var.id.name),
                 notes: vec![],
             },

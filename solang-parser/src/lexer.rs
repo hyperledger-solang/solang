@@ -592,14 +592,14 @@ impl<'input> Lexer<'input> {
                 let mut end = match self.chars.next() {
                     Some((end, ch)) if ch.is_ascii_hexdigit() => end,
                     Some((_, _)) => {
-                        return Err(LexicalError::MissingNumber(Loc(
+                        return Err(LexicalError::MissingNumber(Loc::File(
                             self.file_no,
                             start,
                             start + 1,
                         )));
                     }
                     None => {
-                        return Err(LexicalError::EndofFileInHex(Loc(
+                        return Err(LexicalError::EndofFileInHex(Loc::File(
                             self.file_no,
                             start,
                             self.input.len(),
@@ -643,7 +643,7 @@ impl<'input> Lexer<'input> {
 
         if let Some((i, '.')) = self.chars.peek() {
             if is_rational {
-                return Err(LexicalError::DoublePoints(Loc(
+                return Err(LexicalError::DoublePoints(Loc::File(
                     self.file_no,
                     start,
                     self.input.len(),
@@ -656,7 +656,7 @@ impl<'input> Lexer<'input> {
             self.chars.next();
             while let Some((i, ch)) = self.chars.peek() {
                 if *ch == '.' {
-                    return Err(LexicalError::DoublePoints(Loc(
+                    return Err(LexicalError::DoublePoints(Loc::File(
                         self.file_no,
                         start,
                         self.input.len(),
@@ -671,7 +671,7 @@ impl<'input> Lexer<'input> {
                 self.chars.next();
             }
             if !has_number {
-                return Err(LexicalError::UnrecognisedDecimal(Loc(
+                return Err(LexicalError::UnrecognisedDecimal(Loc::File(
                     self.file_no,
                     start,
                     self.input.len(),
@@ -694,7 +694,7 @@ impl<'input> Lexer<'input> {
             }
 
             if exp_start > end {
-                return Err(LexicalError::MissingExponent(Loc(
+                return Err(LexicalError::MissingExponent(Loc::File(
                     self.file_no,
                     start,
                     self.input.len(),
@@ -707,7 +707,7 @@ impl<'input> Lexer<'input> {
             let mantissa = &self.input[rational_start..=rational_end];
 
             if mantissa.is_empty() {
-                return Err(LexicalError::UnrecognisedDecimal(Loc(
+                return Err(LexicalError::UnrecognisedDecimal(Loc::File(
                     self.file_no,
                     start,
                     self.input.len(),
@@ -749,7 +749,7 @@ impl<'input> Lexer<'input> {
                     last_was_escape = false;
                 }
             } else {
-                return Err(LexicalError::EndOfFileInString(Loc(
+                return Err(LexicalError::EndOfFileInString(Loc::File(
                     self.file_no,
                     token_start,
                     self.input.len(),
@@ -824,14 +824,14 @@ impl<'input> Lexer<'input> {
 
                                         return Some(Err(
                                             LexicalError::InvalidCharacterInHexLiteral(
-                                                Loc(self.file_no, i, i + 1),
+                                                Loc::File(self.file_no, i, i + 1),
                                                 ch,
                                             ),
                                         ));
                                     }
                                 }
 
-                                return Some(Err(LexicalError::EndOfFileInString(Loc(
+                                return Some(Err(LexicalError::EndOfFileInString(Loc::File(
                                     self.file_no,
                                     start,
                                     self.input.len(),
@@ -858,7 +858,7 @@ impl<'input> Lexer<'input> {
                                     }
                                 }
 
-                                return Some(Err(LexicalError::EndOfFileInString(Loc(
+                                return Some(Err(LexicalError::EndOfFileInString(Loc::File(
                                     self.file_no,
                                     start,
                                     self.input.len(),
@@ -926,7 +926,7 @@ impl<'input> Lexer<'input> {
                                 }
                             } else {
                                 self.comments.push(Comment::Line(
-                                    Loc(self.file_no, start, last),
+                                    Loc::File(self.file_no, start, last),
                                     self.input[start..last].to_owned(),
                                 ));
                             }
@@ -954,7 +954,7 @@ impl<'input> Lexer<'input> {
                                     seen_star = ch == '*';
                                     last = i;
                                 } else {
-                                    return Some(Err(LexicalError::EndOfFileInComment(Loc(
+                                    return Some(Err(LexicalError::EndOfFileInComment(Loc::File(
                                         self.file_no,
                                         start,
                                         self.input.len(),
@@ -975,7 +975,7 @@ impl<'input> Lexer<'input> {
                                 }
                             } else {
                                 self.comments.push(Comment::Block(
-                                    Loc(self.file_no, start, last + 2),
+                                    Loc::File(self.file_no, start, last + 2),
                                     self.input[start..last + 2].to_owned(),
                                 ));
                             }
@@ -1173,7 +1173,7 @@ impl<'input> Lexer<'input> {
                     }
 
                     return Some(Err(LexicalError::UnrecognisedToken(
-                        Loc(self.file_no, start, end),
+                        Loc::File(self.file_no, start, end),
                         self.input[start..end].to_owned(),
                     )));
                 }
@@ -1425,7 +1425,7 @@ fn lexertest() {
     assert_eq!(
         tokens,
         vec!(Err(LexicalError::InvalidCharacterInHexLiteral(
-            Loc(0, 10, 11),
+            Loc::File(0, 10, 11),
             'g'
         )))
     );
@@ -1436,7 +1436,7 @@ fn lexertest() {
     assert_eq!(
         tokens,
         vec!(Err(LexicalError::UnrecognisedToken(
-            Loc(0, 1, 4),
+            Loc::File(0, 1, 4),
             "€".to_owned()
         )))
     );
@@ -1447,7 +1447,7 @@ fn lexertest() {
     assert_eq!(
         tokens,
         vec!(Err(LexicalError::UnrecognisedToken(
-            Loc(0, 0, 3),
+            Loc::File(0, 0, 3),
             "€".to_owned()
         )))
     );
@@ -1510,7 +1510,7 @@ fn lexertest() {
     let tokens = Lexer::new("/**", 0, &mut comments).next();
     assert_eq!(
         tokens,
-        Some(Err(LexicalError::EndOfFileInComment(Loc(0, 0, 3))))
+        Some(Err(LexicalError::EndOfFileInComment(Loc::File(0, 0, 3))))
     );
 
     let tokens = Lexer::new("//////////////", 0, &mut comments).next();
@@ -1575,7 +1575,7 @@ fn lexertest() {
         tokens,
         vec!(
             Ok((1, Token::Subtract, 2)),
-            Err(LexicalError::MissingExponent(Loc(0, 2, 4)))
+            Err(LexicalError::MissingExponent(Loc::File(0, 2, 4)))
         )
     );
 
@@ -1585,7 +1585,7 @@ fn lexertest() {
     assert_eq!(
         tokens,
         vec!(
-            Err(LexicalError::MissingExponent(Loc(0, 0, 3))),
+            Err(LexicalError::MissingExponent(Loc::File(0, 0, 3))),
             Ok((2, Token::Identifier("a"), 3))
         )
     );

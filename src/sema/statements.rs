@@ -254,7 +254,7 @@ pub fn resolve_function_body(
 
     if reachable? && return_required {
         ns.diagnostics.push(Diagnostic::error(
-            body.loc().end(),
+            body.loc().end_range(),
             "missing return statement".to_string(),
         ));
         return Err(());
@@ -279,7 +279,7 @@ pub fn resolve_function_body(
 
         if !has_underscore {
             ns.diagnostics.push(Diagnostic::error(
-                body.loc().end(),
+                body.loc().end_range(),
                 "missing ‘_’ in modifier".to_string(),
             ));
         }
@@ -343,8 +343,7 @@ fn statement(
                         loc: decl.loc,
                         ty: var_ty,
                         ty_loc,
-                        name: decl.name.name.to_owned(),
-                        name_loc: Some(decl.name.loc),
+                        name: Some(decl.name.clone()),
                         indexed: false,
                         readonly: false,
                     },
@@ -933,7 +932,7 @@ fn emit_event(
             let mut arguments = HashMap::new();
 
             for arg in args {
-                if arguments.contains_key(&arg.name.name) {
+                if arguments.contains_key(arg.name.name.as_str()) {
                     temp_diagnostics.push(Diagnostic::error(
                         arg.name.loc,
                         format!("duplicate argument with name ‘{}’", arg.name.name),
@@ -949,7 +948,7 @@ fn emit_event(
                     ResolveTo::Unknown,
                 );
 
-                arguments.insert(&arg.name.name, &arg.expr);
+                arguments.insert(arg.name.name.as_str(), &arg.expr);
             }
 
             if !temp_diagnostics.is_empty() {
@@ -984,7 +983,7 @@ fn emit_event(
                 for i in 0..params_len {
                     let param = ns.events[*event_no].fields[i].clone();
 
-                    if param.name.is_empty() {
+                    if param.name.is_none() {
                         temp_diagnostics.push(Diagnostic::error(
                         *loc,
                         format!(
@@ -996,7 +995,7 @@ fn emit_event(
                         break;
                     }
 
-                    let arg = match arguments.get(&param.name) {
+                    let arg = match arguments.get(param.name_as_str()) {
                         Some(a) => a,
                         None => {
                             matches = false;
@@ -1004,7 +1003,8 @@ fn emit_event(
                                 *loc,
                                 format!(
                                     "missing argument ‘{}’ to event ‘{}’",
-                                    param.name, ns.events[*event_no].name,
+                                    param.name_as_str(),
+                                    ns.events[*event_no].name,
                                 ),
                             ));
                             break;
@@ -1188,8 +1188,7 @@ fn destructure(
                         pos,
                         Parameter {
                             loc: *loc,
-                            name: name.name.to_owned(),
-                            name_loc: Some(name.loc),
+                            name: Some(name.clone()),
                             ty,
                             ty_loc,
                             indexed: false,
@@ -1398,7 +1397,7 @@ fn resolve_var_decl_ty(
         }
 
         if let pt::StorageLocation::Storage(loc) = storage {
-            loc_ty.2 = loc.2;
+            loc_ty.use_end_from(loc);
             var_ty = Type::StorageRef(false, Box::new(var_ty));
         }
 
@@ -1779,10 +1778,10 @@ fn try_catch(
         Some(ok) => ok,
         None => {
             // position after the expression
-            let pos = expr.loc().1;
+            let pos = expr.loc().begin_range();
 
             diagnostics.push(Diagnostic::error(
-                pt::Loc(context.file_no, pos, pos),
+                pos,
                 "code block missing for no catch".to_string(),
             ));
             return Err(());
@@ -1880,8 +1879,7 @@ fn try_catch(
                                 loc: param.0,
                                 ty: ret_ty,
                                 ty_loc,
-                                name: name.name.to_string(),
-                                name_loc: Some(name.loc),
+                                name: Some(name.clone()),
                                 indexed: false,
                                 readonly: false,
                             },
@@ -1895,8 +1893,7 @@ fn try_catch(
                             ty: ret_ty,
                             ty_loc,
                             indexed: false,
-                            name: "".to_string(),
-                            name_loc: None,
+                            name: None,
                             readonly: false,
                         },
                     ));
@@ -1976,8 +1973,7 @@ fn try_catch(
                         loc: param.loc,
                         ty: Type::DynamicBytes,
                         ty_loc,
-                        name: "".to_owned(),
-                        name_loc: None,
+                        name: None,
                         indexed: false,
                         readonly: false,
                     };
@@ -1993,8 +1989,7 @@ fn try_catch(
                         ) {
                             ns.check_shadowing(context.file_no, context.contract_no, name);
                             catch_param_pos = Some(pos);
-                            result.name = name.name.to_string();
-                            result.name_loc = Some(name.loc);
+                            result.name = Some(name.clone());
                         }
                     }
 
@@ -2059,8 +2054,7 @@ fn try_catch(
                     loc: id.loc,
                     ty: Type::String,
                     ty_loc,
-                    name: "".to_string(),
-                    name_loc: None,
+                    name: None,
                     indexed: false,
                     readonly: false,
                 };
@@ -2077,8 +2071,7 @@ fn try_catch(
                         ns.check_shadowing(context.file_no, context.contract_no, name);
 
                         error_pos = Some(pos);
-                        error_param.name = name.name.to_string();
-                        error_param.name_loc = Some(name.loc);
+                        error_param.name = Some(name.clone());
                     }
                 }
 

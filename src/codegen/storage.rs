@@ -86,7 +86,7 @@ pub fn storage_slots_array_push(
     cfg.add(
         vartab,
         Instr::Set {
-            loc: pt::Loc(0, 0, 0),
+            loc: pt::Loc::Codegen,
             res: length_pos,
             expr,
         },
@@ -99,7 +99,7 @@ pub fn storage_slots_array_push(
     cfg.add(
         vartab,
         Instr::Set {
-            loc: pt::Loc(0, 0, 0),
+            loc: pt::Loc::Codegen,
             res: entry_pos,
             expr: array_offset(
                 loc,
@@ -178,7 +178,7 @@ pub fn storage_slots_array_pop(
     cfg.add(
         vartab,
         Instr::Set {
-            loc: pt::Loc(0, 0, 0),
+            loc: pt::Loc::Codegen,
             res: length_pos,
             expr,
         },
@@ -213,7 +213,7 @@ pub fn storage_slots_array_pop(
     cfg.add(
         vartab,
         Instr::Set {
-            loc: pt::Loc(0, 0, 0),
+            loc: pt::Loc::Codegen,
             res: new_length,
             expr: Expression::Subtract(
                 *loc,
@@ -233,7 +233,7 @@ pub fn storage_slots_array_pop(
     cfg.add(
         vartab,
         Instr::Set {
-            loc: pt::Loc(0, 0, 0),
+            loc: pt::Loc::Codegen,
             res: entry_pos,
             expr: array_offset(
                 loc,

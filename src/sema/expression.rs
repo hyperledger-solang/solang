@@ -173,14 +173,14 @@ fn unescape(
                     Some(ch) => s.push(ch),
                     None => {
                         diagnostics.push(Diagnostic::error(
-                            pt::Loc(file_no, start + i, start + i + 4),
+                            pt::Loc::File(file_no, start + i, start + i + 4),
                             format!("\\x{:02x} is not a valid unicode character", ch),
                         ));
                     }
                 },
                 Err(offset) => {
                     diagnostics.push(Diagnostic::error(
-                        pt::Loc(
+                        pt::Loc::File(
                             file_no,
                             start + i,
                             start + std::cmp::min(literal.len(), offset),
@@ -194,14 +194,14 @@ fn unescape(
                     Some(ch) => s.push(ch),
                     None => {
                         diagnostics.push(Diagnostic::error(
-                            pt::Loc(file_no, start + i, start + i + 6),
+                            pt::Loc::File(file_no, start + i, start + i + 6),
                             format!("\\u{:04x} is not a valid unicode character", ch),
                         ));
                     }
                 },
                 Err(offset) => {
                     diagnostics.push(Diagnostic::error(
-                        pt::Loc(
+                        pt::Loc::File(
                             file_no,
                             start + i,
                             start + std::cmp::min(literal.len(), offset),
@@ -212,7 +212,7 @@ fn unescape(
             },
             Some((i, ch)) => {
                 diagnostics.push(Diagnostic::error(
-                    pt::Loc(file_no, start + i, start + i + ch.len_utf8()),
+                    pt::Loc::File(file_no, start + i, start + i + ch.len_utf8()),
                     format!("unknown escape character '{}'", ch),
                 ));
             }
@@ -1939,8 +1939,9 @@ fn string_literal(
     let mut loc = v[0].loc;
 
     for s in v {
-        result.extend_from_slice(unescape(&s.string, s.loc.1, file_no, diagnostics).as_bytes());
-        loc.2 = s.loc.2;
+        result
+            .extend_from_slice(unescape(&s.string, s.loc.start(), file_no, diagnostics).as_bytes());
+        loc.use_end_from(&s.loc);
     }
 
     let length = result.len();
@@ -1974,7 +1975,7 @@ fn hex_literal(v: &[pt::HexLiteral], diagnostics: &mut Vec<Diagnostic>) -> Resul
             return Err(());
         } else {
             result.extend_from_slice(&hex::decode(&s.hex).unwrap());
-            loc.2 = s.loc.2;
+            loc.use_end_from(&s.loc);
         }
     }
 
@@ -2114,8 +2115,10 @@ fn address_literal(
             }
             Err(FromBase58Error::InvalidBase58Character(ch, pos)) => {
                 let mut loc = *loc;
-                loc.1 += pos;
-                loc.2 = loc.1;
+                if let pt::Loc::File(_, start, end) = &mut loc {
+                    *start += pos;
+                    *end = *start;
+                }
                 diagnostics.push(Diagnostic::error(
                     loc,
                     format!("address literal {} invalid character '{}'", address, ch),
@@ -2153,8 +2156,10 @@ fn address_literal(
             }
             Err(FromBase58Error::InvalidBase58Character(ch, pos)) => {
                 let mut loc = *loc;
-                loc.1 += pos;
-                loc.2 = loc.1;
+                if let pt::Loc::File(_, start, end) = &mut loc {
+                    *start += pos;
+                    *end = *start;
+                }
                 diagnostics.push(Diagnostic::error(
                     loc,
                     format!("address literal {} invalid character '{}'", address, ch),
@@ -2980,10 +2985,10 @@ pub fn constructor_named_args(
         ns.contracts[context_contract_no].creates.push(no);
     }
 
-    let mut arguments: BTreeMap<&String, &pt::Expression> = BTreeMap::new();
+    let mut arguments: BTreeMap<&str, &pt::Expression> = BTreeMap::new();
 
     for arg in args {
-        if let Some(prev) = arguments.get(&arg.name.name) {
+        if let Some(prev) = arguments.get(arg.name.name.as_str()) {
             diagnostics.push(Diagnostic::error_with_note(
                 *loc,
                 format!("duplicate argument name ‘{}’", arg.name.name),
@@ -3026,13 +3031,13 @@ pub fn constructor_named_args(
         // check if arguments can be implicitly casted
         for i in 0..params_len {
             let param = ns.functions[function_no].params[i].clone();
-            let arg = match arguments.get(&param.name) {
+            let arg = match arguments.get(param.name_as_str()) {
                 Some(a) => a,
                 None => {
                     matches = false;
                     diagnostics.push(Diagnostic::error(
                         *loc,
-                        format!("missing argument ‘{}’ to constructor", param.name),
+                        format!("missing argument ‘{}’ to constructor", param.name_as_str()),
                     ));
                     break;
                 }
@@ -4261,7 +4266,7 @@ fn member_access(
                     .fields
                     .iter()
                     .enumerate()
-                    .find(|(_, field)| id.name == field.name)
+                    .find(|(_, field)| id.name == field.name_as_str())
                 {
                     Ok(Expression::StructMember(
                         id.loc,
@@ -4323,7 +4328,7 @@ fn member_access(
                 .fields
                 .iter()
                 .enumerate()
-                .find(|f| id.name == f.1.name)
+                .find(|f| id.name == f.1.name_as_str())
             {
                 return if context.lvalue && f.readonly {
                     diagnostics.push(Diagnostic::error(
@@ -5124,7 +5129,7 @@ fn function_call_with_named_args(
     let mut arguments = HashMap::new();
 
     for arg in args {
-        if arguments.contains_key(&arg.name.name) {
+        if arguments.contains_key(arg.name.name.as_str()) {
             diagnostics.push(Diagnostic::error(
                 arg.name.loc,
                 format!("duplicate argument with name ‘{}’", arg.name.name),
@@ -5132,7 +5137,7 @@ fn function_call_with_named_args(
             return Err(());
         }
 
-        arguments.insert(&arg.name.name, &arg.expr);
+        arguments.insert(arg.name.name.as_str(), &arg.expr);
     }
 
     // Try to resolve as a function call
@@ -5169,8 +5174,7 @@ fn function_call_with_named_args(
         // check if arguments can be implicitly casted
         for i in 0..params_len {
             let param = &ns.functions[function_no].params[i];
-
-            let arg = match arguments.get(&param.name) {
+            let arg = match arguments.get(param.name_as_str()) {
                 Some(a) => a,
                 None => {
                     matches = false;
@@ -5178,7 +5182,8 @@ fn function_call_with_named_args(
                         *loc,
                         format!(
                             "missing argument ‘{}’ to function ‘{}’",
-                            param.name, id.name,
+                            param.name_as_str(),
+                            id.name,
                         ),
                     ));
                     break;
@@ -5304,12 +5309,9 @@ fn named_struct_literal(
         let mut fields = Vec::new();
         fields.resize(args.len(), Expression::Poison);
         for a in args {
-            match struct_def
-                .fields
-                .iter()
-                .enumerate()
-                .find(|(_, f)| f.name == a.name.name)
-            {
+            match struct_def.fields.iter().enumerate().find(|(_, f)| {
+                f.name.as_ref().map(|id| id.name.as_str()) == Some(a.name.name.as_str())
+            }) {
                 Some((i, f)) => {
                     let expr = expression(
                         &a.expr,
@@ -6350,7 +6352,7 @@ fn method_call_named_args(
         let mut arguments = HashMap::new();
 
         for arg in args {
-            if arguments.contains_key(&arg.name.name) {
+            if arguments.contains_key(arg.name.name.as_str()) {
                 diagnostics.push(Diagnostic::error(
                     arg.name.loc,
                     format!("duplicate argument with name ‘{}’", arg.name.name),
@@ -6358,7 +6360,7 @@ fn method_call_named_args(
                 return Err(());
             }
 
-            arguments.insert(&arg.name.name, &arg.expr);
+            arguments.insert(arg.name.name.as_str(), &arg.expr);
         }
 
         let marker = diagnostics.len();
@@ -6392,8 +6394,7 @@ fn method_call_named_args(
             // check if arguments can be implicitly casted
             for i in 0..params_len {
                 let param = ns.functions[function_no].params[i].clone();
-
-                let arg = match arguments.get(&param.name) {
+                let arg = match arguments.get(param.name_as_str()) {
                     Some(a) => a,
                     None => {
                         matches = false;
@@ -6401,7 +6402,8 @@ fn method_call_named_args(
                             *loc,
                             format!(
                                 "missing argument ‘{}’ to function ‘{}’",
-                                param.name, func_name.name,
+                                param.name_as_str(),
+                                func_name.name,
                             ),
                         ));
                         continue;
@@ -6697,8 +6699,8 @@ pub fn collect_call_args<'a>(
     while let pt::Expression::FunctionCallBlock(_, e, block) = expr {
         match block.as_ref() {
             pt::Statement::Args(_, args) => {
-                if let Some(l) = loc {
-                    loc = Some(pt::Loc(l.0, l.1, block.loc().2));
+                if let Some(pt::Loc::File(file_no, start, _)) = loc {
+                    loc = Some(pt::Loc::File(file_no, start, block.loc().end()));
                 } else {
                     loc = Some(block.loc());
                 }

@@ -64,7 +64,7 @@ pub fn gen_abi(contract_no: usize, ns: &Namespace) -> Vec<ABI> {
         };
 
         ABIParam {
-            name: param.name.to_string(),
+            name: param.name_as_str().to_owned(),
             ty: param.ty.to_signature_string(true, ns),
             internal_ty: param.ty.to_string(ns),
             components,

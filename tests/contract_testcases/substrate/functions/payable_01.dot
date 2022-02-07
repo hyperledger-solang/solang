@@ -2,7 +2,7 @@ strict digraph "tests/contract_testcases/substrate/functions/payable_01.sol" {
 	contract [label="contract c\ntests/contract_testcases/substrate/functions/payable_01.sol:4:9-20"]
 	var [label="variable i\nvisibility internal\ntests/contract_testcases/substrate/functions/payable_01.sol:5:13-24"]
 	number_literal [label="int32 literal: 0\ntests/contract_testcases/substrate/functions/payable_01.sol:5:23-24"]
-	diagnostic [label="pragma ‘solidity’ is ignored\nlevel Debug\ntests/contract_testcases/substrate/functions/payable_01.sol:2:16-26"]
+	diagnostic [label="pragma ‘solidity’ is ignored\nlevel Debug\ntests/contract_testcases/substrate/functions/payable_01.sol:2:9-26"]
 	diagnostic_7 [label="found contract ‘c’\nlevel Debug\ntests/contract_testcases/substrate/functions/payable_01.sol:4:9-20"]
 	diagnostic_8 [label="internal or private function cannot be payable\nlevel Error\ntests/contract_testcases/substrate/functions/payable_01.sol:7:29-36"]
 	diagnostic_9 [label="storage variable 'i' has been assigned, but never read\nlevel Warning\ntests/contract_testcases/substrate/functions/payable_01.sol:5:13-24"]

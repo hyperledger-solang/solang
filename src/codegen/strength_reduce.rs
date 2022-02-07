@@ -1777,7 +1777,7 @@ fn expresson_known_bits() {
     use crate::{parser::pt::Loc, Target};
 
     let ns = Namespace::new(Target::default_substrate());
-    let loc = Loc(0, 0, 0);
+    let loc = Loc::Codegen;
 
     let mut vars: Variables = HashMap::new();
 

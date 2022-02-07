@@ -15,6 +15,7 @@ pub mod sema;
 use file_resolver::FileResolver;
 use sema::ast;
 use sema::diagnostics;
+use solang_parser::pt;
 use std::{ffi::OsStr, fmt};
 
 /// The target chain you want to compile Solidity for.
@@ -176,7 +177,7 @@ pub fn parse_and_resolve(
                 ty: ast::ErrorType::ParserError,
                 level: ast::Level::Error,
                 message,
-                pos: None,
+                pos: pt::Loc::CommandLine,
                 notes: Vec::new(),
             });
         }

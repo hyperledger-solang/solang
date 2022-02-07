@@ -9,7 +9,7 @@ use crate::parser::pt;
 pub fn mutablity(file_no: usize, ns: &mut Namespace) {
     if !diagnostics::any_errors(&ns.diagnostics) {
         for func in &ns.functions {
-            if func.loc.0 != file_no {
+            if func.loc.file_no() != file_no {
                 continue;
             }
 

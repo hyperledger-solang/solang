@@ -2197,7 +2197,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                                 binary.context.i32_type().const_zero(),
                                 binary.context.i32_type().const_int(i as u64, false),
                             ],
-                            &field.name,
+                            field.name_as_str(),
                         )
                     };
 
@@ -2587,7 +2587,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                             binary.context.i32_type().const_zero(),
                             binary.context.i32_type().const_int(i as u64, false),
                         ],
-                        &field.name,
+                        field.name_as_str(),
                     )
                 };
 
@@ -2598,7 +2598,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                     binary,
                     &field.ty,
                     &mut offset,
-                    binary.builder.build_load(elem, &field.name),
+                    binary.builder.build_load(elem, field.name_as_str()),
                     function,
                     ns,
                 );

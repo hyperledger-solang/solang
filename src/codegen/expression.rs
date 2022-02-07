@@ -722,7 +722,7 @@ fn post_incdec(
     cfg.add(
         vartab,
         Instr::Set {
-            loc: pt::Loc(0, 0, 0),
+            loc: pt::Loc::Codegen,
             res,
             expr: v,
         },
@@ -762,7 +762,7 @@ fn post_incdec(
             cfg.add(
                 vartab,
                 Instr::Set {
-                    loc: pt::Loc(0, 0, 0),
+                    loc: pt::Loc::Codegen,
                     res,
                     expr,
                 },
@@ -822,7 +822,7 @@ fn pre_incdec(
     cfg.add(
         vartab,
         Instr::Set {
-            loc: pt::Loc(0, 0, 0),
+            loc: pt::Loc::Codegen,
             res,
             expr,
         },
@@ -888,7 +888,7 @@ fn expr_or(
     cfg.add(
         vartab,
         Instr::Set {
-            loc: pt::Loc(0, 0, 0),
+            loc: pt::Loc::Codegen,
             res: pos,
             expr: Expression::BoolLiteral(*loc, true),
         },
@@ -906,7 +906,7 @@ fn expr_or(
     cfg.add(
         vartab,
         Instr::Set {
-            loc: pt::Loc(0, 0, 0),
+            loc: pt::Loc::Codegen,
             res: pos,
             expr: r,
         },
@@ -945,7 +945,7 @@ fn and(
     cfg.add(
         vartab,
         Instr::Set {
-            loc: pt::Loc(0, 0, 0),
+            loc: pt::Loc::Codegen,
             res: pos,
             expr: Expression::BoolLiteral(*loc, false),
         },
@@ -963,7 +963,7 @@ fn and(
     cfg.add(
         vartab,
         Instr::Set {
-            loc: pt::Loc(0, 0, 0),
+            loc: pt::Loc::Codegen,
             res: pos,
             expr: r,
         },
@@ -1530,7 +1530,7 @@ fn checking_trunc(
     cfg.add(
         vartab,
         Instr::Set {
-            loc: pt::Loc(0, 0, 0),
+            loc: pt::Loc::Codegen,
             res: pos,
             expr,
         },
@@ -1647,7 +1647,7 @@ fn ternary(
     cfg.add(
         vartab,
         Instr::Set {
-            loc: pt::Loc(0, 0, 0),
+            loc: pt::Loc::Codegen,
             res: pos,
             expr,
         },
@@ -1662,7 +1662,7 @@ fn ternary(
     cfg.add(
         vartab,
         Instr::Set {
-            loc: pt::Loc(0, 0, 0),
+            loc: pt::Loc::Codegen,
             res: pos,
             expr,
         },
@@ -1778,7 +1778,7 @@ pub fn assign_single(
             cfg.add(
                 vartab,
                 Instr::Set {
-                    loc: pt::Loc(0, 0, 0),
+                    loc: pt::Loc::Codegen,
                     res: pos,
                     expr: right,
                 },
@@ -1862,7 +1862,7 @@ pub fn emit_function_call(
                     for ret in &ftype.returns {
                         let id = pt::Identifier {
                             loc: ret.loc,
-                            name: ret.name.to_owned(),
+                            name: ret.name_as_str().to_owned(),
                         };
 
                         let temp_pos = vartab.temp(&id, &ret.ty);
@@ -1910,7 +1910,7 @@ pub fn emit_function_call(
 
                     for ty in returns {
                         let id = pt::Identifier {
-                            loc: pt::Loc(0, 0, 0),
+                            loc: pt::Loc::Codegen,
                             name: String::new(),
                         };
 
@@ -1966,7 +1966,7 @@ pub fn emit_function_call(
             let value = if let Some(value) = value {
                 expression(value, cfg, callee_contract_no, func, ns, vartab, opt)
             } else {
-                Expression::NumberLiteral(pt::Loc(0, 0, 0), Type::Value, BigInt::zero())
+                Expression::NumberLiteral(pt::Loc::Codegen, Type::Value, BigInt::zero())
             };
 
             let success = vartab.temp_name("success", &Type::Bool);
@@ -2050,7 +2050,7 @@ pub fn emit_function_call(
                 let value = if let Some(value) = value {
                     expression(value, cfg, callee_contract_no, func, ns, vartab, opt)
                 } else {
-                    Expression::NumberLiteral(pt::Loc(0, 0, 0), Type::Value, BigInt::zero())
+                    Expression::NumberLiteral(pt::Loc::Codegen, Type::Value, BigInt::zero())
                 };
 
                 let dest_func = &ns.functions[*function_no];
@@ -2124,7 +2124,7 @@ pub fn emit_function_call(
                     for ret in &ftype.returns {
                         let id = pt::Identifier {
                             loc: ret.loc,
-                            name: ret.name.to_owned(),
+                            name: ret.name_as_str().to_owned(),
                         };
                         let temp_pos = vartab.temp(&id, &ret.ty);
                         res.push(temp_pos);
@@ -2165,7 +2165,7 @@ pub fn emit_function_call(
                 let value = if let Some(value) = value {
                     expression(value, cfg, callee_contract_no, func, ns, vartab, opt)
                 } else {
-                    Expression::NumberLiteral(pt::Loc(0, 0, 0), Type::Value, BigInt::zero())
+                    Expression::NumberLiteral(pt::Loc::Codegen, Type::Value, BigInt::zero())
                 };
 
                 let selector = Expression::Builtin(
@@ -2210,14 +2210,13 @@ pub fn emit_function_call(
                     for ty in func_returns {
                         let temp_pos = vartab.temp_anonymous(&ty);
                         res.push(temp_pos);
-                        returns.push(Expression::Variable(pt::Loc(0, 0, 0), ty.clone(), temp_pos));
+                        returns.push(Expression::Variable(pt::Loc::Codegen, ty.clone(), temp_pos));
 
                         tys.push(Parameter {
-                            loc: pt::Loc(0, 0, 0),
+                            loc: pt::Loc::Codegen,
                             ty,
-                            ty_loc: pt::Loc(0, 0, 0),
-                            name: String::new(),
-                            name_loc: None,
+                            ty_loc: pt::Loc::Codegen,
+                            name: None,
                             indexed: false,
                             readonly: false,
                         });
@@ -2263,8 +2262,7 @@ pub fn emit_function_call(
                     tys: tys
                         .iter()
                         .map(|ty| Parameter {
-                            name: "".to_owned(),
-                            name_loc: None,
+                            name: None,
                             loc: *loc,
                             ty: ty.clone(),
                             ty_loc: *loc,
@@ -2284,7 +2282,7 @@ pub fn emit_function_call(
 
 pub fn default_gas(ns: &Namespace) -> Expression {
     Expression::NumberLiteral(
-        pt::Loc(0, 0, 0),
+        pt::Loc::Codegen,
         Type::Uint(64),
         // See EIP150
         if ns.target == Target::Ewasm {
@@ -2409,7 +2407,7 @@ fn array_subscript(
     cfg.add(
         vartab,
         Instr::Set {
-            loc: pt::Loc(0, 0, 0),
+            loc: pt::Loc::Codegen,
             res: pos,
             expr: cast(&index.loc(), index, &coerced_ty, false, ns, &mut Vec::new()).unwrap(),
         },

@@ -512,9 +512,9 @@ pub fn dead_storage(cfg: &mut ControlFlowGraph, _ns: &mut Namespace) {
 
                     if let Some(var_no) = found {
                         cfg.blocks[block_no].instr[instr_no] = Instr::Set {
-                            loc: Loc(0, 0, 0),
+                            loc: Loc::Codegen,
                             res: *res,
-                            expr: Expression::Variable(Loc(0, 0, 0), ty.clone(), var_no),
+                            expr: Expression::Variable(Loc::Codegen, ty.clone(), var_no),
                         };
                     } else {
                         for (def, expr) in &vars.stores {

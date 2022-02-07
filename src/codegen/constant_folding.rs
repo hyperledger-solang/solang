@@ -624,7 +624,7 @@ fn expression(
                         }
 
                         if let Some(expr) = v {
-                            if *loc != Loc(0, 0, 0) {
+                            if *loc != Loc::Codegen {
                                 ns.var_constants.insert(*loc, expr.clone());
                             }
                             return (expr, true);

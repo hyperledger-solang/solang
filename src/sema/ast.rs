@@ -52,7 +52,7 @@ pub enum Type {
 pub struct StructDecl {
     pub tags: Vec<Tag>,
     pub name: String,
-    pub loc: Option<pt::Loc>,
+    pub loc: pt::Loc,
     pub contract: Option<String>,
     pub fields: Vec<Parameter>,
     // List of offsets of the fields, last entry is the offset for the struct overall size
@@ -116,13 +116,22 @@ impl fmt::Display for EnumDecl {
 #[derive(PartialEq, Clone, Debug)]
 pub struct Parameter {
     pub loc: pt::Loc,
-    pub name: String,
     // The name can empty (e.g. in an event field or unnamed parameter/return)
-    pub name_loc: Option<pt::Loc>,
+    pub name: Option<pt::Identifier>,
     pub ty: Type,
     pub ty_loc: pt::Loc,
     pub indexed: bool,
     pub readonly: bool,
+}
+
+impl Parameter {
+    pub fn name_as_str(&self) -> &str {
+        if let Some(name) = &self.name {
+            name.name.as_str()
+        } else {
+            ""
+        }
+    }
 }
 
 #[derive(PartialEq, Eq, Clone, Hash, Debug)]

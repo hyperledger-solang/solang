@@ -40,7 +40,7 @@ pub struct Note {
 pub struct Diagnostic {
     pub level: Level,
     pub ty: ErrorType,
-    pub pos: Option<pt::Loc>,
+    pub pos: pt::Loc,
     pub message: String,
     pub notes: Vec<Note>,
 }
@@ -50,7 +50,7 @@ impl Diagnostic {
         Diagnostic {
             level: Level::Debug,
             ty: ErrorType::None,
-            pos: Some(pos),
+            pos,
             message,
             notes: Vec::new(),
         }
@@ -60,7 +60,7 @@ impl Diagnostic {
         Diagnostic {
             level: Level::Info,
             ty: ErrorType::None,
-            pos: Some(pos),
+            pos,
             message,
             notes: Vec::new(),
         }
@@ -70,7 +70,7 @@ impl Diagnostic {
         Diagnostic {
             level: Level::Error,
             ty: ErrorType::ParserError,
-            pos: Some(pos),
+            pos,
             message,
             notes: Vec::new(),
         }
@@ -80,7 +80,7 @@ impl Diagnostic {
         Diagnostic {
             level: Level::Error,
             ty: ErrorType::SyntaxError,
-            pos: Some(pos),
+            pos,
             message,
             notes: Vec::new(),
         }
@@ -90,7 +90,7 @@ impl Diagnostic {
         Diagnostic {
             level: Level::Error,
             ty: ErrorType::DeclarationError,
-            pos: Some(pos),
+            pos,
             message,
             notes: Vec::new(),
         }
@@ -100,7 +100,7 @@ impl Diagnostic {
         Diagnostic {
             level: Level::Error,
             ty: ErrorType::TypeError,
-            pos: Some(pos),
+            pos,
             message,
             notes: Vec::new(),
         }
@@ -110,7 +110,7 @@ impl Diagnostic {
         Diagnostic {
             level: Level::Warning,
             ty: ErrorType::Warning,
-            pos: Some(pos),
+            pos,
             message,
             notes: Vec::new(),
         }
@@ -120,7 +120,7 @@ impl Diagnostic {
         Diagnostic {
             level: Level::Warning,
             ty: ErrorType::Warning,
-            pos: Some(pos),
+            pos,
             message,
             notes: vec![Note {
                 pos: note_pos,
@@ -133,7 +133,7 @@ impl Diagnostic {
         Diagnostic {
             level: Level::Warning,
             ty: ErrorType::Warning,
-            pos: Some(pos),
+            pos,
             message,
             notes,
         }
@@ -143,7 +143,7 @@ impl Diagnostic {
         Diagnostic {
             level: Level::Error,
             ty: ErrorType::None,
-            pos: Some(pos),
+            pos,
             message,
             notes: vec![Note {
                 pos: note_pos,
@@ -156,7 +156,7 @@ impl Diagnostic {
         Diagnostic {
             level: Level::Error,
             ty: ErrorType::None,
-            pos: Some(pos),
+            pos,
             message,
             notes,
         }

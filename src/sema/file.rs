@@ -1,4 +1,4 @@
-use super::ast::File;
+use super::ast::{File, Namespace};
 use crate::parser::pt::Loc;
 use std::{fmt, path};
 
@@ -20,9 +20,9 @@ impl File {
     }
 
     /// Give a position as a human readable position
-    pub fn loc_to_string(&self, loc: &Loc) -> String {
-        let (from_line, from_column) = self.offset_to_line_column(loc.1);
-        let (to_line, to_column) = self.offset_to_line_column(loc.2);
+    pub fn loc_to_string(&self, start: usize, end: usize) -> String {
+        let (from_line, from_column) = self.offset_to_line_column(start);
+        let (to_line, to_column) = self.offset_to_line_column(end);
 
         if from_line == to_line && from_column == to_column {
             format!("{}:{}:{}", self, from_line + 1, from_column + 1)
@@ -89,6 +89,19 @@ impl fmt::Display for File {
         let res = write!(f, "{}", fix_windows_verbatim(&self.path).display());
 
         res
+    }
+}
+
+impl Namespace {
+    /// Give a position as a human readable position
+    pub fn loc_to_string(&self, loc: &Loc) -> String {
+        match loc {
+            Loc::File(file_no, start, end) => self.files[*file_no].loc_to_string(*start, *end),
+            Loc::Builtin => String::from("builtin"),
+            Loc::Codegen => String::from("codegen"),
+            Loc::Implicit => String::from("implicit"),
+            Loc::CommandLine => String::from("commandline"),
+        }
     }
 }
 
