@@ -4,8 +4,8 @@ strict digraph "tests/contract_testcases/substrate/functions/mutability_11.sol" 
 	number_literal [label="int64 literal: 1844674\ntests/contract_testcases/substrate/functions/mutability_11.sol:2:41-48"]
 	foo [label="function foo\ncontract: test\ntests/contract_testcases/substrate/functions/mutability_11.sol:2:35-38\nsignature foo()\nvisibility public\nmutability view"]
 	returns [label="returns\nint64 "]
-	return [label="return\ntests/contract_testcases/substrate/functions/mutability_11.sol:1:1"]
-	constant [label="constant variable\ntest.foo\nint64\ntests/contract_testcases/substrate/functions/mutability_11.sol:1:1"]
+	return [label="return\nimplicit"]
+	constant [label="constant variable\ntest.foo\nint64\nimplicit"]
 	diagnostic [label="found contract ‘test’\nlevel Debug\ntests/contract_testcases/substrate/functions/mutability_11.sol:1:1-15"]
 	contracts -> contract
 	contract -> var [label="variable"]

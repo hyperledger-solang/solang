@@ -603,7 +603,7 @@ pub trait TargetRuntime<'a> {
                                 bin.context.i32_type().const_zero(),
                                 bin.context.i32_type().const_int(i as u64, false),
                             ],
-                            &field.name,
+                            field.name_as_str(),
                         )
                     };
 
@@ -893,14 +893,14 @@ pub trait TargetRuntime<'a> {
                                 bin.context.i32_type().const_zero(),
                                 bin.context.i32_type().const_int(i as u64, false),
                             ],
-                            &field.name,
+                            field.name_as_str(),
                         )
                     };
 
                     if field.ty.is_reference_type() {
                         elem = bin
                             .builder
-                            .build_load(elem, &field.name)
+                            .build_load(elem, field.name_as_str())
                             .into_pointer_value();
                     }
 
@@ -920,7 +920,7 @@ pub trait TargetRuntime<'a> {
                         *slot = bin.builder.build_int_add(
                             *slot,
                             bin.number_literal(256, &field.ty.storage_slots(ns), ns),
-                            &field.name,
+                            field.name_as_str(),
                         );
                     }
                 }
@@ -1111,7 +1111,7 @@ pub trait TargetRuntime<'a> {
                         *slot = bin.builder.build_int_add(
                             *slot,
                             bin.number_literal(256, &field.ty.storage_slots(ns), ns),
-                            &field.name,
+                            field.name_as_str(),
                         );
                     }
                 }
@@ -3933,11 +3933,15 @@ pub trait TargetRuntime<'a> {
                         if !res.is_empty() {
                             for v in f.returns.iter() {
                                 parms.push(if ns.target == Target::Solana {
-                                    bin.build_alloca(function, bin.llvm_var(&v.ty, ns), &v.name)
-                                        .into()
+                                    bin.build_alloca(
+                                        function,
+                                        bin.llvm_var(&v.ty, ns),
+                                        v.name_as_str(),
+                                    )
+                                    .into()
                                 } else {
                                     bin.builder
-                                        .build_alloca(bin.llvm_var(&v.ty, ns), &v.name)
+                                        .build_alloca(bin.llvm_var(&v.ty, ns), v.name_as_str())
                                         .into()
                                 });
                             }
@@ -3975,7 +3979,7 @@ pub trait TargetRuntime<'a> {
                             for (i, v) in f.returns.iter().enumerate() {
                                 let val = bin.builder.build_load(
                                     parms[args.len() + i].into_pointer_value(),
-                                    &v.name,
+                                    v.name_as_str(),
                                 );
 
                                 let dest = w.vars[&res[i]].value;
@@ -4603,13 +4607,13 @@ pub trait TargetRuntime<'a> {
         if !f.returns.is_empty() {
             for v in f.returns.iter() {
                 args.push(if !v.ty.is_reference_type() {
-                    bin.build_alloca(function, bin.llvm_type(&v.ty, ns), &v.name)
+                    bin.build_alloca(function, bin.llvm_type(&v.ty, ns), v.name_as_str())
                         .into()
                 } else {
                     bin.build_alloca(
                         function,
                         bin.llvm_type(&v.ty, ns).ptr_type(AddressSpace::Generic),
-                        &v.name,
+                        v.name_as_str(),
                     )
                     .into()
                 });

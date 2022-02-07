@@ -171,7 +171,7 @@ pub fn generate_docs(outdir: &str, files: &[ast::Namespace], verbose: bool) {
 
             for (i, f) in event_decl.fields.iter().enumerate() {
                 field.push(Field {
-                    name: &f.name,
+                    name: f.name_as_str(),
                     ty: f.ty.to_string(file),
                     indexed: f.indexed,
                     doc: get_tag_no("param", i, &event_decl.tags),
@@ -195,8 +195,8 @@ pub fn generate_docs(outdir: &str, files: &[ast::Namespace], verbose: bool) {
 
         // structs
         for struct_decl in &file.structs {
-            if let Some(loc) = struct_decl.loc {
-                if top.structs.iter().any(|e| e.loc == loc) {
+            if let pt::Loc::File(..) = struct_decl.loc {
+                if top.structs.iter().any(|e| e.loc == struct_decl.loc) {
                     continue;
                 }
 
@@ -204,7 +204,7 @@ pub fn generate_docs(outdir: &str, files: &[ast::Namespace], verbose: bool) {
 
                 for (i, f) in struct_decl.fields.iter().enumerate() {
                     field.push(Field {
-                        name: &f.name,
+                        name: f.name_as_str(),
                         ty: f.ty.to_string(file),
                         indexed: false,
                         doc: get_tag_no("param", i, &struct_decl.tags),
@@ -218,7 +218,7 @@ pub fn generate_docs(outdir: &str, files: &[ast::Namespace], verbose: bool) {
                     notice: get_tag("notice", &struct_decl.tags),
                     author: get_tag("author", &struct_decl.tags),
                     dev: get_tag("dev", &struct_decl.tags),
-                    loc,
+                    loc: struct_decl.loc,
                     field,
                 });
             }
@@ -282,7 +282,7 @@ pub fn generate_docs(outdir: &str, files: &[ast::Namespace], verbose: bool) {
 
                 for (i, f) in func.params.iter().enumerate() {
                     params.push(Field {
-                        name: &f.name,
+                        name: f.name_as_str(),
                         ty: f.ty.to_string(file),
                         indexed: false,
                         doc: get_tag_no("param", i, &func.tags),
@@ -293,7 +293,7 @@ pub fn generate_docs(outdir: &str, files: &[ast::Namespace], verbose: bool) {
 
                 for (i, f) in func.returns.iter().enumerate() {
                     returns.push(Field {
-                        name: &f.name,
+                        name: f.name_as_str(),
                         ty: f.ty.to_string(file),
                         indexed: false,
                         doc: get_tag_no("return", i, &func.tags),

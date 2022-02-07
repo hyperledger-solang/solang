@@ -51,7 +51,7 @@ pub fn resolve_typenames<'a>(
                     ns.structs.push(StructDecl {
                         tags: Vec::new(),
                         name: def.name.name.to_owned(),
-                        loc: Some(def.name.loc),
+                        loc: def.name.loc,
                         contract: None,
                         fields: Vec::new(),
                         offsets: Vec::new(),
@@ -124,10 +124,10 @@ pub fn resolve_fields(delay: ResolveFields, file_no: usize, ns: &mut Namespace) 
 
                     if structs_visited.contains(&struct_no) {
                         ns.diagnostics.push(Diagnostic::error_with_note(
-                            def.loc.unwrap(),
+                            def.loc,
                             format!("struct ‘{}’ has infinite size", def.name),
                             field.loc,
-                            format!("recursive field ‘{}’", field.name),
+                            format!("recursive field ‘{}’", field.name_as_str()),
                         ));
                     } else {
                         structs_visited.push(struct_no);
@@ -165,7 +165,15 @@ fn resolve_contract<'a>(
 ) -> bool {
     let contract_no = ns.contracts.len();
 
-    let doc = resolve_tags(def.name.loc.0, "contract", &def.doc, None, None, None, ns);
+    let doc = resolve_tags(
+        def.name.loc.file_no(),
+        "contract",
+        &def.doc,
+        None,
+        None,
+        None,
+        ns,
+    );
 
     ns.contracts
         .push(Contract::new(&def.name.name, def.ty.clone(), doc, def.loc));
@@ -206,7 +214,7 @@ fn resolve_contract<'a>(
                     ns.structs.push(StructDecl {
                         tags: Vec::new(),
                         name: s.name.name.to_owned(),
-                        loc: Some(s.name.loc),
+                        loc: s.name.loc,
                         contract: Some(def.name.name.to_owned()),
                         fields: Vec::new(),
                         offsets: Vec::new(),
@@ -282,7 +290,10 @@ pub fn struct_decl(
             }
         };
 
-        if let Some(other) = fields.iter().find(|f| f.name == field.name.name) {
+        if let Some(other) = fields
+            .iter()
+            .find(|f| f.name.as_ref().map(|id| id.name.as_str()) == Some(field.name.name.as_str()))
+        {
             ns.diagnostics.push(Diagnostic::error_with_note(
                 field.name.loc,
                 format!(
@@ -290,7 +301,10 @@ pub fn struct_decl(
                     def.name.name, field.name.name
                 ),
                 other.loc,
-                format!("location of previous declaration of ‘{}’", other.name),
+                format!(
+                    "location of previous declaration of ‘{}’",
+                    other.name_as_str()
+                ),
             ));
             valid = false;
             continue;
@@ -313,8 +327,10 @@ pub fn struct_decl(
 
         fields.push(Parameter {
             loc: field.loc,
-            name_loc: Some(field.name.loc),
-            name: field.name.name.to_string(),
+            name: Some(pt::Identifier {
+                name: field.name.name.to_string(),
+                loc: field.name.loc,
+            }),
             ty,
             ty_loc: field.ty.loc(),
             indexed: false,
@@ -335,7 +351,7 @@ pub fn struct_decl(
 
     if valid {
         let doc = resolve_tags(
-            def.name.loc.0,
+            def.name.loc.file_no(),
             "struct",
             &def.doc,
             Some(&fields),
@@ -384,8 +400,11 @@ fn event_decl(
             valid = false;
         }
 
-        let (name, name_loc) = if let Some(name) = &field.name {
-            if let Some(other) = fields.iter().find(|f| f.name == name.name) {
+        let name = if let Some(name) = &field.name {
+            if let Some(other) = fields
+                .iter()
+                .find(|f| f.name.as_ref().map(|id| id.name.as_str()) == Some(name.name.as_str()))
+            {
                 ns.diagnostics.push(Diagnostic::error_with_note(
                     name.loc,
                     format!(
@@ -393,14 +412,20 @@ fn event_decl(
                         def.name.name, name.name
                     ),
                     other.loc,
-                    format!("location of previous declaration of ‘{}’", other.name),
+                    format!(
+                        "location of previous declaration of ‘{}’",
+                        other.name_as_str()
+                    ),
                 ));
                 valid = false;
                 continue;
             }
-            (name.name.to_owned(), Some(name.loc))
+            Some(pt::Identifier {
+                name: name.name.to_owned(),
+                loc: name.loc,
+            })
         } else {
-            (String::new(), None)
+            None
         };
 
         if field.indexed {
@@ -410,7 +435,6 @@ fn event_decl(
         fields.push(Parameter {
             loc: field.loc,
             name,
-            name_loc,
             ty,
             ty_loc: field.ty.loc(),
             indexed: field.indexed,
@@ -442,7 +466,7 @@ fn event_decl(
 
     if valid {
         let doc = resolve_tags(
-            def.name.loc.0,
+            def.name.loc.file_no(),
             "event",
             &def.doc,
             Some(&fields),
@@ -503,7 +527,15 @@ fn enum_decl(
         entries.insert(e.name.to_string(), (e.loc, i));
     }
 
-    let tags = resolve_tags(enum_.name.loc.0, "enum", &enum_.doc, None, None, None, ns);
+    let tags = resolve_tags(
+        enum_.name.loc.file_no(),
+        "enum",
+        &enum_.doc,
+        None,
+        None,
+        None,
+        ns,
+    );
 
     let decl = EnumDecl {
         tags,
@@ -1157,7 +1189,7 @@ impl Type {
     /// Is this structure a builtin
     pub fn is_builtin(&self, ns: &Namespace) -> bool {
         match self {
-            Type::Struct(n) => ns.structs[*n].loc.is_none(),
+            Type::Struct(n) => ns.structs[*n].loc == pt::Loc::Builtin,
             Type::StorageRef(_, r) | Type::Ref(r) => r.is_builtin(ns),
             _ => false,
         }
@@ -1170,7 +1202,7 @@ impl Type {
             Type::Mapping(key, value) => key
                 .contains_builtins(ns)
                 .or_else(|| value.contains_builtins(ns)),
-            Type::Struct(n) if ns.structs[*n].loc.is_none() => Some(self),
+            Type::Struct(n) if ns.structs[*n].loc == pt::Loc::Builtin => Some(self),
             Type::Struct(n) => ns.structs[*n]
                 .fields
                 .iter()

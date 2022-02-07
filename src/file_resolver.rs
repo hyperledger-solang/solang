@@ -236,8 +236,13 @@ impl FileResolver {
         file: &ast::File,
         loc: &Loc,
     ) -> (String, usize, usize, usize) {
-        let (begin_line, mut begin_column) = file.offset_to_line_column(loc.1);
-        let (end_line, mut end_column) = file.offset_to_line_column(loc.2);
+        let (start, end) = if let Loc::File(_, start, end) = loc {
+            (start, end)
+        } else {
+            unreachable!();
+        };
+        let (begin_line, mut begin_column) = file.offset_to_line_column(*start);
+        let (end_line, mut end_column) = file.offset_to_line_column(*end);
 
         let mut full_line = self.files[file.cache_no]
             .lines()

@@ -103,7 +103,7 @@ impl Vartable {
             Variable {
                 id: pt::Identifier {
                     name: format!("temp.{}", var_no),
-                    loc: pt::Loc(0, 0, 0),
+                    loc: pt::Loc::Codegen,
                 },
                 ty: ty.clone(),
                 storage: Storage::Local,
@@ -141,7 +141,7 @@ impl Vartable {
             Variable {
                 id: pt::Identifier {
                     name: format!("{}.temp.{}", name, var_no),
-                    loc: pt::Loc(0, 0, 0),
+                    loc: pt::Loc::Codegen,
                 },
                 ty: ty.clone(),
                 storage: Storage::Local,

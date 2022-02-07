@@ -283,7 +283,7 @@ pub fn var_decl(
     };
 
     let tags = resolve_tags(
-        s.name.loc.0,
+        s.name.loc.file_no(),
         if contract_no.is_none() {
             "global variable"
         } else {
@@ -335,10 +335,10 @@ pub fn var_decl(
         if let Some(contract_no) = contract_no {
             // The accessor function returns the value of the storage variable, constant or not.
             let mut expr = if constant {
-                Expression::ConstantVariable(pt::Loc(0, 0, 0), ty.clone(), Some(contract_no), pos)
+                Expression::ConstantVariable(pt::Loc::Implicit, ty.clone(), Some(contract_no), pos)
             } else {
                 Expression::StorageVariable(
-                    pt::Loc(0, 0, 0),
+                    pt::Loc::Implicit,
                     Type::StorageRef(false, Box::new(ty.clone())),
                     contract_no,
                     pos,
@@ -369,8 +369,7 @@ pub fn var_decl(
                 visibility,
                 params,
                 vec![Parameter {
-                    name: String::new(),
-                    name_loc: Some(s.name.loc),
+                    name: None,
                     loc: s.name.loc,
                     ty: ty.clone(),
                     ty_loc: s.ty.loc(),
@@ -382,11 +381,11 @@ pub fn var_decl(
 
             // Create the implicit body - just return the value
             func.body = vec![Statement::Return(
-                pt::Loc(0, 0, 0),
+                pt::Loc::Implicit,
                 Some(if constant {
                     expr
                 } else {
-                    Expression::StorageLoad(pt::Loc(0, 0, 0), ty.clone(), Box::new(expr))
+                    Expression::StorageLoad(pt::Loc::Implicit, ty.clone(), Box::new(expr))
                 }),
             )];
             func.is_accessor = true;
@@ -403,8 +402,10 @@ pub fn var_decl(
             // we already have a symbol for
             let symbol = Symbol::Function(vec![(s.loc, func_no)]);
 
-            ns.function_symbols
-                .insert((s.loc.0, Some(contract_no), s.name.name.to_owned()), symbol);
+            ns.function_symbols.insert(
+                (s.loc.file_no(), Some(contract_no), s.name.name.to_owned()),
+                symbol,
+            );
         }
     }
 
@@ -424,23 +425,22 @@ fn collect_parameters<'a>(
             let map = (*expr).clone();
 
             *expr = Expression::Subscript(
-                pt::Loc(0, 0, 0),
+                pt::Loc::Implicit,
                 ty.storage_array_elem(),
                 Type::StorageRef(false, Box::new(ty.clone())),
                 Box::new(map),
                 Box::new(Expression::FunctionArg(
-                    pt::Loc(0, 0, 0),
+                    pt::Loc::Implicit,
                     key.as_ref().clone(),
                     params.len(),
                 )),
             );
 
             params.push(Parameter {
-                name: String::new(),
-                name_loc: None,
-                loc: pt::Loc(0, 0, 0),
+                name: None,
+                loc: pt::Loc::Implicit,
                 ty: key.as_ref().clone(),
-                ty_loc: pt::Loc(0, 0, 0),
+                ty_loc: pt::Loc::Implicit,
                 indexed: false,
                 readonly: false,
             });
@@ -453,12 +453,12 @@ fn collect_parameters<'a>(
                 let map = (*expr).clone();
 
                 *expr = Expression::Subscript(
-                    pt::Loc(0, 0, 0),
+                    pt::Loc::Implicit,
                     ty.storage_array_elem(),
                     ty.clone(),
                     Box::new(map),
                     Box::new(Expression::FunctionArg(
-                        pt::Loc(0, 0, 0),
+                        pt::Loc::Implicit,
                         Type::Uint(256),
                         params.len(),
                     )),
@@ -467,11 +467,10 @@ fn collect_parameters<'a>(
                 ty = ty.storage_array_elem();
 
                 params.push(Parameter {
-                    name: String::new(),
-                    name_loc: None,
-                    loc: pt::Loc(0, 0, 0),
+                    name: None,
+                    loc: pt::Loc::Implicit,
                     ty: Type::Uint(256),
-                    ty_loc: pt::Loc(0, 0, 0),
+                    ty_loc: pt::Loc::Implicit,
                     indexed: false,
                     readonly: false,
                 });

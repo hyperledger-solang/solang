@@ -26,24 +26,24 @@ SourceUnitPart: SourceUnitPart = {
     ErrorDefinition => SourceUnitPart::ErrorDefinition(<>),
     FunctionDefinition => SourceUnitPart::FunctionDefinition(<>),
     VariableDefinition => SourceUnitPart::VariableDefinition(<>),
-    <l:@L> ";" <r:@R> => SourceUnitPart::StraySemicolon(Loc(file_no, l, r)),
+    <l:@L> ";" <r:@R> => SourceUnitPart::StraySemicolon(Loc::File(file_no, l, r)),
 }
 
 ImportDirective: SourceUnitPart = {
-    <doc:DocComments> <l:@L> "import" <s:StringLiteral> <r:@R> ";" => SourceUnitPart::ImportDirective(doc, Import::Plain(s, Loc(file_no, l, r))),
-    <doc:DocComments> <l:@L> "import" <s:StringLiteral> "as" <id:SolIdentifier> <r:@R> ";" =>  SourceUnitPart::ImportDirective(doc, Import::GlobalSymbol(s, id, Loc(file_no, l, r))),
+    <doc:DocComments> <l:@L> "import" <s:StringLiteral> <r:@R> ";" => SourceUnitPart::ImportDirective(doc, Import::Plain(s, Loc::File(file_no, l, r))),
+    <doc:DocComments> <l:@L> "import" <s:StringLiteral> "as" <id:SolIdentifier> <r:@R> ";" =>  SourceUnitPart::ImportDirective(doc, Import::GlobalSymbol(s, id, Loc::File(file_no, l, r))),
     <doc:DocComments> <l:@L> "import" "*" "as" <id:SolIdentifier> <from:SolIdentifier> <s:StringLiteral> <r:@R> ";" =>? {
         if from.name != "from" {
             Err(ParseError::User { error: LexicalError::ExpectedFrom(from.loc, from.name)})
         } else {
-            Ok(SourceUnitPart::ImportDirective(doc, Import::GlobalSymbol(s, id, Loc(file_no, l, r))))
+            Ok(SourceUnitPart::ImportDirective(doc, Import::GlobalSymbol(s, id, Loc::File(file_no, l, r))))
         }
     },
     <doc:DocComments> <l:@L> "import" "{" <rename:CommaOne<ImportRename>> "}" <from:SolIdentifier> <s:StringLiteral> <r:@R> ";" =>? {
         if from.name != "from" {
             Err(ParseError::User { error:LexicalError::ExpectedFrom(from.loc, from.name)})
         } else {
-            Ok(SourceUnitPart::ImportDirective(doc, Import::Rename(s, rename, Loc(file_no, l, r))))
+            Ok(SourceUnitPart::ImportDirective(doc, Import::Rename(s, rename, Loc::File(file_no, l, r))))
         }
     }
 }
@@ -55,7 +55,7 @@ ImportRename: (Identifier, Option<Identifier>) = {
 
 PragmaDirective: SourceUnitPart = {
     // The lexer does special parsing for String literal; it isn't really a string literal
-    <doc:DocComments> <l:@L> "pragma" <i:SolIdentifier> <s:StringLiteral> <r:@R> ";" => SourceUnitPart::PragmaDirective(Loc(file_no, l, r), doc, i, s)
+    <doc:DocComments> <l:@L> "pragma" <i:SolIdentifier> <s:StringLiteral> <r:@R> ";" => SourceUnitPart::PragmaDirective(Loc::File(file_no, l, r), doc, i, s)
 }
 
 DocComments: Vec<DocComment> = {
@@ -83,7 +83,7 @@ NoFunctionType: Type = {
     Int => Type::Int(<>),
     Bytes => Type::Bytes(<>),
     <l:@L> "mapping" "(" <k:Precedence0> "=>" <v:Precedence0> ")" <r:@R> => {
-        Type::Mapping(Loc(file_no, l, r), Box::new(k), Box::new(v))
+        Type::Mapping(Loc::File(file_no, l, r), Box::new(k), Box::new(v))
     },
 }
 
@@ -116,40 +116,40 @@ ArrayDimension: Option<Expression> = {
 }
 
 StorageLocation: StorageLocation = {
-    <l:@L> "memory" <r:@R> => StorageLocation::Memory(Loc(file_no, l, r)),
-    <l:@L> "storage" <r:@R> => StorageLocation::Storage(Loc(file_no, l, r)),
-    <l:@L> "calldata" <r:@R> => StorageLocation::Calldata(Loc(file_no, l, r)),
+    <l:@L> "memory" <r:@R> => StorageLocation::Memory(Loc::File(file_no, l, r)),
+    <l:@L> "storage" <r:@R> => StorageLocation::Storage(Loc::File(file_no, l, r)),
+    <l:@L> "calldata" <r:@R> => StorageLocation::Calldata(Loc::File(file_no, l, r)),
 }
 
 Identifier: Identifier = {
-    <l:@L> <n:identifier> <r:@R> => Identifier{loc: Loc(file_no, l, r), name: n.to_string()}
+    <l:@L> <n:identifier> <r:@R> => Identifier{loc: Loc::File(file_no, l, r), name: n.to_string()}
 }
 
 SolIdentifier: Identifier = {
-    <l:@L> <n:identifier> <r:@R> => Identifier{loc: Loc(file_no, l, r), name: n.to_string()},
-    <l:@L> "switch" <r:@R> => Identifier{loc: Loc(file_no, l, r), name: "switch".to_string()},
-    <l:@L> "leave" <r:@R> => Identifier{loc: Loc(file_no, l, r), name: "leave".to_string()},
-    <l:@L> "case" <r:@R> => Identifier{loc: Loc(file_no, l, r), name: "case".to_string()},
-    <l:@L> "default" <r:@R> => Identifier{loc: Loc(file_no, l, r), name: "default".to_string()},
+    <l:@L> <n:identifier> <r:@R> => Identifier{loc: Loc::File(file_no, l, r), name: n.to_string()},
+    <l:@L> "switch" <r:@R> => Identifier{loc: Loc::File(file_no, l, r), name: "switch".to_string()},
+    <l:@L> "leave" <r:@R> => Identifier{loc: Loc::File(file_no, l, r), name: "leave".to_string()},
+    <l:@L> "case" <r:@R> => Identifier{loc: Loc::File(file_no, l, r), name: "case".to_string()},
+    <l:@L> "default" <r:@R> => Identifier{loc: Loc::File(file_no, l, r), name: "default".to_string()},
 }
 
 VariableDeclaration: VariableDeclaration = {
     <l:@L> <ty:Precedence0> <storage:StorageLocation?> <name:SolIdentifier> <r:@R> => VariableDeclaration {
-        loc: Loc(file_no, l, r), ty, storage, name
+        loc: Loc::File(file_no, l, r), ty, storage, name
     },
 }
 
 StructDefinition: Box<StructDefinition> = {
     <doc:DocComments> <l:@L> "struct" <name:SolIdentifier> "{" <fields:(<VariableDeclaration> ";")*> "}" <r:@R> => {
-        Box::new(StructDefinition{loc: Loc(file_no, l, r), doc, name, fields})
+        Box::new(StructDefinition{loc: Loc::File(file_no, l, r), doc, name, fields})
     }
 }
 
 ContractTy: ContractTy = {
-    <l:@L> "abstract" "contract" <r:@R> => ContractTy::Abstract(Loc(file_no, l, r)),
-    <l:@L> "contract" <r:@R> => ContractTy::Contract(Loc(file_no, l, r)),
-    <l:@L> "interface" <r:@R> => ContractTy::Interface(Loc(file_no, l, r)),
-    <l:@L> "library" <r:@R> => ContractTy::Library(Loc(file_no, l, r)),
+    <l:@L> "abstract" "contract" <r:@R> => ContractTy::Abstract(Loc::File(file_no, l, r)),
+    <l:@L> "contract" <r:@R> => ContractTy::Contract(Loc::File(file_no, l, r)),
+    <l:@L> "interface" <r:@R> => ContractTy::Interface(Loc::File(file_no, l, r)),
+    <l:@L> "library" <r:@R> => ContractTy::Library(Loc::File(file_no, l, r)),
 }
 
 ContractPart: ContractPart = {
@@ -161,7 +161,7 @@ ContractPart: ContractPart = {
     FunctionDefinition => ContractPart::FunctionDefinition(<>),
     ModifierDefinition => ContractPart::FunctionDefinition(<>),
     ConstructorDefinition => ContractPart::FunctionDefinition(<>),
-    <l:@L> ";" <r:@R> => ContractPart::StraySemicolon(Loc(file_no, l, r)),
+    <l:@L> ";" <r:@R> => ContractPart::StraySemicolon(Loc::File(file_no, l, r)),
     Using => ContractPart::Using(<>),
 }
 
@@ -172,7 +172,7 @@ Bases: Vec<Base> = {
 
 Base: Base = {
     <l:@L> <name:SolIdentifier> <args:("(" <Comma<Expression>> ")")?> <r:@R> => Base {
-        loc: Loc(file_no, l, r),
+        loc: Loc::File(file_no, l, r),
         name,
         args
     }
@@ -181,13 +181,13 @@ Base: Base = {
 ContractDefinition: Box<ContractDefinition> = {
     <doc:DocComments> <l:@L> <ty:ContractTy> <name:SolIdentifier> <base:Bases> <r:@R>
     "{" <parts:(<ContractPart>)*> "}" => {
-        Box::new(ContractDefinition{doc, loc: Loc(file_no, l, r), ty, name, base, parts})
+        Box::new(ContractDefinition{doc, loc: Loc::File(file_no, l, r), ty, name, base, parts})
     }
 }
 
 EventParameter: EventParameter = {
     <l:@L> <ty:Precedence0> <i:"indexed"?> <name:SolIdentifier?> <r:@R> => EventParameter{
-        loc: Loc(file_no, l, r), ty, indexed: i.is_some(), name
+        loc: Loc::File(file_no, l, r), ty, indexed: i.is_some(), name
     }
 }
 
@@ -200,7 +200,7 @@ ErrorParameter: ErrorParameter = {
 EventDefinition: Box<EventDefinition> = {
     <doc:DocComments> <l:@L> "event" <name:SolIdentifier> "(" <v:Comma<EventParameter>> ")" <a:"anonymous"?> <r:@R> ";" => {
         Box::new(EventDefinition{
-            loc: Loc(file_no, l, r), doc, name, fields: v, anonymous: a.is_some()
+            loc: Loc::File(file_no, l, r), doc, name, fields: v, anonymous: a.is_some()
         })
     },
 }
@@ -215,14 +215,14 @@ ErrorDefinition: Box<ErrorDefinition> = {
 
 EnumDefinition: Box<EnumDefinition> = {
     <doc:DocComments> <l:@L> "enum" <name:SolIdentifier> "{" <values:Comma<SolIdentifier>> "}" <r:@R> => {
-        Box::new(EnumDefinition{loc: Loc(file_no, l, r), doc, name, values})
+        Box::new(EnumDefinition{loc: Loc::File(file_no, l, r), doc, name, values})
     }
 }
 
 VariableDefinition: Box<VariableDefinition> = {
     <doc:DocComments> <l:@L> <ty:NoFunctionTyPrecedence0> <attrs:VariableAttribute*> <name:SolIdentifier> <e:("=" <Expression>)?> <r:@R> ";" => {
         Box::new(VariableDefinition{
-            doc, loc: Loc(file_no, l, r), ty, attrs, name, initializer: e,
+            doc, loc: Loc::File(file_no, l, r), ty, attrs, name, initializer: e,
         })
     },
     // attributes cause shift-reduce errors with function type, since a function type contract variable can be declare as
@@ -232,23 +232,23 @@ VariableDefinition: Box<VariableDefinition> = {
     // }
     <doc:DocComments> <l:@L> <ty:FunctionTyPrecedence0> <name:SolIdentifier> <e:("=" <Expression>)?> <r:@R> ";" => {
         Box::new(VariableDefinition{
-            doc, loc: Loc(file_no, l, r), ty, attrs: Vec::new(), name, initializer: e,
+            doc, loc: Loc::File(file_no, l, r), ty, attrs: Vec::new(), name, initializer: e,
         })
     }
 }
 
 Visibility: Visibility = {
-    <l:@L> "public" <r:@R> => Visibility::Public(Some(Loc(file_no, l, r))),
-    <l:@L> "external" <r:@R> => Visibility::External(Some(Loc(file_no, l, r))),
-    <l:@L> "internal" <r:@R> => Visibility::Internal(Some(Loc(file_no, l, r))),
-    <l:@L> "private" <r:@R> => Visibility::Private(Some(Loc(file_no, l, r))),
+    <l:@L> "public" <r:@R> => Visibility::Public(Some(Loc::File(file_no, l, r))),
+    <l:@L> "external" <r:@R> => Visibility::External(Some(Loc::File(file_no, l, r))),
+    <l:@L> "internal" <r:@R> => Visibility::Internal(Some(Loc::File(file_no, l, r))),
+    <l:@L> "private" <r:@R> => Visibility::Private(Some(Loc::File(file_no, l, r))),
 }
 
 VariableAttribute: VariableAttribute = {
     Visibility => VariableAttribute::Visibility(<>),
-    <l:@L> "constant" <r:@R> => VariableAttribute::Constant(Loc(file_no, l, r)),
-    <l:@L> "immutable" <r:@R> => VariableAttribute::Immutable(Loc(file_no, l, r)),
-    <l:@L> "override" <r:@R> => VariableAttribute::Override(Loc(file_no, l, r))
+    <l:@L> "constant" <r:@R> => VariableAttribute::Constant(Loc::File(file_no, l, r)),
+    <l:@L> "immutable" <r:@R> => VariableAttribute::Immutable(Loc::File(file_no, l, r)),
+    <l:@L> "override" <r:@R> => VariableAttribute::Override(Loc::File(file_no, l, r))
 }
 
 Expression: Expression = {
@@ -256,111 +256,111 @@ Expression: Expression = {
 }
 
 Precedence14: Expression = {
-    <l:Precedence13> <a:@L> "=" <b:@R> <r:Precedence14> => Expression::Assign(Loc(file_no, a, b), Box::new(l), Box::new(r)),
-    <l:Precedence13> <a:@L> "|=" <b:@R> <r:Precedence14> => Expression::AssignOr(Loc(file_no, a, b), Box::new(l), Box::new(r)),
-    <l:Precedence13> <a:@L> "^=" <b:@R> <r:Precedence14> => Expression::AssignXor(Loc(file_no, a, b), Box::new(l), Box::new(r)),
-    <l:Precedence13> <a:@L> "&=" <b:@R> <r:Precedence14> => Expression::AssignAnd(Loc(file_no, a, b), Box::new(l), Box::new(r)),
-    <l:Precedence13> <a:@L> "<<=" <b:@R> <r:Precedence14> => Expression::AssignShiftLeft(Loc(file_no, a, b), Box::new(l), Box::new(r)),
-    <l:Precedence13> <a:@L> ">>=" <b:@R> <r:Precedence14> => Expression::AssignShiftRight(Loc(file_no, a, b), Box::new(l), Box::new(r)),
-    <l:Precedence13> <a:@L> "+=" <b:@R> <r:Precedence14> => Expression::AssignAdd(Loc(file_no, a, b), Box::new(l), Box::new(r)),
-    <l:Precedence13> <a:@L> "-=" <b:@R> <r:Precedence14> => Expression::AssignSubtract(Loc(file_no, a, b), Box::new(l), Box::new(r)),
-    <l:Precedence13> <a:@L> "*=" <b:@R> <r:Precedence14> => Expression::AssignMultiply(Loc(file_no, a, b), Box::new(l), Box::new(r)),
-    <l:Precedence13> <a:@L> "/=" <b:@R> <r:Precedence14> => Expression::AssignDivide(Loc(file_no, a, b), Box::new(l), Box::new(r)),
-    <l:Precedence13> <a:@L> "%=" <b:@R> <r:Precedence14> => Expression::AssignModulo(Loc(file_no, a, b), Box::new(l), Box::new(r)),
-    <c:Precedence13> <a:@L> "?" <l:Precedence14> ":" <b:@R> <r:Precedence14> => Expression::Ternary(Loc(file_no, a, b), Box::new(c), Box::new(l), Box::new(r)),
+    <l:Precedence13> <a:@L> "=" <b:@R> <r:Precedence14> => Expression::Assign(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
+    <l:Precedence13> <a:@L> "|=" <b:@R> <r:Precedence14> => Expression::AssignOr(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
+    <l:Precedence13> <a:@L> "^=" <b:@R> <r:Precedence14> => Expression::AssignXor(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
+    <l:Precedence13> <a:@L> "&=" <b:@R> <r:Precedence14> => Expression::AssignAnd(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
+    <l:Precedence13> <a:@L> "<<=" <b:@R> <r:Precedence14> => Expression::AssignShiftLeft(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
+    <l:Precedence13> <a:@L> ">>=" <b:@R> <r:Precedence14> => Expression::AssignShiftRight(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
+    <l:Precedence13> <a:@L> "+=" <b:@R> <r:Precedence14> => Expression::AssignAdd(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
+    <l:Precedence13> <a:@L> "-=" <b:@R> <r:Precedence14> => Expression::AssignSubtract(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
+    <l:Precedence13> <a:@L> "*=" <b:@R> <r:Precedence14> => Expression::AssignMultiply(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
+    <l:Precedence13> <a:@L> "/=" <b:@R> <r:Precedence14> => Expression::AssignDivide(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
+    <l:Precedence13> <a:@L> "%=" <b:@R> <r:Precedence14> => Expression::AssignModulo(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
+    <c:Precedence13> <a:@L> "?" <l:Precedence14> ":" <b:@R> <r:Precedence14> => Expression::Ternary(Loc::File(file_no, a, b), Box::new(c), Box::new(l), Box::new(r)),
     Precedence13,
 }
 
 Precedence13: Expression = {
-    <l:Precedence13> <a:@L> "||" <b:@R> <r:Precedence12> => Expression::Or(Loc(file_no, a, b), Box::new(l), Box::new(r)),
+    <l:Precedence13> <a:@L> "||" <b:@R> <r:Precedence12> => Expression::Or(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
     Precedence12,
 }
 
 Precedence12: Expression = {
-    <l:Precedence12> <a:@L> "&&" <b:@R> <r:Precedence11> => Expression::And(Loc(file_no, a, b), Box::new(l), Box::new(r)),
+    <l:Precedence12> <a:@L> "&&" <b:@R> <r:Precedence11> => Expression::And(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
     Precedence11,
 }
 
 Precedence11: Expression = {
-    <l:Precedence11> <a:@L> "==" <b:@R> <r:Precedence10> => Expression::Equal(Loc(file_no, a, b), Box::new(l), Box::new(r)),
-    <l:Precedence11> <a:@L> "!=" <b:@R> <r:Precedence10> => Expression::NotEqual(Loc(file_no, a, b), Box::new(l), Box::new(r)),
+    <l:Precedence11> <a:@L> "==" <b:@R> <r:Precedence10> => Expression::Equal(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
+    <l:Precedence11> <a:@L> "!=" <b:@R> <r:Precedence10> => Expression::NotEqual(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
     Precedence10,
 }
 
 Precedence10: Expression = {
-    <l:Precedence10> <a:@L> "<" <b:@R> <r:Precedence9> => Expression::Less(Loc(file_no, a, b), Box::new(l), Box::new(r)),
-    <l:Precedence10> <a:@L> ">" <b:@R> <r:Precedence9> => Expression::More(Loc(file_no, a, b), Box::new(l), Box::new(r)),
-    <l:Precedence10> <a:@L> "<=" <b:@R> <r:Precedence9> => Expression::LessEqual(Loc(file_no, a, b), Box::new(l), Box::new(r)),
-    <l:Precedence10> <a:@L> ">=" <b:@R> <r:Precedence9> => Expression::MoreEqual(Loc(file_no, a, b), Box::new(l), Box::new(r)),
+    <l:Precedence10> <a:@L> "<" <b:@R> <r:Precedence9> => Expression::Less(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
+    <l:Precedence10> <a:@L> ">" <b:@R> <r:Precedence9> => Expression::More(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
+    <l:Precedence10> <a:@L> "<=" <b:@R> <r:Precedence9> => Expression::LessEqual(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
+    <l:Precedence10> <a:@L> ">=" <b:@R> <r:Precedence9> => Expression::MoreEqual(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
     Precedence9,
 }
 
 Precedence9: Expression = {
-    <l:Precedence9> <a:@L> "|" <b:@R> <r:Precedence8> => Expression::BitwiseOr(Loc(file_no, a, b), Box::new(l), Box::new(r)),
+    <l:Precedence9> <a:@L> "|" <b:@R> <r:Precedence8> => Expression::BitwiseOr(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
     Precedence8,
 }
 
 Precedence8: Expression = {
-    <l:Precedence8> <a:@L> "^" <b:@R> <r:Precedence7> => Expression::BitwiseXor(Loc(file_no, a, b), Box::new(l), Box::new(r)),
+    <l:Precedence8> <a:@L> "^" <b:@R> <r:Precedence7> => Expression::BitwiseXor(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
     Precedence7,
 }
 
 Precedence7: Expression = {
-    <l:Precedence7> <a:@L> "&" <b:@R> <r:Precedence6> => Expression::BitwiseAnd(Loc(file_no, a, b), Box::new(l), Box::new(r)),
+    <l:Precedence7> <a:@L> "&" <b:@R> <r:Precedence6> => Expression::BitwiseAnd(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
     Precedence6,
 }
 
 Precedence6: Expression = {
-    <l:Precedence6> <a:@L> "<<" <b:@R> <r:Precedence5> => Expression::ShiftLeft(Loc(file_no, a, b), Box::new(l), Box::new(r)),
-    <l:Precedence6> <a:@L> ">>" <b:@R> <r:Precedence5> => Expression::ShiftRight(Loc(file_no, a, b), Box::new(l), Box::new(r)),
+    <l:Precedence6> <a:@L> "<<" <b:@R> <r:Precedence5> => Expression::ShiftLeft(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
+    <l:Precedence6> <a:@L> ">>" <b:@R> <r:Precedence5> => Expression::ShiftRight(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
     Precedence5,
 }
 
 Precedence5: Expression = {
-    <l:Precedence5> <a:@L> "+" <b:@R> <r:Precedence4> => Expression::Add(Loc(file_no, a, b), Box::new(l), Box::new(r)),
-    <l:Precedence5> <a:@L> "-" <b:@R> <r:Precedence4> => Expression::Subtract(Loc(file_no, a, b), Box::new(l), Box::new(r)),
+    <l:Precedence5> <a:@L> "+" <b:@R> <r:Precedence4> => Expression::Add(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
+    <l:Precedence5> <a:@L> "-" <b:@R> <r:Precedence4> => Expression::Subtract(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
     Precedence4,
 }
 
 Precedence4: Expression = {
-    <l:Precedence4> <a:@L> "*" <b:@R> <r:Precedence3> => Expression::Multiply(Loc(file_no, a, b), Box::new(l), Box::new(r)),
-    <l:Precedence4> <a:@L> "/" <b:@R> <r:Precedence3> => Expression::Divide(Loc(file_no, a, b), Box::new(l), Box::new(r)),
-    <l:Precedence4> <a:@L> "%" <b:@R> <r:Precedence3> => Expression::Modulo(Loc(file_no, a, b), Box::new(l), Box::new(r)),
+    <l:Precedence4> <a:@L> "*" <b:@R> <r:Precedence3> => Expression::Multiply(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
+    <l:Precedence4> <a:@L> "/" <b:@R> <r:Precedence3> => Expression::Divide(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
+    <l:Precedence4> <a:@L> "%" <b:@R> <r:Precedence3> => Expression::Modulo(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
     Precedence3,
 }
 
 Precedence3: Expression = {
-    <l:Precedence3> <a:@L> "**" <b:@R> <r:Precedence2> => Expression::Power(Loc(file_no, a, b), Box::new(l), Box::new(r)),
+    <l:Precedence3> <a:@L> "**" <b:@R> <r:Precedence2> => Expression::Power(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
     Precedence2,
 }
 
 Precedence2: Expression = {
-    <a:@L> "!" <b:@R> <e:Precedence2> => Expression::Not(Loc(file_no, a, b), Box::new(e)),
-    <a:@L> "~" <b:@R> <e:Precedence2> => Expression::Complement(Loc(file_no, a, b), Box::new(e)),
-    <a:@L> "delete" <b:@R> <e:Precedence2> => Expression::Delete(Loc(file_no, a, b), Box::new(e)),
-    <a:@L> "new" <call:FunctionCall> <b:@R> => Expression::New(Loc(file_no, a, b), Box::new(call)),
-    <a:@L> "++" <b:@R> <e:Precedence2> => Expression::PreIncrement(Loc(file_no, a, b), Box::new(e)),
-    <a:@L> "--" <b:@R> <e:Precedence2> => Expression::PreDecrement(Loc(file_no, a, b), Box::new(e)),
-    <a:@L> "+" <b:@R> <e:Precedence2> => Expression::UnaryPlus(Loc(file_no, a, b), Box::new(e)),
-    <a:@L> "-" <b:@R> <e:Precedence2> => Expression::UnaryMinus(Loc(file_no, a, b), Box::new(e)),
+    <a:@L> "!" <b:@R> <e:Precedence2> => Expression::Not(Loc::File(file_no, a, b), Box::new(e)),
+    <a:@L> "~" <b:@R> <e:Precedence2> => Expression::Complement(Loc::File(file_no, a, b), Box::new(e)),
+    <a:@L> "delete" <b:@R> <e:Precedence2> => Expression::Delete(Loc::File(file_no, a, b), Box::new(e)),
+    <a:@L> "new" <call:FunctionCall> <b:@R> => Expression::New(Loc::File(file_no, a, b), Box::new(call)),
+    <a:@L> "++" <b:@R> <e:Precedence2> => Expression::PreIncrement(Loc::File(file_no, a, b), Box::new(e)),
+    <a:@L> "--" <b:@R> <e:Precedence2> => Expression::PreDecrement(Loc::File(file_no, a, b), Box::new(e)),
+    <a:@L> "+" <b:@R> <e:Precedence2> => Expression::UnaryPlus(Loc::File(file_no, a, b), Box::new(e)),
+    <a:@L> "-" <b:@R> <e:Precedence2> => Expression::UnaryMinus(Loc::File(file_no, a, b), Box::new(e)),
     Precedence0,
 }
 
 NamedArgument: NamedArgument = {
     <l:@L> <name:SolIdentifier> ":" <expr:Expression> <r:@R> => {
-        NamedArgument{ loc: Loc(file_no, l, r), name, expr }
+        NamedArgument{ loc: Loc::File(file_no, l, r), name, expr }
     }
 }
 
 FunctionCall: Expression = {
     <a:@L> <i:NoFunctionTyPrecedence0> "(" <v:Comma<Expression>> ")" <b:@R> => {
-        Expression::FunctionCall(Loc(file_no, a, b), Box::new(i), v)
+        Expression::FunctionCall(Loc::File(file_no, a, b), Box::new(i), v)
     },
     <i:NoFunctionTyPrecedence0> <l:@L> <block:BlockStatement> <r:@R> => {
-        Expression::FunctionCallBlock(Loc(file_no, l, r), Box::new(i), Box::new(block))
+        Expression::FunctionCallBlock(Loc::File(file_no, l, r), Box::new(i), Box::new(block))
     },
     <a:@L> <i:NoFunctionTyPrecedence0> "(" "{" <v:Comma<NamedArgument>> "}" ")" <b:@R> => {
-        Expression::NamedFunctionCall(Loc(file_no, a, b), Box::new(i), v)
+        Expression::NamedFunctionCall(Loc::File(file_no, a, b), Box::new(i), v)
     },
 }
 
@@ -370,37 +370,37 @@ Precedence0: Expression = {
 }
 
 FunctionTyPrecedence0: Expression = {
-    <l:@L> <ty:FunctionType> <r:@R> => Expression::Type(Loc(file_no, l, r), ty),
+    <l:@L> <ty:FunctionType> <r:@R> => Expression::Type(Loc::File(file_no, l, r), ty),
 }
 
 NoFunctionTyPrecedence0: Expression = {
-    <a:@L> <e:Precedence0> "++" <b:@R> => Expression::PostIncrement(Loc(file_no, a, b), Box::new(e)),
-    <a:@L> <e:Precedence0> "--" <b:@R> => Expression::PostDecrement(Loc(file_no, a, b), Box::new(e)),
+    <a:@L> <e:Precedence0> "++" <b:@R> => Expression::PostIncrement(Loc::File(file_no, a, b), Box::new(e)),
+    <a:@L> <e:Precedence0> "--" <b:@R> => Expression::PostDecrement(Loc::File(file_no, a, b), Box::new(e)),
     <FunctionCall> => <>,
-    <a:@L> <e:Precedence0> "[" <i:Expression?> "]" <b:@R> => Expression::ArraySubscript(Loc(file_no, a, b), Box::new(e), box_option(i)),
-    <a:@L> <e:Precedence0> "[" <l:Expression?> ":" <r:Expression?> "]" <b:@R> => Expression::ArraySlice(Loc(file_no, a, b), Box::new(e), box_option(l), box_option(r)),
-    <a:@L> <e:Precedence0> "." <i:SolIdentifier> <b:@R> => Expression::MemberAccess(Loc(file_no, a, b), Box::new(e), i),
+    <a:@L> <e:Precedence0> "[" <i:Expression?> "]" <b:@R> => Expression::ArraySubscript(Loc::File(file_no, a, b), Box::new(e), box_option(i)),
+    <a:@L> <e:Precedence0> "[" <l:Expression?> ":" <r:Expression?> "]" <b:@R> => Expression::ArraySlice(Loc::File(file_no, a, b), Box::new(e), box_option(l), box_option(r)),
+    <a:@L> <e:Precedence0> "." <i:SolIdentifier> <b:@R> => Expression::MemberAccess(Loc::File(file_no, a, b), Box::new(e), i),
     // Solidity has ".address" members on external function types. Address is a keyword, so special casing needed
     <a:@L> <e:Precedence0> "." <al:@L> "address" <b:@R> => {
-        Expression::MemberAccess(Loc(file_no, a, b), Box::new(e),
-            Identifier { loc: Loc(file_no, al, b), name: "address".to_string() })
+        Expression::MemberAccess(Loc::File(file_no, a, b), Box::new(e),
+            Identifier { loc: Loc::File(file_no, al, b), name: "address".to_string() })
     },
-    <a:@L> "true" <b:@R> => Expression::BoolLiteral(Loc(file_no, a, b), true),
-    <a:@L> "false" <b:@R> => Expression::BoolLiteral(Loc(file_no, a, b), false),
+    <a:@L> "true" <b:@R> => Expression::BoolLiteral(Loc::File(file_no, a, b), true),
+    <a:@L> "false" <b:@R> => Expression::BoolLiteral(Loc::File(file_no, a, b), false),
     <StringLiteral+> => Expression::StringLiteral(<>),
     <HexLiteral+> => Expression::HexLiteral(<>),
     <l:@L> <a:address> <r:@R> => {
         let v = a.to_string();
         let address_len = a.len() - 9;
 
-        Expression::AddressLiteral(Loc(file_no, l, r), a.chars().skip(8).filter(|c|  *c != '"' && *c != '\'').collect() )
+        Expression::AddressLiteral(Loc::File(file_no, l, r), a.chars().skip(8).filter(|c|  *c != '"' && *c != '\'').collect() )
     },
-    <l:@L> <ty:NoFunctionType> <r:@R> => Expression::Type(Loc(file_no, l, r), ty),
+    <l:@L> <ty:NoFunctionType> <r:@R> => Expression::Type(Loc::File(file_no, l, r), ty),
     <a:@L> "[" <v:CommaOne<Expression>> "]" <b:@R> => {
-        Expression::ArrayLiteral(Loc(file_no, a, b), v)
+        Expression::ArrayLiteral(Loc::File(file_no, a, b), v)
     },
     <SolIdentifier> => Expression::Variable(<>),
-    <l:@L> <e:Precedence0> <u:Unit> <r:@R> => Expression::Unit(Loc(file_no, l, r), Box::new(e), u),
+    <l:@L> <e:Precedence0> <u:Unit> <r:@R> => Expression::Unit(Loc::File(file_no, l, r), Box::new(e), u),
     <l:@L> <n:number> <r:@R> => {
         let base: String = n.0.chars().filter(|v| *v != '_').collect();
         let exp: String = n.1.chars().filter(|v| *v != '_').collect();
@@ -414,7 +414,7 @@ NoFunctionTyPrecedence0: Expression = {
             base.mul(exp)
         };
 
-        Expression::NumberLiteral(Loc(file_no, l, r), n)
+        Expression::NumberLiteral(Loc::File(file_no, l, r), n)
     },
     <l:@L> <n:rational> <r:@R> => {
         let mut significand: String = n.0.to_string();
@@ -468,10 +468,10 @@ NoFunctionTyPrecedence0: Expression = {
             }
         };
 
-        Expression::RationalNumberLiteral(Loc(file_no, l, r), n)
+        Expression::RationalNumberLiteral(Loc::File(file_no, l, r), n)
     },
     <l:@L> <n:hexnumber> <r:@R> => {
-        Expression::HexNumberLiteral(Loc(file_no, l, r), n.to_owned())
+        Expression::HexNumberLiteral(Loc::File(file_no, l, r), n.to_owned())
     },
     <l:@L> <a:ParameterList> <r:@R> => {
         if a.len() == 1 {
@@ -481,26 +481,26 @@ NoFunctionTyPrecedence0: Expression = {
             }
         }
 
-        Expression::List(Loc(file_no, l, r), a)
+        Expression::List(Loc::File(file_no, l, r), a)
     },
-    <@L> "this" <@R> => Expression::This(Loc(file_no, <>)),
+    <@L> "this" <@R> => Expression::This(Loc::File(file_no, <>)),
 }
 
 Unit: Unit = {
-    <@L> "seconds" <@R> => Unit::Seconds(Loc(file_no, <>)),
-    <@L> "minutes" <@R> => Unit::Minutes(Loc(file_no, <>)),
-    <@L> "hours" <@R> => Unit::Hours(Loc(file_no, <>)),
-    <@L> "days" <@R> => Unit::Days(Loc(file_no, <>)),
-    <@L> "weeks" <@R> => Unit::Weeks(Loc(file_no, <>)),
-    <@L> "wei" <@R> => Unit::Wei(Loc(file_no, <>)),
-    <@L> "szabo" <@R> => Unit::Szabo(Loc(file_no, <>)),
-    <@L> "finney" <@R> => Unit::Finney(Loc(file_no, <>)),
-    <@L> "ether" <@R> => Unit::Ether(Loc(file_no, <>)),
+    <@L> "seconds" <@R> => Unit::Seconds(Loc::File(file_no, <>)),
+    <@L> "minutes" <@R> => Unit::Minutes(Loc::File(file_no, <>)),
+    <@L> "hours" <@R> => Unit::Hours(Loc::File(file_no, <>)),
+    <@L> "days" <@R> => Unit::Days(Loc::File(file_no, <>)),
+    <@L> "weeks" <@R> => Unit::Weeks(Loc::File(file_no, <>)),
+    <@L> "wei" <@R> => Unit::Wei(Loc::File(file_no, <>)),
+    <@L> "szabo" <@R> => Unit::Szabo(Loc::File(file_no, <>)),
+    <@L> "finney" <@R> => Unit::Finney(Loc::File(file_no, <>)),
+    <@L> "ether" <@R> => Unit::Ether(Loc::File(file_no, <>)),
 }
 
 StringLiteral: StringLiteral = {
     <l:@L> <s:string> <r:@R> => {
-        StringLiteral{ loc: Loc(file_no, l, r), string: s.to_string() }
+        StringLiteral{ loc: Loc::File(file_no, l, r), string: s.to_string() }
     }
 }
 
@@ -509,7 +509,7 @@ HexLiteral: HexLiteral = {
         let v = s.to_string();
         let hex_len = v.len() - 5;
 
-        HexLiteral{ loc: Loc(file_no, l, r), hex: v.chars().skip(4).filter(|c| *c != '_' && *c != '"' && *c != '\'').collect() }
+        HexLiteral{ loc: Loc::File(file_no, l, r), hex: v.chars().skip(4).filter(|c| *c != '_' && *c != '"' && *c != '\'').collect() }
     }
 }
 
@@ -519,35 +519,35 @@ HexLiteral: HexLiteral = {
 // to functions
 Parameter: Parameter = {
     <l:@L> <ty:Expression> <storage:StorageLocation?> <name:SolIdentifier?> <r:@R> => {
-        let loc = Loc(file_no, l, r);
+        let loc = Loc::File(file_no, l, r);
         Parameter{loc, ty, storage, name}
     }
 }
 
 OptParameter: (Loc, Option<Parameter>) = {
-    <l:@L> <p:Parameter?> <r:@R> => (Loc(file_no, l, r), p),
+    <l:@L> <p:Parameter?> <r:@R> => (Loc::File(file_no, l, r), p),
 }
 
 ParameterList: Vec<(Loc, Option<Parameter>)> = {
     "(" ")" => Vec::new(),
-    "(" <l:@L> <p:Parameter> <r:@R> ")" => vec!((Loc(file_no, l, r), Some(p))),
+    "(" <l:@L> <p:Parameter> <r:@R> ")" => vec!((Loc::File(file_no, l, r), Some(p))),
     "(" <CommaTwo<OptParameter>> ")" => <>,
 }
 
 Mutability: Mutability = {
-    <l:@L> "pure" <r:@R> => Mutability::Pure(Loc(file_no, l, r)),
-    <l:@L> "constant" <r:@R> => Mutability::Constant(Loc(file_no, l, r)),
-    <l:@L> "view" <r:@R> => Mutability::View(Loc(file_no, l, r)),
-    <l:@L> "payable" <r:@R> => Mutability::Payable(Loc(file_no, l, r)),
+    <l:@L> "pure" <r:@R> => Mutability::Pure(Loc::File(file_no, l, r)),
+    <l:@L> "constant" <r:@R> => Mutability::Constant(Loc::File(file_no, l, r)),
+    <l:@L> "view" <r:@R> => Mutability::View(Loc::File(file_no, l, r)),
+    <l:@L> "payable" <r:@R> => Mutability::Payable(Loc::File(file_no, l, r)),
 }
 
 FunctionAttribute: FunctionAttribute = {
     Mutability => FunctionAttribute::Mutability(<>),
     Visibility => FunctionAttribute::Visibility(<>),
-    <l:@L> "virtual" <r:@R> => FunctionAttribute::Virtual(Loc(file_no, <>)),
-    <l:@L> "override" <r:@R> => FunctionAttribute::Override(Loc(file_no, <>), Vec::new()),
-    <l:@L> "override" "(" <list:CommaOne<SolIdentifier>> ")" <r:@R> => FunctionAttribute::Override(Loc(file_no, l, r), list),
-    <l:@L> <base:Base> <r:@R> => FunctionAttribute::BaseOrModifier(Loc(file_no, l, r), base),
+    <l:@L> "virtual" <r:@R> => FunctionAttribute::Virtual(Loc::File(file_no, <>)),
+    <l:@L> "override" <r:@R> => FunctionAttribute::Override(Loc::File(file_no, <>), Vec::new()),
+    <l:@L> "override" "(" <list:CommaOne<SolIdentifier>> ")" <r:@R> => FunctionAttribute::Override(Loc::File(file_no, l, r), list),
+    <l:@L> <base:Base> <r:@R> => FunctionAttribute::BaseOrModifier(Loc::File(file_no, l, r), base),
 }
 
 // Modifier and function have special case
@@ -564,7 +564,7 @@ BlockStatementOrSemiColon: Option<Statement> = {
 
 returns: Option<Loc> = {
     "returns" => None,
-    <l:@L> "return" <r:@R> => Some(Loc(file_no, l, r)),
+    <l:@L> "return" <r:@R> => Some(Loc::File(file_no, l, r)),
 }
 
 // Modifiers can't have attributes or return values, but we parse them anyway so we can give nice
@@ -578,10 +578,10 @@ ModifierDefinition: Box<FunctionDefinition> = {
 
         Box::new(FunctionDefinition{
             doc,
-            loc: Loc(file_no, l, r),
+            loc: Loc::File(file_no, l, r),
             ty: FunctionTy::Modifier,
             name: Some(name),
-            name_loc: Loc(file_no, nl, nr),
+            name_loc: Loc::File(file_no, nl, nr),
             params,
             attributes,
             return_not_returns,
@@ -599,10 +599,10 @@ ConstructorDefinition: Box<FunctionDefinition> = {
 
         Box::new(FunctionDefinition{
             doc,
-            loc: Loc(file_no, l, r),
+            loc: Loc::File(file_no, l, r),
             ty,
             name,
-            name_loc: Loc(file_no, nl, nr),
+            name_loc: Loc::File(file_no, nl, nr),
             params,
             attributes,
             return_not_returns,
@@ -620,10 +620,10 @@ FunctionDefinition: Box<FunctionDefinition> = {
 
         Box::new(FunctionDefinition{
             doc,
-            loc: Loc(file_no, l, r),
+            loc: Loc::File(file_no, l, r),
             ty: FunctionTy::Function,
             name: Some(name),
-            name_loc: Loc(file_no, nl, nr),
+            name_loc: Loc::File(file_no, nl, nr),
             params,
             attributes,
             return_not_returns,
@@ -640,10 +640,10 @@ FunctionDefinition: Box<FunctionDefinition> = {
             Type::Function { params, attributes, returns, .. }  => {
                 Box::new(FunctionDefinition{
                     doc,
-                    loc: Loc(file_no, l, r),
+                    loc: Loc::File(file_no, l, r),
                     ty: FunctionTy::Function,
                     name: None,
-                    name_loc: Loc(file_no, l, r),
+                    name_loc: Loc::File(file_no, l, r),
                     params,
                     attributes,
                     return_not_returns: None,
@@ -658,12 +658,12 @@ FunctionDefinition: Box<FunctionDefinition> = {
 
 Using: Box<Using> = {
     <l:@L> "using" <library:SolIdentifier> "for" <ty:Precedence0> <r:@R> ";" => Box::new(Using {
-        loc: Loc(file_no, l, r),
+        loc: Loc::File(file_no, l, r),
         library,
         ty: Some(ty),
     }),
     <l:@L> "using" <library:SolIdentifier> "for" "*" <r:@R> ";" => Box::new(Using {
-        loc: Loc(file_no, l, r),
+        loc: Loc::File(file_no, l, r),
         library,
         ty: None,
     }),
@@ -671,60 +671,60 @@ Using: Box<Using> = {
 
 BlockStatement: Statement = {
     <l:@L> "{" <statements:Statement*> "}" <r:@R> => {
-        Statement::Block { loc: Loc(file_no, l, r), unchecked: false, statements }
+        Statement::Block { loc: Loc::File(file_no, l, r), unchecked: false, statements }
     },
-    <l:@L> "{" <v:CommaOne<NamedArgument>> "}" <r:@R> => Statement::Args(Loc(file_no, l, r), v),
+    <l:@L> "{" <v:CommaOne<NamedArgument>> "}" <r:@R> => Statement::Args(Loc::File(file_no, l, r), v),
 }
 
 OpenStatement: Statement = {
     <l:@L> "if" "(" <cond:Expression> ")" <body:Statement> <r:@R> => {
-        Statement::If(Loc(file_no, l, r), cond, Box::new(body), None)
+        Statement::If(Loc::File(file_no, l, r), cond, Box::new(body), None)
     },
     <l:@L> "if" "(" <cond:Expression> ")" <body:ClosedStatement> "else" <o:OpenStatement> <r:@R> => {
-        Statement::If(Loc(file_no, l, r), cond, Box::new(body), Some(Box::new(o)))
+        Statement::If(Loc::File(file_no, l, r), cond, Box::new(body), Some(Box::new(o)))
     },
     <l:@L> "while" "(" <e:Expression> ")" <b:OpenStatement> <r:@R> => {
-        Statement::While(Loc(file_no, l, r), e, Box::new(b))
+        Statement::While(Loc::File(file_no, l, r), e, Box::new(b))
     }
 }
 
 ClosedStatement: Statement = {
     NonIfStatement,
     <l:@L> "if" "(" <cond:Expression> ")" <body:ClosedStatement> "else" <o:ClosedStatement> <r:@R> => {
-        Statement::If(Loc(file_no, l, r), cond, Box::new(body), Some(Box::new(o)))
+        Statement::If(Loc::File(file_no, l, r), cond, Box::new(body), Some(Box::new(o)))
     },
     <l:@L> "while" "(" <e:Expression> ")" <b:ClosedStatement> <r:@R> => {
-        Statement::While(Loc(file_no, l, r), e, Box::new(b))
+        Statement::While(Loc::File(file_no, l, r), e, Box::new(b))
     },
     <l:@L> "for" "(" <b:SimpleStatement?> ";" <c:Expression?> ";" <n:SimpleStatement?> ")" <block:ClosedStatement> <r:@R> => {
-        Statement::For(Loc(file_no, l, r), box_option(b), box_option(c), box_option(n), Some(Box::new(block)))
+        Statement::For(Loc::File(file_no, l, r), box_option(b), box_option(c), box_option(n), Some(Box::new(block)))
     },
     <l:@L> "for" "(" <b:SimpleStatement?> ";" <c:Expression?> ";" <n:SimpleStatement?> ")" <r:@R> ";" => {
-        Statement::For(Loc(file_no, l, r), box_option(b), box_option(c), box_option(n), None)
+        Statement::For(Loc::File(file_no, l, r), box_option(b), box_option(c), box_option(n), None)
     }
 }
 
 Statement: Statement = {
     OpenStatement,
     ClosedStatement,
-    <l:@L> <c:DocComment> <r:@R> => Statement::DocComment(Loc(file_no, l, r), c.0, c.1.to_string()),
+    <l:@L> <c:DocComment> <r:@R> => Statement::DocComment(Loc::File(file_no, l, r), c.0, c.1.to_string()),
 }
 
 SimpleStatement: Statement = {
     <l:@L>  <v:VariableDeclaration> <e:("=" <Expression>)?> <r:@R> => {
-        Statement::VariableDefinition(Loc(file_no, l, r), v, e)
+        Statement::VariableDefinition(Loc::File(file_no, l, r), v, e)
     },
     <l:@L> <e:Expression> <r:@R> => {
-        Statement::Expression(Loc(file_no, l, r), e)
+        Statement::Expression(Loc::File(file_no, l, r), e)
     }
 }
 
 CatchClause: CatchClause = {
     <l:@L> "catch" <param:("(" <Parameter> ")")?> <block:BlockStatement> <r:@R> => {
-        CatchClause::Simple(Loc(file_no, l, r), param, block)
+        CatchClause::Simple(Loc::File(file_no, l, r), param, block)
     },
     <l:@L> "catch" <id:SolIdentifier> "(" <param:Parameter> ")" <block:BlockStatement> <r:@R> => {
-        CatchClause::Named(Loc(file_no, l, r), id, param, block)
+        CatchClause::Named(Loc::File(file_no, l, r), id, param, block)
     }
 }
 
@@ -733,74 +733,74 @@ TryReturns: (Vec<(Loc, Option<Parameter>)>, Box<Statement>) = {
 }
 
 TryExpression: Expression = {
-    <a:@L> "new" <call:FunctionCall> <b:@R> => Expression::New(Loc(file_no, a, b), Box::new(call)),
+    <a:@L> "new" <call:FunctionCall> <b:@R> => Expression::New(Loc::File(file_no, a, b), Box::new(call)),
     FunctionCall
 }
 
 NonIfStatement: Statement = {
     BlockStatement => <>,
     <l:@L> "unchecked" "{" <statements:Statement*> "}" <r:@R> => {
-        Statement::Block { loc: Loc(file_no, l, r), unchecked: true, statements }
+        Statement::Block { loc: Loc::File(file_no, l, r), unchecked: true, statements }
     },
     <l:@L> "assembly" <assembly:AssemblyBlock> <r:@R> => {
-        Statement::Assembly { loc: Loc(file_no, l, r), assembly }
+        Statement::Assembly { loc: Loc::File(file_no, l, r), assembly }
     },
     <SimpleStatement> ";" => <>,
     <l:@L> "do" <b:Statement> "while" "(" <e:Expression> ")" <r:@R> ";" => {
-        Statement::DoWhile(Loc(file_no, l, r), Box::new(b), e)
+        Statement::DoWhile(Loc::File(file_no, l, r), Box::new(b), e)
     },
     <l:@L> "continue" <r:@R> ";" => {
-        Statement::Continue(Loc(file_no, l, r))
+        Statement::Continue(Loc::File(file_no, l, r))
     },
     <l:@L> "break" <r:@R> ";" => {
-        Statement::Break(Loc(file_no, l, r))
+        Statement::Break(Loc::File(file_no, l, r))
     },
     <l:@L> "return" <r:@R> ";" => {
-        Statement::Return(Loc(file_no, l, r), None)
+        Statement::Return(Loc::File(file_no, l, r), None)
     },
     <l:@L> "return" <e:Expression> <r:@R> ";" => {
-        Statement::Return(Loc(file_no, l, r), Some(e))
+        Statement::Return(Loc::File(file_no, l, r), Some(e))
     },
     <l:@L> "try" <e:TryExpression> <returns:TryReturns?> <clauses:CatchClause+> <r:@R> => {
-        Statement::Try(Loc(file_no, l, r), e, returns, clauses)
+        Statement::Try(Loc::File(file_no, l, r), e, returns, clauses)
     },
     <l:@L> "emit" <ty:FunctionCall> <r:@R> ";" => {
-        Statement::Emit(Loc(file_no, l, r), ty)
+        Statement::Emit(Loc::File(file_no, l, r), ty)
     },
 }
 
 AsmIdentifier: Identifier = {
-    <l:@L> <n:identifier> <r:@R> => Identifier{loc: Loc(file_no, l, r), name: n.to_string()},
-    <l:@L> "return" <r:@R> => Identifier{loc: Loc(file_no, l, r), name: "return".to_string()},
+    <l:@L> <n:identifier> <r:@R> => Identifier{loc: Loc::File(file_no, l, r), name: n.to_string()},
+    <l:@L> "return" <r:@R> => Identifier{loc: Loc::File(file_no, l, r), name: "return".to_string()},
 }
 
 AssemblyStatement: AssemblyStatement = {
     <l:@L> <left:AssemblyExpression0> ":=" <right:AssemblyExpression2> <r:@R> => {
-        AssemblyStatement::Assign(Loc(file_no, l, r), left, right)
+        AssemblyStatement::Assign(Loc::File(file_no, l, r), left, right)
     },
     <l:@L> "let" <left:AssemblyExpression0> ":=" <right:AssemblyExpression2> <r:@R> => {
-        AssemblyStatement::LetAssign(Loc(file_no, l, r), left, right)
+        AssemblyStatement::LetAssign(Loc::File(file_no, l, r), left, right)
     },
     <l:@L> "if" <cond:AssemblyExpression2> <body:AssemblyBlock> <r:@R> => {
-        AssemblyStatement::If(Loc(file_no, l, r), cond, Box::new(body))
+        AssemblyStatement::If(Loc::File(file_no, l, r), cond, Box::new(body))
     },
     <l:@L> "for" <init:AssemblyBlock> <cond:AssemblyExpression2> <post_iter:AssemblyBlock> <body:AssemblyBlock> <r:@R> => {
-        AssemblyStatement::For(Loc(file_no, l, r), init, cond, post_iter, Box::new(body))
+        AssemblyStatement::For(Loc::File(file_no, l, r), init, cond, post_iter, Box::new(body))
     },
     <l:@L> "switch" <expr:AssemblyExpression2> <default:AssemblySwitchDefault> <r:@R> => {
-        AssemblyStatement::Switch(Loc(file_no, l, r), expr, Vec::new(), Some(default))
+        AssemblyStatement::Switch(Loc::File(file_no, l, r), expr, Vec::new(), Some(default))
     },
     <l:@L> "switch" <expr:AssemblyExpression2> <cases:AssemblySwitchCase+> <default:AssemblySwitchDefault?> <r:@R> => {
-        AssemblyStatement::Switch(Loc(file_no, l, r), expr, cases, default)
+        AssemblyStatement::Switch(Loc::File(file_no, l, r), expr, cases, default)
     },
     <l:@L> "leave" <r:@R> => {
-        AssemblyStatement::Leave(Loc(file_no, l, r))
+        AssemblyStatement::Leave(Loc::File(file_no, l, r))
     },
     <l:@L> "break" <r:@R> => {
-        AssemblyStatement::Break(Loc(file_no, l, r))
+        AssemblyStatement::Break(Loc::File(file_no, l, r))
     },
     <l:@L> "continue" <r:@R> => {
-        AssemblyStatement::Continue(Loc(file_no, l, r))
+        AssemblyStatement::Continue(Loc::File(file_no, l, r))
     },
     <expr:AssemblyExpression1> => {
         AssemblyStatement::Expression(expr)
@@ -830,19 +830,19 @@ AssemblyExpression2: AssemblyExpression = {
 
 AssemblyExpression1: AssemblyExpression = {
     <l:@L> <function:AssemblyExpression0> "(" <args:Comma<AssemblyExpression2>> ")" <r:@R> => {
-        AssemblyExpression::Function(Loc(file_no, l, r), Box::new(function), args)
+        AssemblyExpression::Function(Loc::File(file_no, l, r), Box::new(function), args)
     },
     <l:@L> <ty:NoFunctionType> <br:@R> "(" <args:Comma<AssemblyExpression2>> ")" <r:@R> => {
-        let id = Identifier { loc: Loc(file_no, l, br), name: String::from(&input[l..br]) };
+        let id = Identifier { loc: Loc::File(file_no, l, br), name: String::from(&input[l..br]) };
 
-        AssemblyExpression::Function(Loc(file_no, l, r), Box::new(AssemblyExpression::Variable(id)), args)
+        AssemblyExpression::Function(Loc::File(file_no, l, r), Box::new(AssemblyExpression::Variable(id)), args)
     },
     AssemblyExpression0
 }
 
 AssemblyExpression0: AssemblyExpression = {
-    <a:@L> "true" <b:@R> => AssemblyExpression::BoolLiteral(Loc(file_no, a, b), true),
-    <a:@L> "false" <b:@R> => AssemblyExpression::BoolLiteral(Loc(file_no, a, b), false),
+    <a:@L> "true" <b:@R> => AssemblyExpression::BoolLiteral(Loc::File(file_no, a, b), true),
+    <a:@L> "false" <b:@R> => AssemblyExpression::BoolLiteral(Loc::File(file_no, a, b), false),
     <l:@L> <n:number> <r:@R> => {
         let base: String = n.0.chars().filter(|v| *v != '_').collect();
         let exp: String = n.1.chars().filter(|v| *v != '_').collect();
@@ -856,20 +856,20 @@ AssemblyExpression0: AssemblyExpression = {
             base.mul(exp)
         };
 
-        AssemblyExpression::NumberLiteral(Loc(file_no, l, r), n)
+        AssemblyExpression::NumberLiteral(Loc::File(file_no, l, r), n)
     },
     <l:@L> <n:hexnumber> <r:@R> => {
-        AssemblyExpression::HexNumberLiteral(Loc(file_no, l, r), n.to_owned())
+        AssemblyExpression::HexNumberLiteral(Loc::File(file_no, l, r), n.to_owned())
     },
     <StringLiteral> => {
         AssemblyExpression::StringLiteral(<>)
     },
     <AsmIdentifier> => AssemblyExpression::Variable(<>),
     <l:@L> <array:AssemblyExpression0> "[" <index:AssemblyExpression1> "]" <r:@R> => {
-        AssemblyExpression::Subscript(Loc(file_no, l, r), Box::new(array), Box::new(index))
+        AssemblyExpression::Subscript(Loc::File(file_no, l, r), Box::new(array), Box::new(index))
     },
     <l:@L> <array:AssemblyExpression0> "." <member:AsmIdentifier> <r:@R> => {
-        AssemblyExpression::Member(Loc(file_no, l, r), Box::new(array), member)
+        AssemblyExpression::Member(Loc::File(file_no, l, r), Box::new(array), member)
     },
 }
 

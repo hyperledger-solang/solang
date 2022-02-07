@@ -49,7 +49,7 @@ suite('Extension Test Suite', function () {
     await testdiagnos(diagnosdoc4, [
       {
         message: 'unknown pragma ‘foo’ with value ‘bar’ ignored',
-        range: toRange(0, 7, 0, 14),
+        range: toRange(0, 0, 0, 14),
         severity: vscode.DiagnosticSeverity.Warning,
         source: `solidity`,
       },

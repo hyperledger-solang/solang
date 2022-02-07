@@ -1378,7 +1378,7 @@ fn function_cfg(
             cfg.add(
                 &mut vartab,
                 Instr::Set {
-                    loc: func.params[i].name_loc.unwrap(),
+                    loc: func.params[i].loc,
                     res: *pos,
                     expr: Expression::FunctionArg(var.id.loc, var.ty.clone(), i),
                 },
@@ -1454,7 +1454,7 @@ fn function_cfg(
                             cfg.add(
                                 &mut vartab,
                                 Instr::Set {
-                                    loc: func.params[i].name_loc.unwrap_or(pt::Loc(0, 0, 0)),
+                                    loc: func.params[i].loc,
                                     res: *id,
                                     expr,
                                 },
@@ -1506,12 +1506,12 @@ fn function_cfg(
 
     // named returns should be populated
     for (i, pos) in func.symtable.returns.iter().enumerate() {
-        if !func.returns[i].name.is_empty() {
+        if let Some(name) = &func.returns[i].name {
             if let Some(expr) = func.returns[i].ty.default(ns) {
                 cfg.add(
                     &mut vartab,
                     Instr::Set {
-                        loc: func.returns[i].name_loc.unwrap(),
+                        loc: name.loc,
                         res: *pos,
                         expr,
                     },
@@ -1551,7 +1551,7 @@ fn function_cfg(
                     .iter()
                     .map(|pos| {
                         Expression::Variable(
-                            pt::Loc(0, 0, 0),
+                            pt::Loc::Codegen,
                             func.symtable.vars[pos].ty.clone(),
                             *pos,
                         )
@@ -1606,7 +1606,7 @@ pub fn generate_modifier_dispatch(
             cfg.add(
                 &mut vartab,
                 Instr::Set {
-                    loc: pt::Loc(0, 0, 0),
+                    loc: pt::Loc::Codegen,
                     res: *pos,
                     expr: Expression::FunctionArg(var.id.loc, var.ty.clone(), i),
                 },
@@ -1629,7 +1629,7 @@ pub fn generate_modifier_dispatch(
             cfg.add(
                 &mut vartab,
                 Instr::Set {
-                    loc: pt::Loc(0, 0, 0),
+                    loc: pt::Loc::Codegen,
                     res: *pos,
                     expr,
                 },
@@ -1697,7 +1697,7 @@ pub fn generate_modifier_dispatch(
                     .iter()
                     .map(|pos| {
                         Expression::Variable(
-                            pt::Loc(0, 0, 0),
+                            pt::Loc::Codegen,
                             func.symtable.vars[pos].ty.clone(),
                             *pos,
                         )
@@ -1764,7 +1764,7 @@ impl Contract {
             .iter()
             .find(|l| l.contract_no == var_contract_no && l.var_no == var_no)
         {
-            Expression::NumberLiteral(pt::Loc(0, 0, 0), ns.storage_type(), layout.slot.clone())
+            Expression::NumberLiteral(pt::Loc::Codegen, ns.storage_type(), layout.slot.clone())
         } else {
             panic!("get_storage_slot called on non-storage variable");
         }

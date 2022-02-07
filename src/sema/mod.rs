@@ -93,8 +93,8 @@ fn sema_file(file: &ResolvedFile, resolver: &mut FileResolver, ns: &mut ast::Nam
     // resolve pragmas and imports
     for part in &pt.0 {
         match part {
-            pt::SourceUnitPart::PragmaDirective(_, _, name, value) => {
-                resolve_pragma(name, value, ns);
+            pt::SourceUnitPart::PragmaDirective(loc, _, name, value) => {
+                resolve_pragma(loc, name, value, ns);
             }
             pt::SourceUnitPart::ImportDirective(_, import) => {
                 resolve_import(import, Some(file), file_no, resolver, ns);
@@ -284,25 +284,30 @@ fn resolve_import(
 }
 
 /// Resolve pragma. We don't do anything with pragmas for now
-fn resolve_pragma(name: &pt::Identifier, value: &pt::StringLiteral, ns: &mut ast::Namespace) {
+fn resolve_pragma(
+    loc: &pt::Loc,
+    name: &pt::Identifier,
+    value: &pt::StringLiteral,
+    ns: &mut ast::Namespace,
+) {
     if name.name == "solidity" {
         ns.diagnostics.push(ast::Diagnostic::debug(
-            pt::Loc(name.loc.0, name.loc.1, value.loc.2),
+            *loc,
             "pragma ‘solidity’ is ignored".to_string(),
         ));
     } else if name.name == "experimental" && value.string == "ABIEncoderV2" {
         ns.diagnostics.push(ast::Diagnostic::debug(
-            pt::Loc(name.loc.0, name.loc.1, value.loc.2),
+            *loc,
             "pragma ‘experimental’ with value ‘ABIEncoderV2’ is ignored".to_string(),
         ));
     } else if name.name == "abicoder" && value.string == "v2" {
         ns.diagnostics.push(ast::Diagnostic::debug(
-            pt::Loc(name.loc.0, name.loc.1, value.loc.2),
+            *loc,
             "pragma ‘abicoder’ with value ‘v2’ is ignored".to_string(),
         ));
     } else {
         ns.diagnostics.push(ast::Diagnostic::warning(
-            pt::Loc(name.loc.0, name.loc.1, value.loc.2),
+            *loc,
             format!(
                 "unknown pragma ‘{}’ with value ‘{}’ ignored",
                 name.name, value.string
@@ -737,7 +742,7 @@ impl ast::Namespace {
     ) -> Option<&ast::Symbol> {
         for base in self.contracts[contract_no].bases.iter() {
             // find file this contract was defined in
-            let file_no = self.contracts[base.contract_no].loc.0;
+            let file_no = self.contracts[base.contract_no].loc.file_no();
 
             let res = self
                 .function_symbols
@@ -760,7 +765,7 @@ impl ast::Namespace {
     ) -> Option<&ast::Symbol> {
         for base in self.contracts[contract_no].bases.iter() {
             // find file this contract was defined in
-            let file_no = self.contracts[base.contract_no].loc.0;
+            let file_no = self.contracts[base.contract_no].loc.file_no();
 
             if let Some(sym) =
                 self.variable_symbols
@@ -1150,9 +1155,9 @@ impl ast::Namespace {
                     let params = params
                         .into_iter()
                         .map(|p| {
-                            if !p.name.is_empty() {
+                            if let Some(name) = p.name {
                                 diagnostics.push(ast::Diagnostic::error(
-                                    p.name_loc.unwrap(),
+                                    name.loc,
                                     "function type parameters cannot be named".to_string(),
                                 ));
                                 success = false;
@@ -1164,9 +1169,9 @@ impl ast::Namespace {
                     let returns = returns
                         .into_iter()
                         .map(|p| {
-                            if !p.name.is_empty() {
+                            if let Some(name) = p.name {
                                 diagnostics.push(ast::Diagnostic::error(
-                                    p.name_loc.unwrap(),
+                                    name.loc,
                                     "function type returns cannot be named".to_string(),
                                 ));
                                 success = false;

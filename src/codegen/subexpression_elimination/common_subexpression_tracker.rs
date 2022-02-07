@@ -81,7 +81,7 @@ impl CommonSubExpressionTracker {
                     ns.next_id,
                     Variable {
                         id: Identifier {
-                            loc: Loc(0, 0, 0),
+                            loc: Loc::Codegen,
                             name: format!("{}.cse_temp", self.name_cnt),
                         },
                         ty: exp.var_type.clone(),
@@ -128,7 +128,7 @@ impl CommonSubExpressionTracker {
             }
 
             let new_instr = Instr::Set {
-                loc: Loc(0, 0, 0),
+                loc: Loc::Codegen,
                 res: common_expression.var_no.unwrap(),
                 expr: exp.clone(),
             };
@@ -147,7 +147,7 @@ impl CommonSubExpressionTracker {
             if common_expression.var_loc.is_some() {
                 common_expression.var_loc.unwrap()
             } else {
-                Loc(0, 0, 0)
+                Loc::Codegen
             },
             common_expression.var_type.clone(),
             common_expression.var_no.unwrap(),

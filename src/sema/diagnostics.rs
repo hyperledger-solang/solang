@@ -2,6 +2,7 @@ use super::ast::{Diagnostic, Level, Namespace};
 use crate::file_resolver::FileResolver;
 use codespan_reporting::{diagnostic, files, term};
 use serde::Serialize;
+use solang_parser::pt::Loc;
 use std::{io, sync::Arc};
 
 /// Print the diagnostics to stderr with fancy formatting
@@ -59,15 +60,19 @@ fn convert_diagnostic(msg: &Diagnostic, file_id: &[usize]) -> diagnostic::Diagno
 
     let mut labels = Vec::new();
 
-    if let Some(pos) = msg.pos {
-        labels.push(diagnostic::Label::primary(file_id[pos.0], pos.1..pos.2));
+    if let Loc::File(file_no, start, end) = msg.pos {
+        labels.push(diagnostic::Label::primary(file_id[file_no], start..end));
     }
 
     for note in &msg.notes {
-        labels.push(
-            diagnostic::Label::secondary(file_id[note.pos.0], note.pos.1..note.pos.2)
-                .with_message(note.message.to_owned()),
-        );
+        if let Loc::File(file_no, start, end) = note.pos {
+            labels.push(
+                diagnostic::Label::secondary(file_id[file_no], start..end)
+                    .with_message(note.message.to_owned()),
+            );
+        } else {
+            unreachable!("note without file position");
+        }
     }
 
     if labels.is_empty() {
@@ -131,11 +136,15 @@ pub fn diagnostics_as_json(ns: &Namespace, cache: &FileResolver) -> Vec<OutputJs
 
         term::emit(&mut buffer, &config, &files, &diagnostic).unwrap();
 
-        let location = msg.pos.map(|pos| LocJson {
-            file: format!("{}", ns.files[pos.0].path.display()),
-            start: pos.1 + 1,
-            end: pos.2 + 1,
-        });
+        let location = if let Loc::File(file_no, start, end) = msg.pos {
+            Some(LocJson {
+                file: format!("{}", ns.files[file_no]),
+                start: start + 1,
+                end: end + 1,
+            })
+        } else {
+            None
+        };
 
         json.push(OutputJson {
             sourceLocation: location,

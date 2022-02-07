@@ -528,7 +528,7 @@ pub fn statement(
 
                 topic_tys.push(Type::Bytes(32));
                 topics.push(Expression::BytesLiteral(
-                    pt::Loc(0, 0, 0),
+                    pt::Loc::Codegen,
                     Type::Bytes(32),
                     hash.to_vec(),
                 ));
@@ -542,7 +542,7 @@ pub fn statement(
                         Type::String | Type::DynamicBytes => {
                             let e = expression(
                                 &Expression::Builtin(
-                                    pt::Loc(0, 0, 0),
+                                    pt::Loc::Codegen,
                                     vec![Type::Bytes(32)],
                                     Builtin::Keccak256,
                                     vec![arg.clone()],
@@ -562,11 +562,11 @@ pub fn statement(
                             // We should have an AbiEncodePackedPad
                             let e = expression(
                                 &Expression::Builtin(
-                                    pt::Loc(0, 0, 0),
+                                    pt::Loc::Codegen,
                                     vec![Type::Bytes(32)],
                                     Builtin::Keccak256,
                                     vec![Expression::Builtin(
-                                        pt::Loc(0, 0, 0),
+                                        pt::Loc::Codegen,
                                         vec![Type::DynamicBytes],
                                         Builtin::AbiEncodePacked,
                                         vec![arg.clone()],
@@ -946,7 +946,7 @@ fn destructure(
                 cfg.add(
                     vartab,
                     Instr::Set {
-                        loc: param.name_loc.unwrap_or(pt::Loc(0, 0, 0)),
+                        loc: param.loc,
                         res: *res,
                         expr,
                     },
@@ -1020,7 +1020,7 @@ fn try_catch(
                 let value = if let Some(value) = value {
                     expression(value, cfg, callee_contract_no, Some(func), ns, vartab, opt)
                 } else {
-                    Expression::NumberLiteral(pt::Loc(0, 0, 0), Type::Value, BigInt::zero())
+                    Expression::NumberLiteral(pt::Loc::Codegen, Type::Value, BigInt::zero())
                 };
                 let gas = if let Some(gas) = gas {
                     expression(gas, cfg, callee_contract_no, Some(func), ns, vartab, opt)
@@ -1104,10 +1104,9 @@ fn try_catch(
                         .iter()
                         .map(|ty| Parameter {
                             ty: ty.clone(),
-                            name: String::new(),
-                            ty_loc: pt::Loc(0, 0, 0),
-                            name_loc: None,
-                            loc: pt::Loc(0, 0, 0),
+                            name: None,
+                            ty_loc: pt::Loc::Codegen,
+                            loc: pt::Loc::Codegen,
                             indexed: false,
                             readonly: false,
                         })
@@ -1120,7 +1119,7 @@ fn try_catch(
                             selector: None,
                             exception_block: None,
                             tys,
-                            data: Expression::ReturnData(pt::Loc(0, 0, 0)),
+                            data: Expression::ReturnData(pt::Loc::Codegen),
                         },
                     );
                 }
@@ -1241,7 +1240,7 @@ fn try_catch(
                 exception_block: Some(no_reason_block),
                 res: vec![error_var],
                 tys: vec![error_param.clone()],
-                data: Expression::ReturnData(pt::Loc(0, 0, 0)),
+                data: Expression::ReturnData(pt::Loc::Codegen),
             },
         );
 
@@ -1279,9 +1278,9 @@ fn try_catch(
         cfg.add(
             vartab,
             Instr::Set {
-                loc: pt::Loc(0, 0, 0),
+                loc: pt::Loc::Codegen,
                 res,
-                expr: Expression::ReturnData(pt::Loc(0, 0, 0)),
+                expr: Expression::ReturnData(pt::Loc::Codegen),
             },
         );
     }
@@ -1366,15 +1365,15 @@ impl Type {
     pub fn default(&self, ns: &Namespace) -> Option<Expression> {
         match self {
             Type::Address(_) | Type::Uint(_) | Type::Int(_) => Some(Expression::NumberLiteral(
-                pt::Loc(0, 0, 0),
+                pt::Loc::Codegen,
                 self.clone(),
                 BigInt::from(0),
             )),
-            Type::Bool => Some(Expression::BoolLiteral(pt::Loc(0, 0, 0), false)),
+            Type::Bool => Some(Expression::BoolLiteral(pt::Loc::Codegen, false)),
             Type::Bytes(n) => {
                 let mut l = Vec::new();
                 l.resize(*n as usize, 0);
-                Some(Expression::BytesLiteral(pt::Loc(0, 0, 0), self.clone(), l))
+                Some(Expression::BytesLiteral(pt::Loc::Codegen, self.clone(), l))
             }
             Type::Enum(e) => ns.enums[*e].ty.default(ns),
             Type::Struct(struct_no) => {
@@ -1384,7 +1383,7 @@ impl Type {
                 }
 
                 Some(Expression::StructLiteral(
-                    pt::Loc(0, 0, 0),
+                    pt::Loc::Codegen,
                     self.clone(),
                     Vec::new(),
                 ))
@@ -1392,10 +1391,10 @@ impl Type {
             Type::Ref(_) => unreachable!(),
             Type::StorageRef(_, _) => None,
             Type::String | Type::DynamicBytes => Some(Expression::AllocDynamicArray(
-                pt::Loc(0, 0, 0),
+                pt::Loc::Codegen,
                 self.clone(),
                 Box::new(Expression::NumberLiteral(
-                    pt::Loc(0, 0, 0),
+                    pt::Loc::Codegen,
                     Type::Uint(32),
                     BigInt::zero(),
                 )),
@@ -1409,10 +1408,10 @@ impl Type {
 
                 if dims[0].is_none() {
                     Some(Expression::AllocDynamicArray(
-                        pt::Loc(0, 0, 0),
+                        pt::Loc::Codegen,
                         self.clone(),
                         Box::new(Expression::NumberLiteral(
-                            pt::Loc(0, 0, 0),
+                            pt::Loc::Codegen,
                             Type::Uint(32),
                             BigInt::zero(),
                         )),
@@ -1420,7 +1419,7 @@ impl Type {
                     ))
                 } else {
                     Some(Expression::ArrayLiteral(
-                        pt::Loc(0, 0, 0),
+                        pt::Loc::Codegen,
                         self.clone(),
                         Vec::new(),
                         Vec::new(),
@@ -1436,7 +1435,7 @@ impl Namespace {
     /// Phoney default constructor
     pub fn default_constructor(&self, contract_no: usize) -> Function {
         let mut func = Function::new(
-            pt::Loc(0, 0, 0),
+            pt::Loc::Codegen,
             "".to_owned(),
             Some(contract_no),
             vec![],
@@ -1448,7 +1447,7 @@ impl Namespace {
             self,
         );
 
-        func.body = vec![Statement::Return(pt::Loc(0, 0, 0), None)];
+        func.body = vec![Statement::Return(pt::Loc::Codegen, None)];
         func.has_body = true;
 
         func

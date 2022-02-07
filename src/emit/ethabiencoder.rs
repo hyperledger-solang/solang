@@ -133,7 +133,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                                 binary.context.i32_type().const_zero(),
                                 binary.context.i32_type().const_int(i as u64, false),
                             ],
-                            &field.name,
+                            field.name_as_str(),
                         )
                     };
 
@@ -378,7 +378,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                                 binary.context.i32_type().const_zero(),
                                 binary.context.i32_type().const_int(i as u64, false),
                             ],
-                            &field.name,
+                            field.name_as_str(),
                         )
                     };
 
@@ -1239,7 +1239,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                                 binary.context.i32_type().const_zero(),
                                 binary.context.i32_type().const_int(i as u64, false),
                             ],
-                            &field.name,
+                            field.name_as_str(),
                         )
                     };
 
@@ -1348,7 +1348,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                                 binary.context.i32_type().const_zero(),
                                 binary.context.i32_type().const_int(i as u64, false),
                             ],
-                            &field.name,
+                            field.name_as_str(),
                         )
                     };
 
@@ -1899,7 +1899,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                                 binary.context.i32_type().const_zero(),
                                 binary.context.i32_type().const_int(i as u64, false),
                             ],
-                            &field.name,
+                            field.name_as_str(),
                         )
                     };
 
@@ -2947,7 +2947,7 @@ impl EthAbiDecoder {
                                 binary.context.i32_type().const_zero(),
                                 binary.context.i32_type().const_int(i as u64, false),
                             ],
-                            &field.name,
+                            field.name_as_str(),
                         )
                     };
 

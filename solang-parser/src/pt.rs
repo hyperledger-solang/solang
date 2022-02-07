@@ -7,17 +7,68 @@ use crate::lexer::CommentType;
 
 #[derive(Debug, PartialEq, PartialOrd, Ord, Eq, Hash, Clone, Copy)]
 /// file no, start offset, end offset (in bytes)
-pub struct Loc(pub usize, pub usize, pub usize);
+pub enum Loc {
+    Builtin,
+    CommandLine,
+    Implicit,
+    Codegen,
+    File(usize, usize, usize),
+}
 
 impl Loc {
     #[must_use]
-    pub fn begin(&self) -> Self {
-        Loc(self.0, self.1, self.1)
+    pub fn begin_range(&self) -> Self {
+        match self {
+            Loc::File(file_no, start, _) => Loc::File(*file_no, *start, *start),
+            loc => *loc,
+        }
     }
 
     #[must_use]
-    pub fn end(&self) -> Self {
-        Loc(self.0, self.2, self.2)
+    pub fn end_range(&self) -> Self {
+        match self {
+            Loc::File(file_no, _, end) => Loc::File(*file_no, *end, *end),
+            loc => *loc,
+        }
+    }
+
+    pub fn file_no(&self) -> usize {
+        match self {
+            Loc::File(file_no, _, _) => *file_no,
+            _ => unreachable!(),
+        }
+    }
+
+    pub fn start(&self) -> usize {
+        match self {
+            Loc::File(_, start, _) => *start,
+            _ => unreachable!(),
+        }
+    }
+
+    pub fn end(&self) -> usize {
+        match self {
+            Loc::File(_, _, end) => *end,
+            _ => unreachable!(),
+        }
+    }
+
+    pub fn use_end_from(&mut self, other: &Loc) {
+        match (self, other) {
+            (Loc::File(_, _, end), Loc::File(_, _, other_end)) => {
+                *end = *other_end;
+            }
+            _ => unreachable!(),
+        }
+    }
+
+    pub fn use_start_from(&mut self, other: &Loc) {
+        match (self, other) {
+            (Loc::File(_, start, _), Loc::File(_, other_start, _)) => {
+                *start = *other_start;
+            }
+            _ => unreachable!(),
+        }
     }
 }
 

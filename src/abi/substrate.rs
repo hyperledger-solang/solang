@@ -462,11 +462,7 @@ fn gen_abi(contract_no: usize, ns: &ast::Namespace) -> Abi {
                             .returns
                             .iter()
                             .map(|f| StructField {
-                                name: if f.name.is_empty() {
-                                    None
-                                } else {
-                                    Some(f.name.to_string())
-                                },
+                                name: f.name.as_ref().map(|id| id.name.to_owned()),
                                 ty: ty_to_abi(&f.ty, ns, &mut abi).ty,
                             })
                             .collect();
@@ -592,7 +588,7 @@ fn ty_to_abi(ty: &ast::Type, ns: &ast::Namespace, registry: &mut Abi) -> ParamTy
                 .fields
                 .iter()
                 .map(|f| StructField {
-                    name: Some(f.name.to_string()),
+                    name: Some(f.name_as_str().to_owned()),
                     ty: ty_to_abi(&f.ty, ns, registry).ty,
                 })
                 .collect();
@@ -643,7 +639,7 @@ fn ty_to_abi(ty: &ast::Type, ns: &ast::Namespace, registry: &mut Abi) -> ParamTy
 
 fn parameter_to_abi(param: &ast::Parameter, ns: &ast::Namespace, registry: &mut Abi) -> Param {
     Param {
-        name: param.name.to_string(),
+        name: param.name_as_str().to_owned(),
         ty: ty_to_abi(&param.ty, ns, registry),
     }
 }
