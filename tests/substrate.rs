@@ -720,7 +720,7 @@ impl Externals for TestRuntime {
                 let dest_ptr: u32 = args.nth_checked(0)?;
                 let len_ptr: u32 = args.nth_checked(1)?;
 
-                let scratch = self.vm.value.to_le_bytes().to_vec();
+                let scratch = self.vm.value.to_le_bytes();
 
                 set_seal_value!("seal_value_transferred", dest_ptr, len_ptr, &scratch);
 
@@ -730,7 +730,7 @@ impl Externals for TestRuntime {
                 let dest_ptr: u32 = args.nth_checked(0)?;
                 let len_ptr: u32 = args.nth_checked(1)?;
 
-                let scratch = self.vm.address.to_vec();
+                let scratch = self.vm.address;
 
                 set_seal_value!("seal_address", dest_ptr, len_ptr, &scratch);
 
@@ -740,7 +740,7 @@ impl Externals for TestRuntime {
                 let dest_ptr: u32 = args.nth_checked(0)?;
                 let len_ptr: u32 = args.nth_checked(1)?;
 
-                let scratch = self.vm.caller.to_vec();
+                let scratch = self.vm.caller;
 
                 set_seal_value!("seal_caller", dest_ptr, len_ptr, &scratch);
 
@@ -750,7 +750,7 @@ impl Externals for TestRuntime {
                 let dest_ptr: u32 = args.nth_checked(0)?;
                 let len_ptr: u32 = args.nth_checked(1)?;
 
-                let scratch = self.accounts[&self.vm.address].1.to_le_bytes().to_vec();
+                let scratch = self.accounts[&self.vm.address].1.to_le_bytes();
 
                 set_seal_value!("seal_balance", dest_ptr, len_ptr, &scratch);
 
@@ -760,7 +760,7 @@ impl Externals for TestRuntime {
                 let dest_ptr: u32 = args.nth_checked(0)?;
                 let len_ptr: u32 = args.nth_checked(1)?;
 
-                let scratch = 500u128.to_le_bytes().to_vec();
+                let scratch = 500u128.to_le_bytes();
 
                 set_seal_value!("seal_minimum_balance", dest_ptr, len_ptr, &scratch);
 
@@ -770,7 +770,7 @@ impl Externals for TestRuntime {
                 let dest_ptr: u32 = args.nth_checked(0)?;
                 let len_ptr: u32 = args.nth_checked(1)?;
 
-                let scratch = 950_119_597u32.to_le_bytes().to_vec();
+                let scratch = 950_119_597u32.to_le_bytes();
 
                 set_seal_value!("seal_block_number", dest_ptr, len_ptr, &scratch);
 
@@ -780,7 +780,7 @@ impl Externals for TestRuntime {
                 let dest_ptr: u32 = args.nth_checked(0)?;
                 let len_ptr: u32 = args.nth_checked(1)?;
 
-                let scratch = 1594035638000u64.to_le_bytes().to_vec();
+                let scratch = 1594035638000u64.to_le_bytes();
 
                 set_seal_value!("seal_now", dest_ptr, len_ptr, &scratch);
 
@@ -790,7 +790,7 @@ impl Externals for TestRuntime {
                 let dest_ptr: u32 = args.nth_checked(0)?;
                 let len_ptr: u32 = args.nth_checked(1)?;
 
-                let scratch = 2_224_097_461u64.to_le_bytes().to_vec();
+                let scratch = 2_224_097_461u64.to_le_bytes();
 
                 set_seal_value!("seal_gas_left", dest_ptr, len_ptr, &scratch);
 
@@ -801,9 +801,7 @@ impl Externals for TestRuntime {
                 let dest_ptr: u32 = args.nth_checked(1)?;
                 let len_ptr: u32 = args.nth_checked(2)?;
 
-                let scratch = (59_541_253_813_967u128 * units as u128)
-                    .to_le_bytes()
-                    .to_vec();
+                let scratch = (59_541_253_813_967u128 * units as u128).to_le_bytes();
 
                 set_seal_value!("seal_weight_to_fee", dest_ptr, len_ptr, &scratch);
 
@@ -813,7 +811,7 @@ impl Externals for TestRuntime {
                 let dest_ptr: u32 = args.nth_checked(0)?;
                 let len_ptr: u32 = args.nth_checked(1)?;
 
-                let scratch = 93_603_701_976_053u128.to_le_bytes().to_vec();
+                let scratch = 93_603_701_976_053u128.to_le_bytes();
 
                 set_seal_value!("seal_tombstone_deposit", dest_ptr, len_ptr, &scratch);
 
