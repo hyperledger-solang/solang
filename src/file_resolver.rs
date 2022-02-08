@@ -166,7 +166,8 @@ impl FileResolver {
             if self.import_paths.is_empty() {
                 // we have no import paths, resolve by what's in the cache
                 let full_path = base.join(&path);
-                let base = (&full_path.parent())
+                let base = full_path
+                    .parent()
                     .expect("path should include filename")
                     .to_path_buf();
 
@@ -177,7 +178,8 @@ impl FileResolver {
                 });
             } else if let Ok(full_path) = base.join(&path).canonicalize() {
                 self.load_file(&full_path)?;
-                let base = (&full_path.parent())
+                let base = full_path
+                    .parent()
                     .expect("path should include filename")
                     .to_path_buf();
 
@@ -195,7 +197,8 @@ impl FileResolver {
         if self.import_paths.is_empty() {
             // we have no import paths, resolve by what's in the cache
             let full_path = path;
-            let base = (&full_path.parent())
+            let base = full_path
+                .parent()
                 .expect("path should include filename")
                 .to_path_buf();
 
