@@ -178,6 +178,10 @@ fn print_expr(e: &Expression, func: Option<&Function>, ns: &Namespace) -> Tree {
             format!("load memory {}", ty.to_string(ns)),
             vec![print_expr(expr, func, ns)],
         ),
+        Expression::GetRef(_, ty, expr) => Tree::Branch(
+            format!("getref {}", ty.to_string(ns)),
+            vec![print_expr(expr, func, ns)],
+        ),
         Expression::StorageLoad(_, ty, expr) => Tree::Branch(
             format!("load storage {}", ty.to_string(ns)),
             vec![print_expr(expr, func, ns)],

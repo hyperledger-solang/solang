@@ -1,6 +1,8 @@
 use crate::parser::pt;
-use crate::sema::ast;
-use crate::sema::ast::{Builtin, Expression, FormatArg, StringLocation};
+use crate::sema::ast::{
+    Builtin, BuiltinStruct, CallTy, Contract, Expression, FormatArg, Namespace, Parameter,
+    StringLocation, Type,
+};
 use std::cell::RefCell;
 use std::convert::TryFrom;
 use std::ffi::CStr;
@@ -82,8 +84,8 @@ pub trait TargetRuntime<'a> {
         args: &mut Vec<BasicValueEnum<'b>>,
         data: PointerValue<'b>,
         length: IntValue<'b>,
-        spec: &[ast::Parameter],
-        ns: &ast::Namespace,
+        spec: &[Parameter],
+        ns: &Namespace,
     );
 
     /// Abi encode with optional four bytes selector. The load parameter should be set if the args are
@@ -95,8 +97,8 @@ pub trait TargetRuntime<'a> {
         load: bool,
         function: FunctionValue<'a>,
         args: &[BasicValueEnum<'a>],
-        tys: &[ast::Type],
-        ns: &ast::Namespace,
+        tys: &[Type],
+        ns: &Namespace,
     ) -> (PointerValue<'a>, IntValue<'a>);
 
     /// ABI encode into a vector for abi.encode* style builtin functions
@@ -106,8 +108,8 @@ pub trait TargetRuntime<'a> {
         function: FunctionValue<'b>,
         packed: &[BasicValueEnum<'b>],
         args: &[BasicValueEnum<'b>],
-        tys: &[ast::Type],
-        ns: &ast::Namespace,
+        tys: &[Type],
+        ns: &Namespace,
     ) -> PointerValue<'b>;
 
     fn set_storage(
@@ -132,7 +134,7 @@ pub trait TargetRuntime<'a> {
         _binary: &Binary<'a>,
         _function: FunctionValue,
         _slot: PointerValue<'a>,
-        _ns: &ast::Namespace,
+        _ns: &Namespace,
     ) -> ArrayValue<'a> {
         unimplemented!();
     }
@@ -163,7 +165,7 @@ pub trait TargetRuntime<'a> {
         bin: &Binary<'a>,
         function: FunctionValue,
         slot: PointerValue<'a>,
-        ns: &ast::Namespace,
+        ns: &Namespace,
     ) -> PointerValue<'a>;
     fn get_storage_bytes_subscript(
         &self,
@@ -184,10 +186,10 @@ pub trait TargetRuntime<'a> {
         &self,
         _bin: &Binary<'a>,
         _function: FunctionValue<'a>,
-        _ty: &ast::Type,
+        _ty: &Type,
         _slot: IntValue<'a>,
         _index: BasicValueEnum<'a>,
-        _ns: &ast::Namespace,
+        _ns: &Namespace,
     ) -> IntValue<'a> {
         // not need for slot-based storage chains
         unimplemented!();
@@ -196,27 +198,27 @@ pub trait TargetRuntime<'a> {
         &self,
         bin: &Binary<'a>,
         function: FunctionValue<'a>,
-        ty: &ast::Type,
+        ty: &Type,
         slot: IntValue<'a>,
         val: Option<BasicValueEnum<'a>>,
-        ns: &ast::Namespace,
+        ns: &Namespace,
     ) -> BasicValueEnum<'a>;
     fn storage_pop(
         &self,
         bin: &Binary<'a>,
         function: FunctionValue<'a>,
-        ty: &ast::Type,
+        ty: &Type,
         slot: IntValue<'a>,
         load: bool,
-        ns: &ast::Namespace,
+        ns: &Namespace,
     ) -> Option<BasicValueEnum<'a>>;
     fn storage_array_length(
         &self,
         _bin: &Binary<'a>,
         _function: FunctionValue,
         _slot: IntValue<'a>,
-        _elem_ty: &ast::Type,
-        _ns: &ast::Namespace,
+        _elem_ty: &Type,
+        _ns: &Namespace,
     ) -> IntValue<'a> {
         unimplemented!();
     }
@@ -228,7 +230,7 @@ pub trait TargetRuntime<'a> {
         src: PointerValue,
         length: IntValue,
         dest: PointerValue,
-        ns: &ast::Namespace,
+        ns: &Namespace,
     );
 
     /// Prints a string
@@ -260,7 +262,7 @@ pub trait TargetRuntime<'a> {
         value: Option<IntValue<'b>>,
         salt: Option<IntValue<'b>>,
         space: Option<IntValue<'b>>,
-        ns: &ast::Namespace,
+        ns: &Namespace,
     );
 
     /// call external function
@@ -274,8 +276,8 @@ pub trait TargetRuntime<'a> {
         address: Option<PointerValue<'b>>,
         gas: IntValue<'b>,
         value: IntValue<'b>,
-        ty: ast::CallTy,
-        ns: &ast::Namespace,
+        ty: CallTy,
+        ns: &Namespace,
     );
 
     /// send value to address
@@ -286,7 +288,7 @@ pub trait TargetRuntime<'a> {
         _success: Option<&mut BasicValueEnum<'b>>,
         _address: PointerValue<'b>,
         _value: IntValue<'b>,
-        _ns: &ast::Namespace,
+        _ns: &Namespace,
     ) {
         unimplemented!();
     }
@@ -298,17 +300,17 @@ pub trait TargetRuntime<'a> {
         expr: &Expression,
         vartab: &HashMap<usize, Variable<'b>>,
         function: FunctionValue<'b>,
-        ns: &ast::Namespace,
+        ns: &Namespace,
     ) -> BasicValueEnum<'b>;
 
     /// Return the return data from an external call (either revert error or return values)
     fn return_data<'b>(&self, bin: &Binary<'b>, function: FunctionValue<'b>) -> PointerValue<'b>;
 
     /// Return the value we received
-    fn value_transferred<'b>(&self, binary: &Binary<'b>, ns: &ast::Namespace) -> IntValue<'b>;
+    fn value_transferred<'b>(&self, binary: &Binary<'b>, ns: &Namespace) -> IntValue<'b>;
 
     /// Terminate execution, destroy bin and send remaining funds to addr
-    fn selfdestruct<'b>(&self, binary: &Binary<'b>, addr: ArrayValue<'b>, ns: &ast::Namespace);
+    fn selfdestruct<'b>(&self, binary: &Binary<'b>, addr: ArrayValue<'b>, ns: &Namespace);
 
     /// Crypto Hash
     fn hash<'b>(
@@ -318,14 +320,14 @@ pub trait TargetRuntime<'a> {
         hash: HashTy,
         string: PointerValue<'b>,
         length: IntValue<'b>,
-        ns: &ast::Namespace,
+        ns: &Namespace,
     ) -> IntValue<'b>;
 
     /// Integer to prefix events with
     fn event_id<'b>(
         &self,
         _bin: &Binary<'b>,
-        _contract: &ast::Contract,
+        _contract: &Contract,
         _event_no: usize,
     ) -> Option<IntValue<'b>> {
         None
@@ -335,25 +337,20 @@ pub trait TargetRuntime<'a> {
     fn emit_event<'b>(
         &self,
         bin: &Binary<'b>,
-        contract: &ast::Contract,
+        contract: &Contract,
         function: FunctionValue<'b>,
         event_no: usize,
         data: &[BasicValueEnum<'b>],
-        data_tys: &[ast::Type],
+        data_tys: &[Type],
         topics: &[BasicValueEnum<'b>],
-        topic_tys: &[ast::Type],
-        ns: &ast::Namespace,
+        topic_tys: &[Type],
+        ns: &Namespace,
     );
 
     /// Helper functions which need access to the trait
 
     /// If we receive a value transfer, and we are "payable", abort with revert
-    fn abort_if_value_transfer(
-        &self,
-        binary: &Binary,
-        function: FunctionValue,
-        ns: &ast::Namespace,
-    ) {
+    fn abort_if_value_transfer(&self, binary: &Binary, function: FunctionValue, ns: &Namespace) {
         let value = self.value_transferred(binary, ns);
 
         let got_value = binary.builder.build_int_compare(
@@ -395,10 +392,10 @@ pub trait TargetRuntime<'a> {
     fn storage_load(
         &self,
         binary: &Binary<'a>,
-        ty: &ast::Type,
+        ty: &Type,
         slot: &mut IntValue<'a>,
         function: FunctionValue,
-        ns: &ast::Namespace,
+        ns: &Namespace,
     ) -> BasicValueEnum<'a> {
         // The storage slot is an i256 accessed through a pointer, so we need
         // to store it
@@ -411,15 +408,15 @@ pub trait TargetRuntime<'a> {
     fn storage_load_slot(
         &self,
         bin: &Binary<'a>,
-        ty: &ast::Type,
+        ty: &Type,
         slot: &mut IntValue<'a>,
         slot_ptr: PointerValue<'a>,
         function: FunctionValue,
-        ns: &ast::Namespace,
+        ns: &Namespace,
     ) -> BasicValueEnum<'a> {
         match ty {
-            ast::Type::Ref(ty) => self.storage_load_slot(bin, ty, slot, slot_ptr, function, ns),
-            ast::Type::Array(_, dim) => {
+            Type::Ref(ty) => self.storage_load_slot(bin, ty, slot, slot_ptr, function, ns),
+            Type::Array(_, dim) => {
                 if let Some(d) = &dim[0] {
                     let llvm_ty = bin.llvm_type(ty.deref_any(), ns);
                     // LLVMSizeOf() produces an i64
@@ -472,7 +469,7 @@ pub trait TargetRuntime<'a> {
                     dest.into()
                 } else {
                     // iterate over dynamic array
-                    let slot_ty = ast::Type::Uint(256);
+                    let slot_ty = Type::Uint(256);
 
                     let size = bin.builder.build_int_truncate(
                         self.storage_load_slot(bin, &slot_ty, slot, slot_ptr, function, ns)
@@ -566,7 +563,7 @@ pub trait TargetRuntime<'a> {
                     dest.into()
                 }
             }
-            ast::Type::Struct(n) => {
+            Type::Struct(n) => {
                 let llvm_ty = bin.llvm_type(ty.deref_any(), ns);
                 // LLVMSizeOf() produces an i64
                 let size = bin.builder.build_int_truncate(
@@ -612,7 +609,7 @@ pub trait TargetRuntime<'a> {
 
                 dest.into()
             }
-            ast::Type::String | ast::Type::DynamicBytes => {
+            Type::String | Type::DynamicBytes => {
                 bin.builder.build_store(slot_ptr, *slot);
 
                 let ret = self.get_storage_string(bin, function, slot_ptr);
@@ -625,7 +622,7 @@ pub trait TargetRuntime<'a> {
 
                 ret.into()
             }
-            ast::Type::InternalFunction { .. } => {
+            Type::InternalFunction { .. } => {
                 bin.builder.build_store(slot_ptr, *slot);
 
                 let ptr_ty = bin
@@ -642,7 +639,7 @@ pub trait TargetRuntime<'a> {
                     )
                     .into()
             }
-            ast::Type::ExternalFunction { .. } => {
+            Type::ExternalFunction { .. } => {
                 bin.builder.build_store(slot_ptr, *slot);
 
                 let ret = self.get_storage_extfunc(bin, function, slot_ptr, ns);
@@ -655,7 +652,7 @@ pub trait TargetRuntime<'a> {
 
                 ret.into()
             }
-            ast::Type::Address(_) | ast::Type::Contract(_) => {
+            Type::Address(_) | Type::Contract(_) => {
                 bin.builder.build_store(slot_ptr, *slot);
 
                 let ret = self.get_storage_address(bin, function, slot_ptr, ns);
@@ -693,11 +690,11 @@ pub trait TargetRuntime<'a> {
     fn storage_store(
         &self,
         bin: &Binary<'a>,
-        ty: &ast::Type,
+        ty: &Type,
         slot: &mut IntValue<'a>,
         dest: BasicValueEnum<'a>,
         function: FunctionValue<'a>,
-        ns: &ast::Namespace,
+        ns: &Namespace,
     ) {
         let slot_ptr = bin.builder.build_alloca(slot.get_type(), "slot");
 
@@ -708,15 +705,15 @@ pub trait TargetRuntime<'a> {
     fn storage_store_slot(
         &self,
         bin: &Binary<'a>,
-        ty: &ast::Type,
+        ty: &Type,
         slot: &mut IntValue<'a>,
         slot_ptr: PointerValue<'a>,
         dest: BasicValueEnum<'a>,
         function: FunctionValue<'a>,
-        ns: &ast::Namespace,
+        ns: &Namespace,
     ) {
         match ty.deref_any() {
-            ast::Type::Array(_, dim) => {
+            Type::Array(_, dim) => {
                 if let Some(d) = &dim[0] {
                     let ty = ty.array_deref();
 
@@ -734,7 +731,7 @@ pub trait TargetRuntime<'a> {
                                 )
                             };
 
-                            if ty.is_reference_type() {
+                            if ty.is_reference_type(ns) {
                                 elem = bin.builder.build_load(elem, "").into_pointer_value();
                             }
 
@@ -748,7 +745,7 @@ pub trait TargetRuntime<'a> {
                                 ns,
                             );
 
-                            if !ty.is_reference_type() {
+                            if !ty.is_reference_type(ns) {
                                 *slot = bin.builder.build_int_add(
                                     *slot,
                                     bin.number_literal(256, &ty.storage_slots(ns), ns),
@@ -761,7 +758,7 @@ pub trait TargetRuntime<'a> {
                     // get the length of the our in-memory array
                     let len = bin.vector_len(dest);
 
-                    let slot_ty = ast::Type::Uint(256);
+                    let slot_ty = Type::Uint(256);
 
                     // details about our array elements
                     let elem_ty = bin.llvm_var(&ty.array_elem(), ns);
@@ -839,7 +836,7 @@ pub trait TargetRuntime<'a> {
                                 "entry",
                             );
 
-                            if ty.is_reference_type() {
+                            if ty.is_reference_type(ns) {
                                 elem = bin.builder.build_load(elem, "").into_pointer_value();
                             }
 
@@ -853,7 +850,7 @@ pub trait TargetRuntime<'a> {
                                 ns,
                             );
 
-                            if !ty.is_reference_type() {
+                            if !ty.is_reference_type(ns) {
                                 *slot = bin.builder.build_int_add(
                                     *slot,
                                     bin.number_literal(256, &ty.storage_slots(ns), ns),
@@ -873,7 +870,7 @@ pub trait TargetRuntime<'a> {
                         |_: IntValue<'a>, slot: &mut IntValue<'a>| {
                             self.storage_delete_slot(bin, &ty, slot, slot_ptr, function, ns);
 
-                            if !ty.is_reference_type() {
+                            if !ty.is_reference_type(ns) {
                                 *slot = bin.builder.build_int_add(
                                     *slot,
                                     bin.number_literal(256, &ty.storage_slots(ns), ns),
@@ -884,7 +881,7 @@ pub trait TargetRuntime<'a> {
                     );
                 }
             }
-            ast::Type::Struct(n) => {
+            Type::Struct(n) => {
                 for (i, field) in ns.structs[*n].fields.iter().enumerate() {
                     let mut elem = unsafe {
                         bin.builder.build_gep(
@@ -897,7 +894,7 @@ pub trait TargetRuntime<'a> {
                         )
                     };
 
-                    if field.ty.is_reference_type() {
+                    if field.ty.is_reference_type(ns) {
                         elem = bin
                             .builder
                             .build_load(elem, field.name_as_str())
@@ -914,8 +911,8 @@ pub trait TargetRuntime<'a> {
                         ns,
                     );
 
-                    if !field.ty.is_reference_type()
-                        || matches!(field.ty, ast::Type::String | ast::Type::DynamicBytes)
+                    if !field.ty.is_reference_type(ns)
+                        || matches!(field.ty, Type::String | Type::DynamicBytes)
                     {
                         *slot = bin.builder.build_int_add(
                             *slot,
@@ -925,17 +922,17 @@ pub trait TargetRuntime<'a> {
                     }
                 }
             }
-            ast::Type::String | ast::Type::DynamicBytes => {
+            Type::String | Type::DynamicBytes => {
                 bin.builder.build_store(slot_ptr, *slot);
 
                 self.set_storage_string(bin, function, slot_ptr, dest);
             }
-            ast::Type::ExternalFunction { .. } => {
+            Type::ExternalFunction { .. } => {
                 bin.builder.build_store(slot_ptr, *slot);
 
                 self.set_storage_extfunc(bin, function, slot_ptr, dest.into_pointer_value());
             }
-            ast::Type::InternalFunction { .. } => {
+            Type::InternalFunction { .. } => {
                 let ptr_ty = bin
                     .context
                     .custom_width_int_type(ns.target.ptr_size() as u32);
@@ -955,7 +952,7 @@ pub trait TargetRuntime<'a> {
 
                 self.set_storage(bin, function, slot_ptr, m);
             }
-            ast::Type::Address(_) | ast::Type::Contract(_) => {
+            Type::Address(_) | Type::Contract(_) => {
                 if dest.is_pointer_value() {
                     bin.builder.build_store(slot_ptr, *slot);
 
@@ -1004,10 +1001,10 @@ pub trait TargetRuntime<'a> {
     fn storage_delete(
         &self,
         bin: &Binary<'a>,
-        ty: &ast::Type,
+        ty: &Type,
         slot: &mut IntValue<'a>,
         function: FunctionValue<'a>,
-        ns: &ast::Namespace,
+        ns: &Namespace,
     ) {
         let slot_ptr = bin.builder.build_alloca(slot.get_type(), "slot");
 
@@ -1018,14 +1015,14 @@ pub trait TargetRuntime<'a> {
     fn storage_delete_slot(
         &self,
         bin: &Binary<'a>,
-        ty: &ast::Type,
+        ty: &Type,
         slot: &mut IntValue<'a>,
         slot_ptr: PointerValue<'a>,
         function: FunctionValue<'a>,
-        ns: &ast::Namespace,
+        ns: &Namespace,
     ) {
         match ty.deref_any() {
-            ast::Type::Array(_, dim) => {
+            Type::Array(_, dim) => {
                 let ty = ty.array_deref();
 
                 if let Some(d) = &dim[0] {
@@ -1037,7 +1034,7 @@ pub trait TargetRuntime<'a> {
                         |_index: IntValue<'a>, slot: &mut IntValue<'a>| {
                             self.storage_delete_slot(bin, &ty, slot, slot_ptr, function, ns);
 
-                            if !ty.is_reference_type() {
+                            if !ty.is_reference_type(ns) {
                                 *slot = bin.builder.build_int_add(
                                     *slot,
                                     bin.number_literal(256, &ty.storage_slots(ns), ns),
@@ -1080,7 +1077,7 @@ pub trait TargetRuntime<'a> {
                         |_index: IntValue<'a>, slot: &mut IntValue<'a>| {
                             self.storage_delete_slot(bin, &ty, slot, slot_ptr, function, ns);
 
-                            if !ty.is_reference_type() {
+                            if !ty.is_reference_type(ns) {
                                 *slot = bin.builder.build_int_add(
                                     *slot,
                                     bin.number_literal(256, &ty.storage_slots(ns), ns),
@@ -1091,22 +1088,15 @@ pub trait TargetRuntime<'a> {
                     );
 
                     // clear length itself
-                    self.storage_delete_slot(
-                        bin,
-                        &ast::Type::Uint(256),
-                        slot,
-                        slot_ptr,
-                        function,
-                        ns,
-                    );
+                    self.storage_delete_slot(bin, &Type::Uint(256), slot, slot_ptr, function, ns);
                 }
             }
-            ast::Type::Struct(n) => {
+            Type::Struct(n) => {
                 for (_, field) in ns.structs[*n].fields.iter().enumerate() {
                     self.storage_delete_slot(bin, &field.ty, slot, slot_ptr, function, ns);
 
-                    if !field.ty.is_reference_type()
-                        || matches!(field.ty, ast::Type::String | ast::Type::DynamicBytes)
+                    if !field.ty.is_reference_type(ns)
+                        || matches!(field.ty, Type::String | Type::DynamicBytes)
                     {
                         *slot = bin.builder.build_int_add(
                             *slot,
@@ -1116,7 +1106,7 @@ pub trait TargetRuntime<'a> {
                     }
                 }
             }
-            ast::Type::Mapping(_, _) => {
+            Type::Mapping(..) => {
                 // nothing to do, step over it
             }
             _ => {
@@ -1138,14 +1128,14 @@ pub trait TargetRuntime<'a> {
         e: &Expression,
         vartab: &HashMap<usize, Variable<'a>>,
         function: FunctionValue<'a>,
-        ns: &ast::Namespace,
+        ns: &Namespace,
     ) -> BasicValueEnum<'a> {
         match e {
             Expression::FunctionArg(_, _, pos) => function.get_nth_param(*pos as u32).unwrap(),
             Expression::BoolLiteral(_, val) => {
                 bin.context.bool_type().const_int(*val as u64, false).into()
             }
-            Expression::NumberLiteral(_, ast::Type::Address(_), val) => {
+            Expression::NumberLiteral(_, Type::Address(_), val) => {
                 // address can be negative; "address(-1)" is 0xffff...
                 let mut bs = val.to_signed_bytes_be();
 
@@ -2009,6 +1999,17 @@ pub trait TargetRuntime<'a> {
                 }
             }
             Expression::Variable(_, _, s) => vartab[s].value,
+            Expression::GetRef(_, _, expr) => {
+                let address = self
+                    .expression(bin, expr, vartab, function, ns)
+                    .into_array_value();
+
+                let stack = bin.build_alloca(function, address.get_type(), "address");
+
+                bin.builder.build_store(stack, address);
+
+                stack.into()
+            }
             Expression::Load(_, ty, e) => {
                 let ptr = self
                     .expression(bin, e, vartab, function, ns)
@@ -2016,7 +2017,7 @@ pub trait TargetRuntime<'a> {
 
                 let value = bin.builder.build_load(ptr, "");
 
-                if ty.is_reference_type() {
+                if ty.is_reference_type(ns) {
                     // if the pointer is null, it needs to be allocated
                     let allocation_needed = bin
                         .builder
@@ -2083,7 +2084,7 @@ pub trait TargetRuntime<'a> {
                     value
                 }
             }
-            Expression::StorageLoad(_, _, _) => {
+            Expression::StorageLoad(..) => {
                 // this should be covered by the Instr::LoadStorage instruction; if we reach this
                 // point the code generation is broken.
                 unreachable!();
@@ -2132,7 +2133,7 @@ pub trait TargetRuntime<'a> {
 
                 self.runtime_cast(bin, function, &from, to, e, ns)
             }
-            Expression::BytesCast(_, ast::Type::Bytes(_), ast::Type::DynamicBytes, e) => {
+            Expression::BytesCast(_, Type::Bytes(_), Type::DynamicBytes, e) => {
                 let e = self
                     .expression(bin, e, vartab, function, ns)
                     .into_int_value();
@@ -2181,7 +2182,7 @@ pub trait TargetRuntime<'a> {
                     )
                     .into()
             }
-            Expression::BytesCast(_, ast::Type::DynamicBytes, ast::Type::Bytes(n), e) => {
+            Expression::BytesCast(_, Type::DynamicBytes, Type::Bytes(n), e) => {
                 let array = self.expression(bin, e, vartab, function, ns);
 
                 let len = bin.vector_len(array);
@@ -2338,7 +2339,7 @@ pub trait TargetRuntime<'a> {
 
                     self.storage_subscript(bin, function, ty, array, index, ns)
                         .into()
-                } else if elem_ty.is_builtin(ns) {
+                } else if elem_ty.builtin_struct(ns) != BuiltinStruct::None {
                     let array = self
                         .expression(bin, a, vartab, function, ns)
                         .into_pointer_value();
@@ -2406,7 +2407,9 @@ pub trait TargetRuntime<'a> {
                     }
                 }
             }
-            Expression::StructMember(_, _, a, _) if a.ty().is_builtin(ns) => {
+            Expression::StructMember(_, _, a, _)
+                if a.ty().builtin_struct(ns) == BuiltinStruct::AccountInfo =>
+            {
                 self.builtin(bin, e, vartab, function, ns)
             }
             Expression::StructMember(_, _, a, i) => {
@@ -2511,7 +2514,7 @@ pub trait TargetRuntime<'a> {
                 array.into()
             }
             Expression::AllocDynamicArray(_, ty, size, init) => {
-                if *ty == ast::Type::Slice {
+                if *ty == Type::Slice {
                     let init = init.as_ref().unwrap();
 
                     let data = bin.emit_global_string("const_string", init, true);
@@ -2528,9 +2531,7 @@ pub trait TargetRuntime<'a> {
                         .into()
                 } else {
                     let elem = match ty {
-                        ast::Type::Slice | ast::Type::String | ast::Type::DynamicBytes => {
-                            ast::Type::Bytes(1)
-                        }
+                        Type::Slice | Type::String | Type::DynamicBytes => Type::Bytes(1),
                         _ => ty.array_elem(),
                     };
 
@@ -2548,7 +2549,7 @@ pub trait TargetRuntime<'a> {
                 }
             }
             Expression::Builtin(_, _, Builtin::ArrayLength, args)
-                if !args[0].ty().array_deref().is_builtin(ns) =>
+                if args[0].ty().array_deref().builtin_struct(ns) == BuiltinStruct::None =>
             {
                 let array = self.expression(bin, &args[0], vartab, function, ns);
 
@@ -2591,14 +2592,14 @@ pub trait TargetRuntime<'a> {
             }
             Expression::Keccak256(_, _, exprs) => {
                 let mut length = bin.context.i32_type().const_zero();
-                let mut values: Vec<(BasicValueEnum, IntValue, ast::Type)> = Vec::new();
+                let mut values: Vec<(BasicValueEnum, IntValue, Type)> = Vec::new();
 
                 // first we need to calculate the length of the buffer and get the types/lengths
                 for e in exprs {
                     let v = self.expression(bin, e, vartab, function, ns);
 
                     let len = match e.ty() {
-                        ast::Type::DynamicBytes | ast::Type::String => bin.vector_len(v),
+                        Type::DynamicBytes | Type::String => bin.vector_len(v),
                         _ => v
                             .get_type()
                             .size_of()
@@ -2625,7 +2626,7 @@ pub trait TargetRuntime<'a> {
                     offset = bin.builder.build_int_add(offset, len, "");
 
                     match ty {
-                        ast::Type::DynamicBytes | ast::Type::String => {
+                        Type::DynamicBytes | Type::String => {
                             let data = bin.vector_bytes(v);
 
                             bin.builder.build_call(
@@ -2969,7 +2970,7 @@ pub trait TargetRuntime<'a> {
 
                 let selector = ns.functions[*function_no].selector();
 
-                assert!(matches!(ty, ast::Type::ExternalFunction { .. }));
+                assert!(matches!(ty, Type::ExternalFunction { .. }));
 
                 let ty = bin.llvm_type(ty, ns);
 
@@ -3087,7 +3088,7 @@ pub trait TargetRuntime<'a> {
                 )
                 .into()
             }
-            Expression::Builtin(_, _, _, _) => self.builtin(bin, e, vartab, function, ns),
+            Expression::Builtin(..) => self.builtin(bin, e, vartab, function, ns),
             Expression::InternalFunctionCfg(cfg_no) => bin.functions[cfg_no]
                 .as_global_value()
                 .as_pointer_value()
@@ -3123,12 +3124,12 @@ pub trait TargetRuntime<'a> {
     fn compare_address(
         &self,
         binary: &Binary<'a>,
-        left: &ast::Expression,
-        right: &ast::Expression,
+        left: &Expression,
+        right: &Expression,
         op: inkwell::IntPredicate,
         vartab: &HashMap<usize, Variable<'a>>,
         function: FunctionValue<'a>,
-        ns: &ast::Namespace,
+        ns: &Namespace,
     ) -> IntValue<'a> {
         let l = self
             .expression(binary, left, vartab, function, ns)
@@ -3189,7 +3190,7 @@ pub trait TargetRuntime<'a> {
         location: &StringLocation,
         vartab: &HashMap<usize, Variable<'a>>,
         function: FunctionValue<'a>,
-        ns: &ast::Namespace,
+        ns: &Namespace,
     ) -> (PointerValue<'a>, IntValue<'a>) {
         match location {
             StringLocation::CompileTime(literal) => (
@@ -3210,17 +3211,17 @@ pub trait TargetRuntime<'a> {
         &self,
         bin: &Binary<'a>,
         function: FunctionValue<'a>,
-        from: &ast::Type,
-        to: &ast::Type,
+        from: &Type,
+        to: &Type,
         val: BasicValueEnum<'a>,
-        ns: &ast::Namespace,
+        ns: &Namespace,
     ) -> BasicValueEnum<'a> {
-        if matches!(from, ast::Type::Address(_) | ast::Type::Contract(_))
-            && matches!(to, ast::Type::Address(_) | ast::Type::Contract(_))
+        if matches!(from, Type::Address(_) | Type::Contract(_))
+            && matches!(to, Type::Address(_) | Type::Contract(_))
         {
             // no conversion needed
             val
-        } else if let ast::Type::Address(_) = to {
+        } else if let Type::Address(_) = to {
             let llvm_ty = bin.llvm_type(from, ns);
 
             let src = bin.build_alloca(function, llvm_ty, "dest");
@@ -3257,7 +3258,7 @@ pub trait TargetRuntime<'a> {
             );
 
             bin.builder.build_load(dest, "val")
-        } else if let ast::Type::Address(_) = from {
+        } else if let Type::Address(_) = from {
             let llvm_ty = bin.llvm_type(to, ns);
 
             let src = bin.build_alloca(function, bin.address_type(ns), "address");
@@ -3303,10 +3304,10 @@ pub trait TargetRuntime<'a> {
     fn emit_cfg(
         &mut self,
         bin: &mut Binary<'a>,
-        contract: &ast::Contract,
+        contract: &Contract,
         cfg: &ControlFlowGraph,
         function: FunctionValue<'a>,
-        ns: &ast::Namespace,
+        ns: &Namespace,
     ) {
         // recurse through basic blocks
         struct BasicBlock<'a> {
@@ -3326,7 +3327,7 @@ pub trait TargetRuntime<'a> {
             bin: &Binary<'a>,
             cfg: &ControlFlowGraph,
             function: FunctionValue,
-            ns: &ast::Namespace,
+            ns: &Namespace,
         ) -> BasicBlock<'a> {
             let cfg_bb = &cfg.blocks[block_no];
             let mut phis = HashMap::new();
@@ -3360,7 +3361,7 @@ pub trait TargetRuntime<'a> {
 
         for (no, v) in &cfg.vars {
             match v.storage {
-                Storage::Local if v.ty.is_reference_type() && !v.ty.is_contract_storage() => {
+                Storage::Local if v.ty.is_reference_type(ns) && !v.ty.is_contract_storage() => {
                     // a null pointer means an empty, zero'ed thing, be it string, struct or array
                     let value = bin
                         .llvm_type(&v.ty, ns)
@@ -3382,7 +3383,7 @@ pub trait TargetRuntime<'a> {
                         },
                     );
                 }
-                Storage::Constant(_) | Storage::Contract(_) if v.ty.is_reference_type() => {
+                Storage::Constant(_) | Storage::Contract(_) if v.ty.is_reference_type(ns) => {
                     // This needs a placeholder
                     vars.insert(
                         *no,
@@ -3400,8 +3401,10 @@ pub trait TargetRuntime<'a> {
                                 ty.into_pointer_type().const_zero().into()
                             } else if ty.is_array_type() {
                                 ty.into_array_type().const_zero().into()
-                            } else {
+                            } else if ty.is_int_type() {
                                 ty.into_int_type().const_zero().into()
+                            } else {
+                                ty.into_struct_type().const_zero().into()
                             },
                         },
                     );
@@ -3435,6 +3438,7 @@ pub trait TargetRuntime<'a> {
 
                             bin.builder.build_store(arg.into_pointer_value(), retval);
                         }
+
                         bin.builder
                             .build_return(Some(&bin.return_values[&ReturnCode::Success]));
                     }
@@ -3631,14 +3635,14 @@ pub trait TargetRuntime<'a> {
 
                         // Calculate total size for reallocation
                         let elem_ty = match ty {
-                            ast::Type::Array(..) => match bin.llvm_type(&ty.array_elem(), ns) {
+                            Type::Array(..) => match bin.llvm_type(&ty.array_elem(), ns) {
                                 elem @ BasicTypeEnum::StructType(_) => {
                                     // We don't store structs directly in the array, instead we store references to structs
                                     elem.ptr_type(AddressSpace::Generic).as_basic_type_enum()
                                 }
                                 elem => elem,
                             },
-                            ast::Type::DynamicBytes => bin.context.i8_type().into(),
+                            Type::DynamicBytes => bin.context.i8_type().into(),
                             _ => unreachable!(),
                         };
                         let elem_size = elem_ty
@@ -3777,14 +3781,14 @@ pub trait TargetRuntime<'a> {
 
                         // Calculate total size for reallocation
                         let elem_ty = match ty {
-                            ast::Type::Array(..) => match bin.llvm_type(&ty.array_elem(), ns) {
+                            Type::Array(..) => match bin.llvm_type(&ty.array_elem(), ns) {
                                 elem @ BasicTypeEnum::StructType(_) => {
                                     // We don't store structs directly in the array, instead we store references to structs
                                     elem.ptr_type(AddressSpace::Generic).as_basic_type_enum()
                                 }
                                 elem => elem,
                             },
-                            ast::Type::DynamicBytes => bin.context.i8_type().into(),
+                            Type::DynamicBytes => bin.context.i8_type().into(),
                             _ => unreachable!(),
                         };
                         let elem_size = elem_ty
@@ -3906,7 +3910,7 @@ pub trait TargetRuntime<'a> {
                             false,
                             function,
                             &[v],
-                            &[ast::Type::String],
+                            &[Type::String],
                             ns,
                         );
 
@@ -3985,8 +3989,8 @@ pub trait TargetRuntime<'a> {
                                 let dest = w.vars[&res[i]].value;
 
                                 if dest.is_pointer_value()
-                                    && !(v.ty.is_reference_type()
-                                        || matches!(v.ty, ast::Type::ExternalFunction { .. }))
+                                    && !(v.ty.is_reference_type(ns)
+                                        || matches!(v.ty, Type::ExternalFunction { .. }))
                                 {
                                     bin.builder.build_store(dest.into_pointer_value(), val);
                                 } else {
@@ -4003,12 +4007,12 @@ pub trait TargetRuntime<'a> {
                     } => {
                         let ty = call_expr.ty();
 
-                        let returns =
-                            if let ast::Type::InternalFunction { returns, .. } = ty.deref_any() {
-                                returns
-                            } else {
-                                panic!("should be Type::InternalFunction type");
-                            };
+                        let returns = if let Type::InternalFunction { returns, .. } = ty.deref_any()
+                        {
+                            returns
+                        } else {
+                            panic!("should be Type::InternalFunction type");
+                        };
 
                         let mut parms = args
                             .iter()
@@ -4066,7 +4070,7 @@ pub trait TargetRuntime<'a> {
 
                                 let dest = w.vars[&res[i]].value;
 
-                                if dest.is_pointer_value() && !ty.is_reference_type() {
+                                if dest.is_pointer_value() && !ty.is_reference_type(ns) {
                                     bin.builder.build_store(dest.into_pointer_value(), val);
                                 } else {
                                     w.vars.get_mut(&res[i]).unwrap().value = val;
@@ -4406,8 +4410,8 @@ pub trait TargetRuntime<'a> {
     fn emit_function_dispatch<F>(
         &self,
         bin: &Binary<'a>,
-        contract: &ast::Contract,
-        ns: &ast::Namespace,
+        contract: &Contract,
+        ns: &Namespace,
         function_ty: pt::FunctionTy,
         argsdata: inkwell::values::PointerValue<'a>,
         argslen: inkwell::values::IntValue<'a>,
@@ -4577,7 +4581,7 @@ pub trait TargetRuntime<'a> {
         &self,
         bin: &Binary<'a>,
         f: &ControlFlowGraph,
-        ns: &ast::Namespace,
+        ns: &Namespace,
         cases: &mut Vec<(
             inkwell::values::IntValue<'a>,
             inkwell::basic_block::BasicBlock<'a>,
@@ -4606,7 +4610,7 @@ pub trait TargetRuntime<'a> {
         // add return values as pointer arguments at the end
         if !f.returns.is_empty() {
             for v in f.returns.iter() {
-                args.push(if !v.ty.is_reference_type() {
+                args.push(if !v.ty.is_reference_type(ns) {
                     bin.build_alloca(function, bin.llvm_type(&v.ty, ns), v.name_as_str())
                         .into()
                 } else {
@@ -4667,7 +4671,7 @@ pub trait TargetRuntime<'a> {
             // return ABI of length 0
             self.return_empty_abi(bin);
         } else {
-            let tys: Vec<ast::Type> = f.returns.iter().map(|p| p.ty.clone()).collect();
+            let tys: Vec<Type> = f.returns.iter().map(|p| p.ty.clone()).collect();
 
             let (data, length) = self.abi_encode(
                 bin,
@@ -4698,8 +4702,8 @@ pub trait TargetRuntime<'a> {
     fn emit_initializer(
         &mut self,
         bin: &mut Binary<'a>,
-        contract: &ast::Contract,
-        ns: &ast::Namespace,
+        contract: &Contract,
+        ns: &Namespace,
     ) -> FunctionValue<'a> {
         let function_ty = bin.function_type(&[], &[], ns);
 
@@ -4717,12 +4721,7 @@ pub trait TargetRuntime<'a> {
     }
 
     /// Emit all functions, constructors, fallback and receiver
-    fn emit_functions(
-        &mut self,
-        bin: &mut Binary<'a>,
-        contract: &ast::Contract,
-        ns: &ast::Namespace,
-    ) {
+    fn emit_functions(&mut self, bin: &mut Binary<'a>, contract: &Contract, ns: &Namespace) {
         let mut defines = Vec::new();
 
         for (cfg_no, cfg) in contract.cfg.iter().enumerate() {
@@ -4731,11 +4730,11 @@ pub trait TargetRuntime<'a> {
                     &cfg.params
                         .iter()
                         .map(|p| p.ty.clone())
-                        .collect::<Vec<ast::Type>>(),
+                        .collect::<Vec<Type>>(),
                     &cfg.returns
                         .iter()
                         .map(|p| p.ty.clone())
-                        .collect::<Vec<ast::Type>>(),
+                        .collect::<Vec<Type>>(),
                     ns,
                 );
 
@@ -4763,7 +4762,7 @@ pub trait TargetRuntime<'a> {
         args: &[(FormatArg, Expression)],
         vartab: &HashMap<usize, Variable<'a>>,
         function: FunctionValue<'a>,
-        ns: &ast::Namespace,
+        ns: &Namespace,
     ) -> BasicValueEnum<'a> {
         // first we need to calculate the space we need
         let mut length = bin.context.i32_type().const_zero();
@@ -4782,23 +4781,21 @@ pub trait TargetRuntime<'a> {
             } else {
                 match arg.ty() {
                     // bool: "true" or "false"
-                    ast::Type::Bool => bin.context.i32_type().const_int(5, false),
+                    Type::Bool => bin.context.i32_type().const_int(5, false),
                     // hex encode bytes
-                    ast::Type::Contract(_) | ast::Type::Address(_) => bin
+                    Type::Contract(_) | Type::Address(_) => bin
                         .context
                         .i32_type()
                         .const_int(ns.address_length as u64 * 2, false),
-                    ast::Type::Bytes(size) => {
-                        bin.context.i32_type().const_int(size as u64 * 2, false)
-                    }
-                    ast::Type::String => {
+                    Type::Bytes(size) => bin.context.i32_type().const_int(size as u64 * 2, false),
+                    Type::String => {
                         let val = self.expression(bin, arg, vartab, function, ns);
 
                         evaluated_arg[i] = Some(val);
 
                         bin.vector_len(val)
                     }
-                    ast::Type::DynamicBytes => {
+                    Type::DynamicBytes => {
                         let val = self.expression(bin, arg, vartab, function, ns);
 
                         evaluated_arg[i] = Some(val);
@@ -4808,26 +4805,26 @@ pub trait TargetRuntime<'a> {
 
                         bin.builder.build_int_add(len, len, "hex_len")
                     }
-                    ast::Type::Uint(bits) if *spec == FormatArg::Hex => {
+                    Type::Uint(bits) if *spec == FormatArg::Hex => {
                         bin.context.i32_type().const_int(bits as u64 / 8 + 2, false)
                     }
-                    ast::Type::Int(bits) if *spec == FormatArg::Hex => {
+                    Type::Int(bits) if *spec == FormatArg::Hex => {
                         bin.context.i32_type().const_int(bits as u64 / 8 + 3, false)
                     }
-                    ast::Type::Uint(bits) if *spec == FormatArg::Binary => {
+                    Type::Uint(bits) if *spec == FormatArg::Binary => {
                         bin.context.i32_type().const_int(bits as u64 + 2, false)
                     }
-                    ast::Type::Int(bits) if *spec == FormatArg::Binary => {
+                    Type::Int(bits) if *spec == FormatArg::Binary => {
                         bin.context.i32_type().const_int(bits as u64 + 3, false)
                     }
                     // bits / 3 is a rough over-estimate of how many decimals we need
-                    ast::Type::Uint(bits) if *spec == FormatArg::Default => {
+                    Type::Uint(bits) if *spec == FormatArg::Default => {
                         bin.context.i32_type().const_int(bits as u64 / 3, false)
                     }
-                    ast::Type::Int(bits) if *spec == FormatArg::Default => {
+                    Type::Int(bits) if *spec == FormatArg::Default => {
                         bin.context.i32_type().const_int(bits as u64 / 3 + 1, false)
                     }
-                    ast::Type::Enum(enum_no) => bin
+                    Type::Enum(enum_no) => bin
                         .context
                         .i32_type()
                         .const_int(ns.enums[enum_no].ty.bits(ns) as u64 / 3, false),
@@ -4867,7 +4864,7 @@ pub trait TargetRuntime<'a> {
                 let arg_ty = arg.ty();
 
                 match arg_ty {
-                    ast::Type::Bool => {
+                    Type::Bool => {
                         let len = bin
                             .builder
                             .build_select(
@@ -4893,7 +4890,7 @@ pub trait TargetRuntime<'a> {
 
                         output = unsafe { bin.builder.build_gep(output, &[len], "") };
                     }
-                    ast::Type::String => {
+                    Type::String => {
                         let s = bin.vector_bytes(val);
                         let len = bin.vector_len(val);
 
@@ -4905,7 +4902,7 @@ pub trait TargetRuntime<'a> {
 
                         output = unsafe { bin.builder.build_gep(output, &[len], "") };
                     }
-                    ast::Type::DynamicBytes => {
+                    Type::DynamicBytes => {
                         let s = bin.vector_bytes(val);
                         let len = bin.vector_len(val);
 
@@ -4919,7 +4916,7 @@ pub trait TargetRuntime<'a> {
 
                         output = unsafe { bin.builder.build_gep(output, &[hex_len], "") };
                     }
-                    ast::Type::Address(_) | ast::Type::Contract(_) => {
+                    Type::Address(_) | Type::Contract(_) => {
                         // for Solana/Substrate, we should encode in base58
                         let buf = bin.build_alloca(function, bin.address_type(ns), "address");
 
@@ -4946,7 +4943,7 @@ pub trait TargetRuntime<'a> {
 
                         output = unsafe { bin.builder.build_gep(output, &[hex_len], "") };
                     }
-                    ast::Type::Bytes(size) => {
+                    Type::Bytes(size) => {
                         let buf = bin.build_alloca(function, bin.llvm_type(&arg_ty, ns), "bytesN");
 
                         bin.builder.build_store(buf, val.into_int_value());
@@ -4969,7 +4966,7 @@ pub trait TargetRuntime<'a> {
 
                         output = unsafe { bin.builder.build_gep(output, &[hex_len], "") };
                     }
-                    ast::Type::Enum(_) => {
+                    Type::Enum(_) => {
                         let val = bin.builder.build_int_z_extend(
                             val.into_int_value(),
                             bin.context.i64_type(),
@@ -4988,7 +4985,7 @@ pub trait TargetRuntime<'a> {
                             .unwrap()
                             .into_pointer_value();
                     }
-                    ast::Type::Uint(bits) => {
+                    Type::Uint(bits) => {
                         if *spec == FormatArg::Default && bits <= 64 {
                             let val = if bits == 64 {
                                 val.into_int_value()
@@ -5096,7 +5093,7 @@ pub trait TargetRuntime<'a> {
                                 .into_pointer_value();
                         }
                     }
-                    ast::Type::Int(bits) => {
+                    Type::Int(bits) => {
                         let val = val.into_int_value();
 
                         let is_negative = bin.builder.build_int_compare(
@@ -5598,8 +5595,8 @@ impl<'a> Binary<'a> {
     /// Build the LLVM IR for a single contract
     pub fn build(
         context: &'a Context,
-        contract: &'a ast::Contract,
-        ns: &'a ast::Namespace,
+        contract: &'a Contract,
+        ns: &'a Namespace,
         filename: &'a str,
         opt: OptimizationLevel,
         math_overflow_check: bool,
@@ -5630,7 +5627,7 @@ impl<'a> Binary<'a> {
     /// Build the LLVM IR for a set of contracts in a single namespace
     pub fn build_bundle(
         context: &'a Context,
-        namespaces: &'a [ast::Namespace],
+        namespaces: &'a [Namespace],
         filename: &str,
         opt: OptimizationLevel,
         math_overflow_check: bool,
@@ -5850,7 +5847,7 @@ impl<'a> Binary<'a> {
     }
 
     /// Set flags for early aborts if a value transfer is done and no function/constructor can handle it
-    pub fn set_early_value_aborts(&mut self, contract: &ast::Contract, ns: &ast::Namespace) {
+    pub fn set_early_value_aborts(&mut self, contract: &Contract, ns: &Namespace) {
         // if there is no payable function, fallback or receive then abort all value transfers at the top
         // note that receive() is always payable so this just checkes for presence.
         self.function_abort_value_transfers = !contract.functions.iter().any(|function_no| {
@@ -5865,13 +5862,13 @@ impl<'a> Binary<'a> {
     }
 
     /// llvm value type, as in chain currency (usually 128 bits int)
-    fn value_type(&self, ns: &ast::Namespace) -> IntType<'a> {
+    fn value_type(&self, ns: &Namespace) -> IntType<'a> {
         self.context
             .custom_width_int_type(ns.value_length as u32 * 8)
     }
 
     /// llvm address type
-    fn address_type(&self, ns: &ast::Namespace) -> ArrayType<'a> {
+    fn address_type(&self, ns: &Namespace) -> ArrayType<'a> {
         self.context.i8_type().array_type(ns.address_length as u32)
     }
 
@@ -6150,7 +6147,7 @@ impl<'a> Binary<'a> {
     }
 
     /// Convert a BigInt number to llvm const value
-    fn number_literal(&self, bits: u32, n: &BigInt, _ns: &ast::Namespace) -> IntValue<'a> {
+    fn number_literal(&self, bits: u32, n: &BigInt, _ns: &Namespace) -> IntValue<'a> {
         let ty = self.context.custom_width_int_type(bits);
         let s = n.to_string();
 
@@ -6158,12 +6155,7 @@ impl<'a> Binary<'a> {
     }
 
     /// Emit function prototype
-    fn function_type(
-        &self,
-        params: &[ast::Type],
-        returns: &[ast::Type],
-        ns: &ast::Namespace,
-    ) -> FunctionType<'a> {
+    fn function_type(&self, params: &[Type], returns: &[Type], ns: &Namespace) -> FunctionType<'a> {
         // function parameters
         let mut args = params
             .iter()
@@ -6172,7 +6164,7 @@ impl<'a> Binary<'a> {
 
         // add return values
         for ty in returns {
-            args.push(if ty.is_reference_type() && !ty.is_contract_storage() {
+            args.push(if ty.is_reference_type(ns) && !ty.is_contract_storage() {
                 self.llvm_type(ty, ns)
                     .ptr_type(AddressSpace::Generic)
                     .ptr_type(AddressSpace::Generic)
@@ -6255,19 +6247,18 @@ impl<'a> Binary<'a> {
     }
 
     /// Return the llvm type for a variable holding the type, not the type itself
-    fn llvm_var(&self, ty: &ast::Type, ns: &ast::Namespace) -> BasicTypeEnum<'a> {
+    fn llvm_var(&self, ty: &Type, ns: &Namespace) -> BasicTypeEnum<'a> {
         let llvm_ty = self.llvm_type(ty, ns);
         match ty.deref_memory() {
-            ast::Type::Struct(_)
-            | ast::Type::Array(_, _)
-            | ast::Type::DynamicBytes
-            | ast::Type::String => llvm_ty.ptr_type(AddressSpace::Generic).as_basic_type_enum(),
+            Type::Struct(_) | Type::Array(..) | Type::DynamicBytes | Type::String => {
+                llvm_ty.ptr_type(AddressSpace::Generic).as_basic_type_enum()
+            }
             _ => llvm_ty,
         }
     }
 
     /// Default empty value
-    fn default_value(&self, ty: &ast::Type, ns: &ast::Namespace) -> BasicValueEnum<'a> {
+    fn default_value(&self, ty: &Type, ns: &Namespace) -> BasicValueEnum<'a> {
         let llvm_ty = self.llvm_var(ty, ns);
 
         // const_zero() on BasicTypeEnum yet. Should be coming to inkwell soon
@@ -6281,101 +6272,104 @@ impl<'a> Binary<'a> {
     }
 
     /// Return the llvm type for the resolved type.
-    fn llvm_type(&self, ty: &ast::Type, ns: &ast::Namespace) -> BasicTypeEnum<'a> {
-        if ty.is_builtin(ns) {
+    fn llvm_type(&self, ty: &Type, ns: &Namespace) -> BasicTypeEnum<'a> {
+        if ty.builtin_struct(ns) == BuiltinStruct::AccountInfo {
             return self
                 .module
                 .get_struct_type("struct.SolAccountInfo")
                 .unwrap()
                 .into();
-        }
-        match ty {
-            ast::Type::Bool => BasicTypeEnum::IntType(self.context.bool_type()),
-            ast::Type::Int(n) | ast::Type::Uint(n) => {
-                BasicTypeEnum::IntType(self.context.custom_width_int_type(*n as u32))
-            }
-            ast::Type::Value => BasicTypeEnum::IntType(
-                self.context
-                    .custom_width_int_type(ns.value_length as u32 * 8),
-            ),
-            ast::Type::Contract(_) | ast::Type::Address(_) => {
-                BasicTypeEnum::ArrayType(self.address_type(ns))
-            }
-            ast::Type::Bytes(n) => {
-                BasicTypeEnum::IntType(self.context.custom_width_int_type(*n as u32 * 8))
-            }
-            ast::Type::Enum(n) => self.llvm_type(&ns.enums[*n].ty, ns),
-            ast::Type::String | ast::Type::DynamicBytes => {
-                self.module.get_struct_type("struct.vector").unwrap().into()
-            }
-            ast::Type::Array(base_ty, dims) => {
-                let ty = self.llvm_var(base_ty, ns);
+        } else {
+            match ty {
+                Type::Bool => BasicTypeEnum::IntType(self.context.bool_type()),
+                Type::Int(n) | Type::Uint(n) => {
+                    BasicTypeEnum::IntType(self.context.custom_width_int_type(*n as u32))
+                }
+                Type::Value => BasicTypeEnum::IntType(
+                    self.context
+                        .custom_width_int_type(ns.value_length as u32 * 8),
+                ),
+                Type::Contract(_) | Type::Address(_) => {
+                    BasicTypeEnum::ArrayType(self.address_type(ns))
+                }
+                Type::Bytes(n) => {
+                    BasicTypeEnum::IntType(self.context.custom_width_int_type(*n as u32 * 8))
+                }
+                Type::Enum(n) => self.llvm_type(&ns.enums[*n].ty, ns),
+                Type::String | Type::DynamicBytes => {
+                    self.module.get_struct_type("struct.vector").unwrap().into()
+                }
+                Type::Array(base_ty, dims) => {
+                    let ty = self.llvm_var(base_ty, ns);
 
-                let mut dims = dims.iter();
+                    let mut dims = dims.iter();
 
-                let mut aty = match dims.next().unwrap() {
-                    Some(d) => ty.array_type(d.to_u32().unwrap()),
-                    None => return self.module.get_struct_type("struct.vector").unwrap().into(),
-                };
-
-                for dim in dims {
-                    match dim {
-                        Some(d) => aty = aty.array_type(d.to_u32().unwrap()),
+                    let mut aty = match dims.next().unwrap() {
+                        Some(d) => ty.array_type(d.to_u32().unwrap()),
                         None => {
                             return self.module.get_struct_type("struct.vector").unwrap().into()
                         }
+                    };
+
+                    for dim in dims {
+                        match dim {
+                            Some(d) => aty = aty.array_type(d.to_u32().unwrap()),
+                            None => {
+                                return self.module.get_struct_type("struct.vector").unwrap().into()
+                            }
+                        }
                     }
+
+                    BasicTypeEnum::ArrayType(aty)
                 }
+                Type::Struct(n) => self
+                    .context
+                    .struct_type(
+                        &ns.structs[*n]
+                            .fields
+                            .iter()
+                            .map(|f| self.llvm_var(&f.ty, ns))
+                            .collect::<Vec<BasicTypeEnum>>(),
+                        false,
+                    )
+                    .as_basic_type_enum(),
+                Type::Mapping(..) => unreachable!(),
+                Type::Ref(r) => self
+                    .llvm_type(r, ns)
+                    .ptr_type(AddressSpace::Generic)
+                    .as_basic_type_enum(),
+                Type::StorageRef(..) => self.llvm_type(&ns.storage_type(), ns),
+                Type::InternalFunction {
+                    params, returns, ..
+                } => {
+                    let ftype = self.function_type(params, returns, ns);
 
-                BasicTypeEnum::ArrayType(aty)
-            }
-            ast::Type::Struct(n) => self
-                .context
-                .struct_type(
-                    &ns.structs[*n]
-                        .fields
-                        .iter()
-                        .map(|f| self.llvm_var(&f.ty, ns))
-                        .collect::<Vec<BasicTypeEnum>>(),
-                    false,
-                )
-                .as_basic_type_enum(),
-            ast::Type::Mapping(_, _) => unreachable!(),
-            ast::Type::Ref(r) => self
-                .llvm_type(r, ns)
-                .ptr_type(AddressSpace::Generic)
-                .as_basic_type_enum(),
-            ast::Type::StorageRef(_, _) => self.llvm_type(&ns.storage_type(), ns),
-            ast::Type::InternalFunction {
-                params, returns, ..
-            } => {
-                let ftype = self.function_type(params, returns, ns);
+                    BasicTypeEnum::PointerType(ftype.ptr_type(AddressSpace::Generic))
+                }
+                Type::ExternalFunction { .. } => {
+                    let address = self.llvm_type(&Type::Address(false), ns);
+                    let selector = self.llvm_type(&Type::Uint(32), ns);
 
-                BasicTypeEnum::PointerType(ftype.ptr_type(AddressSpace::Generic))
-            }
-            ast::Type::ExternalFunction { .. } => {
-                let address = self.llvm_type(&ast::Type::Address(false), ns);
-                let selector = self.llvm_type(&ast::Type::Uint(32), ns);
-
-                BasicTypeEnum::PointerType(
-                    self.context
-                        .struct_type(&[address, selector], false)
-                        .ptr_type(AddressSpace::Generic),
-                )
-            }
-            ast::Type::Slice => BasicTypeEnum::StructType(
-                self.context.struct_type(
-                    &[
+                    BasicTypeEnum::PointerType(
                         self.context
-                            .i8_type()
-                            .ptr_type(AddressSpace::Generic)
-                            .into(),
-                        self.context.i32_type().into(),
-                    ],
-                    false,
+                            .struct_type(&[address, selector], false)
+                            .ptr_type(AddressSpace::Generic),
+                    )
+                }
+                Type::Slice => BasicTypeEnum::StructType(
+                    self.context.struct_type(
+                        &[
+                            self.context
+                                .i8_type()
+                                .ptr_type(AddressSpace::Generic)
+                                .into(),
+                            self.context.i32_type().into(),
+                        ],
+                        false,
+                    ),
                 ),
-            ),
-            _ => unreachable!(),
+                _ => unreachable!(),
+            }
         }
     }
 
@@ -6561,13 +6555,13 @@ impl<'a> Binary<'a> {
     /// Dereference an array
     fn array_subscript(
         &self,
-        array_ty: &ast::Type,
+        array_ty: &Type,
         array: PointerValue<'a>,
         index: IntValue<'a>,
-        ns: &ast::Namespace,
+        ns: &Namespace,
     ) -> PointerValue<'a> {
         match array_ty {
-            ast::Type::Array(_, dim) => {
+            Type::Array(_, dim) => {
                 if dim[0].is_some() {
                     // fixed size array
                     unsafe {

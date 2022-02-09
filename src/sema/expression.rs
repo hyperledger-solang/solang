@@ -14,8 +14,8 @@ use std::ops::{Add, Shl, Sub};
 
 use super::address::to_hexstr_eip55;
 use super::ast::{
-    Builtin, CallTy, Diagnostic, Expression, Function, Mutability, Namespace, StringLocation,
-    Symbol, Type,
+    Builtin, BuiltinStruct, CallTy, Diagnostic, Expression, Function, Mutability, Namespace,
+    StringLocation, Symbol, Type,
 };
 use super::builtin;
 use super::contracts::{is_base, visit_bases};
@@ -36,41 +36,42 @@ impl Expression {
     /// panics will occur otherwise
     pub fn ty(&self) -> Type {
         match self {
-            Expression::BoolLiteral(_, _)
-            | Expression::More(_, _, _)
-            | Expression::Less(_, _, _)
-            | Expression::MoreEqual(_, _, _)
-            | Expression::LessEqual(_, _, _)
-            | Expression::Equal(_, _, _)
-            | Expression::Or(_, _, _)
-            | Expression::And(_, _, _)
-            | Expression::NotEqual(_, _, _)
-            | Expression::Not(_, _)
-            | Expression::StringCompare(_, _, _) => Type::Bool,
-            Expression::AbiEncode { .. } | Expression::CodeLiteral(_, _, _) => Type::DynamicBytes,
-            Expression::StringConcat(_, ty, _, _)
+            Expression::BoolLiteral(..)
+            | Expression::More(..)
+            | Expression::Less(..)
+            | Expression::MoreEqual(..)
+            | Expression::LessEqual(..)
+            | Expression::Equal(..)
+            | Expression::Or(..)
+            | Expression::And(..)
+            | Expression::NotEqual(..)
+            | Expression::Not(..)
+            | Expression::StringCompare(..) => Type::Bool,
+            Expression::AbiEncode { .. } | Expression::CodeLiteral(..) => Type::DynamicBytes,
+            Expression::StringConcat(_, ty, ..)
             | Expression::FunctionArg(_, ty, _)
             | Expression::BytesLiteral(_, ty, _)
             | Expression::NumberLiteral(_, ty, _)
             | Expression::RationalNumberLiteral(_, ty, _)
             | Expression::StructLiteral(_, ty, _)
-            | Expression::ArrayLiteral(_, ty, _, _)
-            | Expression::ConstArrayLiteral(_, ty, _, _)
+            | Expression::ArrayLiteral(_, ty, ..)
+            | Expression::ConstArrayLiteral(_, ty, ..)
             | Expression::Add(_, ty, ..)
             | Expression::Subtract(_, ty, ..)
-            | Expression::Multiply(_, ty, _, _, _)
-            | Expression::Divide(_, ty, _, _)
-            | Expression::Modulo(_, ty, _, _)
-            | Expression::Power(_, ty, _, _, _)
-            | Expression::BitwiseOr(_, ty, _, _)
-            | Expression::BitwiseAnd(_, ty, _, _)
-            | Expression::BitwiseXor(_, ty, _, _)
-            | Expression::ShiftLeft(_, ty, _, _)
-            | Expression::ShiftRight(_, ty, _, _, _)
+            | Expression::Multiply(_, ty, ..)
+            | Expression::Divide(_, ty, ..)
+            | Expression::Modulo(_, ty, ..)
+            | Expression::Power(_, ty, ..)
+            | Expression::BitwiseOr(_, ty, ..)
+            | Expression::BitwiseAnd(_, ty, ..)
+            | Expression::BitwiseXor(_, ty, ..)
+            | Expression::ShiftLeft(_, ty, ..)
+            | Expression::ShiftRight(_, ty, ..)
             | Expression::Variable(_, ty, _)
-            | Expression::ConstantVariable(_, ty, _, _)
-            | Expression::StorageVariable(_, ty, _, _)
+            | Expression::ConstantVariable(_, ty, ..)
+            | Expression::StorageVariable(_, ty, ..)
             | Expression::Load(_, ty, _)
+            | Expression::GetRef(_, ty, _)
             | Expression::StorageLoad(_, ty, _)
             | Expression::ZeroExt(_, ty, _)
             | Expression::SignExt(_, ty, _)
@@ -80,21 +81,21 @@ impl Expression {
             | Expression::BytesCast(_, _, ty, _)
             | Expression::Complement(_, ty, _)
             | Expression::UnaryMinus(_, ty, _)
-            | Expression::Ternary(_, ty, _, _, _)
-            | Expression::StructMember(_, ty, _, _)
-            | Expression::AllocDynamicArray(_, ty, _, _)
+            | Expression::Ternary(_, ty, ..)
+            | Expression::StructMember(_, ty, ..)
+            | Expression::AllocDynamicArray(_, ty, ..)
             | Expression::PreIncrement(_, ty, ..)
             | Expression::PreDecrement(_, ty, ..)
             | Expression::PostIncrement(_, ty, ..)
             | Expression::PostDecrement(_, ty, ..)
             | Expression::Keccak256(_, ty, _)
-            | Expression::Assign(_, ty, _, _) => ty.clone(),
-            Expression::Subscript(_, ty, _, _, _) => ty.clone(),
+            | Expression::Assign(_, ty, ..) => ty.clone(),
+            Expression::Subscript(_, ty, ..) => ty.clone(),
             Expression::StorageArrayLength { ty, .. } => ty.clone(),
             Expression::ExternalFunctionCallRaw { .. } => {
                 panic!("two return values");
             }
-            Expression::Builtin(_, returns, _, _)
+            Expression::Builtin(_, returns, ..)
             | Expression::InternalFunctionCall { returns, .. }
             | Expression::ExternalFunctionCall { returns, .. } => {
                 assert_eq!(returns.len(), 1);
@@ -108,7 +109,7 @@ impl Expression {
             Expression::Constructor { contract_no, .. } => Type::Contract(*contract_no),
             Expression::Poison => unreachable!(),
             Expression::InterfaceId(..) => Type::Bytes(4),
-            Expression::FormatString(_, _) => Type::String,
+            Expression::FormatString(..) => Type::String,
             // codegen Expressions
             Expression::ReturnData(_) => Type::DynamicBytes,
             Expression::InternalFunction { ty, .. } => ty.clone(),
@@ -131,7 +132,7 @@ impl Expression {
     /// Return the type for this expression.
     pub fn tys(&self) -> Vec<Type> {
         match self {
-            Expression::Builtin(_, returns, _, _)
+            Expression::Builtin(_, returns, ..)
             | Expression::InternalFunctionCall { returns, .. }
             | Expression::ExternalFunctionCall { returns, .. } => returns.to_vec(),
             Expression::List(_, list) => list.iter().map(|e| e.ty()).collect(),
@@ -308,7 +309,7 @@ fn get_int_length(
             ));
             Err(())
         }
-        Type::Array(_, _) => {
+        Type::Array(..) => {
             diagnostics.push(Diagnostic::error(
                 *l_loc,
                 format!("type array {} not allowed", l.to_string(ns)),
@@ -538,6 +539,18 @@ pub fn cast(
 
     if &from == to {
         return Ok(expr);
+    }
+
+    // First of all, if we need a ref then derefence it
+    if matches!(to, Type::Ref(..)) && !matches!(from, Type::Ref(..)) {
+        return cast(
+            loc,
+            Expression::GetRef(*loc, Type::Ref(Box::new(from)), Box::new(expr)),
+            to,
+            implicit,
+            ns,
+            diagnostics,
+        );
     }
 
     // First of all, if we have a ref then derefence it
@@ -1851,7 +1864,7 @@ pub fn expression(
             ));
             Err(())
         }
-        pt::Expression::FunctionCallBlock(loc, _, _) => {
+        pt::Expression::FunctionCallBlock(loc, ..) => {
             diagnostics.push(Diagnostic::error(
                 *loc,
                 "unexpect block encountered".to_owned(),
@@ -3693,7 +3706,7 @@ fn assign_expr(
 
     let resolve_to = if matches!(
         expr,
-        pt::Expression::AssignShiftLeft(_, _, _) | pt::Expression::AssignShiftRight(_, _, _)
+        pt::Expression::AssignShiftLeft(..) | pt::Expression::AssignShiftRight(..)
     ) {
         ResolveTo::Unknown
     } else {
@@ -3710,8 +3723,7 @@ fn assign_expr(
               diagnostics: &mut Vec<Diagnostic>|
      -> Result<Expression, ()> {
         let set = match expr {
-            pt::Expression::AssignShiftLeft(_, _, _)
-            | pt::Expression::AssignShiftRight(_, _, _) => {
+            pt::Expression::AssignShiftLeft(..) | pt::Expression::AssignShiftRight(..) => {
                 let left_length = get_int_length(ty, loc, true, ns, diagnostics)?;
                 let right_length = get_int_length(&set_type, &left.loc(), false, ns, diagnostics)?;
 
@@ -3730,50 +3742,50 @@ fn assign_expr(
         };
 
         Ok(match expr {
-            pt::Expression::AssignAdd(_, _, _) => Expression::Add(
+            pt::Expression::AssignAdd(..) => Expression::Add(
                 *loc,
                 ty.clone(),
                 context.unchecked,
                 Box::new(assign),
                 Box::new(set),
             ),
-            pt::Expression::AssignSubtract(_, _, _) => Expression::Subtract(
+            pt::Expression::AssignSubtract(..) => Expression::Subtract(
                 *loc,
                 ty.clone(),
                 context.unchecked,
                 Box::new(assign),
                 Box::new(set),
             ),
-            pt::Expression::AssignMultiply(_, _, _) => Expression::Multiply(
+            pt::Expression::AssignMultiply(..) => Expression::Multiply(
                 *loc,
                 ty.clone(),
                 context.unchecked,
                 Box::new(assign),
                 Box::new(set),
             ),
-            pt::Expression::AssignOr(_, _, _) => {
+            pt::Expression::AssignOr(..) => {
                 Expression::BitwiseOr(*loc, ty.clone(), Box::new(assign), Box::new(set))
             }
-            pt::Expression::AssignAnd(_, _, _) => {
+            pt::Expression::AssignAnd(..) => {
                 Expression::BitwiseAnd(*loc, ty.clone(), Box::new(assign), Box::new(set))
             }
-            pt::Expression::AssignXor(_, _, _) => {
+            pt::Expression::AssignXor(..) => {
                 Expression::BitwiseXor(*loc, ty.clone(), Box::new(assign), Box::new(set))
             }
-            pt::Expression::AssignShiftLeft(_, _, _) => {
+            pt::Expression::AssignShiftLeft(..) => {
                 Expression::ShiftLeft(*loc, ty.clone(), Box::new(assign), Box::new(set))
             }
-            pt::Expression::AssignShiftRight(_, _, _) => Expression::ShiftRight(
+            pt::Expression::AssignShiftRight(..) => Expression::ShiftRight(
                 *loc,
                 ty.clone(),
                 Box::new(assign),
                 Box::new(set),
                 ty.is_signed_int(),
             ),
-            pt::Expression::AssignDivide(_, _, _) => {
+            pt::Expression::AssignDivide(..) => {
                 Expression::Divide(*loc, ty.clone(), Box::new(assign), Box::new(set))
             }
-            pt::Expression::AssignModulo(_, _, _) => {
+            pt::Expression::AssignModulo(..) => {
                 Expression::Modulo(*loc, ty.clone(), Box::new(assign), Box::new(set))
             }
             _ => unreachable!(),
@@ -4637,7 +4649,7 @@ fn array_subscript(
     }
 
     match array_ty.deref_any() {
-        Type::Bytes(_) | Type::Array(_, _) | Type::DynamicBytes => {
+        Type::Bytes(_) | Type::Array(..) | Type::DynamicBytes => {
             if array_ty.is_contract_storage() {
                 let elem_ty = array_ty.storage_array_elem();
 
@@ -4651,7 +4663,7 @@ fn array_subscript(
             } else {
                 let mut elem_ty = array_ty.array_deref();
 
-                if elem_ty.is_builtin(ns) {
+                if elem_ty.builtin_struct(ns) == BuiltinStruct::AccountInfo {
                     // AccountInfo is an array of structures, not an array of pointers to structures
                     elem_ty = elem_ty.deref_any().clone();
                 }
@@ -4705,7 +4717,10 @@ fn struct_literal(
 
     let ty = Type::Struct(struct_no);
 
-    if ty.contains_builtins(ns).is_some() {
+    if ty
+        .contains_builtins(ns, BuiltinStruct::AccountInfo)
+        .is_some()
+    {
         diagnostics.push(Diagnostic::error(
             *loc,
             format!(
@@ -5285,7 +5300,10 @@ fn named_struct_literal(
     let struct_def = ns.structs[struct_no].clone();
     let ty = Type::Struct(struct_no);
 
-    if ty.contains_builtins(ns).is_some() {
+    if ty
+        .contains_builtins(ns, BuiltinStruct::AccountInfo)
+        .is_some()
+    {
         diagnostics.push(Diagnostic::error(
             *loc,
             format!(
@@ -5562,7 +5580,7 @@ fn method_call_pos_args(
                             Type::Void
                         }
                         0 => {
-                            if elem_ty.is_reference_type() {
+                            if elem_ty.is_reference_type(ns) {
                                 Type::StorageRef(false, Box::new(elem_ty))
                             } else {
                                 elem_ty
@@ -7126,7 +7144,7 @@ pub fn function_call_expr(
             if symtable.find(&id.name).is_some()
                 || matches!(
                     ns.resolve_var(context.file_no, context.contract_no, id, true),
-                    Some(Symbol::Variable(_, _, _))
+                    Some(Symbol::Variable(..))
                 )
             {
                 call_function_type(
@@ -7223,7 +7241,7 @@ pub fn named_function_call_expr(
                 diagnostics,
             )
         }
-        pt::Expression::ArraySubscript(_, _, _) => {
+        pt::Expression::ArraySubscript(..) => {
             diagnostics.push(Diagnostic::error(
                 ty.loc(),
                 "unexpected array type".to_string(),

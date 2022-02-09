@@ -1147,7 +1147,7 @@ fn destructure(
                             return Err(());
                         }
                     }
-                    Expression::Variable(_, _, _) => (),
+                    Expression::Variable(..) => (),
                     _ => match e.ty() {
                         Type::Ref(_) | Type::StorageRef(false, _) => (),
                         _ => {

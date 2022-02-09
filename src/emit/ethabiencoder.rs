@@ -599,7 +599,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
             ast::Type::String
             | ast::Type::DynamicBytes
             | ast::Type::Struct(_)
-            | ast::Type::Array(_, _)
+            | ast::Type::Array(..)
                 if ty.is_dynamic(ns) =>
             {
                 32

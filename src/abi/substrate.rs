@@ -527,7 +527,7 @@ fn ty_to_abi(ty: &ast::Type, ns: &ast::Namespace, registry: &mut Abi) -> ParamTy
                 display_name: vec![],
             }
         }
-        ast::Type::Mapping(_, _) => unreachable!(),
+        ast::Type::Mapping(..) => unreachable!(),
         ast::Type::Array(ty, dims) => {
             let mut param_ty = ty_to_abi(ty, ns, registry);
 

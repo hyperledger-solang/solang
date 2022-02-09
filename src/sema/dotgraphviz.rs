@@ -569,6 +569,21 @@ impl Dot {
 
                 self.add_expression(expr, func, ns, node, String::from("expr"));
             }
+            Expression::GetRef(loc, ty, expr) => {
+                let node = self.add_node(
+                    Node::new(
+                        "getref",
+                        vec![
+                            format!("getref {}", ty.to_string(ns)),
+                            ns.loc_to_string(loc),
+                        ],
+                    ),
+                    Some(parent),
+                    Some(parent_rel),
+                );
+
+                self.add_expression(expr, func, ns, node, String::from("expr"));
+            }
             Expression::StorageLoad(loc, ty, expr) => {
                 let node = self.add_node(
                     Node::new(

@@ -591,7 +591,7 @@ impl<'input> Lexer<'input> {
 
                 let mut end = match self.chars.next() {
                     Some((end, ch)) if ch.is_ascii_hexdigit() => end,
-                    Some((_, _)) => {
+                    Some((..)) => {
                         return Err(LexicalError::MissingNumber(Loc::File(
                             self.file_no,
                             start,

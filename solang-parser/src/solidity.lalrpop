@@ -193,7 +193,7 @@ EventParameter: EventParameter = {
 
 ErrorParameter: ErrorParameter = {
     <l:@L> <ty:Precedence0> <name:SolIdentifier?> <r:@R> => ErrorParameter{
-        loc: Loc(file_no, l, r), ty, name
+        loc: Loc::File(file_no, l, r), ty, name
     }
 }
 
@@ -208,7 +208,7 @@ EventDefinition: Box<EventDefinition> = {
 ErrorDefinition: Box<ErrorDefinition> = {
     <doc:DocComments> <l:@L> "error" <name:SolIdentifier> "(" <v:Comma<ErrorParameter>> ")" <r:@R> ";" => {
         Box::new(ErrorDefinition{
-            loc: Loc(file_no, l, r), doc, name, fields: v
+            loc: Loc::File(file_no, l, r), doc, name, fields: v
         })
     },
 }

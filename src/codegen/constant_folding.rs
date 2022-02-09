@@ -594,7 +594,7 @@ fn expression(
             }
         }
         Expression::Variable(loc, ty, var) => {
-            if !matches!(ty, Type::Ref(_) | Type::StorageRef(_, _)) {
+            if !matches!(ty, Type::Ref(_) | Type::StorageRef(..)) {
                 if let Some(vars) = vars {
                     if let Some(defs) = vars.get(var) {
                         // There must be at least one definition, and all should evaluate to the same value
@@ -1065,16 +1065,17 @@ fn expression(
                 false,
             )
         }
-        Expression::NumberLiteral(_, _, _)
-        | Expression::RationalNumberLiteral(_, _, _)
-        | Expression::BoolLiteral(_, _)
-        | Expression::BytesLiteral(_, _, _)
-        | Expression::CodeLiteral(_, _, _)
-        | Expression::FunctionArg(_, _, _) => (expr.clone(), true),
-        Expression::AllocDynamicArray(_, _, _, _)
+        Expression::NumberLiteral(..)
+        | Expression::RationalNumberLiteral(..)
+        | Expression::BoolLiteral(..)
+        | Expression::BytesLiteral(..)
+        | Expression::CodeLiteral(..)
+        | Expression::FunctionArg(..) => (expr.clone(), true),
+        Expression::AllocDynamicArray(..)
         | Expression::ReturnData(_)
         | Expression::Undefined(_)
         | Expression::FormatString { .. }
+        | Expression::GetRef(..)
         | Expression::InternalFunctionCfg(_) => (expr.clone(), false),
         // nothing else is permitted in cfg
         _ => panic!("expr should not be in cfg: {:?}", expr),
@@ -1103,7 +1104,7 @@ fn bigint_to_expression(loc: &Loc, ty: &Type, n: BigInt) -> (Expression, bool) {
                 n
             }
         }
-        Type::StorageRef(_, _) => n,
+        Type::StorageRef(..) => n,
         _ => unreachable!(),
     };
 

@@ -3,8 +3,8 @@ use super::tags::resolve_tags;
 use super::SOLANA_BUCKET_SIZE;
 use super::{
     ast::{
-        Contract, Diagnostic, EnumDecl, EventDecl, Namespace, Parameter, StructDecl, Symbol, Tag,
-        Type,
+        BuiltinStruct, Contract, Diagnostic, EnumDecl, EventDecl, Namespace, Parameter, StructDecl,
+        Symbol, Tag, Type,
     },
     SOLANA_SPARSE_ARRAY_SIZE,
 };
@@ -51,6 +51,7 @@ pub fn resolve_typenames<'a>(
                     ns.structs.push(StructDecl {
                         tags: Vec::new(),
                         name: def.name.name.to_owned(),
+                        builtin: BuiltinStruct::None,
                         loc: def.name.loc,
                         contract: None,
                         fields: Vec::new(),
@@ -214,6 +215,7 @@ fn resolve_contract<'a>(
                     ns.structs.push(StructDecl {
                         tags: Vec::new(),
                         name: s.name.name.to_owned(),
+                        builtin: BuiltinStruct::None,
                         loc: s.name.loc,
                         contract: Some(def.name.name.to_owned()),
                         fields: Vec::new(),
@@ -875,7 +877,7 @@ impl Type {
                 // Address and selector
                 Type::Address(false).size_of(ns) + Type::Uint(32).size_of(ns)
             }
-            Type::Mapping(_, _) => BigInt::zero(),
+            Type::Mapping(..) => BigInt::zero(),
             Type::Ref(ty) | Type::StorageRef(_, ty) => ty.size_of(ns),
             _ => unimplemented!("sizeof on {:?}", self),
         }
@@ -914,7 +916,7 @@ impl Type {
             Type::Bytes(n) => *n as u16 * 8,
             Type::Enum(n) => ns.enums[*n].ty.bits(ns),
             Type::Value => ns.value_length as u16 * 8,
-            Type::StorageRef(_, _) => ns.storage_type().bits(ns),
+            Type::StorageRef(..) => ns.storage_type().bits(ns),
             _ => panic!("type not allowed"),
         }
     }
@@ -990,7 +992,7 @@ impl Type {
                     // Address and selector
                     BigInt::from(ns.address_length + 4)
                 }
-                Type::Mapping(_, _) => BigInt::from(SOLANA_BUCKET_SIZE) * BigInt::from(4),
+                Type::Mapping(..) => BigInt::from(SOLANA_BUCKET_SIZE) * BigInt::from(4),
                 Type::Ref(ty) | Type::StorageRef(_, ty) => ty.storage_slots(ns),
                 _ => unimplemented!(),
             }
@@ -1047,7 +1049,7 @@ impl Type {
                 Type::String | Type::DynamicBytes => BigInt::from(4),
                 Type::InternalFunction { .. } => BigInt::from(ns.target.ptr_size()),
                 Type::ExternalFunction { .. } => BigInt::from(ns.address_length),
-                Type::Mapping(_, _) => BigInt::from(4),
+                Type::Mapping(..) => BigInt::from(4),
                 Type::Ref(ty) | Type::StorageRef(_, ty) => ty.storage_align(ns),
                 _ => unimplemented!(),
             };
@@ -1063,7 +1065,7 @@ impl Type {
     }
 
     /// Is this type an reference type in the solidity language? (struct, array, mapping)
-    pub fn is_reference_type(&self) -> bool {
+    pub fn is_reference_type(&self, ns: &Namespace) -> bool {
         match self {
             Type::Bool => false,
             Type::Address(_) => false,
@@ -1073,13 +1075,13 @@ impl Type {
             Type::Bytes(_) => false,
             Type::Enum(_) => false,
             Type::Struct(_) => true,
-            Type::Array(_, _) => true,
+            Type::Array(..) => true,
             Type::DynamicBytes => true,
             Type::String => true,
-            Type::Mapping(_, _) => true,
+            Type::Mapping(..) => true,
             Type::Contract(_) => false,
-            Type::Ref(r) => r.is_reference_type(),
-            Type::StorageRef(_, r) => r.is_reference_type(),
+            Type::Ref(r) => r.is_reference_type(ns),
+            Type::StorageRef(_, r) => r.is_reference_type(ns),
             Type::InternalFunction { .. } => false,
             Type::ExternalFunction { .. } => false,
             _ => unreachable!(),
@@ -1110,9 +1112,9 @@ impl Type {
     pub fn can_have_data_location(&self) -> bool {
         matches!(
             self,
-            Type::Array(_, _)
+            Type::Array(..)
                 | Type::Struct(_)
-                | Type::Mapping(_, _)
+                | Type::Mapping(..)
                 | Type::String
                 | Type::DynamicBytes
         )
@@ -1120,7 +1122,7 @@ impl Type {
 
     /// Is this a reference to contract storage?
     pub fn is_contract_storage(&self) -> bool {
-        matches!(self, Type::StorageRef(_, _))
+        matches!(self, Type::StorageRef(..))
     }
 
     /// Is this a reference to contract storage?
@@ -1147,7 +1149,7 @@ impl Type {
     /// Is this a mapping
     pub fn is_mapping(&self) -> bool {
         match self {
-            Type::Mapping(_, _) => true,
+            Type::Mapping(..) => true,
             Type::StorageRef(_, ty) => ty.is_mapping(),
             _ => false,
         }
@@ -1161,7 +1163,7 @@ impl Type {
     /// Does the type contain any mapping type
     pub fn contains_mapping(&self, ns: &Namespace) -> bool {
         match self {
-            Type::Mapping(_, _) => true,
+            Type::Mapping(..) => true,
             Type::Array(ty, _) => ty.contains_mapping(ns),
             Type::Struct(n) => ns.structs[*n]
                 .fields
@@ -1187,27 +1189,31 @@ impl Type {
     }
 
     /// Is this structure a builtin
-    pub fn is_builtin(&self, ns: &Namespace) -> bool {
+    pub fn builtin_struct(&self, ns: &Namespace) -> BuiltinStruct {
         match self {
-            Type::Struct(n) => ns.structs[*n].loc == pt::Loc::Builtin,
-            Type::StorageRef(_, r) | Type::Ref(r) => r.is_builtin(ns),
-            _ => false,
+            Type::Struct(n) => ns.structs[*n].builtin,
+            Type::StorageRef(_, r) | Type::Ref(r) => r.builtin_struct(ns),
+            _ => BuiltinStruct::None,
         }
     }
 
     /// Does the type contain any builtin type
-    pub fn contains_builtins<'a>(&'a self, ns: &'a Namespace) -> Option<&'a Type> {
+    pub fn contains_builtins<'a>(
+        &'a self,
+        ns: &'a Namespace,
+        builtin: BuiltinStruct,
+    ) -> Option<&'a Type> {
         match self {
-            Type::Array(ty, _) => ty.contains_builtins(ns),
+            Type::Array(ty, _) => ty.contains_builtins(ns, builtin),
             Type::Mapping(key, value) => key
-                .contains_builtins(ns)
-                .or_else(|| value.contains_builtins(ns)),
-            Type::Struct(n) if ns.structs[*n].loc == pt::Loc::Builtin => Some(self),
+                .contains_builtins(ns, builtin)
+                .or_else(|| value.contains_builtins(ns, builtin)),
+            Type::Struct(n) if ns.structs[*n].builtin == builtin => Some(self),
             Type::Struct(n) => ns.structs[*n]
                 .fields
                 .iter()
-                .find_map(|f| f.ty.contains_builtins(ns)),
-            Type::StorageRef(_, r) | Type::Ref(r) => r.contains_builtins(ns),
+                .find_map(|f| f.ty.contains_builtins(ns, builtin)),
+            Type::StorageRef(_, r) | Type::Ref(r) => r.contains_builtins(ns, builtin),
             _ => None,
         }
     }
@@ -1276,7 +1282,7 @@ impl Type {
     /// Is this type sparse on Solana
     pub fn is_sparse_solana(&self, ns: &Namespace) -> bool {
         match self.deref_any() {
-            Type::Mapping(_, _) => true,
+            Type::Mapping(..) => true,
             Type::Array(_, dims) if dims[0].is_none() => false,
             Type::Array(ty, dims) => {
                 let pointer_size = BigInt::from(4);
