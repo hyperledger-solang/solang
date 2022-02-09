@@ -1388,8 +1388,20 @@ impl Type {
                     Vec::new(),
                 ))
             }
-            Type::Ref(_) => unreachable!(),
-            Type::StorageRef(_, _) => None,
+            Type::Ref(ty) => {
+                assert!(matches!(ty.as_ref(), Type::Address(_)));
+
+                Some(Expression::GetRef(
+                    pt::Loc::Codegen,
+                    Type::Ref(Box::new(ty.as_ref().clone())),
+                    Box::new(Expression::NumberLiteral(
+                        pt::Loc::Codegen,
+                        ty.as_ref().clone(),
+                        BigInt::from(0),
+                    )),
+                ))
+            }
+            Type::StorageRef(..) => None,
             Type::String | Type::DynamicBytes => Some(Expression::AllocDynamicArray(
                 pt::Loc::Codegen,
                 self.clone(),

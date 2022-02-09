@@ -1,4 +1,6 @@
-use super::ast::{Builtin, Diagnostic, Expression, Namespace, Parameter, StructDecl, Symbol, Type};
+use super::ast::{
+    Builtin, BuiltinStruct, Diagnostic, Expression, Namespace, Parameter, StructDecl, Symbol, Type,
+};
 use super::eval::eval_const_number;
 use super::expression::{cast, expression, ExprContext, ResolveTo};
 use super::symtable::Symtable;
@@ -1171,7 +1173,7 @@ pub fn resolve_namespace_call(
         expr = cast(&arg.loc(), expr, ty.deref_any(), true, ns, diagnostics)?;
 
         // A string or hex literal should be encoded as a string
-        if let Expression::BytesLiteral(_, _, _) = &expr {
+        if let Expression::BytesLiteral(..) = &expr {
             expr = cast(&arg.loc(), expr, &Type::String, true, ns, diagnostics)?;
         }
 
@@ -1301,7 +1303,7 @@ pub fn resolve_method_call(
 
 impl Namespace {
     pub fn add_solana_builtins(&mut self) {
-        let struct_no = self.structs.len();
+        let account_info_no = self.structs.len();
 
         let fields = vec![
             Parameter {
@@ -1397,6 +1399,7 @@ impl Namespace {
         self.structs.push(StructDecl {
             tags: Vec::new(),
             loc: pt::Loc::Builtin,
+            builtin: BuiltinStruct::AccountInfo,
             contract: None,
             name: String::from("AccountInfo"),
             fields,
@@ -1409,6 +1412,72 @@ impl Namespace {
             name: String::from("AccountInfo"),
         };
 
-        assert!(self.add_symbol(0, None, &id, Symbol::Struct(pt::Loc::Builtin, struct_no)));
+        assert!(self.add_symbol(
+            0,
+            None,
+            &id,
+            Symbol::Struct(pt::Loc::Builtin, account_info_no)
+        ));
+
+        let account_meta_no = self.structs.len();
+
+        let fields = vec![
+            Parameter {
+                loc: pt::Loc::Builtin,
+                name: Some(pt::Identifier {
+                    name: String::from("pubkey"),
+                    loc: pt::Loc::Builtin,
+                }),
+                ty: Type::Ref(Box::new(Type::Address(false))),
+                ty_loc: pt::Loc::Builtin,
+                indexed: false,
+                readonly: false,
+            },
+            Parameter {
+                loc: pt::Loc::Builtin,
+                name: Some(pt::Identifier {
+                    name: String::from("is_writable"),
+                    loc: pt::Loc::Builtin,
+                }),
+                ty: Type::Bool,
+                ty_loc: pt::Loc::Builtin,
+                indexed: false,
+                readonly: false,
+            },
+            Parameter {
+                loc: pt::Loc::Builtin,
+                name: Some(pt::Identifier {
+                    name: String::from("is_signer"),
+                    loc: pt::Loc::Builtin,
+                }),
+                ty: Type::Bool,
+                ty_loc: pt::Loc::Builtin,
+                indexed: false,
+                readonly: false,
+            },
+        ];
+
+        self.structs.push(StructDecl {
+            tags: Vec::new(),
+            loc: pt::Loc::Builtin,
+            builtin: BuiltinStruct::AccountMeta,
+            contract: None,
+            name: String::from("AccountMeta"),
+            fields,
+            offsets: Vec::new(),
+            storage_offsets: Vec::new(),
+        });
+
+        let id = pt::Identifier {
+            loc: pt::Loc::Builtin,
+            name: String::from("AccountMeta"),
+        };
+
+        assert!(self.add_symbol(
+            0,
+            None,
+            &id,
+            Symbol::Struct(pt::Loc::Builtin, account_meta_no)
+        ));
     }
 }

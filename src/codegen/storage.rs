@@ -320,7 +320,7 @@ pub fn array_push(
         ty.deref_any().default(ns)
     };
 
-    if !ty.is_reference_type() {
+    if !ty.is_reference_type(ns) {
         ty = ty.deref_into();
     }
 

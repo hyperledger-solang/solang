@@ -109,7 +109,7 @@ pub fn used_variable(ns: &mut Namespace, exp: &Expression, symtable: &mut Symtab
 /// usage of the latter as well
 pub fn check_function_call(ns: &mut Namespace, exp: &Expression, symtable: &mut Symtable) {
     match &exp {
-        Expression::Load(..) | Expression::StorageLoad(..) | Expression::Variable(_, _, _) => {
+        Expression::Load(..) | Expression::StorageLoad(..) | Expression::Variable(..) => {
             used_variable(ns, exp, symtable);
         }
 

@@ -657,13 +657,13 @@ mod test {
             (vec![
                 SourceUnitPart::ErrorDefinition(Box::new(ErrorDefinition {
                     doc: vec![],
-                    loc: Loc(
+                    loc: Loc::File(
                         0,
                         10,
                         58,
                     ),
                     name: Identifier {
-                        loc: Loc(
+                        loc: Loc::File(
                             0,
                             16,
                             21,
@@ -673,7 +673,7 @@ mod test {
                     fields: vec![
                         ErrorParameter {
                             ty: Expression::Type(
-                                Loc(
+                                Loc::File(
                                     0,
                                     22,
                                     29,
@@ -682,14 +682,14 @@ mod test {
                                     256,
                                 ),
                             ),
-                            loc: Loc(
+                            loc: Loc::File(
                                 0,
                                 22,
                                 39,
                             ),
                             name: Some(
                                 Identifier {
-                                    loc: Loc(
+                                    loc: Loc::File(
                                         0,
                                         30,
                                         39,
@@ -700,7 +700,7 @@ mod test {
                         },
                         ErrorParameter {
                             ty: Expression::Type(
-                                Loc(
+                                Loc::File(
                                     0,
                                     41,
                                     48,
@@ -709,14 +709,14 @@ mod test {
                                     256,
                                 ),
                             ),
-                            loc: Loc(
+                            loc: Loc::File(
                                 0,
                                 41,
                                 57,
                             ),
                             name: Some(
                                 Identifier {
-                                    loc: Loc(
+                                    loc: Loc::File(
                                         0,
                                         49,
                                         57,
@@ -730,20 +730,20 @@ mod test {
                 SourceUnitPart::ContractDefinition(Box::new(
                     ContractDefinition {
                         doc: vec![],
-                        loc: Loc(
+                        loc: Loc::File(
                             0,
                             69,
                             88,
                         ),
                         ty: ContractTy::Contract(
-                            Loc(
+                            Loc::File(
                                 0,
                                 69,
                                 77,
                             ),
                         ),
                         name: Identifier {
-                            loc: Loc(
+                            loc: Loc::File(
                                 0,
                                 78,
                                 87,
@@ -755,13 +755,13 @@ mod test {
                             ContractPart::ErrorDefinition(Box::new(
                                 ErrorDefinition {
                                     doc: vec![],
-                                    loc: Loc(
+                                    loc: Loc::File(
                                         0,
                                         102,
                                         120,
                                     ),
                                     name: Identifier {
-                                        loc: Loc(
+                                        loc: Loc::File(
                                             0,
                                             108,
                                             118,
@@ -796,13 +796,13 @@ mod test {
                                             },
                                         },
                                     ],
-                                    loc: Loc(
+                                    loc: Loc::File(
                                         0,
                                         365,
                                         427,
                                     ),
                                     name: Identifier {
-                                        loc: Loc(
+                                        loc: Loc::File(
                                             0,
                                             371,
                                             390,
@@ -812,7 +812,7 @@ mod test {
                                     fields: vec![
                                         ErrorParameter {
                                             ty: Expression::Type(
-                                                Loc(
+                                                Loc::File(
                                                     0,
                                                     391,
                                                     398,
@@ -821,14 +821,14 @@ mod test {
                                                     256,
                                                 ),
                                             ),
-                                            loc: Loc(
+                                            loc: Loc::File(
                                                 0,
                                                 391,
                                                 408,
                                             ),
                                             name: Some(
                                                 Identifier {
-                                                    loc: Loc(
+                                                    loc: Loc::File(
                                                         0,
                                                         399,
                                                         408,
@@ -839,7 +839,7 @@ mod test {
                                         },
                                         ErrorParameter {
                                             ty: Expression::Type(
-                                                Loc(
+                                                Loc::File(
                                                     0,
                                                     410,
                                                     417,
@@ -848,14 +848,14 @@ mod test {
                                                     256,
                                                 ),
                                             ),
-                                            loc: Loc(
+                                            loc: Loc::File(
                                                 0,
                                                 410,
                                                 426,
                                             ),
                                             name: Some(
                                                 Identifier {
-                                                    loc: Loc(
+                                                    loc: Loc::File(
                                                         0,
                                                         418,
                                                         426,

@@ -1294,7 +1294,7 @@ impl SubstrateTarget {
 
                 *data = either_data.as_basic_value().into_pointer_value()
             }
-            ast::Type::Array(_, _) => {
+            ast::Type::Array(..) => {
                 let arg = if load {
                     binary.builder.build_load(arg.into_pointer_value(), "")
                 } else {

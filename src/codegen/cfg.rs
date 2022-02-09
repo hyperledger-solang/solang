@@ -772,6 +772,9 @@ impl ControlFlowGraph {
                     .join(", ")
             ),
             Expression::Undefined(_) => "undef".to_string(),
+            Expression::GetRef(_, _, expr) => {
+                format!("(deref {}", self.expr_to_string(contract, ns, expr))
+            }
             _ => panic!("{:?}", expr),
         }
     }

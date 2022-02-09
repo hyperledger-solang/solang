@@ -2046,7 +2046,7 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
 
                 binary.builder.build_load(balance, "balance")
             }
-            _ => unimplemented!(),
+            _ => unimplemented!("{:?}", expr),
         }
     }
 }

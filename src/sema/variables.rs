@@ -1,5 +1,6 @@
 use super::ast::{
-    Diagnostic, Expression, Function, Namespace, Parameter, Statement, Symbol, Type, Variable,
+    BuiltinStruct, Diagnostic, Expression, Function, Namespace, Parameter, Statement, Symbol, Type,
+    Variable,
 };
 use super::expression::{cast, expression, ExprContext, ResolveTo};
 use super::symtable::Symtable;
@@ -218,7 +219,14 @@ pub fn var_decl(
             ),
         ));
         return None;
-    } else if let Some(ty) = ty.contains_builtins(ns) {
+    } else if let Some(ty) = ty.contains_builtins(ns, BuiltinStruct::AccountInfo) {
+        let message = format!(
+            "variable of cannot be builtin of type ‘{}’",
+            ty.to_string(ns)
+        );
+        ns.diagnostics.push(Diagnostic::error(s.ty.loc(), message));
+        return None;
+    } else if let Some(ty) = ty.contains_builtins(ns, BuiltinStruct::AccountMeta) {
         let message = format!(
             "variable of cannot be builtin of type ‘{}’",
             ty.to_string(ns)

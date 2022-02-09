@@ -769,7 +769,7 @@ fn post_incdec(
             );
 
             match var.ty() {
-                Type::StorageRef(_, _) => {
+                Type::StorageRef(..) => {
                     cfg.add(
                         vartab,
                         Instr::SetStorage {
@@ -842,7 +842,7 @@ fn pre_incdec(
             let dest = expression(var, cfg, contract_no, func, ns, vartab, opt);
 
             match var.ty() {
-                Type::StorageRef(_, _) => {
+                Type::StorageRef(..) => {
                     cfg.add(
                         vartab,
                         Instr::SetStorage {
@@ -1785,7 +1785,7 @@ pub fn assign_single(
             );
 
             match left_ty {
-                Type::StorageRef(_, _) if set_storage_bytes => {
+                Type::StorageRef(..) if set_storage_bytes => {
                     if let Expression::Subscript(_, _, _, array, index) = dest {
                         // Set a byte in a byte array
                         cfg.add(
@@ -1800,7 +1800,7 @@ pub fn assign_single(
                         unreachable!();
                     }
                 }
-                Type::StorageRef(_, _) => {
+                Type::StorageRef(..) => {
                     cfg.add(
                         vartab,
                         Instr::SetStorage {
@@ -2350,9 +2350,9 @@ fn array_subscript(
             ResolveTo::Unknown,
         )
         .unwrap(),
-        Type::Array(_, _) => match array_ty.array_length() {
+        Type::Array(..) => match array_ty.array_length() {
             None => {
-                if let Type::StorageRef(_, _) = array_ty {
+                if let Type::StorageRef(..) = array_ty {
                     if ns.target == Target::Solana {
                         Expression::StorageArrayLength {
                             loc: *loc,
@@ -2616,7 +2616,7 @@ fn array_subscript(
                 Box::new(array),
                 Box::new(Expression::Variable(index_loc, coerced_ty, pos)),
             ),
-            Type::DynamicBytes | Type::Array(_, _) => Expression::Subscript(
+            Type::DynamicBytes | Type::Array(..) => Expression::Subscript(
                 *loc,
                 elem_ty.clone(),
                 array_ty.clone(),

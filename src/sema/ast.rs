@@ -48,11 +48,19 @@ pub enum Type {
     Slice,
 }
 
+#[derive(PartialEq, Clone, Debug, Copy)]
+pub enum BuiltinStruct {
+    None,
+    AccountInfo,
+    AccountMeta,
+}
+
 #[derive(PartialEq, Clone, Debug)]
 pub struct StructDecl {
     pub tags: Vec<Tag>,
     pub name: String,
     pub loc: pt::Loc,
+    pub builtin: BuiltinStruct,
     pub contract: Option<String>,
     pub fields: Vec<Parameter>,
     // List of offsets of the fields, last entry is the offset for the struct overall size
@@ -319,7 +327,7 @@ impl From<&pt::Type> for Type {
             pt::Type::DynamicBytes => Type::DynamicBytes,
             // needs special casing
             pt::Type::Function { .. } => unimplemented!(),
-            pt::Type::Mapping(_, _, _) => unimplemented!(),
+            pt::Type::Mapping(..) => unimplemented!(),
         }
     }
 }
@@ -353,7 +361,7 @@ impl Symbol {
         match self {
             Symbol::Enum(loc, _) => loc,
             Symbol::Function(funcs) => &funcs[0].0,
-            Symbol::Variable(loc, _, _) => loc,
+            Symbol::Variable(loc, ..) => loc,
             Symbol::Struct(loc, _) => loc,
             Symbol::Event(events) => &events[0].0,
             Symbol::Contract(loc, _) => loc,
@@ -523,6 +531,7 @@ pub enum Expression {
     ConstantVariable(pt::Loc, Type, Option<usize>, usize),
     StorageVariable(pt::Loc, Type, usize, usize),
     Load(pt::Loc, Type, Box<Expression>),
+    GetRef(pt::Loc, Type, Box<Expression>),
     StorageLoad(pt::Loc, Type, Box<Expression>),
     ZeroExt(pt::Loc, Type, Box<Expression>),
     SignExt(pt::Loc, Type, Box<Expression>),
@@ -1170,55 +1179,56 @@ impl Expression {
     /// Return the location for this expression
     pub fn loc(&self) -> pt::Loc {
         match self {
-            Expression::FunctionArg(loc, _, _)
+            Expression::FunctionArg(loc, ..)
             | Expression::BoolLiteral(loc, _)
-            | Expression::BytesLiteral(loc, _, _)
-            | Expression::CodeLiteral(loc, _, _)
-            | Expression::NumberLiteral(loc, _, _)
-            | Expression::RationalNumberLiteral(loc, _, _)
-            | Expression::StructLiteral(loc, _, _)
-            | Expression::ArrayLiteral(loc, _, _, _)
-            | Expression::ConstArrayLiteral(loc, _, _, _)
-            | Expression::Add(loc, _, _, _, _)
-            | Expression::Subtract(loc, _, _, _, _)
-            | Expression::Multiply(loc, _, _, _, _)
-            | Expression::Divide(loc, _, _, _)
-            | Expression::Modulo(loc, _, _, _)
-            | Expression::Power(loc, _, _, _, _)
-            | Expression::BitwiseOr(loc, _, _, _)
-            | Expression::BitwiseAnd(loc, _, _, _)
-            | Expression::BitwiseXor(loc, _, _, _)
-            | Expression::ShiftLeft(loc, _, _, _)
-            | Expression::ShiftRight(loc, _, _, _, _)
-            | Expression::Variable(loc, _, _)
-            | Expression::ConstantVariable(loc, _, _, _)
-            | Expression::StorageVariable(loc, _, _, _)
-            | Expression::Load(loc, _, _)
-            | Expression::StorageLoad(loc, _, _)
-            | Expression::ZeroExt(loc, _, _)
-            | Expression::SignExt(loc, _, _)
-            | Expression::Trunc(loc, _, _)
-            | Expression::CheckingTrunc(loc, _, _)
-            | Expression::Cast(loc, _, _)
-            | Expression::BytesCast(loc, _, _, _)
-            | Expression::More(loc, _, _)
-            | Expression::Less(loc, _, _)
-            | Expression::MoreEqual(loc, _, _)
-            | Expression::LessEqual(loc, _, _)
-            | Expression::Equal(loc, _, _)
-            | Expression::NotEqual(loc, _, _)
+            | Expression::BytesLiteral(loc, ..)
+            | Expression::CodeLiteral(loc, ..)
+            | Expression::NumberLiteral(loc, ..)
+            | Expression::RationalNumberLiteral(loc, ..)
+            | Expression::StructLiteral(loc, ..)
+            | Expression::ArrayLiteral(loc, ..)
+            | Expression::ConstArrayLiteral(loc, ..)
+            | Expression::Add(loc, ..)
+            | Expression::Subtract(loc, ..)
+            | Expression::Multiply(loc, ..)
+            | Expression::Divide(loc, ..)
+            | Expression::Modulo(loc, ..)
+            | Expression::Power(loc, ..)
+            | Expression::BitwiseOr(loc, ..)
+            | Expression::BitwiseAnd(loc, ..)
+            | Expression::BitwiseXor(loc, ..)
+            | Expression::ShiftLeft(loc, ..)
+            | Expression::ShiftRight(loc, ..)
+            | Expression::Variable(loc, ..)
+            | Expression::ConstantVariable(loc, ..)
+            | Expression::StorageVariable(loc, ..)
+            | Expression::Load(loc, ..)
+            | Expression::GetRef(loc, ..)
+            | Expression::StorageLoad(loc, ..)
+            | Expression::ZeroExt(loc, ..)
+            | Expression::SignExt(loc, ..)
+            | Expression::Trunc(loc, ..)
+            | Expression::CheckingTrunc(loc, ..)
+            | Expression::Cast(loc, ..)
+            | Expression::BytesCast(loc, ..)
+            | Expression::More(loc, ..)
+            | Expression::Less(loc, ..)
+            | Expression::MoreEqual(loc, ..)
+            | Expression::LessEqual(loc, ..)
+            | Expression::Equal(loc, ..)
+            | Expression::NotEqual(loc, ..)
             | Expression::Not(loc, _)
-            | Expression::Complement(loc, _, _)
-            | Expression::UnaryMinus(loc, _, _)
-            | Expression::Ternary(loc, _, _, _, _)
+            | Expression::Complement(loc, ..)
+            | Expression::UnaryMinus(loc, ..)
+            | Expression::Ternary(loc, ..)
             | Expression::Subscript(loc, ..)
-            | Expression::StructMember(loc, _, _, _)
-            | Expression::Or(loc, _, _)
-            | Expression::AllocDynamicArray(loc, _, _, _)
+            | Expression::StructMember(loc, ..)
+            | Expression::Or(loc, ..)
+            | Expression::AllocDynamicArray(loc, ..)
             | Expression::StorageArrayLength { loc, .. }
-            | Expression::StringCompare(loc, _, _)
-            | Expression::StringConcat(loc, _, _, _)
-            | Expression::Keccak256(loc, _, _)
+            | Expression::StringCompare(loc, ..)
+            | Expression::StringConcat(loc, ..)
+            | Expression::Keccak256(loc, ..)
             | Expression::ReturnData(loc)
             | Expression::InternalFunction { loc, .. }
             | Expression::ExternalFunction { loc, .. }
@@ -1226,17 +1236,17 @@ impl Expression {
             | Expression::ExternalFunctionCall { loc, .. }
             | Expression::ExternalFunctionCallRaw { loc, .. }
             | Expression::Constructor { loc, .. }
-            | Expression::PreIncrement(loc, _, _, _)
-            | Expression::PreDecrement(loc, _, _, _)
-            | Expression::PostIncrement(loc, _, _, _)
-            | Expression::PostDecrement(loc, _, _, _)
-            | Expression::Builtin(loc, _, _, _)
-            | Expression::Assign(loc, _, _, _)
+            | Expression::PreIncrement(loc, ..)
+            | Expression::PreDecrement(loc, ..)
+            | Expression::PostIncrement(loc, ..)
+            | Expression::PostDecrement(loc, ..)
+            | Expression::Builtin(loc, ..)
+            | Expression::Assign(loc, ..)
             | Expression::List(loc, _)
             | Expression::FormatString(loc, _)
             | Expression::AbiEncode { loc, .. }
             | Expression::InterfaceId(loc, ..)
-            | Expression::And(loc, _, _) => *loc,
+            | Expression::And(loc, ..) => *loc,
             Expression::InternalFunctionCfg(_) | Expression::Undefined(_) | Expression::Poison => {
                 unreachable!()
             }
@@ -1498,16 +1508,16 @@ impl Statement {
     pub fn reachable(&self) -> bool {
         match self {
             Statement::Block { statements, .. } => statements.iter().all(|s| s.reachable()),
-            Statement::Underscore(_)
-            | Statement::Destructure(_, _, _)
-            | Statement::VariableDecl(_, _, _, _) => true,
-            Statement::If(_, reachable, _, _, _)
-            | Statement::While(_, reachable, _, _)
-            | Statement::DoWhile(_, reachable, _, _)
+            Statement::Underscore(_) | Statement::Destructure(..) | Statement::VariableDecl(..) => {
+                true
+            }
+            Statement::If(_, reachable, ..)
+            | Statement::While(_, reachable, ..)
+            | Statement::DoWhile(_, reachable, ..)
             | Statement::Expression(_, reachable, _) => *reachable,
             Statement::Emit { .. } => true,
-            Statement::Delete(_, _, _) => true,
-            Statement::Continue(_) | Statement::Break(_) | Statement::Return(_, _) => false,
+            Statement::Delete(..) => true,
+            Statement::Continue(_) | Statement::Break(_) | Statement::Return(..) => false,
             Statement::For { reachable, .. } | Statement::TryCatch(_, reachable, _) => *reachable,
         }
     }

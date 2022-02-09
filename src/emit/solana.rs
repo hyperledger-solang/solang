@@ -886,7 +886,7 @@ impl SolanaTarget {
     ) -> BasicTypeEnum<'b> {
         let key = if matches!(
             key_ty,
-            ast::Type::String | ast::Type::DynamicBytes | ast::Type::Mapping(_, _)
+            ast::Type::String | ast::Type::DynamicBytes | ast::Type::Mapping(..)
         ) {
             binary.context.i32_type().into()
         } else {
@@ -1927,7 +1927,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             self.storage_store(binary, ty, &mut new_offset, val, function, ns);
         }
 
-        if ty.is_reference_type() {
+        if ty.is_reference_type(ns) {
             // Caller expects a reference to storage; note that storage_store() should not modify
             // new_offset even if the argument is mut
             new_offset.into()

@@ -235,7 +235,7 @@ fn resolve_import(
                 }
             }
         }
-        pt::Import::Plain(_, _) => {
+        pt::Import::Plain(..) => {
             // find all the exports for the file
             let exports = ns
                 .variable_symbols
@@ -710,10 +710,10 @@ impl ast::Namespace {
     pub fn wrong_symbol(sym: Option<&ast::Symbol>, id: &pt::Identifier) -> ast::Diagnostic {
         match sym {
             None => ast::Diagnostic::decl_error(id.loc, format!("`{}' is not found", id.name)),
-            Some(ast::Symbol::Enum(_, _)) => {
+            Some(ast::Symbol::Enum(..)) => {
                 ast::Diagnostic::decl_error(id.loc, format!("`{}' is an enum", id.name))
             }
-            Some(ast::Symbol::Struct(_, _)) => {
+            Some(ast::Symbol::Struct(..)) => {
                 ast::Diagnostic::decl_error(id.loc, format!("`{}' is a struct", id.name))
             }
             Some(ast::Symbol::Event(_)) => {
@@ -722,13 +722,13 @@ impl ast::Namespace {
             Some(ast::Symbol::Function(_)) => {
                 ast::Diagnostic::decl_error(id.loc, format!("`{}' is a function", id.name))
             }
-            Some(ast::Symbol::Contract(_, _)) => {
+            Some(ast::Symbol::Contract(..)) => {
                 ast::Diagnostic::decl_error(id.loc, format!("`{}' is a contract", id.name))
             }
-            Some(ast::Symbol::Import(_, _)) => {
+            Some(ast::Symbol::Import(..)) => {
                 ast::Diagnostic::decl_error(id.loc, format!("`{}' is an import", id.name))
             }
-            Some(ast::Symbol::Variable(_, _, _)) => {
+            Some(ast::Symbol::Variable(..)) => {
                 ast::Diagnostic::decl_error(id.loc, format!("`{}' is a contract variable", id.name))
             }
         }
@@ -1011,7 +1011,7 @@ impl ast::Namespace {
                     let value = self.resolve_type(file_no, contract_no, false, v, diagnostics)?;
 
                     match key {
-                        ast::Type::Mapping(_, _) => {
+                        ast::Type::Mapping(..) => {
                             diagnostics.push(ast::Diagnostic::decl_error(
                                 k.loc(),
                                 "key of mapping cannot be another mapping type".to_string(),
@@ -1025,7 +1025,7 @@ impl ast::Namespace {
                             ));
                             return Err(());
                         }
-                        ast::Type::Array(_, _) => {
+                        ast::Type::Array(..) => {
                             diagnostics.push(ast::Diagnostic::decl_error(
                                 k.loc(),
                                 "key of mapping cannot be array type".to_string(),
@@ -1273,14 +1273,14 @@ impl ast::Namespace {
                 ));
                 Err(())
             }
-            Some(ast::Symbol::Variable(_, _, _)) => {
+            Some(ast::Symbol::Variable(..)) => {
                 diagnostics.push(ast::Diagnostic::decl_error(
                     id.loc,
                     format!("‘{}’ is a contract variable", id.name),
                 ));
                 Err(())
             }
-            Some(ast::Symbol::Import(_, _)) => {
+            Some(ast::Symbol::Import(..)) => {
                 diagnostics.push(ast::Diagnostic::decl_error(
                     id.loc,
                     format!("‘{}’ is an import variable", id.name),
@@ -1347,7 +1347,7 @@ impl ast::Namespace {
                     ));
                     return Err(());
                 }
-                Some(ast::Symbol::Variable(_, _, _)) => {
+                Some(ast::Symbol::Variable(..)) => {
                     diagnostics.push(ast::Diagnostic::decl_error(
                         id.loc,
                         format!("‘{}’ is a contract variable", id.name),
@@ -1361,21 +1361,21 @@ impl ast::Namespace {
                     ));
                     return Err(());
                 }
-                Some(ast::Symbol::Struct(_, _)) => {
+                Some(ast::Symbol::Struct(..)) => {
                     diagnostics.push(ast::Diagnostic::decl_error(
                         id.loc,
                         format!("‘{}’ is a struct", id.name),
                     ));
                     return Err(());
                 }
-                Some(ast::Symbol::Enum(_, _)) => {
+                Some(ast::Symbol::Enum(..)) => {
                     diagnostics.push(ast::Diagnostic::decl_error(
                         id.loc,
                         format!("‘{}’ is an enum variable", id.name),
                     ));
                     return Err(());
                 }
-                Some(ast::Symbol::Import(_, _)) => unreachable!(),
+                Some(ast::Symbol::Import(..)) => unreachable!(),
             };
         }
 
@@ -1444,7 +1444,7 @@ impl ast::Namespace {
 
                     r.as_ref()
                 }
-                pt::Expression::Variable(_) | pt::Expression::Type(_, _) => {
+                pt::Expression::Variable(_) | pt::Expression::Type(..) => {
                     return Ok((Vec::new(), expr.clone(), dimensions))
                 }
                 pt::Expression::MemberAccess(_, namespace, id) => {
