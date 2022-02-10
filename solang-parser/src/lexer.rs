@@ -903,10 +903,10 @@ impl<'input> Lexer<'input> {
 
                             if !newline {
                                 for (i, ch) in &mut self.chars {
+                                    last = i;
                                     if ch == '\n' || ch == '\r' {
                                         break;
                                     }
-                                    last = i;
                                 }
                             }
 
@@ -916,15 +916,15 @@ impl<'input> Lexer<'input> {
                                         start + 3,
                                         Token::DocComment(
                                             CommentType::Line,
-                                            &self.input[doc_start..=last],
+                                            &self.input[doc_start..last],
                                         ),
-                                        last + 1,
+                                        last,
                                     )));
                                 }
                             } else {
                                 self.comments.push(Comment::Line(
-                                    Loc(self.file_no, start, last + 1),
-                                    self.input[start..=last].to_owned(),
+                                    Loc(self.file_no, start, last),
+                                    self.input[start..last].to_owned(),
                                 ));
                             }
                         }
