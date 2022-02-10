@@ -66,6 +66,7 @@ pub enum SourceUnitPart {
     EnumDefinition(Box<EnumDefinition>),
     StructDefinition(Box<StructDefinition>),
     EventDefinition(Box<EventDefinition>),
+    ErrorDefinition(Box<ErrorDefinition>),
     FunctionDefinition(Box<FunctionDefinition>),
     VariableDefinition(Box<VariableDefinition>),
     StraySemicolon(Loc),
@@ -148,6 +149,7 @@ pub enum ContractPart {
     StructDefinition(Box<StructDefinition>),
     EventDefinition(Box<EventDefinition>),
     EnumDefinition(Box<EnumDefinition>),
+    ErrorDefinition(Box<ErrorDefinition>),
     VariableDefinition(Box<VariableDefinition>),
     FunctionDefinition(Box<FunctionDefinition>),
     StraySemicolon(Loc),
@@ -212,6 +214,21 @@ pub struct EventDefinition {
     pub name: Identifier,
     pub fields: Vec<EventParameter>,
     pub anonymous: bool,
+}
+
+#[derive(Debug, PartialEq)]
+pub struct ErrorParameter {
+    pub ty: Expression,
+    pub loc: Loc,
+    pub name: Option<Identifier>,
+}
+
+#[derive(Debug, PartialEq)]
+pub struct ErrorDefinition {
+    pub doc: Vec<DocComment>,
+    pub loc: Loc,
+    pub name: Identifier,
+    pub fields: Vec<ErrorParameter>,
 }
 
 #[derive(Debug, PartialEq)]
