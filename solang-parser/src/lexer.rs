@@ -39,6 +39,7 @@ pub enum Token<'input> {
 
     Struct,
     Event,
+    Error,
     Enum,
 
     Memory,
@@ -260,6 +261,7 @@ impl<'input> fmt::Display for Token<'input> {
             Token::Import => write!(f, "import"),
             Token::Struct => write!(f, "struct"),
             Token::Event => write!(f, "event"),
+            Token::Error => write!(f, "error"),
             Token::Enum => write!(f, "enum"),
             Token::Memory => write!(f, "memory"),
             Token::Storage => write!(f, "storage"),
@@ -441,6 +443,7 @@ static KEYWORDS: phf::Map<&'static str, Token> = phf_map! {
     "emit" => Token::Emit,
     "enum" => Token::Enum,
     "event" => Token::Event,
+    "error" => Token::Error,
     "external" => Token::External,
     "false" => Token::False,
     "for" => Token::For,

@@ -23,6 +23,7 @@ SourceUnitPart: SourceUnitPart = {
     EnumDefinition => SourceUnitPart::EnumDefinition(<>),
     StructDefinition => SourceUnitPart::StructDefinition(<>),
     EventDefinition => SourceUnitPart::EventDefinition(<>),
+    ErrorDefinition => SourceUnitPart::ErrorDefinition(<>),
     FunctionDefinition => SourceUnitPart::FunctionDefinition(<>),
     VariableDefinition => SourceUnitPart::VariableDefinition(<>),
     <l:@L> ";" <r:@R> => SourceUnitPart::StraySemicolon(Loc(file_no, l, r)),
@@ -154,6 +155,7 @@ ContractTy: ContractTy = {
 ContractPart: ContractPart = {
     StructDefinition => ContractPart::StructDefinition(<>),
     EventDefinition => ContractPart::EventDefinition(<>),
+    ErrorDefinition => ContractPart::ErrorDefinition(<>),
     EnumDefinition => ContractPart::EnumDefinition(<>),
     VariableDefinition => ContractPart::VariableDefinition(<>),
     FunctionDefinition => ContractPart::FunctionDefinition(<>),
@@ -189,10 +191,24 @@ EventParameter: EventParameter = {
     }
 }
 
+ErrorParameter: ErrorParameter = {
+    <l:@L> <ty:Precedence0> <name:SolIdentifier?> <r:@R> => ErrorParameter{
+        loc: Loc(file_no, l, r), ty, name
+    }
+}
+
 EventDefinition: Box<EventDefinition> = {
     <doc:DocComments> <l:@L> "event" <name:SolIdentifier> "(" <v:Comma<EventParameter>> ")" <a:"anonymous"?> <r:@R> ";" => {
         Box::new(EventDefinition{
             loc: Loc(file_no, l, r), doc, name, fields: v, anonymous: a.is_some()
+        })
+    },
+}
+
+ErrorDefinition: Box<ErrorDefinition> = {
+    <doc:DocComments> <l:@L> "error" <name:SolIdentifier> "(" <v:Comma<ErrorParameter>> ")" <r:@R> ";" => {
+        Box::new(ErrorDefinition{
+            loc: Loc(file_no, l, r), doc, name, fields: v
         })
     },
 }
@@ -957,6 +973,7 @@ extern {
         "interface" => Token::Interface,
         "library" => Token::Library,
         "event" => Token::Event,
+        "error" => Token::Error,
         "enum" => Token::Enum,
         "public" => Token::Public,
         "private" => Token::Private,
