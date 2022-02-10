@@ -617,4 +617,245 @@ mod test {
             ]
         )
     }
+
+    #[test]
+    fn parse_error_test() {
+        let src = r#"
+
+        error Outer(uint256 available, uint256 required);
+
+        contract TestToken {
+            error NotPending();
+            /// Insufficient balance for transfer. Needed `required` but only
+            /// `available` available.
+            /// @param available balance available.
+            /// @param required requested amount to transfer.
+            error InsufficientBalance(uint256 available, uint256 required);
+        }
+        "#;
+
+        let (actual_parse_tree, _) = crate::parse(src, 0).unwrap();
+        assert_eq!(actual_parse_tree.0.len(), 2);
+
+        let expected_parse_tree = SourceUnit
+            (vec![
+                SourceUnitPart::ErrorDefinition(Box::new(ErrorDefinition {
+                    doc: vec![],
+                    loc: Loc(
+                        0,
+                        10,
+                        58,
+                    ),
+                    name: Identifier {
+                        loc: Loc(
+                            0,
+                            16,
+                            21,
+                        ),
+                        name: "Outer".to_string(),
+                    },
+                    fields: vec![
+                        ErrorParameter {
+                            ty: Expression::Type(
+                                Loc(
+                                    0,
+                                    22,
+                                    29,
+                                ),
+                                Type::Uint(
+                                    256,
+                                ),
+                            ),
+                            loc: Loc(
+                                0,
+                                22,
+                                39,
+                            ),
+                            name: Some(
+                                Identifier {
+                                    loc: Loc(
+                                        0,
+                                        30,
+                                        39,
+                                    ),
+                                    name: "available".to_string(),
+                                },
+                            ),
+                        },
+                        ErrorParameter {
+                            ty: Expression::Type(
+                                Loc(
+                                    0,
+                                    41,
+                                    48,
+                                ),
+                                Type::Uint(
+                                    256,
+                                ),
+                            ),
+                            loc: Loc(
+                                0,
+                                41,
+                                57,
+                            ),
+                            name: Some(
+                                Identifier {
+                                    loc: Loc(
+                                        0,
+                                        49,
+                                        57,
+                                    ),
+                                    name: "required".to_string(),
+                                },
+                            ),
+                        },
+                    ],
+                })),
+                SourceUnitPart::ContractDefinition(Box::new(
+                    ContractDefinition {
+                        doc: vec![],
+                        loc: Loc(
+                            0,
+                            69,
+                            88,
+                        ),
+                        ty: ContractTy::Contract(
+                            Loc(
+                                0,
+                                69,
+                                77,
+                            ),
+                        ),
+                        name: Identifier {
+                            loc: Loc(
+                                0,
+                                78,
+                                87,
+                            ),
+                            name: "TestToken".to_string(),
+                        },
+                        base: vec![],
+                        parts: vec![
+                            ContractPart::ErrorDefinition(Box::new(
+                                ErrorDefinition {
+                                    doc: vec![],
+                                    loc: Loc(
+                                        0,
+                                        102,
+                                        120,
+                                    ),
+                                    name: Identifier {
+                                        loc: Loc(
+                                            0,
+                                            108,
+                                            118,
+                                        ),
+                                        name: "NotPending".to_string(),
+                                    },
+                                    fields: vec![],
+                                },
+                            )),
+                            ContractPart::ErrorDefinition(Box::new(
+                                ErrorDefinition {
+                                    doc: vec![
+                                        DocComment::Line {
+                                            comment: SingleDocComment {
+                                                offset: 137,
+                                                tag: "notice".to_string(),
+                                                value: "Insufficient balance for transfer. Needed `required` but only\n`available` available.".to_string(),
+                                            },
+                                        },
+                                        DocComment::Line {
+                                            comment: SingleDocComment {
+                                                offset: 0,
+                                                tag: "param".to_string(),
+                                                value: "available balance available.".to_string(),
+                                            },
+                                        },
+                                        DocComment::Line {
+                                            comment: SingleDocComment {
+                                                offset: 0,
+                                                tag: "param".to_string(),
+                                                value: "required requested amount to transfer.".to_string(),
+                                            },
+                                        },
+                                    ],
+                                    loc: Loc(
+                                        0,
+                                        365,
+                                        427,
+                                    ),
+                                    name: Identifier {
+                                        loc: Loc(
+                                            0,
+                                            371,
+                                            390,
+                                        ),
+                                        name: "InsufficientBalance".to_string(),
+                                    },
+                                    fields: vec![
+                                        ErrorParameter {
+                                            ty: Expression::Type(
+                                                Loc(
+                                                    0,
+                                                    391,
+                                                    398,
+                                                ),
+                                                Type::Uint(
+                                                    256,
+                                                ),
+                                            ),
+                                            loc: Loc(
+                                                0,
+                                                391,
+                                                408,
+                                            ),
+                                            name: Some(
+                                                Identifier {
+                                                    loc: Loc(
+                                                        0,
+                                                        399,
+                                                        408,
+                                                    ),
+                                                    name: "available".to_string(),
+                                                },
+                                            ),
+                                        },
+                                        ErrorParameter {
+                                            ty: Expression::Type(
+                                                Loc(
+                                                    0,
+                                                    410,
+                                                    417,
+                                                ),
+                                                Type::Uint(
+                                                    256,
+                                                ),
+                                            ),
+                                            loc: Loc(
+                                                0,
+                                                410,
+                                                426,
+                                            ),
+                                            name: Some(
+                                                Identifier {
+                                                    loc: Loc(
+                                                        0,
+                                                        418,
+                                                        426,
+                                                    ),
+                                                    name: "required".to_string(),
+                                                },
+                                            ),
+                                        },
+                                    ],
+                                },
+                            )),
+                        ],
+                    },
+                ))
+            ]);
+
+        assert_eq!(actual_parse_tree, expected_parse_tree);
+    }
 }
