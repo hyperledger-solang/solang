@@ -1,4 +1,5 @@
 use parity_scale_codec::{Decode, Encode};
+use parity_scale_codec_derive::{Decode, Encode};
 use serde_derive::Deserialize;
 
 use crate::build_solidity;

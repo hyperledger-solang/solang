@@ -1,8 +1,8 @@
-use parity_scale_codec::{Decode, Encode};
-
 use crate::{build_solidity, build_solidity_with_overflow_check};
 use num_bigint::BigInt;
 use num_bigint::Sign;
+use parity_scale_codec::{Decode, Encode};
+use parity_scale_codec_derive::{Decode, Encode};
 use rand::Rng;
 
 #[test]
