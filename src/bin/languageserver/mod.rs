@@ -92,9 +92,9 @@ impl SolangServer {
                     };
 
                     let sev = match diag.level {
-                        ast::Level::Info => DiagnosticSeverity::Information,
-                        ast::Level::Warning => DiagnosticSeverity::Warning,
-                        ast::Level::Error => DiagnosticSeverity::Error,
+                        ast::Level::Info => DiagnosticSeverity::INFORMATION,
+                        ast::Level::Warning => DiagnosticSeverity::WARNING,
+                        ast::Level::Error => DiagnosticSeverity::ERROR,
                         ast::Level::Debug => {
                             return None;
                         }
@@ -984,7 +984,7 @@ impl LanguageServer for SolangServer {
             server_info: None,
             capabilities: ServerCapabilities {
                 text_document_sync: Some(TextDocumentSyncCapability::Kind(
-                    TextDocumentSyncKind::Incremental,
+                    TextDocumentSyncKind::INCREMENTAL,
                 )),
                 hover_provider: Some(HoverProviderCapability::Simple(true)),
                 completion_provider: Some(CompletionOptions {
@@ -1019,7 +1019,7 @@ impl LanguageServer for SolangServer {
     async fn initialized(&self, _: InitializedParams) {
         self.client
             .log_message(
-                MessageType::Info,
+                MessageType::INFO,
                 format!("solang language server {} initialized", env!("GIT_HASH")),
             )
             .await;
@@ -1031,25 +1031,25 @@ impl LanguageServer for SolangServer {
 
     async fn did_change_workspace_folders(&self, _: DidChangeWorkspaceFoldersParams) {
         self.client
-            .log_message(MessageType::Info, "workspace folders changed!")
+            .log_message(MessageType::INFO, "workspace folders changed!")
             .await;
     }
 
     async fn did_change_configuration(&self, _: DidChangeConfigurationParams) {
         self.client
-            .log_message(MessageType::Info, "configuration changed!")
+            .log_message(MessageType::INFO, "configuration changed!")
             .await;
     }
 
     async fn did_change_watched_files(&self, _: DidChangeWatchedFilesParams) {
         self.client
-            .log_message(MessageType::Info, "watched files have changed!")
+            .log_message(MessageType::INFO, "watched files have changed!")
             .await;
     }
 
     async fn execute_command(&self, _: ExecuteCommandParams) -> Result<Option<Value>> {
         self.client
-            .log_message(MessageType::Info, "command executed!")
+            .log_message(MessageType::INFO, "command executed!")
             .await;
         Ok(None)
     }
