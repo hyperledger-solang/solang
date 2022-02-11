@@ -1,5 +1,5 @@
 use parity_scale_codec::Encode;
-use parity_scale_codec_derive::Decode;
+use parity_scale_codec_derive::{Decode, Encode};
 
 use crate::build_solidity;
 

@@ -47,8 +47,8 @@ codespan-reporting = "0.11"
 
 [dev-dependencies]
 num-derive = "0.3"
-parity-scale-codec-derive = "2.0.0"
-parity-scale-codec = "2.0.0"
+parity-scale-codec-derive = "3.0.0"
+parity-scale-codec = "3.0.0"
 ethabi = "16.0"
 wasmi = "0.11"
 rand = "0.7"

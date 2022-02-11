@@ -1,6 +1,6 @@
 use crate::build_solidity;
 use parity_scale_codec::Encode;
-use parity_scale_codec_derive::Decode;
+use parity_scale_codec_derive::{Decode, Encode};
 
 #[test]
 fn various_constants() {

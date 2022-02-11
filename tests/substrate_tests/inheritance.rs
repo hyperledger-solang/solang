@@ -1,6 +1,6 @@
 use crate::{build_solidity, no_errors};
 use parity_scale_codec::Encode;
-use parity_scale_codec_derive::Decode;
+use parity_scale_codec_derive::{Decode, Encode};
 use solang::file_resolver::FileResolver;
 use solang::Target;
 use std::ffi::OsStr;
