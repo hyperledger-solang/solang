@@ -1,5 +1,5 @@
 use crate::build_solidity;
-use ethabi::Token;
+use ethabi::{ethereum_types::U256, Token};
 use tiny_keccak::{Hasher, Keccak};
 
 #[test]
@@ -35,8 +35,8 @@ fn simple_event() {
 
     for log in &decoded.params {
         match log.name.as_str() {
-            "a" => assert_eq!(log.value, Token::Int(ethereum_types::U256::from(1))),
-            "b" => assert_eq!(log.value, Token::Int(ethereum_types::U256::from(2))),
+            "a" => assert_eq!(log.value, Token::Int(U256::from(1))),
+            "b" => assert_eq!(log.value, Token::Int(U256::from(2))),
             _ => panic!("unexpected field {}", log.name),
         }
     }
@@ -86,7 +86,7 @@ fn less_simple_event() {
         match log.name.as_str() {
             "a" => assert_eq!(
                 log.value,
-                Token::Int(ethereum_types::U256::from_dec_str("115792089237316195423570985008687907853269984665640564039457584007913129639834").unwrap())
+                Token::Int(U256::from_dec_str("115792089237316195423570985008687907853269984665640564039457584007913129639834").unwrap())
             ),
             "b" => {
                 let mut hasher = Keccak::v256();
@@ -109,7 +109,7 @@ fn less_simple_event() {
                 assert_eq!(log.value, Token::FixedBytes(hash.to_vec()));
             }
             "d" => {
-                assert_eq!(log.value, Token::Tuple(vec![Token::Int(ethereum_types::U256::from(102)), Token::Bool(true)]));
+                assert_eq!(log.value, Token::Tuple(vec![Token::Int(U256::from(102)), Token::Bool(true)]));
             }
 
             _ => panic!("unexpected field {}", log.name),

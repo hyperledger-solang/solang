@@ -1,5 +1,5 @@
 use crate::build_solidity;
-use ethabi::Token;
+use ethabi::{ethereum_types::U256, Token};
 
 #[test]
 fn returns_and_phis_needed() {
@@ -32,19 +32,10 @@ fn returns_and_phis_needed() {
 
     assert_eq!(
         returns,
-        vec![
-            Token::Int(ethereum_types::U256::from(40)),
-            Token::Bool(false)
-        ]
+        vec![Token::Int(U256::from(40)), Token::Bool(false)]
     );
 
     let returns = vm.function("func", &[Token::Bool(true)], &[], 0, None);
 
-    assert_eq!(
-        returns,
-        vec![
-            Token::Int(ethereum_types::U256::from(12)),
-            Token::Bool(true)
-        ]
-    );
+    assert_eq!(returns, vec![Token::Int(U256::from(12)), Token::Bool(true)]);
 }

@@ -1,5 +1,5 @@
 use crate::{account_new, build_solidity};
-use ethabi::Token;
+use ethabi::{ethereum_types::U256, Token};
 
 #[test]
 fn simple_mapping() {
@@ -28,8 +28,8 @@ fn simple_mapping() {
         vm.function(
             "set",
             &[
-                Token::Uint(ethereum_types::U256::from(102 + i)),
-                Token::Uint(ethereum_types::U256::from(300331 + i)),
+                Token::Uint(U256::from(102 + i)),
+                Token::Uint(U256::from(300331 + i)),
             ],
             &[],
             0,
@@ -38,54 +38,24 @@ fn simple_mapping() {
     }
 
     for i in 0..10 {
-        let returns = vm.function(
-            "get",
-            &[Token::Uint(ethereum_types::U256::from(102 + i))],
-            &[],
-            0,
-            None,
-        );
+        let returns = vm.function("get", &[Token::Uint(U256::from(102 + i))], &[], 0, None);
 
-        assert_eq!(
-            returns,
-            vec![Token::Uint(ethereum_types::U256::from(300331 + i))]
-        );
+        assert_eq!(returns, vec![Token::Uint(U256::from(300331 + i))]);
     }
 
-    let returns = vm.function(
-        "get",
-        &[Token::Uint(ethereum_types::U256::from(101))],
-        &[],
-        0,
-        None,
-    );
+    let returns = vm.function("get", &[Token::Uint(U256::from(101))], &[], 0, None);
 
-    assert_eq!(returns, vec![Token::Uint(ethereum_types::U256::from(0))]);
+    assert_eq!(returns, vec![Token::Uint(U256::from(0))]);
 
-    vm.function(
-        "rm",
-        &[Token::Uint(ethereum_types::U256::from(104))],
-        &[],
-        0,
-        None,
-    );
+    vm.function("rm", &[Token::Uint(U256::from(104))], &[], 0, None);
 
     for i in 0..10 {
-        let returns = vm.function(
-            "get",
-            &[Token::Uint(ethereum_types::U256::from(102 + i))],
-            &[],
-            0,
-            None,
-        );
+        let returns = vm.function("get", &[Token::Uint(U256::from(102 + i))], &[], 0, None);
 
         if 102 + i != 104 {
-            assert_eq!(
-                returns,
-                vec![Token::Uint(ethereum_types::U256::from(300331 + i))]
-            );
+            assert_eq!(returns, vec![Token::Uint(U256::from(300331 + i))]);
         } else {
-            assert_eq!(returns, vec![Token::Uint(ethereum_types::U256::from(0))]);
+            assert_eq!(returns, vec![Token::Uint(U256::from(0))]);
         }
     }
 }
@@ -125,7 +95,7 @@ fn less_simple_mapping() {
     vm.function(
         "set_string",
         &[
-            Token::Uint(ethereum_types::U256::from(12313132131321312311213131u128)),
+            Token::Uint(U256::from(12313132131321312311213131u128)),
             Token::String(String::from("This is a string which should be a little longer than 32 bytes so we the the abi encoder")),
         ], &[], 0, None
     );
@@ -133,8 +103,8 @@ fn less_simple_mapping() {
     vm.function(
         "add_int",
         &[
-            Token::Uint(ethereum_types::U256::from(12313132131321312311213131u128)),
-            Token::Int(ethereum_types::U256::from(102)),
+            Token::Uint(U256::from(12313132131321312311213131u128)),
+            Token::Int(U256::from(102)),
         ],
         &[],
         0,
@@ -143,9 +113,7 @@ fn less_simple_mapping() {
 
     let returns = vm.function(
         "get",
-        &[Token::Uint(ethereum_types::U256::from(
-            12313132131321312311213131u128,
-        ))],
+        &[Token::Uint(U256::from(12313132131321312311213131u128))],
         &[],
         0,
         None,
@@ -155,7 +123,7 @@ fn less_simple_mapping() {
         returns,
         vec![Token::Tuple(vec![
             Token::String(String::from("This is a string which should be a little longer than 32 bytes so we the the abi encoder")),
-            Token::Array(vec![Token::Int(ethereum_types::U256::from(102))]),
+            Token::Array(vec![Token::Int(U256::from(102))]),
         ])]
     );
 }
@@ -204,7 +172,7 @@ fn string_mapping() {
         "add_int",
         &[
             Token::String(String::from("a")),
-            Token::Int(ethereum_types::U256::from(102)),
+            Token::Int(U256::from(102)),
         ],
         &[],
         0,
@@ -217,7 +185,7 @@ fn string_mapping() {
         returns,
         vec![Token::Tuple(vec![
             Token::String(String::from("This is a string which should be a little longer than 32 bytes so we the the abi encoder")),
-            Token::Array(vec![Token::Int(ethereum_types::U256::from(102))]),
+            Token::Array(vec![Token::Int(U256::from(102))]),
         ])]
     );
 }
@@ -290,7 +258,7 @@ fn mapping_in_mapping() {
         "set",
         &[
             Token::String(String::from("a")),
-            Token::Int(ethereum_types::U256::from(102)),
+            Token::Int(U256::from(102)),
             Token::FixedBytes(vec![0x98]),
         ],
         &[],
@@ -302,7 +270,7 @@ fn mapping_in_mapping() {
         "map",
         &[
             Token::String(String::from("a")),
-            Token::Int(ethereum_types::U256::from(102)),
+            Token::Int(U256::from(102)),
         ],
         &[],
         0,
@@ -315,7 +283,7 @@ fn mapping_in_mapping() {
         "map",
         &[
             Token::String(String::from("a")),
-            Token::Int(ethereum_types::U256::from(103)),
+            Token::Int(U256::from(103)),
         ],
         &[],
         0,
@@ -328,7 +296,7 @@ fn mapping_in_mapping() {
         "map",
         &[
             Token::String(String::from("b")),
-            Token::Int(ethereum_types::U256::from(102)),
+            Token::Int(U256::from(102)),
         ],
         &[],
         0,
@@ -373,7 +341,7 @@ fn sparse_array() {
     vm.function(
         "set_string",
         &[
-            Token::Uint(ethereum_types::U256::from(909090909)),
+            Token::Uint(U256::from(909090909)),
             Token::String(String::from("This is a string which should be a little longer than 32 bytes so we the the abi encoder")),
         ], &[],0, None
     );
@@ -381,27 +349,21 @@ fn sparse_array() {
     vm.function(
         "add_int",
         &[
-            Token::Uint(ethereum_types::U256::from(909090909)),
-            Token::Int(ethereum_types::U256::from(102)),
+            Token::Uint(U256::from(909090909)),
+            Token::Int(U256::from(102)),
         ],
         &[],
         0,
         None,
     );
 
-    let returns = vm.function(
-        "get",
-        &[Token::Uint(ethereum_types::U256::from(909090909))],
-        &[],
-        0,
-        None,
-    );
+    let returns = vm.function("get", &[Token::Uint(U256::from(909090909))], &[], 0, None);
 
     assert_eq!(
         returns,
         vec![Token::Tuple(vec![
             Token::String(String::from("This is a string which should be a little longer than 32 bytes so we the the abi encoder")),
-            Token::Array(vec![Token::Int(ethereum_types::U256::from(102))]),
+            Token::Array(vec![Token::Int(U256::from(102))]),
         ])]
     );
 }
@@ -441,7 +403,7 @@ fn massive_sparse_array() {
     vm.function(
         "set_string",
         &[
-            Token::Uint(ethereum_types::U256::from(786868768768678687686877u128)),
+            Token::Uint(U256::from(786868768768678687686877u128)),
             Token::String(String::from("This is a string which should be a little longer than 32 bytes so we the the abi encoder")),
         ], &[],0, None
     );
@@ -449,8 +411,8 @@ fn massive_sparse_array() {
     vm.function(
         "add_int",
         &[
-            Token::Uint(ethereum_types::U256::from(786868768768678687686877u128)),
-            Token::Int(ethereum_types::U256::from(102)),
+            Token::Uint(U256::from(786868768768678687686877u128)),
+            Token::Int(U256::from(102)),
         ],
         &[],
         0,
@@ -459,9 +421,7 @@ fn massive_sparse_array() {
 
     let returns = vm.function(
         "get",
-        &[Token::Uint(ethereum_types::U256::from(
-            786868768768678687686877u128,
-        ))],
+        &[Token::Uint(U256::from(786868768768678687686877u128))],
         &[],
         0,
         None,
@@ -471,7 +431,7 @@ fn massive_sparse_array() {
         returns,
         vec![Token::Tuple(vec![
             Token::String(String::from("This is a string which should be a little longer than 32 bytes so we the the abi encoder")),
-            Token::Array(vec![Token::Int(ethereum_types::U256::from(102))]),
+            Token::Array(vec![Token::Int(U256::from(102))]),
         ])]
     );
 }
@@ -514,7 +474,7 @@ fn mapping_in_dynamic_array() {
 
     vm.function(
         "setNumber",
-        &[Token::Int(ethereum_types::U256::from(2147483647))],
+        &[Token::Int(U256::from(2147483647))],
         &[],
         0,
         None,
@@ -528,9 +488,9 @@ fn mapping_in_dynamic_array() {
             vm.function(
                 "set",
                 &[
-                    Token::Uint(ethereum_types::U256::from(array_no)),
-                    Token::Uint(ethereum_types::U256::from(102 + i + array_no * 500)),
-                    Token::Uint(ethereum_types::U256::from(300331 + i)),
+                    Token::Uint(U256::from(array_no)),
+                    Token::Uint(U256::from(102 + i + array_no * 500)),
+                    Token::Uint(U256::from(300331 + i)),
                 ],
                 &[],
                 0,
@@ -544,40 +504,31 @@ fn mapping_in_dynamic_array() {
             let returns = vm.function(
                 "map",
                 &[
-                    Token::Uint(ethereum_types::U256::from(array_no)),
-                    Token::Uint(ethereum_types::U256::from(102 + i + array_no * 500)),
+                    Token::Uint(U256::from(array_no)),
+                    Token::Uint(U256::from(102 + i + array_no * 500)),
                 ],
                 &[],
                 0,
                 None,
             );
 
-            assert_eq!(
-                returns,
-                vec![Token::Uint(ethereum_types::U256::from(300331 + i))]
-            );
+            assert_eq!(returns, vec![Token::Uint(U256::from(300331 + i))]);
         }
     }
 
     let returns = vm.function(
         "map",
-        &[
-            Token::Uint(ethereum_types::U256::from(0)),
-            Token::Uint(ethereum_types::U256::from(101)),
-        ],
+        &[Token::Uint(U256::from(0)), Token::Uint(U256::from(101))],
         &[],
         0,
         None,
     );
 
-    assert_eq!(returns, vec![Token::Uint(ethereum_types::U256::from(0))]);
+    assert_eq!(returns, vec![Token::Uint(U256::from(0))]);
 
     vm.function(
         "rm",
-        &[
-            Token::Uint(ethereum_types::U256::from(0)),
-            Token::Uint(ethereum_types::U256::from(104)),
-        ],
+        &[Token::Uint(U256::from(0)), Token::Uint(U256::from(104))],
         &[],
         0,
         None,
@@ -586,44 +537,35 @@ fn mapping_in_dynamic_array() {
     for i in 0..10 {
         let returns = vm.function(
             "map",
-            &[
-                Token::Uint(ethereum_types::U256::from(0)),
-                Token::Uint(ethereum_types::U256::from(102 + i)),
-            ],
+            &[Token::Uint(U256::from(0)), Token::Uint(U256::from(102 + i))],
             &[],
             0,
             None,
         );
 
         if 102 + i != 104 {
-            assert_eq!(
-                returns,
-                vec![Token::Uint(ethereum_types::U256::from(300331 + i))]
-            );
+            assert_eq!(returns, vec![Token::Uint(U256::from(300331 + i))]);
         } else {
-            assert_eq!(returns, vec![Token::Uint(ethereum_types::U256::from(0))]);
+            assert_eq!(returns, vec![Token::Uint(U256::from(0))]);
         }
     }
 
     let returns = vm.function("length", &[], &[], 0, None);
-    assert_eq!(returns, vec![Token::Uint(ethereum_types::U256::from(2))]);
+    assert_eq!(returns, vec![Token::Uint(U256::from(2))]);
 
     vm.function("pop", &[], &[], 0, None);
 
     let returns = vm.function("length", &[], &[], 0, None);
-    assert_eq!(returns, vec![Token::Uint(ethereum_types::U256::from(1))]);
+    assert_eq!(returns, vec![Token::Uint(U256::from(1))]);
 
     vm.function("pop", &[], &[], 0, None);
 
     let returns = vm.function("length", &[], &[], 0, None);
-    assert_eq!(returns, vec![Token::Uint(ethereum_types::U256::from(0))]);
+    assert_eq!(returns, vec![Token::Uint(U256::from(0))]);
 
     let returns = vm.function("number", &[], &[], 0, None);
 
-    assert_eq!(
-        returns,
-        vec![Token::Int(ethereum_types::U256::from(2147483647))]
-    );
+    assert_eq!(returns, vec![Token::Int(U256::from(2147483647))]);
 }
 
 #[test]
@@ -668,7 +610,7 @@ fn mapping_in_struct_in_dynamic_array() {
 
     vm.function(
         "setNumber",
-        &[Token::Int(ethereum_types::U256::from(2147483647))],
+        &[Token::Int(U256::from(2147483647))],
         &[],
         0,
         None,
@@ -682,9 +624,9 @@ fn mapping_in_struct_in_dynamic_array() {
             vm.function(
                 "set",
                 &[
-                    Token::Uint(ethereum_types::U256::from(array_no)),
-                    Token::Uint(ethereum_types::U256::from(102 + i + array_no * 500)),
-                    Token::Uint(ethereum_types::U256::from(300331 + i)),
+                    Token::Uint(U256::from(array_no)),
+                    Token::Uint(U256::from(102 + i + array_no * 500)),
+                    Token::Uint(U256::from(300331 + i)),
                 ],
                 &[],
                 0,
@@ -698,40 +640,31 @@ fn mapping_in_struct_in_dynamic_array() {
             let returns = vm.function(
                 "get",
                 &[
-                    Token::Uint(ethereum_types::U256::from(array_no)),
-                    Token::Uint(ethereum_types::U256::from(102 + i + array_no * 500)),
+                    Token::Uint(U256::from(array_no)),
+                    Token::Uint(U256::from(102 + i + array_no * 500)),
                 ],
                 &[],
                 0,
                 None,
             );
 
-            assert_eq!(
-                returns,
-                vec![Token::Uint(ethereum_types::U256::from(300331 + i))]
-            );
+            assert_eq!(returns, vec![Token::Uint(U256::from(300331 + i))]);
         }
     }
 
     let returns = vm.function(
         "get",
-        &[
-            Token::Uint(ethereum_types::U256::from(0)),
-            Token::Uint(ethereum_types::U256::from(101)),
-        ],
+        &[Token::Uint(U256::from(0)), Token::Uint(U256::from(101))],
         &[],
         0,
         None,
     );
 
-    assert_eq!(returns, vec![Token::Uint(ethereum_types::U256::from(0))]);
+    assert_eq!(returns, vec![Token::Uint(U256::from(0))]);
 
     vm.function(
         "rm",
-        &[
-            Token::Uint(ethereum_types::U256::from(0)),
-            Token::Uint(ethereum_types::U256::from(104)),
-        ],
+        &[Token::Uint(U256::from(0)), Token::Uint(U256::from(104))],
         &[],
         0,
         None,
@@ -740,22 +673,16 @@ fn mapping_in_struct_in_dynamic_array() {
     for i in 0..10 {
         let returns = vm.function(
             "get",
-            &[
-                Token::Uint(ethereum_types::U256::from(0)),
-                Token::Uint(ethereum_types::U256::from(102 + i)),
-            ],
+            &[Token::Uint(U256::from(0)), Token::Uint(U256::from(102 + i))],
             &[],
             0,
             None,
         );
 
         if 102 + i != 104 {
-            assert_eq!(
-                returns,
-                vec![Token::Uint(ethereum_types::U256::from(300331 + i))]
-            );
+            assert_eq!(returns, vec![Token::Uint(U256::from(300331 + i))]);
         } else {
-            assert_eq!(returns, vec![Token::Uint(ethereum_types::U256::from(0))]);
+            assert_eq!(returns, vec![Token::Uint(U256::from(0))]);
         }
     }
 
@@ -764,8 +691,5 @@ fn mapping_in_struct_in_dynamic_array() {
 
     let returns = vm.function("number", &[], &[], 0, None);
 
-    assert_eq!(
-        returns,
-        vec![Token::Int(ethereum_types::U256::from(2147483647))]
-    );
+    assert_eq!(returns, vec![Token::Int(U256::from(2147483647))]);
 }

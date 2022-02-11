@@ -1,5 +1,5 @@
 use crate::build_solidity;
-use ethabi::Token;
+use ethabi::{ethereum_types::U256, Token};
 
 #[test]
 fn return_single() {
@@ -31,19 +31,19 @@ fn return_single() {
     vm.constructor("foo", &[], 0);
 
     let returns = vm.function("f", &[], &[], 0, None);
-    assert_eq!(returns, vec![Token::Uint(ethereum_types::U256::from(2)),]);
+    assert_eq!(returns, vec![Token::Uint(U256::from(2)),]);
 
     let returns = vm.function("g", &[], &[], 0, None);
-    assert_eq!(returns, vec![Token::Uint(ethereum_types::U256::from(3)),]);
+    assert_eq!(returns, vec![Token::Uint(U256::from(3)),]);
 
     let returns = vm.function("h", &[], &[], 0, None);
-    assert_eq!(returns, vec![Token::Uint(ethereum_types::U256::from(2)),]);
+    assert_eq!(returns, vec![Token::Uint(U256::from(2)),]);
 
     let returns = vm.function("i", &[], &[], 0, None);
-    assert_eq!(returns, vec![Token::Uint(ethereum_types::U256::from(24)),]);
+    assert_eq!(returns, vec![Token::Uint(U256::from(24)),]);
 
     let returns = vm.function("j", &[], &[], 0, None);
-    assert_eq!(returns, vec![Token::Uint(ethereum_types::U256::from(5)),]);
+    assert_eq!(returns, vec![Token::Uint(U256::from(5)),]);
 }
 
 #[test]
@@ -62,10 +62,7 @@ fn return_ternary() {
 
     assert_eq!(
         returns,
-        vec![
-            Token::Uint(ethereum_types::U256::from(3)),
-            Token::Uint(ethereum_types::U256::from(4)),
-        ]
+        vec![Token::Uint(U256::from(3)), Token::Uint(U256::from(4)),]
     );
 
     let mut vm = build_solidity(
@@ -82,10 +79,7 @@ fn return_ternary() {
 
     assert_eq!(
         returns,
-        vec![
-            Token::Uint(ethereum_types::U256::from(6)),
-            Token::Uint(ethereum_types::U256::from(4)),
-        ]
+        vec![Token::Uint(U256::from(6)), Token::Uint(U256::from(4)),]
     );
 }
 
@@ -116,7 +110,7 @@ fn return_nothing() {
     let _returns = vm.function("inc", &[], &[], 0, None);
     let returns = vm.function("get", &[], &[], 0, None);
 
-    assert_eq!(returns, vec![Token::Uint(ethereum_types::U256::from(2)),]);
+    assert_eq!(returns, vec![Token::Uint(U256::from(2)),]);
 
     let mut vm = build_solidity(
         r#"
@@ -145,7 +139,7 @@ fn return_nothing() {
     let _returns = vm.function("f", &[], &[], 0, None);
     let returns = vm.function("get", &[], &[], 0, None);
 
-    assert_eq!(returns, vec![Token::Uint(ethereum_types::U256::from(5)),]);
+    assert_eq!(returns, vec![Token::Uint(U256::from(5)),]);
 }
 
 #[test]
@@ -168,10 +162,7 @@ fn return_function() {
 
     assert_eq!(
         returns,
-        vec![
-            Token::Uint(ethereum_types::U256::from(1)),
-            Token::Uint(ethereum_types::U256::from(2)),
-        ]
+        vec![Token::Uint(U256::from(1)), Token::Uint(U256::from(2)),]
     );
 
     let mut vm = build_solidity(
@@ -192,9 +183,6 @@ fn return_function() {
 
     assert_eq!(
         returns,
-        vec![
-            Token::Uint(ethereum_types::U256::from(1)),
-            Token::Uint(ethereum_types::U256::from(2)),
-        ]
+        vec![Token::Uint(U256::from(1)), Token::Uint(U256::from(2)),]
     );
 }

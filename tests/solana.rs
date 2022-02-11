@@ -2,7 +2,7 @@ mod solana_helpers;
 
 use base58::{FromBase58, ToBase58};
 use byteorder::{ByteOrder, LittleEndian, WriteBytesExt};
-use ethabi::{RawLog, Token};
+use ethabi::{ethereum_types::H256, RawLog, Token};
 use libc::c_char;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
@@ -1041,9 +1041,9 @@ impl<'a> SyscallObject<UserError> for SyscallInvokeSignedC<'a> {
                         assert_eq!(create_account.instruction, 3);
 
                         let mut hasher = Sha256::new();
-                        hasher.update(create_account.base);
+                        hasher.update(&create_account.base);
                         hasher.update(create_account.seed);
-                        hasher.update(create_account.program_id);
+                        hasher.update(&create_account.program_id);
 
                         let hash = hasher.finalize();
 
@@ -1528,7 +1528,7 @@ impl VirtualMachine {
                     .map(|topic| {
                         let topic: [u8; 32] = topic.try_into().unwrap();
 
-                        ethereum_types::H256::from(topic)
+                        H256::from(topic)
                     })
                     .collect();
                 let data = fields[1].clone();

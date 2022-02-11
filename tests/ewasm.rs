@@ -1,4 +1,4 @@
-use ethabi::{decode, RawLog, Token};
+use ethabi::{decode, ethereum_types, RawLog, Token};
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 use rand::Rng;

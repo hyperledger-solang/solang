@@ -1,5 +1,5 @@
 use crate::build_solidity;
-use ethabi::Token;
+use ethabi::{ethereum_types::U256, Token};
 
 #[test]
 fn simple_external_call() {
@@ -84,15 +84,9 @@ fn external_call_with_returns() {
 
     vm.constructor("bar1", &[], 0);
 
-    let res = vm.function(
-        "test_bar",
-        &[Token::Int(ethereum_types::U256::from(21))],
-        &[],
-        0,
-        None,
-    );
+    let res = vm.function("test_bar", &[Token::Int(U256::from(21))], &[], 0, None);
 
-    assert_eq!(res, vec![Token::Int(ethereum_types::U256::from(24))]);
+    assert_eq!(res, vec![Token::Int(U256::from(24))]);
 
     let bar1_account = vm.stack[0].data;
 
@@ -108,7 +102,7 @@ fn external_call_with_returns() {
         None,
     );
 
-    assert_eq!(res, vec![Token::Int(ethereum_types::U256::from(15))]);
+    assert_eq!(res, vec![Token::Int(U256::from(15))]);
 }
 
 #[test]
@@ -137,15 +131,9 @@ fn external_raw_call_with_returns() {
 
     vm.constructor("bar1", &[], 0);
 
-    let res = vm.function(
-        "test_bar",
-        &[Token::Int(ethereum_types::U256::from(21))],
-        &[],
-        0,
-        None,
-    );
+    let res = vm.function("test_bar", &[Token::Int(U256::from(21))], &[], 0, None);
 
-    assert_eq!(res, vec![Token::Int(ethereum_types::U256::from(24))]);
+    assert_eq!(res, vec![Token::Int(U256::from(24))]);
 
     let bar1_account = vm.stack[0].data;
 
@@ -161,7 +149,7 @@ fn external_raw_call_with_returns() {
         None,
     );
 
-    assert_eq!(res, vec![Token::Int(ethereum_types::U256::from(15))]);
+    assert_eq!(res, vec![Token::Int(U256::from(15))]);
 }
 
 #[test]
@@ -202,13 +190,7 @@ fn external_call_with_string_returns() {
 
     vm.constructor("bar1", &[], 0);
 
-    let res = vm.function(
-        "test_bar",
-        &[Token::Int(ethereum_types::U256::from(22))],
-        &[],
-        0,
-        None,
-    );
+    let res = vm.function("test_bar", &[Token::Int(U256::from(22))], &[], 0, None);
 
     assert_eq!(res, vec![Token::String(String::from("foo:22"))]);
 

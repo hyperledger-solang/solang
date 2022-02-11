@@ -1,4 +1,5 @@
 use crate::build_solidity;
+use ethabi::ethereum_types::U256;
 use num_bigint::{BigInt, BigUint};
 use rand::Rng;
 use std::ops::Add;
@@ -155,14 +156,11 @@ fn test_enum() {
 
     let returns = vm.function("return_enum", &[], &[], 0, None);
 
-    assert_eq!(
-        returns,
-        vec![ethabi::Token::Uint(ethereum_types::U256::from(9))]
-    );
+    assert_eq!(returns, vec![ethabi::Token::Uint(U256::from(9))]);
 
     vm.function(
         "enum_arg",
-        &[ethabi::Token::Uint(ethereum_types::U256::from(6))],
+        &[ethabi::Token::Uint(U256::from(6))],
         &[],
         0,
         None,
@@ -300,7 +298,7 @@ fn bytes() {
                 "shift_left",
                 &[
                     ethabi::Token::FixedBytes(a.to_vec()),
-                    ethabi::Token::Uint(ethereum_types::U256::from(r)),
+                    ethabi::Token::Uint(U256::from(r)),
                 ],
                 &[],
                 0,
@@ -323,7 +321,7 @@ fn bytes() {
                 "shift_right",
                 &[
                     ethabi::Token::FixedBytes(a.to_vec()),
-                    ethabi::Token::Uint(ethereum_types::U256::from(r)),
+                    ethabi::Token::Uint(U256::from(r)),
                 ],
                 &[],
                 0,
@@ -415,8 +413,8 @@ fn uint() {
             rng.fill(&mut a[..]);
             rng.fill(&mut b[..]);
 
-            let mut a = ethereum_types::U256::from_big_endian(&a);
-            let mut b = ethereum_types::U256::from_big_endian(&b);
+            let mut a = U256::from_big_endian(&a);
+            let mut b = U256::from_big_endian(&b);
 
             rng.fill(&mut a.0[..]);
             rng.fill(&mut b.0[..]);
@@ -486,7 +484,7 @@ fn uint() {
 
             assert_eq!(pow, vec![ethabi::Token::Uint(res)]);
 
-            if b != ethereum_types::U256::zero() {
+            if b != U256::zero() {
                 let div = vm.function(
                     "div",
                     &[ethabi::Token::Uint(a), ethabi::Token::Uint(b)],
@@ -524,7 +522,7 @@ fn uint() {
                 None,
             );
 
-            let mut res = ethereum_types::U256([
+            let mut res = U256([
                 a.0[0] | b.0[0],
                 a.0[1] | b.0[1],
                 a.0[2] | b.0[2],
@@ -543,7 +541,7 @@ fn uint() {
                 None,
             );
 
-            let mut res = ethereum_types::U256([
+            let mut res = U256([
                 a.0[0] & b.0[0],
                 a.0[1] & b.0[1],
                 a.0[2] & b.0[2],
@@ -562,7 +560,7 @@ fn uint() {
                 None,
             );
 
-            let mut res = ethereum_types::U256([
+            let mut res = U256([
                 a.0[0] ^ b.0[0],
                 a.0[1] ^ b.0[1],
                 a.0[2] ^ b.0[2],
@@ -577,10 +575,7 @@ fn uint() {
 
             let shl = vm.function(
                 "shift_left",
-                &[
-                    ethabi::Token::Uint(a),
-                    ethabi::Token::Uint(ethereum_types::U256::from(r)),
-                ],
+                &[ethabi::Token::Uint(a), ethabi::Token::Uint(U256::from(r))],
                 &[],
                 0,
                 None,
@@ -594,10 +589,7 @@ fn uint() {
 
             let shr = vm.function(
                 "shift_right",
-                &[
-                    ethabi::Token::Uint(a),
-                    ethabi::Token::Uint(ethereum_types::U256::from(r)),
-                ],
+                &[ethabi::Token::Uint(a), ethabi::Token::Uint(U256::from(r))],
                 &[],
                 0,
                 None,
@@ -612,7 +604,7 @@ fn uint() {
     }
 }
 
-fn truncate_uint(n: &mut ethereum_types::U256, width: usize) {
+fn truncate_uint(n: &mut U256, width: usize) {
     let mut bits = 256 - width;
 
     let mut offset = 3;
@@ -692,8 +684,8 @@ fn int() {
             rng.fill(&mut a_bs[..]);
             rng.fill(&mut b_bs[..]);
 
-            let mut a = ethereum_types::U256::from_big_endian(&a_bs);
-            let mut b = ethereum_types::U256::from_big_endian(&b_bs);
+            let mut a = U256::from_big_endian(&a_bs);
+            let mut b = U256::from_big_endian(&b_bs);
 
             truncate_int(&mut a, width);
             truncate_int(&mut b, width);
@@ -739,7 +731,7 @@ fn int() {
 
             assert_eq!(mul, vec![ethabi::Token::Int(res)]);
 
-            if b != ethereum_types::U256::zero() {
+            if b != U256::zero() {
                 let div = vm.function(
                     "div",
                     &[ethabi::Token::Int(a), ethabi::Token::Int(b)],
@@ -775,7 +767,7 @@ fn int() {
                 None,
             );
 
-            let mut res = ethereum_types::U256([
+            let mut res = U256([
                 a.0[0] | b.0[0],
                 a.0[1] | b.0[1],
                 a.0[2] | b.0[2],
@@ -794,7 +786,7 @@ fn int() {
                 None,
             );
 
-            let mut res = ethereum_types::U256([
+            let mut res = U256([
                 a.0[0] & b.0[0],
                 a.0[1] & b.0[1],
                 a.0[2] & b.0[2],
@@ -813,7 +805,7 @@ fn int() {
                 None,
             );
 
-            let mut res = ethereum_types::U256([
+            let mut res = U256([
                 a.0[0] ^ b.0[0],
                 a.0[1] ^ b.0[1],
                 a.0[2] ^ b.0[2],
@@ -828,10 +820,7 @@ fn int() {
 
             let shl = vm.function(
                 "shift_left",
-                &[
-                    ethabi::Token::Int(a),
-                    ethabi::Token::Uint(ethereum_types::U256::from(r)),
-                ],
+                &[ethabi::Token::Int(a), ethabi::Token::Uint(U256::from(r))],
                 &[],
                 0,
                 None,
@@ -845,10 +834,7 @@ fn int() {
 
             let shr = vm.function(
                 "shift_right",
-                &[
-                    ethabi::Token::Int(a),
-                    ethabi::Token::Uint(ethereum_types::U256::from(r)),
-                ],
+                &[ethabi::Token::Int(a), ethabi::Token::Uint(U256::from(r))],
                 &[],
                 0,
                 None,
@@ -861,9 +847,8 @@ fn int() {
     }
 }
 
-fn truncate_int(n: &mut ethereum_types::U256, width: usize) {
-    let sign =
-        n.bitand(ethereum_types::U256::from(1) << (width - 1)) != ethereum_types::U256::zero();
+fn truncate_int(n: &mut U256, width: usize) {
+    let sign = n.bitand(U256::from(1) << (width - 1)) != U256::zero();
 
     let mut bits = 256 - width;
 
@@ -885,7 +870,7 @@ fn truncate_int(n: &mut ethereum_types::U256, width: usize) {
     }
 }
 
-fn bigint_to_eth(v: &BigInt, width: usize) -> ethereum_types::U256 {
+fn bigint_to_eth(v: &BigInt, width: usize) -> U256 {
     let mut buf = v.to_signed_bytes_be();
     let width = width / 8;
 
@@ -899,10 +884,10 @@ fn bigint_to_eth(v: &BigInt, width: usize) -> ethereum_types::U256 {
         buf.insert(0, sign);
     }
 
-    ethereum_types::U256::from_big_endian(&buf)
+    U256::from_big_endian(&buf)
 }
 
-fn eth_to_bigint(v: &ethereum_types::U256, width: usize) -> BigInt {
+fn eth_to_bigint(v: &U256, width: usize) -> BigInt {
     let mut buf = Vec::new();
 
     buf.resize(32, 0);

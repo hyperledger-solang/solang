@@ -1,5 +1,5 @@
 use crate::build_solidity;
-use ethabi::Token;
+use ethabi::{ethereum_types::U256, Token};
 
 #[test]
 fn lamports() {
@@ -30,10 +30,7 @@ fn lamports() {
 
     let returns = vm.function("test", &[], &[], 0, None);
 
-    assert_eq!(
-        returns[0],
-        Token::Uint(ethereum_types::U256::from(17672630920854456917u64))
-    );
+    assert_eq!(returns[0], Token::Uint(U256::from(17672630920854456917u64)));
 }
 
 #[test]
@@ -98,19 +95,13 @@ fn data() {
     vm.constructor("c", &[], 0);
 
     for i in 0..10 {
-        let returns = vm.function(
-            "test",
-            &[Token::Uint(ethereum_types::U256::from(i))],
-            &[],
-            0,
-            None,
-        );
+        let returns = vm.function("test", &[Token::Uint(U256::from(i))], &[], 0, None);
 
         let this = &vm.stack[0].data;
 
         let val = vm.account_data[this].data[i];
 
-        assert_eq!(returns[0], Token::Uint(ethereum_types::U256::from(val)));
+        assert_eq!(returns[0], Token::Uint(U256::from(val)));
     }
 
     let returns = vm.function("test2", &[], &[], 0, None);
@@ -119,5 +110,5 @@ fn data() {
 
     let val = u32::from_le_bytes(vm.account_data[this].data[1..5].try_into().unwrap());
 
-    assert_eq!(returns[0], Token::Uint(ethereum_types::U256::from(val)));
+    assert_eq!(returns[0], Token::Uint(U256::from(val)));
 }

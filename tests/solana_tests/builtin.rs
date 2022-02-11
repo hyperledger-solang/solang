@@ -1,5 +1,5 @@
 use crate::build_solidity;
-use ethabi::Token;
+use ethabi::{ethereum_types::U256, Token};
 
 #[test]
 fn builtins() {
@@ -28,28 +28,19 @@ fn builtins() {
 
     let returns = vm.function("mr_now", &[], &[], 0, None);
 
-    assert_eq!(
-        returns,
-        vec![Token::Uint(ethereum_types::U256::from(1620656423))]
-    );
+    assert_eq!(returns, vec![Token::Uint(U256::from(1620656423))]);
 
     let returns = vm.function("mr_slot", &[], &[], 0, None);
 
-    assert_eq!(
-        returns,
-        vec![Token::Uint(ethereum_types::U256::from(70818331))]
-    );
+    assert_eq!(returns, vec![Token::Uint(U256::from(70818331))]);
 
     let returns = vm.function("mr_blocknumber", &[], &[], 0, None);
 
-    assert_eq!(
-        returns,
-        vec![Token::Uint(ethereum_types::U256::from(70818331))]
-    );
+    assert_eq!(returns, vec![Token::Uint(U256::from(70818331))]);
 
     let returns = vm.function(
         "msg_data",
-        &[Token::Uint(ethereum_types::U256::from(0xdeadcafeu32))],
+        &[Token::Uint(U256::from(0xdeadcafeu32))],
         &[],
         0,
         None,
