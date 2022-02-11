@@ -1,5 +1,5 @@
 use crate::build_solidity;
-use ethabi::{encode, Token};
+use ethabi::{encode, ethereum_types::U256, Token};
 
 #[test]
 fn abi_encode() {
@@ -38,7 +38,7 @@ fn abi_encode() {
 
     bytes.extend(
         encode(&[
-            Token::Int(ethereum_types::U256::from(102)),
+            Token::Int(U256::from(102)),
             Token::FixedBytes(b"ABCD".to_vec()),
         ])
         .iter(),

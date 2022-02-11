@@ -1,5 +1,5 @@
 use crate::build_solidity;
-use ethabi::Token;
+use ethabi::{ethereum_types::U256, Token};
 
 #[test]
 fn conditional_destructure() {
@@ -21,40 +21,28 @@ fn conditional_destructure() {
 
     assert_eq!(
         returns,
-        vec![
-            Token::Int(ethereum_types::U256::from(1)),
-            Token::Int(ethereum_types::U256::from(2)),
-        ]
+        vec![Token::Int(U256::from(1)), Token::Int(U256::from(2)),]
     );
 
     let returns = vm.function("f", &[Token::Bool(true), Token::Bool(false)], &[], 0, None);
 
     assert_eq!(
         returns,
-        vec![
-            Token::Int(ethereum_types::U256::from(3)),
-            Token::Int(ethereum_types::U256::from(4)),
-        ]
+        vec![Token::Int(U256::from(3)), Token::Int(U256::from(4)),]
     );
 
     let returns = vm.function("f", &[Token::Bool(false), Token::Bool(false)], &[], 0, None);
 
     assert_eq!(
         returns,
-        vec![
-            Token::Int(ethereum_types::U256::from(5)),
-            Token::Int(ethereum_types::U256::from(6)),
-        ]
+        vec![Token::Int(U256::from(5)), Token::Int(U256::from(6)),]
     );
 
     let returns = vm.function("f", &[Token::Bool(false), Token::Bool(true)], &[], 0, None);
 
     assert_eq!(
         returns,
-        vec![
-            Token::Int(ethereum_types::U256::from(5)),
-            Token::Int(ethereum_types::U256::from(6)),
-        ]
+        vec![Token::Int(U256::from(5)), Token::Int(U256::from(6)),]
     );
 }
 
@@ -80,10 +68,7 @@ fn casting_destructure() {
 
     assert_eq!(
         returns,
-        vec![
-            Token::Int(ethereum_types::U256::from(1)),
-            Token::Int(ethereum_types::U256::from(2)),
-        ]
+        vec![Token::Int(U256::from(1)), Token::Int(U256::from(2)),]
     );
 
     let mut vm = build_solidity(

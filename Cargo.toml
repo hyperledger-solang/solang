@@ -37,7 +37,7 @@ base58 = "0.2.0"
 sha2 = "0.10"
 ripemd = "0.1"
 bitvec = "0.20"
-funty = "=1.1.0"
+funty = "2.0"
 itertools = "0.10"
 num-rational = "0.4"
 indexmap = "1.8"
@@ -50,16 +50,18 @@ num-derive = "0.3"
 parity-scale-codec-derive = "2.0.0"
 parity-scale-codec = "2.0.0"
 ethabi = "16.0"
-ethereum-types = "0.12"
 wasmi = "0.11"
 rand = "0.7"
 sha2 = "0.10"
 # solana_rbpf makes api changes in patch versions
-solana_rbpf = "=0.2.21"
+solana_rbpf = "=0.2.23"
 byteorder = "1.3"
 assert_cmd = "2.0"
 bincode = "1.3"
 ed25519-dalek = "1.0"
+
+[package.metadata.docs.rs]
+no-default-features = true
 
 [profile.release]
 lto = true

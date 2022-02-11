@@ -1,5 +1,5 @@
 use crate::build_solidity;
-use ethabi::Token;
+use ethabi::{ethereum_types::U256, Token};
 use num_bigint::BigUint;
 use std::str::FromStr;
 
@@ -158,7 +158,7 @@ fn safe_math() {
     assert_ne!(res, Ok(0));
 }
 
-fn biguint_to_eth(v: &BigUint) -> ethereum_types::U256 {
+fn biguint_to_eth(v: &BigUint) -> U256 {
     let mut buf = v.to_bytes_be();
     let width = 32;
 
@@ -170,5 +170,5 @@ fn biguint_to_eth(v: &BigUint) -> ethereum_types::U256 {
         buf.insert(0, 0);
     }
 
-    ethereum_types::U256::from_big_endian(&buf)
+    U256::from_big_endian(&buf)
 }

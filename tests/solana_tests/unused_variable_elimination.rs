@@ -1,5 +1,5 @@
 use crate::build_solidity;
-use ethabi::Token;
+use ethabi::{ethereum_types::U256, Token};
 
 /// This tests check that a public storage variable is not eliminated
 /// and that an assignment inside an expression works
@@ -39,10 +39,10 @@ fn test_returns() {
     let _ = vm.function("assign", &[], &[], 0, None);
     let returns = vm.function("pb1", &[], &[], 0, None);
 
-    assert_eq!(returns, vec![Token::Int(ethereum_types::U256::from(5))]);
+    assert_eq!(returns, vec![Token::Int(U256::from(5))]);
 
     let returns = vm.function("test1", &[], &[], 0, None);
-    assert_eq!(returns, vec![Token::Int(ethereum_types::U256::from(52))]);
+    assert_eq!(returns, vec![Token::Int(U256::from(52))]);
     let returns = vm.function("test2", &[], &[], 0, None);
-    assert_eq!(returns, vec![Token::Int(ethereum_types::U256::from(5))]);
+    assert_eq!(returns, vec![Token::Int(U256::from(5))]);
 }

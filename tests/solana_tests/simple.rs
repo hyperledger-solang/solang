@@ -1,4 +1,5 @@
 use crate::build_solidity;
+use ethabi::ethereum_types::U256;
 use solang::{file_resolver::FileResolver, Target};
 use std::ffi::OsStr;
 
@@ -71,8 +72,8 @@ fn parameters() {
     vm.function(
         "test",
         &[
-            ethabi::Token::Uint(ethereum_types::U256::from(10)),
-            ethabi::Token::Uint(ethereum_types::U256::from(10)),
+            ethabi::Token::Uint(U256::from(10)),
+            ethabi::Token::Uint(U256::from(10)),
         ],
         &[],
         0,
@@ -86,8 +87,8 @@ fn parameters() {
     vm.function(
         "test",
         &[
-            ethabi::Token::Uint(ethereum_types::U256::from(99)),
-            ethabi::Token::Uint(ethereum_types::U256::from(102)),
+            ethabi::Token::Uint(U256::from(99)),
+            ethabi::Token::Uint(U256::from(102)),
         ],
         &[],
         0,
@@ -110,18 +111,9 @@ fn returns() {
 
     vm.constructor("foo", &[], 0);
 
-    let returns = vm.function(
-        "test",
-        &[ethabi::Token::Uint(ethereum_types::U256::from(10))],
-        &[],
-        0,
-        None,
-    );
+    let returns = vm.function("test", &[ethabi::Token::Uint(U256::from(10))], &[], 0, None);
 
-    assert_eq!(
-        returns,
-        vec![ethabi::Token::Uint(ethereum_types::U256::from(100))]
-    );
+    assert_eq!(returns, vec![ethabi::Token::Uint(U256::from(100))]);
 
     let mut vm = build_solidity(
         r#"
@@ -136,7 +128,7 @@ fn returns() {
 
     let returns = vm.function(
         "test",
-        &[ethabi::Token::Uint(ethereum_types::U256::from(982451653))],
+        &[ethabi::Token::Uint(U256::from(982451653))],
         &[],
         0,
         None,
@@ -146,7 +138,7 @@ fn returns() {
         returns,
         vec![
             ethabi::Token::Bool(true),
-            ethabi::Token::Uint(ethereum_types::U256::from(961748941u64 * 982451653u64))
+            ethabi::Token::Uint(U256::from(961748941u64 * 982451653u64))
         ]
     );
 }
@@ -231,33 +223,17 @@ fn incrementer() {
         }"#,
     );
 
-    vm.constructor(
-        "incrementer",
-        &[ethabi::Token::Uint(ethereum_types::U256::from(5))],
-        0,
-    );
+    vm.constructor("incrementer", &[ethabi::Token::Uint(U256::from(5))], 0);
 
     let returns = vm.function("get", &[], &[], 0, None);
 
-    assert_eq!(
-        returns,
-        vec![ethabi::Token::Uint(ethereum_types::U256::from(5))]
-    );
+    assert_eq!(returns, vec![ethabi::Token::Uint(U256::from(5))]);
 
-    vm.function(
-        "inc",
-        &[ethabi::Token::Uint(ethereum_types::U256::from(7))],
-        &[],
-        0,
-        None,
-    );
+    vm.function("inc", &[ethabi::Token::Uint(U256::from(7))], &[], 0, None);
 
     let returns = vm.function("get", &[], &[], 0, None);
 
-    assert_eq!(
-        returns,
-        vec![ethabi::Token::Uint(ethereum_types::U256::from(12))]
-    );
+    assert_eq!(returns, vec![ethabi::Token::Uint(U256::from(12))]);
 }
 
 #[test]

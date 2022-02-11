@@ -1,5 +1,5 @@
 use crate::build_solidity;
-use ethabi::Token;
+use ethabi::{ethereum_types::U256, Token};
 use rand::Rng;
 
 #[test]
@@ -107,10 +107,10 @@ fn read_buffer() {
     assert_eq!(
         returns,
         vec![
-            Token::Int(ethereum_types::U256::from(
+            Token::Int(U256::from(
                 "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffbebdbcbc"
             )),
-            Token::Uint(ethereum_types::U256::from(0x0102030405060708u64))
+            Token::Uint(U256::from(0x0102030405060708u64))
         ]
     );
 
@@ -133,7 +133,7 @@ fn read_buffer() {
     assert_eq!(
         returns,
         vec![
-            Token::Uint(ethereum_types::U256::from(0x4142)),
+            Token::Uint(U256::from(0x4142)),
             Token::FixedBytes(vm.origin.to_vec())
         ]
     );
@@ -204,8 +204,8 @@ fn assignment_in_ternary() {
         let returns = vm.function(
             "minimum",
             &[
-                Token::Uint(ethereum_types::U256::from(left)),
-                Token::Uint(ethereum_types::U256::from(right)),
+                Token::Uint(U256::from(left)),
+                Token::Uint(U256::from(right)),
             ],
             &[],
             0,
@@ -214,9 +214,7 @@ fn assignment_in_ternary() {
 
         assert_eq!(
             returns,
-            vec![Token::Uint(ethereum_types::U256::from(std::cmp::min(
-                left, right
-            )))]
+            vec![Token::Uint(U256::from(std::cmp::min(left, right)))]
         );
     }
 }

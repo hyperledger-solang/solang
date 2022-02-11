@@ -1,5 +1,5 @@
 use crate::build_solidity;
-use ethabi::Token;
+use ethabi::{ethereum_types::U256, Token};
 
 #[test]
 fn simple() {
@@ -17,7 +17,7 @@ fn simple() {
 
     vm.constructor("foo", &[], 0);
     let returns = vm.function("boom", &[], &[], 0, None);
-    assert_eq!(returns, vec![Token::Int(ethereum_types::U256::from(0)),]);
+    assert_eq!(returns, vec![Token::Int(U256::from(0)),]);
 
     let mut vm = build_solidity(
         r#"
@@ -41,7 +41,7 @@ fn simple() {
 
     vm.constructor("c", &[], 0);
     let returns = vm.function("func", &[], &[], 0, None);
-    assert_eq!(returns, vec![Token::Int(ethereum_types::U256::from(1)),]);
+    assert_eq!(returns, vec![Token::Int(U256::from(1)),]);
 }
 
 #[test]
@@ -158,7 +158,7 @@ fn bytes() {
 
     let returns = vm.function("foo_length", &[], &[], 0, None);
 
-    assert_eq!(returns, vec![Token::Uint(ethereum_types::U256::from(0))]);
+    assert_eq!(returns, vec![Token::Uint(U256::from(0))]);
 
     vm.function(
         "set_foo",
@@ -181,7 +181,7 @@ fn bytes() {
     {
         let returns = vm.function(
             "get_foo_offset",
-            &[Token::Uint(ethereum_types::U256::from(i))],
+            &[Token::Uint(U256::from(i))],
             &[],
             0,
             None,
@@ -192,10 +192,7 @@ fn bytes() {
 
     vm.function(
         "set_foo_offset",
-        &[
-            Token::Uint(ethereum_types::U256::from(2)),
-            Token::FixedBytes(b"E".to_vec()),
-        ],
+        &[Token::Uint(U256::from(2)), Token::FixedBytes(b"E".to_vec())],
         &[],
         0,
         None,
@@ -203,10 +200,7 @@ fn bytes() {
 
     vm.function(
         "set_foo_offset",
-        &[
-            Token::Uint(ethereum_types::U256::from(7)),
-            Token::FixedBytes(b"E".to_vec()),
-        ],
+        &[Token::Uint(U256::from(7)), Token::FixedBytes(b"E".to_vec())],
         &[],
         0,
         None,
@@ -218,7 +212,7 @@ fn bytes() {
     {
         let returns = vm.function(
             "get_foo_offset",
-            &[Token::Uint(ethereum_types::U256::from(i))],
+            &[Token::Uint(U256::from(i))],
             &[],
             0,
             None,
@@ -258,10 +252,7 @@ fn bytes_set_subscript_range() {
 
     vm.function(
         "set_foo_offset",
-        &[
-            Token::Uint(ethereum_types::U256::from(0)),
-            Token::FixedBytes(b"E".to_vec()),
-        ],
+        &[Token::Uint(U256::from(0)), Token::FixedBytes(b"E".to_vec())],
         &[],
         0,
         None,
@@ -308,7 +299,7 @@ fn bytes_get_subscript_range() {
 
     vm.function(
         "get_foo_offset",
-        &[Token::Uint(ethereum_types::U256::from(0x80000000u64))],
+        &[Token::Uint(U256::from(0x80000000u64))],
         &[],
         0,
         None,
@@ -452,16 +443,16 @@ fn simple_struct() {
     assert_eq!(
         returns,
         vec![Token::Tuple(vec![
-            Token::Uint(ethereum_types::U256::from(254)),
-            Token::Uint(ethereum_types::U256::from(0xdead)),
+            Token::Uint(U256::from(254)),
+            Token::Uint(U256::from(0xdead)),
         ])]
     );
 
     vm.function(
         "set_s1",
         &[Token::Tuple(vec![
-            Token::Uint(ethereum_types::U256::from(102)),
-            Token::Uint(ethereum_types::U256::from(3240121)),
+            Token::Uint(U256::from(102)),
+            Token::Uint(U256::from(3240121)),
         ])],
         &[],
         0,
@@ -473,8 +464,8 @@ fn simple_struct() {
     assert_eq!(
         returns,
         vec![Token::Tuple(vec![
-            Token::Uint(ethereum_types::U256::from(102)),
-            Token::Uint(ethereum_types::U256::from(3240121)),
+            Token::Uint(U256::from(102)),
+            Token::Uint(U256::from(3240121)),
         ])]
     );
 }
@@ -530,24 +521,24 @@ fn struct_in_struct() {
     assert_eq!(
         returns,
         vec![Token::Tuple(vec![
-            Token::Uint(ethereum_types::U256::from(254)),
+            Token::Uint(U256::from(254)),
             Token::Tuple(vec![
-                Token::Int(ethereum_types::U256::from(102)),
+                Token::Int(U256::from(102)),
                 Token::FixedBytes(vec![102, 111, 111, 98, 97, 114])
             ]),
-            Token::Uint(ethereum_types::U256::from(1234567890))
+            Token::Uint(U256::from(1234567890))
         ])]
     );
 
     vm.function(
         "set_s1",
         &[Token::Tuple(vec![
-            Token::Uint(ethereum_types::U256::from(127)),
+            Token::Uint(U256::from(127)),
             Token::Tuple(vec![
-                Token::Int(ethereum_types::U256::from(8192)),
+                Token::Int(U256::from(8192)),
                 Token::FixedBytes(vec![1, 2, 3, 4, 5, 6]),
             ]),
-            Token::Uint(ethereum_types::U256::from(12345678901234567890u64)),
+            Token::Uint(U256::from(12345678901234567890u64)),
         ])],
         &[],
         0,
@@ -559,12 +550,12 @@ fn struct_in_struct() {
     assert_eq!(
         returns,
         vec![Token::Tuple(vec![
-            Token::Uint(ethereum_types::U256::from(127)),
+            Token::Uint(U256::from(127)),
             Token::Tuple(vec![
-                Token::Int(ethereum_types::U256::from(8192)),
+                Token::Int(U256::from(8192)),
                 Token::FixedBytes(vec![1, 2, 3, 4, 5, 6]),
             ]),
-            Token::Uint(ethereum_types::U256::from(12345678901234567890u64)),
+            Token::Uint(U256::from(12345678901234567890u64)),
         ])]
     );
 }
@@ -615,18 +606,18 @@ fn string_in_struct() {
     assert_eq!(
         returns,
         vec![Token::Tuple(vec![
-            Token::Uint(ethereum_types::U256::from(254)),
+            Token::Uint(U256::from(254)),
             Token::String(String::from("foobar")),
-            Token::Uint(ethereum_types::U256::from(1234567890))
+            Token::Uint(U256::from(1234567890))
         ])]
     );
 
     vm.function(
         "set_s1",
         &[Token::Tuple(vec![
-            Token::Uint(ethereum_types::U256::from(127)),
+            Token::Uint(U256::from(127)),
             Token::String(String::from("foobar foobar foobar foobar foobar foobar")),
-            Token::Uint(ethereum_types::U256::from(12345678901234567890u64)),
+            Token::Uint(U256::from(12345678901234567890u64)),
         ])],
         &[],
         0,
@@ -638,9 +629,9 @@ fn string_in_struct() {
     assert_eq!(
         returns,
         vec![Token::Tuple(vec![
-            Token::Uint(ethereum_types::U256::from(127)),
+            Token::Uint(U256::from(127)),
             Token::String(String::from("foobar foobar foobar foobar foobar foobar")),
-            Token::Uint(ethereum_types::U256::from(12345678901234567890u64)),
+            Token::Uint(U256::from(12345678901234567890u64)),
         ])]
     );
 }
@@ -707,15 +698,15 @@ fn complex_struct() {
         returns,
         vec![
             Token::Tuple(vec![
-                Token::Uint(ethereum_types::U256::from(254)),
+                Token::Uint(U256::from(254)),
                 Token::String(String::from("foobar")),
                 Token::Tuple(vec!(
                     Token::Bool(true),
                     Token::FixedBytes(vec!(0xed, 0xae, 0xda))
                 )),
-                Token::Uint(ethereum_types::U256::from(1234567890)),
+                Token::Uint(U256::from(1234567890)),
                 Token::Tuple(vec!(
-                    Token::Uint(ethereum_types::U256::from(12123131321312u128)),
+                    Token::Uint(U256::from(12123131321312u128)),
                     Token::Bytes(b"jasldajldjaldjlads".to_vec())
                 )),
                 Token::String(String::from(
@@ -730,17 +721,15 @@ fn complex_struct() {
         "set_s1",
         &[
             Token::Tuple(vec![
-                Token::Uint(ethereum_types::U256::from(127)),
+                Token::Uint(U256::from(127)),
                 Token::String(String::from("foobar foobar foobar foobar foobar foobar")),
                 Token::Tuple(vec![
                     Token::Bool(false),
                     Token::FixedBytes(vec![0xc3, 0x9a, 0xfd]),
                 ]),
-                Token::Uint(ethereum_types::U256::from(12345678901234567890u64)),
+                Token::Uint(U256::from(12345678901234567890u64)),
                 Token::Tuple(vec![
-                    Token::Uint(ethereum_types::U256::from(
-                        97560097522392203078545981438598778247u128,
-                    )),
+                    Token::Uint(U256::from(97560097522392203078545981438598778247u128)),
                     Token::Bytes(b"jasldajldjaldjlads".to_vec()),
                 ]),
                 Token::String(String::from("be as honest as the day is long")),
@@ -758,17 +747,15 @@ fn complex_struct() {
         returns,
         vec![
             Token::Tuple(vec![
-                Token::Uint(ethereum_types::U256::from(127)),
+                Token::Uint(U256::from(127)),
                 Token::String(String::from("foobar foobar foobar foobar foobar foobar")),
                 Token::Tuple(vec![
                     Token::Bool(false),
                     Token::FixedBytes(vec![0xc3, 0x9a, 0xfd]),
                 ]),
-                Token::Uint(ethereum_types::U256::from(12345678901234567890u64)),
+                Token::Uint(U256::from(12345678901234567890u64)),
                 Token::Tuple(vec![
-                    Token::Uint(ethereum_types::U256::from(
-                        97560097522392203078545981438598778247u128,
-                    )),
+                    Token::Uint(U256::from(97560097522392203078545981438598778247u128,)),
                     Token::Bytes(b"jasldajldjaldjlads".to_vec()),
                 ]),
                 Token::String(String::from("be as honest as the day is long")),
@@ -785,14 +772,11 @@ fn complex_struct() {
         returns,
         vec![
             Token::Tuple(vec![
-                Token::Uint(ethereum_types::U256::from(0)),
+                Token::Uint(U256::from(0)),
                 Token::String(String::from("")),
                 Token::Tuple(vec![Token::Bool(false), Token::FixedBytes(vec![0, 0, 0]),]),
-                Token::Uint(ethereum_types::U256::from(0)),
-                Token::Tuple(vec![
-                    Token::Uint(ethereum_types::U256::from(0)),
-                    Token::Bytes(Vec::new()),
-                ]),
+                Token::Uint(U256::from(0)),
+                Token::Tuple(vec![Token::Uint(U256::from(0)), Token::Bytes(Vec::new()),]),
                 Token::String(String::from("")),
             ]),
             Token::String(String::from("yadayada")),

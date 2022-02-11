@@ -1,5 +1,5 @@
 use crate::{account_new, build_solidity, AccountState};
-use ethabi::{Function, StateMutability, Token};
+use ethabi::{ethereum_types::U256, Function, StateMutability, Token};
 
 #[test]
 fn msg_value() {
@@ -18,7 +18,7 @@ fn msg_value() {
 
     let returns = vm.function("test", &[], &[], 102, None);
 
-    assert_eq!(returns[0], Token::Uint(ethereum_types::U256::from(306)));
+    assert_eq!(returns[0], Token::Uint(U256::from(306)));
 
     assert_eq!(vm.account_data[&vm.origin].lamports, 312 - 102);
     assert_eq!(vm.account_data[&vm.stack[0].data].lamports, 102);
@@ -112,7 +112,7 @@ fn get_balance() {
 
     let returns = vm.function("test", &[], &[], 0, Some(&new));
 
-    assert_eq!(returns, vec![Token::Uint(ethereum_types::U256::from(102))]);
+    assert_eq!(returns, vec![Token::Uint(U256::from(102))]);
 }
 
 #[test]
@@ -143,7 +143,7 @@ fn send_fails() {
         "send",
         &[
             Token::FixedBytes(new.to_vec()),
-            Token::Uint(ethereum_types::U256::from(102)),
+            Token::Uint(U256::from(102)),
         ],
         &[],
         0,
@@ -185,7 +185,7 @@ fn send_succeeds() {
         "send",
         &[
             Token::FixedBytes(new.to_vec()),
-            Token::Uint(ethereum_types::U256::from(102)),
+            Token::Uint(U256::from(102)),
         ],
         &[],
         0,
@@ -239,7 +239,7 @@ fn send_overflows() {
         "send",
         &[
             Token::FixedBytes(new.to_vec()),
-            Token::Uint(ethereum_types::U256::from(102)),
+            Token::Uint(U256::from(102)),
         ],
         &[],
         0,
@@ -296,7 +296,7 @@ fn transfer_succeeds() {
         "transfer",
         &[
             Token::FixedBytes(new.to_vec()),
-            Token::Uint(ethereum_types::U256::from(102)),
+            Token::Uint(U256::from(102)),
         ],
         &[],
         0,
@@ -348,7 +348,7 @@ fn transfer_fails_not_enough() {
         "transfer",
         &[
             Token::FixedBytes(new.to_vec()),
-            Token::Uint(ethereum_types::U256::from(104)),
+            Token::Uint(U256::from(104)),
         ],
         &[],
         0,
@@ -389,7 +389,7 @@ fn transfer_fails_overflow() {
         "transfer",
         &[
             Token::FixedBytes(new.to_vec()),
-            Token::Uint(ethereum_types::U256::from(104)),
+            Token::Uint(U256::from(104)),
         ],
         &[],
         0,
@@ -478,7 +478,7 @@ fn value_overflows() {
         "send",
         &[
             Token::FixedBytes(new.to_vec()),
-            Token::Uint(ethereum_types::U256::from(u64::MAX as u128 + 1)),
+            Token::Uint(U256::from(u64::MAX as u128 + 1)),
         ],
         &[],
         0,
@@ -490,7 +490,7 @@ fn value_overflows() {
         "send",
         &[
             Token::FixedBytes(new.to_vec()),
-            Token::Uint(ethereum_types::U256::from(u128::MAX)),
+            Token::Uint(U256::from(u128::MAX)),
         ],
         &[],
         0,
@@ -502,7 +502,7 @@ fn value_overflows() {
         "send",
         &[
             Token::FixedBytes(new.to_vec()),
-            Token::Uint(ethereum_types::U256::from(102)),
+            Token::Uint(U256::from(102)),
         ],
         &[],
         0,
