@@ -905,10 +905,17 @@ impl<'input> Lexer<'input> {
                             let mut last = start + 3;
 
                             if !newline {
-                                for (i, ch) in &mut self.chars {
-                                    last = i;
-                                    if ch == '\n' || ch == '\r' {
-                                        break;
+                                loop {
+                                    match self.chars.next() {
+                                        None => {
+                                            last = self.input.len();
+                                            break;
+                                        }
+                                        Some((offset, '\n' | '\r')) => {
+                                            last = offset;
+                                            break;
+                                        }
+                                        Some(_) => (),
                                     }
                                 }
                             }
