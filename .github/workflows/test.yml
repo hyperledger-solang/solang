@@ -44,7 +44,7 @@ jobs:
     - name: Build
       run: cargo build --verbose
     - name: Run tests
-      run: cargo test --verbose
+      run: cargo test --verbose --workspace
     - uses: actions/upload-artifact@master
       with:
         name: solang-linux-x86-64
@@ -65,7 +65,7 @@ jobs:
     - name: Build
       run: cargo build --verbose
     - name: Run tests
-      run: cargo test --verbose
+      run: cargo test --verbose --workspace
     - uses: actions/upload-artifact@master
       with:
         name: solang-linux-arm64
@@ -98,7 +98,7 @@ jobs:
     - name: Build
       run: cargo build --verbose
     - name: Run tests
-      run: cargo test --verbose
+      run: cargo test --verbose --workspace
     - uses: actions/upload-artifact@master
       with:
         name: solang.exe
@@ -123,7 +123,7 @@ jobs:
     - name: Build
       run: cargo build --verbose
     - name: Run tests
-      run: cargo test --verbose
+      run: cargo test --verbose --workspace
     - uses: actions/upload-artifact@master
       with:
         name: solang-mac-arm
@@ -147,7 +147,7 @@ jobs:
     - name: Build
       run: cargo build --verbose
     - name: Run tests
-      run: cargo test --verbose
+      run: cargo test --verbose --workspace
     - uses: actions/upload-artifact@master
       with:
         name: solang-mac-intel
