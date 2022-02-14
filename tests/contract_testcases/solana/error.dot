@@ -1,0 +1,14 @@
+strict digraph "tests/contract_testcases/solana/error.sol" {
+	contract [label="contract error\ntests/contract_testcases/solana/error.sol:1:1-2:16"]
+	foo [label="function foo\ncontract: error\ntests/contract_testcases/solana/error.sol:5:2-30\nsignature foo(bytes32)\nvisibility public\nmutability nonpayable"]
+	parameters [label="parameters\ncontract error x"]
+	diagnostic [label="found contract ‘error’\nlevel Debug\ntests/contract_testcases/solana/error.sol:1:1-2:16"]
+	diagnostic_7 [label="function parameter 'x' has never been read\nlevel Warning\ntests/contract_testcases/solana/error.sol:5:21-22"]
+	diagnostic_8 [label="function can be declared ‘pure’\nlevel Warning\ntests/contract_testcases/solana/error.sol:5:2-30"]
+	contracts -> contract
+	contract -> foo [label="function"]
+	foo -> parameters [label="parameters"]
+	diagnostics -> diagnostic [label="Debug"]
+	diagnostics -> diagnostic_7 [label="Warning"]
+	diagnostics -> diagnostic_8 [label="Warning"]
+}
