@@ -38,7 +38,7 @@ jobs:
     - name: Build
       run: cargo build --verbose --release
     - name: Run tests
-      run: cargo test --verbose --release
+      run: cargo test --workspace --verbose --release
     - name: Upload binary
       uses: svenstaro/upload-release-action@v2
       with:
@@ -78,7 +78,7 @@ jobs:
     - name: Build
       run: cargo build --verbose --release
     - name: Run tests
-      run: cargo test --verbose --release
+      run: cargo test --workspace --verbose --release
     - name: Upload binary
       uses: svenstaro/upload-release-action@v2
       with:
@@ -122,7 +122,7 @@ jobs:
     - name: Build
       run: cargo build --release --verbose
     - name: Run tests
-      run: cargo test --release --verbose
+      run: cargo test --workspace --release --verbose
     - name: Upload binary
       uses: svenstaro/upload-release-action@v2
       with:
@@ -162,7 +162,7 @@ jobs:
     - name: Build
       run: cargo build --release --verbose
     - name: Run tests
-      run: cargo test --release --verbose
+      run: cargo test --workspace --release --verbose
     - name: Upload binary
       uses: svenstaro/upload-release-action@v2
       with:
@@ -201,7 +201,7 @@ jobs:
     - name: Build
       run: cargo build --release --verbose
     - name: Run tests
-      run: cargo test --release --verbose
+      run: cargo test --workspace --release --verbose
     - name: Upload binary
       uses: svenstaro/upload-release-action@v2
       with:
