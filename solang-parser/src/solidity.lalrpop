@@ -31,7 +31,7 @@ SourceUnitPart: SourceUnitPart = {
 
 ImportDirective: SourceUnitPart = {
     <doc:DocComments> <l:@L> "import" <s:StringLiteral> <r:@R> ";" => SourceUnitPart::ImportDirective(doc, Import::Plain(s, Loc::File(file_no, l, r))),
-    <doc:DocComments> <l:@L> "import" <s:StringLiteral> "as" <id:SolIdentifier> <r:@R> ";" =>  SourceUnitPart::ImportDirective(doc, Import::GlobalSymbol(s, id, Loc::File(file_no, l, r))),
+    <doc:DocComments> <l:@L> "import" <s:StringLiteral> "as" <id:SolIdentifier> <r:@R> ";" => SourceUnitPart::ImportDirective(doc, Import::GlobalSymbol(s, id, Loc::File(file_no, l, r))),
     <doc:DocComments> <l:@L> "import" "*" "as" <id:SolIdentifier> <from:SolIdentifier> <s:StringLiteral> <r:@R> ";" =>? {
         if from.name != "from" {
             Err(ParseError::User { error: LexicalError::ExpectedFrom(from.loc, from.name)})
@@ -126,6 +126,15 @@ Identifier: Identifier = {
 }
 
 SolIdentifier: Identifier = {
+    <l:@L> <n:identifier> <r:@R> => Identifier{loc: Loc::File(file_no, l, r), name: n.to_string()},
+    <l:@L> "switch" <r:@R> => Identifier{loc: Loc::File(file_no, l, r), name: "switch".to_string()},
+    <l:@L> "leave" <r:@R> => Identifier{loc: Loc::File(file_no, l, r), name: "leave".to_string()},
+    <l:@L> "case" <r:@R> => Identifier{loc: Loc::File(file_no, l, r), name: "case".to_string()},
+    <l:@L> "default" <r:@R> => Identifier{loc: Loc::File(file_no, l, r), name: "default".to_string()},
+    <l:@L> "error" <r:@R> => Identifier{loc: Loc::File(file_no, l, r), name: "error".to_string()},
+}
+
+SolNoErrorIdentifier: Identifier = {
     <l:@L> <n:identifier> <r:@R> => Identifier{loc: Loc::File(file_no, l, r), name: n.to_string()},
     <l:@L> "switch" <r:@R> => Identifier{loc: Loc::File(file_no, l, r), name: "switch".to_string()},
     <l:@L> "leave" <r:@R> => Identifier{loc: Loc::File(file_no, l, r), name: "leave".to_string()},
@@ -343,6 +352,7 @@ Precedence2: Expression = {
     <a:@L> "--" <b:@R> <e:Precedence2> => Expression::PreDecrement(Loc::File(file_no, a, b), Box::new(e)),
     <a:@L> "+" <b:@R> <e:Precedence2> => Expression::UnaryPlus(Loc::File(file_no, a, b), Box::new(e)),
     <a:@L> "-" <b:@R> <e:Precedence2> => Expression::UnaryMinus(Loc::File(file_no, a, b), Box::new(e)),
+    <l:@L> "error" <r:@R> => Expression::Variable(Identifier{loc: Loc::File(file_no, l, r), name: "error".to_string()}),
     Precedence0,
 }
 
@@ -399,7 +409,7 @@ NoFunctionTyPrecedence0: Expression = {
     <a:@L> "[" <v:CommaOne<Expression>> "]" <b:@R> => {
         Expression::ArrayLiteral(Loc::File(file_no, a, b), v)
     },
-    <SolIdentifier> => Expression::Variable(<>),
+    <SolNoErrorIdentifier> => Expression::Variable(<>),
     <l:@L> <e:Precedence0> <u:Unit> <r:@R> => Expression::Unit(Loc::File(file_no, l, r), Box::new(e), u),
     <l:@L> <n:number> <r:@R> => {
         let base: String = n.0.chars().filter(|v| *v != '_').collect();
@@ -637,7 +647,7 @@ FunctionDefinition: Box<FunctionDefinition> = {
         match ft {
             // we're dropping the trailing attributes, but this production is for
             // generating an error messages
-            Type::Function { params, attributes, returns, .. }  => {
+            Type::Function { params, attributes, returns, .. } => {
                 Box::new(FunctionDefinition{
                     doc,
                     loc: Loc::File(file_no, l, r),
@@ -711,7 +721,7 @@ Statement: Statement = {
 }
 
 SimpleStatement: Statement = {
-    <l:@L>  <v:VariableDeclaration> <e:("=" <Expression>)?> <r:@R> => {
+    <l:@L> <v:VariableDeclaration> <e:("=" <Expression>)?> <r:@R> => {
         Statement::VariableDefinition(Loc::File(file_no, l, r), v, e)
     },
     <l:@L> <e:Expression> <r:@R> => {
@@ -879,7 +889,7 @@ Comma<T>: Vec<T> = {
 };
 
 CommaOne<T>: Vec<T> = {
-    <e:T> <v:("," <T>)*>  => {
+    <e:T> <v:("," <T>)*> => {
         let mut v = v;
         v.insert(0, e);
         v
@@ -887,7 +897,7 @@ CommaOne<T>: Vec<T> = {
 };
 
 CommaTwo<T>: Vec<T> = {
-    <e:T> <v:("," <T>)+>  => {
+    <e:T> <v:("," <T>)+> => {
         let mut v = v;
         v.insert(0, e);
         v
