@@ -241,7 +241,7 @@ pub fn visit_bases(contract_no: usize, ns: &ast::Namespace) -> Vec<usize> {
     let mut order = Vec::new();
 
     fn base(contract_no: usize, order: &mut Vec<usize>, ns: &ast::Namespace) {
-        for b in ns.contracts[contract_no].bases.iter().rev() {
+        for b in ns.contracts[contract_no].bases.iter() {
             base(b.contract_no, order, ns);
         }
 
