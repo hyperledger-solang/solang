@@ -31,7 +31,7 @@ fn external_call_value() {
     runtime.function("step2", Vec::new());
 
     for (address, account) in runtime.accounts {
-        if address == runtime.vm.address {
+        if address == runtime.vm.account {
             continue;
         }
 
@@ -63,7 +63,7 @@ fn external_call_value() {
     runtime.function("step1", Vec::new());
 
     for (address, account) in runtime.accounts {
-        if address == runtime.vm.address {
+        if address == runtime.vm.account {
             continue;
         }
 
@@ -92,7 +92,7 @@ fn constructor_value() {
     runtime.function("step1", Vec::new());
 
     for (address, account) in runtime.accounts {
-        if address == runtime.vm.address {
+        if address == runtime.vm.account {
             continue;
         }
 
@@ -118,7 +118,7 @@ fn constructor_value() {
     runtime.function("step1", Vec::new());
 
     for (address, account) in runtime.accounts {
-        if address == runtime.vm.address {
+        if address == runtime.vm.account {
             continue;
         }
 
@@ -144,7 +144,7 @@ fn constructor_value() {
     runtime.function("step1", Vec::new());
 
     for (address, account) in runtime.accounts {
-        if address == runtime.vm.address {
+        if address == runtime.vm.account {
             continue;
         }
 
@@ -175,7 +175,7 @@ fn constructor_value() {
     runtime.function("step1", Vec::new());
 
     for (address, account) in runtime.accounts {
-        if address == runtime.vm.address {
+        if address == runtime.vm.account {
             continue;
         }
 
@@ -206,7 +206,7 @@ fn constructor_value() {
     runtime.function("step1", Vec::new());
 
     for (address, account) in runtime.accounts {
-        if address == runtime.vm.address {
+        if address == runtime.vm.account {
             continue;
         }
 
@@ -286,7 +286,7 @@ fn this_address() {
 
     runtime.function("step1", Vec::new());
 
-    assert_eq!(runtime.vm.output, runtime.vm.address);
+    assert_eq!(runtime.vm.output, runtime.vm.account);
 
     let mut runtime = build_solidity(
         r##"
@@ -301,7 +301,7 @@ fn this_address() {
 
     runtime.function("step1", Vec::new());
 
-    assert_eq!(runtime.vm.output, runtime.vm.address);
+    assert_eq!(runtime.vm.output, runtime.vm.account);
 
     #[derive(Debug, PartialEq, Encode, Decode)]
     struct Ret(u32);
@@ -341,7 +341,7 @@ fn this_address() {
 
     runtime.function("step1", Vec::new());
 
-    assert_eq!(runtime.vm.output, runtime.vm.address);
+    assert_eq!(runtime.vm.output, runtime.vm.account);
 }
 
 #[test]
@@ -373,7 +373,7 @@ fn balance() {
 
     runtime.constructor(0, Vec::new());
 
-    runtime.accounts.get_mut(&runtime.vm.address).unwrap().1 = 315;
+    runtime.accounts.get_mut(&runtime.vm.account).unwrap().1 = 315;
 
     runtime.function("step1", Vec::new());
 
@@ -408,11 +408,11 @@ fn selfdestruct() {
     runtime.constructor(0, Vec::new());
 
     runtime.function("step1", Vec::new());
-    assert_eq!(runtime.accounts.get_mut(&runtime.vm.address).unwrap().1, 0);
+    assert_eq!(runtime.accounts.get_mut(&runtime.vm.account).unwrap().1, 0);
 
     runtime.function_expect_failure("step2", Vec::new());
     assert_eq!(
-        runtime.accounts.get_mut(&runtime.vm.address).unwrap().1,
+        runtime.accounts.get_mut(&runtime.vm.account).unwrap().1,
         511
     );
 }
@@ -447,7 +447,7 @@ fn send_and_transfer() {
     assert_eq!(runtime.vm.output, true.encode());
 
     for (address, account) in runtime.accounts {
-        if address == runtime.vm.address {
+        if address == runtime.vm.account {
             continue;
         }
 
@@ -481,7 +481,7 @@ fn send_and_transfer() {
     assert_eq!(runtime.vm.output, true.encode());
 
     for (address, account) in runtime.accounts {
-        if address == runtime.vm.address {
+        if address == runtime.vm.account {
             continue;
         }
 
@@ -513,7 +513,7 @@ fn send_and_transfer() {
     runtime.function("step1", Vec::new());
 
     for (address, account) in runtime.accounts {
-        if address == runtime.vm.address {
+        if address == runtime.vm.account {
             continue;
         }
 
@@ -545,7 +545,7 @@ fn send_and_transfer() {
     runtime.function("step1", Vec::new());
 
     for (address, account) in runtime.accounts {
-        if address == runtime.vm.address {
+        if address == runtime.vm.account {
             continue;
         }
 

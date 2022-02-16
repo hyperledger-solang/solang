@@ -17,9 +17,9 @@ use solang::{compile, Target};
 mod substrate_tests;
 
 type StorageKey = [u8; 32];
-type Address = [u8; 32];
+type Account = [u8; 32];
 
-fn address_new() -> Address {
+fn account_new() -> Account {
     let mut rng = rand::thread_rng();
 
     let mut a = [0u8; 32];
@@ -88,8 +88,8 @@ pub struct Event {
 }
 
 pub struct VirtualMachine {
-    address: Address,
-    caller: Address,
+    account: Account,
+    caller: Account,
     memory: MemoryRef,
     input: Vec<u8>,
     pub output: Vec<u8>,
@@ -97,29 +97,33 @@ pub struct VirtualMachine {
 }
 
 impl VirtualMachine {
-    fn new(address: Address, caller: Address, value: u128) -> Self {
+    fn new(account: Account, caller: Account, value: u128) -> Self {
         VirtualMachine {
             memory: MemoryInstance::alloc(Pages(16), Some(Pages(16))).unwrap(),
             input: Vec::new(),
             output: Vec::new(),
-            address,
+            account,
             caller,
             value,
         }
     }
 }
 
-pub struct TestRuntime {
-    pub store: HashMap<(Address, StorageKey), Vec<u8>>,
-    pub contracts: Vec<(Vec<u8>, String)>,
+pub struct Program {
+    abi: abi::substrate::Abi,
+    code: Vec<u8>,
+}
+pub struct MockSubstrate {
+    pub store: HashMap<(Account, StorageKey), Vec<u8>>,
+    pub programs: Vec<Program>,
     pub printbuf: String,
-    pub accounts: HashMap<Address, (Vec<u8>, u128)>,
-    pub abi: abi::substrate::Abi,
+    pub accounts: HashMap<Account, (Vec<u8>, u128)>,
+    pub current_program: usize,
     pub vm: VirtualMachine,
     pub events: Vec<Event>,
 }
 
-impl Externals for TestRuntime {
+impl Externals for MockSubstrate {
     #[allow(clippy::cognitive_complexity)]
     fn invoke_index(
         &mut self,
@@ -197,7 +201,7 @@ impl Externals for TestRuntime {
                     panic!("seal_get_storage: {}", e);
                 }
 
-                if let Some(value) = self.store.get(&(self.vm.address, key)) {
+                if let Some(value) = self.store.get(&(self.vm.account, key)) {
                     println!("seal_get_storage: {:?} = {:?}", key, value);
 
                     let len = self
@@ -236,7 +240,7 @@ impl Externals for TestRuntime {
                 }
 
                 println!("seal_clear_storage: {:?}", key);
-                self.store.remove(&(self.vm.address, key));
+                self.store.remove(&(self.vm.account, key));
 
                 Ok(None)
             }
@@ -261,7 +265,7 @@ impl Externals for TestRuntime {
                 }
                 println!("seal_set_storage: {:?} = {:?}", key, data);
 
-                self.store.insert((self.vm.address, key), data);
+                self.store.insert((self.vm.account, key), data);
 
                 Ok(None)
             }
@@ -455,8 +459,8 @@ impl Externals for TestRuntime {
                 Ok(None)
             }
             Some(SubstrateExternal::seal_call) => {
-                let address_ptr: u32 = args.nth_checked(0)?;
-                let address_len: u32 = args.nth_checked(1)?;
+                let account_ptr: u32 = args.nth_checked(0)?;
+                let account_len: u32 = args.nth_checked(1)?;
                 //let gas: u64 = args.nth_checked(2)?;
                 let value_ptr: u32 = args.nth_checked(3)?;
                 let value_len: u32 = args.nth_checked(4)?;
@@ -465,11 +469,11 @@ impl Externals for TestRuntime {
                 let output_ptr: u32 = args.nth_checked(7)?;
                 let output_len_ptr: u32 = args.nth_checked(8)?;
 
-                let mut address = [0u8; 32];
+                let mut account = [0u8; 32];
 
-                assert!(address_len == 32, "seal_call: len = {}", address_len);
+                assert!(account_len == 32, "seal_call: len = {}", account_len);
 
-                if let Err(e) = self.vm.memory.get_into(address_ptr, &mut address) {
+                if let Err(e) = self.vm.memory.get_into(account_ptr, &mut account) {
                     panic!("seal_call: {}", e);
                 }
 
@@ -483,7 +487,7 @@ impl Externals for TestRuntime {
 
                 let value = u128::from_le_bytes(value);
 
-                if !self.accounts.contains_key(&address) {
+                if !self.accounts.contains_key(&account) {
                     // substrate would return NotCallable
                     return Ok(Some(RuntimeValue::I32(0x8)));
                 }
@@ -496,16 +500,16 @@ impl Externals for TestRuntime {
                 }
 
                 println!(
-                    "seal_call: address={} input={}",
-                    hex::encode(address),
+                    "seal_call: account={} input={}",
+                    hex::encode(account),
                     hex::encode(&input)
                 );
 
-                let mut vm = VirtualMachine::new(address, self.vm.address, value);
+                let mut vm = VirtualMachine::new(account, self.vm.account, value);
 
                 std::mem::swap(&mut self.vm, &mut vm);
 
-                let module = self.create_module(&self.accounts.get(&self.vm.address).unwrap().0);
+                let module = self.create_module(&self.accounts.get(&self.vm.account).unwrap().0);
 
                 self.vm.input = input;
 
@@ -536,7 +540,7 @@ impl Externals for TestRuntime {
 
                 println!("seal_call ret={:?} buf={}", ret, hex::encode(&output));
 
-                if let Some(acc) = self.accounts.get_mut(&vm.address) {
+                if let Some(acc) = self.accounts.get_mut(&vm.account) {
                     acc.1 += vm.value;
                 }
 
@@ -545,16 +549,16 @@ impl Externals for TestRuntime {
                 Ok(ret)
             }
             Some(SubstrateExternal::seal_transfer) => {
-                let address_ptr: u32 = args.nth_checked(0)?;
-                let address_len: u32 = args.nth_checked(1)?;
+                let account_ptr: u32 = args.nth_checked(0)?;
+                let account_len: u32 = args.nth_checked(1)?;
                 let value_ptr: u32 = args.nth_checked(2)?;
                 let value_len: u32 = args.nth_checked(3)?;
 
-                let mut address = [0u8; 32];
+                let mut account = [0u8; 32];
 
-                assert!(address_len == 32, "seal_transfer: len = {}", address_len);
+                assert!(account_len == 32, "seal_transfer: len = {}", account_len);
 
-                if let Err(e) = self.vm.memory.get_into(address_ptr, &mut address) {
+                if let Err(e) = self.vm.memory.get_into(account_ptr, &mut account) {
                     panic!("seal_transfer: {}", e);
                 }
 
@@ -568,12 +572,12 @@ impl Externals for TestRuntime {
 
                 let value = u128::from_le_bytes(value);
 
-                if !self.accounts.contains_key(&address) {
+                if !self.accounts.contains_key(&account) {
                     // substrate would return TransferFailed
                     return Ok(Some(RuntimeValue::I32(0x5)));
                 }
 
-                if let Some(acc) = self.accounts.get_mut(&address) {
+                if let Some(acc) = self.accounts.get_mut(&account) {
                     acc.1 += value;
                 }
 
@@ -587,8 +591,8 @@ impl Externals for TestRuntime {
                 let value_len: u32 = args.nth_checked(4)?;
                 let input_ptr: u32 = args.nth_checked(5)?;
                 let input_len: u32 = args.nth_checked(6)?;
-                let address_ptr: u32 = args.nth_checked(7)?;
-                let address_len_ptr: u32 = args.nth_checked(8)?;
+                let account_ptr: u32 = args.nth_checked(7)?;
+                let account_len_ptr: u32 = args.nth_checked(8)?;
                 let output_ptr: u32 = args.nth_checked(9)?;
                 let output_len_ptr: u32 = args.nth_checked(10)?;
                 let salt_ptr: u32 = args.nth_checked(11)?;
@@ -637,27 +641,27 @@ impl Externals for TestRuntime {
                     hex::encode(&salt),
                 );
 
-                let mut address = [0u8; 32];
+                let mut account = [0u8; 32];
 
                 let hash_data: Vec<u8> = input.iter().chain(salt.iter()).cloned().collect();
 
-                address
+                account
                     .copy_from_slice(blake2_rfc::blake2b::blake2b(32, &[], &hash_data).as_bytes());
 
-                if self.accounts.contains_key(&address) {
+                if self.accounts.contains_key(&account) {
                     // substrate would return TRAP_RETURN_CODE (0x0100)
                     return Ok(Some(RuntimeValue::I32(0x100)));
                 }
 
-                let code = self
-                    .contracts
+                let program = self
+                    .programs
                     .iter()
-                    .find(|code| {
-                        blake2_rfc::blake2b::blake2b(32, &[], &code.0).as_bytes() == codehash
+                    .find(|program| {
+                        blake2_rfc::blake2b::blake2b(32, &[], &program.code).as_bytes() == codehash
                     })
                     .expect("codehash not found");
 
-                self.accounts.insert(address, (code.0.clone(), 0));
+                self.accounts.insert(account, (program.code.clone(), 0));
 
                 let mut input = Vec::new();
                 input.resize(input_len as usize, 0u8);
@@ -666,11 +670,11 @@ impl Externals for TestRuntime {
                     panic!("seal_instantiate: {}", e);
                 }
 
-                let mut vm = VirtualMachine::new(address, self.vm.address, value);
+                let mut vm = VirtualMachine::new(account, self.vm.account, value);
 
                 std::mem::swap(&mut self.vm, &mut vm);
 
-                let module = self.create_module(&code.0);
+                let module = self.create_module(&program.code);
 
                 self.vm.input = input;
 
@@ -703,12 +707,12 @@ impl Externals for TestRuntime {
                 );
 
                 if let Some(RuntimeValue::I32(0)) = ret {
-                    self.accounts.get_mut(&vm.address).unwrap().1 += vm.value;
+                    self.accounts.get_mut(&vm.account).unwrap().1 += vm.value;
                     set_seal_value!(
-                        "seal_instantiate address",
-                        address_ptr,
-                        address_len_ptr,
-                        &address
+                        "seal_instantiate account",
+                        account_ptr,
+                        account_len_ptr,
+                        &account
                     );
                 }
 
@@ -730,7 +734,7 @@ impl Externals for TestRuntime {
                 let dest_ptr: u32 = args.nth_checked(0)?;
                 let len_ptr: u32 = args.nth_checked(1)?;
 
-                let scratch = self.vm.address;
+                let scratch = self.vm.account;
 
                 set_seal_value!("seal_address", dest_ptr, len_ptr, &scratch);
 
@@ -750,7 +754,7 @@ impl Externals for TestRuntime {
                 let dest_ptr: u32 = args.nth_checked(0)?;
                 let len_ptr: u32 = args.nth_checked(1)?;
 
-                let scratch = self.accounts[&self.vm.address].1.to_le_bytes();
+                let scratch = self.accounts[&self.vm.account].1.to_le_bytes();
 
                 set_seal_value!("seal_balance", dest_ptr, len_ptr, &scratch);
 
@@ -818,24 +822,24 @@ impl Externals for TestRuntime {
                 Ok(None)
             }
             Some(SubstrateExternal::seal_terminate) => {
-                let address_ptr: u32 = args.nth_checked(0)?;
-                let address_len: u32 = args.nth_checked(1)?;
+                let account_ptr: u32 = args.nth_checked(0)?;
+                let account_len: u32 = args.nth_checked(1)?;
 
-                let mut address = [0u8; 32];
+                let mut account = [0u8; 32];
 
-                assert!(address_len == 32, "seal_terminate: len = {}", address_len);
+                assert!(account_len == 32, "seal_terminate: len = {}", account_len);
 
-                if let Err(e) = self.vm.memory.get_into(address_ptr, &mut address) {
+                if let Err(e) = self.vm.memory.get_into(account_ptr, &mut account) {
                     panic!("seal_terminate: {}", e);
                 }
 
-                let remaining = self.accounts[&self.vm.address].1;
+                let remaining = self.accounts[&self.vm.account].1;
 
-                self.accounts.get_mut(&address).unwrap().1 += remaining;
+                self.accounts.get_mut(&account).unwrap().1 += remaining;
 
-                println!("seal_terminate: {} {}", hex::encode(&address), remaining);
+                println!("seal_terminate: {} {}", hex::encode(&account), remaining);
 
-                self.accounts.remove(&self.vm.address);
+                self.accounts.remove(&self.vm.account);
 
                 Err(Trap::new(TrapKind::Host(Box::new(HostCodeTerminate {}))))
             }
@@ -898,7 +902,7 @@ impl Externals for TestRuntime {
     }
 }
 
-impl ModuleImportResolver for TestRuntime {
+impl ModuleImportResolver for MockSubstrate {
     fn resolve_func(&self, field_name: &str, signature: &Signature) -> Result<FuncRef, Error> {
         let index = match field_name {
             "seal_input" => SubstrateExternal::seal_input,
@@ -944,7 +948,7 @@ impl ModuleImportResolver for TestRuntime {
     }
 }
 
-impl TestRuntime {
+impl MockSubstrate {
     fn create_module(&self, code: &[u8]) -> ModuleRef {
         let module = Module::from_buffer(&code).expect("parse wasm should work");
 
@@ -996,9 +1000,9 @@ impl TestRuntime {
     }
 
     pub fn constructor(&mut self, index: usize, args: Vec<u8>) {
-        let m = &self.abi.spec.constructors[index];
+        let m = &self.programs[self.current_program].abi.spec.constructors[index];
 
-        let module = self.create_module(&self.accounts.get(&self.vm.address).unwrap().0);
+        let module = self.create_module(&self.accounts.get(&self.vm.account).unwrap().0);
 
         self.vm.input = m.selector().into_iter().chain(args).collect();
 
@@ -1012,9 +1016,9 @@ impl TestRuntime {
     }
 
     pub fn constructor_expect_return(&mut self, index: usize, expected_ret: i32, args: Vec<u8>) {
-        let m = &self.abi.spec.constructors[index];
+        let m = &self.programs[self.current_program].abi.spec.constructors[index];
 
-        let module = self.create_module(&self.accounts.get(&self.vm.address).unwrap().0);
+        let module = self.create_module(&self.accounts.get(&self.vm.account).unwrap().0);
 
         self.vm.input = m.selector().into_iter().chain(args).collect();
 
@@ -1033,9 +1037,12 @@ impl TestRuntime {
     }
 
     pub fn function(&mut self, name: &str, args: Vec<u8>) {
-        let m = self.abi.get_function(name).unwrap();
+        let m = self.programs[self.current_program]
+            .abi
+            .get_function(name)
+            .unwrap();
 
-        let module = self.create_module(&self.accounts.get(&self.vm.address).unwrap().0);
+        let module = self.create_module(&self.accounts.get(&self.vm.account).unwrap().0);
 
         self.vm.input = m.selector().into_iter().chain(args).collect();
 
@@ -1047,9 +1054,12 @@ impl TestRuntime {
     }
 
     pub fn function_expect_failure(&mut self, name: &str, args: Vec<u8>) {
-        let m = self.abi.get_function(name).unwrap();
+        let m = self.programs[self.current_program]
+            .abi
+            .get_function(name)
+            .unwrap();
 
-        let module = self.create_module(&self.accounts.get(&self.vm.address).unwrap().0);
+        let module = self.create_module(&self.accounts.get(&self.vm.account).unwrap().0);
 
         self.vm.input = m.selector().into_iter().chain(args).collect();
 
@@ -1068,7 +1078,7 @@ impl TestRuntime {
     }
 
     pub fn raw_function(&mut self, input: Vec<u8>) {
-        let module = self.create_module(&self.accounts.get(&self.vm.address).unwrap().0);
+        let module = self.create_module(&self.accounts.get(&self.vm.account).unwrap().0);
 
         self.vm.input = input;
 
@@ -1080,7 +1090,7 @@ impl TestRuntime {
     }
 
     pub fn raw_function_failure(&mut self, input: Vec<u8>) {
-        let module = self.create_module(&self.accounts.get(&self.vm.address).unwrap().0);
+        let module = self.create_module(&self.accounts.get(&self.vm.account).unwrap().0);
 
         self.vm.input = input;
 
@@ -1099,7 +1109,7 @@ impl TestRuntime {
     }
 
     pub fn raw_constructor(&mut self, input: Vec<u8>) {
-        let module = self.create_module(&self.accounts.get(&self.vm.address).unwrap().0);
+        let module = self.create_module(&self.accounts.get(&self.vm.account).unwrap().0);
 
         self.vm.input = input;
 
@@ -1175,7 +1185,7 @@ impl TestRuntime {
     }
 }
 
-pub fn build_solidity(src: &'static str) -> TestRuntime {
+pub fn build_solidity(src: &'static str) -> MockSubstrate {
     let mut cache = FileResolver::new();
 
     cache.set_file_contents("test.sol", src.to_string());
@@ -1194,26 +1204,34 @@ pub fn build_solidity(src: &'static str) -> TestRuntime {
 
     assert!(!res.is_empty());
 
-    let abistr = res[0].1.clone();
-    let code = res[0].0.clone();
-    let address = address_new();
+    let programs: Vec<Program> = res
+        .iter()
+        .map(|res| Program {
+            code: res.0.clone(),
+            abi: abi::substrate::load(&res.1).unwrap(),
+        })
+        .collect();
 
-    let mut t = TestRuntime {
-        accounts: HashMap::new(),
+    let mut accounts = HashMap::new();
+
+    let account = account_new();
+
+    accounts.insert(account, (programs[0].code.clone(), 0));
+
+    let vm = VirtualMachine::new(account, account_new(), 0);
+
+    MockSubstrate {
+        accounts,
         printbuf: String::new(),
         store: HashMap::new(),
-        contracts: res,
-        vm: VirtualMachine::new(address, address_new(), 0),
-        abi: abi::substrate::load(&abistr).unwrap(),
+        programs,
+        vm,
+        current_program: 0,
         events: Vec::new(),
-    };
-
-    t.accounts.insert(address, (code, 0));
-
-    t
+    }
 }
 
-pub fn build_solidity_with_overflow_check(src: &'static str) -> TestRuntime {
+pub fn build_solidity_with_overflow_check(src: &'static str) -> MockSubstrate {
     let mut cache = FileResolver::new();
 
     cache.set_file_contents("test.sol", src.to_string());
@@ -1230,23 +1248,31 @@ pub fn build_solidity_with_overflow_check(src: &'static str) -> TestRuntime {
 
     assert!(!res.is_empty());
 
-    let abistr = res[0].1.clone();
-    let code = res[0].0.clone();
-    let address = address_new();
+    let programs: Vec<Program> = res
+        .iter()
+        .map(|res| Program {
+            code: res.0.clone(),
+            abi: abi::substrate::load(&res.1).unwrap(),
+        })
+        .collect();
 
-    let mut t = TestRuntime {
-        accounts: HashMap::new(),
+    let mut accounts = HashMap::new();
+
+    let account = account_new();
+
+    accounts.insert(account, (programs[0].code.clone(), 0));
+
+    let vm = VirtualMachine::new(account, account_new(), 0);
+
+    MockSubstrate {
+        accounts,
         printbuf: String::new(),
         store: HashMap::new(),
-        contracts: res,
-        vm: VirtualMachine::new(address, address_new(), 0),
-        abi: abi::substrate::load(&abistr).unwrap(),
+        programs,
+        vm,
+        current_program: 0,
         events: Vec::new(),
-    };
-
-    t.accounts.insert(address, (code, 0));
-
-    t
+    }
 }
 
 pub(crate) fn first_error(errors: Vec<ast::Diagnostic>) -> String {

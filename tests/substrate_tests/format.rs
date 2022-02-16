@@ -69,7 +69,7 @@ fn output() {
 
     assert_eq!(
         runtime.printbuf,
-        format!("bar:ladida address:{}", hex::encode(&runtime.vm.address))
+        format!("bar:ladida address:{}", hex::encode(&runtime.vm.account))
     );
 
     let mut runtime = build_solidity(
