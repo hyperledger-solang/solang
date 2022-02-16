@@ -999,6 +999,16 @@ impl MockSubstrate {
         }
     }
 
+    pub fn set_program(&mut self, index: usize) {
+        let account = account_new();
+
+        let code = self.programs[index].code.clone();
+        self.accounts.insert(account, (code, 0));
+        self.vm = VirtualMachine::new(account, account_new(), 0);
+
+        self.current_program = index;
+    }
+
     pub fn constructor(&mut self, index: usize, args: Vec<u8>) {
         let m = &self.programs[self.current_program].abi.spec.constructors[index];
 

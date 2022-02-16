@@ -200,3 +200,41 @@ fn creation_code() {
         Ret(runtime.programs[1].code.clone()).encode()
     );
 }
+
+#[test]
+fn issue666() {
+    let mut runtime = build_solidity(
+        r##"
+        contract Flipper {
+            function flip () pure public {
+                print("flip");
+            }
+        }
+
+        contract Inc {
+            Flipper _flipper;
+
+            constructor (Flipper _flipperContract) {
+                _flipper = _flipperContract;
+            }
+
+            function superFlip () pure public {
+                _flipper.flip();
+            }
+        }"##,
+    );
+
+    runtime.constructor(0, Vec::new());
+
+    let flipper_address = runtime.vm.account;
+
+    println!("flipper_address={}", hex::encode(&flipper_address));
+
+    runtime.set_program(1);
+
+    runtime.constructor(0, flipper_address.to_vec());
+
+    runtime.function("superFlip", Vec::new());
+
+    assert!(runtime.vm.output.is_empty());
+}
