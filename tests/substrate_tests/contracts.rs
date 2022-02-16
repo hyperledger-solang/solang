@@ -197,6 +197,6 @@ fn creation_code() {
     // return value should be the code for the second contract
     assert_eq!(
         runtime.vm.output,
-        Ret(runtime.contracts[1].0.clone()).encode()
+        Ret(runtime.programs[1].code.clone()).encode()
     );
 }

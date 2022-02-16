@@ -26,12 +26,12 @@ fn chain() {
 
     let slot = [0u8; 32];
 
-    assert_eq!(runtime.store.get(&(runtime.vm.address, slot)), None);
+    assert_eq!(runtime.store.get(&(runtime.vm.account, slot)), None);
 
     runtime.function("bar", Vec::new());
 
     assert_eq!(
-        runtime.store.get(&(runtime.vm.address, slot)).unwrap(),
+        runtime.store.get(&(runtime.vm.account, slot)).unwrap(),
         &vec!(7, 0)
     );
 
@@ -57,12 +57,12 @@ fn chain() {
 
     let slot = [0u8; 32];
 
-    assert_eq!(runtime.store.get(&(runtime.vm.address, slot)), None);
+    assert_eq!(runtime.store.get(&(runtime.vm.account, slot)), None);
 
     runtime.function("test", Vec::new());
 
     assert_eq!(
-        runtime.store.get(&(runtime.vm.address, slot)).unwrap(),
+        runtime.store.get(&(runtime.vm.account, slot)).unwrap(),
         &vec!(5, 0)
     );
 
@@ -90,12 +90,12 @@ fn chain() {
 
     let slot = [0u8; 32];
 
-    assert_eq!(runtime.store.get(&(runtime.vm.address, slot)), None);
+    assert_eq!(runtime.store.get(&(runtime.vm.account, slot)), None);
 
     runtime.function("test", 11u16.encode());
 
     assert_eq!(
-        runtime.store.get(&(runtime.vm.address, slot)).unwrap(),
+        runtime.store.get(&(runtime.vm.account, slot)).unwrap(),
         &vec!(5, 0)
     );
 
@@ -133,12 +133,12 @@ fn chain() {
 
     let slot = [0u8; 32];
 
-    assert_eq!(runtime.store.get(&(runtime.vm.address, slot)), None);
+    assert_eq!(runtime.store.get(&(runtime.vm.account, slot)), None);
 
     runtime.function("test", 11u16.encode());
 
     assert_eq!(
-        runtime.store.get(&(runtime.vm.address, slot)).unwrap(),
+        runtime.store.get(&(runtime.vm.account, slot)).unwrap(),
         &vec!(5, 0)
     );
 
@@ -163,12 +163,12 @@ fn chain() {
 
     let slot = [0u8; 32];
 
-    assert_eq!(runtime.store.get(&(runtime.vm.address, slot)), None);
+    assert_eq!(runtime.store.get(&(runtime.vm.account, slot)), None);
 
     runtime.function("test", Vec::new());
 
     assert_eq!(
-        runtime.store.get(&(runtime.vm.address, slot)).unwrap(),
+        runtime.store.get(&(runtime.vm.account, slot)).unwrap(),
         &vec!(6, 0)
     );
 }
@@ -201,12 +201,12 @@ fn inherit_modifier() {
     let mut slot = [0u8; 32];
     slot[0] = 1;
 
-    assert_eq!(runtime.store.get(&(runtime.vm.address, slot)), None);
+    assert_eq!(runtime.store.get(&(runtime.vm.account, slot)), None);
 
     runtime.function("test", Vec::new());
 
     assert_eq!(
-        runtime.store.get(&(runtime.vm.address, slot)).unwrap(),
+        runtime.store.get(&(runtime.vm.account, slot)).unwrap(),
         &vec!(7, 0, 0, 0)
     );
 
@@ -243,12 +243,12 @@ fn inherit_modifier() {
     let mut slot = [0u8; 32];
     slot[0] = 1;
 
-    assert_eq!(runtime.store.get(&(runtime.vm.address, slot)), None);
+    assert_eq!(runtime.store.get(&(runtime.vm.account, slot)), None);
 
     runtime.function("test", Vec::new());
 
     assert_eq!(
-        runtime.store.get(&(runtime.vm.address, slot)).unwrap(),
+        runtime.store.get(&(runtime.vm.account, slot)).unwrap(),
         &vec!(10, 0, 0, 0)
     );
 }

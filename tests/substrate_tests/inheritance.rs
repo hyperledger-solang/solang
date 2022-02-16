@@ -97,14 +97,14 @@ fn inherit_variables() {
     let mut slot = [0u8; 32];
 
     assert_eq!(
-        runtime.store.get(&(runtime.vm.address, slot)).unwrap(),
+        runtime.store.get(&(runtime.vm.account, slot)).unwrap(),
         &vec!(102, 0)
     );
 
     slot[0] = 1;
 
     assert_eq!(
-        runtime.store.get(&(runtime.vm.address, slot)).unwrap(),
+        runtime.store.get(&(runtime.vm.account, slot)).unwrap(),
         &vec!(0xff, 0xff)
     );
 
@@ -130,14 +130,14 @@ fn inherit_variables() {
     let mut slot = [0u8; 32];
 
     assert_eq!(
-        runtime.store.get(&(runtime.vm.address, slot)).unwrap(),
+        runtime.store.get(&(runtime.vm.account, slot)).unwrap(),
         &vec!(102, 0)
     );
 
     slot[0] = 1;
 
     assert_eq!(
-        runtime.store.get(&(runtime.vm.address, slot)).unwrap(),
+        runtime.store.get(&(runtime.vm.account, slot)).unwrap(),
         &vec!(0xff, 0xff)
     );
 }
@@ -283,7 +283,7 @@ fn test_override() {
 
     let slot = [0u8; 32];
     assert_eq!(
-        runtime.store.get(&(runtime.vm.address, slot)).unwrap(),
+        runtime.store.get(&(runtime.vm.account, slot)).unwrap(),
         &vec!(3)
     );
 
@@ -293,7 +293,7 @@ fn test_override() {
     let slot = [0u8; 32];
 
     assert_eq!(
-        runtime.store.get(&(runtime.vm.address, slot)).unwrap(),
+        runtime.store.get(&(runtime.vm.account, slot)).unwrap(),
         &vec!(2)
     );
 
@@ -317,7 +317,7 @@ fn test_override() {
 
     let slot = [0u8; 32];
     assert_eq!(
-        runtime.store.get(&(runtime.vm.address, slot)).unwrap(),
+        runtime.store.get(&(runtime.vm.account, slot)).unwrap(),
         &vec!(3)
     );
 
@@ -326,7 +326,7 @@ fn test_override() {
     let slot = [0u8; 32];
 
     assert_eq!(
-        runtime.store.get(&(runtime.vm.address, slot)).unwrap(),
+        runtime.store.get(&(runtime.vm.account, slot)).unwrap(),
         &vec!(2)
     );
 }
