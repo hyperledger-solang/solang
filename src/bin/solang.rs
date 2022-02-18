@@ -1,4 +1,4 @@
-use clap::{App, Arg, ArgMatches};
+use clap::{Arg, ArgMatches, Command};
 use itertools::Itertools;
 use num_traits::cast::ToPrimitive;
 use serde::Serialize;
@@ -41,7 +41,7 @@ pub struct JsonResult {
 }
 
 fn main() {
-    let matches = App::new("solang")
+    let matches = Command::new("solang")
         .version(&*format!("version {}", env!("GIT_HASH")))
         .author(env!("CARGO_PKG_AUTHORS"))
         .about(env!("CARGO_PKG_DESCRIPTION"))
