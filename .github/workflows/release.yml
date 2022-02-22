@@ -170,6 +170,7 @@ jobs:
     name: Container
     runs-on: ubuntu-20.04
     steps:
+    - uses: rlespinasse/github-slug-action@v4
     - name: Checkout sources
       uses: actions/checkout@v2
     - run: |
@@ -177,4 +178,4 @@ jobs:
             --label org.opencontainers.image.description="Solidity Compiler for Solana, Substrate, and ewasm version $(git describe --tags)"
     - run: |
         echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin
-        docker push ghcr.io/${GITHUB_REPOSITORY}:${GITHUB_REF/refs\/tags\//}
+        docker push ghcr.io/${{ env.GITHUB_REPOSITORY_OWNER_PART_SLUG }}/${{ env.GITHUB_REPOSITORY_NAME_PART_SLUG }}:${GITHUB_REF/refs\/tags\//}
