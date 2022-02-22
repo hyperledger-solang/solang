@@ -174,7 +174,7 @@ jobs:
     - name: Checkout sources
       uses: actions/checkout@v2
     - run: |
-        docker build . -t ghcr.io/${GITHUB_REPOSITORY}:${GITHUB_REF/refs\/tags\//} \
+        docker build . -t ghcr.io/${{ env.GITHUB_REPOSITORY_OWNER_PART_SLUG }}/${{ env.GITHUB_REPOSITORY_NAME_PART_SLUG }}:${GITHUB_REF/refs\/tags\//} \
             --label org.opencontainers.image.description="Solidity Compiler for Solana, Substrate, and ewasm version $(git describe --tags)"
     - run: |
         echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin
