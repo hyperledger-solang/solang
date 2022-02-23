@@ -230,3 +230,50 @@ fn external_call_with_string_returns() {
 
     assert_eq!(res[0], Token::FixedBytes(bar0_account.to_vec()));
 }
+
+#[test]
+fn encode_call() {
+    let mut vm = build_solidity(
+        r#"
+        contract bar0 {
+            bytes4 private constant SELECTOR = bytes4(keccak256(bytes('test_bar(int64)')));
+
+            function test_other(bar1 x) public returns (int64) {
+                bytes select = abi.encodeWithSelector(SELECTOR, int64(7));
+                bytes signature = abi.encodeCall(bar1.test_bar, 7);
+                require(select == signature, "must be the same");
+                (, bytes raw) = address(x).call(signature);
+                (int64 v) = abi.decode(raw, (int64));
+                return v + 5;
+            }
+        }
+
+        contract bar1 {
+            function test_bar(int64 y) public returns (int64) {
+                return 3 + y;
+            }
+        }"#,
+    );
+
+    vm.constructor("bar1", &[], 0);
+
+    let res = vm.function("test_bar", &[Token::Int(U256::from(21))], &[], 0, None);
+
+    assert_eq!(res, vec![Token::Int(U256::from(24))]);
+
+    let bar1_account = vm.stack[0].data;
+
+    vm.set_program(0);
+
+    vm.constructor("bar0", &[], 0);
+
+    let res = vm.function(
+        "test_other",
+        &[Token::FixedBytes(bar1_account.to_vec())],
+        &[],
+        0,
+        None,
+    );
+
+    assert_eq!(res, vec![Token::Int(U256::from(15))]);
+}

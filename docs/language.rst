@@ -3202,9 +3202,25 @@ bytes will be encoded, not the length. It is not possible to decode packed encod
 
 .. code-block:: javascript
 
-    bytes foo = abi.encode(uint16(0xff00), "ABCD");
+    bytes foo = abi.encodePacked(uint16(0xff00), "ABCD");
 
 On Substrate, foo will be ``hex"00ff41424344"``. On Ethereum this will be ``hex"ff0041424344"``.
+
+abi.encodeCall(function, ...)
++++++++++++++++++++++++++++++
+
+ABI encodes the function call to the function which should be specified as ``ContractName.FunctionName``. The arguments
+are cast and checked against the function specified as the first argument.
+
+.. code-block:: javascript
+
+    contract c {
+        function f1() public {
+            bytes foo = abi.encodeCall(c.bar, 102, true);
+        }
+
+        function bar(int a, bool b) public {}
+    }
 
 Cryptography
 ____________

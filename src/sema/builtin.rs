@@ -24,7 +24,7 @@ pub struct Prototype {
 }
 
 // A list of all Solidity builtins functions
-static BUILTIN_FUNCTIONS: Lazy<[Prototype; 24]> = Lazy::new(|| {
+static BUILTIN_FUNCTIONS: Lazy<[Prototype; 25]> = Lazy::new(|| {
     [
         Prototype {
             builtin: Builtin::Assert,
@@ -211,7 +211,7 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 24]> = Lazy::new(|| {
             ret: vec![],
             target: vec![],
             doc: "Abi encode given arguments",
-            // it should be allowed in constant context, but we don't supported that yet
+            // it should be allowed in constant context, but we don't support that yet
             constant: false,
         },
         Prototype {
@@ -223,7 +223,7 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 24]> = Lazy::new(|| {
             ret: vec![],
             target: vec![],
             doc: "Abi encode given arguments using packed encoding",
-            // it should be allowed in constant context, but we don't supported that yet
+            // it should be allowed in constant context, but we don't support that yet
             constant: false,
         },
         Prototype {
@@ -235,7 +235,7 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 24]> = Lazy::new(|| {
             ret: vec![],
             target: vec![],
             doc: "Abi encode given arguments with selector",
-            // it should be allowed in constant context, but we don't supported that yet
+            // it should be allowed in constant context, but we don't support that yet
             constant: false,
         },
         Prototype {
@@ -247,7 +247,19 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 24]> = Lazy::new(|| {
             ret: vec![],
             target: vec![],
             doc: "Abi encode given arguments with function signature",
-            // it should be allowed in constant context, but we don't supported that yet
+            // it should be allowed in constant context, but we don't support that yet
+            constant: false,
+        },
+        Prototype {
+            builtin: Builtin::AbiEncodeCall,
+            namespace: Some("abi"),
+            method: None,
+            name: "encodeCall",
+            args: vec![],
+            ret: vec![],
+            target: vec![],
+            doc: "Abi encode given arguments with function signature",
+            // it should be allowed in constant context, but we don't support that yet
             constant: false,
         },
         Prototype {
@@ -270,7 +282,7 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 24]> = Lazy::new(|| {
             ret: vec![Type::Uint(256)],
             target: vec![],
             doc: "Multiply first two arguments, and the modulo last argument. Does not overflow",
-            // it should be allowed in constant context, but we don't supported that yet
+            // it should be allowed in constant context, but we don't support that yet
             constant: false,
         },
         Prototype {
@@ -282,7 +294,7 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 24]> = Lazy::new(|| {
             ret: vec![Type::Uint(256)],
             target: vec![],
             doc: "Add first two arguments, and the modulo last argument. Does not overflow",
-            // it should be allowed in constant context, but we don't supported that yet
+            // it should be allowed in constant context, but we don't support that yet
             constant: false,
         },
         Prototype {
@@ -976,6 +988,7 @@ pub fn resolve_namespace_call(
         "encodePacked" => Builtin::AbiEncodePacked,
         "encodeWithSelector" => Builtin::AbiEncodeWithSelector,
         "encodeWithSignature" => Builtin::AbiEncodeWithSignature,
+        "encodeCall" => Builtin::AbiEncodeCall,
         _ => unreachable!(),
     };
 
@@ -1117,6 +1130,85 @@ pub fn resolve_namespace_call(
                 diagnostics.push(Diagnostic::error(
                     *loc,
                     "function requires one ‘bytes4’ selector argument".to_string(),
+                ));
+
+                return Err(());
+            }
+        }
+        Builtin::AbiEncodeCall => {
+            // first argument is function
+            if let Some(function) = args_iter.next() {
+                let function = expression(
+                    function,
+                    context,
+                    ns,
+                    symtable,
+                    diagnostics,
+                    ResolveTo::Unknown,
+                )?;
+
+                match function.ty() {
+                    Type::ExternalFunction { params, .. }
+                    | Type::InternalFunction { params, .. } => {
+                        resolved_args.push(function);
+
+                        if args.len() - 1 != params.len() {
+                            diagnostics.push(Diagnostic::error(
+                                *loc,
+                                format!(
+                                    "function takes {} arguments, {} provided",
+                                    params.len(),
+                                    args.len() - 1
+                                ),
+                            ));
+
+                            return Err(());
+                        }
+
+                        for (arg_no, arg) in args_iter.enumerate() {
+                            let mut expr = expression(
+                                arg,
+                                context,
+                                ns,
+                                symtable,
+                                diagnostics,
+                                ResolveTo::Type(&params[arg_no]),
+                            )?;
+
+                            expr = cast(&arg.loc(), expr, &params[arg_no], true, ns, diagnostics)?;
+
+                            // A string or hex literal should be encoded as a string
+                            if let Expression::BytesLiteral(..) = &expr {
+                                expr =
+                                    cast(&arg.loc(), expr, &Type::String, true, ns, diagnostics)?;
+                            }
+
+                            resolved_args.push(expr);
+                        }
+
+                        return Ok(Expression::Builtin(
+                            *loc,
+                            vec![Type::DynamicBytes],
+                            builtin,
+                            resolved_args,
+                        ));
+                    }
+                    ty => {
+                        diagnostics.push(Diagnostic::error(
+                            *loc,
+                            format!(
+                                "first argument should be function, got ‘{}’",
+                                ty.to_string(ns)
+                            ),
+                        ));
+
+                        return Err(());
+                    }
+                }
+            } else {
+                diagnostics.push(Diagnostic::error(
+                    *loc,
+                    "least one function argument required".to_string(),
                 ));
 
                 return Err(());
