@@ -250,6 +250,7 @@ fn serialize_parameters(
     let mut refs = Vec::new();
     let mut v: Vec<u8> = Vec::new();
 
+    #[allow(clippy::ptr_arg)]
     fn serialize_account(
         v: &mut Vec<u8>,
         refs: &mut Vec<AccountRef>,
