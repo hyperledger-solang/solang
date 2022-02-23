@@ -627,6 +627,9 @@ pub fn expression(
         Expression::Builtin(loc, _, Builtin::AbiEncodeWithSignature, args) => {
             abi_encode_with_signature(args, loc, cfg, contract_no, func, ns, vartab, opt)
         }
+        Expression::Builtin(loc, _, Builtin::AbiEncodeCall, args) => {
+            abi_encode_call(args, cfg, contract_no, func, ns, vartab, loc, opt)
+        }
         // The Substrate gas price builtin takes an argument; the others do not
         Expression::Builtin(loc, _, Builtin::Gasprice, expr)
             if expr.len() == 1 && ns.target == Target::Ewasm =>
@@ -1314,6 +1317,59 @@ fn abi_encode_with_signature(
     );
     let hash = expression(&hash, cfg, contract_no, func, ns, vartab, opt);
     let selector = cast(loc, hash, &Type::Bytes(4), false, ns, &mut Vec::new()).unwrap();
+    let args = args_iter
+        .map(|v| expression(v, cfg, contract_no, func, ns, vartab, opt))
+        .collect();
+    let res = vartab.temp(
+        &pt::Identifier {
+            loc: *loc,
+            name: "encoded".to_owned(),
+        },
+        &Type::DynamicBytes,
+    );
+    tys.insert(0, Type::Bytes(4));
+    cfg.add(
+        vartab,
+        Instr::Set {
+            loc: *loc,
+            res,
+            expr: Expression::AbiEncode {
+                loc: *loc,
+                tys,
+                packed: vec![selector],
+                args,
+            },
+        },
+    );
+    Expression::Variable(*loc, Type::DynamicBytes, res)
+}
+
+fn abi_encode_call(
+    args: &[Expression],
+    cfg: &mut ControlFlowGraph,
+    contract_no: usize,
+    func: Option<&Function>,
+    ns: &Namespace,
+    vartab: &mut Vartable,
+    loc: &pt::Loc,
+    opt: &Options,
+) -> Expression {
+    let mut tys: Vec<Type> = args.iter().skip(1).map(|a| a.ty()).collect();
+    let mut args_iter = args.iter();
+    let selector = expression(
+        &Expression::Builtin(
+            *loc,
+            vec![Type::Bytes(4)],
+            Builtin::FunctionSelector,
+            vec![args_iter.next().unwrap().clone()],
+        ),
+        cfg,
+        contract_no,
+        func,
+        ns,
+        vartab,
+        opt,
+    );
     let args = args_iter
         .map(|v| expression(v, cfg, contract_no, func, ns, vartab, opt))
         .collect();

@@ -1320,6 +1320,7 @@ pub enum Builtin {
     AbiEncodePacked,
     AbiEncodeWithSelector,
     AbiEncodeWithSignature,
+    AbiEncodeCall,
     MulMod,
     AddMod,
     ExternalFunctionAddress,
