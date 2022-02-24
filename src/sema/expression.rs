@@ -5995,6 +5995,15 @@ fn method_call_pos_args(
                 ResolveTo::Type(&Type::Value),
             )?;
 
+            let address = cast(
+                &var_expr.loc(),
+                var_expr,
+                var_ty.deref_any(),
+                true,
+                ns,
+                diagnostics,
+            )?;
+
             let value = cast(&args[0].loc(), expr, &Type::Value, true, ns, diagnostics)?;
 
             return if func.name == "transfer" {
@@ -6002,14 +6011,14 @@ fn method_call_pos_args(
                     *loc,
                     vec![Type::Void],
                     Builtin::PayableTransfer,
-                    vec![var_expr, value],
+                    vec![address, value],
                 ))
             } else {
                 Ok(Expression::Builtin(
                     *loc,
                     vec![Type::Bool],
                     Builtin::PayableSend,
-                    vec![var_expr, value],
+                    vec![address, value],
                 ))
             };
         }
