@@ -752,8 +752,12 @@ NonIfStatement: Statement = {
     <l:@L> "unchecked" "{" <statements:Statement*> "}" <r:@R> => {
         Statement::Block { loc: Loc::File(file_no, l, r), unchecked: true, statements }
     },
-    <l:@L> "assembly" <assembly:AssemblyBlock> <r:@R> => {
-        Statement::Assembly { loc: Loc::File(file_no, l, r), assembly }
+    <l:@L> "assembly" <dialect:StringLiteral?> <statements:AssemblyBlock> <r:@R> => {
+        Statement::Assembly {
+            loc: Loc::File(file_no, l, r),
+            dialect: dialect.map(|dialect| dialect.to_owned()),
+            statements
+        }
     },
     <SimpleStatement> ";" => <>,
     <l:@L> "do" <b:Statement> "while" "(" <e:Expression> ")" <r:@R> ";" => {
@@ -779,30 +783,21 @@ NonIfStatement: Statement = {
     },
 }
 
-AsmIdentifier: Identifier = {
+AssemblyIdentifier: Identifier = {
     <l:@L> <n:identifier> <r:@R> => Identifier{loc: Loc::File(file_no, l, r), name: n.to_string()},
-    <l:@L> "return" <r:@R> => Identifier{loc: Loc::File(file_no, l, r), name: "return".to_string()},
+    <l:@L> "return" <r:@R> => Identifier{loc: Loc::File(file_no, l, r), name: "return".to_string()}
 }
 
 AssemblyStatement: AssemblyStatement = {
-    <l:@L> <left:AssemblyExpression0> ":=" <right:AssemblyExpression2> <r:@R> => {
-        AssemblyStatement::Assign(Loc::File(file_no, l, r), left, right)
-    },
-    <l:@L> "let" <left:AssemblyExpression0> ":=" <right:AssemblyExpression2> <r:@R> => {
-        AssemblyStatement::LetAssign(Loc::File(file_no, l, r), left, right)
-    },
-    <l:@L> "if" <cond:AssemblyExpression2> <body:AssemblyBlock> <r:@R> => {
-        AssemblyStatement::If(Loc::File(file_no, l, r), cond, Box::new(body))
-    },
-    <l:@L> "for" <init:AssemblyBlock> <cond:AssemblyExpression2> <post_iter:AssemblyBlock> <body:AssemblyBlock> <r:@R> => {
-        AssemblyStatement::For(Loc::File(file_no, l, r), init, cond, post_iter, Box::new(body))
-    },
-    <l:@L> "switch" <expr:AssemblyExpression2> <default:AssemblySwitchDefault> <r:@R> => {
-        AssemblyStatement::Switch(Loc::File(file_no, l, r), expr, Vec::new(), Some(default))
-    },
-    <l:@L> "switch" <expr:AssemblyExpression2> <cases:AssemblySwitchCase+> <default:AssemblySwitchDefault?> <r:@R> => {
-        AssemblyStatement::Switch(Loc::File(file_no, l, r), expr, cases, default)
-    },
+    <l:@L> "{" <statement:AssemblyStatement> "}" <r:@R> => { AssemblyStatement::Block(Loc::File(file_no, l, r),
+            Box::new(statement))},
+    <AssemblyVariableDeclaration> => <>,
+    <AssemblyAssignment> => <>,
+    <AssemblyFunctionCall> => AssemblyStatement::FunctionCall(Box::new(<>)),
+    <AssemblyIf> => <>,
+    <AssemblyFor> => <>,
+    <AssemblySwitch> => <>,
+    <AssemblyFunctionDefinition> => <>,
     <l:@L> "leave" <r:@R> => {
         AssemblyStatement::Leave(Loc::File(file_no, l, r))
     },
@@ -812,48 +807,16 @@ AssemblyStatement: AssemblyStatement = {
     <l:@L> "continue" <r:@R> => {
         AssemblyStatement::Continue(Loc::File(file_no, l, r))
     },
-    <expr:AssemblyExpression1> => {
-        AssemblyStatement::Expression(expr)
-    },
-}
-
-AssemblySwitchCase: AssemblySwitch = {
-    "case" <case:AssemblyExpression0> <body:AssemblyBlock> => {
-        AssemblySwitch::Case(case, Box::new(body))
-    }
-}
-
-AssemblySwitchDefault: AssemblySwitch = {
-    "default" <body:AssemblyBlock> => {
-        AssemblySwitch::Default(Box::new(body))
-    }
 }
 
 AssemblyBlock: Vec<AssemblyStatement> = {
-    "{" <AssemblyStatement*> "}" => <>
+    "{" <AssemblyStatement*> "}" => <>,
 }
 
-AssemblyExpression2: AssemblyExpression = {
-    "(" <AssemblyExpression1> ")" => <>,
-    AssemblyExpression1
-}
-
-AssemblyExpression1: AssemblyExpression = {
-    <l:@L> <function:AssemblyExpression0> "(" <args:Comma<AssemblyExpression2>> ")" <r:@R> => {
-        AssemblyExpression::Function(Loc::File(file_no, l, r), Box::new(function), args)
-    },
-    <l:@L> <ty:NoFunctionType> <br:@R> "(" <args:Comma<AssemblyExpression2>> ")" <r:@R> => {
-        let id = Identifier { loc: Loc::File(file_no, l, br), name: String::from(&input[l..br]) };
-
-        AssemblyExpression::Function(Loc::File(file_no, l, r), Box::new(AssemblyExpression::Variable(id)), args)
-    },
-    AssemblyExpression0
-}
-
-AssemblyExpression0: AssemblyExpression = {
-    <a:@L> "true" <b:@R> => AssemblyExpression::BoolLiteral(Loc::File(file_no, a, b), true),
-    <a:@L> "false" <b:@R> => AssemblyExpression::BoolLiteral(Loc::File(file_no, a, b), false),
-    <l:@L> <n:number> <r:@R> => {
+AssemblyLiteral: AssemblyExpression = {
+    <a:@L> "true" <t_type:(":" <AssemblyIdentifier>)?> <b:@R> => AssemblyExpression::BoolLiteral(Loc::File(file_no, a, b), true, t_type),
+    <a:@L> "false" <t_type:(":" <AssemblyIdentifier>)?> <b:@R> => AssemblyExpression::BoolLiteral(Loc::File(file_no, a, b), false, t_type),
+    <l:@L> <n:number> <t_type:(":" <AssemblyIdentifier>)?> <r:@R> => {
         let base: String = n.0.chars().filter(|v| *v != '_').collect();
         let exp: String = n.1.chars().filter(|v| *v != '_').collect();
 
@@ -866,22 +829,109 @@ AssemblyExpression0: AssemblyExpression = {
             base.mul(exp)
         };
 
-        AssemblyExpression::NumberLiteral(Loc::File(file_no, l, r), n)
+        AssemblyExpression::NumberLiteral(Loc::File(file_no, l, r), n, t_type)
     },
-    <l:@L> <n:hexnumber> <r:@R> => {
-        AssemblyExpression::HexNumberLiteral(Loc::File(file_no, l, r), n.to_owned())
+    <l:@L> <n:hexnumber> <t_type:(":" <AssemblyIdentifier>)?> <r:@R> => {
+        AssemblyExpression::HexNumberLiteral(Loc::File(file_no, l, r), n.to_owned(), t_type)
     },
-    <StringLiteral> => {
-        AssemblyExpression::StringLiteral(<>)
-    },
-    <AsmIdentifier> => AssemblyExpression::Variable(<>),
-    <l:@L> <array:AssemblyExpression0> "[" <index:AssemblyExpression1> "]" <r:@R> => {
-        AssemblyExpression::Subscript(Loc::File(file_no, l, r), Box::new(array), Box::new(index))
-    },
-    <l:@L> <array:AssemblyExpression0> "." <member:AsmIdentifier> <r:@R> => {
-        AssemblyExpression::Member(Loc::File(file_no, l, r), Box::new(array), member)
+    <str:StringLiteral> <t_type:(":" <AssemblyIdentifier>)?> => {
+        AssemblyExpression::StringLiteral(str, t_type)
     },
 }
+
+AssemblyFunctionCall: AssemblyFunctionCall = {
+    <l:@L> <name:AssemblyIdentifier> "(" <args:Comma<AssemblyExpression>> ")" <r:@R> =>
+     AssemblyFunctionCall{loc: Loc::File(file_no, l, r), function_name: name, arguments: args}
+}
+
+AssemblyPath: AssemblyExpression = {
+ <AssemblyIdentifier> => AssemblyExpression::Variable(<>),
+ <l:@L> <array:AssemblyPath> "." <member:AssemblyIdentifier> <r:@R> => {
+         AssemblyExpression::Member(Loc::File(file_no, l, r), Box::new(array), member)
+     },
+}
+
+AssemblyExpression: AssemblyExpression = {
+    <AssemblyPath> => <>,
+    <AssemblyFunctionCall> => AssemblyExpression::FunctionCall(Box::new(<>)),
+    <AssemblyLiteral> => <>,
+}
+
+AssemblyFunctionDefinition: AssemblyStatement = {
+    <l:@L> "function" <name: AssemblyIdentifier> "(" <params: AssemblyTypedIdentifierList> ")" <returns:("->" <AssemblyTypedIdentifierList>)?>
+    <body: AssemblyBlock> <r:@R> => {
+        let returns = match returns {
+            Some(content) => content,
+            None => vec![]
+        };
+        AssemblyStatement::FunctionDefinition(Box::new(AssemblyFunctionDefinition{
+            loc: Loc::File(file_no, l, r),
+            name,
+            params,
+            returns,
+            body
+            }
+          )
+        )
+ }
+
+}
+
+AssemblyTypedIdentifierList: Vec<AssemblyTypedIdentifier> = {
+    CommaOne<<AssemblyType>> => <>
+}
+
+AssemblyType: AssemblyTypedIdentifier = {
+    <l:@L> <var_name:AssemblyIdentifier> ":" <var_type:AssemblyIdentifier> <r:@R> =>
+       AssemblyTypedIdentifier{
+            loc: Loc::File(file_no, l, r),
+            name: var_name, ty: Some(var_type)
+       },
+    <l:@L> <var_name:AssemblyIdentifier> <r:@R> =>
+       AssemblyTypedIdentifier{loc: Loc::File(file_no, l, r), name: var_name, ty: None},
+}
+
+AssemblySwitch: AssemblyStatement = {
+    <l:@L> "switch" <expr:AssemblyExpression> <default:AssemblySwitchDefault> <r:@R> =>
+    AssemblyStatement::Switch(Loc::File(file_no, l, r), expr, Vec::new(), Some(default)),
+    <l:@L> "switch" <expr:AssemblyExpression> <cases:AssemblySwitchCase+> <default:AssemblySwitchDefault?> <r:@R> =>
+    AssemblyStatement::Switch(Loc::File(file_no, l, r), expr, cases, default),
+}
+
+AssemblySwitchDefault: AssemblySwitch = {
+    "default" <body:AssemblyBlock> => {
+        AssemblySwitch::Default(body)
+    }
+}
+
+AssemblySwitchCase: AssemblySwitch = {
+    "case" <case:AssemblyLiteral> <body:AssemblyBlock> => {
+        AssemblySwitch::Case(case, body)
+    }
+}
+
+AssemblyFor: AssemblyStatement = {
+    <l:@L> "for" <init:AssemblyBlock> <cond:AssemblyExpression> <post_iter:AssemblyBlock> <body:AssemblyBlock> <r:@R> => {
+        AssemblyStatement::For(Loc::File(file_no, l, r), init, cond, post_iter, body)
+    },
+}
+
+AssemblyIf: AssemblyStatement = {
+    <l:@L> "if" <cond:AssemblyExpression> <body:AssemblyBlock> <r:@R> => {
+        AssemblyStatement::If(Loc::File(file_no, l, r), cond, body)
+    },
+}
+
+AssemblyAssignment: AssemblyStatement = {
+ <l:@L> <paths:CommaOne<AssemblyPath>> ":=" <expr:AssemblyExpression> <r:@R> =>
+ AssemblyStatement::Assign(Loc::File(file_no, l, r), paths, expr)
+}
+
+AssemblyVariableDeclaration: AssemblyStatement = {
+    <l:@L>  "let" <names:AssemblyTypedIdentifierList> <expr:(":=" <AssemblyExpression>)?> <r:@R> =>
+    AssemblyStatement::VariableDeclaration(Loc::File(file_no, l, r), names, expr),
+}
+
 
 Comma<T>: Vec<T> = {
     => Vec::new(),
@@ -924,6 +974,7 @@ extern {
         "=" => Token::Assign,
         "==" => Token::Equal,
         "=>" => Token::Arrow,
+        "->" => Token::AssemblyArrow,
         "|=" => Token::BitwiseOrAssign,
         "^=" => Token::BitwiseXorAssign,
         "&=" => Token::BitwiseAndAssign,

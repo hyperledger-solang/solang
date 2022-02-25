@@ -597,7 +597,8 @@ pub enum Statement {
     },
     Assembly {
         loc: Loc,
-        assembly: AssemblyBlock,
+        dialect: Option<StringLiteral>,
+        statements: Vec<AssemblyStatement>,
     },
     Args(Loc, Vec<NamedArgument>),
     If(Loc, Expression, Box<Statement>, Option<Box<Statement>>),
@@ -633,16 +634,20 @@ pub enum CatchClause {
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum AssemblyStatement {
-    Assign(Loc, AssemblyExpression, AssemblyExpression),
-    LetAssign(Loc, AssemblyExpression, AssemblyExpression),
+    Assign(Loc, Vec<AssemblyExpression>, AssemblyExpression),
+    VariableDeclaration(
+        Loc,
+        Vec<AssemblyTypedIdentifier>,
+        Option<AssemblyExpression>,
+    ),
     Expression(AssemblyExpression),
-    If(Loc, AssemblyExpression, Box<AssemblyBlock>),
+    If(Loc, AssemblyExpression, Vec<AssemblyStatement>),
     For(
         Loc,
-        AssemblyBlock,
+        Vec<AssemblyStatement>,
         AssemblyExpression,
-        AssemblyBlock,
-        Box<AssemblyBlock>,
+        Vec<AssemblyStatement>,
+        Vec<AssemblyStatement>,
     ),
     Switch(
         Loc,
@@ -653,28 +658,52 @@ pub enum AssemblyStatement {
     Leave(Loc),
     Break(Loc),
     Continue(Loc),
+    Block(Loc, Box<AssemblyStatement>),
+    FunctionDefinition(Box<AssemblyFunctionDefinition>),
+    FunctionCall(Box<AssemblyFunctionCall>),
 }
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum AssemblyExpression {
-    BoolLiteral(Loc, bool),
-    NumberLiteral(Loc, BigInt),
-    HexNumberLiteral(Loc, String),
-    StringLiteral(StringLiteral),
+    BoolLiteral(Loc, bool, Option<Identifier>),
+    NumberLiteral(Loc, BigInt, Option<Identifier>),
+    HexNumberLiteral(Loc, String, Option<Identifier>),
+    StringLiteral(StringLiteral, Option<Identifier>),
     Variable(Identifier),
     Assign(Loc, Box<AssemblyExpression>, Box<AssemblyExpression>),
     LetAssign(Loc, Box<AssemblyExpression>, Box<AssemblyExpression>),
-    Function(Loc, Box<AssemblyExpression>, Vec<AssemblyExpression>),
+    FunctionCall(Box<AssemblyFunctionCall>),
     Member(Loc, Box<AssemblyExpression>, Identifier),
     Subscript(Loc, Box<AssemblyExpression>, Box<AssemblyExpression>),
 }
 
-pub type AssemblyBlock = Vec<AssemblyStatement>;
+#[derive(Debug, PartialEq, Clone)]
+pub struct AssemblyTypedIdentifier {
+    pub loc: Loc,
+    pub name: Identifier,
+    pub ty: Option<Identifier>,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct AssemblyFunctionDefinition {
+    pub loc: Loc,
+    pub name: Identifier,
+    pub params: Vec<AssemblyTypedIdentifier>,
+    pub returns: Vec<AssemblyTypedIdentifier>,
+    pub body: Vec<AssemblyStatement>,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct AssemblyFunctionCall {
+    pub loc: Loc,
+    pub function_name: Identifier,
+    pub arguments: Vec<AssemblyExpression>,
+}
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum AssemblySwitch {
-    Case(AssemblyExpression, Box<AssemblyBlock>),
-    Default(Box<AssemblyBlock>),
+    Case(AssemblyExpression, Vec<AssemblyStatement>),
+    Default(Vec<AssemblyStatement>),
 }
 
 impl Statement {
