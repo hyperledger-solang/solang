@@ -8,6 +8,7 @@ pub mod diagnostics;
 mod doc;
 pub mod lexer;
 pub mod pt;
+#[cfg(test)]
 mod test;
 
 #[allow(clippy::all)]

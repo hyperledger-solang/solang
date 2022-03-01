@@ -28,7 +28,7 @@ jobs:
       - name: Run cargo fmt
         run: cargo fmt --all -- --check
       - name: Run cargo clippy
-        run: cargo clippy --tests --bins -- -D warnings -D clippy::inconsistent-struct-constructor
+        run: cargo clippy --workspace --tests --bins -- -D warnings -D clippy::inconsistent-struct-constructor
 
   linux-x86-64:
     name: Linux x86-64
@@ -94,7 +94,7 @@ jobs:
         components: clippy
     # We run clippy on Linux in the lint job above, but this does not check #[cfg(windows)] items
     - name: Run cargo clippy
-      run: cargo clippy --tests --bins -- -D warnings -D clippy::inconsistent-struct-constructor
+      run: cargo clippy --workspace --tests --bins -- -D warnings -D clippy::inconsistent-struct-constructor
     - name: Build
       run: cargo build --verbose
     - name: Run tests
