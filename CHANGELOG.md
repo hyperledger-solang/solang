@@ -2,7 +2,7 @@
 All notable changes to [Solang](https://github.com/hyperledger-labs/solang/)
 will be documented here.
 
-## [Unreleased]
+## [0.1.10]
 
 ### Added
 - On Solana, the accounts that were passed into the transactions are listed in
@@ -10,10 +10,13 @@ will be documented here.
 - A new common subexpression elimination pass was added, thanks to
   [LucasSte](https://github.com/hyperledger-labs/solang/pull/550)
 - A graphviz dot file can be generated from the ast, using `--emit ast-dot`
+- Many improvements to the solidity parser, and the parser has been spun out
+  in it's own create `solang-parser`.
 
 ### Changed
 - Solang now uses LLVM 13.0, based on the [Solana LLVM tree](https://github.com/solana-labs/llvm-project/)
 - The ast datastructure has been simplified.
+- Many bugfixes across the entire tree.
 
 ## [0.1.9]
 
