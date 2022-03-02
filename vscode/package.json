@@ -4,7 +4,7 @@
 	"description": "Use the solang compiler for syntax highlighting, compiler warnings and errors, and hovers",
 	"publisher": "solang",
 	"author": "Shivam Balikondwar <shivambalikondwar@icloud.com>",
-	"version": "0.2.0",
+	"version": "0.3.0",
 	"repository": "github.com/hyperledger-labs/solang",
 	"engines": {
 		"vscode": "^1.43.0"
@@ -85,7 +85,7 @@
 	"dependencies": {
 		"node-fetch": "^2.6.1",
 		"semver": "^7.3.5",
-		"vsce": "^1.96.1",
+		"vsce": "^1.103.1",
 		"vscode-languageclient": "^6.1.3",
 		"vscode-languageserver": "^6.1.1",
 		"vscode-languageserver-protocol": "=3.15.3"
@@ -95,8 +95,8 @@
 		"@types/mocha": "^7.0.2",
 		"@types/node": "^12.12.0",
 		"@types/node-fetch": "^2.5.8",
-		"@types/vscode": "^1.43.0",
 		"@types/semver": "^7.3.8",
+		"@types/vscode": "^1.43.0",
 		"@typescript-eslint/eslint-plugin": "^4.15.0",
 		"@typescript-eslint/parser": "^4.15.0",
 		"eslint": ">=7.0.0",
