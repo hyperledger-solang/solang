@@ -34,6 +34,6 @@ pub(crate) fn get_default_type_from_identifier(
             Err(())
         }
     } else {
-        Ok(Type::Uint(ns.target.ptr_size()))
+        Ok(Type::Uint(256))
     }
 }

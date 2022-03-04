@@ -48,7 +48,10 @@ fn resolve_number_literal() {
     let expr = pt::AssemblyExpression::NumberLiteral(
         loc,
         BigInt::from_u128(0xffffffffffffffffff).unwrap(),
-        None,
+        Some(Identifier {
+            loc,
+            name: "u64".to_string(),
+        }),
     );
     let parsed = resolve_assembly_expression(&expr, &mut ns);
     assert!(parsed.is_ok());
@@ -82,7 +85,7 @@ fn resolve_number_literal() {
     assert!(ns.diagnostics.is_empty());
     assert_eq!(
         parsed.unwrap(),
-        AssemblyExpression::NumberLiteral(loc, BigInt::from(20), Type::Uint(64))
+        AssemblyExpression::NumberLiteral(loc, BigInt::from(20), Type::Uint(256))
     );
 }
 
@@ -90,7 +93,14 @@ fn resolve_number_literal() {
 fn resolve_hex_number_literal() {
     let mut ns = Namespace::new(Target::Ewasm);
     let loc = Loc::File(0, 3, 5);
-    let expr = pt::AssemblyExpression::HexNumberLiteral(loc, "0xf23456789a".to_string(), None);
+    let expr = pt::AssemblyExpression::HexNumberLiteral(
+        loc,
+        "0xf23456789a".to_string(),
+        Some(Identifier {
+            loc,
+            name: "u32".to_string(),
+        }),
+    );
 
     let resolved = resolve_assembly_expression(&expr, &mut ns);
     assert!(resolved.is_ok());
