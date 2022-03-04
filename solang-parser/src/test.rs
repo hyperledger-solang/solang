@@ -656,7 +656,7 @@ fn test_assembly_parser() {
                                 Loc::File(0, 98, 108),
                                 vec![AssemblyTypedIdentifier {
                                     loc: Loc::File(0, 102, 103),
-                                    name: Identifier {
+                                    id: Identifier {
                                         loc: Loc::File(0, 102, 103),
                                         name: "x".to_string(),
                                     },
@@ -674,7 +674,7 @@ fn test_assembly_parser() {
                                     Loc::File(0, 139, 149),
                                     vec![AssemblyTypedIdentifier {
                                         loc: Loc::File(0, 143, 144),
-                                        name: Identifier {
+                                        id: Identifier {
                                             loc: Loc::File(0, 143, 144),
                                             name: "i".to_string(),
                                         },
@@ -802,7 +802,7 @@ fn test_assembly_parser() {
                                 vec![
                                     AssemblyTypedIdentifier {
                                         loc: Loc::File(0, 418, 425),
-                                        name: Identifier {
+                                        id: Identifier {
                                             loc: Loc::File(0, 418, 419),
                                             name: "h".to_string(),
                                         },
@@ -813,7 +813,7 @@ fn test_assembly_parser() {
                                     },
                                     AssemblyTypedIdentifier {
                                         loc: Loc::File(0, 427, 428),
-                                        name: Identifier {
+                                        id: Identifier {
                                             loc: Loc::File(0, 427, 428),
                                             name: "y".to_string(),
                                         },
@@ -821,7 +821,7 @@ fn test_assembly_parser() {
                                     },
                                     AssemblyTypedIdentifier {
                                         loc: Loc::File(0, 430, 437),
-                                        name: Identifier {
+                                        id: Identifier {
                                             loc: Loc::File(0, 430, 431),
                                             name: "z".to_string(),
                                         },
@@ -891,14 +891,14 @@ fn test_assembly_parser() {
                         statements: vec![AssemblyStatement::FunctionDefinition(Box::new(
                             AssemblyFunctionDefinition {
                                 loc: Loc::File(0, 794, 1005),
-                                name: Identifier {
+                                id: Identifier {
                                     loc: Loc::File(0, 803, 808),
                                     name: "power".to_string(),
                                 },
                                 params: vec![
                                     AssemblyTypedIdentifier {
                                         loc: Loc::File(0, 809, 820),
-                                        name: Identifier {
+                                        id: Identifier {
                                             loc: Loc::File(0, 809, 813),
                                             name: "base".to_string(),
                                         },
@@ -909,7 +909,7 @@ fn test_assembly_parser() {
                                     },
                                     AssemblyTypedIdentifier {
                                         loc: Loc::File(0, 822, 830),
-                                        name: Identifier {
+                                        id: Identifier {
                                             loc: Loc::File(0, 822, 830),
                                             name: "exponent".to_string(),
                                         },
@@ -918,7 +918,7 @@ fn test_assembly_parser() {
                                 ],
                                 returns: vec![AssemblyTypedIdentifier {
                                     loc: Loc::File(0, 835, 841),
-                                    name: Identifier {
+                                    id: Identifier {
                                         loc: Loc::File(0, 835, 841),
                                         name: "result".to_string(),
                                     },
@@ -929,7 +929,7 @@ fn test_assembly_parser() {
                                         Loc::File(0, 896, 940),
                                         vec![AssemblyTypedIdentifier {
                                             loc: Loc::File(0, 900, 901),
-                                            name: Identifier {
+                                            id: Identifier {
                                                 loc: Loc::File(0, 900, 901),
                                                 name: "y".to_string(),
                                             },
@@ -988,7 +988,7 @@ fn test_assembly_parser() {
                                         Loc::File(0, 969, 979),
                                         vec![AssemblyTypedIdentifier {
                                             loc: Loc::File(0, 973, 979),
-                                            name: Identifier {
+                                            id: Identifier {
                                                 loc: Loc::File(0, 973, 979),
                                                 name: "result".to_string(),
                                             },

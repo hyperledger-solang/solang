@@ -6,7 +6,7 @@ use super::ast::{Diagnostic, Namespace, Type};
 use crate::parser::pt;
 use crate::sema::ast::Expression;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Variable {
     pub id: pt::Identifier,
     pub ty: Type,
@@ -44,7 +44,7 @@ impl Variable {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum VariableUsage {
     Parameter,
     ReturnVariable,
@@ -56,9 +56,10 @@ pub enum VariableUsage {
     TryCatchErrorBytes,
 }
 
+#[derive(Debug, Clone)]
 struct VarScope(HashMap<String, usize>, Option<HashSet<usize>>);
 
-#[derive(Default)]
+#[derive(Default, Debug, Clone)]
 pub struct Symtable {
     pub vars: IndexMap<usize, Variable>,
     names: LinkedList<VarScope>,

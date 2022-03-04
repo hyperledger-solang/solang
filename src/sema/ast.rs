@@ -2,6 +2,7 @@ use super::symtable::Symtable;
 use crate::codegen::cfg::ControlFlowGraph;
 pub use crate::parser::diagnostics::*;
 use crate::parser::pt;
+use crate::sema::assembly::AssemblyStatement;
 use crate::Target;
 use num_bigint::BigInt;
 use num_rational::BigRational;
@@ -46,6 +47,16 @@ pub enum Type {
     Unreachable,
     /// DynamicBytes and String are lowered to a vector.
     Slice,
+}
+
+impl Type {
+    pub fn get_type_size(&self) -> u16 {
+        match self {
+            Type::Int(n) | Type::Uint(n) => *n,
+            Type::Bool => 1,
+            _ => unimplemented!("size of type not known"),
+        }
+    }
 }
 
 #[derive(PartialEq, Clone, Debug, Copy)]
@@ -1406,6 +1417,7 @@ pub enum Statement {
     },
     TryCatch(pt::Loc, bool, TryCatch),
     Underscore(pt::Loc),
+    AssemblyBlock(Vec<AssemblyStatement>),
 }
 
 #[derive(Clone, Debug)]
@@ -1520,6 +1532,7 @@ impl Statement {
             Statement::Delete(..) => true,
             Statement::Continue(_) | Statement::Break(_) | Statement::Return(..) => false,
             Statement::For { reachable, .. } | Statement::TryCatch(_, reachable, _) => *reachable,
+            Statement::AssemblyBlock(_) => unimplemented!("Assembly block ast not ready"),
         }
     }
 }

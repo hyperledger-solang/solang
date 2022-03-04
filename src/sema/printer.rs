@@ -670,6 +670,7 @@ fn print_statement(stmts: &[Statement], func: &Function, ns: &Namespace) -> Vec<
                 Tree::Branch(String::from("try-catch"), list)
             }
             Statement::Underscore(_) => Tree::Leaf(String::from("underscore")),
+            Statement::AssemblyBlock(_) => unimplemented!("Assembly block printer not ready yet"),
         });
     }
 

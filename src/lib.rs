@@ -88,8 +88,8 @@ impl Target {
         }
     }
 
-    /// Size of a pointer in bytes
-    pub fn ptr_size(&self) -> usize {
+    /// Size of a pointer in bits
+    pub fn ptr_size(&self) -> u16 {
         if *self == Target::Solana {
             // Solana is BPF, which is 64 bit
             64

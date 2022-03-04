@@ -668,26 +668,25 @@ pub enum AssemblyExpression {
     BoolLiteral(Loc, bool, Option<Identifier>),
     NumberLiteral(Loc, BigInt, Option<Identifier>),
     HexNumberLiteral(Loc, String, Option<Identifier>),
+    HexStringLiteral(HexLiteral, Option<Identifier>),
     StringLiteral(StringLiteral, Option<Identifier>),
     Variable(Identifier),
     Assign(Loc, Box<AssemblyExpression>, Box<AssemblyExpression>),
-    LetAssign(Loc, Box<AssemblyExpression>, Box<AssemblyExpression>),
     FunctionCall(Box<AssemblyFunctionCall>),
     Member(Loc, Box<AssemblyExpression>, Identifier),
-    Subscript(Loc, Box<AssemblyExpression>, Box<AssemblyExpression>),
 }
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct AssemblyTypedIdentifier {
     pub loc: Loc,
-    pub name: Identifier,
+    pub id: Identifier,
     pub ty: Option<Identifier>,
 }
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct AssemblyFunctionDefinition {
     pub loc: Loc,
-    pub name: Identifier,
+    pub id: Identifier,
     pub params: Vec<AssemblyTypedIdentifier>,
     pub returns: Vec<AssemblyTypedIdentifier>,
     pub body: Vec<AssemblyStatement>,

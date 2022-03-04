@@ -215,6 +215,9 @@ fn recurse_statements(stmts: &[Statement], state: &mut StateCheck) {
             }
             Statement::Emit { loc, .. } => state.write(loc),
             Statement::Break(_) | Statement::Continue(_) | Statement::Underscore(_) => (),
+            Statement::AssemblyBlock(_) => {
+                unimplemented!("Assembly block mutability not ready yet");
+            }
         }
     }
 }

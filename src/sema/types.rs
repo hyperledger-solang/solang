@@ -901,7 +901,7 @@ impl Type {
                 .map(|f| f.ty.align_of(ns))
                 .max()
                 .unwrap(),
-            Type::InternalFunction { .. } => ns.target.ptr_size(),
+            Type::InternalFunction { .. } => ns.target.ptr_size().into(),
             _ => 1,
         }
     }
