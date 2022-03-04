@@ -621,6 +621,10 @@ pub fn statement(
                 panic!("placeholder should be provided for modifiers");
             }
         }
+
+        Statement::AssemblyBlock(_) => {
+            unimplemented!("Assembly block codegen not yet ready");
+        }
     }
 }
 

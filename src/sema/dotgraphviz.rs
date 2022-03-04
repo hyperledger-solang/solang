@@ -1561,6 +1561,10 @@ impl Dot {
                         Some(parent_rel),
                     );
                 }
+
+                Statement::AssemblyBlock(_) => {
+                    unimplemented!("Assembly block graphviz not ready yet");
+                }
             }
             parent_rel = String::from("next");
         }

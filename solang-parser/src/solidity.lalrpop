@@ -834,6 +834,12 @@ AssemblyLiteral: AssemblyExpression = {
     <l:@L> <n:hexnumber> <t_type:(":" <AssemblyIdentifier>)?> <r:@R> => {
         AssemblyExpression::HexNumberLiteral(Loc::File(file_no, l, r), n.to_owned(), t_type)
     },
+    <l:@L> <s:hexstring> <t_type:(":" <AssemblyIdentifier>)?> <r:@R> => {
+        let v = s.to_string();
+        let hex_len = v.len() - 5;
+        AssemblyExpression::HexStringLiteral(HexLiteral{ loc: Loc::File(file_no, l, r), hex: v.chars().skip(4).filter(|c| *c != '_' && *c != '"' && *c != '\'').collect()},
+        t_type)
+    },
     <str:StringLiteral> <t_type:(":" <AssemblyIdentifier>)?> => {
         AssemblyExpression::StringLiteral(str, t_type)
     },
@@ -866,7 +872,7 @@ AssemblyFunctionDefinition: AssemblyStatement = {
         };
         AssemblyStatement::FunctionDefinition(Box::new(AssemblyFunctionDefinition{
             loc: Loc::File(file_no, l, r),
-            name,
+            id: name,
             params,
             returns,
             body
@@ -885,10 +891,10 @@ AssemblyType: AssemblyTypedIdentifier = {
     <l:@L> <var_name:AssemblyIdentifier> ":" <var_type:AssemblyIdentifier> <r:@R> =>
        AssemblyTypedIdentifier{
             loc: Loc::File(file_no, l, r),
-            name: var_name, ty: Some(var_type)
+            id: var_name, ty: Some(var_type)
        },
-    <l:@L> <var_name:AssemblyIdentifier> <r:@R> =>
-       AssemblyTypedIdentifier{loc: Loc::File(file_no, l, r), name: var_name, ty: None},
+    <l:@L> <id:AssemblyIdentifier> <r:@R> =>
+       AssemblyTypedIdentifier{loc: Loc::File(file_no, l, r), id, ty: None},
 }
 
 AssemblySwitch: AssemblyStatement = {

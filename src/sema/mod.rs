@@ -7,6 +7,7 @@ use num_traits::Zero;
 use std::{collections::HashMap, ffi::OsStr};
 
 mod address;
+mod assembly;
 pub mod ast;
 pub mod builtin;
 pub mod contracts;
