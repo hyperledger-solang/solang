@@ -22,6 +22,7 @@ pub mod printer;
 mod statements;
 pub mod symtable;
 pub mod tags;
+mod tests;
 mod types;
 mod unused_variable;
 mod variables;

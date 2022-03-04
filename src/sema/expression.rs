@@ -143,42 +143,35 @@ impl Expression {
 }
 
 /// Unescape a string literal
-fn unescape(
+pub(crate) fn unescape(
     literal: &str,
     start: usize,
     file_no: usize,
     diagnostics: &mut Vec<Diagnostic>,
-) -> String {
-    let mut s = String::new();
+) -> Vec<u8> {
+    let mut s: Vec<u8> = Vec::new();
     let mut indeces = literal.char_indices();
 
     while let Some((_, ch)) = indeces.next() {
         if ch != '\\' {
-            s.push(ch);
+            let mut buffer = [0; 4];
+            s.extend_from_slice(ch.encode_utf8(&mut buffer).as_bytes());
             continue;
         }
 
         match indeces.next() {
             Some((_, '\n')) => (),
-            Some((_, '\\')) => s.push('\\'),
-            Some((_, '\'')) => s.push('\''),
-            Some((_, '"')) => s.push('"'),
-            Some((_, 'b')) => s.push('\u{0008}'),
-            Some((_, 'f')) => s.push('\u{000c}'),
-            Some((_, 'n')) => s.push('\n'),
-            Some((_, 'r')) => s.push('\r'),
-            Some((_, 't')) => s.push('\t'),
-            Some((_, 'v')) => s.push('\u{000b}'),
+            Some((_, '\\')) => s.push(b'\\'),
+            Some((_, '\'')) => s.push(b'\''),
+            Some((_, '"')) => s.push(b'"'),
+            Some((_, 'b')) => s.push(b'\x08'),
+            Some((_, 'f')) => s.push(b'\x0c'),
+            Some((_, 'n')) => s.push(b'\n'),
+            Some((_, 'r')) => s.push(b'\r'),
+            Some((_, 't')) => s.push(b'\t'),
+            Some((_, 'v')) => s.push(b'\x0b'),
             Some((i, 'x')) => match get_digits(&mut indeces, 2) {
-                Ok(ch) => match std::char::from_u32(ch) {
-                    Some(ch) => s.push(ch),
-                    None => {
-                        diagnostics.push(Diagnostic::error(
-                            pt::Loc::File(file_no, start + i, start + i + 4),
-                            format!("\\x{:02x} is not a valid unicode character", ch),
-                        ));
-                    }
-                },
+                Ok(ch) => s.push(ch as u8),
                 Err(offset) => {
                     diagnostics.push(Diagnostic::error(
                         pt::Loc::File(
@@ -191,12 +184,15 @@ fn unescape(
                 }
             },
             Some((i, 'u')) => match get_digits(&mut indeces, 4) {
-                Ok(ch) => match std::char::from_u32(ch) {
-                    Some(ch) => s.push(ch),
+                Ok(codepoint) => match char::from_u32(codepoint) {
+                    Some(ch) => {
+                        let mut buffer = [0; 4];
+                        s.extend_from_slice(ch.encode_utf8(&mut buffer).as_bytes());
+                    }
                     None => {
                         diagnostics.push(Diagnostic::error(
                             pt::Loc::File(file_no, start + i, start + i + 6),
-                            format!("\\u{:04x} is not a valid unicode character", ch),
+                            "Found an invalid unicode character".to_string(),
                         ));
                     }
                 },
@@ -220,14 +216,13 @@ fn unescape(
             None => unreachable!(),
         }
     }
-
     s
 }
 
 /// Get the hex digits for an escaped \x or \u. Returns either the value or
 /// or the offset of the last character
 fn get_digits(input: &mut std::str::CharIndices, len: usize) -> Result<u32, usize> {
-    let mut n = 0;
+    let mut n: u32 = 0;
     let offset;
 
     for _ in 0..len {
@@ -1952,8 +1947,12 @@ fn string_literal(
     let mut loc = v[0].loc;
 
     for s in v {
-        result
-            .extend_from_slice(unescape(&s.string, s.loc.start(), file_no, diagnostics).as_bytes());
+        result.append(&mut unescape(
+            &s.string,
+            s.loc.start(),
+            file_no,
+            diagnostics,
+        ));
         loc.use_end_from(&s.loc);
     }
 

@@ -1,0 +1,14 @@
+strict digraph "tests/contract_testcases/substrate/strings/string_escape_06.sol" {
+	contract [label="contract foo\ntests/contract_testcases/substrate/strings/string_escape_06.sol:1:1-14"]
+	bar [label="function bar\ncontract: foo\ntests/contract_testcases/substrate/strings/string_escape_06.sol:2:5-48\nsignature bar()\nvisibility public\nmutability pure"]
+	returns [label="returns\nbytes4 "]
+	return [label="return\ntests/contract_testcases/substrate/strings/string_escape_06.sol:3:9-25"]
+	bytes_literal [label="bytes4 literal: 414243ff\ntests/contract_testcases/substrate/strings/string_escape_06.sol:3:16-25"]
+	diagnostic [label="found contract ‘foo’\nlevel Debug\ntests/contract_testcases/substrate/strings/string_escape_06.sol:1:1-14"]
+	contracts -> contract
+	contract -> bar [label="function"]
+	bar -> returns [label="returns"]
+	bar -> return [label="body"]
+	return -> bytes_literal [label="expr"]
+	diagnostics -> diagnostic [label="Debug"]
+}
