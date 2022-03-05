@@ -1,7 +1,6 @@
 use crate::ast::{Namespace, Type};
 use crate::sema::assembly::types::{get_default_type_from_identifier, get_type_from_string};
 use crate::sema::expression::unescape;
-use crate::Target;
 use num_bigint::{BigInt, Sign};
 use num_traits::Num;
 use solang_parser::diagnostics::{ErrorType, Level};
@@ -66,10 +65,10 @@ pub(crate) fn resolve_assembly_expression(
     }
 }
 
-fn get_type_from_big_int(big_int: &BigInt, target: &Target) -> Type {
+fn get_type_from_big_int(big_int: &BigInt) -> Type {
     match big_int.sign() {
-        Sign::Minus => Type::Int(target.ptr_size()),
-        _ => Type::Uint(target.ptr_size()),
+        Sign::Minus => Type::Int(256),
+        _ => Type::Uint(256),
     }
 }
 
@@ -123,7 +122,7 @@ fn resolve_number_literal(
             return Err(());
         }
     } else {
-        get_type_from_big_int(value, &ns.target)
+        get_type_from_big_int(value)
     };
 
     let type_size = new_type.get_type_size();
