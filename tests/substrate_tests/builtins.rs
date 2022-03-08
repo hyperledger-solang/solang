@@ -705,4 +705,16 @@ fn my_token() {
 
     runtime.function("test", TokenTest(addr, false).encode());
     assert_eq!(&runtime.vm.output[..], &addr[..]);
+
+    runtime.function(
+        "test",
+        TokenTest(<[u8; 32]>::try_from(&runtime.vm.caller[..]).unwrap(), true).encode(),
+    );
+    assert_eq!(&runtime.vm.caller[..], &runtime.vm.output[..]);
+
+    runtime.function(
+        "test",
+        TokenTest(<[u8; 32]>::try_from(&runtime.vm.caller[..]).unwrap(), false).encode(),
+    );
+    assert_eq!(&runtime.vm.caller[..], &runtime.vm.output[..]);
 }
