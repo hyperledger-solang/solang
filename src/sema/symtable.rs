@@ -54,6 +54,7 @@ pub enum VariableUsage {
     TryCatchReturns,
     TryCatchErrorString,
     TryCatchErrorBytes,
+    AssemblyLocalVariable,
 }
 
 #[derive(Debug, Clone)]

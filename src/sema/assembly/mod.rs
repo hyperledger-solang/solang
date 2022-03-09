@@ -2,6 +2,7 @@ use crate::sema::assembly::functions::AssemblyFunction;
 use indexmap::IndexMap;
 use solang_parser::pt;
 
+mod builtin;
 mod expression;
 mod functions;
 mod tests;

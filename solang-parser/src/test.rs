@@ -688,7 +688,7 @@ fn test_assembly_parser() {
                                 )],
                                 AssemblyExpression::FunctionCall(Box::new(AssemblyFunctionCall {
                                     loc: Loc::File(0, 152, 164),
-                                    function_name: Identifier {
+                                    id: Identifier {
                                         loc: Loc::File(0, 152, 154),
                                         name: "lt".to_string(),
                                     },
@@ -713,7 +713,7 @@ fn test_assembly_parser() {
                                     AssemblyExpression::FunctionCall(Box::new(
                                         AssemblyFunctionCall {
                                             loc: Loc::File(0, 172, 184),
-                                            function_name: Identifier {
+                                            id: Identifier {
                                                 loc: Loc::File(0, 172, 175),
                                                 name: "add".to_string(),
                                             },
@@ -741,7 +741,7 @@ fn test_assembly_parser() {
                                         AssemblyExpression::FunctionCall(Box::new(
                                             AssemblyFunctionCall {
                                                 loc: Loc::File(0, 232, 248),
-                                                function_name: Identifier {
+                                                id: Identifier {
                                                     loc: Loc::File(0, 232, 235),
                                                     name: "add".to_string(),
                                                 },
@@ -753,7 +753,7 @@ fn test_assembly_parser() {
                                                     AssemblyExpression::FunctionCall(Box::new(
                                                         AssemblyFunctionCall {
                                                             loc: Loc::File(0, 239, 247),
-                                                            function_name: Identifier {
+                                                            id: Identifier {
                                                                 loc: Loc::File(0, 239, 244),
                                                                 name: "mload".to_string(),
                                                             },
@@ -776,7 +776,7 @@ fn test_assembly_parser() {
                                         AssemblyExpression::FunctionCall(Box::new(
                                             AssemblyFunctionCall {
                                                 loc: Loc::File(0, 281, 292),
-                                                function_name: Identifier {
+                                                id: Identifier {
                                                     loc: Loc::File(0, 281, 283),
                                                     name: "gt".to_string(),
                                                 },
@@ -834,7 +834,7 @@ fn test_assembly_parser() {
                                 Some(AssemblyExpression::FunctionCall(Box::new(
                                     AssemblyFunctionCall {
                                         loc: Loc::File(0, 441, 451),
-                                        function_name: Identifier {
+                                        id: Identifier {
                                             loc: Loc::File(0, 441, 449),
                                             name: "funcCall".to_string(),
                                         },
@@ -857,7 +857,7 @@ fn test_assembly_parser() {
                                     vec![AssemblyStatement::FunctionCall(Box::new(
                                         AssemblyFunctionCall {
                                             loc: Loc::File(0, 547, 559),
-                                            function_name: Identifier {
+                                            id: Identifier {
                                                 loc: Loc::File(0, 547, 553),
                                                 name: "revert".to_string(),
                                             },
@@ -938,7 +938,7 @@ fn test_assembly_parser() {
                                         Some(AssemblyExpression::FunctionCall(Box::new(
                                             AssemblyFunctionCall {
                                                 loc: Loc::File(0, 905, 940),
-                                                function_name: Identifier {
+                                                id: Identifier {
                                                     loc: Loc::File(0, 905, 908),
                                                     name: "and".to_string(),
                                                 },
@@ -956,7 +956,7 @@ fn test_assembly_parser() {
                                                     AssemblyExpression::FunctionCall(Box::new(
                                                         AssemblyFunctionCall {
                                                             loc: Loc::File(0, 920, 939),
-                                                            function_name: Identifier {
+                                                            id: Identifier {
                                                                 loc: Loc::File(0, 920, 923),
                                                                 name: "add".to_string(),
                                                             },
