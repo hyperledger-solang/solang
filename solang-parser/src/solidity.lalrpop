@@ -846,8 +846,8 @@ AssemblyLiteral: AssemblyExpression = {
 }
 
 AssemblyFunctionCall: AssemblyFunctionCall = {
-    <l:@L> <name:AssemblyIdentifier> "(" <args:Comma<AssemblyExpression>> ")" <r:@R> =>
-     AssemblyFunctionCall{loc: Loc::File(file_no, l, r), function_name: name, arguments: args}
+    <l:@L> <id:AssemblyIdentifier> "(" <arguments:Comma<AssemblyExpression>> ")" <r:@R> =>
+     AssemblyFunctionCall{loc: Loc::File(file_no, l, r), id, arguments}
 }
 
 AssemblyPath: AssemblyExpression = {

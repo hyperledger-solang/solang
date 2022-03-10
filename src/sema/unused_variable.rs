@@ -359,6 +359,9 @@ pub fn emit_warning_local_variable(variable: &symtable::Variable) -> Option<Diag
 
             None
         }
+        VariableUsage::AssemblyLocalVariable => {
+            unimplemented!("Variable usage not implemented for YUL")
+        }
         VariableUsage::AnonymousReturnVariable => None,
     }
 }

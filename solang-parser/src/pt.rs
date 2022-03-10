@@ -671,7 +671,6 @@ pub enum AssemblyExpression {
     HexStringLiteral(HexLiteral, Option<Identifier>),
     StringLiteral(StringLiteral, Option<Identifier>),
     Variable(Identifier),
-    Assign(Loc, Box<AssemblyExpression>, Box<AssemblyExpression>),
     FunctionCall(Box<AssemblyFunctionCall>),
     Member(Loc, Box<AssemblyExpression>, Identifier),
 }
@@ -695,7 +694,7 @@ pub struct AssemblyFunctionDefinition {
 #[derive(Debug, PartialEq, Clone)]
 pub struct AssemblyFunctionCall {
     pub loc: Loc,
-    pub function_name: Identifier,
+    pub id: Identifier,
     pub arguments: Vec<AssemblyExpression>,
 }
 
