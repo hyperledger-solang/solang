@@ -260,3 +260,23 @@ contract line {
         "implicit conversion from int to address not allowed"
     );
 }
+
+#[test]
+fn two_arrays() {
+    let mut vm = build_solidity(
+        r#"
+        contract two_arrays {
+            uint[] array1;
+            uint[] array2;
+
+            constructor() {
+                for(uint i = 0; i < 10; i++) {
+                    array1.push((i*uint(sha256("i"))));
+                    array2.push(((i+1)*uint(sha256("i"))));
+               }
+            }
+        }"#,
+    );
+
+    vm.constructor("two_arrays", &[], 0);
+}
