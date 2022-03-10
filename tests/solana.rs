@@ -1300,6 +1300,7 @@ impl VirtualMachine {
         };
 
         let res = self.execute(&calldata, &[]);
+        println!("res:{:?}", res);
         assert!(matches!(res, Ok(0)));
     }
 

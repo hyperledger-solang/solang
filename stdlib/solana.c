@@ -839,7 +839,7 @@ uint64_t account_data_realloc(SolAccountInfo *ai, uint32_t offset, uint32_t size
         return rc;
 
     __memcpy(data + new_offset, data + offset, old_length);
-    account_data_free(ai, offset);
+    account_data_free(data, offset);
 
     *res = new_offset;
     return 0;
