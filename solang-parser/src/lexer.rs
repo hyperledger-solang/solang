@@ -9,7 +9,7 @@ use std::iter::Peekable;
 use std::str::CharIndices;
 use unicode_xid::UnicodeXID;
 
-use crate::pt::{Comment, Loc};
+use crate::pt::{CodeLocation, Comment, Loc};
 
 pub type Spanned<Token, Loc, Error> = Result<(Loc, Token, Loc), Error>;
 
@@ -377,19 +377,19 @@ impl fmt::Display for LexicalError {
     }
 }
 
-impl LexicalError {
-    pub fn loc(&self) -> &Loc {
+impl CodeLocation for LexicalError {
+    fn loc(&self) -> Loc {
         match self {
-            LexicalError::EndOfFileInComment(loc, ..) => loc,
-            LexicalError::EndOfFileInString(loc, ..) => loc,
-            LexicalError::EndofFileInHex(loc, ..) => loc,
-            LexicalError::MissingNumber(loc, ..) => loc,
-            LexicalError::InvalidCharacterInHexLiteral(loc, _) => loc,
-            LexicalError::UnrecognisedToken(loc, ..) => loc,
-            LexicalError::ExpectedFrom(loc, ..) => loc,
-            LexicalError::MissingExponent(loc, ..) => loc,
-            LexicalError::DoublePoints(loc, ..) => loc,
-            LexicalError::UnrecognisedDecimal(loc, ..) => loc,
+            LexicalError::EndOfFileInComment(loc, ..)
+            | LexicalError::EndOfFileInString(loc, ..)
+            | LexicalError::EndofFileInHex(loc, ..)
+            | LexicalError::MissingNumber(loc, ..)
+            | LexicalError::InvalidCharacterInHexLiteral(loc, _)
+            | LexicalError::UnrecognisedToken(loc, ..)
+            | LexicalError::ExpectedFrom(loc, ..)
+            | LexicalError::MissingExponent(loc, ..)
+            | LexicalError::DoublePoints(loc, ..)
+            | LexicalError::UnrecognisedDecimal(loc, ..) => *loc,
         }
     }
 }

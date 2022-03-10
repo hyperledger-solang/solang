@@ -1,5 +1,6 @@
 //! Solidity file parser
 
+use crate::pt::CodeLocation;
 use lalrpop_util::ParseError;
 
 pub use diagnostics::Diagnostic;
@@ -45,7 +46,7 @@ pub fn parse(
                     expected.join(", ")
                 ),
             ),
-            ParseError::User { error } => Diagnostic::parser_error(*error.loc(), error.to_string()),
+            ParseError::User { error } => Diagnostic::parser_error(error.loc(), error.to_string()),
             ParseError::ExtraToken { token } => Diagnostic::parser_error(
                 pt::Loc::File(file_no, token.0, token.2),
                 format!("extra token `{}' encountered", token.0),

@@ -15,6 +15,16 @@ pub enum Loc {
     File(usize, usize, usize),
 }
 
+/// Structs can implement this trait to easily return their loc
+pub trait CodeLocation {
+    fn loc(&self) -> Loc;
+}
+
+/// Structs should implement this trait to return an optional location
+pub trait OptionalCodeLocation {
+    fn loc(&self) -> Option<Loc>;
+}
+
 impl Loc {
     #[must_use]
     pub fn begin_range(&self) -> Self {
@@ -158,12 +168,12 @@ pub enum StorageLocation {
     Calldata(Loc),
 }
 
-impl StorageLocation {
-    pub fn loc(&self) -> &Loc {
+impl CodeLocation for StorageLocation {
+    fn loc(&self) -> Loc {
         match self {
-            StorageLocation::Memory(l) => l,
-            StorageLocation::Storage(l) => l,
-            StorageLocation::Calldata(l) => l,
+            StorageLocation::Memory(l)
+            | StorageLocation::Storage(l)
+            | StorageLocation::Calldata(l) => *l,
         }
     }
 }
@@ -409,8 +419,8 @@ pub enum Expression {
     This(Loc),
 }
 
-impl Expression {
-    pub fn loc(&self) -> Loc {
+impl CodeLocation for Expression {
+    fn loc(&self) -> Loc {
         match self {
             Expression::PostIncrement(loc, _)
             | Expression::PostDecrement(loc, _)
@@ -502,8 +512,8 @@ impl fmt::Display for Mutability {
     }
 }
 
-impl Mutability {
-    pub fn loc(&self) -> Loc {
+impl CodeLocation for Mutability {
+    fn loc(&self) -> Loc {
         match self {
             Mutability::Pure(loc)
             | Mutability::Constant(loc)
@@ -532,8 +542,8 @@ impl fmt::Display for Visibility {
     }
 }
 
-impl Visibility {
-    pub fn loc(&self) -> Option<Loc> {
+impl OptionalCodeLocation for Visibility {
+    fn loc(&self) -> Option<Loc> {
         match self {
             Visibility::Public(loc)
             | Visibility::External(loc)
@@ -704,8 +714,8 @@ pub enum AssemblySwitch {
     Default(Vec<AssemblyStatement>),
 }
 
-impl Statement {
-    pub fn loc(&self) -> Loc {
+impl CodeLocation for Statement {
+    fn loc(&self) -> Loc {
         match self {
             Statement::Block { loc, .. }
             | Statement::Assembly { loc, .. }

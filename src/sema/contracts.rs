@@ -1,4 +1,5 @@
 use crate::parser::pt;
+use crate::parser::pt::CodeLocation;
 use num_bigint::BigInt;
 use num_traits::Zero;
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
@@ -311,9 +312,9 @@ fn check_inheritance(contract_no: usize, ns: &mut ast::Namespace) {
                         || prev.is_event() && sym.is_event())
                     {
                         ns.diagnostics.push(ast::Diagnostic::error_with_note(
-                            *sym.loc(),
+                            sym.loc(),
                             format!("already defined ‘{}’", name),
-                            *prev.loc(),
+                            prev.loc(),
                             format!("previous definition of ‘{}’", name),
                         ));
                     }

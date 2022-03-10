@@ -24,6 +24,7 @@ use super::eval::eval_const_rational;
 use super::format::string_format;
 use super::symtable::Symtable;
 use crate::parser::pt;
+use crate::parser::pt::CodeLocation;
 use crate::sema::unused_variable::{
     assigned_variable, check_function_call, check_var_usage_expression, used_variable,
 };

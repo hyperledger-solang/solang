@@ -35,6 +35,8 @@ use self::functions::{resolve_params, resolve_returns};
 use self::symtable::Symtable;
 use self::variables::var_decl;
 use crate::file_resolver::{FileResolver, ResolvedFile};
+use crate::parser::pt::CodeLocation;
+use crate::parser::pt::OptionalCodeLocation;
 use crate::sema::unused_variable::{check_unused_events, check_unused_namespace_variables};
 
 pub type ArrayDimension = Option<(pt::Loc, BigInt)>;

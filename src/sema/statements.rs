@@ -7,9 +7,11 @@ use super::expression::{
 };
 use super::symtable::{LoopScopes, Symtable};
 use crate::parser::pt;
+use crate::parser::pt::CatchClause;
+use crate::parser::pt::CodeLocation;
+use crate::parser::pt::OptionalCodeLocation;
 use crate::sema::symtable::VariableUsage;
 use crate::sema::unused_variable::{assigned_variable, check_function_call, used_variable};
-use solang_parser::pt::CatchClause;
 use std::collections::{BTreeMap, HashMap, HashSet};
 
 pub fn resolve_function_body(
@@ -1106,7 +1108,7 @@ fn destructure(
             }) => {
                 if let Some(storage) = storage {
                     diagnostics.push(Diagnostic::error(
-                        *storage.loc(),
+                        storage.loc(),
                         format!("storage modifier ‘{}’ not permitted on assignment", storage),
                     ));
                     return Err(());
@@ -1389,7 +1391,7 @@ fn resolve_var_decl_ty(
     if let Some(storage) = storage {
         if !var_ty.can_have_data_location() {
             diagnostics.push(Diagnostic::error(
-                *storage.loc(),
+                storage.loc(),
                 format!(
                     "data location ‘{}’ only allowed for array, struct or mapping type",
                     storage
@@ -1644,7 +1646,7 @@ pub fn parameter_list_to_expr_list<'a>(
                     ..
                 }) => {
                     diagnostics.push(Diagnostic::error(
-                        *storage.loc(),
+                        storage.loc(),
                         "storage specified not permitted here".to_string(),
                     ));
                     broken = true;
