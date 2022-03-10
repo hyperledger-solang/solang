@@ -6,6 +6,8 @@ use super::expression::{cast, expression, ExprContext, ResolveTo};
 use super::symtable::Symtable;
 use super::tags::resolve_tags;
 use crate::parser::pt;
+use crate::parser::pt::CodeLocation;
+use crate::parser::pt::OptionalCodeLocation;
 
 pub fn contract_variables(
     def: &pt::ContractDefinition,

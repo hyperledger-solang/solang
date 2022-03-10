@@ -14,6 +14,7 @@ use super::{
 use crate::codegen::subexpression_elimination::common_sub_expression_elimination;
 use crate::codegen::undefined_variable;
 use crate::parser::pt;
+use crate::parser::pt::CodeLocation;
 use crate::sema::ast::{
     CallTy, Contract, Expression, Function, Namespace, Parameter, StringLocation, Type,
 };

@@ -2,6 +2,7 @@ use super::symtable::Symtable;
 use crate::codegen::cfg::ControlFlowGraph;
 pub use crate::parser::diagnostics::*;
 use crate::parser::pt;
+use crate::parser::pt::{CodeLocation, OptionalCodeLocation};
 use crate::sema::assembly::AssemblyStatement;
 use crate::Target;
 use num_bigint::BigInt;
@@ -367,19 +368,21 @@ pub enum Symbol {
     Import(pt::Loc, usize),
 }
 
-impl Symbol {
-    pub fn loc(&self) -> &pt::Loc {
+impl CodeLocation for Symbol {
+    fn loc(&self) -> pt::Loc {
         match self {
-            Symbol::Enum(loc, _) => loc,
-            Symbol::Function(funcs) => &funcs[0].0,
-            Symbol::Variable(loc, ..) => loc,
-            Symbol::Struct(loc, _) => loc,
-            Symbol::Event(events) => &events[0].0,
-            Symbol::Contract(loc, _) => loc,
-            Symbol::Import(loc, _) => loc,
+            Symbol::Enum(loc, _)
+            | Symbol::Variable(loc, ..)
+            | Symbol::Struct(loc, _)
+            | Symbol::Contract(loc, _)
+            | Symbol::Import(loc, _) => *loc,
+
+            Symbol::Event(items) | Symbol::Function(items) => items[0].0,
         }
     }
+}
 
+impl Symbol {
     /// Is this symbol for an event
     pub fn is_event(&self) -> bool {
         matches!(self, Symbol::Event(_))
@@ -1186,9 +1189,10 @@ impl Expression {
             }
         }
     }
+}
 
-    /// Return the location for this expression
-    pub fn loc(&self) -> pt::Loc {
+impl CodeLocation for Expression {
+    fn loc(&self) -> pt::Loc {
         match self {
             Expression::FunctionArg(loc, ..)
             | Expression::BoolLiteral(loc, _)
@@ -1439,8 +1443,8 @@ pub enum DestructureField {
     VariableDecl(usize, Parameter),
 }
 
-impl DestructureField {
-    pub fn loc(&self) -> Option<pt::Loc> {
+impl OptionalCodeLocation for DestructureField {
+    fn loc(&self) -> Option<pt::Loc> {
         match self {
             DestructureField::None => None,
             DestructureField::Expression(e) => Some(e.loc()),

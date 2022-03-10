@@ -5,6 +5,7 @@ use super::eval::eval_const_number;
 use super::expression::{cast, expression, ExprContext, ResolveTo};
 use super::symtable::Symtable;
 use crate::parser::pt;
+use crate::parser::pt::CodeLocation;
 use crate::Target;
 use num_bigint::BigInt;
 use num_traits::One;
@@ -1036,7 +1037,7 @@ pub fn resolve_namespace_call(
 
                         if let Some(storage) = &param.storage {
                             diagnostics.push(Diagnostic::error(
-                                *storage.loc(),
+                                storage.loc(),
                                 format!("storage modifier ‘{}’ not allowed", storage),
                             ));
                             broken = true;

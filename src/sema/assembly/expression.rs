@@ -10,7 +10,7 @@ use indexmap::IndexMap;
 use num_bigint::{BigInt, Sign};
 use num_traits::Num;
 use solang_parser::diagnostics::{ErrorType, Level};
-use solang_parser::pt::{AssemblyFunctionCall, Identifier, Loc, StorageLocation};
+use solang_parser::pt::{AssemblyFunctionCall, CodeLocation, Identifier, Loc, StorageLocation};
 use solang_parser::{pt, Diagnostic};
 
 // TODO: State variables cannot be assigned to, only .slot can be assigned to, .length cannot be assigned to (check TypeChecker.cpp)
@@ -50,8 +50,8 @@ fn get_suffix_from_string(suffix_name: &str) -> Option<AssemblySuffix> {
     }
 }
 
-impl AssemblyExpression {
-    pub fn loc(&self) -> pt::Loc {
+impl CodeLocation for AssemblyExpression {
+    fn loc(&self) -> pt::Loc {
         match self {
             AssemblyExpression::BoolLiteral(loc, ..)
             | AssemblyExpression::NumberLiteral(loc, ..)

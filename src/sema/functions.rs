@@ -4,6 +4,8 @@ use super::ast::{
 use super::contracts::is_base;
 use super::tags::resolve_tags;
 use crate::parser::pt;
+use crate::parser::pt::CodeLocation;
+use crate::parser::pt::OptionalCodeLocation;
 use crate::Target;
 
 /// Resolve function declaration in a contract
@@ -823,7 +825,7 @@ pub fn resolve_params(
                 let ty = if !ty.can_have_data_location() {
                     if let Some(storage) = &p.storage {
                         diagnostics.push(Diagnostic::error(
-                            *storage.loc(),
+                            storage.loc(),
                                 format!("data location ‘{}’ can only be specified for array, struct or mapping",
                                 storage)
                             ));
@@ -928,7 +930,7 @@ pub fn resolve_returns(
                 let ty = if !ty.can_have_data_location() {
                     if let Some(storage) = &r.storage {
                         diagnostics.push(Diagnostic::error(
-                            *storage.loc(),
+                            storage.loc(),
                                 format!("data location ‘{}’ can only be specified for array, struct or mapping",
                                 storage)
                             ));

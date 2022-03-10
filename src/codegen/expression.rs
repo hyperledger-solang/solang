@@ -8,6 +8,7 @@ use super::{
 };
 use crate::codegen::unused_variable::should_remove_assignment;
 use crate::parser::pt;
+use crate::parser::pt::CodeLocation;
 use crate::sema::ast::{
     Builtin, CallTy, Expression, FormatArg, Function, Namespace, Parameter, StringLocation, Type,
 };

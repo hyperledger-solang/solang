@@ -3,6 +3,7 @@ use crate::codegen::{
     vartable::{Storage, Variable},
     ControlFlowGraph, Instr,
 };
+use crate::parser::pt::OptionalCodeLocation;
 use crate::parser::pt::{Identifier, Loc};
 use crate::sema::ast::{Expression, Namespace, Type};
 use std::collections::HashMap;
@@ -60,7 +61,7 @@ impl CommonSubExpressionTracker {
         self.common_subexpressions.push(CommonSubexpression {
             in_cfg: node.available_variable.is_available(),
             var_no: node.available_variable.get_var_number(),
-            var_loc: node.available_variable.get_var_loc(),
+            var_loc: node.available_variable.loc(),
             instantiated: false,
             var_type: exp.ty(),
             block: node.block,

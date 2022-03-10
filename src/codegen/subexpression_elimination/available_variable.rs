@@ -1,4 +1,5 @@
 use crate::parser::pt::Loc;
+use crate::parser::pt::OptionalCodeLocation;
 
 /// This struct manages expressions assigned to an existing variable.
 #[derive(Clone)]
@@ -28,18 +29,20 @@ impl AvailableVariable {
         }
     }
 
-    pub fn get_var_loc(&self) -> Option<Loc> {
-        match self {
-            AvailableVariable::Available(_, loc) => Some(*loc),
-            _ => None,
-        }
-    }
-
     pub fn is_available(&self) -> bool {
         matches!(self, AvailableVariable::Available(..))
     }
 
     pub fn is_invalid(&self) -> bool {
         matches!(self, AvailableVariable::Invalidated)
+    }
+}
+
+impl OptionalCodeLocation for AvailableVariable {
+    fn loc(&self) -> Option<Loc> {
+        match self {
+            AvailableVariable::Available(_, loc) => Some(*loc),
+            _ => None,
+        }
     }
 }

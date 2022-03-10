@@ -11,6 +11,7 @@ use crate::codegen::unused_variable::{
     should_remove_assignment, should_remove_variable, SideEffectsCheckParameters,
 };
 use crate::parser::pt;
+use crate::parser::pt::CodeLocation;
 use crate::sema::ast::{
     Builtin, CallTy, DestructureField, Expression, Function, Namespace, Parameter, Statement,
     TryCatch, Type,

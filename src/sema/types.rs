@@ -9,6 +9,7 @@ use super::{
     SOLANA_SPARSE_ARRAY_SIZE,
 };
 use crate::parser::pt;
+use crate::parser::pt::CodeLocation;
 use crate::Target;
 use num_bigint::BigInt;
 use num_traits::{One, Zero};
@@ -318,7 +319,7 @@ pub fn struct_decl(
         // allowed as parameter/return types of public functions though.
         if let Some(storage) = &field.storage {
             ns.diagnostics.push(Diagnostic::error(
-                *storage.loc(),
+                storage.loc(),
                 format!(
                     "storage location ‘{}’ not allowed for struct field",
                     storage
