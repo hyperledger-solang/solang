@@ -280,3 +280,32 @@ fn two_arrays() {
 
     vm.constructor("two_arrays", &[], 0);
 }
+
+#[test]
+fn dead_storage_bug() {
+    let mut vm = build_solidity(
+        r#"
+        contract deadstorage {
+            uint public maxlen = 10000;
+            uint public z;
+            uint public v;
+
+            constructor() {
+                for(uint i = 0; i < 10; i++) {
+                    uint x = i*(10e34+9999);
+                    print("x:{}".format(x));
+                    v = x%maxlen;
+                    print("v:{}".format(v));
+                    z = v%maxlen;
+                    print("z:{}".format(z));
+               }
+            }
+        }"#,
+    );
+
+    vm.constructor("deadstorage", &[], 0);
+
+    let returns = vm.function("v", &[], &[], 0, None);
+
+    assert_eq!(returns, vec![ethabi::Token::Uint(U256::from(9991))]);
+}
