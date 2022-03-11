@@ -5,15 +5,29 @@ use std::collections::{HashMap, HashSet};
 use std::fmt;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
-struct InstrDef {
-    pub block_no: usize,
-    pub instr_no: usize,
+enum Definition {
+    Undefined,
+    Instr { block_no: usize, instr_no: usize },
 }
+
+impl fmt::Display for Definition {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Definition::Undefined => {
+                write!(f, "undef")
+            }
+            Definition::Instr { block_no, instr_no } => {
+                write!(f, "({}, {})", block_no, instr_no)
+            }
+        }
+    }
+}
+
 #[allow(clippy::large_enum_variant)]
 #[derive(Clone, PartialEq)]
 enum Transfer {
     Gen {
-        def: InstrDef,
+        def: Definition,
         var_no: usize,
     },
     Copy {
@@ -24,7 +38,7 @@ enum Transfer {
         var_no: usize,
     },
     Store {
-        def: InstrDef,
+        def: Definition,
         expr: Option<Expression>,
     },
 }
@@ -33,7 +47,7 @@ impl fmt::Display for Transfer {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Transfer::Gen { def, var_no } => {
-                write!(f, "Gen %{} = ({}, {})", var_no, def.block_no, def.instr_no)
+                write!(f, "Gen %{} = {}", var_no, def)
             }
             Transfer::Copy { var_no, src } => {
                 write!(f, "Copy %{} from %{}", var_no, src)
@@ -42,11 +56,7 @@ impl fmt::Display for Transfer {
                 write!(f, "Kill %{}", var_no)
             }
             Transfer::Store { def, expr } => {
-                write!(
-                    f,
-                    "Storage: {:?} at ({}, {})",
-                    expr, def.block_no, def.instr_no
-                )
+                write!(f, "Storage: {:?} at {}", expr, def)
             }
         }
     }
@@ -54,8 +64,8 @@ impl fmt::Display for Transfer {
 
 #[derive(Clone, PartialEq)]
 struct ReachingDefs {
-    vars: HashMap<usize, HashMap<InstrDef, Option<Expression>>>,
-    stores: Vec<(InstrDef, Expression)>,
+    vars: HashMap<usize, HashMap<Definition, Option<Expression>>>,
+    stores: Vec<(Definition, Expression)>,
 }
 
 type BlockVars = HashMap<usize, Vec<ReachingDefs>>;
@@ -92,8 +102,21 @@ fn reaching_definitions(cfg: &mut ControlFlowGraph) -> (Vec<Vec<Vec<Transfer>>>,
         let mut vars = if let Some(vars) = block_vars.get(&block_no) {
             vars[0].clone()
         } else {
+            debug_assert_eq!(block_no, 0);
+
+            // On entry all variables should be undefined
+            let mut vars: HashMap<usize, HashMap<Definition, Option<Expression>>> = HashMap::new();
+
+            for var_no in cfg.vars.keys() {
+                let mut defs = HashMap::new();
+
+                defs.insert(Definition::Undefined, None);
+
+                vars.insert(*var_no, defs);
+            }
+
             ReachingDefs {
-                vars: HashMap::new(),
+                vars,
                 stores: Vec::new(),
             }
         };
@@ -147,7 +170,7 @@ fn instr_transfers(block_no: usize, block: &BasicBlock) -> Vec<Vec<Transfer>> {
     let mut transfers = Vec::new();
 
     for (instr_no, instr) in block.instr.iter().enumerate() {
-        let def = InstrDef { block_no, instr_no };
+        let def = Definition::Instr { block_no, instr_no };
 
         let set_var = |var_nos: &[usize]| {
             let mut transfer = Vec::new();
@@ -546,7 +569,7 @@ pub fn dead_storage(cfg: &mut ControlFlowGraph, _ns: &mut Namespace) {
                 Instr::SetStorage { .. }
                 | Instr::SetStorageBytes { .. }
                 | Instr::ClearStorage { .. } => {
-                    let def = InstrDef { block_no, instr_no };
+                    let def = Definition::Instr { block_no, instr_no };
 
                     // add an entry if there is not one there already
                     redundant_stores.entry(def).or_insert(true);
@@ -571,40 +594,57 @@ pub fn dead_storage(cfg: &mut ControlFlowGraph, _ns: &mut Namespace) {
     // remove all stores which are marked as still redundant
     for (def, redundant) in &redundant_stores {
         if *redundant {
-            cfg.blocks[def.block_no].instr[def.instr_no] = Instr::Nop;
+            if let Definition::Instr { block_no, instr_no } = def {
+                cfg.blocks[*block_no].instr[*instr_no] = Instr::Nop;
+            }
         }
     }
 }
 
 fn get_storage_definition<'a>(
-    def: &InstrDef,
+    def: &Definition,
     cfg: &'a ControlFlowGraph,
 ) -> Option<(usize, &'a Expression)> {
-    match &cfg.blocks[def.block_no].instr[def.instr_no] {
-        Instr::LoadStorage { storage, res, .. } => Some((*res, storage)),
-        _ => None,
-    }
-}
-
-fn get_definition<'a>(def: &InstrDef, cfg: &'a ControlFlowGraph) -> Option<&'a Expression> {
-    match &cfg.blocks[def.block_no].instr[def.instr_no] {
-        Instr::LoadStorage { storage, .. } => Some(storage),
-        Instr::Set { expr, .. } => Some(expr),
-        _ => None,
-    }
-}
-
-fn get_vars_at(def: &InstrDef, block_vars: &BlockVars) -> ReachingDefs {
-    let vars = if let Some(vars) = block_vars.get(&def.block_no) {
-        vars[def.instr_no].clone()
-    } else {
-        ReachingDefs {
-            vars: HashMap::new(),
-            stores: Vec::new(),
+    if let Definition::Instr { block_no, instr_no } = def {
+        match &cfg.blocks[*block_no].instr[*instr_no] {
+            Instr::LoadStorage { storage, res, .. } => Some((*res, storage)),
+            _ => None,
         }
-    };
+    } else {
+        None
+    }
+}
 
-    vars
+fn get_definition<'a>(def: &Definition, cfg: &'a ControlFlowGraph) -> Option<&'a Expression> {
+    if let Definition::Instr { block_no, instr_no } = def {
+        match &cfg.blocks[*block_no].instr[*instr_no] {
+            Instr::LoadStorage { storage, .. } => Some(storage),
+            Instr::Set { expr, .. } => Some(expr),
+            _ => None,
+        }
+    } else {
+        None
+    }
+}
+
+fn get_vars_at(def: &Definition, block_vars: &BlockVars) -> ReachingDefs {
+    match def {
+        Definition::Instr { block_no, instr_no } => {
+            let vars = if let Some(vars) = block_vars.get(block_no) {
+                vars[*instr_no].clone()
+            } else {
+                ReachingDefs {
+                    vars: HashMap::new(),
+                    stores: Vec::new(),
+                }
+            };
+
+            vars
+        }
+        Definition::Undefined => {
+            unreachable!("cannot get reaching definitions for undefined");
+        }
+    }
 }
 
 #[derive(PartialEq, Copy, Clone, Debug)]
