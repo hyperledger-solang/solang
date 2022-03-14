@@ -781,6 +781,9 @@ NonIfStatement: Statement = {
     <l:@L> "emit" <ty:FunctionCall> <r:@R> ";" => {
         Statement::Emit(Loc::File(file_no, l, r), ty)
     },
+    <l:@L> "revert" <ty:FunctionCall> <r:@R> ";" => {
+        Statement::Revert(Loc::File(file_no, l, r), ty)
+    },
 }
 
 AssemblyIdentifier: Identifier = {
@@ -1056,6 +1059,7 @@ extern {
         "function" => Token::Function,
         "returns" => Token::Returns,
         "return" => Token::Return,
+        "revert" => Token::Revert,
         "if" => Token::If,
         "for" => Token::For,
         "while" => Token::While,
