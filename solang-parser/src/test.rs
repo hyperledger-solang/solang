@@ -1016,3 +1016,73 @@ fn test_assembly_parser() {
         ]
     );
 }
+
+#[test]
+fn parse_revert_test() {
+    let src = r#"
+        contract TestToken {
+            error BAR_ERROR();
+            function foo()  {
+                revert BAR_ERROR();
+            }
+        }
+        "#;
+
+    let (actual_parse_tree, _) = crate::parse(src, 0).unwrap();
+    assert_eq!(actual_parse_tree.0.len(), 1);
+
+    let expected_parse_tree = SourceUnit(vec![SourceUnitPart::ContractDefinition(Box::new(
+        ContractDefinition {
+            doc: vec![],
+            loc: Loc::File(0, 9, 28),
+            ty: ContractTy::Contract(Loc::File(0, 9, 17)),
+            name: Identifier {
+                loc: Loc::File(0, 18, 27),
+                name: "TestToken".to_string(),
+            },
+            base: vec![],
+            parts: vec![
+                ContractPart::ErrorDefinition(Box::new(ErrorDefinition {
+                    doc: vec![],
+                    loc: Loc::File(0, 42, 59),
+                    name: Identifier {
+                        loc: Loc::File(0, 48, 57),
+                        name: "BAR_ERROR".to_string(),
+                    },
+                    fields: vec![],
+                })),
+                ContractPart::FunctionDefinition(Box::new(FunctionDefinition {
+                    doc: vec![],
+                    loc: Loc::File(0, 73, 89),
+                    ty: FunctionTy::Function,
+                    name: Some(Identifier {
+                        loc: Loc::File(0, 82, 85),
+                        name: "foo".to_string(),
+                    }),
+                    name_loc: Loc::File(0, 82, 85),
+                    params: vec![],
+                    attributes: vec![],
+                    return_not_returns: None,
+                    returns: vec![],
+                    body: Some(Statement::Block {
+                        loc: Loc::File(0, 89, 140),
+                        unchecked: false,
+                        statements: vec![Statement::Revert(
+                            Loc::File(0, 107, 125),
+                            Expression::FunctionCall(
+                                Loc::File(0, 114, 125),
+                                Box::new(Expression::Variable(Identifier {
+                                    loc: Loc::File(0, 114, 123),
+                                    name: "BAR_ERROR".to_string(),
+                                })),
+                                vec![],
+                            ),
+                        )],
+                    }),
+                })),
+            ],
+        },
+    ))]);
+
+    assert_eq!(actual_parse_tree, expected_parse_tree);
+}
