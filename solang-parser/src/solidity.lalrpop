@@ -132,6 +132,7 @@ SolIdentifier: Identifier = {
     <l:@L> "case" <r:@R> => Identifier{loc: Loc::File(file_no, l, r), name: "case".to_string()},
     <l:@L> "default" <r:@R> => Identifier{loc: Loc::File(file_no, l, r), name: "default".to_string()},
     <l:@L> "error" <r:@R> => Identifier{loc: Loc::File(file_no, l, r), name: "error".to_string()},
+    <l:@L> "revert" <r:@R> => Identifier{loc: Loc::File(file_no, l, r), name: "revert".to_string()},
 }
 
 SolNoErrorIdentifier: Identifier = {
@@ -353,6 +354,7 @@ Precedence2: Expression = {
     <a:@L> "+" <b:@R> <e:Precedence2> => Expression::UnaryPlus(Loc::File(file_no, a, b), Box::new(e)),
     <a:@L> "-" <b:@R> <e:Precedence2> => Expression::UnaryMinus(Loc::File(file_no, a, b), Box::new(e)),
     <l:@L> "error" <r:@R> => Expression::Variable(Identifier{loc: Loc::File(file_no, l, r), name: "error".to_string()}),
+    <l:@L> "revert" <r:@R> => Expression::Variable(Identifier{loc: Loc::File(file_no, l, r), name: "revert".to_string()}),
     Precedence0,
 }
 
@@ -781,14 +783,15 @@ NonIfStatement: Statement = {
     <l:@L> "emit" <ty:FunctionCall> <r:@R> ";" => {
         Statement::Emit(Loc::File(file_no, l, r), ty)
     },
-    <l:@L> "revert" <ty:FunctionCall> <r:@R> ";" => {
-        Statement::Revert(Loc::File(file_no, l, r), ty)
+    <l:@L> "revert" <error:SolIdentifier?> "(" <v:Comma<Expression>> ")" <r:@R> ";" => {
+        Statement::Revert(Loc::File(file_no, l, r), error, v)
     },
 }
 
 AssemblyIdentifier: Identifier = {
     <l:@L> <n:identifier> <r:@R> => Identifier{loc: Loc::File(file_no, l, r), name: n.to_string()},
-    <l:@L> "return" <r:@R> => Identifier{loc: Loc::File(file_no, l, r), name: "return".to_string()}
+    <l:@L> "return" <r:@R> => Identifier{loc: Loc::File(file_no, l, r), name: "return".to_string()},
+    <l:@L> "revert" <r:@R> => Identifier{loc: Loc::File(file_no, l, r), name: "revert".to_string()}
 }
 
 AssemblyStatement: AssemblyStatement = {

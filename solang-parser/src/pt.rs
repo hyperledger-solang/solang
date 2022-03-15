@@ -626,7 +626,7 @@ pub enum Statement {
     Continue(Loc),
     Break(Loc),
     Return(Loc, Option<Expression>),
-    Revert(Loc, Expression),
+    Revert(Loc, Option<Identifier>, Vec<Expression>),
     Emit(Loc, Expression),
     Try(
         Loc,

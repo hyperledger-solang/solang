@@ -10,8 +10,11 @@ use crate::parser::pt;
 use crate::parser::pt::CatchClause;
 use crate::parser::pt::CodeLocation;
 use crate::parser::pt::OptionalCodeLocation;
-use crate::sema::symtable::VariableUsage;
-use crate::sema::unused_variable::{assigned_variable, check_function_call, used_variable};
+use crate::sema::{
+    builtin,
+    symtable::VariableUsage,
+    unused_variable::{assigned_variable, check_function_call, used_variable},
+};
 use std::collections::{BTreeMap, HashMap, HashSet};
 
 pub fn resolve_function_body(
@@ -795,9 +798,40 @@ fn statement(
             ));
             Err(())
         }
+        pt::Statement::Revert(loc, error, args) => {
+            if let Some(error) = error {
+                ns.diagnostics.push(Diagnostic::error(
+                    error.loc,
+                    format!(
+                        "revert with custom error ‘{}’ not supported yet",
+                        error.name
+                    ),
+                ));
+                return Err(());
+            }
 
-        pt::Statement::Revert(..) => unimplemented!("revert statement not supported yet"),
+            let id = pt::Identifier {
+                loc: pt::Loc::File(loc.file_no(), loc.start(), loc.start() + 6),
+                name: "revert".to_string(),
+            };
 
+            let expr = builtin::resolve_call(
+                &id.loc,
+                None,
+                &id.name,
+                args,
+                context,
+                ns,
+                symtable,
+                diagnostics,
+            )?;
+
+            let reachable = expr.ty() != Type::Unreachable;
+
+            res.push(Statement::Expression(*loc, reachable, expr));
+
+            Ok(reachable)
+        }
         pt::Statement::DocComment(..) => Ok(true),
     }
 }
