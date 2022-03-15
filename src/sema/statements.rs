@@ -796,6 +796,8 @@ fn statement(
             Err(())
         }
 
+        pt::Statement::Revert(..) => unimplemented!("revert statement not supported yet"),
+
         pt::Statement::DocComment(..) => Ok(true),
     }
 }
