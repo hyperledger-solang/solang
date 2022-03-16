@@ -255,19 +255,13 @@ fn parse_test() {
                             Statement::Block {
                                 loc: Loc::File(0, 879, 941),
                                 unchecked: false,
-                                statements: vec![Statement::Expression(
+                                statements: vec![Statement::Revert(
                                     Loc::File(0, 905, 918),
-                                    Expression::FunctionCall(
-                                        Loc::File(0, 905, 918),
-                                        Box::new(Expression::Variable(Identifier {
-                                            loc: Loc::File(0, 905, 911),
-                                            name: "revert".to_string(),
-                                        })),
-                                        vec![Expression::StringLiteral(vec![StringLiteral {
-                                            loc: Loc::File(0, 912, 917),
-                                            string: "meh".to_string(),
-                                        }])],
-                                    ),
+                                    None,
+                                    vec![Expression::StringLiteral(vec![StringLiteral {
+                                        loc: Loc::File(0, 912, 917),
+                                        string: "meh".to_string(),
+                                    }])],
                                 )],
                             },
                         ),
@@ -289,19 +283,13 @@ fn parse_test() {
                             Statement::Block {
                                 loc: Loc::File(0, 975, 1037),
                                 unchecked: false,
-                                statements: vec![Statement::Expression(
+                                statements: vec![Statement::Revert(
                                     Loc::File(0, 1001, 1014),
-                                    Expression::FunctionCall(
-                                        Loc::File(0, 1001, 1014),
-                                        Box::new(Expression::Variable(Identifier {
-                                            loc: Loc::File(0, 1001, 1007),
-                                            name: "revert".to_string(),
-                                        })),
-                                        vec![Expression::Variable(Identifier {
-                                            loc: Loc::File(0, 1008, 1013),
-                                            name: "error".to_string(),
-                                        })],
-                                    ),
+                                    None,
+                                    vec![Expression::Variable(Identifier {
+                                        loc: Loc::File(0, 1008, 1013),
+                                        name: "error".to_string(),
+                                    })],
                                 )],
                             },
                         ),
@@ -323,19 +311,13 @@ fn parse_test() {
                             Statement::Block {
                                 loc: Loc::File(0, 1058, 1120),
                                 unchecked: false,
-                                statements: vec![Statement::Expression(
+                                statements: vec![Statement::Revert(
                                     Loc::File(0, 1084, 1097),
-                                    Expression::FunctionCall(
-                                        Loc::File(0, 1084, 1097),
-                                        Box::new(Expression::Variable(Identifier {
-                                            loc: Loc::File(0, 1084, 1090),
-                                            name: "revert".to_string(),
-                                        })),
-                                        vec![Expression::StringLiteral(vec![StringLiteral {
-                                            loc: Loc::File(0, 1091, 1096),
-                                            string: "feh".to_string(),
-                                        }])],
-                                    ),
+                                    None,
+                                    vec![Expression::StringLiteral(vec![StringLiteral {
+                                        loc: Loc::File(0, 1091, 1096),
+                                        string: "feh".to_string(),
+                                    }])],
                                 )],
                             },
                         ),
