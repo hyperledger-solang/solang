@@ -255,19 +255,13 @@ fn parse_test() {
                             Statement::Block {
                                 loc: Loc::File(0, 879, 941),
                                 unchecked: false,
-                                statements: vec![Statement::Expression(
+                                statements: vec![Statement::Revert(
                                     Loc::File(0, 905, 918),
-                                    Expression::FunctionCall(
-                                        Loc::File(0, 905, 918),
-                                        Box::new(Expression::Variable(Identifier {
-                                            loc: Loc::File(0, 905, 911),
-                                            name: "revert".to_string(),
-                                        })),
-                                        vec![Expression::StringLiteral(vec![StringLiteral {
-                                            loc: Loc::File(0, 912, 917),
-                                            string: "meh".to_string(),
-                                        }])],
-                                    ),
+                                    None,
+                                    vec![Expression::StringLiteral(vec![StringLiteral {
+                                        loc: Loc::File(0, 912, 917),
+                                        string: "meh".to_string(),
+                                    }])],
                                 )],
                             },
                         ),
@@ -289,19 +283,13 @@ fn parse_test() {
                             Statement::Block {
                                 loc: Loc::File(0, 975, 1037),
                                 unchecked: false,
-                                statements: vec![Statement::Expression(
+                                statements: vec![Statement::Revert(
                                     Loc::File(0, 1001, 1014),
-                                    Expression::FunctionCall(
-                                        Loc::File(0, 1001, 1014),
-                                        Box::new(Expression::Variable(Identifier {
-                                            loc: Loc::File(0, 1001, 1007),
-                                            name: "revert".to_string(),
-                                        })),
-                                        vec![Expression::Variable(Identifier {
-                                            loc: Loc::File(0, 1008, 1013),
-                                            name: "error".to_string(),
-                                        })],
-                                    ),
+                                    None,
+                                    vec![Expression::Variable(Identifier {
+                                        loc: Loc::File(0, 1008, 1013),
+                                        name: "error".to_string(),
+                                    })],
                                 )],
                             },
                         ),
@@ -323,19 +311,13 @@ fn parse_test() {
                             Statement::Block {
                                 loc: Loc::File(0, 1058, 1120),
                                 unchecked: false,
-                                statements: vec![Statement::Expression(
+                                statements: vec![Statement::Revert(
                                     Loc::File(0, 1084, 1097),
-                                    Expression::FunctionCall(
-                                        Loc::File(0, 1084, 1097),
-                                        Box::new(Expression::Variable(Identifier {
-                                            loc: Loc::File(0, 1084, 1090),
-                                            name: "revert".to_string(),
-                                        })),
-                                        vec![Expression::StringLiteral(vec![StringLiteral {
-                                            loc: Loc::File(0, 1091, 1096),
-                                            string: "feh".to_string(),
-                                        }])],
-                                    ),
+                                    None,
+                                    vec![Expression::StringLiteral(vec![StringLiteral {
+                                        loc: Loc::File(0, 1091, 1096),
+                                        string: "feh".to_string(),
+                                    }])],
                                 )],
                             },
                         ),
@@ -1015,4 +997,71 @@ fn test_assembly_parser() {
             Comment::Line(Loc::File(0, 588, 594), "// feh".to_string())
         ]
     );
+}
+
+#[test]
+fn parse_revert_test() {
+    let src = r#"
+        contract TestToken {
+            error BAR_ERROR();
+            function foo()  {
+                revert BAR_ERROR();
+            }
+        }
+        "#;
+
+    let (actual_parse_tree, _) = crate::parse(src, 0).unwrap();
+    assert_eq!(actual_parse_tree.0.len(), 1);
+
+    let expected_parse_tree = SourceUnit(vec![SourceUnitPart::ContractDefinition(Box::new(
+        ContractDefinition {
+            doc: vec![],
+            loc: Loc::File(0, 9, 28),
+            ty: ContractTy::Contract(Loc::File(0, 9, 17)),
+            name: Identifier {
+                loc: Loc::File(0, 18, 27),
+                name: "TestToken".to_string(),
+            },
+            base: vec![],
+            parts: vec![
+                ContractPart::ErrorDefinition(Box::new(ErrorDefinition {
+                    doc: vec![],
+                    loc: Loc::File(0, 42, 59),
+                    name: Identifier {
+                        loc: Loc::File(0, 48, 57),
+                        name: "BAR_ERROR".to_string(),
+                    },
+                    fields: vec![],
+                })),
+                ContractPart::FunctionDefinition(Box::new(FunctionDefinition {
+                    doc: vec![],
+                    loc: Loc::File(0, 73, 89),
+                    ty: FunctionTy::Function,
+                    name: Some(Identifier {
+                        loc: Loc::File(0, 82, 85),
+                        name: "foo".to_string(),
+                    }),
+                    name_loc: Loc::File(0, 82, 85),
+                    params: vec![],
+                    attributes: vec![],
+                    return_not_returns: None,
+                    returns: vec![],
+                    body: Some(Statement::Block {
+                        loc: Loc::File(0, 89, 140),
+                        unchecked: false,
+                        statements: vec![Statement::Revert(
+                            Loc::File(0, 107, 125),
+                            Some(Identifier {
+                                loc: Loc::File(0, 114, 123),
+                                name: "BAR_ERROR".to_string(),
+                            }),
+                            vec![],
+                        )],
+                    }),
+                })),
+            ],
+        },
+    ))]);
+
+    assert_eq!(actual_parse_tree, expected_parse_tree);
 }

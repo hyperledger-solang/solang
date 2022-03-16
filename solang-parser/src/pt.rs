@@ -626,6 +626,7 @@ pub enum Statement {
     Continue(Loc),
     Break(Loc),
     Return(Loc, Option<Expression>),
+    Revert(Loc, Option<Identifier>, Vec<Expression>),
     Emit(Loc, Expression),
     Try(
         Loc,
@@ -729,6 +730,7 @@ impl CodeLocation for Statement {
             | Statement::Continue(loc)
             | Statement::Break(loc)
             | Statement::Return(loc, ..)
+            | Statement::Revert(loc, ..)
             | Statement::Emit(loc, ..)
             | Statement::Try(loc, ..)
             | Statement::DocComment(loc, ..) => *loc,

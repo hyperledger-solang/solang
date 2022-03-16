@@ -17,7 +17,7 @@ pub mod solidity {
     include!(concat!(env!("OUT_DIR"), "/solidity.rs"));
 }
 
-/// Parse soldiity file content
+/// Parse solidity file content
 pub fn parse(
     src: &str,
     file_no: usize,
