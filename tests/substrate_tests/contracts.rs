@@ -1,7 +1,5 @@
-use parity_scale_codec::Encode;
-use parity_scale_codec_derive::{Decode, Encode};
-
 use crate::build_solidity;
+use parity_scale_codec::{Decode, Encode};
 
 #[derive(Debug, PartialEq, Encode, Decode)]
 struct RevertReturn(u32, String);
