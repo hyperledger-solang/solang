@@ -31,16 +31,13 @@ pub async fn start_server(target: Target) {
     let stdin = tokio::io::stdin();
     let stdout = tokio::io::stdout();
 
-    let (service, messages) = LspService::new(|client| SolangServer {
+    let (service, socket) = LspService::new(|client| SolangServer {
         client,
         target,
         files: Mutex::new(HashMap::new()),
     });
 
-    Server::new(stdin, stdout)
-        .interleave(messages)
-        .serve(service)
-        .await;
+    Server::new(stdin, stdout, socket).serve(service).await;
 
     std::process::exit(1);
 }

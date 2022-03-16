@@ -427,7 +427,7 @@ fn receive() {
                 name: "extinct".to_string(),
                 inputs: vec![],
                 outputs: vec![],
-                constant: false,
+                constant: None,
                 state_mutability: StateMutability::Payable,
             }],
         );
