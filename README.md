@@ -119,6 +119,41 @@ You will have a file called flipper.contract. You can use this directly in
 the [Polkadot UI](https://substrate.dev/substrate-contracts-workshop/#/0/deploy-contract),
 as if your smart contract was written using ink!.
 
+## Tentative roadmap
+
+Solang has a high level of compatibility with many blockchains. We are trying to ensure the compiler stays
+up to date with the newest Solidity syntax and features.  In addition, we focus on bringing new performance optimizations
+and improve developer experience.
+Here is a brief description of what we envision for the next versions.
+
+### V0.2
+
+| Milestone | Status |
+| --------- | ------ |
+| Specify values as "1 sol" and "1e9 lamports" | Not started |
+| Solana SPL tokens compatibility | In progess |
+
+### V0.3
+
+| Milestone | Status |
+| --------- | ------ |
+| Call Rust contracts from Solidity | Not started |
+| Parse and resolve inline assembly | In progress |
+| Improvements in overflow checking | Not started |
+
+
+### V0.4
+
+| Milestone                         | Status       |
+|-----------------------------------|--------------|
+| Call Solidity from Rust           | Not started  |
+| Generate code for inline assembly | Not started  |
+| Improve management over optimization passes | Not Started  |
+| Dead code elimination | Not started  |
+| ewasm target | Not started  |
+
+
+
 ## License
 
 [Apache 2.0](LICENSE)
