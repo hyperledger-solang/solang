@@ -224,7 +224,7 @@ fn main() {
     }
 
     if matches.is_present("LANGUAGESERVER") {
-        languageserver::start_server(target);
+        languageserver::start_server(target, matches);
     }
 
     let verbose = matches.is_present("VERBOSE");
