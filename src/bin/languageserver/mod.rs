@@ -1,19 +1,16 @@
+use clap::ArgMatches;
 use serde_json::Value;
-use std::cmp::Ordering;
-use std::collections::HashMap;
-use std::path::PathBuf;
+use solang::{
+    codegen::codegen,
+    file_resolver::FileResolver,
+    parse_and_resolve,
+    parser::pt,
+    sema::{ast, builtin::get_prototype, symtable, tags::render},
+    Target,
+};
+use std::{cmp::Ordering, collections::HashMap, ffi::OsString, path::PathBuf};
 use tokio::sync::Mutex;
-use tower_lsp::jsonrpc::Result;
-use tower_lsp::lsp_types::*;
-use tower_lsp::{Client, LanguageServer};
-use tower_lsp::{LspService, Server};
-
-use solang::codegen::codegen;
-use solang::file_resolver::FileResolver;
-use solang::parse_and_resolve;
-use solang::parser::pt;
-use solang::sema::{ast, builtin::get_prototype, symtable, tags::render};
-use solang::Target;
+use tower_lsp::{jsonrpc::Result, lsp_types::*, Client, LanguageServer, LspService, Server};
 
 pub struct Hovers {
     file: ast::File,
@@ -23,11 +20,12 @@ pub struct Hovers {
 pub struct SolangServer {
     client: Client,
     target: Target,
+    matches: ArgMatches,
     files: Mutex<HashMap<PathBuf, Hovers>>,
 }
 
 #[tokio::main(flavor = "current_thread")]
-pub async fn start_server(target: Target) {
+pub async fn start_server(target: Target, matches: ArgMatches) -> ! {
     let stdin = tokio::io::stdin();
     let stdout = tokio::io::stdout();
 
@@ -35,6 +33,7 @@ pub async fn start_server(target: Target) {
         client,
         target,
         files: Mutex::new(HashMap::new()),
+        matches,
     });
 
     Server::new(stdin, stdout, socket).serve(service).await;
@@ -52,6 +51,42 @@ impl SolangServer {
 
             let _ = resolver.add_import_path(PathBuf::from(dir));
 
+            let mut diags = Vec::new();
+
+            if let Some(paths) = self.matches.values_of_os("IMPORTPATH") {
+                for path in paths {
+                    if let Err(e) = resolver.add_import_path(PathBuf::from(path)) {
+                        diags.push(Diagnostic {
+                            message: format!("import path ‘{}’: {}", path.to_string_lossy(), e),
+                            severity: Some(DiagnosticSeverity::ERROR),
+                            ..Default::default()
+                        });
+                    }
+                }
+            }
+
+            if let Some(maps) = self.matches.values_of("IMPORTMAP") {
+                for p in maps {
+                    if let Some((map, path)) = p.split_once('=') {
+                        if let Err(e) =
+                            resolver.add_import_map(OsString::from(map), PathBuf::from(path))
+                        {
+                            diags.push(Diagnostic {
+                                message: format!("error: import path ‘{}’: {}", path, e),
+                                severity: Some(DiagnosticSeverity::ERROR),
+                                ..Default::default()
+                            });
+                        }
+                    } else {
+                        diags.push(Diagnostic {
+                            message: format!("error: import map ‘{}’: contains no ‘=’", p),
+                            severity: Some(DiagnosticSeverity::ERROR),
+                            ..Default::default()
+                        });
+                    }
+                }
+            }
+
             let os_str = path.file_name().unwrap();
 
             let mut ns = parse_and_resolve(os_str, &mut resolver, self.target);
@@ -59,61 +94,49 @@ impl SolangServer {
             // codegen all the contracts; some additional errors/warnings will be detected here
             codegen(&mut ns, &Default::default());
 
-            let diags = ns
-                .diagnostics
-                .iter()
-                .filter_map(|diag| {
-                    let pos = diag.pos;
+            diags.extend(ns.diagnostics.iter().filter_map(|diag| {
+                if diag.pos.file_no() != 0 {
+                    // The first file is the one we wanted to parse; others are imported
+                    return None;
+                }
 
-                    if pos.file_no() != 0 {
-                        // The first file is the one we wanted to parse; others are imported
+                let severity = match diag.level {
+                    ast::Level::Info => Some(DiagnosticSeverity::INFORMATION),
+                    ast::Level::Warning => Some(DiagnosticSeverity::WARNING),
+                    ast::Level::Error => Some(DiagnosticSeverity::ERROR),
+                    ast::Level::Debug => {
                         return None;
                     }
+                };
 
-                    let related_information = if diag.notes.is_empty() {
-                        None
-                    } else {
-                        Some(
-                            diag.notes
-                                .iter()
-                                .map(|note| DiagnosticRelatedInformation {
-                                    message: note.message.to_string(),
-                                    location: Location {
-                                        uri: Url::from_file_path(
-                                            &ns.files[note.pos.file_no()].path,
-                                        )
+                let related_information = if diag.notes.is_empty() {
+                    None
+                } else {
+                    Some(
+                        diag.notes
+                            .iter()
+                            .map(|note| DiagnosticRelatedInformation {
+                                message: note.message.to_string(),
+                                location: Location {
+                                    uri: Url::from_file_path(&ns.files[note.pos.file_no()].path)
                                         .unwrap(),
-                                        range: SolangServer::loc_to_range(&note.pos, &ns.files[0]),
-                                    },
-                                })
-                                .collect(),
-                        )
-                    };
+                                    range: SolangServer::loc_to_range(&note.pos, &ns.files[0]),
+                                },
+                            })
+                            .collect(),
+                    )
+                };
 
-                    let sev = match diag.level {
-                        ast::Level::Info => DiagnosticSeverity::INFORMATION,
-                        ast::Level::Warning => DiagnosticSeverity::WARNING,
-                        ast::Level::Error => DiagnosticSeverity::ERROR,
-                        ast::Level::Debug => {
-                            return None;
-                        }
-                    };
+                let range = SolangServer::loc_to_range(&diag.pos, &ns.files[0]);
 
-                    let range = SolangServer::loc_to_range(&pos, &ns.files[0]);
-
-                    Some(Diagnostic {
-                        range,
-                        message: diag.message.to_string(),
-                        severity: Some(sev),
-                        source: None,
-                        code: None,
-                        code_description: None,
-                        related_information,
-                        tags: None,
-                        data: None,
-                    })
+                Some(Diagnostic {
+                    range,
+                    message: diag.message.to_string(),
+                    severity,
+                    related_information,
+                    ..Default::default()
                 })
-                .collect();
+            }));
 
             let res = self.client.publish_diagnostics(uri, diags, None);
 
