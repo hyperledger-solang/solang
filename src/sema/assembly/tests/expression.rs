@@ -5,11 +5,11 @@ use crate::sema::assembly::builtin::AssemblyBuiltInFunction;
 use crate::sema::assembly::expression::{
     check_type, resolve_assembly_expression, AssemblyExpression, AssemblySuffix,
 };
-use crate::sema::assembly::functions::{AssemblyFunction, AssemblyFunctionParameter};
+use crate::sema::assembly::functions::{AssemblyFunctionParameter, FunctionsTable};
+use crate::sema::assembly::tests::{assert_message_in_diagnostics, parse};
 use crate::sema::expression::ExprContext;
-use crate::sema::symtable::{Symtable, VariableUsage};
+use crate::sema::symtable::{Symtable, VariableInitializer, VariableUsage};
 use crate::{ast, Target};
-use indexmap::IndexMap;
 use num_bigint::BigInt;
 use num_traits::FromPrimitive;
 use solang_parser::pt;
@@ -27,9 +27,10 @@ fn resolve_bool_literal() {
         unchecked: false,
         constant: false,
         lvalue: false,
+        yul_function: false,
     };
     let symtable = Symtable::new();
-    let functions: IndexMap<String, AssemblyFunction> = IndexMap::new();
+    let function_table = FunctionsTable::new();
 
     let mut ns = Namespace::new(Target::Solana);
     let expr = pt::AssemblyExpression::BoolLiteral(
@@ -41,7 +42,8 @@ fn resolve_bool_literal() {
         }),
     );
 
-    let resolved_type = resolve_assembly_expression(&expr, &ctx, &symtable, &functions, &mut ns);
+    let resolved_type =
+        resolve_assembly_expression(&expr, &ctx, &symtable, &function_table, &mut ns);
     assert!(resolved_type.is_ok());
     assert!(ns.diagnostics.is_empty());
     let unwrapped = resolved_type.unwrap();
@@ -52,7 +54,8 @@ fn resolve_bool_literal() {
     );
 
     let expr = pt::AssemblyExpression::BoolLiteral(Loc::File(0, 3, 5), true, None);
-    let resolved_type = resolve_assembly_expression(&expr, &ctx, &symtable, &functions, &mut ns);
+    let resolved_type =
+        resolve_assembly_expression(&expr, &ctx, &symtable, &function_table, &mut ns);
 
     assert!(resolved_type.is_ok());
     assert!(ns.diagnostics.is_empty());
@@ -72,9 +75,10 @@ fn resolve_number_literal() {
         unchecked: false,
         constant: false,
         lvalue: false,
+        yul_function: false,
     };
     let symtable = Symtable::new();
-    let functions: IndexMap<String, AssemblyFunction> = IndexMap::new();
+    let function_table = FunctionsTable::new();
 
     let loc = Loc::File(0, 3, 5);
     let mut ns = Namespace::new(Target::Solana);
@@ -86,7 +90,7 @@ fn resolve_number_literal() {
             name: "u64".to_string(),
         }),
     );
-    let parsed = resolve_assembly_expression(&expr, &ctx, &symtable, &functions, &mut ns);
+    let parsed = resolve_assembly_expression(&expr, &ctx, &symtable, &function_table, &mut ns);
     assert!(parsed.is_ok());
     assert_eq!(ns.diagnostics.len(), 1);
     assert_eq!(
@@ -103,17 +107,17 @@ fn resolve_number_literal() {
             name: "u128".to_string(),
         }),
     );
-    let parsed = resolve_assembly_expression(&expr, &ctx, &symtable, &functions, &mut ns);
+    let parsed = resolve_assembly_expression(&expr, &ctx, &symtable, &function_table, &mut ns);
     assert!(parsed.is_err());
     assert_eq!(ns.diagnostics.len(), 1);
     assert_eq!(
         ns.diagnostics[0].message,
-        "singed value cannot fit in unsigned type"
+        "signed integer cannot fit in unsigned integer"
     );
 
     ns.diagnostics.clear();
     let expr = pt::AssemblyExpression::NumberLiteral(loc, BigInt::from(20), None);
-    let parsed = resolve_assembly_expression(&expr, &ctx, &symtable, &functions, &mut ns);
+    let parsed = resolve_assembly_expression(&expr, &ctx, &symtable, &function_table, &mut ns);
     assert!(parsed.is_ok());
     assert!(ns.diagnostics.is_empty());
     assert_eq!(
@@ -131,9 +135,10 @@ fn resolve_hex_number_literal() {
         unchecked: false,
         constant: false,
         lvalue: false,
+        yul_function: false,
     };
     let symtable = Symtable::new();
-    let functions: IndexMap<String, AssemblyFunction> = IndexMap::new();
+    let function_table = FunctionsTable::new();
 
     let mut ns = Namespace::new(Target::Ewasm);
     let loc = Loc::File(0, 3, 5);
@@ -146,7 +151,7 @@ fn resolve_hex_number_literal() {
         }),
     );
 
-    let resolved = resolve_assembly_expression(&expr, &ctx, &symtable, &functions, &mut ns);
+    let resolved = resolve_assembly_expression(&expr, &ctx, &symtable, &function_table, &mut ns);
     assert!(resolved.is_ok());
     assert_eq!(ns.diagnostics.len(), 1);
     assert_eq!(
@@ -163,7 +168,7 @@ fn resolve_hex_number_literal() {
             name: "s64".to_string(),
         }),
     );
-    let resolved = resolve_assembly_expression(&expr, &ctx, &symtable, &functions, &mut ns);
+    let resolved = resolve_assembly_expression(&expr, &ctx, &symtable, &function_table, &mut ns);
     assert!(resolved.is_ok());
     assert!(ns.diagnostics.is_empty());
     assert_eq!(
@@ -181,9 +186,10 @@ fn resolve_hex_string_literal() {
         unchecked: false,
         constant: false,
         lvalue: false,
+        yul_function: false,
     };
     let symtable = Symtable::new();
-    let functions: IndexMap<String, AssemblyFunction> = IndexMap::new();
+    let function_table = FunctionsTable::new();
 
     let mut ns = Namespace::new(Target::Ewasm);
     let loc = Loc::File(0, 3, 5);
@@ -195,7 +201,7 @@ fn resolve_hex_string_literal() {
         None,
     );
 
-    let resolved = resolve_assembly_expression(&expr, &ctx, &symtable, &functions, &mut ns);
+    let resolved = resolve_assembly_expression(&expr, &ctx, &symtable, &function_table, &mut ns);
     assert!(resolved.is_err());
     assert_eq!(ns.diagnostics.len(), 1);
     assert_eq!(
@@ -214,7 +220,7 @@ fn resolve_hex_string_literal() {
             name: "myType".to_string(),
         }),
     );
-    let resolved = resolve_assembly_expression(&expr, &ctx, &symtable, &functions, &mut ns);
+    let resolved = resolve_assembly_expression(&expr, &ctx, &symtable, &function_table, &mut ns);
     assert!(resolved.is_err());
     assert_eq!(ns.diagnostics.len(), 1);
     assert_eq!(
@@ -233,7 +239,7 @@ fn resolve_hex_string_literal() {
             name: "u256".to_string(),
         }),
     );
-    let resolved = resolve_assembly_expression(&expr, &ctx, &symtable, &functions, &mut ns);
+    let resolved = resolve_assembly_expression(&expr, &ctx, &symtable, &function_table, &mut ns);
     assert!(resolved.is_ok());
     assert!(ns.diagnostics.is_empty());
     assert_eq!(
@@ -251,9 +257,10 @@ fn resolve_string_literal() {
         unchecked: false,
         constant: false,
         lvalue: false,
+        yul_function: false,
     };
     let symtable = Symtable::new();
-    let functions: IndexMap<String, AssemblyFunction> = IndexMap::new();
+    let function_table = FunctionsTable::new();
 
     let mut ns = Namespace::new(Target::Solana);
     let loc = Loc::File(0, 3, 5);
@@ -268,7 +275,7 @@ fn resolve_string_literal() {
         }),
     );
 
-    let resolved = resolve_assembly_expression(&expr, &ctx, &symtable, &functions, &mut ns);
+    let resolved = resolve_assembly_expression(&expr, &ctx, &symtable, &function_table, &mut ns);
     assert!(resolved.is_ok());
     assert!(ns.diagnostics.is_empty());
     assert_eq!(
@@ -290,9 +297,10 @@ fn resolve_variable_local() {
         unchecked: false,
         constant: false,
         lvalue: false,
+        yul_function: false,
     };
     let mut symtable = Symtable::new();
-    let functions: IndexMap<String, AssemblyFunction> = IndexMap::new();
+    let function_table = FunctionsTable::new();
     let mut ns = Namespace::new(Target::Ewasm);
     let loc = Loc::File(1, 2, 3);
 
@@ -304,7 +312,7 @@ fn resolve_variable_local() {
             },
             Type::Uint(32),
             &mut ns,
-            None,
+            VariableInitializer::Assembly(false),
             VariableUsage::AssemblyLocalVariable,
             None,
         )
@@ -317,7 +325,7 @@ fn resolve_variable_local() {
             },
             Type::Uint(32),
             &mut ns,
-            None,
+            VariableInitializer::Assembly(false),
             VariableUsage::LocalVariable,
             None,
         )
@@ -335,8 +343,8 @@ fn resolve_variable_local() {
     let expected_1 = AssemblyExpression::AssemblyLocalVariable(loc, Type::Uint(32), pos1);
     let expected_2 = AssemblyExpression::SolidityLocalVariable(loc, Type::Uint(32), None, pos2);
 
-    let res1 = resolve_assembly_expression(&expr1, &context, &symtable, &functions, &mut ns);
-    let res2 = resolve_assembly_expression(&expr2, &context, &symtable, &functions, &mut ns);
+    let res1 = resolve_assembly_expression(&expr1, &context, &symtable, &function_table, &mut ns);
+    let res2 = resolve_assembly_expression(&expr2, &context, &symtable, &function_table, &mut ns);
 
     assert!(res1.is_ok());
     assert!(res2.is_ok());
@@ -355,9 +363,10 @@ fn resolve_variable_contract() {
         unchecked: false,
         constant: false,
         lvalue: false,
+        yul_function: false,
     };
     let symtable = Symtable::new();
-    let functions: IndexMap<String, AssemblyFunction> = IndexMap::new();
+    let function_table = FunctionsTable::new();
     let mut ns = Namespace::new(Target::Ewasm);
     let loc = Loc::File(0, 2, 3);
     let mut contract = ast::Contract::new("test", ContractTy::Contract(loc), vec![], loc);
@@ -381,6 +390,19 @@ fn resolve_variable_contract() {
         visibility: Visibility::Public(None),
         constant: false,
         immutable: false,
+        initializer: None,
+        assigned: false,
+        read: false,
+    });
+
+    contract.variables.push(Variable {
+        tags: vec![],
+        name: "imut".to_string(),
+        loc,
+        ty: Type::Int(128),
+        visibility: Visibility::Public(None),
+        constant: false,
+        immutable: true,
         initializer: None,
         assigned: false,
         read: false,
@@ -410,6 +432,10 @@ fn resolve_variable_contract() {
         Symbol::Variable(loc, Some(0), 1),
     );
     ns.variable_symbols.insert(
+        (0, Some(0), "imut".to_string()),
+        Symbol::Variable(loc, Some(0), 2),
+    );
+    ns.variable_symbols.insert(
         (0, None, "var3".to_string()),
         Symbol::Variable(loc, None, 0),
     );
@@ -420,7 +446,7 @@ fn resolve_variable_contract() {
         loc,
         name: "var1".to_string(),
     });
-    let res = resolve_assembly_expression(&expr, &context, &symtable, &functions, &mut ns);
+    let res = resolve_assembly_expression(&expr, &context, &symtable, &function_table, &mut ns);
     assert!(res.is_ok());
     assert_eq!(
         AssemblyExpression::ConstantVariable(loc, Type::Bool, Some(0), 0),
@@ -431,7 +457,7 @@ fn resolve_variable_contract() {
         loc,
         name: "var2".to_string(),
     });
-    let res = resolve_assembly_expression(&expr, &context, &symtable, &functions, &mut ns);
+    let res = resolve_assembly_expression(&expr, &context, &symtable, &function_table, &mut ns);
     assert!(res.is_ok());
     assert_eq!(
         AssemblyExpression::StorageVariable(loc, Type::Int(128), 0, 1),
@@ -442,7 +468,7 @@ fn resolve_variable_contract() {
         loc,
         name: "var3".to_string(),
     });
-    let res = resolve_assembly_expression(&expr, &context, &symtable, &functions, &mut ns);
+    let res = resolve_assembly_expression(&expr, &context, &symtable, &function_table, &mut ns);
     assert!(res.is_ok());
     assert_eq!(
         AssemblyExpression::ConstantVariable(loc, Type::Uint(32), None, 0),
@@ -453,7 +479,7 @@ fn resolve_variable_contract() {
         loc,
         name: "func".to_string(),
     });
-    let res = resolve_assembly_expression(&expr, &context, &symtable, &functions, &mut ns);
+    let res = resolve_assembly_expression(&expr, &context, &symtable, &function_table, &mut ns);
     assert!(res.is_err());
     assert_eq!(ns.diagnostics.len(), 1);
     assert_eq!(
@@ -466,10 +492,23 @@ fn resolve_variable_contract() {
         loc,
         name: "none".to_string(),
     });
-    let res = resolve_assembly_expression(&expr, &context, &symtable, &functions, &mut ns);
+    let res = resolve_assembly_expression(&expr, &context, &symtable, &function_table, &mut ns);
     assert!(res.is_err());
     assert_eq!(ns.diagnostics.len(), 1);
     assert_eq!(ns.diagnostics[0].message, "'none' is not found");
+
+    ns.diagnostics.clear();
+    let expr = pt::AssemblyExpression::Variable(Identifier {
+        loc,
+        name: "imut".to_string(),
+    });
+    let res = resolve_assembly_expression(&expr, &context, &symtable, &function_table, &mut ns);
+    assert!(res.is_err());
+    assert_eq!(ns.diagnostics.len(), 1);
+    assert_eq!(
+        ns.diagnostics[0].message,
+        "assembly access to immutable variables is not supported"
+    );
 }
 
 #[test]
@@ -481,9 +520,11 @@ fn function_call() {
         unchecked: false,
         constant: false,
         lvalue: false,
+        yul_function: false,
     };
     let symtable = Symtable::new();
-    let mut functions: IndexMap<String, AssemblyFunction> = IndexMap::new();
+    let mut function_table = FunctionsTable::new();
+    function_table.new_scope();
     let mut ns = Namespace::new(Target::Ewasm);
     let loc = Loc::File(0, 2, 3);
 
@@ -495,7 +536,7 @@ fn function_call() {
         },
         arguments: vec![],
     }));
-    let res = resolve_assembly_expression(&expr, &context, &symtable, &functions, &mut ns);
+    let res = resolve_assembly_expression(&expr, &context, &symtable, &function_table, &mut ns);
     assert!(res.is_err());
     assert_eq!(ns.diagnostics.len(), 1);
     assert_eq!(
@@ -512,7 +553,7 @@ fn function_call() {
         },
         arguments: vec![],
     }));
-    let res = resolve_assembly_expression(&expr, &context, &symtable, &functions, &mut ns);
+    let res = resolve_assembly_expression(&expr, &context, &symtable, &function_table, &mut ns);
     assert!(res.is_err());
     assert_eq!(ns.diagnostics.len(), 1);
     assert_eq!(
@@ -538,7 +579,7 @@ fn function_call() {
         },
         arguments: vec![arg.clone()],
     }));
-    let res = resolve_assembly_expression(&expr, &context, &symtable, &functions, &mut ns);
+    let res = resolve_assembly_expression(&expr, &context, &symtable, &function_table, &mut ns);
     assert!(res.is_err());
     assert_eq!(ns.diagnostics.len(), 1);
     assert_eq!(
@@ -555,31 +596,27 @@ fn function_call() {
         },
         arguments: vec![arg.clone()],
     }));
-    let res = resolve_assembly_expression(&expr, &context, &symtable, &functions, &mut ns);
+    let res = resolve_assembly_expression(&expr, &context, &symtable, &function_table, &mut ns);
     assert!(res.is_ok());
     assert_eq!(
         AssemblyExpression::BuiltInCall(
             loc,
             AssemblyBuiltInFunction::Not,
             vec![
-                resolve_assembly_expression(&arg, &context, &symtable, &functions, &mut ns)
+                resolve_assembly_expression(&arg, &context, &symtable, &function_table, &mut ns)
                     .unwrap()
             ]
         ),
         res.unwrap()
     );
 
-    functions.insert(
-        "myFunc".to_string(),
-        AssemblyFunction {
+    function_table.add_function_header(
+        &Identifier {
             loc,
             name: "myFunc".to_string(),
-            params: vec![],
-            returns: vec![],
-            body: vec![],
-            functions: IndexMap::new(),
-            symtable: Symtable::new(),
         },
+        vec![],
+        vec![],
     );
 
     let expr = pt::AssemblyExpression::FunctionCall(Box::new(AssemblyFunctionCall {
@@ -590,7 +627,7 @@ fn function_call() {
         },
         arguments: vec![arg.clone()],
     }));
-    let res = resolve_assembly_expression(&expr, &context, &symtable, &functions, &mut ns);
+    let res = resolve_assembly_expression(&expr, &context, &symtable, &function_table, &mut ns);
     assert!(res.is_err());
     assert_eq!(ns.diagnostics.len(), 1);
     assert_eq!(
@@ -607,10 +644,10 @@ fn function_call() {
         },
         arguments: vec![],
     }));
-    let res = resolve_assembly_expression(&expr, &context, &symtable, &functions, &mut ns);
+    let res = resolve_assembly_expression(&expr, &context, &symtable, &function_table, &mut ns);
     assert!(res.is_ok());
     assert_eq!(
-        AssemblyExpression::FunctionCall(loc, "myFunc".to_string(), vec![]),
+        AssemblyExpression::FunctionCall(loc, 0, vec![]),
         res.unwrap()
     );
 
@@ -622,7 +659,7 @@ fn function_call() {
         },
         arguments: vec![],
     }));
-    let res = resolve_assembly_expression(&expr, &context, &symtable, &functions, &mut ns);
+    let res = resolve_assembly_expression(&expr, &context, &symtable, &function_table, &mut ns);
     assert!(res.is_err());
     assert_eq!(ns.diagnostics.len(), 1);
     assert_eq!(ns.diagnostics[0].message, "function 'none' is not defined");
@@ -637,53 +674,47 @@ fn check_arguments() {
         unchecked: false,
         constant: false,
         lvalue: false,
+        yul_function: false,
     };
     let symtable = Symtable::new();
-    let mut functions: IndexMap<String, AssemblyFunction> = IndexMap::new();
+    let mut function_table = FunctionsTable::new();
+    function_table.new_scope();
     let mut ns = Namespace::new(Target::Ewasm);
     let loc = Loc::File(0, 2, 3);
 
-    functions.insert(
-        "func1".to_string(),
-        AssemblyFunction {
+    function_table.add_function_header(
+        &Identifier {
             loc,
             name: "func1".to_string(),
-            params: vec![],
-            returns: vec![],
-            body: vec![],
-            functions: IndexMap::new(),
-            symtable: Symtable::new(),
         },
+        vec![],
+        vec![],
     );
 
-    functions.insert(
-        "func2".to_string(),
-        AssemblyFunction {
+    function_table.add_function_header(
+        &Identifier {
             loc,
             name: "func2".to_string(),
-            params: vec![],
-            returns: vec![
-                AssemblyFunctionParameter {
-                    loc,
-                    name: Identifier {
-                        loc,
-                        name: "ret1".to_string(),
-                    },
-                    ty: Type::Uint(256),
-                },
-                AssemblyFunctionParameter {
-                    loc,
-                    name: Identifier {
-                        loc,
-                        name: "ret2".to_string(),
-                    },
-                    ty: Type::Uint(256),
-                },
-            ],
-            body: vec![],
-            functions: IndexMap::new(),
-            symtable: Symtable::new(),
         },
+        vec![],
+        vec![
+            AssemblyFunctionParameter {
+                loc,
+                id: Identifier {
+                    loc,
+                    name: "ret1".to_string(),
+                },
+                ty: Type::Uint(256),
+            },
+            AssemblyFunctionParameter {
+                loc,
+                id: Identifier {
+                    loc,
+                    name: "ret2".to_string(),
+                },
+                ty: Type::Uint(256),
+            },
+        ],
     );
 
     let expr = pt::AssemblyExpression::FunctionCall(Box::new(AssemblyFunctionCall {
@@ -708,7 +739,7 @@ fn check_arguments() {
         ))],
     }));
 
-    let _ = resolve_assembly_expression(&expr, &context, &symtable, &functions, &mut ns);
+    let _ = resolve_assembly_expression(&expr, &context, &symtable, &function_table, &mut ns);
     assert!(!ns.diagnostics.is_empty());
     assert_eq!(
         ns.diagnostics[0].message,
@@ -734,7 +765,7 @@ fn check_arguments() {
         ))],
     }));
 
-    let _ = resolve_assembly_expression(&expr, &context, &symtable, &functions, &mut ns);
+    let _ = resolve_assembly_expression(&expr, &context, &symtable, &function_table, &mut ns);
     assert!(!ns.diagnostics.is_empty());
     assert_eq!(
         ns.diagnostics[0].message,
@@ -760,11 +791,11 @@ fn check_arguments() {
         ))],
     }));
 
-    let _ = resolve_assembly_expression(&expr, &context, &symtable, &functions, &mut ns);
+    let _ = resolve_assembly_expression(&expr, &context, &symtable, &function_table, &mut ns);
     assert!(!ns.diagnostics.is_empty());
     assert_eq!(
         ns.diagnostics[0].message,
-        "function 'func2' has multiple returns and cannot be used as argument"
+        "function 'func2' has multiple returns and cannot be used in this scope"
     );
 }
 
@@ -777,9 +808,10 @@ fn test_member_access() {
         unchecked: false,
         constant: false,
         lvalue: false,
+        yul_function: false,
     };
     let symtable = Symtable::new();
-    let functions: IndexMap<String, AssemblyFunction> = IndexMap::new();
+    let function_table = FunctionsTable::new();
     let mut ns = Namespace::new(Target::Ewasm);
     let loc = Loc::File(0, 2, 3);
 
@@ -813,7 +845,7 @@ fn test_member_access() {
         },
     );
 
-    let res = resolve_assembly_expression(&expr, &context, &symtable, &functions, &mut ns);
+    let res = resolve_assembly_expression(&expr, &context, &symtable, &function_table, &mut ns);
     assert!(res.is_err());
     assert_eq!(ns.diagnostics.len(), 1);
     assert_eq!(
@@ -831,7 +863,7 @@ fn test_member_access() {
         },
     );
 
-    let res = resolve_assembly_expression(&expr, &context, &symtable, &functions, &mut ns);
+    let res = resolve_assembly_expression(&expr, &context, &symtable, &function_table, &mut ns);
     assert!(res.is_err());
     assert_eq!(ns.diagnostics.len(), 1);
     assert_eq!(
@@ -839,9 +871,6 @@ fn test_member_access() {
         "the given expression does not support suffixes"
     );
     ns.diagnostics.clear();
-
-    // TODO: tests with member access are difficult due to nested expressions.
-    // Such tests must be done when Yul sema is complete.
 
     let expr = pt::AssemblyExpression::Member(
         loc,
@@ -855,7 +884,7 @@ fn test_member_access() {
         },
     );
 
-    let res = resolve_assembly_expression(&expr, &context, &symtable, &functions, &mut ns);
+    let res = resolve_assembly_expression(&expr, &context, &symtable, &function_table, &mut ns);
     assert!(res.is_ok());
     assert!(ns.diagnostics.is_empty());
     assert_eq!(
@@ -878,7 +907,17 @@ fn test_check_types() {
         0,
     );
 
-    let res = check_type(&expr);
+    let context = ExprContext {
+        file_no: 0,
+        contract_no: Some(0),
+        function_no: Some(0),
+        unchecked: false,
+        constant: false,
+        lvalue: false,
+        yul_function: false,
+    };
+
+    let res = check_type(&expr, &context);
     assert!(res.is_some());
     assert_eq!(
         res.unwrap().message,
@@ -886,7 +925,7 @@ fn test_check_types() {
     );
 
     let expr = AssemblyExpression::StorageVariable(loc, Type::Int(16), 0, 1);
-    let res = check_type(&expr);
+    let res = check_type(&expr, &context);
     assert!(res.is_some());
     assert_eq!(
         res.unwrap().message,
@@ -899,11 +938,478 @@ fn test_check_types() {
         Some(StorageLocation::Calldata(loc)),
         2,
     );
-    let res = check_type(&expr);
+    let res = check_type(&expr, &context);
     assert!(res.is_some());
     assert_eq!(res.unwrap().message, "Calldata arrays must be accessed with \".offset\", \".length\" and the \"calldatacopy\" function");
 
     let expr = AssemblyExpression::StringLiteral(loc, vec![0, 255, 20], Type::Uint(256));
-    let res = check_type(&expr);
+    let res = check_type(&expr, &context);
     assert!(res.is_none());
+}
+
+#[test]
+fn test_check_types_resolved() {
+    let file = r#"
+contract testTypes {
+    uint256 b;
+    function testAsm() public pure {
+        assembly {
+            {
+                let x := 0
+                b.offset := add(x, 2)
+            }
+        }
+    }
+}
+    "#;
+
+    let ns = parse(file);
+    assert!(assert_message_in_diagnostics(
+        &ns.diagnostics,
+        "cannot assign a value to offset"
+    ));
+
+    let file = r#"
+    contract testTypes {
+    uint256 b;
+    function testAsm(uint[] calldata vl) public pure {
+        assembly {
+            {
+                let x := 0
+                vl.length := add(x, 2)
+            }
+        }
+    }
+}
+    "#;
+
+    let ns = parse(file);
+    assert!(assert_message_in_diagnostics(
+        &ns.diagnostics,
+        "cannot assign a value to length"
+    ));
+
+    let file = r#"
+contract testTypes {
+    uint256 b;
+    function testAsm(uint[] calldata vl) public pure {
+        assembly {
+            {
+                let x := 0
+                pop(x) := add(x, 2)
+            }
+        }
+    }
+}
+    "#;
+
+    let ns = parse(file);
+    assert!(assert_message_in_diagnostics(
+        &ns.diagnostics,
+        r#"unrecognised token `:=', expected ")", ",", "address", "bool", "break", "case", "continue", "default", "for", "function", "if", "leave", "let", "return", "revert", "switch", "{", "}", identifier"#
+    ));
+
+    let file = r#"
+uint256 constant b = 1;
+contract testTypes {
+    function testAsm(uint[] calldata vl) public pure {
+        assembly {
+            {
+                let x := 0
+                b := add(x, 2)
+            }
+        }
+    }
+}
+    "#;
+
+    let ns = parse(file);
+    assert!(assert_message_in_diagnostics(
+        &ns.diagnostics,
+        "cannot assigned a value to a constant"
+    ));
+
+    let file = r#"
+contract testTypes {
+    struct test {
+        uint a;
+        uint b;
+    }
+
+    test tt1;
+    function testAsm(uint[] calldata vl) public pure {
+        test storage tt2 = tt1;
+        assembly {
+            {
+                let x := 0
+                tt1.slot := add(x, 2)
+            }
+        }
+    }
+}
+    "#;
+
+    let ns = parse(file);
+    assert!(assert_message_in_diagnostics(
+        &ns.diagnostics,
+        "cannot assign to slot of storage variable"
+    ));
+
+    let file = r#"
+    contract testTypes {
+    struct test {
+        uint a;
+        uint b;
+    }
+
+    test tt1;
+    function testAsm(uint[] calldata vl) public pure {
+        test storage tt2 = tt1;
+        assembly {
+            {
+                let x := 0
+                tt2.slot := add(x, 2)
+            }
+        }
+    }
+}
+    "#;
+    let ns = parse(file);
+    assert_eq!(ns.diagnostics.len(), 3);
+    assert!(assert_message_in_diagnostics(
+        &ns.diagnostics,
+        "found contract ‘testTypes’"
+    ));
+    assert!(assert_message_in_diagnostics(
+        &ns.diagnostics,
+        "evm assembly not supported on target solana"
+    ));
+    assert!(assert_message_in_diagnostics(
+        &ns.diagnostics,
+        "function parameter 'vl' has never been read"
+    ));
+
+    let file = r#"
+    contract testTypes {
+    struct test {
+        uint a;
+        uint b;
+    }
+
+    test tt1;
+    function testAsm(uint[] calldata vl) public pure {
+        test storage tt2 = tt1;
+        assembly {
+            {
+                let x := 0
+                tt2 := add(x, 2)
+            }
+        }
+    }
+}   "#;
+
+    let ns = parse(file);
+    assert!(assert_message_in_diagnostics(
+        &ns.diagnostics,
+        r#"storage variables cannot be assigned any value in assembly. You may use "sstore()""#
+    ));
+
+    let file = r#"
+contract testTypes {
+    struct test {
+        uint a;
+        uint b;
+    }
+
+    test tt1;
+    function testAsm(uint[] calldata vl) public pure {
+        test storage tt2 = tt1;
+        assembly {
+            {
+                let x := 0
+                let y := add(tt2, 2)
+            }
+        }
+    }
+}    "#;
+    let ns = parse(file);
+    assert!(assert_message_in_diagnostics(
+        &ns.diagnostics,
+        r#"Storage variables must be accessed with ".slot" or ".offset""#
+    ));
+
+    let file = r#"
+contract testTypes {
+    function testAsm(uint[] calldata vl) public pure {
+        assembly {
+            {
+                let x := 4
+                let y := add(vl, x)
+            }
+        }
+    }
+}    "#;
+
+    let ns = parse(file);
+    assert!(assert_message_in_diagnostics(
+        &ns.diagnostics,
+        r#"Calldata arrays must be accessed with ".offset", ".length" and the "calldatacopy" function"#
+    ));
+}
+
+#[test]
+fn test_member_access_resolved() {
+    let file = r#"
+contract testTypes {
+    struct test {
+        uint a;
+        uint b;
+    }
+    test tt1;
+    function testAsm(uint[] calldata vl) public pure {
+        test storage tt2 = tt1;
+        assembly {
+            {
+                let x := tt1.slot.length
+               // let y := tt2.length
+            }
+        }
+    }
+}    "#;
+
+    let ns = parse(file);
+    assert!(assert_message_in_diagnostics(
+        &ns.diagnostics,
+        "there cannot be multiple suffixes to a name"
+    ));
+
+    let file = r#"
+contract testTypes {
+    struct test {
+        uint a;
+        uint b;
+    }
+    test tt1;
+    function testAsm(uint[] calldata vl) public pure {
+        test storage tt2 = tt1;
+        assembly {
+            {
+                //let x := tt1.slot.length
+               let y := tt2.length
+            }
+        }
+    }
+}
+    "#;
+
+    let ns = parse(file);
+    assert!(assert_message_in_diagnostics(
+        &ns.diagnostics,
+        r#"state variables only support ".slot" and ".offset""#
+    ));
+
+    let file = r#"
+contract testTypes {
+    struct test {
+        uint a;
+        uint b;
+    }
+    test tt1;
+    function bar(uint a) public pure returns (uint) {
+        return a + 3;
+    }
+
+    function testAsm(uint[] calldata vl) public pure {
+        test storage tt2 = tt1;
+        function(uint) internal pure returns (uint) func = bar;
+        assembly {
+            {
+               let y := func.length
+            }
+        }
+    }
+}    "#;
+
+    let ns = parse(file);
+    assert!(assert_message_in_diagnostics(
+        &ns.diagnostics,
+        "only variables of type external function pointer support suffixes"
+    ));
+
+    let file = r#"
+contract testTypes {
+    struct test {
+        uint a;
+        uint b;
+    }
+    test tt1;
+    function bar(uint a) public pure returns (uint) {
+        return a + 3;
+    }
+
+    function testAsm(uint[] calldata vl) public pure {
+        test storage tt2 = tt1;
+        function(uint) external pure returns (uint) func = this.bar;
+        assembly {
+            {
+               let y := func.length
+            }
+        }
+    }
+}    "#;
+
+    let ns = parse(file);
+    assert!(assert_message_in_diagnostics(
+        &ns.diagnostics,
+        r#"variables of type function pointer only support ".selector" and ".address" suffixes"#
+    ));
+
+    let file = r#"
+contract testTypes {
+    function testAsm(uint[] calldata vl) public pure {
+        assembly {
+            {
+               let y := vl.selector
+            }
+        }
+    }
+}    "#;
+    let ns = parse(file);
+    assert!(assert_message_in_diagnostics(
+        &ns.diagnostics,
+        r#"calldata variables only support ".offset" and ".length""#
+    ));
+
+    let file = r#"
+contract testTypes {
+    uint constant cte = 5;
+    function testAsm(uint[] calldata vl) public pure {
+        assembly {
+            {
+               let y := cte.offset
+            }
+        }
+    }
+}
+    "#;
+    let ns = parse(file);
+    assert!(assert_message_in_diagnostics(
+        &ns.diagnostics,
+        "the suffixes .offset and .slot can only be used in non-constant storage variables"
+    ));
+
+    let file = r#"
+contract testTypes {
+    uint constant cte = 5;
+    function testAsm(uint[] calldata vl) public pure {
+        assembly {
+            {
+               let y := cte.dada
+            }
+        }
+    }
+}    "#;
+
+    let ns = parse(file);
+    assert!(assert_message_in_diagnostics(
+        &ns.diagnostics,
+        "the provided suffix is not allowed in yul"
+    ));
+}
+
+#[test]
+fn test_check_argument() {
+    let file = r#"
+contract testTypes {
+    function testAsm(uint[] calldata vl) public pure {
+        assembly {
+            {
+                let a1 : u32 := 5
+                let b1 : s32 := 6
+                let c1 : u256 := 7
+                let d1 : s256 := 8
+                let f1 : u256 := 9
+
+                let ret1 := testPars(a1, b1, c1, d1, f1)
+                function testPars(a : s32, b:u32, c:u128, d:s128, f : bool) -> ret{
+                    ret := add(a, b)
+                    ret := add(c, ret)
+                    ret := add(d, ret)
+                    if f {
+                        ret := 0
+                    }
+                }
+            }
+        }
+    }
+}
+    "#;
+
+    let ns = parse(file);
+    assert!(assert_message_in_diagnostics(
+        &ns.diagnostics,
+        "32 bit unsigned integer may not fit into 32 bit signed integer"
+    ));
+
+    assert!(assert_message_in_diagnostics(
+        &ns.diagnostics,
+        "signed integer may not be correctly represented as unsigned integer"
+    ));
+
+    assert!(assert_message_in_diagnostics(
+        &ns.diagnostics,
+        "256 bit type may not fit into 128 bit type"
+    ));
+
+    assert!(assert_message_in_diagnostics(
+        &ns.diagnostics,
+        "256 bit type may not fit into 128 bit type"
+    ));
+
+    assert!(assert_message_in_diagnostics(
+        &ns.diagnostics,
+        "Truncating argument to bool"
+    ));
+}
+
+#[test]
+fn address_member_access() {
+    let file = r#"
+contract C {
+    // Assigns a new selector and address to the return variable @fun
+    function combineToFunctionPointer(address newAddress, uint newSelector) public pure returns (function() external fun) {
+        assembly {
+            fun.selector := newSelector
+            fun.address  := newAddress
+        }
+    }
+}
+    "#;
+
+    let ns = parse(file);
+    assert_eq!(ns.diagnostics.len(), 5);
+    assert!(assert_message_in_diagnostics(
+        &ns.diagnostics,
+        "evm assembly not supported on target solana"
+    ));
+
+    assert!(assert_message_in_diagnostics(
+        &ns.diagnostics,
+        "function parameter 'newAddress' has never been read"
+    ));
+
+    assert!(assert_message_in_diagnostics(
+        &ns.diagnostics,
+        "function parameter 'newSelector' has never been read"
+    ));
+
+    assert!(assert_message_in_diagnostics(
+        &ns.diagnostics,
+        "return variable 'fun' has never been assigned"
+    ));
+
+    assert!(assert_message_in_diagnostics(
+        &ns.diagnostics,
+        "found contract ‘C’"
+    ));
 }

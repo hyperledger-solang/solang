@@ -346,8 +346,8 @@ impl SolangServer {
                 }
             }
             ast::Statement::Underscore(_loc) => {}
-            ast::Statement::AssemblyBlock(_) => {
-                unimplemented!("Assembly block not implemented in language server");
+            ast::Statement::Assembly(_) => {
+                //unimplemented!("Assembly block not implemented in language server");
             }
         }
     }

@@ -3,10 +3,11 @@ use crate::codegen::cfg::ControlFlowGraph;
 pub use crate::parser::diagnostics::*;
 use crate::parser::pt;
 use crate::parser::pt::{CodeLocation, OptionalCodeLocation};
-use crate::sema::assembly::AssemblyStatement;
+use crate::sema::assembly::InlineAssembly;
 use crate::Target;
 use num_bigint::BigInt;
 use num_rational::BigRational;
+use std::sync::Arc;
 use std::{
     collections::{BTreeMap, HashMap},
     fmt,
@@ -1395,7 +1396,7 @@ pub enum Statement {
         unchecked: bool,
         statements: Vec<Statement>,
     },
-    VariableDecl(pt::Loc, usize, Parameter, Option<Expression>),
+    VariableDecl(pt::Loc, usize, Parameter, Option<Arc<Expression>>),
     If(pt::Loc, bool, Expression, Vec<Statement>, Vec<Statement>),
     While(pt::Loc, bool, Expression, Vec<Statement>),
     For {
@@ -1421,7 +1422,7 @@ pub enum Statement {
     },
     TryCatch(pt::Loc, bool, TryCatch),
     Underscore(pt::Loc),
-    AssemblyBlock(Vec<AssemblyStatement>),
+    Assembly(InlineAssembly),
 }
 
 #[derive(Clone, Debug)]
@@ -1536,7 +1537,7 @@ impl Statement {
             Statement::Delete(..) => true,
             Statement::Continue(_) | Statement::Break(_) | Statement::Return(..) => false,
             Statement::For { reachable, .. } | Statement::TryCatch(_, reachable, _) => *reachable,
-            Statement::AssemblyBlock(_) => unimplemented!("Assembly block ast not ready"),
+            Statement::Assembly(_) => unimplemented!("Assembly block ast not ready"),
         }
     }
 }

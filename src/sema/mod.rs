@@ -1502,6 +1502,7 @@ impl ast::Namespace {
             function_no,
             constant: true,
             lvalue: false,
+            yul_function: false,
         };
 
         let size_expr = expression(

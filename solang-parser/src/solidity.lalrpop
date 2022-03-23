@@ -754,11 +754,11 @@ NonIfStatement: Statement = {
     <l:@L> "unchecked" "{" <statements:Statement*> "}" <r:@R> => {
         Statement::Block { loc: Loc::File(file_no, l, r), unchecked: true, statements }
     },
-    <l:@L> "assembly" <dialect:StringLiteral?> <statements:AssemblyBlock> <r:@R> => {
+    <l:@L> "assembly" <dialect:StringLiteral?> <block:AssemblyBlock> <r:@R> => {
         Statement::Assembly {
             loc: Loc::File(file_no, l, r),
             dialect: dialect.map(|dialect| dialect.to_owned()),
-            statements
+            block
         }
     },
     <SimpleStatement> ";" => <>,
@@ -791,12 +791,13 @@ NonIfStatement: Statement = {
 AssemblyIdentifier: Identifier = {
     <l:@L> <n:identifier> <r:@R> => Identifier{loc: Loc::File(file_no, l, r), name: n.to_string()},
     <l:@L> "return" <r:@R> => Identifier{loc: Loc::File(file_no, l, r), name: "return".to_string()},
-    <l:@L> "revert" <r:@R> => Identifier{loc: Loc::File(file_no, l, r), name: "revert".to_string()}
+    <l:@L> "revert" <r:@R> => Identifier{loc: Loc::File(file_no, l, r), name: "revert".to_string()},
+    <l:@L> "bool" <r:@R> => Identifier{loc: Loc::File(file_no, l, r), name: "bool".to_string()},
+    <l:@L> "address" <r:@L> => Identifier{loc: Loc::File(file_no, l, r), name: "address".to_string()},
 }
 
 AssemblyStatement: AssemblyStatement = {
-    <l:@L> "{" <statement:AssemblyStatement> "}" <r:@R> => { AssemblyStatement::Block(Loc::File(file_no, l, r),
-            Box::new(statement))},
+    <AssemblyBlock> => AssemblyStatement::Block(<>),
     <AssemblyVariableDeclaration> => <>,
     <AssemblyAssignment> => <>,
     <AssemblyFunctionCall> => AssemblyStatement::FunctionCall(Box::new(<>)),
@@ -815,8 +816,8 @@ AssemblyStatement: AssemblyStatement = {
     },
 }
 
-AssemblyBlock: Vec<AssemblyStatement> = {
-    "{" <AssemblyStatement*> "}" => <>,
+AssemblyBlock: AssemblyBlock = {
+    <l:@L> "{" <statements:AssemblyStatement*> "}" <r:@R> => AssemblyBlock{loc: Loc::File(file_no, l, r), statements},
 }
 
 AssemblyLiteral: AssemblyExpression = {
@@ -904,27 +905,43 @@ AssemblyType: AssemblyTypedIdentifier = {
 }
 
 AssemblySwitch: AssemblyStatement = {
-    <l:@L> "switch" <expr:AssemblyExpression> <default:AssemblySwitchDefault> <r:@R> =>
-    AssemblyStatement::Switch(Loc::File(file_no, l, r), expr, Vec::new(), Some(default)),
-    <l:@L> "switch" <expr:AssemblyExpression> <cases:AssemblySwitchCase+> <default:AssemblySwitchDefault?> <r:@R> =>
-    AssemblyStatement::Switch(Loc::File(file_no, l, r), expr, cases, default),
+    <l:@L> "switch" <condition:AssemblyExpression> <default:AssemblySwitchDefault> <r:@R> =>
+    AssemblyStatement::Switch(AssemblySwitch{
+        loc: Loc::File(file_no, l, r),
+        condition,
+        cases: Vec::new(),
+        default: Some(default)
+    }),
+    <l:@L> "switch" <condition:AssemblyExpression> <cases:AssemblySwitchCase+> <default:AssemblySwitchDefault?> <r:@R> =>
+    AssemblyStatement::Switch(AssemblySwitch{
+        loc: Loc::File(file_no, l, r),
+        condition,
+        cases,
+        default
+    }),
 }
 
-AssemblySwitchDefault: AssemblySwitch = {
-    "default" <body:AssemblyBlock> => {
-        AssemblySwitch::Default(body)
+AssemblySwitchDefault: AssemblySwitchOptions = {
+    <l:@L> "default" <body:AssemblyBlock> <r:@R> => {
+        AssemblySwitchOptions::Default(Loc::File(file_no, l, r), body)
     }
 }
 
-AssemblySwitchCase: AssemblySwitch = {
-    "case" <case:AssemblyLiteral> <body:AssemblyBlock> => {
-        AssemblySwitch::Case(case, body)
+AssemblySwitchCase: AssemblySwitchOptions = {
+    <l:@L> "case" <case:AssemblyLiteral> <body:AssemblyBlock> <r:@R> => {
+        AssemblySwitchOptions::Case(Loc::File(file_no, l, r), case, body)
     }
 }
 
 AssemblyFor: AssemblyStatement = {
     <l:@L> "for" <init:AssemblyBlock> <cond:AssemblyExpression> <post_iter:AssemblyBlock> <body:AssemblyBlock> <r:@R> => {
-        AssemblyStatement::For(Loc::File(file_no, l, r), init, cond, post_iter, body)
+        AssemblyStatement::For(AssemblyFor{
+            loc: Loc::File(file_no, l, r),
+            init_block: init,
+            condition: cond,
+            post_block: post_iter,
+            execution_block: body
+        })
     },
 }
 
