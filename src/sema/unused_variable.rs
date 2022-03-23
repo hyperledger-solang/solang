@@ -275,7 +275,7 @@ pub fn emit_warning_local_variable(variable: &symtable::Variable) -> Option<Diag
         }
 
         VariableUsage::LocalVariable => {
-            let assigned = variable.initializer.is_some() || variable.assigned;
+            let assigned = variable.initializer.has_initializer() || variable.assigned;
             if !assigned && !variable.read {
                 return Some(generate_unused_warning(
                     variable.id.loc,
@@ -360,7 +360,8 @@ pub fn emit_warning_local_variable(variable: &symtable::Variable) -> Option<Diag
             None
         }
         VariableUsage::AssemblyLocalVariable => {
-            unimplemented!("Variable usage not implemented for YUL")
+            //unimplemented!("Variable usage not implemented for YUL")
+            None
         }
         VariableUsage::AnonymousReturnVariable => None,
     }

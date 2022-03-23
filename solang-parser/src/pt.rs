@@ -608,7 +608,7 @@ pub enum Statement {
     Assembly {
         loc: Loc,
         dialect: Option<StringLiteral>,
-        statements: Vec<AssemblyStatement>,
+        block: AssemblyBlock,
     },
     Args(Loc, Vec<NamedArgument>),
     If(Loc, Expression, Box<Statement>, Option<Box<Statement>>),
@@ -651,27 +651,37 @@ pub enum AssemblyStatement {
         Vec<AssemblyTypedIdentifier>,
         Option<AssemblyExpression>,
     ),
-    Expression(AssemblyExpression),
-    If(Loc, AssemblyExpression, Vec<AssemblyStatement>),
-    For(
-        Loc,
-        Vec<AssemblyStatement>,
-        AssemblyExpression,
-        Vec<AssemblyStatement>,
-        Vec<AssemblyStatement>,
-    ),
-    Switch(
-        Loc,
-        AssemblyExpression,
-        Vec<AssemblySwitch>,
-        Option<AssemblySwitch>,
-    ),
+    If(Loc, AssemblyExpression, AssemblyBlock),
+    For(AssemblyFor),
+    Switch(AssemblySwitch),
     Leave(Loc),
     Break(Loc),
     Continue(Loc),
-    Block(Loc, Box<AssemblyStatement>),
+    Block(AssemblyBlock),
     FunctionDefinition(Box<AssemblyFunctionDefinition>),
     FunctionCall(Box<AssemblyFunctionCall>),
+}
+#[derive(PartialEq, Clone, Debug)]
+pub struct AssemblySwitch {
+    pub loc: Loc,
+    pub condition: AssemblyExpression,
+    pub cases: Vec<AssemblySwitchOptions>,
+    pub default: Option<AssemblySwitchOptions>,
+}
+
+#[derive(PartialEq, Clone, Debug)]
+pub struct AssemblyFor {
+    pub loc: Loc,
+    pub init_block: AssemblyBlock,
+    pub condition: AssemblyExpression,
+    pub post_block: AssemblyBlock,
+    pub execution_block: AssemblyBlock,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct AssemblyBlock {
+    pub loc: Loc,
+    pub statements: Vec<AssemblyStatement>,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -699,7 +709,7 @@ pub struct AssemblyFunctionDefinition {
     pub id: Identifier,
     pub params: Vec<AssemblyTypedIdentifier>,
     pub returns: Vec<AssemblyTypedIdentifier>,
-    pub body: Vec<AssemblyStatement>,
+    pub body: AssemblyBlock,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -710,9 +720,17 @@ pub struct AssemblyFunctionCall {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub enum AssemblySwitch {
-    Case(AssemblyExpression, Vec<AssemblyStatement>),
-    Default(Vec<AssemblyStatement>),
+pub enum AssemblySwitchOptions {
+    Case(Loc, AssemblyExpression, AssemblyBlock),
+    Default(Loc, AssemblyBlock),
+}
+
+impl CodeLocation for AssemblySwitchOptions {
+    fn loc(&self) -> Loc {
+        match self {
+            AssemblySwitchOptions::Case(loc, ..) | AssemblySwitchOptions::Default(loc, ..) => *loc,
+        }
+    }
 }
 
 impl CodeLocation for Statement {
@@ -734,6 +752,28 @@ impl CodeLocation for Statement {
             | Statement::Emit(loc, ..)
             | Statement::Try(loc, ..)
             | Statement::DocComment(loc, ..) => *loc,
+        }
+    }
+}
+
+impl AssemblyStatement {
+    pub fn loc(&self) -> Loc {
+        match self {
+            AssemblyStatement::Assign(loc, ..)
+            | AssemblyStatement::VariableDeclaration(loc, ..)
+            | AssemblyStatement::If(loc, ..)
+            | AssemblyStatement::Leave(loc, ..)
+            | AssemblyStatement::Break(loc, ..)
+            | AssemblyStatement::Continue(loc, ..) => *loc,
+
+            AssemblyStatement::Block(block) => block.loc,
+
+            AssemblyStatement::FunctionDefinition(func_def) => func_def.loc,
+
+            AssemblyStatement::FunctionCall(func_call) => func_call.loc,
+
+            AssemblyStatement::For(for_struct) => for_struct.loc,
+            AssemblyStatement::Switch(switch_struct) => switch_struct.loc,
         }
     }
 }

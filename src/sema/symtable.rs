@@ -1,6 +1,8 @@
 use indexmap::IndexMap;
+use solang_parser::diagnostics::{ErrorType, Level, Note};
 use std::collections::{HashMap, HashSet, LinkedList};
 use std::str;
+use std::sync::Arc;
 
 use super::ast::{Diagnostic, Namespace, Type};
 use crate::parser::pt;
@@ -15,8 +17,23 @@ pub struct Variable {
     pub assigned: bool,
     pub read: bool,
     pub usage_type: VariableUsage,
-    pub initializer: Option<Expression>,
+    pub initializer: VariableInitializer,
     pub storage_location: Option<pt::StorageLocation>,
+}
+
+#[derive(Clone, Debug)]
+pub enum VariableInitializer {
+    Solidity(Option<Arc<Expression>>),
+    Assembly(bool),
+}
+
+impl VariableInitializer {
+    pub fn has_initializer(&self) -> bool {
+        match self {
+            VariableInitializer::Solidity(expr) => expr.is_some(),
+            VariableInitializer::Assembly(initialized) => *initialized,
+        }
+    }
 }
 
 impl Variable {
@@ -27,11 +44,11 @@ impl Variable {
             self.storage_location,
             Some(pt::StorageLocation::Memory(_)) | Some(pt::StorageLocation::Storage(_))
         ) {
-            if let Some(expr) = &self.initializer {
+            if let VariableInitializer::Solidity(Some(expr)) = &self.initializer {
                 // If the initializer is an array allocation, a constructor or a struct literal,
                 // the variable is not a reference to another.
                 return !matches!(
-                    expr,
+                    **expr,
                     Expression::AllocDynamicArray(..)
                         | Expression::ArrayLiteral(..)
                         | Expression::Constructor { .. }
@@ -85,7 +102,7 @@ impl Symtable {
         id: &pt::Identifier,
         ty: Type,
         ns: &mut Namespace,
-        initializer: Option<Expression>,
+        initializer: VariableInitializer,
         usage_type: VariableUsage,
         storage_location: Option<pt::StorageLocation>,
     ) -> Option<usize> {
@@ -127,6 +144,32 @@ impl Symtable {
         }
 
         Some(pos)
+    }
+
+    pub fn exclusive_add(
+        &mut self,
+        id: &pt::Identifier,
+        ty: Type,
+        ns: &mut Namespace,
+        initializer: VariableInitializer,
+        usage_type: VariableUsage,
+        storage_location: Option<pt::StorageLocation>,
+    ) -> Option<usize> {
+        if let Some(var) = self.find(&id.name) {
+            ns.diagnostics.push(Diagnostic {
+                level: Level::Error,
+                ty: ErrorType::DeclarationError,
+                pos: id.loc,
+                message: format!("variable name '{}' already used in this scope", id.name),
+                notes: vec![Note {
+                    pos: var.id.loc,
+                    message: "found previous declaration here".to_string(),
+                }],
+            });
+            return None;
+        }
+
+        self.add(id, ty, ns, initializer, usage_type, storage_location)
     }
 
     pub fn find(&self, name: &str) -> Option<&Variable> {

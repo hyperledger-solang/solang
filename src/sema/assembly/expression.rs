@@ -2,21 +2,21 @@ use crate::ast::{Namespace, Symbol, Type};
 use crate::sema::assembly::builtin::{
     assembly_unsupported_builtin, parse_builtin_keyword, AssemblyBuiltInFunction,
 };
-use crate::sema::assembly::functions::{AssemblyFunction, AssemblyFunctionParameter};
-use crate::sema::assembly::types::{get_default_type_from_identifier, get_type_from_string};
+use crate::sema::assembly::functions::{AssemblyFunctionParameter, FunctionsTable};
+use crate::sema::assembly::types::{
+    get_default_type_from_identifier, get_type_from_string, verify_type_from_expression,
+};
 use crate::sema::expression::{unescape, ExprContext};
 use crate::sema::symtable::{Symtable, VariableUsage};
-use indexmap::IndexMap;
 use num_bigint::{BigInt, Sign};
 use num_traits::Num;
 use solang_parser::diagnostics::{ErrorType, Level};
 use solang_parser::pt::{AssemblyFunctionCall, CodeLocation, Identifier, Loc, StorageLocation};
 use solang_parser::{pt, Diagnostic};
 
-// TODO: State variables cannot be assigned to, only .slot can be assigned to, .length cannot be assigned to (check TypeChecker.cpp)
 // TODO: Add assembly to unused variable detection
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub enum AssemblyExpression {
     BoolLiteral(pt::Loc, bool, Type),
     NumberLiteral(pt::Loc, BigInt, Type),
@@ -26,11 +26,11 @@ pub enum AssemblyExpression {
     ConstantVariable(pt::Loc, Type, Option<usize>, usize),
     StorageVariable(pt::Loc, Type, usize, usize),
     BuiltInCall(pt::Loc, AssemblyBuiltInFunction, Vec<AssemblyExpression>),
-    FunctionCall(pt::Loc, String, Vec<AssemblyExpression>),
+    FunctionCall(pt::Loc, usize, Vec<AssemblyExpression>),
     MemberAccess(pt::Loc, Box<AssemblyExpression>, AssemblySuffix),
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub enum AssemblySuffix {
     Offset,
     Slot,
@@ -39,6 +39,7 @@ pub enum AssemblySuffix {
     Address,
 }
 
+/// Given a keyword, returns the suffix it represents in YUL
 fn get_suffix_from_string(suffix_name: &str) -> Option<AssemblySuffix> {
     match suffix_name {
         "offset" => Some(AssemblySuffix::Offset),
@@ -67,13 +68,12 @@ impl CodeLocation for AssemblyExpression {
     }
 }
 
-// TODO: remove this decorator. It avoids warnings during development
-#[allow(dead_code)]
+/// Resolve an assembly expression.
 pub(crate) fn resolve_assembly_expression(
     expr: &pt::AssemblyExpression,
     context: &ExprContext,
     symtable: &Symtable,
-    functions: &IndexMap<String, AssemblyFunction>,
+    function_table: &FunctionsTable,
     ns: &mut Namespace,
 ) -> Result<AssemblyExpression, ()> {
     match expr {
@@ -121,15 +121,16 @@ pub(crate) fn resolve_assembly_expression(
         }
 
         pt::AssemblyExpression::FunctionCall(func_call) => {
-            resolve_function_call(functions, func_call, context, symtable, ns)
+            resolve_function_call(function_table, func_call, context, symtable, ns)
         }
 
         pt::AssemblyExpression::Member(loc, expr, id) => {
-            resolve_member_access(loc, expr, id, context, symtable, functions, ns)
+            resolve_member_access(loc, expr, id, context, symtable, function_table, ns)
         }
     }
 }
 
+/// Returns the default YUL type a bigint represents
 fn get_type_from_big_int(big_int: &BigInt) -> Type {
     match big_int.sign() {
         Sign::Minus => Type::Int(256),
@@ -173,7 +174,7 @@ fn resolve_number_literal(
                     pos: *loc,
                     level: Level::Error,
                     ty: ErrorType::TypeError,
-                    message: "singed value cannot fit in unsigned type".to_string(),
+                    message: "signed integer cannot fit in unsigned integer".to_string(),
                     notes: vec![],
                 });
                 return Err(());
@@ -302,54 +303,71 @@ fn resolve_variable_reference(
         }
     }
 
-    match ns.resolve_var(context.file_no, context.contract_no, id, false) {
-        Some(Symbol::Variable(_, Some(var_contract_no), var_no)) => {
-            let var = &ns.contracts[*var_contract_no].variables[*var_no];
-            if var.constant {
+    // yul functions cannot access contract symbols
+    if !context.yul_function {
+        return match ns.resolve_var(context.file_no, context.contract_no, id, false) {
+            Some(Symbol::Variable(_, Some(var_contract_no), var_no)) => {
+                let var = &ns.contracts[*var_contract_no].variables[*var_no];
+                if var.immutable {
+                    ns.diagnostics.push(Diagnostic::error(
+                        id.loc,
+                        "assembly access to immutable variables is not supported".to_string(),
+                    ));
+                    return Err(());
+                }
+
+                if var.constant {
+                    Ok(AssemblyExpression::ConstantVariable(
+                        id.loc,
+                        var.ty.clone(),
+                        Some(*var_contract_no),
+                        *var_no,
+                    ))
+                } else {
+                    Ok(AssemblyExpression::StorageVariable(
+                        id.loc,
+                        var.ty.clone(),
+                        *var_contract_no,
+                        *var_no,
+                    ))
+                }
+            }
+            Some(Symbol::Variable(_, None, var_no)) => {
+                let var = &ns.constants[*var_no];
                 Ok(AssemblyExpression::ConstantVariable(
                     id.loc,
                     var.ty.clone(),
-                    Some(*var_contract_no),
-                    *var_no,
-                ))
-            } else {
-                Ok(AssemblyExpression::StorageVariable(
-                    id.loc,
-                    var.ty.clone(),
-                    *var_contract_no,
+                    None,
                     *var_no,
                 ))
             }
-        }
-        Some(Symbol::Variable(_, None, var_no)) => {
-            let var = &ns.constants[*var_no];
-            Ok(AssemblyExpression::ConstantVariable(
-                id.loc,
-                var.ty.clone(),
-                None,
-                *var_no,
-            ))
-        }
-        None => {
-            ns.diagnostics.push(Diagnostic::decl_error(
-                id.loc,
-                format!("'{}' is not found", id.name),
-            ));
-            Err(())
-        }
+            None => {
+                ns.diagnostics.push(Diagnostic::error(
+                    id.loc,
+                    format!("'{}' is not found", id.name),
+                ));
+                Err(())
+            }
 
-        _ => {
-            ns.diagnostics.push(Diagnostic::error(
-                id.loc,
-                "only variables can be accessed inside assembly blocks".to_string(),
-            ));
-            Err(())
-        }
+            _ => {
+                ns.diagnostics.push(Diagnostic::error(
+                    id.loc,
+                    "only variables can be accessed inside assembly blocks".to_string(),
+                ));
+                Err(())
+            }
+        };
     }
+
+    ns.diagnostics.push(Diagnostic::error(
+        id.loc,
+        format!("'{}' is not found", id.name),
+    ));
+    Err(())
 }
 
-fn resolve_function_call(
-    functions: &IndexMap<String, AssemblyFunction>,
+pub(crate) fn resolve_function_call(
+    function_table: &FunctionsTable,
     func_call: &AssemblyFunctionCall,
     context: &ExprContext,
     symtable: &Symtable,
@@ -375,9 +393,10 @@ fn resolve_function_call(
     let mut resolved_arguments: Vec<AssemblyExpression> =
         Vec::with_capacity(func_call.arguments.len());
     for item in &func_call.arguments {
-        let resolved_expr = resolve_assembly_expression(item, context, symtable, functions, ns)?;
+        let resolved_expr =
+            resolve_assembly_expression(item, context, symtable, function_table, ns)?;
 
-        if let Some(diagnostic) = check_type(&resolved_expr) {
+        if let Some(diagnostic) = check_type(&resolved_expr, context) {
             ns.diagnostics.push(diagnostic);
             return Err(());
         }
@@ -385,7 +404,7 @@ fn resolve_function_call(
         resolved_arguments.push(resolved_expr);
     }
 
-    if let Some(built_in) = parse_builtin_keyword(&func_call.id.name[..]) {
+    if let Some(built_in) = parse_builtin_keyword(func_call.id.name.as_str()) {
         let prototype = &built_in.get_prototype_info();
         if prototype.no_args as usize != func_call.arguments.len() {
             ns.diagnostics.push(Diagnostic {
@@ -405,7 +424,7 @@ fn resolve_function_call(
 
         let default_builtin_parameter = AssemblyFunctionParameter {
             loc: Loc::Builtin,
-            name: Identifier {
+            id: Identifier {
                 loc: Loc::Builtin,
                 name: "".to_string(),
             },
@@ -413,7 +432,7 @@ fn resolve_function_call(
         };
 
         for item in &resolved_arguments {
-            check_function_argument(&default_builtin_parameter, item, functions, ns);
+            check_function_argument(&default_builtin_parameter, item, function_table, ns);
         }
 
         return Ok(AssemblyExpression::BuiltInCall(
@@ -423,7 +442,7 @@ fn resolve_function_call(
         ));
     }
 
-    if let Some(func) = functions.get(&func_call.id.name) {
+    if let Some(func) = function_table.find(&func_call.id.name) {
         if resolved_arguments.len() != func.params.len() {
             ns.diagnostics.push(Diagnostic::error(
                 func_call.loc,
@@ -438,12 +457,12 @@ fn resolve_function_call(
         }
 
         for (index, item) in func.params.iter().enumerate() {
-            check_function_argument(item, &resolved_arguments[index], functions, ns);
+            check_function_argument(item, &resolved_arguments[index], function_table, ns);
         }
 
         return Ok(AssemblyExpression::FunctionCall(
             func_call.id.loc,
-            func_call.id.name.clone(),
+            func.function_no,
             resolved_arguments,
         ));
     }
@@ -456,67 +475,18 @@ fn resolve_function_call(
     Err(())
 }
 
+/// Check if the provided argument is compatible with the declared parameters of a function.
 fn check_function_argument(
     parameter: &AssemblyFunctionParameter,
     argument: &AssemblyExpression,
-    functions: &IndexMap<String, AssemblyFunction>,
+    function_table: &FunctionsTable,
     ns: &mut Namespace,
 ) {
-    let arg_type = match argument {
-        AssemblyExpression::BoolLiteral(..) => Type::Bool,
-
-        AssemblyExpression::NumberLiteral(_, _, ty)
-        | AssemblyExpression::StringLiteral(_, _, ty)
-        | AssemblyExpression::AssemblyLocalVariable(_, ty, _)
-        | AssemblyExpression::ConstantVariable(_, ty, ..)
-        | AssemblyExpression::SolidityLocalVariable(_, ty, None, _) => ty.clone(),
-
-        AssemblyExpression::SolidityLocalVariable(_, _, Some(_), _)
-        | AssemblyExpression::MemberAccess(..)
-        | AssemblyExpression::StorageVariable(..) => Type::Uint(256),
-
-        AssemblyExpression::BuiltInCall(_, ty, _) => {
-            let prototype = ty.get_prototype_info();
-            if prototype.no_returns == 0 {
-                ns.diagnostics.push(Diagnostic::error(
-                    argument.loc(),
-                    format!("builtin function '{}' returns nothing", prototype.name),
-                ));
-                Type::Void
-            } else if prototype.no_args > 1 {
-                ns.diagnostics.push(Diagnostic::error(
-                    argument.loc(),
-                    format!(
-                        "builtin function '{}' has multiple returns and cannot be used as argument",
-                        prototype.name
-                    ),
-                ));
-                Type::Unreachable
-            } else {
-                Type::Uint(256)
-            }
-        }
-
-        AssemblyExpression::FunctionCall(_, name, ..) => {
-            let func = functions.get(name).unwrap();
-            if func.returns.is_empty() {
-                ns.diagnostics.push(Diagnostic::error(
-                    argument.loc(),
-                    format!("function '{}' returns nothing", func.name),
-                ));
-                Type::Void
-            } else if func.returns.len() > 1 {
-                ns.diagnostics.push(Diagnostic::error(
-                    argument.loc(),
-                    format!(
-                        "function '{}' has multiple returns and cannot be used as argument",
-                        func.name
-                    ),
-                ));
-                Type::Unreachable
-            } else {
-                func.returns[0].ty.clone()
-            }
+    let arg_type = match verify_type_from_expression(argument, function_table) {
+        Ok(ty) => ty,
+        Err(diagnostic) => {
+            ns.diagnostics.push(diagnostic);
+            Type::Unreachable
         }
     };
 
@@ -530,16 +500,16 @@ fn check_function_argument(
     {
         let n1 = parameter.ty.get_type_size();
         let n2 = arg_type.get_type_size();
-        if n1 > n2 {
+        if n1 < n2 {
             ns.diagnostics.push(Diagnostic::warning(
                 argument.loc(),
-                format!("{}-bit type may not fit into '{}'-bit type", n1, n2),
+                format!("{} bit type may not fit into {} bit type", n2, n1),
             ));
         }
     } else if matches!(parameter.ty, Type::Uint(_)) && matches!(arg_type, Type::Int(_)) {
         ns.diagnostics.push(Diagnostic::warning(
             argument.loc(),
-            "Singed integer may not be correctly represented as unsigned integer".to_string(),
+            "signed integer may not be correctly represented as unsigned integer".to_string(),
         ));
     } else if matches!(parameter.ty, Type::Int(_)) && matches!(arg_type, Type::Uint(_)) {
         let n1 = parameter.ty.get_type_size();
@@ -548,7 +518,7 @@ fn check_function_argument(
             ns.diagnostics.push(Diagnostic::warning(
                 argument.loc(),
                 format!(
-                    "{}-bit unsigned integer may not fit into {}-bit signed integer",
+                    "{} bit unsigned integer may not fit into {} bit signed integer",
                     n1, n2
                 ),
             ));
@@ -556,13 +526,14 @@ fn check_function_argument(
     }
 }
 
+/// Resolve variables accessed with suffixes (e.g. 'var.slot', 'var.offset')
 fn resolve_member_access(
     loc: &pt::Loc,
     expr: &pt::AssemblyExpression,
     id: &Identifier,
     context: &ExprContext,
     symtable: &Symtable,
-    functions: &IndexMap<String, AssemblyFunction>,
+    function_table: &FunctionsTable,
     ns: &mut Namespace,
 ) -> Result<AssemblyExpression, ()> {
     let suffix_type = match get_suffix_from_string(&id.name[..]) {
@@ -576,7 +547,7 @@ fn resolve_member_access(
         }
     };
 
-    let resolved_expr = resolve_assembly_expression(expr, context, symtable, functions, ns)?;
+    let resolved_expr = resolve_assembly_expression(expr, context, symtable, function_table, ns)?;
     match resolved_expr {
         AssemblyExpression::ConstantVariable(_, _, Some(_), _) => {
             ns.diagnostics.push(Diagnostic::error(
@@ -598,8 +569,8 @@ fn resolve_member_access(
                     resolved_expr.loc(),
                     "calldata variables only support \".offset\" and \".length\"".to_string(),
                 ));
+                return Err(());
             }
-            return Err(());
         }
 
         AssemblyExpression::SolidityLocalVariable(_, Type::InternalFunction { .. }, ..)
@@ -667,7 +638,68 @@ fn resolve_member_access(
     ))
 }
 
-pub(crate) fn check_type(expr: &AssemblyExpression) -> Option<Diagnostic> {
+/// Check if an assembly expression has been used correctly in a assignment or if the member access
+/// has a valid expression given the context.
+pub(crate) fn check_type(expr: &AssemblyExpression, context: &ExprContext) -> Option<Diagnostic> {
+    if context.lvalue {
+        match expr {
+            AssemblyExpression::SolidityLocalVariable(
+                _,
+                _,
+                Some(StorageLocation::Storage(_)),
+                ..,
+            )
+            | AssemblyExpression::StorageVariable(..) => {
+                return Some(Diagnostic::error(
+                    expr.loc(),
+                    "storage variables cannot be assigned any value in assembly. You may use \"sstore()\"".to_string()
+                ));
+            }
+
+            AssemblyExpression::StringLiteral(..)
+            | AssemblyExpression::NumberLiteral(..)
+            | AssemblyExpression::BoolLiteral(..)
+            | AssemblyExpression::ConstantVariable(..) => {
+                return Some(Diagnostic::error(
+                    expr.loc(),
+                    "cannot assigned a value to a constant".to_string(),
+                ));
+            }
+
+            AssemblyExpression::BuiltInCall(..) | AssemblyExpression::FunctionCall(..) => {
+                return Some(Diagnostic::error(
+                    expr.loc(),
+                    "cannot assign a value to a function".to_string(),
+                ));
+            }
+
+            AssemblyExpression::MemberAccess(_, _, AssemblySuffix::Length) => {
+                return Some(Diagnostic::error(
+                    expr.loc(),
+                    "cannot assign a value to length".to_string(),
+                ));
+            }
+
+            AssemblyExpression::MemberAccess(_, _, AssemblySuffix::Offset) => {
+                return Some(Diagnostic::error(
+                    expr.loc(),
+                    "cannot assign a value to offset".to_string(),
+                ));
+            }
+
+            AssemblyExpression::MemberAccess(_, expr, AssemblySuffix::Slot) => {
+                if matches!(**expr, AssemblyExpression::StorageVariable(..)) {
+                    return Some(Diagnostic::error(
+                        expr.loc(),
+                        "cannot assign to slot of storage variable".to_string(),
+                    ));
+                }
+            }
+
+            _ => (),
+        }
+    }
+
     match expr {
         AssemblyExpression::SolidityLocalVariable(_, _, Some(StorageLocation::Storage(_)), ..)
         | AssemblyExpression::StorageVariable(..) => {

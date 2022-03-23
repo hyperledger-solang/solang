@@ -208,6 +208,7 @@ fn resolve_base_args(
             unchecked: false,
             constant: false,
             lvalue: false,
+            yul_function: false,
         };
 
         for base in &def.base {

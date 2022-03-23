@@ -10,12 +10,12 @@ use crate::parser::pt;
 use crate::parser::pt::CatchClause;
 use crate::parser::pt::CodeLocation;
 use crate::parser::pt::OptionalCodeLocation;
-use crate::sema::{
-    builtin,
-    symtable::VariableUsage,
-    unused_variable::{assigned_variable, check_function_call, used_variable},
-};
+use crate::sema::assembly::resolve_inline_assembly;
+use crate::sema::builtin;
+use crate::sema::symtable::{VariableInitializer, VariableUsage};
+use crate::sema::unused_variable::{assigned_variable, check_function_call, used_variable};
 use std::collections::{BTreeMap, HashMap, HashSet};
+use std::sync::Arc;
 
 pub fn resolve_function_body(
     def: &pt::FunctionDefinition,
@@ -34,6 +34,7 @@ pub fn resolve_function_body(
         unchecked: false,
         constant: false,
         lvalue: false,
+        yul_function: false,
     };
 
     // first add function parameters
@@ -44,7 +45,7 @@ pub fn resolve_function_body(
                 name,
                 ns.functions[function_no].params[i].ty.clone(),
                 ns,
-                None,
+                VariableInitializer::Solidity(None),
                 VariableUsage::Parameter,
                 p.storage.clone(),
             ) {
@@ -209,7 +210,7 @@ pub fn resolve_function_body(
                 name,
                 ret.ty.clone(),
                 ns,
-                None,
+                VariableInitializer::Solidity(None),
                 VariableUsage::ReturnVariable,
                 None,
             ) {
@@ -228,7 +229,7 @@ pub fn resolve_function_body(
                     &id,
                     ret.ty.clone(),
                     ns,
-                    None,
+                    VariableInitializer::Solidity(None),
                     VariableUsage::AnonymousReturnVariable,
                     None,
                 )
@@ -327,7 +328,14 @@ fn statement(
 
                 used_variable(ns, &expr, symtable);
 
-                Some(cast(&expr.loc(), expr, &var_ty, true, ns, diagnostics)?)
+                Some(Arc::new(cast(
+                    &expr.loc(),
+                    expr,
+                    &var_ty,
+                    true,
+                    ns,
+                    diagnostics,
+                )?))
             } else {
                 None
             };
@@ -336,7 +344,7 @@ fn statement(
                 &decl.name,
                 var_ty.clone(),
                 ns,
-                initializer.clone(),
+                VariableInitializer::Solidity(initializer.clone()),
                 VariableUsage::LocalVariable,
                 decl.storage.clone(),
             ) {
@@ -791,12 +799,29 @@ fn statement(
 
             Ok(true)
         }
-        pt::Statement::Assembly { loc, .. } => {
+        pt::Statement::Assembly {
+            loc,
+            dialect,
+            block,
+        } => {
+            // TODO: Remove this error when sema is ready
             ns.diagnostics.push(Diagnostic::error(
                 *loc,
                 format!("evm assembly not supported on target {}", ns.target),
             ));
-            Err(())
+
+            if dialect.is_some() && dialect.as_ref().unwrap().string != "evmasm" {
+                ns.diagnostics.push(Diagnostic::error(
+                    dialect.as_ref().unwrap().loc,
+                    "only evmasm dialect is supported".to_string(),
+                ));
+                return Err(());
+            }
+
+            let resolved_asm =
+                resolve_inline_assembly(loc, &block.statements, context, symtable, ns);
+            res.push(Statement::Assembly(resolved_asm.0));
+            Ok(resolved_asm.1)
         }
         pt::Statement::Revert(loc, error, args) => {
             if let Some(error) = error {
@@ -1216,7 +1241,7 @@ fn destructure(
                     name,
                     ty.clone(),
                     ns,
-                    None,
+                    VariableInitializer::Solidity(None),
                     VariableUsage::DestructureVariable,
                     storage.clone(),
                 ) {
@@ -1908,7 +1933,7 @@ fn try_catch(
                         name,
                         ret_ty.clone(),
                         ns,
-                        None,
+                        VariableInitializer::Solidity(None),
                         VariableUsage::TryCatchReturns,
                         storage.clone(),
                     ) {
@@ -2023,7 +2048,7 @@ fn try_catch(
                             name,
                             catch_ty,
                             ns,
-                            None,
+                            VariableInitializer::Solidity(None),
                             VariableUsage::TryCatchErrorBytes,
                             param.storage.clone(),
                         ) {
@@ -2104,7 +2129,7 @@ fn try_catch(
                         name,
                         Type::String,
                         ns,
-                        None,
+                        VariableInitializer::Solidity(None),
                         VariableUsage::TryCatchErrorString,
                         param.storage.clone(),
                     ) {

@@ -623,7 +623,7 @@ pub fn statement(
             }
         }
 
-        Statement::AssemblyBlock(_) => {
+        Statement::Assembly(_) => {
             unimplemented!("Assembly block codegen not yet ready");
         }
     }

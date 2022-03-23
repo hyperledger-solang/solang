@@ -1562,7 +1562,7 @@ impl Dot {
                     );
                 }
 
-                Statement::AssemblyBlock(_) => {
+                Statement::Assembly(_) => {
                     unimplemented!("Assembly block graphviz not ready yet");
                 }
             }

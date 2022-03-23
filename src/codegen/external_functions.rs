@@ -129,7 +129,7 @@ fn check_statement(stmt: &Statement, call_list: &mut Vec<usize>) -> bool {
         | Statement::Break(_)
         | Statement::Continue(_)
         | Statement::Underscore(_) => (),
-        Statement::AssemblyBlock(_) => {
+        Statement::Assembly(_) => {
             unimplemented!("Assembly block codegen not yet ready!");
         }
     }

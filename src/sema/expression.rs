@@ -1423,6 +1423,8 @@ pub struct ExprContext {
     pub constant: bool,
     /// Are we resolving an l-value
     pub lvalue: bool,
+    /// Are we resolving a yul function (it cannot have external dependencies)
+    pub yul_function: bool,
 }
 
 /// Resolve a parsed expression into an AST expression. The resolve_to argument is a hint to what

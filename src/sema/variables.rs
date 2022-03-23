@@ -246,6 +246,7 @@ pub fn var_decl(
             function_no: None,
             constant,
             lvalue: false,
+            yul_function: false,
         };
 
         match expression(
