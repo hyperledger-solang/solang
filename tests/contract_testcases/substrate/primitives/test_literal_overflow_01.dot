@@ -3,7 +3,7 @@ strict digraph "tests/contract_testcases/substrate/primitives/test_literal_overf
 	var [label="variable foo\nvisibility internal\ntests/contract_testcases/substrate/primitives/test_literal_overflow_01.sol:2:13-33"]
 	diagnostic [label="found contract ‘test’\nlevel Debug\ntests/contract_testcases/substrate/primitives/test_literal_overflow_01.sol:1:1-15"]
 	diagnostic_6 [label="literal 65536 is too large to fit into type ‘uint16’\nlevel Error\ntests/contract_testcases/substrate/primitives/test_literal_overflow_01.sol:2:26-33"]
-	diagnostic_7 [label="storage variable 'foo' has never been used\nlevel Warning\ntests/contract_testcases/substrate/primitives/test_literal_overflow_01.sol:2:13-33"]
+	diagnostic_7 [label="storage variable ‘foo‘ has never been used\nlevel Warning\ntests/contract_testcases/substrate/primitives/test_literal_overflow_01.sol:2:13-33"]
 	contracts -> contract
 	contract -> var [label="variable"]
 	diagnostics -> diagnostic [label="Debug"]

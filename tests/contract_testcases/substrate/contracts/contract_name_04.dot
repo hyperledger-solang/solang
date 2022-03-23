@@ -5,7 +5,7 @@ strict digraph "tests/contract_testcases/substrate/contracts/contract_name_04.so
 	diagnostic [label="found contract ‘test’\nlevel Debug\ntests/contract_testcases/substrate/contracts/contract_name_04.sol:1:1-15"]
 	diagnostic_6 [label="declaration of ‘test’ shadows contract name\nlevel Warning\ntests/contract_testcases/substrate/contracts/contract_name_04.sol:3:21-25"]
 	note [label="previous declaration of contract name\ntests/contract_testcases/substrate/contracts/contract_name_04.sol:1:1-15"]
-	diagnostic_8 [label="local variable 'test' has never been read nor assigned\nlevel Warning\ntests/contract_testcases/substrate/contracts/contract_name_04.sol:3:21-25"]
+	diagnostic_8 [label="local variable ‘test‘ has never been read nor assigned\nlevel Warning\ntests/contract_testcases/substrate/contracts/contract_name_04.sol:3:21-25"]
 	diagnostic_9 [label="function can be declared ‘pure’\nlevel Warning\ntests/contract_testcases/substrate/contracts/contract_name_04.sol:2:13-32"]
 	contracts -> contract
 	contract -> f [label="function"]

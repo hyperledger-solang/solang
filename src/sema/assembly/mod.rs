@@ -15,8 +15,9 @@ mod statements;
 mod switch;
 mod tests;
 mod types;
+mod unused_variable;
 
-// TODO: Mark functions and variables as used/unused
+// TODO: Mark functions as used/unused
 
 #[derive(Debug, Clone)]
 pub struct InlineAssembly {

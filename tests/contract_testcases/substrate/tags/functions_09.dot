@@ -8,9 +8,9 @@ strict digraph "tests/contract_testcases/substrate/tags/functions_09.sol" {
 	contract_7 [label="contract b\ntests/contract_testcases/substrate/tags/functions_09.sol:9:9-20"]
 	diagnostic [label="found contract ‘c’\nlevel Debug\ntests/contract_testcases/substrate/tags/functions_09.sol:2:9-24"]
 	diagnostic_10 [label="found contract ‘b’\nlevel Debug\ntests/contract_testcases/substrate/tags/functions_09.sol:9:9-20"]
-	diagnostic_11 [label="function parameter 'x' has never been read\nlevel Warning\ntests/contract_testcases/substrate/tags/functions_09.sol:6:30-31"]
-	diagnostic_12 [label="return variable 'a' has never been assigned\nlevel Warning\ntests/contract_testcases/substrate/tags/functions_09.sol:6:58-59"]
-	diagnostic_13 [label="return variable 'k' has never been assigned\nlevel Warning\ntests/contract_testcases/substrate/tags/functions_09.sol:6:66-67"]
+	diagnostic_11 [label="function parameter ‘x‘ has never been read\nlevel Warning\ntests/contract_testcases/substrate/tags/functions_09.sol:6:30-31"]
+	diagnostic_12 [label="return variable ‘a‘ has never been assigned\nlevel Warning\ntests/contract_testcases/substrate/tags/functions_09.sol:6:58-59"]
+	diagnostic_13 [label="return variable ‘k‘ has never been assigned\nlevel Warning\ntests/contract_testcases/substrate/tags/functions_09.sol:6:66-67"]
 	contracts -> contract
 	contract -> base [label="base"]
 	contract -> foo [label="function"]

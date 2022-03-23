@@ -360,8 +360,8 @@ strict digraph "tests/contract_testcases/ewasm/rubixi.sol" {
 	number_literal_360 [label="uint256 literal: 1000000000000000000\ntests/contract_testcases/ewasm/rubixi.sol:153:73-80"]
 	diagnostic [label="pragma ‘solidity’ is ignored\nlevel Debug\ntests/contract_testcases/ewasm/rubixi.sol:2:2-25"]
 	diagnostic_363 [label="found contract ‘Rubixi’\nlevel Debug\ntests/contract_testcases/ewasm/rubixi.sol:4:2-18"]
-	diagnostic_364 [label="local variable 'payoutToSend' has been assigned, but never read\nlevel Warning\ntests/contract_testcases/ewasm/rubixi.sol:67:31-43"]
-	diagnostic_365 [label="return variable 'Address' has never been assigned\nlevel Warning\ntests/contract_testcases/ewasm/rubixi.sol:150:87-94"]
+	diagnostic_364 [label="local variable ‘payoutToSend‘ has been assigned, but never read\nlevel Warning\ntests/contract_testcases/ewasm/rubixi.sol:67:31-43"]
+	diagnostic_365 [label="return variable ‘Address‘ has never been assigned\nlevel Warning\ntests/contract_testcases/ewasm/rubixi.sol:150:87-94"]
 	structs -> Participant
 	contracts -> contract
 	contract -> var [label="variable"]

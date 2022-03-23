@@ -7,7 +7,7 @@ strict digraph "tests/contract_testcases/substrate/format/parse_08.sol" {
 	number_literal_6 [label="uint16 literal: 51966\ntests/contract_testcases/substrate/format/parse_08.sol:4:51-57"]
 	bytes_literal [label="string literal: 73\ntests/contract_testcases/substrate/format/parse_08.sol:4:28-58"]
 	diagnostic [label="found contract ‘c’\nlevel Debug\ntests/contract_testcases/substrate/format/parse_08.sol:2:9-20"]
-	diagnostic_10 [label="local variable 's' has been assigned, but never read\nlevel Warning\ntests/contract_testcases/substrate/format/parse_08.sol:4:24-25"]
+	diagnostic_10 [label="local variable ‘s‘ has been assigned, but never read\nlevel Warning\ntests/contract_testcases/substrate/format/parse_08.sol:4:24-25"]
 	diagnostic_11 [label="function can be declared ‘pure’\nlevel Warning\ntests/contract_testcases/substrate/format/parse_08.sol:3:13-34"]
 	contracts -> contract
 	contract -> foo [label="function"]

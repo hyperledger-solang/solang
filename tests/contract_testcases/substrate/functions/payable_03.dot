@@ -5,7 +5,7 @@ strict digraph "tests/contract_testcases/substrate/functions/payable_03.sol" {
 	diagnostic [label="pragma ‘solidity’ is ignored\nlevel Debug\ntests/contract_testcases/substrate/functions/payable_03.sol:2:9-26"]
 	diagnostic_7 [label="found contract ‘c’\nlevel Debug\ntests/contract_testcases/substrate/functions/payable_03.sol:4:9-20"]
 	diagnostic_8 [label="fallback function must not be declare payable, use ‘receive() external payable’ instead\nlevel Error\ntests/contract_testcases/substrate/functions/payable_03.sol:7:13-40"]
-	diagnostic_9 [label="storage variable 'i' has been assigned, but never read\nlevel Warning\ntests/contract_testcases/substrate/functions/payable_03.sol:5:13-24"]
+	diagnostic_9 [label="storage variable ‘i‘ has been assigned, but never read\nlevel Warning\ntests/contract_testcases/substrate/functions/payable_03.sol:5:13-24"]
 	contracts -> contract
 	contract -> var [label="variable"]
 	var -> number_literal [label="initializer"]

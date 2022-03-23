@@ -12,8 +12,8 @@ strict digraph "tests/contract_testcases/substrate/contracts/contract_name_08.so
 	diagnostic [label="found contract ‘a’\nlevel Debug\ntests/contract_testcases/substrate/contracts/contract_name_08.sol:2:9-20"]
 	diagnostic_13 [label="found contract ‘b’\nlevel Debug\ntests/contract_testcases/substrate/contracts/contract_name_08.sol:8:9-20"]
 	diagnostic_14 [label="found contract ‘c’\nlevel Debug\ntests/contract_testcases/substrate/contracts/contract_name_08.sol:14:9-20"]
-	diagnostic_15 [label="local variable 'y' has been assigned, but never read\nlevel Warning\ntests/contract_testcases/substrate/contracts/contract_name_08.sol:4:19-20"]
-	diagnostic_16 [label="local variable 'y' has been assigned, but never read\nlevel Warning\ntests/contract_testcases/substrate/contracts/contract_name_08.sol:10:19-20"]
+	diagnostic_15 [label="local variable ‘y‘ has been assigned, but never read\nlevel Warning\ntests/contract_testcases/substrate/contracts/contract_name_08.sol:4:19-20"]
+	diagnostic_16 [label="local variable ‘y‘ has been assigned, but never read\nlevel Warning\ntests/contract_testcases/substrate/contracts/contract_name_08.sol:10:19-20"]
 	diagnostic_17 [label="circular reference creating contract ‘a’\nlevel Error\ntests/contract_testcases/substrate/contracts/contract_name_08.sol:16:23-30"]
 	contracts -> contract
 	contract -> x [label="function"]

@@ -9,7 +9,7 @@ strict digraph "tests/contract_testcases/solana/expressions/const_in_type.sol" {
 	node_9 [label="constructor \ncontract: x\ntests/contract_testcases/solana/expressions/const_in_type.sol:5:13-48\nsignature (bytes32[24])\nvisibility public\nmutability nonpayable"]
 	parameters [label="parameters\nbytes32[24] foo"]
 	diagnostic [label="found contract ‘x’\nlevel Debug\ntests/contract_testcases/solana/expressions/const_in_type.sol:2:9-20"]
-	diagnostic_13 [label="function parameter 'foo' has never been read\nlevel Warning\ntests/contract_testcases/solana/expressions/const_in_type.sol:5:43-46"]
+	diagnostic_13 [label="function parameter ‘foo‘ has never been read\nlevel Warning\ntests/contract_testcases/solana/expressions/const_in_type.sol:5:43-46"]
 	contracts -> contract
 	contract -> var [label="variable"]
 	var -> number_literal [label="initializer"]

@@ -3,7 +3,7 @@ strict digraph "tests/contract_testcases/substrate/tags/variables.sol" {
 	var [label="variable x\nvisibility internal\ntests/contract_testcases/substrate/tags/variables.sol:4:13-18"]
 	diagnostic [label="found contract ‘c’\nlevel Debug\ntests/contract_testcases/substrate/tags/variables.sol:2:9-20"]
 	diagnostic_6 [label="tag ‘@param’ is not valid for state variable\nlevel Error\ntests/contract_testcases/substrate/tags/variables.sol:1:1-2:5"]
-	diagnostic_7 [label="storage variable 'x' has never been used\nlevel Warning\ntests/contract_testcases/substrate/tags/variables.sol:4:13-18"]
+	diagnostic_7 [label="storage variable ‘x‘ has never been used\nlevel Warning\ntests/contract_testcases/substrate/tags/variables.sol:4:13-18"]
 	contracts -> contract
 	contract -> var [label="variable"]
 	diagnostics -> diagnostic [label="Debug"]

@@ -9,8 +9,8 @@ strict digraph "tests/contract_testcases/substrate/events/signatures.sol" {
 	bool_literal [label="bool literal: true\ntests/contract_testcases/substrate/events/signatures.sol:10:26-30"]
 	number_literal [label="int256 literal: 1\ntests/contract_testcases/substrate/events/signatures.sol:10:32-33"]
 	diagnostic [label="found contract ‘c’\nlevel Debug\ntests/contract_testcases/substrate/events/signatures.sol:5:9-20"]
-	diagnostic_13 [label="event 'bar' has never been emitted\nlevel Warning\ntests/contract_testcases/substrate/events/signatures.sol:3:15-18"]
-	diagnostic_14 [label="event 'bar' has never been emitted\nlevel Warning\ntests/contract_testcases/substrate/events/signatures.sol:7:19-22"]
+	diagnostic_13 [label="event ‘bar‘ has never been emitted\nlevel Warning\ntests/contract_testcases/substrate/events/signatures.sol:3:15-18"]
+	diagnostic_14 [label="event ‘bar‘ has never been emitted\nlevel Warning\ntests/contract_testcases/substrate/events/signatures.sol:7:19-22"]
 	events -> foo
 	events -> bar
 	events -> foo_3

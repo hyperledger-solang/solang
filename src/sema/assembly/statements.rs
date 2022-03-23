@@ -209,7 +209,7 @@ fn resolve_top_level_function_call(
     func_call: &pt::AssemblyFunctionCall,
     function_table: &mut FunctionsTable,
     context: &ExprContext,
-    symtable: &Symtable,
+    symtable: &mut Symtable,
     ns: &mut Namespace,
 ) -> Result<(AssemblyStatement, bool), ()> {
     match resolve_function_call(function_table, func_call, context, symtable, ns) {
@@ -311,7 +311,15 @@ fn resolve_variable_declaration(
     let resolved_init = if let Some(init_expr) = &initializer {
         let resolved_expr =
             resolve_assembly_expression(init_expr, context, symtable, function_table, ns)?;
-        check_assignment_compatibility(loc, variables, &resolved_expr, context, function_table, ns);
+        check_assignment_compatibility(
+            loc,
+            variables,
+            &resolved_expr,
+            context,
+            function_table,
+            symtable,
+            ns,
+        );
         Some(resolved_expr)
     } else {
         None
@@ -330,7 +338,7 @@ fn resolve_assignment(
     rhs: &pt::AssemblyExpression,
     context: &ExprContext,
     function_table: &FunctionsTable,
-    symtable: &Symtable,
+    symtable: &mut Symtable,
     ns: &mut Namespace,
 ) -> Result<AssemblyStatement, ()> {
     let mut resolved_lhs: Vec<AssemblyExpression> = Vec::with_capacity(lhs.len());
@@ -338,7 +346,7 @@ fn resolve_assignment(
     local_ctx.lvalue = true;
     for item in lhs {
         let resolved = resolve_assembly_expression(item, &local_ctx, symtable, function_table, ns)?;
-        if let Some(diagnostic) = check_type(&resolved, &local_ctx) {
+        if let Some(diagnostic) = check_type(&resolved, &local_ctx, ns, symtable) {
             ns.diagnostics.push(diagnostic);
             return Err(());
         }
@@ -353,6 +361,7 @@ fn resolve_assignment(
         &resolved_rhs,
         context,
         function_table,
+        symtable,
         ns,
     );
 
@@ -370,6 +379,7 @@ fn check_assignment_compatibility<T>(
     rhs: &AssemblyExpression,
     context: &ExprContext,
     function_table: &FunctionsTable,
+    symtable: &mut Symtable,
     ns: &mut Namespace,
 ) {
     match rhs {
@@ -407,7 +417,7 @@ fn check_assignment_compatibility<T>(
                     *loc,
                     "a single value cannot be assigned to multiple variables".to_string(),
                 ));
-            } else if let Some(diagnostic) = check_type(rhs, context) {
+            } else if let Some(diagnostic) = check_type(rhs, context, ns, symtable) {
                 ns.diagnostics.push(diagnostic);
             }
         }

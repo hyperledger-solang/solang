@@ -9,7 +9,7 @@ strict digraph "tests/contract_testcases/substrate/functions/mutability_03.sol" 
 	number_literal_8 [label="int64 literal: 102\ntests/contract_testcases/substrate/functions/mutability_03.sol:5:23-26"]
 	diagnostic [label="found contract ‘test’\nlevel Debug\ntests/contract_testcases/substrate/functions/mutability_03.sol:1:1-15"]
 	diagnostic_11 [label="function declared ‘view’ but this expression writes to state\nlevel Error\ntests/contract_testcases/substrate/functions/mutability_03.sol:5:17-20"]
-	diagnostic_12 [label="storage variable 'foo' has been assigned, but never read\nlevel Warning\ntests/contract_testcases/substrate/functions/mutability_03.sol:2:13-32"]
+	diagnostic_12 [label="storage variable ‘foo‘ has been assigned, but never read\nlevel Warning\ntests/contract_testcases/substrate/functions/mutability_03.sol:2:13-32"]
 	contracts -> contract
 	contract -> var [label="variable"]
 	var -> number_literal [label="initializer"]

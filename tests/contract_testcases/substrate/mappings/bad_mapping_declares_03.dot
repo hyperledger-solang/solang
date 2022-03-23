@@ -3,7 +3,7 @@ strict digraph "tests/contract_testcases/substrate/mappings/bad_mapping_declares
 	var [label="variable data\nvisibility internal\ntests/contract_testcases/substrate/mappings/bad_mapping_declares_03.sol:3:13-41"]
 	diagnostic [label="found contract ‘c’\nlevel Debug\ntests/contract_testcases/substrate/mappings/bad_mapping_declares_03.sol:2:9-20"]
 	diagnostic_6 [label="‘data’ is a contract variable\nlevel Error\ntests/contract_testcases/substrate/mappings/bad_mapping_declares_03.sol:4:21-25"]
-	diagnostic_7 [label="storage variable 'data' has never been used\nlevel Warning\ntests/contract_testcases/substrate/mappings/bad_mapping_declares_03.sol:3:13-41"]
+	diagnostic_7 [label="storage variable ‘data‘ has never been used\nlevel Warning\ntests/contract_testcases/substrate/mappings/bad_mapping_declares_03.sol:3:13-41"]
 	contracts -> contract
 	contract -> var [label="variable"]
 	diagnostics -> diagnostic [label="Debug"]

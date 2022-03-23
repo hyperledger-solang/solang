@@ -6,6 +6,7 @@ use crate::sema::assembly::functions::{AssemblyFunctionParameter, FunctionsTable
 use crate::sema::assembly::types::{
     get_default_type_from_identifier, get_type_from_string, verify_type_from_expression,
 };
+use crate::sema::assembly::unused_variable::{assigned_variable, used_variable};
 use crate::sema::expression::{unescape, ExprContext};
 use crate::sema::symtable::{Symtable, VariableUsage};
 use num_bigint::{BigInt, Sign};
@@ -13,8 +14,6 @@ use num_traits::Num;
 use solang_parser::diagnostics::{ErrorType, Level};
 use solang_parser::pt::{AssemblyFunctionCall, CodeLocation, Identifier, Loc, StorageLocation};
 use solang_parser::{pt, Diagnostic};
-
-// TODO: Add assembly to unused variable detection
 
 #[derive(PartialEq, Debug, Clone)]
 pub enum AssemblyExpression {
@@ -72,7 +71,7 @@ impl CodeLocation for AssemblyExpression {
 pub(crate) fn resolve_assembly_expression(
     expr: &pt::AssemblyExpression,
     context: &ExprContext,
-    symtable: &Symtable,
+    symtable: &mut Symtable,
     function_table: &FunctionsTable,
     ns: &mut Namespace,
 ) -> Result<AssemblyExpression, ()> {
@@ -370,7 +369,7 @@ pub(crate) fn resolve_function_call(
     function_table: &FunctionsTable,
     func_call: &AssemblyFunctionCall,
     context: &ExprContext,
-    symtable: &Symtable,
+    symtable: &mut Symtable,
     ns: &mut Namespace,
 ) -> Result<AssemblyExpression, ()> {
     if func_call.id.name.starts_with("verbatim") {
@@ -396,7 +395,7 @@ pub(crate) fn resolve_function_call(
         let resolved_expr =
             resolve_assembly_expression(item, context, symtable, function_table, ns)?;
 
-        if let Some(diagnostic) = check_type(&resolved_expr, context) {
+        if let Some(diagnostic) = check_type(&resolved_expr, context, ns, symtable) {
             ns.diagnostics.push(diagnostic);
             return Err(());
         }
@@ -532,7 +531,7 @@ fn resolve_member_access(
     expr: &pt::AssemblyExpression,
     id: &Identifier,
     context: &ExprContext,
-    symtable: &Symtable,
+    symtable: &mut Symtable,
     function_table: &FunctionsTable,
     ns: &mut Namespace,
 ) -> Result<AssemblyExpression, ()> {
@@ -640,7 +639,12 @@ fn resolve_member_access(
 
 /// Check if an assembly expression has been used correctly in a assignment or if the member access
 /// has a valid expression given the context.
-pub(crate) fn check_type(expr: &AssemblyExpression, context: &ExprContext) -> Option<Diagnostic> {
+pub(crate) fn check_type(
+    expr: &AssemblyExpression,
+    context: &ExprContext,
+    ns: &mut Namespace,
+    symtable: &mut Symtable,
+) -> Option<Diagnostic> {
     if context.lvalue {
         match expr {
             AssemblyExpression::SolidityLocalVariable(
@@ -652,7 +656,7 @@ pub(crate) fn check_type(expr: &AssemblyExpression, context: &ExprContext) -> Op
             | AssemblyExpression::StorageVariable(..) => {
                 return Some(Diagnostic::error(
                     expr.loc(),
-                    "storage variables cannot be assigned any value in assembly. You may use \"sstore()\"".to_string()
+                    "storage variables cannot be assigned any value in assembly. You may use ‘sstore()‘".to_string()
                 ));
             }
 
@@ -687,10 +691,10 @@ pub(crate) fn check_type(expr: &AssemblyExpression, context: &ExprContext) -> Op
                 ));
             }
 
-            AssemblyExpression::MemberAccess(_, expr, AssemblySuffix::Slot) => {
-                if matches!(**expr, AssemblyExpression::StorageVariable(..)) {
+            AssemblyExpression::MemberAccess(_, exp, AssemblySuffix::Slot) => {
+                if matches!(**exp, AssemblyExpression::StorageVariable(..)) {
                     return Some(Diagnostic::error(
-                        expr.loc(),
+                        exp.loc(),
                         "cannot assign to slot of storage variable".to_string(),
                     ));
                 }
@@ -698,6 +702,10 @@ pub(crate) fn check_type(expr: &AssemblyExpression, context: &ExprContext) -> Op
 
             _ => (),
         }
+
+        assigned_variable(ns, expr, symtable);
+    } else {
+        used_variable(ns, expr, symtable);
     }
 
     match expr {
@@ -705,7 +713,7 @@ pub(crate) fn check_type(expr: &AssemblyExpression, context: &ExprContext) -> Op
         | AssemblyExpression::StorageVariable(..) => {
             return Some(Diagnostic::error(
                 expr.loc(),
-                "Storage variables must be accessed with \".slot\" or \".offset\"".to_string(),
+                "Storage variables must be accessed with ‘.slot‘ or ‘.offset‘".to_string(),
             ));
         }
 
@@ -718,7 +726,7 @@ pub(crate) fn check_type(expr: &AssemblyExpression, context: &ExprContext) -> Op
             if dims[0].is_none() {
                 return Some(Diagnostic::error(
                     expr.loc(),
-                    "Calldata arrays must be accessed with \".offset\", \".length\" and the \"calldatacopy\" function".to_string()
+                    "Calldata arrays must be accessed with ‘.offset‘, ‘.length‘ and the ‘calldatacopy‘ function".to_string()
                 ));
             }
         }

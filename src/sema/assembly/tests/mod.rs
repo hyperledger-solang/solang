@@ -11,6 +11,7 @@ mod functions;
 mod statements;
 mod switch;
 mod types;
+mod unused_variable;
 
 pub(crate) fn parse(src: &'static str) -> ast::Namespace {
     let mut cache = FileResolver::new();

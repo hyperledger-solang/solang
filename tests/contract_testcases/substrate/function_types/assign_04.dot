@@ -7,7 +7,7 @@ strict digraph "tests/contract_testcases/substrate/function_types/assign_04.sol"
 	bool_literal [label="bool literal: false\ntests/contract_testcases/substrate/function_types/assign_04.sol:3:24-29"]
 	foo [label="function foo\ncontract: test\ntests/contract_testcases/substrate/function_types/assign_04.sol:6:13-34\nsignature foo()\nvisibility public\nmutability nonpayable"]
 	diagnostic [label="found contract ‘test’\nlevel Debug\ntests/contract_testcases/substrate/function_types/assign_04.sol:1:1-15"]
-	diagnostic_10 [label="function parameter 'arg1' has never been read\nlevel Warning\ntests/contract_testcases/substrate/function_types/assign_04.sol:2:30-34"]
+	diagnostic_10 [label="function parameter ‘arg1‘ has never been read\nlevel Warning\ntests/contract_testcases/substrate/function_types/assign_04.sol:2:30-34"]
 	diagnostic_11 [label="function arguments do not match in conversion from ‘function(int32) internal returns (bool)’ to ‘function(int64) internal returns (bool)’\nlevel Error\ntests/contract_testcases/substrate/function_types/assign_04.sol:7:52-53"]
 	contracts -> contract
 	contract -> x [label="function"]

@@ -9,7 +9,7 @@ strict digraph "tests/contract_testcases/substrate/primitives/address_payable_ty
 	test_8 [label="function test\ncontract: other\ntests/contract_testcases/substrate/primitives/address_payable_type_04.sol:9:13-35\nsignature test()\nvisibility public\nmutability nonpayable"]
 	diagnostic [label="found contract ‘c’\nlevel Debug\ntests/contract_testcases/substrate/primitives/address_payable_type_04.sol:2:9-20"]
 	diagnostic_11 [label="found contract ‘other’\nlevel Debug\ntests/contract_testcases/substrate/primitives/address_payable_type_04.sol:8:9-24"]
-	diagnostic_12 [label="local variable 'b' has been assigned, but never read\nlevel Warning\ntests/contract_testcases/substrate/primitives/address_payable_type_04.sol:4:23-24"]
+	diagnostic_12 [label="local variable ‘b‘ has been assigned, but never read\nlevel Warning\ntests/contract_testcases/substrate/primitives/address_payable_type_04.sol:4:23-24"]
 	diagnostic_13 [label="function can be declared ‘pure’\nlevel Warning\ntests/contract_testcases/substrate/primitives/address_payable_type_04.sol:3:13-52"]
 	diagnostic_14 [label="function can be declared ‘pure’\nlevel Warning\ntests/contract_testcases/substrate/primitives/address_payable_type_04.sol:9:13-35"]
 	contracts -> contract

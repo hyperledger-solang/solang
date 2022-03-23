@@ -25,7 +25,7 @@ strict digraph "tests/contract_testcases/substrate/libraries/using_06.sol" {
 	diagnostic [label="found contract ‘test’\nlevel Debug\ntests/contract_testcases/substrate/libraries/using_06.sol:2:9-23"]
 	diagnostic_26 [label="found library ‘ints’\nlevel Debug\ntests/contract_testcases/substrate/libraries/using_06.sol:10:9-22"]
 	diagnostic_27 [label="cannot find overloaded library function which matches signature\nlevel Error\ntests/contract_testcases/substrate/libraries/using_06.sol:6:24-39"]
-	diagnostic_28 [label="storage variable 'nada' has been assigned, but never read\nlevel Warning\ntests/contract_testcases/substrate/libraries/using_06.sol:11:13-37"]
+	diagnostic_28 [label="storage variable ‘nada‘ has been assigned, but never read\nlevel Warning\ntests/contract_testcases/substrate/libraries/using_06.sol:11:13-37"]
 	contracts -> contract
 	contract -> using [label="base"]
 	contract -> foo [label="function"]

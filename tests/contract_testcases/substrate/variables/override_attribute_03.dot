@@ -6,7 +6,7 @@ strict digraph "tests/contract_testcases/substrate/variables/override_attribute_
 	diagnostic_7 [label="duplicate ‘override’ attribute\nlevel Error\ntests/contract_testcases/substrate/variables/override_attribute_03.sol:2:26-34"]
 	note [label="previous ‘override’ attribute\ntests/contract_testcases/substrate/variables/override_attribute_03.sol:2:17-25"]
 	diagnostic_9 [label="only public variable can be declared ‘override’\nlevel Error\ntests/contract_testcases/substrate/variables/override_attribute_03.sol:2:26-34"]
-	diagnostic_10 [label="storage variable 'y' has been assigned, but never read\nlevel Warning\ntests/contract_testcases/substrate/variables/override_attribute_03.sol:2:13-40"]
+	diagnostic_10 [label="storage variable ‘y‘ has been assigned, but never read\nlevel Warning\ntests/contract_testcases/substrate/variables/override_attribute_03.sol:2:13-40"]
 	contracts -> contract
 	contract -> var [label="variable"]
 	var -> number_literal [label="initializer"]

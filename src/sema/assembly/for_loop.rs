@@ -1,9 +1,8 @@
 use crate::ast::Namespace;
 use crate::sema::assembly::block::{process_statements, resolve_assembly_block, AssemblyBlock};
-use crate::sema::assembly::expression::resolve_assembly_expression;
 use crate::sema::assembly::functions::FunctionsTable;
 use crate::sema::assembly::statements::AssemblyStatement;
-use crate::sema::assembly::types::verify_type_from_expression;
+use crate::sema::assembly::switch::resolve_condition;
 use crate::sema::expression::ExprContext;
 use crate::sema::symtable::{LoopScopes, Symtable};
 use solang_parser::{pt, Diagnostic};
@@ -32,20 +31,13 @@ pub(crate) fn resolve_for_loop(
     )?;
     reachable &= resolved_init_block.1;
 
-    let resolved_cond = resolve_assembly_expression(
+    let resolved_cond = resolve_condition(
         &assembly_for.condition,
         context,
         symtable,
         function_table,
         ns,
     )?;
-    match verify_type_from_expression(&resolved_cond, function_table) {
-        Ok(_) => (),
-        Err(diagnostic) => {
-            ns.diagnostics.push(diagnostic);
-            return Err(());
-        }
-    }
 
     loop_scope.new_scope();
 

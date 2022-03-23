@@ -1,5 +1,6 @@
+use crate::ast::EventDecl;
 use crate::parser::pt::{ContractTy, Loc};
-use crate::sema::ast::{Builtin, Diagnostic, ErrorType, Expression, Level, Namespace, Note};
+use crate::sema::ast::{Builtin, Diagnostic, Expression, Namespace};
 use crate::sema::symtable::{Symtable, VariableUsage};
 use crate::sema::{ast, contracts::visit_bases, symtable};
 
@@ -232,29 +233,17 @@ pub fn check_var_usage_expression(
     used_variable(ns, right, symtable);
 }
 
-/// Generate warnings for unused varibles
-fn generate_unused_warning(loc: Loc, text: &str, notes: Vec<Note>) -> Diagnostic {
-    Diagnostic {
-        level: Level::Warning,
-        ty: ErrorType::Warning,
-        pos: loc,
-        message: text.parse().unwrap(),
-        notes,
-    }
-}
-
 /// Emit different warning types according to the function variable usage
 pub fn emit_warning_local_variable(variable: &symtable::Variable) -> Option<Diagnostic> {
     match &variable.usage_type {
         VariableUsage::Parameter => {
             if !variable.read {
-                return Some(generate_unused_warning(
+                return Some(Diagnostic::warning(
                     variable.id.loc,
-                    &format!(
-                        "function parameter '{}' has never been read",
+                    format!(
+                        "function parameter ‘{}‘ has never been read",
                         variable.id.name
                     ),
-                    vec![],
                 ));
             }
             None
@@ -262,13 +251,12 @@ pub fn emit_warning_local_variable(variable: &symtable::Variable) -> Option<Diag
 
         VariableUsage::ReturnVariable => {
             if !variable.assigned {
-                return Some(generate_unused_warning(
+                return Some(Diagnostic::warning(
                     variable.id.loc,
-                    &format!(
-                        "return variable '{}' has never been assigned",
+                    format!(
+                        "return variable ‘{}‘ has never been assigned",
                         variable.id.name
                     ),
-                    vec![],
                 ));
             }
             None
@@ -277,24 +265,22 @@ pub fn emit_warning_local_variable(variable: &symtable::Variable) -> Option<Diag
         VariableUsage::LocalVariable => {
             let assigned = variable.initializer.has_initializer() || variable.assigned;
             if !assigned && !variable.read {
-                return Some(generate_unused_warning(
+                return Some(Diagnostic::warning(
                     variable.id.loc,
-                    &format!(
-                        "local variable '{}' has never been read nor assigned",
+                    format!(
+                        "local variable ‘{}‘ has never been read nor assigned",
                         variable.id.name
                     ),
-                    vec![],
                 ));
             } else if assigned && !variable.read && !variable.is_reference() {
                 // Values assigned to variables that reference others change the value of its reference
                 // No warning needed in this case
-                return Some(generate_unused_warning(
+                return Some(Diagnostic::warning(
                     variable.id.loc,
-                    &format!(
-                        "local variable '{}' has been assigned, but never read",
+                    format!(
+                        "local variable ‘{}‘ has been assigned, but never read",
                         variable.id.name
                     ),
-                    vec![],
                 ));
             }
             None
@@ -302,13 +288,12 @@ pub fn emit_warning_local_variable(variable: &symtable::Variable) -> Option<Diag
 
         VariableUsage::DestructureVariable => {
             if !variable.read {
-                return Some(generate_unused_warning(
+                return Some(Diagnostic::warning(
                     variable.id.loc,
-                    &format!(
-                        "destructure variable '{}' has never been used",
+                    format!(
+                        "destructure variable ‘{}‘ has never been used",
                         variable.id.name
                     ),
-                    vec![],
                 ));
             }
 
@@ -317,13 +302,12 @@ pub fn emit_warning_local_variable(variable: &symtable::Variable) -> Option<Diag
 
         VariableUsage::TryCatchReturns => {
             if !variable.read {
-                return Some(generate_unused_warning(
+                return Some(Diagnostic::warning(
                     variable.id.loc,
-                    &format!(
-                        "try-catch returns variable '{}' has never been read",
+                    format!(
+                        "try-catch returns variable ‘{}‘ has never been read",
                         variable.id.name
                     ),
-                    vec![],
                 ));
             }
 
@@ -332,13 +316,12 @@ pub fn emit_warning_local_variable(variable: &symtable::Variable) -> Option<Diag
 
         VariableUsage::TryCatchErrorBytes => {
             if !variable.read {
-                return Some(generate_unused_warning(
+                return Some(Diagnostic::warning(
                     variable.id.loc,
-                    &format!(
-                        "try-catch error bytes '{}' has never been used",
+                    format!(
+                        "try-catch error bytes ‘{}‘ has never been used",
                         variable.id.name
                     ),
-                    vec![],
                 ));
             }
 
@@ -347,20 +330,37 @@ pub fn emit_warning_local_variable(variable: &symtable::Variable) -> Option<Diag
 
         VariableUsage::TryCatchErrorString => {
             if !variable.read {
-                return Some(generate_unused_warning(
+                return Some(Diagnostic::warning(
                     variable.id.loc,
-                    &format!(
-                        "try-catch error string '{}' has never been used",
+                    format!(
+                        "try-catch error string ‘{}‘ has never been used",
                         variable.id.name
                     ),
-                    vec![],
                 ));
             }
 
             None
         }
         VariableUsage::AssemblyLocalVariable => {
-            //unimplemented!("Variable usage not implemented for YUL")
+            let has_value = variable.assigned || variable.initializer.has_initializer();
+            if !variable.read && !has_value {
+                return Some(Diagnostic::warning(
+                    variable.id.loc,
+                    format!(
+                        "assembly variable ‘{}‘ has never been read or assigned",
+                        variable.id.name
+                    ),
+                ));
+            } else if !variable.read {
+                return Some(Diagnostic::warning(
+                    variable.id.loc,
+                    format!(
+                        "assembly variable ‘{}‘ has never been read",
+                        variable.id.name
+                    ),
+                ));
+            }
+
             None
         }
         VariableUsage::AnonymousReturnVariable => None,
@@ -370,19 +370,17 @@ pub fn emit_warning_local_variable(variable: &symtable::Variable) -> Option<Diag
 /// Emit warnings depending on the storage variable usage
 fn emit_warning_contract_variables(variable: &ast::Variable) -> Option<Diagnostic> {
     if variable.assigned && !variable.read {
-        return Some(generate_unused_warning(
+        return Some(Diagnostic::warning(
             variable.loc,
-            &format!(
-                "storage variable '{}' has been assigned, but never read",
+            format!(
+                "storage variable ‘{}‘ has been assigned, but never read",
                 variable.name
             ),
-            vec![],
         ));
     } else if !variable.assigned && !variable.read {
-        return Some(generate_unused_warning(
+        return Some(Diagnostic::warning(
             variable.loc,
-            &format!("storage variable '{}' has never been used", variable.name),
-            vec![],
+            format!("storage variable ‘{}‘ has never been used", variable.name),
         ));
     }
 
@@ -402,14 +400,29 @@ pub fn check_unused_namespace_variables(ns: &mut Namespace) {
         }
     }
 
-    //Global constants should have been initialized during declaration
+    // Global constants should have been initialized during declaration
     for constant in &ns.constants {
         if !constant.read {
-            ns.diagnostics.push(generate_unused_warning(
+            ns.diagnostics.push(Diagnostic::warning(
                 constant.loc,
-                &format!("global constant '{}' has never been used", constant.name),
-                vec![],
-            ))
+                format!("global constant ‘{}‘ has never been used", constant.name),
+            ));
+        }
+    }
+}
+
+/// Find shadowing events
+fn shadowing_events(
+    event_no: usize,
+    event: &EventDecl,
+    shadows: &mut Vec<usize>,
+    events: &[(Loc, usize)],
+    ns: &Namespace,
+) {
+    for e in events {
+        let other_no = e.1;
+        if event_no != other_no && ns.events[other_no].signature == event.signature {
+            shadows.push(other_no);
         }
     }
 }
@@ -435,13 +448,7 @@ pub fn check_unused_events(ns: &mut Namespace) {
                 ns.variable_symbols
                     .get(&(event.loc.file_no(), None, event.name.to_owned()))
             {
-                for e in events {
-                    let other_no = e.1;
-
-                    if event_no != other_no && ns.events[other_no].signature == event.signature {
-                        shadows.push(other_no);
-                    }
-                }
+                shadowing_events(event_no, event, &mut shadows, events, ns);
             }
 
             // is there a base contract with the same name
@@ -452,14 +459,7 @@ pub fn check_unused_events(ns: &mut Namespace) {
                     ns.variable_symbols
                         .get(&(base_file_no, Some(base_no), event.name.to_owned()))
                 {
-                    for e in events {
-                        let other_no = e.1;
-
-                        if event_no != other_no && ns.events[other_no].signature == event.signature
-                        {
-                            shadows.push(other_no);
-                        }
-                    }
+                    shadowing_events(event_no, event, &mut shadows, events, ns);
                 }
             }
         }
@@ -481,10 +481,9 @@ pub fn check_unused_events(ns: &mut Namespace) {
                 }
             }
 
-            ns.diagnostics.push(generate_unused_warning(
+            ns.diagnostics.push(Diagnostic::warning(
                 event.loc,
-                &format!("event '{}' has never been emitted", event.name),
-                vec![],
+                format!("event ‘{}‘ has never been emitted", event.name),
             ))
         }
     }

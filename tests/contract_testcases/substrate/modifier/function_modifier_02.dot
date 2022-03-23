@@ -6,9 +6,9 @@ strict digraph "tests/contract_testcases/substrate/modifier/function_modifier_02
 	bar [label="function bar\ncontract: c\ntests/contract_testcases/substrate/modifier/function_modifier_02.sol:5:13-47\nsignature bar(bool)\nvisibility public\nmutability nonpayable"]
 	parameters_6 [label="parameters\nbool x"]
 	diagnostic [label="found contract ‘c’\nlevel Debug\ntests/contract_testcases/substrate/modifier/function_modifier_02.sol:2:9-20"]
-	diagnostic_9 [label="function parameter 'f' has never been read\nlevel Warning\ntests/contract_testcases/substrate/modifier/function_modifier_02.sol:3:32-33"]
+	diagnostic_9 [label="function parameter ‘f‘ has never been read\nlevel Warning\ntests/contract_testcases/substrate/modifier/function_modifier_02.sol:3:32-33"]
 	diagnostic_10 [label="conversion from bool to int32 not possible\nlevel Error\ntests/contract_testcases/substrate/modifier/function_modifier_02.sol:5:38-39"]
-	diagnostic_11 [label="function parameter 'x' has never been read\nlevel Warning\ntests/contract_testcases/substrate/modifier/function_modifier_02.sol:5:31-32"]
+	diagnostic_11 [label="function parameter ‘x‘ has never been read\nlevel Warning\ntests/contract_testcases/substrate/modifier/function_modifier_02.sol:5:31-32"]
 	contracts -> contract
 	contract -> foo [label="modifier"]
 	foo -> parameters [label="parameters"]

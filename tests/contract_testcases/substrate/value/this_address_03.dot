@@ -11,7 +11,7 @@ strict digraph "tests/contract_testcases/substrate/value/this_address_03.sol" {
 	variable [label="variable: n\nint32\ntests/contract_testcases/substrate/value/this_address_03.sol:11:21-22"]
 	diagnostic [label="found contract ‘b’\nlevel Debug\ntests/contract_testcases/substrate/value/this_address_03.sol:2:9-20"]
 	diagnostic_13 [label="function ‘other’ is not ‘public’ or ‘external’\nlevel Error\ntests/contract_testcases/substrate/value/this_address_03.sol:6:17-32"]
-	diagnostic_14 [label="storage variable 's' has been assigned, but never read\nlevel Warning\ntests/contract_testcases/substrate/value/this_address_03.sol:3:13-20"]
+	diagnostic_14 [label="storage variable ‘s‘ has been assigned, but never read\nlevel Warning\ntests/contract_testcases/substrate/value/this_address_03.sol:3:13-20"]
 	contracts -> contract
 	contract -> var [label="variable"]
 	contract -> step1 [label="function"]

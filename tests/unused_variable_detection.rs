@@ -87,7 +87,7 @@ fn emit_event() {
     assert_eq!(count_warnings(&ns.diagnostics), 1);
     assert_eq!(
         get_first_warning(&ns.diagnostics).message,
-        "event 'Hello' has never been emitted"
+        "event ‘Hello‘ has never been emitted"
     );
 
     // Unused event
@@ -108,7 +108,7 @@ fn emit_event() {
     assert_eq!(count_warnings(&ns.diagnostics), 1);
     assert_eq!(
         get_first_warning(&ns.diagnostics).message,
-        "event 'Hello' has never been emitted"
+        "event ‘Hello‘ has never been emitted"
     );
 
     // Unused event
@@ -129,7 +129,7 @@ fn emit_event() {
     assert_eq!(count_warnings(&ns.diagnostics), 1);
     assert_eq!(
         get_first_warning(&ns.diagnostics).message,
-        "event 'Hey' has never been emitted"
+        "event ‘Hey‘ has never been emitted"
     );
 
     // make sure we don't complain about interfaces or abstract contracts
@@ -191,11 +191,11 @@ fn constant_variable() {
     assert_eq!(count_warnings(&ns.diagnostics), 2);
     assert!(assert_message_in_warnings(
         &ns.diagnostics,
-        "storage variable 'cte' has been assigned, but never read"
+        "storage variable ‘cte‘ has been assigned, but never read"
     ));
     assert!(assert_message_in_warnings(
         &ns.diagnostics,
-        "global constant 'outside' has never been used"
+        "global constant ‘outside‘ has never been used"
     ));
 }
 
@@ -216,11 +216,11 @@ fn storage_variable() {
     assert_eq!(warnings.len(), 2);
     assert_eq!(
         warnings[0].message,
-        "storage variable 'str' has been assigned, but never read"
+        "storage variable ‘str‘ has been assigned, but never read"
     );
     assert_eq!(
         warnings[1].message,
-        "storage variable 'str2' has never been used"
+        "storage variable ‘str2‘ has never been used"
     );
 
     let file = r#"
@@ -238,7 +238,7 @@ fn storage_variable() {
     assert_eq!(count_warnings(&ns.diagnostics), 1);
     assert_eq!(
         get_first_warning(&ns.diagnostics).message,
-        "storage variable 'str2' has been assigned, but never read"
+        "storage variable ‘str2‘ has been assigned, but never read"
     );
 
     let file = r#"
@@ -283,15 +283,15 @@ fn state_variable() {
     assert_eq!(count_warnings(&ns.diagnostics), 3);
     assert!(assert_message_in_warnings(
         &ns.diagnostics,
-        "local variable 'b' has been assigned, but never read"
+        "local variable ‘b‘ has been assigned, but never read"
     ));
     assert!(assert_message_in_warnings(
         &ns.diagnostics,
-        "local variable 'a' has been assigned, but never read"
+        "local variable ‘a‘ has been assigned, but never read"
     ));
     assert!(assert_message_in_warnings(
         &ns.diagnostics,
-        "local variable 'c' has never been read nor assigned"
+        "local variable ‘c‘ has never been read nor assigned"
     ));
 }
 
@@ -330,19 +330,19 @@ fn struct_usage() {
     assert_eq!(count_warnings(&ns.diagnostics), 4);
     assert!(assert_message_in_warnings(
         &ns.diagnostics,
-        "local variable 't2' has been assigned, but never read"
+        "local variable ‘t2‘ has been assigned, but never read"
     ));
     assert!(assert_message_in_warnings(
         &ns.diagnostics,
-        "storage variable 't1' has been assigned, but never read"
+        "storage variable ‘t1‘ has been assigned, but never read"
     ));
     assert!(assert_message_in_warnings(
         &ns.diagnostics,
-        "local variable 't5' has never been read nor assigned"
+        "local variable ‘t5‘ has never been read nor assigned"
     ));
     assert!(assert_message_in_warnings(
         &ns.diagnostics,
-        "storage variable 't6' has never been used"
+        "storage variable ‘t6‘ has never been used"
     ));
 }
 
@@ -380,19 +380,19 @@ fn subscript() {
     assert_eq!(count_warnings(&ns.diagnostics), 4);
     assert!(assert_message_in_warnings(
         &ns.diagnostics,
-        "local variable 'arr4' has been assigned, but never read"
+        "local variable ‘arr4‘ has been assigned, but never read"
     ));
     assert!(assert_message_in_warnings(
         &ns.diagnostics,
-        "storage variable 'arr1' has been assigned, but never read"
+        "storage variable ‘arr1‘ has been assigned, but never read"
     ));
     assert!(assert_message_in_warnings(
         &ns.diagnostics,
-        "storage variable 'arr2' has been assigned, but never read"
+        "storage variable ‘arr2‘ has been assigned, but never read"
     ));
     assert!(assert_message_in_warnings(
         &ns.diagnostics,
-        "storage variable 'byteArr' has been assigned, but never read"
+        "storage variable ‘byteArr‘ has been assigned, but never read"
     ));
 
     let file = r#"
@@ -464,7 +464,7 @@ fn assign_trunc_cast() {
     assert_eq!(count_warnings(&ns.diagnostics), 1);
     assert!(assert_message_in_warnings(
         &ns.diagnostics,
-        "storage variable 'byteArr' has been assigned, but never read"
+        "storage variable ‘byteArr‘ has been assigned, but never read"
     ));
 }
 
@@ -593,11 +593,11 @@ fn statements() {
     assert_eq!(count_warnings(&ns.diagnostics), 2);
     assert!(assert_message_in_warnings(
         &ns.diagnostics,
-        "function parameter 'a' has never been read"
+        "function parameter ‘a‘ has never been read"
     ));
     assert!(assert_message_in_warnings(
         &ns.diagnostics,
-        "local variable 'ct' has been assigned, but never read",
+        "local variable ‘ct‘ has been assigned, but never read",
     ));
 }
 
@@ -698,11 +698,11 @@ fn array_push_pop() {
     assert_eq!(count_warnings(&ns.diagnostics), 2);
     assert!(assert_message_in_warnings(
         &ns.diagnostics,
-        "local variable 'vec2' has been assigned, but never read"
+        "local variable ‘vec2‘ has been assigned, but never read"
     ));
     assert!(assert_message_in_warnings(
         &ns.diagnostics,
-        "storage variable 'vec1' has been assigned, but never read"
+        "storage variable ‘vec1‘ has been assigned, but never read"
     ));
 
     let file = r#"
@@ -749,15 +749,15 @@ fn return_variable() {
     assert_eq!(count_warnings(&ns.diagnostics), 3);
     assert!(assert_message_in_warnings(
         &ns.diagnostics,
-        "destructure variable 'a' has never been used"
+        "destructure variable ‘a‘ has never been used"
     ));
     assert!(assert_message_in_warnings(
         &ns.diagnostics,
-        "return variable 'hey' has never been assigned"
+        "return variable ‘hey‘ has never been assigned"
     ));
     assert!(assert_message_in_warnings(
         &ns.diagnostics,
-        "storage variable 'testing' has been assigned, but never read"
+        "storage variable ‘testing‘ has been assigned, but never read"
     ));
 }
 
@@ -788,15 +788,15 @@ fn try_catch() {
     assert_eq!(count_warnings(&ns.diagnostics), 3);
     assert!(assert_message_in_warnings(
         &ns.diagnostics,
-        "try-catch error bytes 'returnData' has never been used"
+        "try-catch error bytes ‘returnData‘ has never been used"
     ));
     assert!(assert_message_in_warnings(
         &ns.diagnostics,
-        "try-catch returns variable 'returnedInstance' has never been read"
+        "try-catch returns variable ‘returnedInstance‘ has never been read"
     ));
     assert!(assert_message_in_warnings(
         &ns.diagnostics,
-        "try-catch error string 'revertReason' has never been used"
+        "try-catch error string ‘revertReason‘ has never been used"
     ));
 
     let file = r#"
@@ -829,7 +829,7 @@ fn try_catch() {
     assert_eq!(count_warnings(&ns.diagnostics), 1);
     assert!(assert_message_in_warnings(
         &ns.diagnostics,
-        "storage variable 'notOk' has been assigned, but never read"
+        "storage variable ‘notOk‘ has been assigned, but never read"
     ));
 
     let file = r#"
@@ -946,7 +946,7 @@ fn subarray_mapping_struct_literal() {
     assert_eq!(count_warnings(&ns.diagnostics), 1);
     assert!(assert_message_in_warnings(
         &ns.diagnostics,
-        "storage variable 'choice' has been assigned, but never read"
+        "storage variable ‘choice‘ has been assigned, but never read"
     ));
 }
 

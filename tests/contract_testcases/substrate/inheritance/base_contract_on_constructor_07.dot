@@ -29,7 +29,7 @@ strict digraph "tests/contract_testcases/substrate/inheritance/base_contract_on_
 	diagnostic_29 [label="found contract ‘a’\nlevel Debug\ntests/contract_testcases/substrate/inheritance/base_contract_on_constructor_07.sol:10:9-20"]
 	diagnostic_30 [label="duplicate base contract ‘b’\nlevel Error\ntests/contract_testcases/substrate/inheritance/base_contract_on_constructor_07.sol:3:41-45"]
 	note [label="previous base contract ‘b’\ntests/contract_testcases/substrate/inheritance/base_contract_on_constructor_07.sol:3:34-40"]
-	diagnostic_32 [label="function parameter 'y' has never been read\nlevel Warning\ntests/contract_testcases/substrate/inheritance/base_contract_on_constructor_07.sol:7:31-32"]
+	diagnostic_32 [label="function parameter ‘y‘ has never been read\nlevel Warning\ntests/contract_testcases/substrate/inheritance/base_contract_on_constructor_07.sol:7:31-32"]
 	diagnostic_33 [label="missing arguments to base contract ‘a’ constructor\nlevel Error\ntests/contract_testcases/substrate/inheritance/base_contract_on_constructor_07.sol:2:9-24"]
 	contracts -> contract
 	contract -> base [label="base"]

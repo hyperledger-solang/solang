@@ -90,7 +90,7 @@ pub(crate) fn resolve_switch(
 pub(crate) fn resolve_condition(
     condition: &pt::AssemblyExpression,
     context: &ExprContext,
-    symtable: &Symtable,
+    symtable: &mut Symtable,
     function_table: &FunctionsTable,
     ns: &mut Namespace,
 ) -> Result<AssemblyExpression, ()> {
@@ -99,7 +99,7 @@ pub(crate) fn resolve_condition(
     if let Err(diagnostic) = verify_type_from_expression(&resolved_condition, function_table) {
         ns.diagnostics.push(diagnostic);
         return Err(());
-    } else if let Some(diagnostic) = check_type(&resolved_condition, context) {
+    } else if let Some(diagnostic) = check_type(&resolved_condition, context, ns, symtable) {
         ns.diagnostics.push(diagnostic);
         return Err(());
     }

@@ -11,9 +11,9 @@ strict digraph "tests/contract_testcases/substrate/value/external_call_value.sol
 	diagnostic [label="found contract ‘a’\nlevel Debug\ntests/contract_testcases/substrate/value/external_call_value.sol:2:9-20"]
 	diagnostic_12 [label="found contract ‘b’\nlevel Debug\ntests/contract_testcases/substrate/value/external_call_value.sol:8:9-20"]
 	diagnostic_13 [label="‘foo’ not a valid call parameter\nlevel Error\ntests/contract_testcases/substrate/value/external_call_value.sol:4:24-30"]
-	diagnostic_14 [label="function parameter 'l' has never been read\nlevel Warning\ntests/contract_testcases/substrate/value/external_call_value.sol:11:33-34"]
-	diagnostic_15 [label="local variable 'f' has been assigned, but never read\nlevel Warning\ntests/contract_testcases/substrate/value/external_call_value.sol:12:19-20"]
-	diagnostic_16 [label="storage variable 'x' has never been used\nlevel Warning\ntests/contract_testcases/substrate/value/external_call_value.sol:9:13-18"]
+	diagnostic_14 [label="function parameter ‘l‘ has never been read\nlevel Warning\ntests/contract_testcases/substrate/value/external_call_value.sol:11:33-34"]
+	diagnostic_15 [label="local variable ‘f‘ has been assigned, but never read\nlevel Warning\ntests/contract_testcases/substrate/value/external_call_value.sol:12:19-20"]
+	diagnostic_16 [label="storage variable ‘x‘ has never been used\nlevel Warning\ntests/contract_testcases/substrate/value/external_call_value.sol:9:13-18"]
 	contracts -> contract
 	contract -> test [label="function"]
 	test -> parameters [label="parameters"]

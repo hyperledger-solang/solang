@@ -141,7 +141,7 @@ contract testTypes {
     "#;
 
     let ns = parse(file);
-    assert_eq!(ns.diagnostics.len(), 2);
+    assert_eq!(ns.diagnostics.len(), 3);
     assert!(assert_message_in_diagnostics(
         &ns.diagnostics,
         "found contract ‘testTypes’"
@@ -149,5 +149,9 @@ contract testTypes {
     assert!(assert_message_in_diagnostics(
         &ns.diagnostics,
         "evm assembly not supported on target solana"
+    ));
+    assert!(assert_message_in_diagnostics(
+        &ns.diagnostics,
+        "assembly variable ‘x‘ has never been read"
     ));
 }
