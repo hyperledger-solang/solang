@@ -7,7 +7,7 @@ use crate::sema::assembly::expression::{
     check_type, resolve_assembly_expression, resolve_function_call, AssemblyExpression,
 };
 use crate::sema::assembly::for_loop::resolve_for_loop;
-use crate::sema::assembly::functions::{process_function_definition, FunctionsTable};
+use crate::sema::assembly::functions::FunctionsTable;
 use crate::sema::assembly::switch::{resolve_condition, resolve_switch, CaseBlock};
 use crate::sema::assembly::types::get_default_type_from_identifier;
 use crate::sema::expression::ExprContext;
@@ -54,10 +54,7 @@ pub(crate) fn resolve_assembly_statement(
     ns: &mut Namespace,
 ) -> Result<bool, ()> {
     match statement {
-        pt::AssemblyStatement::FunctionDefinition(func_def) => {
-            resolve_function_definition(func_def, context, function_table, ns)?;
-            Ok(true)
-        }
+        pt::AssemblyStatement::FunctionDefinition(_) => Ok(true),
         pt::AssemblyStatement::FunctionCall(func_call) => {
             let data =
                 resolve_top_level_function_call(func_call, function_table, context, symtable, ns)?;
@@ -193,17 +190,6 @@ pub(crate) fn resolve_assembly_statement(
     }
 }
 
-pub(crate) fn resolve_function_definition(
-    func_def: &pt::AssemblyFunctionDefinition,
-    context: &ExprContext,
-    function_table: &mut FunctionsTable,
-    ns: &mut Namespace,
-) -> Result<(), ()> {
-    let resolved_func = process_function_definition(func_def, function_table, context, ns)?;
-    function_table.resolved_functions.push(resolved_func);
-    Ok(())
-}
-
 /// Top-leve function calls must not return anything, so there is a special function to handle them.
 fn resolve_top_level_function_call(
     func_call: &pt::AssemblyFunctionCall,
@@ -254,7 +240,7 @@ fn resolve_variable_declaration(
     loc: &pt::Loc,
     variables: &[AssemblyTypedIdentifier],
     initializer: &Option<pt::AssemblyExpression>,
-    function_table: &FunctionsTable,
+    function_table: &mut FunctionsTable,
     context: &ExprContext,
     symtable: &mut Symtable,
     ns: &mut Namespace,
@@ -337,7 +323,7 @@ fn resolve_assignment(
     lhs: &[pt::AssemblyExpression],
     rhs: &pt::AssemblyExpression,
     context: &ExprContext,
-    function_table: &FunctionsTable,
+    function_table: &mut FunctionsTable,
     symtable: &mut Symtable,
     ns: &mut Namespace,
 ) -> Result<AssemblyStatement, ()> {

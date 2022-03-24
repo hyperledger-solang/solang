@@ -19,6 +19,7 @@ pub struct AssemblyFunction {
     pub returns: Arc<Vec<AssemblyFunctionParameter>>,
     pub body: Vec<(AssemblyStatement, bool)>,
     pub symtable: Symtable,
+    pub called: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -35,6 +36,7 @@ pub struct FunctionHeader {
     pub params: Arc<Vec<AssemblyFunctionParameter>>,
     pub returns: Arc<Vec<AssemblyFunctionParameter>>,
     pub function_no: usize,
+    called: bool,
 }
 
 /// Keeps track of declared functions and their scope
@@ -59,8 +61,19 @@ impl FunctionsTable {
         self.scopes.push_back(HashMap::new());
     }
 
-    pub fn leave_scope(&mut self) {
-        self.scopes.pop_back();
+    pub fn leave_scope(&mut self, ns: &mut Namespace) {
+        let scope = self.scopes.pop_back().unwrap();
+        for function_no in scope.values() {
+            let header = &self.lookup[*function_no];
+            if header.called {
+                self.resolved_functions[*function_no].called = true;
+            } else {
+                ns.diagnostics.push(Diagnostic::warning(
+                    header.id.loc,
+                    "yul function has never been used".to_string(),
+                ));
+            }
+        }
     }
 
     pub fn find(&self, name: &str) -> Option<&FunctionHeader> {
@@ -116,10 +129,15 @@ impl FunctionsTable {
             params: Arc::new(params),
             returns: Arc::new(returns),
             function_no: self.counter,
+            called: false,
         });
         self.counter += 1;
 
         None
+    }
+
+    pub fn function_called(&mut self, func_no: usize) {
+        self.lookup.get_mut(func_no).unwrap().called = true;
     }
 }
 
@@ -202,7 +220,7 @@ pub(crate) fn process_function_header(
 }
 
 /// Semantic analysis of function definitions
-pub(crate) fn process_function_definition(
+pub(crate) fn resolve_function_definition(
     func_def: &pt::AssemblyFunctionDefinition,
     functions_table: &mut FunctionsTable,
     context: &ExprContext,
@@ -249,7 +267,7 @@ pub(crate) fn process_function_definition(
         ns,
     );
 
-    functions_table.leave_scope();
+    functions_table.leave_scope(ns);
     Ok(AssemblyFunction {
         loc: func_def.loc,
         name: func_def.id.name.clone(),
@@ -257,5 +275,6 @@ pub(crate) fn process_function_definition(
         returns,
         body,
         symtable,
+        called: false,
     })
 }

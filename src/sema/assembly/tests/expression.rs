@@ -30,7 +30,7 @@ fn resolve_bool_literal() {
         yul_function: false,
     };
     let mut symtable = Symtable::new();
-    let function_table = FunctionsTable::new();
+    let mut function_table = FunctionsTable::new();
 
     let mut ns = Namespace::new(Target::Solana);
     let expr = pt::AssemblyExpression::BoolLiteral(
@@ -43,7 +43,7 @@ fn resolve_bool_literal() {
     );
 
     let resolved_type =
-        resolve_assembly_expression(&expr, &ctx, &mut symtable, &function_table, &mut ns);
+        resolve_assembly_expression(&expr, &ctx, &mut symtable, &mut function_table, &mut ns);
     assert!(resolved_type.is_ok());
     assert!(ns.diagnostics.is_empty());
     let unwrapped = resolved_type.unwrap();
@@ -55,7 +55,7 @@ fn resolve_bool_literal() {
 
     let expr = pt::AssemblyExpression::BoolLiteral(Loc::File(0, 3, 5), true, None);
     let resolved_type =
-        resolve_assembly_expression(&expr, &ctx, &mut symtable, &function_table, &mut ns);
+        resolve_assembly_expression(&expr, &ctx, &mut symtable, &mut function_table, &mut ns);
 
     assert!(resolved_type.is_ok());
     assert!(ns.diagnostics.is_empty());
@@ -78,7 +78,7 @@ fn resolve_number_literal() {
         yul_function: false,
     };
     let mut symtable = Symtable::new();
-    let function_table = FunctionsTable::new();
+    let mut function_table = FunctionsTable::new();
 
     let loc = Loc::File(0, 3, 5);
     let mut ns = Namespace::new(Target::Solana);
@@ -90,7 +90,8 @@ fn resolve_number_literal() {
             name: "u64".to_string(),
         }),
     );
-    let parsed = resolve_assembly_expression(&expr, &ctx, &mut symtable, &function_table, &mut ns);
+    let parsed =
+        resolve_assembly_expression(&expr, &ctx, &mut symtable, &mut function_table, &mut ns);
     assert!(parsed.is_ok());
     assert_eq!(ns.diagnostics.len(), 1);
     assert_eq!(
@@ -107,7 +108,8 @@ fn resolve_number_literal() {
             name: "u128".to_string(),
         }),
     );
-    let parsed = resolve_assembly_expression(&expr, &ctx, &mut symtable, &function_table, &mut ns);
+    let parsed =
+        resolve_assembly_expression(&expr, &ctx, &mut symtable, &mut function_table, &mut ns);
     assert!(parsed.is_err());
     assert_eq!(ns.diagnostics.len(), 1);
     assert_eq!(
@@ -117,7 +119,8 @@ fn resolve_number_literal() {
 
     ns.diagnostics.clear();
     let expr = pt::AssemblyExpression::NumberLiteral(loc, BigInt::from(20), None);
-    let parsed = resolve_assembly_expression(&expr, &ctx, &mut symtable, &function_table, &mut ns);
+    let parsed =
+        resolve_assembly_expression(&expr, &ctx, &mut symtable, &mut function_table, &mut ns);
     assert!(parsed.is_ok());
     assert!(ns.diagnostics.is_empty());
     assert_eq!(
@@ -138,7 +141,7 @@ fn resolve_hex_number_literal() {
         yul_function: false,
     };
     let mut symtable = Symtable::new();
-    let function_table = FunctionsTable::new();
+    let mut function_table = FunctionsTable::new();
 
     let mut ns = Namespace::new(Target::Ewasm);
     let loc = Loc::File(0, 3, 5);
@@ -152,7 +155,7 @@ fn resolve_hex_number_literal() {
     );
 
     let resolved =
-        resolve_assembly_expression(&expr, &ctx, &mut symtable, &function_table, &mut ns);
+        resolve_assembly_expression(&expr, &ctx, &mut symtable, &mut function_table, &mut ns);
     assert!(resolved.is_ok());
     assert_eq!(ns.diagnostics.len(), 1);
     assert_eq!(
@@ -170,7 +173,7 @@ fn resolve_hex_number_literal() {
         }),
     );
     let resolved =
-        resolve_assembly_expression(&expr, &ctx, &mut symtable, &function_table, &mut ns);
+        resolve_assembly_expression(&expr, &ctx, &mut symtable, &mut function_table, &mut ns);
     assert!(resolved.is_ok());
     assert!(ns.diagnostics.is_empty());
     assert_eq!(
@@ -191,7 +194,7 @@ fn resolve_hex_string_literal() {
         yul_function: false,
     };
     let mut symtable = Symtable::new();
-    let function_table = FunctionsTable::new();
+    let mut function_table = FunctionsTable::new();
 
     let mut ns = Namespace::new(Target::Ewasm);
     let loc = Loc::File(0, 3, 5);
@@ -204,7 +207,7 @@ fn resolve_hex_string_literal() {
     );
 
     let resolved =
-        resolve_assembly_expression(&expr, &ctx, &mut symtable, &function_table, &mut ns);
+        resolve_assembly_expression(&expr, &ctx, &mut symtable, &mut function_table, &mut ns);
     assert!(resolved.is_err());
     assert_eq!(ns.diagnostics.len(), 1);
     assert_eq!(
@@ -224,7 +227,7 @@ fn resolve_hex_string_literal() {
         }),
     );
     let resolved =
-        resolve_assembly_expression(&expr, &ctx, &mut symtable, &function_table, &mut ns);
+        resolve_assembly_expression(&expr, &ctx, &mut symtable, &mut function_table, &mut ns);
     assert!(resolved.is_err());
     assert_eq!(ns.diagnostics.len(), 1);
     assert_eq!(
@@ -244,7 +247,7 @@ fn resolve_hex_string_literal() {
         }),
     );
     let resolved =
-        resolve_assembly_expression(&expr, &ctx, &mut symtable, &function_table, &mut ns);
+        resolve_assembly_expression(&expr, &ctx, &mut symtable, &mut function_table, &mut ns);
     assert!(resolved.is_ok());
     assert!(ns.diagnostics.is_empty());
     assert_eq!(
@@ -265,7 +268,7 @@ fn resolve_string_literal() {
         yul_function: false,
     };
     let mut symtable = Symtable::new();
-    let function_table = FunctionsTable::new();
+    let mut function_table = FunctionsTable::new();
 
     let mut ns = Namespace::new(Target::Solana);
     let loc = Loc::File(0, 3, 5);
@@ -281,7 +284,7 @@ fn resolve_string_literal() {
     );
 
     let resolved =
-        resolve_assembly_expression(&expr, &ctx, &mut symtable, &function_table, &mut ns);
+        resolve_assembly_expression(&expr, &ctx, &mut symtable, &mut function_table, &mut ns);
     assert!(resolved.is_ok());
     assert!(ns.diagnostics.is_empty());
     assert_eq!(
@@ -306,7 +309,7 @@ fn resolve_variable_local() {
         yul_function: false,
     };
     let mut symtable = Symtable::new();
-    let function_table = FunctionsTable::new();
+    let mut function_table = FunctionsTable::new();
     let mut ns = Namespace::new(Target::Ewasm);
     let loc = Loc::File(1, 2, 3);
 
@@ -349,10 +352,20 @@ fn resolve_variable_local() {
     let expected_1 = AssemblyExpression::AssemblyLocalVariable(loc, Type::Uint(32), pos1);
     let expected_2 = AssemblyExpression::SolidityLocalVariable(loc, Type::Uint(32), None, pos2);
 
-    let res1 =
-        resolve_assembly_expression(&expr1, &context, &mut symtable, &function_table, &mut ns);
-    let res2 =
-        resolve_assembly_expression(&expr2, &context, &mut symtable, &function_table, &mut ns);
+    let res1 = resolve_assembly_expression(
+        &expr1,
+        &context,
+        &mut symtable,
+        &mut function_table,
+        &mut ns,
+    );
+    let res2 = resolve_assembly_expression(
+        &expr2,
+        &context,
+        &mut symtable,
+        &mut function_table,
+        &mut ns,
+    );
 
     assert!(res1.is_ok());
     assert!(res2.is_ok());
@@ -374,7 +387,7 @@ fn resolve_variable_contract() {
         yul_function: false,
     };
     let mut symtable = Symtable::new();
-    let function_table = FunctionsTable::new();
+    let mut function_table = FunctionsTable::new();
     let mut ns = Namespace::new(Target::Ewasm);
     let loc = Loc::File(0, 2, 3);
     let mut contract = ast::Contract::new("test", ContractTy::Contract(loc), vec![], loc);
@@ -454,7 +467,8 @@ fn resolve_variable_contract() {
         loc,
         name: "var1".to_string(),
     });
-    let res = resolve_assembly_expression(&expr, &context, &mut symtable, &function_table, &mut ns);
+    let res =
+        resolve_assembly_expression(&expr, &context, &mut symtable, &mut function_table, &mut ns);
     assert!(res.is_ok());
     assert_eq!(
         AssemblyExpression::ConstantVariable(loc, Type::Bool, Some(0), 0),
@@ -465,7 +479,8 @@ fn resolve_variable_contract() {
         loc,
         name: "var2".to_string(),
     });
-    let res = resolve_assembly_expression(&expr, &context, &mut symtable, &function_table, &mut ns);
+    let res =
+        resolve_assembly_expression(&expr, &context, &mut symtable, &mut function_table, &mut ns);
     assert!(res.is_ok());
     assert_eq!(
         AssemblyExpression::StorageVariable(loc, Type::Int(128), 0, 1),
@@ -476,7 +491,8 @@ fn resolve_variable_contract() {
         loc,
         name: "var3".to_string(),
     });
-    let res = resolve_assembly_expression(&expr, &context, &mut symtable, &function_table, &mut ns);
+    let res =
+        resolve_assembly_expression(&expr, &context, &mut symtable, &mut function_table, &mut ns);
     assert!(res.is_ok());
     assert_eq!(
         AssemblyExpression::ConstantVariable(loc, Type::Uint(32), None, 0),
@@ -487,7 +503,8 @@ fn resolve_variable_contract() {
         loc,
         name: "func".to_string(),
     });
-    let res = resolve_assembly_expression(&expr, &context, &mut symtable, &function_table, &mut ns);
+    let res =
+        resolve_assembly_expression(&expr, &context, &mut symtable, &mut function_table, &mut ns);
     assert!(res.is_err());
     assert_eq!(ns.diagnostics.len(), 1);
     assert_eq!(
@@ -500,7 +517,8 @@ fn resolve_variable_contract() {
         loc,
         name: "none".to_string(),
     });
-    let res = resolve_assembly_expression(&expr, &context, &mut symtable, &function_table, &mut ns);
+    let res =
+        resolve_assembly_expression(&expr, &context, &mut symtable, &mut function_table, &mut ns);
     assert!(res.is_err());
     assert_eq!(ns.diagnostics.len(), 1);
     assert_eq!(ns.diagnostics[0].message, "'none' is not found");
@@ -510,7 +528,8 @@ fn resolve_variable_contract() {
         loc,
         name: "imut".to_string(),
     });
-    let res = resolve_assembly_expression(&expr, &context, &mut symtable, &function_table, &mut ns);
+    let res =
+        resolve_assembly_expression(&expr, &context, &mut symtable, &mut function_table, &mut ns);
     assert!(res.is_err());
     assert_eq!(ns.diagnostics.len(), 1);
     assert_eq!(
@@ -544,7 +563,8 @@ fn function_call() {
         },
         arguments: vec![],
     }));
-    let res = resolve_assembly_expression(&expr, &context, &mut symtable, &function_table, &mut ns);
+    let res =
+        resolve_assembly_expression(&expr, &context, &mut symtable, &mut function_table, &mut ns);
     assert!(res.is_err());
     assert_eq!(ns.diagnostics.len(), 1);
     assert_eq!(
@@ -561,7 +581,8 @@ fn function_call() {
         },
         arguments: vec![],
     }));
-    let res = resolve_assembly_expression(&expr, &context, &mut symtable, &function_table, &mut ns);
+    let res =
+        resolve_assembly_expression(&expr, &context, &mut symtable, &mut function_table, &mut ns);
     assert!(res.is_err());
     assert_eq!(ns.diagnostics.len(), 1);
     assert_eq!(
@@ -587,7 +608,8 @@ fn function_call() {
         },
         arguments: vec![arg.clone()],
     }));
-    let res = resolve_assembly_expression(&expr, &context, &mut symtable, &function_table, &mut ns);
+    let res =
+        resolve_assembly_expression(&expr, &context, &mut symtable, &mut function_table, &mut ns);
     assert!(res.is_err());
     assert_eq!(ns.diagnostics.len(), 1);
     assert_eq!(
@@ -604,7 +626,8 @@ fn function_call() {
         },
         arguments: vec![arg.clone()],
     }));
-    let res = resolve_assembly_expression(&expr, &context, &mut symtable, &function_table, &mut ns);
+    let res =
+        resolve_assembly_expression(&expr, &context, &mut symtable, &mut function_table, &mut ns);
     assert!(res.is_ok());
     assert_eq!(
         AssemblyExpression::BuiltInCall(
@@ -614,7 +637,7 @@ fn function_call() {
                 &arg,
                 &context,
                 &mut symtable,
-                &function_table,
+                &mut function_table,
                 &mut ns
             )
             .unwrap()]
@@ -639,7 +662,8 @@ fn function_call() {
         },
         arguments: vec![arg.clone()],
     }));
-    let res = resolve_assembly_expression(&expr, &context, &mut symtable, &function_table, &mut ns);
+    let res =
+        resolve_assembly_expression(&expr, &context, &mut symtable, &mut function_table, &mut ns);
     assert!(res.is_err());
     assert_eq!(ns.diagnostics.len(), 1);
     assert_eq!(
@@ -656,7 +680,8 @@ fn function_call() {
         },
         arguments: vec![],
     }));
-    let res = resolve_assembly_expression(&expr, &context, &mut symtable, &function_table, &mut ns);
+    let res =
+        resolve_assembly_expression(&expr, &context, &mut symtable, &mut function_table, &mut ns);
     assert!(res.is_ok());
     assert_eq!(
         AssemblyExpression::FunctionCall(loc, 0, vec![]),
@@ -671,7 +696,8 @@ fn function_call() {
         },
         arguments: vec![],
     }));
-    let res = resolve_assembly_expression(&expr, &context, &mut symtable, &function_table, &mut ns);
+    let res =
+        resolve_assembly_expression(&expr, &context, &mut symtable, &mut function_table, &mut ns);
     assert!(res.is_err());
     assert_eq!(ns.diagnostics.len(), 1);
     assert_eq!(ns.diagnostics[0].message, "function 'none' is not defined");
@@ -751,7 +777,8 @@ fn check_arguments() {
         ))],
     }));
 
-    let _ = resolve_assembly_expression(&expr, &context, &mut symtable, &function_table, &mut ns);
+    let _ =
+        resolve_assembly_expression(&expr, &context, &mut symtable, &mut function_table, &mut ns);
     assert!(!ns.diagnostics.is_empty());
     assert_eq!(
         ns.diagnostics[0].message,
@@ -777,7 +804,8 @@ fn check_arguments() {
         ))],
     }));
 
-    let _ = resolve_assembly_expression(&expr, &context, &mut symtable, &function_table, &mut ns);
+    let _ =
+        resolve_assembly_expression(&expr, &context, &mut symtable, &mut function_table, &mut ns);
     assert!(!ns.diagnostics.is_empty());
     assert_eq!(
         ns.diagnostics[0].message,
@@ -803,7 +831,8 @@ fn check_arguments() {
         ))],
     }));
 
-    let _ = resolve_assembly_expression(&expr, &context, &mut symtable, &function_table, &mut ns);
+    let _ =
+        resolve_assembly_expression(&expr, &context, &mut symtable, &mut function_table, &mut ns);
     assert!(!ns.diagnostics.is_empty());
     assert_eq!(
         ns.diagnostics[0].message,
@@ -823,7 +852,7 @@ fn test_member_access() {
         yul_function: false,
     };
     let mut symtable = Symtable::new();
-    let function_table = FunctionsTable::new();
+    let mut function_table = FunctionsTable::new();
     let mut ns = Namespace::new(Target::Ewasm);
     let loc = Loc::File(0, 2, 3);
 
@@ -857,7 +886,8 @@ fn test_member_access() {
         },
     );
 
-    let res = resolve_assembly_expression(&expr, &context, &mut symtable, &function_table, &mut ns);
+    let res =
+        resolve_assembly_expression(&expr, &context, &mut symtable, &mut function_table, &mut ns);
     assert!(res.is_err());
     assert_eq!(ns.diagnostics.len(), 1);
     assert_eq!(
@@ -875,7 +905,8 @@ fn test_member_access() {
         },
     );
 
-    let res = resolve_assembly_expression(&expr, &context, &mut symtable, &function_table, &mut ns);
+    let res =
+        resolve_assembly_expression(&expr, &context, &mut symtable, &mut function_table, &mut ns);
     assert!(res.is_err());
     assert_eq!(ns.diagnostics.len(), 1);
     assert_eq!(
@@ -896,7 +927,8 @@ fn test_member_access() {
         },
     );
 
-    let res = resolve_assembly_expression(&expr, &context, &mut symtable, &function_table, &mut ns);
+    let res =
+        resolve_assembly_expression(&expr, &context, &mut symtable, &mut function_table, &mut ns);
     assert!(res.is_ok());
     assert!(ns.diagnostics.is_empty());
     assert_eq!(

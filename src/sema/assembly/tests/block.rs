@@ -44,7 +44,7 @@ contract testTypes {
 }
     "#;
     let ns = parse(file);
-    assert_eq!(ns.diagnostics.len(), 2);
+    assert_eq!(ns.diagnostics.len(), 3);
     assert!(assert_message_in_diagnostics(
         &ns.diagnostics,
         "found contract ‘testTypes’"
@@ -52,6 +52,10 @@ contract testTypes {
     assert!(assert_message_in_diagnostics(
         &ns.diagnostics,
         "evm assembly not supported on target solana"
+    ));
+    assert!(assert_message_in_diagnostics(
+        &ns.diagnostics,
+        "yul function has never been used"
     ));
 }
 
@@ -270,5 +274,64 @@ contract testTypes {
     assert!(assert_message_in_diagnostics(
         &ns.diagnostics,
         "evm assembly not supported on target solana"
+    ));
+}
+
+#[test]
+fn unreachable_after_leave() {
+    let file = r#"
+contract testTypes {
+    function testAsm() public pure {
+        assembly {
+            {
+                function tryThis(b, a) -> c {
+                    a := add(a, 4)
+                    if gt(a, 5) {
+                        leave
+                    }
+                    b := add(a, 6)
+                    c := tryThat(b, 2)
+                    return(b, 0)
+                }
+
+                {
+                    function foo(d) -> e {
+                        e := shr(d, 3)
+                    }
+
+                    revert(tryThis(foo(3), 2), 4)
+                }
+
+                function tryThat(b, a) -> c {
+                    a := add(a, 4)
+                    if gt(a, 5) {
+                        leave
+                    }
+                    c := 5
+                    return(b, 0)
+                }
+                let x := 5
+            }
+        }
+    }
+}    "#;
+
+    let ns = parse(file);
+    assert_eq!(ns.diagnostics.len(), 4);
+    assert!(assert_message_in_diagnostics(
+        &ns.diagnostics,
+        "found contract ‘testTypes’"
+    ));
+    assert!(assert_message_in_diagnostics(
+        &ns.diagnostics,
+        "evm assembly not supported on target solana"
+    ));
+    assert!(assert_message_in_diagnostics(
+        &ns.diagnostics,
+        "unreachable assembly statement"
+    ));
+    assert!(assert_message_in_diagnostics(
+        &ns.diagnostics,
+        "assembly variable ‘x‘ has never been read"
     ));
 }

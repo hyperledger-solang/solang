@@ -51,7 +51,7 @@ pub fn resolve_inline_assembly(
     );
 
     symtable.leave_scope();
-    functions_table.leave_scope();
+    functions_table.leave_scope(ns);
 
     (
         InlineAssembly {
