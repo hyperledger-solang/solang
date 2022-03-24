@@ -3,7 +3,7 @@ strict digraph "tests/contract_testcases/substrate/variables/test_variable_initi
 	var [label="variable x\nvisibility internal\ntests/contract_testcases/substrate/variables/test_variable_initializer_errors_04.sol:2:13-29"]
 	diagnostic [label="found contract ‘test’\nlevel Debug\ntests/contract_testcases/substrate/variables/test_variable_initializer_errors_04.sol:1:1-15"]
 	diagnostic_6 [label="`x' is not found\nlevel Error\ntests/contract_testcases/substrate/variables/test_variable_initializer_errors_04.sol:2:22-23"]
-	diagnostic_7 [label="storage variable 'x' has never been used\nlevel Warning\ntests/contract_testcases/substrate/variables/test_variable_initializer_errors_04.sol:2:13-29"]
+	diagnostic_7 [label="storage variable ‘x‘ has never been used\nlevel Warning\ntests/contract_testcases/substrate/variables/test_variable_initializer_errors_04.sol:2:13-29"]
 	contracts -> contract
 	contract -> var [label="variable"]
 	diagnostics -> diagnostic [label="Debug"]

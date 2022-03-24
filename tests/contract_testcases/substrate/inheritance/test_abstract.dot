@@ -8,7 +8,7 @@ strict digraph "tests/contract_testcases/substrate/inheritance/test_abstract.sol
 	diagnostic [label="found abstract contract ‘foo’\nlevel Debug\ntests/contract_testcases/substrate/inheritance/test_abstract.sol:2:9-31"]
 	diagnostic_9 [label="‘public’: visibility for constructors is ignored\nlevel Warning\ntests/contract_testcases/substrate/inheritance/test_abstract.sol:3:35-41"]
 	diagnostic_10 [label="found contract ‘bar’\nlevel Debug\ntests/contract_testcases/substrate/inheritance/test_abstract.sol:10:9-22"]
-	diagnostic_11 [label="function parameter 'arg1' has never been read\nlevel Warning\ntests/contract_testcases/substrate/inheritance/test_abstract.sol:3:29-33"]
+	diagnostic_11 [label="function parameter ‘arg1‘ has never been read\nlevel Warning\ntests/contract_testcases/substrate/inheritance/test_abstract.sol:3:29-33"]
 	diagnostic_12 [label="cannot construct ‘foo’ of type ‘abstract contract’\nlevel Error\ntests/contract_testcases/substrate/inheritance/test_abstract.sol:12:25-35"]
 	contracts -> contract
 	contract -> node_2 [label="constructor"]

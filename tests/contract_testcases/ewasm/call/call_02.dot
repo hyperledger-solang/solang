@@ -11,8 +11,8 @@ strict digraph "tests/contract_testcases/ewasm/call/call_02.sol" {
 	number_literal [label="uint32 literal: 0\ntests/contract_testcases/ewasm/call/call_02.sol:4:62-64"]
 	number_literal_11 [label="uint128 literal: 2\ntests/contract_testcases/ewasm/call/call_02.sol:4:59-60"]
 	diagnostic [label="found contract ‘x’\nlevel Debug\ntests/contract_testcases/ewasm/call/call_02.sol:2:9-20"]
-	diagnostic_14 [label="destructure variable 's' has never been used\nlevel Warning\ntests/contract_testcases/ewasm/call/call_02.sol:4:23-24"]
-	diagnostic_15 [label="destructure variable 'bs' has never been used\nlevel Warning\ntests/contract_testcases/ewasm/call/call_02.sol:4:39-41"]
+	diagnostic_14 [label="destructure variable ‘s‘ has never been used\nlevel Warning\ntests/contract_testcases/ewasm/call/call_02.sol:4:23-24"]
+	diagnostic_15 [label="destructure variable ‘bs‘ has never been used\nlevel Warning\ntests/contract_testcases/ewasm/call/call_02.sol:4:39-41"]
 	contracts -> contract
 	contract -> f [label="function"]
 	f -> parameters [label="parameters"]

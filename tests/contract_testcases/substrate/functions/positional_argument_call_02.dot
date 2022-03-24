@@ -4,8 +4,8 @@ strict digraph "tests/contract_testcases/substrate/functions/positional_argument
 	parameters [label="parameters\nbool arg1\nuint256 arg2"]
 	bar [label="function bar\ncontract: args\ntests/contract_testcases/substrate/functions/positional_argument_call_02.sol:6:9-31\nsignature bar()\nvisibility private\nmutability nonpayable"]
 	diagnostic [label="found contract ‘args’\nlevel Debug\ntests/contract_testcases/substrate/functions/positional_argument_call_02.sol:2:5-19"]
-	diagnostic_7 [label="function parameter 'arg1' has never been read\nlevel Warning\ntests/contract_testcases/substrate/functions/positional_argument_call_02.sol:3:27-31"]
-	diagnostic_8 [label="function parameter 'arg2' has never been read\nlevel Warning\ntests/contract_testcases/substrate/functions/positional_argument_call_02.sol:3:38-42"]
+	diagnostic_7 [label="function parameter ‘arg1‘ has never been read\nlevel Warning\ntests/contract_testcases/substrate/functions/positional_argument_call_02.sol:3:27-31"]
+	diagnostic_8 [label="function parameter ‘arg2‘ has never been read\nlevel Warning\ntests/contract_testcases/substrate/functions/positional_argument_call_02.sol:3:38-42"]
 	diagnostic_9 [label="expected ‘bool’, found integer\nlevel Error\ntests/contract_testcases/substrate/functions/positional_argument_call_02.sol:7:17-18"]
 	diagnostic_10 [label="conversion from bool to uint256 not possible\nlevel Error\ntests/contract_testcases/substrate/functions/positional_argument_call_02.sol:7:20-25"]
 	contracts -> contract

@@ -11,8 +11,8 @@ strict digraph "tests/contract_testcases/solana/call/abi_encode_call.sol" {
 	diagnostic_12 [label="conversion from bool to int256 not possible\nlevel Error\ntests/contract_testcases/solana/call/abi_encode_call.sol:7:49-53"]
 	diagnostic_13 [label="declaration of ‘foo’ shadows function\nlevel Warning\ntests/contract_testcases/solana/call/abi_encode_call.sol:12:22-25"]
 	note [label="previous declaration of function\ntests/contract_testcases/solana/call/abi_encode_call.sol:12:14-17"]
-	diagnostic_15 [label="function parameter 'foo' has never been read\nlevel Warning\ntests/contract_testcases/solana/call/abi_encode_call.sol:12:22-25"]
-	diagnostic_16 [label="function parameter 'bar' has never been read\nlevel Warning\ntests/contract_testcases/solana/call/abi_encode_call.sol:12:31-34"]
+	diagnostic_15 [label="function parameter ‘foo‘ has never been read\nlevel Warning\ntests/contract_testcases/solana/call/abi_encode_call.sol:12:22-25"]
+	diagnostic_16 [label="function parameter ‘bar‘ has never been read\nlevel Warning\ntests/contract_testcases/solana/call/abi_encode_call.sol:12:31-34"]
 	contracts -> contract
 	contract -> test1 [label="function"]
 	contract -> test2 [label="function"]

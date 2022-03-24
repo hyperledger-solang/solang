@@ -30,7 +30,7 @@ strict digraph "tests/contract_testcases/substrate/contracts/external_call_02.so
 	diagnostic_30 [label="found contract ‘b’\nlevel Debug\ntests/contract_testcases/substrate/contracts/external_call_02.sol:12:9-20"]
 	diagnostic_31 [label="‘public’: visibility for constructors is ignored\nlevel Warning\ntests/contract_testcases/substrate/contracts/external_call_02.sol:14:34-40"]
 	diagnostic_32 [label="duplicate argument with name ‘t’\nlevel Error\ntests/contract_testcases/substrate/contracts/external_call_02.sol:8:41-42"]
-	diagnostic_33 [label="storage variable 'x' has been assigned, but never read\nlevel Warning\ntests/contract_testcases/substrate/contracts/external_call_02.sol:3:13-16"]
+	diagnostic_33 [label="storage variable ‘x‘ has been assigned, but never read\nlevel Warning\ntests/contract_testcases/substrate/contracts/external_call_02.sol:3:13-16"]
 	contracts -> contract
 	contract -> var [label="variable"]
 	contract -> node_3 [label="constructor"]

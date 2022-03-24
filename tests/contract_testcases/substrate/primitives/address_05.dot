@@ -3,7 +3,7 @@ strict digraph "tests/contract_testcases/substrate/primitives/address_05.sol" {
 	var [label="variable foo\nvisibility internal\ntests/contract_testcases/substrate/primitives/address_05.sol:2:13-84"]
 	number_literal [label="address literal: 82381599652983064627748031644048006099156261489258002493031233701766405061660\ntests/contract_testcases/substrate/primitives/address_05.sol:2:27-84"]
 	diagnostic [label="found contract ‘test’\nlevel Debug\ntests/contract_testcases/substrate/primitives/address_05.sol:1:1-15"]
-	diagnostic_7 [label="storage variable 'foo' has been assigned, but never read\nlevel Warning\ntests/contract_testcases/substrate/primitives/address_05.sol:2:13-84"]
+	diagnostic_7 [label="storage variable ‘foo‘ has been assigned, but never read\nlevel Warning\ntests/contract_testcases/substrate/primitives/address_05.sol:2:13-84"]
 	contracts -> contract
 	contract -> var [label="variable"]
 	var -> number_literal [label="initializer"]

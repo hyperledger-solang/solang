@@ -6,7 +6,7 @@ strict digraph "tests/contract_testcases/substrate/strings/string_escape_01.sol"
 	number_literal [label="uint32 literal: 0\ntests/contract_testcases/substrate/strings/string_escape_01.sol:4:32-38"]
 	diagnostic [label="found contract ‘c’\nlevel Debug\ntests/contract_testcases/substrate/strings/string_escape_01.sol:2:9-20"]
 	diagnostic_8 [label="\x escape should be followed by two hex digits\nlevel Error\ntests/contract_testcases/substrate/strings/string_escape_01.sol:4:33-36"]
-	diagnostic_9 [label="local variable 'f' has been assigned, but never read\nlevel Warning\ntests/contract_testcases/substrate/strings/string_escape_01.sol:4:28-29"]
+	diagnostic_9 [label="local variable ‘f‘ has been assigned, but never read\nlevel Warning\ntests/contract_testcases/substrate/strings/string_escape_01.sol:4:28-29"]
 	contracts -> contract
 	contract -> foo [label="function"]
 	foo -> var_decl [label="body"]

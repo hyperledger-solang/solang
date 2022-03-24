@@ -22,8 +22,8 @@ strict digraph "tests/contract_testcases/substrate/function_types/variable_or_fu
 	diagnostic [label="found contract ‘bar’\nlevel Debug\ntests/contract_testcases/substrate/function_types/variable_or_func_type.sol:1:1-14"]
 	diagnostic_23 [label="found interface ‘I’\nlevel Debug\ntests/contract_testcases/substrate/function_types/variable_or_func_type.sol:5:9-21"]
 	diagnostic_24 [label="found contract ‘foo’\nlevel Debug\ntests/contract_testcases/substrate/function_types/variable_or_func_type.sol:9:9-31"]
-	diagnostic_25 [label="local variable 'variable' has been assigned, but never read\nlevel Warning\ntests/contract_testcases/substrate/function_types/variable_or_func_type.sol:12:21-29"]
-	diagnostic_26 [label="local variable 'func_type' has been assigned, but never read\nlevel Warning\ntests/contract_testcases/substrate/function_types/variable_or_func_type.sol:14:51-60"]
+	diagnostic_25 [label="local variable ‘variable‘ has been assigned, but never read\nlevel Warning\ntests/contract_testcases/substrate/function_types/variable_or_func_type.sol:12:21-29"]
+	diagnostic_26 [label="local variable ‘func_type‘ has been assigned, but never read\nlevel Warning\ntests/contract_testcases/substrate/function_types/variable_or_func_type.sol:14:51-60"]
 	diagnostic_27 [label="function can be declared ‘view’\nlevel Warning\ntests/contract_testcases/substrate/function_types/variable_or_func_type.sol:10:13-33"]
 	contracts -> contract
 	contract -> var [label="variable"]

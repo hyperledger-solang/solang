@@ -5,7 +5,7 @@ strict digraph "tests/contract_testcases/substrate/functions/payable.sol" {
 	diagnostic [label="pragma ‘solidity’ is ignored\nlevel Debug\ntests/contract_testcases/substrate/functions/payable.sol:2:9-26"]
 	diagnostic_7 [label="found contract ‘c’\nlevel Debug\ntests/contract_testcases/substrate/functions/payable.sol:4:9-20"]
 	diagnostic_8 [label="internal or private function cannot be payable\nlevel Error\ntests/contract_testcases/substrate/functions/payable.sol:7:29-36"]
-	diagnostic_9 [label="storage variable 'i' has been assigned, but never read\nlevel Warning\ntests/contract_testcases/substrate/functions/payable.sol:5:13-24"]
+	diagnostic_9 [label="storage variable ‘i‘ has been assigned, but never read\nlevel Warning\ntests/contract_testcases/substrate/functions/payable.sol:5:13-24"]
 	contracts -> contract
 	contract -> var [label="variable"]
 	var -> number_literal [label="initializer"]

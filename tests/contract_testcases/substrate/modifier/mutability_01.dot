@@ -8,7 +8,7 @@ strict digraph "tests/contract_testcases/substrate/modifier/mutability_01.sol" {
 	underscore [label="undersore\ntests/contract_testcases/substrate/modifier/mutability_01.sol:4:46-47"]
 	bar [label="function bar\ncontract: c\ntests/contract_testcases/substrate/modifier/mutability_01.sol:6:13-45\nsignature bar()\nvisibility public\nmutability pure"]
 	diagnostic [label="found contract ‘c’\nlevel Debug\ntests/contract_testcases/substrate/modifier/mutability_01.sol:2:9-20"]
-	diagnostic_11 [label="local variable 'x' has been assigned, but never read\nlevel Warning\ntests/contract_testcases/substrate/modifier/mutability_01.sol:4:37-38"]
+	diagnostic_11 [label="local variable ‘x‘ has been assigned, but never read\nlevel Warning\ntests/contract_testcases/substrate/modifier/mutability_01.sol:4:37-38"]
 	diagnostic_12 [label="function declared ‘pure’ but this expression reads from state\nlevel Error\ntests/contract_testcases/substrate/modifier/mutability_01.sol:4:41-44"]
 	contracts -> contract
 	contract -> var [label="variable"]

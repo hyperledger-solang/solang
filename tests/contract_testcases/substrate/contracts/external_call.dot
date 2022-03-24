@@ -12,8 +12,8 @@ strict digraph "tests/contract_testcases/substrate/contracts/external_call.sol" 
 	diagnostic [label="found contract ‘c’\nlevel Debug\ntests/contract_testcases/substrate/contracts/external_call.sol:2:9-20"]
 	diagnostic_13 [label="found contract ‘b’\nlevel Debug\ntests/contract_testcases/substrate/contracts/external_call.sol:9:9-20"]
 	diagnostic_14 [label="function expects 1 arguments, 0 provided\nlevel Error\ntests/contract_testcases/substrate/contracts/external_call.sol:5:24-33"]
-	diagnostic_15 [label="function parameter 't' has never been read\nlevel Warning\ntests/contract_testcases/substrate/contracts/external_call.sol:10:34-35"]
-	diagnostic_16 [label="storage variable 'x' has never been used\nlevel Warning\ntests/contract_testcases/substrate/contracts/external_call.sol:3:13-16"]
+	diagnostic_15 [label="function parameter ‘t‘ has never been read\nlevel Warning\ntests/contract_testcases/substrate/contracts/external_call.sol:10:34-35"]
+	diagnostic_16 [label="storage variable ‘x‘ has never been used\nlevel Warning\ntests/contract_testcases/substrate/contracts/external_call.sol:3:13-16"]
 	contracts -> contract
 	contract -> var [label="variable"]
 	contract -> test [label="function"]

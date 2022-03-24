@@ -11,7 +11,7 @@ strict digraph "tests/contract_testcases/solana/expressions/selector_in_free_fun
 	variable [label="variable: t\ncontract I\ntests/contract_testcases/solana/expressions/selector_in_free_function_02.sol:8:24-25"]
 	diagnostic [label="found contract ‘I’\nlevel Debug\ntests/contract_testcases/solana/expressions/selector_in_free_function_02.sol:2:9-20"]
 	diagnostic_14 [label="found contract ‘foo’\nlevel Debug\ntests/contract_testcases/solana/expressions/selector_in_free_function_02.sol:6:9-22"]
-	diagnostic_15 [label="function parameter 't' has never been read\nlevel Warning\ntests/contract_testcases/solana/expressions/selector_in_free_function_02.sol:7:26-27"]
+	diagnostic_15 [label="function parameter ‘t‘ has never been read\nlevel Warning\ntests/contract_testcases/solana/expressions/selector_in_free_function_02.sol:7:26-27"]
 	diagnostic_16 [label="function can be declared ‘pure’\nlevel Warning\ntests/contract_testcases/solana/expressions/selector_in_free_function_02.sol:3:13-34"]
 	diagnostic_17 [label="function can be declared ‘pure’\nlevel Warning\ntests/contract_testcases/solana/expressions/selector_in_free_function_02.sol:7:13-52"]
 	contracts -> contract

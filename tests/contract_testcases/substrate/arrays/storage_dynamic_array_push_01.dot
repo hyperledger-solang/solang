@@ -4,7 +4,7 @@ strict digraph "tests/contract_testcases/substrate/arrays/storage_dynamic_array_
 	test [label="function test\ncontract: foo\ntests/contract_testcases/substrate/arrays/storage_dynamic_array_push_01.sol:5:13-35\nsignature test()\nvisibility public\nmutability nonpayable"]
 	diagnostic [label="found contract ‘foo’\nlevel Debug\ntests/contract_testcases/substrate/arrays/storage_dynamic_array_push_01.sol:2:9-22"]
 	diagnostic_6 [label="method ‘push()’ not allowed on fixed length array\nlevel Error\ntests/contract_testcases/substrate/arrays/storage_dynamic_array_push_01.sol:6:21-25"]
-	diagnostic_7 [label="storage variable 'bar' has never been used\nlevel Warning\ntests/contract_testcases/substrate/arrays/storage_dynamic_array_push_01.sol:3:13-25"]
+	diagnostic_7 [label="storage variable ‘bar‘ has never been used\nlevel Warning\ntests/contract_testcases/substrate/arrays/storage_dynamic_array_push_01.sol:3:13-25"]
 	contracts -> contract
 	contract -> var [label="variable"]
 	contract -> test [label="function"]

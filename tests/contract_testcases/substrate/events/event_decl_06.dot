@@ -3,7 +3,7 @@ strict digraph "tests/contract_testcases/substrate/events/event_decl_06.sol" {
 	contract [label="contract c\ntests/contract_testcases/substrate/events/event_decl_06.sol:2:9-20"]
 	diagnostic [label="event ‘foo’ has duplicate field name ‘x’\nlevel Error\ntests/contract_testcases/substrate/events/event_decl_06.sol:3:50-51"]
 	note [label="location of previous declaration of ‘x’\ntests/contract_testcases/substrate/events/event_decl_06.sol:3:24-30"]
-	diagnostic_8 [label="event 'foo' has never been emitted\nlevel Warning\ntests/contract_testcases/substrate/events/event_decl_06.sol:3:19-22"]
+	diagnostic_8 [label="event ‘foo‘ has never been emitted\nlevel Warning\ntests/contract_testcases/substrate/events/event_decl_06.sol:3:19-22"]
 	events -> foo
 	contracts -> contract
 	diagnostics -> diagnostic [label="Error"]

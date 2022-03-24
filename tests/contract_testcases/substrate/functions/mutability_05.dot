@@ -10,8 +10,8 @@ strict digraph "tests/contract_testcases/substrate/functions/mutability_05.sol" 
 	alloc_array [label="alloc array bytes\ninitializer: 0102\ntests/contract_testcases/substrate/functions/mutability_05.sol:3:53-62"]
 	number_literal [label="uint32 literal: 2\ntests/contract_testcases/substrate/functions/mutability_05.sol:3:53-62"]
 	diagnostic [label="found contract ‘c’\nlevel Debug\ntests/contract_testcases/substrate/functions/mutability_05.sol:1:1-12"]
-	diagnostic_13 [label="destructure variable 'f' has never been used\nlevel Warning\ntests/contract_testcases/substrate/functions/mutability_05.sol:3:23-24"]
-	diagnostic_14 [label="destructure variable 'res' has never been used\nlevel Warning\ntests/contract_testcases/substrate/functions/mutability_05.sol:3:39-42"]
+	diagnostic_13 [label="destructure variable ‘f‘ has never been used\nlevel Warning\ntests/contract_testcases/substrate/functions/mutability_05.sol:3:23-24"]
+	diagnostic_14 [label="destructure variable ‘res‘ has never been used\nlevel Warning\ntests/contract_testcases/substrate/functions/mutability_05.sol:3:39-42"]
 	diagnostic_15 [label="function declared ‘view’ but this expression writes to state\nlevel Error\ntests/contract_testcases/substrate/functions/mutability_05.sol:3:46-63"]
 	contracts -> contract
 	contract -> add [label="function"]
