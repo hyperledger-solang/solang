@@ -67,7 +67,7 @@ pub(crate) fn resolve_for_loop(
     );
 
     symtable.leave_scope();
-    function_table.leave_scope();
+    function_table.leave_scope(ns);
 
     Ok((
         AssemblyStatement::For {

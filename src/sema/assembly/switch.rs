@@ -91,7 +91,7 @@ pub(crate) fn resolve_condition(
     condition: &pt::AssemblyExpression,
     context: &ExprContext,
     symtable: &mut Symtable,
-    function_table: &FunctionsTable,
+    function_table: &mut FunctionsTable,
     ns: &mut Namespace,
 ) -> Result<AssemblyExpression, ()> {
     let resolved_condition =

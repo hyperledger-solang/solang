@@ -360,7 +360,6 @@ pub fn emit_warning_local_variable(variable: &symtable::Variable) -> Option<Diag
                     ),
                 ));
             }
-
             None
         }
         VariableUsage::AnonymousReturnVariable => None,
@@ -484,7 +483,7 @@ pub fn check_unused_events(ns: &mut Namespace) {
             ns.diagnostics.push(Diagnostic::warning(
                 event.loc,
                 format!("event ‘{}‘ has never been emitted", event.name),
-            ))
+            ));
         }
     }
 }

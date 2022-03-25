@@ -72,7 +72,7 @@ pub(crate) fn resolve_assembly_expression(
     expr: &pt::AssemblyExpression,
     context: &ExprContext,
     symtable: &mut Symtable,
-    function_table: &FunctionsTable,
+    function_table: &mut FunctionsTable,
     ns: &mut Namespace,
 ) -> Result<AssemblyExpression, ()> {
     match expr {
@@ -366,7 +366,7 @@ fn resolve_variable_reference(
 }
 
 pub(crate) fn resolve_function_call(
-    function_table: &FunctionsTable,
+    function_table: &mut FunctionsTable,
     func_call: &AssemblyFunctionCall,
     context: &ExprContext,
     symtable: &mut Symtable,
@@ -459,11 +459,14 @@ pub(crate) fn resolve_function_call(
             check_function_argument(item, &resolved_arguments[index], function_table, ns);
         }
 
-        return Ok(AssemblyExpression::FunctionCall(
+        let fn_no = func.function_no;
+        let resolved_fn = Ok(AssemblyExpression::FunctionCall(
             func_call.id.loc,
-            func.function_no,
+            fn_no,
             resolved_arguments,
         ));
+        function_table.function_called(fn_no);
+        return resolved_fn;
     }
 
     ns.diagnostics.push(Diagnostic::error(
@@ -532,7 +535,7 @@ fn resolve_member_access(
     id: &Identifier,
     context: &ExprContext,
     symtable: &mut Symtable,
-    function_table: &FunctionsTable,
+    function_table: &mut FunctionsTable,
     ns: &mut Namespace,
 ) -> Result<AssemblyExpression, ()> {
     let suffix_type = match get_suffix_from_string(&id.name[..]) {
@@ -690,7 +693,6 @@ pub(crate) fn check_type(
                     "cannot assign a value to offset".to_string(),
                 ));
             }
-
             AssemblyExpression::MemberAccess(_, exp, AssemblySuffix::Slot) => {
                 if matches!(**exp, AssemblyExpression::StorageVariable(..)) {
                     return Some(Diagnostic::error(

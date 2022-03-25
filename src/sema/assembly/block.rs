@@ -1,5 +1,7 @@
 use crate::ast::Namespace;
-use crate::sema::assembly::functions::{process_function_header, FunctionsTable};
+use crate::sema::assembly::functions::{
+    process_function_header, resolve_function_definition, FunctionsTable,
+};
 use crate::sema::assembly::statements::{resolve_assembly_statement, AssemblyStatement};
 use crate::sema::expression::ExprContext;
 use crate::sema::symtable::{LoopScopes, Symtable};
@@ -39,7 +41,7 @@ pub fn resolve_assembly_block(
     reachable &= local_reachable;
 
     symtable.leave_scope();
-    function_table.leave_scope();
+    function_table.leave_scope(ns);
 
     (AssemblyBlock { loc: *loc, body }, reachable)
 }
@@ -64,6 +66,16 @@ pub(crate) fn process_statements(
         }
     }
 
+    for item in statements {
+        if let pt::AssemblyStatement::FunctionDefinition(func_def) = item {
+            if let Ok(resolved_func) =
+                resolve_function_definition(func_def, functions_table, context, ns)
+            {
+                functions_table.resolved_functions.push(resolved_func);
+            }
+        }
+    }
+
     let mut body: Vec<(AssemblyStatement, bool)> =
         Vec::with_capacity(statements.len() - func_count);
     let mut has_unreachable = false;
@@ -79,7 +91,18 @@ pub(crate) fn process_statements(
             ns,
         ) {
             Ok(can_reach_next_statement) => {
-                if !reachable && !has_unreachable {
+                /* There shouldn't be warnings of unreachable statements for function definitions.
+                    let x := foo(1, 2)
+                    return(x, 2)
+                    function foo(a, b) -> ret {
+                        ret := add(a, b)
+                    }
+                The function definition is not unreachable, because it does not execute anything.
+                */
+                if !reachable
+                    && !has_unreachable
+                    && !matches!(item, pt::AssemblyStatement::FunctionDefinition(..))
+                {
                     ns.diagnostics.push(Diagnostic::warning(
                         item.loc(),
                         "unreachable assembly statement".to_string(),
