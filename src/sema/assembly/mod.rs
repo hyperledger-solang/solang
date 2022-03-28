@@ -1,13 +1,14 @@
 use crate::ast::Namespace;
+use crate::sema::assembly::ast::InlineAssembly;
 use crate::sema::assembly::block::process_statements;
-use crate::sema::assembly::functions::{AssemblyFunction, FunctionsTable};
-use crate::sema::assembly::statements::AssemblyStatement;
+use crate::sema::assembly::functions::FunctionsTable;
 use crate::sema::expression::ExprContext;
 use crate::sema::symtable::{LoopScopes, Symtable};
 use solang_parser::pt;
 
+pub mod ast;
 mod block;
-mod builtin;
+pub mod builtin;
 mod expression;
 mod for_loop;
 mod functions;
@@ -16,15 +17,6 @@ mod switch;
 mod tests;
 mod types;
 mod unused_variable;
-
-// TODO: Mark functions as used/unused
-
-#[derive(Debug, Clone)]
-pub struct InlineAssembly {
-    pub loc: pt::Loc,
-    pub body: Vec<(AssemblyStatement, bool)>,
-    pub functions: Vec<AssemblyFunction>,
-}
 
 /// Resolves a block of inline assembly
 /// Returns the resolved block and a bool to indicate if the next statement is reachable.

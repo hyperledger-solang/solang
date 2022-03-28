@@ -194,6 +194,13 @@ impl AssemblyBuiltInFunction {
     }
 }
 
+impl ToString for AssemblyBuiltInFunction {
+    fn to_string(&self) -> String {
+        let prototype = self.get_prototype_info();
+        prototype.name.to_owned()
+    }
+}
+
 // Assembly built-in functions.
 // Descriptions copied and slightly modified from: https://docs.soliditylang.org/en/v0.8.12/yul.html
 static ASSEMBLY_BUILTIN: [AssemblyBuiltinPrototype; 76] =

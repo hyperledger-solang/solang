@@ -335,6 +335,8 @@ fn main() {
             if matches.is_present("STD-JSON") {
                 println!("{}", serde_json::to_string(&json).unwrap());
                 std::process::exit(0);
+            } else if let Some("ast-dot") = matches.value_of("EMIT") {
+                std::process::exit(0);
             } else {
                 eprintln!("error: not all contracts are valid");
                 std::process::exit(1);
@@ -468,6 +470,11 @@ fn process_file(
             eprintln!("{}: error: {}", dot_filename.display(), err);
             std::process::exit(1);
         }
+
+        if ns.contracts.is_empty() || diagnostics::any_errors(&ns.diagnostics) {
+            return Err(());
+        }
+
         return Ok(ns);
     }
 

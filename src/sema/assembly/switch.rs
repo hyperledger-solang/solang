@@ -1,21 +1,13 @@
 use crate::ast::Namespace;
-use crate::sema::assembly::block::{resolve_assembly_block, AssemblyBlock};
-use crate::sema::assembly::expression::{
-    check_type, resolve_assembly_expression, AssemblyExpression,
-};
+use crate::sema::assembly::ast::{AssemblyBlock, AssemblyExpression, AssemblyStatement, CaseBlock};
+use crate::sema::assembly::block::resolve_assembly_block;
+use crate::sema::assembly::expression::{check_type, resolve_assembly_expression};
 use crate::sema::assembly::functions::FunctionsTable;
-use crate::sema::assembly::statements::AssemblyStatement;
 use crate::sema::assembly::types::verify_type_from_expression;
 use crate::sema::expression::ExprContext;
 use crate::sema::symtable::{LoopScopes, Symtable};
 use solang_parser::pt::{AssemblySwitchOptions, CodeLocation};
 use solang_parser::{pt, Diagnostic};
-
-#[derive(Debug, Clone)]
-pub struct CaseBlock {
-    pub condition: AssemblyExpression,
-    pub block: AssemblyBlock,
-}
 
 /// Resolve switch statement
 /// Returns the resolved block and a bool to indicate if the next statement is reachable.
@@ -203,6 +195,7 @@ fn resolve_case_block(
 
     Ok((
         CaseBlock {
+            loc: *loc,
             condition: resolved_condition,
             block: case_block.0,
         },

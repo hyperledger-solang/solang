@@ -1,8 +1,8 @@
 use crate::ast::{Namespace, Type};
+use crate::sema::assembly::ast::{AssemblyFunction, AssemblyFunctionParameter};
 use crate::sema::assembly::block::process_statements;
 use crate::sema::assembly::builtin::{assembly_unsupported_builtin, parse_builtin_keyword};
 use crate::sema::assembly::types::get_type_from_string;
-use crate::sema::assembly::AssemblyStatement;
 use crate::sema::expression::ExprContext;
 use crate::sema::symtable::{LoopScopes, Symtable, VariableInitializer, VariableUsage};
 use solang_parser::diagnostics::{ErrorType, Level, Note};
@@ -10,24 +10,6 @@ use solang_parser::pt::AssemblyFunctionDefinition;
 use solang_parser::{pt, Diagnostic};
 use std::collections::{HashMap, LinkedList};
 use std::sync::Arc;
-
-#[derive(Debug, Clone)]
-pub struct AssemblyFunction {
-    pub loc: pt::Loc,
-    pub name: String,
-    pub params: Arc<Vec<AssemblyFunctionParameter>>,
-    pub returns: Arc<Vec<AssemblyFunctionParameter>>,
-    pub body: Vec<(AssemblyStatement, bool)>,
-    pub symtable: Symtable,
-    pub called: bool,
-}
-
-#[derive(Debug, Clone)]
-pub struct AssemblyFunctionParameter {
-    pub loc: pt::Loc,
-    pub id: pt::Identifier,
-    pub ty: Type,
-}
 
 /// Saves resolved function headers, so that we can account for function calls, before
 /// resolving the function's body

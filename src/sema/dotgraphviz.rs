@@ -1,5 +1,11 @@
 use super::ast::*;
 use crate::parser::pt;
+use crate::sema::assembly::ast::{
+    AssemblyBlock, AssemblyExpression, AssemblyFunction, AssemblyStatement,
+};
+use crate::sema::assembly::builtin::AssemblyBuiltInFunction;
+use crate::sema::symtable::Symtable;
+use solang_parser::pt::Loc;
 
 struct Node {
     name: String,
@@ -501,30 +507,7 @@ impl Dot {
                 self.add_expression(right, func, ns, node, String::from("right"));
             }
             Expression::ConstantVariable(loc, ty, contract, var_no) => {
-                let mut labels = vec![
-                    String::from("constant variable"),
-                    ty.to_string(ns),
-                    ns.loc_to_string(loc),
-                ];
-
-                if let Some(contract) = contract {
-                    labels.insert(
-                        1,
-                        format!(
-                            "{}.{}",
-                            ns.contracts[*contract].name,
-                            ns.contracts[*contract].variables[*var_no].name
-                        ),
-                    );
-                } else {
-                    labels.insert(1, ns.constants[*var_no].name.to_string());
-                }
-
-                self.add_node(
-                    Node::new("constant", labels),
-                    Some(parent),
-                    Some(parent_rel),
-                );
+                self.add_constant_variable(loc, ty, contract, var_no, parent, parent_rel, ns);
             }
             Expression::Variable(loc, ty, var_no) => {
                 let labels = vec![
@@ -540,22 +523,7 @@ impl Dot {
                 );
             }
             Expression::StorageVariable(loc, ty, contract, var_no) => {
-                let labels = vec![
-                    String::from("storage variable"),
-                    format!(
-                        "{}.{}",
-                        ns.contracts[*contract].name,
-                        ns.contracts[*contract].variables[*var_no].name
-                    ),
-                    ty.to_string(ns),
-                    ns.loc_to_string(loc),
-                ];
-
-                self.add_node(
-                    Node::new("storage_var", labels),
-                    Some(parent),
-                    Some(parent_rel),
-                );
+                self.add_storage_variable(loc, ty, contract, var_no, parent, parent_rel, ns);
             }
             Expression::Load(loc, ty, expr) => {
                 let node = self.add_node(
@@ -1562,12 +1530,669 @@ impl Dot {
                     );
                 }
 
-                Statement::Assembly(_) => {
-                    unimplemented!("Assembly block graphviz not ready yet");
+                Statement::Assembly(inline_assembly) => {
+                    let labels = vec![
+                        "inline assembly".to_string(),
+                        ns.loc_to_string(&inline_assembly.loc),
+                    ];
+                    parent = self.add_node(
+                        Node::new("inline_assembly", labels),
+                        Some(parent),
+                        Some(parent_rel),
+                    );
+
+                    let mut local_parent = parent;
+
+                    for n in 0..inline_assembly.functions.len() {
+                        self.add_yul_function(
+                            n,
+                            &inline_assembly.functions,
+                            ns,
+                            local_parent,
+                            format!("func def #{}", n),
+                        );
+                    }
+
+                    local_parent = parent;
+                    for (item_no, item) in inline_assembly.body.iter().enumerate() {
+                        local_parent = self.add_yul_statement(
+                            &item.0,
+                            local_parent,
+                            format!("statement #{}", item_no),
+                            &inline_assembly.functions,
+                            &func.symtable,
+                            ns,
+                        );
+                    }
                 }
             }
             parent_rel = String::from("next");
         }
+    }
+
+    fn add_yul_function(
+        &mut self,
+        func_no: usize,
+        avail_functions: &[AssemblyFunction],
+        ns: &Namespace,
+        parent: usize,
+        parent_rel: String,
+    ) {
+        let labels = vec![
+            format!("function definition {}", avail_functions[func_no].name),
+            ns.loc_to_string(&avail_functions[func_no].loc),
+        ];
+
+        let func_node = self.add_node(
+            Node::new("yul_function_definition", labels),
+            Some(parent),
+            Some(parent_rel),
+        );
+
+        let mut local_parent = func_node;
+        for (item_no, item) in (*avail_functions[func_no].params).iter().enumerate() {
+            let labels = vec![
+                format!(
+                    "function parameter {}: {}",
+                    item.ty.to_string(ns),
+                    item.id.name
+                ),
+                ns.loc_to_string(&item.loc),
+            ];
+            local_parent = self.add_node(
+                Node::new("yul_function_parameter", labels),
+                Some(local_parent),
+                Some(format!("parameter #{}", item_no)),
+            );
+        }
+
+        local_parent = func_node;
+        for (item_no, item) in (*avail_functions[func_no].returns).iter().enumerate() {
+            let labels = vec![
+                format!(
+                    "return parameter {}: {}",
+                    item.ty.to_string(ns),
+                    item.id.name
+                ),
+                ns.loc_to_string(&item.loc),
+            ];
+            local_parent = self.add_node(
+                Node::new("yul_function_return", labels),
+                Some(local_parent),
+                Some(format!("return #{}", item_no)),
+            );
+        }
+
+        local_parent = func_node;
+        for (item_no, item) in avail_functions[func_no].body.iter().enumerate() {
+            local_parent = self.add_yul_statement(
+                &item.0,
+                local_parent,
+                format!("statement #{}", item_no),
+                avail_functions,
+                &avail_functions[func_no].symtable,
+                ns,
+            );
+        }
+    }
+
+    fn add_yul_expression(
+        &mut self,
+        expr: &AssemblyExpression,
+        symtable: &Symtable,
+        avail_functions: &[AssemblyFunction],
+        ns: &Namespace,
+        parent: usize,
+        parent_rel: String,
+    ) {
+        match expr {
+            AssemblyExpression::BoolLiteral(loc, value, ty) => {
+                let labels = vec![
+                    format!(
+                        "bool literal: {} of type {}",
+                        if *value { "true" } else { "false" },
+                        ty.to_string(ns)
+                    ),
+                    ns.loc_to_string(loc),
+                ];
+
+                self.add_node(
+                    Node::new("yul_bool_literal", labels),
+                    Some(parent),
+                    Some(parent_rel),
+                );
+            }
+            AssemblyExpression::NumberLiteral(loc, value, ty) => {
+                let labels = vec![
+                    format!("{} literal: {}", ty.to_string(ns), value),
+                    ns.loc_to_string(loc),
+                ];
+
+                self.add_node(
+                    Node::new("yul_number_literal", labels),
+                    Some(parent),
+                    Some(parent_rel),
+                );
+            }
+            AssemblyExpression::StringLiteral(loc, value, ty) => {
+                let labels = vec![
+                    format!("{} literal: {}", ty.to_string(ns), hex::encode(value)),
+                    ns.loc_to_string(loc),
+                ];
+
+                self.add_node(
+                    Node::new("bytes_literal", labels),
+                    Some(parent),
+                    Some(parent_rel),
+                );
+            }
+            AssemblyExpression::AssemblyLocalVariable(loc, ty, var_no) => {
+                let labels = vec![
+                    format!("yul variable: {}", symtable.vars[var_no].id.name),
+                    ty.to_string(ns),
+                    ns.loc_to_string(loc),
+                ];
+                self.add_node(
+                    Node::new("yul_variable", labels),
+                    Some(parent),
+                    Some(parent_rel),
+                );
+            }
+            AssemblyExpression::SolidityLocalVariable(loc, ty, _, var_no) => {
+                let labels = vec![
+                    format!("solidity variable: {}", symtable.vars[var_no].id.name),
+                    ty.to_string(ns),
+                    ns.loc_to_string(loc),
+                ];
+
+                self.add_node(
+                    Node::new("solidity_variable", labels),
+                    Some(parent),
+                    Some(parent_rel),
+                );
+            }
+            AssemblyExpression::ConstantVariable(loc, ty, contract, var_no) => {
+                self.add_constant_variable(loc, ty, contract, var_no, parent, parent_rel, ns);
+            }
+            AssemblyExpression::StorageVariable(loc, ty, contract, var_no) => {
+                self.add_storage_variable(loc, ty, contract, var_no, parent, parent_rel, ns);
+            }
+            AssemblyExpression::BuiltInCall(loc, builtin_ty, args) => {
+                self.add_yul_builtin_call(
+                    loc,
+                    builtin_ty,
+                    args,
+                    parent,
+                    parent_rel,
+                    avail_functions,
+                    symtable,
+                    ns,
+                );
+            }
+            AssemblyExpression::FunctionCall(loc, func_no, args) => {
+                self.add_yul_function_call(
+                    loc,
+                    func_no,
+                    args,
+                    parent,
+                    parent_rel,
+                    avail_functions,
+                    symtable,
+                    ns,
+                );
+            }
+            AssemblyExpression::MemberAccess(loc, member, suffix) => {
+                let labels = vec![
+                    format!("yul member ‘{}‘ access", suffix.to_string()),
+                    ns.loc_to_string(loc),
+                ];
+
+                let node = self.add_node(
+                    Node::new("yul_member_access", labels),
+                    Some(parent),
+                    Some(parent_rel),
+                );
+
+                self.add_yul_expression(
+                    member,
+                    symtable,
+                    avail_functions,
+                    ns,
+                    node,
+                    "parent".to_string(),
+                );
+            }
+        }
+    }
+
+    fn add_constant_variable(
+        &mut self,
+        loc: &Loc,
+        ty: &Type,
+        contract: &Option<usize>,
+        var_no: &usize,
+        parent: usize,
+        parent_rel: String,
+        ns: &Namespace,
+    ) {
+        let mut labels = vec![
+            String::from("constant variable"),
+            ty.to_string(ns),
+            ns.loc_to_string(loc),
+        ];
+
+        if let Some(contract) = contract {
+            labels.insert(
+                1,
+                format!(
+                    "{}.{}",
+                    ns.contracts[*contract].name, ns.contracts[*contract].variables[*var_no].name
+                ),
+            );
+        } else {
+            labels.insert(1, ns.constants[*var_no].name.to_string());
+        }
+
+        self.add_node(
+            Node::new("constant", labels),
+            Some(parent),
+            Some(parent_rel),
+        );
+    }
+
+    fn add_storage_variable(
+        &mut self,
+        loc: &Loc,
+        ty: &Type,
+        contract: &usize,
+        var_no: &usize,
+        parent: usize,
+        parent_rel: String,
+        ns: &Namespace,
+    ) {
+        let labels = vec![
+            String::from("storage variable"),
+            format!(
+                "{}.{}",
+                ns.contracts[*contract].name, ns.contracts[*contract].variables[*var_no].name
+            ),
+            ty.to_string(ns),
+            ns.loc_to_string(loc),
+        ];
+
+        self.add_node(
+            Node::new("storage_var", labels),
+            Some(parent),
+            Some(parent_rel),
+        );
+    }
+
+    fn add_yul_statement(
+        &mut self,
+        statement: &AssemblyStatement,
+        parent: usize,
+        parent_rel: String,
+        avail_functions: &[AssemblyFunction],
+        symtable: &Symtable,
+        ns: &Namespace,
+    ) -> usize {
+        match statement {
+            AssemblyStatement::FunctionCall(loc, func_no, args) => self.add_yul_function_call(
+                loc,
+                func_no,
+                args,
+                parent,
+                parent_rel,
+                avail_functions,
+                symtable,
+                ns,
+            ),
+            AssemblyStatement::BuiltInCall(loc, builtin_ty, args) => self.add_yul_builtin_call(
+                loc,
+                builtin_ty,
+                args,
+                parent,
+                parent_rel,
+                avail_functions,
+                symtable,
+                ns,
+            ),
+            AssemblyStatement::Block(block) => {
+                self.add_yul_block(block, parent, parent_rel, avail_functions, symtable, ns)
+            }
+            AssemblyStatement::VariableDeclaration(loc, declared_vars, initializer) => {
+                let labels = vec![
+                    "yul variable declaration".to_string(),
+                    ns.loc_to_string(loc),
+                ];
+
+                let node = self.add_node(
+                    Node::new("yul_var_decl", labels),
+                    Some(parent),
+                    Some(parent_rel),
+                );
+
+                for (decl_no, item) in declared_vars.iter().enumerate() {
+                    let var = &symtable.vars[item];
+                    self.add_node(
+                        Node::new(
+                            "var_decl_item",
+                            vec![
+                                format!(
+                                    "yul variable declaration {} {}",
+                                    var.ty.to_string(ns),
+                                    var.id.name
+                                ),
+                                ns.loc_to_string(&var.id.loc),
+                            ],
+                        ),
+                        Some(node),
+                        Some(format!("decl item #{}", decl_no)),
+                    );
+                }
+
+                if let Some(init) = initializer {
+                    self.add_yul_expression(
+                        init,
+                        symtable,
+                        avail_functions,
+                        ns,
+                        node,
+                        "init".to_string(),
+                    );
+                }
+
+                node
+            }
+            AssemblyStatement::Assignment(loc, lhs, rhs) => {
+                let labels = vec!["yul assignment".to_string(), ns.loc_to_string(loc)];
+
+                let node = self.add_node(
+                    Node::new("yul_assignment", labels),
+                    Some(parent),
+                    Some(parent_rel),
+                );
+
+                for (item_no, item) in lhs.iter().enumerate() {
+                    self.add_yul_expression(
+                        item,
+                        symtable,
+                        avail_functions,
+                        ns,
+                        node,
+                        format!("rhs #{}", item_no),
+                    );
+                }
+
+                self.add_yul_expression(
+                    rhs,
+                    symtable,
+                    avail_functions,
+                    ns,
+                    node,
+                    "lhs".to_string(),
+                );
+                node
+            }
+            AssemblyStatement::IfBlock(loc, condition, block) => {
+                let labels = vec!["yul if".to_string(), ns.loc_to_string(loc)];
+
+                let node = self.add_node(Node::new("if", labels), Some(parent), Some(parent_rel));
+
+                self.add_yul_expression(
+                    condition,
+                    symtable,
+                    avail_functions,
+                    ns,
+                    node,
+                    "cond".to_string(),
+                );
+                self.add_yul_block(
+                    block,
+                    node,
+                    "if-block".to_string(),
+                    avail_functions,
+                    symtable,
+                    ns,
+                );
+                node
+            }
+            AssemblyStatement::Switch {
+                loc,
+                condition,
+                cases,
+                default,
+            } => {
+                let labels = vec!["yul switch".to_string(), ns.loc_to_string(loc)];
+
+                let node =
+                    self.add_node(Node::new("switch", labels), Some(parent), Some(parent_rel));
+
+                self.add_yul_expression(
+                    condition,
+                    symtable,
+                    avail_functions,
+                    ns,
+                    node,
+                    "cond".to_string(),
+                );
+
+                for (item_no, item) in cases.iter().enumerate() {
+                    let case_block = self.add_node(
+                        Node::new(
+                            "case",
+                            vec!["yul switch case".to_string(), ns.loc_to_string(&item.loc)],
+                        ),
+                        Some(node),
+                        Some(format!("case #{}", item_no)),
+                    );
+                    self.add_yul_expression(
+                        &item.condition,
+                        symtable,
+                        avail_functions,
+                        ns,
+                        case_block,
+                        "case-condition".to_string(),
+                    );
+                    self.add_yul_block(
+                        &item.block,
+                        case_block,
+                        "case block".to_string(),
+                        avail_functions,
+                        symtable,
+                        ns,
+                    );
+                }
+
+                if let Some(default_block) = default {
+                    let default_node = self.add_node(
+                        Node::new(
+                            "default",
+                            vec![
+                                "yul switch default".to_string(),
+                                ns.loc_to_string(&default_block.loc),
+                            ],
+                        ),
+                        Some(node),
+                        Some("default".to_string()),
+                    );
+                    self.add_yul_block(
+                        default_block,
+                        default_node,
+                        "default block".to_string(),
+                        avail_functions,
+                        symtable,
+                        ns,
+                    );
+                }
+                node
+            }
+            AssemblyStatement::For {
+                loc,
+                init_block,
+                condition,
+                post_block,
+                execution_block,
+            } => {
+                let labels = vec!["yul for".to_string(), ns.loc_to_string(loc)];
+
+                let node = self.add_node(Node::new("for", labels), Some(parent), Some(parent_rel));
+
+                self.add_yul_block(
+                    init_block,
+                    node,
+                    "init block".to_string(),
+                    avail_functions,
+                    symtable,
+                    ns,
+                );
+                self.add_yul_expression(
+                    condition,
+                    symtable,
+                    avail_functions,
+                    ns,
+                    node,
+                    "for condition".to_string(),
+                );
+                self.add_yul_block(
+                    post_block,
+                    node,
+                    "post block".to_string(),
+                    avail_functions,
+                    symtable,
+                    ns,
+                );
+                self.add_yul_block(
+                    execution_block,
+                    node,
+                    "execution block".to_string(),
+                    avail_functions,
+                    symtable,
+                    ns,
+                );
+                node
+            }
+            AssemblyStatement::Leave(loc) => {
+                let labels = vec!["leave".to_string(), ns.loc_to_string(loc)];
+                self.add_node(Node::new("leave", labels), Some(parent), Some(parent_rel))
+            }
+            AssemblyStatement::Break(loc) => {
+                let labels = vec!["break".to_string(), ns.loc_to_string(loc)];
+                self.add_node(Node::new("break", labels), Some(parent), Some(parent_rel))
+            }
+            AssemblyStatement::Continue(loc) => {
+                let labels = vec!["continue".to_string(), ns.loc_to_string(loc)];
+                self.add_node(
+                    Node::new("continue", labels),
+                    Some(parent),
+                    Some(parent_rel),
+                )
+            }
+        }
+    }
+
+    fn add_yul_block(
+        &mut self,
+        block: &AssemblyBlock,
+        mut parent: usize,
+        parent_rel: String,
+        avail_functions: &[AssemblyFunction],
+        symtable: &Symtable,
+        ns: &Namespace,
+    ) -> usize {
+        let label = vec!["assembly block".to_string(), ns.loc_to_string(&block.loc)];
+
+        let node = self.add_node(
+            Node::new("assembly_block", label),
+            Some(parent),
+            Some(parent_rel),
+        );
+
+        parent = node;
+        for (statement_no, child_statement) in block.body.iter().enumerate() {
+            parent = self.add_yul_statement(
+                &child_statement.0,
+                parent,
+                format!("statement #{}", statement_no),
+                avail_functions,
+                symtable,
+                ns,
+            );
+        }
+
+        node
+    }
+
+    fn add_yul_function_call(
+        &mut self,
+        loc: &Loc,
+        func_no: &usize,
+        args: &[AssemblyExpression],
+        parent: usize,
+        parent_rel: String,
+        avail_functions: &[AssemblyFunction],
+        symtable: &Symtable,
+        ns: &Namespace,
+    ) -> usize {
+        let labels = vec![
+            format!("yul function call ‘{}‘", avail_functions[*func_no].name),
+            ns.loc_to_string(loc),
+        ];
+
+        let node = self.add_node(
+            Node::new("yul_function_call", labels),
+            Some(parent),
+            Some(parent_rel),
+        );
+
+        for (arg_no, arg) in args.iter().enumerate() {
+            self.add_yul_expression(
+                arg,
+                symtable,
+                avail_functions,
+                ns,
+                node,
+                format!("arg #{}", arg_no),
+            );
+        }
+
+        node
+    }
+
+    fn add_yul_builtin_call(
+        &mut self,
+        loc: &Loc,
+        builtin_ty: &AssemblyBuiltInFunction,
+        args: &[AssemblyExpression],
+        parent: usize,
+        parent_rel: String,
+        avail_functions: &[AssemblyFunction],
+        symtable: &Symtable,
+        ns: &Namespace,
+    ) -> usize {
+        let labels = vec![
+            format!("yul builtin call ‘{}‘", builtin_ty.to_string()),
+            ns.loc_to_string(loc),
+        ];
+
+        let node = self.add_node(
+            Node::new("yul_builtin_call", labels),
+            Some(parent),
+            Some(parent_rel),
+        );
+
+        for (arg_no, arg) in args.iter().enumerate() {
+            self.add_yul_expression(
+                arg,
+                symtable,
+                avail_functions,
+                ns,
+                node,
+                format!("arg #{}", arg_no),
+            );
+        }
+
+        node
     }
 }
 

@@ -1,5 +1,5 @@
 use crate::ast::Namespace;
-use crate::sema::assembly::expression::AssemblyExpression;
+use crate::sema::assembly::ast::AssemblyExpression;
 use crate::sema::symtable::Symtable;
 
 pub(crate) fn assigned_variable(

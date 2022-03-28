@@ -1,17 +1,12 @@
 use crate::ast::Namespace;
+use crate::sema::assembly::ast::{AssemblyBlock, AssemblyStatement};
 use crate::sema::assembly::functions::{
     process_function_header, resolve_function_definition, FunctionsTable,
 };
-use crate::sema::assembly::statements::{resolve_assembly_statement, AssemblyStatement};
+use crate::sema::assembly::statements::resolve_assembly_statement;
 use crate::sema::expression::ExprContext;
 use crate::sema::symtable::{LoopScopes, Symtable};
 use solang_parser::{pt, Diagnostic};
-
-#[derive(Debug, Clone)]
-pub struct AssemblyBlock {
-    pub loc: pt::Loc,
-    pub body: Vec<(AssemblyStatement, bool)>,
-}
 
 /// Resolve an assembly block.
 /// Returns the resolved block and a boolean that tells us if the next statement is reachable.
