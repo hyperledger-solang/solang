@@ -19,6 +19,7 @@ use crate::sema::ast::{
     CallTy, Contract, Expression, Function, Namespace, Parameter, StringLocation, Type,
 };
 use crate::sema::contracts::{collect_base_args, visit_bases};
+use crate::Target;
 
 #[derive(Clone)]
 #[allow(clippy::large_enum_variant)]
@@ -1771,6 +1772,17 @@ impl Contract {
             Expression::NumberLiteral(pt::Loc::Codegen, ns.storage_type(), layout.slot.clone())
         } else {
             panic!("get_storage_slot called on non-storage variable");
+        }
+    }
+}
+
+impl Namespace {
+    /// Type storage
+    pub fn storage_type(&self) -> Type {
+        if self.target == Target::Solana {
+            Type::Uint(32)
+        } else {
+            Type::Uint(256)
         }
     }
 }
