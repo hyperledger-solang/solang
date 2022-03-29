@@ -58,9 +58,7 @@ fn main() {
                 .help("Emit compiler state at early stage")
                 .long("emit")
                 .takes_value(true)
-                .possible_values(&[
-                    "ast", "ast-dot", "cfg", "llvm-ir", "llvm-bc", "object", "asm",
-                ]),
+                .possible_values(&["ast-dot", "cfg", "llvm-ir", "llvm-bc", "object", "asm"]),
         )
         .arg(
             Arg::new("OPT")
@@ -477,11 +475,6 @@ fn process_file(
         return Err(());
     }
 
-    if let Some("ast") = matches.value_of("EMIT") {
-        println!("{}", ns.print(&filename.to_string_lossy()));
-        return Ok(ns);
-    }
-
     // emit phase
     for contract_no in 0..ns.contracts.len() {
         let resolved_contract = &ns.contracts[contract_no];
@@ -726,7 +719,6 @@ fn save_intermediates(binary: &solang::emit::Binary, matches: &ArgMatches) -> bo
             true
         }
         Some("cfg") => true,
-        Some("ast") => true,
         Some("ast-dot") => true,
         _ => false,
     }

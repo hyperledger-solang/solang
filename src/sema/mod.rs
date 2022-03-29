@@ -19,7 +19,6 @@ mod file;
 mod format;
 mod functions;
 mod mutability;
-pub mod printer;
 mod statements;
 pub mod symtable;
 pub mod tags;
