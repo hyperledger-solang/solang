@@ -10,7 +10,7 @@ use solang_parser::{pt, Diagnostic};
 /// Resolve a for-loop statement
 /// Returns the resolved block and a bool to indicate if the next statement is reachable.
 pub(crate) fn resolve_for_loop(
-    assembly_for: &pt::AssemblyFor,
+    assembly_for: &pt::YulFor,
     context: &ExprContext,
     mut reachable: bool,
     loop_scope: &mut LoopScopes,
@@ -84,7 +84,7 @@ pub(crate) fn resolve_for_loop(
 /// Resolve for initialization block.
 /// Returns the resolved block and a bool to indicate if the next statement is reachable.
 fn resolve_for_init_block(
-    init_block: &pt::AssemblyBlock,
+    init_block: &pt::YulBlock,
     context: &ExprContext,
     loop_scope: &mut LoopScopes,
     symtable: &mut Symtable,
@@ -92,7 +92,7 @@ fn resolve_for_init_block(
     ns: &mut Namespace,
 ) -> Result<(AssemblyBlock, bool), ()> {
     for item in &init_block.statements {
-        if matches!(item, pt::AssemblyStatement::FunctionDefinition(_)) {
+        if matches!(item, pt::YulStatement::FunctionDefinition(_)) {
             ns.diagnostics.push(Diagnostic::error(
                 item.loc(),
                 "function definitions are not allowed inside for-init block".to_string(),

@@ -12,7 +12,7 @@ use solang_parser::{pt, Diagnostic};
 /// Returns the resolved block and a boolean that tells us if the next statement is reachable.
 pub fn resolve_assembly_block(
     loc: &pt::Loc,
-    statements: &[pt::AssemblyStatement],
+    statements: &[pt::YulStatement],
     context: &ExprContext,
     mut reachable: bool,
     loop_scope: &mut LoopScopes,
@@ -45,7 +45,7 @@ pub fn resolve_assembly_block(
 /// Returns a vector of tuples (resolved_statement, reachable) and a boolean that tells us if the
 /// next statement is reachable
 pub(crate) fn process_statements(
-    statements: &[pt::AssemblyStatement],
+    statements: &[pt::YulStatement],
     context: &ExprContext,
     mut reachable: bool,
     symtable: &mut Symtable,
@@ -55,14 +55,14 @@ pub(crate) fn process_statements(
 ) -> (Vec<(AssemblyStatement, bool)>, bool) {
     let mut func_count: usize = 0;
     for item in statements {
-        if let pt::AssemblyStatement::FunctionDefinition(fun_def) = item {
+        if let pt::YulStatement::FunctionDefinition(fun_def) = item {
             process_function_header(fun_def, functions_table, ns);
             func_count += 1;
         }
     }
 
     for item in statements {
-        if let pt::AssemblyStatement::FunctionDefinition(func_def) = item {
+        if let pt::YulStatement::FunctionDefinition(func_def) = item {
             if let Ok(resolved_func) =
                 resolve_function_definition(func_def, functions_table, context, ns)
             {
@@ -96,7 +96,7 @@ pub(crate) fn process_statements(
                 */
                 if !reachable
                     && !has_unreachable
-                    && !matches!(item, pt::AssemblyStatement::FunctionDefinition(..))
+                    && !matches!(item, pt::YulStatement::FunctionDefinition(..))
                 {
                     ns.diagnostics.push(Diagnostic::warning(
                         item.loc(),

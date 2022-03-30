@@ -13,7 +13,7 @@ use num_bigint::BigInt;
 use num_traits::FromPrimitive;
 use solang_parser::pt;
 use solang_parser::pt::{
-    AssemblyFunctionCall, ContractTy, HexLiteral, Identifier, Loc, StorageLocation, StringLiteral,
+    YulFunctionCall, ContractTy, HexLiteral, Identifier, Loc, StorageLocation, StringLiteral,
     Visibility,
 };
 
@@ -32,7 +32,7 @@ fn resolve_bool_literal() {
     let mut function_table = FunctionsTable::new();
 
     let mut ns = Namespace::new(Target::Solana);
-    let expr = pt::AssemblyExpression::BoolLiteral(
+    let expr = pt::YulExpression::BoolLiteral(
         Loc::File(0, 3, 5),
         false,
         Some(pt::Identifier {
@@ -52,7 +52,7 @@ fn resolve_bool_literal() {
         AssemblyExpression::BoolLiteral(Loc::File(0, 3, 5), false, Type::Uint(32))
     );
 
-    let expr = pt::AssemblyExpression::BoolLiteral(Loc::File(0, 3, 5), true, None);
+    let expr = pt::YulExpression::BoolLiteral(Loc::File(0, 3, 5), true, None);
     let resolved_type =
         resolve_assembly_expression(&expr, &ctx, &mut symtable, &mut function_table, &mut ns);
 
@@ -81,7 +81,7 @@ fn resolve_number_literal() {
 
     let loc = Loc::File(0, 3, 5);
     let mut ns = Namespace::new(Target::Solana);
-    let expr = pt::AssemblyExpression::NumberLiteral(
+    let expr = pt::YulExpression::NumberLiteral(
         loc,
         BigInt::from_u128(0xffffffffffffffffff).unwrap(),
         Some(Identifier {
@@ -99,7 +99,7 @@ fn resolve_number_literal() {
     );
 
     ns.diagnostics.clear();
-    let expr = pt::AssemblyExpression::NumberLiteral(
+    let expr = pt::YulExpression::NumberLiteral(
         loc,
         BigInt::from_i32(-50).unwrap(),
         Some(Identifier {
@@ -117,7 +117,7 @@ fn resolve_number_literal() {
     );
 
     ns.diagnostics.clear();
-    let expr = pt::AssemblyExpression::NumberLiteral(loc, BigInt::from(20), None);
+    let expr = pt::YulExpression::NumberLiteral(loc, BigInt::from(20), None);
     let parsed =
         resolve_assembly_expression(&expr, &ctx, &mut symtable, &mut function_table, &mut ns);
     assert!(parsed.is_ok());
@@ -144,7 +144,7 @@ fn resolve_hex_number_literal() {
 
     let mut ns = Namespace::new(Target::Ewasm);
     let loc = Loc::File(0, 3, 5);
-    let expr = pt::AssemblyExpression::HexNumberLiteral(
+    let expr = pt::YulExpression::HexNumberLiteral(
         loc,
         "0xf23456789a".to_string(),
         Some(Identifier {
@@ -163,7 +163,7 @@ fn resolve_hex_number_literal() {
     );
 
     ns.diagnostics.clear();
-    let expr = pt::AssemblyExpression::HexNumberLiteral(
+    let expr = pt::YulExpression::HexNumberLiteral(
         loc,
         "0xff".to_string(),
         Some(Identifier {
@@ -197,7 +197,7 @@ fn resolve_hex_string_literal() {
 
     let mut ns = Namespace::new(Target::Ewasm);
     let loc = Loc::File(0, 3, 5);
-    let expr = pt::AssemblyExpression::HexStringLiteral(
+    let expr = pt::YulExpression::HexStringLiteral(
         HexLiteral {
             loc,
             hex: "3ca".to_string(),
@@ -215,7 +215,7 @@ fn resolve_hex_string_literal() {
     );
 
     ns.diagnostics.clear();
-    let expr = pt::AssemblyExpression::HexStringLiteral(
+    let expr = pt::YulExpression::HexStringLiteral(
         HexLiteral {
             loc,
             hex: "acdf".to_string(),
@@ -235,7 +235,7 @@ fn resolve_hex_string_literal() {
     );
 
     ns.diagnostics.clear();
-    let expr = pt::AssemblyExpression::HexStringLiteral(
+    let expr = pt::YulExpression::HexStringLiteral(
         HexLiteral {
             loc,
             hex: "ffff".to_string(),
@@ -271,7 +271,7 @@ fn resolve_string_literal() {
 
     let mut ns = Namespace::new(Target::Solana);
     let loc = Loc::File(0, 3, 5);
-    let expr = pt::AssemblyExpression::StringLiteral(
+    let expr = pt::YulExpression::StringLiteral(
         StringLiteral {
             loc,
             string: r#"ab\xffa\u00e0g"#.to_string(),
@@ -339,11 +339,11 @@ fn resolve_variable_local() {
         )
         .unwrap();
 
-    let expr1 = pt::AssemblyExpression::Variable(Identifier {
+    let expr1 = pt::YulExpression::Variable(Identifier {
         loc,
         name: "var1".to_string(),
     });
-    let expr2 = pt::AssemblyExpression::Variable(Identifier {
+    let expr2 = pt::YulExpression::Variable(Identifier {
         loc,
         name: "var2".to_string(),
     });
@@ -462,7 +462,7 @@ fn resolve_variable_contract() {
     ns.variable_symbols
         .insert((0, Some(0), "func".to_string()), Symbol::Function(vec![]));
 
-    let expr = pt::AssemblyExpression::Variable(Identifier {
+    let expr = pt::YulExpression::Variable(Identifier {
         loc,
         name: "var1".to_string(),
     });
@@ -474,7 +474,7 @@ fn resolve_variable_contract() {
         res.unwrap()
     );
 
-    let expr = pt::AssemblyExpression::Variable(Identifier {
+    let expr = pt::YulExpression::Variable(Identifier {
         loc,
         name: "var2".to_string(),
     });
@@ -486,7 +486,7 @@ fn resolve_variable_contract() {
         res.unwrap()
     );
 
-    let expr = pt::AssemblyExpression::Variable(Identifier {
+    let expr = pt::YulExpression::Variable(Identifier {
         loc,
         name: "var3".to_string(),
     });
@@ -498,7 +498,7 @@ fn resolve_variable_contract() {
         res.unwrap()
     );
 
-    let expr = pt::AssemblyExpression::Variable(Identifier {
+    let expr = pt::YulExpression::Variable(Identifier {
         loc,
         name: "func".to_string(),
     });
@@ -512,7 +512,7 @@ fn resolve_variable_contract() {
     );
 
     ns.diagnostics.clear();
-    let expr = pt::AssemblyExpression::Variable(Identifier {
+    let expr = pt::YulExpression::Variable(Identifier {
         loc,
         name: "none".to_string(),
     });
@@ -523,7 +523,7 @@ fn resolve_variable_contract() {
     assert_eq!(ns.diagnostics[0].message, "'none' is not found");
 
     ns.diagnostics.clear();
-    let expr = pt::AssemblyExpression::Variable(Identifier {
+    let expr = pt::YulExpression::Variable(Identifier {
         loc,
         name: "imut".to_string(),
     });
@@ -554,7 +554,7 @@ fn function_call() {
     let mut ns = Namespace::new(Target::Ewasm);
     let loc = Loc::File(0, 2, 3);
 
-    let expr = pt::AssemblyExpression::FunctionCall(Box::new(AssemblyFunctionCall {
+    let expr = pt::YulExpression::FunctionCall(Box::new(YulFunctionCall {
         loc,
         id: Identifier {
             loc,
@@ -572,7 +572,7 @@ fn function_call() {
     );
     ns.diagnostics.clear();
 
-    let expr = pt::AssemblyExpression::FunctionCall(Box::new(AssemblyFunctionCall {
+    let expr = pt::YulExpression::FunctionCall(Box::new(YulFunctionCall {
         loc,
         id: Identifier {
             loc,
@@ -590,7 +590,7 @@ fn function_call() {
     );
     ns.diagnostics.clear();
 
-    let arg = pt::AssemblyExpression::BoolLiteral(
+    let arg = pt::YulExpression::BoolLiteral(
         Loc::File(0, 3, 5),
         false,
         Some(pt::Identifier {
@@ -599,7 +599,7 @@ fn function_call() {
         }),
     );
 
-    let expr = pt::AssemblyExpression::FunctionCall(Box::new(AssemblyFunctionCall {
+    let expr = pt::YulExpression::FunctionCall(Box::new(YulFunctionCall {
         loc,
         id: Identifier {
             loc,
@@ -617,7 +617,7 @@ fn function_call() {
     );
     ns.diagnostics.clear();
 
-    let expr = pt::AssemblyExpression::FunctionCall(Box::new(AssemblyFunctionCall {
+    let expr = pt::YulExpression::FunctionCall(Box::new(YulFunctionCall {
         loc,
         id: Identifier {
             loc,
@@ -653,7 +653,7 @@ fn function_call() {
         vec![],
     );
 
-    let expr = pt::AssemblyExpression::FunctionCall(Box::new(AssemblyFunctionCall {
+    let expr = pt::YulExpression::FunctionCall(Box::new(YulFunctionCall {
         loc,
         id: Identifier {
             loc,
@@ -671,7 +671,7 @@ fn function_call() {
     );
     ns.diagnostics.clear();
 
-    let expr = pt::AssemblyExpression::FunctionCall(Box::new(AssemblyFunctionCall {
+    let expr = pt::YulExpression::FunctionCall(Box::new(YulFunctionCall {
         loc,
         id: Identifier {
             loc,
@@ -687,7 +687,7 @@ fn function_call() {
         res.unwrap()
     );
 
-    let expr = pt::AssemblyExpression::FunctionCall(Box::new(AssemblyFunctionCall {
+    let expr = pt::YulExpression::FunctionCall(Box::new(YulFunctionCall {
         loc,
         id: Identifier {
             loc,
@@ -754,20 +754,20 @@ fn check_arguments() {
         ],
     );
 
-    let expr = pt::AssemblyExpression::FunctionCall(Box::new(AssemblyFunctionCall {
+    let expr = pt::YulExpression::FunctionCall(Box::new(YulFunctionCall {
         loc,
         id: Identifier {
             loc,
             name: "not".to_string(),
         },
-        arguments: vec![pt::AssemblyExpression::FunctionCall(Box::new(
-            AssemblyFunctionCall {
+        arguments: vec![pt::YulExpression::FunctionCall(Box::new(
+            YulFunctionCall {
                 loc,
                 id: Identifier {
                     loc,
                     name: "pop".to_string(),
                 },
-                arguments: vec![pt::AssemblyExpression::NumberLiteral(
+                arguments: vec![pt::YulExpression::NumberLiteral(
                     loc,
                     BigInt::from(23),
                     None,
@@ -785,14 +785,14 @@ fn check_arguments() {
     );
     ns.diagnostics.clear();
 
-    let expr = pt::AssemblyExpression::FunctionCall(Box::new(AssemblyFunctionCall {
+    let expr = pt::YulExpression::FunctionCall(Box::new(YulFunctionCall {
         loc,
         id: Identifier {
             loc,
             name: "not".to_string(),
         },
-        arguments: vec![pt::AssemblyExpression::FunctionCall(Box::new(
-            AssemblyFunctionCall {
+        arguments: vec![pt::YulExpression::FunctionCall(Box::new(
+            YulFunctionCall {
                 loc,
                 id: Identifier {
                     loc,
@@ -812,14 +812,14 @@ fn check_arguments() {
     );
     ns.diagnostics.clear();
 
-    let expr = pt::AssemblyExpression::FunctionCall(Box::new(AssemblyFunctionCall {
+    let expr = pt::YulExpression::FunctionCall(Box::new(YulFunctionCall {
         loc,
         id: Identifier {
             loc,
             name: "not".to_string(),
         },
-        arguments: vec![pt::AssemblyExpression::FunctionCall(Box::new(
-            AssemblyFunctionCall {
+        arguments: vec![pt::YulExpression::FunctionCall(Box::new(
+            YulFunctionCall {
                 loc,
                 id: Identifier {
                     loc,
@@ -876,9 +876,9 @@ fn test_member_access() {
         Symbol::Variable(loc, Some(0), 0),
     );
 
-    let expr = pt::AssemblyExpression::Member(
+    let expr = pt::YulExpression::Member(
         loc,
-        Box::new(pt::AssemblyExpression::BoolLiteral(loc, true, None)),
+        Box::new(pt::YulExpression::BoolLiteral(loc, true, None)),
         Identifier {
             loc,
             name: "pineapple".to_string(),
@@ -895,9 +895,9 @@ fn test_member_access() {
     );
     ns.diagnostics.clear();
 
-    let expr = pt::AssemblyExpression::Member(
+    let expr = pt::YulExpression::Member(
         loc,
-        Box::new(pt::AssemblyExpression::BoolLiteral(loc, true, None)),
+        Box::new(pt::YulExpression::BoolLiteral(loc, true, None)),
         Identifier {
             loc,
             name: "slot".to_string(),
@@ -914,9 +914,9 @@ fn test_member_access() {
     );
     ns.diagnostics.clear();
 
-    let expr = pt::AssemblyExpression::Member(
+    let expr = pt::YulExpression::Member(
         loc,
-        Box::new(pt::AssemblyExpression::Variable(Identifier {
+        Box::new(pt::YulExpression::Variable(Identifier {
             loc,
             name: "var1".to_string(),
         })),

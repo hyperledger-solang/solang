@@ -22,7 +22,7 @@ mod unused_variable;
 /// Returns the resolved block and a bool to indicate if the next statement is reachable.
 pub fn resolve_inline_assembly(
     loc: &pt::Loc,
-    statements: &[pt::AssemblyStatement],
+    statements: &[pt::YulStatement],
     context: &ExprContext,
     symtable: &mut Symtable,
     ns: &mut Namespace,

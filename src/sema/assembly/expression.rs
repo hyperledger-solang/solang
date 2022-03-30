@@ -11,7 +11,7 @@ use crate::sema::symtable::{Symtable, VariableUsage};
 use num_bigint::{BigInt, Sign};
 use num_traits::Num;
 use solang_parser::diagnostics::{ErrorType, Level};
-use solang_parser::pt::{AssemblyFunctionCall, CodeLocation, Identifier, Loc, StorageLocation};
+use solang_parser::pt::{YulFunctionCall, CodeLocation, Identifier, Loc, StorageLocation};
 use solang_parser::{pt, Diagnostic};
 
 /// Given a keyword, returns the suffix it represents in YUL
@@ -28,25 +28,25 @@ fn get_suffix_from_string(suffix_name: &str) -> Option<AssemblySuffix> {
 
 /// Resolve an assembly expression.
 pub(crate) fn resolve_assembly_expression(
-    expr: &pt::AssemblyExpression,
+    expr: &pt::YulExpression,
     context: &ExprContext,
     symtable: &mut Symtable,
     function_table: &mut FunctionsTable,
     ns: &mut Namespace,
 ) -> Result<AssemblyExpression, ()> {
     match expr {
-        pt::AssemblyExpression::BoolLiteral(loc, value, ty) => {
+        pt::YulExpression::BoolLiteral(loc, value, ty) => {
             resolve_bool_literal(loc, value, ty, ns)
         }
 
-        pt::AssemblyExpression::NumberLiteral(loc, value, ty) => {
+        pt::YulExpression::NumberLiteral(loc, value, ty) => {
             resolve_number_literal(loc, value, ty, ns)
         }
 
-        pt::AssemblyExpression::HexNumberLiteral(loc, value, ty) => {
+        pt::YulExpression::HexNumberLiteral(loc, value, ty) => {
             resolve_hex_literal(loc, value, ty, ns)
         }
-        pt::AssemblyExpression::HexStringLiteral(value, ty) => {
+        pt::YulExpression::HexStringLiteral(value, ty) => {
             if (value.hex.len() % 2) != 0 {
                 ns.diagnostics.push(Diagnostic {
                     pos: value.loc,
@@ -64,7 +64,7 @@ pub(crate) fn resolve_assembly_expression(
             resolve_string_literal(&value.loc, byte_array, ty, ns)
         }
 
-        pt::AssemblyExpression::StringLiteral(value, ty) => {
+        pt::YulExpression::StringLiteral(value, ty) => {
             let unescaped_string = unescape(
                 &value.string[..],
                 0,
@@ -74,15 +74,15 @@ pub(crate) fn resolve_assembly_expression(
             resolve_string_literal(&value.loc, unescaped_string, ty, ns)
         }
 
-        pt::AssemblyExpression::Variable(id) => {
+        pt::YulExpression::Variable(id) => {
             resolve_variable_reference(id, ns, symtable, context)
         }
 
-        pt::AssemblyExpression::FunctionCall(func_call) => {
+        pt::YulExpression::FunctionCall(func_call) => {
             resolve_function_call(function_table, func_call, context, symtable, ns)
         }
 
-        pt::AssemblyExpression::Member(loc, expr, id) => {
+        pt::YulExpression::Member(loc, expr, id) => {
             resolve_member_access(loc, expr, id, context, symtable, function_table, ns)
         }
     }
@@ -326,7 +326,7 @@ fn resolve_variable_reference(
 
 pub(crate) fn resolve_function_call(
     function_table: &mut FunctionsTable,
-    func_call: &AssemblyFunctionCall,
+    func_call: &YulFunctionCall,
     context: &ExprContext,
     symtable: &mut Symtable,
     ns: &mut Namespace,
@@ -490,7 +490,7 @@ fn check_function_argument(
 /// Resolve variables accessed with suffixes (e.g. 'var.slot', 'var.offset')
 fn resolve_member_access(
     loc: &pt::Loc,
-    expr: &pt::AssemblyExpression,
+    expr: &pt::YulExpression,
     id: &Identifier,
     context: &ExprContext,
     symtable: &mut Symtable,

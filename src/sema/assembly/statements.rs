@@ -12,12 +12,12 @@ use crate::sema::assembly::types::get_default_type_from_identifier;
 use crate::sema::expression::ExprContext;
 use crate::sema::symtable::{LoopScopes, Symtable, VariableInitializer, VariableUsage};
 use solang_parser::diagnostics::{ErrorType, Level, Note};
-use solang_parser::pt::AssemblyTypedIdentifier;
+use solang_parser::pt::YulTypedIdentifier;
 use solang_parser::{pt, Diagnostic};
 
 /// Resolves an assembly statement. Returns a boolean that indicates if the next statement is reachable.
 pub(crate) fn resolve_assembly_statement(
-    statement: &pt::AssemblyStatement,
+    statement: &pt::YulStatement,
     context: &ExprContext,
     reachable: bool,
     loop_scope: &mut LoopScopes,
@@ -27,15 +27,15 @@ pub(crate) fn resolve_assembly_statement(
     ns: &mut Namespace,
 ) -> Result<bool, ()> {
     match statement {
-        pt::AssemblyStatement::FunctionDefinition(_) => Ok(true),
-        pt::AssemblyStatement::FunctionCall(func_call) => {
+        pt::YulStatement::FunctionDefinition(_) => Ok(true),
+        pt::YulStatement::FunctionCall(func_call) => {
             let data =
                 resolve_top_level_function_call(func_call, function_table, context, symtable, ns)?;
             resolved_statements.push((data.0, reachable));
             Ok(data.1)
         }
 
-        pt::AssemblyStatement::Block(block) => {
+        pt::YulStatement::Block(block) => {
             let data = resolve_assembly_block(
                 &block.loc,
                 &block.statements,
@@ -50,7 +50,7 @@ pub(crate) fn resolve_assembly_statement(
             Ok(data.1)
         }
 
-        pt::AssemblyStatement::VariableDeclaration(loc, variables, initializer) => {
+        pt::YulStatement::VariableDeclaration(loc, variables, initializer) => {
             resolved_statements.push((
                 resolve_variable_declaration(
                     loc,
@@ -66,7 +66,7 @@ pub(crate) fn resolve_assembly_statement(
             Ok(true)
         }
 
-        pt::AssemblyStatement::Assign(loc, lhs, rhs) => {
+        pt::YulStatement::Assign(loc, lhs, rhs) => {
             resolved_statements.push((
                 resolve_assignment(loc, lhs, rhs, context, function_table, symtable, ns)?,
                 reachable,
@@ -74,7 +74,7 @@ pub(crate) fn resolve_assembly_statement(
             Ok(true)
         }
 
-        pt::AssemblyStatement::If(loc, condition, body) => {
+        pt::YulStatement::If(loc, condition, body) => {
             resolved_statements.push((
                 resolve_if_block(
                     loc,
@@ -92,7 +92,7 @@ pub(crate) fn resolve_assembly_statement(
             Ok(true)
         }
 
-        pt::AssemblyStatement::Switch(switch_statement) => {
+        pt::YulStatement::Switch(switch_statement) => {
             let resolved_switch = resolve_switch(
                 switch_statement,
                 context,
@@ -106,7 +106,7 @@ pub(crate) fn resolve_assembly_statement(
             Ok(resolved_switch.1)
         }
 
-        pt::AssemblyStatement::Break(loc) => {
+        pt::YulStatement::Break(loc) => {
             if loop_scope.do_break() {
                 resolved_statements.push((AssemblyStatement::Break(*loc), reachable));
                 Ok(false)
@@ -119,7 +119,7 @@ pub(crate) fn resolve_assembly_statement(
             }
         }
 
-        pt::AssemblyStatement::Continue(loc) => {
+        pt::YulStatement::Continue(loc) => {
             if loop_scope.do_continue() {
                 resolved_statements.push((AssemblyStatement::Continue(*loc), reachable));
                 Ok(false)
@@ -132,7 +132,7 @@ pub(crate) fn resolve_assembly_statement(
             }
         }
 
-        pt::AssemblyStatement::Leave(loc) => {
+        pt::YulStatement::Leave(loc) => {
             if !context.yul_function {
                 ns.diagnostics.push(Diagnostic::error(
                     *loc,
@@ -144,7 +144,7 @@ pub(crate) fn resolve_assembly_statement(
             Ok(false)
         }
 
-        pt::AssemblyStatement::For(for_statement) => {
+        pt::YulStatement::For(for_statement) => {
             let resolved_for = resolve_for_loop(
                 for_statement,
                 context,
@@ -162,7 +162,7 @@ pub(crate) fn resolve_assembly_statement(
 
 /// Top-leve function calls must not return anything, so there is a special function to handle them.
 fn resolve_top_level_function_call(
-    func_call: &pt::AssemblyFunctionCall,
+    func_call: &pt::YulFunctionCall,
     function_table: &mut FunctionsTable,
     context: &ExprContext,
     symtable: &mut Symtable,
@@ -208,8 +208,8 @@ fn resolve_top_level_function_call(
 
 fn resolve_variable_declaration(
     loc: &pt::Loc,
-    variables: &[AssemblyTypedIdentifier],
-    initializer: &Option<pt::AssemblyExpression>,
+    variables: &[YulTypedIdentifier],
+    initializer: &Option<pt::YulExpression>,
     function_table: &mut FunctionsTable,
     context: &ExprContext,
     symtable: &mut Symtable,
@@ -290,8 +290,8 @@ fn resolve_variable_declaration(
 
 fn resolve_assignment(
     loc: &pt::Loc,
-    lhs: &[pt::AssemblyExpression],
-    rhs: &pt::AssemblyExpression,
+    lhs: &[pt::YulExpression],
+    rhs: &pt::YulExpression,
     context: &ExprContext,
     function_table: &mut FunctionsTable,
     symtable: &mut Symtable,
@@ -382,8 +382,8 @@ fn check_assignment_compatibility<T>(
 
 fn resolve_if_block(
     loc: &pt::Loc,
-    condition: &pt::AssemblyExpression,
-    if_block: &[pt::AssemblyStatement],
+    condition: &pt::YulExpression,
+    if_block: &[pt::YulStatement],
     context: &ExprContext,
     reachable: bool,
     loop_scope: &mut LoopScopes,

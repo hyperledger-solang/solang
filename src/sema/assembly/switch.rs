@@ -6,13 +6,13 @@ use crate::sema::assembly::functions::FunctionsTable;
 use crate::sema::assembly::types::verify_type_from_expression;
 use crate::sema::expression::ExprContext;
 use crate::sema::symtable::{LoopScopes, Symtable};
-use solang_parser::pt::{AssemblySwitchOptions, CodeLocation};
+use solang_parser::pt::{YulSwitchOptions, CodeLocation};
 use solang_parser::{pt, Diagnostic};
 
 /// Resolve switch statement
 /// Returns the resolved block and a bool to indicate if the next statement is reachable.
 pub(crate) fn resolve_switch(
-    assembly_switch: &pt::AssemblySwitch,
+    assembly_switch: &pt::YulSwitch,
     context: &ExprContext,
     mut reachable: bool,
     function_table: &mut FunctionsTable,
@@ -80,7 +80,7 @@ pub(crate) fn resolve_switch(
 
 /// Resolves condition statements for either if-statement and switch-statements
 pub(crate) fn resolve_condition(
-    condition: &pt::AssemblyExpression,
+    condition: &pt::YulExpression,
     context: &ExprContext,
     symtable: &mut Symtable,
     function_table: &mut FunctionsTable,
@@ -101,7 +101,7 @@ pub(crate) fn resolve_condition(
 
 /// Resolve case or default from a switch statements
 fn resolve_case_or_default(
-    switch_case: &pt::AssemblySwitchOptions,
+    switch_case: &pt::YulSwitchOptions,
     default_block: &mut Option<AssemblyBlock>,
     case_blocks: &mut Vec<CaseBlock>,
     context: &ExprContext,
@@ -112,7 +112,7 @@ fn resolve_case_or_default(
     ns: &mut Namespace,
 ) -> Result<bool, ()> {
     match switch_case {
-        AssemblySwitchOptions::Case(loc, expr, block) => {
+        YulSwitchOptions::Case(loc, expr, block) => {
             let resolved_case = resolve_case_block(
                 loc,
                 default_block.is_some(),
@@ -129,7 +129,7 @@ fn resolve_case_or_default(
             Ok(resolved_case.1)
         }
 
-        AssemblySwitchOptions::Default(loc, block) => {
+        YulSwitchOptions::Default(loc, block) => {
             let resolved_default = resolve_assembly_block(
                 loc,
                 &block.statements,
@@ -150,8 +150,8 @@ fn resolve_case_or_default(
 fn resolve_case_block(
     loc: &pt::Loc,
     has_default: bool,
-    condition: &pt::AssemblyExpression,
-    block: &[pt::AssemblyStatement],
+    condition: &pt::YulExpression,
+    block: &[pt::YulStatement],
     context: &ExprContext,
     reachable: bool,
     function_table: &mut FunctionsTable,

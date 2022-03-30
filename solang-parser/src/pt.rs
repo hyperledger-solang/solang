@@ -608,7 +608,7 @@ pub enum Statement {
     Assembly {
         loc: Loc,
         dialect: Option<StringLiteral>,
-        block: AssemblyBlock,
+        block: YulBlock,
     },
     Args(Loc, Vec<NamedArgument>),
     If(Loc, Expression, Box<Statement>, Option<Box<Statement>>),
@@ -644,91 +644,91 @@ pub enum CatchClause {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub enum AssemblyStatement {
-    Assign(Loc, Vec<AssemblyExpression>, AssemblyExpression),
+pub enum YulStatement {
+    Assign(Loc, Vec<YulExpression>, YulExpression),
     VariableDeclaration(
         Loc,
-        Vec<AssemblyTypedIdentifier>,
-        Option<AssemblyExpression>,
+        Vec<YulTypedIdentifier>,
+        Option<YulExpression>,
     ),
-    If(Loc, AssemblyExpression, AssemblyBlock),
-    For(AssemblyFor),
-    Switch(AssemblySwitch),
+    If(Loc, YulExpression, YulBlock),
+    For(YulFor),
+    Switch(YulSwitch),
     Leave(Loc),
     Break(Loc),
     Continue(Loc),
-    Block(AssemblyBlock),
-    FunctionDefinition(Box<AssemblyFunctionDefinition>),
-    FunctionCall(Box<AssemblyFunctionCall>),
+    Block(YulBlock),
+    FunctionDefinition(Box<YulFunctionDefinition>),
+    FunctionCall(Box<YulFunctionCall>),
 }
 #[derive(PartialEq, Clone, Debug)]
-pub struct AssemblySwitch {
+pub struct YulSwitch {
     pub loc: Loc,
-    pub condition: AssemblyExpression,
-    pub cases: Vec<AssemblySwitchOptions>,
-    pub default: Option<AssemblySwitchOptions>,
+    pub condition: YulExpression,
+    pub cases: Vec<YulSwitchOptions>,
+    pub default: Option<YulSwitchOptions>,
 }
 
 #[derive(PartialEq, Clone, Debug)]
-pub struct AssemblyFor {
+pub struct YulFor {
     pub loc: Loc,
-    pub init_block: AssemblyBlock,
-    pub condition: AssemblyExpression,
-    pub post_block: AssemblyBlock,
-    pub execution_block: AssemblyBlock,
+    pub init_block: YulBlock,
+    pub condition: YulExpression,
+    pub post_block: YulBlock,
+    pub execution_block: YulBlock,
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct AssemblyBlock {
+pub struct YulBlock {
     pub loc: Loc,
-    pub statements: Vec<AssemblyStatement>,
+    pub statements: Vec<YulStatement>,
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub enum AssemblyExpression {
+pub enum YulExpression {
     BoolLiteral(Loc, bool, Option<Identifier>),
     NumberLiteral(Loc, BigInt, Option<Identifier>),
     HexNumberLiteral(Loc, String, Option<Identifier>),
     HexStringLiteral(HexLiteral, Option<Identifier>),
     StringLiteral(StringLiteral, Option<Identifier>),
     Variable(Identifier),
-    FunctionCall(Box<AssemblyFunctionCall>),
-    Member(Loc, Box<AssemblyExpression>, Identifier),
+    FunctionCall(Box<YulFunctionCall>),
+    Member(Loc, Box<YulExpression>, Identifier),
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct AssemblyTypedIdentifier {
+pub struct YulTypedIdentifier {
     pub loc: Loc,
     pub id: Identifier,
     pub ty: Option<Identifier>,
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct AssemblyFunctionDefinition {
+pub struct YulFunctionDefinition {
     pub loc: Loc,
     pub id: Identifier,
-    pub params: Vec<AssemblyTypedIdentifier>,
-    pub returns: Vec<AssemblyTypedIdentifier>,
-    pub body: AssemblyBlock,
+    pub params: Vec<YulTypedIdentifier>,
+    pub returns: Vec<YulTypedIdentifier>,
+    pub body: YulBlock,
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct AssemblyFunctionCall {
+pub struct YulFunctionCall {
     pub loc: Loc,
     pub id: Identifier,
-    pub arguments: Vec<AssemblyExpression>,
+    pub arguments: Vec<YulExpression>,
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub enum AssemblySwitchOptions {
-    Case(Loc, AssemblyExpression, AssemblyBlock),
-    Default(Loc, AssemblyBlock),
+pub enum YulSwitchOptions {
+    Case(Loc, YulExpression, YulBlock),
+    Default(Loc, YulBlock),
 }
 
-impl CodeLocation for AssemblySwitchOptions {
+impl CodeLocation for YulSwitchOptions {
     fn loc(&self) -> Loc {
         match self {
-            AssemblySwitchOptions::Case(loc, ..) | AssemblySwitchOptions::Default(loc, ..) => *loc,
+            YulSwitchOptions::Case(loc, ..) | YulSwitchOptions::Default(loc, ..) => *loc,
         }
     }
 }
@@ -756,24 +756,24 @@ impl CodeLocation for Statement {
     }
 }
 
-impl AssemblyStatement {
+impl YulStatement {
     pub fn loc(&self) -> Loc {
         match self {
-            AssemblyStatement::Assign(loc, ..)
-            | AssemblyStatement::VariableDeclaration(loc, ..)
-            | AssemblyStatement::If(loc, ..)
-            | AssemblyStatement::Leave(loc, ..)
-            | AssemblyStatement::Break(loc, ..)
-            | AssemblyStatement::Continue(loc, ..) => *loc,
+            YulStatement::Assign(loc, ..)
+            | YulStatement::VariableDeclaration(loc, ..)
+            | YulStatement::If(loc, ..)
+            | YulStatement::Leave(loc, ..)
+            | YulStatement::Break(loc, ..)
+            | YulStatement::Continue(loc, ..) => *loc,
 
-            AssemblyStatement::Block(block) => block.loc,
+            YulStatement::Block(block) => block.loc,
 
-            AssemblyStatement::FunctionDefinition(func_def) => func_def.loc,
+            YulStatement::FunctionDefinition(func_def) => func_def.loc,
 
-            AssemblyStatement::FunctionCall(func_call) => func_call.loc,
+            YulStatement::FunctionCall(func_call) => func_call.loc,
 
-            AssemblyStatement::For(for_struct) => for_struct.loc,
-            AssemblyStatement::Switch(switch_struct) => switch_struct.loc,
+            YulStatement::For(for_struct) => for_struct.loc,
+            YulStatement::Switch(switch_struct) => switch_struct.loc,
         }
     }
 }

@@ -754,7 +754,7 @@ NonIfStatement: Statement = {
     <l:@L> "unchecked" "{" <statements:Statement*> "}" <r:@R> => {
         Statement::Block { loc: Loc::File(file_no, l, r), unchecked: true, statements }
     },
-    <l:@L> "assembly" <dialect:StringLiteral?> <block:AssemblyBlock> <r:@R> => {
+    <l:@L> "assembly" <dialect:StringLiteral?> <block:YulBlock> <r:@R> => {
         Statement::Assembly {
             loc: Loc::File(file_no, l, r),
             dialect: dialect.map(|dialect| dialect.to_owned()),
@@ -788,7 +788,7 @@ NonIfStatement: Statement = {
     },
 }
 
-AssemblyIdentifier: Identifier = {
+YulIdentifier: Identifier = {
     <l:@L> <n:identifier> <r:@R> => Identifier{loc: Loc::File(file_no, l, r), name: n.to_string()},
     <l:@L> "return" <r:@R> => Identifier{loc: Loc::File(file_no, l, r), name: "return".to_string()},
     <l:@L> "revert" <r:@R> => Identifier{loc: Loc::File(file_no, l, r), name: "revert".to_string()},
@@ -796,34 +796,34 @@ AssemblyIdentifier: Identifier = {
     <l:@L> "address" <r:@L> => Identifier{loc: Loc::File(file_no, l, r), name: "address".to_string()},
 }
 
-AssemblyStatement: AssemblyStatement = {
-    <AssemblyBlock> => AssemblyStatement::Block(<>),
-    <AssemblyVariableDeclaration> => <>,
-    <AssemblyAssignment> => <>,
-    <AssemblyFunctionCall> => AssemblyStatement::FunctionCall(Box::new(<>)),
-    <AssemblyIf> => <>,
-    <AssemblyFor> => <>,
-    <AssemblySwitch> => <>,
-    <AssemblyFunctionDefinition> => <>,
+YulStatement: YulStatement = {
+    <YulBlock> => YulStatement::Block(<>),
+    <YulVariableDeclaration> => <>,
+    <YulAssignment> => <>,
+    <YulFunctionCall> => YulStatement::FunctionCall(Box::new(<>)),
+    <YulIf> => <>,
+    <YulFor> => <>,
+    <YulSwitch> => <>,
+    <YulFunctionDefinition> => <>,
     <l:@L> "leave" <r:@R> => {
-        AssemblyStatement::Leave(Loc::File(file_no, l, r))
+        YulStatement::Leave(Loc::File(file_no, l, r))
     },
     <l:@L> "break" <r:@R> => {
-        AssemblyStatement::Break(Loc::File(file_no, l, r))
+        YulStatement::Break(Loc::File(file_no, l, r))
     },
     <l:@L> "continue" <r:@R> => {
-        AssemblyStatement::Continue(Loc::File(file_no, l, r))
+        YulStatement::Continue(Loc::File(file_no, l, r))
     },
 }
 
-AssemblyBlock: AssemblyBlock = {
-    <l:@L> "{" <statements:AssemblyStatement*> "}" <r:@R> => AssemblyBlock{loc: Loc::File(file_no, l, r), statements},
+YulBlock: YulBlock = {
+    <l:@L> "{" <statements:YulStatement*> "}" <r:@R> => YulBlock{loc: Loc::File(file_no, l, r), statements},
 }
 
-AssemblyLiteral: AssemblyExpression = {
-    <a:@L> "true" <t_type:(":" <AssemblyIdentifier>)?> <b:@R> => AssemblyExpression::BoolLiteral(Loc::File(file_no, a, b), true, t_type),
-    <a:@L> "false" <t_type:(":" <AssemblyIdentifier>)?> <b:@R> => AssemblyExpression::BoolLiteral(Loc::File(file_no, a, b), false, t_type),
-    <l:@L> <n:number> <t_type:(":" <AssemblyIdentifier>)?> <r:@R> => {
+YulLiteral: YulExpression = {
+    <a:@L> "true" <t_type:(":" <YulIdentifier>)?> <b:@R> => YulExpression::BoolLiteral(Loc::File(file_no, a, b), true, t_type),
+    <a:@L> "false" <t_type:(":" <YulIdentifier>)?> <b:@R> => YulExpression::BoolLiteral(Loc::File(file_no, a, b), false, t_type),
+    <l:@L> <n:number> <t_type:(":" <YulIdentifier>)?> <r:@R> => {
         let base: String = n.0.chars().filter(|v| *v != '_').collect();
         let exp: String = n.1.chars().filter(|v| *v != '_').collect();
 
@@ -836,48 +836,48 @@ AssemblyLiteral: AssemblyExpression = {
             base.mul(exp)
         };
 
-        AssemblyExpression::NumberLiteral(Loc::File(file_no, l, r), n, t_type)
+        YulExpression::NumberLiteral(Loc::File(file_no, l, r), n, t_type)
     },
-    <l:@L> <n:hexnumber> <t_type:(":" <AssemblyIdentifier>)?> <r:@R> => {
-        AssemblyExpression::HexNumberLiteral(Loc::File(file_no, l, r), n.to_owned(), t_type)
+    <l:@L> <n:hexnumber> <t_type:(":" <YulIdentifier>)?> <r:@R> => {
+        YulExpression::HexNumberLiteral(Loc::File(file_no, l, r), n.to_owned(), t_type)
     },
-    <l:@L> <s:hexstring> <t_type:(":" <AssemblyIdentifier>)?> <r:@R> => {
+    <l:@L> <s:hexstring> <t_type:(":" <YulIdentifier>)?> <r:@R> => {
         let v = s.to_string();
         let hex_len = v.len() - 5;
-        AssemblyExpression::HexStringLiteral(HexLiteral{ loc: Loc::File(file_no, l, r), hex: v.chars().skip(4).filter(|c| *c != '_' && *c != '"' && *c != '\'').collect()},
+        YulExpression::HexStringLiteral(HexLiteral{ loc: Loc::File(file_no, l, r), hex: v.chars().skip(4).filter(|c| *c != '_' && *c != '"' && *c != '\'').collect()},
         t_type)
     },
-    <str:StringLiteral> <t_type:(":" <AssemblyIdentifier>)?> => {
-        AssemblyExpression::StringLiteral(str, t_type)
+    <str:StringLiteral> <t_type:(":" <YulIdentifier>)?> => {
+        YulExpression::StringLiteral(str, t_type)
     },
 }
 
-AssemblyFunctionCall: AssemblyFunctionCall = {
-    <l:@L> <id:AssemblyIdentifier> "(" <arguments:Comma<AssemblyExpression>> ")" <r:@R> =>
-     AssemblyFunctionCall{loc: Loc::File(file_no, l, r), id, arguments}
+YulFunctionCall: YulFunctionCall = {
+    <l:@L> <id:YulIdentifier> "(" <arguments:Comma<YulExpression>> ")" <r:@R> =>
+     YulFunctionCall{loc: Loc::File(file_no, l, r), id, arguments}
 }
 
-AssemblyPath: AssemblyExpression = {
- <AssemblyIdentifier> => AssemblyExpression::Variable(<>),
- <l:@L> <array:AssemblyPath> "." <member:AssemblyIdentifier> <r:@R> => {
-         AssemblyExpression::Member(Loc::File(file_no, l, r), Box::new(array), member)
+YulPath: YulExpression = {
+ <YulIdentifier> => YulExpression::Variable(<>),
+ <l:@L> <array:YulPath> "." <member:YulIdentifier> <r:@R> => {
+         YulExpression::Member(Loc::File(file_no, l, r), Box::new(array), member)
      },
 }
 
-AssemblyExpression: AssemblyExpression = {
-    <AssemblyPath> => <>,
-    <AssemblyFunctionCall> => AssemblyExpression::FunctionCall(Box::new(<>)),
-    <AssemblyLiteral> => <>,
+YulExpression: YulExpression = {
+    <YulPath> => <>,
+    <YulFunctionCall> => YulExpression::FunctionCall(Box::new(<>)),
+    <YulLiteral> => <>,
 }
 
-AssemblyFunctionDefinition: AssemblyStatement = {
-    <l:@L> "function" <name: AssemblyIdentifier> "(" <params: AssemblyTypedIdentifierList> ")" <returns:("->" <AssemblyTypedIdentifierList>)?>
-    <body: AssemblyBlock> <r:@R> => {
+YulFunctionDefinition: YulStatement = {
+    <l:@L> "function" <name: YulIdentifier> "(" <params: YulTypedIdentifierList> ")" <returns:("->" <YulTypedIdentifierList>)?>
+    <body: YulBlock> <r:@R> => {
         let returns = match returns {
             Some(content) => content,
             None => vec![]
         };
-        AssemblyStatement::FunctionDefinition(Box::new(AssemblyFunctionDefinition{
+        YulStatement::FunctionDefinition(Box::new(YulFunctionDefinition{
             loc: Loc::File(file_no, l, r),
             id: name,
             params,
@@ -890,30 +890,30 @@ AssemblyFunctionDefinition: AssemblyStatement = {
 
 }
 
-AssemblyTypedIdentifierList: Vec<AssemblyTypedIdentifier> = {
-    CommaOne<<AssemblyType>> => <>
+YulTypedIdentifierList: Vec<YulTypedIdentifier> = {
+    CommaOne<<YulType>> => <>
 }
 
-AssemblyType: AssemblyTypedIdentifier = {
-    <l:@L> <var_name:AssemblyIdentifier> ":" <var_type:AssemblyIdentifier> <r:@R> =>
-       AssemblyTypedIdentifier{
+YulType: YulTypedIdentifier = {
+    <l:@L> <var_name:YulIdentifier> ":" <var_type:YulIdentifier> <r:@R> =>
+       YulTypedIdentifier{
             loc: Loc::File(file_no, l, r),
             id: var_name, ty: Some(var_type)
        },
-    <l:@L> <id:AssemblyIdentifier> <r:@R> =>
-       AssemblyTypedIdentifier{loc: Loc::File(file_no, l, r), id, ty: None},
+    <l:@L> <id:YulIdentifier> <r:@R> =>
+       YulTypedIdentifier{loc: Loc::File(file_no, l, r), id, ty: None},
 }
 
-AssemblySwitch: AssemblyStatement = {
-    <l:@L> "switch" <condition:AssemblyExpression> <default:AssemblySwitchDefault> <r:@R> =>
-    AssemblyStatement::Switch(AssemblySwitch{
+YulSwitch: YulStatement = {
+    <l:@L> "switch" <condition:YulExpression> <default:YulSwitchDefault> <r:@R> =>
+    YulStatement::Switch(YulSwitch{
         loc: Loc::File(file_no, l, r),
         condition,
         cases: Vec::new(),
         default: Some(default)
     }),
-    <l:@L> "switch" <condition:AssemblyExpression> <cases:AssemblySwitchCase+> <default:AssemblySwitchDefault?> <r:@R> =>
-    AssemblyStatement::Switch(AssemblySwitch{
+    <l:@L> "switch" <condition:YulExpression> <cases:YulSwitchCase+> <default:YulSwitchDefault?> <r:@R> =>
+    YulStatement::Switch(YulSwitch{
         loc: Loc::File(file_no, l, r),
         condition,
         cases,
@@ -921,21 +921,21 @@ AssemblySwitch: AssemblyStatement = {
     }),
 }
 
-AssemblySwitchDefault: AssemblySwitchOptions = {
-    <l:@L> "default" <body:AssemblyBlock> <r:@R> => {
-        AssemblySwitchOptions::Default(Loc::File(file_no, l, r), body)
+YulSwitchDefault: YulSwitchOptions = {
+    <l:@L> "default" <body:YulBlock> <r:@R> => {
+        YulSwitchOptions::Default(Loc::File(file_no, l, r), body)
     }
 }
 
-AssemblySwitchCase: AssemblySwitchOptions = {
-    <l:@L> "case" <case:AssemblyLiteral> <body:AssemblyBlock> <r:@R> => {
-        AssemblySwitchOptions::Case(Loc::File(file_no, l, r), case, body)
+YulSwitchCase: YulSwitchOptions = {
+    <l:@L> "case" <case:YulLiteral> <body:YulBlock> <r:@R> => {
+        YulSwitchOptions::Case(Loc::File(file_no, l, r), case, body)
     }
 }
 
-AssemblyFor: AssemblyStatement = {
-    <l:@L> "for" <init:AssemblyBlock> <cond:AssemblyExpression> <post_iter:AssemblyBlock> <body:AssemblyBlock> <r:@R> => {
-        AssemblyStatement::For(AssemblyFor{
+YulFor: YulStatement = {
+    <l:@L> "for" <init:YulBlock> <cond:YulExpression> <post_iter:YulBlock> <body:YulBlock> <r:@R> => {
+        YulStatement::For(YulFor{
             loc: Loc::File(file_no, l, r),
             init_block: init,
             condition: cond,
@@ -945,20 +945,20 @@ AssemblyFor: AssemblyStatement = {
     },
 }
 
-AssemblyIf: AssemblyStatement = {
-    <l:@L> "if" <cond:AssemblyExpression> <body:AssemblyBlock> <r:@R> => {
-        AssemblyStatement::If(Loc::File(file_no, l, r), cond, body)
+YulIf: YulStatement = {
+    <l:@L> "if" <cond:YulExpression> <body:YulBlock> <r:@R> => {
+        YulStatement::If(Loc::File(file_no, l, r), cond, body)
     },
 }
 
-AssemblyAssignment: AssemblyStatement = {
- <l:@L> <paths:CommaOne<AssemblyPath>> ":=" <expr:AssemblyExpression> <r:@R> =>
- AssemblyStatement::Assign(Loc::File(file_no, l, r), paths, expr)
+YulAssignment: YulStatement = {
+ <l:@L> <paths:CommaOne<YulPath>> ":=" <expr:YulExpression> <r:@R> =>
+ YulStatement::Assign(Loc::File(file_no, l, r), paths, expr)
 }
 
-AssemblyVariableDeclaration: AssemblyStatement = {
-    <l:@L>  "let" <names:AssemblyTypedIdentifierList> <expr:(":=" <AssemblyExpression>)?> <r:@R> =>
-    AssemblyStatement::VariableDeclaration(Loc::File(file_no, l, r), names, expr),
+YulVariableDeclaration: YulStatement = {
+    <l:@L>  "let" <names:YulTypedIdentifierList> <expr:(":=" <YulExpression>)?> <r:@R> =>
+    YulStatement::VariableDeclaration(Loc::File(file_no, l, r), names, expr),
 }
 
 
@@ -1003,7 +1003,7 @@ extern {
         "=" => Token::Assign,
         "==" => Token::Equal,
         "=>" => Token::Arrow,
-        "->" => Token::AssemblyArrow,
+        "->" => Token::YulArrow,
         "|=" => Token::BitwiseOrAssign,
         "^=" => Token::BitwiseXorAssign,
         "&=" => Token::BitwiseAndAssign,

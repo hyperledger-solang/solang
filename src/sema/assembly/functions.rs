@@ -6,7 +6,7 @@ use crate::sema::assembly::types::get_type_from_string;
 use crate::sema::expression::ExprContext;
 use crate::sema::symtable::{LoopScopes, Symtable, VariableInitializer, VariableUsage};
 use solang_parser::diagnostics::{ErrorType, Level, Note};
-use solang_parser::pt::AssemblyFunctionDefinition;
+use solang_parser::pt::YulFunctionDefinition;
 use solang_parser::{pt, Diagnostic};
 use std::collections::{HashMap, LinkedList};
 use std::sync::Arc;
@@ -125,7 +125,7 @@ impl FunctionsTable {
 
 /// Resolve the parameters of a function declaration
 fn process_parameters(
-    parameters: &[pt::AssemblyTypedIdentifier],
+    parameters: &[pt::YulTypedIdentifier],
     ns: &mut Namespace,
 ) -> Vec<AssemblyFunctionParameter> {
     let mut params: Vec<AssemblyFunctionParameter> = Vec::with_capacity(parameters.len());
@@ -158,7 +158,7 @@ fn process_parameters(
 
 /// Resolve the function header of a declaration and add it to the functions table
 pub(crate) fn process_function_header(
-    func_def: &AssemblyFunctionDefinition,
+    func_def: &YulFunctionDefinition,
     functions_table: &mut FunctionsTable,
     ns: &mut Namespace,
 ) {
@@ -203,7 +203,7 @@ pub(crate) fn process_function_header(
 
 /// Semantic analysis of function definitions
 pub(crate) fn resolve_function_definition(
-    func_def: &pt::AssemblyFunctionDefinition,
+    func_def: &pt::YulFunctionDefinition,
     functions_table: &mut FunctionsTable,
     context: &ExprContext,
     ns: &mut Namespace,
