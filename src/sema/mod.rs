@@ -7,7 +7,6 @@ use num_traits::Zero;
 use std::{collections::HashMap, ffi::OsStr};
 
 mod address;
-mod assembly;
 pub mod ast;
 pub mod builtin;
 pub mod contracts;
@@ -26,6 +25,7 @@ mod tests;
 mod types;
 mod unused_variable;
 mod variables;
+mod yul;
 
 use self::contracts::visit_bases;
 use self::eval::eval_const_number;

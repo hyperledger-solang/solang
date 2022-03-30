@@ -72,8 +72,8 @@ strict digraph "tests/contract_testcases/solana/assembly/function_cal_cond.sol" 
 	yul_number_literal_72 [label="uint256 literal: 5\ntests/contract_testcases/solana/assembly/function_cal_cond.sol:31:26-27"]
 	diagnostic [label="found contract ‘testTypes’\nlevel Debug\ntests/contract_testcases/solana/assembly/function_cal_cond.sol:1:1-20"]
 	diagnostic_75 [label="evm assembly not supported on target solana\nlevel Error\ntests/contract_testcases/solana/assembly/function_cal_cond.sol:3:9-33:10"]
-	diagnostic_76 [label="unreachable assembly statement\nlevel Warning\ntests/contract_testcases/solana/assembly/function_cal_cond.sol:31:17-27"]
-	diagnostic_77 [label="assembly variable ‘x‘ has never been read\nlevel Warning\ntests/contract_testcases/solana/assembly/function_cal_cond.sol:31:21-22"]
+	diagnostic_76 [label="unreachable yul statement\nlevel Warning\ntests/contract_testcases/solana/assembly/function_cal_cond.sol:31:17-27"]
+	diagnostic_77 [label="yul variable ‘x‘ has never been read\nlevel Warning\ntests/contract_testcases/solana/assembly/function_cal_cond.sol:31:21-22"]
 	contracts -> contract
 	contract -> testAsm [label="function"]
 	testAsm -> inline_assembly [label="body"]

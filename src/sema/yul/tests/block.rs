@@ -1,4 +1,4 @@
-use crate::sema::assembly::tests::{assert_message_in_diagnostics, parse};
+use crate::sema::yul::tests::{assert_message_in_diagnostics, parse};
 
 #[test]
 fn unreachable_leave() {
@@ -22,7 +22,7 @@ fn unreachable_leave() {
     let ns = parse(file);
     assert!(assert_message_in_diagnostics(
         &ns.diagnostics,
-        "unreachable assembly statement"
+        "unreachable yul statement"
     ));
 
     let file = r#"
@@ -83,7 +83,7 @@ contract testTypes {
     let ns = parse(file);
     assert!(assert_message_in_diagnostics(
         &ns.diagnostics,
-        "unreachable assembly statement"
+        "unreachable yul statement"
     ));
 
     let file = r#"
@@ -141,7 +141,7 @@ contract testTypes {
     let ns = parse(file);
     assert!(assert_message_in_diagnostics(
         &ns.diagnostics,
-        "unreachable assembly statement"
+        "unreachable yul statement"
     ));
 
     let file = r#"
@@ -211,7 +211,7 @@ contract testTypes {
     let ns = parse(file);
     assert!(assert_message_in_diagnostics(
         &ns.diagnostics,
-        "unreachable assembly statement"
+        "unreachable yul statement"
     ));
 
     let file = r#"
@@ -328,10 +328,10 @@ contract testTypes {
     ));
     assert!(assert_message_in_diagnostics(
         &ns.diagnostics,
-        "unreachable assembly statement"
+        "unreachable yul statement"
     ));
     assert!(assert_message_in_diagnostics(
         &ns.diagnostics,
-        "assembly variable ‘x‘ has never been read"
+        "yul variable ‘x‘ has never been read"
     ));
 }

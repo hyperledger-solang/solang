@@ -1,4 +1,4 @@
-use crate::sema::assembly::tests::{assert_message_in_diagnostics, parse};
+use crate::sema::yul::tests::{assert_message_in_diagnostics, parse};
 
 #[test]
 fn unused_variables() {
@@ -25,7 +25,7 @@ contract testTypes {
     let ns = parse(file);
     assert!(assert_message_in_diagnostics(
         &ns.diagnostics,
-        "assembly variable ‘a‘ has never been read or assigned"
+        "yul variable ‘a‘ has never been read or assigned"
     ));
 
     let file = r#"
@@ -51,7 +51,7 @@ contract testTypes {
     let ns = parse(file);
     assert!(assert_message_in_diagnostics(
         &ns.diagnostics,
-        "assembly variable ‘c‘ has never been read"
+        "yul variable ‘c‘ has never been read"
     ));
 }
 
@@ -91,7 +91,7 @@ fn correct_contracts() {
 
     let ns = parse(file);
     for item in &ns.diagnostics {
-        assert!(!item.message.starts_with("assembly variable has never been"));
+        assert!(!item.message.starts_with("yul variable has never been"));
     }
 
     let file = r#"

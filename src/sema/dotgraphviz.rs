@@ -1,10 +1,8 @@
 use super::ast::*;
 use crate::parser::pt;
-use crate::sema::assembly::ast::{
-    AssemblyBlock, AssemblyExpression, AssemblyFunction, AssemblyStatement,
-};
-use crate::sema::assembly::builtin::AssemblyBuiltInFunction;
 use crate::sema::symtable::Symtable;
+use crate::sema::yul::ast::{YulBlock, YulExpression, YulFunction, YulStatement};
+use crate::sema::yul::builtin::YulBuiltInFunction;
 use solang_parser::pt::Loc;
 
 struct Node {
@@ -1572,7 +1570,7 @@ impl Dot {
     fn add_yul_function(
         &mut self,
         func_no: usize,
-        avail_functions: &[AssemblyFunction],
+        avail_functions: &[YulFunction],
         ns: &Namespace,
         parent: usize,
         parent_rel: String,
@@ -1637,15 +1635,15 @@ impl Dot {
 
     fn add_yul_expression(
         &mut self,
-        expr: &AssemblyExpression,
+        expr: &YulExpression,
         symtable: &Symtable,
-        avail_functions: &[AssemblyFunction],
+        avail_functions: &[YulFunction],
         ns: &Namespace,
         parent: usize,
         parent_rel: String,
     ) {
         match expr {
-            AssemblyExpression::BoolLiteral(loc, value, ty) => {
+            YulExpression::BoolLiteral(loc, value, ty) => {
                 let labels = vec![
                     format!(
                         "bool literal: {} of type {}",
@@ -1661,7 +1659,7 @@ impl Dot {
                     Some(parent_rel),
                 );
             }
-            AssemblyExpression::NumberLiteral(loc, value, ty) => {
+            YulExpression::NumberLiteral(loc, value, ty) => {
                 let labels = vec![
                     format!("{} literal: {}", ty.to_string(ns), value),
                     ns.loc_to_string(loc),
@@ -1673,7 +1671,7 @@ impl Dot {
                     Some(parent_rel),
                 );
             }
-            AssemblyExpression::StringLiteral(loc, value, ty) => {
+            YulExpression::StringLiteral(loc, value, ty) => {
                 let labels = vec![
                     format!("{} literal: {}", ty.to_string(ns), hex::encode(value)),
                     ns.loc_to_string(loc),
@@ -1685,7 +1683,7 @@ impl Dot {
                     Some(parent_rel),
                 );
             }
-            AssemblyExpression::AssemblyLocalVariable(loc, ty, var_no) => {
+            YulExpression::YulLocalVariable(loc, ty, var_no) => {
                 let labels = vec![
                     format!("yul variable: {}", symtable.vars[var_no].id.name),
                     ty.to_string(ns),
@@ -1697,7 +1695,7 @@ impl Dot {
                     Some(parent_rel),
                 );
             }
-            AssemblyExpression::SolidityLocalVariable(loc, ty, _, var_no) => {
+            YulExpression::SolidityLocalVariable(loc, ty, _, var_no) => {
                 let labels = vec![
                     format!("solidity variable: {}", symtable.vars[var_no].id.name),
                     ty.to_string(ns),
@@ -1710,13 +1708,13 @@ impl Dot {
                     Some(parent_rel),
                 );
             }
-            AssemblyExpression::ConstantVariable(loc, ty, contract, var_no) => {
+            YulExpression::ConstantVariable(loc, ty, contract, var_no) => {
                 self.add_constant_variable(loc, ty, contract, var_no, parent, parent_rel, ns);
             }
-            AssemblyExpression::StorageVariable(loc, ty, contract, var_no) => {
+            YulExpression::StorageVariable(loc, ty, contract, var_no) => {
                 self.add_storage_variable(loc, ty, contract, var_no, parent, parent_rel, ns);
             }
-            AssemblyExpression::BuiltInCall(loc, builtin_ty, args) => {
+            YulExpression::BuiltInCall(loc, builtin_ty, args) => {
                 self.add_yul_builtin_call(
                     loc,
                     builtin_ty,
@@ -1728,7 +1726,7 @@ impl Dot {
                     ns,
                 );
             }
-            AssemblyExpression::FunctionCall(loc, func_no, args) => {
+            YulExpression::FunctionCall(loc, func_no, args) => {
                 self.add_yul_function_call(
                     loc,
                     func_no,
@@ -1740,7 +1738,7 @@ impl Dot {
                     ns,
                 );
             }
-            AssemblyExpression::MemberAccess(loc, member, suffix) => {
+            YulExpression::MemberAccess(loc, member, suffix) => {
                 let labels = vec![
                     format!("yul member ‘{}‘ access", suffix.to_string()),
                     ns.loc_to_string(loc),
@@ -1828,15 +1826,15 @@ impl Dot {
 
     fn add_yul_statement(
         &mut self,
-        statement: &AssemblyStatement,
+        statement: &YulStatement,
         parent: usize,
         parent_rel: String,
-        avail_functions: &[AssemblyFunction],
+        avail_functions: &[YulFunction],
         symtable: &Symtable,
         ns: &Namespace,
     ) -> usize {
         match statement {
-            AssemblyStatement::FunctionCall(loc, func_no, args) => self.add_yul_function_call(
+            YulStatement::FunctionCall(loc, func_no, args) => self.add_yul_function_call(
                 loc,
                 func_no,
                 args,
@@ -1846,7 +1844,7 @@ impl Dot {
                 symtable,
                 ns,
             ),
-            AssemblyStatement::BuiltInCall(loc, builtin_ty, args) => self.add_yul_builtin_call(
+            YulStatement::BuiltInCall(loc, builtin_ty, args) => self.add_yul_builtin_call(
                 loc,
                 builtin_ty,
                 args,
@@ -1856,10 +1854,10 @@ impl Dot {
                 symtable,
                 ns,
             ),
-            AssemblyStatement::Block(block) => {
+            YulStatement::Block(block) => {
                 self.add_yul_block(block, parent, parent_rel, avail_functions, symtable, ns)
             }
-            AssemblyStatement::VariableDeclaration(loc, declared_vars, initializer) => {
+            YulStatement::VariableDeclaration(loc, declared_vars, initializer) => {
                 let labels = vec![
                     "yul variable declaration".to_string(),
                     ns.loc_to_string(loc),
@@ -1903,7 +1901,7 @@ impl Dot {
 
                 node
             }
-            AssemblyStatement::Assignment(loc, lhs, rhs) => {
+            YulStatement::Assignment(loc, lhs, rhs) => {
                 let labels = vec!["yul assignment".to_string(), ns.loc_to_string(loc)];
 
                 let node = self.add_node(
@@ -1933,7 +1931,7 @@ impl Dot {
                 );
                 node
             }
-            AssemblyStatement::IfBlock(loc, condition, block) => {
+            YulStatement::IfBlock(loc, condition, block) => {
                 let labels = vec!["yul if".to_string(), ns.loc_to_string(loc)];
 
                 let node = self.add_node(Node::new("if", labels), Some(parent), Some(parent_rel));
@@ -1956,7 +1954,7 @@ impl Dot {
                 );
                 node
             }
-            AssemblyStatement::Switch {
+            YulStatement::Switch {
                 loc,
                 condition,
                 cases,
@@ -2026,7 +2024,7 @@ impl Dot {
                 }
                 node
             }
-            AssemblyStatement::For {
+            YulStatement::For {
                 loc,
                 init_block,
                 condition,
@@ -2071,15 +2069,15 @@ impl Dot {
                 );
                 node
             }
-            AssemblyStatement::Leave(loc) => {
+            YulStatement::Leave(loc) => {
                 let labels = vec!["leave".to_string(), ns.loc_to_string(loc)];
                 self.add_node(Node::new("leave", labels), Some(parent), Some(parent_rel))
             }
-            AssemblyStatement::Break(loc) => {
+            YulStatement::Break(loc) => {
                 let labels = vec!["break".to_string(), ns.loc_to_string(loc)];
                 self.add_node(Node::new("break", labels), Some(parent), Some(parent_rel))
             }
-            AssemblyStatement::Continue(loc) => {
+            YulStatement::Continue(loc) => {
                 let labels = vec!["continue".to_string(), ns.loc_to_string(loc)];
                 self.add_node(
                     Node::new("continue", labels),
@@ -2092,10 +2090,10 @@ impl Dot {
 
     fn add_yul_block(
         &mut self,
-        block: &AssemblyBlock,
+        block: &YulBlock,
         mut parent: usize,
         parent_rel: String,
-        avail_functions: &[AssemblyFunction],
+        avail_functions: &[YulFunction],
         symtable: &Symtable,
         ns: &Namespace,
     ) -> usize {
@@ -2126,10 +2124,10 @@ impl Dot {
         &mut self,
         loc: &Loc,
         func_no: &usize,
-        args: &[AssemblyExpression],
+        args: &[YulExpression],
         parent: usize,
         parent_rel: String,
-        avail_functions: &[AssemblyFunction],
+        avail_functions: &[YulFunction],
         symtable: &Symtable,
         ns: &Namespace,
     ) -> usize {
@@ -2161,11 +2159,11 @@ impl Dot {
     fn add_yul_builtin_call(
         &mut self,
         loc: &Loc,
-        builtin_ty: &AssemblyBuiltInFunction,
-        args: &[AssemblyExpression],
+        builtin_ty: &YulBuiltInFunction,
+        args: &[YulExpression],
         parent: usize,
         parent_rel: String,
-        avail_functions: &[AssemblyFunction],
+        avail_functions: &[YulFunction],
         symtable: &Symtable,
         ns: &Namespace,
     ) -> usize {

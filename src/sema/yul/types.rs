@@ -1,7 +1,7 @@
 use crate::ast::{Namespace, Type};
 use crate::pt::CodeLocation;
-use crate::sema::assembly::ast::AssemblyExpression;
-use crate::sema::assembly::functions::FunctionsTable;
+use crate::sema::yul::ast::YulExpression;
+use crate::sema::yul::functions::FunctionsTable;
 use solang_parser::pt::Identifier;
 use solang_parser::Diagnostic;
 
@@ -45,23 +45,23 @@ pub(crate) fn get_default_type_from_identifier(
 
 /// Performs checks on whether it is possible to retrieve a type from an expression
 pub(crate) fn verify_type_from_expression(
-    expr: &AssemblyExpression,
+    expr: &YulExpression,
     function_table: &FunctionsTable,
 ) -> Result<Type, Diagnostic> {
     match expr {
-        AssemblyExpression::BoolLiteral(..) => Ok(Type::Bool),
+        YulExpression::BoolLiteral(..) => Ok(Type::Bool),
 
-        AssemblyExpression::NumberLiteral(_, _, ty)
-        | AssemblyExpression::StringLiteral(_, _, ty)
-        | AssemblyExpression::AssemblyLocalVariable(_, ty, _)
-        | AssemblyExpression::ConstantVariable(_, ty, ..)
-        | AssemblyExpression::SolidityLocalVariable(_, ty, None, _) => Ok(ty.clone()),
+        YulExpression::NumberLiteral(_, _, ty)
+        | YulExpression::StringLiteral(_, _, ty)
+        | YulExpression::YulLocalVariable(_, ty, _)
+        | YulExpression::ConstantVariable(_, ty, ..)
+        | YulExpression::SolidityLocalVariable(_, ty, None, _) => Ok(ty.clone()),
 
-        AssemblyExpression::SolidityLocalVariable(_, _, Some(_), _)
-        | AssemblyExpression::MemberAccess(..)
-        | AssemblyExpression::StorageVariable(..) => Ok(Type::Uint(256)),
+        YulExpression::SolidityLocalVariable(_, _, Some(_), _)
+        | YulExpression::MemberAccess(..)
+        | YulExpression::StorageVariable(..) => Ok(Type::Uint(256)),
 
-        AssemblyExpression::BuiltInCall(_, ty, _) => {
+        YulExpression::BuiltInCall(_, ty, _) => {
             let prototype = ty.get_prototype_info();
             if prototype.no_returns == 0 {
                 Err(Diagnostic::error(
@@ -81,7 +81,7 @@ pub(crate) fn verify_type_from_expression(
             }
         }
 
-        AssemblyExpression::FunctionCall(_, function_no, ..) => {
+        YulExpression::FunctionCall(_, function_no, ..) => {
             let func = function_table.get(*function_no).unwrap();
             if func.returns.is_empty() {
                 Err(Diagnostic::error(

@@ -1,28 +1,26 @@
 use crate::ast::Namespace;
-use crate::sema::assembly::ast::{AssemblyExpression, AssemblyStatement};
-use crate::sema::assembly::block::resolve_assembly_block;
-use crate::sema::assembly::builtin::{assembly_unsupported_builtin, parse_builtin_keyword};
-use crate::sema::assembly::expression::{
-    check_type, resolve_assembly_expression, resolve_function_call,
-};
-use crate::sema::assembly::for_loop::resolve_for_loop;
-use crate::sema::assembly::functions::FunctionsTable;
-use crate::sema::assembly::switch::{resolve_condition, resolve_switch};
-use crate::sema::assembly::types::get_default_type_from_identifier;
 use crate::sema::expression::ExprContext;
 use crate::sema::symtable::{LoopScopes, Symtable, VariableInitializer, VariableUsage};
+use crate::sema::yul::ast::{YulExpression, YulStatement};
+use crate::sema::yul::block::resolve_yul_block;
+use crate::sema::yul::builtin::{parse_builtin_keyword, yul_unsupported_builtin};
+use crate::sema::yul::expression::{check_type, resolve_function_call, resolve_yul_expression};
+use crate::sema::yul::for_loop::resolve_for_loop;
+use crate::sema::yul::functions::FunctionsTable;
+use crate::sema::yul::switch::{resolve_condition, resolve_switch};
+use crate::sema::yul::types::get_default_type_from_identifier;
 use solang_parser::diagnostics::{ErrorType, Level, Note};
 use solang_parser::pt::YulTypedIdentifier;
 use solang_parser::{pt, Diagnostic};
 
-/// Resolves an assembly statement. Returns a boolean that indicates if the next statement is reachable.
-pub(crate) fn resolve_assembly_statement(
+/// Resolves an yul statement. Returns a boolean that indicates if the next statement is reachable.
+pub(crate) fn resolve_yul_statement(
     statement: &pt::YulStatement,
     context: &ExprContext,
     reachable: bool,
     loop_scope: &mut LoopScopes,
     symtable: &mut Symtable,
-    resolved_statements: &mut Vec<(AssemblyStatement, bool)>,
+    resolved_statements: &mut Vec<(YulStatement, bool)>,
     function_table: &mut FunctionsTable,
     ns: &mut Namespace,
 ) -> Result<bool, ()> {
@@ -36,7 +34,7 @@ pub(crate) fn resolve_assembly_statement(
         }
 
         pt::YulStatement::Block(block) => {
-            let data = resolve_assembly_block(
+            let data = resolve_yul_block(
                 &block.loc,
                 &block.statements,
                 context,
@@ -46,7 +44,7 @@ pub(crate) fn resolve_assembly_statement(
                 symtable,
                 ns,
             );
-            resolved_statements.push((AssemblyStatement::Block(Box::new(data.0)), reachable));
+            resolved_statements.push((YulStatement::Block(Box::new(data.0)), reachable));
             Ok(data.1)
         }
 
@@ -108,7 +106,7 @@ pub(crate) fn resolve_assembly_statement(
 
         pt::YulStatement::Break(loc) => {
             if loop_scope.do_break() {
-                resolved_statements.push((AssemblyStatement::Break(*loc), reachable));
+                resolved_statements.push((YulStatement::Break(*loc), reachable));
                 Ok(false)
             } else {
                 ns.diagnostics.push(Diagnostic::error(
@@ -121,7 +119,7 @@ pub(crate) fn resolve_assembly_statement(
 
         pt::YulStatement::Continue(loc) => {
             if loop_scope.do_continue() {
-                resolved_statements.push((AssemblyStatement::Continue(*loc), reachable));
+                resolved_statements.push((YulStatement::Continue(*loc), reachable));
                 Ok(false)
             } else {
                 ns.diagnostics.push(Diagnostic::error(
@@ -140,7 +138,7 @@ pub(crate) fn resolve_assembly_statement(
                 ));
                 return Err(());
             }
-            resolved_statements.push((AssemblyStatement::Leave(*loc), reachable));
+            resolved_statements.push((YulStatement::Leave(*loc), reachable));
             Ok(false)
         }
 
@@ -167,9 +165,9 @@ fn resolve_top_level_function_call(
     context: &ExprContext,
     symtable: &mut Symtable,
     ns: &mut Namespace,
-) -> Result<(AssemblyStatement, bool), ()> {
+) -> Result<(YulStatement, bool), ()> {
     match resolve_function_call(function_table, func_call, context, symtable, ns) {
-        Ok(AssemblyExpression::BuiltInCall(loc, ty, args)) => {
+        Ok(YulExpression::BuiltInCall(loc, ty, args)) => {
             let func_prototype = ty.get_prototype_info();
             if func_prototype.no_returns != 0 {
                 ns.diagnostics.push(Diagnostic::error(
@@ -179,11 +177,11 @@ fn resolve_top_level_function_call(
                 return Err(());
             }
             Ok((
-                AssemblyStatement::BuiltInCall(loc, ty, args),
+                YulStatement::BuiltInCall(loc, ty, args),
                 !func_prototype.stops_execution,
             ))
         }
-        Ok(AssemblyExpression::FunctionCall(loc, function_no, args)) => {
+        Ok(YulExpression::FunctionCall(loc, function_no, args)) => {
             let func = function_table.get(function_no).unwrap();
             if !func.returns.is_empty() {
                 ns.diagnostics.push(Diagnostic::error(
@@ -192,14 +190,11 @@ fn resolve_top_level_function_call(
                 ));
                 return Err(());
             }
-            Ok((
-                AssemblyStatement::FunctionCall(loc, function_no, args),
-                true,
-            ))
+            Ok((YulStatement::FunctionCall(loc, function_no, args), true))
         }
 
         Ok(_) => {
-            unreachable!("sema::assembly::resolve_function_call can only return resolved calls")
+            unreachable!("sema::yul::resolve_function_call can only return resolved calls")
         }
 
         Err(_) => Err(()),
@@ -214,7 +209,7 @@ fn resolve_variable_declaration(
     context: &ExprContext,
     symtable: &mut Symtable,
     ns: &mut Namespace,
-) -> Result<AssemblyStatement, ()> {
+) -> Result<YulStatement, ()> {
     let mut added_variables: Vec<usize> = Vec::with_capacity(variables.len());
     for item in variables {
         if let Some(func) = function_table.find(&item.id.name) {
@@ -229,7 +224,7 @@ fn resolve_variable_declaration(
                 }],
             });
             return Err(());
-        } else if assembly_unsupported_builtin(&item.id.name)
+        } else if yul_unsupported_builtin(&item.id.name)
             || parse_builtin_keyword(&item.id.name).is_some()
         {
             ns.diagnostics.push(Diagnostic::error(
@@ -254,8 +249,8 @@ fn resolve_variable_declaration(
             &item.id,
             ty,
             ns,
-            VariableInitializer::Assembly(initializer.is_some()),
-            VariableUsage::AssemblyLocalVariable,
+            VariableInitializer::Yul(initializer.is_some()),
+            VariableUsage::YulLocalVariable,
             None,
         ) {
             added_variables.push(pos);
@@ -266,7 +261,7 @@ fn resolve_variable_declaration(
 
     let resolved_init = if let Some(init_expr) = &initializer {
         let resolved_expr =
-            resolve_assembly_expression(init_expr, context, symtable, function_table, ns)?;
+            resolve_yul_expression(init_expr, context, symtable, function_table, ns)?;
         check_assignment_compatibility(
             loc,
             variables,
@@ -281,7 +276,7 @@ fn resolve_variable_declaration(
         None
     };
 
-    Ok(AssemblyStatement::VariableDeclaration(
+    Ok(YulStatement::VariableDeclaration(
         *loc,
         added_variables,
         resolved_init,
@@ -296,12 +291,12 @@ fn resolve_assignment(
     function_table: &mut FunctionsTable,
     symtable: &mut Symtable,
     ns: &mut Namespace,
-) -> Result<AssemblyStatement, ()> {
-    let mut resolved_lhs: Vec<AssemblyExpression> = Vec::with_capacity(lhs.len());
+) -> Result<YulStatement, ()> {
+    let mut resolved_lhs: Vec<YulExpression> = Vec::with_capacity(lhs.len());
     let mut local_ctx = context.clone();
     local_ctx.lvalue = true;
     for item in lhs {
-        let resolved = resolve_assembly_expression(item, &local_ctx, symtable, function_table, ns)?;
+        let resolved = resolve_yul_expression(item, &local_ctx, symtable, function_table, ns)?;
         if let Some(diagnostic) = check_type(&resolved, &local_ctx, ns, symtable) {
             ns.diagnostics.push(diagnostic);
             return Err(());
@@ -310,7 +305,7 @@ fn resolve_assignment(
     }
 
     local_ctx.lvalue = false;
-    let resolved_rhs = resolve_assembly_expression(rhs, &local_ctx, symtable, function_table, ns)?;
+    let resolved_rhs = resolve_yul_expression(rhs, &local_ctx, symtable, function_table, ns)?;
     check_assignment_compatibility(
         loc,
         &resolved_lhs,
@@ -321,25 +316,21 @@ fn resolve_assignment(
         ns,
     );
 
-    Ok(AssemblyStatement::Assignment(
-        *loc,
-        resolved_lhs,
-        resolved_rhs,
-    ))
+    Ok(YulStatement::Assignment(*loc, resolved_lhs, resolved_rhs))
 }
 
 /// Checks the the left hand side of an assignment is compatible with it right hand side
 fn check_assignment_compatibility<T>(
     loc: &pt::Loc,
     lhs: &[T],
-    rhs: &AssemblyExpression,
+    rhs: &YulExpression,
     context: &ExprContext,
     function_table: &FunctionsTable,
     symtable: &mut Symtable,
     ns: &mut Namespace,
 ) {
     match rhs {
-        AssemblyExpression::FunctionCall(_, function_no, ..) => {
+        YulExpression::FunctionCall(_, function_no, ..) => {
             let func = function_table.get(*function_no).unwrap();
             if func.returns.len() != lhs.len() {
                 ns.diagnostics.push(Diagnostic::error(
@@ -353,7 +344,7 @@ fn check_assignment_compatibility<T>(
             }
         }
 
-        AssemblyExpression::BuiltInCall(_, ty, _) => {
+        YulExpression::BuiltInCall(_, ty, _) => {
             let prototype = ty.get_prototype_info();
             if prototype.no_returns as usize != lhs.len() {
                 ns.diagnostics.push(Diagnostic::error(
@@ -390,10 +381,10 @@ fn resolve_if_block(
     function_table: &mut FunctionsTable,
     symtable: &mut Symtable,
     ns: &mut Namespace,
-) -> Result<AssemblyStatement, ()> {
+) -> Result<YulStatement, ()> {
     let resolved_condition = resolve_condition(condition, context, symtable, function_table, ns)?;
 
-    let resolved_block = resolve_assembly_block(
+    let resolved_block = resolve_yul_block(
         loc,
         if_block,
         context,
@@ -404,7 +395,7 @@ fn resolve_if_block(
         ns,
     );
 
-    Ok(AssemblyStatement::IfBlock(
+    Ok(YulStatement::IfBlock(
         *loc,
         resolved_condition,
         Box::new(resolved_block.0),

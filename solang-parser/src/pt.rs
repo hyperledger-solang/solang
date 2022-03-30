@@ -646,11 +646,7 @@ pub enum CatchClause {
 #[derive(Debug, PartialEq, Clone)]
 pub enum YulStatement {
     Assign(Loc, Vec<YulExpression>, YulExpression),
-    VariableDeclaration(
-        Loc,
-        Vec<YulTypedIdentifier>,
-        Option<YulExpression>,
-    ),
+    VariableDeclaration(Loc, Vec<YulTypedIdentifier>, Option<YulExpression>),
     If(Loc, YulExpression, YulBlock),
     For(YulFor),
     Switch(YulSwitch),

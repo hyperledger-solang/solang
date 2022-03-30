@@ -1,9 +1,9 @@
 use crate::ast::Namespace;
-use crate::sema::assembly::ast::InlineAssembly;
-use crate::sema::assembly::block::process_statements;
-use crate::sema::assembly::functions::FunctionsTable;
 use crate::sema::expression::ExprContext;
 use crate::sema::symtable::{LoopScopes, Symtable};
+use crate::sema::yul::ast::InlineAssembly;
+use crate::sema::yul::block::process_statements;
+use crate::sema::yul::functions::FunctionsTable;
 use solang_parser::pt;
 
 pub mod ast;
