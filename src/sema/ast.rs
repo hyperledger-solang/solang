@@ -3,7 +3,7 @@ use crate::codegen::cfg::ControlFlowGraph;
 pub use crate::parser::diagnostics::*;
 use crate::parser::pt;
 use crate::parser::pt::{CodeLocation, OptionalCodeLocation};
-use crate::sema::assembly::InlineAssembly;
+use crate::sema::assembly::ast::InlineAssembly;
 use crate::Target;
 use num_bigint::BigInt;
 use num_rational::BigRational;

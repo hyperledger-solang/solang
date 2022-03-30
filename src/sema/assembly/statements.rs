@@ -1,46 +1,19 @@
 use crate::ast::Namespace;
-use crate::sema::assembly::block::{resolve_assembly_block, AssemblyBlock};
-use crate::sema::assembly::builtin::{
-    assembly_unsupported_builtin, parse_builtin_keyword, AssemblyBuiltInFunction,
-};
+use crate::sema::assembly::ast::{AssemblyExpression, AssemblyStatement};
+use crate::sema::assembly::block::resolve_assembly_block;
+use crate::sema::assembly::builtin::{assembly_unsupported_builtin, parse_builtin_keyword};
 use crate::sema::assembly::expression::{
-    check_type, resolve_assembly_expression, resolve_function_call, AssemblyExpression,
+    check_type, resolve_assembly_expression, resolve_function_call,
 };
 use crate::sema::assembly::for_loop::resolve_for_loop;
 use crate::sema::assembly::functions::FunctionsTable;
-use crate::sema::assembly::switch::{resolve_condition, resolve_switch, CaseBlock};
+use crate::sema::assembly::switch::{resolve_condition, resolve_switch};
 use crate::sema::assembly::types::get_default_type_from_identifier;
 use crate::sema::expression::ExprContext;
 use crate::sema::symtable::{LoopScopes, Symtable, VariableInitializer, VariableUsage};
 use solang_parser::diagnostics::{ErrorType, Level, Note};
 use solang_parser::pt::AssemblyTypedIdentifier;
 use solang_parser::{pt, Diagnostic};
-
-#[derive(Clone, Debug)]
-pub enum AssemblyStatement {
-    FunctionCall(pt::Loc, usize, Vec<AssemblyExpression>),
-    BuiltInCall(pt::Loc, AssemblyBuiltInFunction, Vec<AssemblyExpression>),
-    Block(pt::Loc, Box<AssemblyBlock>),
-    VariableDeclaration(pt::Loc, Vec<usize>, Option<AssemblyExpression>),
-    Assignment(pt::Loc, Vec<AssemblyExpression>, AssemblyExpression),
-    IfBlock(pt::Loc, AssemblyExpression, Box<AssemblyBlock>),
-    Switch {
-        loc: pt::Loc,
-        condition: AssemblyExpression,
-        cases: Vec<CaseBlock>,
-        default: Option<AssemblyBlock>,
-    },
-    For {
-        loc: pt::Loc,
-        init_block: AssemblyBlock,
-        condition: AssemblyExpression,
-        post_block: AssemblyBlock,
-        execution_block: AssemblyBlock,
-    },
-    Leave(pt::Loc),
-    Break(pt::Loc),
-    Continue(pt::Loc),
-}
 
 /// Resolves an assembly statement. Returns a boolean that indicates if the next statement is reachable.
 pub(crate) fn resolve_assembly_statement(
@@ -73,10 +46,7 @@ pub(crate) fn resolve_assembly_statement(
                 symtable,
                 ns,
             );
-            resolved_statements.push((
-                AssemblyStatement::Block(block.loc, Box::new(data.0)),
-                reachable,
-            ));
+            resolved_statements.push((AssemblyStatement::Block(Box::new(data.0)), reachable));
             Ok(data.1)
         }
 

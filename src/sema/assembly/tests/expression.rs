@@ -1,11 +1,10 @@
 #![cfg(test)]
 
 use crate::ast::{Namespace, Symbol, Type, Variable};
+use crate::sema::assembly::ast::{AssemblyExpression, AssemblyFunctionParameter, AssemblySuffix};
 use crate::sema::assembly::builtin::AssemblyBuiltInFunction;
-use crate::sema::assembly::expression::{
-    check_type, resolve_assembly_expression, AssemblyExpression, AssemblySuffix,
-};
-use crate::sema::assembly::functions::{AssemblyFunctionParameter, FunctionsTable};
+use crate::sema::assembly::expression::{check_type, resolve_assembly_expression};
+use crate::sema::assembly::functions::FunctionsTable;
 use crate::sema::assembly::tests::{assert_message_in_diagnostics, parse};
 use crate::sema::expression::ExprContext;
 use crate::sema::symtable::{Symtable, VariableInitializer, VariableUsage};

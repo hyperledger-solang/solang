@@ -1,6 +1,6 @@
 use crate::ast::{Namespace, Type};
 use crate::pt::CodeLocation;
-use crate::sema::assembly::expression::AssemblyExpression;
+use crate::sema::assembly::ast::AssemblyExpression;
 use crate::sema::assembly::functions::FunctionsTable;
 use solang_parser::pt::Identifier;
 use solang_parser::Diagnostic;

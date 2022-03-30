@@ -1,8 +1,7 @@
 use crate::ast::{Namespace, Symbol, Type};
-use crate::sema::assembly::builtin::{
-    assembly_unsupported_builtin, parse_builtin_keyword, AssemblyBuiltInFunction,
-};
-use crate::sema::assembly::functions::{AssemblyFunctionParameter, FunctionsTable};
+use crate::sema::assembly::ast::{AssemblyExpression, AssemblyFunctionParameter, AssemblySuffix};
+use crate::sema::assembly::builtin::{assembly_unsupported_builtin, parse_builtin_keyword};
+use crate::sema::assembly::functions::FunctionsTable;
 use crate::sema::assembly::types::{
     get_default_type_from_identifier, get_type_from_string, verify_type_from_expression,
 };
@@ -15,29 +14,6 @@ use solang_parser::diagnostics::{ErrorType, Level};
 use solang_parser::pt::{AssemblyFunctionCall, CodeLocation, Identifier, Loc, StorageLocation};
 use solang_parser::{pt, Diagnostic};
 
-#[derive(PartialEq, Debug, Clone)]
-pub enum AssemblyExpression {
-    BoolLiteral(pt::Loc, bool, Type),
-    NumberLiteral(pt::Loc, BigInt, Type),
-    StringLiteral(pt::Loc, Vec<u8>, Type),
-    AssemblyLocalVariable(pt::Loc, Type, usize),
-    SolidityLocalVariable(pt::Loc, Type, Option<StorageLocation>, usize),
-    ConstantVariable(pt::Loc, Type, Option<usize>, usize),
-    StorageVariable(pt::Loc, Type, usize, usize),
-    BuiltInCall(pt::Loc, AssemblyBuiltInFunction, Vec<AssemblyExpression>),
-    FunctionCall(pt::Loc, usize, Vec<AssemblyExpression>),
-    MemberAccess(pt::Loc, Box<AssemblyExpression>, AssemblySuffix),
-}
-
-#[derive(PartialEq, Debug, Clone)]
-pub enum AssemblySuffix {
-    Offset,
-    Slot,
-    Length,
-    Selector,
-    Address,
-}
-
 /// Given a keyword, returns the suffix it represents in YUL
 fn get_suffix_from_string(suffix_name: &str) -> Option<AssemblySuffix> {
     match suffix_name {
@@ -47,23 +23,6 @@ fn get_suffix_from_string(suffix_name: &str) -> Option<AssemblySuffix> {
         "selector" => Some(AssemblySuffix::Selector),
         "address" => Some(AssemblySuffix::Address),
         _ => None,
-    }
-}
-
-impl CodeLocation for AssemblyExpression {
-    fn loc(&self) -> pt::Loc {
-        match self {
-            AssemblyExpression::BoolLiteral(loc, ..)
-            | AssemblyExpression::NumberLiteral(loc, ..)
-            | AssemblyExpression::StringLiteral(loc, ..)
-            | AssemblyExpression::AssemblyLocalVariable(loc, ..)
-            | AssemblyExpression::SolidityLocalVariable(loc, ..)
-            | AssemblyExpression::ConstantVariable(loc, ..)
-            | AssemblyExpression::StorageVariable(loc, ..)
-            | AssemblyExpression::BuiltInCall(loc, ..)
-            | AssemblyExpression::MemberAccess(loc, ..)
-            | AssemblyExpression::FunctionCall(loc, ..) => *loc,
-        }
     }
 }
 

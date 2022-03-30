@@ -1,7 +1,7 @@
 use crate::ast::Namespace;
-use crate::sema::assembly::block::{process_statements, resolve_assembly_block, AssemblyBlock};
+use crate::sema::assembly::ast::{AssemblyBlock, AssemblyStatement};
+use crate::sema::assembly::block::{process_statements, resolve_assembly_block};
 use crate::sema::assembly::functions::FunctionsTable;
-use crate::sema::assembly::statements::AssemblyStatement;
 use crate::sema::assembly::switch::resolve_condition;
 use crate::sema::expression::ExprContext;
 use crate::sema::symtable::{LoopScopes, Symtable};
