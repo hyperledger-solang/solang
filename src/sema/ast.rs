@@ -1422,7 +1422,7 @@ pub enum Statement {
     },
     TryCatch(pt::Loc, bool, TryCatch),
     Underscore(pt::Loc),
-    Assembly(InlineAssembly),
+    Assembly(InlineAssembly, bool),
 }
 
 #[derive(Clone, Debug)]
@@ -1526,18 +1526,21 @@ impl Statement {
     pub fn reachable(&self) -> bool {
         match self {
             Statement::Block { statements, .. } => statements.iter().all(|s| s.reachable()),
-            Statement::Underscore(_) | Statement::Destructure(..) | Statement::VariableDecl(..) => {
-                true
-            }
+            Statement::Underscore(_)
+            | Statement::Destructure(..)
+            | Statement::VariableDecl(..)
+            | Statement::Emit { .. }
+            | Statement::Delete(..) => true,
+
+            Statement::Continue(_) | Statement::Break(_) | Statement::Return(..) => false,
+
             Statement::If(_, reachable, ..)
             | Statement::While(_, reachable, ..)
             | Statement::DoWhile(_, reachable, ..)
-            | Statement::Expression(_, reachable, _) => *reachable,
-            Statement::Emit { .. } => true,
-            Statement::Delete(..) => true,
-            Statement::Continue(_) | Statement::Break(_) | Statement::Return(..) => false,
-            Statement::For { reachable, .. } | Statement::TryCatch(_, reachable, _) => *reachable,
-            Statement::Assembly(_) => unimplemented!("Assembly block ast not ready"),
+            | Statement::Expression(_, reachable, _)
+            | Statement::For { reachable, .. }
+            | Statement::TryCatch(_, reachable, _)
+            | Statement::Assembly(_, reachable) => *reachable,
         }
     }
 }

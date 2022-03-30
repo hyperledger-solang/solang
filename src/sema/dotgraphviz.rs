@@ -1529,8 +1529,7 @@ impl Dot {
                         Some(parent_rel),
                     );
                 }
-
-                Statement::Assembly(inline_assembly) => {
+                Statement::Assembly(inline_assembly, ..) => {
                     let labels = vec![
                         "inline assembly".to_string(),
                         ns.loc_to_string(&inline_assembly.loc),

@@ -820,7 +820,7 @@ fn statement(
 
             let resolved_asm =
                 resolve_inline_assembly(loc, &block.statements, context, symtable, ns);
-            res.push(Statement::Assembly(resolved_asm.0));
+            res.push(Statement::Assembly(resolved_asm.0, resolved_asm.1));
             Ok(resolved_asm.1)
         }
         pt::Statement::Revert(loc, error, args) => {
