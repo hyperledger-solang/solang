@@ -1,9 +1,9 @@
 use crate::ast::Namespace;
-use crate::sema::assembly::ast::InlineAssembly;
-use crate::sema::assembly::block::process_statements;
-use crate::sema::assembly::functions::FunctionsTable;
 use crate::sema::expression::ExprContext;
 use crate::sema::symtable::{LoopScopes, Symtable};
+use crate::sema::yul::ast::InlineAssembly;
+use crate::sema::yul::block::process_statements;
+use crate::sema::yul::functions::FunctionsTable;
 use solang_parser::pt;
 
 pub mod ast;
@@ -22,7 +22,7 @@ mod unused_variable;
 /// Returns the resolved block and a bool to indicate if the next statement is reachable.
 pub fn resolve_inline_assembly(
     loc: &pt::Loc,
-    statements: &[pt::AssemblyStatement],
+    statements: &[pt::YulStatement],
     context: &ExprContext,
     symtable: &mut Symtable,
     ns: &mut Namespace,

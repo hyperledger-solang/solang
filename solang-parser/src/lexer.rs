@@ -182,7 +182,7 @@ pub enum Token<'input> {
     Switch,
     Case,
     Default,
-    AssemblyArrow,
+    YulArrow,
 }
 
 impl<'input> fmt::Display for Token<'input> {
@@ -327,7 +327,7 @@ impl<'input> fmt::Display for Token<'input> {
             Token::Switch => write!(f, "switch"),
             Token::Case => write!(f, "case"),
             Token::Default => write!(f, "default"),
-            Token::AssemblyArrow => write!(f, "->"),
+            Token::YulArrow => write!(f, "->"),
         }
     }
 }
@@ -1089,7 +1089,7 @@ impl<'input> Lexer<'input> {
                         }
                         Some((_, '>')) => {
                             self.chars.next();
-                            Some(Ok((i, Token::AssemblyArrow, i + 2)))
+                            Some(Ok((i, Token::YulArrow, i + 2)))
                         }
                         _ => Some(Ok((i, Token::Subtract, i + 1))),
                     };

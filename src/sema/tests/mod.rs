@@ -1,7 +1,7 @@
 #![cfg(test)]
 use crate::ast::{Expression, Parameter, Statement, TryCatch, Type};
-use crate::sema::assembly::ast::InlineAssembly;
 use crate::sema::expression::unescape;
+use crate::sema::yul::ast::InlineAssembly;
 use solang_parser::pt::Loc;
 use solang_parser::Diagnostic;
 

@@ -1,12 +1,12 @@
 use crate::ast::{Namespace, Type};
-use crate::sema::assembly::ast::{AssemblyFunction, AssemblyFunctionParameter};
-use crate::sema::assembly::block::process_statements;
-use crate::sema::assembly::builtin::{assembly_unsupported_builtin, parse_builtin_keyword};
-use crate::sema::assembly::types::get_type_from_string;
 use crate::sema::expression::ExprContext;
 use crate::sema::symtable::{LoopScopes, Symtable, VariableInitializer, VariableUsage};
+use crate::sema::yul::ast::{YulFunction, YulFunctionParameter};
+use crate::sema::yul::block::process_statements;
+use crate::sema::yul::builtin::{parse_builtin_keyword, yul_unsupported_builtin};
+use crate::sema::yul::types::get_type_from_string;
 use solang_parser::diagnostics::{ErrorType, Level, Note};
-use solang_parser::pt::AssemblyFunctionDefinition;
+use solang_parser::pt::YulFunctionDefinition;
 use solang_parser::{pt, Diagnostic};
 use std::collections::{HashMap, LinkedList};
 use std::sync::Arc;
@@ -15,8 +15,8 @@ use std::sync::Arc;
 /// resolving the function's body
 pub struct FunctionHeader {
     pub id: pt::Identifier,
-    pub params: Arc<Vec<AssemblyFunctionParameter>>,
-    pub returns: Arc<Vec<AssemblyFunctionParameter>>,
+    pub params: Arc<Vec<YulFunctionParameter>>,
+    pub returns: Arc<Vec<YulFunctionParameter>>,
     pub function_no: usize,
     called: bool,
 }
@@ -26,7 +26,7 @@ pub struct FunctionsTable {
     scopes: LinkedList<HashMap<String, usize>>,
     lookup: Vec<FunctionHeader>,
     counter: usize,
-    pub resolved_functions: Vec<AssemblyFunction>,
+    pub resolved_functions: Vec<YulFunction>,
 }
 
 impl FunctionsTable {
@@ -71,8 +71,8 @@ impl FunctionsTable {
         &self,
         name: &str,
     ) -> (
-        Arc<Vec<AssemblyFunctionParameter>>,
-        Arc<Vec<AssemblyFunctionParameter>>,
+        Arc<Vec<YulFunctionParameter>>,
+        Arc<Vec<YulFunctionParameter>>,
     ) {
         let header = self.find(name).unwrap();
         (header.params.clone(), header.returns.clone())
@@ -85,8 +85,8 @@ impl FunctionsTable {
     pub fn add_function_header(
         &mut self,
         id: &pt::Identifier,
-        params: Vec<AssemblyFunctionParameter>,
-        returns: Vec<AssemblyFunctionParameter>,
+        params: Vec<YulFunctionParameter>,
+        returns: Vec<YulFunctionParameter>,
     ) -> Option<Diagnostic> {
         if let Some(func) = self.find(&id.name) {
             return Some(Diagnostic {
@@ -125,10 +125,10 @@ impl FunctionsTable {
 
 /// Resolve the parameters of a function declaration
 fn process_parameters(
-    parameters: &[pt::AssemblyTypedIdentifier],
+    parameters: &[pt::YulTypedIdentifier],
     ns: &mut Namespace,
-) -> Vec<AssemblyFunctionParameter> {
-    let mut params: Vec<AssemblyFunctionParameter> = Vec::with_capacity(parameters.len());
+) -> Vec<YulFunctionParameter> {
+    let mut params: Vec<YulFunctionParameter> = Vec::with_capacity(parameters.len());
     for item in parameters {
         let ty = match &item.ty {
             Some(identifier) => {
@@ -137,7 +137,7 @@ fn process_parameters(
                 } else {
                     ns.diagnostics.push(Diagnostic::error(
                         identifier.loc,
-                        format!("unrecognized assembly type: {}", identifier.name),
+                        format!("unrecognized yul type: {}", identifier.name),
                     ));
 
                     Type::Uint(256)
@@ -146,7 +146,7 @@ fn process_parameters(
             None => Type::Uint(256),
         };
 
-        params.push(AssemblyFunctionParameter {
+        params.push(YulFunctionParameter {
             loc: item.loc,
             id: item.id.clone(),
             ty,
@@ -158,7 +158,7 @@ fn process_parameters(
 
 /// Resolve the function header of a declaration and add it to the functions table
 pub(crate) fn process_function_header(
-    func_def: &AssemblyFunctionDefinition,
+    func_def: &YulFunctionDefinition,
     functions_table: &mut FunctionsTable,
     ns: &mut Namespace,
 ) {
@@ -175,7 +175,7 @@ pub(crate) fn process_function_header(
         });
         return;
     } else if parse_builtin_keyword(&func_def.id.name).is_some()
-        || assembly_unsupported_builtin(&func_def.id.name)
+        || yul_unsupported_builtin(&func_def.id.name)
     {
         ns.diagnostics.push(Diagnostic::error(
             func_def.loc,
@@ -203,11 +203,11 @@ pub(crate) fn process_function_header(
 
 /// Semantic analysis of function definitions
 pub(crate) fn resolve_function_definition(
-    func_def: &pt::AssemblyFunctionDefinition,
+    func_def: &pt::YulFunctionDefinition,
     functions_table: &mut FunctionsTable,
     context: &ExprContext,
     ns: &mut Namespace,
-) -> Result<AssemblyFunction, ()> {
+) -> Result<YulFunction, ()> {
     let mut symtable = Symtable::new();
     let mut local_ctx = context.clone();
     local_ctx.yul_function = true;
@@ -220,8 +220,8 @@ pub(crate) fn resolve_function_definition(
             &item.id,
             item.ty.clone(),
             ns,
-            VariableInitializer::Assembly(true),
-            VariableUsage::AssemblyLocalVariable,
+            VariableInitializer::Yul(true),
+            VariableUsage::YulLocalVariable,
             None,
         );
     }
@@ -231,8 +231,8 @@ pub(crate) fn resolve_function_definition(
             &item.id,
             item.ty.clone(),
             ns,
-            VariableInitializer::Assembly(false),
-            VariableUsage::AssemblyLocalVariable,
+            VariableInitializer::Yul(false),
+            VariableUsage::YulLocalVariable,
             None,
         );
     }
@@ -250,7 +250,7 @@ pub(crate) fn resolve_function_definition(
     );
 
     functions_table.leave_scope(ns);
-    Ok(AssemblyFunction {
+    Ok(YulFunction {
         loc: func_def.loc,
         name: func_def.id.name.clone(),
         params,

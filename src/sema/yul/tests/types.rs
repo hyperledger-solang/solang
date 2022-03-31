@@ -1,6 +1,6 @@
 #![cfg(test)]
 
-use crate::sema::assembly::tests::{assert_message_in_diagnostics, parse};
+use crate::sema::yul::tests::{assert_message_in_diagnostics, parse};
 
 #[test]
 fn type_not_found() {

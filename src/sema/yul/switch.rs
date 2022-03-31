@@ -1,35 +1,30 @@
 use crate::ast::Namespace;
-use crate::sema::assembly::ast::{AssemblyBlock, AssemblyExpression, AssemblyStatement, CaseBlock};
-use crate::sema::assembly::block::resolve_assembly_block;
-use crate::sema::assembly::expression::{check_type, resolve_assembly_expression};
-use crate::sema::assembly::functions::FunctionsTable;
-use crate::sema::assembly::types::verify_type_from_expression;
 use crate::sema::expression::ExprContext;
 use crate::sema::symtable::{LoopScopes, Symtable};
-use solang_parser::pt::{AssemblySwitchOptions, CodeLocation};
+use crate::sema::yul::ast::{CaseBlock, YulBlock, YulExpression, YulStatement};
+use crate::sema::yul::block::resolve_yul_block;
+use crate::sema::yul::expression::{check_type, resolve_yul_expression};
+use crate::sema::yul::functions::FunctionsTable;
+use crate::sema::yul::types::verify_type_from_expression;
+use solang_parser::pt::{CodeLocation, YulSwitchOptions};
 use solang_parser::{pt, Diagnostic};
 
 /// Resolve switch statement
 /// Returns the resolved block and a bool to indicate if the next statement is reachable.
 pub(crate) fn resolve_switch(
-    assembly_switch: &pt::AssemblySwitch,
+    yul_switch: &pt::YulSwitch,
     context: &ExprContext,
     mut reachable: bool,
     function_table: &mut FunctionsTable,
     loop_scope: &mut LoopScopes,
     symtable: &mut Symtable,
     ns: &mut Namespace,
-) -> Result<(AssemblyStatement, bool), ()> {
-    let resolved_condition = resolve_condition(
-        &assembly_switch.condition,
-        context,
-        symtable,
-        function_table,
-        ns,
-    )?;
-    let mut default_block: Option<AssemblyBlock> = None;
-    let mut case_blocks: Vec<CaseBlock> = Vec::with_capacity(assembly_switch.cases.len());
-    for item in &assembly_switch.cases {
+) -> Result<(YulStatement, bool), ()> {
+    let resolved_condition =
+        resolve_condition(&yul_switch.condition, context, symtable, function_table, ns)?;
+    let mut default_block: Option<YulBlock> = None;
+    let mut case_blocks: Vec<CaseBlock> = Vec::with_capacity(yul_switch.cases.len());
+    for item in &yul_switch.cases {
         let block_reachable = resolve_case_or_default(
             item,
             &mut default_block,
@@ -44,13 +39,13 @@ pub(crate) fn resolve_switch(
         reachable |= block_reachable;
     }
 
-    if assembly_switch.default.is_some() && default_block.is_some() {
+    if yul_switch.default.is_some() && default_block.is_some() {
         ns.diagnostics.push(Diagnostic::error(
-            assembly_switch.default.as_ref().unwrap().loc(),
+            yul_switch.default.as_ref().unwrap().loc(),
             "Only one default block is allowed".to_string(),
         ));
         return Err(());
-    } else if let Some(default_unwrapped) = &assembly_switch.default {
+    } else if let Some(default_unwrapped) = &yul_switch.default {
         let block_reachable = resolve_case_or_default(
             default_unwrapped,
             &mut default_block,
@@ -63,13 +58,13 @@ pub(crate) fn resolve_switch(
             ns,
         )?;
         reachable |= block_reachable;
-    } else if assembly_switch.default.is_none() && default_block.is_none() {
+    } else if yul_switch.default.is_none() && default_block.is_none() {
         reachable |= true;
     }
 
     Ok((
-        AssemblyStatement::Switch {
-            loc: assembly_switch.loc,
+        YulStatement::Switch {
+            loc: yul_switch.loc,
             condition: resolved_condition,
             cases: case_blocks,
             default: default_block,
@@ -80,14 +75,14 @@ pub(crate) fn resolve_switch(
 
 /// Resolves condition statements for either if-statement and switch-statements
 pub(crate) fn resolve_condition(
-    condition: &pt::AssemblyExpression,
+    condition: &pt::YulExpression,
     context: &ExprContext,
     symtable: &mut Symtable,
     function_table: &mut FunctionsTable,
     ns: &mut Namespace,
-) -> Result<AssemblyExpression, ()> {
+) -> Result<YulExpression, ()> {
     let resolved_condition =
-        resolve_assembly_expression(condition, context, symtable, function_table, ns)?;
+        resolve_yul_expression(condition, context, symtable, function_table, ns)?;
     if let Err(diagnostic) = verify_type_from_expression(&resolved_condition, function_table) {
         ns.diagnostics.push(diagnostic);
         return Err(());
@@ -101,8 +96,8 @@ pub(crate) fn resolve_condition(
 
 /// Resolve case or default from a switch statements
 fn resolve_case_or_default(
-    switch_case: &pt::AssemblySwitchOptions,
-    default_block: &mut Option<AssemblyBlock>,
+    switch_case: &pt::YulSwitchOptions,
+    default_block: &mut Option<YulBlock>,
     case_blocks: &mut Vec<CaseBlock>,
     context: &ExprContext,
     reachable: bool,
@@ -112,7 +107,7 @@ fn resolve_case_or_default(
     ns: &mut Namespace,
 ) -> Result<bool, ()> {
     match switch_case {
-        AssemblySwitchOptions::Case(loc, expr, block) => {
+        YulSwitchOptions::Case(loc, expr, block) => {
             let resolved_case = resolve_case_block(
                 loc,
                 default_block.is_some(),
@@ -129,8 +124,8 @@ fn resolve_case_or_default(
             Ok(resolved_case.1)
         }
 
-        AssemblySwitchOptions::Default(loc, block) => {
-            let resolved_default = resolve_assembly_block(
+        YulSwitchOptions::Default(loc, block) => {
+            let resolved_default = resolve_yul_block(
                 loc,
                 &block.statements,
                 context,
@@ -150,8 +145,8 @@ fn resolve_case_or_default(
 fn resolve_case_block(
     loc: &pt::Loc,
     has_default: bool,
-    condition: &pt::AssemblyExpression,
-    block: &[pt::AssemblyStatement],
+    condition: &pt::YulExpression,
+    block: &[pt::YulStatement],
     context: &ExprContext,
     reachable: bool,
     function_table: &mut FunctionsTable,
@@ -167,11 +162,11 @@ fn resolve_case_block(
         return Err(());
     }
     let resolved_condition =
-        resolve_assembly_expression(condition, context, symtable, function_table, ns)?;
+        resolve_yul_expression(condition, context, symtable, function_table, ns)?;
     match resolved_condition {
-        AssemblyExpression::NumberLiteral(..)
-        | AssemblyExpression::StringLiteral(..)
-        | AssemblyExpression::BoolLiteral(..) => (),
+        YulExpression::NumberLiteral(..)
+        | YulExpression::StringLiteral(..)
+        | YulExpression::BoolLiteral(..) => (),
 
         _ => {
             ns.diagnostics.push(Diagnostic::error(
@@ -182,7 +177,7 @@ fn resolve_case_block(
         }
     }
 
-    let case_block = resolve_assembly_block(
+    let case_block = resolve_yul_block(
         loc,
         block,
         context,

@@ -24,14 +24,14 @@ pub struct Variable {
 #[derive(Clone, Debug)]
 pub enum VariableInitializer {
     Solidity(Option<Arc<Expression>>),
-    Assembly(bool),
+    Yul(bool),
 }
 
 impl VariableInitializer {
     pub fn has_initializer(&self) -> bool {
         match self {
             VariableInitializer::Solidity(expr) => expr.is_some(),
-            VariableInitializer::Assembly(initialized) => *initialized,
+            VariableInitializer::Yul(initialized) => *initialized,
         }
     }
 }
@@ -71,7 +71,7 @@ pub enum VariableUsage {
     TryCatchReturns,
     TryCatchErrorString,
     TryCatchErrorBytes,
-    AssemblyLocalVariable,
+    YulLocalVariable,
 }
 
 #[derive(Debug, Clone)]

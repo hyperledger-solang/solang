@@ -1,28 +1,28 @@
 use crate::ast::Namespace;
-use crate::sema::assembly::ast::{AssemblyBlock, AssemblyStatement};
-use crate::sema::assembly::block::{process_statements, resolve_assembly_block};
-use crate::sema::assembly::functions::FunctionsTable;
-use crate::sema::assembly::switch::resolve_condition;
 use crate::sema::expression::ExprContext;
 use crate::sema::symtable::{LoopScopes, Symtable};
+use crate::sema::yul::ast::{YulBlock, YulStatement};
+use crate::sema::yul::block::{process_statements, resolve_yul_block};
+use crate::sema::yul::functions::FunctionsTable;
+use crate::sema::yul::switch::resolve_condition;
 use solang_parser::{pt, Diagnostic};
 
 /// Resolve a for-loop statement
 /// Returns the resolved block and a bool to indicate if the next statement is reachable.
 pub(crate) fn resolve_for_loop(
-    assembly_for: &pt::AssemblyFor,
+    yul_for: &pt::YulFor,
     context: &ExprContext,
     mut reachable: bool,
     loop_scope: &mut LoopScopes,
     symtable: &mut Symtable,
     function_table: &mut FunctionsTable,
     ns: &mut Namespace,
-) -> Result<(AssemblyStatement, bool), ()> {
+) -> Result<(YulStatement, bool), ()> {
     symtable.new_scope();
     function_table.new_scope();
 
     let resolved_init_block = resolve_for_init_block(
-        &assembly_for.init_block,
+        &yul_for.init_block,
         context,
         loop_scope,
         symtable,
@@ -31,19 +31,14 @@ pub(crate) fn resolve_for_loop(
     )?;
     reachable &= resolved_init_block.1;
 
-    let resolved_cond = resolve_condition(
-        &assembly_for.condition,
-        context,
-        symtable,
-        function_table,
-        ns,
-    )?;
+    let resolved_cond =
+        resolve_condition(&yul_for.condition, context, symtable, function_table, ns)?;
 
     loop_scope.new_scope();
 
-    let resolved_exec_block = resolve_assembly_block(
-        &assembly_for.execution_block.loc,
-        &assembly_for.execution_block.statements,
+    let resolved_exec_block = resolve_yul_block(
+        &yul_for.execution_block.loc,
+        &yul_for.execution_block.statements,
         context,
         reachable,
         loop_scope,
@@ -55,9 +50,9 @@ pub(crate) fn resolve_for_loop(
 
     loop_scope.leave_scope();
 
-    let resolved_post_block = resolve_assembly_block(
-        &assembly_for.post_block.loc,
-        &assembly_for.post_block.statements,
+    let resolved_post_block = resolve_yul_block(
+        &yul_for.post_block.loc,
+        &yul_for.post_block.statements,
         context,
         reachable,
         loop_scope,
@@ -70,8 +65,8 @@ pub(crate) fn resolve_for_loop(
     function_table.leave_scope(ns);
 
     Ok((
-        AssemblyStatement::For {
-            loc: assembly_for.loc,
+        YulStatement::For {
+            loc: yul_for.loc,
             init_block: resolved_init_block.0,
             condition: resolved_cond,
             post_block: resolved_post_block.0,
@@ -84,15 +79,15 @@ pub(crate) fn resolve_for_loop(
 /// Resolve for initialization block.
 /// Returns the resolved block and a bool to indicate if the next statement is reachable.
 fn resolve_for_init_block(
-    init_block: &pt::AssemblyBlock,
+    init_block: &pt::YulBlock,
     context: &ExprContext,
     loop_scope: &mut LoopScopes,
     symtable: &mut Symtable,
     function_table: &mut FunctionsTable,
     ns: &mut Namespace,
-) -> Result<(AssemblyBlock, bool), ()> {
+) -> Result<(YulBlock, bool), ()> {
     for item in &init_block.statements {
-        if matches!(item, pt::AssemblyStatement::FunctionDefinition(_)) {
+        if matches!(item, pt::YulStatement::FunctionDefinition(_)) {
             ns.diagnostics.push(Diagnostic::error(
                 item.loc(),
                 "function definitions are not allowed inside for-init block".to_string(),
@@ -112,7 +107,7 @@ fn resolve_for_init_block(
     );
 
     Ok((
-        AssemblyBlock {
+        YulBlock {
             loc: init_block.loc,
             body,
         },

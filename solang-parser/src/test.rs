@@ -633,12 +633,12 @@ fn test_assembly_parser() {
                 statements: vec![
                     Statement::Assembly {
                         loc: Loc::File(0, 54, 736),
-                        block: AssemblyBlock {
+                        block: YulBlock {
                             loc: Loc::File(0, 72, 736),
                             statements: vec![
-                                AssemblyStatement::VariableDeclaration(
+                                YulStatement::VariableDeclaration(
                                     Loc::File(0, 98, 108),
-                                    vec![AssemblyTypedIdentifier {
+                                    vec![YulTypedIdentifier {
                                         loc: Loc::File(0, 102, 103),
                                         id: Identifier {
                                             loc: Loc::File(0, 102, 103),
@@ -646,19 +646,19 @@ fn test_assembly_parser() {
                                         },
                                         ty: None,
                                     }],
-                                    Some(AssemblyExpression::NumberLiteral(
+                                    Some(YulExpression::NumberLiteral(
                                         Loc::File(0, 107, 108),
                                         BigInt::from(0),
                                         None,
                                     )),
                                 ),
-                                AssemblyStatement::For(AssemblyFor{
+                                YulStatement::For(YulFor {
                                     loc: Loc::File(0, 133, 388),
-                                    init_block: AssemblyBlock{
+                                    init_block: YulBlock {
                                         loc: Loc::File(0, 137, 151),
-                                        statements: vec![AssemblyStatement::VariableDeclaration(
+                                        statements: vec![YulStatement::VariableDeclaration(
                                             Loc::File(0, 139, 149),
-                                            vec![AssemblyTypedIdentifier {
+                                            vec![YulTypedIdentifier {
                                                 loc: Loc::File(0, 143, 144),
                                                 id: Identifier {
                                                     loc: Loc::File(0, 143, 144),
@@ -666,52 +666,52 @@ fn test_assembly_parser() {
                                                 },
                                                 ty: None,
                                             }],
-                                            Some(AssemblyExpression::NumberLiteral(
+                                            Some(YulExpression::NumberLiteral(
                                                 Loc::File(0, 148, 149),
                                                 BigInt::from(0),
                                                 None,
                                             )),
                                         )],
                                     },
-                                    condition: AssemblyExpression::FunctionCall(Box::new(AssemblyFunctionCall {
+                                    condition: YulExpression::FunctionCall(Box::new(YulFunctionCall {
                                         loc: Loc::File(0, 152, 164),
                                         id: Identifier {
                                             loc: Loc::File(0, 152, 154),
                                             name: "lt".to_string(),
                                         },
                                         arguments: vec![
-                                            AssemblyExpression::Variable(Identifier {
+                                            YulExpression::Variable(Identifier {
                                                 loc: Loc::File(0, 155, 156),
                                                 name: "i".to_string(),
                                             }),
-                                            AssemblyExpression::HexNumberLiteral(
+                                            YulExpression::HexNumberLiteral(
                                                 Loc::File(0, 158, 163),
                                                 "0x100".to_string(),
                                                 None,
                                             ),
                                         ],
                                     })),
-                                    post_block: AssemblyBlock {
+                                    post_block: YulBlock {
                                         loc: Loc::File(0, 165, 186),
-                                        statements: vec![AssemblyStatement::Assign(
+                                        statements: vec![YulStatement::Assign(
                                             Loc::File(0, 167, 184),
-                                            vec![AssemblyExpression::Variable(Identifier {
+                                            vec![YulExpression::Variable(Identifier {
                                                 loc: Loc::File(0, 167, 168),
                                                 name: "i".to_string(),
                                             })],
-                                            AssemblyExpression::FunctionCall(Box::new(
-                                                AssemblyFunctionCall {
+                                            YulExpression::FunctionCall(Box::new(
+                                                YulFunctionCall {
                                                     loc: Loc::File(0, 172, 184),
                                                     id: Identifier {
                                                         loc: Loc::File(0, 172, 175),
                                                         name: "add".to_string(),
                                                     },
                                                     arguments: vec![
-                                                        AssemblyExpression::Variable(Identifier {
+                                                        YulExpression::Variable(Identifier {
                                                             loc: Loc::File(0, 176, 177),
                                                             name: "i".to_string(),
                                                         }),
-                                                        AssemblyExpression::HexNumberLiteral(
+                                                        YulExpression::HexNumberLiteral(
                                                             Loc::File(0, 179, 183),
                                                             "0x20".to_string(),
                                                             None,
@@ -721,36 +721,36 @@ fn test_assembly_parser() {
                                             )),
                                         )],
                                     },
-                                    execution_block: AssemblyBlock{
+                                    execution_block: YulBlock {
                                         loc: Loc::File(0, 187, 388),
                                         statements: vec![
-                                            AssemblyStatement::Assign(
+                                            YulStatement::Assign(
                                                 Loc::File(0, 217, 248),
-                                                vec![AssemblyExpression::Variable(Identifier {
+                                                vec![YulExpression::Variable(Identifier {
                                                     loc: Loc::File(0, 217, 218),
                                                     name: "x".to_string(),
                                                 })],
-                                                AssemblyExpression::FunctionCall(Box::new(
-                                                    AssemblyFunctionCall {
+                                                YulExpression::FunctionCall(Box::new(
+                                                    YulFunctionCall {
                                                         loc: Loc::File(0, 232, 248),
                                                         id: Identifier {
                                                             loc: Loc::File(0, 232, 235),
                                                             name: "add".to_string(),
                                                         },
                                                         arguments: vec![
-                                                            AssemblyExpression::Variable(Identifier {
+                                                            YulExpression::Variable(Identifier {
                                                                 loc: Loc::File(0, 236, 237),
                                                                 name: "x".to_string(),
                                                             }),
-                                                            AssemblyExpression::FunctionCall(Box::new(
-                                                                AssemblyFunctionCall {
+                                                            YulExpression::FunctionCall(Box::new(
+                                                                YulFunctionCall {
                                                                     loc: Loc::File(0, 239, 247),
                                                                     id: Identifier {
                                                                         loc: Loc::File(0, 239, 244),
                                                                         name: "mload".to_string(),
                                                                     },
                                                                     arguments: vec![
-                                                                        AssemblyExpression::Variable(
+                                                                        YulExpression::Variable(
                                                                             Identifier {
                                                                                 loc: Loc::File(0, 245, 246),
                                                                                 name: "i".to_string(),
@@ -763,21 +763,21 @@ fn test_assembly_parser() {
                                                     },
                                                 )),
                                             ),
-                                            AssemblyStatement::If(
+                                            YulStatement::If(
                                                 Loc::File(0, 278, 362),
-                                                AssemblyExpression::FunctionCall(Box::new(
-                                                    AssemblyFunctionCall {
+                                                YulExpression::FunctionCall(Box::new(
+                                                    YulFunctionCall {
                                                         loc: Loc::File(0, 281, 292),
                                                         id: Identifier {
                                                             loc: Loc::File(0, 281, 283),
                                                             name: "gt".to_string(),
                                                         },
                                                         arguments: vec![
-                                                            AssemblyExpression::Variable(Identifier {
+                                                            YulExpression::Variable(Identifier {
                                                                 loc: Loc::File(0, 284, 285),
                                                                 name: "i".to_string(),
                                                             }),
-                                                            AssemblyExpression::HexNumberLiteral(
+                                                            YulExpression::HexNumberLiteral(
                                                                 Loc::File(0, 287, 291),
                                                                 "0x10".to_string(),
                                                                 None,
@@ -785,18 +785,18 @@ fn test_assembly_parser() {
                                                         ],
                                                     },
                                                 )),
-                                                AssemblyBlock{
+                                                YulBlock {
                                                     loc: Loc::File(0, 293, 362),
-                                                    statements: vec![AssemblyStatement::Break(Loc::File(0, 327, 332))],
+                                                    statements: vec![YulStatement::Break(Loc::File(0, 327, 332))],
                                                 },
                                             ),
                                         ],
                                     },
                             }),
-                                AssemblyStatement::VariableDeclaration(
+                                YulStatement::VariableDeclaration(
                                     Loc::File(0, 414, 451),
                                     vec![
-                                        AssemblyTypedIdentifier {
+                                        YulTypedIdentifier {
                                             loc: Loc::File(0, 418, 425),
                                             id: Identifier {
                                                 loc: Loc::File(0, 418, 419),
@@ -807,7 +807,7 @@ fn test_assembly_parser() {
                                                 name: "u32".to_string(),
                                             }),
                                         },
-                                        AssemblyTypedIdentifier {
+                                        YulTypedIdentifier {
                                             loc: Loc::File(0, 427, 428),
                                             id: Identifier {
                                                 loc: Loc::File(0, 427, 428),
@@ -815,7 +815,7 @@ fn test_assembly_parser() {
                                             },
                                             ty: None,
                                         },
-                                        AssemblyTypedIdentifier {
+                                        YulTypedIdentifier {
                                             loc: Loc::File(0, 430, 437),
                                             id: Identifier {
                                                 loc: Loc::File(0, 430, 431),
@@ -827,8 +827,8 @@ fn test_assembly_parser() {
                                             }),
                                         },
                                     ],
-                                    Some(AssemblyExpression::FunctionCall(Box::new(
-                                        AssemblyFunctionCall {
+                                    Some(YulExpression::FunctionCall(Box::new(
+                                        YulFunctionCall {
                                             loc: Loc::File(0, 441, 451),
                                             id: Identifier {
                                                 loc: Loc::File(0, 441, 449),
@@ -838,35 +838,35 @@ fn test_assembly_parser() {
                                         },
                                     ))),
                                 ),
-                                AssemblyStatement::Switch(AssemblySwitch{
+                                YulStatement::Switch(YulSwitch {
                                     loc: Loc::File(0, 477, 714),
-                                    condition: AssemblyExpression::Variable(Identifier {
+                                    condition: YulExpression::Variable(Identifier {
                                         loc: Loc::File(0, 484, 485),
                                         name: "x".to_string(),
                                     }),
-                                    cases: vec![AssemblySwitchOptions::Case(
+                                    cases: vec![YulSwitchOptions::Case(
                                         Loc::File(0, 510, 620),
-                                        AssemblyExpression::NumberLiteral(
+                                        YulExpression::NumberLiteral(
                                             Loc::File(0, 515, 516),
                                             BigInt::from(0),
                                             None,
                                         ),
-                                        AssemblyBlock{
+                                        YulBlock {
                                             loc: Loc::File(0, 517, 620),
-                                            statements: vec![AssemblyStatement::FunctionCall(Box::new(
-                                                AssemblyFunctionCall {
+                                            statements: vec![YulStatement::FunctionCall(Box::new(
+                                                YulFunctionCall {
                                                     loc: Loc::File(0, 547, 559),
                                                     id: Identifier {
                                                         loc: Loc::File(0, 547, 553),
                                                         name: "revert".to_string(),
                                                     },
                                                     arguments: vec![
-                                                        AssemblyExpression::NumberLiteral(
+                                                        YulExpression::NumberLiteral(
                                                             Loc::File(0, 554, 555),
                                                             BigInt::from(0),
                                                             None,
                                                         ),
-                                                        AssemblyExpression::NumberLiteral(
+                                                        YulExpression::NumberLiteral(
                                                             Loc::File(0, 557, 558),
                                                             BigInt::from(0),
                                                             None,
@@ -876,11 +876,11 @@ fn test_assembly_parser() {
                                             ))],
                                         }
                                     )],
-                                    default: Some(AssemblySwitchOptions::Default(
+                                    default: Some(YulSwitchOptions::Default(
                                         Loc::File(0, 645, 714),
-                                        AssemblyBlock {
+                                        YulBlock {
                                             loc: Loc::File(0, 653, 714),
-                                            statements: vec![AssemblyStatement::Leave(Loc::File(0, 683, 688))],
+                                            statements: vec![YulStatement::Leave(Loc::File(0, 683, 688))],
                                         }
                                     )),
                             }),
@@ -893,17 +893,17 @@ fn test_assembly_parser() {
                     },
                     Statement::Assembly {
                         loc: Loc::File(0, 758, 1027),
-                        block: AssemblyBlock{
+                        block: YulBlock {
                           loc: Loc::File(0, 767, 1027),
-                            statements: vec![AssemblyStatement::FunctionDefinition(Box::new(
-                                AssemblyFunctionDefinition {
+                            statements: vec![YulStatement::FunctionDefinition(Box::new(
+                                YulFunctionDefinition {
                                     loc: Loc::File(0, 794, 1005),
                                     id: Identifier {
                                         loc: Loc::File(0, 803, 808),
                                         name: "power".to_string(),
                                     },
                                     params: vec![
-                                        AssemblyTypedIdentifier {
+                                        YulTypedIdentifier {
                                             loc: Loc::File(0, 809, 820),
                                             id: Identifier {
                                                 loc: Loc::File(0, 809, 813),
@@ -914,7 +914,7 @@ fn test_assembly_parser() {
                                                 name: "u256".to_string(),
                                             }),
                                         },
-                                        AssemblyTypedIdentifier {
+                                        YulTypedIdentifier {
                                             loc: Loc::File(0, 822, 830),
                                             id: Identifier {
                                                 loc: Loc::File(0, 822, 830),
@@ -923,7 +923,7 @@ fn test_assembly_parser() {
                                             ty: None,
                                         },
                                     ],
-                                    returns: vec![AssemblyTypedIdentifier {
+                                    returns: vec![YulTypedIdentifier {
                                         loc: Loc::File(0, 835, 841),
                                         id: Identifier {
                                             loc: Loc::File(0, 835, 841),
@@ -931,12 +931,12 @@ fn test_assembly_parser() {
                                         },
                                         ty: None,
                                     }],
-                                    body: AssemblyBlock {
+                                    body: YulBlock {
                                         loc: Loc::File(0, 866, 1005),
                                         statements:  vec![
-                                            AssemblyStatement::VariableDeclaration(
+                                            YulStatement::VariableDeclaration(
                                                 Loc::File(0, 896, 940),
-                                                vec![AssemblyTypedIdentifier {
+                                                vec![YulTypedIdentifier {
                                                     loc: Loc::File(0, 900, 901),
                                                     id: Identifier {
                                                         loc: Loc::File(0, 900, 901),
@@ -944,15 +944,15 @@ fn test_assembly_parser() {
                                                     },
                                                     ty: None,
                                                 }],
-                                                Some(AssemblyExpression::FunctionCall(Box::new(
-                                                    AssemblyFunctionCall {
+                                                Some(YulExpression::FunctionCall(Box::new(
+                                                    YulFunctionCall {
                                                         loc: Loc::File(0, 905, 940),
                                                         id: Identifier {
                                                             loc: Loc::File(0, 905, 908),
                                                             name: "and".to_string(),
                                                         },
                                                         arguments: vec![
-                                                            AssemblyExpression::StringLiteral(
+                                                            YulExpression::StringLiteral(
                                                                 StringLiteral {
                                                                     loc: Loc::File(0, 909, 914),
                                                                     string: "abc".to_string(),
@@ -962,15 +962,15 @@ fn test_assembly_parser() {
                                                                     name: "u32".to_string(),
                                                                 }),
                                                             ),
-                                                            AssemblyExpression::FunctionCall(Box::new(
-                                                                AssemblyFunctionCall {
+                                                            YulExpression::FunctionCall(Box::new(
+                                                                YulFunctionCall {
                                                                     loc: Loc::File(0, 920, 939),
                                                                     id: Identifier {
                                                                         loc: Loc::File(0, 920, 923),
                                                                         name: "add".to_string(),
                                                                     },
                                                                     arguments: vec![
-                                                                        AssemblyExpression::NumberLiteral(
+                                                                        YulExpression::NumberLiteral(
                                                                             Loc::File(0, 924, 930),
                                                                             BigInt::from(3),
                                                                             Some(Identifier {
@@ -978,7 +978,7 @@ fn test_assembly_parser() {
                                                                                 name: "u256".to_string(),
                                                                             }),
                                                                         ),
-                                                                        AssemblyExpression::NumberLiteral(
+                                                                        YulExpression::NumberLiteral(
                                                                             Loc::File(0, 932, 938),
                                                                             BigInt::from(2),
                                                                             Some(Identifier {
@@ -993,9 +993,9 @@ fn test_assembly_parser() {
                                                     },
                                                 ))),
                                             ),
-                                            AssemblyStatement::VariableDeclaration(
+                                            YulStatement::VariableDeclaration(
                                                 Loc::File(0, 969, 979),
-                                                vec![AssemblyTypedIdentifier {
+                                                vec![YulTypedIdentifier {
                                                     loc: Loc::File(0, 973, 979),
                                                     id: Identifier {
                                                         loc: Loc::File(0, 973, 979),

@@ -341,23 +341,20 @@ pub fn emit_warning_local_variable(variable: &symtable::Variable) -> Option<Diag
 
             None
         }
-        VariableUsage::AssemblyLocalVariable => {
+        VariableUsage::YulLocalVariable => {
             let has_value = variable.assigned || variable.initializer.has_initializer();
             if !variable.read && !has_value {
                 return Some(Diagnostic::warning(
                     variable.id.loc,
                     format!(
-                        "assembly variable ‘{}‘ has never been read or assigned",
+                        "yul variable ‘{}‘ has never been read or assigned",
                         variable.id.name
                     ),
                 ));
             } else if !variable.read {
                 return Some(Diagnostic::warning(
                     variable.id.loc,
-                    format!(
-                        "assembly variable ‘{}‘ has never been read",
-                        variable.id.name
-                    ),
+                    format!("yul variable ‘{}‘ has never been read", variable.id.name),
                 ));
             }
             None

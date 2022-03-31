@@ -1,25 +1,25 @@
 use crate::ast::Namespace;
-use crate::sema::assembly::ast::{AssemblyBlock, AssemblyStatement};
-use crate::sema::assembly::functions::{
-    process_function_header, resolve_function_definition, FunctionsTable,
-};
-use crate::sema::assembly::statements::resolve_assembly_statement;
 use crate::sema::expression::ExprContext;
 use crate::sema::symtable::{LoopScopes, Symtable};
+use crate::sema::yul::ast::{YulBlock, YulStatement};
+use crate::sema::yul::functions::{
+    process_function_header, resolve_function_definition, FunctionsTable,
+};
+use crate::sema::yul::statements::resolve_yul_statement;
 use solang_parser::{pt, Diagnostic};
 
-/// Resolve an assembly block.
+/// Resolve an yul block.
 /// Returns the resolved block and a boolean that tells us if the next statement is reachable.
-pub fn resolve_assembly_block(
+pub fn resolve_yul_block(
     loc: &pt::Loc,
-    statements: &[pt::AssemblyStatement],
+    statements: &[pt::YulStatement],
     context: &ExprContext,
     mut reachable: bool,
     loop_scope: &mut LoopScopes,
     function_table: &mut FunctionsTable,
     symtable: &mut Symtable,
     ns: &mut Namespace,
-) -> (AssemblyBlock, bool) {
+) -> (YulBlock, bool) {
     function_table.new_scope();
     symtable.new_scope();
 
@@ -38,31 +38,31 @@ pub fn resolve_assembly_block(
     symtable.leave_scope();
     function_table.leave_scope(ns);
 
-    (AssemblyBlock { loc: *loc, body }, reachable)
+    (YulBlock { loc: *loc, body }, reachable)
 }
 
-/// Resolves an array of assembly statements.
+/// Resolves an array of yul statements.
 /// Returns a vector of tuples (resolved_statement, reachable) and a boolean that tells us if the
 /// next statement is reachable
 pub(crate) fn process_statements(
-    statements: &[pt::AssemblyStatement],
+    statements: &[pt::YulStatement],
     context: &ExprContext,
     mut reachable: bool,
     symtable: &mut Symtable,
     loop_scope: &mut LoopScopes,
     functions_table: &mut FunctionsTable,
     ns: &mut Namespace,
-) -> (Vec<(AssemblyStatement, bool)>, bool) {
+) -> (Vec<(YulStatement, bool)>, bool) {
     let mut func_count: usize = 0;
     for item in statements {
-        if let pt::AssemblyStatement::FunctionDefinition(fun_def) = item {
+        if let pt::YulStatement::FunctionDefinition(fun_def) = item {
             process_function_header(fun_def, functions_table, ns);
             func_count += 1;
         }
     }
 
     for item in statements {
-        if let pt::AssemblyStatement::FunctionDefinition(func_def) = item {
+        if let pt::YulStatement::FunctionDefinition(func_def) = item {
             if let Ok(resolved_func) =
                 resolve_function_definition(func_def, functions_table, context, ns)
             {
@@ -71,11 +71,10 @@ pub(crate) fn process_statements(
         }
     }
 
-    let mut body: Vec<(AssemblyStatement, bool)> =
-        Vec::with_capacity(statements.len() - func_count);
+    let mut body: Vec<(YulStatement, bool)> = Vec::with_capacity(statements.len() - func_count);
     let mut has_unreachable = false;
     for item in statements {
-        match resolve_assembly_statement(
+        match resolve_yul_statement(
             item,
             context,
             reachable,
@@ -96,11 +95,11 @@ pub(crate) fn process_statements(
                 */
                 if !reachable
                     && !has_unreachable
-                    && !matches!(item, pt::AssemblyStatement::FunctionDefinition(..))
+                    && !matches!(item, pt::YulStatement::FunctionDefinition(..))
                 {
                     ns.diagnostics.push(Diagnostic::warning(
                         item.loc(),
-                        "unreachable assembly statement".to_string(),
+                        "unreachable yul statement".to_string(),
                     ));
                     has_unreachable = true;
                 }

@@ -1,52 +1,50 @@
 use crate::ast::{Namespace, Symbol, Type};
-use crate::sema::assembly::ast::{AssemblyExpression, AssemblyFunctionParameter, AssemblySuffix};
-use crate::sema::assembly::builtin::{assembly_unsupported_builtin, parse_builtin_keyword};
-use crate::sema::assembly::functions::FunctionsTable;
-use crate::sema::assembly::types::{
-    get_default_type_from_identifier, get_type_from_string, verify_type_from_expression,
-};
-use crate::sema::assembly::unused_variable::{assigned_variable, used_variable};
 use crate::sema::expression::{unescape, ExprContext};
 use crate::sema::symtable::{Symtable, VariableUsage};
+use crate::sema::yul::ast::{YulExpression, YulFunctionParameter, YulSuffix};
+use crate::sema::yul::builtin::{parse_builtin_keyword, yul_unsupported_builtin};
+use crate::sema::yul::functions::FunctionsTable;
+use crate::sema::yul::types::{
+    get_default_type_from_identifier, get_type_from_string, verify_type_from_expression,
+};
+use crate::sema::yul::unused_variable::{assigned_variable, used_variable};
 use num_bigint::{BigInt, Sign};
 use num_traits::Num;
 use solang_parser::diagnostics::{ErrorType, Level};
-use solang_parser::pt::{AssemblyFunctionCall, CodeLocation, Identifier, Loc, StorageLocation};
+use solang_parser::pt::{CodeLocation, Identifier, Loc, StorageLocation, YulFunctionCall};
 use solang_parser::{pt, Diagnostic};
 
 /// Given a keyword, returns the suffix it represents in YUL
-fn get_suffix_from_string(suffix_name: &str) -> Option<AssemblySuffix> {
+fn get_suffix_from_string(suffix_name: &str) -> Option<YulSuffix> {
     match suffix_name {
-        "offset" => Some(AssemblySuffix::Offset),
-        "slot" => Some(AssemblySuffix::Slot),
-        "length" => Some(AssemblySuffix::Length),
-        "selector" => Some(AssemblySuffix::Selector),
-        "address" => Some(AssemblySuffix::Address),
+        "offset" => Some(YulSuffix::Offset),
+        "slot" => Some(YulSuffix::Slot),
+        "length" => Some(YulSuffix::Length),
+        "selector" => Some(YulSuffix::Selector),
+        "address" => Some(YulSuffix::Address),
         _ => None,
     }
 }
 
-/// Resolve an assembly expression.
-pub(crate) fn resolve_assembly_expression(
-    expr: &pt::AssemblyExpression,
+/// Resolve an yul expression.
+pub(crate) fn resolve_yul_expression(
+    expr: &pt::YulExpression,
     context: &ExprContext,
     symtable: &mut Symtable,
     function_table: &mut FunctionsTable,
     ns: &mut Namespace,
-) -> Result<AssemblyExpression, ()> {
+) -> Result<YulExpression, ()> {
     match expr {
-        pt::AssemblyExpression::BoolLiteral(loc, value, ty) => {
-            resolve_bool_literal(loc, value, ty, ns)
-        }
+        pt::YulExpression::BoolLiteral(loc, value, ty) => resolve_bool_literal(loc, value, ty, ns),
 
-        pt::AssemblyExpression::NumberLiteral(loc, value, ty) => {
+        pt::YulExpression::NumberLiteral(loc, value, ty) => {
             resolve_number_literal(loc, value, ty, ns)
         }
 
-        pt::AssemblyExpression::HexNumberLiteral(loc, value, ty) => {
+        pt::YulExpression::HexNumberLiteral(loc, value, ty) => {
             resolve_hex_literal(loc, value, ty, ns)
         }
-        pt::AssemblyExpression::HexStringLiteral(value, ty) => {
+        pt::YulExpression::HexStringLiteral(value, ty) => {
             if (value.hex.len() % 2) != 0 {
                 ns.diagnostics.push(Diagnostic {
                     pos: value.loc,
@@ -64,7 +62,7 @@ pub(crate) fn resolve_assembly_expression(
             resolve_string_literal(&value.loc, byte_array, ty, ns)
         }
 
-        pt::AssemblyExpression::StringLiteral(value, ty) => {
+        pt::YulExpression::StringLiteral(value, ty) => {
             let unescaped_string = unescape(
                 &value.string[..],
                 0,
@@ -74,15 +72,13 @@ pub(crate) fn resolve_assembly_expression(
             resolve_string_literal(&value.loc, unescaped_string, ty, ns)
         }
 
-        pt::AssemblyExpression::Variable(id) => {
-            resolve_variable_reference(id, ns, symtable, context)
-        }
+        pt::YulExpression::Variable(id) => resolve_variable_reference(id, ns, symtable, context),
 
-        pt::AssemblyExpression::FunctionCall(func_call) => {
+        pt::YulExpression::FunctionCall(func_call) => {
             resolve_function_call(function_table, func_call, context, symtable, ns)
         }
 
-        pt::AssemblyExpression::Member(loc, expr, id) => {
+        pt::YulExpression::Member(loc, expr, id) => {
             resolve_member_access(loc, expr, id, context, symtable, function_table, ns)
         }
     }
@@ -101,7 +97,7 @@ fn resolve_bool_literal(
     value: &bool,
     ty: &Option<pt::Identifier>,
     ns: &mut Namespace,
-) -> Result<AssemblyExpression, ()> {
+) -> Result<YulExpression, ()> {
     let new_type = if let Some(type_id) = ty {
         if let Some(asm_type) = get_type_from_string(&type_id.name) {
             asm_type
@@ -116,7 +112,7 @@ fn resolve_bool_literal(
         Type::Bool
     };
 
-    Ok(AssemblyExpression::BoolLiteral(*loc, *value, new_type))
+    Ok(YulExpression::BoolLiteral(*loc, *value, new_type))
 }
 
 fn resolve_number_literal(
@@ -124,7 +120,7 @@ fn resolve_number_literal(
     value: &BigInt,
     ty: &Option<pt::Identifier>,
     ns: &mut Namespace,
-) -> Result<AssemblyExpression, ()> {
+) -> Result<YulExpression, ()> {
     let new_type = if let Some(type_id) = ty {
         if let Some(asm_type) = get_type_from_string(&type_id.name) {
             if matches!(asm_type, Type::Uint(_)) && matches!(value.sign(), Sign::Minus) {
@@ -169,11 +165,7 @@ fn resolve_number_literal(
         });
     }
 
-    Ok(AssemblyExpression::NumberLiteral(
-        *loc,
-        value.clone(),
-        new_type,
-    ))
+    Ok(YulExpression::NumberLiteral(*loc, value.clone(), new_type))
 }
 
 fn resolve_hex_literal(
@@ -181,7 +173,7 @@ fn resolve_hex_literal(
     value: &str,
     ty: &Option<pt::Identifier>,
     ns: &mut Namespace,
-) -> Result<AssemblyExpression, ()> {
+) -> Result<YulExpression, ()> {
     let new_type = get_default_type_from_identifier(ty, ns)?;
 
     let s: String = value.chars().skip(2).filter(|v| *v != '_').collect();
@@ -201,7 +193,7 @@ fn resolve_hex_literal(
         });
     }
 
-    Ok(AssemblyExpression::NumberLiteral(*loc, val, new_type))
+    Ok(YulExpression::NumberLiteral(*loc, val, new_type))
 }
 
 fn resolve_string_literal(
@@ -209,7 +201,7 @@ fn resolve_string_literal(
     byte_array: Vec<u8>,
     ty: &Option<pt::Identifier>,
     ns: &mut Namespace,
-) -> Result<AssemblyExpression, ()> {
+) -> Result<YulExpression, ()> {
     let new_type = get_default_type_from_identifier(ty, ns)?;
     let type_size = new_type.get_type_size();
 
@@ -227,9 +219,7 @@ fn resolve_string_literal(
         });
     }
 
-    Ok(AssemblyExpression::StringLiteral(
-        *loc, byte_array, new_type,
-    ))
+    Ok(YulExpression::StringLiteral(*loc, byte_array, new_type))
 }
 
 fn resolve_variable_reference(
@@ -237,21 +227,17 @@ fn resolve_variable_reference(
     ns: &mut Namespace,
     symtable: &Symtable,
     context: &ExprContext,
-) -> Result<AssemblyExpression, ()> {
+) -> Result<YulExpression, ()> {
     if let Some(v) = symtable.find(&id.name) {
         match &v.usage_type {
-            VariableUsage::AssemblyLocalVariable => {
-                return Ok(AssemblyExpression::AssemblyLocalVariable(
-                    id.loc,
-                    v.ty.clone(),
-                    v.pos,
-                ))
+            VariableUsage::YulLocalVariable => {
+                return Ok(YulExpression::YulLocalVariable(id.loc, v.ty.clone(), v.pos))
             }
             VariableUsage::AnonymousReturnVariable => {
                 unreachable!("Anonymous returns variables cannot be accessed from assembly blocks")
             }
             _ => {
-                return Ok(AssemblyExpression::SolidityLocalVariable(
+                return Ok(YulExpression::SolidityLocalVariable(
                     id.loc,
                     v.ty.clone(),
                     v.storage_location.clone(),
@@ -275,14 +261,14 @@ fn resolve_variable_reference(
                 }
 
                 if var.constant {
-                    Ok(AssemblyExpression::ConstantVariable(
+                    Ok(YulExpression::ConstantVariable(
                         id.loc,
                         var.ty.clone(),
                         Some(*var_contract_no),
                         *var_no,
                     ))
                 } else {
-                    Ok(AssemblyExpression::StorageVariable(
+                    Ok(YulExpression::StorageVariable(
                         id.loc,
                         var.ty.clone(),
                         *var_contract_no,
@@ -292,7 +278,7 @@ fn resolve_variable_reference(
             }
             Some(Symbol::Variable(_, None, var_no)) => {
                 let var = &ns.constants[*var_no];
-                Ok(AssemblyExpression::ConstantVariable(
+                Ok(YulExpression::ConstantVariable(
                     id.loc,
                     var.ty.clone(),
                     None,
@@ -326,18 +312,18 @@ fn resolve_variable_reference(
 
 pub(crate) fn resolve_function_call(
     function_table: &mut FunctionsTable,
-    func_call: &AssemblyFunctionCall,
+    func_call: &YulFunctionCall,
     context: &ExprContext,
     symtable: &mut Symtable,
     ns: &mut Namespace,
-) -> Result<AssemblyExpression, ()> {
+) -> Result<YulExpression, ()> {
     if func_call.id.name.starts_with("verbatim") {
         ns.diagnostics.push(Diagnostic::error(
             func_call.id.loc,
             "verbatim functions are not yet supported in Solang".to_string(),
         ));
         return Err(());
-    } else if assembly_unsupported_builtin(func_call.id.name.as_str()) {
+    } else if yul_unsupported_builtin(func_call.id.name.as_str()) {
         ns.diagnostics.push(Diagnostic::error(
             func_call.id.loc,
             format!(
@@ -348,11 +334,9 @@ pub(crate) fn resolve_function_call(
         return Err(());
     }
 
-    let mut resolved_arguments: Vec<AssemblyExpression> =
-        Vec::with_capacity(func_call.arguments.len());
+    let mut resolved_arguments: Vec<YulExpression> = Vec::with_capacity(func_call.arguments.len());
     for item in &func_call.arguments {
-        let resolved_expr =
-            resolve_assembly_expression(item, context, symtable, function_table, ns)?;
+        let resolved_expr = resolve_yul_expression(item, context, symtable, function_table, ns)?;
 
         if let Some(diagnostic) = check_type(&resolved_expr, context, ns, symtable) {
             ns.diagnostics.push(diagnostic);
@@ -380,7 +364,7 @@ pub(crate) fn resolve_function_call(
             return Err(());
         }
 
-        let default_builtin_parameter = AssemblyFunctionParameter {
+        let default_builtin_parameter = YulFunctionParameter {
             loc: Loc::Builtin,
             id: Identifier {
                 loc: Loc::Builtin,
@@ -393,7 +377,7 @@ pub(crate) fn resolve_function_call(
             check_function_argument(&default_builtin_parameter, item, function_table, ns);
         }
 
-        return Ok(AssemblyExpression::BuiltInCall(
+        return Ok(YulExpression::BuiltInCall(
             func_call.loc,
             *built_in,
             resolved_arguments,
@@ -419,7 +403,7 @@ pub(crate) fn resolve_function_call(
         }
 
         let fn_no = func.function_no;
-        let resolved_fn = Ok(AssemblyExpression::FunctionCall(
+        let resolved_fn = Ok(YulExpression::FunctionCall(
             func_call.id.loc,
             fn_no,
             resolved_arguments,
@@ -438,8 +422,8 @@ pub(crate) fn resolve_function_call(
 
 /// Check if the provided argument is compatible with the declared parameters of a function.
 fn check_function_argument(
-    parameter: &AssemblyFunctionParameter,
-    argument: &AssemblyExpression,
+    parameter: &YulFunctionParameter,
+    argument: &YulExpression,
     function_table: &FunctionsTable,
     ns: &mut Namespace,
 ) {
@@ -490,13 +474,13 @@ fn check_function_argument(
 /// Resolve variables accessed with suffixes (e.g. 'var.slot', 'var.offset')
 fn resolve_member_access(
     loc: &pt::Loc,
-    expr: &pt::AssemblyExpression,
+    expr: &pt::YulExpression,
     id: &Identifier,
     context: &ExprContext,
     symtable: &mut Symtable,
     function_table: &mut FunctionsTable,
     ns: &mut Namespace,
-) -> Result<AssemblyExpression, ()> {
+) -> Result<YulExpression, ()> {
     let suffix_type = match get_suffix_from_string(&id.name[..]) {
         Some(suffix) => suffix,
         None => {
@@ -508,9 +492,9 @@ fn resolve_member_access(
         }
     };
 
-    let resolved_expr = resolve_assembly_expression(expr, context, symtable, function_table, ns)?;
+    let resolved_expr = resolve_yul_expression(expr, context, symtable, function_table, ns)?;
     match resolved_expr {
-        AssemblyExpression::ConstantVariable(_, _, Some(_), _) => {
+        YulExpression::ConstantVariable(_, _, Some(_), _) => {
             ns.diagnostics.push(Diagnostic::error(
                 resolved_expr.loc(),
                 "the suffixes .offset and .slot can only be used in non-constant storage variables"
@@ -519,7 +503,7 @@ fn resolve_member_access(
             return Err(());
         }
 
-        AssemblyExpression::SolidityLocalVariable(
+        YulExpression::SolidityLocalVariable(
             _,
             Type::Array(_, ref dims),
             Some(StorageLocation::Calldata(_)),
@@ -534,9 +518,9 @@ fn resolve_member_access(
             }
         }
 
-        AssemblyExpression::SolidityLocalVariable(_, Type::InternalFunction { .. }, ..)
-        | AssemblyExpression::ConstantVariable(_, Type::InternalFunction { .. }, ..)
-        | AssemblyExpression::StorageVariable(_, Type::InternalFunction { .. }, ..) => {
+        YulExpression::SolidityLocalVariable(_, Type::InternalFunction { .. }, ..)
+        | YulExpression::ConstantVariable(_, Type::InternalFunction { .. }, ..)
+        | YulExpression::StorageVariable(_, Type::InternalFunction { .. }, ..) => {
             ns.diagnostics.push(Diagnostic::error(
                 resolved_expr.loc(),
                 "only variables of type external function pointer support suffixes".to_string(),
@@ -544,9 +528,9 @@ fn resolve_member_access(
             return Err(());
         }
 
-        AssemblyExpression::SolidityLocalVariable(_, Type::ExternalFunction { .. }, ..)
-        | AssemblyExpression::ConstantVariable(_, Type::ExternalFunction { .. }, ..)
-        | AssemblyExpression::StorageVariable(_, Type::ExternalFunction { .. }, ..) => {
+        YulExpression::SolidityLocalVariable(_, Type::ExternalFunction { .. }, ..)
+        | YulExpression::ConstantVariable(_, Type::ExternalFunction { .. }, ..)
+        | YulExpression::StorageVariable(_, Type::ExternalFunction { .. }, ..) => {
             if id.name != "selector" && id.name != "address" {
                 ns.diagnostics.push(Diagnostic::error(
                     id.loc,
@@ -556,8 +540,8 @@ fn resolve_member_access(
             }
         }
 
-        AssemblyExpression::SolidityLocalVariable(_, _, Some(StorageLocation::Storage(_)), _)
-        | AssemblyExpression::StorageVariable(_, _, _, _) => {
+        YulExpression::SolidityLocalVariable(_, _, Some(StorageLocation::Storage(_)), _)
+        | YulExpression::StorageVariable(_, _, _, _) => {
             if id.name != "slot" && id.name != "offset" {
                 ns.diagnostics.push(Diagnostic::error(
                     id.loc,
@@ -567,7 +551,7 @@ fn resolve_member_access(
             }
         }
 
-        AssemblyExpression::MemberAccess(..) => {
+        YulExpression::MemberAccess(..) => {
             ns.diagnostics.push(Diagnostic::error(
                 id.loc,
                 "there cannot be multiple suffixes to a name".to_string(),
@@ -575,13 +559,13 @@ fn resolve_member_access(
             return Err(());
         }
 
-        AssemblyExpression::BoolLiteral(..)
-        | AssemblyExpression::NumberLiteral(..)
-        | AssemblyExpression::StringLiteral(..)
-        | AssemblyExpression::AssemblyLocalVariable(..)
-        | AssemblyExpression::BuiltInCall(..)
-        | AssemblyExpression::FunctionCall(..)
-        | AssemblyExpression::ConstantVariable(_, _, None, _) => {
+        YulExpression::BoolLiteral(..)
+        | YulExpression::NumberLiteral(..)
+        | YulExpression::StringLiteral(..)
+        | YulExpression::YulLocalVariable(..)
+        | YulExpression::BuiltInCall(..)
+        | YulExpression::FunctionCall(..)
+        | YulExpression::ConstantVariable(_, _, None, _) => {
             ns.diagnostics.push(Diagnostic::error(
                 resolved_expr.loc(),
                 "the given expression does not support suffixes".to_string(),
@@ -592,68 +576,63 @@ fn resolve_member_access(
         _ => (),
     }
 
-    Ok(AssemblyExpression::MemberAccess(
+    Ok(YulExpression::MemberAccess(
         *loc,
         Box::new(resolved_expr),
         suffix_type,
     ))
 }
 
-/// Check if an assembly expression has been used correctly in a assignment or if the member access
+/// Check if an yul expression has been used correctly in a assignment or if the member access
 /// has a valid expression given the context.
 pub(crate) fn check_type(
-    expr: &AssemblyExpression,
+    expr: &YulExpression,
     context: &ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
 ) -> Option<Diagnostic> {
     if context.lvalue {
         match expr {
-            AssemblyExpression::SolidityLocalVariable(
-                _,
-                _,
-                Some(StorageLocation::Storage(_)),
-                ..,
-            )
-            | AssemblyExpression::StorageVariable(..) => {
+            YulExpression::SolidityLocalVariable(_, _, Some(StorageLocation::Storage(_)), ..)
+            | YulExpression::StorageVariable(..) => {
                 return Some(Diagnostic::error(
                     expr.loc(),
                     "storage variables cannot be assigned any value in assembly. You may use ‘sstore()‘".to_string()
                 ));
             }
 
-            AssemblyExpression::StringLiteral(..)
-            | AssemblyExpression::NumberLiteral(..)
-            | AssemblyExpression::BoolLiteral(..)
-            | AssemblyExpression::ConstantVariable(..) => {
+            YulExpression::StringLiteral(..)
+            | YulExpression::NumberLiteral(..)
+            | YulExpression::BoolLiteral(..)
+            | YulExpression::ConstantVariable(..) => {
                 return Some(Diagnostic::error(
                     expr.loc(),
                     "cannot assigned a value to a constant".to_string(),
                 ));
             }
 
-            AssemblyExpression::BuiltInCall(..) | AssemblyExpression::FunctionCall(..) => {
+            YulExpression::BuiltInCall(..) | YulExpression::FunctionCall(..) => {
                 return Some(Diagnostic::error(
                     expr.loc(),
                     "cannot assign a value to a function".to_string(),
                 ));
             }
 
-            AssemblyExpression::MemberAccess(_, _, AssemblySuffix::Length) => {
+            YulExpression::MemberAccess(_, _, YulSuffix::Length) => {
                 return Some(Diagnostic::error(
                     expr.loc(),
                     "cannot assign a value to length".to_string(),
                 ));
             }
 
-            AssemblyExpression::MemberAccess(_, _, AssemblySuffix::Offset) => {
+            YulExpression::MemberAccess(_, _, YulSuffix::Offset) => {
                 return Some(Diagnostic::error(
                     expr.loc(),
                     "cannot assign a value to offset".to_string(),
                 ));
             }
-            AssemblyExpression::MemberAccess(_, exp, AssemblySuffix::Slot) => {
-                if matches!(**exp, AssemblyExpression::StorageVariable(..)) {
+            YulExpression::MemberAccess(_, exp, YulSuffix::Slot) => {
+                if matches!(**exp, YulExpression::StorageVariable(..)) {
                     return Some(Diagnostic::error(
                         exp.loc(),
                         "cannot assign to slot of storage variable".to_string(),
@@ -670,15 +649,15 @@ pub(crate) fn check_type(
     }
 
     match expr {
-        AssemblyExpression::SolidityLocalVariable(_, _, Some(StorageLocation::Storage(_)), ..)
-        | AssemblyExpression::StorageVariable(..) => {
+        YulExpression::SolidityLocalVariable(_, _, Some(StorageLocation::Storage(_)), ..)
+        | YulExpression::StorageVariable(..) => {
             return Some(Diagnostic::error(
                 expr.loc(),
                 "Storage variables must be accessed with ‘.slot‘ or ‘.offset‘".to_string(),
             ));
         }
 
-        AssemblyExpression::SolidityLocalVariable(
+        YulExpression::SolidityLocalVariable(
             _,
             Type::Array(_, ref dims),
             Some(StorageLocation::Calldata(_)),
