@@ -122,8 +122,8 @@ impl Expression {
     }
 
     /// Is this expression 0
-    fn const_zero(&self, contract_no: Option<usize>, ns: &Namespace) -> bool {
-        if let Ok((_, value)) = eval_const_number(self, contract_no, ns) {
+    fn const_zero(&self, ns: &Namespace) -> bool {
+        if let Ok((_, value)) = eval_const_number(self, ns) {
             value == BigInt::zero()
         } else {
             false
@@ -776,7 +776,7 @@ fn cast_types(
             let enum_ty = &ns.enums[*enum_no];
 
             // TODO would be help to have current contract to resolve contract constants
-            if let Ok((_, big_number)) = eval_const_number(&expr, None, ns) {
+            if let Ok((_, big_number)) = eval_const_number(&expr, ns) {
                 if let Some(number) = big_number.to_usize() {
                     if enum_ty.values.values().any(|(_, v)| *v == number) {
                         return Ok(Expression::NumberLiteral(
@@ -1101,7 +1101,7 @@ fn cast_types(
             }
         }
         (Type::Rational, Type::Uint(_) | Type::Int(_) | Type::Value) => {
-            match eval_const_rational(&expr, None, ns) {
+            match eval_const_rational(&expr, ns) {
                 Ok((_, big_number)) => {
                     if big_number.is_integer() {
                         let expr = Expression::NumberLiteral(
@@ -2348,7 +2348,7 @@ fn subtract(
     if ty.is_rational() {
         let expr = Expression::Subtract(*loc, ty, false, Box::new(left), Box::new(right));
 
-        return match eval_const_rational(&expr, context.contract_no, ns) {
+        return match eval_const_rational(&expr, ns) {
             Ok(_) => Ok(expr),
             Err(diag) => {
                 diagnostics.push(diag);
@@ -2556,7 +2556,7 @@ fn multiply(
     if ty.is_rational() {
         let expr = Expression::Multiply(*loc, ty, false, Box::new(left), Box::new(right));
 
-        return match eval_const_rational(&expr, context.contract_no, ns) {
+        return match eval_const_rational(&expr, ns) {
             Ok(_) => Ok(expr),
             Err(diag) => {
                 diagnostics.push(diag);
@@ -4859,9 +4859,7 @@ fn call_function_type(
         let call_args = parse_call_args(call_args, true, context, ns, symtable, diagnostics)?;
 
         let value = if let Some(value) = call_args.value {
-            if !value.const_zero(context.contract_no, ns)
-                && !matches!(mutability, Mutability::Payable(_))
-            {
+            if !value.const_zero(ns) && !matches!(mutability, Mutability::Payable(_)) {
                 diagnostics.push(Diagnostic::error(
                     *loc,
                     format!(
@@ -5872,9 +5870,7 @@ fn method_call_pos_args(
                 }
 
                 let value = if let Some(value) = call_args.value {
-                    if !value.const_zero(Some(*ext_contract_no), ns)
-                        && !ns.functions[function_no].is_payable()
-                    {
+                    if !value.const_zero(ns) && !ns.functions[function_no].is_payable() {
                         diagnostics.push(Diagnostic::error(
                             *loc,
                             format!(
@@ -6476,9 +6472,7 @@ fn method_call_named_args(
                 }
 
                 let value = if let Some(value) = call_args.value {
-                    if !value.const_zero(context.contract_no, ns)
-                        && !ns.functions[function_no].is_payable()
-                    {
+                    if !value.const_zero(ns) && !ns.functions[function_no].is_payable() {
                         diagnostics.push(Diagnostic::error(
                             *loc,
                             format!(
@@ -6590,7 +6584,7 @@ fn resolve_array_literal(
     let mut dims = Box::new(Vec::new());
     let mut flattened = Vec::new();
 
-    check_subarrays(exprs, &mut Some(&mut dims), &mut flattened, ns, diagnostics)?;
+    check_subarrays(exprs, &mut Some(&mut dims), &mut flattened, diagnostics)?;
 
     if flattened.is_empty() {
         diagnostics.push(Diagnostic::error(
@@ -6659,12 +6653,11 @@ fn check_subarrays<'a>(
     exprs: &'a [pt::Expression],
     dims: &mut Option<&mut Vec<u32>>,
     flatten: &mut Vec<&'a pt::Expression>,
-    ns: &Namespace,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Result<(), ()> {
     if let Some(pt::Expression::ArrayLiteral(_, first)) = exprs.get(0) {
         // ensure all elements are array literals of the same length
-        check_subarrays(first, dims, flatten, ns, diagnostics)?;
+        check_subarrays(first, dims, flatten, diagnostics)?;
 
         for (i, e) in exprs.iter().enumerate().skip(1) {
             if let pt::Expression::ArrayLiteral(_, other) = e {
@@ -6677,7 +6670,7 @@ fn check_subarrays<'a>(
                     ));
                     return Err(());
                 }
-                check_subarrays(other, &mut None, flatten, ns, diagnostics)?;
+                check_subarrays(other, &mut None, flatten, diagnostics)?;
             } else {
                 diagnostics.push(Diagnostic::error(
                     e.loc(),

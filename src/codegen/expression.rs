@@ -66,7 +66,7 @@ pub fn expression(
         ),
         Expression::Multiply(loc, ty, unchecked, left, right) => {
             if ty.is_rational() {
-                let (_, r) = eval_const_rational(expr, Some(contract_no), ns).unwrap();
+                let (_, r) = eval_const_rational(expr, ns).unwrap();
 
                 Expression::NumberLiteral(*loc, ty.clone(), r.to_integer())
             } else {
@@ -496,7 +496,7 @@ pub fn expression(
             Box::new(expression(e, cfg, contract_no, func, ns, vartab, opt)),
         ),
         Expression::Cast(loc, ty @ Type::Address(_), e) => {
-            if let Ok((_, address)) = eval_const_number(e, Some(contract_no), ns) {
+            if let Ok((_, address)) = eval_const_number(e, ns) {
                 Expression::NumberLiteral(*loc, ty.clone(), address)
             } else {
                 Expression::Cast(
@@ -2567,7 +2567,7 @@ fn array_subscript(
         } else {
             let elem_size = elem_ty.storage_slots(ns);
 
-            if let Ok(array_length) = eval_const_number(&array_length, Some(contract_no), ns) {
+            if let Ok(array_length) = eval_const_number(&array_length, ns) {
                 if array_length.1.mul(elem_size.clone()).to_u64().is_some() {
                     // we need to calculate the storage offset. If this can be done with 64 bit
                     // arithmetic it will be much more efficient on wasm

@@ -97,7 +97,7 @@ pub fn statement(
             } else {
                 match expr {
                     None => cfg.add(vartab, Instr::Return { value: Vec::new() }),
-                    Some(expr) => returns(expr, cfg, contract_no, func, ns, vartab, loops, opt),
+                    Some(expr) => returns(expr, cfg, contract_no, func, ns, vartab, opt),
                 }
             }
         }
@@ -500,7 +500,7 @@ pub fn statement(
             cfg.set_phis(cond_block, set);
         }
         Statement::Destructure(_, fields, expr) => {
-            destructure(fields, expr, cfg, contract_no, func, ns, vartab, loops, opt)
+            destructure(fields, expr, cfg, contract_no, func, ns, vartab, opt)
         }
         Statement::TryCatch(_, _, try_stmt) => try_catch(
             try_stmt,
@@ -785,7 +785,6 @@ fn returns(
     func: &Function,
     ns: &Namespace,
     vartab: &mut Vartable,
-    loops: &mut LoopScopes,
     opt: &Options,
 ) {
     // Can only be another function call without returns
@@ -810,10 +809,10 @@ fn returns(
             vartab.new_dirty_tracker(ns.next_id);
 
             cfg.set_basic_block(left_block);
-            returns(left, cfg, contract_no, func, ns, vartab, loops, opt);
+            returns(left, cfg, contract_no, func, ns, vartab, opt);
 
             cfg.set_basic_block(right_block);
-            returns(right, cfg, contract_no, func, ns, vartab, loops, opt);
+            returns(right, cfg, contract_no, func, ns, vartab, opt);
 
             return;
         }
@@ -856,7 +855,6 @@ fn destructure(
     func: &Function,
     ns: &Namespace,
     vartab: &mut Vartable,
-    loops: &mut LoopScopes,
     opt: &Options,
 ) {
     if let Expression::Ternary(_, _, cond, left, right) = expr {
@@ -879,23 +877,13 @@ fn destructure(
 
         cfg.set_basic_block(left_block);
 
-        destructure(fields, left, cfg, contract_no, func, ns, vartab, loops, opt);
+        destructure(fields, left, cfg, contract_no, func, ns, vartab, opt);
 
         cfg.add(vartab, Instr::Branch { block: done_block });
 
         cfg.set_basic_block(right_block);
 
-        destructure(
-            fields,
-            right,
-            cfg,
-            contract_no,
-            func,
-            ns,
-            vartab,
-            loops,
-            opt,
-        );
+        destructure(fields, right, cfg, contract_no, func, ns, vartab, opt);
 
         cfg.add(vartab, Instr::Branch { block: done_block });
 

@@ -359,7 +359,7 @@ pub fn var_decl(
             // If the variable is an array or mapping, the accessor function takes mapping keys
             // or array indices as arguments, and returns the dereferenced value
             let mut params = Vec::new();
-            let ty = collect_parameters(&ty, &mut params, &mut expr, ns);
+            let ty = collect_parameters(&ty, &mut params, &mut expr);
 
             if ty.contains_mapping(ns) {
                 // we can't return a mapping
@@ -429,7 +429,6 @@ fn collect_parameters<'a>(
     ty: &'a Type,
     params: &mut Vec<Parameter>,
     expr: &mut Expression,
-    ns: &Namespace,
 ) -> &'a Type {
     match ty {
         Type::Mapping(key, value) => {
@@ -456,7 +455,7 @@ fn collect_parameters<'a>(
                 readonly: false,
             });
 
-            collect_parameters(value, params, expr, ns)
+            collect_parameters(value, params, expr)
         }
         Type::Array(elem_ty, dims) => {
             let mut ty = Type::StorageRef(false, Box::new(ty.clone()));
@@ -487,7 +486,7 @@ fn collect_parameters<'a>(
                 });
             }
 
-            collect_parameters(elem_ty, params, expr, ns)
+            collect_parameters(elem_ty, params, expr)
         }
         _ => ty,
     }
