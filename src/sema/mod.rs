@@ -1524,7 +1524,7 @@ impl ast::Namespace {
             }
         }
 
-        match eval_const_number(&size_expr, contract_no, self) {
+        match eval_const_number(&size_expr, self) {
             Ok(n) => Ok(Some(n)),
             Err(d) => {
                 diagnostics.push(d);
