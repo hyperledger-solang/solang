@@ -20,16 +20,22 @@ pub(crate) fn resolve_yul_statement(
     reachable: bool,
     loop_scope: &mut LoopScopes,
     symtable: &mut Symtable,
-    resolved_statements: &mut Vec<(YulStatement, bool)>,
+    resolved_statements: &mut Vec<YulStatement>,
     function_table: &mut FunctionsTable,
     ns: &mut Namespace,
 ) -> Result<bool, ()> {
     match statement {
         pt::YulStatement::FunctionDefinition(_) => Ok(true),
         pt::YulStatement::FunctionCall(func_call) => {
-            let data =
-                resolve_top_level_function_call(func_call, function_table, context, symtable, ns)?;
-            resolved_statements.push((data.0, reachable));
+            let data = resolve_top_level_function_call(
+                func_call,
+                reachable,
+                function_table,
+                context,
+                symtable,
+                ns,
+            )?;
+            resolved_statements.push(data.0);
             Ok(data.1)
         }
 
@@ -44,49 +50,50 @@ pub(crate) fn resolve_yul_statement(
                 symtable,
                 ns,
             );
-            resolved_statements.push((YulStatement::Block(Box::new(data.0)), reachable));
+            resolved_statements.push(YulStatement::Block(Box::new(data.0)));
             Ok(data.1)
         }
 
         pt::YulStatement::VariableDeclaration(loc, variables, initializer) => {
-            resolved_statements.push((
-                resolve_variable_declaration(
-                    loc,
-                    variables,
-                    initializer,
-                    function_table,
-                    context,
-                    symtable,
-                    ns,
-                )?,
+            resolved_statements.push(resolve_variable_declaration(
+                loc,
+                variables,
+                initializer,
                 reachable,
-            ));
+                function_table,
+                context,
+                symtable,
+                ns,
+            )?);
             Ok(true)
         }
 
         pt::YulStatement::Assign(loc, lhs, rhs) => {
-            resolved_statements.push((
-                resolve_assignment(loc, lhs, rhs, context, function_table, symtable, ns)?,
+            resolved_statements.push(resolve_assignment(
+                loc,
+                lhs,
+                rhs,
+                context,
                 reachable,
-            ));
+                function_table,
+                symtable,
+                ns,
+            )?);
             Ok(true)
         }
 
         pt::YulStatement::If(loc, condition, body) => {
-            resolved_statements.push((
-                resolve_if_block(
-                    loc,
-                    condition,
-                    &body.statements,
-                    context,
-                    reachable,
-                    loop_scope,
-                    function_table,
-                    symtable,
-                    ns,
-                )?,
+            resolved_statements.push(resolve_if_block(
+                loc,
+                condition,
+                &body.statements,
+                context,
                 reachable,
-            ));
+                loop_scope,
+                function_table,
+                symtable,
+                ns,
+            )?);
             Ok(true)
         }
 
@@ -100,13 +107,13 @@ pub(crate) fn resolve_yul_statement(
                 symtable,
                 ns,
             )?;
-            resolved_statements.push((resolved_switch.0, reachable));
+            resolved_statements.push(resolved_switch.0);
             Ok(resolved_switch.1)
         }
 
         pt::YulStatement::Break(loc) => {
             if loop_scope.do_break() {
-                resolved_statements.push((YulStatement::Break(*loc), reachable));
+                resolved_statements.push(YulStatement::Break(*loc, reachable));
                 Ok(false)
             } else {
                 ns.diagnostics.push(Diagnostic::error(
@@ -119,7 +126,7 @@ pub(crate) fn resolve_yul_statement(
 
         pt::YulStatement::Continue(loc) => {
             if loop_scope.do_continue() {
-                resolved_statements.push((YulStatement::Continue(*loc), reachable));
+                resolved_statements.push(YulStatement::Continue(*loc, reachable));
                 Ok(false)
             } else {
                 ns.diagnostics.push(Diagnostic::error(
@@ -138,7 +145,7 @@ pub(crate) fn resolve_yul_statement(
                 ));
                 return Err(());
             }
-            resolved_statements.push((YulStatement::Leave(*loc), reachable));
+            resolved_statements.push(YulStatement::Leave(*loc, reachable));
             Ok(false)
         }
 
@@ -152,7 +159,7 @@ pub(crate) fn resolve_yul_statement(
                 function_table,
                 ns,
             )?;
-            resolved_statements.push((resolved_for.0, reachable));
+            resolved_statements.push(resolved_for.0);
             Ok(resolved_for.1)
         }
     }
@@ -161,6 +168,7 @@ pub(crate) fn resolve_yul_statement(
 /// Top-leve function calls must not return anything, so there is a special function to handle them.
 fn resolve_top_level_function_call(
     func_call: &pt::YulFunctionCall,
+    reachable: bool,
     function_table: &mut FunctionsTable,
     context: &ExprContext,
     symtable: &mut Symtable,
@@ -177,7 +185,7 @@ fn resolve_top_level_function_call(
                 return Err(());
             }
             Ok((
-                YulStatement::BuiltInCall(loc, ty, args),
+                YulStatement::BuiltInCall(loc, reachable, ty, args),
                 !func_prototype.stops_execution,
             ))
         }
@@ -190,7 +198,10 @@ fn resolve_top_level_function_call(
                 ));
                 return Err(());
             }
-            Ok((YulStatement::FunctionCall(loc, function_no, args), true))
+            Ok((
+                YulStatement::FunctionCall(loc, reachable, function_no, args),
+                true,
+            ))
         }
 
         Ok(_) => {
@@ -205,6 +216,7 @@ fn resolve_variable_declaration(
     loc: &pt::Loc,
     variables: &[YulTypedIdentifier],
     initializer: &Option<pt::YulExpression>,
+    reachable: bool,
     function_table: &mut FunctionsTable,
     context: &ExprContext,
     symtable: &mut Symtable,
@@ -278,6 +290,7 @@ fn resolve_variable_declaration(
 
     Ok(YulStatement::VariableDeclaration(
         *loc,
+        reachable,
         added_variables,
         resolved_init,
     ))
@@ -288,6 +301,7 @@ fn resolve_assignment(
     lhs: &[pt::YulExpression],
     rhs: &pt::YulExpression,
     context: &ExprContext,
+    reachable: bool,
     function_table: &mut FunctionsTable,
     symtable: &mut Symtable,
     ns: &mut Namespace,
@@ -316,7 +330,12 @@ fn resolve_assignment(
         ns,
     );
 
-    Ok(YulStatement::Assignment(*loc, resolved_lhs, resolved_rhs))
+    Ok(YulStatement::Assignment(
+        *loc,
+        reachable,
+        resolved_lhs,
+        resolved_rhs,
+    ))
 }
 
 /// Checks the the left hand side of an assignment is compatible with it right hand side
@@ -397,6 +416,7 @@ fn resolve_if_block(
 
     Ok(YulStatement::IfBlock(
         *loc,
+        reachable,
         resolved_condition,
         Box::new(resolved_block.0),
     ))

@@ -8,6 +8,7 @@ mod block;
 mod expression;
 mod for_loop;
 mod functions;
+mod mutability;
 mod statements;
 mod switch;
 mod types;

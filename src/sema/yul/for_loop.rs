@@ -12,7 +12,7 @@ use solang_parser::{pt, Diagnostic};
 pub(crate) fn resolve_for_loop(
     yul_for: &pt::YulFor,
     context: &ExprContext,
-    mut reachable: bool,
+    reachable: bool,
     loop_scope: &mut LoopScopes,
     symtable: &mut Symtable,
     function_table: &mut FunctionsTable,
@@ -20,16 +20,17 @@ pub(crate) fn resolve_for_loop(
 ) -> Result<(YulStatement, bool), ()> {
     symtable.new_scope();
     function_table.new_scope();
-
+    let mut next_reachable = reachable;
     let resolved_init_block = resolve_for_init_block(
         &yul_for.init_block,
         context,
+        next_reachable,
         loop_scope,
         symtable,
         function_table,
         ns,
     )?;
-    reachable &= resolved_init_block.1;
+    next_reachable &= resolved_init_block.1;
 
     let resolved_cond =
         resolve_condition(&yul_for.condition, context, symtable, function_table, ns)?;
@@ -40,13 +41,13 @@ pub(crate) fn resolve_for_loop(
         &yul_for.execution_block.loc,
         &yul_for.execution_block.statements,
         context,
-        reachable,
+        next_reachable,
         loop_scope,
         function_table,
         symtable,
         ns,
     );
-    reachable &= resolved_exec_block.1;
+    next_reachable &= resolved_exec_block.1;
 
     loop_scope.leave_scope();
 
@@ -54,7 +55,7 @@ pub(crate) fn resolve_for_loop(
         &yul_for.post_block.loc,
         &yul_for.post_block.statements,
         context,
-        reachable,
+        next_reachable,
         loop_scope,
         function_table,
         symtable,
@@ -67,6 +68,7 @@ pub(crate) fn resolve_for_loop(
     Ok((
         YulStatement::For {
             loc: yul_for.loc,
+            reachable,
             init_block: resolved_init_block.0,
             condition: resolved_cond,
             post_block: resolved_post_block.0,
@@ -81,6 +83,7 @@ pub(crate) fn resolve_for_loop(
 fn resolve_for_init_block(
     init_block: &pt::YulBlock,
     context: &ExprContext,
+    reachable: bool,
     loop_scope: &mut LoopScopes,
     symtable: &mut Symtable,
     function_table: &mut FunctionsTable,
@@ -96,10 +99,10 @@ fn resolve_for_init_block(
         }
     }
 
-    let (body, reachable) = process_statements(
+    let (body, next_reachable) = process_statements(
         &init_block.statements,
         context,
-        true,
+        reachable,
         symtable,
         loop_scope,
         function_table,
@@ -109,8 +112,9 @@ fn resolve_for_init_block(
     Ok((
         YulBlock {
             loc: init_block.loc,
+            reachable,
             body,
         },
-        reachable,
+        next_reachable,
     ))
 }

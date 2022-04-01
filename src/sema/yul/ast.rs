@@ -9,14 +9,15 @@ use std::sync::Arc;
 #[derive(Debug, Clone)]
 pub struct InlineAssembly {
     pub loc: pt::Loc,
-    pub body: Vec<(YulStatement, bool)>,
+    pub body: Vec<YulStatement>,
     pub functions: Vec<YulFunction>,
 }
 
 #[derive(Debug, Clone)]
 pub struct YulBlock {
     pub loc: pt::Loc,
-    pub body: Vec<(YulStatement, bool)>,
+    pub reachable: bool,
+    pub body: Vec<YulStatement>,
 }
 
 #[derive(PartialEq, Debug, Clone)]
@@ -79,7 +80,7 @@ pub struct YulFunction {
     pub name: String,
     pub params: Arc<Vec<YulFunctionParameter>>,
     pub returns: Arc<Vec<YulFunctionParameter>>,
-    pub body: Vec<(YulStatement, bool)>,
+    pub body: Vec<YulStatement>,
     pub symtable: Symtable,
     pub called: bool,
 }
@@ -93,28 +94,30 @@ pub struct YulFunctionParameter {
 
 #[derive(Clone, Debug)]
 pub enum YulStatement {
-    FunctionCall(pt::Loc, usize, Vec<YulExpression>),
-    BuiltInCall(pt::Loc, YulBuiltInFunction, Vec<YulExpression>),
+    FunctionCall(pt::Loc, bool, usize, Vec<YulExpression>),
+    BuiltInCall(pt::Loc, bool, YulBuiltInFunction, Vec<YulExpression>),
     Block(Box<YulBlock>),
-    VariableDeclaration(pt::Loc, Vec<usize>, Option<YulExpression>),
-    Assignment(pt::Loc, Vec<YulExpression>, YulExpression),
-    IfBlock(pt::Loc, YulExpression, Box<YulBlock>),
+    VariableDeclaration(pt::Loc, bool, Vec<usize>, Option<YulExpression>),
+    Assignment(pt::Loc, bool, Vec<YulExpression>, YulExpression),
+    IfBlock(pt::Loc, bool, YulExpression, Box<YulBlock>),
     Switch {
         loc: pt::Loc,
+        reachable: bool,
         condition: YulExpression,
         cases: Vec<CaseBlock>,
         default: Option<YulBlock>,
     },
     For {
         loc: pt::Loc,
+        reachable: bool,
         init_block: YulBlock,
         condition: YulExpression,
         post_block: YulBlock,
         execution_block: YulBlock,
     },
-    Leave(pt::Loc),
-    Break(pt::Loc),
-    Continue(pt::Loc),
+    Leave(pt::Loc, bool),
+    Break(pt::Loc, bool),
+    Continue(pt::Loc, bool),
 }
 
 #[derive(Debug, Clone)]
@@ -122,4 +125,25 @@ pub struct CaseBlock {
     pub loc: pt::Loc,
     pub condition: YulExpression,
     pub block: YulBlock,
+}
+
+impl YulExpression {
+    /// Recurse over the expressions
+    pub fn recurse<T>(&self, cx: &mut T, f: fn(expr: &YulExpression, ctx: &mut T) -> bool) {
+        if !f(self, cx) {
+            return;
+        }
+        match self {
+            YulExpression::BuiltInCall(_, _, args) | YulExpression::FunctionCall(_, _, args) => {
+                for arg in args {
+                    arg.recurse(cx, f);
+                }
+            }
+            YulExpression::MemberAccess(_, expr, _) => {
+                expr.recurse(cx, f);
+            }
+
+            _ => (),
+        }
+    }
 }

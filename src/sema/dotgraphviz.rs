@@ -1553,7 +1553,7 @@ impl Dot {
                     local_parent = parent;
                     for (item_no, item) in inline_assembly.body.iter().enumerate() {
                         local_parent = self.add_yul_statement(
-                            &item.0,
+                            item,
                             local_parent,
                             format!("statement #{}", item_no),
                             &inline_assembly.functions,
@@ -1623,7 +1623,7 @@ impl Dot {
         local_parent = func_node;
         for (item_no, item) in avail_functions[func_no].body.iter().enumerate() {
             local_parent = self.add_yul_statement(
-                &item.0,
+                item,
                 local_parent,
                 format!("statement #{}", item_no),
                 avail_functions,
@@ -1834,7 +1834,7 @@ impl Dot {
         ns: &Namespace,
     ) -> usize {
         match statement {
-            YulStatement::FunctionCall(loc, func_no, args) => self.add_yul_function_call(
+            YulStatement::FunctionCall(loc, _, func_no, args) => self.add_yul_function_call(
                 loc,
                 func_no,
                 args,
@@ -1844,7 +1844,7 @@ impl Dot {
                 symtable,
                 ns,
             ),
-            YulStatement::BuiltInCall(loc, builtin_ty, args) => self.add_yul_builtin_call(
+            YulStatement::BuiltInCall(loc, _, builtin_ty, args) => self.add_yul_builtin_call(
                 loc,
                 builtin_ty,
                 args,
@@ -1857,7 +1857,7 @@ impl Dot {
             YulStatement::Block(block) => {
                 self.add_yul_block(block, parent, parent_rel, avail_functions, symtable, ns)
             }
-            YulStatement::VariableDeclaration(loc, declared_vars, initializer) => {
+            YulStatement::VariableDeclaration(loc, _, declared_vars, initializer) => {
                 let labels = vec![
                     "yul variable declaration".to_string(),
                     ns.loc_to_string(loc),
@@ -1901,7 +1901,7 @@ impl Dot {
 
                 node
             }
-            YulStatement::Assignment(loc, lhs, rhs) => {
+            YulStatement::Assignment(loc, _, lhs, rhs) => {
                 let labels = vec!["yul assignment".to_string(), ns.loc_to_string(loc)];
 
                 let node = self.add_node(
@@ -1931,7 +1931,7 @@ impl Dot {
                 );
                 node
             }
-            YulStatement::IfBlock(loc, condition, block) => {
+            YulStatement::IfBlock(loc, _, condition, block) => {
                 let labels = vec!["yul if".to_string(), ns.loc_to_string(loc)];
 
                 let node = self.add_node(Node::new("if", labels), Some(parent), Some(parent_rel));
@@ -1959,6 +1959,7 @@ impl Dot {
                 condition,
                 cases,
                 default,
+                ..
             } => {
                 let labels = vec!["yul switch".to_string(), ns.loc_to_string(loc)];
 
@@ -2030,6 +2031,7 @@ impl Dot {
                 condition,
                 post_block,
                 execution_block,
+                ..
             } => {
                 let labels = vec!["yul for".to_string(), ns.loc_to_string(loc)];
 
@@ -2069,15 +2071,15 @@ impl Dot {
                 );
                 node
             }
-            YulStatement::Leave(loc) => {
+            YulStatement::Leave(loc, _) => {
                 let labels = vec!["leave".to_string(), ns.loc_to_string(loc)];
                 self.add_node(Node::new("leave", labels), Some(parent), Some(parent_rel))
             }
-            YulStatement::Break(loc) => {
+            YulStatement::Break(loc, _) => {
                 let labels = vec!["break".to_string(), ns.loc_to_string(loc)];
                 self.add_node(Node::new("break", labels), Some(parent), Some(parent_rel))
             }
-            YulStatement::Continue(loc) => {
+            YulStatement::Continue(loc, _) => {
                 let labels = vec!["continue".to_string(), ns.loc_to_string(loc)];
                 self.add_node(
                     Node::new("continue", labels),
@@ -2108,7 +2110,7 @@ impl Dot {
         parent = node;
         for (statement_no, child_statement) in block.body.iter().enumerate() {
             parent = self.add_yul_statement(
-                &child_statement.0,
+                child_statement,
                 parent,
                 format!("statement #{}", statement_no),
                 avail_functions,

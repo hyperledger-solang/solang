@@ -804,12 +804,6 @@ fn statement(
             dialect,
             block,
         } => {
-            // TODO: Remove this error when sema is ready
-            ns.diagnostics.push(Diagnostic::error(
-                *loc,
-                format!("evm assembly not supported on target {}", ns.target),
-            ));
-
             if dialect.is_some() && dialect.as_ref().unwrap().string != "evmasm" {
                 ns.diagnostics.push(Diagnostic::error(
                     dialect.as_ref().unwrap().loc,

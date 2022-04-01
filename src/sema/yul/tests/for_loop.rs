@@ -121,7 +121,7 @@ contract testTypes {
 
     let file = r#"
 contract testTypes {
-    function testAsm() public {
+    function testAsm() public pure {
         assembly {
 
             let a := 0
@@ -148,7 +148,7 @@ contract testTypes {
     ));
     assert!(assert_message_in_diagnostics(
         &ns.diagnostics,
-        "evm assembly not supported on target solana"
+        "inline assembly is not yet supported"
     ));
     assert!(assert_message_in_diagnostics(
         &ns.diagnostics,

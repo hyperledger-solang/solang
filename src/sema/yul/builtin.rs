@@ -192,6 +192,51 @@ impl YulBuiltInFunction {
         let index = self as usize;
         &YUL_BUILTIN[index]
     }
+
+    pub(crate) fn modify_state(&self) -> bool {
+        matches!(
+            self,
+            YulBuiltInFunction::SStore
+                | YulBuiltInFunction::Log0
+                | YulBuiltInFunction::Log1
+                | YulBuiltInFunction::Log2
+                | YulBuiltInFunction::Log3
+                | YulBuiltInFunction::Log4
+                | YulBuiltInFunction::Create
+                | YulBuiltInFunction::Call
+                | YulBuiltInFunction::CallCode
+                | YulBuiltInFunction::DelegateCall
+                | YulBuiltInFunction::Create2
+                | YulBuiltInFunction::SelfDestruct
+        )
+    }
+
+    pub(crate) fn read_state(&self) -> bool {
+        matches!(
+            self,
+            YulBuiltInFunction::Address
+                | YulBuiltInFunction::SelfBalance
+                | YulBuiltInFunction::Balance
+                | YulBuiltInFunction::Origin
+                | YulBuiltInFunction::Caller
+                | YulBuiltInFunction::CallValue
+                | YulBuiltInFunction::ChainId
+                | YulBuiltInFunction::BaseFee
+                | YulBuiltInFunction::Gas
+                | YulBuiltInFunction::GasPrice
+                | YulBuiltInFunction::ExtCodeSize
+                | YulBuiltInFunction::ExtCodeCopy
+                | YulBuiltInFunction::ExtCodeHash
+                | YulBuiltInFunction::BlockHash
+                | YulBuiltInFunction::CoinBase
+                | YulBuiltInFunction::Timestamp
+                | YulBuiltInFunction::Number
+                | YulBuiltInFunction::Difficulty
+                | YulBuiltInFunction::GasLimit
+                | YulBuiltInFunction::StaticCall
+                | YulBuiltInFunction::SLoad
+        )
+    }
 }
 
 impl ToString for YulBuiltInFunction {
@@ -503,7 +548,7 @@ static YUL_BUILTIN: [YulBuiltinPrototype; 76] =
         },
         YulBuiltinPrototype {
             name: "balance",
-            no_args: 2,
+            no_args: 1,
             no_returns: 1,
             doc: "balance(a) returns the wei balance at address a",
             ty: YulBuiltInFunction::Balance,

@@ -14,7 +14,7 @@ use solang_parser::{pt, Diagnostic};
 pub(crate) fn resolve_switch(
     yul_switch: &pt::YulSwitch,
     context: &ExprContext,
-    mut reachable: bool,
+    reachable: bool,
     function_table: &mut FunctionsTable,
     loop_scope: &mut LoopScopes,
     symtable: &mut Symtable,
@@ -24,19 +24,20 @@ pub(crate) fn resolve_switch(
         resolve_condition(&yul_switch.condition, context, symtable, function_table, ns)?;
     let mut default_block: Option<YulBlock> = None;
     let mut case_blocks: Vec<CaseBlock> = Vec::with_capacity(yul_switch.cases.len());
+    let mut next_reachable = reachable;
     for item in &yul_switch.cases {
         let block_reachable = resolve_case_or_default(
             item,
             &mut default_block,
             &mut case_blocks,
             context,
-            reachable,
+            next_reachable,
             function_table,
             loop_scope,
             symtable,
             ns,
         )?;
-        reachable |= block_reachable;
+        next_reachable |= block_reachable;
     }
 
     if yul_switch.default.is_some() && default_block.is_some() {
@@ -51,25 +52,26 @@ pub(crate) fn resolve_switch(
             &mut default_block,
             &mut case_blocks,
             context,
-            reachable,
+            next_reachable,
             function_table,
             loop_scope,
             symtable,
             ns,
         )?;
-        reachable |= block_reachable;
+        next_reachable |= block_reachable;
     } else if yul_switch.default.is_none() && default_block.is_none() {
-        reachable |= true;
+        next_reachable |= true;
     }
 
     Ok((
         YulStatement::Switch {
             loc: yul_switch.loc,
+            reachable,
             condition: resolved_condition,
             cases: case_blocks,
             default: default_block,
         },
-        reachable,
+        next_reachable,
     ))
 }
 

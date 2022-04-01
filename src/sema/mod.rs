@@ -162,7 +162,7 @@ fn sema_file(file: &ResolvedFile, resolver: &mut FileResolver, ns: &mut ast::Nam
     }
 
     // now check state mutability for all contracts
-    mutability::mutablity(file_no, ns);
+    mutability::mutability(file_no, ns);
 }
 
 /// Find import file, resolve it by calling sema and add it to the namespace

@@ -1066,7 +1066,7 @@ contract testTypes {
     }
 
     test tt1;
-    function testAsm(uint[] calldata vl) public pure {
+    function testAsm(uint[] calldata vl) public view {
         test storage tt2 = tt1;
         assembly {
             {
@@ -1092,7 +1092,7 @@ contract testTypes {
     }
 
     test tt1;
-    function testAsm(uint[] calldata vl) public pure {
+    function testAsm(uint[] calldata vl) public view {
         test storage tt2 = tt1;
         assembly {
             {
@@ -1111,7 +1111,7 @@ contract testTypes {
     ));
     assert!(assert_message_in_diagnostics(
         &ns.diagnostics,
-        "evm assembly not supported on target solana"
+        "inline assembly is not yet supported"
     ));
     assert!(assert_message_in_diagnostics(
         &ns.diagnostics,
@@ -1419,7 +1419,7 @@ contract C {
     assert_eq!(ns.diagnostics.len(), 2);
     assert!(assert_message_in_diagnostics(
         &ns.diagnostics,
-        "evm assembly not supported on target solana"
+        "inline assembly is not yet supported"
     ));
 
     assert!(assert_message_in_diagnostics(
