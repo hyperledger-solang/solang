@@ -205,7 +205,7 @@ contract testTypes {
     ));
     assert!(assert_message_in_diagnostics(
         &ns.diagnostics,
-        "evm assembly not supported on target solana"
+        "inline assembly is not yet supported"
     ));
 }
 
@@ -254,7 +254,7 @@ contract testTypes {
     ));
     assert!(assert_message_in_diagnostics(
         &ns.diagnostics,
-        "evm assembly not supported on target solana"
+        "inline assembly is not yet supported"
     ));
 }
 
@@ -312,7 +312,7 @@ contract testTypes {
     ));
     assert!(assert_message_in_diagnostics(
         &ns.diagnostics,
-        "evm assembly not supported on target solana"
+        "inline assembly is not yet supported"
     ));
 }
 
@@ -370,6 +370,6 @@ contract testTypes {
     ));
     assert!(assert_message_in_diagnostics(
         &ns.diagnostics,
-        "evm assembly not supported on target solana"
+        "inline assembly is not yet supported"
     ));
 }

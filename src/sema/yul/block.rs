@@ -14,7 +14,7 @@ pub fn resolve_yul_block(
     loc: &pt::Loc,
     statements: &[pt::YulStatement],
     context: &ExprContext,
-    mut reachable: bool,
+    reachable: bool,
     loop_scope: &mut LoopScopes,
     function_table: &mut FunctionsTable,
     symtable: &mut Symtable,
@@ -23,7 +23,7 @@ pub fn resolve_yul_block(
     function_table.new_scope();
     symtable.new_scope();
 
-    let (body, local_reachable) = process_statements(
+    let (body, mut next_reachable) = process_statements(
         statements,
         context,
         reachable,
@@ -33,12 +33,18 @@ pub fn resolve_yul_block(
         ns,
     );
 
-    reachable &= local_reachable;
-
+    next_reachable &= reachable;
     symtable.leave_scope();
     function_table.leave_scope(ns);
 
-    (YulBlock { loc: *loc, body }, reachable)
+    (
+        YulBlock {
+            loc: *loc,
+            reachable,
+            body,
+        },
+        next_reachable,
+    )
 }
 
 /// Resolves an array of yul statements.
@@ -52,7 +58,7 @@ pub(crate) fn process_statements(
     loop_scope: &mut LoopScopes,
     functions_table: &mut FunctionsTable,
     ns: &mut Namespace,
-) -> (Vec<(YulStatement, bool)>, bool) {
+) -> (Vec<YulStatement>, bool) {
     let mut func_count: usize = 0;
     for item in statements {
         if let pt::YulStatement::FunctionDefinition(fun_def) = item {
@@ -71,7 +77,7 @@ pub(crate) fn process_statements(
         }
     }
 
-    let mut body: Vec<(YulStatement, bool)> = Vec::with_capacity(statements.len() - func_count);
+    let mut body: Vec<YulStatement> = Vec::with_capacity(statements.len() - func_count);
     let mut has_unreachable = false;
     for item in statements {
         match resolve_yul_statement(

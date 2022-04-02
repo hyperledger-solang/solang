@@ -87,8 +87,8 @@ impl Default for Options {
     }
 }
 
-/// The contracts are fully resolved but they do not have any a CFG which is needed for
-/// the llvm code emitter. This will also do addition code checks.
+/// The contracts are fully resolved but they do not have any CFGs which is needed for
+/// the llvm code emitter. This will also do additional code checks.
 pub fn codegen(ns: &mut Namespace, opt: &Options) {
     if any_errors(&ns.diagnostics) {
         return;

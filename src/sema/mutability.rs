@@ -4,9 +4,10 @@ use super::ast::{
 };
 use super::diagnostics;
 use crate::parser::pt;
+use crate::sema::yul::ast::{YulExpression, YulStatement};
 
-/// check state mutablity
-pub fn mutablity(file_no: usize, ns: &mut Namespace) {
+/// check state mutability
+pub fn mutability(file_no: usize, ns: &mut Namespace) {
     if !diagnostics::any_errors(&ns.diagnostics) {
         for func in &ns.functions {
             if func.loc.file_no() != file_no {
@@ -58,6 +59,14 @@ impl<'a> StateCheck<'a> {
         }
 
         self.does_read_state = true;
+    }
+
+    //TODO: This is a temporary solution while inline assembly is not supported in codegen
+    fn has_yul(&mut self, loc: &pt::Loc) {
+        self.diagnostics.push(Diagnostic::error(
+            *loc,
+            "inline assembly is not yet supported".to_string(),
+        ));
     }
 }
 
@@ -215,8 +224,12 @@ fn recurse_statements(stmts: &[Statement], state: &mut StateCheck) {
             }
             Statement::Emit { loc, .. } => state.write(loc),
             Statement::Break(_) | Statement::Continue(_) | Statement::Underscore(_) => (),
-            Statement::Assembly(..) => {
-                unimplemented!("Assembly block mutability not ready yet");
+            Statement::Assembly(inline_assembly, _) => {
+                state.has_yul(&inline_assembly.loc);
+                for item in &inline_assembly.functions {
+                    recurse_yul_statements(&item.body, state);
+                }
+                recurse_yul_statements(&inline_assembly.body, state);
             }
         }
     }
@@ -312,4 +325,83 @@ fn write_expression(expr: &Expression, state: &mut StateCheck) -> bool {
     }
 
     true
+}
+
+fn recurse_yul_statements(stmts: &[YulStatement], state: &mut StateCheck) {
+    for stmt in stmts {
+        match stmt {
+            YulStatement::FunctionCall(_, _, _, args) => {
+                for arg in args {
+                    arg.recurse(state, check_expression_mutability_yul);
+                }
+            }
+            YulStatement::BuiltInCall(loc, _, builtin_ty, args) => {
+                if builtin_ty.read_state() {
+                    state.read(loc);
+                } else if builtin_ty.modify_state() {
+                    state.write(loc);
+                }
+                for arg in args {
+                    arg.recurse(state, check_expression_mutability_yul);
+                }
+            }
+            YulStatement::Block(block) => {
+                recurse_yul_statements(&block.body, state);
+            }
+            YulStatement::Assignment(_, _, _, value)
+            | YulStatement::VariableDeclaration(_, _, _, Some(value)) => {
+                value.recurse(state, check_expression_mutability_yul);
+            }
+            YulStatement::IfBlock(_, _, condition, block) => {
+                condition.recurse(state, check_expression_mutability_yul);
+                recurse_yul_statements(&block.body, state);
+            }
+            YulStatement::Switch {
+                condition,
+                cases,
+                default,
+                ..
+            } => {
+                condition.recurse(state, check_expression_mutability_yul);
+                for item in cases {
+                    item.condition
+                        .recurse(state, check_expression_mutability_yul);
+                    recurse_yul_statements(&item.block.body, state);
+                }
+
+                if let Some(block) = default {
+                    recurse_yul_statements(&block.body, state);
+                }
+            }
+            YulStatement::For {
+                init_block,
+                condition,
+                post_block,
+                execution_block,
+                ..
+            } => {
+                recurse_yul_statements(&init_block.body, state);
+                condition.recurse(state, check_expression_mutability_yul);
+                recurse_yul_statements(&post_block.body, state);
+                recurse_yul_statements(&execution_block.body, state);
+            }
+
+            _ => (),
+        }
+    }
+}
+
+fn check_expression_mutability_yul(expr: &YulExpression, state: &mut StateCheck) -> bool {
+    match expr {
+        YulExpression::BuiltInCall(loc, builtin_ty, _) => {
+            if builtin_ty.read_state() {
+                state.read(loc);
+            } else if builtin_ty.modify_state() {
+                state.write(loc);
+            }
+            true
+        }
+        YulExpression::FunctionCall(..) => true,
+        _ => false,
+    }
 }
