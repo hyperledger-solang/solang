@@ -116,10 +116,10 @@ pub struct SingleDocComment {
     pub value: String,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct SourceUnit(pub Vec<SourceUnitPart>);
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum SourceUnitPart {
     ContractDefinition(Box<ContractDefinition>),
     PragmaDirective(Loc, Vec<DocComment>, Identifier, StringLiteral),
@@ -133,7 +133,7 @@ pub enum SourceUnitPart {
     StraySemicolon(Loc),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Import {
     Plain(StringLiteral, Loc),
     GlobalSymbol(StringLiteral, Identifier, Loc),
@@ -196,7 +196,7 @@ pub struct VariableDeclaration {
     pub name: Identifier,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 #[allow(clippy::vec_box)]
 pub struct StructDefinition {
     pub doc: Vec<DocComment>,
@@ -205,7 +205,7 @@ pub struct StructDefinition {
     pub fields: Vec<VariableDeclaration>,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum ContractPart {
     StructDefinition(Box<StructDefinition>),
     EventDefinition(Box<EventDefinition>),
@@ -217,7 +217,7 @@ pub enum ContractPart {
     Using(Box<Using>),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Using {
     pub loc: Loc,
     pub library: Identifier,
@@ -250,7 +250,7 @@ pub struct Base {
     pub args: Option<Vec<Expression>>,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct ContractDefinition {
     pub doc: Vec<DocComment>,
     pub loc: Loc,
@@ -260,7 +260,7 @@ pub struct ContractDefinition {
     pub parts: Vec<ContractPart>,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct EventParameter {
     pub ty: Expression,
     pub loc: Loc,
@@ -268,7 +268,7 @@ pub struct EventParameter {
     pub name: Option<Identifier>,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct EventDefinition {
     pub doc: Vec<DocComment>,
     pub loc: Loc,
@@ -277,14 +277,14 @@ pub struct EventDefinition {
     pub anonymous: bool,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct ErrorParameter {
     pub ty: Expression,
     pub loc: Loc,
     pub name: Option<Identifier>,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct ErrorDefinition {
     pub doc: Vec<DocComment>,
     pub loc: Loc,
@@ -292,7 +292,7 @@ pub struct ErrorDefinition {
     pub fields: Vec<ErrorParameter>,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct EnumDefinition {
     pub doc: Vec<DocComment>,
     pub loc: Loc,
@@ -308,7 +308,7 @@ pub enum VariableAttribute {
     Override(Loc),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct VariableDefinition {
     pub doc: Vec<DocComment>,
     pub loc: Loc,
@@ -583,7 +583,7 @@ impl fmt::Display for FunctionTy {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct FunctionDefinition {
     pub doc: Vec<DocComment>,
     pub loc: Loc,
