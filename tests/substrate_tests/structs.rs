@@ -284,8 +284,6 @@ fn struct_in_struct() {
 
                 f.c.y = 300;
 
-                assert(m.y == 300);
-
                 return f.b;
             }
         }"##,

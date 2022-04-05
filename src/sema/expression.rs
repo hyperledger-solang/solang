@@ -551,14 +551,24 @@ pub fn cast(
 
     // First of all, if we have a ref then derefence it
     if let Type::Ref(r) = from {
-        return cast(
-            loc,
-            Expression::Load(*loc, r.as_ref().clone(), Box::new(expr)),
-            to,
-            implicit,
-            ns,
-            diagnostics,
-        );
+        if r.is_fixed_reference_type() {
+            // Accessing a struct/fixed size array within an array/struct gives
+            // a Type::Ref(..) the element, this type is just a simple pointer,
+            // like it would have been without the Type::Ref(..)
+            //
+            // The Type::Ref(..) just means it can be used as an l-value and assigned
+            // a new value, unlike say, a struct literal.
+            return cast(loc, expr, &Type::Ref(r), implicit, ns, diagnostics);
+        } else {
+            return cast(
+                loc,
+                Expression::Load(*loc, r.as_ref().clone(), Box::new(expr)),
+                to,
+                implicit,
+                ns,
+                diagnostics,
+            );
+        }
     }
 
     // If it's a storage reference then load the value. The expr is the storage slot
@@ -1439,8 +1449,7 @@ pub fn expression(
 ) -> Result<Expression, ()> {
     match expr {
         pt::Expression::ArrayLiteral(loc, exprs) => {
-            let res =
-                resolve_array_literal(loc, exprs, context, ns, symtable, diagnostics, resolve_to);
+            let res = array_literal(loc, exprs, context, ns, symtable, diagnostics, resolve_to);
 
             if let Ok(exp) = &res {
                 used_variable(ns, exp, symtable);
@@ -4214,8 +4223,51 @@ fn member_access(
     let expr = expression(e, context, ns, symtable, diagnostics, resolve_to)?;
     let expr_ty = expr.ty();
 
-    // Dereference if need to. This could be struct-in-struct for
-    // example.
+    if let Type::Struct(struct_no) = expr_ty.deref_memory() {
+        if let Some((i, f)) = ns.structs[*struct_no]
+            .fields
+            .iter()
+            .enumerate()
+            .find(|f| id.name == f.1.name_as_str())
+        {
+            return if context.lvalue && f.readonly {
+                diagnostics.push(Diagnostic::error(
+                    id.loc,
+                    format!(
+                        "struct ‘{}’ field ‘{}’ is readonly",
+                        ns.structs[*struct_no], id.name
+                    ),
+                ));
+                Err(())
+            } else if f.readonly {
+                // readonly fields return the value, not a reference
+                Ok(Expression::StructMember(
+                    id.loc,
+                    f.ty.clone(),
+                    Box::new(expr),
+                    i,
+                ))
+            } else {
+                Ok(Expression::StructMember(
+                    id.loc,
+                    Type::Ref(Box::new(f.ty.clone())),
+                    Box::new(expr),
+                    i,
+                ))
+            };
+        } else {
+            diagnostics.push(Diagnostic::error(
+                id.loc,
+                format!(
+                    "struct ‘{}’ does not have a field called ‘{}’",
+                    ns.structs[*struct_no], id.name
+                ),
+            ));
+            return Err(());
+        }
+    }
+
+    // Dereference if need to
     let (expr, expr_ty) = if let Type::Ref(ty) = &expr_ty {
         (
             Expression::Load(*loc, expr_ty.clone(), Box::new(expr)),
@@ -4337,46 +4389,6 @@ fn member_access(
             }
             _ => {}
         },
-        Type::Struct(n) => {
-            if let Some((i, f)) = ns.structs[n]
-                .fields
-                .iter()
-                .enumerate()
-                .find(|f| id.name == f.1.name_as_str())
-            {
-                return if context.lvalue && f.readonly {
-                    diagnostics.push(Diagnostic::error(
-                        id.loc,
-                        format!("struct ‘{}’ field ‘{}’ is readonly", ns.structs[n], id.name),
-                    ));
-                    Err(())
-                } else if f.readonly {
-                    // readonly fields return the value, not a reference
-                    Ok(Expression::StructMember(
-                        id.loc,
-                        f.ty.clone(),
-                        Box::new(expr),
-                        i,
-                    ))
-                } else {
-                    Ok(Expression::StructMember(
-                        id.loc,
-                        Type::Ref(Box::new(f.ty.clone())),
-                        Box::new(expr),
-                        i,
-                    ))
-                };
-            } else {
-                diagnostics.push(Diagnostic::error(
-                    id.loc,
-                    format!(
-                        "struct ‘{}’ does not have a field called ‘{}’",
-                        ns.structs[n], id.name
-                    ),
-                ));
-                return Err(());
-            }
-        }
         Type::Address(_) => {
             if id.name == "balance" {
                 if ns.target.is_substrate() {
@@ -4673,7 +4685,11 @@ fn array_subscript(
                 let array = cast(
                     &array.loc(),
                     array,
-                    array_ty.deref_any(),
+                    if array_ty.deref_memory().is_fixed_reference_type() {
+                        &array_ty
+                    } else {
+                        array_ty.deref_any()
+                    },
                     true,
                     ns,
                     diagnostics,
@@ -6572,7 +6588,7 @@ pub fn cast_shift_arg(
 /// Given an parsed literal array, ensure that it is valid. All the elements in the array
 /// must of the same type. The array might be a multidimensional array; all the leaf nodes
 /// must match.
-fn resolve_array_literal(
+fn array_literal(
     loc: &pt::Loc,
     exprs: &[pt::Expression],
     context: &ExprContext,

@@ -33,6 +33,8 @@ fn testcase(path: PathBuf) {
     let mut command_line: Option<String> = None;
     let mut checks = Vec::new();
     let mut fails = Vec::new();
+    let mut read_from = None;
+
     for line in reader.lines() {
         let mut line = line.unwrap();
         line = line.trim().parse().unwrap();
@@ -40,6 +42,8 @@ fn testcase(path: PathBuf) {
             assert_eq!(command_line, None);
 
             command_line = Some(String::from(args));
+        } else if let Some(check) = line.strip_prefix("// READ:") {
+            read_from = Some(check.trim().to_string());
         } else if let Some(check) = line.strip_prefix("// CHECK:") {
             checks.push(Test::Check(check.trim().to_string()));
         } else if let Some(fail) = line.strip_prefix("// FAIL:") {
@@ -69,7 +73,12 @@ fn testcase(path: PathBuf) {
     let mut current_check = 0;
     let mut current_fail = 0;
     let mut current_line = 0;
-    let lines: Vec<&str> = stdout.split('\n').chain(stderr.split('\n')).collect();
+    let contents = if let Some(file) = read_from {
+        fs::read_to_string(file).unwrap()
+    } else {
+        stdout.to_string()
+    };
+    let lines: Vec<&str> = contents.split('\n').chain(stderr.split('\n')).collect();
 
     while current_line < lines.len() {
         let line = lines[current_line];
