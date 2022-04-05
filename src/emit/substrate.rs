@@ -780,6 +780,14 @@ impl SubstrateTarget {
 
                     let val = self.decode_ty(binary, function, &field.ty, data, end, ns);
 
+                    let val = if field.ty.deref_memory().is_fixed_reference_type() {
+                        binary
+                            .builder
+                            .build_load(val.into_pointer_value(), field.name_as_str())
+                    } else {
+                        val
+                    };
+
                     binary.builder.build_store(elem, val);
                 }
 
@@ -832,6 +840,13 @@ impl SubstrateTarget {
                             };
 
                             let val = self.decode_ty(binary, function, &ty, data, end, ns);
+
+                            let val = if ty.deref_memory().is_fixed_reference_type() {
+                                binary.builder.build_load(val.into_pointer_value(), "elem")
+                            } else {
+                                val
+                            };
+
                             binary.builder.build_store(elem, val);
                         },
                     );
@@ -857,7 +872,7 @@ impl SubstrateTarget {
                     let len = binary.builder.build_load(len, "array.len").into_int_value();
 
                     // details about our array elements
-                    let elem_ty = binary.llvm_var(&ty.array_elem(), ns);
+                    let elem_ty = binary.llvm_field_ty(&ty.array_elem(), ns);
                     let elem_size = elem_ty
                         .size_of()
                         .unwrap()
@@ -910,6 +925,13 @@ impl SubstrateTarget {
                             let ty = ty.array_deref();
 
                             let val = self.decode_ty(binary, function, &ty, data, end, ns);
+
+                            let val = if ty.deref_memory().is_fixed_reference_type() {
+                                binary.builder.build_load(val.into_pointer_value(), "elem")
+                            } else {
+                                val
+                            };
+
                             binary.builder.build_store(elem, val);
                         },
                     );
@@ -1247,7 +1269,7 @@ impl SubstrateTarget {
                         self.encode_ty(
                             binary,
                             ns,
-                            true,
+                            !elem_ty.is_fixed_reference_type(),
                             packed,
                             function,
                             &elem_ty,
@@ -1274,7 +1296,14 @@ impl SubstrateTarget {
                     &mut null_data,
                     |_, elem_data| {
                         self.encode_ty(
-                            binary, ns, false, packed, function, &elem_ty, elem, elem_data,
+                            binary,
+                            ns,
+                            false,
+                            packed,
+                            function,
+                            elem_ty.deref_any(),
+                            elem,
+                            elem_data,
                         );
                     },
                 );
@@ -1317,15 +1346,7 @@ impl SubstrateTarget {
                         .into_pointer_value();
                 }
 
-                // details about our array elements
                 let elem_ty = ty.array_deref();
-                let llvm_elem_ty = binary.llvm_var(&elem_ty, ns);
-                let elem_size = llvm_elem_ty
-                    .into_pointer_type()
-                    .get_element_type()
-                    .size_of()
-                    .unwrap()
-                    .const_cast(binary.context.i32_type(), false);
 
                 binary.emit_loop_cond_first_with_pointer(
                     function,
@@ -1333,35 +1354,16 @@ impl SubstrateTarget {
                     len,
                     data,
                     |elem_no, data| {
-                        let index = binary.builder.build_int_mul(elem_no, elem_size, "");
-
-                        let element_start = unsafe {
-                            binary.builder.build_gep(
-                                arg.into_pointer_value(),
-                                &[
-                                    binary.context.i32_type().const_zero(),
-                                    binary.context.i32_type().const_int(2, false),
-                                    index,
-                                ],
-                                "data",
-                            )
-                        };
-
-                        let elem = binary.builder.build_pointer_cast(
-                            element_start,
-                            llvm_elem_ty.into_pointer_type(),
-                            "entry",
-                        );
-
-                        let ty = ty.array_deref();
+                        let elem =
+                            binary.array_subscript(ty, arg.into_pointer_value(), elem_no, ns);
 
                         self.encode_ty(
                             binary,
                             ns,
-                            true,
+                            !elem_ty.deref_any().is_fixed_reference_type(),
                             packed,
                             function,
-                            ty.deref_any(),
+                            elem_ty.deref_any(),
                             elem.into(),
                             data,
                         );
@@ -1409,7 +1411,7 @@ impl SubstrateTarget {
                     self.encode_ty(
                         binary,
                         ns,
-                        true,
+                        !field.ty.is_fixed_reference_type(),
                         packed,
                         function,
                         &field.ty,
@@ -1458,7 +1460,16 @@ impl SubstrateTarget {
                 *data = either_data.as_basic_value().into_pointer_value()
             }
             ast::Type::Ref(ty) => {
-                self.encode_ty(binary, ns, load, packed, function, ty, arg, data);
+                self.encode_ty(
+                    binary,
+                    ns,
+                    !ty.is_fixed_reference_type(),
+                    packed,
+                    function,
+                    ty,
+                    arg,
+                    data,
+                );
             }
             ast::Type::String | ast::Type::DynamicBytes => {
                 let arg = if load {
@@ -1640,7 +1651,7 @@ impl SubstrateTarget {
                         normal_sum,
                         self.encoded_length(
                             elem.into(),
-                            true,
+                            !field.ty.is_fixed_reference_type(),
                             packed,
                             &field.ty,
                             function,
@@ -1738,7 +1749,7 @@ impl SubstrateTarget {
                             *sum = binary.builder.build_int_add(
                                 self.encoded_length(
                                     elem.into(),
-                                    true,
+                                    !elem_ty.deref_memory().is_fixed_reference_type(),
                                     packed,
                                     &elem_ty,
                                     function,
@@ -1820,7 +1831,7 @@ impl SubstrateTarget {
                 let array_length = binary.vector_len(arg);
 
                 let elem_ty = ty.array_deref();
-                let llvm_elem_ty = binary.llvm_var(&elem_ty, ns);
+                let llvm_elem_ty = binary.llvm_field_ty(&elem_ty, ns);
 
                 if elem_ty.is_dynamic(ns) {
                     // if the array contains elements of dynamic length, we have to iterate over all of them
@@ -1861,7 +1872,7 @@ impl SubstrateTarget {
                             *sum = binary.builder.build_int_add(
                                 self.encoded_length(
                                     elem.into(),
-                                    true,
+                                    !elem_ty.deref_memory().is_fixed_reference_type(),
                                     packed,
                                     &elem_ty,
                                     function,
