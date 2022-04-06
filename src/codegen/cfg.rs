@@ -2,6 +2,7 @@ use indexmap::IndexMap;
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::fmt;
 use std::str;
+use std::sync::Arc;
 
 use super::statements::{statement, LoopScopes};
 use super::{
@@ -12,7 +13,7 @@ use super::{
     vector_to_slice, Options,
 };
 use crate::codegen::subexpression_elimination::common_sub_expression_elimination;
-use crate::codegen::undefined_variable;
+use crate::codegen::{undefined_variable, LLVMName};
 use crate::parser::pt;
 use crate::parser::pt::CodeLocation;
 use crate::sema::ast::{
@@ -324,9 +325,9 @@ impl BasicBlock {
 #[derive(Clone)]
 pub struct ControlFlowGraph {
     pub name: String,
-    pub function_no: Option<usize>,
-    pub params: Vec<Parameter>,
-    pub returns: Vec<Parameter>,
+    pub function_no: ASTFunction,
+    pub params: Arc<Vec<Parameter>>,
+    pub returns: Arc<Vec<Parameter>>,
     pub vars: Vars,
     pub blocks: Vec<BasicBlock>,
     pub nonpayable: bool,
@@ -336,13 +337,20 @@ pub struct ControlFlowGraph {
     current: usize,
 }
 
+#[derive(Clone)]
+pub enum ASTFunction {
+    SolidityFunction(usize),
+    YulFunction(usize),
+    None,
+}
+
 impl ControlFlowGraph {
-    pub fn new(name: String, function_no: Option<usize>) -> Self {
+    pub fn new(name: String, function_no: ASTFunction) -> Self {
         let mut cfg = ControlFlowGraph {
             name,
             function_no,
-            params: Vec::new(),
-            returns: Vec::new(),
+            params: Arc::new(Vec::new()),
+            returns: Arc::new(Vec::new()),
             vars: IndexMap::new(),
             blocks: Vec::new(),
             nonpayable: false,
@@ -361,9 +369,9 @@ impl ControlFlowGraph {
     pub fn placeholder() -> Self {
         ControlFlowGraph {
             name: String::new(),
-            function_no: None,
-            params: Vec::new(),
-            returns: Vec::new(),
+            function_no: ASTFunction::None,
+            params: Arc::new(Vec::new()),
+            returns: Arc::new(Vec::new()),
             vars: IndexMap::new(),
             blocks: Vec::new(),
             nonpayable: false,
@@ -1346,7 +1354,14 @@ fn function_cfg(
         _ => format!("{}::{}", contract_name, func.ty),
     };
 
-    let mut cfg = ControlFlowGraph::new(name, function_no);
+    let mut cfg = ControlFlowGraph::new(
+        name,
+        if let Some(num) = function_no {
+            ASTFunction::SolidityFunction(num)
+        } else {
+            ASTFunction::None
+        },
+    );
 
     cfg.params = func.params.clone();
     cfg.returns = func.returns.clone();
@@ -1511,7 +1526,7 @@ fn function_cfg(
 
     // named returns should be populated
     for (i, pos) in func.symtable.returns.iter().enumerate() {
-        if let Some(name) = &func.returns[i].name {
+        if let Some(name) = &func.returns[i].id {
             if let Some(expr) = func.returns[i].ty.default(ns) {
                 cfg.add(
                     &mut vartab,
@@ -1593,7 +1608,7 @@ pub fn generate_modifier_dispatch(
         chain_no,
         modifier.llvm_symbol(ns)
     );
-    let mut cfg = ControlFlowGraph::new(name, None);
+    let mut cfg = ControlFlowGraph::new(name, ASTFunction::None);
 
     cfg.params = func.params.clone();
     cfg.returns = func.returns.clone();

@@ -406,7 +406,7 @@ static YUL_BUILTIN: [YulBuiltinPrototype; 76] =
             name: "byte",
             no_args: 2,
             no_returns: 1,
-            doc: "byte(n, x) returns the nth byte of x, where the most significant byt is the 0th",
+            doc: "byte(n, x) returns the nth byte of x, where the most significant byte is the 0th",
             ty: YulBuiltInFunction::Byte,
             stops_execution: false,
         },

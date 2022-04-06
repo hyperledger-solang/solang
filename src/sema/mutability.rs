@@ -123,12 +123,12 @@ fn check_mutability(func: &Function, ns: &Namespace) -> Vec<Diagnostic> {
                 // modifiers do not have mutability, bases or modifiers itself
                 let func = &ns.functions[function_no];
 
-                recurse_statements(&func.body, &mut state);
+                recurse_statements(&func.body, ns, &mut state);
             }
         }
     }
 
-    recurse_statements(&func.body, &mut state);
+    recurse_statements(&func.body, ns, &mut state);
 
     if pt::FunctionTy::Function == func.ty && !func.is_accessor {
         if !state.does_write_state && !state.does_read_state {
@@ -163,11 +163,11 @@ fn check_mutability(func: &Function, ns: &Namespace) -> Vec<Diagnostic> {
     state.diagnostics
 }
 
-fn recurse_statements(stmts: &[Statement], state: &mut StateCheck) {
+fn recurse_statements(stmts: &[Statement], ns: &Namespace, state: &mut StateCheck) {
     for stmt in stmts.iter() {
         match stmt {
             Statement::Block { statements, .. } => {
-                recurse_statements(statements, state);
+                recurse_statements(statements, ns, state);
             }
             Statement::VariableDecl(_, _, _, Some(expr)) => {
                 expr.recurse(state, read_expression);
@@ -175,12 +175,12 @@ fn recurse_statements(stmts: &[Statement], state: &mut StateCheck) {
             Statement::VariableDecl(_, _, _, None) => (),
             Statement::If(_, _, expr, then_, else_) => {
                 expr.recurse(state, read_expression);
-                recurse_statements(then_, state);
-                recurse_statements(else_, state);
+                recurse_statements(then_, ns, state);
+                recurse_statements(else_, ns, state);
             }
             Statement::DoWhile(_, _, body, expr) | Statement::While(_, _, expr, body) => {
                 expr.recurse(state, read_expression);
-                recurse_statements(body, state);
+                recurse_statements(body, ns, state);
             }
             Statement::For {
                 init,
@@ -189,12 +189,12 @@ fn recurse_statements(stmts: &[Statement], state: &mut StateCheck) {
                 body,
                 ..
             } => {
-                recurse_statements(init, state);
+                recurse_statements(init, ns, state);
                 if let Some(cond) = cond {
                     cond.recurse(state, read_expression);
                 }
-                recurse_statements(next, state);
-                recurse_statements(body, state);
+                recurse_statements(next, ns, state);
+                recurse_statements(body, ns, state);
             }
             Statement::Expression(_, _, expr) => {
                 expr.recurse(state, read_expression);
@@ -216,18 +216,18 @@ fn recurse_statements(stmts: &[Statement], state: &mut StateCheck) {
             }
             Statement::TryCatch(_, _, try_catch) => {
                 try_catch.expr.recurse(state, read_expression);
-                recurse_statements(&try_catch.ok_stmt, state);
+                recurse_statements(&try_catch.ok_stmt, ns, state);
                 for (_, _, s) in &try_catch.errors {
-                    recurse_statements(s, state);
+                    recurse_statements(s, ns, state);
                 }
-                recurse_statements(&try_catch.catch_stmt, state);
+                recurse_statements(&try_catch.catch_stmt, ns, state);
             }
             Statement::Emit { loc, .. } => state.write(loc),
             Statement::Break(_) | Statement::Continue(_) | Statement::Underscore(_) => (),
             Statement::Assembly(inline_assembly, _) => {
                 state.has_yul(&inline_assembly.loc);
-                for item in &inline_assembly.functions {
-                    recurse_yul_statements(&item.body, state);
+                for function_no in inline_assembly.functions.start..inline_assembly.functions.end {
+                    recurse_yul_statements(&ns.yul_functions[function_no].body, state);
                 }
                 recurse_yul_statements(&inline_assembly.body, state);
             }

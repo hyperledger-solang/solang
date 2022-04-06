@@ -1401,89 +1401,89 @@ impl Namespace {
         let fields = vec![
             Parameter {
                 loc: pt::Loc::Builtin,
-                name: Some(pt::Identifier {
+                id: Some(pt::Identifier {
                     name: String::from("key"),
                     loc: pt::Loc::Builtin,
                 }),
                 ty: Type::Address(false),
-                ty_loc: pt::Loc::Builtin,
+                ty_loc: None,
                 indexed: false,
                 readonly: true,
             },
             Parameter {
                 loc: pt::Loc::Builtin,
-                name: Some(pt::Identifier {
+                id: Some(pt::Identifier {
                     name: String::from("lamports"),
                     loc: pt::Loc::Builtin,
                 }),
                 ty: Type::Uint(64),
-                ty_loc: pt::Loc::Builtin,
+                ty_loc: None,
                 indexed: false,
                 readonly: false,
             },
             Parameter {
                 loc: pt::Loc::Builtin,
-                name: Some(pt::Identifier {
+                id: Some(pt::Identifier {
                     name: String::from("data"),
                     loc: pt::Loc::Builtin,
                 }),
                 ty: Type::DynamicBytes,
-                ty_loc: pt::Loc::Builtin,
+                ty_loc: None,
                 indexed: false,
                 readonly: true,
             },
             Parameter {
                 loc: pt::Loc::Builtin,
-                name: Some(pt::Identifier {
+                id: Some(pt::Identifier {
                     name: String::from("owner"),
                     loc: pt::Loc::Builtin,
                 }),
                 ty: Type::Address(false),
-                ty_loc: pt::Loc::Builtin,
+                ty_loc: None,
                 indexed: false,
                 readonly: true,
             },
             Parameter {
                 loc: pt::Loc::Builtin,
-                name: Some(pt::Identifier {
+                id: Some(pt::Identifier {
                     name: String::from("rent_epoch"),
                     loc: pt::Loc::Builtin,
                 }),
                 ty: Type::Uint(64),
-                ty_loc: pt::Loc::Builtin,
+                ty_loc: None,
                 indexed: false,
                 readonly: true,
             },
             Parameter {
                 loc: pt::Loc::Builtin,
-                name: Some(pt::Identifier {
+                id: Some(pt::Identifier {
                     name: String::from("is_signer"),
                     loc: pt::Loc::Builtin,
                 }),
                 ty: Type::Bool,
-                ty_loc: pt::Loc::Builtin,
+                ty_loc: None,
                 indexed: false,
                 readonly: true,
             },
             Parameter {
                 loc: pt::Loc::Builtin,
-                name: Some(pt::Identifier {
+                id: Some(pt::Identifier {
                     name: String::from("is_writable"),
                     loc: pt::Loc::Builtin,
                 }),
                 ty: Type::Bool,
-                ty_loc: pt::Loc::Builtin,
+                ty_loc: None,
                 indexed: false,
                 readonly: true,
             },
             Parameter {
                 loc: pt::Loc::Builtin,
-                name: Some(pt::Identifier {
+                id: Some(pt::Identifier {
                     name: String::from("executable"),
                     loc: pt::Loc::Builtin,
                 }),
                 ty: Type::Bool,
-                ty_loc: pt::Loc::Builtin,
+                ty_loc: None,
                 indexed: false,
                 readonly: true,
             },
@@ -1517,34 +1517,34 @@ impl Namespace {
         let fields = vec![
             Parameter {
                 loc: pt::Loc::Builtin,
-                name: Some(pt::Identifier {
+                id: Some(pt::Identifier {
                     name: String::from("pubkey"),
                     loc: pt::Loc::Builtin,
                 }),
                 ty: Type::Ref(Box::new(Type::Address(false))),
-                ty_loc: pt::Loc::Builtin,
+                ty_loc: None,
                 indexed: false,
                 readonly: false,
             },
             Parameter {
                 loc: pt::Loc::Builtin,
-                name: Some(pt::Identifier {
+                id: Some(pt::Identifier {
                     name: String::from("is_writable"),
                     loc: pt::Loc::Builtin,
                 }),
                 ty: Type::Bool,
-                ty_loc: pt::Loc::Builtin,
+                ty_loc: None,
                 indexed: false,
                 readonly: false,
             },
             Parameter {
                 loc: pt::Loc::Builtin,
-                name: Some(pt::Identifier {
+                id: Some(pt::Identifier {
                     name: String::from("is_signer"),
                     loc: pt::Loc::Builtin,
                 }),
                 ty: Type::Bool,
-                ty_loc: pt::Loc::Builtin,
+                ty_loc: None,
                 indexed: false,
                 readonly: false,
             },

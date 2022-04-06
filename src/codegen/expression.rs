@@ -1916,7 +1916,7 @@ pub fn emit_function_call(
                     let mut returns = Vec::new();
                     let mut return_tys = Vec::new();
 
-                    for ret in &ftype.returns {
+                    for ret in &*ftype.returns {
                         let id = pt::Identifier {
                             loc: ret.loc,
                             name: ret.name_as_str().to_owned(),
@@ -2178,7 +2178,7 @@ pub fn emit_function_call(
                     let mut returns = Vec::new();
                     let mut res = Vec::new();
 
-                    for ret in &ftype.returns {
+                    for ret in &*ftype.returns {
                         let id = pt::Identifier {
                             loc: ret.loc,
                             name: ret.name_as_str().to_owned(),
@@ -2194,7 +2194,7 @@ pub fn emit_function_call(
                             res,
                             selector: None,
                             exception_block: None,
-                            tys: ftype.returns.clone(),
+                            tys: (*ftype.returns).clone(),
                             data: Expression::ReturnData(*loc),
                         },
                     );
@@ -2272,8 +2272,8 @@ pub fn emit_function_call(
                         tys.push(Parameter {
                             loc: pt::Loc::Codegen,
                             ty,
-                            ty_loc: pt::Loc::Codegen,
-                            name: None,
+                            ty_loc: Some(pt::Loc::Codegen),
+                            id: None,
                             indexed: false,
                             readonly: false,
                         });
@@ -2319,10 +2319,10 @@ pub fn emit_function_call(
                     tys: tys
                         .iter()
                         .map(|ty| Parameter {
-                            name: None,
+                            id: None,
                             loc: *loc,
                             ty: ty.clone(),
-                            ty_loc: *loc,
+                            ty_loc: Some(*loc),
                             indexed: false,
                             readonly: false,
                         })

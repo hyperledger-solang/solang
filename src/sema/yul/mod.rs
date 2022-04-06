@@ -27,7 +27,8 @@ pub fn resolve_inline_assembly(
     symtable: &mut Symtable,
     ns: &mut Namespace,
 ) -> (InlineAssembly, bool) {
-    let mut functions_table = FunctionsTable::new();
+    let start = ns.yul_functions.len();
+    let mut functions_table = FunctionsTable::new(start);
     functions_table.new_scope();
     symtable.new_scope();
     let mut loop_scope = LoopScopes::new();
@@ -44,12 +45,15 @@ pub fn resolve_inline_assembly(
 
     symtable.leave_scope();
     functions_table.leave_scope(ns);
+    let end = start + functions_table.resolved_functions.len();
+    ns.yul_functions
+        .append(&mut functions_table.resolved_functions);
 
     (
         InlineAssembly {
             loc: *loc,
             body,
-            functions: functions_table.resolved_functions,
+            functions: std::ops::Range { start, end },
         },
         reachable,
     )

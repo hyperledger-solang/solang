@@ -33,9 +33,9 @@ fn test_statement_reachable() {
                 0,
                 Parameter {
                     loc,
-                    name: None,
+                    id: None,
                     ty: Type::Bool,
-                    ty_loc: Loc::Builtin,
+                    ty_loc: None,
                     indexed: false,
                     readonly: false,
                 },
@@ -113,7 +113,7 @@ fn test_statement_reachable() {
                 InlineAssembly {
                     loc,
                     body: vec![],
-                    functions: vec![],
+                    functions: std::ops::Range { start: 0, end: 0 },
                 },
                 false,
             ),

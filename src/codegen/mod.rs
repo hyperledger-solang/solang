@@ -25,6 +25,8 @@ use crate::sema::contracts::visit_bases;
 use crate::sema::diagnostics::any_errors;
 use crate::Target;
 
+use crate::ast::Function;
+use crate::codegen::cfg::ASTFunction;
 use num_bigint::BigInt;
 use num_traits::Zero;
 
@@ -171,6 +173,12 @@ fn contract(contract_no: usize, ns: &mut Namespace, opt: &Options) {
             cfg_no += 1;
         }
 
+        // TODO: This should be done when we create a CFG for yul functions, which is not the case yet
+        // for yul_fn_no in &ns.contracts[contract_no].yul_functions {
+        //     ns.yul_functions[*yul_fn_no].cfg_no = cfg_no;
+        //     cfg_no += 1;
+        // }
+
         all_cfg.resize(cfg_no, ControlFlowGraph::placeholder());
 
         // clone all_functions so we can pass a mutable reference to generate_cfg
@@ -190,6 +198,10 @@ fn contract(contract_no: usize, ns: &mut Namespace, opt: &Options) {
                 opt,
             )
         }
+
+        // for yul_func_no in &ns.contracts[contract_no].yul_functions {
+        //     // TODO: Generate Yul function CFG
+        // }
 
         // Generate cfg for storage initializers
         let cfg = storage_initializer(contract_no, ns, opt);
@@ -217,7 +229,7 @@ fn storage_initializer(contract_no: usize, ns: &mut Namespace, opt: &Options) ->
     // note the single `:` to prevent a name clash with user-declared functions
     let mut cfg = ControlFlowGraph::new(
         format!("{}:storage_initializer", ns.contracts[contract_no].name),
-        None,
+        ASTFunction::None,
     );
     let mut vartab = Vartable::new(ns.next_id);
 
@@ -289,4 +301,29 @@ fn layout(contract_no: usize, ns: &mut Namespace) {
     }
 
     ns.contracts[contract_no].fixed_layout_size = slot;
+}
+
+trait LLVMName {
+    fn llvm_symbol(&self, ns: &Namespace) -> String;
+}
+
+impl LLVMName for Function {
+    /// Return a unique string for this function which is a valid llvm symbol
+    fn llvm_symbol(&self, ns: &Namespace) -> String {
+        let mut sig = self.name.to_owned();
+
+        if !self.params.is_empty() {
+            sig.push_str("__");
+
+            for (i, p) in self.params.iter().enumerate() {
+                if i > 0 {
+                    sig.push('_');
+                }
+
+                sig.push_str(&p.ty.to_llvm_string(ns));
+            }
+        }
+
+        sig
+    }
 }

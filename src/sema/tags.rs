@@ -95,7 +95,7 @@ pub fn resolve_tags(
 
                     if let Some(no) = returns
                         .iter()
-                        .position(|p| p.name.as_ref().map(|id| id.name.as_str()) == Some(name))
+                        .position(|p| p.id.as_ref().map(|id| id.name.as_str()) == Some(name))
                     {
                         if res.iter().any(|e| e.tag == "return" && e.no == no) {
                             ns.diagnostics.push(Diagnostic::error(

@@ -1,4 +1,4 @@
-use crate::ast::Type;
+use crate::ast::{Parameter, Type};
 use crate::sema::symtable::Symtable;
 use crate::sema::yul::builtin::YulBuiltInFunction;
 use num_bigint::BigInt;
@@ -10,7 +10,8 @@ use std::sync::Arc;
 pub struct InlineAssembly {
     pub loc: pt::Loc,
     pub body: Vec<YulStatement>,
-    pub functions: Vec<YulFunction>,
+    // (begin, end) offset for Namespace::yul_functions
+    pub functions: std::ops::Range<usize>,
 }
 
 #[derive(Debug, Clone)]
@@ -78,18 +79,14 @@ impl CodeLocation for YulExpression {
 pub struct YulFunction {
     pub loc: pt::Loc,
     pub name: String,
-    pub params: Arc<Vec<YulFunctionParameter>>,
-    pub returns: Arc<Vec<YulFunctionParameter>>,
+    pub params: Arc<Vec<Parameter>>,
+    pub returns: Arc<Vec<Parameter>>,
     pub body: Vec<YulStatement>,
     pub symtable: Symtable,
+    pub parent_sol_func: Option<usize>,
+    pub func_no: usize,
     pub called: bool,
-}
-
-#[derive(Debug, Clone)]
-pub struct YulFunctionParameter {
-    pub loc: pt::Loc,
-    pub id: pt::Identifier,
-    pub ty: Type,
+    pub cfg_no: usize,
 }
 
 #[derive(Clone, Debug)]

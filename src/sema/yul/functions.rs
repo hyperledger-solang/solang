@@ -1,7 +1,7 @@
-use crate::ast::{Namespace, Type};
+use crate::ast::{Namespace, Parameter, Type};
 use crate::sema::expression::ExprContext;
 use crate::sema::symtable::{LoopScopes, Symtable, VariableInitializer, VariableUsage};
-use crate::sema::yul::ast::{YulFunction, YulFunctionParameter};
+use crate::sema::yul::ast::YulFunction;
 use crate::sema::yul::block::process_statements;
 use crate::sema::yul::builtin::{parse_builtin_keyword, yul_unsupported_builtin};
 use crate::sema::yul::types::get_type_from_string;
@@ -15,8 +15,8 @@ use std::sync::Arc;
 /// resolving the function's body
 pub struct FunctionHeader {
     pub id: pt::Identifier,
-    pub params: Arc<Vec<YulFunctionParameter>>,
-    pub returns: Arc<Vec<YulFunctionParameter>>,
+    pub params: Arc<Vec<Parameter>>,
+    pub returns: Arc<Vec<Parameter>>,
     pub function_no: usize,
     called: bool,
 }
@@ -26,14 +26,16 @@ pub struct FunctionsTable {
     scopes: LinkedList<HashMap<String, usize>>,
     lookup: Vec<FunctionHeader>,
     counter: usize,
+    offset: usize,
     pub resolved_functions: Vec<YulFunction>,
 }
 
 impl FunctionsTable {
-    pub fn new() -> FunctionsTable {
+    pub fn new(offset: usize) -> FunctionsTable {
         FunctionsTable {
             scopes: LinkedList::new(),
             lookup: vec![],
+            offset,
             counter: 0,
             resolved_functions: vec![],
         }
@@ -61,32 +63,33 @@ impl FunctionsTable {
     pub fn find(&self, name: &str) -> Option<&FunctionHeader> {
         for scope in &self.scopes {
             if let Some(func_idx) = scope.get(name) {
-                return Some(self.lookup.get(*func_idx).unwrap());
+                return Some(self.lookup.get(*func_idx - self.offset).unwrap());
             }
         }
         None
     }
 
-    pub fn get_params_and_returns(
+    pub fn get_params_returns_func_no(
         &self,
         name: &str,
-    ) -> (
-        Arc<Vec<YulFunctionParameter>>,
-        Arc<Vec<YulFunctionParameter>>,
-    ) {
+    ) -> (Arc<Vec<Parameter>>, Arc<Vec<Parameter>>, usize) {
         let header = self.find(name).unwrap();
-        (header.params.clone(), header.returns.clone())
+        (
+            header.params.clone(),
+            header.returns.clone(),
+            header.function_no,
+        )
     }
 
     pub fn get(&self, index: usize) -> Option<&FunctionHeader> {
-        self.lookup.get(index)
+        self.lookup.get(index - self.offset)
     }
 
     pub fn add_function_header(
         &mut self,
         id: &pt::Identifier,
-        params: Vec<YulFunctionParameter>,
-        returns: Vec<YulFunctionParameter>,
+        params: Vec<Parameter>,
+        returns: Vec<Parameter>,
     ) -> Option<Diagnostic> {
         if let Some(func) = self.find(&id.name) {
             return Some(Diagnostic {
@@ -104,13 +107,13 @@ impl FunctionsTable {
         self.scopes
             .back_mut()
             .unwrap()
-            .insert(id.name.clone(), self.counter);
+            .insert(id.name.clone(), self.counter + self.offset);
 
         self.lookup.push(FunctionHeader {
             id: id.clone(),
             params: Arc::new(params),
             returns: Arc::new(returns),
-            function_no: self.counter,
+            function_no: self.counter + self.offset,
             called: false,
         });
         self.counter += 1;
@@ -119,16 +122,13 @@ impl FunctionsTable {
     }
 
     pub fn function_called(&mut self, func_no: usize) {
-        self.lookup.get_mut(func_no).unwrap().called = true;
+        self.lookup.get_mut(func_no - self.offset).unwrap().called = true;
     }
 }
 
 /// Resolve the parameters of a function declaration
-fn process_parameters(
-    parameters: &[pt::YulTypedIdentifier],
-    ns: &mut Namespace,
-) -> Vec<YulFunctionParameter> {
-    let mut params: Vec<YulFunctionParameter> = Vec::with_capacity(parameters.len());
+fn process_parameters(parameters: &[pt::YulTypedIdentifier], ns: &mut Namespace) -> Vec<Parameter> {
+    let mut params: Vec<Parameter> = Vec::with_capacity(parameters.len());
     for item in parameters {
         let ty = match &item.ty {
             Some(identifier) => {
@@ -146,10 +146,13 @@ fn process_parameters(
             None => Type::Uint(256),
         };
 
-        params.push(YulFunctionParameter {
+        params.push(Parameter {
             loc: item.loc,
-            id: item.id.clone(),
             ty,
+            ty_loc: item.ty.as_ref().map(|ty_id| ty_id.loc),
+            indexed: false,
+            id: Some(item.id.clone()),
+            readonly: false,
         });
     }
 
@@ -213,28 +216,32 @@ pub(crate) fn resolve_function_definition(
     local_ctx.yul_function = true;
     functions_table.new_scope();
 
-    let (params, returns) = functions_table.get_params_and_returns(&func_def.id.name);
+    let (params, returns, func_no) = functions_table.get_params_returns_func_no(&func_def.id.name);
 
     for item in &*params {
-        let _ = symtable.exclusive_add(
-            &item.id,
+        let pos = symtable.exclusive_add(
+            item.id.as_ref().unwrap(),
             item.ty.clone(),
             ns,
             VariableInitializer::Yul(true),
             VariableUsage::YulLocalVariable,
             None,
         );
+        symtable.arguments.push(pos);
     }
 
     for item in &*returns {
-        let _ = symtable.exclusive_add(
-            &item.id,
+        if let Some(pos) = symtable.exclusive_add(
+            item.id.as_ref().unwrap(),
             item.ty.clone(),
             ns,
             VariableInitializer::Yul(false),
             VariableUsage::YulLocalVariable,
             None,
-        );
+        ) {
+            // If exclusive add returns None, the return variable's name cannot be used.
+            symtable.returns.push(pos);
+        }
     }
 
     let mut loop_scope = LoopScopes::new();
@@ -257,6 +264,9 @@ pub(crate) fn resolve_function_definition(
         returns,
         body,
         symtable,
+        func_no,
+        parent_sol_func: context.function_no,
         called: false,
+        cfg_no: 0,
     })
 }

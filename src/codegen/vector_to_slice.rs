@@ -1,5 +1,6 @@
 use super::cfg::{BasicBlock, ControlFlowGraph, Instr};
 use super::reaching_definitions::{Def, Transfer};
+use crate::codegen::cfg::ASTFunction;
 use crate::sema::ast::{Expression, Namespace, Type};
 use indexmap::IndexMap;
 use std::collections::HashSet;
@@ -215,7 +216,7 @@ fn update_vectors_to_slice(
                 ),
             };
 
-            if let Some(function_no) = cfg.function_no {
+            if let ASTFunction::SolidityFunction(function_no) = cfg.function_no {
                 if let Some(var) = ns.functions[function_no].symtable.vars.get_mut(&res) {
                     var.slice = true;
                 }
