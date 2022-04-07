@@ -462,7 +462,7 @@ fn gen_abi(contract_no: usize, ns: &ast::Namespace) -> Abi {
                             .returns
                             .iter()
                             .map(|f| StructField {
-                                name: f.name.as_ref().map(|id| id.name.to_owned()),
+                                name: f.id.as_ref().map(|id| id.name.to_owned()),
                                 ty: ty_to_abi(&f.ty, ns, &mut abi).ty,
                             })
                             .collect();

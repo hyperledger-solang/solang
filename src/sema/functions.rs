@@ -868,9 +868,9 @@ pub fn resolve_params(
 
                 params.push(Parameter {
                     loc: *loc,
-                    name: p.name.clone(),
+                    id: p.name.clone(),
                     ty,
-                    ty_loc,
+                    ty_loc: Some(ty_loc),
                     indexed: false,
                     readonly: false,
                 });
@@ -979,9 +979,9 @@ pub fn resolve_returns(
 
                 resolved_returns.push(Parameter {
                     loc: *loc,
-                    name: r.name.clone(),
+                    id: r.name.clone(),
                     ty,
-                    ty_loc,
+                    ty_loc: Some(ty_loc),
                     indexed: false,
                     readonly: false,
                 });
@@ -1017,17 +1017,17 @@ fn signatures() {
         vec![
             Parameter {
                 loc: pt::Loc::Implicit,
-                name: None,
+                id: None,
                 ty: Type::Uint(8),
-                ty_loc: pt::Loc::Implicit,
+                ty_loc: None,
                 indexed: false,
                 readonly: false,
             },
             Parameter {
                 loc: pt::Loc::Implicit,
-                name: None,
+                id: None,
                 ty: Type::Address(false),
-                ty_loc: pt::Loc::Implicit,
+                ty_loc: None,
                 indexed: false,
                 readonly: false,
             },

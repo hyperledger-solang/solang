@@ -3,7 +3,7 @@ use crate::codegen::cfg::ControlFlowGraph;
 pub use crate::parser::diagnostics::*;
 use crate::parser::pt;
 use crate::parser::pt::{CodeLocation, OptionalCodeLocation};
-use crate::sema::yul::ast::InlineAssembly;
+use crate::sema::yul::ast::{InlineAssembly, YulFunction};
 use crate::Target;
 use num_bigint::BigInt;
 use num_rational::BigRational;
@@ -138,16 +138,17 @@ impl fmt::Display for EnumDecl {
 pub struct Parameter {
     pub loc: pt::Loc,
     // The name can empty (e.g. in an event field or unnamed parameter/return)
-    pub name: Option<pt::Identifier>,
+    pub id: Option<pt::Identifier>,
     pub ty: Type,
-    pub ty_loc: pt::Loc,
+    // Yul function parameters may not have a type identifier
+    pub ty_loc: Option<pt::Loc>,
     pub indexed: bool,
     pub readonly: bool,
 }
 
 impl Parameter {
     pub fn name_as_str(&self) -> &str {
-        if let Some(name) = &self.name {
+        if let Some(name) = &self.id {
             name.name.as_str()
         } else {
             ""
@@ -190,8 +191,8 @@ pub struct Function {
     pub signature: String,
     pub mutability: Mutability,
     pub visibility: pt::Visibility,
-    pub params: Vec<Parameter>,
-    pub returns: Vec<Parameter>,
+    pub params: Arc<Vec<Parameter>>,
+    pub returns: Arc<Vec<Parameter>>,
     // constructor arguments for base contracts, only present on constructors
     pub bases: BTreeMap<usize, (pt::Loc, usize, Vec<Expression>)>,
     // modifiers for functions
@@ -245,8 +246,8 @@ impl Function {
             signature,
             mutability,
             visibility,
-            params,
-            returns,
+            params: Arc::new(params),
+            returns: Arc::new(returns),
             bases: BTreeMap::new(),
             modifiers: Vec::new(),
             is_virtual: false,
@@ -291,25 +292,6 @@ impl Function {
     /// Is this function accessable only from same contract
     pub fn is_private(&self) -> bool {
         matches!(self.visibility, pt::Visibility::Private(_))
-    }
-
-    /// Return a unique string for this function which is a valid llvm symbol
-    pub fn llvm_symbol(&self, ns: &Namespace) -> String {
-        let mut sig = self.name.to_owned();
-
-        if !self.params.is_empty() {
-            sig.push_str("__");
-
-            for (i, p) in self.params.iter().enumerate() {
-                if i > 0 {
-                    sig.push('_');
-                }
-
-                sig.push_str(&p.ty.to_llvm_string(ns));
-            }
-        }
-
-        sig
     }
 
     /// Print the function type, contract name, and name
@@ -423,6 +405,8 @@ pub struct Namespace {
     pub contracts: Vec<Contract>,
     /// All functions
     pub functions: Vec<Function>,
+    /// Yul functions
+    pub yul_functions: Vec<YulFunction>,
     /// Global constants
     pub constants: Vec<Variable>,
     /// address length in bytes
@@ -468,6 +452,7 @@ pub struct Contract {
     pub functions: Vec<usize>,
     pub all_functions: BTreeMap<usize, usize>,
     pub virtual_functions: HashMap<String, usize>,
+    pub yul_functions: Vec<usize>,
     pub variables: Vec<Variable>,
     // List of contracts this contract instantiates
     pub creates: Vec<usize>,

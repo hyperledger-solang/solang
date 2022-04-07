@@ -1097,8 +1097,8 @@ fn try_catch(
                         .iter()
                         .map(|ty| Parameter {
                             ty: ty.clone(),
-                            name: None,
-                            ty_loc: pt::Loc::Codegen,
+                            id: None,
+                            ty_loc: Some(pt::Loc::Codegen),
                             loc: pt::Loc::Codegen,
                             indexed: false,
                             readonly: false,

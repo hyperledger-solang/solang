@@ -81,7 +81,7 @@ impl SolanaTarget {
             .iter()
             .enumerate()
             .find(|(_, cfg)| cfg.ty == pt::FunctionTy::Constructor && cfg.public)
-            .map(|(cfg_no, cfg)| (binary.functions[&cfg_no], &cfg.params));
+            .map(|(cfg_no, cfg)| (binary.functions[&cfg_no], &*cfg.params));
 
         let mut functions = HashMap::new();
 
@@ -169,7 +169,7 @@ impl SolanaTarget {
                     .iter()
                     .enumerate()
                     .find(|(_, cfg)| cfg.ty == pt::FunctionTy::Constructor && cfg.public)
-                    .map(|(cfg_no, cfg)| (binary.functions[&cfg_no], &cfg.params));
+                    .map(|(cfg_no, cfg)| (binary.functions[&cfg_no], &*cfg.params));
 
                 let mut functions = HashMap::new();
 
@@ -2781,7 +2781,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         ];
 
         if let Some(function_no) = constructor_no {
-            for param in &ns.functions[function_no].params {
+            for param in &*ns.functions[function_no].params {
                 tys.push(param.ty.clone());
             }
         };

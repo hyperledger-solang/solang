@@ -5328,7 +5328,7 @@ fn named_struct_literal(
         fields.resize(args.len(), Expression::Poison);
         for a in args {
             match struct_def.fields.iter().enumerate().find(|(_, f)| {
-                f.name.as_ref().map(|id| id.name.as_str()) == Some(a.name.name.as_str())
+                f.id.as_ref().map(|id| id.name.as_str()) == Some(a.name.name.as_str())
             }) {
                 Some((i, f)) => {
                     let expr = expression(

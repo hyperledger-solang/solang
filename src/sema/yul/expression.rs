@@ -1,7 +1,7 @@
-use crate::ast::{Namespace, Symbol, Type};
+use crate::ast::{Namespace, Parameter, Symbol, Type};
 use crate::sema::expression::{unescape, ExprContext};
 use crate::sema::symtable::{Symtable, VariableUsage};
-use crate::sema::yul::ast::{YulExpression, YulFunctionParameter, YulSuffix};
+use crate::sema::yul::ast::{YulExpression, YulSuffix};
 use crate::sema::yul::builtin::{parse_builtin_keyword, yul_unsupported_builtin};
 use crate::sema::yul::functions::FunctionsTable;
 use crate::sema::yul::types::{
@@ -364,13 +364,13 @@ pub(crate) fn resolve_function_call(
             return Err(());
         }
 
-        let default_builtin_parameter = YulFunctionParameter {
+        let default_builtin_parameter = Parameter {
             loc: Loc::Builtin,
-            id: Identifier {
-                loc: Loc::Builtin,
-                name: "".to_string(),
-            },
+            id: None,
             ty: Type::Uint(256),
+            ty_loc: None,
+            indexed: false,
+            readonly: false,
         };
 
         for item in &resolved_arguments {
@@ -422,7 +422,7 @@ pub(crate) fn resolve_function_call(
 
 /// Check if the provided argument is compatible with the declared parameters of a function.
 fn check_function_argument(
-    parameter: &YulFunctionParameter,
+    parameter: &Parameter,
     argument: &YulExpression,
     function_table: &FunctionsTable,
     ns: &mut Namespace,

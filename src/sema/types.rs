@@ -295,7 +295,7 @@ pub fn struct_decl(
 
         if let Some(other) = fields
             .iter()
-            .find(|f| f.name.as_ref().map(|id| id.name.as_str()) == Some(field.name.name.as_str()))
+            .find(|f| f.id.as_ref().map(|id| id.name.as_str()) == Some(field.name.name.as_str()))
         {
             ns.diagnostics.push(Diagnostic::error_with_note(
                 field.name.loc,
@@ -330,12 +330,12 @@ pub fn struct_decl(
 
         fields.push(Parameter {
             loc: field.loc,
-            name: Some(pt::Identifier {
+            id: Some(pt::Identifier {
                 name: field.name.name.to_string(),
                 loc: field.name.loc,
             }),
             ty,
-            ty_loc: field.ty.loc(),
+            ty_loc: Some(field.ty.loc()),
             indexed: false,
             readonly: false,
         });
@@ -406,7 +406,7 @@ fn event_decl(
         let name = if let Some(name) = &field.name {
             if let Some(other) = fields
                 .iter()
-                .find(|f| f.name.as_ref().map(|id| id.name.as_str()) == Some(name.name.as_str()))
+                .find(|f| f.id.as_ref().map(|id| id.name.as_str()) == Some(name.name.as_str()))
             {
                 ns.diagnostics.push(Diagnostic::error_with_note(
                     name.loc,
@@ -437,9 +437,9 @@ fn event_decl(
 
         fields.push(Parameter {
             loc: field.loc,
-            name,
+            id: name,
             ty,
-            ty_loc: field.ty.loc(),
+            ty_loc: Some(field.ty.loc()),
             indexed: field.indexed,
             readonly: false,
         });

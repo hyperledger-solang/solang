@@ -1,9 +1,9 @@
 #![cfg(test)]
 
-use crate::ast::{Namespace, Symbol, Type, Variable};
+use crate::ast::{Namespace, Parameter, Symbol, Type, Variable};
 use crate::sema::expression::ExprContext;
 use crate::sema::symtable::{Symtable, VariableInitializer, VariableUsage};
-use crate::sema::yul::ast::{YulExpression, YulFunctionParameter, YulSuffix};
+use crate::sema::yul::ast::{YulExpression, YulSuffix};
 use crate::sema::yul::builtin::YulBuiltInFunction;
 use crate::sema::yul::expression::{check_type, resolve_yul_expression};
 use crate::sema::yul::functions::FunctionsTable;
@@ -29,7 +29,7 @@ fn resolve_bool_literal() {
         yul_function: false,
     };
     let mut symtable = Symtable::new();
-    let mut function_table = FunctionsTable::new();
+    let mut function_table = FunctionsTable::new(0);
 
     let mut ns = Namespace::new(Target::Solana);
     let expr = pt::YulExpression::BoolLiteral(
@@ -77,7 +77,7 @@ fn resolve_number_literal() {
         yul_function: false,
     };
     let mut symtable = Symtable::new();
-    let mut function_table = FunctionsTable::new();
+    let mut function_table = FunctionsTable::new(0);
 
     let loc = Loc::File(0, 3, 5);
     let mut ns = Namespace::new(Target::Solana);
@@ -137,7 +137,7 @@ fn resolve_hex_number_literal() {
         yul_function: false,
     };
     let mut symtable = Symtable::new();
-    let mut function_table = FunctionsTable::new();
+    let mut function_table = FunctionsTable::new(0);
 
     let mut ns = Namespace::new(Target::Ewasm);
     let loc = Loc::File(0, 3, 5);
@@ -188,7 +188,7 @@ fn resolve_hex_string_literal() {
         yul_function: false,
     };
     let mut symtable = Symtable::new();
-    let mut function_table = FunctionsTable::new();
+    let mut function_table = FunctionsTable::new(0);
 
     let mut ns = Namespace::new(Target::Ewasm);
     let loc = Loc::File(0, 3, 5);
@@ -259,7 +259,7 @@ fn resolve_string_literal() {
         yul_function: false,
     };
     let mut symtable = Symtable::new();
-    let mut function_table = FunctionsTable::new();
+    let mut function_table = FunctionsTable::new(0);
 
     let mut ns = Namespace::new(Target::Solana);
     let loc = Loc::File(0, 3, 5);
@@ -295,7 +295,7 @@ fn resolve_variable_local() {
         yul_function: false,
     };
     let mut symtable = Symtable::new();
-    let mut function_table = FunctionsTable::new();
+    let mut function_table = FunctionsTable::new(0);
     let mut ns = Namespace::new(Target::Ewasm);
     let loc = Loc::File(1, 2, 3);
 
@@ -373,7 +373,7 @@ fn resolve_variable_contract() {
         yul_function: false,
     };
     let mut symtable = Symtable::new();
-    let mut function_table = FunctionsTable::new();
+    let mut function_table = FunctionsTable::new(0);
     let mut ns = Namespace::new(Target::Ewasm);
     let loc = Loc::File(0, 2, 3);
     let mut contract = ast::Contract::new("test", ContractTy::Contract(loc), vec![], loc);
@@ -530,7 +530,7 @@ fn function_call() {
         yul_function: false,
     };
     let mut symtable = Symtable::new();
-    let mut function_table = FunctionsTable::new();
+    let mut function_table = FunctionsTable::new(0);
     function_table.new_scope();
     let mut ns = Namespace::new(Target::Ewasm);
     let loc = Loc::File(0, 2, 3);
@@ -685,7 +685,7 @@ fn check_arguments() {
         yul_function: false,
     };
     let mut symtable = Symtable::new();
-    let mut function_table = FunctionsTable::new();
+    let mut function_table = FunctionsTable::new(0);
     function_table.new_scope();
     let mut ns = Namespace::new(Target::Ewasm);
     let loc = Loc::File(0, 2, 3);
@@ -706,21 +706,27 @@ fn check_arguments() {
         },
         vec![],
         vec![
-            YulFunctionParameter {
+            Parameter {
                 loc,
-                id: Identifier {
+                id: Some(Identifier {
                     loc,
                     name: "ret1".to_string(),
-                },
+                }),
                 ty: Type::Uint(256),
+                ty_loc: None,
+                indexed: false,
+                readonly: false,
             },
-            YulFunctionParameter {
+            Parameter {
                 loc,
-                id: Identifier {
+                id: Some(Identifier {
                     loc,
                     name: "ret2".to_string(),
-                },
+                }),
                 ty: Type::Uint(256),
+                ty_loc: None,
+                indexed: false,
+                readonly: false,
             },
         ],
     );
@@ -813,7 +819,7 @@ fn test_member_access() {
         yul_function: false,
     };
     let mut symtable = Symtable::new();
-    let mut function_table = FunctionsTable::new();
+    let mut function_table = FunctionsTable::new(0);
     let mut ns = Namespace::new(Target::Ewasm);
     let loc = Loc::File(0, 2, 3);
 

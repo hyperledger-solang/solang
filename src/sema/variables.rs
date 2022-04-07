@@ -380,10 +380,10 @@ pub fn var_decl(
                 visibility,
                 params,
                 vec![Parameter {
-                    name: None,
+                    id: None,
                     loc: s.name.loc,
                     ty: ty.clone(),
-                    ty_loc: s.ty.loc(),
+                    ty_loc: Some(s.ty.loc()),
                     indexed: false,
                     readonly: false,
                 }],
@@ -447,10 +447,10 @@ fn collect_parameters<'a>(
             );
 
             params.push(Parameter {
-                name: None,
+                id: None,
                 loc: pt::Loc::Implicit,
                 ty: key.as_ref().clone(),
-                ty_loc: pt::Loc::Implicit,
+                ty_loc: None,
                 indexed: false,
                 readonly: false,
             });
@@ -477,10 +477,10 @@ fn collect_parameters<'a>(
                 ty = ty.storage_array_elem();
 
                 params.push(Parameter {
-                    name: None,
+                    id: None,
                     loc: pt::Loc::Implicit,
                     ty: Type::Uint(256),
-                    ty_loc: pt::Loc::Implicit,
+                    ty_loc: None,
                     indexed: false,
                     readonly: false,
                 });

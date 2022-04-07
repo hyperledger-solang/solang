@@ -1,10 +1,17 @@
 use crate::sema::ast::{DestructureField, Expression, Namespace, Statement};
+use indexmap::IndexSet;
+
+#[derive(Default)]
+struct CallList {
+    pub solidity: IndexSet<usize>,
+    pub yul: IndexSet<usize>,
+}
 
 /// After generating the AST for a contract, we should have a list of
 /// all the functions a contract calls in `all_functions`. This should
 /// include any libraries and global functions
 pub fn add_external_functions(contract_no: usize, ns: &mut Namespace) {
-    let mut call_list = Vec::new();
+    let mut call_list = CallList::default();
 
     for var in &ns.contracts[contract_no].variables {
         if let Some(init) = &var.initializer {
@@ -21,10 +28,10 @@ pub fn add_external_functions(contract_no: usize, ns: &mut Namespace) {
     }
 
     // we've now collected all the functions which are called.
-    while !call_list.is_empty() {
-        let mut new_call_list = Vec::new();
+    while !call_list.solidity.is_empty() {
+        let mut new_call_list = CallList::default();
 
-        for function_no in &call_list {
+        for function_no in &call_list.solidity {
             let func = &ns.functions[*function_no];
 
             for stmt in &func.body {
@@ -33,21 +40,32 @@ pub fn add_external_functions(contract_no: usize, ns: &mut Namespace) {
         }
 
         // add functions to contract functions list
-        for function_no in &call_list {
+        for function_no in &call_list.solidity {
             ns.contracts[contract_no]
                 .all_functions
                 .insert(*function_no, usize::MAX);
         }
 
-        call_list.truncate(0);
+        for yul_function_no in &call_list.yul {
+            ns.contracts[contract_no]
+                .yul_functions
+                .push(*yul_function_no);
+        }
 
-        for function_no in new_call_list.into_iter() {
+        call_list.solidity.clear();
+        call_list.yul.clear();
+
+        for function_no in &new_call_list.solidity {
             if !ns.contracts[contract_no]
                 .all_functions
-                .contains_key(&function_no)
+                .contains_key(function_no)
             {
-                call_list.push(function_no);
+                call_list.solidity.insert(*function_no);
             }
+        }
+
+        for yul_func_no in &new_call_list.yul {
+            ns.contracts[contract_no].yul_functions.push(*yul_func_no);
         }
     }
 
@@ -68,17 +86,15 @@ pub fn add_external_functions(contract_no: usize, ns: &mut Namespace) {
     ns.contracts[contract_no].sends_events = send_events;
 }
 
-fn check_expression(expr: &Expression, call_list: &mut Vec<usize>) -> bool {
+fn check_expression(expr: &Expression, call_list: &mut CallList) -> bool {
     if let Expression::InternalFunction { function_no, .. } = expr {
-        if !call_list.contains(function_no) {
-            call_list.push(*function_no);
-        }
+        call_list.solidity.insert(*function_no);
     }
 
     true
 }
 
-fn check_statement(stmt: &Statement, call_list: &mut Vec<usize>) -> bool {
+fn check_statement(stmt: &Statement, call_list: &mut CallList) -> bool {
     match stmt {
         Statement::VariableDecl(_, _, _, Some(expr)) => {
             expr.recurse(call_list, check_expression);
@@ -129,8 +145,10 @@ fn check_statement(stmt: &Statement, call_list: &mut Vec<usize>) -> bool {
         | Statement::Break(_)
         | Statement::Continue(_)
         | Statement::Underscore(_) => (),
-        Statement::Assembly(..) => {
-            unimplemented!("Assembly block codegen not yet ready!");
+        Statement::Assembly(inline_assembly, _) => {
+            for func_no in inline_assembly.functions.start..inline_assembly.functions.end {
+                call_list.yul.insert(func_no);
+            }
         }
     }
 

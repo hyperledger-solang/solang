@@ -25,7 +25,7 @@ mod tests;
 mod types;
 mod unused_variable;
 mod variables;
-mod yul;
+pub mod yul;
 
 use self::contracts::visit_bases;
 use self::eval::eval_const_number;
@@ -339,6 +339,7 @@ impl ast::Namespace {
             events: Vec::new(),
             contracts: Vec::new(),
             functions: Vec::new(),
+            yul_functions: Vec::new(),
             constants: Vec::new(),
             address_length,
             value_length,
@@ -1158,7 +1159,7 @@ impl ast::Namespace {
                     let params = params
                         .into_iter()
                         .map(|p| {
-                            if let Some(name) = p.name {
+                            if let Some(name) = p.id {
                                 diagnostics.push(ast::Diagnostic::error(
                                     name.loc,
                                     "function type parameters cannot be named".to_string(),
@@ -1172,7 +1173,7 @@ impl ast::Namespace {
                     let returns = returns
                         .into_iter()
                         .map(|p| {
-                            if let Some(name) = p.name {
+                            if let Some(name) = p.id {
                                 diagnostics.push(ast::Diagnostic::error(
                                     name.loc,
                                     "function type returns cannot be named".to_string(),

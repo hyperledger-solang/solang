@@ -678,7 +678,7 @@ impl SolangServer {
 
                     let mut param_msg = format!("{} \n\n {} {}(", msg_tg, fnc.ty, fnc.name);
 
-                    for parm in &fnc.params {
+                    for parm in &*fnc.params {
                         let msg = format!(
                             "{}:{}, \n\n",
                             parm.name_as_str(),
@@ -689,7 +689,7 @@ impl SolangServer {
 
                     param_msg = format!("{} ) returns (", param_msg);
 
-                    for ret in &fnc.returns {
+                    for ret in &*fnc.returns {
                         let msg = format!(
                             "{}:{}, ",
                             ret.name_as_str(),
@@ -725,7 +725,7 @@ impl SolangServer {
                     let msg_tg = render(&fnc.tags[..]);
                     let mut param_msg = format!("{} \n\n {} {}(", msg_tg, fnc.ty, fnc.name);
 
-                    for parm in &fnc.params {
+                    for parm in &*fnc.params {
                         let msg = format!(
                             "{}:{}, \n\n",
                             parm.name_as_str(),
@@ -736,7 +736,7 @@ impl SolangServer {
 
                     param_msg = format!("{} ) \n\n returns (", param_msg);
 
-                    for ret in &fnc.returns {
+                    for ret in &*fnc.returns {
                         let msg = format!(
                             "{}:{}, ",
                             ret.name_as_str(),
@@ -897,12 +897,12 @@ impl SolangServer {
                 continue;
             }
 
-            for parm in &fnc.params {
+            for parm in &*fnc.params {
                 let msg = SolangServer::expanded_ty(&parm.ty, ns);
                 lookup_tbl.push((parm.loc.start(), parm.loc.end(), msg));
             }
 
-            for ret in &fnc.returns {
+            for ret in &*fnc.returns {
                 let msg = SolangServer::expanded_ty(&ret.ty, ns);
                 lookup_tbl.push((ret.loc.start(), ret.loc.end(), msg));
             }

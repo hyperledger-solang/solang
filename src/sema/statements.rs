@@ -356,8 +356,8 @@ fn statement(
                     Parameter {
                         loc: decl.loc,
                         ty: var_ty,
-                        ty_loc,
-                        name: Some(decl.name.clone()),
+                        ty_loc: Some(ty_loc),
+                        id: Some(decl.name.clone()),
                         indexed: false,
                         readonly: false,
                     },
@@ -1042,7 +1042,7 @@ fn emit_event(
                 for i in 0..params_len {
                     let param = ns.events[*event_no].fields[i].clone();
 
-                    if param.name.is_none() {
+                    if param.id.is_none() {
                         temp_diagnostics.push(Diagnostic::error(
                         *loc,
                         format!(
@@ -1247,9 +1247,9 @@ fn destructure(
                         pos,
                         Parameter {
                             loc: *loc,
-                            name: Some(name.clone()),
+                            id: Some(name.clone()),
                             ty,
-                            ty_loc,
+                            ty_loc: Some(ty_loc),
                             indexed: false,
                             readonly: false,
                         },
@@ -1937,8 +1937,8 @@ fn try_catch(
                             Parameter {
                                 loc: param.0,
                                 ty: ret_ty,
-                                ty_loc,
-                                name: Some(name.clone()),
+                                ty_loc: Some(ty_loc),
+                                id: Some(name.clone()),
                                 indexed: false,
                                 readonly: false,
                             },
@@ -1950,9 +1950,9 @@ fn try_catch(
                         Parameter {
                             loc: param.0,
                             ty: ret_ty,
-                            ty_loc,
+                            ty_loc: Some(ty_loc),
                             indexed: false,
-                            name: None,
+                            id: None,
                             readonly: false,
                         },
                     ));
@@ -2031,8 +2031,8 @@ fn try_catch(
                     let mut result = Parameter {
                         loc: param.loc,
                         ty: Type::DynamicBytes,
-                        ty_loc,
-                        name: None,
+                        ty_loc: Some(ty_loc),
+                        id: None,
                         indexed: false,
                         readonly: false,
                     };
@@ -2048,7 +2048,7 @@ fn try_catch(
                         ) {
                             ns.check_shadowing(context.file_no, context.contract_no, name);
                             catch_param_pos = Some(pos);
-                            result.name = Some(name.clone());
+                            result.id = Some(name.clone());
                         }
                     }
 
@@ -2112,8 +2112,8 @@ fn try_catch(
                 let mut error_param = Parameter {
                     loc: id.loc,
                     ty: Type::String,
-                    ty_loc,
-                    name: None,
+                    ty_loc: Some(ty_loc),
+                    id: None,
                     indexed: false,
                     readonly: false,
                 };
@@ -2130,7 +2130,7 @@ fn try_catch(
                         ns.check_shadowing(context.file_no, context.contract_no, name);
 
                         error_pos = Some(pos);
-                        error_param.name = Some(name.clone());
+                        error_param.id = Some(name.clone());
                     }
                 }
 

@@ -1,7 +1,7 @@
 use super::ast::*;
 use crate::parser::pt;
 use crate::sema::symtable::Symtable;
-use crate::sema::yul::ast::{YulBlock, YulExpression, YulFunction, YulStatement};
+use crate::sema::yul::ast::{YulBlock, YulExpression, YulStatement};
 use crate::sema::yul::builtin::YulBuiltInFunction;
 use solang_parser::pt::Loc;
 
@@ -157,7 +157,7 @@ impl Dot {
         if !func.params.is_empty() {
             let mut labels = vec![String::from("parameters")];
 
-            for param in &func.params {
+            for param in &*func.params {
                 labels.push(format!(
                     "{} {}",
                     param.ty.to_string(ns),
@@ -176,7 +176,7 @@ impl Dot {
         if !func.returns.is_empty() {
             let mut labels = vec![String::from("returns")];
 
-            for param in &func.returns {
+            for param in &*func.returns {
                 labels.push(format!(
                     "{} {}",
                     param.ty.to_string(ns),
@@ -1540,13 +1540,12 @@ impl Dot {
 
                     let mut local_parent = parent;
 
-                    for n in 0..inline_assembly.functions.len() {
+                    for n in inline_assembly.functions.start..inline_assembly.functions.end {
                         self.add_yul_function(
                             n,
-                            &inline_assembly.functions,
                             ns,
                             local_parent,
-                            format!("func def #{}", n),
+                            format!("func def #{}", inline_assembly.functions.end - n),
                         );
                     }
 
@@ -1556,7 +1555,6 @@ impl Dot {
                             item,
                             local_parent,
                             format!("statement #{}", item_no),
-                            &inline_assembly.functions,
                             &func.symtable,
                             ns,
                         );
@@ -1570,14 +1568,13 @@ impl Dot {
     fn add_yul_function(
         &mut self,
         func_no: usize,
-        avail_functions: &[YulFunction],
         ns: &Namespace,
         parent: usize,
         parent_rel: String,
     ) {
         let labels = vec![
-            format!("function definition {}", avail_functions[func_no].name),
-            ns.loc_to_string(&avail_functions[func_no].loc),
+            format!("function definition {}", ns.yul_functions[func_no].name),
+            ns.loc_to_string(&ns.yul_functions[func_no].loc),
         ];
 
         let func_node = self.add_node(
@@ -1587,12 +1584,12 @@ impl Dot {
         );
 
         let mut local_parent = func_node;
-        for (item_no, item) in (*avail_functions[func_no].params).iter().enumerate() {
+        for (item_no, item) in (*ns.yul_functions[func_no].params).iter().enumerate() {
             let labels = vec![
                 format!(
                     "function parameter {}: {}",
                     item.ty.to_string(ns),
-                    item.id.name
+                    item.id.as_ref().unwrap().name,
                 ),
                 ns.loc_to_string(&item.loc),
             ];
@@ -1604,12 +1601,12 @@ impl Dot {
         }
 
         local_parent = func_node;
-        for (item_no, item) in (*avail_functions[func_no].returns).iter().enumerate() {
+        for (item_no, item) in (*ns.yul_functions[func_no].returns).iter().enumerate() {
             let labels = vec![
                 format!(
                     "return parameter {}: {}",
                     item.ty.to_string(ns),
-                    item.id.name
+                    item.id.as_ref().unwrap().name
                 ),
                 ns.loc_to_string(&item.loc),
             ];
@@ -1621,13 +1618,12 @@ impl Dot {
         }
 
         local_parent = func_node;
-        for (item_no, item) in avail_functions[func_no].body.iter().enumerate() {
+        for (item_no, item) in ns.yul_functions[func_no].body.iter().enumerate() {
             local_parent = self.add_yul_statement(
                 item,
                 local_parent,
                 format!("statement #{}", item_no),
-                avail_functions,
-                &avail_functions[func_no].symtable,
+                &ns.yul_functions[func_no].symtable,
                 ns,
             );
         }
@@ -1637,7 +1633,6 @@ impl Dot {
         &mut self,
         expr: &YulExpression,
         symtable: &Symtable,
-        avail_functions: &[YulFunction],
         ns: &Namespace,
         parent: usize,
         parent_rel: String,
@@ -1715,28 +1710,10 @@ impl Dot {
                 self.add_storage_variable(loc, ty, contract, var_no, parent, parent_rel, ns);
             }
             YulExpression::BuiltInCall(loc, builtin_ty, args) => {
-                self.add_yul_builtin_call(
-                    loc,
-                    builtin_ty,
-                    args,
-                    parent,
-                    parent_rel,
-                    avail_functions,
-                    symtable,
-                    ns,
-                );
+                self.add_yul_builtin_call(loc, builtin_ty, args, parent, parent_rel, symtable, ns);
             }
             YulExpression::FunctionCall(loc, func_no, args) => {
-                self.add_yul_function_call(
-                    loc,
-                    func_no,
-                    args,
-                    parent,
-                    parent_rel,
-                    avail_functions,
-                    symtable,
-                    ns,
-                );
+                self.add_yul_function_call(loc, func_no, args, parent, parent_rel, symtable, ns);
             }
             YulExpression::MemberAccess(loc, member, suffix) => {
                 let labels = vec![
@@ -1750,14 +1727,7 @@ impl Dot {
                     Some(parent_rel),
                 );
 
-                self.add_yul_expression(
-                    member,
-                    symtable,
-                    avail_functions,
-                    ns,
-                    node,
-                    "parent".to_string(),
-                );
+                self.add_yul_expression(member, symtable, ns, node, "parent".to_string());
             }
         }
     }
@@ -1829,33 +1799,18 @@ impl Dot {
         statement: &YulStatement,
         parent: usize,
         parent_rel: String,
-        avail_functions: &[YulFunction],
         symtable: &Symtable,
         ns: &Namespace,
     ) -> usize {
         match statement {
-            YulStatement::FunctionCall(loc, _, func_no, args) => self.add_yul_function_call(
-                loc,
-                func_no,
-                args,
-                parent,
-                parent_rel,
-                avail_functions,
-                symtable,
-                ns,
-            ),
-            YulStatement::BuiltInCall(loc, _, builtin_ty, args) => self.add_yul_builtin_call(
-                loc,
-                builtin_ty,
-                args,
-                parent,
-                parent_rel,
-                avail_functions,
-                symtable,
-                ns,
-            ),
+            YulStatement::FunctionCall(loc, _, func_no, args) => {
+                self.add_yul_function_call(loc, func_no, args, parent, parent_rel, symtable, ns)
+            }
+            YulStatement::BuiltInCall(loc, _, builtin_ty, args) => {
+                self.add_yul_builtin_call(loc, builtin_ty, args, parent, parent_rel, symtable, ns)
+            }
             YulStatement::Block(block) => {
-                self.add_yul_block(block, parent, parent_rel, avail_functions, symtable, ns)
+                self.add_yul_block(block, parent, parent_rel, symtable, ns)
             }
             YulStatement::VariableDeclaration(loc, _, declared_vars, initializer) => {
                 let labels = vec![
@@ -1889,14 +1844,7 @@ impl Dot {
                 }
 
                 if let Some(init) = initializer {
-                    self.add_yul_expression(
-                        init,
-                        symtable,
-                        avail_functions,
-                        ns,
-                        node,
-                        "init".to_string(),
-                    );
+                    self.add_yul_expression(init, symtable, ns, node, "init".to_string());
                 }
 
                 node
@@ -1911,24 +1859,10 @@ impl Dot {
                 );
 
                 for (item_no, item) in lhs.iter().enumerate() {
-                    self.add_yul_expression(
-                        item,
-                        symtable,
-                        avail_functions,
-                        ns,
-                        node,
-                        format!("rhs #{}", item_no),
-                    );
+                    self.add_yul_expression(item, symtable, ns, node, format!("rhs #{}", item_no));
                 }
 
-                self.add_yul_expression(
-                    rhs,
-                    symtable,
-                    avail_functions,
-                    ns,
-                    node,
-                    "lhs".to_string(),
-                );
+                self.add_yul_expression(rhs, symtable, ns, node, "lhs".to_string());
                 node
             }
             YulStatement::IfBlock(loc, _, condition, block) => {
@@ -1936,22 +1870,8 @@ impl Dot {
 
                 let node = self.add_node(Node::new("if", labels), Some(parent), Some(parent_rel));
 
-                self.add_yul_expression(
-                    condition,
-                    symtable,
-                    avail_functions,
-                    ns,
-                    node,
-                    "cond".to_string(),
-                );
-                self.add_yul_block(
-                    block,
-                    node,
-                    "if-block".to_string(),
-                    avail_functions,
-                    symtable,
-                    ns,
-                );
+                self.add_yul_expression(condition, symtable, ns, node, "cond".to_string());
+                self.add_yul_block(block, node, "if-block".to_string(), symtable, ns);
                 node
             }
             YulStatement::Switch {
@@ -1966,14 +1886,7 @@ impl Dot {
                 let node =
                     self.add_node(Node::new("switch", labels), Some(parent), Some(parent_rel));
 
-                self.add_yul_expression(
-                    condition,
-                    symtable,
-                    avail_functions,
-                    ns,
-                    node,
-                    "cond".to_string(),
-                );
+                self.add_yul_expression(condition, symtable, ns, node, "cond".to_string());
 
                 for (item_no, item) in cases.iter().enumerate() {
                     let case_block = self.add_node(
@@ -1987,7 +1900,6 @@ impl Dot {
                     self.add_yul_expression(
                         &item.condition,
                         symtable,
-                        avail_functions,
                         ns,
                         case_block,
                         "case-condition".to_string(),
@@ -1996,7 +1908,6 @@ impl Dot {
                         &item.block,
                         case_block,
                         "case block".to_string(),
-                        avail_functions,
                         symtable,
                         ns,
                     );
@@ -2018,7 +1929,6 @@ impl Dot {
                         default_block,
                         default_node,
                         "default block".to_string(),
-                        avail_functions,
                         symtable,
                         ns,
                     );
@@ -2037,35 +1947,13 @@ impl Dot {
 
                 let node = self.add_node(Node::new("for", labels), Some(parent), Some(parent_rel));
 
-                self.add_yul_block(
-                    init_block,
-                    node,
-                    "init block".to_string(),
-                    avail_functions,
-                    symtable,
-                    ns,
-                );
-                self.add_yul_expression(
-                    condition,
-                    symtable,
-                    avail_functions,
-                    ns,
-                    node,
-                    "for condition".to_string(),
-                );
-                self.add_yul_block(
-                    post_block,
-                    node,
-                    "post block".to_string(),
-                    avail_functions,
-                    symtable,
-                    ns,
-                );
+                self.add_yul_block(init_block, node, "init block".to_string(), symtable, ns);
+                self.add_yul_expression(condition, symtable, ns, node, "for condition".to_string());
+                self.add_yul_block(post_block, node, "post block".to_string(), symtable, ns);
                 self.add_yul_block(
                     execution_block,
                     node,
                     "execution block".to_string(),
-                    avail_functions,
                     symtable,
                     ns,
                 );
@@ -2095,7 +1983,6 @@ impl Dot {
         block: &YulBlock,
         mut parent: usize,
         parent_rel: String,
-        avail_functions: &[YulFunction],
         symtable: &Symtable,
         ns: &Namespace,
     ) -> usize {
@@ -2113,7 +2000,6 @@ impl Dot {
                 child_statement,
                 parent,
                 format!("statement #{}", statement_no),
-                avail_functions,
                 symtable,
                 ns,
             );
@@ -2129,12 +2015,11 @@ impl Dot {
         args: &[YulExpression],
         parent: usize,
         parent_rel: String,
-        avail_functions: &[YulFunction],
         symtable: &Symtable,
         ns: &Namespace,
     ) -> usize {
         let labels = vec![
-            format!("yul function call ‘{}‘", avail_functions[*func_no].name),
+            format!("yul function call ‘{}‘", ns.yul_functions[*func_no].name),
             ns.loc_to_string(loc),
         ];
 
@@ -2145,14 +2030,7 @@ impl Dot {
         );
 
         for (arg_no, arg) in args.iter().enumerate() {
-            self.add_yul_expression(
-                arg,
-                symtable,
-                avail_functions,
-                ns,
-                node,
-                format!("arg #{}", arg_no),
-            );
+            self.add_yul_expression(arg, symtable, ns, node, format!("arg #{}", arg_no));
         }
 
         node
@@ -2165,7 +2043,6 @@ impl Dot {
         args: &[YulExpression],
         parent: usize,
         parent_rel: String,
-        avail_functions: &[YulFunction],
         symtable: &Symtable,
         ns: &Namespace,
     ) -> usize {
@@ -2181,14 +2058,7 @@ impl Dot {
         );
 
         for (arg_no, arg) in args.iter().enumerate() {
-            self.add_yul_expression(
-                arg,
-                symtable,
-                avail_functions,
-                ns,
-                node,
-                format!("arg #{}", arg_no),
-            );
+            self.add_yul_expression(arg, symtable, ns, node, format!("arg #{}", arg_no));
         }
 
         node

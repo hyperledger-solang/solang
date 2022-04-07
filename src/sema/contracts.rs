@@ -30,6 +30,7 @@ impl ast::Contract {
             tags,
             functions: Vec::new(),
             all_functions: BTreeMap::new(),
+            yul_functions: Vec::new(),
             virtual_functions: HashMap::new(),
             variables: Vec::new(),
             creates: Vec::new(),
