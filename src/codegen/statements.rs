@@ -7,6 +7,7 @@ use super::{
     cfg::{ControlFlowGraph, Instr},
     vartable::Vartable,
 };
+use crate::codegen::expression::load_storage;
 use crate::codegen::unused_variable::{
     should_remove_assignment, should_remove_variable, SideEffectsCheckParameters,
 };
@@ -927,10 +928,13 @@ fn destructure(
             }
             DestructureField::VariableDecl(res, param) => {
                 // the resolver did not cast the expression
-                let expr = cast(&param.loc, right, &param.ty, true, ns, &mut Vec::new())
+                let mut expr = cast(&param.loc, right, &param.ty, true, ns, &mut Vec::new())
                     .expect("sema should have checked cast");
-                // casts to StorageLoad generate LoadStorage instructions
-                let expr = expression(&expr, cfg, contract_no, Some(func), ns, vartab, opt);
+
+                // casts to StorageLoad should generate LoadStorage instructions
+                if let Expression::StorageLoad(loc, ty, storage) = expr {
+                    expr = load_storage(&loc, &ty, *storage, cfg, vartab, opt);
+                }
 
                 if should_remove_variable(res, func, opt) {
                     continue;
@@ -949,7 +953,7 @@ fn destructure(
                 // the resolver did not cast the expression
                 let loc = left.loc();
 
-                let expr = cast(
+                let mut expr = cast(
                     &loc,
                     right,
                     left.ty().deref_any(),
@@ -958,8 +962,11 @@ fn destructure(
                     &mut Vec::new(),
                 )
                 .expect("sema should have checked cast");
-                // casts to StorageLoad generate LoadStorage instructions
-                let expr = expression(&expr, cfg, contract_no, Some(func), ns, vartab, opt);
+
+                // casts to StorageLoad should generate LoadStorage instructions
+                if let Expression::StorageLoad(loc, ty, storage) = expr {
+                    expr = load_storage(&loc, &ty, *storage, cfg, vartab, opt);
+                }
 
                 if should_remove_assignment(ns, left, func, opt) {
                     continue;
