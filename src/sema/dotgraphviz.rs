@@ -867,23 +867,19 @@ impl Dot {
                 self.add_expression(index, func, ns, node, String::from("index"));
             }
             Expression::StructMember(loc, ty, var, member) => {
-                if let Type::Struct(struct_no) = ty {
-                    let field = &ns.structs[*struct_no].fields[*member];
-                    let node = self.add_node(
-                        Node::new(
-                            "struct member",
-                            vec![
-                                format!("struct member {}", ty.to_string(ns),),
-                                format!("field {} {}", field.ty.to_string(ns), field.name_as_str()),
-                                ns.loc_to_string(loc),
-                            ],
-                        ),
-                        Some(parent),
-                        Some(parent_rel),
-                    );
+                let node = self.add_node(
+                    Node::new(
+                        "structmember",
+                        vec![
+                            format!("struct member #{} {}", member, ty.to_string(ns)),
+                            ns.loc_to_string(loc),
+                        ],
+                    ),
+                    Some(parent),
+                    Some(parent_rel),
+                );
 
-                    self.add_expression(var, func, ns, node, String::from("var"));
-                }
+                self.add_expression(var, func, ns, node, String::from("var"));
             }
 
             Expression::AllocDynamicArray(loc, ty, length, initializer) => {
