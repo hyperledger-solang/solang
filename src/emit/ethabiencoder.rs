@@ -384,7 +384,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
 
                     let len = EncoderBuilder::encoded_dynamic_length(
                         elem.into(),
-                        true,
+                        !field.ty.is_fixed_reference_type(),
                         &field.ty,
                         function,
                         binary,
@@ -858,7 +858,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                 self.encode_ty(
                     binary,
                     ns,
-                    true,
+                    !elem_ty.is_fixed_reference_type(),
                     function,
                     elem_ty.deref_any(),
                     elem.into(),
@@ -1038,7 +1038,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                 self.encode_ty(
                     binary,
                     ns,
-                    true,
+                    !elem_ty.is_fixed_reference_type(),
                     function,
                     elem_ty.deref_any(),
                     elem.into(),
@@ -1246,7 +1246,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                     self.encode_ty(
                         binary,
                         ns,
-                        true,
+                        !field.ty.is_fixed_reference_type(),
                         function,
                         &field.ty,
                         elem.into(),
@@ -1355,7 +1355,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                     self.encode_ty(
                         binary,
                         ns,
-                        true,
+                        !field.ty.is_fixed_reference_type(),
                         function,
                         &field.ty,
                         elem.into(),
@@ -1800,7 +1800,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
 
                 self.encode_packed_ty(
                     binary,
-                    true,
+                    !elem_ty.is_fixed_reference_type(),
                     function,
                     elem_ty.deref_any(),
                     elem.into(),
@@ -1905,7 +1905,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
 
                     self.encode_packed_ty(
                         binary,
-                        true,
+                        !field.ty.is_fixed_reference_type(),
                         function,
                         &field.ty,
                         elem.into(),
@@ -2673,23 +2673,25 @@ impl EthAbiDecoder {
                 let dest;
 
                 if let Some(d) = &dim[0] {
-                    let new = binary
-                        .builder
-                        .build_call(
-                            binary.module.get_function("__malloc").unwrap(),
-                            &[size.into()],
-                            "",
-                        )
-                        .try_as_basic_value()
-                        .left()
-                        .unwrap()
-                        .into_pointer_value();
+                    dest = to.unwrap_or_else(|| {
+                        let new = binary
+                            .builder
+                            .build_call(
+                                binary.module.get_function("__malloc").unwrap(),
+                                &[size.into()],
+                                "",
+                            )
+                            .try_as_basic_value()
+                            .left()
+                            .unwrap()
+                            .into_pointer_value();
 
-                    dest = binary.builder.build_pointer_cast(
-                        new,
-                        llvm_ty.ptr_type(AddressSpace::Generic),
-                        "dest",
-                    );
+                        binary.builder.build_pointer_cast(
+                            new,
+                            llvm_ty.ptr_type(AddressSpace::Generic),
+                            "dest",
+                        )
+                    });
 
                     // if the struct has dynamic fields, read offset from dynamic section and
                     // read fields from there
@@ -2797,7 +2799,7 @@ impl EthAbiDecoder {
                     // in dynamic arrays, offsets are counted from after the array length
                     let base_offset = dataoffset;
 
-                    let llvm_elem_ty = binary.llvm_var(elem_ty.deref_any(), ns);
+                    let llvm_elem_ty = binary.llvm_field_ty(elem_ty.deref_any(), ns);
                     let elem_size = llvm_elem_ty
                         .size_of()
                         .unwrap()
@@ -2871,10 +2873,10 @@ impl EthAbiDecoder {
                             );
                         },
                     );
-                }
 
-                if let Some(to) = to {
-                    binary.builder.build_store(to, dest);
+                    if let Some(to) = to {
+                        binary.builder.build_store(to, dest);
+                    }
                 }
 
                 dest.into()
@@ -2887,23 +2889,25 @@ impl EthAbiDecoder {
                     .unwrap()
                     .const_cast(binary.context.i32_type(), false);
 
-                let new = binary
-                    .builder
-                    .build_call(
-                        binary.module.get_function("__malloc").unwrap(),
-                        &[size.into()],
-                        "",
-                    )
-                    .try_as_basic_value()
-                    .left()
-                    .unwrap()
-                    .into_pointer_value();
+                let struct_pointer = to.unwrap_or_else(|| {
+                    let new = binary
+                        .builder
+                        .build_call(
+                            binary.module.get_function("__malloc").unwrap(),
+                            &[size.into()],
+                            "",
+                        )
+                        .try_as_basic_value()
+                        .left()
+                        .unwrap()
+                        .into_pointer_value();
 
-                let struct_pointer = binary.builder.build_pointer_cast(
-                    new,
-                    llvm_ty.ptr_type(AddressSpace::Generic),
-                    &ns.structs[*n].name,
-                );
+                    binary.builder.build_pointer_cast(
+                        new,
+                        llvm_ty.ptr_type(AddressSpace::Generic),
+                        &ns.structs[*n].name,
+                    )
+                });
 
                 // if the struct has dynamic fields, read offset from dynamic section and
                 // read fields from there
@@ -2967,10 +2971,6 @@ impl EthAbiDecoder {
                 // if the struct is not dynamic, we have read the fields from fixed section so update
                 if !ty.is_dynamic(ns) {
                     *offset = dataoffset;
-                }
-
-                if let Some(to) = to {
-                    binary.builder.build_store(to, struct_pointer);
                 }
 
                 struct_pointer.into()

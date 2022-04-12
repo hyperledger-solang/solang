@@ -2201,6 +2201,12 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                         )
                     };
 
+                    let val = if field.ty.is_fixed_reference_type() {
+                        binary.builder.build_load(val.into_pointer_value(), "elem")
+                    } else {
+                        val
+                    };
+
                     binary.builder.build_store(elem, val);
                 }
 
@@ -2293,6 +2299,12 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                     function,
                     ns,
                 );
+
+                let val = if elem_ty.deref_memory().is_fixed_reference_type() {
+                    binary.builder.build_load(val.into_pointer_value(), "elem")
+                } else {
+                    val
+                };
 
                 binary.builder.build_store(elem, val);
 
@@ -2554,7 +2566,11 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                 binary,
                 elem_ty.deref_any(),
                 &mut offset_val,
-                binary.builder.build_load(elem, "array_elem"),
+                if elem_ty.deref_memory().is_fixed_reference_type() {
+                    elem.into()
+                } else {
+                    binary.builder.build_load(elem, "array_elem")
+                },
                 function,
                 ns,
             );
@@ -2598,7 +2614,11 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                     binary,
                     &field.ty,
                     &mut offset,
-                    binary.builder.build_load(elem, field.name_as_str()),
+                    if field.ty.is_fixed_reference_type() {
+                        elem.into()
+                    } else {
+                        binary.builder.build_load(elem, field.name_as_str())
+                    },
                     function,
                     ns,
                 );

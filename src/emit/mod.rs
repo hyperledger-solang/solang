@@ -416,7 +416,7 @@ pub trait TargetRuntime<'a> {
     ) -> BasicValueEnum<'a> {
         match ty {
             Type::Ref(ty) => self.storage_load_slot(bin, ty, slot, slot_ptr, function, ns),
-            Type::Array(_, dim) => {
+            Type::Array(elem_ty, dim) => {
                 if let Some(d) = &dim[0] {
                     let llvm_ty = bin.llvm_type(ty.deref_any(), ns);
                     // LLVMSizeOf() produces an i64
@@ -462,6 +462,12 @@ pub trait TargetRuntime<'a> {
                             let val =
                                 self.storage_load_slot(bin, &ty, slot, slot_ptr, function, ns);
 
+                            let val = if ty.deref_memory().is_fixed_reference_type() {
+                                bin.builder.build_load(val.into_pointer_value(), "elem")
+                            } else {
+                                val
+                            };
+
                             bin.builder.build_store(elem, val);
                         },
                     );
@@ -478,10 +484,10 @@ pub trait TargetRuntime<'a> {
                         "size",
                     );
 
-                    let elem_ty = bin.llvm_var(&ty.array_elem(), ns);
+                    let llvm_elem_ty = bin.llvm_field_ty(elem_ty, ns);
 
                     let elem_size = bin.builder.build_int_truncate(
-                        elem_ty.size_of().unwrap(),
+                        llvm_elem_ty.size_of().unwrap(),
                         bin.context.i32_type(),
                         "size_of",
                     );
@@ -526,37 +532,18 @@ pub trait TargetRuntime<'a> {
                         size,
                         &mut elem_slot,
                         |elem_no: IntValue<'a>, slot: &mut IntValue<'a>| {
-                            let index = bin.builder.build_int_mul(elem_no, elem_size, "");
+                            let elem = bin.array_subscript(ty, dest, elem_no, ns);
 
-                            let entry = self.storage_load_slot(
-                                bin,
-                                &ty.array_elem(),
-                                slot,
-                                slot_ptr,
-                                function,
-                                ns,
-                            );
+                            let entry =
+                                self.storage_load_slot(bin, elem_ty, slot, slot_ptr, function, ns);
 
-                            let data = unsafe {
-                                bin.builder.build_gep(
-                                    dest,
-                                    &[
-                                        bin.context.i32_type().const_zero(),
-                                        bin.context.i32_type().const_int(2, false),
-                                        index,
-                                    ],
-                                    "data",
-                                )
+                            let entry = if elem_ty.deref_memory().is_fixed_reference_type() {
+                                bin.builder.build_load(entry.into_pointer_value(), "elem")
+                            } else {
+                                entry
                             };
 
-                            bin.builder.build_store(
-                                bin.builder.build_pointer_cast(
-                                    data,
-                                    elem_ty.ptr_type(AddressSpace::Generic),
-                                    "entry",
-                                ),
-                                entry,
-                            );
+                            bin.builder.build_store(elem, entry);
                         },
                     );
                     // load
@@ -602,6 +589,13 @@ pub trait TargetRuntime<'a> {
                             ],
                             field.name_as_str(),
                         )
+                    };
+
+                    let val = if field.ty.deref_memory().is_fixed_reference_type() {
+                        bin.builder
+                            .build_load(val.into_pointer_value(), field.name_as_str())
+                    } else {
+                        val
                     };
 
                     bin.builder.build_store(elem, val);
@@ -731,7 +725,9 @@ pub trait TargetRuntime<'a> {
                                 )
                             };
 
-                            if ty.is_reference_type(ns) {
+                            if ty.is_reference_type(ns)
+                                && !ty.deref_memory().is_fixed_reference_type()
+                            {
                                 elem = bin.builder.build_load(elem, "").into_pointer_value();
                             }
 
@@ -761,7 +757,7 @@ pub trait TargetRuntime<'a> {
                     let slot_ty = Type::Uint(256);
 
                     // details about our array elements
-                    let elem_ty = bin.llvm_var(&ty.array_elem(), ns);
+                    let elem_ty = bin.llvm_field_ty(&ty.array_elem(), ns);
                     let elem_size = bin.builder.build_int_truncate(
                         elem_ty.size_of().unwrap(),
                         bin.context.i32_type(),
@@ -836,7 +832,9 @@ pub trait TargetRuntime<'a> {
                                 "entry",
                             );
 
-                            if ty.is_reference_type(ns) {
+                            if ty.is_reference_type(ns)
+                                && !ty.deref_memory().is_fixed_reference_type()
+                            {
                                 elem = bin.builder.build_load(elem, "").into_pointer_value();
                             }
 
@@ -894,7 +892,7 @@ pub trait TargetRuntime<'a> {
                         )
                     };
 
-                    if field.ty.is_reference_type(ns) {
+                    if field.ty.is_reference_type(ns) && !field.ty.is_fixed_reference_type() {
                         elem = bin
                             .builder
                             .build_load(elem, field.name_as_str())
@@ -1189,8 +1187,8 @@ pub trait TargetRuntime<'a> {
                     "struct_literal",
                 );
 
-                for (i, f) in exprs.iter().enumerate() {
-                    let elem = unsafe {
+                for (i, expr) in exprs.iter().enumerate() {
+                    let elemptr = unsafe {
                         bin.builder.build_gep(
                             s,
                             &[
@@ -1201,8 +1199,15 @@ pub trait TargetRuntime<'a> {
                         )
                     };
 
-                    bin.builder
-                        .build_store(elem, self.expression(bin, f, vartab, function, ns));
+                    let elem = self.expression(bin, expr, vartab, function, ns);
+
+                    let elem = if expr.ty().is_fixed_reference_type() {
+                        bin.builder.build_load(elem.into_pointer_value(), "elem")
+                    } else {
+                        elem
+                    };
+
+                    bin.builder.build_store(elemptr, elem);
                 }
 
                 s.into()
@@ -2017,7 +2022,7 @@ pub trait TargetRuntime<'a> {
 
                 let value = bin.builder.build_load(ptr, "");
 
-                if ty.is_reference_type(ns) {
+                if ty.is_reference_type(ns) && !ty.is_fixed_reference_type() {
                     // if the pointer is null, it needs to be allocated
                     let allocation_needed = bin
                         .builder
@@ -2355,7 +2360,7 @@ pub trait TargetRuntime<'a> {
                 } else if ty.is_dynamic_memory() {
                     let array = self.expression(bin, a, vartab, function, ns);
 
-                    let ty = bin.llvm_var(elem_ty, ns);
+                    let ty = bin.llvm_field_ty(elem_ty, ns);
 
                     let mut array_index = self
                         .expression(bin, i, vartab, function, ns)
@@ -2507,8 +2512,15 @@ pub trait TargetRuntime<'a> {
                     let elemptr =
                         unsafe { bin.builder.build_gep(array, &ind, &format!("elemptr{}", i)) };
 
-                    bin.builder
-                        .build_store(elemptr, self.expression(bin, expr, vartab, function, ns));
+                    let elem = self.expression(bin, expr, vartab, function, ns);
+
+                    let elem = if expr.ty().is_fixed_reference_type() {
+                        bin.builder.build_load(elem.into_pointer_value(), "elem")
+                    } else {
+                        elem
+                    };
+
+                    bin.builder.build_store(elemptr, elem);
                 }
 
                 array.into()
@@ -3338,7 +3350,7 @@ pub trait TargetRuntime<'a> {
 
             if let Some(ref cfg_phis) = cfg_bb.phis {
                 for v in cfg_phis {
-                    let ty = bin.llvm_var(&cfg.vars[v].ty, ns);
+                    let ty = bin.llvm_var_ty(&cfg.vars[v].ty, ns);
 
                     phis.insert(*v, bin.builder.build_phi(ty, &cfg.vars[v].id.name));
                 }
@@ -3615,41 +3627,19 @@ pub trait TargetRuntime<'a> {
                         array,
                         value,
                     } => {
-                        let a = w.vars[array].value.into_pointer_value();
-                        let len = unsafe {
-                            bin.builder.build_gep(
-                                a,
-                                &[
-                                    bin.context.i32_type().const_zero(),
-                                    bin.context.i32_type().const_zero(),
-                                ],
-                                "array_len",
-                            )
-                        };
-                        let a = bin.builder.build_pointer_cast(
-                            a,
-                            bin.context.i8_type().ptr_type(AddressSpace::Generic),
-                            "a",
-                        );
+                        let arr = w.vars[array].value;
+
                         let llvm_ty = bin.llvm_type(ty, ns);
 
+                        let elem_ty = ty.array_elem();
+
                         // Calculate total size for reallocation
-                        let elem_ty = match ty {
-                            Type::Array(..) => match bin.llvm_type(&ty.array_elem(), ns) {
-                                elem @ BasicTypeEnum::StructType(_) => {
-                                    // We don't store structs directly in the array, instead we store references to structs
-                                    elem.ptr_type(AddressSpace::Generic).as_basic_type_enum()
-                                }
-                                elem => elem,
-                            },
-                            Type::DynamicBytes => bin.context.i8_type().into(),
-                            _ => unreachable!(),
-                        };
-                        let elem_size = elem_ty
+                        let llvm_elem_ty = bin.llvm_field_ty(&elem_ty, ns);
+                        let elem_size = llvm_elem_ty
                             .size_of()
                             .unwrap()
                             .const_cast(bin.context.i32_type(), false);
-                        let len = bin.builder.build_load(len, "array_len").into_int_value();
+                        let len = bin.vector_len(arr);
                         let new_len = bin.builder.build_int_add(
                             len,
                             bin.context.i32_type().const_int(1, false),
@@ -3670,7 +3660,16 @@ pub trait TargetRuntime<'a> {
                             .builder
                             .build_call(
                                 bin.module.get_function("__realloc").unwrap(),
-                                &[a.into(), size.into()],
+                                &[
+                                    bin.builder
+                                        .build_pointer_cast(
+                                            arr.into_pointer_value(),
+                                            bin.context.i8_type().ptr_type(AddressSpace::Generic),
+                                            "a",
+                                        )
+                                        .into(),
+                                    size.into(),
+                                ],
                                 "",
                             )
                             .try_as_basic_value()
@@ -3699,11 +3698,17 @@ pub trait TargetRuntime<'a> {
                         let value = self.expression(bin, value, &w.vars, function, ns);
                         let elem_ptr = bin.builder.build_pointer_cast(
                             slot_ptr,
-                            elem_ty.ptr_type(AddressSpace::Generic),
+                            llvm_elem_ty.ptr_type(AddressSpace::Generic),
                             "element pointer",
                         );
+                        let value = if elem_ty.is_fixed_reference_type() {
+                            w.vars.get_mut(res).unwrap().value = elem_ptr.into();
+                            bin.builder.build_load(value.into_pointer_value(), "elem")
+                        } else {
+                            w.vars.get_mut(res).unwrap().value = value;
+                            value
+                        };
                         bin.builder.build_store(elem_ptr, value);
-                        w.vars.get_mut(res).unwrap().value = value;
 
                         // Update the len and size field of the vector struct
                         let len_ptr = unsafe {
@@ -3779,19 +3784,11 @@ pub trait TargetRuntime<'a> {
                         bin.builder.position_at_end(pop);
                         let llvm_ty = bin.llvm_type(ty, ns);
 
+                        let elem_ty = ty.array_elem();
+                        let llvm_elem_ty = bin.llvm_field_ty(&elem_ty, ns);
+
                         // Calculate total size for reallocation
-                        let elem_ty = match ty {
-                            Type::Array(..) => match bin.llvm_type(&ty.array_elem(), ns) {
-                                elem @ BasicTypeEnum::StructType(_) => {
-                                    // We don't store structs directly in the array, instead we store references to structs
-                                    elem.ptr_type(AddressSpace::Generic).as_basic_type_enum()
-                                }
-                                elem => elem,
-                            },
-                            Type::DynamicBytes => bin.context.i8_type().into(),
-                            _ => unreachable!(),
-                        };
-                        let elem_size = elem_ty
+                        let elem_size = llvm_elem_ty
                             .size_of()
                             .unwrap()
                             .const_cast(bin.context.i32_type(), false);
@@ -3824,11 +3821,15 @@ pub trait TargetRuntime<'a> {
                         };
                         let slot_ptr = bin.builder.build_pointer_cast(
                             slot_ptr,
-                            elem_ty.ptr_type(AddressSpace::Generic),
+                            llvm_elem_ty.ptr_type(AddressSpace::Generic),
                             "slot_ptr",
                         );
-                        let ret_val = bin.builder.build_load(slot_ptr, "");
-                        w.vars.get_mut(res).unwrap().value = ret_val;
+                        if elem_ty.is_fixed_reference_type() {
+                            w.vars.get_mut(res).unwrap().value = slot_ptr.into();
+                        } else {
+                            let ret_val = bin.builder.build_load(slot_ptr, "");
+                            w.vars.get_mut(res).unwrap().value = ret_val;
+                        }
 
                         // Reallocate and reassign the array pointer
                         let a = bin.builder.build_pointer_cast(
@@ -3939,13 +3940,13 @@ pub trait TargetRuntime<'a> {
                                 parms.push(if ns.target == Target::Solana {
                                     bin.build_alloca(
                                         function,
-                                        bin.llvm_var(&v.ty, ns),
+                                        bin.llvm_var_ty(&v.ty, ns),
                                         v.name_as_str(),
                                     )
                                     .into()
                                 } else {
                                     bin.builder
-                                        .build_alloca(bin.llvm_var(&v.ty, ns), v.name_as_str())
+                                        .build_alloca(bin.llvm_var_ty(&v.ty, ns), v.name_as_str())
                                         .into()
                                 });
                             }
@@ -4027,7 +4028,8 @@ pub trait TargetRuntime<'a> {
                         if !res.is_empty() {
                             for ty in returns.iter() {
                                 parms.push(
-                                    bin.build_alloca(function, bin.llvm_var(ty, ns), "").into(),
+                                    bin.build_alloca(function, bin.llvm_var_ty(ty, ns), "")
+                                        .into(),
                                 );
                             }
                         }
@@ -6159,7 +6161,7 @@ impl<'a> Binary<'a> {
         // function parameters
         let mut args = params
             .iter()
-            .map(|ty| self.llvm_var(ty, ns).into())
+            .map(|ty| self.llvm_var_ty(ty, ns).into())
             .collect::<Vec<BasicMetadataTypeEnum>>();
 
         // add return values
@@ -6247,7 +6249,7 @@ impl<'a> Binary<'a> {
     }
 
     /// Return the llvm type for a variable holding the type, not the type itself
-    fn llvm_var(&self, ty: &Type, ns: &Namespace) -> BasicTypeEnum<'a> {
+    fn llvm_var_ty(&self, ty: &Type, ns: &Namespace) -> BasicTypeEnum<'a> {
         let llvm_ty = self.llvm_type(ty, ns);
         match ty.deref_memory() {
             Type::Struct(_) | Type::Array(..) | Type::DynamicBytes | Type::String => {
@@ -6259,7 +6261,7 @@ impl<'a> Binary<'a> {
 
     /// Default empty value
     fn default_value(&self, ty: &Type, ns: &Namespace) -> BasicValueEnum<'a> {
-        let llvm_ty = self.llvm_var(ty, ns);
+        let llvm_ty = self.llvm_var_ty(ty, ns);
 
         // const_zero() on BasicTypeEnum yet. Should be coming to inkwell soon
         if llvm_ty.is_pointer_type() {
@@ -6268,6 +6270,20 @@ impl<'a> Binary<'a> {
             self.address_type(ns).const_zero().into()
         } else {
             llvm_ty.into_int_type().const_zero().into()
+        }
+    }
+
+    /// Return the llvm type for field in struct or array
+    fn llvm_field_ty(&self, ty: &Type, ns: &Namespace) -> BasicTypeEnum<'a> {
+        let llvm_ty = self.llvm_type(ty, ns);
+        match ty.deref_memory() {
+            Type::Array(_, dim) if dim[0].is_none() => {
+                llvm_ty.ptr_type(AddressSpace::Generic).as_basic_type_enum()
+            }
+            Type::DynamicBytes | Type::String => {
+                llvm_ty.ptr_type(AddressSpace::Generic).as_basic_type_enum()
+            }
+            _ => llvm_ty,
         }
     }
 
@@ -6300,7 +6316,7 @@ impl<'a> Binary<'a> {
                     self.module.get_struct_type("struct.vector").unwrap().into()
                 }
                 Type::Array(base_ty, dims) => {
-                    let ty = self.llvm_var(base_ty, ns);
+                    let ty = self.llvm_field_ty(base_ty, ns);
 
                     let mut dims = dims.iter();
 
@@ -6328,7 +6344,7 @@ impl<'a> Binary<'a> {
                         &ns.structs[*n]
                             .fields
                             .iter()
-                            .map(|f| self.llvm_var(&f.ty, ns))
+                            .map(|f| self.llvm_field_ty(&f.ty, ns))
                             .collect::<Vec<BasicTypeEnum>>(),
                         false,
                     )
@@ -6573,7 +6589,7 @@ impl<'a> Binary<'a> {
                     }
                 } else {
                     let elem_ty = array_ty.array_deref();
-                    let llvm_elem_ty = self.llvm_var(&elem_ty, ns);
+                    let llvm_elem_ty = self.llvm_field_ty(&elem_ty, ns);
 
                     // dynamic length array or vector
                     let index = self.builder.build_int_mul(
