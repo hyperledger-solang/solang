@@ -1832,6 +1832,12 @@ pub fn assign_single(
             let dest = expression(left, cfg, contract_no, func, ns, vartab, opt);
             let right = expression(right, cfg, contract_no, func, ns, vartab, opt);
 
+            let right = if !left_ty.is_contract_storage() && right.ty().is_fixed_reference_type() {
+                Expression::Load(pt::Loc::Codegen, right.ty(), Box::new(right))
+            } else {
+                right
+            };
+
             cfg.add(
                 vartab,
                 Instr::Set {

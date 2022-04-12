@@ -804,6 +804,31 @@ impl Type {
         }
     }
 
+    /// Is this a reference type of fixed size
+    pub fn is_fixed_reference_type(&self) -> bool {
+        match self {
+            Type::Bool => false,
+            Type::Address(_) => false,
+            Type::Int(_) => false,
+            Type::Uint(_) => false,
+            Type::Rational => false,
+            Type::Bytes(_) => false,
+            Type::Enum(_) => false,
+            Type::Struct(_) => true,
+            Type::Array(_, dims) => dims[0].is_some(),
+            Type::DynamicBytes => false,
+            Type::String => false,
+            Type::Mapping(..) => false,
+            Type::Contract(_) => false,
+            Type::Ref(_) => false,
+            Type::StorageRef(..) => false,
+            Type::InternalFunction { .. } => false,
+            Type::ExternalFunction { .. } => false,
+            Type::Slice => false,
+            _ => unreachable!("{:?}", self),
+        }
+    }
+
     /// Given an array, return the type of its elements
     #[must_use]
     pub fn array_elem(&self) -> Self {
@@ -812,6 +837,7 @@ impl Type {
                 Type::Array(ty.clone(), dim[..dim.len() - 1].to_vec())
             }
             Type::Array(ty, dim) if dim.len() == 1 => *ty.clone(),
+            Type::DynamicBytes => Type::Bytes(1),
             _ => panic!("not an array"),
         }
     }
