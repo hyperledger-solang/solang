@@ -167,7 +167,7 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 25]> = Lazy::new(|| {
             args: vec![],
             ret: vec![Type::Uint(64)],
             target: vec![Target::default_substrate(), Target::Ewasm],
-            doc: "Return remaing gas left in current call",
+            doc: "Return remaining gas left in current call",
             constant: false,
         },
         Prototype {
@@ -593,7 +593,7 @@ static BUILTIN_METHODS: Lazy<[Prototype; 25]> = Lazy::new(|| {
             args: vec![Type::Uint(32)],
             ret: vec![Type::Uint(64)],
             target: vec![],
-            doc: "Reads an unsigned 64-bit integer from the specified offset as ltitle endian",
+            doc: "Reads an unsigned 64-bit integer from the specified offset as little endian",
             constant: false,
         },
         Prototype {
