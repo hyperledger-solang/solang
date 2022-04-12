@@ -31,6 +31,7 @@ use crate::sema::unused_variable::{
 use crate::Target;
 use base58::{FromBase58, FromBase58Error};
 use num_rational::BigRational;
+use solang_parser::diagnostics::Note;
 
 impl Expression {
     /// Return the type for this expression. This assumes the expression has a single value,
@@ -5008,11 +5009,13 @@ pub fn call_position_args(
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Result<Expression, ()> {
     let mut name_matches = 0;
+    let mut name_matches_notes = Vec::new();
     let mut errors = Vec::new();
 
     // Try to resolve as a function call
     for function_no in function_nos {
         let func = &ns.functions[function_no];
+        let func_loc = func.loc;
 
         if func.ty != func_ty {
             continue;
@@ -5032,6 +5035,10 @@ pub fn call_position_args(
                     args.len()
                 ),
             ));
+            name_matches_notes.push(Note {
+                pos: func_loc,
+                message: format!("expects {} arguments, {} provided", params_len, args.len()),
+            });
             continue;
         }
 
@@ -5067,6 +5074,10 @@ pub fn call_position_args(
         }
 
         if !matches {
+            name_matches_notes.push(Note {
+                pos: func_loc,
+                message: "argument types don't match".to_string(),
+            });
             continue;
         }
 
@@ -5079,7 +5090,10 @@ pub fn call_position_args(
                 func.loc,
                 format!("declaration of {} ‘{}’", func.ty, func.name),
             ));
-
+            name_matches_notes.push(Note {
+                pos: func_loc,
+                message: "cannot call private function".to_string(),
+            });
             continue;
         }
 
@@ -5119,9 +5133,10 @@ pub fn call_position_args(
         }
         1 => diagnostics.extend(errors),
         _ => {
-            diagnostics.push(Diagnostic::error(
+            diagnostics.push(Diagnostic::error_with_notes(
                 *loc,
                 format!("cannot find overloaded {} which matches signature", func_ty),
+                name_matches_notes,
             ));
         }
     }
@@ -5157,11 +5172,13 @@ fn function_call_with_named_args(
 
     // Try to resolve as a function call
     let mut name_matches = 0;
+    let mut name_matches_notes = Vec::new();
     let mut errors = Vec::new();
 
     // Try to resolve as a function call
     for function_no in function_nos {
         let func = &ns.functions[function_no];
+        let func_loc = func.loc;
 
         if func.name != id.name || func.ty != pt::FunctionTy::Function {
             continue;
@@ -5180,6 +5197,10 @@ fn function_call_with_named_args(
                     args.len()
                 ),
             ));
+            name_matches_notes.push(Note {
+                pos: func_loc,
+                message: format!("expects {} arguments, {} provided", params_len, args.len()),
+            });
             continue;
         }
 
@@ -5201,6 +5222,10 @@ fn function_call_with_named_args(
                             id.name,
                         ),
                     ));
+                    name_matches_notes.push(Note {
+                        pos: func_loc,
+                        message: format!("missing argument ‘{}’", param.name_as_str(),),
+                    });
                     break;
                 }
             };
@@ -5218,6 +5243,10 @@ fn function_call_with_named_args(
                 Ok(e) => e,
                 Err(()) => {
                     matches = false;
+                    name_matches_notes.push(Note {
+                        pos: func_loc,
+                        message: "argument types don't match".to_string(),
+                    });
                     continue;
                 }
             };
@@ -5226,6 +5255,10 @@ fn function_call_with_named_args(
                 Ok(expr) => cast_args.push(expr),
                 Err(_) => {
                     matches = false;
+                    name_matches_notes.push(Note {
+                        pos: func_loc,
+                        message: "argument types don't match".to_string(),
+                    });
                     continue;
                 }
             }
@@ -5244,7 +5277,10 @@ fn function_call_with_named_args(
                 func.loc,
                 format!("declaration of function ‘{}’", func.name),
             ));
-
+            name_matches_notes.push(Note {
+                pos: func_loc,
+                message: "cannot call private function".to_string(),
+            });
             continue;
         }
 
@@ -5277,9 +5313,10 @@ fn function_call_with_named_args(
         }
         1 => diagnostics.extend(errors),
         _ => {
-            diagnostics.push(Diagnostic::error(
+            diagnostics.push(Diagnostic::error_with_notes(
                 *loc,
                 "cannot find overloaded function which matches signature".to_string(),
+                name_matches_notes,
             ));
         }
     }
