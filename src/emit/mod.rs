@@ -4020,11 +4020,6 @@ pub trait TargetRuntime<'a> {
                             .map(|p| self.expression(bin, p, &w.vars, function, ns).into())
                             .collect::<Vec<BasicMetadataValueEnum>>();
 
-                        // on Solana, we need to pass the accounts parameter around
-                        if let Some(parameters) = bin.parameters {
-                            parms.push(parameters.into());
-                        }
-
                         if !res.is_empty() {
                             for ty in returns.iter() {
                                 parms.push(
@@ -4032,6 +4027,11 @@ pub trait TargetRuntime<'a> {
                                         .into(),
                                 );
                             }
+                        }
+
+                        // on Solana, we need to pass the accounts parameter around
+                        if let Some(parameters) = bin.parameters {
+                            parms.push(parameters.into());
                         }
 
                         let callable = CallableValue::try_from(
@@ -4050,7 +4050,7 @@ pub trait TargetRuntime<'a> {
                         let success = bin.builder.build_int_compare(
                             IntPredicate::EQ,
                             ret.into_int_value(),
-                            bin.context.i32_type().const_zero(),
+                            bin.return_values[&ReturnCode::Success],
                             "success",
                         );
 

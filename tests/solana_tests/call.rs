@@ -277,3 +277,63 @@ fn encode_call() {
 
     assert_eq!(res, vec![Token::Int(U256::from(15))]);
 }
+
+#[test]
+fn internal_function_storage() {
+    let mut vm = build_solidity(
+        r#"
+        contract ft {
+            function(int32,int32) internal returns (int32) func;
+
+            function mul(int32 a, int32 b) internal returns (int32) {
+                return a * b;
+            }
+
+            function add(int32 a, int32 b) internal returns (int32) {
+                return a + b;
+            }
+
+            function set_op(bool action) public {
+                if (action) {
+                    func = mul;
+                } else {
+                    func = add;
+                }
+            }
+
+            function test(int32 a, int32 b) public returns (int32) {
+                return func(a, b);
+            }
+        }"#,
+    );
+
+    vm.constructor("ft", &[], 0);
+
+    let res = vm.function("set_op", &[Token::Bool(true)], &[], 0, None);
+
+    assert_eq!(res, vec![]);
+
+    let res = vm.function(
+        "test",
+        &[Token::Int(U256::from(3)), Token::Int(U256::from(5))],
+        &[],
+        0,
+        None,
+    );
+
+    assert_eq!(res, vec![Token::Int(U256::from(15))]);
+
+    let res = vm.function("set_op", &[Token::Bool(false)], &[], 0, None);
+
+    assert_eq!(res, vec![]);
+
+    let res = vm.function(
+        "test",
+        &[Token::Int(U256::from(3)), Token::Int(U256::from(5))],
+        &[],
+        0,
+        None,
+    );
+
+    assert_eq!(res, vec![Token::Int(U256::from(8))]);
+}
