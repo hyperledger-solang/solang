@@ -128,17 +128,17 @@ Here is a brief description of what we envision for the next versions.
 
 ### V0.2
 
-| Milestone | Status |
-| --------- | ------ |
-| Specify values as "1 sol" and "1e9 lamports" | Not started |
-| Solana SPL tokens compatibility | In progess |
+| Milestone | Status      |
+| --------- |-------------|
+| Specify values as "1 sol" and "1e9 lamports" | In progress |
+| Solana SPL tokens compatibility | In progress |
 
 ### V0.3
 
-| Milestone | Status |
-| --------- | ------ |
+| Milestone | Status      |
+| --------- |-------------|
 | Call Rust contracts from Solidity | Not started |
-| Parse and resolve inline assembly | In progress |
+| Parse and resolve inline assembly | Completed   |
 | Improvements in overflow checking | Not started |
 
 
