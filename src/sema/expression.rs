@@ -153,12 +153,6 @@ impl Expression {
             return Ok(self.clone());
         }
 
-        // First of all, if we need a ref then derefence it
-        if matches!(to, Type::Ref(..)) && !matches!(from, Type::Ref(..)) {
-            return Expression::GetRef(*loc, Type::Ref(Box::new(from)), Box::new(self.clone()))
-                .cast(loc, to, implicit, ns, diagnostics);
-        }
-
         // First of all, if we have a ref then derefence it
         if let Type::Ref(r) = from {
             return if r.is_fixed_reference_type() {
@@ -384,6 +378,16 @@ impl Expression {
 
         #[allow(clippy::comparison_chain)]
         match (&from, &to) {
+            // Solana builtin AccountMeta struct wants a pointer to an address for the pubkey field,
+            // not an address. For this specific field we have a special Expression::GetRef() which
+            // gets the pointer to an address
+            (Type::Address(_), Type::Ref(to)) if matches!(to.as_ref(), Type::Address(..)) => {
+                Ok(Expression::GetRef(
+                    *loc,
+                    Type::Ref(Box::new(from.clone())),
+                    Box::new(self.clone()),
+                ))
+            }
             (Type::Uint(from_width), Type::Enum(enum_no))
             | (Type::Int(from_width), Type::Enum(enum_no)) => {
                 if implicit {

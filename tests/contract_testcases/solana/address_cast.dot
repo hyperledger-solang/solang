@@ -1,0 +1,10 @@
+strict digraph "tests/contract_testcases/solana/address_cast.sol" {
+	contract [label="contract c\ntests/contract_testcases/solana/address_cast.sol:1:1-12"]
+	foo [label="function foo\ncontract: c\ntests/contract_testcases/solana/address_cast.sol:2:2-23\nsignature foo()\nvisibility public\nmutability nonpayable"]
+	diagnostic [label="found contract ‘c’\nlevel Debug\ntests/contract_testcases/solana/address_cast.sol:1:1-12"]
+	diagnostic_6 [label="expression is not assignable\nlevel Error\ntests/contract_testcases/solana/address_cast.sol:6:3-13"]
+	contracts -> contract
+	contract -> foo [label="function"]
+	diagnostics -> diagnostic [label="Debug"]
+	diagnostics -> diagnostic_6 [label="Error"]
+}
