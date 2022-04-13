@@ -45,7 +45,7 @@ contract testTypes {
     let ns = parse(file);
     assert!(assert_message_in_diagnostics(
         &ns.diagnostics,
-        r#"unrecognised token `case', expected "address", "bool", "break", "continue", "for", "function", "if", "leave", "let", "return", "revert", "switch", "{", "}", identifier"#
+        r#"unrecognised token `case', expected "address", "bool", "break", "byte", "continue", "for", "function", "if", "leave", "let", "return", "revert", "switch", "{", "}", identifier"#
     ));
 }
 
@@ -69,7 +69,7 @@ contract testTypes {
     let ns = parse(file);
     assert!(assert_message_in_diagnostics(
         &ns.diagnostics,
-        r#"unrecognised token `default', expected "address", "bool", "break", "continue", "for", "function", "if", "leave", "let", "return", "revert", "switch", "{", "}", identifier"#
+        r#"unrecognised token `default', expected "address", "bool", "break", "byte", "continue", "for", "function", "if", "leave", "let", "return", "revert", "switch", "{", "}", identifier"#
     ));
 }
 
