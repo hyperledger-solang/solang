@@ -1094,3 +1094,19 @@ fn parse_revert_test() {
 
     assert_eq!(actual_parse_tree, expected_parse_tree);
 }
+
+#[test]
+fn parse_byte_function_assembly() {
+    let src = r#"
+    contract ECDSA {
+        function tryRecover() internal pure {
+            assembly {
+                v := byte(0, mload(add(signature, 0x60)))
+            }
+        }
+    }
+        "#;
+
+    let (actual_parse_tree, _) = crate::parse(src, 0).unwrap();
+    assert_eq!(actual_parse_tree.0.len(), 1);
+}
