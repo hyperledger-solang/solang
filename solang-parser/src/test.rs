@@ -1080,10 +1080,10 @@ fn parse_revert_test() {
                         unchecked: false,
                         statements: vec![Statement::Revert(
                             Loc::File(0, 107, 125),
-                            Some(Identifier {
+                            Some(Expression::Variable(Identifier {
                                 loc: Loc::File(0, 114, 123),
                                 name: "BAR_ERROR".to_string(),
-                            }),
+                            })),
                             vec![],
                         )],
                     }),
@@ -1093,4 +1093,24 @@ fn parse_revert_test() {
     ))]);
 
     assert_eq!(actual_parse_tree, expected_parse_tree);
+}
+
+#[test]
+fn parse_various_reverts() {
+    let src = r#"
+    contract ECDSA {
+        function doRevert() internal pure {
+             revert ('meh');
+        }
+        function doRevert2() internal pure {
+             revert IDCAHub.InvalidTokens();
+        }
+        function doRevert3() internal pure {
+             revert InvalidTokens();
+        }
+    }
+        "#;
+
+    let (actual_parse_tree, _) = crate::parse(src, 0).unwrap();
+    assert_eq!(actual_parse_tree.0.len(), 1);
 }
