@@ -1,6 +1,7 @@
 use crate::ast::{Parameter, Type};
 use crate::sema::symtable::Symtable;
 use crate::sema::yul::builtin::YulBuiltInFunction;
+use crate::sema::Recurse;
 use num_bigint::BigInt;
 use solang_parser::pt;
 use solang_parser::pt::{CodeLocation, StorageLocation};
@@ -124,9 +125,9 @@ pub struct CaseBlock {
     pub block: YulBlock,
 }
 
-impl YulExpression {
-    /// Recurse over the expressions
-    pub fn recurse<T>(&self, cx: &mut T, f: fn(expr: &YulExpression, ctx: &mut T) -> bool) {
+impl Recurse for YulExpression {
+    type ArgType = YulExpression;
+    fn recurse<T>(&self, cx: &mut T, f: fn(expr: &YulExpression, ctx: &mut T) -> bool) {
         if !f(self, cx) {
             return;
         }

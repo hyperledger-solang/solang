@@ -1,6 +1,7 @@
 use clap::ArgMatches;
 use serde_json::Value;
 use solang::{
+    codegen,
     codegen::codegen,
     file_resolver::FileResolver,
     parse_and_resolve,
@@ -209,15 +210,15 @@ impl SolangServer {
                 msg = format!("{} {}", msg, _param.name_as_str());
                 if let Some(expr) = ns.var_constants.get(loc) {
                     match expr {
-                        ast::Expression::BytesLiteral(_, ast::Type::Bytes(_), bs)
-                        | ast::Expression::BytesLiteral(_, ast::Type::DynamicBytes, bs) => {
+                        codegen::Expression::BytesLiteral(_, ast::Type::Bytes(_), bs)
+                        | codegen::Expression::BytesLiteral(_, ast::Type::DynamicBytes, bs) => {
                             msg.push_str(&format!(" = hex\"{}\"", hex::encode(&bs)));
                         }
-                        ast::Expression::BytesLiteral(_, ast::Type::String, bs) => {
+                        codegen::Expression::BytesLiteral(_, ast::Type::String, bs) => {
                             msg.push_str(&format!(" = \"{}\"", String::from_utf8_lossy(bs)));
                         }
-                        ast::Expression::NumberLiteral(_, ast::Type::Uint(_), n)
-                        | ast::Expression::NumberLiteral(_, ast::Type::Int(_), n) => {
+                        codegen::Expression::NumberLiteral(_, ast::Type::Uint(_), n)
+                        | codegen::Expression::NumberLiteral(_, ast::Type::Int(_), n) => {
                             msg.push_str(&format!(" = {}", n));
                         }
                         _ => (),
@@ -506,15 +507,15 @@ impl SolangServer {
 
                 if let Some(expr) = ns.var_constants.get(loc) {
                     match expr {
-                        ast::Expression::BytesLiteral(_, ast::Type::Bytes(_), bs)
-                        | ast::Expression::BytesLiteral(_, ast::Type::DynamicBytes, bs) => {
+                        codegen::Expression::BytesLiteral(_, ast::Type::Bytes(_), bs)
+                        | codegen::Expression::BytesLiteral(_, ast::Type::DynamicBytes, bs) => {
                             msg.push_str(&format!(" hex\"{}\"", hex::encode(&bs)));
                         }
-                        ast::Expression::BytesLiteral(_, ast::Type::String, bs) => {
+                        codegen::Expression::BytesLiteral(_, ast::Type::String, bs) => {
                             msg.push_str(&format!(" \"{}\"", String::from_utf8_lossy(bs)));
                         }
-                        ast::Expression::NumberLiteral(_, ast::Type::Uint(_), n)
-                        | ast::Expression::NumberLiteral(_, ast::Type::Int(_), n) => {
+                        codegen::Expression::NumberLiteral(_, ast::Type::Uint(_), n)
+                        | codegen::Expression::NumberLiteral(_, ast::Type::Int(_), n) => {
                             msg.push_str(&format!(" {}", n));
                         }
                         _ => (),
@@ -802,19 +803,6 @@ impl SolangServer {
                 if let Some(space) = space {
                     SolangServer::construct_expr(space, lookup_tbl, symtab, fnc_map, ns);
                 }
-            }
-
-            // Hash table operation expression
-            ast::Expression::Keccak256(_locs, _typ, expr) => {
-                for expp in expr {
-                    SolangServer::construct_expr(expp, lookup_tbl, symtab, fnc_map, ns);
-                }
-                lookup_tbl.push((_locs.start(), _locs.end(), String::from("Keccak256 hash")));
-            }
-
-            ast::Expression::ReturnData(locs) => {
-                let msg = String::from("Return");
-                lookup_tbl.push((locs.start(), locs.end(), msg));
             }
             ast::Expression::Builtin(_locs, _typ, _builtin, expr) => {
                 let msg = SolangServer::construct_builtins(_builtin, ns);

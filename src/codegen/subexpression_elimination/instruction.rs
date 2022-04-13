@@ -2,7 +2,7 @@ use crate::codegen::cfg::Instr;
 use crate::codegen::subexpression_elimination::common_subexpression_tracker::CommonSubExpressionTracker;
 use crate::codegen::subexpression_elimination::AvailableExpression;
 use crate::codegen::subexpression_elimination::{AvailableExpressionSet, AvailableVariable};
-use crate::sema::ast::Expression;
+use crate::codegen::Expression;
 
 impl AvailableExpressionSet {
     /// Check if we can add the expressions of an instruction to the graph

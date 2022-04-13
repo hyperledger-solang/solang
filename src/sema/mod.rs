@@ -1,4 +1,5 @@
 use crate::parser::{parse, pt};
+use crate::sema::ast::RetrieveType;
 use crate::Target;
 use ast::{Diagnostic, Mutability};
 use num_bigint::BigInt;
@@ -1590,4 +1591,10 @@ impl ast::Symbol {
             _ => false,
         }
     }
+}
+
+pub trait Recurse {
+    type ArgType;
+    /// recurse over a structure
+    fn recurse<T>(&self, cx: &mut T, f: fn(expr: &Self::ArgType, ctx: &mut T) -> bool);
 }

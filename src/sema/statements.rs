@@ -1,7 +1,7 @@
 use super::ast::*;
 use super::contracts::is_base;
 use super::expression::{
-    available_functions, call_expr, call_position_args, cast, constructor_named_args, expression,
+    available_functions, call_expr, call_position_args, constructor_named_args, expression,
     function_call_expr, match_constructor_to_args, named_call_expr, named_function_call_expr, new,
     ExprContext, ResolveTo,
 };
@@ -14,6 +14,7 @@ use crate::sema::builtin;
 use crate::sema::symtable::{VariableInitializer, VariableUsage};
 use crate::sema::unused_variable::{assigned_variable, check_function_call, used_variable};
 use crate::sema::yul::resolve_inline_assembly;
+use crate::sema::Recurse;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::sync::Arc;
 
@@ -328,9 +329,8 @@ fn statement(
 
                 used_variable(ns, &expr, symtable);
 
-                Some(Arc::new(cast(
+                Some(Arc::new(expr.cast(
                     &expr.loc(),
-                    expr,
                     &var_ty,
                     true,
                     ns,
@@ -427,7 +427,7 @@ fn statement(
                 ResolveTo::Type(&Type::Bool),
             )?;
             used_variable(ns, &expr, symtable);
-            let cond = cast(&expr.loc(), expr, &Type::Bool, true, ns, diagnostics)?;
+            let cond = expr.cast(&expr.loc(), &Type::Bool, true, ns, diagnostics)?;
 
             symtable.new_scope();
             let mut body_stmts = Vec::new();
@@ -458,7 +458,7 @@ fn statement(
                 ResolveTo::Type(&Type::Bool),
             )?;
             used_variable(ns, &expr, symtable);
-            let cond = cast(&expr.loc(), expr, &Type::Bool, true, ns, diagnostics)?;
+            let cond = expr.cast(&expr.loc(), &Type::Bool, true, ns, diagnostics)?;
 
             symtable.new_scope();
             let mut body_stmts = Vec::new();
@@ -489,7 +489,7 @@ fn statement(
             )?;
             used_variable(ns, &expr, symtable);
 
-            let cond = cast(&expr.loc(), expr, &Type::Bool, true, ns, diagnostics)?;
+            let cond = expr.cast(&expr.loc(), &Type::Bool, true, ns, diagnostics)?;
 
             symtable.new_scope();
             let mut then_stmts = Vec::new();
@@ -623,7 +623,7 @@ fn statement(
                 ResolveTo::Type(&Type::Bool),
             )?;
 
-            let cond = cast(&cond_expr.loc(), expr, &Type::Bool, true, ns, diagnostics)?;
+            let cond = expr.cast(&cond_expr.loc(), &Type::Bool, true, ns, diagnostics)?;
 
             // continue goes to next, and if that does exist, cond
             loops.new_scope();
@@ -937,14 +937,7 @@ fn emit_event(
                     };
                     used_variable(ns, &arg, symtable);
 
-                    match cast(
-                        &arg.loc(),
-                        arg.clone(),
-                        &ty,
-                        true,
-                        ns,
-                        &mut temp_diagnostics,
-                    ) {
+                    match arg.cast(&arg.loc(), &ty, true, ns, &mut temp_diagnostics) {
                         Ok(expr) => cast_args.push(expr),
                         Err(_) => {
                             matches = false;
@@ -1087,7 +1080,7 @@ fn emit_event(
 
                     used_variable(ns, &arg, symtable);
 
-                    match cast(&arg.loc(), arg, &param.ty, true, ns, &mut temp_diagnostics) {
+                    match arg.cast(&arg.loc(), &param.ty, true, ns, &mut temp_diagnostics) {
                         Ok(expr) => cast_args.push(expr),
                         Err(_) => {
                             matches = false;
@@ -1418,9 +1411,8 @@ fn destructure_values(
     for (i, field) in fields.iter().enumerate() {
         if let Some(left_ty) = &left_tys[i] {
             let loc = field.loc().unwrap();
-            let _ = cast(
+            let _ = Expression::FunctionArg(loc, right_tys[i].clone(), i).cast(
                 &loc,
-                Expression::FunctionArg(loc, right_tys[i].clone(), i),
                 left_ty,
                 true,
                 ns,
@@ -1593,7 +1585,7 @@ fn return_with_values(
                     diagnostics,
                     ResolveTo::Type(&return_ty),
                 )?;
-                let expr = cast(loc, expr, &return_ty, true, ns, diagnostics)?;
+                let expr = expr.cast(loc, &return_ty, true, ns, diagnostics)?;
                 used_variable(ns, &expr, symtable);
                 exprs.push(expr);
             }
@@ -1657,9 +1649,8 @@ fn return_with_values(
         .zip(func_returns_tys)
         .enumerate()
         .map(|(i, (expr_return_ty, func_return_ty))| {
-            cast(
+            Expression::FunctionArg(expr_returns.loc(), expr_return_ty, i).cast(
                 &expr_returns.loc(),
-                Expression::FunctionArg(expr_returns.loc(), expr_return_ty, i),
                 &func_return_ty,
                 true,
                 ns,

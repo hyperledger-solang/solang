@@ -1,3 +1,5 @@
+use crate::ast;
+use crate::codegen::Expression;
 use num_bigint::BigInt;
 use num_traits::FromPrimitive;
 use num_traits::One;
@@ -10,7 +12,8 @@ use super::{
     vartable::Vartable,
 };
 use crate::parser::pt;
-use crate::sema::ast::{Expression, Function, Namespace, Type};
+use crate::sema::ast::RetrieveType;
+use crate::sema::ast::{Function, Namespace, Type};
 
 /// Given a storage slot which is the start of the array, calculate the
 /// offset of the array element. This function exists to avoid doing
@@ -67,7 +70,7 @@ pub fn array_offset(
 /// Push() method on dynamic array in storage
 pub fn storage_slots_array_push(
     loc: &pt::Loc,
-    args: &[Expression],
+    args: &[ast::Expression],
     cfg: &mut ControlFlowGraph,
     contract_no: usize,
     func: Option<&Function>,
@@ -81,7 +84,7 @@ pub fn storage_slots_array_push(
 
     let var_expr = expression(&args[0], cfg, contract_no, func, ns, vartab, opt);
 
-    let expr = load_storage(loc, &slot_ty, var_expr.clone(), cfg, vartab, opt);
+    let expr = load_storage(loc, &slot_ty, var_expr.clone(), cfg, vartab);
 
     cfg.add(
         vartab,
@@ -156,7 +159,7 @@ pub fn storage_slots_array_push(
 /// Pop() method on dynamic array in storage
 pub fn storage_slots_array_pop(
     loc: &pt::Loc,
-    args: &[Expression],
+    args: &[ast::Expression],
     return_ty: &Type,
     cfg: &mut ControlFlowGraph,
     contract_no: usize,
@@ -173,7 +176,7 @@ pub fn storage_slots_array_pop(
     let ty = args[0].ty();
     let var_expr = expression(&args[0], cfg, contract_no, func, ns, vartab, opt);
 
-    let expr = load_storage(loc, &length_ty, var_expr.clone(), cfg, vartab, opt);
+    let expr = load_storage(loc, &length_ty, var_expr.clone(), cfg, vartab);
 
     cfg.add(
         vartab,
@@ -254,7 +257,6 @@ pub fn storage_slots_array_pop(
             Expression::Variable(*loc, elem_ty.clone(), entry_pos),
             cfg,
             vartab,
-            opt,
         );
 
         cfg.add(
@@ -294,7 +296,7 @@ pub fn storage_slots_array_pop(
 /// Push() method on array or bytes in storage
 pub fn array_push(
     loc: &pt::Loc,
-    args: &[Expression],
+    args: &[ast::Expression],
     cfg: &mut ControlFlowGraph,
     contract_no: usize,
     func: Option<&Function>,
@@ -342,7 +344,7 @@ pub fn array_push(
 /// Pop() method on array or bytes in storage
 pub fn array_pop(
     loc: &pt::Loc,
-    args: &[Expression],
+    args: &[ast::Expression],
     return_ty: &Type,
     cfg: &mut ControlFlowGraph,
     contract_no: usize,

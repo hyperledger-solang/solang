@@ -1,7 +1,7 @@
 use crate::codegen::cfg::HashTy;
 use crate::parser::pt;
 use crate::sema::ast;
-use crate::Target;
+use crate::{codegen, Target};
 use std::collections::HashMap;
 use std::str;
 
@@ -3322,13 +3322,13 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
     fn builtin<'b>(
         &self,
         binary: &Binary<'b>,
-        expr: &ast::Expression,
+        expr: &codegen::Expression,
         vartab: &HashMap<usize, Variable<'b>>,
         function: FunctionValue<'b>,
         ns: &ast::Namespace,
     ) -> BasicValueEnum<'b> {
         match expr {
-            ast::Expression::Builtin(_, _, ast::Builtin::Timestamp, _) => {
+            codegen::Expression::Builtin(_, _, ast::Builtin::Timestamp, _) => {
                 let parameters = self.sol_parameters(binary);
 
                 let sol_clock = binary.module.get_function("sol_clock").unwrap();
@@ -3354,7 +3354,12 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
 
                 binary.builder.build_load(timestamp, "timestamp")
             }
-            ast::Expression::Builtin(_, _, ast::Builtin::BlockNumber | ast::Builtin::Slot, _) => {
+            codegen::Expression::Builtin(
+                _,
+                _,
+                ast::Builtin::BlockNumber | ast::Builtin::Slot,
+                _,
+            ) => {
                 let parameters = self.sol_parameters(binary);
 
                 let sol_clock = binary.module.get_function("sol_clock").unwrap();
@@ -3377,7 +3382,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
 
                 binary.builder.build_load(slot, "timestamp")
             }
-            ast::Expression::Builtin(_, _, ast::Builtin::Sender, _) => {
+            codegen::Expression::Builtin(_, _, ast::Builtin::Sender, _) => {
                 let parameters = self.sol_parameters(binary);
 
                 let sender = binary
@@ -3399,10 +3404,10 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
 
                 binary.builder.build_load(sender_address, "sender_address")
             }
-            ast::Expression::Builtin(_, _, ast::Builtin::Value, _) => {
+            codegen::Expression::Builtin(_, _, ast::Builtin::Value, _) => {
                 self.value_transferred(binary, ns).into()
             }
-            ast::Expression::Builtin(_, _, ast::Builtin::GetAddress, _) => {
+            codegen::Expression::Builtin(_, _, ast::Builtin::GetAddress, _) => {
                 let parameters = self.sol_parameters(binary);
 
                 let account_id = binary
@@ -3424,7 +3429,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
 
                 binary.builder.build_load(value, "self_address")
             }
-            ast::Expression::Builtin(_, _, ast::Builtin::Calldata, _) => {
+            codegen::Expression::Builtin(_, _, ast::Builtin::Calldata, _) => {
                 let sol_params = self.sol_parameters(binary);
 
                 let input = binary
@@ -3470,7 +3475,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                     .left()
                     .unwrap()
             }
-            ast::Expression::Builtin(_, _, ast::Builtin::Signature, _) => {
+            codegen::Expression::Builtin(_, _, ast::Builtin::Signature, _) => {
                 let sol_params = self.sol_parameters(binary);
 
                 let input = binary
@@ -3502,7 +3507,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                     .left()
                     .unwrap()
             }
-            ast::Expression::Builtin(_, _, ast::Builtin::SignatureVerify, args) => {
+            codegen::Expression::Builtin(_, _, ast::Builtin::SignatureVerify, args) => {
                 assert_eq!(args.len(), 3);
 
                 let address = binary.build_alloca(function, binary.address_type(ns), "address");
@@ -3564,7 +3569,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                     )
                     .into()
             }
-            ast::Expression::Builtin(_, _, ast::Builtin::Balance, args) => {
+            codegen::Expression::Builtin(_, _, ast::Builtin::Balance, args) => {
                 assert_eq!(args.len(), 1);
 
                 let address = binary.build_alloca(function, binary.address_type(ns), "address");
@@ -3604,7 +3609,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
 
                 binary.builder.build_load(lamport, "lamport")
             }
-            ast::Expression::Builtin(_, _, ast::Builtin::Accounts, _) => {
+            codegen::Expression::Builtin(_, _, ast::Builtin::Accounts, _) => {
                 let parameters = self.sol_parameters(binary);
 
                 unsafe {
@@ -3620,7 +3625,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                 }
                 .into()
             }
-            ast::Expression::Builtin(_, _, ast::Builtin::ArrayLength, _) => {
+            codegen::Expression::Builtin(_, _, ast::Builtin::ArrayLength, _) => {
                 let parameters = self.sol_parameters(binary);
 
                 let ka_num = binary
@@ -3635,7 +3640,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                     .build_int_truncate(ka_num, binary.context.i32_type(), "ka_num_32bits")
                     .into()
             }
-            ast::Expression::StructMember(_, _, a, member) => {
+            codegen::Expression::StructMember(_, _, a, member) => {
                 let account_info = self
                     .expression(binary, a, vartab, function, ns)
                     .into_pointer_value();

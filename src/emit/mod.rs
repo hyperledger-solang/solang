@@ -1,7 +1,8 @@
+use crate::codegen::Expression;
 use crate::parser::pt;
+use crate::sema::ast::RetrieveType;
 use crate::sema::ast::{
-    Builtin, BuiltinStruct, CallTy, Contract, Expression, FormatArg, Namespace, Parameter,
-    StringLocation, Type,
+    Builtin, BuiltinStruct, CallTy, Contract, FormatArg, Namespace, Parameter, StringLocation, Type,
 };
 use std::cell::RefCell;
 use std::convert::TryFrom;
@@ -2089,11 +2090,7 @@ pub trait TargetRuntime<'a> {
                     value
                 }
             }
-            Expression::StorageLoad(..) => {
-                // this should be covered by the Instr::LoadStorage instruction; if we reach this
-                // point the code generation is broken.
-                unreachable!();
-            }
+
             Expression::ZeroExt(_, t, e) => {
                 let e = self
                     .expression(bin, e, vartab, function, ns)
@@ -2253,26 +2250,6 @@ pub trait TargetRuntime<'a> {
                     .into_int_value();
 
                 bin.builder.build_not(e, "").into()
-            }
-            Expression::Or(_, l, r) => {
-                let left = self
-                    .expression(bin, l, vartab, function, ns)
-                    .into_int_value();
-                let right = self
-                    .expression(bin, r, vartab, function, ns)
-                    .into_int_value();
-
-                bin.builder.build_or(left, right, "").into()
-            }
-            Expression::And(_, l, r) => {
-                let left = self
-                    .expression(bin, l, vartab, function, ns)
-                    .into_int_value();
-                let right = self
-                    .expression(bin, r, vartab, function, ns)
-                    .into_int_value();
-
-                bin.builder.build_and(left, right, "").into()
             }
             Expression::BitwiseOr(_, _, l, r) => {
                 let left = self
@@ -3108,22 +3085,8 @@ pub trait TargetRuntime<'a> {
             Expression::FormatString(_, args) => {
                 self.format_string(bin, args, vartab, function, ns)
             }
-            Expression::Ternary(..)
-            | Expression::CheckingTrunc(..)
-            | Expression::RationalNumberLiteral(..)
-            | Expression::ConstantVariable(..)
-            | Expression::StorageVariable(..)
-            | Expression::PreDecrement(..)
-            | Expression::PostDecrement(..)
-            | Expression::PreIncrement(..)
-            | Expression::PostIncrement(..)
-            | Expression::Assign(..)
-            | Expression::InternalFunction { .. }
-            | Expression::InternalFunctionCall { .. }
-            | Expression::ExternalFunctionCall { .. }
-            | Expression::ExternalFunctionCallRaw { .. }
-            | Expression::Constructor { .. }
-            | Expression::InterfaceId(..)
+
+            Expression::RationalNumberLiteral(..)
             | Expression::List(..)
             | Expression::Undefined(..)
             | Expression::Poison
@@ -3199,7 +3162,7 @@ pub trait TargetRuntime<'a> {
     fn string_location(
         &self,
         bin: &Binary<'a>,
-        location: &StringLocation,
+        location: &StringLocation<Expression>,
         vartab: &HashMap<usize, Variable<'a>>,
         function: FunctionValue<'a>,
         ns: &Namespace,

@@ -1,6 +1,7 @@
 use super::cfg::{BasicBlock, ControlFlowGraph, Instr};
+use crate::codegen::Expression;
 use crate::parser::pt::Loc;
-use crate::sema::ast::{Expression, Namespace};
+use crate::sema::ast::Namespace;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 

@@ -1,6 +1,7 @@
 use super::cfg::{ControlFlowGraph, Instr};
-use crate::sema::ast::{Expression, Namespace, Type};
-use crate::sema::expression::cast;
+use crate::codegen::Expression;
+use crate::sema::ast::RetrieveType;
+use crate::sema::ast::{Namespace, Type};
 use bitvec::prelude::*;
 use itertools::Itertools;
 use num_bigint::{BigInt, Sign};
@@ -205,7 +206,6 @@ fn expression_reduce(expr: &Expression, vars: &Variables, ns: &mut Namespace) ->
         match expr {
             Expression::Multiply(loc, ty, unchecked, left, right) => {
                 let bits = ty.bits(ns) as usize;
-
                 if bits >= 128 {
                     let left_values = expression_values(left, vars, ns);
                     let right_values = expression_values(right, vars, ns);
@@ -261,28 +261,8 @@ fn expression_reduce(expr: &Expression, vars: &Variables, ns: &mut Namespace) ->
                                         *loc,
                                         Type::Int(64),
                                         *unchecked,
-                                        Box::new(
-                                            cast(
-                                                loc,
-                                                left.as_ref().clone(),
-                                                &Type::Int(64),
-                                                false,
-                                                ns,
-                                                &mut Vec::new(),
-                                            )
-                                            .unwrap(),
-                                        ),
-                                        Box::new(
-                                            cast(
-                                                loc,
-                                                right.as_ref().clone(),
-                                                &Type::Int(64),
-                                                false,
-                                                ns,
-                                                &mut Vec::new(),
-                                            )
-                                            .unwrap(),
-                                        ),
+                                        Box::new(left.as_ref().clone().cast(&Type::Int(64), ns)),
+                                        Box::new(right.as_ref().clone().cast(&Type::Int(64), ns)),
                                     )),
                                 );
                             }
@@ -308,28 +288,8 @@ fn expression_reduce(expr: &Expression, vars: &Variables, ns: &mut Namespace) ->
                                     *loc,
                                     Type::Uint(64),
                                     *unchecked,
-                                    Box::new(
-                                        cast(
-                                            loc,
-                                            left.as_ref().clone(),
-                                            &Type::Uint(64),
-                                            false,
-                                            ns,
-                                            &mut Vec::new(),
-                                        )
-                                        .unwrap(),
-                                    ),
-                                    Box::new(
-                                        cast(
-                                            loc,
-                                            right.as_ref().clone(),
-                                            &Type::Uint(64),
-                                            false,
-                                            ns,
-                                            &mut Vec::new(),
-                                        )
-                                        .unwrap(),
-                                    ),
+                                    Box::new(left.as_ref().clone().cast(&Type::Uint(64), ns)),
+                                    Box::new(right.as_ref().clone().cast(&Type::Uint(64), ns)),
                                 )),
                             );
                         }
@@ -395,28 +355,8 @@ fn expression_reduce(expr: &Expression, vars: &Variables, ns: &mut Namespace) ->
                                     Box::new(Expression::Divide(
                                         *loc,
                                         Type::Int(64),
-                                        Box::new(
-                                            cast(
-                                                loc,
-                                                left.as_ref().clone(),
-                                                &Type::Int(64),
-                                                false,
-                                                ns,
-                                                &mut Vec::new(),
-                                            )
-                                            .unwrap(),
-                                        ),
-                                        Box::new(
-                                            cast(
-                                                loc,
-                                                right.as_ref().clone(),
-                                                &Type::Int(64),
-                                                false,
-                                                ns,
-                                                &mut Vec::new(),
-                                            )
-                                            .unwrap(),
-                                        ),
+                                        Box::new(left.as_ref().clone().cast(&Type::Int(64), ns)),
+                                        Box::new(right.as_ref().clone().cast(&Type::Int(64), ns)),
                                     )),
                                 );
                             }
@@ -438,28 +378,8 @@ fn expression_reduce(expr: &Expression, vars: &Variables, ns: &mut Namespace) ->
                                 Box::new(Expression::Divide(
                                     *loc,
                                     Type::Uint(64),
-                                    Box::new(
-                                        cast(
-                                            loc,
-                                            left.as_ref().clone(),
-                                            &Type::Uint(64),
-                                            false,
-                                            ns,
-                                            &mut Vec::new(),
-                                        )
-                                        .unwrap(),
-                                    ),
-                                    Box::new(
-                                        cast(
-                                            loc,
-                                            right.as_ref().clone(),
-                                            &Type::Uint(64),
-                                            false,
-                                            ns,
-                                            &mut Vec::new(),
-                                        )
-                                        .unwrap(),
-                                    ),
+                                    Box::new(left.as_ref().clone().cast(&Type::Uint(64), ns)),
+                                    Box::new(right.as_ref().clone().cast(&Type::Uint(64), ns)),
                                 )),
                             );
                         }
@@ -523,28 +443,8 @@ fn expression_reduce(expr: &Expression, vars: &Variables, ns: &mut Namespace) ->
                                     Box::new(Expression::Modulo(
                                         *loc,
                                         Type::Int(64),
-                                        Box::new(
-                                            cast(
-                                                loc,
-                                                left.as_ref().clone(),
-                                                &Type::Int(64),
-                                                false,
-                                                ns,
-                                                &mut Vec::new(),
-                                            )
-                                            .unwrap(),
-                                        ),
-                                        Box::new(
-                                            cast(
-                                                loc,
-                                                right.as_ref().clone(),
-                                                &Type::Int(64),
-                                                false,
-                                                ns,
-                                                &mut Vec::new(),
-                                            )
-                                            .unwrap(),
-                                        ),
+                                        Box::new(left.as_ref().clone().cast(&Type::Int(64), ns)),
+                                        Box::new(right.as_ref().clone().cast(&Type::Int(64), ns)),
                                     )),
                                 );
                             }
@@ -566,28 +466,8 @@ fn expression_reduce(expr: &Expression, vars: &Variables, ns: &mut Namespace) ->
                                 Box::new(Expression::Modulo(
                                     *loc,
                                     Type::Uint(64),
-                                    Box::new(
-                                        cast(
-                                            loc,
-                                            left.as_ref().clone(),
-                                            &Type::Uint(64),
-                                            false,
-                                            ns,
-                                            &mut Vec::new(),
-                                        )
-                                        .unwrap(),
-                                    ),
-                                    Box::new(
-                                        cast(
-                                            loc,
-                                            right.as_ref().clone(),
-                                            &Type::Uint(64),
-                                            false,
-                                            ns,
-                                            &mut Vec::new(),
-                                        )
-                                        .unwrap(),
-                                    ),
+                                    Box::new(left.as_ref().clone().cast(&Type::Uint(64), ns)),
+                                    Box::new(right.as_ref().clone().cast(&Type::Uint(64), ns)),
                                 )),
                             );
                         }
@@ -1617,57 +1497,6 @@ fn expression_values(expr: &Expression, vars: &Variables, ns: &Namespace) -> Has
                 })
                 .collect()
         }
-        Expression::Or(_, left, right) => {
-            let left = expression_values(left, vars, ns);
-            let right = expression_values(right, vars, ns);
-
-            left.iter()
-                .cartesian_product(right.iter())
-                .map(|(l, r)| {
-                    let mut known_bits = BitArray::new([0u8; 32]);
-                    let mut value = BitArray::new([0u8; 32]);
-
-                    if l.known_bits[0] && r.known_bits[0] {
-                        known_bits.set(0, true);
-                        value.set(0, l.value[0] || r.value[0]);
-                    } else if (l.known_bits[0] && l.value[0]) || (r.known_bits[0] && r.value[0]) {
-                        known_bits.set(0, true);
-                        value.set(0, true);
-                    }
-
-                    Value {
-                        value,
-                        known_bits,
-                        bits: 1,
-                    }
-                })
-                .collect()
-        }
-        Expression::And(_, left, right) => {
-            let left = expression_values(left, vars, ns);
-            let right = expression_values(right, vars, ns);
-
-            left.iter()
-                .cartesian_product(right.iter())
-                .map(|(l, r)| {
-                    let mut known_bits = BitArray::new([0u8; 32]);
-                    let mut value = BitArray::new([0u8; 32]);
-
-                    if l.known_bits[0] && r.known_bits[0] {
-                        known_bits.set(0, true);
-                        value.set(0, l.value[0] && r.value[0]);
-                    } else if (l.known_bits[0] && !l.value[0]) || (r.known_bits[0] && !r.value[0]) {
-                        known_bits.set(0, true);
-                    }
-
-                    Value {
-                        value,
-                        known_bits,
-                        bits: 1,
-                    }
-                })
-                .collect()
-        }
         Expression::Complement(_, _, expr) => {
             let vals = expression_values(expr, vars, ns);
 
@@ -2628,78 +2457,4 @@ fn expresson_known_bits() {
 
     assert!(v.known_bits[0]);
     assert!(v.value[0]);
-
-    /////////////
-    // test: or
-    /////////////
-    let vars = HashMap::new();
-
-    // true or unknown => true
-    let res = expression_values(
-        &Expression::Or(
-            loc,
-            Box::new(Expression::BoolLiteral(loc, true)),
-            Box::new(Expression::FunctionArg(loc, Type::Bool, 0)),
-        ),
-        &vars,
-        &ns,
-    );
-
-    assert_eq!(res.len(), 1);
-    let v = res.iter().next().unwrap();
-
-    assert!(v.known_bits[0]);
-    assert!(v.value[0]);
-
-    // false or unknown => unknown
-    let res = expression_values(
-        &Expression::Or(
-            loc,
-            Box::new(Expression::BoolLiteral(loc, false)),
-            Box::new(Expression::FunctionArg(loc, Type::Bool, 0)),
-        ),
-        &vars,
-        &ns,
-    );
-
-    assert_eq!(res.len(), 1);
-    let v = res.iter().next().unwrap();
-
-    assert!(!v.known_bits[0]);
-
-    /////////////
-    // test: and
-    /////////////
-    let vars = HashMap::new();
-
-    // true and unknown => unknown
-    let res = expression_values(
-        &Expression::And(
-            loc,
-            Box::new(Expression::BoolLiteral(loc, true)),
-            Box::new(Expression::FunctionArg(loc, Type::Bool, 0)),
-        ),
-        &vars,
-        &ns,
-    );
-
-    assert_eq!(res.len(), 1);
-    let v = res.iter().next().unwrap();
-    assert!(!v.known_bits[0]);
-
-    // false and unknown => false
-    let res = expression_values(
-        &Expression::And(
-            loc,
-            Box::new(Expression::BoolLiteral(loc, false)),
-            Box::new(Expression::FunctionArg(loc, Type::Bool, 0)),
-        ),
-        &vars,
-        &ns,
-    );
-
-    assert_eq!(res.len(), 1);
-    let v = res.iter().next().unwrap();
-    assert!(v.known_bits[0]);
-    assert!(!v.value[0]);
 }

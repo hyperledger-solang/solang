@@ -2,7 +2,7 @@ use crate::codegen::subexpression_elimination::{
     AvailableExpression, AvailableExpressionSet, AvailableVariable, BasicExpression,
     ExpressionType, NodeId,
 };
-use crate::sema::ast::Expression;
+use crate::codegen::Expression;
 use std::cell::RefCell;
 use std::rc::Rc;
 

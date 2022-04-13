@@ -7,16 +7,18 @@ use super::{
     cfg::{ControlFlowGraph, Instr},
     vartable::Vartable,
 };
+use crate::ast;
 use crate::codegen::unused_variable::{
     should_remove_assignment, should_remove_variable, SideEffectsCheckParameters,
 };
+use crate::codegen::Expression;
 use crate::parser::pt;
 use crate::parser::pt::CodeLocation;
+use crate::sema::ast::RetrieveType;
 use crate::sema::ast::{
-    Builtin, CallTy, DestructureField, Expression, Function, Namespace, Parameter, Statement,
-    TryCatch, Type,
+    Builtin, CallTy, DestructureField, Function, Namespace, Parameter, Statement, TryCatch, Type,
 };
-use crate::sema::expression::cast;
+use crate::sema::Recurse;
 use num_traits::Zero;
 use tiny_keccak::{Hasher, Keccak};
 
@@ -102,7 +104,7 @@ pub fn statement(
             }
         }
         Statement::Expression(_, reachable, expr) => {
-            if let Expression::Assign(_, _, left, right) = &expr {
+            if let ast::Expression::Assign(_, _, left, right) = &expr {
                 if should_remove_assignment(ns, left, func, opt) {
                     let mut params = SideEffectsCheckParameters {
                         cfg,
@@ -542,7 +544,7 @@ pub fn statement(
                     match ty {
                         Type::String | Type::DynamicBytes => {
                             let e = expression(
-                                &Expression::Builtin(
+                                &ast::Expression::Builtin(
                                     pt::Loc::Codegen,
                                     vec![Type::Bytes(32)],
                                     Builtin::Keccak256,
@@ -562,11 +564,11 @@ pub fn statement(
                         Type::Struct(_) | Type::Array(..) => {
                             // We should have an AbiEncodePackedPad
                             let e = expression(
-                                &Expression::Builtin(
+                                &ast::Expression::Builtin(
                                     pt::Loc::Codegen,
                                     vec![Type::Bytes(32)],
                                     Builtin::Keccak256,
-                                    vec![Expression::Builtin(
+                                    vec![ast::Expression::Builtin(
                                         pt::Loc::Codegen,
                                         vec![Type::DynamicBytes],
                                         Builtin::AbiEncodePacked,
@@ -631,7 +633,7 @@ pub fn statement(
 
 /// Generate if-then-no-else
 fn if_then(
-    cond: &Expression,
+    cond: &ast::Expression,
     then_stmt: &[Statement],
     func: &Function,
     cfg: &mut ControlFlowGraph,
@@ -691,7 +693,7 @@ fn if_then(
 
 /// Generate if-then-else
 fn if_then_else(
-    cond: &Expression,
+    cond: &ast::Expression,
     then_stmt: &[Statement],
     else_stmt: &[Statement],
     func: &Function,
@@ -779,7 +781,7 @@ fn if_then_else(
 }
 
 fn returns(
-    expr: &Expression,
+    expr: &ast::Expression,
     cfg: &mut ControlFlowGraph,
     contract_no: usize,
     func: &Function,
@@ -791,7 +793,7 @@ fn returns(
     let uncast_values = match expr {
         // Explicitly recurse for ternary expressions.
         // `return a ? b : c` is transformed into pseudo code `a ? return b : return c`
-        Expression::Ternary(_, _, cond, left, right) => {
+        ast::Expression::Ternary(_, _, cond, left, right) => {
             let cond = expression(cond, cfg, contract_no, Some(func), ns, vartab, opt);
 
             let left_block = cfg.new_basic_block("left".to_string());
@@ -817,18 +819,29 @@ fn returns(
             return;
         }
 
-        Expression::Builtin(_, _, Builtin::AbiDecode, _)
-        | Expression::InternalFunctionCall { .. }
-        | Expression::ExternalFunctionCall { .. }
-        | Expression::ExternalFunctionCallRaw { .. } => {
+        ast::Expression::Builtin(_, _, Builtin::AbiDecode, _)
+        | ast::Expression::InternalFunctionCall { .. }
+        | ast::Expression::ExternalFunctionCall { .. }
+        | ast::Expression::ExternalFunctionCallRaw { .. } => {
             emit_function_call(expr, contract_no, cfg, Some(func), ns, vartab, opt)
         }
 
-        Expression::List(_, exprs) => exprs.clone(),
+        ast::Expression::List(_, exprs) => exprs
+            .iter()
+            .map(|e| expression(e, cfg, contract_no, Some(func), ns, vartab, opt))
+            .collect::<Vec<Expression>>(),
 
         // Can be any other expression
         _ => {
-            vec![expr.clone()]
+            vec![expression(
+                expr,
+                cfg,
+                contract_no,
+                Some(func),
+                ns,
+                vartab,
+                opt,
+            )]
         }
     };
 
@@ -836,12 +849,7 @@ fn returns(
         .returns
         .iter()
         .zip(uncast_values.into_iter())
-        .map(|(left, right)| {
-            let right = cast(&left.loc, right, &left.ty, true, ns, &mut Vec::new())
-                .expect("sema should have checked cast");
-            // casts to StorageLoad generate LoadStorage instructions
-            expression(&right, cfg, contract_no, Some(func), ns, vartab, opt)
-        })
+        .map(|(left, right)| destructure_load(&right.loc(), &right.cast(&left.ty, ns), cfg, vartab))
         .collect();
 
     cfg.add(vartab, Instr::Return { value: cast_values });
@@ -849,7 +857,7 @@ fn returns(
 
 fn destructure(
     fields: &[DestructureField],
-    expr: &Expression,
+    expr: &ast::Expression,
     cfg: &mut ControlFlowGraph,
     contract_no: usize,
     func: &Function,
@@ -857,7 +865,7 @@ fn destructure(
     vartab: &mut Vartable,
     opt: &Options,
 ) {
-    if let Expression::Ternary(_, _, cond, left, right) = expr {
+    if let ast::Expression::Ternary(_, _, cond, left, right) = expr {
         let cond = expression(cond, cfg, contract_no, Some(func), ns, vartab, opt);
 
         let left_block = cfg.new_basic_block("left".to_string());
@@ -895,7 +903,7 @@ fn destructure(
     }
 
     let mut values = match expr {
-        Expression::List(_, exprs) => {
+        ast::Expression::List(_, exprs) => {
             let mut values = Vec::new();
 
             for expr in exprs {
@@ -926,11 +934,7 @@ fn destructure(
                 // nothing to do
             }
             DestructureField::VariableDecl(res, param) => {
-                // the resolver did not cast the expression
-                let expr = cast(&param.loc, right, &param.ty, true, ns, &mut Vec::new())
-                    .expect("sema should have checked cast");
-                // casts to StorageLoad generate LoadStorage instructions
-                let expr = expression(&expr, cfg, contract_no, Some(func), ns, vartab, opt);
+                let expr = destructure_load(&param.loc, &right.cast(&param.ty, ns), cfg, vartab);
 
                 if should_remove_variable(res, func, opt) {
                     continue;
@@ -946,29 +950,53 @@ fn destructure(
                 );
             }
             DestructureField::Expression(left) => {
-                // the resolver did not cast the expression
-                let loc = left.loc();
-
-                let expr = cast(
-                    &loc,
-                    right,
-                    left.ty().deref_any(),
-                    true,
-                    ns,
-                    &mut Vec::new(),
-                )
-                .expect("sema should have checked cast");
-                // casts to StorageLoad generate LoadStorage instructions
-                let expr = expression(&expr, cfg, contract_no, Some(func), ns, vartab, opt);
+                let expr = destructure_load(
+                    &left.loc(),
+                    &right.cast(left.ty().deref_any(), ns),
+                    cfg,
+                    vartab,
+                );
 
                 if should_remove_assignment(ns, left, func, opt) {
                     continue;
                 }
 
-                assign_single(left, &expr, cfg, contract_no, Some(func), ns, vartab, opt);
+                assign_single(left, expr, cfg, contract_no, Some(func), ns, vartab, opt);
             }
         }
     }
+}
+
+/// During a destructure statement, sema only checks if the cast is possible. During codegen, we
+/// perform the cast to a StorageRef if that is the case. The cast function, however, does not add
+/// instructions to the CFG. Here, we add a load instruction to fetch the variables from storage.
+fn destructure_load(
+    loc: &pt::Loc,
+    expr: &Expression,
+    cfg: &mut ControlFlowGraph,
+    vartab: &mut Vartable,
+) -> Expression {
+    if let Type::StorageRef(_, ty) = expr.ty() {
+        if let Expression::Subscript(_, _, ty, ..) = &expr {
+            if ty.is_storage_bytes() {
+                return expr.clone();
+            }
+        }
+
+        let anonymous_no = vartab.temp_anonymous(&*ty);
+        cfg.add(
+            vartab,
+            Instr::LoadStorage {
+                res: anonymous_no,
+                ty: (*ty).clone(),
+                storage: expr.clone(),
+            },
+        );
+
+        return Expression::Variable(*loc, (*ty).clone(), anonymous_no);
+    }
+
+    expr.clone()
 }
 
 /// Resolve try catch statement
@@ -997,7 +1025,7 @@ fn try_catch(
     let finally_block = cfg.new_basic_block("finally".to_string());
 
     match &try_stmt.expr {
-        Expression::ExternalFunctionCall {
+        ast::Expression::ExternalFunctionCall {
             loc,
             function,
             args,
@@ -1121,7 +1149,7 @@ fn try_catch(
                 unimplemented!();
             }
         }
-        Expression::Constructor {
+        ast::Expression::Constructor {
             contract_no,
             constructor_no,
             args,
@@ -1463,15 +1491,15 @@ impl Namespace {
 /// processes them.
 /// They must be added to the cfg event if we remove the assignment
 pub fn process_side_effects_expressions(
-    exp: &Expression,
+    exp: &ast::Expression,
     ctx: &mut SideEffectsCheckParameters,
 ) -> bool {
     match &exp {
-        Expression::InternalFunctionCall { .. }
-        | Expression::ExternalFunctionCall { .. }
-        | Expression::ExternalFunctionCallRaw { .. }
-        | Expression::Constructor { .. }
-        | Expression::Assign(..) => {
+        ast::Expression::InternalFunctionCall { .. }
+        | ast::Expression::ExternalFunctionCall { .. }
+        | ast::Expression::ExternalFunctionCallRaw { .. }
+        | ast::Expression::Constructor { .. }
+        | ast::Expression::Assign(..) => {
             let _ = expression(
                 exp,
                 ctx.cfg,
@@ -1484,7 +1512,7 @@ pub fn process_side_effects_expressions(
             false
         }
 
-        Expression::Builtin(_, _, builtin_type, _) => match &builtin_type {
+        ast::Expression::Builtin(_, _, builtin_type, _) => match &builtin_type {
             Builtin::PayableSend
             | Builtin::ArrayPush
             | Builtin::ArrayPop
