@@ -125,7 +125,7 @@ IdentifierProject: Vec<Identifier> = {
     => vec![],
     <i:SolIdentifier> <v:("." SolIdentifier)*> => {
             let mut i = vec![i];
-            i.extend(v);
+            i.extend(v.into_iter().map(|(_, id)|id));
             i
     }
 }

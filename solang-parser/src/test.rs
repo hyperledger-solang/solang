@@ -257,7 +257,7 @@ fn parse_test() {
                                 unchecked: false,
                                 statements: vec![Statement::Revert(
                                     Loc::File(0, 905, 918),
-                                    None,
+                                    vec![],
                                     vec![Expression::StringLiteral(vec![StringLiteral {
                                         loc: Loc::File(0, 912, 917),
                                         string: "meh".to_string(),
@@ -285,7 +285,7 @@ fn parse_test() {
                                 unchecked: false,
                                 statements: vec![Statement::Revert(
                                     Loc::File(0, 1001, 1014),
-                                    None,
+                                    vec![],
                                     vec![Expression::Variable(Identifier {
                                         loc: Loc::File(0, 1008, 1013),
                                         name: "error".to_string(),
@@ -313,7 +313,7 @@ fn parse_test() {
                                 unchecked: false,
                                 statements: vec![Statement::Revert(
                                     Loc::File(0, 1084, 1097),
-                                    None,
+                                    vec![],
                                     vec![Expression::StringLiteral(vec![StringLiteral {
                                         loc: Loc::File(0, 1091, 1096),
                                         string: "feh".to_string(),
@@ -1080,10 +1080,10 @@ fn parse_revert_test() {
                         unchecked: false,
                         statements: vec![Statement::Revert(
                             Loc::File(0, 107, 125),
-                            Some(Expression::Variable(Identifier {
+                            vec![Identifier {
                                 loc: Loc::File(0, 114, 123),
                                 name: "BAR_ERROR".to_string(),
-                            })),
+                            }],
                             vec![],
                         )],
                     }),
