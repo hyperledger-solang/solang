@@ -122,12 +122,12 @@ StorageLocation: StorageLocation = {
 }
 
 IdentifierProject: Vec<Identifier> = {
-    <i:SolIdentifier?> => vec![],
+    => vec![],
     <i:SolIdentifier> <v:("." SolIdentifier)*> => {
             let mut i = vec![i];
             i.extend(v);
             i
-  }
+    }
 }
 
 Identifier: Identifier = {
