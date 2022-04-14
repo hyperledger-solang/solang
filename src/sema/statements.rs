@@ -818,12 +818,16 @@ fn statement(
             Ok(resolved_asm.1)
         }
         pt::Statement::Revert(loc, error, args) => {
-            if let Some(error) = error {
+            if !error.is_empty() {
                 ns.diagnostics.push(Diagnostic::error(
-                    error.loc,
+                    error[0].loc,
                     format!(
                         "revert with custom error ‘{}’ not supported yet",
-                        error.name
+                        error
+                            .iter()
+                            .map(|err| err.to_string())
+                            .collect::<Vec<_>>()
+                            .join(".")
                     ),
                 ));
                 return Err(());
