@@ -82,6 +82,8 @@ NoFunctionType: Type = {
     Uint => Type::Uint(<>),
     Int => Type::Int(<>),
     Bytes => Type::Bytes(<>),
+    // prior to 0.8.0 `byte` used to be an alias for `bytes1`
+    "byte" => Type::Bytes(1),
     <l:@L> "mapping" "(" <k:Precedence0> "=>" <v:Precedence0> ")" <r:@R> => {
         Type::Mapping(Loc::File(file_no, l, r), Box::new(k), Box::new(v))
     },
@@ -794,6 +796,7 @@ YulIdentifier: Identifier = {
     <l:@L> "revert" <r:@R> => Identifier{loc: Loc::File(file_no, l, r), name: "revert".to_string()},
     <l:@L> "bool" <r:@R> => Identifier{loc: Loc::File(file_no, l, r), name: "bool".to_string()},
     <l:@L> "address" <r:@L> => Identifier{loc: Loc::File(file_no, l, r), name: "address".to_string()},
+    <l:@L> "byte" <r:@L> => Identifier{loc: Loc::File(file_no, l, r), name: "byte".to_string()},
 }
 
 YulStatement: YulStatement = {
@@ -1047,6 +1050,7 @@ extern {
         Uint => Token::Uint(<u16>),
         Int => Token::Int(<u16>),
         Bytes => Token::Bytes(<u8>),
+        "byte" => Token::Byte,
         "struct" => Token::Struct,
         "memory" => Token::Memory,
         "calldata" => Token::Calldata,
