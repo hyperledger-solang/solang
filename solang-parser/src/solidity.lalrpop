@@ -26,6 +26,7 @@ SourceUnitPart: SourceUnitPart = {
     ErrorDefinition => SourceUnitPart::ErrorDefinition(<>),
     FunctionDefinition => SourceUnitPart::FunctionDefinition(<>),
     VariableDefinition => SourceUnitPart::VariableDefinition(<>),
+    TypeDefinition => SourceUnitPart::TypeDefinition(<>),
     <l:@L> ";" <r:@R> => SourceUnitPart::StraySemicolon(Loc::File(file_no, l, r)),
 }
 
@@ -71,19 +72,22 @@ Type: Type = {
     FunctionType
 }
 
-NoFunctionType: Type = {
+ElementaryValueType: Type = {
     "bool" => Type::Bool,
     "address" => Type::Address,
     "address" "payable" => Type::AddressPayable,
+    Uint => Type::Uint(<>),
+    Int => Type::Int(<>),
+    Bytes => Type::Bytes(<>),
+    "byte" => Type::Bytes(1),
+}
+
+NoFunctionType: Type = {
+    ElementaryValueType,
     // payable is only used as a cast in solc
     "payable" => Type::Payable,
     "string" => Type::String,
     "bytes" => Type::DynamicBytes,
-    Uint => Type::Uint(<>),
-    Int => Type::Int(<>),
-    Bytes => Type::Bytes(<>),
-    // prior to 0.8.0 `byte` used to be an alias for `bytes1`
-    "byte" => Type::Bytes(1),
     <l:@L> "mapping" "(" <k:Precedence0> "=>" <v:Precedence0> ")" <r:@R> => {
         Type::Mapping(Loc::File(file_no, l, r), Box::new(k), Box::new(v))
     },
@@ -173,6 +177,7 @@ ContractPart: ContractPart = {
     FunctionDefinition => ContractPart::FunctionDefinition(<>),
     ModifierDefinition => ContractPart::FunctionDefinition(<>),
     ConstructorDefinition => ContractPart::FunctionDefinition(<>),
+    TypeDefinition => ContractPart::TypeDefinition(<>),
     <l:@L> ";" <r:@R> => ContractPart::StraySemicolon(Loc::File(file_no, l, r)),
     Using => ContractPart::Using(<>),
 }
@@ -247,6 +252,14 @@ VariableDefinition: Box<VariableDefinition> = {
             doc, loc: Loc::File(file_no, l, r), ty, attrs: Vec::new(), name, initializer: e,
         })
     }
+}
+
+TypeDefinition: Box<TypeDefinition> = {
+    <doc:DocComments> <l:@L> "type" <name:SolIdentifier> "is" <ty:ElementaryValueType> <r:@R> ";" => {
+        Box::new(TypeDefinition{
+            loc: Loc::File(file_no, l, r), doc, name, ty
+        })
+    },
 }
 
 Visibility: Visibility = {
@@ -1069,6 +1082,7 @@ extern {
         "event" => Token::Event,
         "error" => Token::Error,
         "enum" => Token::Enum,
+        "type" => Token::Type,
         "public" => Token::Public,
         "private" => Token::Private,
         "external" => Token::External,

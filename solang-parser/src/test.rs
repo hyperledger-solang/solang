@@ -1110,3 +1110,49 @@ fn parse_byte_function_assembly() {
     let (actual_parse_tree, _) = crate::parse(src, 0).unwrap();
     assert_eq!(actual_parse_tree.0.len(), 1);
 }
+
+#[test]
+fn parse_user_defined_value_type() {
+    let src = r#"
+        type Uint256 is uint256;
+        contract TestToken {
+            type Bytes32 is bytes32;
+        }
+        "#;
+
+    let (actual_parse_tree, _) = crate::parse(src, 0).unwrap();
+    assert_eq!(actual_parse_tree.0.len(), 2);
+
+    let expected_parse_tree = SourceUnit(vec![
+        SourceUnitPart::TypeDefinition(Box::new(TypeDefinition {
+            doc: vec![],
+            loc: Loc::File(0, 9, 32),
+            name: Identifier {
+                loc: Loc::File(0, 14, 21),
+                name: "Uint256".to_string(),
+            },
+            ty: Type::Uint(256),
+        })),
+        SourceUnitPart::ContractDefinition(Box::new(ContractDefinition {
+            doc: vec![],
+            loc: Loc::File(0, 42, 61),
+            ty: ContractTy::Contract(Loc::File(0, 42, 50)),
+            name: Identifier {
+                loc: Loc::File(0, 51, 60),
+                name: "TestToken".to_string(),
+            },
+            base: vec![],
+            parts: vec![ContractPart::TypeDefinition(Box::new(TypeDefinition {
+                doc: vec![],
+                loc: Loc::File(0, 75, 98),
+                name: Identifier {
+                    loc: Loc::File(0, 80, 87),
+                    name: "Bytes32".to_string(),
+                },
+                ty: Type::Bytes(32),
+            }))],
+        })),
+    ]);
+
+    assert_eq!(actual_parse_tree, expected_parse_tree);
+}
