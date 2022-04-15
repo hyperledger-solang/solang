@@ -954,11 +954,8 @@ impl<'input> Lexer<'input> {
                             // multiline comment
                             self.chars.next();
 
-                            let doc_comment_start = match self.chars.next() {
-                                Some((i, '*')) => match self.chars.peek() {
-                                    Some((_, '*')) => None,
-                                    _ => Some(i + 1),
-                                },
+                            let doc_comment_start = match self.chars.peek() {
+                                Some((i, '*')) => Some(i + 1),
                                 _ => None,
                             };
 
@@ -983,21 +980,25 @@ impl<'input> Lexer<'input> {
 
                             if let Some(doc_start) = doc_comment_start {
                                 if last > doc_start {
-                                    return Some(Ok((
-                                        start + 3,
-                                        Token::DocComment(
-                                            CommentType::Block,
-                                            &self.input[doc_start..last],
-                                        ),
-                                        last,
-                                    )));
+                                    let comment = &self.input[doc_start..last];
+
+                                    if comment.chars().any(|ch| !ch.is_whitespace() && ch != '*') {
+                                        return Some(Ok((
+                                            start + 3,
+                                            Token::DocComment(
+                                                CommentType::Block,
+                                                &self.input[doc_start..last],
+                                            ),
+                                            last,
+                                        )));
+                                    }
                                 }
-                            } else {
-                                self.comments.push(Comment::Block(
-                                    Loc::File(self.file_no, start, last + 2),
-                                    self.input[start..last + 2].to_owned(),
-                                ));
                             }
+
+                            self.comments.push(Comment::Block(
+                                Loc::File(self.file_no, start, last + 2),
+                                self.input[start..last + 2].to_owned(),
+                            ));
                         }
                         _ => {
                             return Some(Ok((start, Token::Divide, start + 1)));
