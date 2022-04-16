@@ -130,6 +130,7 @@ pub enum SourceUnitPart {
     ErrorDefinition(Box<ErrorDefinition>),
     FunctionDefinition(Box<FunctionDefinition>),
     VariableDefinition(Box<VariableDefinition>),
+    TypeDefinition(Box<TypeDefinition>),
     StraySemicolon(Loc),
 }
 
@@ -213,6 +214,7 @@ pub enum ContractPart {
     ErrorDefinition(Box<ErrorDefinition>),
     VariableDefinition(Box<VariableDefinition>),
     FunctionDefinition(Box<FunctionDefinition>),
+    TypeDefinition(Box<TypeDefinition>),
     StraySemicolon(Loc),
     Using(Box<Using>),
 }
@@ -316,6 +318,14 @@ pub struct VariableDefinition {
     pub attrs: Vec<VariableAttribute>,
     pub name: Identifier,
     pub initializer: Option<Expression>,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct TypeDefinition {
+    pub doc: Vec<DocComment>,
+    pub loc: Loc,
+    pub name: Identifier,
+    pub ty: Expression,
 }
 
 #[derive(Debug, PartialEq, Clone)]

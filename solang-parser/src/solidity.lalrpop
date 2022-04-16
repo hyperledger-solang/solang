@@ -26,6 +26,7 @@ SourceUnitPart: SourceUnitPart = {
     ErrorDefinition => SourceUnitPart::ErrorDefinition(<>),
     FunctionDefinition => SourceUnitPart::FunctionDefinition(<>),
     VariableDefinition => SourceUnitPart::VariableDefinition(<>),
+    TypeDefinition => SourceUnitPart::TypeDefinition(<>),
     <l:@L> ";" <r:@R> => SourceUnitPart::StraySemicolon(Loc::File(file_no, l, r)),
 }
 
@@ -173,6 +174,7 @@ ContractPart: ContractPart = {
     FunctionDefinition => ContractPart::FunctionDefinition(<>),
     ModifierDefinition => ContractPart::FunctionDefinition(<>),
     ConstructorDefinition => ContractPart::FunctionDefinition(<>),
+    TypeDefinition => ContractPart::TypeDefinition(<>),
     <l:@L> ";" <r:@R> => ContractPart::StraySemicolon(Loc::File(file_no, l, r)),
     Using => ContractPart::Using(<>),
 }
@@ -247,6 +249,14 @@ VariableDefinition: Box<VariableDefinition> = {
             doc, loc: Loc::File(file_no, l, r), ty, attrs: Vec::new(), name, initializer: e,
         })
     }
+}
+
+TypeDefinition: Box<TypeDefinition> = {
+    <doc:DocComments> <l:@L> "type" <name:SolIdentifier> "is" <ty:Precedence0> <r:@R> ";" => {
+        Box::new(TypeDefinition{
+            loc: Loc::File(file_no, l, r), doc, name, ty
+        })
+    },
 }
 
 Visibility: Visibility = {
@@ -367,15 +377,20 @@ NamedArgument: NamedArgument = {
 }
 
 FunctionCall: Expression = {
-    <a:@L> <i:NoFunctionTyPrecedence0> "(" <v:Comma<Expression>> ")" <b:@R> => {
+    <a:@L> <i:FunctionCallPrecedence> "(" <v:Comma<Expression>> ")" <b:@R> => {
         Expression::FunctionCall(Loc::File(file_no, a, b), Box::new(i), v)
     },
-    <i:NoFunctionTyPrecedence0> <l:@L> <block:BlockStatement> <r:@R> => {
+    <i:FunctionCallPrecedence> <l:@L> <block:BlockStatement> <r:@R> => {
         Expression::FunctionCallBlock(Loc::File(file_no, l, r), Box::new(i), Box::new(block))
     },
-    <a:@L> <i:NoFunctionTyPrecedence0> "(" "{" <v:Comma<NamedArgument>> "}" ")" <b:@R> => {
+    <a:@L> <i:FunctionCallPrecedence> "(" "{" <v:Comma<NamedArgument>> "}" ")" <b:@R> => {
         Expression::NamedFunctionCall(Loc::File(file_no, a, b), Box::new(i), v)
     },
+}
+
+FunctionCallPrecedence: Expression = {
+    NoFunctionTyPrecedence0,
+    <l:@L> "type" <r:@R> => Expression::Variable(Identifier{loc: Loc::File(file_no, l, r), name: "type".to_string()}),
 }
 
 Precedence0: Expression = {
@@ -1069,6 +1084,7 @@ extern {
         "event" => Token::Event,
         "error" => Token::Error,
         "enum" => Token::Enum,
+        "type" => Token::Type,
         "public" => Token::Public,
         "private" => Token::Private,
         "external" => Token::External,
