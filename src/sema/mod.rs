@@ -4,6 +4,7 @@ use ast::{Diagnostic, Mutability};
 use num_bigint::BigInt;
 use num_traits::Signed;
 use num_traits::Zero;
+use solang_parser::pt::Expression;
 use std::{collections::HashMap, ffi::OsStr};
 
 mod address;
@@ -101,6 +102,9 @@ fn sema_file(file: &ResolvedFile, resolver: &mut FileResolver, ns: &mut ast::Nam
             }
             pt::SourceUnitPart::ImportDirective(_, import) => {
                 resolve_import(import, Some(file), file_no, resolver, ns);
+            }
+            pt::SourceUnitPart::TypeDefinition(def) => {
+                resolve_type_definition(def, ns);
             }
             _ => (),
         }
@@ -316,6 +320,30 @@ fn resolve_pragma(
                 name.name, value.string
             ),
         ));
+    }
+}
+
+/// Resolve type definition and emit a diagnostic error if type is not an elementary value type
+fn resolve_type_definition(def: &pt::TypeDefinition, ns: &mut ast::Namespace) {
+    if let Expression::Type(_, ty) = &def.ty {
+        if !matches!(
+            ty,
+            pt::Type::Address
+                | pt::Type::AddressPayable
+                | pt::Type::Bool
+                | pt::Type::Int(_)
+                | pt::Type::Uint(_)
+                | pt::Type::Bytes(_)
+                | pt::Type::Rational
+        ) {
+            ns.diagnostics.push(ast::Diagnostic::error(
+                def.loc,
+                format!(
+                    "’{}’ is not an elementary value type",
+                    ast::Type::from(ty).to_string(ns),
+                ),
+            ));
+        }
     }
 }
 

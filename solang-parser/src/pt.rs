@@ -325,7 +325,7 @@ pub struct TypeDefinition {
     pub doc: Vec<DocComment>,
     pub loc: Loc,
     pub name: Identifier,
-    pub ty: Type,
+    pub ty: Expression,
 }
 
 #[derive(Debug, PartialEq, Clone)]

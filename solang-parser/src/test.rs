@@ -1131,7 +1131,7 @@ fn parse_user_defined_value_type() {
                 loc: Loc::File(0, 14, 21),
                 name: "Uint256".to_string(),
             },
-            ty: Type::Uint(256),
+            ty: Expression::Type(Loc::File(0, 25, 32), Type::Uint(256)),
         })),
         SourceUnitPart::ContractDefinition(Box::new(ContractDefinition {
             doc: vec![],
@@ -1149,7 +1149,7 @@ fn parse_user_defined_value_type() {
                     loc: Loc::File(0, 80, 87),
                     name: "Bytes32".to_string(),
                 },
-                ty: Type::Bytes(32),
+                ty: Expression::Type(Loc::File(0, 91, 98), Type::Bytes(32)),
             }))],
         })),
     ]);

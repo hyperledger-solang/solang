@@ -72,22 +72,19 @@ Type: Type = {
     FunctionType
 }
 
-ElementaryValueType: Type = {
+NoFunctionType: Type = {
     "bool" => Type::Bool,
     "address" => Type::Address,
     "address" "payable" => Type::AddressPayable,
-    Uint => Type::Uint(<>),
-    Int => Type::Int(<>),
-    Bytes => Type::Bytes(<>),
-    "byte" => Type::Bytes(1),
-}
-
-NoFunctionType: Type = {
-    ElementaryValueType,
     // payable is only used as a cast in solc
     "payable" => Type::Payable,
     "string" => Type::String,
     "bytes" => Type::DynamicBytes,
+    Uint => Type::Uint(<>),
+    Int => Type::Int(<>),
+    Bytes => Type::Bytes(<>),
+    // prior to 0.8.0 `byte` used to be an alias for `bytes1`
+    "byte" => Type::Bytes(1),
     <l:@L> "mapping" "(" <k:Precedence0> "=>" <v:Precedence0> ")" <r:@R> => {
         Type::Mapping(Loc::File(file_no, l, r), Box::new(k), Box::new(v))
     },
@@ -255,7 +252,7 @@ VariableDefinition: Box<VariableDefinition> = {
 }
 
 TypeDefinition: Box<TypeDefinition> = {
-    <doc:DocComments> <l:@L> "type" <name:SolIdentifier> "is" <ty:ElementaryValueType> <r:@R> ";" => {
+    <doc:DocComments> <l:@L> "type" <name:SolIdentifier> "is" <ty:Precedence0> <r:@R> ";" => {
         Box::new(TypeDefinition{
             loc: Loc::File(file_no, l, r), doc, name, ty
         })
