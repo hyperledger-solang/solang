@@ -4158,7 +4158,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         }
 
         match expr {
-            codegen::Expression::Builtin(_, _, ast::Builtin::Calldata, _) => {
+            codegen::Expression::Builtin(_, _, codegen::Builtin::Calldata, _) => {
                 // allocate vector for input
                 let v = binary
                     .builder
@@ -4237,7 +4237,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
                 v.into()
             }
-            codegen::Expression::Builtin(_, _, ast::Builtin::BlockNumber, _) => {
+            codegen::Expression::Builtin(_, _, codegen::Builtin::BlockNumber, _) => {
                 let block_number =
                     get_seal_value!("block_number", "seal_block_number", 32).into_int_value();
 
@@ -4251,7 +4251,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                     )
                     .into()
             }
-            codegen::Expression::Builtin(_, _, ast::Builtin::Timestamp, _) => {
+            codegen::Expression::Builtin(_, _, codegen::Builtin::Timestamp, _) => {
                 let milliseconds = get_seal_value!("timestamp", "seal_now", 64).into_int_value();
 
                 // Solidity expects the timestamp in seconds, not milliseconds
@@ -4264,10 +4264,10 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                     )
                     .into()
             }
-            codegen::Expression::Builtin(_, _, ast::Builtin::Gasleft, _) => {
+            codegen::Expression::Builtin(_, _, codegen::Builtin::Gasleft, _) => {
                 get_seal_value!("gas_left", "seal_gas_left", 64)
             }
-            codegen::Expression::Builtin(_, _, ast::Builtin::Gasprice, expr) => {
+            codegen::Expression::Builtin(_, _, codegen::Builtin::Gasprice, expr) => {
                 // gasprice is available as "tx.gasprice" which will give you the price for one unit
                 // of gas, or "tx.gasprice(uint64)" which will give you the price of N gas units
                 let gas = if expr.is_empty() {
@@ -4310,7 +4310,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                     "price",
                 )
             }
-            codegen::Expression::Builtin(_, _, ast::Builtin::Sender, _) => {
+            codegen::Expression::Builtin(_, _, codegen::Builtin::Sender, _) => {
                 let scratch_buf = binary.builder.build_pointer_cast(
                     binary.scratch.unwrap().as_pointer_value(),
                     binary.context.i8_type().ptr_type(AddressSpace::Generic),
@@ -4341,22 +4341,24 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                     "caller",
                 )
             }
-            codegen::Expression::Builtin(_, _, ast::Builtin::Value, _) => {
+            codegen::Expression::Builtin(_, _, codegen::Builtin::Value, _) => {
                 self.value_transferred(binary, ns).into()
             }
-            codegen::Expression::Builtin(_, _, ast::Builtin::MinimumBalance, _) => get_seal_value!(
-                "minimum_balance",
-                "seal_minimum_balance",
-                ns.value_length as u32 * 8
-            ),
-            codegen::Expression::Builtin(_, _, ast::Builtin::TombstoneDeposit, _) => {
+            codegen::Expression::Builtin(_, _, codegen::Builtin::MinimumBalance, _) => {
+                get_seal_value!(
+                    "minimum_balance",
+                    "seal_minimum_balance",
+                    ns.value_length as u32 * 8
+                )
+            }
+            codegen::Expression::Builtin(_, _, codegen::Builtin::TombstoneDeposit, _) => {
                 get_seal_value!(
                     "tombstone_deposit",
                     "seal_tombstone_deposit",
                     ns.value_length as u32 * 8
                 )
             }
-            codegen::Expression::Builtin(_, _, ast::Builtin::Random, args) => {
+            codegen::Expression::Builtin(_, _, codegen::Builtin::Random, args) => {
                 let subject = self
                     .expression(binary, &args[0], vartab, function, ns)
                     .into_pointer_value();
@@ -4424,7 +4426,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                     "hash",
                 )
             }
-            codegen::Expression::Builtin(_, _, ast::Builtin::GetAddress, _) => {
+            codegen::Expression::Builtin(_, _, codegen::Builtin::GetAddress, _) => {
                 let scratch_buf = binary.builder.build_pointer_cast(
                     binary.scratch.unwrap().as_pointer_value(),
                     binary.context.i8_type().ptr_type(AddressSpace::Generic),
@@ -4455,7 +4457,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                     "self_address",
                 )
             }
-            codegen::Expression::Builtin(_, _, ast::Builtin::Balance, _) => {
+            codegen::Expression::Builtin(_, _, codegen::Builtin::Balance, _) => {
                 let scratch_buf = binary.builder.build_pointer_cast(
                     binary.scratch.unwrap().as_pointer_value(),
                     binary.context.i8_type().ptr_type(AddressSpace::Generic),
