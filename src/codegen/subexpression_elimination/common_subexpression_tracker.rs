@@ -1,11 +1,12 @@
 use crate::codegen::subexpression_elimination::{BasicExpression, ExpressionType};
 use crate::codegen::{
     vartable::{Storage, Variable},
-    ControlFlowGraph, Instr,
+    ControlFlowGraph, Expression, Instr,
 };
 use crate::parser::pt::OptionalCodeLocation;
 use crate::parser::pt::{Identifier, Loc};
-use crate::sema::ast::{Expression, Namespace, Type};
+use crate::sema::ast::RetrieveType;
+use crate::sema::ast::{Namespace, Type};
 use std::collections::HashMap;
 
 #[derive(Clone)]
@@ -45,8 +46,7 @@ impl CommonSubExpressionTracker {
             Expression::FunctionArg(..)
                 | Expression::Variable(..)
                 | Expression::BytesLiteral(..)
-                | Expression::NumberLiteral(..)
-                | Expression::ConstantVariable(..)
+                | Expression::NumberLiteral(..) //| Expression::ConstantVariable(..)
         ) {
             return;
         }

@@ -1,7 +1,9 @@
 use super::cfg::{ControlFlowGraph, Instr};
 use super::reaching_definitions;
+use crate::codegen::Expression;
 use crate::parser::pt::Loc;
-use crate::sema::ast::{Builtin, Diagnostic, Expression, Namespace, StringLocation, Type};
+use crate::sema::ast::RetrieveType;
+use crate::sema::ast::{Builtin, Diagnostic, Namespace, StringLocation, Type};
 use num_bigint::{BigInt, Sign};
 use num_traits::{ToPrimitive, Zero};
 use ripemd::Ripemd160;
@@ -820,14 +822,6 @@ fn expression(
 
             (Expression::Load(*loc, ty.clone(), Box::new(expr)), false)
         }
-        Expression::StorageLoad(loc, ty, expr) => {
-            let (expr, _) = expression(expr, vars, cfg, ns);
-
-            (
-                Expression::StorageLoad(*loc, ty.clone(), Box::new(expr)),
-                false,
-            )
-        }
         Expression::Cast(loc, ty, expr) => {
             let (expr, _) = expression(expr, vars, cfg, ns);
 
@@ -892,22 +886,6 @@ fn expression(
 
             (
                 Expression::NotEqual(*loc, Box::new(left.0), Box::new(right.0)),
-                false,
-            )
-        }
-        Expression::Ternary(loc, ty, cond, left, right) => {
-            let cond = expression(cond, vars, cfg, ns);
-            let left = expression(left, vars, cfg, ns);
-            let right = expression(right, vars, cfg, ns);
-
-            (
-                Expression::Ternary(
-                    *loc,
-                    ty.clone(),
-                    Box::new(cond.0),
-                    Box::new(left.0),
-                    Box::new(right.0),
-                ),
                 false,
             )
         }

@@ -1195,21 +1195,12 @@ impl Dot {
                     self.add_expression(expr, func, ns, node, format!("entry #{}", no));
                 }
             }
-
-            Expression::InternalFunctionCfg(..)
-            | Expression::ReturnData(..)
-            | Expression::Poison
-            | Expression::AbiEncode { .. }
-            | Expression::Undefined(..)
-            | Expression::Keccak256(..) => {
-                panic!("should not present in ast");
-            }
         }
     }
 
     fn add_string_location(
         &mut self,
-        loc: &StringLocation,
+        loc: &StringLocation<Expression>,
         func: Option<&Function>,
         ns: &Namespace,
         parent: usize,

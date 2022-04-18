@@ -4,7 +4,9 @@ use super::ast::{
 };
 use super::diagnostics;
 use crate::parser::pt;
+use crate::sema::ast::RetrieveType;
 use crate::sema::yul::ast::{YulExpression, YulStatement};
+use crate::sema::Recurse;
 
 /// check state mutability
 pub fn mutability(file_no: usize, ns: &mut Namespace) {

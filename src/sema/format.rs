@@ -1,8 +1,9 @@
 use super::ast::{Diagnostic, Expression, FormatArg, Namespace, Type};
-use super::expression::{cast, expression, ExprContext, ResolveTo};
+use super::expression::{expression, ExprContext, ResolveTo};
 use super::symtable::Symtable;
 use crate::parser::pt;
 use crate::parser::pt::CodeLocation;
+use crate::sema::ast::RetrieveType;
 
 use std::iter::Peekable;
 use std::slice::Iter;
@@ -29,7 +30,10 @@ pub fn string_format(
 
         let ty = expr.ty();
 
-        resolved_args.push(cast(&arg.loc(), expr, ty.deref_any(), true, ns, diagnostics).unwrap());
+        resolved_args.push(
+            expr.cast(&arg.loc(), ty.deref_any(), true, ns, diagnostics)
+                .unwrap(),
+        );
     }
 
     let mut format_iterator = FormatIterator::new(literals).peekable();

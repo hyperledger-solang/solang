@@ -1,5 +1,5 @@
 use super::cfg::{BasicBlock, ControlFlowGraph, Instr};
-use crate::sema::ast::Expression;
+use crate::codegen::Expression;
 use indexmap::IndexMap;
 use std::collections::HashSet;
 use std::fmt;

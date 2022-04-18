@@ -4,7 +4,8 @@ pub use crate::parser::diagnostics::*;
 use crate::parser::pt;
 use crate::parser::pt::{CodeLocation, OptionalCodeLocation};
 use crate::sema::yul::ast::{InlineAssembly, YulFunction};
-use crate::Target;
+use crate::sema::Recurse;
+use crate::{codegen, Target};
 use num_bigint::BigInt;
 use num_rational::BigRational;
 use std::sync::Arc;
@@ -49,6 +50,12 @@ pub enum Type {
     Unreachable,
     /// DynamicBytes and String are lowered to a vector.
     Slice,
+}
+
+pub trait RetrieveType {
+    /// Return the type for this expression. This assumes the expression has a single value,
+    /// panics will occur otherwise
+    fn ty(&self) -> Type;
 }
 
 impl Type {
@@ -422,7 +429,7 @@ pub struct Namespace {
     pub next_id: usize,
     /// For a variable reference at a location, give the constant value
     /// This for use by the language server to show the value of a variable at a location
-    pub var_constants: HashMap<pt::Loc, Expression>,
+    pub var_constants: HashMap<pt::Loc, codegen::Expression>,
     /// Overrides for hover in the language server
     pub hover_overrides: HashMap<pt::Loc, String>,
 }
@@ -574,8 +581,17 @@ pub enum Expression {
         array: Box<Expression>,
         elem_ty: Type,
     },
-    StringCompare(pt::Loc, StringLocation, StringLocation),
-    StringConcat(pt::Loc, Type, StringLocation, StringLocation),
+    StringCompare(
+        pt::Loc,
+        StringLocation<Expression>,
+        StringLocation<Expression>,
+    ),
+    StringConcat(
+        pt::Loc,
+        Type,
+        StringLocation<Expression>,
+        StringLocation<Expression>,
+    ),
 
     Or(pt::Loc, Box<Expression>, Box<Expression>),
     And(pt::Loc, Box<Expression>, Box<Expression>),
@@ -627,396 +643,11 @@ pub enum Expression {
     Builtin(pt::Loc, Vec<Type>, Builtin, Vec<Expression>),
     InterfaceId(pt::Loc, usize),
     List(pt::Loc, Vec<Expression>),
-    // The remaining types are only generated during codegen
-    Keccak256(pt::Loc, Type, Vec<Expression>),
-    ReturnData(pt::Loc),
-    AbiEncode {
-        loc: pt::Loc,
-        tys: Vec<Type>,
-        packed: Vec<Expression>,
-        args: Vec<Expression>,
-    },
-    InternalFunctionCfg(usize),
-    Undefined(Type),
-    Poison,
 }
 
-impl Expression {
-    /// Recurse over expression and copy each element through a filter. This allows the optimizer passes to create
-    /// copies of expressions while modifying the results slightly
-    #[must_use]
-    pub fn copy_filter<T, F>(&self, ctx: &mut T, filter: F) -> Expression
-    where
-        F: Fn(&Expression, &mut T) -> Expression,
-    {
-        filter(
-            &match self {
-                Expression::StructLiteral(loc, ty, args) => Expression::StructLiteral(
-                    *loc,
-                    ty.clone(),
-                    args.iter().map(|e| filter(e, ctx)).collect(),
-                ),
-                Expression::ArrayLiteral(loc, ty, lengths, args) => Expression::ArrayLiteral(
-                    *loc,
-                    ty.clone(),
-                    lengths.clone(),
-                    args.iter().map(|e| filter(e, ctx)).collect(),
-                ),
-                Expression::ConstArrayLiteral(loc, ty, lengths, args) => {
-                    Expression::ConstArrayLiteral(
-                        *loc,
-                        ty.clone(),
-                        lengths.clone(),
-                        args.iter().map(|e| filter(e, ctx)).collect(),
-                    )
-                }
-                Expression::Add(loc, ty, unchecked, left, right) => Expression::Add(
-                    *loc,
-                    ty.clone(),
-                    *unchecked,
-                    Box::new(filter(left, ctx)),
-                    Box::new(filter(right, ctx)),
-                ),
-                Expression::Subtract(loc, ty, unchecked, left, right) => Expression::Subtract(
-                    *loc,
-                    ty.clone(),
-                    *unchecked,
-                    Box::new(filter(left, ctx)),
-                    Box::new(filter(right, ctx)),
-                ),
-                Expression::Multiply(loc, ty, unchecked, left, right) => Expression::Multiply(
-                    *loc,
-                    ty.clone(),
-                    *unchecked,
-                    Box::new(filter(left, ctx)),
-                    Box::new(filter(right, ctx)),
-                ),
-                Expression::Divide(loc, ty, left, right) => Expression::Divide(
-                    *loc,
-                    ty.clone(),
-                    Box::new(filter(left, ctx)),
-                    Box::new(filter(right, ctx)),
-                ),
-                Expression::Power(loc, ty, unchecked, left, right) => Expression::Power(
-                    *loc,
-                    ty.clone(),
-                    *unchecked,
-                    Box::new(filter(left, ctx)),
-                    Box::new(filter(right, ctx)),
-                ),
-                Expression::BitwiseOr(loc, ty, left, right) => Expression::BitwiseOr(
-                    *loc,
-                    ty.clone(),
-                    Box::new(filter(left, ctx)),
-                    Box::new(filter(right, ctx)),
-                ),
-                Expression::BitwiseAnd(loc, ty, left, right) => Expression::BitwiseAnd(
-                    *loc,
-                    ty.clone(),
-                    Box::new(filter(left, ctx)),
-                    Box::new(filter(right, ctx)),
-                ),
-                Expression::BitwiseXor(loc, ty, left, right) => Expression::BitwiseXor(
-                    *loc,
-                    ty.clone(),
-                    Box::new(filter(left, ctx)),
-                    Box::new(filter(right, ctx)),
-                ),
-                Expression::ShiftLeft(loc, ty, left, right) => Expression::ShiftLeft(
-                    *loc,
-                    ty.clone(),
-                    Box::new(filter(left, ctx)),
-                    Box::new(filter(right, ctx)),
-                ),
-                Expression::ShiftRight(loc, ty, left, right, sign_extend) => {
-                    Expression::ShiftRight(
-                        *loc,
-                        ty.clone(),
-                        Box::new(filter(left, ctx)),
-                        Box::new(filter(right, ctx)),
-                        *sign_extend,
-                    )
-                }
-                Expression::Load(loc, ty, expr) => {
-                    Expression::Load(*loc, ty.clone(), Box::new(filter(expr, ctx)))
-                }
-                Expression::StorageLoad(loc, ty, expr) => {
-                    Expression::StorageLoad(*loc, ty.clone(), Box::new(filter(expr, ctx)))
-                }
-                Expression::ZeroExt(loc, ty, expr) => {
-                    Expression::ZeroExt(*loc, ty.clone(), Box::new(filter(expr, ctx)))
-                }
-                Expression::SignExt(loc, ty, expr) => {
-                    Expression::SignExt(*loc, ty.clone(), Box::new(filter(expr, ctx)))
-                }
-                Expression::Trunc(loc, ty, expr) => {
-                    Expression::Trunc(*loc, ty.clone(), Box::new(filter(expr, ctx)))
-                }
-                Expression::Cast(loc, ty, expr) => {
-                    Expression::Cast(*loc, ty.clone(), Box::new(filter(expr, ctx)))
-                }
-                Expression::BytesCast(loc, ty, from, expr) => Expression::BytesCast(
-                    *loc,
-                    ty.clone(),
-                    from.clone(),
-                    Box::new(filter(expr, ctx)),
-                ),
-                Expression::PreIncrement(loc, ty, unchecked, expr) => Expression::PreIncrement(
-                    *loc,
-                    ty.clone(),
-                    *unchecked,
-                    Box::new(filter(expr, ctx)),
-                ),
-                Expression::PreDecrement(loc, ty, unchecked, expr) => Expression::PreDecrement(
-                    *loc,
-                    ty.clone(),
-                    *unchecked,
-                    Box::new(filter(expr, ctx)),
-                ),
-                Expression::PostIncrement(loc, ty, unchecked, expr) => Expression::PostIncrement(
-                    *loc,
-                    ty.clone(),
-                    *unchecked,
-                    Box::new(filter(expr, ctx)),
-                ),
-                Expression::PostDecrement(loc, ty, unchecked, expr) => Expression::PostDecrement(
-                    *loc,
-                    ty.clone(),
-                    *unchecked,
-                    Box::new(filter(expr, ctx)),
-                ),
-                Expression::Assign(loc, ty, left, right) => Expression::Assign(
-                    *loc,
-                    ty.clone(),
-                    Box::new(filter(left, ctx)),
-                    Box::new(filter(right, ctx)),
-                ),
-                Expression::More(loc, left, right) => Expression::More(
-                    *loc,
-                    Box::new(filter(left, ctx)),
-                    Box::new(filter(right, ctx)),
-                ),
-                Expression::Less(loc, left, right) => Expression::Less(
-                    *loc,
-                    Box::new(filter(left, ctx)),
-                    Box::new(filter(right, ctx)),
-                ),
-                Expression::MoreEqual(loc, left, right) => Expression::MoreEqual(
-                    *loc,
-                    Box::new(filter(left, ctx)),
-                    Box::new(filter(right, ctx)),
-                ),
-                Expression::LessEqual(loc, left, right) => Expression::LessEqual(
-                    *loc,
-                    Box::new(filter(left, ctx)),
-                    Box::new(filter(right, ctx)),
-                ),
-                Expression::Equal(loc, left, right) => Expression::Equal(
-                    *loc,
-                    Box::new(filter(left, ctx)),
-                    Box::new(filter(right, ctx)),
-                ),
-                Expression::NotEqual(loc, left, right) => Expression::NotEqual(
-                    *loc,
-                    Box::new(filter(left, ctx)),
-                    Box::new(filter(right, ctx)),
-                ),
-                Expression::Not(loc, expr) => Expression::Not(*loc, Box::new(filter(expr, ctx))),
-                Expression::Complement(loc, ty, expr) => {
-                    Expression::Complement(*loc, ty.clone(), Box::new(filter(expr, ctx)))
-                }
-                Expression::UnaryMinus(loc, ty, expr) => {
-                    Expression::UnaryMinus(*loc, ty.clone(), Box::new(filter(expr, ctx)))
-                }
-                Expression::Ternary(loc, ty, cond, left, right) => Expression::Ternary(
-                    *loc,
-                    ty.clone(),
-                    Box::new(filter(cond, ctx)),
-                    Box::new(filter(left, ctx)),
-                    Box::new(filter(right, ctx)),
-                ),
-                Expression::Subscript(loc, elem_ty, array_ty, left, right) => {
-                    Expression::Subscript(
-                        *loc,
-                        elem_ty.clone(),
-                        array_ty.clone(),
-                        Box::new(filter(left, ctx)),
-                        Box::new(filter(right, ctx)),
-                    )
-                }
-                Expression::StructMember(loc, ty, expr, field) => {
-                    Expression::StructMember(*loc, ty.clone(), Box::new(filter(expr, ctx)), *field)
-                }
-                Expression::AllocDynamicArray(loc, ty, expr, initializer) => {
-                    Expression::AllocDynamicArray(
-                        *loc,
-                        ty.clone(),
-                        Box::new(filter(expr, ctx)),
-                        initializer.clone(),
-                    )
-                }
-                Expression::StorageArrayLength {
-                    loc,
-                    ty,
-                    array,
-                    elem_ty,
-                } => Expression::StorageArrayLength {
-                    loc: *loc,
-                    ty: ty.clone(),
-                    array: Box::new(filter(array, ctx)),
-                    elem_ty: elem_ty.clone(),
-                },
-                Expression::StringCompare(loc, left, right) => Expression::StringCompare(
-                    *loc,
-                    match left {
-                        StringLocation::CompileTime(_) => left.clone(),
-                        StringLocation::RunTime(expr) => {
-                            StringLocation::RunTime(Box::new(filter(expr, ctx)))
-                        }
-                    },
-                    match right {
-                        StringLocation::CompileTime(_) => right.clone(),
-                        StringLocation::RunTime(expr) => {
-                            StringLocation::RunTime(Box::new(filter(expr, ctx)))
-                        }
-                    },
-                ),
-                Expression::StringConcat(loc, ty, left, right) => Expression::StringConcat(
-                    *loc,
-                    ty.clone(),
-                    match left {
-                        StringLocation::CompileTime(_) => left.clone(),
-                        StringLocation::RunTime(expr) => {
-                            StringLocation::RunTime(Box::new(filter(expr, ctx)))
-                        }
-                    },
-                    match right {
-                        StringLocation::CompileTime(_) => right.clone(),
-                        StringLocation::RunTime(expr) => {
-                            StringLocation::RunTime(Box::new(filter(expr, ctx)))
-                        }
-                    },
-                ),
-                Expression::Or(loc, left, right) => Expression::Or(
-                    *loc,
-                    Box::new(filter(left, ctx)),
-                    Box::new(filter(right, ctx)),
-                ),
-                Expression::And(loc, left, right) => Expression::And(
-                    *loc,
-                    Box::new(filter(left, ctx)),
-                    Box::new(filter(right, ctx)),
-                ),
-                Expression::ExternalFunction {
-                    loc,
-                    ty,
-                    address,
-                    function_no,
-                } => Expression::ExternalFunction {
-                    loc: *loc,
-                    ty: ty.clone(),
-                    address: Box::new(filter(address, ctx)),
-                    function_no: *function_no,
-                },
-                Expression::InternalFunctionCall {
-                    loc,
-                    returns,
-                    function,
-                    args,
-                } => Expression::InternalFunctionCall {
-                    loc: *loc,
-                    returns: returns.clone(),
-                    function: Box::new(filter(function, ctx)),
-                    args: args.iter().map(|e| filter(e, ctx)).collect(),
-                },
-                Expression::ExternalFunctionCall {
-                    loc,
-                    returns,
-                    function,
-                    args,
-                    value,
-                    gas,
-                } => Expression::ExternalFunctionCall {
-                    loc: *loc,
-                    returns: returns.clone(),
-                    function: Box::new(filter(function, ctx)),
-                    args: args.iter().map(|e| filter(e, ctx)).collect(),
-                    value: value.as_ref().map(|value| Box::new(filter(value, ctx))),
-                    gas: gas.as_ref().map(|gas| Box::new(filter(gas, ctx))),
-                },
-                Expression::ExternalFunctionCallRaw {
-                    loc,
-                    ty,
-                    address,
-                    args,
-                    value,
-                    gas,
-                } => Expression::ExternalFunctionCallRaw {
-                    loc: *loc,
-                    ty: ty.clone(),
-                    address: Box::new(filter(address, ctx)),
-                    args: Box::new(filter(args, ctx)),
-                    value: value.as_ref().map(|value| Box::new(filter(value, ctx))),
-                    gas: gas.as_ref().map(|gas| Box::new(filter(gas, ctx))),
-                },
-                Expression::Constructor {
-                    loc,
-                    contract_no,
-                    constructor_no,
-                    args,
-                    gas,
-                    value,
-                    salt,
-                    space,
-                } => Expression::Constructor {
-                    loc: *loc,
-                    contract_no: *contract_no,
-                    constructor_no: *constructor_no,
-                    args: args.iter().map(|e| filter(e, ctx)).collect(),
-                    value: value.as_ref().map(|e| Box::new(filter(e, ctx))),
-                    gas: gas.as_ref().map(|e| Box::new(filter(e, ctx))),
-                    salt: salt.as_ref().map(|e| Box::new(filter(e, ctx))),
-                    space: space.as_ref().map(|e| Box::new(filter(e, ctx))),
-                },
-                Expression::Keccak256(loc, ty, args) => {
-                    let args = args.iter().map(|e| filter(e, ctx)).collect();
-
-                    Expression::Keccak256(*loc, ty.clone(), args)
-                }
-                Expression::FormatString(loc, args) => {
-                    let args = args.iter().map(|(f, e)| (*f, filter(e, ctx))).collect();
-
-                    Expression::FormatString(*loc, args)
-                }
-                Expression::Builtin(loc, tys, builtin, args) => {
-                    let args = args.iter().map(|e| filter(e, ctx)).collect();
-
-                    Expression::Builtin(*loc, tys.clone(), *builtin, args)
-                }
-                Expression::AbiEncode {
-                    loc,
-                    tys,
-                    packed,
-                    args,
-                } => {
-                    let packed = packed.iter().map(|e| filter(e, ctx)).collect();
-                    let args = args.iter().map(|e| filter(e, ctx)).collect();
-
-                    Expression::AbiEncode {
-                        loc: *loc,
-                        tys: tys.clone(),
-                        packed,
-                        args,
-                    }
-                }
-                _ => self.clone(),
-            },
-            ctx,
-        )
-    }
-
-    /// recurse over the expression
-    pub fn recurse<T>(&self, cx: &mut T, f: fn(expr: &Expression, ctx: &mut T) -> bool) {
+impl Recurse for Expression {
+    type ArgType = Expression;
+    fn recurse<T>(&self, cx: &mut T, f: fn(expr: &Expression, ctx: &mut T) -> bool) {
         if f(self, cx) {
             match self {
                 Expression::StructLiteral(_, _, exprs)
@@ -1156,18 +787,8 @@ impl Expression {
                         salt.recurse(cx, f);
                     }
                 }
-                Expression::Builtin(_, _, _, exprs)
-                | Expression::List(_, exprs)
-                | Expression::Keccak256(_, _, exprs) => {
+                Expression::Builtin(_, _, _, exprs) | Expression::List(_, exprs) => {
                     for e in exprs {
-                        e.recurse(cx, f);
-                    }
-                }
-                Expression::AbiEncode { packed, args, .. } => {
-                    for e in packed {
-                        e.recurse(cx, f);
-                    }
-                    for e in args {
                         e.recurse(cx, f);
                     }
                 }
@@ -1229,8 +850,6 @@ impl CodeLocation for Expression {
             | Expression::StorageArrayLength { loc, .. }
             | Expression::StringCompare(loc, ..)
             | Expression::StringConcat(loc, ..)
-            | Expression::Keccak256(loc, ..)
-            | Expression::ReturnData(loc)
             | Expression::InternalFunction { loc, .. }
             | Expression::ExternalFunction { loc, .. }
             | Expression::InternalFunctionCall { loc, .. }
@@ -1245,12 +864,8 @@ impl CodeLocation for Expression {
             | Expression::Assign(loc, ..)
             | Expression::List(loc, _)
             | Expression::FormatString(loc, _)
-            | Expression::AbiEncode { loc, .. }
             | Expression::InterfaceId(loc, ..)
             | Expression::And(loc, ..) => *loc,
-            Expression::InternalFunctionCfg(_) | Expression::Undefined(_) | Expression::Poison => {
-                unreachable!()
-            }
         }
     }
 }
@@ -1275,9 +890,9 @@ impl fmt::Display for FormatArg {
 }
 
 #[derive(PartialEq, Clone, Debug)]
-pub enum StringLocation {
+pub enum StringLocation<T> {
     CompileTime(Vec<u8>),
-    RunTime(Box<Expression>),
+    RunTime(Box<T>),
 }
 
 #[derive(PartialEq, Clone, Copy, Debug)]
@@ -1439,9 +1054,9 @@ impl OptionalCodeLocation for DestructureField {
     }
 }
 
-impl Statement {
-    /// recurse over the statement
-    pub fn recurse<T>(&self, cx: &mut T, f: fn(stmt: &Statement, ctx: &mut T) -> bool) {
+impl Recurse for Statement {
+    type ArgType = Statement;
+    fn recurse<T>(&self, cx: &mut T, f: fn(stmt: &Statement, ctx: &mut T) -> bool) {
         if f(self, cx) {
             match self {
                 Statement::Block { statements, .. } => {
@@ -1502,7 +1117,9 @@ impl Statement {
             }
         }
     }
+}
 
+impl Statement {
     /// Shorthand for checking underscore
     pub fn is_underscore(&self) -> bool {
         matches!(&self, Statement::Underscore(_))

@@ -1,5 +1,6 @@
 use crate::codegen::subexpression_elimination::{ConstantType, ExpressionType};
-use crate::sema::ast::{Expression, StringLocation};
+use crate::codegen::Expression;
+use crate::sema::ast::StringLocation;
 
 impl Expression {
     /// Rebuild a binary expression given the new left and right subexpressions
@@ -42,15 +43,6 @@ impl Expression {
                 Box::new(left.clone()),
                 Box::new(right.clone()),
             ),
-
-            Expression::Or(loc, ..) => {
-                Expression::Or(*loc, Box::new(left.clone()), Box::new(right.clone()))
-            }
-
-            Expression::And(loc, ..) => {
-                Expression::And(*loc, Box::new(left.clone()), Box::new(right.clone()))
-            }
-
             Expression::Equal(loc, ..) => {
                 Expression::Equal(*loc, Box::new(left.clone()), Box::new(right.clone()))
             }
@@ -206,8 +198,6 @@ impl Expression {
             | Expression::BitwiseOr(_, _, left, right)
             | Expression::BitwiseAnd(_, _, left, right)
             | Expression::BitwiseXor(_, _, left, right)
-            | Expression::Or(_, left, right)
-            | Expression::And(_, left, right)
             | Expression::Equal(_, left, right)
             | Expression::NotEqual(_, left, right) => Some((left, right)),
 
@@ -255,10 +245,6 @@ impl Expression {
             Expression::BoolLiteral(_, value) => ConstantType::Bool(*value),
             Expression::NumberLiteral(_, _, value) => ConstantType::Number(value.clone()),
             Expression::BytesLiteral(_, _, value) => ConstantType::Bytes(value.clone()),
-            Expression::ConstantVariable(_, _, contract_no, var_no) => {
-                ConstantType::ConstantVariable(*contract_no, *var_no)
-            }
-
             _ => unreachable!("Not a constant expression"),
         };
 

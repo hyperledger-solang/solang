@@ -1,4 +1,4 @@
-use crate::sema::ast::Expression;
+use crate::codegen::Expression;
 
 /// This enum defines operator types for the graph
 #[derive(PartialEq, Eq, Hash, Copy, Clone)]
@@ -14,8 +14,6 @@ pub enum Operator {
     BitwiseXor,
     ShiftLeft,
     ShiftRight,
-    Or,
-    And,
     More,
     Less,
     MoreEqual,
@@ -50,8 +48,6 @@ impl Expression {
             Expression::BitwiseXor(..) => Operator::BitwiseXor,
             Expression::ShiftLeft(..) => Operator::ShiftLeft,
             Expression::ShiftRight(..) => Operator::ShiftRight,
-            Expression::Or(..) => Operator::Or,
-            Expression::And(..) => Operator::And,
             Expression::Not(..) => Operator::Not,
             Expression::ZeroExt(..) => Operator::ZeroExt,
             Expression::SignExt(..) => Operator::SignExt,

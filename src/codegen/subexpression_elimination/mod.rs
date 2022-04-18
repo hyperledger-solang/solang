@@ -62,7 +62,6 @@ pub enum ConstantType {
     Bool(bool),
     Bytes(Vec<u8>),
     Number(BigInt),
-    ConstantVariable(Option<usize>, usize),
 }
 
 /// The type of expression that a node represents

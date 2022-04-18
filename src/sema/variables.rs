@@ -2,7 +2,7 @@ use super::ast::{
     BuiltinStruct, Diagnostic, Expression, Function, Namespace, Parameter, Statement, Symbol, Type,
     Variable,
 };
-use super::expression::{cast, expression, ExprContext, ResolveTo};
+use super::expression::{expression, ExprContext, ResolveTo};
 use super::symtable::Symtable;
 use super::tags::resolve_tags;
 use crate::parser::pt;
@@ -259,7 +259,7 @@ pub fn var_decl(
         ) {
             Ok(res) => {
                 // implicitly conversion to correct ty
-                match cast(&s.loc, res, &ty, true, ns, &mut diagnostics) {
+                match res.cast(&s.loc, &ty, true, ns, &mut diagnostics) {
                     Ok(res) => Some(res),
                     Err(_) => {
                         ns.diagnostics.extend(diagnostics);

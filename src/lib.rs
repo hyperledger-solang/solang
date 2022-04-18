@@ -1,3 +1,5 @@
+extern crate core;
+
 pub mod abi;
 pub mod codegen;
 #[cfg(feature = "llvm")]

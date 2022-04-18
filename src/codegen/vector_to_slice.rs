@@ -1,7 +1,8 @@
 use super::cfg::{BasicBlock, ControlFlowGraph, Instr};
 use super::reaching_definitions::{Def, Transfer};
 use crate::codegen::cfg::ASTFunction;
-use crate::sema::ast::{Expression, Namespace, Type};
+use crate::codegen::Expression;
+use crate::sema::ast::{Namespace, Type};
 use indexmap::IndexMap;
 use std::collections::HashSet;
 

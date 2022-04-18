@@ -4,7 +4,8 @@ use crate::codegen::subexpression_elimination::AvailableExpression;
 use crate::codegen::subexpression_elimination::{
     AvailableExpressionSet, BasicExpression, ExpressionType, NodeId,
 };
-use crate::sema::ast::{Expression, StringLocation};
+use crate::codegen::Expression;
+use crate::sema::ast::StringLocation;
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
@@ -193,8 +194,8 @@ impl AvailableExpressionSet {
                 return Some(ave.add_variable_node(exp, self));
             }
 
-            Expression::ConstantVariable(..)
-            | Expression::NumberLiteral(..)
+            //Expression::ConstantVariable(..)
+            Expression::NumberLiteral(..)
             | Expression::BoolLiteral(..)
             | Expression::BytesLiteral(..) => {
                 let key = exp.get_constant_expression_type();
@@ -304,8 +305,8 @@ impl AvailableExpressionSet {
                 return self.expr_map.get(&ExpressionType::Variable(*pos)).copied();
             }
 
-            Expression::ConstantVariable(..)
-            | Expression::NumberLiteral(..)
+            //Expression::ConstantVariable(..)
+            Expression::NumberLiteral(..)
             | Expression::BoolLiteral(..)
             | Expression::BytesLiteral(..) => {
                 let key = exp.get_constant_expression_type();
@@ -419,7 +420,7 @@ impl AvailableExpressionSet {
             // Variables, constants and literals will never be substituted
             Expression::FunctionArg(..)
             | Expression::Variable(..)
-            | Expression::ConstantVariable(..)
+            //| Expression::ConstantVariable(..)
             | Expression::NumberLiteral(..)
             | Expression::BoolLiteral(..)
             | Expression::BytesLiteral(..) => {

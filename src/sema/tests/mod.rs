@@ -24,7 +24,7 @@ fn test_statement_reachable() {
     let test_cases: Vec<(Statement, bool)> = vec![
         (Statement::Underscore(loc), true),
         (
-            Statement::Destructure(loc, vec![], Expression::Undefined(Type::Bool)),
+            Statement::Destructure(loc, vec![], Expression::BoolLiteral(loc, true)),
             true,
         ),
         (
@@ -53,7 +53,7 @@ fn test_statement_reachable() {
             true,
         ),
         (
-            Statement::Delete(loc, Type::Bool, Expression::Undefined(Type::Bool)),
+            Statement::Delete(loc, Type::Bool, Expression::BoolLiteral(loc, true)),
             true,
         ),
         (Statement::Continue(loc), false),
@@ -63,22 +63,22 @@ fn test_statement_reachable() {
             Statement::If(
                 loc,
                 false,
-                Expression::Undefined(Type::Bool),
+                Expression::BoolLiteral(loc, false),
                 vec![],
                 vec![],
             ),
             false,
         ),
         (
-            Statement::While(loc, true, Expression::Undefined(Type::Bool), vec![]),
+            Statement::While(loc, true, Expression::BoolLiteral(loc, false), vec![]),
             true,
         ),
         (
-            Statement::DoWhile(loc, false, vec![], Expression::Undefined(Type::Bool)),
+            Statement::DoWhile(loc, false, vec![], Expression::BoolLiteral(loc, true)),
             false,
         ),
         (
-            Statement::Expression(loc, true, Expression::Undefined(Type::Bool)),
+            Statement::Expression(loc, true, Expression::BoolLiteral(loc, false)),
             true,
         ),
         (
@@ -97,7 +97,7 @@ fn test_statement_reachable() {
                 loc,
                 true,
                 TryCatch {
-                    expr: Expression::Poison,
+                    expr: Expression::BoolLiteral(loc, false),
                     returns: vec![],
                     ok_stmt: vec![],
                     errors: vec![],

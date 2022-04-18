@@ -2,10 +2,11 @@ use super::ast::{
     Builtin, BuiltinStruct, Diagnostic, Expression, Namespace, Parameter, StructDecl, Symbol, Type,
 };
 use super::eval::eval_const_number;
-use super::expression::{cast, expression, ExprContext, ResolveTo};
+use super::expression::{expression, ExprContext, ResolveTo};
 use super::symtable::Symtable;
 use crate::parser::pt;
 use crate::parser::pt::CodeLocation;
+use crate::sema::ast::RetrieveType;
 use crate::Target;
 use num_bigint::BigInt;
 use num_traits::One;
@@ -902,14 +903,7 @@ pub fn resolve_call(
                 }
             };
 
-            match cast(
-                &arg.loc(),
-                arg.clone(),
-                &func.args[i],
-                true,
-                ns,
-                diagnostics,
-            ) {
+            match arg.cast(&arg.loc(), &func.args[i], true, ns, diagnostics) {
                 Ok(expr) => cast_args.push(expr),
                 Err(()) => {
                     matches = false;
@@ -1004,21 +998,15 @@ pub fn resolve_namespace_call(
         }
 
         // first args
-        let data = cast(
-            &args[0].loc(),
-            expression(
-                &args[0],
-                context,
-                ns,
-                symtable,
-                diagnostics,
-                ResolveTo::Type(&Type::DynamicBytes),
-            )?,
-            &Type::DynamicBytes,
-            true,
+        let data = expression(
+            &args[0],
+            context,
             ns,
+            symtable,
             diagnostics,
-        )?;
+            ResolveTo::Type(&Type::DynamicBytes),
+        )?
+        .cast(&args[0].loc(), &Type::DynamicBytes, true, ns, diagnostics)?;
 
         let mut tys = Vec::new();
         let mut broken = false;
@@ -1118,14 +1106,7 @@ pub fn resolve_namespace_call(
 
                 resolved_args.insert(
                     0,
-                    cast(
-                        &selector.loc(),
-                        selector,
-                        &Type::Bytes(4),
-                        true,
-                        ns,
-                        diagnostics,
-                    )?,
+                    selector.cast(&selector.loc(), &Type::Bytes(4), true, ns, diagnostics)?,
                 );
             } else {
                 diagnostics.push(Diagnostic::error(
@@ -1176,12 +1157,12 @@ pub fn resolve_namespace_call(
                                 ResolveTo::Type(&params[arg_no]),
                             )?;
 
-                            expr = cast(&arg.loc(), expr, &params[arg_no], true, ns, diagnostics)?;
+                            expr = expr.cast(&arg.loc(), &params[arg_no], true, ns, diagnostics)?;
 
                             // A string or hex literal should be encoded as a string
                             if let Expression::BytesLiteral(..) = &expr {
                                 expr =
-                                    cast(&arg.loc(), expr, &Type::String, true, ns, diagnostics)?;
+                                    expr.cast(&arg.loc(), &Type::String, true, ns, diagnostics)?;
                             }
 
                             resolved_args.push(expr);
@@ -1229,14 +1210,7 @@ pub fn resolve_namespace_call(
 
                 resolved_args.insert(
                     0,
-                    cast(
-                        &signature.loc(),
-                        signature,
-                        &Type::String,
-                        true,
-                        ns,
-                        diagnostics,
-                    )?,
+                    signature.cast(&signature.loc(), &Type::String, true, ns, diagnostics)?,
                 );
             } else {
                 diagnostics.push(Diagnostic::error(
@@ -1263,11 +1237,11 @@ pub fn resolve_namespace_call(
             return Err(());
         }
 
-        expr = cast(&arg.loc(), expr, ty.deref_any(), true, ns, diagnostics)?;
+        expr = expr.cast(&arg.loc(), ty.deref_any(), true, ns, diagnostics)?;
 
         // A string or hex literal should be encoded as a string
         if let Expression::BytesLiteral(..) = &expr {
-            expr = cast(&arg.loc(), expr, &Type::String, true, ns, diagnostics)?;
+            expr = expr.cast(&arg.loc(), &Type::String, true, ns, diagnostics)?;
         }
 
         resolved_args.push(expr);
@@ -1343,14 +1317,7 @@ pub fn resolve_method_call(
                 }
             };
 
-            match cast(
-                &arg.loc(),
-                arg.clone(),
-                &func.args[i],
-                true,
-                ns,
-                diagnostics,
-            ) {
+            match arg.cast(&arg.loc(), &func.args[i], true, ns, diagnostics) {
                 Ok(expr) => cast_args.push(expr),
                 Err(()) => {
                     matches = false;
