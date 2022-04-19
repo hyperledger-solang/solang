@@ -5827,18 +5827,20 @@ fn method_call_pos_args(
         let call_args = parse_call_args(call_args, true, context, ns, symtable, diagnostics)?;
 
         let marker = diagnostics.len();
-        let mut name_match = 0;
+        let mut name_matches: Vec<usize> = Vec::new();
 
-        for function_no in ns.contracts[*ext_contract_no].functions.clone() {
-            if func.name != ns.functions[function_no].name
-                || ns.functions[function_no].ty != pt::FunctionTy::Function
+        for function_no in ns.contracts[*ext_contract_no].all_functions.keys() {
+            if func.name != ns.functions[*function_no].name
+                || ns.functions[*function_no].ty != pt::FunctionTy::Function
             {
                 continue;
             }
 
-            name_match += 1;
+            name_matches.push(*function_no);
+        }
 
-            let params_len = ns.functions[function_no].params.len();
+        for function_no in &name_matches {
+            let params_len = ns.functions[*function_no].params.len();
 
             if params_len != args.len() {
                 diagnostics.push(Diagnostic::error(
@@ -5855,7 +5857,7 @@ fn method_call_pos_args(
             let mut cast_args = Vec::new();
             // check if arguments can be implicitly casted
             for (i, arg) in args.iter().enumerate() {
-                let ty = ns.functions[function_no].params[i].ty.clone();
+                let ty = ns.functions[*function_no].params[i].ty.clone();
 
                 let arg = match expression(
                     arg,
@@ -5883,7 +5885,7 @@ fn method_call_pos_args(
             if matches {
                 diagnostics.truncate(marker);
 
-                if !ns.functions[function_no].is_public() {
+                if !ns.functions[*function_no].is_public() {
                     diagnostics.push(Diagnostic::error(
                         *loc,
                         format!("function ‘{}’ is not ‘public’ or ‘external’", func.name),
@@ -5892,7 +5894,7 @@ fn method_call_pos_args(
                 }
 
                 let value = if let Some(value) = call_args.value {
-                    if !value.const_zero(ns) && !ns.functions[function_no].is_payable() {
+                    if !value.const_zero(ns) && !ns.functions[*function_no].is_payable() {
                         diagnostics.push(Diagnostic::error(
                             *loc,
                             format!(
@@ -5908,7 +5910,7 @@ fn method_call_pos_args(
                     None
                 };
 
-                let func = &ns.functions[function_no];
+                let func = &ns.functions[*function_no];
                 let returns = function_returns(func);
                 let ty = function_type(func, true);
 
@@ -5918,10 +5920,10 @@ fn method_call_pos_args(
                     function: Box::new(Expression::ExternalFunction {
                         loc: *loc,
                         ty,
-                        function_no,
+                        function_no: *function_no,
                         address: Box::new(var_expr.cast(
                             &var.loc(),
-                            &Type::Contract(*ext_contract_no),
+                            &Type::Contract(func.contract_no.unwrap()),
                             true,
                             ns,
                             diagnostics,
@@ -5959,7 +5961,7 @@ fn method_call_pos_args(
             }
         }
 
-        if name_match != 1 {
+        if name_matches.len() != 1 {
             diagnostics.truncate(marker);
             diagnostics.push(Diagnostic::error(
                 *loc,
@@ -6395,20 +6397,21 @@ fn method_call_named_args(
         }
 
         let marker = diagnostics.len();
-        let mut name_match = 0;
+        let mut name_matches: Vec<usize> = Vec::new();
 
         // function call
-        for function_no in ns.contracts[*external_contract_no].functions.clone() {
-            if ns.functions[function_no].name != func_name.name
-                || ns.functions[function_no].ty != pt::FunctionTy::Function
+        for function_no in ns.contracts[*external_contract_no].all_functions.keys() {
+            if ns.functions[*function_no].name != func_name.name
+                || ns.functions[*function_no].ty != pt::FunctionTy::Function
             {
                 continue;
             }
 
-            let params_len = ns.functions[function_no].params.len();
+            name_matches.push(*function_no);
+        }
 
-            name_match += 1;
-
+        for function_no in &name_matches {
+            let params_len = ns.functions[*function_no].params.len();
             if params_len != args.len() {
                 diagnostics.push(Diagnostic::error(
                     *loc,
@@ -6424,7 +6427,7 @@ fn method_call_named_args(
             let mut cast_args = Vec::new();
             // check if arguments can be implicitly casted
             for i in 0..params_len {
-                let param = ns.functions[function_no].params[i].clone();
+                let param = ns.functions[*function_no].params[i].clone();
                 let arg = match arguments.get(param.name_as_str()) {
                     Some(a) => a,
                     None => {
@@ -6466,7 +6469,7 @@ fn method_call_named_args(
             }
 
             if matches {
-                if !ns.functions[function_no].is_public() {
+                if !ns.functions[*function_no].is_public() {
                     diagnostics.push(Diagnostic::error(
                         *loc,
                         format!(
@@ -6478,7 +6481,7 @@ fn method_call_named_args(
                 }
 
                 let value = if let Some(value) = call_args.value {
-                    if !value.const_zero(ns) && !ns.functions[function_no].is_payable() {
+                    if !value.const_zero(ns) && !ns.functions[*function_no].is_payable() {
                         diagnostics.push(Diagnostic::error(
                             *loc,
                             format!(
@@ -6494,7 +6497,7 @@ fn method_call_named_args(
                     None
                 };
 
-                let func = &ns.functions[function_no];
+                let func = &ns.functions[*function_no];
                 let returns = function_returns(func);
                 let ty = function_type(func, true);
 
@@ -6504,10 +6507,10 @@ fn method_call_named_args(
                     function: Box::new(Expression::ExternalFunction {
                         loc: *loc,
                         ty,
-                        function_no,
+                        function_no: *function_no,
                         address: Box::new(var_expr.cast(
                             &var.loc(),
-                            &Type::Contract(*external_contract_no),
+                            &Type::Contract(func.contract_no.unwrap()),
                             true,
                             ns,
                             diagnostics,
@@ -6520,7 +6523,7 @@ fn method_call_named_args(
             }
         }
 
-        match name_match {
+        match name_matches.len() {
             0 => {
                 diagnostics.push(Diagnostic::error(
                     *loc,
