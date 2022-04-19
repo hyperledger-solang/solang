@@ -6347,6 +6347,7 @@ impl<'a> Binary<'a> {
                         false,
                     ),
                 ),
+                Type::UserType(no) => self.llvm_type(&ns.user_types[*no].ty, ns),
                 _ => unreachable!(),
             }
         }

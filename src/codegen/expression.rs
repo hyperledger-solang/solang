@@ -552,6 +552,10 @@ pub fn expression(
             Box::new(expression(e, cfg, contract_no, func, ns, vartab, opt)),
         ),
         // for some built-ins, we have to inline special case code
+        ast::Expression::Builtin(_, _, ast::Builtin::UserTypeWrap, args)
+        | ast::Expression::Builtin(_, _, ast::Builtin::UserTypeUnwrap, args) => {
+            expression(&args[0], cfg, contract_no, func, ns, vartab, opt)
+        }
         ast::Expression::Builtin(loc, ty, ast::Builtin::ArrayPush, args) => {
             if args[0].ty().is_contract_storage() {
                 if ns.target == Target::Solana || args[0].ty().is_storage_bytes() {

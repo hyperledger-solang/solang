@@ -621,6 +621,9 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
             }
             ast::Type::Ref(r) => EncoderBuilder::encoded_fixed_length(r, ns),
             ast::Type::StorageRef(_, r) => EncoderBuilder::encoded_fixed_length(r, ns),
+            ast::Type::UserType(no) => {
+                EncoderBuilder::encoded_fixed_length(&ns.user_types[*no].ty, ns)
+            }
             _ => unreachable!(),
         }
     }
@@ -713,6 +716,19 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                         "",
                     )
                 };
+            }
+            ast::Type::UserType(no) => {
+                self.encode_ty(
+                    binary,
+                    ns,
+                    load,
+                    function,
+                    &ns.user_types[*no].ty,
+                    arg,
+                    fixed,
+                    offset,
+                    dynamic,
+                );
             }
             ast::Type::Enum(n) => {
                 self.encode_primitive(binary, load, function, &ns.enums[*n].ty, *fixed, arg, ns);
@@ -3076,6 +3092,16 @@ impl EthAbiDecoder {
 
                 v.into()
             }
+            ast::Type::UserType(no) => self.decode_primitive(
+                binary,
+                function,
+                &ns.user_types[*no].ty,
+                to,
+                offset,
+                data,
+                length,
+                ns,
+            ),
             _ => self.decode_primitive(binary, function, ty, to, offset, data, length, ns),
         }
     }

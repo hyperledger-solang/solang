@@ -4,7 +4,7 @@ use super::SOLANA_BUCKET_SIZE;
 use super::{
     ast::{
         BuiltinStruct, Contract, Diagnostic, EnumDecl, EventDecl, Namespace, Parameter, StructDecl,
-        Symbol, Tag, Type,
+        Symbol, Tag, Type, UserTypeDecl,
     },
     SOLANA_SPARSE_ARRAY_SIZE,
 };
@@ -93,11 +93,74 @@ pub fn resolve_typenames<'a>(
 
                 delay.events.push((pos, def, None));
             }
+            pt::SourceUnitPart::TypeDefinition(ty) => {
+                type_decl(ty, file_no, None, ns);
+            }
             _ => (),
         }
     }
 
     delay
+}
+
+fn type_decl(
+    def: &pt::TypeDefinition,
+    file_no: usize,
+    contract_no: Option<usize>,
+    ns: &mut Namespace,
+) {
+    let mut diagnostics = Vec::new();
+
+    let ty = match ns.resolve_type(file_no, contract_no, false, &def.ty, &mut diagnostics) {
+        Ok(ty) => ty,
+        Err(_) => {
+            ns.diagnostics.extend(diagnostics);
+            return;
+        }
+    };
+
+    // We could permit all types to be defined here, however:
+    // - This would require resolving the types definition after all other types are resolved
+    // - Need for circular checks (type a is b; type b is a;)
+    if !matches!(
+        ty,
+        Type::Address(_) | Type::Bool | Type::Int(_) | Type::Uint(_) | Type::Bytes(_)
+    ) {
+        ns.diagnostics.push(Diagnostic::error(
+            def.ty.loc(),
+            format!("’{}’ is not an elementary value type", ty.to_string(ns)),
+        ));
+        return;
+    }
+
+    let pos = ns.user_types.len();
+
+    if !ns.add_symbol(
+        file_no,
+        contract_no,
+        &def.name,
+        Symbol::UserType(def.name.loc, pos),
+    ) {
+        return;
+    }
+
+    let tags = resolve_tags(
+        def.name.loc.file_no(),
+        "type",
+        &def.doc,
+        None,
+        None,
+        None,
+        ns,
+    );
+
+    ns.user_types.push(UserTypeDecl {
+        tags,
+        loc: def.loc,
+        name: def.name.name.to_string(),
+        ty,
+        contract: contract_no.map(|no| ns.contracts[no].name.to_string()),
+    });
 }
 
 pub fn resolve_fields(delay: ResolveFields, file_no: usize, ns: &mut Namespace) {
@@ -260,6 +323,9 @@ fn resolve_contract<'a>(
                 });
 
                 delay.events.push((pos, s, Some(contract_no)));
+            }
+            pt::ContractPart::TypeDefinition(ty) => {
+                type_decl(ty, file_no, Some(contract_no), ns);
             }
             _ => (),
         }
@@ -721,6 +787,7 @@ impl Type {
                 s
             }
             Type::Contract(n) => format!("contract {}", ns.contracts[*n].name),
+            Type::UserType(n) => format!("usertype {}", ns.user_types[*n]),
             Type::Ref(r) => r.to_string(ns),
             Type::StorageRef(_, ty) => format!("{} storage", ty.to_string(ns)),
             Type::Void => "void".to_owned(),
@@ -785,6 +852,7 @@ impl Type {
                 )
             }
             Type::InternalFunction { .. } | Type::ExternalFunction { .. } => "function".to_owned(),
+            Type::UserType(n) => ns.user_types[*n].ty.to_signature_string(say_tuple, ns),
             _ => unreachable!(),
         }
     }
@@ -906,6 +974,7 @@ impl Type {
             }
             Type::Mapping(..) => BigInt::zero(),
             Type::Ref(ty) | Type::StorageRef(_, ty) => ty.size_of(ns),
+            Type::UserType(no) => ns.user_types[*no].ty.size_of(ns),
             _ => unimplemented!("sizeof on {:?}", self),
         }
     }
@@ -1112,6 +1181,7 @@ impl Type {
             Type::StorageRef(_, r) => r.is_reference_type(ns),
             Type::InternalFunction { .. } => false,
             Type::ExternalFunction { .. } => false,
+            Type::UserType(no) => ns.user_types[*no].ty.is_reference_type(ns),
             _ => unreachable!(),
         }
     }
@@ -1303,6 +1373,7 @@ impl Type {
             Type::ExternalFunction { .. } => "function".to_owned(),
             Type::Ref(r) => r.to_llvm_string(ns),
             Type::StorageRef(_, r) => r.to_llvm_string(ns),
+            Type::UserType(no) => ns.user_types[*no].ty.to_llvm_string(ns),
             _ => unreachable!(),
         }
     }

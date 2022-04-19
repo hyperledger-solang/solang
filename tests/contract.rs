@@ -1,9 +1,10 @@
+use path_slash::PathExt;
 use solang::{codegen, file_resolver::FileResolver, parse_and_resolve, sema::ast::Level, Target};
 use std::{
     ffi::OsStr,
     fs::{read_dir, File},
     io::{self, Read},
-    path::PathBuf,
+    path::{Path, PathBuf},
 };
 
 #[test]
@@ -42,19 +43,7 @@ fn recurse_directory(path: PathBuf, target: Target) -> io::Result<()> {
 fn parse_file(path: PathBuf, target: Target) -> io::Result<()> {
     let mut cache = FileResolver::new();
 
-    let mut file = File::open(&path)?;
-
-    let mut source = String::new();
-
-    file.read_to_string(&mut source)?;
-
-    // make sure the path uses unix file separators, this is what the dot file uses
-    let filename = path.to_string_lossy().replace('\\', "/");
-
-    println!("Parsing {} for {}", path.display(), target);
-
-    // The files may have had their end of lines mangled on Windows
-    cache.set_file_contents(&filename, source.replace("\r\n", "\n"));
+    let filename = add_file(&mut cache, &path, target)?;
 
     let mut ns = parse_and_resolve(OsStr::new(&filename), &mut cache, target);
 
@@ -68,6 +57,14 @@ fn parse_file(path: PathBuf, target: Target) -> io::Result<()> {
                 ..Default::default()
             },
         );
+    }
+
+    #[cfg(windows)]
+    {
+        for file in &mut ns.files {
+            let filename = file.path.to_slash_lossy();
+            file.path = PathBuf::from(filename);
+        }
     }
 
     let mut path = path;
@@ -93,4 +90,34 @@ fn parse_file(path: PathBuf, target: Target) -> io::Result<()> {
     assert_eq!(generated_dot, test_dot);
 
     Ok(())
+}
+
+fn add_file(cache: &mut FileResolver, path: &Path, target: Target) -> io::Result<String> {
+    let mut file = File::open(&path)?;
+
+    let mut source = String::new();
+
+    file.read_to_string(&mut source)?;
+
+    // make sure the path uses unix file separators, this is what the dot file uses
+    let filename = path.to_slash_lossy();
+
+    println!("Parsing {} for {}", filename, target);
+
+    // The files may have had their end of lines mangled on Windows
+    cache.set_file_contents(&filename, source.replace("\r\n", "\n"));
+
+    for line in source.lines() {
+        if line.starts_with("import") {
+            let start = line.find('"').unwrap();
+            let end = line.rfind('"').unwrap();
+            let file = &line[start + 1..end];
+            let mut import_path = path.parent().unwrap().to_path_buf();
+            import_path.push(file);
+            println!("adding import {}", import_path.display());
+            add_file(cache, &import_path, target)?;
+        }
+    }
+
+    Ok(filename)
 }
