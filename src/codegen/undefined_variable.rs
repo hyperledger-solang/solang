@@ -1,8 +1,8 @@
 use crate::codegen::cfg::{ControlFlowGraph, Instr};
 use crate::codegen::reaching_definitions::{apply_transfers, VarDefs};
-use crate::codegen::Expression;
+use crate::codegen::{Builtin, Expression};
 use crate::parser::pt::{Loc, StorageLocation};
-use crate::sema::ast::{Builtin, Diagnostic, ErrorType, Level, Namespace, Note};
+use crate::sema::ast::{Diagnostic, ErrorType, Level, Namespace, Note};
 use crate::sema::symtable;
 use solang_parser::pt::CodeLocation;
 use std::collections::HashMap;

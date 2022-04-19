@@ -1,9 +1,9 @@
 use super::cfg::{ControlFlowGraph, Instr};
 use super::reaching_definitions;
-use crate::codegen::Expression;
+use crate::codegen::{Builtin, Expression};
 use crate::parser::pt::Loc;
 use crate::sema::ast::RetrieveType;
-use crate::sema::ast::{Builtin, Diagnostic, Namespace, StringLocation, Type};
+use crate::sema::ast::{Diagnostic, Namespace, StringLocation, Type};
 use num_bigint::{BigInt, Sign};
 use num_traits::{ToPrimitive, Zero};
 use ripemd::Ripemd160;

@@ -11,12 +11,12 @@ use crate::ast;
 use crate::codegen::unused_variable::{
     should_remove_assignment, should_remove_variable, SideEffectsCheckParameters,
 };
-use crate::codegen::Expression;
+use crate::codegen::{Builtin, Expression};
 use crate::parser::pt;
 use crate::parser::pt::CodeLocation;
 use crate::sema::ast::RetrieveType;
 use crate::sema::ast::{
-    Builtin, CallTy, DestructureField, Function, Namespace, Parameter, Statement, TryCatch, Type,
+    CallTy, DestructureField, Function, Namespace, Parameter, Statement, TryCatch, Type,
 };
 use crate::sema::Recurse;
 use num_traits::Zero;
@@ -547,7 +547,7 @@ pub fn statement(
                                 &ast::Expression::Builtin(
                                     pt::Loc::Codegen,
                                     vec![Type::Bytes(32)],
-                                    Builtin::Keccak256,
+                                    ast::Builtin::Keccak256,
                                     vec![arg.clone()],
                                 ),
                                 cfg,
@@ -567,11 +567,11 @@ pub fn statement(
                                 &ast::Expression::Builtin(
                                     pt::Loc::Codegen,
                                     vec![Type::Bytes(32)],
-                                    Builtin::Keccak256,
+                                    ast::Builtin::Keccak256,
                                     vec![ast::Expression::Builtin(
                                         pt::Loc::Codegen,
                                         vec![Type::DynamicBytes],
-                                        Builtin::AbiEncodePacked,
+                                        ast::Builtin::AbiEncodePacked,
                                         vec![arg.clone()],
                                     )],
                                 ),
@@ -819,7 +819,7 @@ fn returns(
             return;
         }
 
-        ast::Expression::Builtin(_, _, Builtin::AbiDecode, _)
+        ast::Expression::Builtin(_, _, ast::Builtin::AbiDecode, _)
         | ast::Expression::InternalFunctionCall { .. }
         | ast::Expression::ExternalFunctionCall { .. }
         | ast::Expression::ExternalFunctionCallRaw { .. } => {
@@ -1513,27 +1513,27 @@ pub fn process_side_effects_expressions(
         }
 
         ast::Expression::Builtin(_, _, builtin_type, _) => match &builtin_type {
-            Builtin::PayableSend
-            | Builtin::ArrayPush
-            | Builtin::ArrayPop
+            ast::Builtin::PayableSend
+            | ast::Builtin::ArrayPush
+            | ast::Builtin::ArrayPop
             // PayableTransfer, Revert, Require and SelfDestruct do not occur inside an expression
             // for they return no value. They should not bother the unused variable elimination.
-            | Builtin::PayableTransfer
-            | Builtin::Revert
-            | Builtin::Require
-            | Builtin::SelfDestruct
-            | Builtin::WriteInt8
-            | Builtin::WriteInt16LE
-            | Builtin::WriteInt32LE
-            | Builtin::WriteInt64LE
-            | Builtin::WriteInt128LE
-            | Builtin::WriteInt256LE
-            | Builtin::WriteUint16LE
-            | Builtin::WriteUint32LE
-            | Builtin::WriteUint64LE
-            | Builtin::WriteUint128LE
-            | Builtin::WriteUint256LE
-            | Builtin::WriteAddress => {
+            | ast::Builtin::PayableTransfer
+            | ast::Builtin::Revert
+            | ast::Builtin::Require
+            | ast::Builtin::SelfDestruct
+            | ast::Builtin::WriteInt8
+            | ast::Builtin::WriteInt16LE
+            | ast::Builtin::WriteInt32LE
+            | ast::Builtin::WriteInt64LE
+            | ast::Builtin::WriteInt128LE
+            | ast::Builtin::WriteInt256LE
+            | ast::Builtin::WriteUint16LE
+            | ast::Builtin::WriteUint32LE
+            | ast::Builtin::WriteUint64LE
+            | ast::Builtin::WriteUint128LE
+            | ast::Builtin::WriteUint256LE
+            | ast::Builtin::WriteAddress => {
                 let _ = expression(exp, ctx.cfg, ctx.contract_no, ctx.func, ctx.ns, ctx.vartab, ctx.opt);
                 false
             }

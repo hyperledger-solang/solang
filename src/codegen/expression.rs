@@ -7,14 +7,12 @@ use super::{
     vartable::Vartable,
 };
 use crate::codegen::unused_variable::should_remove_assignment;
-use crate::codegen::Expression;
+use crate::codegen::{Builtin, Expression};
 use crate::parser::pt;
 use crate::parser::pt::CodeLocation;
 use crate::sema::ast;
 use crate::sema::ast::RetrieveType;
-use crate::sema::ast::{
-    Builtin, CallTy, FormatArg, Function, Namespace, Parameter, StringLocation, Type,
-};
+use crate::sema::ast::{CallTy, FormatArg, Function, Namespace, Parameter, StringLocation, Type};
 use crate::sema::eval::{eval_const_number, eval_const_rational};
 use crate::sema::expression::{bigint_to_expression, ResolveTo};
 use crate::Target;
@@ -378,7 +376,12 @@ pub fn expression(
                 _ => unreachable!(),
             }
         }
-        ast::Expression::Builtin(loc, returns, Builtin::ExternalFunctionAddress, func_expr) => {
+        ast::Expression::Builtin(
+            loc,
+            returns,
+            ast::Builtin::ExternalFunctionAddress,
+            func_expr,
+        ) => {
             if let ast::Expression::ExternalFunction { address, .. } = &func_expr[0] {
                 expression(address, cfg, contract_no, func, ns, vartab, opt)
             } else {
@@ -392,7 +395,7 @@ pub fn expression(
                 )
             }
         }
-        ast::Expression::Builtin(loc, returns, Builtin::FunctionSelector, func_expr) => {
+        ast::Expression::Builtin(loc, returns, ast::Builtin::FunctionSelector, func_expr) => {
             match &func_expr[0] {
                 ast::Expression::ExternalFunction { function_no, .. }
                 | ast::Expression::InternalFunction { function_no, .. } => {
@@ -416,7 +419,7 @@ pub fn expression(
         ast::Expression::InternalFunctionCall { .. }
         | ast::Expression::ExternalFunctionCall { .. }
         | ast::Expression::ExternalFunctionCallRaw { .. }
-        | ast::Expression::Builtin(_, _, Builtin::AbiDecode, _) => {
+        | ast::Expression::Builtin(_, _, ast::Builtin::AbiDecode, _) => {
             let mut returns = emit_function_call(expr, contract_no, cfg, func, ns, vartab, opt);
             assert_eq!(returns.len(), 1);
 
@@ -549,7 +552,7 @@ pub fn expression(
             Box::new(expression(e, cfg, contract_no, func, ns, vartab, opt)),
         ),
         // for some built-ins, we have to inline special case code
-        ast::Expression::Builtin(loc, ty, Builtin::ArrayPush, args) => {
+        ast::Expression::Builtin(loc, ty, ast::Builtin::ArrayPush, args) => {
             if args[0].ty().is_contract_storage() {
                 if ns.target == Target::Solana || args[0].ty().is_storage_bytes() {
                     array_push(loc, args, cfg, contract_no, func, ns, vartab, opt)
@@ -576,7 +579,7 @@ pub fn expression(
                 )
             }
         }
-        ast::Expression::Builtin(loc, ty, Builtin::ArrayPop, args) => {
+        ast::Expression::Builtin(loc, ty, ast::Builtin::ArrayPop, args) => {
             if args[0].ty().is_contract_storage() {
                 if ns.target == Target::Solana || args[0].ty().is_storage_bytes() {
                     array_pop(loc, args, &ty[0], cfg, contract_no, func, ns, vartab, opt)
@@ -614,48 +617,48 @@ pub fn expression(
                 Expression::Variable(*loc, ty[0].clone(), address_res)
             }
         }
-        ast::Expression::Builtin(_, _, Builtin::Assert, args) => {
+        ast::Expression::Builtin(_, _, ast::Builtin::Assert, args) => {
             expr_assert(cfg, &args[0], contract_no, func, ns, vartab, opt)
         }
-        ast::Expression::Builtin(_, _, Builtin::Print, args) => {
+        ast::Expression::Builtin(_, _, ast::Builtin::Print, args) => {
             let expr = expression(&args[0], cfg, contract_no, func, ns, vartab, opt);
 
             cfg.add(vartab, Instr::Print { expr });
 
             Expression::Poison
         }
-        ast::Expression::Builtin(_, _, Builtin::Require, args) => {
+        ast::Expression::Builtin(_, _, ast::Builtin::Require, args) => {
             require(cfg, args, contract_no, func, ns, vartab, opt)
         }
-        ast::Expression::Builtin(_, _, Builtin::Revert, args) => {
+        ast::Expression::Builtin(_, _, ast::Builtin::Revert, args) => {
             revert(args, cfg, contract_no, func, ns, vartab, opt)
         }
-        ast::Expression::Builtin(_, _, Builtin::SelfDestruct, args) => {
+        ast::Expression::Builtin(_, _, ast::Builtin::SelfDestruct, args) => {
             self_destruct(args, cfg, contract_no, func, ns, vartab, opt)
         }
-        ast::Expression::Builtin(loc, _, Builtin::PayableSend, args) => {
+        ast::Expression::Builtin(loc, _, ast::Builtin::PayableSend, args) => {
             payable_send(args, cfg, contract_no, func, ns, vartab, loc, opt)
         }
-        ast::Expression::Builtin(loc, _, Builtin::PayableTransfer, args) => {
+        ast::Expression::Builtin(loc, _, ast::Builtin::PayableTransfer, args) => {
             payable_transfer(args, cfg, contract_no, func, ns, vartab, loc, opt)
         }
-        ast::Expression::Builtin(loc, _, Builtin::AbiEncode, args) => {
+        ast::Expression::Builtin(loc, _, ast::Builtin::AbiEncode, args) => {
             abi_encode(args, cfg, contract_no, func, ns, vartab, loc, opt)
         }
-        ast::Expression::Builtin(loc, _, Builtin::AbiEncodePacked, args) => {
+        ast::Expression::Builtin(loc, _, ast::Builtin::AbiEncodePacked, args) => {
             abi_encode_packed(args, cfg, contract_no, func, ns, vartab, loc, opt)
         }
-        ast::Expression::Builtin(loc, _, Builtin::AbiEncodeWithSelector, args) => {
+        ast::Expression::Builtin(loc, _, ast::Builtin::AbiEncodeWithSelector, args) => {
             abi_encode_with_selector(args, cfg, contract_no, func, ns, vartab, loc, opt)
         }
-        ast::Expression::Builtin(loc, _, Builtin::AbiEncodeWithSignature, args) => {
+        ast::Expression::Builtin(loc, _, ast::Builtin::AbiEncodeWithSignature, args) => {
             abi_encode_with_signature(args, loc, cfg, contract_no, func, ns, vartab, opt)
         }
-        ast::Expression::Builtin(loc, _, Builtin::AbiEncodeCall, args) => {
+        ast::Expression::Builtin(loc, _, ast::Builtin::AbiEncodeCall, args) => {
             abi_encode_call(args, cfg, contract_no, func, ns, vartab, loc, opt)
         }
         // The Substrate gas price builtin takes an argument; the others do not
-        ast::Expression::Builtin(loc, _, Builtin::Gasprice, expr)
+        ast::Expression::Builtin(loc, _, ast::Builtin::Gasprice, expr)
             if expr.len() == 1 && ns.target == Target::Ewasm =>
         {
             builtin_ewasm_gasprice(loc, expr, cfg, contract_no, func, ns, vartab, opt)
@@ -1363,7 +1366,7 @@ fn abi_encode_with_signature(
     let hash = ast::Expression::Builtin(
         *loc,
         vec![Type::Bytes(32)],
-        Builtin::Keccak256,
+        ast::Builtin::Keccak256,
         vec![args_iter.next().unwrap().clone()],
     );
     let hash = expression(&hash, cfg, contract_no, func, ns, vartab, opt);
@@ -1411,7 +1414,7 @@ fn abi_encode_call(
         &ast::Expression::Builtin(
             *loc,
             vec![Type::Bytes(4)],
-            Builtin::FunctionSelector,
+            ast::Builtin::FunctionSelector,
             vec![args_iter.next().unwrap().clone()],
         ),
         cfg,
@@ -1473,22 +1476,22 @@ fn expr_builtin(
     vartab: &mut Vartable,
     loc: &pt::Loc,
     tys: &[Type],
-    builtin: &Builtin,
+    builtin: &ast::Builtin,
     opt: &Options,
 ) -> Expression {
     match builtin {
-        Builtin::WriteInt8
-        | Builtin::WriteInt16LE
-        | Builtin::WriteInt32LE
-        | Builtin::WriteInt64LE
-        | Builtin::WriteInt128LE
-        | Builtin::WriteInt256LE
-        | Builtin::WriteAddress
-        | Builtin::WriteUint16LE
-        | Builtin::WriteUint32LE
-        | Builtin::WriteUint64LE
-        | Builtin::WriteUint128LE
-        | Builtin::WriteUint256LE => {
+        ast::Builtin::WriteInt8
+        | ast::Builtin::WriteInt16LE
+        | ast::Builtin::WriteInt32LE
+        | ast::Builtin::WriteInt64LE
+        | ast::Builtin::WriteInt128LE
+        | ast::Builtin::WriteInt256LE
+        | ast::Builtin::WriteAddress
+        | ast::Builtin::WriteUint16LE
+        | ast::Builtin::WriteUint32LE
+        | ast::Builtin::WriteUint64LE
+        | ast::Builtin::WriteUint128LE
+        | ast::Builtin::WriteUint256LE => {
             let buf = expression(&args[0], cfg, contract_no, func, ns, vartab, opt);
             let offset = expression(&args[2], cfg, contract_no, func, ns, vartab, opt);
 
@@ -1536,18 +1539,18 @@ fn expr_builtin(
 
             Expression::Undefined(tys[0].clone())
         }
-        Builtin::ReadInt8
-        | Builtin::ReadInt16LE
-        | Builtin::ReadInt32LE
-        | Builtin::ReadInt64LE
-        | Builtin::ReadInt128LE
-        | Builtin::ReadInt256LE
-        | Builtin::ReadAddress
-        | Builtin::ReadUint16LE
-        | Builtin::ReadUint32LE
-        | Builtin::ReadUint64LE
-        | Builtin::ReadUint128LE
-        | Builtin::ReadUint256LE => {
+        ast::Builtin::ReadInt8
+        | ast::Builtin::ReadInt16LE
+        | ast::Builtin::ReadInt32LE
+        | ast::Builtin::ReadInt64LE
+        | ast::Builtin::ReadInt128LE
+        | ast::Builtin::ReadInt256LE
+        | ast::Builtin::ReadAddress
+        | ast::Builtin::ReadUint16LE
+        | ast::Builtin::ReadUint32LE
+        | ast::Builtin::ReadUint64LE
+        | ast::Builtin::ReadUint128LE
+        | ast::Builtin::ReadUint256LE => {
             let buf = expression(&args[0], cfg, contract_no, func, ns, vartab, opt);
             let offset = expression(&args[1], cfg, contract_no, func, ns, vartab, opt);
 
@@ -1590,7 +1593,7 @@ fn expr_builtin(
 
             cfg.set_basic_block(in_bounds);
 
-            Expression::Builtin(*loc, tys.to_vec(), *builtin, vec![buf, offset])
+            Expression::Builtin(*loc, tys.to_vec(), builtin.into(), vec![buf, offset])
         }
         _ => {
             let args = args
@@ -1598,7 +1601,7 @@ fn expr_builtin(
                 .map(|v| expression(v, cfg, contract_no, func, ns, vartab, opt))
                 .collect();
 
-            Expression::Builtin(*loc, tys.to_vec(), *builtin, args)
+            Expression::Builtin(*loc, tys.to_vec(), builtin.into(), args)
         }
     }
 }
@@ -2354,7 +2357,7 @@ pub fn emit_function_call(
                 unreachable!();
             }
         }
-        ast::Expression::Builtin(loc, tys, Builtin::AbiDecode, args) => {
+        ast::Expression::Builtin(loc, tys, ast::Builtin::AbiDecode, args) => {
             let data = expression(&args[0], cfg, callee_contract_no, func, ns, vartab, opt);
 
             let mut returns = Vec::new();
