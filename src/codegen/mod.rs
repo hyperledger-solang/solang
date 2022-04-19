@@ -8,6 +8,7 @@ mod statements;
 mod storage;
 mod strength_reduce;
 pub(crate) mod subexpression_elimination;
+mod tests;
 mod undefined_variable;
 mod unused_variable;
 pub(crate) mod vartable;
@@ -24,11 +25,11 @@ use crate::emit::Generate;
 use crate::sema::ast::{Layout, Namespace};
 use crate::sema::contracts::visit_bases;
 use crate::sema::diagnostics::any_errors;
-use crate::Target;
+use crate::{ast, Target};
 use std::cmp::Ordering;
 
 use crate::ast::Function;
-use crate::ast::{Builtin, FormatArg, RetrieveType, StringLocation, Type};
+use crate::ast::{FormatArg, RetrieveType, StringLocation, Type};
 use crate::codegen::cfg::ASTFunction;
 use crate::sema::Recurse;
 use num_bigint::{BigInt, Sign};
@@ -1119,5 +1120,127 @@ impl Expression {
             },
             ctx,
         )
+    }
+}
+
+#[derive(PartialEq, Debug, Clone, Copy)]
+pub enum Builtin {
+    Accounts,
+    AddMod,
+    ArrayLength,
+    Balance,
+    Blake2_128,
+    Blake2_256,
+    BlockCoinbase,
+    BlockDifficulty,
+    BlockHash,
+    BlockNumber,
+    Calldata,
+    ExternalFunctionAddress,
+    FunctionSelector,
+    Gasleft,
+    GasLimit,
+    Gasprice,
+    GetAddress,
+    MinimumBalance,
+    MulMod,
+    Keccak256,
+    Origin,
+    Random,
+    ReadAddress,
+    ReadInt8,
+    ReadInt16LE,
+    ReadInt32LE,
+    ReadInt64LE,
+    ReadInt128LE,
+    ReadInt256LE,
+    ReadUint16LE,
+    ReadUint32LE,
+    ReadUint64LE,
+    ReadUint128LE,
+    ReadUint256LE,
+    Ripemd160,
+    Sender,
+    Slot,
+    Sha256,
+    Signature,
+    SignatureVerify,
+    Timestamp,
+    TombstoneDeposit,
+    Value,
+    WriteAddress,
+    WriteInt8,
+    WriteInt16LE,
+    WriteInt32LE,
+    WriteInt64LE,
+    WriteInt128LE,
+    WriteInt256LE,
+    WriteUint16LE,
+    WriteUint32LE,
+    WriteUint64LE,
+    WriteUint128LE,
+    WriteUint256LE,
+}
+
+impl From<&ast::Builtin> for Builtin {
+    fn from(ast_builtin: &ast::Builtin) -> Self {
+        match ast_builtin {
+            ast::Builtin::Accounts => Builtin::Accounts,
+            ast::Builtin::AddMod => Builtin::AddMod,
+            ast::Builtin::ArrayLength => Builtin::ArrayLength,
+            ast::Builtin::Balance => Builtin::Balance,
+            ast::Builtin::Blake2_128 => Builtin::Blake2_128,
+            ast::Builtin::Blake2_256 => Builtin::Blake2_256,
+            ast::Builtin::BlockCoinbase => Builtin::BlockCoinbase,
+            ast::Builtin::BlockDifficulty => Builtin::BlockDifficulty,
+            ast::Builtin::BlockHash => Builtin::BlockHash,
+            ast::Builtin::BlockNumber => Builtin::BlockNumber,
+            ast::Builtin::Calldata => Builtin::Calldata,
+            ast::Builtin::ExternalFunctionAddress => Builtin::ExternalFunctionAddress,
+            ast::Builtin::FunctionSelector => Builtin::FunctionSelector,
+            ast::Builtin::Gasleft => Builtin::Gasleft,
+            ast::Builtin::GasLimit => Builtin::GasLimit,
+            ast::Builtin::Gasprice => Builtin::Gasprice,
+            ast::Builtin::GetAddress => Builtin::GetAddress,
+            ast::Builtin::MinimumBalance => Builtin::MinimumBalance,
+            ast::Builtin::MulMod => Builtin::MulMod,
+            ast::Builtin::Keccak256 => Builtin::Keccak256,
+            ast::Builtin::Origin => Builtin::Origin,
+            ast::Builtin::Random => Builtin::Random,
+            ast::Builtin::ReadAddress => Builtin::ReadAddress,
+            ast::Builtin::ReadInt8 => Builtin::ReadInt8,
+            ast::Builtin::ReadInt16LE => Builtin::ReadInt16LE,
+            ast::Builtin::ReadInt32LE => Builtin::ReadInt32LE,
+            ast::Builtin::ReadInt64LE => Builtin::ReadInt64LE,
+            ast::Builtin::ReadInt128LE => Builtin::ReadInt128LE,
+            ast::Builtin::ReadInt256LE => Builtin::ReadInt256LE,
+            ast::Builtin::ReadUint16LE => Builtin::ReadUint16LE,
+            ast::Builtin::ReadUint32LE => Builtin::ReadUint32LE,
+            ast::Builtin::ReadUint64LE => Builtin::ReadUint64LE,
+            ast::Builtin::ReadUint128LE => Builtin::ReadUint128LE,
+            ast::Builtin::ReadUint256LE => Builtin::ReadUint256LE,
+            ast::Builtin::Ripemd160 => Builtin::Ripemd160,
+            ast::Builtin::Sender => Builtin::Sender,
+            ast::Builtin::Slot => Builtin::Slot,
+            ast::Builtin::Sha256 => Builtin::Sha256,
+            ast::Builtin::Signature => Builtin::Signature,
+            ast::Builtin::SignatureVerify => Builtin::SignatureVerify,
+            ast::Builtin::Timestamp => Builtin::Timestamp,
+            ast::Builtin::TombstoneDeposit => Builtin::TombstoneDeposit,
+            ast::Builtin::Value => Builtin::Value,
+            ast::Builtin::WriteAddress => Builtin::WriteAddress,
+            ast::Builtin::WriteInt8 => Builtin::WriteInt8,
+            ast::Builtin::WriteInt16LE => Builtin::WriteInt16LE,
+            ast::Builtin::WriteInt32LE => Builtin::WriteInt32LE,
+            ast::Builtin::WriteInt64LE => Builtin::WriteInt64LE,
+            ast::Builtin::WriteInt128LE => Builtin::WriteInt128LE,
+            ast::Builtin::WriteInt256LE => Builtin::WriteInt256LE,
+            ast::Builtin::WriteUint16LE => Builtin::WriteUint16LE,
+            ast::Builtin::WriteUint32LE => Builtin::WriteUint32LE,
+            ast::Builtin::WriteUint64LE => Builtin::WriteUint64LE,
+            ast::Builtin::WriteUint128LE => Builtin::WriteUint128LE,
+            ast::Builtin::WriteUint256LE => Builtin::WriteUint256LE,
+            _ => panic!("Builtin should not be in the cfg"),
+        }
     }
 }

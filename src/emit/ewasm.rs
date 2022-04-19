@@ -1912,37 +1912,37 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
         }
 
         match expr {
-            codegen::Expression::Builtin(_, _, ast::Builtin::BlockNumber, _) => {
+            codegen::Expression::Builtin(_, _, codegen::Builtin::BlockNumber, _) => {
                 straight_call!("block_number", "getBlockNumber")
             }
-            codegen::Expression::Builtin(_, _, ast::Builtin::Gasleft, _) => {
+            codegen::Expression::Builtin(_, _, codegen::Builtin::Gasleft, _) => {
                 straight_call!("gas_left", "getGasLeft")
             }
-            codegen::Expression::Builtin(_, _, ast::Builtin::GasLimit, _) => {
+            codegen::Expression::Builtin(_, _, codegen::Builtin::GasLimit, _) => {
                 straight_call!("gas_limit", "getBlockGasLimit")
             }
-            codegen::Expression::Builtin(_, _, ast::Builtin::Timestamp, _) => {
+            codegen::Expression::Builtin(_, _, codegen::Builtin::Timestamp, _) => {
                 straight_call!("time_stamp", "getBlockTimestamp")
             }
-            codegen::Expression::Builtin(_, _, ast::Builtin::BlockDifficulty, _) => {
+            codegen::Expression::Builtin(_, _, codegen::Builtin::BlockDifficulty, _) => {
                 single_int_stack!("block_difficulty", "getBlockDifficulty", 256)
             }
-            codegen::Expression::Builtin(_, _, ast::Builtin::Origin, _) => {
+            codegen::Expression::Builtin(_, _, codegen::Builtin::Origin, _) => {
                 single_address_stack!("origin", "getTxOrigin")
             }
-            codegen::Expression::Builtin(_, _, ast::Builtin::Sender, _) => {
+            codegen::Expression::Builtin(_, _, codegen::Builtin::Sender, _) => {
                 single_address_stack!("caller", "getCaller")
             }
-            codegen::Expression::Builtin(_, _, ast::Builtin::BlockCoinbase, _) => {
+            codegen::Expression::Builtin(_, _, codegen::Builtin::BlockCoinbase, _) => {
                 single_address_stack!("coinbase", "getBlockCoinbase")
             }
-            codegen::Expression::Builtin(_, _, ast::Builtin::Gasprice, _) => {
+            codegen::Expression::Builtin(_, _, codegen::Builtin::Gasprice, _) => {
                 single_int_stack!("gas_price", "getTxGasPrice", ns.value_length as u32 * 8)
             }
-            codegen::Expression::Builtin(_, _, ast::Builtin::Value, _) => {
+            codegen::Expression::Builtin(_, _, codegen::Builtin::Value, _) => {
                 single_int_stack!("value", "getCallValue", ns.value_length as u32 * 8)
             }
-            codegen::Expression::Builtin(_, _, ast::Builtin::Calldata, _) => binary
+            codegen::Expression::Builtin(_, _, codegen::Builtin::Calldata, _) => binary
                 .builder
                 .build_call(
                     binary.module.get_function("vector_new").unwrap(),
@@ -1962,7 +1962,7 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
                 .try_as_basic_value()
                 .left()
                 .unwrap(),
-            codegen::Expression::Builtin(_, _, ast::Builtin::BlockHash, args) => {
+            codegen::Expression::Builtin(_, _, codegen::Builtin::BlockHash, args) => {
                 let block_number = self.expression(binary, &args[0], vartab, function, ns);
 
                 let value = binary
@@ -1987,7 +1987,7 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
 
                 binary.builder.build_load(value, "block_hash")
             }
-            codegen::Expression::Builtin(_, _, ast::Builtin::GetAddress, _) => {
+            codegen::Expression::Builtin(_, _, codegen::Builtin::GetAddress, _) => {
                 let value = binary
                     .builder
                     .build_alloca(binary.address_type(ns), "self_address");
@@ -2007,7 +2007,7 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
 
                 binary.builder.build_load(value, "self_address")
             }
-            codegen::Expression::Builtin(_, _, ast::Builtin::Balance, addr) => {
+            codegen::Expression::Builtin(_, _, codegen::Builtin::Balance, addr) => {
                 let addr = self
                     .expression(binary, &addr[0], vartab, function, ns)
                     .into_array_value();

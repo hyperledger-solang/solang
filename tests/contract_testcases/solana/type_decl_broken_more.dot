@@ -1,0 +1,22 @@
+strict digraph "tests/contract_testcases/solana/type_decl_broken_more.sol" {
+	Addr [label="name:Addr ty:address payable\ntests/contract_testcases/solana/type_decl.sol:1:1-2:29"]
+	Binary [label="name:Binary ty:bool\ncontract: x\ntests/contract_testcases/solana/type_decl.sol:5:2-21"]
+	contract [label="contract x\ntests/contract_testcases/solana/type_decl.sol:3:1-4:12"]
+	f [label="function f\ncontract: x\ntests/contract_testcases/solana/type_decl.sol:7:2-33\nsignature f(bytes32,bool)\nvisibility public\nmutability nonpayable"]
+	parameters [label="parameters\nusertype Addr \nusertype x.Binary "]
+	diagnostic [label="found contract ‘x’\nlevel Debug\ntests/contract_testcases/solana/type_decl.sol:3:1-4:12"]
+	diagnostic_10 [label="function can be declared ‘pure’\nlevel Warning\ntests/contract_testcases/solana/type_decl.sol:7:2-33"]
+	diagnostic_11 [label="‘Addr’ is an user type\nlevel Error\ntests/contract_testcases/solana/type_decl_broken_more.sol:3:14-18"]
+	diagnostic_12 [label="declaration of ‘Addr’ shadows type\nlevel Warning\ntests/contract_testcases/solana/type_decl_broken_more.sol:5:18-22"]
+	note [label="previous declaration of type\ntests/contract_testcases/solana/type_decl.sol:2:6-10"]
+	types -> Addr
+	types -> Binary
+	contracts -> contract
+	contract -> f [label="function"]
+	f -> parameters [label="parameters"]
+	diagnostics -> diagnostic [label="Debug"]
+	diagnostics -> diagnostic_10 [label="Warning"]
+	diagnostics -> diagnostic_11 [label="Error"]
+	diagnostics -> diagnostic_12 [label="Warning"]
+	diagnostic_12 -> note [label="note"]
+}
