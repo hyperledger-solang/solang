@@ -1024,6 +1024,28 @@ is called via the ABI encoder/decoder, it is not possible to pass references, ju
 However it is possible to use storage reference variables in public functions, as
 demonstrated in function all_pumas().
 
+User Defined Types
+__________________
+
+A user defined type is a new type which simply wraps an existing primitive type. First, a new type
+is declared with the ``type`` syntax. The name of the type can now be used anywhere where a type
+is used, for example in function arguments or return values.
+
+.. code-block:: javascript
+
+    type Value is uint128;
+
+    function inc_and_wrap(int128 v) returns (Value) {
+        return Value.wrap(v + 1);
+    }
+
+    function dec_and_unwrap(Value v) returns (uint128) {
+        return Value.unwrap(v) - 1;
+    }
+
+Note that the wrapped value ``Value v`` cannot be used in any type of arithmetic or comparision. It needs to
+be unwrapped before it can be used.
+
 Expressions
 -----------
 

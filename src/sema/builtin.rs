@@ -26,7 +26,7 @@ pub struct Prototype {
 }
 
 // A list of all Solidity builtins functions
-static BUILTIN_FUNCTIONS: Lazy<[Prototype; 25]> = Lazy::new(|| {
+static BUILTIN_FUNCTIONS: Lazy<[Prototype; 27]> = Lazy::new(|| {
     [
         Prototype {
             builtin: Builtin::Assert,
@@ -308,6 +308,28 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 25]> = Lazy::new(|| {
             ret: vec![Type::Bool],
             target: vec![Target::Solana],
             doc: "ed25519 signature verification",
+            constant: false,
+        },
+        Prototype {
+            builtin: Builtin::UserTypeWrap,
+            namespace: None,
+            method: Some(Type::UserType(0)),
+            name: "wrap",
+            args: vec![],
+            ret: vec![Type::UserType(0)],
+            target: vec![],
+            doc: "wrap type into user defined type",
+            constant: false,
+        },
+        Prototype {
+            builtin: Builtin::UserTypeUnwrap,
+            namespace: None,
+            method: Some(Type::UserType(0)),
+            name: "unwrap",
+            args: vec![Type::UserType(0)],
+            ret: vec![],
+            target: vec![],
+            doc: "unwrap user defined type",
             constant: false,
         },
     ]

@@ -1,8 +1,8 @@
-use crate::codegen::Expression;
+use crate::codegen::{Builtin, Expression};
 use crate::parser::pt;
 use crate::sema::ast::RetrieveType;
 use crate::sema::ast::{
-    Builtin, BuiltinStruct, CallTy, Contract, FormatArg, Namespace, Parameter, StringLocation, Type,
+    BuiltinStruct, CallTy, Contract, FormatArg, Namespace, Parameter, StringLocation, Type,
 };
 use std::cell::RefCell;
 use std::convert::TryFrom;
@@ -6347,6 +6347,7 @@ impl<'a> Binary<'a> {
                         false,
                     ),
                 ),
+                Type::UserType(no) => self.llvm_type(&ns.user_types[*no].ty, ns),
                 _ => unreachable!(),
             }
         }

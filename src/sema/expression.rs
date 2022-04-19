@@ -5508,6 +5508,75 @@ fn method_call_pos_args(
         }
     }
 
+    if let Ok(Type::UserType(no)) = ns.resolve_type(
+        context.file_no,
+        context.contract_no,
+        false,
+        var,
+        &mut Vec::new(),
+    ) {
+        if let Some(loc) = call_args_loc {
+            diagnostics.push(Diagnostic::error(
+                loc,
+                "call arguments not allowed on builtins".to_string(),
+            ));
+            return Err(());
+        }
+
+        let elem_ty = ns.user_types[no].ty.clone();
+        let user_ty = Type::UserType(no);
+
+        if func.name == "unwrap" {
+            return if args.len() != 1 {
+                diagnostics.push(Diagnostic::error(
+                    func.loc,
+                    "method ‘unwrap()’ takes one argument".to_string(),
+                ));
+                Err(())
+            } else {
+                let expr = expression(
+                    &args[0],
+                    context,
+                    ns,
+                    symtable,
+                    diagnostics,
+                    ResolveTo::Type(&user_ty),
+                )?;
+
+                Ok(Expression::Builtin(
+                    *loc,
+                    vec![elem_ty],
+                    Builtin::UserTypeUnwrap,
+                    vec![expr.cast(&expr.loc(), &user_ty, true, ns, diagnostics)?],
+                ))
+            };
+        } else if func.name == "wrap" {
+            return if args.len() != 1 {
+                diagnostics.push(Diagnostic::error(
+                    func.loc,
+                    "method ‘wrap()’ takes one argument".to_string(),
+                ));
+                Err(())
+            } else {
+                let expr = expression(
+                    &args[0],
+                    context,
+                    ns,
+                    symtable,
+                    diagnostics,
+                    ResolveTo::Type(&elem_ty),
+                )?;
+
+                Ok(Expression::Builtin(
+                    *loc,
+                    vec![user_ty],
+                    Builtin::UserTypeWrap,
+                    vec![expr.cast(&expr.loc(), &elem_ty, true, ns, diagnostics)?],
+                ))
+            };
+        }
+    }
+
     let var_expr = expression(var, context, ns, symtable, diagnostics, ResolveTo::Unknown)?;
 
     if let Some(expr) =

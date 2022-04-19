@@ -5,7 +5,6 @@ use ast::{Diagnostic, Mutability};
 use num_bigint::BigInt;
 use num_traits::Signed;
 use num_traits::Zero;
-use solang_parser::pt::Expression;
 use std::{collections::HashMap, ffi::OsStr};
 
 mod address;
@@ -103,9 +102,6 @@ fn sema_file(file: &ResolvedFile, resolver: &mut FileResolver, ns: &mut ast::Nam
             }
             pt::SourceUnitPart::ImportDirective(_, import) => {
                 resolve_import(import, Some(file), file_no, resolver, ns);
-            }
-            pt::SourceUnitPart::TypeDefinition(def) => {
-                resolve_type_definition(def, ns);
             }
             _ => (),
         }
@@ -229,8 +225,6 @@ fn resolve_import(
                         }
                     }
 
-                    ns.check_shadowing(file_no, None, symbol);
-
                     ns.add_symbol(file_no, None, symbol, import);
                 } else {
                     ns.diagnostics.push(ast::Diagnostic::error(
@@ -273,14 +267,10 @@ fn resolve_import(
                     }
                 }
 
-                ns.check_shadowing(file_no, contract_no, &new_symbol);
-
                 ns.add_symbol(file_no, contract_no, &new_symbol, symbol);
             }
         }
         pt::Import::GlobalSymbol(_, symbol, _) => {
-            ns.check_shadowing(file_no, None, symbol);
-
             ns.add_symbol(
                 file_no,
                 None,
@@ -324,30 +314,6 @@ fn resolve_pragma(
     }
 }
 
-/// Resolve type definition and emit a diagnostic error if type is not an elementary value type
-fn resolve_type_definition(def: &pt::TypeDefinition, ns: &mut ast::Namespace) {
-    if let Expression::Type(_, ty) = &def.ty {
-        if !matches!(
-            ty,
-            pt::Type::Address
-                | pt::Type::AddressPayable
-                | pt::Type::Bool
-                | pt::Type::Int(_)
-                | pt::Type::Uint(_)
-                | pt::Type::Bytes(_)
-                | pt::Type::Rational
-        ) {
-            ns.diagnostics.push(ast::Diagnostic::error(
-                def.loc,
-                format!(
-                    "’{}’ is not an elementary value type",
-                    ast::Type::from(ty).to_string(ns),
-                ),
-            ));
-        }
-    }
-}
-
 impl ast::Namespace {
     /// Create a namespace and populate with the parameters for the target
     pub fn new(target: Target) -> Self {
@@ -367,6 +333,7 @@ impl ast::Namespace {
             structs: Vec::new(),
             events: Vec::new(),
             contracts: Vec::new(),
+            user_types: Vec::new(),
             functions: Vec::new(),
             yul_functions: Vec::new(),
             constants: Vec::new(),
@@ -478,6 +445,14 @@ impl ast::Namespace {
                         "location of previous definition".to_string(),
                     ));
                 }
+                ast::Symbol::UserType(loc, _) => {
+                    self.diagnostics.push(ast::Diagnostic::error_with_note(
+                        id.loc,
+                        format!("{} is already defined as an user type", id.name),
+                        *loc,
+                        "location of previous definition".to_string(),
+                    ));
+                }
                 ast::Symbol::Function(_) => unreachable!(),
             }
 
@@ -556,6 +531,14 @@ impl ast::Namespace {
                         self.diagnostics.push(ast::Diagnostic::warning_with_note(
                             id.loc,
                             format!("{} is already defined as an import", id.name),
+                            *loc,
+                            "location of previous definition".to_string(),
+                        ));
+                    }
+                    ast::Symbol::UserType(loc, _) => {
+                        self.diagnostics.push(ast::Diagnostic::warning_with_note(
+                            id.loc,
+                            format!("{} is already defined as an user type", id.name),
                             *loc,
                             "location of previous definition".to_string(),
                         ));
@@ -760,6 +743,9 @@ impl ast::Namespace {
             }
             Some(ast::Symbol::Import(..)) => {
                 ast::Diagnostic::decl_error(id.loc, format!("`{}' is an import", id.name))
+            }
+            Some(ast::Symbol::UserType(..)) => {
+                ast::Diagnostic::decl_error(id.loc, format!("`{}' is an user type", id.name))
             }
             Some(ast::Symbol::Variable(..)) => {
                 ast::Diagnostic::decl_error(id.loc, format!("`{}' is a contract variable", id.name))
@@ -976,6 +962,15 @@ impl ast::Namespace {
                     format!("declaration of ‘{}’ shadows contract name", id.name),
                     loc,
                     "previous declaration of contract name".to_string(),
+                ));
+            }
+            Some(ast::Symbol::UserType(loc, _)) => {
+                let loc = *loc;
+                self.diagnostics.push(ast::Diagnostic::warning_with_note(
+                    id.loc,
+                    format!("declaration of ‘{}’ shadows type", id.name),
+                    loc,
+                    "previous declaration of type".to_string(),
                 ));
             }
             Some(ast::Symbol::Import(loc, _)) => {
@@ -1320,6 +1315,7 @@ impl ast::Namespace {
                 ));
                 Err(())
             }
+            Some(ast::Symbol::UserType(_, n)) => Ok(ast::Type::UserType(*n)),
         }
     }
 
@@ -1375,36 +1371,43 @@ impl ast::Namespace {
                 }
                 Some(ast::Symbol::Function(_)) => {
                     diagnostics.push(ast::Diagnostic::decl_error(
-                        id.loc,
-                        format!("‘{}’ is a function", id.name),
+                        contract_name.loc,
+                        format!("‘{}’ is a function", contract_name.name),
                     ));
                     return Err(());
                 }
                 Some(ast::Symbol::Variable(..)) => {
                     diagnostics.push(ast::Diagnostic::decl_error(
-                        id.loc,
-                        format!("‘{}’ is a contract variable", id.name),
+                        contract_name.loc,
+                        format!("‘{}’ is a contract variable", contract_name.name),
                     ));
                     return Err(());
                 }
                 Some(ast::Symbol::Event(_)) => {
                     diagnostics.push(ast::Diagnostic::decl_error(
-                        id.loc,
-                        format!("‘{}’ is an event", id.name),
+                        contract_name.loc,
+                        format!("‘{}’ is an event", contract_name.name),
                     ));
                     return Err(());
                 }
                 Some(ast::Symbol::Struct(..)) => {
                     diagnostics.push(ast::Diagnostic::decl_error(
-                        id.loc,
-                        format!("‘{}’ is a struct", id.name),
+                        contract_name.loc,
+                        format!("‘{}’ is a struct", contract_name.name),
                     ));
                     return Err(());
                 }
                 Some(ast::Symbol::Enum(..)) => {
                     diagnostics.push(ast::Diagnostic::decl_error(
-                        id.loc,
-                        format!("‘{}’ is an enum variable", id.name),
+                        contract_name.loc,
+                        format!("‘{}’ is an enum variable", contract_name.name),
+                    ));
+                    return Err(());
+                }
+                Some(ast::Symbol::UserType(..)) => {
+                    diagnostics.push(ast::Diagnostic::decl_error(
+                        contract_name.loc,
+                        format!("‘{}’ is an user type", contract_name.name),
                     ));
                     return Err(());
                 }
