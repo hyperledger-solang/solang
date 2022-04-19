@@ -2147,6 +2147,28 @@ impl Namespace {
             }
         }
 
+        // user types
+        if !self.user_types.is_empty() {
+            let types = dot.add_node(Node::new("types", Vec::new()), None, None);
+
+            for decl in &self.user_types {
+                let mut labels = vec![
+                    format!("name:{} ty:{}", decl.name, decl.ty.to_string(self)),
+                    self.loc_to_string(&decl.loc),
+                ];
+
+                if let Some(contract) = &decl.contract {
+                    labels.insert(1, format!("contract: {}", contract));
+                }
+
+                let e = Node::new(&decl.name, labels);
+
+                let node = dot.add_node(e, Some(types), None);
+
+                dot.add_tags(&decl.tags, node);
+            }
+        }
+
         // free functions
         if !self.functions.iter().any(|func| func.contract_no.is_some()) {
             let functions = dot.add_node(Node::new("free_functions", Vec::new()), None, None);

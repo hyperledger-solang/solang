@@ -27,9 +27,12 @@ pub enum Type {
     DynamicBytes,
     String,
     Array(Box<Type>, Vec<Option<BigInt>>),
+    /// The usize is an index into enums in the namespace
     Enum(usize),
+    /// The usize is an index into contracts in the namespace
     Struct(usize),
     Mapping(Box<Type>, Box<Type>),
+    /// The usize is an index into contracts in the namespace
     Contract(usize),
     Ref(Box<Type>),
     /// Reference to storage, first bool is true for immutables
@@ -44,6 +47,9 @@ pub enum Type {
         params: Vec<Type>,
         returns: Vec<Type>,
     },
+    /// User type definitions, e.g. `type Foo is int128;`. The usize
+    /// is an index into user_types in the namespace.
+    UserType(usize),
     /// There is no way to declare value in Solidity (should there be?)
     Value,
     Void,
@@ -111,7 +117,7 @@ impl EventDecl {
 }
 
 impl fmt::Display for StructDecl {
-    /// Make the struct name into a string for printing. The enum can be declared either
+    /// Make the struct name into a string for printing. The struct can be declared either
     /// inside or outside a contract.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match &self.contract {
@@ -334,6 +340,26 @@ impl From<&pt::Type> for Type {
     }
 }
 
+#[derive(PartialEq, Clone, Debug)]
+pub struct UserTypeDecl {
+    pub tags: Vec<Tag>,
+    pub loc: pt::Loc,
+    pub name: String,
+    pub ty: Type,
+    pub contract: Option<String>,
+}
+
+impl fmt::Display for UserTypeDecl {
+    /// Make the user type name into a string for printing. The user type can
+    /// be declared either inside or outside a contract.
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match &self.contract {
+            Some(c) => write!(f, "{}.{}", c, self.name),
+            None => write!(f, "{}", self.name),
+        }
+    }
+}
+
 pub struct Variable {
     pub tags: Vec<Tag>,
     pub name: String,
@@ -356,6 +382,7 @@ pub enum Symbol {
     Event(Vec<(pt::Loc, usize)>),
     Contract(pt::Loc, usize),
     Import(pt::Loc, usize),
+    UserType(pt::Loc, usize),
 }
 
 impl CodeLocation for Symbol {
@@ -365,8 +392,8 @@ impl CodeLocation for Symbol {
             | Symbol::Variable(loc, ..)
             | Symbol::Struct(loc, _)
             | Symbol::Contract(loc, _)
-            | Symbol::Import(loc, _) => *loc,
-
+            | Symbol::Import(loc, _)
+            | Symbol::UserType(loc, _) => *loc,
             Symbol::Event(items) | Symbol::Function(items) => items[0].0,
         }
     }
@@ -410,6 +437,8 @@ pub struct Namespace {
     pub structs: Vec<StructDecl>,
     pub events: Vec<EventDecl>,
     pub contracts: Vec<Contract>,
+    /// All type declarations
+    pub user_types: Vec<UserTypeDecl>,
     /// All functions
     pub functions: Vec<Function>,
     /// Yul functions
@@ -969,6 +998,8 @@ pub enum Builtin {
     WriteUint256LE,
     WriteAddress,
     Accounts,
+    UserTypeWrap,
+    UserTypeUnwrap,
 }
 
 #[derive(PartialEq, Clone, Debug)]

@@ -549,6 +549,7 @@ fn ty_to_abi(ty: &ast::Type, ns: &ast::Namespace, registry: &mut Abi) -> ParamTy
         }
         ast::Type::StorageRef(_, ty) => ty_to_abi(ty, ns, registry),
         ast::Type::Ref(ty) => ty_to_abi(ty, ns, registry),
+        ast::Type::UserType(no) => ty_to_abi(&ns.user_types[*no].ty, ns, registry),
         ast::Type::Bool | ast::Type::Uint(_) | ast::Type::Int(_) => {
             let scalety = match ty {
                 ast::Type::Bool => "bool".into(),

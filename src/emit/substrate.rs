@@ -741,6 +741,9 @@ impl SubstrateTarget {
                 arg
             }
             ast::Type::Enum(n) => self.decode_ty(binary, function, &ns.enums[*n].ty, data, end, ns),
+            ast::Type::UserType(n) => {
+                self.decode_ty(binary, function, &ns.user_types[*n].ty, data, end, ns)
+            }
             ast::Type::Struct(n) => {
                 let llvm_ty = binary.llvm_type(ty.deref_any(), ns);
 
@@ -1214,17 +1217,26 @@ impl SubstrateTarget {
                     )
                 };
             }
-            ast::Type::Enum(n) => {
-                let arglen = self.encode_primitive(binary, load, &ns.enums[*n].ty, *data, arg, ns);
-
-                *data = unsafe {
-                    binary.builder.build_gep(
-                        *data,
-                        &[binary.context.i32_type().const_int(arglen, false)],
-                        "",
-                    )
-                };
-            }
+            ast::Type::UserType(no) => self.encode_ty(
+                binary,
+                ns,
+                load,
+                packed,
+                function,
+                &ns.user_types[*no].ty,
+                arg,
+                data,
+            ),
+            ast::Type::Enum(no) => self.encode_ty(
+                binary,
+                ns,
+                load,
+                packed,
+                function,
+                &ns.enums[*no].ty,
+                arg,
+                data,
+            ),
             ast::Type::Array(_, dim) if dim[0].is_some() => {
                 let arg = if load {
                     binary
