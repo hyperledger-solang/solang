@@ -1413,7 +1413,7 @@ fn destructure_values(
             let loc = field.loc().unwrap();
             let _ = Expression::FunctionArg(loc, right_tys[i].clone(), i).cast(
                 &loc,
-                left_ty,
+                left_ty.deref_memory(),
                 true,
                 ns,
                 diagnostics,
