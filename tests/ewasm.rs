@@ -2284,7 +2284,7 @@ fn selfdestruct() {
             }
 
             function step2() public {
-                o.goaway(payable(address(this)));
+                bool foo = o.goaway(payable(address(this)));
             }
         }"##,
     );

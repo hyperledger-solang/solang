@@ -1464,7 +1464,7 @@ pub fn compatible_mutability(left: &Mutability, right: &Mutability) -> bool {
 }
 
 /// When resolving an expression, what type are we looking for
-#[derive(PartialEq, Clone, Copy)]
+#[derive(PartialEq, Clone, Copy, Debug)]
 pub enum ResolveTo<'a> {
     Unknown,        // We don't know what we're looking for, best effort
     Discard,        // We won't be using the result. For example, an expression as a statement/
@@ -1793,9 +1793,17 @@ pub fn expression(
 
             assign_expr(loc, var, expr, e, context, ns, symtable, diagnostics)
         }
-        pt::Expression::NamedFunctionCall(loc, ty, args) => {
-            named_call_expr(loc, ty, args, false, context, ns, symtable, diagnostics)
-        }
+        pt::Expression::NamedFunctionCall(loc, ty, args) => named_call_expr(
+            loc,
+            ty,
+            args,
+            false,
+            context,
+            ns,
+            symtable,
+            diagnostics,
+            resolve_to,
+        ),
         pt::Expression::New(loc, call) => {
             if context.constant {
                 diagnostics.push(Diagnostic::error(
@@ -1869,20 +1877,24 @@ pub fn expression(
         }
         pt::Expression::Or(loc, left, right) => {
             let boolty = Type::Bool;
-            let l = expression(left, context, ns, symtable, diagnostics, resolve_to)?.cast(
-                loc,
-                &boolty,
-                true,
+            let l = expression(
+                left,
+                context,
                 ns,
+                symtable,
                 diagnostics,
-            )?;
-            let r = expression(right, context, ns, symtable, diagnostics, resolve_to)?.cast(
-                loc,
-                &boolty,
-                true,
+                ResolveTo::Type(&boolty),
+            )?
+            .cast(loc, &boolty, true, ns, diagnostics)?;
+            let r = expression(
+                right,
+                context,
                 ns,
+                symtable,
                 diagnostics,
-            )?;
+                ResolveTo::Type(&boolty),
+            )?
+            .cast(loc, &boolty, true, ns, diagnostics)?;
 
             check_var_usage_expression(ns, &l, &r, symtable);
 
@@ -1890,20 +1902,24 @@ pub fn expression(
         }
         pt::Expression::And(loc, left, right) => {
             let boolty = Type::Bool;
-            let l = expression(left, context, ns, symtable, diagnostics, resolve_to)?.cast(
-                loc,
-                &boolty,
-                true,
+            let l = expression(
+                left,
+                context,
                 ns,
+                symtable,
                 diagnostics,
-            )?;
-            let r = expression(right, context, ns, symtable, diagnostics, resolve_to)?.cast(
-                loc,
-                &boolty,
-                true,
+                ResolveTo::Type(&boolty),
+            )?
+            .cast(loc, &boolty, true, ns, diagnostics)?;
+            let r = expression(
+                right,
+                context,
                 ns,
+                symtable,
                 diagnostics,
-            )?;
+                ResolveTo::Type(&boolty),
+            )?
+            .cast(loc, &boolty, true, ns, diagnostics)?;
             check_var_usage_expression(ns, &l, &r, symtable);
 
             Ok(Expression::And(*loc, Box::new(l), Box::new(r)))
@@ -3570,6 +3586,18 @@ fn addition(
         diagnostics,
     )?;
 
+    if ty.is_rational() {
+        let expr = Expression::Add(*loc, ty, false, Box::new(left), Box::new(right));
+
+        return match eval_const_rational(&expr, ns) {
+            Ok(_) => Ok(expr),
+            Err(diag) => {
+                diagnostics.push(diag);
+                Err(())
+            }
+        };
+    }
+
     // If we don't know what type the result is going to be
     if resolve_to == ResolveTo::Unknown {
         let bits = std::cmp::min(256, ty.bits(ns) * 2);
@@ -4214,7 +4242,7 @@ fn member_access(
 
                     expr = Ok(Expression::InternalFunction {
                         loc: e.loc(),
-                        ty: function_type(func, false),
+                        ty: function_type(func, false, resolve_to),
                         function_no: *function_no,
                         signature: None,
                     })
@@ -4806,6 +4834,7 @@ fn call_function_type(
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
+    resolve_to: ResolveTo,
 ) -> Result<Expression, ()> {
     let mut function = expression(expr, context, ns, symtable, diagnostics, ResolveTo::Unknown)?;
 
@@ -4860,7 +4889,7 @@ fn call_function_type(
 
         Ok(Expression::InternalFunctionCall {
             loc: *loc,
-            returns: if returns.is_empty() {
+            returns: if returns.is_empty() || resolve_to == ResolveTo::Discard {
                 vec![Type::Void]
             } else {
                 returns
@@ -4923,7 +4952,7 @@ fn call_function_type(
 
         Ok(Expression::ExternalFunctionCall {
             loc: *loc,
-            returns: if returns.is_empty() {
+            returns: if returns.is_empty() || resolve_to == ResolveTo::Discard {
                 vec![Type::Void]
             } else {
                 returns
@@ -5015,6 +5044,7 @@ pub fn call_position_args(
     virtual_call: bool,
     context: &ExprContext,
     ns: &mut Namespace,
+    resolve_to: ResolveTo,
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Result<Expression, ()> {
@@ -5094,8 +5124,8 @@ pub fn call_position_args(
             continue;
         }
 
-        let returns = function_returns(func);
-        let ty = function_type(func, false);
+        let returns = function_returns(func, resolve_to);
+        let ty = function_type(func, false, resolve_to);
 
         return Ok(Expression::InternalFunctionCall {
             loc: *loc,
@@ -5148,6 +5178,7 @@ fn function_call_with_named_args(
     function_nos: Vec<usize>,
     virtual_call: bool,
     context: &ExprContext,
+    resolve_to: ResolveTo,
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
@@ -5259,8 +5290,8 @@ fn function_call_with_named_args(
             continue;
         }
 
-        let returns = function_returns(func);
-        let ty = function_type(func, false);
+        let returns = function_returns(func, resolve_to);
+        let ty = function_type(func, false, resolve_to);
 
         return Ok(Expression::InternalFunctionCall {
             loc: *loc,
@@ -5425,6 +5456,7 @@ fn method_call_pos_args(
                     false,
                     context,
                     ns,
+                    resolve_to,
                     symtable,
                     diagnostics,
                 );
@@ -5463,6 +5495,7 @@ fn method_call_pos_args(
                     true,
                     context,
                     ns,
+                    resolve_to,
                     symtable,
                     diagnostics,
                 );
@@ -5494,6 +5527,7 @@ fn method_call_pos_args(
                         false,
                         context,
                         ns,
+                        resolve_to,
                         symtable,
                         diagnostics,
                     );
@@ -5974,8 +6008,8 @@ fn method_call_pos_args(
                 };
 
                 let func = &ns.functions[*function_no];
-                let returns = function_returns(func);
-                let ty = function_type(func, true);
+                let returns = function_returns(func, resolve_to);
+                let ty = function_type(func, true, resolve_to);
 
                 return Ok(Expression::ExternalFunctionCall {
                     loc: *loc,
@@ -6012,6 +6046,7 @@ fn method_call_pos_args(
             symtable,
             diagnostics,
             ns,
+            resolve_to,
         ) {
             Ok(Some(expr)) => {
                 diagnostics.truncate(marker);
@@ -6177,6 +6212,7 @@ fn method_call_pos_args(
             symtable,
             diagnostics,
             ns,
+            resolve_to,
         ) {
             Ok(Some(expr)) => {
                 return Ok(expr);
@@ -6206,6 +6242,7 @@ fn resolve_using(
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
     ns: &mut Namespace,
+    resolve_to: ResolveTo,
 ) -> Result<Option<Expression>, ()> {
     // first collect all possible libraries that match the using directive type
     // Use HashSet for deduplication.
@@ -6304,8 +6341,8 @@ fn resolve_using(
                 continue;
             }
 
-            let returns = function_returns(libfunc);
-            let ty = function_type(libfunc, false);
+            let returns = function_returns(libfunc, resolve_to);
+            let ty = function_type(libfunc, false, resolve_to);
 
             return Ok(Some(Expression::InternalFunctionCall {
                 loc: *loc,
@@ -6349,6 +6386,7 @@ fn method_call_named_args(
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
+    resolve_to: ResolveTo,
 ) -> Result<Expression, ()> {
     if let pt::Expression::Variable(namespace) = var {
         // is it a call to super
@@ -6369,6 +6407,7 @@ fn method_call_named_args(
                     available_super_functions(&func_name.name, cur_contract_no, ns),
                     false,
                     context,
+                    resolve_to,
                     ns,
                     symtable,
                     diagnostics,
@@ -6406,6 +6445,7 @@ fn method_call_named_args(
                     ),
                     true,
                     context,
+                    resolve_to,
                     ns,
                     symtable,
                     diagnostics,
@@ -6436,6 +6476,7 @@ fn method_call_named_args(
                         ),
                         false,
                         context,
+                        resolve_to,
                         ns,
                         symtable,
                         diagnostics,
@@ -6567,8 +6608,8 @@ fn method_call_named_args(
                 };
 
                 let func = &ns.functions[*function_no];
-                let returns = function_returns(func);
-                let ty = function_type(func, true);
+                let returns = function_returns(func, resolve_to);
+                let ty = function_type(func, true, resolve_to);
 
                 return Ok(Expression::ExternalFunctionCall {
                     loc: *loc,
@@ -7021,6 +7062,7 @@ pub fn named_call_expr(
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
+    resolve_to: ResolveTo,
 ) -> Result<Expression, ()> {
     let mut nullsink = Vec::new();
 
@@ -7054,7 +7096,16 @@ pub fn named_call_expr(
         return Err(());
     }
 
-    let expr = named_function_call_expr(loc, ty, args, context, ns, symtable, diagnostics)?;
+    let expr = named_function_call_expr(
+        loc,
+        ty,
+        args,
+        context,
+        ns,
+        symtable,
+        diagnostics,
+        resolve_to,
+    )?;
 
     check_function_call(ns, &expr, symtable);
     if expr.tys().len() > 1 && !is_destructible {
@@ -7234,6 +7285,7 @@ pub fn function_call_expr(
                     ns,
                     symtable,
                     diagnostics,
+                    resolve_to,
                 )
             } else {
                 if let Some(loc) = call_args_loc {
@@ -7253,6 +7305,7 @@ pub fn function_call_expr(
                     true,
                     context,
                     ns,
+                    resolve_to,
                     symtable,
                     diagnostics,
                 )
@@ -7268,6 +7321,7 @@ pub fn function_call_expr(
             ns,
             symtable,
             diagnostics,
+            resolve_to,
         ),
     }
 }
@@ -7281,6 +7335,7 @@ pub fn named_function_call_expr(
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
+    resolve_to: ResolveTo,
 ) -> Result<Expression, ()> {
     let (ty, call_args, call_args_loc) = collect_call_args(ty, diagnostics)?;
 
@@ -7296,6 +7351,7 @@ pub fn named_function_call_expr(
             ns,
             symtable,
             diagnostics,
+            resolve_to,
         ),
         pt::Expression::Variable(id) => {
             if let Some(loc) = call_args_loc {
@@ -7313,6 +7369,7 @@ pub fn named_function_call_expr(
                 available_functions(&id.name, true, context.file_no, context.contract_no, ns),
                 true,
                 context,
+                resolve_to,
                 ns,
                 symtable,
                 diagnostics,
@@ -7336,8 +7393,8 @@ pub fn named_function_call_expr(
 }
 
 /// Get the return values for a function call
-fn function_returns(ftype: &Function) -> Vec<Type> {
-    if !ftype.returns.is_empty() {
+fn function_returns(ftype: &Function, resolve_to: ResolveTo) -> Vec<Type> {
+    if !ftype.returns.is_empty() && !matches!(resolve_to, ResolveTo::Discard) {
         ftype.returns.iter().map(|p| p.ty.clone()).collect()
     } else {
         vec![Type::Void]
@@ -7345,10 +7402,10 @@ fn function_returns(ftype: &Function) -> Vec<Type> {
 }
 
 /// Get the function type for an internal.external function call
-fn function_type(func: &Function, external: bool) -> Type {
+fn function_type(func: &Function, external: bool, resolve_to: ResolveTo) -> Type {
     let params = func.params.iter().map(|p| p.ty.clone()).collect();
     let mutability = func.mutability.clone();
-    let returns = function_returns(func);
+    let returns = function_returns(func, resolve_to);
 
     if external {
         Type::ExternalFunction {

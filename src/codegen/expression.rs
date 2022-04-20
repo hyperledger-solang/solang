@@ -421,7 +421,6 @@ pub fn expression(
         | ast::Expression::ExternalFunctionCallRaw { .. }
         | ast::Expression::Builtin(_, _, ast::Builtin::AbiDecode, _) => {
             let mut returns = emit_function_call(expr, contract_no, cfg, func, ns, vartab, opt);
-            assert_eq!(returns.len(), 1);
 
             returns.remove(0)
         }
@@ -2144,6 +2143,7 @@ pub fn emit_function_call(
             args,
             value,
             gas,
+            returns,
             ..
         } => {
             if let ast::Expression::ExternalFunction {
@@ -2234,7 +2234,8 @@ pub fn emit_function_call(
                     },
                 );
 
-                if !ftype.returns.is_empty() {
+                // If the first element of returns is Void, we can discard the returns
+                if !ftype.returns.is_empty() && returns[0] != Type::Void {
                     let mut returns = Vec::new();
                     let mut res = Vec::new();
 
@@ -2319,7 +2320,7 @@ pub fn emit_function_call(
                     },
                 );
 
-                if !func_returns.is_empty() {
+                if !func_returns.is_empty() && returns[0] != Type::Void {
                     let mut returns = Vec::new();
                     let mut res = Vec::new();
                     let mut tys = Vec::new();

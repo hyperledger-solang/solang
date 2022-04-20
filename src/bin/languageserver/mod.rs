@@ -757,12 +757,11 @@ impl SolangServer {
                 }
             }
             ast::Expression::ExternalFunctionCallRaw {
-                loc: _,
-                ty: _,
                 address,
                 args,
                 value,
                 gas,
+                ..
             } => {
                 SolangServer::construct_expr(args, lookup_tbl, symtab, fnc_map, ns);
                 SolangServer::construct_expr(address, lookup_tbl, symtab, fnc_map, ns);

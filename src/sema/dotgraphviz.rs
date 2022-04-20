@@ -808,7 +808,7 @@ impl Dot {
             Expression::UnaryMinus(loc, ty, expr) => {
                 let node = self.add_node(
                     Node::new(
-                        "unary minus",
+                        "unary_minus",
                         vec![
                             format!("unary minus {}", ty.to_string(ns)),
                             ns.loc_to_string(loc),
