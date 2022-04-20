@@ -3,7 +3,7 @@ strict digraph "tests/contract_testcases/substrate/tags/functions_05.sol" {
 	foo [label="function foo\ncontract: c\ntests/contract_testcases/substrate/tags/functions_05.sol:4:13-58\nsignature foo()\nvisibility public\nmutability nonpayable"]
 	returns [label="returns\nint256 a\nbool b"]
 	diagnostic [label="found contract ‘c’\nlevel Debug\ntests/contract_testcases/substrate/tags/functions_05.sol:2:9-20"]
-	diagnostic_6 [label="tag ‘@return’ missing parameter name\nlevel Error\ntests/contract_testcases/substrate/tags/functions_05.sol:1:1-2:6"]
+	diagnostic_6 [label="tag ‘@return’ missing parameter name\nlevel Error\ntests/contract_testcases/substrate/tags/functions_05.sol:3:24"]
 	diagnostic_7 [label="return variable ‘a‘ has never been assigned\nlevel Warning\ntests/contract_testcases/substrate/tags/functions_05.sol:4:48-49"]
 	diagnostic_8 [label="return variable ‘b‘ has never been assigned\nlevel Warning\ntests/contract_testcases/substrate/tags/functions_05.sol:4:56-57"]
 	contracts -> contract

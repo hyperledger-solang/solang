@@ -32,7 +32,7 @@ pub fn resolve_tags(
                 let v: Vec<&str> = c.value.splitn(2, char::is_whitespace).collect();
                 if v.is_empty() || v[0].is_empty() {
                     ns.diagnostics.push(Diagnostic::error(
-                        pt::Loc::File(file_no, c.offset, c.offset + c.tag.len()),
+                        pt::Loc::File(file_no, c.tag_offset, c.tag_offset + c.tag.len()),
                         "tag ‘@param’ missing parameter name".to_string(),
                     ));
                     continue;
@@ -43,7 +43,7 @@ pub fn resolve_tags(
                 if let Some(no) = params.unwrap().iter().position(|p| p.name_as_str() == name) {
                     if res.iter().any(|e| e.tag == "param" && e.no == no) {
                         ns.diagnostics.push(Diagnostic::error(
-                            pt::Loc::File(file_no, c.offset, c.offset + c.tag.len()),
+                            pt::Loc::File(file_no, c.tag_offset, c.tag_offset + c.tag.len()),
                             format!("duplicate tag ‘@param’ for ‘{}’", name),
                         ));
                     } else {
@@ -55,7 +55,7 @@ pub fn resolve_tags(
                     }
                 } else {
                     ns.diagnostics.push(Diagnostic::error(
-                        pt::Loc::File(file_no, c.offset, c.offset + c.tag.len()),
+                        pt::Loc::File(file_no, c.value_offset, c.value_offset + c.value.len()),
                         format!("tag ‘@param’ no field ‘{}’", name),
                     ));
                 }
@@ -65,13 +65,13 @@ pub fn resolve_tags(
 
                 if returns.is_empty() {
                     ns.diagnostics.push(Diagnostic::error(
-                        pt::Loc::File(file_no, c.offset, c.offset + c.tag.len()),
+                        pt::Loc::File(file_no, c.tag_offset, c.tag_offset + c.tag.len()),
                         "tag ‘@return’ for function with no return values".to_string(),
                     ));
                 } else if returns.len() == 1 {
                     if res.iter().any(|e| e.tag == "return") {
                         ns.diagnostics.push(Diagnostic::error(
-                            pt::Loc::File(file_no, c.offset, c.offset + c.tag.len()),
+                            pt::Loc::File(file_no, c.tag_offset, c.tag_offset + c.tag.len()),
                             "duplicate tag ‘@return’".to_string(),
                         ));
                     } else {
@@ -85,7 +85,7 @@ pub fn resolve_tags(
                     let v: Vec<&str> = c.value.splitn(2, char::is_whitespace).collect();
                     if v.is_empty() || v[0].is_empty() {
                         ns.diagnostics.push(Diagnostic::error(
-                            pt::Loc::File(file_no, c.offset, c.offset + c.tag.len()),
+                            pt::Loc::File(file_no, c.value_offset, c.value_offset + c.value.len()),
                             "tag ‘@return’ missing parameter name".to_string(),
                         ));
                         continue;
@@ -99,7 +99,7 @@ pub fn resolve_tags(
                     {
                         if res.iter().any(|e| e.tag == "return" && e.no == no) {
                             ns.diagnostics.push(Diagnostic::error(
-                                pt::Loc::File(file_no, c.offset, c.offset + c.tag.len()),
+                                pt::Loc::File(file_no, c.tag_offset, c.tag_offset + c.tag.len()),
                                 format!("duplicate tag ‘@return’ for ‘{}’", name),
                             ));
                         } else {
@@ -109,10 +109,19 @@ pub fn resolve_tags(
                                 value,
                             });
                         }
+                    // find next unnamed return parameter without documentation tag
+                    } else if let Some((no, _)) = returns.iter().enumerate().find(|(no, p)| {
+                        p.id.is_none() && !res.iter().any(|e| e.tag == "return" && e.no == *no)
+                    }) {
+                        res.push(Tag {
+                            tag: String::from("return"),
+                            no,
+                            value,
+                        });
                     } else {
                         ns.diagnostics.push(Diagnostic::error(
-                            pt::Loc::File(file_no, c.offset, c.offset + c.tag.len()),
-                            format!("tag ‘@return’ no field ‘{}’", name),
+                            pt::Loc::File(file_no, c.value_offset, c.value_offset + c.value.len()),
+                            format!("tag ‘@return’ no matching return value ‘{}’", c.value),
                         ));
                     }
                 }
@@ -120,7 +129,7 @@ pub fn resolve_tags(
             "inheritdoc" if bases.is_some() => {
                 if c.value.is_empty() {
                     ns.diagnostics.push(Diagnostic::error(
-                        pt::Loc::File(file_no, c.offset, c.offset + c.tag.len()),
+                        pt::Loc::File(file_no, c.tag_offset, c.tag_offset + c.tag.len()),
                         "missing contract for tag ‘@inheritdoc’".to_string(),
                     ));
                 } else if bases.unwrap().iter().any(|s| &c.value == s) {
@@ -131,14 +140,14 @@ pub fn resolve_tags(
                     });
                 } else {
                     ns.diagnostics.push(Diagnostic::error(
-                        pt::Loc::File(file_no, c.offset, c.offset + c.tag.len()),
+                        pt::Loc::File(file_no, c.value_offset, c.value_offset + c.value.len()),
                         format!("base contract ‘{}’ not found in tag ‘@inheritdoc’", c.value),
                     ));
                 }
             }
             _ => {
                 ns.diagnostics.push(Diagnostic::error(
-                    pt::Loc::File(file_no, c.offset, c.offset + c.tag.len()),
+                    pt::Loc::File(file_no, c.tag_offset, c.tag_offset + c.tag.len()),
                     format!("tag ‘@{}’ is not valid for {}", c.tag, ty),
                 ));
             }

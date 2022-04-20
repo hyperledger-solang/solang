@@ -52,15 +52,17 @@ fn parse_test() {
             doc: vec![
                 DocComment::Line {
                     comment: SingleDocComment {
-                        offset: 0,
+                        tag_offset: 5,
                         tag: "title".to_string(),
+                        value_offset: 11,
                         value: "Foo".to_string(),
                     },
                 },
                 DocComment::Line {
                     comment: SingleDocComment {
-                        offset: 0,
+                        tag_offset: 36,
                         tag: "description".to_string(),
+                        value_offset: 48,
                         value: "Foo\nBar".to_string(),
                     },
                 },
@@ -77,28 +79,32 @@ fn parse_test() {
                     doc: vec![
                         DocComment::Block {
                             comments: vec![SingleDocComment {
-                                offset: 0,
+                                tag_offset: 152,
                                 tag: "title".to_string(),
+                                value_offset: 158,
                                 value: "Jurisdiction".to_string(),
                             }],
                         },
                         DocComment::Line {
                             comment: SingleDocComment {
-                                offset: 0,
+                                tag_offset: 219,
                                 tag: "author".to_string(),
+                                value_offset: 226,
                                 value: "Anon".to_string(),
                             },
                         },
                         DocComment::Block {
                             comments: vec![
                                 SingleDocComment {
-                                    offset: 0,
+                                    tag_offset: 276,
                                     tag: "description".to_string(),
+                                    value_offset: 288,
                                     value: "Data for\njurisdiction".to_string(),
                                 },
                                 SingleDocComment {
-                                    offset: 0,
+                                    tag_offset: 351,
                                     tag: "dev".to_string(),
+                                    value_offset: 355,
                                     value: "It's a struct".to_string(),
                                 },
                             ],
@@ -472,22 +478,25 @@ fn parse_error_test() {
                                     doc: vec![
                                         DocComment::Line {
                                             comment: SingleDocComment {
-                                                offset: 137,
+                                                tag_offset: 276,
                                                 tag: "notice".to_string(),
+                                                value_offset: 276,
                                                 value: "Insufficient balance for transfer. Needed `required` but only\n`available` available.".to_string(),
                                             },
                                         },
                                         DocComment::Line {
                                             comment: SingleDocComment {
-                                                offset: 0,
+                                                tag_offset: 256,
                                                 tag: "param".to_string(),
+                                                value_offset: 262,
                                                 value: "available balance available.".to_string(),
                                             },
                                         },
                                         DocComment::Line {
                                             comment: SingleDocComment {
-                                                offset: 0,
+                                                tag_offset: 308,
                                                 tag: "param".to_string(),
+                                                value_offset: 314,
                                                 value: "required requested amount to transfer.".to_string(),
                                             },
                                         },
