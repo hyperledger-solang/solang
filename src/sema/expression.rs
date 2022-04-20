@@ -6108,7 +6108,7 @@ fn method_call_pos_args(
         }
     }
 
-    if let Type::Address(_) = &var_ty.deref_any() {
+    if let Type::Address(payable) = &var_ty.deref_any() {
         let ty = match func.name.as_str() {
             "call" => Some(CallTy::Regular),
             "delegatecall" if ns.target == Target::Ewasm => Some(CallTy::Delegate),
@@ -6156,7 +6156,13 @@ fn method_call_pos_args(
                 loc: *loc,
                 ty,
                 args: Box::new(args),
-                address: Box::new(var_expr),
+                address: Box::new(var_expr.cast(
+                    &var_expr.loc(),
+                    &Type::Address(*payable),
+                    true,
+                    ns,
+                    diagnostics,
+                )?),
                 gas: call_args.gas,
                 value: call_args.value,
             });
