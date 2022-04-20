@@ -12,7 +12,11 @@ fn to_lines<'a>(
         let mut grouped_comments = Vec::new();
 
         match ty {
-            CommentType::Line => grouped_comments.push((*start, comment.trim())),
+            CommentType::Line => {
+                let leading = comment.chars().take_while(|ch| ch.is_whitespace()).count();
+
+                grouped_comments.push((*start + leading, comment.trim()));
+            }
             CommentType::Block => {
                 let mut start = *start;
 
@@ -24,7 +28,7 @@ fn to_lines<'a>(
                         grouped_comments.push((start + i, s[i..].trim_end()));
                     }
 
-                    start += s.len();
+                    start += s.len() + 1;
                 }
             }
         }
@@ -62,10 +66,16 @@ pub fn tags(lines: &[(usize, CommentType, &str)]) -> Vec<DocComment> {
                     chars.next();
                 }
 
+                let leading = line[tag_end + 1..]
+                    .chars()
+                    .take_while(|ch| ch.is_whitespace())
+                    .count();
+
                 // tag value
                 single_tags.push(SingleDocComment {
-                    offset: tag_start,
+                    tag_offset: start_offset + tag_start + 1,
                     tag: line[tag_start + 1..tag_end + 1].to_owned(),
+                    value_offset: start_offset + tag_end + leading + 1,
                     value: line[tag_end + 1..].trim().to_owned(),
                 });
             } else if !single_tags.is_empty() || !tags.is_empty() {
@@ -88,9 +98,12 @@ pub fn tags(lines: &[(usize, CommentType, &str)]) -> Vec<DocComment> {
                     }
                 }
             } else {
+                let leading = line.chars().take_while(|ch| ch.is_whitespace()).count();
+
                 single_tags.push(SingleDocComment {
-                    offset: start_offset,
+                    tag_offset: start_offset + start_offset + leading,
                     tag: String::from("notice"),
+                    value_offset: start_offset + start_offset + leading,
                     value: line.trim().to_owned(),
                 });
             }
