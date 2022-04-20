@@ -196,7 +196,7 @@ jobs:
     needs: linux-x86-64
     services:
       solana:
-        image: solanalabs/solana:v1.8.1
+        image: solanalabs/solana:v1.9.15
         ports:
           - 8899
           - 8900
