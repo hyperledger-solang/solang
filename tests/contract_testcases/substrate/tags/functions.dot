@@ -2,7 +2,7 @@ strict digraph "tests/contract_testcases/substrate/tags/functions.sol" {
 	contract [label="contract c\ntests/contract_testcases/substrate/tags/functions.sol:2:9-20"]
 	foo [label="function foo\ncontract: c\ntests/contract_testcases/substrate/tags/functions.sol:4:13-34\nsignature foo()\nvisibility public\nmutability nonpayable"]
 	diagnostic [label="found contract ‘c’\nlevel Debug\ntests/contract_testcases/substrate/tags/functions.sol:2:9-20"]
-	diagnostic_5 [label="tag ‘@param’ missing parameter name\nlevel Error\ntests/contract_testcases/substrate/tags/functions.sol:1:1-2:5"]
+	diagnostic_5 [label="tag ‘@param’ missing parameter name\nlevel Error\ntests/contract_testcases/substrate/tags/functions.sol:3:18-23"]
 	contracts -> contract
 	contract -> foo [label="function"]
 	diagnostics -> diagnostic [label="Debug"]

@@ -111,9 +111,10 @@ impl DocComment {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct SingleDocComment {
-    pub offset: usize,
     pub tag: String,
+    pub tag_offset: usize,
     pub value: String,
+    pub value_offset: usize,
 }
 
 #[derive(Debug, PartialEq, Clone)]
