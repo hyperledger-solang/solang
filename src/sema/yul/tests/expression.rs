@@ -876,7 +876,7 @@ fn test_member_access() {
     assert_eq!(ns.diagnostics.len(), 1);
     assert_eq!(
         ns.diagnostics[0].message,
-        "the given expression does not support suffixes"
+        "the given expression does not support ‘.slot‘ suffixes"
     );
     ns.diagnostics.clear();
 
@@ -1431,5 +1431,96 @@ contract C {
     assert!(assert_message_in_diagnostics(
         &ns.diagnostics,
         "found contract ‘C’"
+    ));
+}
+
+#[test]
+fn test_invalid_suffix() {
+    let file = r#"
+contract test {
+    function testing() public pure returns (int) {
+        int[4] memory vec = [int(1), 2, 3, 4];
+        assembly {
+            let x := vec.slot
+            if lt(x, 0) {
+                stop()
+            }
+        }
+
+        return vec[1];
+    }
+}
+    "#;
+    let ns = parse(file);
+    assert_eq!(ns.diagnostics.len(), 3);
+    assert!(assert_message_in_diagnostics(
+        &ns.diagnostics,
+        "found contract ‘test’"
+    ));
+    assert!(assert_message_in_diagnostics(
+        &ns.diagnostics,
+        "the given expression does not support ‘.slot‘ suffixes"
+    ));
+    assert!(assert_message_in_diagnostics(
+        &ns.diagnostics,
+        "yul variable ‘x‘ has never been read"
+    ));
+
+    let file = r#"
+    contract test {
+    struct tts {
+        int a;
+        string b;
+    }
+    function testing(tts calldata strcl) public pure returns (int) {
+        assembly {
+            let x := strcl.slot
+        }
+
+        return strcl.a;
+    }
+}
+    "#;
+    let ns = parse(file);
+    assert_eq!(ns.diagnostics.len(), 3);
+    assert!(assert_message_in_diagnostics(
+        &ns.diagnostics,
+        "found contract ‘test’"
+    ));
+    assert!(assert_message_in_diagnostics(
+        &ns.diagnostics,
+        "the given expression does not support ‘.slot‘ suffixes"
+    ));
+    assert!(assert_message_in_diagnostics(
+        &ns.diagnostics,
+        "yul variable ‘x‘ has never been read"
+    ));
+
+    let file = r#"
+    contract test {
+
+    function testing() public pure returns (int) {
+        int c = 8;
+        assembly {
+            let x := c.offset
+        }
+
+        return c;
+    }
+}
+    "#;
+    let ns = parse(file);
+    assert_eq!(ns.diagnostics.len(), 3);
+    assert!(assert_message_in_diagnostics(
+        &ns.diagnostics,
+        "found contract ‘test’"
+    ));
+    assert!(assert_message_in_diagnostics(
+        &ns.diagnostics,
+        "the given expression does not support ‘.offset‘ suffixes"
+    ));
+    assert!(assert_message_in_diagnostics(
+        &ns.diagnostics,
+        "yul variable ‘x‘ has never been read"
     ));
 }
