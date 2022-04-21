@@ -4140,7 +4140,7 @@ fn enum_value(
     }
 }
 
-/// Resolve an array subscript expression
+/// Resolve an member access expression
 fn member_access(
     loc: &pt::Loc,
     e: &pt::Expression,
@@ -4698,12 +4698,7 @@ fn array_subscript(
                     Box::new(index),
                 ))
             } else {
-                let mut elem_ty = array_ty.array_deref();
-
-                if elem_ty.builtin_struct(ns) == BuiltinStruct::AccountInfo {
-                    // AccountInfo is an array of structures, not an array of pointers to structures
-                    elem_ty = elem_ty.deref_any().clone();
-                }
+                let elem_ty = array_ty.array_deref();
 
                 let array = array.cast(
                     &array.loc(),
