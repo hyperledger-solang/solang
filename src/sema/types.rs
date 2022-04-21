@@ -863,9 +863,10 @@ impl Type {
         match self {
             Type::String | Type::DynamicBytes => Type::Ref(Box::new(Type::Uint(8))),
             Type::Ref(t) => t.array_deref(),
-            Type::Array(ty, dim) if dim.len() > 1 => {
-                Type::Array(ty.clone(), dim[..dim.len() - 1].to_vec())
-            }
+            Type::Array(ty, dim) if dim.len() > 1 => Type::Ref(Box::new(Type::Array(
+                ty.clone(),
+                dim[..dim.len() - 1].to_vec(),
+            ))),
             Type::Array(ty, dim) if dim.len() == 1 => Type::Ref(ty.clone()),
             Type::Bytes(_) => Type::Bytes(1),
             _ => panic!("deref on non-array"),
