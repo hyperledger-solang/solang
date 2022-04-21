@@ -333,7 +333,6 @@ pub(crate) fn resolve_function_call(
         ));
         return Err(());
     }
-
     let mut resolved_arguments: Vec<YulExpression> = Vec::with_capacity(func_call.arguments.len());
     for item in &func_call.arguments {
         let resolved_expr = resolve_yul_expression(item, context, symtable, function_table, ns)?;
@@ -563,17 +562,21 @@ fn resolve_member_access(
         | YulExpression::NumberLiteral(..)
         | YulExpression::StringLiteral(..)
         | YulExpression::YulLocalVariable(..)
+        | YulExpression::SolidityLocalVariable(_, _, Some(StorageLocation::Memory(_)), ..)
+        | YulExpression::SolidityLocalVariable(_, _, Some(StorageLocation::Calldata(_)), ..)
+        | YulExpression::SolidityLocalVariable(_, _, None, ..)
         | YulExpression::BuiltInCall(..)
         | YulExpression::FunctionCall(..)
         | YulExpression::ConstantVariable(_, _, None, _) => {
             ns.diagnostics.push(Diagnostic::error(
                 resolved_expr.loc(),
-                "the given expression does not support suffixes".to_string(),
+                format!(
+                    "the given expression does not support ‘.{}‘ suffixes",
+                    suffix_type.to_string()
+                ),
             ));
             return Err(());
         }
-
-        _ => (),
     }
 
     Ok(YulExpression::MemberAccess(
