@@ -1,5 +1,5 @@
 Solana
-______
+======
 
 The Solana target requires `Solana <https://www.solana.com/>`_ v1.8.1.
 
@@ -72,3 +72,96 @@ The contract can be used via the `@solana/solidity <https://www.npmjs.com/packag
 package has `documentation <https://solana-labs.github.io/solana-solidity.js/>`_ and there
 are `some examples <https://solana-labs.github.io/solana-solidity.js/>`_. There is also
 `solang's integration tests <https://github.com/hyperledger-labs/solang/tree/main/integration/solana>`_.
+
+
+Builtin Imports
+________________
+
+Some builtin functionality is only available after importing. The following structs
+can be imported via the special import file ``solana``.
+
+.. code-block:: solidity
+
+    import {AccountMeta, AccountInfo} from 'solana';
+
+Note that ``{AccountMeta, AccountInfo}`` can be omitted, renamed or imported via
+import object.
+
+.. code-block:: solidity
+
+    // Now AccountMeta will be known as AM
+    import {AccountMeta as AM} from 'solana';
+
+    // Now AccountMeta will be available as solana.AccountMeta
+    import 'solana' as solana;
+
+.. note::
+
+    The import file ``solana`` is only available when compiling for the Solana
+    target.
+
+.. _account_info:
+
+Builtin AccountInfo
++++++++++++++++++++
+
+The account info of all the accounts passed into the transaction. ``AccountInfo`` is a builtin
+structure with the following fields:
+
+address ``key``
+    The address (or public key) of the account
+
+uint64 ``lamports``
+    The lamports of the accounts. This field can be modified, however the lamports need to be
+    balanced for all accounts by the end of the transaction.
+
+bytes ``data```
+    The account data. This field can be modified, but use with caution.
+
+address ``owner``
+    The program that owns this account
+
+uint64 ``rent_epoch``
+    The next epoch when rent is due.
+
+bool ``is_signer``
+    Did this account sign the transaction
+
+bool ``is_writable``
+    Is this account writable in this transaction
+
+bool ``executable``
+    Is this account a program
+
+.. _account_meta:
+
+Builtin AccountMeta
++++++++++++++++++++
+
+When doing an external call (aka CPI), ``AccountMeta`` specifies which accounts
+should be passed to the callee.
+
+address ``pubkey``
+    The address (or public key) of the account
+
+bool ``is_writable``
+    Can the callee write to this account
+
+bool ``is_signer``
+    Can the callee assume this account signed the transaction
+
+Using spl-token
+_______________
+
+`spl-token <https://spl.solana.com/token>`_ is the solana native way of creating tokens, minting, burning and
+transfering token. This is the Solana equivalent of
+`ERC-20 <https://ethereum.org/en/developers/docs/standards/tokens/erc-20/>`_ and
+`ERC-721 <https://ethereum.org/en/developers/docs/standards/tokens/erc-721/>`_. We have created a library ``SplToken`` to use
+spl-token from Solidity. The file
+`spl_token.sol <https://github.com/hyperledger-labs/solang/blob/main/examples/spl_token.sol>`_  should be copied into
+your source tree, and then imported in your solidity files where it is required. The ``SplToken`` library has doc
+comments explaining how it should be used.
+
+There is an example in our integration tests of how this should be used, see
+`token.sol <https://github.com/hyperledger-labs/solang/blob/main/integration/solana/token.sol>`_ and
+`token.spec.ts <https://github.com/hyperledger-labs/solang/blob/main/integration/solana/token.spec.ts>`_.

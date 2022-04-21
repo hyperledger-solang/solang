@@ -1,5 +1,5 @@
 Hyperledger Burrow (ewasm)
-__________________________
+==========================
 
 The ewasm specification is not finalized yet. There is no `create2` or `chainid` call, and the keccak256 precompile
 contract has not been finalized yet.

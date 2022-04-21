@@ -1,5 +1,5 @@
 Parity Substrate
-________________
+================
 
 Solang works with Parity Substrate 2.0 or later.
 
