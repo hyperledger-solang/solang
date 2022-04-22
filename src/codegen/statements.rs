@@ -1092,6 +1092,7 @@ fn try_catch(
                     Instr::ExternalCall {
                         success: Some(success),
                         address: Some(address),
+                        accounts: None,
                         payload,
                         value,
                         gas,
