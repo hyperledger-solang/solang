@@ -14,8 +14,8 @@ use std::ops::{Add, Shl, Sub};
 
 use super::address::to_hexstr_eip55;
 use super::ast::{
-    Builtin, BuiltinStruct, CallTy, Diagnostic, Expression, Function, Mutability, Namespace,
-    StringLocation, Symbol, Type,
+    Builtin, BuiltinStruct, CallArgs, CallTy, Diagnostic, Expression, Function, Mutability,
+    Namespace, StringLocation, Symbol, Type,
 };
 use super::builtin;
 use super::contracts::{is_base, visit_bases};
@@ -2900,10 +2900,7 @@ fn constructor(
             contract_no: no,
             constructor_no,
             args: cast_args,
-            value: call_args.value,
-            gas: call_args.gas,
-            salt: call_args.salt,
-            space: call_args.space,
+            call_args,
         }),
         Err(()) => Err(()),
     }
@@ -3175,10 +3172,7 @@ pub fn constructor_named_args(
                 contract_no: no,
                 constructor_no: Some(function_no),
                 args: cast_args,
-                value: call_args.value,
-                gas: call_args.gas,
-                salt: call_args.salt,
-                space: call_args.space,
+                call_args,
             });
         }
     }
@@ -3189,10 +3183,7 @@ pub fn constructor_named_args(
             contract_no: no,
             constructor_no: None,
             args: Vec::new(),
-            value: call_args.value,
-            gas: call_args.gas,
-            salt: call_args.salt,
-            space: call_args.space,
+            call_args,
         }),
         1 => Err(()),
         _ => {
@@ -4943,7 +4934,7 @@ fn call_function_type(
     {
         let call_args = parse_call_args(call_args, true, context, ns, symtable, diagnostics)?;
 
-        let value = if let Some(value) = call_args.value {
+        if let Some(value) = &call_args.value {
             if !value.const_zero(ns) && !matches!(mutability, Mutability::Payable(_)) {
                 diagnostics.push(Diagnostic::error(
                     *loc,
@@ -4954,11 +4945,7 @@ fn call_function_type(
                 ));
                 return Err(());
             }
-
-            Some(value)
-        } else {
-            None
-        };
+        }
 
         if params.len() != args.len() {
             diagnostics.push(Diagnostic::error(
@@ -4997,8 +4984,7 @@ fn call_function_type(
             },
             function: Box::new(function),
             args: cast_args,
-            gas: call_args.gas,
-            value,
+            call_args,
         })
     } else {
         diagnostics.push(Diagnostic::error(
@@ -6074,7 +6060,7 @@ fn method_call_pos_args(
                     return Err(());
                 }
 
-                let value = if let Some(value) = call_args.value {
+                if let Some(value) = &call_args.value {
                     if !value.const_zero(ns) && !ns.functions[*function_no].is_payable() {
                         diagnostics.push(Diagnostic::error(
                             *loc,
@@ -6085,11 +6071,7 @@ fn method_call_pos_args(
                         ));
                         return Err(());
                     }
-
-                    Some(value)
-                } else {
-                    None
-                };
+                }
 
                 let func = &ns.functions[*function_no];
                 let returns = function_returns(func, resolve_to);
@@ -6111,8 +6093,7 @@ fn method_call_pos_args(
                         )?),
                     }),
                     args: cast_args,
-                    value,
-                    gas: call_args.gas,
+                    call_args,
                 });
             }
         }
@@ -6276,8 +6257,7 @@ fn method_call_pos_args(
                     ns,
                     diagnostics,
                 )?),
-                gas: call_args.gas,
-                value: call_args.value,
+                call_args,
             });
         }
     }
@@ -6694,7 +6674,7 @@ fn method_call_named_args(
                     return Err(());
                 }
 
-                let value = if let Some(value) = call_args.value {
+                if let Some(value) = &call_args.value {
                     if !value.const_zero(ns) && !ns.functions[*function_no].is_payable() {
                         diagnostics.push(Diagnostic::error(
                             *loc,
@@ -6705,11 +6685,7 @@ fn method_call_named_args(
                         ));
                         return Err(());
                     }
-
-                    Some(value)
-                } else {
-                    None
-                };
+                }
 
                 let func = &ns.functions[*function_no];
                 let returns = function_returns(func, resolve_to);
@@ -6731,8 +6707,7 @@ fn method_call_named_args(
                         )?),
                     }),
                     args: cast_args,
-                    value,
-                    gas: call_args.gas,
+                    call_args,
                 });
             }
         }
@@ -6973,14 +6948,6 @@ pub fn collect_call_args<'a>(
     }
 
     Ok((expr, named_arguments, loc))
-}
-
-struct CallArgs {
-    gas: Option<Box<Expression>>,
-    salt: Option<Box<Expression>>,
-    value: Option<Box<Expression>>,
-    space: Option<Box<Expression>>,
-    accounts: Option<Box<Expression>>,
 }
 
 /// Parse call arguments for external calls

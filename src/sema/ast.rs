@@ -647,31 +647,53 @@ pub enum Expression {
         returns: Vec<Type>,
         function: Box<Expression>,
         args: Vec<Expression>,
-        value: Option<Box<Expression>>,
-        gas: Option<Box<Expression>>,
+        call_args: CallArgs,
     },
     ExternalFunctionCallRaw {
         loc: pt::Loc,
         ty: CallTy,
         address: Box<Expression>,
         args: Box<Expression>,
-        value: Option<Box<Expression>>,
-        gas: Option<Box<Expression>>,
+        call_args: CallArgs,
     },
     Constructor {
         loc: pt::Loc,
         contract_no: usize,
         constructor_no: Option<usize>,
         args: Vec<Expression>,
-        gas: Option<Box<Expression>>,
-        value: Option<Box<Expression>>,
-        salt: Option<Box<Expression>>,
-        space: Option<Box<Expression>>,
+        call_args: CallArgs,
     },
     FormatString(pt::Loc, Vec<(FormatArg, Expression)>),
     Builtin(pt::Loc, Vec<Type>, Builtin, Vec<Expression>),
     InterfaceId(pt::Loc, usize),
     List(pt::Loc, Vec<Expression>),
+}
+
+#[derive(PartialEq, Clone, Debug)]
+pub struct CallArgs {
+    pub gas: Option<Box<Expression>>,
+    pub salt: Option<Box<Expression>>,
+    pub value: Option<Box<Expression>>,
+    pub space: Option<Box<Expression>>,
+    pub accounts: Option<Box<Expression>>,
+}
+
+impl Recurse for CallArgs {
+    type ArgType = Expression;
+    fn recurse<T>(&self, cx: &mut T, f: fn(expr: &Expression, ctx: &mut T) -> bool) {
+        if let Some(gas) = &self.gas {
+            f(gas, cx);
+        }
+        if let Some(salt) = &self.salt {
+            f(salt, cx);
+        }
+        if let Some(value) = &self.value {
+            f(value, cx);
+        }
+        if let Some(accounts) = &self.accounts {
+            f(accounts, cx);
+        }
+    }
 }
 
 impl Recurse for Expression {
@@ -765,56 +787,32 @@ impl Recurse for Expression {
                 Expression::ExternalFunctionCall {
                     function,
                     args,
-                    value,
-                    gas,
+                    call_args,
                     ..
                 } => {
                     for e in args {
                         e.recurse(cx, f);
                     }
                     function.recurse(cx, f);
-                    if let Some(value) = value {
-                        value.recurse(cx, f);
-                    }
-                    if let Some(gas) = gas {
-                        gas.recurse(cx, f);
-                    }
+                    call_args.recurse(cx, f);
                 }
                 Expression::ExternalFunctionCallRaw {
                     address,
                     args,
-                    value,
-                    gas,
+                    call_args,
                     ..
                 } => {
                     args.recurse(cx, f);
                     address.recurse(cx, f);
-                    if let Some(value) = value {
-                        value.recurse(cx, f);
-                    }
-                    if let Some(gas) = gas {
-                        gas.recurse(cx, f);
-                    }
+                    call_args.recurse(cx, f);
                 }
                 Expression::Constructor {
-                    args,
-                    value,
-                    gas,
-                    salt,
-                    ..
+                    args, call_args, ..
                 } => {
                     for e in args {
                         e.recurse(cx, f);
                     }
-                    if let Some(value) = value {
-                        value.recurse(cx, f);
-                    }
-                    if let Some(gas) = gas {
-                        gas.recurse(cx, f);
-                    }
-                    if let Some(salt) = salt {
-                        salt.recurse(cx, f);
-                    }
+                    call_args.recurse(cx, f);
                 }
                 Expression::Builtin(_, _, _, exprs) | Expression::List(_, exprs) => {
                     for e in exprs {

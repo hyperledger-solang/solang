@@ -265,10 +265,7 @@ pub fn expression(
             contract_no,
             constructor_no,
             args,
-            value,
-            gas,
-            salt,
-            space,
+            call_args,
         } => {
             let address_res = vartab.temp_anonymous(&Type::Contract(*contract_no));
 
@@ -276,18 +273,21 @@ pub fn expression(
                 .iter()
                 .map(|v| expression(v, cfg, *contract_no, func, ns, vartab, opt))
                 .collect();
-            let gas = if let Some(gas) = gas {
+            let gas = if let Some(gas) = &call_args.gas {
                 expression(gas, cfg, *contract_no, func, ns, vartab, opt)
             } else {
                 default_gas(ns)
             };
-            let value = value
+            let value = call_args
+                .value
                 .as_ref()
                 .map(|value| expression(value, cfg, *contract_no, func, ns, vartab, opt));
-            let salt = salt
+            let salt = call_args
+                .salt
                 .as_ref()
                 .map(|salt| expression(salt, cfg, *contract_no, func, ns, vartab, opt));
-            let space = space
+            let space = call_args
+                .space
                 .as_ref()
                 .map(|space| expression(space, cfg, *contract_no, func, ns, vartab, opt));
 
@@ -2068,18 +2068,17 @@ pub fn emit_function_call(
             loc,
             address,
             args,
-            value,
-            gas,
+            call_args,
             ty,
         } => {
             let args = expression(args, cfg, callee_contract_no, func, ns, vartab, opt);
             let address = expression(address, cfg, callee_contract_no, func, ns, vartab, opt);
-            let gas = if let Some(gas) = gas {
+            let gas = if let Some(gas) = &call_args.gas {
                 expression(gas, cfg, callee_contract_no, func, ns, vartab, opt)
             } else {
                 default_gas(ns)
             };
-            let value = if let Some(value) = value {
+            let value = if let Some(value) = &call_args.value {
                 expression(value, cfg, callee_contract_no, func, ns, vartab, opt)
             } else {
                 Expression::NumberLiteral(pt::Loc::Codegen, Type::Value, BigInt::zero())
@@ -2141,9 +2140,8 @@ pub fn emit_function_call(
             loc,
             function,
             args,
-            value,
-            gas,
             returns,
+            call_args,
             ..
         } => {
             if let ast::Expression::ExternalFunction {
@@ -2159,12 +2157,12 @@ pub fn emit_function_call(
                     .map(|a| expression(a, cfg, callee_contract_no, func, ns, vartab, opt))
                     .collect();
                 let address = expression(address, cfg, callee_contract_no, func, ns, vartab, opt);
-                let gas = if let Some(gas) = gas {
+                let gas = if let Some(gas) = &call_args.gas {
                     expression(gas, cfg, callee_contract_no, func, ns, vartab, opt)
                 } else {
                     default_gas(ns)
                 };
-                let value = if let Some(value) = value {
+                let value = if let Some(value) = &call_args.value {
                     expression(value, cfg, callee_contract_no, func, ns, vartab, opt)
                 } else {
                     Expression::NumberLiteral(pt::Loc::Codegen, Type::Value, BigInt::zero())
@@ -2275,12 +2273,12 @@ pub fn emit_function_call(
                     .map(|a| expression(a, cfg, callee_contract_no, func, ns, vartab, opt))
                     .collect();
                 let function = expression(function, cfg, callee_contract_no, func, ns, vartab, opt);
-                let gas = if let Some(gas) = gas {
+                let gas = if let Some(gas) = &call_args.gas {
                     expression(gas, cfg, callee_contract_no, func, ns, vartab, opt)
                 } else {
                     default_gas(ns)
                 };
-                let value = if let Some(value) = value {
+                let value = if let Some(value) = &call_args.value {
                     expression(value, cfg, callee_contract_no, func, ns, vartab, opt)
                 } else {
                     Expression::NumberLiteral(pt::Loc::Codegen, Type::Value, BigInt::zero())

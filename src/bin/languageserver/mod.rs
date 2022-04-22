@@ -706,8 +706,7 @@ impl SolangServer {
                 loc,
                 function,
                 args,
-                value,
-                gas,
+                call_args,
                 ..
             } => {
                 if let ast::Expression::ExternalFunction {
@@ -748,10 +747,10 @@ impl SolangServer {
                     for expp in args {
                         SolangServer::construct_expr(expp, lookup_tbl, symtab, fnc_map, ns);
                     }
-                    if let Some(value) = value {
+                    if let Some(value) = &call_args.value {
                         SolangServer::construct_expr(value, lookup_tbl, symtab, fnc_map, ns);
                     }
-                    if let Some(gas) = gas {
+                    if let Some(gas) = &call_args.gas {
                         SolangServer::construct_expr(gas, lookup_tbl, symtab, fnc_map, ns);
                     }
                 }
@@ -759,16 +758,15 @@ impl SolangServer {
             ast::Expression::ExternalFunctionCallRaw {
                 address,
                 args,
-                value,
-                gas,
+                call_args,
                 ..
             } => {
                 SolangServer::construct_expr(args, lookup_tbl, symtab, fnc_map, ns);
                 SolangServer::construct_expr(address, lookup_tbl, symtab, fnc_map, ns);
-                if let Some(value) = value {
+                if let Some(value) = &call_args.value {
                     SolangServer::construct_expr(value, lookup_tbl, symtab, fnc_map, ns);
                 }
-                if let Some(gas) = gas {
+                if let Some(gas) = &call_args.gas {
                     SolangServer::construct_expr(gas, lookup_tbl, symtab, fnc_map, ns);
                 }
             }
@@ -777,24 +775,21 @@ impl SolangServer {
                 contract_no: _,
                 constructor_no: _,
                 args,
-                gas,
-                value,
-                salt,
-                space,
+                call_args,
             } => {
-                if let Some(gas) = gas {
+                if let Some(gas) = &call_args.gas {
                     SolangServer::construct_expr(gas, lookup_tbl, symtab, fnc_map, ns);
                 }
                 for expp in args {
                     SolangServer::construct_expr(expp, lookup_tbl, symtab, fnc_map, ns);
                 }
-                if let Some(optval) = value {
+                if let Some(optval) = &call_args.value {
                     SolangServer::construct_expr(optval, lookup_tbl, symtab, fnc_map, ns);
                 }
-                if let Some(optsalt) = salt {
+                if let Some(optsalt) = &call_args.salt {
                     SolangServer::construct_expr(optsalt, lookup_tbl, symtab, fnc_map, ns);
                 }
-                if let Some(space) = space {
+                if let Some(space) = &call_args.space {
                     SolangServer::construct_expr(space, lookup_tbl, symtab, fnc_map, ns);
                 }
             }

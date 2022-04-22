@@ -1040,9 +1040,8 @@ impl Dot {
             Expression::ExternalFunctionCall {
                 loc,
                 function,
-                value,
-                gas,
                 args,
+                call_args,
                 ..
             } => {
                 let labels = vec![
@@ -1062,19 +1061,13 @@ impl Dot {
                     self.add_expression(arg, func, ns, node, format!("arg #{}", no));
                 }
 
-                if let Some(gas) = gas {
-                    self.add_expression(gas, func, ns, node, String::from("gas"));
-                }
-                if let Some(value) = value {
-                    self.add_expression(value, func, ns, node, String::from("value"));
-                }
+                self.add_call_args(call_args, func, ns, node);
             }
             Expression::ExternalFunctionCallRaw {
                 loc,
                 address,
-                value,
-                gas,
                 args,
+                call_args,
                 ..
             } => {
                 let labels = vec![
@@ -1090,21 +1083,13 @@ impl Dot {
 
                 self.add_expression(address, func, ns, node, String::from("address"));
                 self.add_expression(args, func, ns, node, String::from("args"));
-                if let Some(gas) = gas {
-                    self.add_expression(gas, func, ns, node, String::from("gas"));
-                }
-                if let Some(value) = value {
-                    self.add_expression(value, func, ns, node, String::from("value"));
-                }
+                self.add_call_args(call_args, func, ns, node);
             }
             Expression::Constructor {
                 loc,
                 contract_no,
-                value,
-                gas,
                 args,
-                space,
-                salt,
+                call_args,
                 ..
             } => {
                 let labels = vec![
@@ -1122,18 +1107,7 @@ impl Dot {
                     self.add_expression(arg, func, ns, node, format!("arg #{}", no));
                 }
 
-                if let Some(value) = value {
-                    self.add_expression(value, func, ns, node, String::from("value"));
-                }
-                if let Some(salt) = salt {
-                    self.add_expression(salt, func, ns, node, String::from("salt"));
-                }
-                if let Some(space) = space {
-                    self.add_expression(space, func, ns, node, String::from("space"));
-                }
-                if let Some(gas) = gas {
-                    self.add_expression(gas, func, ns, node, String::from("gas"));
-                }
+                self.add_call_args(call_args, func, ns, node);
             }
 
             Expression::FormatString(loc, args) => {
@@ -1183,6 +1157,30 @@ impl Dot {
                     self.add_expression(expr, func, ns, node, format!("entry #{}", no));
                 }
             }
+        }
+    }
+
+    fn add_call_args(
+        &mut self,
+        call_args: &CallArgs,
+        func: Option<&Function>,
+        ns: &Namespace,
+        node: usize,
+    ) {
+        if let Some(gas) = &call_args.gas {
+            self.add_expression(gas, func, ns, node, String::from("gas"));
+        }
+        if let Some(value) = &call_args.value {
+            self.add_expression(value, func, ns, node, String::from("value"));
+        }
+        if let Some(salt) = &call_args.salt {
+            self.add_expression(salt, func, ns, node, String::from("salt"));
+        }
+        if let Some(space) = &call_args.space {
+            self.add_expression(space, func, ns, node, String::from("space"));
+        }
+        if let Some(accounts) = &call_args.accounts {
+            self.add_expression(accounts, func, ns, node, String::from("accounts"));
         }
     }
 

@@ -1,6 +1,6 @@
 use crate::ast::EventDecl;
 use crate::parser::pt::{ContractTy, Loc};
-use crate::sema::ast::{Builtin, Diagnostic, Expression, Namespace};
+use crate::sema::ast::{Builtin, CallArgs, Diagnostic, Expression, Namespace};
 use crate::sema::symtable::{Symtable, VariableUsage};
 use crate::sema::{ast, contracts::visit_bases, symtable};
 
@@ -131,18 +131,12 @@ pub fn check_function_call(ns: &mut Namespace, exp: &Expression, symtable: &mut 
             returns: _,
             function,
             args,
-            value,
-            gas,
+            call_args,
         } => {
             for arg in args {
                 used_variable(ns, arg, symtable);
             }
-            if let Some(gas) = gas {
-                used_variable(ns, gas, symtable);
-            }
-            if let Some(value) = value {
-                used_variable(ns, value, symtable);
-            }
+            check_call_args(ns, call_args, symtable);
             check_function_call(ns, function, symtable);
         }
 
@@ -151,28 +145,12 @@ pub fn check_function_call(ns: &mut Namespace, exp: &Expression, symtable: &mut 
             contract_no: _,
             constructor_no: _,
             args,
-            gas,
-            value,
-            salt,
-            space,
+            call_args,
         } => {
             for arg in args {
                 used_variable(ns, arg, symtable);
             }
-            if let Some(gas) = gas {
-                used_variable(ns, gas, symtable);
-            }
-            if let Some(expr) = value {
-                used_variable(ns, expr, symtable);
-            }
-
-            if let Some(expr) = salt {
-                used_variable(ns, expr, symtable);
-            }
-
-            if let Some(expr) = space {
-                used_variable(ns, expr, symtable);
-            }
+            check_call_args(ns, call_args, symtable);
         }
 
         Expression::ExternalFunctionCallRaw {
@@ -180,17 +158,11 @@ pub fn check_function_call(ns: &mut Namespace, exp: &Expression, symtable: &mut 
             ty: _,
             address,
             args,
-            value,
-            gas,
+            call_args,
         } => {
             used_variable(ns, args, symtable);
             used_variable(ns, address, symtable);
-            if let Some(value) = value {
-                used_variable(ns, value, symtable);
-            }
-            if let Some(gas) = gas {
-                used_variable(ns, gas, symtable);
-            }
+            check_call_args(ns, call_args, symtable);
         }
 
         Expression::ExternalFunction { address, .. } => {
@@ -219,6 +191,25 @@ pub fn check_function_call(ns: &mut Namespace, exp: &Expression, symtable: &mut 
         }
 
         _ => {}
+    }
+}
+
+/// Mark function call arguments as used
+fn check_call_args(ns: &mut Namespace, call_args: &CallArgs, symtable: &mut Symtable) {
+    if let Some(gas) = &call_args.gas {
+        used_variable(ns, gas.as_ref(), symtable);
+    }
+    if let Some(salt) = &call_args.salt {
+        used_variable(ns, salt.as_ref(), symtable);
+    }
+    if let Some(value) = &call_args.value {
+        used_variable(ns, value.as_ref(), symtable);
+    }
+    if let Some(space) = &call_args.space {
+        used_variable(ns, space.as_ref(), symtable);
+    }
+    if let Some(accounts) = &call_args.accounts {
+        used_variable(ns, accounts.as_ref(), symtable);
     }
 }
 
