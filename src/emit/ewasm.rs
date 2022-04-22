@@ -1406,13 +1406,14 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
     fn external_call<'b>(
         &self,
         binary: &Binary<'b>,
-        function: FunctionValue,
+        function: FunctionValue<'b>,
         success: Option<&mut BasicValueEnum<'b>>,
         payload: PointerValue<'b>,
         payload_len: IntValue<'b>,
         address: Option<PointerValue<'b>>,
         gas: IntValue<'b>,
         value: IntValue<'b>,
+        _accounts: Option<(PointerValue<'b>, IntValue<'b>)>,
         callty: ast::CallTy,
         ns: &ast::Namespace,
     ) {

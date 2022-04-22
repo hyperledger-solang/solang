@@ -270,13 +270,14 @@ pub trait TargetRuntime<'a> {
     fn external_call<'b>(
         &self,
         bin: &Binary<'b>,
-        function: FunctionValue,
+        function: FunctionValue<'b>,
         success: Option<&mut BasicValueEnum<'b>>,
         payload: PointerValue<'b>,
         payload_len: IntValue<'b>,
         address: Option<PointerValue<'b>>,
         gas: IntValue<'b>,
         value: IntValue<'b>,
+        accounts: Option<(PointerValue<'b>, IntValue<'b>)>,
         ty: CallTy,
         ns: &Namespace,
     );
@@ -4121,6 +4122,7 @@ pub trait TargetRuntime<'a> {
                         value,
                         gas,
                         callty,
+                        accounts,
                     } => {
                         let gas = self
                             .expression(bin, gas, &w.vars, function, ns)
@@ -4155,6 +4157,26 @@ pub trait TargetRuntime<'a> {
                             None
                         };
 
+                        let accounts = if let Some(accounts) = accounts {
+                            let ty = accounts.ty();
+
+                            let expr = self.expression(bin, accounts, &w.vars, function, ns);
+
+                            if let Some(n) = ty.array_length() {
+                                let accounts = expr.into_pointer_value();
+                                let len =
+                                    bin.context.i32_type().const_int(n.to_u64().unwrap(), false);
+
+                                Some((accounts, len))
+                            } else {
+                                let addr = bin.vector_bytes(expr);
+                                let len = bin.vector_len(expr);
+                                Some((addr, len))
+                            }
+                        } else {
+                            None
+                        };
+
                         let success = match success {
                             Some(n) => Some(&mut w.vars.get_mut(n).unwrap().value),
                             None => None,
@@ -4169,6 +4191,7 @@ pub trait TargetRuntime<'a> {
                             address,
                             gas,
                             value,
+                            accounts,
                             callty.clone(),
                             ns,
                         );

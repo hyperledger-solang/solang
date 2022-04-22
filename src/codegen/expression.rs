@@ -1161,6 +1161,7 @@ fn payable_send(
             Instr::ExternalCall {
                 success: Some(success),
                 address: Some(address),
+                accounts: None,
                 payload: Expression::AllocDynamicArray(
                     *loc,
                     Type::DynamicBytes,
@@ -1207,6 +1208,7 @@ fn payable_transfer(
             vartab,
             Instr::ExternalCall {
                 success: None,
+                accounts: None,
                 address: Some(address),
                 payload: Expression::AllocDynamicArray(
                     *loc,
@@ -2083,10 +2085,15 @@ pub fn emit_function_call(
             } else {
                 Expression::NumberLiteral(pt::Loc::Codegen, Type::Value, BigInt::zero())
             };
+            let accounts = call_args
+                .accounts
+                .as_ref()
+                .map(|expr| expression(expr, cfg, callee_contract_no, func, ns, vartab, opt));
 
             let success = vartab.temp_name("success", &Type::Bool);
 
-            let (payload, address) = if ns.target == Target::Solana {
+            let (payload, address) = if ns.target == Target::Solana && call_args.accounts.is_none()
+            {
                 (
                     Expression::AbiEncode {
                         loc: *loc,
@@ -2126,6 +2133,7 @@ pub fn emit_function_call(
                     address,
                     payload,
                     value,
+                    accounts,
                     gas,
                     callty: ty.clone(),
                 },
@@ -2224,6 +2232,7 @@ pub fn emit_function_call(
                     vartab,
                     Instr::ExternalCall {
                         success: None,
+                        accounts: None,
                         address,
                         payload,
                         value,
@@ -2310,6 +2319,7 @@ pub fn emit_function_call(
                     vartab,
                     Instr::ExternalCall {
                         success: None,
+                        accounts: None,
                         address: Some(address),
                         payload,
                         value,

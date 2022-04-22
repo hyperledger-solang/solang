@@ -2955,39 +2955,132 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
     fn external_call<'b>(
         &self,
         binary: &Binary<'b>,
-        function: FunctionValue,
+        function: FunctionValue<'b>,
         success: Option<&mut BasicValueEnum<'b>>,
         payload: PointerValue<'b>,
         payload_len: IntValue<'b>,
         address: Option<PointerValue<'b>>,
         _gas: IntValue<'b>,
         _value: IntValue<'b>,
+        accounts: Option<(PointerValue<'b>, IntValue<'b>)>,
         _ty: ast::CallTy,
         _ns: &ast::Namespace,
     ) {
-        debug_assert!(address.is_none());
+        let ret = if let Some(address) = address {
+            // build instruction
+            let instruction_ty: BasicTypeEnum = binary
+                .module
+                .get_struct_type("struct.SolInstruction")
+                .unwrap()
+                .into();
 
-        let parameters = self.sol_parameters(binary);
+            let instruction = binary.build_alloca(function, instruction_ty, "instruction");
 
-        let external_call = binary.module.get_function("external_call").unwrap();
+            binary.builder.build_store(
+                binary
+                    .builder
+                    .build_struct_gep(instruction, 0, "program_id")
+                    .unwrap(),
+                address,
+            );
 
-        let arg2 = binary.builder.build_pointer_cast(
-            parameters,
-            external_call.get_type().get_param_types()[2].into_pointer_type(),
-            "",
-        );
+            let (accounts, accounts_len) = accounts.unwrap();
 
-        let ret = binary
-            .builder
-            .build_call(
-                external_call,
-                &[payload.into(), payload_len.into(), arg2.into()],
+            binary.builder.build_store(
+                binary
+                    .builder
+                    .build_struct_gep(instruction, 1, "accounts")
+                    .unwrap(),
+                accounts,
+            );
+
+            binary.builder.build_store(
+                binary
+                    .builder
+                    .build_struct_gep(instruction, 2, "accounts_len")
+                    .unwrap(),
+                accounts_len,
+            );
+
+            binary.builder.build_store(
+                binary
+                    .builder
+                    .build_struct_gep(instruction, 3, "data")
+                    .unwrap(),
+                payload,
+            );
+
+            binary.builder.build_store(
+                binary
+                    .builder
+                    .build_struct_gep(instruction, 4, "data_len")
+                    .unwrap(),
+                payload_len,
+            );
+
+            let parameters = self.sol_parameters(binary);
+
+            let account_infos = binary.builder.build_load(
+                binary
+                    .builder
+                    .build_struct_gep(parameters, 0, "ka")
+                    .unwrap(),
+                "ka",
+            );
+
+            let account_infos_len = binary.builder.build_load(
+                binary
+                    .builder
+                    .build_struct_gep(parameters, 0, "ka")
+                    .unwrap(),
+                "ka",
+            );
+
+            let external_call = binary.module.get_function("sol_invoke_signed_c").unwrap();
+
+            let signer_seeds = external_call.get_type().get_param_types()[3].const_zero();
+            let signer_seeds_len = external_call.get_type().get_param_types()[4].const_zero();
+
+            binary
+                .builder
+                .build_call(
+                    external_call,
+                    &[
+                        instruction.into(),
+                        account_infos.into(),
+                        account_infos_len.into(),
+                        signer_seeds.into(),
+                        signer_seeds_len.into(),
+                    ],
+                    "",
+                )
+                .try_as_basic_value()
+                .left()
+                .unwrap()
+                .into_int_value()
+        } else {
+            let parameters = self.sol_parameters(binary);
+
+            let external_call = binary.module.get_function("external_call").unwrap();
+
+            let arg2 = binary.builder.build_pointer_cast(
+                parameters,
+                external_call.get_type().get_param_types()[2].into_pointer_type(),
                 "",
-            )
-            .try_as_basic_value()
-            .left()
-            .unwrap()
-            .into_int_value();
+            );
+
+            binary
+                .builder
+                .build_call(
+                    external_call,
+                    &[payload.into(), payload_len.into(), arg2.into()],
+                    "",
+                )
+                .try_as_basic_value()
+                .left()
+                .unwrap()
+                .into_int_value()
+        };
 
         let is_success = binary.builder.build_int_compare(
             IntPredicate::EQ,
