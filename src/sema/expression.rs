@@ -6980,6 +6980,7 @@ struct CallArgs {
     salt: Option<Box<Expression>>,
     value: Option<Box<Expression>>,
     space: Option<Box<Expression>>,
+    accounts: Option<Box<Expression>>,
 }
 
 /// Parse call arguments for external calls
@@ -7012,6 +7013,7 @@ fn parse_call_args(
         value: None,
         salt: None,
         space: None,
+        accounts: None,
     };
 
     for arg in args.values() {
@@ -7143,6 +7145,50 @@ fn parse_call_args(
                     ns,
                     diagnostics,
                 )?));
+            }
+            "accounts" => {
+                if ns.target != Target::Solana {
+                    diagnostics.push(Diagnostic::error(
+                        arg.loc,
+                        format!(
+                            "‘accounts’ not permitted for external calls or constructors on {}",
+                            ns.target
+                        ),
+                    ));
+                    return Err(());
+                }
+
+                let expr = expression(
+                    &arg.expr,
+                    context,
+                    ns,
+                    symtable,
+                    diagnostics,
+                    ResolveTo::Unknown,
+                )?;
+
+                let mut correct_ty = false;
+                let expr_ty = expr.ty();
+
+                // if let chains would really help here
+                if let Type::Array(elem_ty, dims) = expr_ty.deref_memory() {
+                    if elem_ty.builtin_struct(ns) == BuiltinStruct::AccountMeta && dims.len() == 1 {
+                        correct_ty = true;
+                    }
+                }
+
+                if !correct_ty {
+                    diagnostics.push(Diagnostic::error(
+                        arg.loc,
+                        format!(
+                            "‘accounts’ takes array of AccountMeta, not ‘{}’",
+                            expr_ty.to_string(ns)
+                        ),
+                    ));
+                    return Err(());
+                }
+
+                res.accounts = Some(Box::new(expr));
             }
             _ => {
                 diagnostics.push(Diagnostic::error(
