@@ -363,11 +363,6 @@ impl SolangServer {
         ns: &ast::Namespace,
     ) {
         match expr {
-            ast::Expression::FunctionArg(locs, typ, _sample_sz) => {
-                let msg = SolangServer::expanded_ty(typ, ns);
-                lookup_tbl.push((locs.start(), locs.end(), msg));
-            }
-
             // Variable types expression
             ast::Expression::BoolLiteral(locs, vl) => {
                 let msg = format!("(bool) {}", vl);

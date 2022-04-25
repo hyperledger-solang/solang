@@ -543,7 +543,6 @@ impl Contract {
 
 #[derive(PartialEq, Clone, Debug)]
 pub enum Expression {
-    FunctionArg(pt::Loc, Type, usize),
     BoolLiteral(pt::Loc, bool),
     BytesLiteral(pt::Loc, Type, Vec<u8>),
     CodeLiteral(pt::Loc, usize, bool),
@@ -830,8 +829,7 @@ impl Recurse for Expression {
 impl CodeLocation for Expression {
     fn loc(&self) -> pt::Loc {
         match self {
-            Expression::FunctionArg(loc, ..)
-            | Expression::BoolLiteral(loc, _)
+            Expression::BoolLiteral(loc, _)
             | Expression::BytesLiteral(loc, ..)
             | Expression::CodeLiteral(loc, ..)
             | Expression::NumberLiteral(loc, ..)

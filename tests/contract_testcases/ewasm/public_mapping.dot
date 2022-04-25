@@ -9,7 +9,7 @@ strict digraph "tests/contract_testcases/ewasm/public_mapping.sol" {
 	storage_load [label="storage load struct foo.A\nimplicit"]
 	subscript [label="subscript struct foo.A[] storage\nimplicit"]
 	storage_var [label="storage variable\nfoo.map\nstruct foo.A[] storage\nimplicit"]
-	func_arg [label="func arg #0: uint256\nimplicit"]
+	variable [label="variable: \nuint256\nimplicit"]
 	diagnostic [label="found contract ‘foo’\nlevel Debug\ntests/contract_testcases/ewasm/public_mapping.sol:1:1-14"]
 	diagnostic_15 [label="mapping in a struct variable cannot be public\nlevel Error\ntests/contract_testcases/ewasm/public_mapping.sol:6:5-19"]
 	structs -> A
@@ -22,7 +22,7 @@ strict digraph "tests/contract_testcases/ewasm/public_mapping.sol" {
 	return -> storage_load [label="expr"]
 	storage_load -> subscript [label="expr"]
 	subscript -> storage_var [label="array"]
-	subscript -> func_arg [label="index"]
+	subscript -> variable [label="index"]
 	diagnostics -> diagnostic [label="Debug"]
 	diagnostics -> diagnostic_15 [label="Error"]
 }
