@@ -699,9 +699,6 @@ pub fn expression(
             opt,
         ),
         ast::Expression::InterfaceId(loc, contract_no) => interfaceid(ns, contract_no, loc),
-        ast::Expression::FunctionArg(loc, ty, pos) => {
-            Expression::FunctionArg(*loc, ty.clone(), *pos)
-        }
         ast::Expression::BoolLiteral(loc, value) => Expression::BoolLiteral(*loc, *value),
         ast::Expression::BytesLiteral(loc, ty, arr) => {
             Expression::BytesLiteral(*loc, ty.clone(), arr.clone())

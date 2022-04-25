@@ -1,13 +1,14 @@
-use super::ast::{
-    BuiltinStruct, Diagnostic, Expression, Function, Namespace, Parameter, Statement, Symbol, Type,
-    Variable,
+use super::{
+    ast::{
+        BuiltinStruct, Diagnostic, Expression, Function, Namespace, Parameter, Statement, Symbol,
+        Type, Variable,
+    },
+    expression::{expression, ExprContext, ResolveTo},
+    symtable::Symtable,
+    symtable::{VariableInitializer, VariableUsage},
+    tags::resolve_tags,
 };
-use super::expression::{expression, ExprContext, ResolveTo};
-use super::symtable::Symtable;
-use super::tags::resolve_tags;
-use crate::parser::pt;
-use crate::parser::pt::CodeLocation;
-use crate::parser::pt::OptionalCodeLocation;
+use crate::parser::pt::{self, CodeLocation, OptionalCodeLocation};
 
 pub fn contract_variables(
     def: &pt::ContractDefinition,
@@ -358,8 +359,9 @@ pub fn var_decl(
 
             // If the variable is an array or mapping, the accessor function takes mapping keys
             // or array indices as arguments, and returns the dereferenced value
+            let mut symtable = Symtable::new();
             let mut params = Vec::new();
-            let ty = collect_parameters(&ty, &mut params, &mut expr);
+            let ty = collect_parameters(&ty, &mut symtable, &mut params, &mut expr, ns);
 
             if ty.contains_mapping(ns) {
                 // we can't return a mapping
@@ -402,6 +404,7 @@ pub fn var_decl(
             func.is_accessor = true;
             func.has_body = true;
             func.is_override = has_override.map(|loc| (loc, Vec::new()));
+            func.symtable = symtable;
 
             // add the function to the namespace and then to our contract
             let func_no = ns.functions.len();
@@ -427,27 +430,44 @@ pub fn var_decl(
 /// For accessor functions, create the parameter list and the return expression
 fn collect_parameters<'a>(
     ty: &'a Type,
+    symtable: &mut Symtable,
     params: &mut Vec<Parameter>,
     expr: &mut Expression,
+    ns: &mut Namespace,
 ) -> &'a Type {
     match ty {
         Type::Mapping(key, value) => {
             let map = (*expr).clone();
+
+            let id = pt::Identifier {
+                loc: pt::Loc::Implicit,
+                name: "".to_owned(),
+            };
+            let arg_ty = key.as_ref().clone();
+
+            let arg_no = symtable
+                .add(
+                    &id,
+                    arg_ty.clone(),
+                    ns,
+                    VariableInitializer::Solidity(None),
+                    VariableUsage::Parameter,
+                    None,
+                )
+                .unwrap();
+
+            symtable.arguments.push(Some(arg_no));
 
             *expr = Expression::Subscript(
                 pt::Loc::Implicit,
                 ty.storage_array_elem(),
                 Type::StorageRef(false, Box::new(ty.clone())),
                 Box::new(map),
-                Box::new(Expression::FunctionArg(
-                    pt::Loc::Implicit,
-                    key.as_ref().clone(),
-                    params.len(),
-                )),
+                Box::new(Expression::Variable(pt::Loc::Implicit, arg_ty, arg_no)),
             );
 
             params.push(Parameter {
-                id: None,
+                id: Some(id),
                 loc: pt::Loc::Implicit,
                 ty: key.as_ref().clone(),
                 ty_loc: None,
@@ -455,38 +475,57 @@ fn collect_parameters<'a>(
                 readonly: false,
             });
 
-            collect_parameters(value, params, expr)
+            collect_parameters(value, symtable, params, expr, ns)
         }
         Type::Array(elem_ty, dims) => {
             let mut ty = Type::StorageRef(false, Box::new(ty.clone()));
             for _ in 0..dims.len() {
                 let map = (*expr).clone();
 
+                let id = pt::Identifier {
+                    loc: pt::Loc::Implicit,
+                    name: "".to_owned(),
+                };
+                let arg_ty = Type::Uint(256);
+
+                let var_no = symtable
+                    .add(
+                        &id,
+                        arg_ty.clone(),
+                        ns,
+                        VariableInitializer::Solidity(None),
+                        VariableUsage::Parameter,
+                        None,
+                    )
+                    .unwrap();
+
+                symtable.arguments.push(Some(var_no));
+
                 *expr = Expression::Subscript(
                     pt::Loc::Implicit,
                     ty.storage_array_elem(),
                     ty.clone(),
                     Box::new(map),
-                    Box::new(Expression::FunctionArg(
+                    Box::new(Expression::Variable(
                         pt::Loc::Implicit,
                         Type::Uint(256),
-                        params.len(),
+                        var_no,
                     )),
                 );
 
                 ty = ty.storage_array_elem();
 
                 params.push(Parameter {
-                    id: None,
+                    id: Some(id),
                     loc: pt::Loc::Implicit,
-                    ty: Type::Uint(256),
+                    ty: arg_ty,
                     ty_loc: None,
                     indexed: false,
                     readonly: false,
                 });
             }
 
-            collect_parameters(elem_ty, params, expr)
+            collect_parameters(elem_ty, symtable, params, expr, ns)
         }
         _ => ty,
     }

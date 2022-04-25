@@ -1411,7 +1411,7 @@ fn destructure_values(
     for (i, field) in fields.iter().enumerate() {
         if let Some(left_ty) = &left_tys[i] {
             let loc = field.loc().unwrap();
-            let _ = Expression::FunctionArg(loc, right_tys[i].clone(), i).cast(
+            let _ = Expression::Variable(loc, right_tys[i].clone(), i).cast(
                 &loc,
                 left_ty.deref_memory(),
                 true,
@@ -1649,7 +1649,7 @@ fn return_with_values(
         .zip(func_returns_tys)
         .enumerate()
         .map(|(i, (expr_return_ty, func_return_ty))| {
-            Expression::FunctionArg(expr_returns.loc(), expr_return_ty, i).cast(
+            Expression::Variable(expr_returns.loc(), expr_return_ty, i).cast(
                 &expr_returns.loc(),
                 &func_return_ty,
                 true,

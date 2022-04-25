@@ -220,18 +220,6 @@ impl Dot {
         parent_rel: String,
     ) {
         match expr {
-            Expression::FunctionArg(loc, ty, arg_no) => {
-                let labels = vec![
-                    format!("func arg #{}: {}", arg_no, ty.to_string(ns)),
-                    ns.loc_to_string(loc),
-                ];
-
-                self.add_node(
-                    Node::new("func_arg", labels),
-                    Some(parent),
-                    Some(parent_rel),
-                );
-            }
             Expression::BoolLiteral(loc, val) => {
                 let labels = vec![
                     format!("bool literal: {}", if *val { "true" } else { "false" }),

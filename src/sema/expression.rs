@@ -50,7 +50,6 @@ impl RetrieveType for Expression {
             | Expression::StringCompare(..) => Type::Bool,
             Expression::CodeLiteral(..) => Type::DynamicBytes,
             Expression::StringConcat(_, ty, ..)
-            | Expression::FunctionArg(_, ty, _)
             | Expression::BytesLiteral(_, ty, _)
             | Expression::NumberLiteral(_, ty, _)
             | Expression::RationalNumberLiteral(_, ty, _)
