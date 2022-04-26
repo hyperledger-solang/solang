@@ -183,6 +183,7 @@ pub fn resolve_function_body(
                     true,
                     &context,
                     ns,
+                    ResolveTo::Unknown,
                     &mut symtable,
                     &mut diagnostics,
                 ) {
@@ -705,39 +706,37 @@ fn statement(
             Ok(false)
         }
         pt::Statement::Expression(loc, expr) => {
-            // delete statement
-            if let pt::Expression::Delete(_, expr) = expr {
-                let expr =
-                    expression(expr, context, ns, symtable, diagnostics, ResolveTo::Unknown)?;
-                used_variable(ns, &expr, symtable);
-                return if let Type::StorageRef(_, ty) = expr.ty() {
-                    if expr.ty().is_mapping() {
+            let expr = match expr {
+                // delete statement
+                pt::Expression::Delete(_, expr) => {
+                    let expr =
+                        expression(expr, context, ns, symtable, diagnostics, ResolveTo::Unknown)?;
+                    used_variable(ns, &expr, symtable);
+                    return if let Type::StorageRef(_, ty) = expr.ty() {
+                        if expr.ty().is_mapping() {
+                            ns.diagnostics.push(Diagnostic::error(
+                                *loc,
+                                "‘delete’ cannot be applied to mapping type".to_string(),
+                            ));
+                            return Err(());
+                        }
+
+                        res.push(Statement::Delete(*loc, ty.as_ref().clone(), expr));
+
+                        Ok(true)
+                    } else {
                         ns.diagnostics.push(Diagnostic::error(
                             *loc,
-                            "‘delete’ cannot be applied to mapping type".to_string(),
+                            "argument to ‘delete’ should be storage reference".to_string(),
                         ));
-                        return Err(());
-                    }
 
-                    res.push(Statement::Delete(*loc, ty.as_ref().clone(), expr));
-
-                    Ok(true)
-                } else {
-                    ns.diagnostics.push(Diagnostic::error(
-                        *loc,
-                        "argument to ‘delete’ should be storage reference".to_string(),
-                    ));
-
-                    Err(())
-                };
-            }
-
-            // is it an underscore modifier statement
-            if let pt::Expression::Variable(id) = expr {
-                if id.name == "_" {
+                        Err(())
+                    };
+                }
+                // is it an underscore modifier statement
+                pt::Expression::Variable(id) if id.name == "_" => {
                     return if ns.functions[function_no].ty == pt::FunctionTy::Modifier {
                         res.push(Statement::Underscore(*loc));
-
                         Ok(true)
                     } else {
                         ns.diagnostics.push(Diagnostic::error(
@@ -747,30 +746,52 @@ fn statement(
                         Err(())
                     };
                 }
-            }
+                pt::Expression::FunctionCall(loc, ty, args) => call_expr(
+                    loc,
+                    ty,
+                    args,
+                    true,
+                    context,
+                    ns,
+                    symtable,
+                    diagnostics,
+                    ResolveTo::Discard,
+                )?,
+                pt::Expression::NamedFunctionCall(loc, ty, args) => named_call_expr(
+                    loc,
+                    ty,
+                    args,
+                    true,
+                    context,
+                    ns,
+                    symtable,
+                    diagnostics,
+                    ResolveTo::Discard,
+                )?,
+                _ => {
+                    // is it a destructure statement
+                    if let pt::Expression::Assign(_, var, expr) = expr {
+                        if let pt::Expression::List(_, var) = var.as_ref() {
+                            res.push(destructure(
+                                loc,
+                                var,
+                                expr,
+                                context,
+                                symtable,
+                                ns,
+                                diagnostics,
+                            )?);
 
-            // is it a destructure statement
-            if let pt::Expression::Assign(_, var, expr) = expr {
-                if let pt::Expression::List(_, var) = var.as_ref() {
-                    res.push(destructure(
-                        loc,
-                        var,
-                        expr,
-                        context,
-                        symtable,
-                        ns,
-                        diagnostics,
-                    )?);
-
-                    // if a noreturn function was called, then the destructure would not resolve
-                    return Ok(true);
+                            // if a noreturn function was called, then the destructure would not resolve
+                            return Ok(true);
+                        }
+                    }
+                    // the rest. We don't care about the result
+                    expression(expr, context, ns, symtable, diagnostics, ResolveTo::Unknown)?
                 }
-            }
+            };
 
-            // the rest. We don't care about the result
-            let expr = expression(expr, context, ns, symtable, diagnostics, ResolveTo::Discard)?;
-
-            let reachable = expr.ty() != Type::Unreachable;
+            let reachable = expr.tys() != vec![Type::Unreachable];
 
             res.push(Statement::Expression(*loc, reachable, expr));
 
@@ -1292,7 +1313,16 @@ fn destructure_values(
             res
         }
         pt::Expression::NamedFunctionCall(loc, ty, args) => {
-            let res = named_function_call_expr(loc, ty, args, context, ns, symtable, diagnostics)?;
+            let res = named_function_call_expr(
+                loc,
+                ty,
+                args,
+                context,
+                ns,
+                symtable,
+                diagnostics,
+                ResolveTo::Unknown,
+            )?;
             check_function_call(ns, &res, symtable);
             res
         }
@@ -1504,7 +1534,17 @@ fn return_with_values(
             expr
         }
         pt::Expression::NamedFunctionCall(loc, ty, args) => {
-            let expr = named_call_expr(loc, ty, args, true, context, ns, symtable, diagnostics)?;
+            let expr = named_call_expr(
+                loc,
+                ty,
+                args,
+                true,
+                context,
+                ns,
+                symtable,
+                diagnostics,
+                ResolveTo::Unknown,
+            )?;
             used_variable(ns, &expr, symtable);
             expr
         }
@@ -1759,7 +1799,16 @@ fn try_catch(
             res
         }
         pt::Expression::NamedFunctionCall(loc, ty, args) => {
-            let res = named_function_call_expr(loc, ty, args, context, ns, symtable, diagnostics)?;
+            let res = named_function_call_expr(
+                loc,
+                ty,
+                args,
+                context,
+                ns,
+                symtable,
+                diagnostics,
+                ResolveTo::Unknown,
+            )?;
 
             check_function_call(ns, &res, symtable);
 
