@@ -3,7 +3,7 @@ strict digraph "tests/contract_testcases/substrate/primitives/address_02.sol" {
 	var [label="variable foo\nvisibility internal\ntests/contract_testcases/substrate/primitives/address_02.sol:2:13-83"]
 	diagnostic [label="found contract ‘test’\nlevel Debug\ntests/contract_testcases/substrate/primitives/address_02.sol:1:1-15"]
 	diagnostic_6 [label="address literal 5GBWmgdFAMqm8ZgAHGobqDqX6tjLxJhv53ygjNtaaAn3sje incorrect length of 34\nlevel Error\ntests/contract_testcases/substrate/primitives/address_02.sol:2:27-83"]
-	diagnostic_7 [label="storage variable ‘foo‘ has never been used\nlevel Warning\ntests/contract_testcases/substrate/primitives/address_02.sol:2:13-83"]
+	diagnostic_7 [label="storage variable ‘foo‘ has been assigned, but never read\nlevel Warning\ntests/contract_testcases/substrate/primitives/address_02.sol:2:13-83"]
 	contracts -> contract
 	contract -> var [label="variable"]
 	diagnostics -> diagnostic [label="Debug"]

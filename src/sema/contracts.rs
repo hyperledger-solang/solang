@@ -76,10 +76,10 @@ pub fn resolve(
 
     // we need to resolve declarations first, so we call functions/constructors of
     // contracts before they are declared
-    let mut function_bodies = Vec::new();
+    let mut delayed: ResolveLater = Default::default();
 
     for (contract_no, def) in contracts {
-        function_bodies.extend(resolve_declarations(def, file_no, *contract_no, ns));
+        resolve_declarations(def, file_no, *contract_no, ns, &mut delayed);
     }
 
     // Resolve base contract constructor arguments on contract definition (not constructor definitions)
@@ -90,8 +90,11 @@ pub fn resolve(
         check_inheritance(*contract_no, ns);
     }
 
+    // Now we can resolve the initializers
+    variables::resolve_initializers(&delayed.initializers, file_no, ns);
+
     // Now we can resolve the bodies
-    if !resolve_bodies(function_bodies, file_no, ns) {
+    if !resolve_bodies(delayed.function_bodies, file_no, ns) {
         // only if we could resolve all the bodies
         for (contract_no, _) in contracts {
             check_base_args(*contract_no, ns);
@@ -733,6 +736,23 @@ fn check_inheritance(contract_no: usize, ns: &mut ast::Namespace) {
     }
 }
 
+/// Function body which should be resolved.
+/// List of function_no, contract_no, and function parse tree
+struct DelayedResolveFunction<'a> {
+    function_no: usize,
+    contract_no: usize,
+    function: &'a pt::FunctionDefinition,
+}
+
+#[derive(Default)]
+
+/// Function bodies and state variable initializers can only be resolved once
+/// all function prototypes, bases contracts and state variables are resolved.
+struct ResolveLater<'a> {
+    function_bodies: Vec<DelayedResolveFunction<'a>>,
+    initializers: Vec<variables::DelayedResolveInitializer<'a>>,
+}
+
 /// Resolve functions declarations, constructor declarations, and contract variables
 /// This returns a list of function bodies to resolve
 fn resolve_declarations<'a>(
@@ -740,18 +760,20 @@ fn resolve_declarations<'a>(
     file_no: usize,
     contract_no: usize,
     ns: &mut ast::Namespace,
-) -> Vec<(usize, usize, &'a pt::FunctionDefinition)> {
+    delayed: &mut ResolveLater<'a>,
+) {
     ns.diagnostics.push(ast::Diagnostic::debug(
         def.loc,
         format!("found {} ‘{}’", def.ty, def.name.name),
     ));
 
     let mut function_no_bodies = Vec::new();
-    let mut resolve_bodies = Vec::new();
 
     // resolve state variables. We may need a constant to resolve the array
     // dimension of a function argument.
-    variables::contract_variables(def, file_no, contract_no, ns);
+    delayed
+        .initializers
+        .extend(variables::contract_variables(def, file_no, contract_no, ns));
 
     // resolve function signatures
     for parts in &def.parts {
@@ -760,7 +782,11 @@ fn resolve_declarations<'a>(
                 functions::contract_function(def, f, file_no, contract_no, ns)
             {
                 if f.body.is_some() {
-                    resolve_bodies.push((contract_no, function_no, f.as_ref()));
+                    delayed.function_bodies.push(DelayedResolveFunction {
+                        contract_no,
+                        function_no,
+                        function: f.as_ref(),
+                    });
                 } else {
                     function_no_bodies.push(function_no);
                 }
@@ -791,8 +817,6 @@ fn resolve_declarations<'a>(
                 ));
         }
     }
-
-    resolve_bodies
 }
 
 /// Resolve the using declarations in a contract
@@ -863,14 +887,19 @@ fn resolve_using(
 
 /// Resolve contract functions bodies
 fn resolve_bodies(
-    bodies: Vec<(usize, usize, &pt::FunctionDefinition)>,
+    bodies: Vec<DelayedResolveFunction>,
     file_no: usize,
     ns: &mut ast::Namespace,
 ) -> bool {
     let mut broken = false;
 
-    for (contract_no, function_no, def) in bodies {
-        if statements::resolve_function_body(def, file_no, Some(contract_no), function_no, ns)
+    for DelayedResolveFunction {
+        contract_no,
+        function_no,
+        function,
+    } in bodies
+    {
+        if statements::resolve_function_body(function, file_no, Some(contract_no), function_no, ns)
             .is_err()
         {
             broken = true;
