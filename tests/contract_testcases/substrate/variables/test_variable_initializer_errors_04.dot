@@ -1,12 +1,16 @@
 strict digraph "tests/contract_testcases/substrate/variables/test_variable_initializer_errors_04.sol" {
 	contract [label="contract test\ntests/contract_testcases/substrate/variables/test_variable_initializer_errors_04.sol:1:1-15"]
-	var [label="variable x\nvisibility internal\ntests/contract_testcases/substrate/variables/test_variable_initializer_errors_04.sol:2:13-29"]
+	var [label="variable x\nvisibility internal\ntests/contract_testcases/substrate/variables/test_variable_initializer_errors_04.sol:3:5-21"]
+	add [label="add\nuint256\ntests/contract_testcases/substrate/variables/test_variable_initializer_errors_04.sol:3:16-17"]
+	storage_load [label="storage load uint256\ntests/contract_testcases/substrate/variables/test_variable_initializer_errors_04.sol:3:14-15"]
+	storage_var [label="storage variable\ntest.x\nuint256 storage\ntests/contract_testcases/substrate/variables/test_variable_initializer_errors_04.sol:3:14-15"]
+	number_literal [label="uint256 literal: 102\ntests/contract_testcases/substrate/variables/test_variable_initializer_errors_04.sol:3:18-21"]
 	diagnostic [label="found contract ‘test’\nlevel Debug\ntests/contract_testcases/substrate/variables/test_variable_initializer_errors_04.sol:1:1-15"]
-	diagnostic_6 [label="`x' is not found\nlevel Error\ntests/contract_testcases/substrate/variables/test_variable_initializer_errors_04.sol:2:22-23"]
-	diagnostic_7 [label="storage variable ‘x‘ has never been used\nlevel Warning\ntests/contract_testcases/substrate/variables/test_variable_initializer_errors_04.sol:2:13-29"]
 	contracts -> contract
 	contract -> var [label="variable"]
+	var -> add [label="initializer"]
+	add -> storage_load [label="left"]
+	storage_load -> storage_var [label="expr"]
+	add -> number_literal [label="right"]
 	diagnostics -> diagnostic [label="Debug"]
-	diagnostics -> diagnostic_6 [label="Error"]
-	diagnostics -> diagnostic_7 [label="Warning"]
 }

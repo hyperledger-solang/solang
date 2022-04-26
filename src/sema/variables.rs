@@ -10,61 +10,45 @@ use super::{
 };
 use crate::parser::pt::{self, CodeLocation, OptionalCodeLocation};
 
-pub fn contract_variables(
-    def: &pt::ContractDefinition,
+pub struct DelayedResolveInitializer<'a> {
+    var_no: usize,
+    contract_no: usize,
+    initializer: &'a pt::Expression,
+}
+
+pub fn contract_variables<'a>(
+    def: &'a pt::ContractDefinition,
     file_no: usize,
     contract_no: usize,
     ns: &mut Namespace,
-) -> bool {
-    let mut broken = false;
+) -> Vec<DelayedResolveInitializer<'a>> {
     let mut symtable = Symtable::new();
+    let mut delayed = Vec::new();
 
     for parts in &def.parts {
         if let pt::ContractPart::VariableDefinition(ref s) = parts {
-            // don't even attempt to parse contract variables for interfaces, they are never allowed
-            if matches!(def.ty, pt::ContractTy::Interface(_)) {
-                ns.diagnostics.push(Diagnostic::error(
-                    s.loc,
-                    format!(
-                        "{} ‘{}’ is not allowed to have contract variable ‘{}’",
-                        def.ty, def.name.name, s.name.name
-                    ),
-                ));
-                broken = true;
-                continue;
-            }
-
-            match var_decl(Some(def), s, file_no, Some(contract_no), ns, &mut symtable) {
-                None => {
-                    broken = true;
-                }
-                Some(false) if matches!(def.ty, pt::ContractTy::Library(_)) => {
-                    ns.diagnostics.push(Diagnostic::error(
-                        s.loc,
-                        format!(
-                            "{} ‘{}’ is not allowed to have state variable ‘{}’",
-                            def.ty, def.name.name, s.name.name
-                        ),
-                    ));
-                }
-                _ => (),
+            if let Some(delay) =
+                variable_decl(Some(def), s, file_no, Some(contract_no), ns, &mut symtable)
+            {
+                delayed.push(delay);
             }
         }
     }
 
-    broken
+    delayed
 }
 
-pub fn var_decl(
+pub fn variable_decl<'a>(
     contract: Option<&pt::ContractDefinition>,
-    s: &pt::VariableDefinition,
+    def: &'a pt::VariableDefinition,
     file_no: usize,
     contract_no: Option<usize>,
     ns: &mut Namespace,
     symtable: &mut Symtable,
-) -> Option<bool> {
-    let mut attrs = s.attrs.clone();
-    let mut ty = s.ty.clone();
+) -> Option<DelayedResolveInitializer<'a>> {
+    let mut attrs = def.attrs.clone();
+    let mut ty = def.ty.clone();
+    let mut ret = None;
 
     // For function types, the parser adds the attributes incl visibility to the type,
     // not the pt::VariableDefinition attrs. We need to chomp off the visibility
@@ -180,7 +164,7 @@ pub fn var_decl(
 
     let visibility = match visibility {
         Some(v) => v,
-        None => pt::Visibility::Internal(Some(s.ty.loc())),
+        None => pt::Visibility::Internal(Some(def.ty.loc())),
     };
 
     if let pt::Visibility::Public(_) = &visibility {
@@ -193,29 +177,44 @@ pub fn var_decl(
         has_override = None;
     }
 
-    if contract_no.is_none() {
+    if let Some(contract) = contract {
+        if matches!(contract.ty, pt::ContractTy::Interface(_))
+            || (matches!(contract.ty, pt::ContractTy::Library(_)) && !constant)
+        {
+            ns.diagnostics.push(Diagnostic::error(
+                def.loc,
+                format!(
+                    "{} ‘{}’ is not allowed to have contract variable ‘{}’",
+                    contract.ty, contract.name.name, def.name.name
+                ),
+            ));
+            return None;
+        }
+    } else {
         if !constant {
             ns.diagnostics.push(Diagnostic::error(
-                s.ty.loc(),
+                def.ty.loc(),
                 "global variable must be constant".to_string(),
             ));
             return None;
         }
         if ty.contains_internal_function(ns) {
             ns.diagnostics.push(Diagnostic::error(
-                s.ty.loc(),
+                def.ty.loc(),
                 "global variable cannot be of type internal function".to_string(),
             ));
             return None;
         }
-    } else if ty.contains_internal_function(ns)
+    }
+
+    if ty.contains_internal_function(ns)
         && matches!(
             visibility,
             pt::Visibility::Public(_) | pt::Visibility::External(_)
         )
     {
         ns.diagnostics.push(Diagnostic::error(
-            s.ty.loc(),
+            def.ty.loc(),
             format!(
                 "variable of type internal function cannot be ‘{}’",
                 visibility
@@ -223,64 +222,62 @@ pub fn var_decl(
         ));
         return None;
     } else if let Some(ty) = ty.contains_builtins(ns, BuiltinStruct::AccountInfo) {
-        let message = format!(
-            "variable of cannot be builtin of type ‘{}’",
-            ty.to_string(ns)
-        );
-        ns.diagnostics.push(Diagnostic::error(s.ty.loc(), message));
+        let message = format!("variable cannot be of builtin type ‘{}’", ty.to_string(ns));
+        ns.diagnostics
+            .push(Diagnostic::error(def.ty.loc(), message));
         return None;
     } else if let Some(ty) = ty.contains_builtins(ns, BuiltinStruct::AccountMeta) {
-        let message = format!(
-            "variable of cannot be builtin of type ‘{}’",
-            ty.to_string(ns)
-        );
-        ns.diagnostics.push(Diagnostic::error(s.ty.loc(), message));
+        let message = format!("variable cannot be of builtin type ‘{}’", ty.to_string(ns));
+        ns.diagnostics
+            .push(Diagnostic::error(def.ty.loc(), message));
         return None;
     }
 
-    let initializer = if let Some(initializer) = &s.initializer {
-        let mut diagnostics = Vec::new();
-        let context = ExprContext {
-            file_no,
-            unchecked: false,
-            contract_no,
-            function_no: None,
-            constant,
-            lvalue: false,
-            yul_function: false,
-        };
+    let initializer = if constant {
+        if let Some(initializer) = &def.initializer {
+            let mut diagnostics = Vec::new();
+            let context = ExprContext {
+                file_no,
+                unchecked: false,
+                contract_no,
+                function_no: None,
+                constant,
+                lvalue: false,
+                yul_function: false,
+            };
 
-        match expression(
-            initializer,
-            &context,
-            ns,
-            symtable,
-            &mut diagnostics,
-            ResolveTo::Type(&ty),
-        ) {
-            Ok(res) => {
-                // implicitly conversion to correct ty
-                match res.cast(&s.loc, &ty, true, ns, &mut diagnostics) {
-                    Ok(res) => Some(res),
-                    Err(_) => {
-                        ns.diagnostics.extend(diagnostics);
-                        None
+            match expression(
+                initializer,
+                &context,
+                ns,
+                symtable,
+                &mut diagnostics,
+                ResolveTo::Type(&ty),
+            ) {
+                Ok(res) => {
+                    // implicitly conversion to correct ty
+                    match res.cast(&def.loc, &ty, true, ns, &mut diagnostics) {
+                        Ok(res) => Some(res),
+                        Err(_) => {
+                            ns.diagnostics.extend(diagnostics);
+                            None
+                        }
                     }
                 }
+                Err(()) => {
+                    ns.diagnostics.extend(diagnostics);
+                    None
+                }
             }
-            Err(()) => {
-                ns.diagnostics.extend(diagnostics);
-                None
-            }
-        }
-    } else {
-        if constant {
+        } else {
             ns.diagnostics.push(Diagnostic::decl_error(
-                s.loc,
+                def.loc,
                 "missing initializer for constant".to_string(),
             ));
-        }
 
+            None
+        }
+    } else {
         None
     };
 
@@ -295,13 +292,13 @@ pub fn var_decl(
     };
 
     let tags = resolve_tags(
-        s.name.loc.file_no(),
+        def.name.loc.file_no(),
         if contract_no.is_none() {
             "global variable"
         } else {
             "state variable"
         },
-        &s.doc,
+        &def.doc,
         None,
         None,
         Some(&bases),
@@ -309,37 +306,47 @@ pub fn var_decl(
     );
 
     let sdecl = Variable {
-        name: s.name.name.to_string(),
-        loc: s.loc,
+        name: def.name.name.to_string(),
+        loc: def.loc,
         tags,
         visibility: visibility.clone(),
         ty: ty.clone(),
         constant,
         immutable: has_immutable.is_some(),
-        assigned: initializer.is_some(),
+        assigned: def.initializer.is_some(),
         initializer,
         read: matches!(visibility, pt::Visibility::Public(_)),
     };
 
-    let pos = if let Some(contract_no) = contract_no {
-        let pos = ns.contracts[contract_no].variables.len();
+    let var_no = if let Some(contract_no) = contract_no {
+        let var_no = ns.contracts[contract_no].variables.len();
 
         ns.contracts[contract_no].variables.push(sdecl);
 
-        pos
+        if !constant {
+            if let Some(initializer) = &def.initializer {
+                ret = Some(DelayedResolveInitializer {
+                    var_no,
+                    contract_no,
+                    initializer,
+                });
+            }
+        }
+
+        var_no
     } else {
-        let pos = ns.constants.len();
+        let var_no = ns.constants.len();
 
         ns.constants.push(sdecl);
 
-        pos
+        var_no
     };
 
     let success = ns.add_symbol(
         file_no,
         contract_no,
-        &s.name,
-        Symbol::Variable(s.loc, contract_no, pos),
+        &def.name,
+        Symbol::Variable(def.loc, contract_no, var_no),
     );
 
     // for public variables in contracts, create an accessor function
@@ -347,13 +354,18 @@ pub fn var_decl(
         if let Some(contract_no) = contract_no {
             // The accessor function returns the value of the storage variable, constant or not.
             let mut expr = if constant {
-                Expression::ConstantVariable(pt::Loc::Implicit, ty.clone(), Some(contract_no), pos)
+                Expression::ConstantVariable(
+                    pt::Loc::Implicit,
+                    ty.clone(),
+                    Some(contract_no),
+                    var_no,
+                )
             } else {
                 Expression::StorageVariable(
                     pt::Loc::Implicit,
                     Type::StorageRef(false, Box::new(ty.clone())),
                     contract_no,
-                    pos,
+                    var_no,
                 )
             };
 
@@ -366,26 +378,26 @@ pub fn var_decl(
             if ty.contains_mapping(ns) {
                 // we can't return a mapping
                 ns.diagnostics.push(Diagnostic::decl_error(
-                    s.loc,
+                    def.loc,
                     "mapping in a struct variable cannot be public".to_string(),
                 ));
             }
 
             let mut func = Function::new(
-                s.name.loc,
-                s.name.name.to_owned(),
+                def.name.loc,
+                def.name.name.to_owned(),
                 Some(contract_no),
                 Vec::new(),
                 pt::FunctionTy::Function,
                 // accessors for constant variables have view mutability
-                Some(pt::Mutability::View(s.name.loc)),
+                Some(pt::Mutability::View(def.name.loc)),
                 visibility,
                 params,
                 vec![Parameter {
                     id: None,
-                    loc: s.name.loc,
+                    loc: def.name.loc,
                     ty: ty.clone(),
-                    ty_loc: Some(s.ty.loc()),
+                    ty_loc: Some(def.ty.loc()),
                     indexed: false,
                     readonly: false,
                 }],
@@ -414,17 +426,20 @@ pub fn var_decl(
             ns.contracts[contract_no].functions.push(func_no);
 
             // we already have a symbol for
-            let symbol = Symbol::Function(vec![(s.loc, func_no)]);
+            let symbol = Symbol::Function(vec![(def.loc, func_no)]);
 
             ns.function_symbols.insert(
-                (s.loc.file_no(), Some(contract_no), s.name.name.to_owned()),
+                (
+                    def.loc.file_no(),
+                    Some(contract_no),
+                    def.name.name.to_owned(),
+                ),
                 symbol,
             );
         }
     }
 
-    // Return true if the value is constant
-    Some(constant)
+    ret
 }
 
 /// For accessor functions, create the parameter list and the return expression
@@ -529,4 +544,48 @@ fn collect_parameters<'a>(
         }
         _ => ty,
     }
+}
+
+pub fn resolve_initializers(
+    initializers: &[DelayedResolveInitializer],
+    file_no: usize,
+    ns: &mut Namespace,
+) {
+    let mut symtable = Symtable::new();
+    let mut diagnostics = Vec::new();
+
+    for DelayedResolveInitializer {
+        var_no,
+        contract_no,
+        initializer,
+    } in initializers
+    {
+        let var = &ns.contracts[*contract_no].variables[*var_no];
+        let ty = var.ty.clone();
+
+        let context = ExprContext {
+            file_no,
+            unchecked: false,
+            contract_no: Some(*contract_no),
+            function_no: None,
+            constant: false,
+            lvalue: false,
+            yul_function: false,
+        };
+
+        if let Ok(res) = expression(
+            initializer,
+            &context,
+            ns,
+            &mut symtable,
+            &mut diagnostics,
+            ResolveTo::Type(&ty),
+        ) {
+            if let Ok(res) = res.cast(&initializer.loc(), &ty, true, ns, &mut diagnostics) {
+                ns.contracts[*contract_no].variables[*var_no].initializer = Some(res);
+            }
+        }
+    }
+
+    ns.diagnostics.extend(diagnostics);
 }

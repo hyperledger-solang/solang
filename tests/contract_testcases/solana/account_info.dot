@@ -6,7 +6,7 @@ strict digraph "tests/contract_testcases/solana/account_info.sol" {
 	parameters [label="parameters\nstruct AccountInfo "]
 	returns [label="returns\nstruct AccountInfo "]
 	diagnostic [label="found contract ‘c’\nlevel Debug\ntests/contract_testcases/solana/account_info.sol:1:1-12"]
-	diagnostic_10 [label="variable of cannot be builtin of type ‘struct AccountInfo’\nlevel Error\ntests/contract_testcases/solana/account_info.sol:2:2-13"]
+	diagnostic_10 [label="variable cannot be of builtin type ‘struct AccountInfo’\nlevel Error\ntests/contract_testcases/solana/account_info.sol:2:2-13"]
 	diagnostic_11 [label="parameter of type ‘struct AccountInfo’ not alowed in public or external functions\nlevel Error\ntests/contract_testcases/solana/account_info.sol:4:15-26"]
 	diagnostic_12 [label="return type ‘struct AccountInfo’ not allowed in public or external functions\nlevel Error\ntests/contract_testcases/solana/account_info.sol:4:44-55"]
 	diagnostic_13 [label="builtin struct ‘AccountInfo’ cannot be created using struct literal\nlevel Error\ntests/contract_testcases/solana/account_info.sol:8:8-36"]

@@ -33,7 +33,7 @@ use self::eval::eval_const_number;
 use self::expression::{expression, ExprContext, ResolveTo};
 use self::functions::{resolve_params, resolve_returns};
 use self::symtable::Symtable;
-use self::variables::var_decl;
+use self::variables::variable_decl;
 use crate::file_resolver::{FileResolver, ResolvedFile};
 use crate::parser::pt::CodeLocation;
 use crate::parser::pt::OptionalCodeLocation;
@@ -129,7 +129,7 @@ fn sema_file(file: &ResolvedFile, resolver: &mut FileResolver, ns: &mut ast::Nam
                 }
             }
             pt::SourceUnitPart::VariableDefinition(var) => {
-                var_decl(None, var, file_no, None, ns, &mut Symtable::new());
+                variable_decl(None, var, file_no, None, ns, &mut Symtable::new());
             }
             _ => (),
         }
