@@ -1240,7 +1240,7 @@ contract testTypes {
     let ns = parse(file);
     assert!(assert_message_in_diagnostics(
         &ns.diagnostics,
-        r#"state variables only support ".slot" and ".offset""#
+        "state variables only support ‘.slot‘ and ‘.offset‘"
     ));
 
     let file = r#"
@@ -1296,7 +1296,7 @@ contract testTypes {
     let ns = parse(file);
     assert!(assert_message_in_diagnostics(
         &ns.diagnostics,
-        r#"variables of type function pointer only support ".selector" and ".address" suffixes"#
+        "variables of type function pointer only support ‘.selector‘ and ‘.address‘ suffixes"
     ));
 
     let file = r#"
@@ -1312,7 +1312,7 @@ contract testTypes {
     let ns = parse(file);
     assert!(assert_message_in_diagnostics(
         &ns.diagnostics,
-        r#"calldata variables only support ".offset" and ".length""#
+        "calldata variables only support ‘.offset‘ and ‘.length‘"
     ));
 
     let file = r#"
@@ -1522,5 +1522,41 @@ contract test {
     assert!(assert_message_in_diagnostics(
         &ns.diagnostics,
         "yul variable ‘x‘ has never been read"
+    ));
+}
+
+#[test]
+fn call_data_variables_error() {
+    let file = r#"
+contract testTypes {
+    function testAsm(uint[3][] calldata vl) public pure {
+        assembly {
+            {
+               let y := vl.selector
+            }
+        }
+    }
+}    "#;
+    let ns = parse(file);
+    assert!(assert_message_in_diagnostics(
+        &ns.diagnostics,
+        "calldata variables only support ‘.offset‘ and ‘.length‘"
+    ));
+
+    let file = r#"
+contract testTypes {
+    function testAsm(uint[][3] calldata vl) public pure {
+        assembly {
+            {
+               let y := vl.length
+            }
+        }
+    }
+}  "#;
+
+    let ns = parse(file);
+    assert!(assert_message_in_diagnostics(
+        &ns.diagnostics,
+        "the given expression does not support ‘.length‘ suffixes"
     ));
 }
