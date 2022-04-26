@@ -2981,7 +2981,15 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                     .builder
                     .build_struct_gep(instruction, 0, "program_id")
                     .unwrap(),
-                address,
+                binary.builder.build_pointer_cast(
+                    address,
+                    binary
+                        .module
+                        .get_struct_type("struct.SolPubkey")
+                        .unwrap()
+                        .ptr_type(AddressSpace::Generic),
+                    "SolPubkey",
+                ),
             );
 
             let (accounts, accounts_len) = accounts.unwrap();
@@ -2991,7 +2999,15 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                     .builder
                     .build_struct_gep(instruction, 1, "accounts")
                     .unwrap(),
-                accounts,
+                binary.builder.build_pointer_cast(
+                    accounts,
+                    binary
+                        .module
+                        .get_struct_type("struct.SolAccountMeta")
+                        .unwrap()
+                        .ptr_type(AddressSpace::Generic),
+                    "SolAccountMeta",
+                ),
             );
 
             binary.builder.build_store(
@@ -2999,7 +3015,11 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                     .builder
                     .build_struct_gep(instruction, 2, "accounts_len")
                     .unwrap(),
-                accounts_len,
+                binary.builder.build_int_z_extend(
+                    accounts_len,
+                    binary.context.i64_type(),
+                    "accounts_len",
+                ),
             );
 
             binary.builder.build_store(
@@ -3007,7 +3027,11 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                     .builder
                     .build_struct_gep(instruction, 3, "data")
                     .unwrap(),
-                payload,
+                binary.builder.build_pointer_cast(
+                    payload,
+                    binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                    "data",
+                ),
             );
 
             binary.builder.build_store(
@@ -3015,25 +3039,41 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                     .builder
                     .build_struct_gep(instruction, 4, "data_len")
                     .unwrap(),
-                payload_len,
+                binary.builder.build_int_z_extend(
+                    payload_len,
+                    binary.context.i64_type(),
+                    "payload_len",
+                ),
             );
 
             let parameters = self.sol_parameters(binary);
 
-            let account_infos = binary.builder.build_load(
+            let account_infos = binary.builder.build_pointer_cast(
                 binary
                     .builder
                     .build_struct_gep(parameters, 0, "ka")
                     .unwrap(),
-                "ka",
+                binary
+                    .module
+                    .get_struct_type("struct.SolAccountInfo")
+                    .unwrap()
+                    .ptr_type(AddressSpace::Generic),
+                "SolAccountInfo",
             );
 
-            let account_infos_len = binary.builder.build_load(
+            let account_infos_len = binary.builder.build_int_truncate(
                 binary
                     .builder
-                    .build_struct_gep(parameters, 0, "ka")
-                    .unwrap(),
-                "ka",
+                    .build_load(
+                        binary
+                            .builder
+                            .build_struct_gep(parameters, 1, "ka_num")
+                            .unwrap(),
+                        "ka_num",
+                    )
+                    .into_int_value(),
+                binary.context.i32_type(),
+                "ka_num",
             );
 
             let external_call = binary.module.get_function("sol_invoke_signed_c").unwrap();

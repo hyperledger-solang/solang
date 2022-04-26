@@ -6235,7 +6235,7 @@ fn method_call_pos_args(
                 return Err(());
             }
 
-            let expr = expression(
+            let args = expression(
                 &args[0],
                 context,
                 ns,
@@ -6244,7 +6244,25 @@ fn method_call_pos_args(
                 ResolveTo::Type(&Type::DynamicBytes),
             )?;
 
-            let args = expr.cast(&args[0].loc(), &Type::DynamicBytes, true, ns, diagnostics)?;
+            let mut args_ty = args.ty();
+
+            match args_ty.deref_any() {
+                Type::DynamicBytes => (),
+                Type::Bytes(_) => {
+                    args_ty = Type::DynamicBytes;
+                }
+                Type::Array(..) | Type::Struct(..) if !args_ty.is_dynamic(ns) => (),
+                _ => {
+                    diagnostics.push(Diagnostic::error(
+                        args.loc(),
+                        format!("‘{}’ is not fixed length type", args_ty.to_string(ns),),
+                    ));
+
+                    return Err(());
+                }
+            }
+
+            let args = args.cast(&args.loc(), args_ty.deref_any(), true, ns, diagnostics)?;
 
             return Ok(Expression::ExternalFunctionCallRaw {
                 loc: *loc,
