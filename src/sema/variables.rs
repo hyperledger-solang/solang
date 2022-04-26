@@ -15,54 +15,24 @@ pub fn contract_variables(
     file_no: usize,
     contract_no: usize,
     ns: &mut Namespace,
-) -> bool {
-    let mut broken = false;
+) {
     let mut symtable = Symtable::new();
 
     for parts in &def.parts {
         if let pt::ContractPart::VariableDefinition(ref s) = parts {
-            // don't even attempt to parse contract variables for interfaces, they are never allowed
-            if matches!(def.ty, pt::ContractTy::Interface(_)) {
-                ns.diagnostics.push(Diagnostic::error(
-                    s.loc,
-                    format!(
-                        "{} ‘{}’ is not allowed to have contract variable ‘{}’",
-                        def.ty, def.name.name, s.name.name
-                    ),
-                ));
-                broken = true;
-                continue;
-            }
-
-            match var_decl(Some(def), s, file_no, Some(contract_no), ns, &mut symtable) {
-                None => {
-                    broken = true;
-                }
-                Some(false) if matches!(def.ty, pt::ContractTy::Library(_)) => {
-                    ns.diagnostics.push(Diagnostic::error(
-                        s.loc,
-                        format!(
-                            "{} ‘{}’ is not allowed to have state variable ‘{}’",
-                            def.ty, def.name.name, s.name.name
-                        ),
-                    ));
-                }
-                _ => (),
-            }
+            variable_decl(Some(def), s, file_no, Some(contract_no), ns, &mut symtable);
         }
     }
-
-    broken
 }
 
-pub fn var_decl(
+pub fn variable_decl(
     contract: Option<&pt::ContractDefinition>,
     s: &pt::VariableDefinition,
     file_no: usize,
     contract_no: Option<usize>,
     ns: &mut Namespace,
     symtable: &mut Symtable,
-) -> Option<bool> {
+) {
     let mut attrs = s.attrs.clone();
     let mut ty = s.ty.clone();
 
@@ -96,7 +66,7 @@ pub fn var_decl(
         Ok(s) => s,
         Err(()) => {
             ns.diagnostics.extend(diagnostics);
-            return None;
+            return;
         }
     };
 
@@ -143,14 +113,14 @@ pub fn var_decl(
                     v.loc().unwrap(),
                     format!("‘{}’: global variable cannot have visibility specifier", v),
                 ));
-                return None;
+                return;
             }
             pt::VariableAttribute::Visibility(pt::Visibility::External(loc)) => {
                 ns.diagnostics.push(Diagnostic::error(
                     loc.unwrap(),
                     "variable cannot be declared external".to_string(),
                 ));
-                return None;
+                return;
             }
             pt::VariableAttribute::Visibility(v) => {
                 if let Some(e) = &visibility {
@@ -160,7 +130,7 @@ pub fn var_decl(
                         e.loc().unwrap(),
                         format!("location of previous declaration of `{}'", e),
                     ));
-                    return None;
+                    return;
                 }
 
                 visibility = Some(v.clone());
@@ -193,22 +163,37 @@ pub fn var_decl(
         has_override = None;
     }
 
-    if contract_no.is_none() {
+    if let Some(def) = contract {
+        if matches!(def.ty, pt::ContractTy::Interface(_))
+            || (matches!(def.ty, pt::ContractTy::Library(_)) && !constant)
+        {
+            ns.diagnostics.push(Diagnostic::error(
+                s.loc,
+                format!(
+                    "{} ‘{}’ is not allowed to have contract variable ‘{}’",
+                    def.ty, def.name.name, s.name.name
+                ),
+            ));
+            return;
+        }
+    } else {
         if !constant {
             ns.diagnostics.push(Diagnostic::error(
                 s.ty.loc(),
                 "global variable must be constant".to_string(),
             ));
-            return None;
+            return;
         }
         if ty.contains_internal_function(ns) {
             ns.diagnostics.push(Diagnostic::error(
                 s.ty.loc(),
                 "global variable cannot be of type internal function".to_string(),
             ));
-            return None;
+            return;
         }
-    } else if ty.contains_internal_function(ns)
+    }
+
+    if ty.contains_internal_function(ns)
         && matches!(
             visibility,
             pt::Visibility::Public(_) | pt::Visibility::External(_)
@@ -221,21 +206,15 @@ pub fn var_decl(
                 visibility
             ),
         ));
-        return None;
+        return;
     } else if let Some(ty) = ty.contains_builtins(ns, BuiltinStruct::AccountInfo) {
-        let message = format!(
-            "variable of cannot be builtin of type ‘{}’",
-            ty.to_string(ns)
-        );
+        let message = format!("variable cannot be of builtin type ‘{}’", ty.to_string(ns));
         ns.diagnostics.push(Diagnostic::error(s.ty.loc(), message));
-        return None;
+        return;
     } else if let Some(ty) = ty.contains_builtins(ns, BuiltinStruct::AccountMeta) {
-        let message = format!(
-            "variable of cannot be builtin of type ‘{}’",
-            ty.to_string(ns)
-        );
+        let message = format!("variable cannot be of builtin type ‘{}’", ty.to_string(ns));
         ns.diagnostics.push(Diagnostic::error(s.ty.loc(), message));
-        return None;
+        return;
     }
 
     let initializer = if let Some(initializer) = &s.initializer {
@@ -422,9 +401,6 @@ pub fn var_decl(
             );
         }
     }
-
-    // Return true if the value is constant
-    Some(constant)
 }
 
 /// For accessor functions, create the parameter list and the return expression

@@ -749,7 +749,8 @@ fn resolve_declarations<'a>(
     let mut function_no_bodies = Vec::new();
     let mut resolve_bodies = Vec::new();
 
-    // resolve state variables. We may need a constant to resolve a function type
+    // resolve state variables. We may need a constant to resolve the array
+    // dimension of a function argument.
     variables::contract_variables(def, file_no, contract_no, ns);
 
     // resolve function signatures
