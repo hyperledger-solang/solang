@@ -4130,6 +4130,7 @@ pub trait TargetRuntime<'a> {
                         let value = self
                             .expression(bin, value, &w.vars, function, ns)
                             .into_int_value();
+                        let payload_ty = payload.ty();
                         let payload = self.expression(bin, payload, &w.vars, function, ns);
 
                         let address = if let Some(address) = address {
@@ -4182,12 +4183,26 @@ pub trait TargetRuntime<'a> {
                             None => None,
                         };
 
+                        let (payload_ptr, payload_len) = if payload_ty == Type::DynamicBytes {
+                            (bin.vector_bytes(payload), bin.vector_len(payload))
+                        } else {
+                            let ptr = payload.into_pointer_value();
+                            let len = ptr
+                                .get_type()
+                                .get_element_type()
+                                .size_of()
+                                .unwrap()
+                                .const_cast(bin.context.i32_type(), false);
+
+                            (ptr, len)
+                        };
+
                         self.external_call(
                             bin,
                             function,
                             success,
-                            bin.vector_bytes(payload),
-                            bin.vector_len(payload),
+                            payload_ptr,
+                            payload_len,
                             address,
                             gas,
                             value,
