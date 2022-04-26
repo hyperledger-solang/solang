@@ -1,3 +1,4 @@
 contract test {
-            uint x = x + 102;
-        }
+    // solc permits this too
+    uint x = x + 102;
+}
