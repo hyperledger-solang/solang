@@ -9,7 +9,6 @@ strict digraph "tests/contract_testcases/substrate/value/external_call_value_07.
 	diagnostic_9 [label="found contract ‘b’\nlevel Debug\ntests/contract_testcases/substrate/value/external_call_value_07.sol:7:9-20"]
 	diagnostic_10 [label="function parameter ‘l‘ has never been read\nlevel Warning\ntests/contract_testcases/substrate/value/external_call_value_07.sol:3:33-34"]
 	diagnostic_11 [label="sending value to function ‘test’ which is not payable\nlevel Error\ntests/contract_testcases/substrate/value/external_call_value_07.sol:12:17-41"]
-	diagnostic_12 [label="storage variable ‘x‘ has never been used\nlevel Warning\ntests/contract_testcases/substrate/value/external_call_value_07.sol:8:13-18"]
 	contracts -> contract
 	contract -> test [label="function"]
 	test -> parameters [label="parameters"]
@@ -20,5 +19,4 @@ strict digraph "tests/contract_testcases/substrate/value/external_call_value_07.
 	diagnostics -> diagnostic_9 [label="Debug"]
 	diagnostics -> diagnostic_10 [label="Warning"]
 	diagnostics -> diagnostic_11 [label="Error"]
-	diagnostics -> diagnostic_12 [label="Warning"]
 }

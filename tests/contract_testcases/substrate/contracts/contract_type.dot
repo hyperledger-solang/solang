@@ -16,7 +16,6 @@ strict digraph "tests/contract_testcases/substrate/contracts/contract_type.sol" 
 	diagnostic [label="found contract ‘printer’\nlevel Debug\ntests/contract_testcases/substrate/contracts/contract_type.sol:2:9-26"]
 	diagnostic_17 [label="found contract ‘foo’\nlevel Debug\ntests/contract_testcases/substrate/contracts/contract_type.sol:8:9-22"]
 	diagnostic_18 [label="implicit conversion to address from contract printer not allowed\nlevel Error\ntests/contract_testcases/substrate/contracts/contract_type.sol:10:29-30"]
-	diagnostic_19 [label="local variable ‘y‘ has been assigned, but never read\nlevel Warning\ntests/contract_testcases/substrate/contracts/contract_type.sol:14:25-26"]
 	contracts -> contract
 	contract -> test [label="function"]
 	test -> expr [label="body"]
@@ -34,5 +33,4 @@ strict digraph "tests/contract_testcases/substrate/contracts/contract_type.sol" 
 	diagnostics -> diagnostic [label="Debug"]
 	diagnostics -> diagnostic_17 [label="Debug"]
 	diagnostics -> diagnostic_18 [label="Error"]
-	diagnostics -> diagnostic_19 [label="Warning"]
 }

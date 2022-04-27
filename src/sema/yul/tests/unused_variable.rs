@@ -1,4 +1,4 @@
-use crate::sema::yul::tests::{assert_message_in_diagnostics, parse};
+use crate::sema::yul::tests::parse;
 
 #[test]
 fn unused_variables() {
@@ -23,10 +23,9 @@ contract testTypes {
     "#;
 
     let ns = parse(file);
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "yul variable ‘a‘ has never been read or assigned"
-    ));
+    assert!(ns
+        .diagnostics
+        .contains_message("yul variable ‘a‘ has never been read or assigned"));
 
     let file = r#"
 contract testTypes {
@@ -49,10 +48,9 @@ contract testTypes {
     "#;
 
     let ns = parse(file);
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "yul variable ‘c‘ has never been read"
-    ));
+    assert!(ns
+        .diagnostics
+        .contains_message("yul variable ‘c‘ has never been read"));
 }
 
 #[test]
@@ -90,7 +88,7 @@ fn correct_contracts() {
 }    "#;
 
     let ns = parse(file);
-    for item in &ns.diagnostics {
+    for item in ns.diagnostics.iter() {
         assert!(!item.message.starts_with("yul variable has never been"));
     }
 
@@ -114,12 +112,10 @@ fn correct_contracts() {
 
     let ns = parse(file);
     assert_eq!(ns.diagnostics.len(), 2);
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "found contract ‘testTypes’"
-    ));
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "inline assembly is not yet supported"
-    ));
+    assert!(ns
+        .diagnostics
+        .contains_message("found contract ‘testTypes’"));
+    assert!(ns
+        .diagnostics
+        .contains_message("inline assembly is not yet supported"));
 }

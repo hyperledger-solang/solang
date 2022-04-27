@@ -2,51 +2,117 @@ use super::ast::{Diagnostic, Level, Namespace};
 use crate::file_resolver::FileResolver;
 use crate::parser::pt::Loc;
 use codespan_reporting::{diagnostic, files, term};
+use itertools::Itertools;
 use serde::Serialize;
+use std::slice::Iter;
 use std::{io, sync::Arc};
 
-/// Print the diagnostics to stderr with fancy formatting
-pub fn print_diagnostics(cache: &FileResolver, ns: &Namespace, debug: bool) {
-    let (files, file_id) = convert_files(ns, cache);
-
-    let writer = term::termcolor::StandardStream::stderr(term::termcolor::ColorChoice::Always);
-    let config = term::Config::default();
-
-    for msg in &ns.diagnostics {
-        if msg.level == Level::Debug && !debug {
-            continue;
-        }
-
-        let diagnostic = convert_diagnostic(msg, &file_id);
-
-        term::emit(&mut writer.lock(), &config, &files, &diagnostic).unwrap();
-    }
+#[derive(Default)]
+pub struct Diagnostics {
+    contents: Vec<Diagnostic>,
+    has_error: bool,
 }
 
-/// Print the diagnostics to stdout with plain formatting
-pub fn print_diagnostics_plain(cache: &FileResolver, ns: &Namespace, debug: bool) {
-    let (files, file_id) = convert_files(ns, cache);
+impl Diagnostics {
+    pub fn any_errors(&self) -> bool {
+        self.has_error
+    }
 
-    let config = term::Config::default();
+    pub fn len(&self) -> usize {
+        self.contents.len()
+    }
 
-    for msg in &ns.diagnostics {
-        if msg.level == Level::Debug && !debug {
-            continue;
+    pub fn iter(&self) -> Iter<Diagnostic> {
+        self.contents.iter()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.contents.is_empty()
+    }
+
+    pub fn push(&mut self, diagnostic: Diagnostic) {
+        if matches!(diagnostic.level, Level::Error) {
+            self.has_error = true;
+        }
+        self.contents.push(diagnostic);
+    }
+
+    pub fn extend(&mut self, diagnostics: Vec<Diagnostic>) {
+        if !self.has_error {
+            self.has_error = diagnostics.iter().any(|m| m.level == Level::Error);
+        }
+        self.contents.extend(diagnostics);
+    }
+
+    pub fn append(&mut self, diagnostics: &mut Vec<Diagnostic>) {
+        if !self.has_error {
+            self.has_error = diagnostics.iter().any(|m| m.level == Level::Error);
+        }
+        self.contents.append(diagnostics);
+    }
+
+    pub fn first_error(&self) -> String {
+        match self.contents.iter().find(|m| m.level == Level::Error) {
+            Some(m) => m.message.to_owned(),
+            None => panic!("no errors found"),
+        }
+    }
+
+    pub fn count_warnings(&self) -> usize {
+        self.contents
+            .iter()
+            .filter(|&x| x.level == Level::Warning)
+            .count()
+    }
+
+    pub fn first_warning(&self) -> &Diagnostic {
+        self.contents
+            .iter()
+            .find_or_first(|&x| x.level == Level::Warning)
+            .unwrap()
+    }
+
+    pub fn warnings(&self) -> Vec<&Diagnostic> {
+        let mut res = Vec::new();
+        for elem in &self.contents {
+            if elem.level == Level::Warning {
+                res.push(elem);
+            }
         }
 
-        let diagnostic = convert_diagnostic(msg, &file_id);
-
-        let mut buffer = RawBuffer::new();
-
-        term::emit(&mut buffer, &config, &files, &diagnostic).unwrap();
-
-        println!("{}", buffer.into_string());
+        res
     }
-}
 
-/// Do we have any errors
-pub fn any_errors(diagnotic: &[Diagnostic]) -> bool {
-    diagnotic.iter().any(|m| m.level == Level::Error)
+    pub fn errors(&self) -> Vec<&Diagnostic> {
+        let mut vec = Vec::new();
+        for diag in &self.contents {
+            if matches!(diag.level, Level::Error) {
+                vec.push(diag);
+            }
+        }
+        vec
+    }
+
+    pub fn warning_contains(&self, message: &str) -> bool {
+        let warnings = self.warnings();
+        for warning in warnings {
+            if warning.message == message {
+                return true;
+            }
+        }
+
+        false
+    }
+
+    pub fn contains_message(&self, message: &str) -> bool {
+        for item in &self.contents {
+            if item.message == message {
+                return true;
+            }
+        }
+
+        false
+    }
 }
 
 fn convert_diagnostic(msg: &Diagnostic, file_id: &[usize]) -> diagnostic::Diagnostic<usize> {
@@ -82,19 +148,103 @@ fn convert_diagnostic(msg: &Diagnostic, file_id: &[usize]) -> diagnostic::Diagno
     }
 }
 
-fn convert_files(
-    ns: &Namespace,
-    cache: &FileResolver,
-) -> (files::SimpleFiles<String, Arc<str>>, Vec<usize>) {
-    let mut files = files::SimpleFiles::new();
-    let mut file_id = Vec::new();
+impl Namespace {
+    /// Print the diagnostics to stdout with plain formatting
+    pub fn print_diagnostics_in_plain(&self, cache: &FileResolver, debug: bool) {
+        let (files, file_id) = self.convert_files(cache);
 
-    for file in &ns.files {
-        let (contents, _) = cache.get_file_contents_and_number(&file.path);
-        file_id.push(files.add(format!("{}", file), contents.to_owned()));
+        let config = term::Config::default();
+
+        for msg in self.diagnostics.iter() {
+            if msg.level == Level::Debug && !debug {
+                continue;
+            }
+
+            let diagnostic = convert_diagnostic(msg, &file_id);
+
+            let mut buffer = RawBuffer::new();
+
+            term::emit(&mut buffer, &config, &files, &diagnostic).unwrap();
+
+            println!("{}", buffer.into_string());
+        }
     }
 
-    (files, file_id)
+    /// Print the diagnostics to stderr with fancy formatting
+    pub fn print_diagnostics(&self, cache: &FileResolver, debug: bool) {
+        let (files, file_id) = self.convert_files(cache);
+
+        let writer = term::termcolor::StandardStream::stderr(term::termcolor::ColorChoice::Always);
+        let config = term::Config::default();
+
+        for msg in self.diagnostics.iter() {
+            if msg.level == Level::Debug && !debug {
+                continue;
+            }
+
+            let diagnostic = convert_diagnostic(msg, &file_id);
+
+            term::emit(&mut writer.lock(), &config, &files, &diagnostic).unwrap();
+        }
+    }
+
+    pub fn diagnostics_as_json(&self, cache: &FileResolver) -> Vec<OutputJson> {
+        let (files, file_id) = self.convert_files(cache);
+        let mut json = Vec::new();
+
+        let config = term::Config {
+            display_style: term::DisplayStyle::Short,
+            ..Default::default()
+        };
+
+        for msg in self.diagnostics.iter() {
+            if msg.level == Level::Info || msg.level == Level::Debug {
+                continue;
+            }
+
+            let diagnostic = convert_diagnostic(msg, &file_id);
+
+            let mut buffer = RawBuffer::new();
+
+            term::emit(&mut buffer, &config, &files, &diagnostic).unwrap();
+
+            let location = if let Loc::File(file_no, start, end) = msg.pos {
+                Some(LocJson {
+                    file: format!("{}", self.files[file_no]),
+                    start: start + 1,
+                    end: end + 1,
+                })
+            } else {
+                None
+            };
+
+            json.push(OutputJson {
+                sourceLocation: location,
+                ty: format!("{:?}", msg.ty),
+                component: "general".to_owned(),
+                severity: msg.level.to_string().to_owned(),
+                message: msg.message.to_owned(),
+                formattedMessage: buffer.into_string(),
+            });
+        }
+
+        json
+    }
+
+    fn convert_files(
+        &self,
+        cache: &FileResolver,
+    ) -> (files::SimpleFiles<String, Arc<str>>, Vec<usize>) {
+        let mut files = files::SimpleFiles::new();
+        let mut file_id = Vec::new();
+
+        for file in &self.files {
+            let (contents, _) = cache.get_file_contents_and_number(&file.path);
+            file_id.push(files.add(format!("{}", file), contents.to_owned()));
+        }
+
+        (files, file_id)
+    }
 }
 
 #[derive(Serialize)]
@@ -114,49 +264,6 @@ pub struct OutputJson {
     pub severity: String,
     pub message: String,
     pub formattedMessage: String,
-}
-
-pub fn diagnostics_as_json(ns: &Namespace, cache: &FileResolver) -> Vec<OutputJson> {
-    let (files, file_id) = convert_files(ns, cache);
-    let mut json = Vec::new();
-
-    let config = term::Config {
-        display_style: term::DisplayStyle::Short,
-        ..Default::default()
-    };
-
-    for msg in &ns.diagnostics {
-        if msg.level == Level::Info || msg.level == Level::Debug {
-            continue;
-        }
-
-        let diagnostic = convert_diagnostic(msg, &file_id);
-
-        let mut buffer = RawBuffer::new();
-
-        term::emit(&mut buffer, &config, &files, &diagnostic).unwrap();
-
-        let location = if let Loc::File(file_no, start, end) = msg.pos {
-            Some(LocJson {
-                file: format!("{}", ns.files[file_no]),
-                start: start + 1,
-                end: end + 1,
-            })
-        } else {
-            None
-        };
-
-        json.push(OutputJson {
-            sourceLocation: location,
-            ty: format!("{:?}", msg.ty),
-            component: "general".to_owned(),
-            severity: msg.level.to_string().to_owned(),
-            message: msg.message.to_owned(),
-            formattedMessage: buffer.into_string(),
-        });
-    }
-
-    json
 }
 
 pub struct RawBuffer {

@@ -1,6 +1,6 @@
 #![cfg(test)]
 
-use crate::sema::yul::tests::{assert_message_in_diagnostics, parse};
+use crate::sema::yul::tests::parse;
 
 #[test]
 fn case_not_literal() {
@@ -19,8 +19,7 @@ fn case_not_literal() {
     "#;
 
     let ns = parse(file);
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
+    assert!(ns.diagnostics.contains_message(
         r#"unrecognised token `y', expected "false", "true", hexnumber, hexstring, number, string"#
     ));
 }
@@ -43,8 +42,7 @@ contract testTypes {
     "#;
 
     let ns = parse(file);
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
+    assert!(ns.diagnostics.contains_message(
         r#"unrecognised token `case', expected "address", "bool", "break", "byte", "continue", "for", "function", "if", "leave", "let", "return", "revert", "switch", "{", "}", identifier"#
     ));
 }
@@ -67,8 +65,7 @@ contract testTypes {
     "#;
 
     let ns = parse(file);
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
+    assert!(ns.diagnostics.contains_message(
         r#"unrecognised token `default', expected "address", "bool", "break", "byte", "continue", "for", "function", "if", "leave", "let", "return", "revert", "switch", "{", "}", identifier"#
     ));
 }
@@ -102,12 +99,10 @@ contract testTypes {
 
     let ns = parse(file);
     assert_eq!(ns.diagnostics.len(), 2);
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "found contract ‘testTypes’"
-    ));
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "inline assembly is not yet supported"
-    ));
+    assert!(ns
+        .diagnostics
+        .contains_message("found contract ‘testTypes’"));
+    assert!(ns
+        .diagnostics
+        .contains_message("inline assembly is not yet supported"));
 }

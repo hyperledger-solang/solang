@@ -10,7 +10,6 @@ strict digraph "tests/contract_testcases/substrate/contracts/creation_code.sol" 
 	diagnostic_10 [label="found contract ‘b’\nlevel Debug\ntests/contract_testcases/substrate/contracts/creation_code.sol:8:9-20"]
 	diagnostic_11 [label="local variable ‘code‘ has been assigned, but never read\nlevel Warning\ntests/contract_testcases/substrate/contracts/creation_code.sol:4:27-31"]
 	diagnostic_12 [label="circular reference creating contract ‘a’\nlevel Error\ntests/contract_testcases/substrate/contracts/creation_code.sol:12:31-38"]
-	diagnostic_13 [label="storage variable ‘x‘ has never been used\nlevel Warning\ntests/contract_testcases/substrate/contracts/creation_code.sol:9:17-22"]
 	contracts -> contract
 	contract -> test [label="function"]
 	test -> var_decl [label="body"]
@@ -22,5 +21,4 @@ strict digraph "tests/contract_testcases/substrate/contracts/creation_code.sol" 
 	diagnostics -> diagnostic_10 [label="Debug"]
 	diagnostics -> diagnostic_11 [label="Warning"]
 	diagnostics -> diagnostic_12 [label="Error"]
-	diagnostics -> diagnostic_13 [label="Warning"]
 }

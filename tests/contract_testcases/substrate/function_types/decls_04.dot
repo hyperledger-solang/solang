@@ -4,11 +4,9 @@ strict digraph "tests/contract_testcases/substrate/function_types/decls_04.sol" 
 	var_decl [label="variable decl function() internal returns (bool) a\ntests/contract_testcases/substrate/function_types/decls_04.sol:3:17-46"]
 	diagnostic [label="found contract ‘test’\nlevel Debug\ntests/contract_testcases/substrate/function_types/decls_04.sol:1:1-15"]
 	diagnostic_6 [label="function type returns cannot be named\nlevel Error\ntests/contract_testcases/substrate/function_types/decls_04.sol:3:42-43"]
-	diagnostic_7 [label="local variable ‘a‘ has never been read nor assigned\nlevel Warning\ntests/contract_testcases/substrate/function_types/decls_04.sol:3:45-46"]
 	contracts -> contract
 	contract -> foo [label="function"]
 	foo -> var_decl [label="body"]
 	diagnostics -> diagnostic [label="Debug"]
 	diagnostics -> diagnostic_6 [label="Error"]
-	diagnostics -> diagnostic_7 [label="Warning"]
 }

@@ -1,4 +1,3 @@
-use super::diagnostics::any_errors;
 use super::tags::resolve_tags;
 use super::SOLANA_BUCKET_SIZE;
 use super::{
@@ -207,7 +206,7 @@ pub fn resolve_fields(delay: ResolveFields, file_no: usize, ns: &mut Namespace) 
     }
 
     // Do not attempt to call struct offsets if there are any infinitely recursive structs
-    if !any_errors(&ns.diagnostics) {
+    if !ns.diagnostics.any_errors() {
         struct_offsets(ns);
     }
 

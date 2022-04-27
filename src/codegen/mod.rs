@@ -24,7 +24,6 @@ use self::{
 use crate::emit::Generate;
 use crate::sema::ast::{Layout, Namespace};
 use crate::sema::contracts::visit_bases;
-use crate::sema::diagnostics::any_errors;
 use crate::{ast, Target};
 use std::cmp::Ordering;
 
@@ -100,7 +99,7 @@ impl Default for Options {
 /// The contracts are fully resolved but they do not have any CFGs which is needed for
 /// the llvm code emitter. This will also do additional code checks.
 pub fn codegen(ns: &mut Namespace, opt: &Options) {
-    if any_errors(&ns.diagnostics) {
+    if ns.diagnostics.any_errors() {
         return;
     }
 
@@ -131,7 +130,7 @@ pub fn codegen(ns: &mut Namespace, opt: &Options) {
 
             contract(contract_no, ns, opt);
 
-            if any_errors(&ns.diagnostics) {
+            if ns.diagnostics.any_errors() {
                 return;
             }
 
@@ -167,7 +166,7 @@ pub fn codegen(ns: &mut Namespace, opt: &Options) {
 }
 
 fn contract(contract_no: usize, ns: &mut Namespace, opt: &Options) {
-    if !any_errors(&ns.diagnostics) && ns.contracts[contract_no].is_concrete() {
+    if !ns.diagnostics.any_errors() && ns.contracts[contract_no].is_concrete() {
         layout(contract_no, ns);
 
         let mut cfg_no = 0;

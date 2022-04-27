@@ -1,4 +1,4 @@
-use crate::sema::yul::tests::{assert_message_in_diagnostics, parse};
+use crate::sema::yul::tests::parse;
 
 #[test]
 fn repeated_names() {
@@ -21,10 +21,9 @@ contract testTypes {
 }
     "#;
     let ns = parse(file);
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "variable name 'a' already used in this scope"
-    ));
+    assert!(ns
+        .diagnostics
+        .contains_message("variable name 'a' already used in this scope"));
 
     let file = r#"
     contract testTypes {
@@ -45,8 +44,7 @@ contract testTypes {
 }    "#;
 
     let ns = parse(file);
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "variable name 'b' already used in this scope"
-    ));
+    assert!(ns
+        .diagnostics
+        .contains_message("variable name 'b' already used in this scope"));
 }

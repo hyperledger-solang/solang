@@ -4,11 +4,9 @@ strict digraph "tests/contract_testcases/substrate/events/emit_01.sol" {
 	f [label="function f\ncontract: c\ntests/contract_testcases/substrate/events/emit_01.sol:4:13-32\nsignature f()\nvisibility public\nmutability nonpayable"]
 	diagnostic [label="found contract ‘c’\nlevel Debug\ntests/contract_testcases/substrate/events/emit_01.sol:2:9-20"]
 	diagnostic_7 [label="expected event arguments, found code block\nlevel Error\ntests/contract_testcases/substrate/events/emit_01.sol:5:26-28"]
-	diagnostic_8 [label="event ‘foo‘ has never been emitted\nlevel Warning\ntests/contract_testcases/substrate/events/emit_01.sol:3:19-22"]
 	events -> foo
 	contracts -> contract
 	contract -> f [label="function"]
 	diagnostics -> diagnostic [label="Debug"]
 	diagnostics -> diagnostic_7 [label="Error"]
-	diagnostics -> diagnostic_8 [label="Warning"]
 }

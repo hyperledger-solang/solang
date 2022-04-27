@@ -2,7 +2,6 @@ use super::ast::{
     Builtin, DestructureField, Diagnostic, Expression, Function, Mutability, Namespace, Statement,
     Type,
 };
-use super::diagnostics;
 use crate::parser::pt;
 use crate::sema::ast::RetrieveType;
 use crate::sema::yul::ast::{YulExpression, YulStatement};
@@ -10,7 +9,7 @@ use crate::sema::Recurse;
 
 /// check state mutability
 pub fn mutability(file_no: usize, ns: &mut Namespace) {
-    if !diagnostics::any_errors(&ns.diagnostics) {
+    if !ns.diagnostics.any_errors() {
         for func in &ns.functions {
             if func.loc.file_no() != file_no {
                 continue;

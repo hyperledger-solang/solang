@@ -1,7 +1,5 @@
-use itertools::Itertools;
 use solang::file_resolver::FileResolver;
 use solang::sema::ast;
-use solang::sema::ast::{Diagnostic, Level};
 use solang::{parse_and_resolve, Target};
 use std::ffi::OsStr;
 
@@ -20,42 +18,6 @@ fn parse_two_files(src1: &'static str, src2: &'static str) -> ast::Namespace {
     parse_and_resolve(OsStr::new("test.sol"), &mut cache, Target::Ewasm)
 }
 
-fn count_warnings(diagnostics: &[Diagnostic]) -> usize {
-    diagnostics
-        .iter()
-        .filter(|&x| x.level == Level::Warning)
-        .count()
-}
-
-fn get_first_warning(diagnostics: &[Diagnostic]) -> &Diagnostic {
-    diagnostics
-        .iter()
-        .find_or_first(|&x| x.level == Level::Warning)
-        .unwrap()
-}
-
-fn get_warnings(diagnostics: &[Diagnostic]) -> Vec<&Diagnostic> {
-    let mut res = Vec::new();
-    for elem in diagnostics {
-        if elem.level == Level::Warning {
-            res.push(elem);
-        }
-    }
-
-    res
-}
-
-fn assert_message_in_warnings(diagnostics: &[Diagnostic], message: &str) -> bool {
-    let warnings = get_warnings(diagnostics);
-    for warning in warnings {
-        if warning.message == message {
-            return true;
-        }
-    }
-
-    false
-}
-
 #[test]
 fn emit_event() {
     //Used event
@@ -69,7 +31,7 @@ fn emit_event() {
     "#;
 
     let ns = parse(case_1);
-    assert_eq!(count_warnings(&ns.diagnostics), 0);
+    assert_eq!(ns.diagnostics.count_warnings(), 0);
 
     // Unused event
     let case_2 = r#"
@@ -84,9 +46,9 @@ fn emit_event() {
     "#;
 
     let ns = parse(case_2);
-    assert_eq!(count_warnings(&ns.diagnostics), 1);
+    assert_eq!(ns.diagnostics.count_warnings(), 1);
     assert_eq!(
-        get_first_warning(&ns.diagnostics).message,
+        ns.diagnostics.first_warning().message,
         "event ‘Hello‘ has never been emitted"
     );
 
@@ -105,9 +67,9 @@ fn emit_event() {
     "#;
 
     let ns = parse(case_2);
-    assert_eq!(count_warnings(&ns.diagnostics), 1);
+    assert_eq!(ns.diagnostics.count_warnings(), 1);
     assert_eq!(
-        get_first_warning(&ns.diagnostics).message,
+        ns.diagnostics.first_warning().message,
         "event ‘Hello‘ has never been emitted"
     );
 
@@ -126,9 +88,9 @@ fn emit_event() {
     "#;
 
     let ns = parse(case_2);
-    assert_eq!(count_warnings(&ns.diagnostics), 1);
+    assert_eq!(ns.diagnostics.count_warnings(), 1);
     assert_eq!(
-        get_first_warning(&ns.diagnostics).message,
+        ns.diagnostics.first_warning().message,
         "event ‘Hey‘ has never been emitted"
     );
 
@@ -143,7 +105,7 @@ fn emit_event() {
     "#;
 
     let ns = parse(case_3);
-    assert_eq!(count_warnings(&ns.diagnostics), 0);
+    assert_eq!(ns.diagnostics.count_warnings(), 0);
 }
 
 #[test]
@@ -170,7 +132,7 @@ fn constant_variable() {
 
     //Constant properly read
     let ns = parse_two_files(file_1, file_2);
-    assert_eq!(count_warnings(&ns.diagnostics), 0);
+    assert_eq!(ns.diagnostics.count_warnings(), 0);
 
     let file_1 = r#"
         import "test2.sol";
@@ -188,15 +150,13 @@ fn constant_variable() {
     "#;
 
     let ns = parse_two_files(file_1, file_2);
-    assert_eq!(count_warnings(&ns.diagnostics), 2);
-    assert!(assert_message_in_warnings(
-        &ns.diagnostics,
-        "storage variable ‘cte‘ has been assigned, but never read"
-    ));
-    assert!(assert_message_in_warnings(
-        &ns.diagnostics,
-        "global constant ‘outside‘ has never been used"
-    ));
+    assert_eq!(ns.diagnostics.count_warnings(), 2);
+    assert!(ns
+        .diagnostics
+        .warning_contains("storage variable ‘cte‘ has been assigned, but never read"));
+    assert!(ns
+        .diagnostics
+        .warning_contains("global constant ‘outside‘ has never been used"));
 }
 
 #[test]
@@ -212,7 +172,7 @@ fn storage_variable() {
     "#;
 
     let ns = parse(file);
-    let warnings = get_warnings(&ns.diagnostics);
+    let warnings = ns.diagnostics.warnings();
     assert_eq!(warnings.len(), 2);
     assert_eq!(
         warnings[0].message,
@@ -235,9 +195,9 @@ fn storage_variable() {
     "#;
 
     let ns = parse(file);
-    assert_eq!(count_warnings(&ns.diagnostics), 1);
+    assert_eq!(ns.diagnostics.count_warnings(), 1);
     assert_eq!(
-        get_first_warning(&ns.diagnostics).message,
+        ns.diagnostics.first_warning().message,
         "storage variable ‘str2‘ has been assigned, but never read"
     );
 
@@ -257,7 +217,7 @@ fn storage_variable() {
     "#;
 
     let ns = parse(file);
-    assert_eq!(count_warnings(&ns.diagnostics), 0);
+    assert_eq!(ns.diagnostics.count_warnings(), 0);
 }
 
 #[test]
@@ -280,19 +240,16 @@ fn state_variable() {
     "#;
 
     let ns = parse(file);
-    assert_eq!(count_warnings(&ns.diagnostics), 3);
-    assert!(assert_message_in_warnings(
-        &ns.diagnostics,
-        "local variable ‘b‘ has been assigned, but never read"
-    ));
-    assert!(assert_message_in_warnings(
-        &ns.diagnostics,
-        "local variable ‘a‘ has been assigned, but never read"
-    ));
-    assert!(assert_message_in_warnings(
-        &ns.diagnostics,
-        "local variable ‘c‘ has never been read nor assigned"
-    ));
+    assert_eq!(ns.diagnostics.count_warnings(), 3);
+    assert!(ns
+        .diagnostics
+        .warning_contains("local variable ‘b‘ has been assigned, but never read"));
+    assert!(ns
+        .diagnostics
+        .warning_contains("local variable ‘a‘ has been assigned, but never read"));
+    assert!(ns
+        .diagnostics
+        .warning_contains("local variable ‘c‘ has never been read nor assigned"));
 }
 
 #[test]
@@ -327,23 +284,19 @@ fn struct_usage() {
     "#;
 
     let ns = parse(file);
-    assert_eq!(count_warnings(&ns.diagnostics), 4);
-    assert!(assert_message_in_warnings(
-        &ns.diagnostics,
-        "local variable ‘t2‘ has been assigned, but never read"
-    ));
-    assert!(assert_message_in_warnings(
-        &ns.diagnostics,
-        "storage variable ‘t1‘ has been assigned, but never read"
-    ));
-    assert!(assert_message_in_warnings(
-        &ns.diagnostics,
-        "local variable ‘t5‘ has never been read nor assigned"
-    ));
-    assert!(assert_message_in_warnings(
-        &ns.diagnostics,
-        "storage variable ‘t6‘ has never been used"
-    ));
+    assert_eq!(ns.diagnostics.count_warnings(), 4);
+    assert!(ns
+        .diagnostics
+        .warning_contains("local variable ‘t2‘ has been assigned, but never read"));
+    assert!(ns
+        .diagnostics
+        .warning_contains("storage variable ‘t1‘ has been assigned, but never read"));
+    assert!(ns
+        .diagnostics
+        .warning_contains("local variable ‘t5‘ has never been read nor assigned"));
+    assert!(ns
+        .diagnostics
+        .warning_contains("storage variable ‘t6‘ has never been used"));
 }
 
 #[test]
@@ -377,23 +330,19 @@ fn subscript() {
     "#;
 
     let ns = parse(file);
-    assert_eq!(count_warnings(&ns.diagnostics), 4);
-    assert!(assert_message_in_warnings(
-        &ns.diagnostics,
-        "local variable ‘arr4‘ has been assigned, but never read"
-    ));
-    assert!(assert_message_in_warnings(
-        &ns.diagnostics,
-        "storage variable ‘arr1‘ has been assigned, but never read"
-    ));
-    assert!(assert_message_in_warnings(
-        &ns.diagnostics,
-        "storage variable ‘arr2‘ has been assigned, but never read"
-    ));
-    assert!(assert_message_in_warnings(
-        &ns.diagnostics,
-        "storage variable ‘byteArr‘ has been assigned, but never read"
-    ));
+    assert_eq!(ns.diagnostics.count_warnings(), 4);
+    assert!(ns
+        .diagnostics
+        .warning_contains("local variable ‘arr4‘ has been assigned, but never read"));
+    assert!(ns
+        .diagnostics
+        .warning_contains("storage variable ‘arr1‘ has been assigned, but never read"));
+    assert!(ns
+        .diagnostics
+        .warning_contains("storage variable ‘arr2‘ has been assigned, but never read"));
+    assert!(ns
+        .diagnostics
+        .warning_contains("storage variable ‘byteArr‘ has been assigned, but never read"));
 
     let file = r#"
         contract Test {
@@ -428,7 +377,7 @@ fn subscript() {
     "#;
 
     let ns = parse(file);
-    assert_eq!(count_warnings(&ns.diagnostics), 0);
+    assert_eq!(ns.diagnostics.count_warnings(), 0);
 }
 
 #[test]
@@ -461,11 +410,10 @@ fn assign_trunc_cast() {
 "#;
 
     let ns = parse(file);
-    assert_eq!(count_warnings(&ns.diagnostics), 1);
-    assert!(assert_message_in_warnings(
-        &ns.diagnostics,
-        "storage variable ‘byteArr‘ has been assigned, but never read"
-    ));
+    assert_eq!(ns.diagnostics.count_warnings(), 1);
+    assert!(ns
+        .diagnostics
+        .warning_contains("storage variable ‘byteArr‘ has been assigned, but never read"));
 }
 
 #[test]
@@ -493,7 +441,7 @@ fn array_length() {
     "#;
 
     let ns = parse(file);
-    assert_eq!(count_warnings(&ns.diagnostics), 0);
+    assert_eq!(ns.diagnostics.count_warnings(), 0);
 }
 
 #[test]
@@ -519,7 +467,7 @@ fn sign_ext_storage_load() {
     "#;
 
     let ns = parse(file);
-    assert_eq!(count_warnings(&ns.diagnostics), 0);
+    assert_eq!(ns.diagnostics.count_warnings(), 0);
 }
 
 #[test]
@@ -590,15 +538,13 @@ fn statements() {
     }
     "#;
     let ns = parse(file);
-    assert_eq!(count_warnings(&ns.diagnostics), 2);
-    assert!(assert_message_in_warnings(
-        &ns.diagnostics,
-        "function parameter ‘a‘ has never been read"
-    ));
-    assert!(assert_message_in_warnings(
-        &ns.diagnostics,
-        "local variable ‘ct‘ has been assigned, but never read",
-    ));
+    assert_eq!(ns.diagnostics.count_warnings(), 2);
+    assert!(ns
+        .diagnostics
+        .warning_contains("function parameter ‘a‘ has never been read"));
+    assert!(ns
+        .diagnostics
+        .warning_contains("local variable ‘ct‘ has been assigned, but never read",));
 }
 
 #[test]
@@ -640,7 +586,7 @@ fn function_call() {
     "#;
 
     let ns = parse(file);
-    assert_eq!(count_warnings(&ns.diagnostics), 0);
+    assert_eq!(ns.diagnostics.count_warnings(), 0);
 
     let file = r#"
     contract Test1 {
@@ -674,7 +620,7 @@ fn function_call() {
     "#;
 
     let ns = parse(file);
-    assert_eq!(count_warnings(&ns.diagnostics), 0);
+    assert_eq!(ns.diagnostics.count_warnings(), 0);
 }
 
 #[test]
@@ -695,15 +641,13 @@ fn array_push_pop() {
     "#;
 
     let ns = parse(file);
-    assert_eq!(count_warnings(&ns.diagnostics), 2);
-    assert!(assert_message_in_warnings(
-        &ns.diagnostics,
-        "local variable ‘vec2‘ has been assigned, but never read"
-    ));
-    assert!(assert_message_in_warnings(
-        &ns.diagnostics,
-        "storage variable ‘vec1‘ has been assigned, but never read"
-    ));
+    assert_eq!(ns.diagnostics.count_warnings(), 2);
+    assert!(ns
+        .diagnostics
+        .warning_contains("local variable ‘vec2‘ has been assigned, but never read"));
+    assert!(ns
+        .diagnostics
+        .warning_contains("storage variable ‘vec1‘ has been assigned, but never read"));
 
     let file = r#"
         contract Test1 {
@@ -723,7 +667,7 @@ fn array_push_pop() {
     "#;
 
     let ns = parse(file);
-    assert_eq!(count_warnings(&ns.diagnostics), 0);
+    assert_eq!(ns.diagnostics.count_warnings(), 0);
 }
 
 #[test]
@@ -746,19 +690,16 @@ fn return_variable() {
     "#;
 
     let ns = parse(file);
-    assert_eq!(count_warnings(&ns.diagnostics), 3);
-    assert!(assert_message_in_warnings(
-        &ns.diagnostics,
-        "destructure variable ‘a‘ has never been used"
-    ));
-    assert!(assert_message_in_warnings(
-        &ns.diagnostics,
-        "return variable ‘hey‘ has never been assigned"
-    ));
-    assert!(assert_message_in_warnings(
-        &ns.diagnostics,
-        "storage variable ‘testing‘ has been assigned, but never read"
-    ));
+    assert_eq!(ns.diagnostics.count_warnings(), 3);
+    assert!(ns
+        .diagnostics
+        .warning_contains("destructure variable ‘a‘ has never been used"));
+    assert!(ns
+        .diagnostics
+        .warning_contains("return variable ‘hey‘ has never been assigned"));
+    assert!(ns
+        .diagnostics
+        .warning_contains("storage variable ‘testing‘ has been assigned, but never read"));
 }
 
 #[test]
@@ -785,19 +726,16 @@ fn try_catch() {
     "#;
 
     let ns = parse(file);
-    assert_eq!(count_warnings(&ns.diagnostics), 3);
-    assert!(assert_message_in_warnings(
-        &ns.diagnostics,
-        "try-catch error bytes ‘returnData‘ has never been used"
-    ));
-    assert!(assert_message_in_warnings(
-        &ns.diagnostics,
-        "try-catch returns variable ‘returnedInstance‘ has never been read"
-    ));
-    assert!(assert_message_in_warnings(
-        &ns.diagnostics,
-        "try-catch error string ‘revertReason‘ has never been used"
-    ));
+    assert_eq!(ns.diagnostics.count_warnings(), 3);
+    assert!(ns
+        .diagnostics
+        .warning_contains("try-catch error bytes ‘returnData‘ has never been used"));
+    assert!(ns
+        .diagnostics
+        .warning_contains("try-catch returns variable ‘returnedInstance‘ has never been read"));
+    assert!(ns
+        .diagnostics
+        .warning_contains("try-catch error string ‘revertReason‘ has never been used"));
 
     let file = r#"
     contract CalledContract {
@@ -826,11 +764,10 @@ fn try_catch() {
     "#;
 
     let ns = parse(file);
-    assert_eq!(count_warnings(&ns.diagnostics), 1);
-    assert!(assert_message_in_warnings(
-        &ns.diagnostics,
-        "storage variable ‘notOk‘ has been assigned, but never read"
-    ));
+    assert_eq!(ns.diagnostics.count_warnings(), 1);
+    assert!(ns
+        .diagnostics
+        .warning_contains("storage variable ‘notOk‘ has been assigned, but never read"));
 
     let file = r#"
     contract CalledContract {
@@ -839,7 +776,7 @@ fn try_catch() {
     "#;
 
     let ns = parse(file);
-    assert_eq!(count_warnings(&ns.diagnostics), 0);
+    assert_eq!(ns.diagnostics.count_warnings(), 0);
 }
 
 #[test]
@@ -868,7 +805,7 @@ fn destructure() {
     "#;
 
     let ns = parse(file);
-    assert_eq!(count_warnings(&ns.diagnostics), 0);
+    assert_eq!(ns.diagnostics.count_warnings(), 0);
 }
 
 #[test]
@@ -892,7 +829,7 @@ fn struct_initialization() {
     "#;
 
     let ns = parse(file);
-    assert_eq!(count_warnings(&ns.diagnostics), 0);
+    assert_eq!(ns.diagnostics.count_warnings(), 0);
 }
 
 #[test]
@@ -943,11 +880,10 @@ fn subarray_mapping_struct_literal() {
     "#;
 
     let ns = parse(file);
-    assert_eq!(count_warnings(&ns.diagnostics), 1);
-    assert!(assert_message_in_warnings(
-        &ns.diagnostics,
-        "storage variable ‘choice‘ has been assigned, but never read"
-    ));
+    assert_eq!(ns.diagnostics.count_warnings(), 1);
+    assert!(ns
+        .diagnostics
+        .warning_contains("storage variable ‘choice‘ has been assigned, but never read"));
 }
 
 #[test]
@@ -973,7 +909,7 @@ fn builtin_call_destructure() {
     "#;
 
     let ns = parse(file);
-    assert_eq!(count_warnings(&ns.diagnostics), 0);
+    assert_eq!(ns.diagnostics.count_warnings(), 0);
 }
 
 #[test]
@@ -991,7 +927,7 @@ fn delete_statement() {
     "#;
 
     let ns = parse(file);
-    assert_eq!(count_warnings(&ns.diagnostics), 0);
+    assert_eq!(ns.diagnostics.count_warnings(), 0);
 }
 
 #[test]
@@ -1015,7 +951,7 @@ fn load_length() {
     "#;
 
     let ns = parse(file);
-    assert_eq!(count_warnings(&ns.diagnostics), 0);
+    assert_eq!(ns.diagnostics.count_warnings(), 0);
 }
 
 #[test]
@@ -1036,7 +972,7 @@ fn address_selector() {
     "#;
 
     let ns = parse(file);
-    assert_eq!(count_warnings(&ns.diagnostics), 0);
+    assert_eq!(ns.diagnostics.count_warnings(), 0);
 }
 
 #[test]
@@ -1056,7 +992,7 @@ fn load_storage_load() {
     "#;
 
     let ns = parse(file);
-    assert_eq!(count_warnings(&ns.diagnostics), 0);
+    assert_eq!(ns.diagnostics.count_warnings(), 0);
 }
 
 #[test]
@@ -1088,7 +1024,7 @@ fn variable_function() {
     "#;
 
     let ns = parse(file);
-    assert_eq!(count_warnings(&ns.diagnostics), 0);
+    assert_eq!(ns.diagnostics.count_warnings(), 0);
 
     let file = r#"
     contract ft {
@@ -1105,7 +1041,7 @@ fn variable_function() {
     "#;
 
     let ns = parse(file);
-    assert_eq!(count_warnings(&ns.diagnostics), 0);
+    assert_eq!(ns.diagnostics.count_warnings(), 0);
 
     let file = r#"
     contract ft {
@@ -1134,7 +1070,7 @@ fn variable_function() {
     "#;
 
     let ns = parse(file);
-    assert_eq!(count_warnings(&ns.diagnostics), 0);
+    assert_eq!(ns.diagnostics.count_warnings(), 0);
 
     let file = r#"
     contract ft {
@@ -1161,7 +1097,7 @@ fn variable_function() {
     "#;
 
     let ns = parse(file);
-    assert_eq!(count_warnings(&ns.diagnostics), 0);
+    assert_eq!(ns.diagnostics.count_warnings(), 0);
 
     let file = r#"
     contract ft is Arith {
@@ -1197,7 +1133,7 @@ fn variable_function() {
         }
     "#;
     let ns = parse(file);
-    assert_eq!(count_warnings(&ns.diagnostics), 0);
+    assert_eq!(ns.diagnostics.count_warnings(), 0);
 
     let file = r#"
     function global_function() pure returns (uint32) {
@@ -1219,7 +1155,7 @@ fn variable_function() {
         }
     "#;
     let ns = parse(file);
-    assert_eq!(count_warnings(&ns.diagnostics), 0);
+    assert_eq!(ns.diagnostics.count_warnings(), 0);
 }
 
 #[test]
@@ -1235,7 +1171,7 @@ fn format_string() {
     "#;
 
     let ns = parse(file);
-    assert_eq!(count_warnings(&ns.diagnostics), 0);
+    assert_eq!(ns.diagnostics.count_warnings(), 0);
 }
 
 #[test]
@@ -1253,5 +1189,5 @@ fn balance() {
     }
     "#;
     let ns = parse(file);
-    assert_eq!(count_warnings(&ns.diagnostics), 0);
+    assert_eq!(ns.diagnostics.count_warnings(), 0);
 }

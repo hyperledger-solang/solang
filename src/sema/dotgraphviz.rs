@@ -2266,7 +2266,7 @@ impl Namespace {
         if !self.diagnostics.is_empty() {
             let diagnostics = dot.add_node(Node::new("diagnostics", Vec::new()), None, None);
 
-            for diag in &self.diagnostics {
+            for diag in self.diagnostics.iter() {
                 let mut labels = vec![diag.message.to_string(), format!("level {:?}", diag.level)];
 
                 labels.push(self.loc_to_string(&diag.pos));

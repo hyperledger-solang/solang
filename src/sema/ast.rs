@@ -1,5 +1,6 @@
 use super::symtable::Symtable;
 use crate::codegen::cfg::ControlFlowGraph;
+use crate::diagnostics::Diagnostics;
 pub use crate::parser::diagnostics::*;
 use crate::parser::pt;
 use crate::parser::pt::{CodeLocation, OptionalCodeLocation};
@@ -449,7 +450,7 @@ pub struct Namespace {
     pub address_length: usize,
     /// value length in bytes
     pub value_length: usize,
-    pub diagnostics: Vec<Diagnostic>,
+    pub diagnostics: Diagnostics,
     /// There is a separate namespace for functions and non-functions
     pub function_symbols: HashMap<(usize, Option<usize>, String), Symbol>,
     /// Symbol key is file_no, contract, identifier

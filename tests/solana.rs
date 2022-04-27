@@ -23,7 +23,6 @@ use solang::{
     compile_many,
     emit::Generate,
     file_resolver::FileResolver,
-    sema::diagnostics,
     Target,
 };
 use std::{
@@ -124,7 +123,7 @@ fn build_solidity(src: &str) -> VirtualMachine {
     // codegen all the contracts; some additional errors/warnings will be detected here
     codegen(&mut ns, &Options::default());
 
-    diagnostics::print_diagnostics_plain(&cache, &ns, false);
+    ns.print_diagnostics_in_plain(&cache, false);
 
     let context = inkwell::context::Context::create();
 

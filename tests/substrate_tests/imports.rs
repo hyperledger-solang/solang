@@ -1,4 +1,3 @@
-use crate::{first_error, no_errors};
 use solang::file_resolver::FileResolver;
 use solang::Target;
 use std::ffi::OsStr;
@@ -30,7 +29,7 @@ fn enum_import() {
     let ns =
         solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_substrate());
 
-    no_errors(ns.diagnostics);
+    assert!(!ns.diagnostics.any_errors());
 
     let mut cache = FileResolver::new();
 
@@ -57,7 +56,7 @@ fn enum_import() {
     let ns =
         solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_substrate());
 
-    no_errors(ns.diagnostics);
+    assert!(!ns.diagnostics.any_errors());
 
     let mut cache = FileResolver::new();
 
@@ -84,7 +83,7 @@ fn enum_import() {
     let ns =
         solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_substrate());
 
-    no_errors(ns.diagnostics);
+    assert!(!ns.diagnostics.any_errors());
 
     let mut cache = FileResolver::new();
 
@@ -108,7 +107,7 @@ fn enum_import() {
         solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_substrate());
 
     assert_eq!(
-        first_error(ns.diagnostics),
+        ns.diagnostics.first_error(),
         "import ‘b.sol’ does not export ‘enum_c’"
     );
 
@@ -127,7 +126,7 @@ fn enum_import() {
         solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_substrate());
 
     assert_eq!(
-        first_error(ns.diagnostics),
+        ns.diagnostics.first_error(),
         "‘frum’ found where ‘from’ expected"
     );
 
@@ -145,7 +144,7 @@ fn enum_import() {
         solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_substrate());
 
     assert_eq!(
-        first_error(ns.diagnostics),
+        ns.diagnostics.first_error(),
         "‘frum’ found where ‘from’ expected"
     );
 }
@@ -177,7 +176,7 @@ fn struct_import() {
     let ns =
         solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_substrate());
 
-    no_errors(ns.diagnostics);
+    assert!(!ns.diagnostics.any_errors());
 
     let mut cache = FileResolver::new();
 
@@ -204,7 +203,7 @@ fn struct_import() {
     let ns =
         solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_substrate());
 
-    assert_eq!(first_error(ns.diagnostics), "type ‘struct_a’ not found");
+    assert_eq!(ns.diagnostics.first_error(), "type ‘struct_a’ not found");
 }
 
 #[test]
@@ -242,7 +241,7 @@ fn contract_import() {
     let ns =
         solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_substrate());
 
-    no_errors(ns.diagnostics);
+    assert!(!ns.diagnostics.any_errors());
 
     // lets try a importing an import
     let mut cache = FileResolver::new();
@@ -286,7 +285,7 @@ fn contract_import() {
     let ns =
         solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_substrate());
 
-    no_errors(ns.diagnostics);
+    assert!(!ns.diagnostics.any_errors());
 
     // now let's rename an import in a chain
     let mut cache = FileResolver::new();
@@ -330,7 +329,7 @@ fn contract_import() {
     let ns =
         solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_substrate());
 
-    no_errors(ns.diagnostics);
+    assert!(!ns.diagnostics.any_errors());
 }
 
 #[test]
@@ -357,7 +356,7 @@ fn circular_import() {
         Target::default_substrate(),
     );
 
-    no_errors(ns.diagnostics);
+    assert!(!ns.diagnostics.any_errors());
 
     let mut cache = FileResolver::new();
 
@@ -399,7 +398,7 @@ fn circular_import() {
     let ns =
         solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_substrate());
 
-    no_errors(ns.diagnostics);
+    assert!(!ns.diagnostics.any_errors());
 }
 
 #[test]
@@ -434,7 +433,7 @@ fn import_symbol() {
     let ns =
         solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_substrate());
 
-    no_errors(ns.diagnostics);
+    assert!(!ns.diagnostics.any_errors());
 
     // import contract via import symbol
     let mut cache = FileResolver::new();
@@ -470,7 +469,7 @@ fn import_symbol() {
     let ns =
         solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_substrate());
 
-    no_errors(ns.diagnostics);
+    assert!(!ns.diagnostics.any_errors());
 
     // import enum in contract via import symbol
     let mut cache = FileResolver::new();
@@ -506,7 +505,7 @@ fn import_symbol() {
     let ns =
         solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_substrate());
 
-    no_errors(ns.diagnostics);
+    assert!(!ns.diagnostics.any_errors());
 
     // import struct in contract via import symbol chain
     let mut cache = FileResolver::new();
@@ -552,7 +551,7 @@ fn import_symbol() {
     let ns =
         solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_substrate());
 
-    no_errors(ns.diagnostics);
+    assert!(!ns.diagnostics.any_errors());
 }
 
 #[test]
@@ -603,7 +602,7 @@ fn enum_import_chain() {
     let ns =
         solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_substrate());
 
-    no_errors(ns.diagnostics);
+    assert!(!ns.diagnostics.any_errors());
 
     // now with error
     let mut cache = FileResolver::new();
@@ -652,7 +651,7 @@ fn enum_import_chain() {
         solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_substrate());
 
     assert_eq!(
-        first_error(ns.diagnostics),
+        ns.diagnostics.first_error(),
         "enum d.enum_d does not have value d4"
     );
 }
@@ -701,5 +700,5 @@ fn import_base_dir() {
     let ns =
         solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_substrate());
 
-    no_errors(ns.diagnostics);
+    assert!(!ns.diagnostics.any_errors());
 }

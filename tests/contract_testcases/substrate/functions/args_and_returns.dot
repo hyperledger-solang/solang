@@ -5,14 +5,10 @@ strict digraph "tests/contract_testcases/substrate/functions/args_and_returns.so
 	diagnostic [label="found contract ‘args’\nlevel Debug\ntests/contract_testcases/substrate/functions/args_and_returns.sol:2:5-19"]
 	diagnostic_6 [label="arg1 is already declared\nlevel Error\ntests/contract_testcases/substrate/functions/args_and_returns.sol:3:38-42"]
 	note [label="location of previous declaration\ntests/contract_testcases/substrate/functions/args_and_returns.sol:3:27-31"]
-	diagnostic_8 [label="function parameter ‘arg1‘ has never been read\nlevel Warning\ntests/contract_testcases/substrate/functions/args_and_returns.sol:3:27-31"]
-	diagnostic_9 [label="function parameter ‘arg1‘ has never been read\nlevel Warning\ntests/contract_testcases/substrate/functions/args_and_returns.sol:3:38-42"]
 	contracts -> contract
 	contract -> foo [label="function"]
 	foo -> parameters [label="parameters"]
 	diagnostics -> diagnostic [label="Debug"]
 	diagnostics -> diagnostic_6 [label="Error"]
 	diagnostic_6 -> note [label="note"]
-	diagnostics -> diagnostic_8 [label="Warning"]
-	diagnostics -> diagnostic_9 [label="Warning"]
 }

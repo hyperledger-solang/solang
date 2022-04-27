@@ -1,3 +1,4 @@
+use crate::diagnostics::Diagnostics;
 use crate::parser::{parse, pt};
 use crate::sema::ast::RetrieveType;
 use crate::Target;
@@ -50,9 +51,11 @@ pub const SOLANA_SPARSE_ARRAY_SIZE: u64 = 1024;
 pub fn sema(file: &ResolvedFile, resolver: &mut FileResolver, ns: &mut ast::Namespace) {
     sema_file(file, resolver, ns);
 
-    // Checks for unused variables
-    check_unused_namespace_variables(ns);
-    check_unused_events(ns);
+    if !ns.diagnostics.any_errors() {
+        // Checks for unused variables
+        check_unused_namespace_variables(ns);
+        check_unused_events(ns);
+    }
 }
 
 /// Parse and resolve a file and its imports in a recursive manner.
@@ -114,7 +117,7 @@ fn sema_file(file: &ResolvedFile, resolver: &mut FileResolver, ns: &mut ast::Nam
     types::resolve_fields(fields, file_no, ns);
 
     // give up if we failed
-    if diagnostics::any_errors(&ns.diagnostics) {
+    if ns.diagnostics.any_errors() {
         return;
     }
 
@@ -192,7 +195,7 @@ fn resolve_import(
                 sema_file(&file, resolver, ns);
 
                 // give up if we failed
-                if diagnostics::any_errors(&ns.diagnostics) {
+                if ns.diagnostics.any_errors() {
                     return;
                 }
             }
@@ -341,7 +344,7 @@ impl ast::Namespace {
             value_length,
             variable_symbols: HashMap::new(),
             function_symbols: HashMap::new(),
-            diagnostics: Vec::new(),
+            diagnostics: Diagnostics::default(),
             next_id: 0,
             var_constants: HashMap::new(),
             hover_overrides: HashMap::new(),

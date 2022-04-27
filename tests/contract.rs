@@ -1,5 +1,5 @@
 use path_slash::PathExt;
-use solang::{codegen, file_resolver::FileResolver, parse_and_resolve, sema::ast::Level, Target};
+use solang::{codegen, file_resolver::FileResolver, parse_and_resolve, Target};
 use std::{
     ffi::OsStr,
     fs::{read_dir, File},
@@ -47,7 +47,7 @@ fn parse_file(path: PathBuf, target: Target) -> io::Result<()> {
 
     let mut ns = parse_and_resolve(OsStr::new(&filename), &mut cache, target);
 
-    if ns.diagnostics.iter().all(|diag| diag.level != Level::Error) {
+    if !ns.diagnostics.any_errors() {
         // codegen all the contracts
         codegen::codegen(
             &mut ns,

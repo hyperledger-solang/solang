@@ -283,12 +283,12 @@ fn main() {
         for filename in matches.values_of_os("INPUT").unwrap() {
             let ns = solang::parse_and_resolve(filename, &mut resolver, target);
 
-            diagnostics::print_diagnostics(&resolver, &ns, verbose);
+            ns.print_diagnostics(&resolver, verbose);
 
             if ns.contracts.is_empty() {
                 eprintln!("{}: error: no contracts found", filename.to_string_lossy());
                 success = false;
-            } else if diagnostics::any_errors(&ns.diagnostics) {
+            } else if ns.diagnostics.any_errors() {
                 success = false;
             } else {
                 files.push(ns);
@@ -449,10 +449,10 @@ fn process_file(
     codegen(&mut ns, opt);
 
     if matches.is_present("STD-JSON") {
-        let mut out = diagnostics::diagnostics_as_json(&ns, resolver);
+        let mut out = ns.diagnostics_as_json(resolver);
         json.errors.append(&mut out);
     } else {
-        diagnostics::print_diagnostics(resolver, &ns, verbose);
+        ns.print_diagnostics(resolver, verbose);
     }
 
     if let Some("ast-dot") = matches.value_of("EMIT") {
@@ -476,7 +476,7 @@ fn process_file(
         return Ok(ns);
     }
 
-    if ns.contracts.is_empty() || diagnostics::any_errors(&ns.diagnostics) {
+    if ns.contracts.is_empty() || ns.diagnostics.any_errors() {
         return Err(());
     }
 

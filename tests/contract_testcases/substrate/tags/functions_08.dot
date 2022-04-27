@@ -4,13 +4,9 @@ strict digraph "tests/contract_testcases/substrate/tags/functions_08.sol" {
 	returns [label="returns\nint256 a\nbool b"]
 	diagnostic [label="found contract ‘c’\nlevel Debug\ntests/contract_testcases/substrate/tags/functions_08.sol:2:9-20"]
 	diagnostic_6 [label="base contract ‘b’ not found in tag ‘@inheritdoc’\nlevel Error\ntests/contract_testcases/substrate/tags/functions_08.sol:3:29-30"]
-	diagnostic_7 [label="return variable ‘a‘ has never been assigned\nlevel Warning\ntests/contract_testcases/substrate/tags/functions_08.sol:4:48-49"]
-	diagnostic_8 [label="return variable ‘b‘ has never been assigned\nlevel Warning\ntests/contract_testcases/substrate/tags/functions_08.sol:4:56-57"]
 	contracts -> contract
 	contract -> foo [label="function"]
 	foo -> returns [label="returns"]
 	diagnostics -> diagnostic [label="Debug"]
 	diagnostics -> diagnostic_6 [label="Error"]
-	diagnostics -> diagnostic_7 [label="Warning"]
-	diagnostics -> diagnostic_8 [label="Warning"]
 }

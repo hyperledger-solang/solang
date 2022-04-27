@@ -1,6 +1,6 @@
 #![cfg(test)]
 
-use crate::sema::yul::tests::{assert_message_in_diagnostics, parse};
+use crate::sema::yul::tests::parse;
 
 #[test]
 fn type_not_found() {
@@ -15,10 +15,9 @@ contract testTypes {
     "#;
 
     let ns = parse(file);
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "the specified type 's120' does not exist"
-    ));
+    assert!(ns
+        .diagnostics
+        .contains_message("the specified type 's120' does not exist"));
 }
 
 #[test]
@@ -33,10 +32,9 @@ contract testTypes {
 }
     "#;
     let ns = parse(file);
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "builtin function 'log0' returns nothing"
-    ));
+    assert!(ns
+        .diagnostics
+        .contains_message("builtin function 'log0' returns nothing"));
 
     let file = r#"
     contract testTypes {
@@ -63,13 +61,11 @@ contract testTypes {
     "#;
 
     let ns = parse(file);
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "function 'doThis' returns nothing"
-    ));
+    assert!(ns
+        .diagnostics
+        .contains_message("function 'doThis' returns nothing"));
 
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "function 'foo' has multiple returns and cannot be used in this scope"
-    ));
+    assert!(ns
+        .diagnostics
+        .contains_message("function 'foo' has multiple returns and cannot be used in this scope"));
 }
