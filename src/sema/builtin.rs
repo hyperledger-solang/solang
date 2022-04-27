@@ -878,6 +878,17 @@ pub fn resolve_call(
         .filter(|p| p.name == id && p.namespace == namespace && p.method.is_none())
         .collect::<Vec<&Prototype>>();
 
+    // check if the arguments are not garbage
+    let mut errors = false;
+
+    for arg in args {
+        errors |= expression(arg, context, ns, symtable, diagnostics, ResolveTo::Unknown).is_err();
+    }
+
+    if errors {
+        return Err(());
+    }
+
     let marker = diagnostics.len();
 
     for func in &matches {
