@@ -10,7 +10,7 @@ strict digraph "tests/contract_testcases/substrate/functions/mutability_06.sol" 
 	variable_9 [label="variable: a\naddress\ntests/contract_testcases/substrate/functions/mutability_06.sol:3:28-29"]
 	alloc_array [label="alloc array bytes\ninitializer: 0102\ntests/contract_testcases/substrate/functions/mutability_06.sol:3:35-44"]
 	number_literal [label="uint32 literal: 2\ntests/contract_testcases/substrate/functions/mutability_06.sol:3:35-44"]
-	diagnostic [label="found contract ‘c’\nlevel Debug\ntests/contract_testcases/substrate/functions/mutability_06.sol:1:1-12"]
+	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/functions/mutability_06.sol:1:1-12"]
 	contracts -> contract
 	contract -> add [label="function"]
 	add -> parameters [label="parameters"]

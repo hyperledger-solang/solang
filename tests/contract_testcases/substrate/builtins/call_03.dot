@@ -7,8 +7,8 @@ strict digraph "tests/contract_testcases/substrate/builtins/call_03.sol" {
 	builtins [label="builtin Print\ntests/contract_testcases/substrate/builtins/call_03.sol:12:17-22"]
 	alloc_array [label="alloc array string\ninitializer: 42616121\ntests/contract_testcases/substrate/builtins/call_03.sol:12:23-29"]
 	number_literal [label="uint32 literal: 4\ntests/contract_testcases/substrate/builtins/call_03.sol:12:23-29"]
-	diagnostic [label="found contract ‘superior’\nlevel Debug\ntests/contract_testcases/substrate/builtins/call_03.sol:2:9-27"]
-	diagnostic_11 [label="found contract ‘inferior’\nlevel Debug\ntests/contract_testcases/substrate/builtins/call_03.sol:10:9-27"]
+	diagnostic [label="found contract 'superior'\nlevel Debug\ntests/contract_testcases/substrate/builtins/call_03.sol:2:9-27"]
+	diagnostic_11 [label="found contract 'inferior'\nlevel Debug\ntests/contract_testcases/substrate/builtins/call_03.sol:10:9-27"]
 	diagnostic_12 [label="conversion from bool to bytes not possible\nlevel Error\ntests/contract_testcases/substrate/builtins/call_03.sol:6:14-21"]
 	contracts -> contract
 	contract -> test [label="function"]

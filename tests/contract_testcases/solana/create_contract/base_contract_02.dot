@@ -6,9 +6,9 @@ strict digraph "tests/contract_testcases/solana/create_contract/base_contract_02
 	base [label="base Logic\ntests/contract_testcases/solana/create_contract/base_contract_02.sol:7:26-31"]
 	contract_8 [label="contract IsMath\ntests/contract_testcases/solana/create_contract/base_contract_02.sol:10:9-32"]
 	base_9 [label="base Math\ntests/contract_testcases/solana/create_contract/base_contract_02.sol:10:28-32"]
-	diagnostic [label="found contract ‘Logic’\nlevel Debug\ntests/contract_testcases/solana/create_contract/base_contract_02.sol:2:9-24"]
-	diagnostic_12 [label="found contract ‘Math’\nlevel Debug\ntests/contract_testcases/solana/create_contract/base_contract_02.sol:7:9-31"]
-	diagnostic_13 [label="found contract ‘IsMath’\nlevel Debug\ntests/contract_testcases/solana/create_contract/base_contract_02.sol:10:9-32"]
+	diagnostic [label="found contract 'Logic'\nlevel Debug\ntests/contract_testcases/solana/create_contract/base_contract_02.sol:2:9-24"]
+	diagnostic_12 [label="found contract 'Math'\nlevel Debug\ntests/contract_testcases/solana/create_contract/base_contract_02.sol:7:9-31"]
+	diagnostic_13 [label="found contract 'IsMath'\nlevel Debug\ntests/contract_testcases/solana/create_contract/base_contract_02.sol:10:9-32"]
 	structs -> LogicFields
 	structs -> WithMath
 	contracts -> contract

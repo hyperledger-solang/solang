@@ -16,11 +16,11 @@ strict digraph "tests/contract_testcases/substrate/inheritance/inherit_variables
 	return_15 [label="return\ntests/contract_testcases/substrate/inheritance/inherit_variables_03.sol:12:17-27"]
 	storage_load_16 [label="storage load int256\ntests/contract_testcases/substrate/inheritance/inherit_variables_03.sol:12:17-27"]
 	storage_var_17 [label="storage variable\nb.foo\nint256 storage\ntests/contract_testcases/substrate/inheritance/inherit_variables_03.sol:12:24-27"]
-	diagnostic [label="found contract ‘a’\nlevel Debug\ntests/contract_testcases/substrate/inheritance/inherit_variables_03.sol:2:9-20"]
-	diagnostic_20 [label="found contract ‘b’\nlevel Debug\ntests/contract_testcases/substrate/inheritance/inherit_variables_03.sol:6:9-24"]
-	diagnostic_21 [label="found contract ‘c’\nlevel Debug\ntests/contract_testcases/substrate/inheritance/inherit_variables_03.sol:10:9-24"]
-	diagnostic_22 [label="function can be declared ‘view’\nlevel Warning\ntests/contract_testcases/substrate/inheritance/inherit_variables_03.sol:11:13-51"]
-	diagnostic_23 [label="storage variable ‘foo‘ has never been used\nlevel Warning\ntests/contract_testcases/substrate/inheritance/inherit_variables_03.sol:3:13-28"]
+	diagnostic [label="found contract 'a'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/inherit_variables_03.sol:2:9-20"]
+	diagnostic_20 [label="found contract 'b'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/inherit_variables_03.sol:6:9-24"]
+	diagnostic_21 [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/inherit_variables_03.sol:10:9-24"]
+	diagnostic_22 [label="function can be declared 'view'\nlevel Warning\ntests/contract_testcases/substrate/inheritance/inherit_variables_03.sol:11:13-51"]
+	diagnostic_23 [label="storage variable 'foo' has never been used\nlevel Warning\ntests/contract_testcases/substrate/inheritance/inherit_variables_03.sol:3:13-28"]
 	contracts -> contract
 	contract -> var [label="variable"]
 	contracts -> contract_3

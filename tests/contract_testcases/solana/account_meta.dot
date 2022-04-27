@@ -46,9 +46,9 @@ strict digraph "tests/contract_testcases/solana/account_meta.sol" {
 	subscript_46 [label="subscript struct AccountMeta[2]\ntests/contract_testcases/solana/account_meta.sol:13:32-39"]
 	variable_47 [label="variable: meta\nstruct AccountMeta[2]\ntests/contract_testcases/solana/account_meta.sol:13:32-36"]
 	number_literal_48 [label="uint32 literal: 0\ntests/contract_testcases/solana/account_meta.sol:13:37-38"]
-	diagnostic [label="found contract ‘spl’\nlevel Debug\ntests/contract_testcases/solana/account_meta.sol:1:1-14"]
-	diagnostic_51 [label="function can be declared ‘pure’\nlevel Warning\ntests/contract_testcases/solana/account_meta.sol:2:2-47"]
-	diagnostic_52 [label="function can be declared ‘pure’\nlevel Warning\ntests/contract_testcases/solana/account_meta.sol:7:2-56"]
+	diagnostic [label="found contract 'spl'\nlevel Debug\ntests/contract_testcases/solana/account_meta.sol:1:1-14"]
+	diagnostic_51 [label="function can be declared 'pure'\nlevel Warning\ntests/contract_testcases/solana/account_meta.sol:2:2-47"]
+	diagnostic_52 [label="function can be declared 'pure'\nlevel Warning\ntests/contract_testcases/solana/account_meta.sol:7:2-56"]
 	contracts -> contract
 	contract -> foo [label="function"]
 	foo -> returns [label="returns"]

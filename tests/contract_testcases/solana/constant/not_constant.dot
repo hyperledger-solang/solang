@@ -9,9 +9,9 @@ strict digraph "tests/contract_testcases/solana/constant/not_constant.sol" {
 	contract_9 [label="contract foo\ntests/contract_testcases/solana/constant/not_constant.sol:6:9-22"]
 	f [label="function f\ncontract: foo\ntests/contract_testcases/solana/constant/not_constant.sol:7:13-47\nsignature f()\nvisibility public\nmutability nonpayable"]
 	returns_11 [label="returns\nuint256 "]
-	diagnostic [label="found contract ‘C’\nlevel Debug\ntests/contract_testcases/solana/constant/not_constant.sol:2:9-20"]
-	diagnostic_14 [label="found contract ‘foo’\nlevel Debug\ntests/contract_testcases/solana/constant/not_constant.sol:6:9-22"]
-	diagnostic_15 [label="`C' is a contract\nlevel Error\ntests/contract_testcases/solana/constant/not_constant.sol:8:26-27"]
+	diagnostic [label="found contract 'C'\nlevel Debug\ntests/contract_testcases/solana/constant/not_constant.sol:2:9-20"]
+	diagnostic_14 [label="found contract 'foo'\nlevel Debug\ntests/contract_testcases/solana/constant/not_constant.sol:6:9-22"]
+	diagnostic_15 [label="'C' is a contract\nlevel Error\ntests/contract_testcases/solana/constant/not_constant.sol:8:26-27"]
 	contracts -> contract
 	contract -> var [label="variable"]
 	var -> number_literal [label="initializer"]

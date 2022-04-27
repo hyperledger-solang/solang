@@ -12,8 +12,8 @@ strict digraph "tests/contract_testcases/substrate/variables/override_attribute_
 	returns_11 [label="returns\nint256 "]
 	return_12 [label="return\ntests/contract_testcases/substrate/variables/override_attribute_05.sol:7:17-27"]
 	number_literal [label="int256 literal: 102\ntests/contract_testcases/substrate/variables/override_attribute_05.sol:7:24-27"]
-	diagnostic [label="found contract ‘x’\nlevel Debug\ntests/contract_testcases/substrate/variables/override_attribute_05.sol:1:1-16"]
-	diagnostic_16 [label="found contract ‘y’\nlevel Debug\ntests/contract_testcases/substrate/variables/override_attribute_05.sol:5:9-20"]
+	diagnostic [label="found contract 'x'\nlevel Debug\ntests/contract_testcases/substrate/variables/override_attribute_05.sol:1:1-16"]
+	diagnostic_16 [label="found contract 'y'\nlevel Debug\ntests/contract_testcases/substrate/variables/override_attribute_05.sol:5:9-20"]
 	contracts -> contract
 	contract -> base [label="base"]
 	contract -> var [label="variable"]

@@ -8,11 +8,11 @@ strict digraph "tests/contract_testcases/substrate/inheritance/inherit_types_05.
 	base_9 [label="base c\ntests/contract_testcases/substrate/inheritance/inherit_types_05.sol:13:26-27"]
 	test [label="function test\ncontract: a\ntests/contract_testcases/substrate/inheritance/inherit_types_05.sol:14:13-40\nsignature test((uint32,uint32))\nvisibility public\nmutability nonpayable"]
 	parameters [label="parameters\nstruct b.foo x"]
-	diagnostic [label="found contract ‘b’\nlevel Debug\ntests/contract_testcases/substrate/inheritance/inherit_types_05.sol:2:9-20"]
-	diagnostic_14 [label="found contract ‘c’\nlevel Debug\ntests/contract_testcases/substrate/inheritance/inherit_types_05.sol:9:9-20"]
-	diagnostic_15 [label="found contract ‘a’\nlevel Debug\ntests/contract_testcases/substrate/inheritance/inherit_types_05.sol:13:9-27"]
-	diagnostic_16 [label="already defined ‘foo’\nlevel Error\ntests/contract_testcases/substrate/inheritance/inherit_types_05.sol:3:20-23"]
-	note [label="previous definition of ‘foo’\ntests/contract_testcases/substrate/inheritance/inherit_types_05.sol:10:18-21"]
+	diagnostic [label="found contract 'b'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/inherit_types_05.sol:2:9-20"]
+	diagnostic_14 [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/inherit_types_05.sol:9:9-20"]
+	diagnostic_15 [label="found contract 'a'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/inherit_types_05.sol:13:9-27"]
+	diagnostic_16 [label="already defined 'foo'\nlevel Error\ntests/contract_testcases/substrate/inheritance/inherit_types_05.sol:3:20-23"]
+	note [label="previous definition of 'foo'\ntests/contract_testcases/substrate/inheritance/inherit_types_05.sol:10:18-21"]
 	enums -> foo
 	structs -> foo_3
 	contracts -> contract

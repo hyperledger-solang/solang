@@ -1,7 +1,7 @@
 strict digraph "tests/contract_testcases/substrate/modifier/declare_08.sol" {
 	contract [label="contract c\ntests/contract_testcases/substrate/modifier/declare_08.sol:2:9-20"]
 	bar [label="function bar\ncontract: c\ntests/contract_testcases/substrate/modifier/declare_08.sol:3:13-34\nsignature bar()\nvisibility public\nmutability nonpayable"]
-	diagnostic [label="found contract ‘c’\nlevel Debug\ntests/contract_testcases/substrate/modifier/declare_08.sol:2:9-20"]
+	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/modifier/declare_08.sol:2:9-20"]
 	diagnostic_5 [label="underscore statement only permitted in modifiers\nlevel Error\ntests/contract_testcases/substrate/modifier/declare_08.sol:4:17-18"]
 	contracts -> contract
 	contract -> bar [label="function"]

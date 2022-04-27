@@ -58,7 +58,7 @@ impl SolangServer {
                 for path in paths {
                     if let Err(e) = resolver.add_import_path(PathBuf::from(path)) {
                         diags.push(Diagnostic {
-                            message: format!("import path ‘{}’: {}", path.to_string_lossy(), e),
+                            message: format!("import path '{}': {}", path.to_string_lossy(), e),
                             severity: Some(DiagnosticSeverity::ERROR),
                             ..Default::default()
                         });
@@ -73,14 +73,14 @@ impl SolangServer {
                             resolver.add_import_map(OsString::from(map), PathBuf::from(path))
                         {
                             diags.push(Diagnostic {
-                                message: format!("error: import path ‘{}’: {}", path, e),
+                                message: format!("error: import path '{}': {}", path, e),
                                 severity: Some(DiagnosticSeverity::ERROR),
                                 ..Default::default()
                             });
                         }
                     } else {
                         diags.push(Diagnostic {
-                            message: format!("error: import map ‘{}’: contains no ‘=’", p),
+                            message: format!("error: import map '{}': contains no '='", p),
                             severity: Some(DiagnosticSeverity::ERROR),
                             ..Default::default()
                         });

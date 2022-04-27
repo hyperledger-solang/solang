@@ -1,8 +1,8 @@
 strict digraph "tests/contract_testcases/substrate/contracts/creation_code_01.sol" {
 	contract [label="contract a\ntests/contract_testcases/substrate/contracts/creation_code_01.sol:2:9-20"]
 	test [label="function test\ncontract: a\ntests/contract_testcases/substrate/contracts/creation_code_01.sol:3:13-35\nsignature test()\nvisibility public\nmutability nonpayable"]
-	diagnostic [label="found contract ‘a’\nlevel Debug\ntests/contract_testcases/substrate/contracts/creation_code_01.sol:2:9-20"]
-	diagnostic_5 [label="containing our own contract code for ‘a’ would generate infinite size contract\nlevel Error\ntests/contract_testcases/substrate/contracts/creation_code_01.sol:4:34-53"]
+	diagnostic [label="found contract 'a'\nlevel Debug\ntests/contract_testcases/substrate/contracts/creation_code_01.sol:2:9-20"]
+	diagnostic_5 [label="containing our own contract code for 'a' would generate infinite size contract\nlevel Error\ntests/contract_testcases/substrate/contracts/creation_code_01.sol:4:34-53"]
 	contracts -> contract
 	contract -> test [label="function"]
 	diagnostics -> diagnostic [label="Debug"]

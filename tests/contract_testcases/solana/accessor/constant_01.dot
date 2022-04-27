@@ -6,8 +6,8 @@ strict digraph "tests/contract_testcases/solana/accessor/constant_01.sol" {
 	returns [label="returns\nbytes32 "]
 	return [label="return\nimplicit"]
 	constant [label="constant variable\nx.z\nbytes32\nimplicit"]
-	diagnostic [label="found contract ‘x’\nlevel Debug\ntests/contract_testcases/solana/accessor/constant_01.sol:2:9-20"]
-	diagnostic_11 [label="cannot read contract variable ‘foo’ in constant expression\nlevel Error\ntests/contract_testcases/solana/accessor/constant_01.sol:4:51-54"]
+	diagnostic [label="found contract 'x'\nlevel Debug\ntests/contract_testcases/solana/accessor/constant_01.sol:2:9-20"]
+	diagnostic_11 [label="cannot read contract variable 'foo' in constant expression\nlevel Error\ntests/contract_testcases/solana/accessor/constant_01.sol:4:51-54"]
 	contracts -> contract
 	contract -> var [label="variable"]
 	contract -> var_4 [label="variable"]

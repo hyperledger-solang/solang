@@ -1,6 +1,6 @@
 strict digraph "tests/contract_testcases/substrate/tags/struct_tag_01.sol" {
 	x [label="name:x\ntests/contract_testcases/substrate/tags/struct_tag_01.sol:3:16-17\nfield name:f ty:uint32"]
-	diagnostic [label="tag ‘@param’ no field ‘g’\nlevel Error\ntests/contract_testcases/substrate/tags/struct_tag_01.sol:2:20-21"]
+	diagnostic [label="tag '@param' no field 'g'\nlevel Error\ntests/contract_testcases/substrate/tags/struct_tag_01.sol:2:20-21"]
 	structs -> x
 	diagnostics -> diagnostic [label="Error"]
 }

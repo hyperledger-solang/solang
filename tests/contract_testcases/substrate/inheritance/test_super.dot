@@ -1,6 +1,6 @@
 strict digraph "tests/contract_testcases/substrate/inheritance/test_super.sol" {
 	contract [label="contract super\ntests/contract_testcases/substrate/inheritance/test_super.sol:1:1-16"]
-	diagnostic [label="‘super’ shadows name of a builtin\nlevel Error\ntests/contract_testcases/substrate/inheritance/test_super.sol:1:10-15"]
+	diagnostic [label="'super' shadows name of a builtin\nlevel Error\ntests/contract_testcases/substrate/inheritance/test_super.sol:1:10-15"]
 	contracts -> contract
 	diagnostics -> diagnostic [label="Error"]
 }

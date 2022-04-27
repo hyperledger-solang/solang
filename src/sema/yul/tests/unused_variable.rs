@@ -25,7 +25,7 @@ contract testTypes {
     let ns = parse(file);
     assert!(ns
         .diagnostics
-        .contains_message("yul variable ‘a‘ has never been read or assigned"));
+        .contains_message("yul variable 'a' has never been read or assigned"));
 
     let file = r#"
 contract testTypes {
@@ -50,7 +50,7 @@ contract testTypes {
     let ns = parse(file);
     assert!(ns
         .diagnostics
-        .contains_message("yul variable ‘c‘ has never been read"));
+        .contains_message("yul variable 'c' has never been read"));
 }
 
 #[test]
@@ -114,7 +114,7 @@ fn correct_contracts() {
     assert_eq!(ns.diagnostics.len(), 2);
     assert!(ns
         .diagnostics
-        .contains_message("found contract ‘testTypes’"));
+        .contains_message("found contract 'testTypes'"));
     assert!(ns
         .diagnostics
         .contains_message("inline assembly is not yet supported"));

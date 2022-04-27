@@ -476,7 +476,7 @@ Values: {{field}}
 
     if verbose {
         println!(
-            "debug: writing documentation to ‘{}’",
+            "debug: writing documentation to '{}'",
             filename.to_string_lossy()
         );
     }

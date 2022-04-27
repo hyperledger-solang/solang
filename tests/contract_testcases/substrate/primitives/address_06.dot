@@ -9,8 +9,8 @@ strict digraph "tests/contract_testcases/substrate/primitives/address_06.sol" {
 	storage_load [label="storage load address\ntests/contract_testcases/substrate/primitives/address_06.sol:5:24-27"]
 	storage_var [label="storage variable\ntest.foo\naddress storage\ntests/contract_testcases/substrate/primitives/address_06.sol:5:24-27"]
 	number_literal_10 [label="address literal: 0\ntests/contract_testcases/substrate/primitives/address_06.sol:5:30-40"]
-	diagnostic [label="found contract ‘test’\nlevel Debug\ntests/contract_testcases/substrate/primitives/address_06.sol:1:1-15"]
-	diagnostic_13 [label="function can be declared ‘view’\nlevel Warning\ntests/contract_testcases/substrate/primitives/address_06.sol:4:13-50"]
+	diagnostic [label="found contract 'test'\nlevel Debug\ntests/contract_testcases/substrate/primitives/address_06.sol:1:1-15"]
+	diagnostic_13 [label="function can be declared 'view'\nlevel Warning\ntests/contract_testcases/substrate/primitives/address_06.sol:4:13-50"]
 	contracts -> contract
 	contract -> var [label="variable"]
 	var -> number_literal [label="initializer"]

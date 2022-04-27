@@ -7,9 +7,9 @@ strict digraph "tests/contract_testcases/solana/create_contract/base_contract_01
 	base [label="base Logic\ntests/contract_testcases/solana/create_contract/base_contract_01.sol:7:26-31"]
 	contract_10 [label="contract IsMath\ntests/contract_testcases/solana/create_contract/base_contract_01.sol:13:9-32"]
 	base_11 [label="base Math\ntests/contract_testcases/solana/create_contract/base_contract_01.sol:13:28-32"]
-	diagnostic [label="found contract ‘Logic’\nlevel Debug\ntests/contract_testcases/solana/create_contract/base_contract_01.sol:2:9-24"]
-	diagnostic_14 [label="found contract ‘Math’\nlevel Debug\ntests/contract_testcases/solana/create_contract/base_contract_01.sol:7:9-31"]
-	diagnostic_15 [label="found contract ‘IsMath’\nlevel Debug\ntests/contract_testcases/solana/create_contract/base_contract_01.sol:13:9-32"]
+	diagnostic [label="found contract 'Logic'\nlevel Debug\ntests/contract_testcases/solana/create_contract/base_contract_01.sol:2:9-24"]
+	diagnostic_14 [label="found contract 'Math'\nlevel Debug\ntests/contract_testcases/solana/create_contract/base_contract_01.sol:7:9-31"]
+	diagnostic_15 [label="found contract 'IsMath'\nlevel Debug\ntests/contract_testcases/solana/create_contract/base_contract_01.sol:13:9-32"]
 	enums -> LogicError
 	enums -> MathError
 	structs -> WithMath

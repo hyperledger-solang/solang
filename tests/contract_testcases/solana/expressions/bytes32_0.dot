@@ -18,7 +18,7 @@ strict digraph "tests/contract_testcases/solana/expressions/bytes32_0.sol" {
 	assign_18 [label="assign\nbytes3\ntests/contract_testcases/solana/expressions/bytes32_0.sol:12:19-20"]
 	variable_19 [label="variable: r\nbytes3\ntests/contract_testcases/solana/expressions/bytes32_0.sol:12:17-18"]
 	number_literal_20 [label="bytes3 literal: 74291\ntests/contract_testcases/solana/expressions/bytes32_0.sol:12:21-37"]
-	diagnostic [label="found contract ‘x’\nlevel Debug\ntests/contract_testcases/solana/expressions/bytes32_0.sol:2:9-20"]
+	diagnostic [label="found contract 'x'\nlevel Debug\ntests/contract_testcases/solana/expressions/bytes32_0.sol:2:9-20"]
 	contracts -> contract
 	contract -> b32 [label="function"]
 	b32 -> returns [label="returns"]

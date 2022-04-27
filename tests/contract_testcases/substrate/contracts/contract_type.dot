@@ -13,8 +13,8 @@ strict digraph "tests/contract_testcases/substrate/contracts/contract_type.sol" 
 	var_decl [label="variable decl contract printer y\ntests/contract_testcases/substrate/contracts/contract_type.sol:14:17-39"]
 	cast [label="cast contract printer\ntests/contract_testcases/substrate/contracts/contract_type.sol:14:29-39"]
 	variable [label="variable: x\naddress\ntests/contract_testcases/substrate/contracts/contract_type.sol:14:37-38"]
-	diagnostic [label="found contract ‘printer’\nlevel Debug\ntests/contract_testcases/substrate/contracts/contract_type.sol:2:9-26"]
-	diagnostic_17 [label="found contract ‘foo’\nlevel Debug\ntests/contract_testcases/substrate/contracts/contract_type.sol:8:9-22"]
+	diagnostic [label="found contract 'printer'\nlevel Debug\ntests/contract_testcases/substrate/contracts/contract_type.sol:2:9-26"]
+	diagnostic_17 [label="found contract 'foo'\nlevel Debug\ntests/contract_testcases/substrate/contracts/contract_type.sol:8:9-22"]
 	diagnostic_18 [label="implicit conversion to address from contract printer not allowed\nlevel Error\ntests/contract_testcases/substrate/contracts/contract_type.sol:10:29-30"]
 	contracts -> contract
 	contract -> test [label="function"]

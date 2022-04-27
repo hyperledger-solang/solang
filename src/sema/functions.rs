@@ -92,7 +92,7 @@ pub fn contract_function(
     if let Some(loc) = func.return_not_returns {
         ns.diagnostics.push(Diagnostic::error(
             loc,
-            "‘return’ unexpected. Did you mean ‘returns’?".to_string(),
+            "'return' unexpected. Did you mean 'returns'?".to_string(),
         ));
         success = false;
     }
@@ -108,9 +108,9 @@ pub fn contract_function(
                 if let Some(e) = &mutability {
                     ns.diagnostics.push(Diagnostic::error_with_note(
                         m.loc(),
-                        format!("function redeclared `{}'", m),
+                        format!("function redeclared '{}'", m),
                         e.loc(),
-                        format!("location of previous declaration of `{}'", e),
+                        format!("location of previous declaration of '{}'", e),
                     ));
                     success = false;
                     continue;
@@ -119,7 +119,7 @@ pub fn contract_function(
                 if let pt::Mutability::Constant(loc) = m {
                     ns.diagnostics.push(Diagnostic::warning(
                         *loc,
-                        "‘constant’ is deprecated. Use ‘view’ instead".to_string(),
+                        "'constant' is deprecated. Use 'view' instead".to_string(),
                     ));
 
                     mutability = Some(pt::Mutability::View(*loc));
@@ -131,9 +131,9 @@ pub fn contract_function(
                 if let Some(e) = &visibility {
                     ns.diagnostics.push(Diagnostic::error_with_note(
                         v.loc().unwrap(),
-                        format!("function redeclared `{}'", v),
+                        format!("function redeclared '{}'", v),
                         e.loc().unwrap(),
-                        format!("location of previous declaration of `{}'", e),
+                        format!("location of previous declaration of '{}'", e),
                     ));
                     success = false;
                     continue;
@@ -145,9 +145,9 @@ pub fn contract_function(
                 if let Some(prev_loc) = &is_virtual {
                     ns.diagnostics.push(Diagnostic::error_with_note(
                         *loc,
-                        "function redeclared ‘virtual’".to_string(),
+                        "function redeclared 'virtual'".to_string(),
                         *prev_loc,
-                        "location of previous declaration of ‘virtual’".to_string(),
+                        "location of previous declaration of 'virtual'".to_string(),
                     ));
                     success = false;
                     continue;
@@ -159,9 +159,9 @@ pub fn contract_function(
                 if let Some((prev_loc, _)) = &is_override {
                     ns.diagnostics.push(Diagnostic::error_with_note(
                         *loc,
-                        "function redeclared ‘override’".to_string(),
+                        "function redeclared 'override'".to_string(),
                         *prev_loc,
-                        "location of previous declaration of ‘override’".to_string(),
+                        "location of previous declaration of 'override'".to_string(),
                     ));
                     success = false;
                     continue;
@@ -175,13 +175,13 @@ pub fn contract_function(
                             if list.contains(&no) {
                                 ns.diagnostics.push(Diagnostic::error(
                                     name.loc,
-                                    format!("function duplicate override ‘{}’", name.name),
+                                    format!("function duplicate override '{}'", name.name),
                                 ));
                             } else if !is_base(no, contract_no, ns) {
                                 ns.diagnostics.push(Diagnostic::error(
                                     name.loc,
                                     format!(
-                                        "override ‘{}’ is not a base contract of ‘{}’",
+                                        "override '{}' is not a base contract of '{}'",
                                         name.name, ns.contracts[contract_no].name
                                     ),
                                 ));
@@ -192,7 +192,7 @@ pub fn contract_function(
                         None => {
                             ns.diagnostics.push(Diagnostic::error(
                                 name.loc,
-                                format!("contract ‘{}’ in override list not found", name.name),
+                                format!("contract '{}' in override list not found", name.name),
                             ));
                         }
                     }
@@ -222,14 +222,14 @@ pub fn contract_function(
             if func.ty == pt::FunctionTy::Modifier {
                 ns.diagnostics.push(Diagnostic::error(
                     v.loc().unwrap(),
-                    format!("‘{}’: modifiers can not have visibility", v),
+                    format!("'{}': modifiers can not have visibility", v),
                 ));
 
                 pt::Visibility::Internal(v.loc())
             } else if func.ty == pt::FunctionTy::Constructor {
                 ns.diagnostics.push(Diagnostic::warning(
                     v.loc().unwrap(),
-                    format!("‘{}’: visibility for constructors is ignored", v),
+                    format!("'{}': visibility for constructors is ignored", v),
                 ));
 
                 pt::Visibility::Public(v.loc())
@@ -325,7 +325,7 @@ pub fn contract_function(
         } else {
             ns.diagnostics.push(Diagnostic::error(
                 func.loc,
-                "functions must be declared ‘external’ in an interface".to_string(),
+                "functions must be declared 'external' in an interface".to_string(),
             ));
             success = false;
         }
@@ -358,7 +358,7 @@ pub fn contract_function(
     } else if func.ty == pt::FunctionTy::Constructor && is_virtual.is_some() {
         ns.diagnostics.push(Diagnostic::error(
             func.loc,
-            "constructors cannot be declared ‘virtual’".to_string(),
+            "constructors cannot be declared 'virtual'".to_string(),
         ));
     }
 
@@ -388,7 +388,7 @@ pub fn contract_function(
     if !is_virtual && func.body.is_none() {
         ns.diagnostics.push(Diagnostic::error(
             func.loc,
-            "function with no body must be marked ‘virtual’".to_string(),
+            "function with no body must be marked 'virtual'".to_string(),
         ));
         success = false;
     }
@@ -397,7 +397,7 @@ pub fn contract_function(
         if is_virtual {
             ns.diagnostics.push(Diagnostic::error(
                 func.loc,
-                "function marked ‘virtual’ cannot also be ‘private’".to_string(),
+                "function marked 'virtual' cannot also be 'private'".to_string(),
             ));
             success = false;
         }
@@ -475,7 +475,7 @@ pub fn contract_function(
 
                 ns.diagnostics.push(Diagnostic::error_with_note(
                     func.loc,
-                    "all constructors should be defined ‘payable’ or not".to_string(),
+                    "all constructors should be defined 'payable' or not".to_string(),
                     prev_loc,
                     "location of previous definition".to_string(),
                 ));
@@ -632,9 +632,9 @@ pub fn function(
                 if let Some(e) = &mutability {
                     ns.diagnostics.push(Diagnostic::error_with_note(
                         m.loc(),
-                        format!("function redeclared `{}'", m),
+                        format!("function redeclared '{}'", m),
                         e.loc(),
-                        format!("location of previous declaration of `{}'", e),
+                        format!("location of previous declaration of '{}'", e),
                     ));
                     success = false;
                     continue;
@@ -643,7 +643,7 @@ pub fn function(
                 if let pt::Mutability::Constant(loc) = m {
                     ns.diagnostics.push(Diagnostic::warning(
                         *loc,
-                        "‘constant’ is deprecated. Use ‘view’ instead".to_string(),
+                        "'constant' is deprecated. Use 'view' instead".to_string(),
                     ));
 
                     mutability = Some(pt::Mutability::View(*loc));
@@ -655,7 +655,7 @@ pub fn function(
                 ns.diagnostics.push(Diagnostic::error(
                     v.loc().unwrap(),
                     format!(
-                        "‘{}’: only functions in contracts can have a visibility specifier",
+                        "'{}': only functions in contracts can have a visibility specifier",
                         v
                     ),
                 ));
@@ -814,7 +814,7 @@ pub fn resolve_params(
 
                     if let Some(ty) = ty.contains_builtins(ns, BuiltinStruct::AccountInfo) {
                         let message = format!(
-                            "parameter of type ‘{}’ not alowed in public or external functions",
+                            "parameter of type '{}' not alowed in public or external functions",
                             ty.to_string(ns)
                         );
                         ns.diagnostics.push(Diagnostic::error(p.ty.loc(), message));
@@ -826,7 +826,7 @@ pub fn resolve_params(
                     if let Some(storage) = &p.storage {
                         diagnostics.push(Diagnostic::error(
                             storage.loc(),
-                                format!("data location ‘{}’ can only be specified for array, struct or mapping",
+                                format!("data location '{}' can only be specified for array, struct or mapping",
                                 storage)
                             ));
                         success = false;
@@ -837,7 +837,7 @@ pub fn resolve_params(
                     if !is_internal {
                         diagnostics.push(Diagnostic::error(
                             loc,
-                            "parameter of type ‘storage’ not allowed public or external functions"
+                            "parameter of type 'storage' not allowed public or external functions"
                                 .to_string(),
                         ));
                         success = false;
@@ -850,7 +850,7 @@ pub fn resolve_params(
                     if ty.contains_mapping(ns) {
                         diagnostics.push(Diagnostic::error(
                             p.ty.loc(),
-                            "parameter with mapping type must be of type ‘storage’".to_string(),
+                            "parameter with mapping type must be of type 'storage'".to_string(),
                         ));
                         success = false;
                     }
@@ -920,7 +920,7 @@ pub fn resolve_returns(
 
                     if let Some(ty) = ty.contains_builtins(ns, BuiltinStruct::AccountInfo) {
                         let message = format!(
-                            "return type ‘{}’ not allowed in public or external functions",
+                            "return type '{}' not allowed in public or external functions",
                             ty.to_string(ns)
                         );
                         ns.diagnostics.push(Diagnostic::error(r.ty.loc(), message));
@@ -931,7 +931,7 @@ pub fn resolve_returns(
                     if let Some(storage) = &r.storage {
                         diagnostics.push(Diagnostic::error(
                             storage.loc(),
-                                format!("data location ‘{}’ can only be specified for array, struct or mapping",
+                                format!("data location '{}' can only be specified for array, struct or mapping",
                                 storage)
                             ));
                         success = false;
@@ -944,7 +944,7 @@ pub fn resolve_returns(
                             if !is_internal {
                                 diagnostics.push(Diagnostic::error(
                                     loc,
-                                    "return type of type ‘storage’ not allowed public or external functions"
+                                    "return type of type 'storage' not allowed public or external functions"
                                         .to_string(),
                                 ));
                                 success = false;
@@ -958,7 +958,7 @@ pub fn resolve_returns(
                             if ty.contains_mapping(ns) {
                                 diagnostics.push(Diagnostic::error(
                                     r.ty.loc(),
-                                    "return type containing mapping must be of type ‘storage’"
+                                    "return type containing mapping must be of type 'storage'"
                                         .to_string(),
                                 ));
                                 success = false;

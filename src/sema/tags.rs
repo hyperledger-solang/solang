@@ -33,7 +33,7 @@ pub fn resolve_tags(
                 if v.is_empty() || v[0].is_empty() {
                     ns.diagnostics.push(Diagnostic::error(
                         pt::Loc::File(file_no, c.tag_offset, c.tag_offset + c.tag.len()),
-                        "tag ‘@param’ missing parameter name".to_string(),
+                        "tag '@param' missing parameter name".to_string(),
                     ));
                     continue;
                 }
@@ -44,7 +44,7 @@ pub fn resolve_tags(
                     if res.iter().any(|e| e.tag == "param" && e.no == no) {
                         ns.diagnostics.push(Diagnostic::error(
                             pt::Loc::File(file_no, c.tag_offset, c.tag_offset + c.tag.len()),
-                            format!("duplicate tag ‘@param’ for ‘{}’", name),
+                            format!("duplicate tag '@param' for '{}'", name),
                         ));
                     } else {
                         res.push(Tag {
@@ -56,7 +56,7 @@ pub fn resolve_tags(
                 } else {
                     ns.diagnostics.push(Diagnostic::error(
                         pt::Loc::File(file_no, c.value_offset, c.value_offset + c.value.len()),
-                        format!("tag ‘@param’ no field ‘{}’", name),
+                        format!("tag '@param' no field '{}'", name),
                     ));
                 }
             }
@@ -66,13 +66,13 @@ pub fn resolve_tags(
                 if returns.is_empty() {
                     ns.diagnostics.push(Diagnostic::error(
                         pt::Loc::File(file_no, c.tag_offset, c.tag_offset + c.tag.len()),
-                        "tag ‘@return’ for function with no return values".to_string(),
+                        "tag '@return' for function with no return values".to_string(),
                     ));
                 } else if returns.len() == 1 {
                     if res.iter().any(|e| e.tag == "return") {
                         ns.diagnostics.push(Diagnostic::error(
                             pt::Loc::File(file_no, c.tag_offset, c.tag_offset + c.tag.len()),
-                            "duplicate tag ‘@return’".to_string(),
+                            "duplicate tag '@return'".to_string(),
                         ));
                     } else {
                         res.push(Tag {
@@ -86,7 +86,7 @@ pub fn resolve_tags(
                     if v.is_empty() || v[0].is_empty() {
                         ns.diagnostics.push(Diagnostic::error(
                             pt::Loc::File(file_no, c.value_offset, c.value_offset + c.value.len()),
-                            "tag ‘@return’ missing parameter name".to_string(),
+                            "tag '@return' missing parameter name".to_string(),
                         ));
                         continue;
                     }
@@ -100,7 +100,7 @@ pub fn resolve_tags(
                         if res.iter().any(|e| e.tag == "return" && e.no == no) {
                             ns.diagnostics.push(Diagnostic::error(
                                 pt::Loc::File(file_no, c.tag_offset, c.tag_offset + c.tag.len()),
-                                format!("duplicate tag ‘@return’ for ‘{}’", name),
+                                format!("duplicate tag '@return' for '{}'", name),
                             ));
                         } else {
                             res.push(Tag {
@@ -121,7 +121,7 @@ pub fn resolve_tags(
                     } else {
                         ns.diagnostics.push(Diagnostic::error(
                             pt::Loc::File(file_no, c.value_offset, c.value_offset + c.value.len()),
-                            format!("tag ‘@return’ no matching return value ‘{}’", c.value),
+                            format!("tag '@return' no matching return value '{}'", c.value),
                         ));
                     }
                 }
@@ -130,7 +130,7 @@ pub fn resolve_tags(
                 if c.value.is_empty() {
                     ns.diagnostics.push(Diagnostic::error(
                         pt::Loc::File(file_no, c.tag_offset, c.tag_offset + c.tag.len()),
-                        "missing contract for tag ‘@inheritdoc’".to_string(),
+                        "missing contract for tag '@inheritdoc'".to_string(),
                     ));
                 } else if bases.unwrap().iter().any(|s| &c.value == s) {
                     res.push(Tag {
@@ -141,14 +141,14 @@ pub fn resolve_tags(
                 } else {
                     ns.diagnostics.push(Diagnostic::error(
                         pt::Loc::File(file_no, c.value_offset, c.value_offset + c.value.len()),
-                        format!("base contract ‘{}’ not found in tag ‘@inheritdoc’", c.value),
+                        format!("base contract '{}' not found in tag '@inheritdoc'", c.value),
                     ));
                 }
             }
             _ => {
                 ns.diagnostics.push(Diagnostic::error(
                     pt::Loc::File(file_no, c.tag_offset, c.tag_offset + c.tag.len()),
-                    format!("tag ‘@{}’ is not valid for {}", c.tag, ty),
+                    format!("tag '@{}' is not valid for {}", c.tag, ty),
                 ));
             }
         }

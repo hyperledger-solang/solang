@@ -62,7 +62,7 @@ impl FileResolver {
         {
             Err(Error::new(
                 ErrorKind::Other,
-                format!("duplicate mapping for ‘{}’", map.to_string_lossy()),
+                format!("duplicate mapping for '{}'", map.to_string_lossy()),
             ))
         } else {
             self.import_paths.push((Some(map), path.canonicalize()?));
@@ -97,7 +97,7 @@ impl FileResolver {
         let mut f = match File::open(&path) {
             Err(err_info) => {
                 return Err(format!(
-                    "cannot open file ‘{}’: {}",
+                    "cannot open file '{}': {}",
                     path.display(),
                     err_info
                 ));
@@ -107,7 +107,7 @@ impl FileResolver {
 
         let mut contents = String::new();
         if let Err(e) = f.read_to_string(&mut contents) {
-            return Err(format!("failed to read file ‘{}’: {}", path.display(), e));
+            return Err(format!("failed to read file '{}': {}", path.display(), e));
         }
 
         let pos = self.files.len();
@@ -230,7 +230,7 @@ impl FileResolver {
             }
         }
 
-        Err(format!("file not found ‘{}’", filename.to_string_lossy()))
+        Err(format!("file not found '{}'", filename.to_string_lossy()))
     }
 
     /// Get line and the target symbol's offset from loc

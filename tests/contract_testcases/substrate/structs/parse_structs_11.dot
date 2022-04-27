@@ -2,8 +2,8 @@ strict digraph "tests/contract_testcases/substrate/structs/parse_structs_11.sol"
 	Foo [label="name:Foo\ncontract: test_struct_parsing\ntests/contract_testcases/substrate/structs/parse_structs_11.sol:3:20-23\nfield name:x ty:bool\nfield name:y ty:int32"]
 	contract [label="contract test_struct_parsing\ntests/contract_testcases/substrate/structs/parse_structs_11.sol:2:9-38"]
 	f [label="function f\ncontract: test_struct_parsing\ntests/contract_testcases/substrate/structs/parse_structs_11.sol:8:13-33\nsignature f()\nvisibility private\nmutability nonpayable"]
-	diagnostic [label="found contract ‘test_struct_parsing’\nlevel Debug\ntests/contract_testcases/substrate/structs/parse_structs_11.sol:2:9-38"]
-	diagnostic_7 [label="struct ‘Foo’ has 2 fields, not 0\nlevel Error\ntests/contract_testcases/substrate/structs/parse_structs_11.sol:9:25-30"]
+	diagnostic [label="found contract 'test_struct_parsing'\nlevel Debug\ntests/contract_testcases/substrate/structs/parse_structs_11.sol:2:9-38"]
+	diagnostic_7 [label="struct 'Foo' has 2 fields, not 0\nlevel Error\ntests/contract_testcases/substrate/structs/parse_structs_11.sol:9:25-30"]
 	structs -> Foo
 	contracts -> contract
 	contract -> f [label="function"]

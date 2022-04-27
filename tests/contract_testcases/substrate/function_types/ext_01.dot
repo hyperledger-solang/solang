@@ -6,8 +6,8 @@ strict digraph "tests/contract_testcases/substrate/function_types/ext_01.sol" {
 	returns [label="returns\nbool "]
 	return [label="return\ntests/contract_testcases/substrate/function_types/ext_01.sol:8:17-29"]
 	bool_literal [label="bool literal: false\ntests/contract_testcases/substrate/function_types/ext_01.sol:8:24-29"]
-	diagnostic [label="found contract ‘ft’\nlevel Debug\ntests/contract_testcases/substrate/function_types/ext_01.sol:2:9-21"]
-	diagnostic_10 [label="contract ‘ft’ has no public function ‘foo’\nlevel Error\ntests/contract_testcases/substrate/function_types/ext_01.sol:4:66-69"]
+	diagnostic [label="found contract 'ft'\nlevel Debug\ntests/contract_testcases/substrate/function_types/ext_01.sol:2:9-21"]
+	diagnostic_10 [label="contract 'ft' has no public function 'foo'\nlevel Error\ntests/contract_testcases/substrate/function_types/ext_01.sol:4:66-69"]
 	contracts -> contract
 	contract -> test [label="function"]
 	contract -> foo [label="function"]

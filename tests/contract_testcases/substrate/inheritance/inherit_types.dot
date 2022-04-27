@@ -7,9 +7,9 @@ strict digraph "tests/contract_testcases/substrate/inheritance/inherit_types.sol
 	return [label="return\ntests/contract_testcases/substrate/inheritance/inherit_types.sol:4:17-33"]
 	number_literal [label="enum b.enum_x literal: 1\ntests/contract_testcases/substrate/inheritance/inherit_types.sol:4:24-33"]
 	contract_9 [label="contract b\ntests/contract_testcases/substrate/inheritance/inherit_types.sol:8:9-20"]
-	diagnostic [label="found contract ‘a’\nlevel Debug\ntests/contract_testcases/substrate/inheritance/inherit_types.sol:2:9-24"]
-	diagnostic_12 [label="found contract ‘b’\nlevel Debug\ntests/contract_testcases/substrate/inheritance/inherit_types.sol:8:9-20"]
-	diagnostic_13 [label="function can be declared ‘pure’\nlevel Warning\ntests/contract_testcases/substrate/inheritance/inherit_types.sol:3:13-52"]
+	diagnostic [label="found contract 'a'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/inherit_types.sol:2:9-24"]
+	diagnostic_12 [label="found contract 'b'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/inherit_types.sol:8:9-20"]
+	diagnostic_13 [label="function can be declared 'pure'\nlevel Warning\ntests/contract_testcases/substrate/inheritance/inherit_types.sol:3:13-52"]
 	enums -> enum_x
 	contracts -> contract
 	contract -> base [label="base"]

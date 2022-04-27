@@ -7,8 +7,8 @@ strict digraph "tests/contract_testcases/substrate/variables/test_variable_initi
 	number_literal [label="uint256 literal: 102\ntests/contract_testcases/substrate/variables/test_variable_initializer_errors_02.sol:2:26-29"]
 	var_8 [label="variable y\nvisibility internal\ntests/contract_testcases/substrate/variables/test_variable_initializer_errors_02.sol:3:13-25"]
 	number_literal_9 [label="uint256 literal: 102\ntests/contract_testcases/substrate/variables/test_variable_initializer_errors_02.sol:3:22-25"]
-	diagnostic [label="found contract ‘test’\nlevel Debug\ntests/contract_testcases/substrate/variables/test_variable_initializer_errors_02.sol:1:1-15"]
-	diagnostic_12 [label="storage variable ‘x‘ has been assigned, but never read\nlevel Warning\ntests/contract_testcases/substrate/variables/test_variable_initializer_errors_02.sol:2:13-29"]
+	diagnostic [label="found contract 'test'\nlevel Debug\ntests/contract_testcases/substrate/variables/test_variable_initializer_errors_02.sol:1:1-15"]
+	diagnostic_12 [label="storage variable 'x' has been assigned, but never read\nlevel Warning\ntests/contract_testcases/substrate/variables/test_variable_initializer_errors_02.sol:2:13-29"]
 	contracts -> contract
 	contract -> var [label="variable"]
 	var -> add [label="initializer"]

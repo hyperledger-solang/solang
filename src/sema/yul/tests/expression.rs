@@ -883,7 +883,7 @@ fn test_member_access() {
     assert_eq!(ns.diagnostics.len(), 1);
     assert_eq!(
         ns.diagnostics.iter().next().unwrap().message,
-        "the given expression does not support ‘.slot‘ suffixes"
+        "the given expression does not support '.slot' suffixes"
     );
     ns.diagnostics = Diagnostics::default();
 
@@ -963,7 +963,7 @@ fn test_check_types() {
     assert!(res.is_some());
     assert_eq!(
         res.unwrap().message,
-        "Storage variables must be accessed with ‘.slot‘ or ‘.offset‘"
+        "Storage variables must be accessed with '.slot' or '.offset'"
     );
 
     let expr = YulExpression::StorageVariable(loc, Type::Int(16), 0, 0);
@@ -971,7 +971,7 @@ fn test_check_types() {
     assert!(res.is_some());
     assert_eq!(
         res.unwrap().message,
-        "Storage variables must be accessed with ‘.slot‘ or ‘.offset‘"
+        "Storage variables must be accessed with '.slot' or '.offset'"
     );
 
     let expr = YulExpression::SolidityLocalVariable(
@@ -982,7 +982,7 @@ fn test_check_types() {
     );
     let res = check_type(&expr, &context, &mut ns, &mut symtable);
     assert!(res.is_some());
-    assert_eq!(res.unwrap().message, "Calldata arrays must be accessed with ‘.offset‘, ‘.length‘ and the ‘calldatacopy‘ function");
+    assert_eq!(res.unwrap().message, "Calldata arrays must be accessed with '.offset', '.length' and the 'calldatacopy' function");
 
     let expr = YulExpression::StringLiteral(loc, vec![0, 255, 20], Type::Uint(256));
     let res = check_type(&expr, &context, &mut ns, &mut symtable);
@@ -1045,7 +1045,7 @@ contract testTypes {
 
     let ns = parse(file);
     assert!(ns.diagnostics.contains_message(
-        r#"unrecognised token `:=', expected ")", ",", "address", "bool", "break", "byte", "case", "continue", "default", "for", "function", "if", "leave", "let", "return", "revert", "switch", "{", "}", identifier"#
+        r#"unrecognised token ':=', expected ")", ",", "address", "bool", "break", "byte", "case", "continue", "default", "for", "function", "if", "leave", "let", "return", "revert", "switch", "{", "}", identifier"#
     ));
 
     let file = r#"
@@ -1115,13 +1115,13 @@ contract testTypes {
     assert_eq!(ns.diagnostics.len(), 3);
     assert!(ns
         .diagnostics
-        .contains_message("found contract ‘testTypes’"));
+        .contains_message("found contract 'testTypes'"));
     assert!(ns
         .diagnostics
         .contains_message("inline assembly is not yet supported"));
     assert!(ns
         .diagnostics
-        .contains_message("function parameter ‘vl‘ has never been read"));
+        .contains_message("function parameter 'vl' has never been read"));
 
     let file = r#"
     contract testTypes {
@@ -1144,7 +1144,7 @@ contract testTypes {
 
     let ns = parse(file);
     assert!(ns.diagnostics.contains_message(
-        "storage variables cannot be assigned any value in assembly. You may use ‘sstore()‘"
+        "storage variables cannot be assigned any value in assembly. You may use 'sstore()'"
     ));
 
     let file = r#"
@@ -1168,7 +1168,7 @@ contract testTypes {
     let ns = parse(file);
     assert!(ns
         .diagnostics
-        .contains_message("Storage variables must be accessed with ‘.slot‘ or ‘.offset‘"));
+        .contains_message("Storage variables must be accessed with '.slot' or '.offset'"));
 
     let file = r#"
 contract testTypes {
@@ -1184,7 +1184,7 @@ contract testTypes {
 
     let ns = parse(file);
     assert!(ns.diagnostics.contains_message(
-        "Calldata arrays must be accessed with ‘.offset‘, ‘.length‘ and the ‘calldatacopy‘ function"
+        "Calldata arrays must be accessed with '.offset', '.length' and the 'calldatacopy' function"
     ));
 }
 
@@ -1235,7 +1235,7 @@ contract testTypes {
     let ns = parse(file);
     assert!(ns
         .diagnostics
-        .contains_message("state variables only support ‘.slot‘ and ‘.offset‘"));
+        .contains_message("state variables only support '.slot' and '.offset'"));
 
     let file = r#"
 contract testTypes {
@@ -1288,7 +1288,7 @@ contract testTypes {
 
     let ns = parse(file);
     assert!(ns.diagnostics.contains_message(
-        "variables of type function pointer only support ‘.selector‘ and ‘.address‘ suffixes"
+        "variables of type function pointer only support '.selector' and '.address' suffixes"
     ));
 
     let file = r#"
@@ -1304,7 +1304,7 @@ contract testTypes {
     let ns = parse(file);
     assert!(ns
         .diagnostics
-        .contains_message("calldata variables only support ‘.offset‘ and ‘.length‘"));
+        .contains_message("calldata variables only support '.offset' and '.length'"));
 
     let file = r#"
 contract testTypes {
@@ -1411,7 +1411,7 @@ contract C {
         .diagnostics
         .contains_message("inline assembly is not yet supported"));
 
-    assert!(ns.diagnostics.contains_message("found contract ‘C’"));
+    assert!(ns.diagnostics.contains_message("found contract 'C'"));
 }
 
 #[test]
@@ -1433,10 +1433,10 @@ contract test {
     "#;
     let ns = parse(file);
     assert_eq!(ns.diagnostics.len(), 2);
-    assert!(ns.diagnostics.contains_message("found contract ‘test’"));
+    assert!(ns.diagnostics.contains_message("found contract 'test'"));
     assert!(ns
         .diagnostics
-        .contains_message("the given expression does not support ‘.slot‘ suffixes"));
+        .contains_message("the given expression does not support '.slot' suffixes"));
 
     let file = r#"
     contract test {
@@ -1455,10 +1455,10 @@ contract test {
     "#;
     let ns = parse(file);
     assert_eq!(ns.diagnostics.len(), 2);
-    assert!(ns.diagnostics.contains_message("found contract ‘test’"));
+    assert!(ns.diagnostics.contains_message("found contract 'test'"));
     assert!(ns
         .diagnostics
-        .contains_message("the given expression does not support ‘.slot‘ suffixes"));
+        .contains_message("the given expression does not support '.slot' suffixes"));
 
     let file = r#"
     contract test {
@@ -1475,10 +1475,10 @@ contract test {
     "#;
     let ns = parse(file);
     assert_eq!(ns.diagnostics.len(), 2);
-    assert!(ns.diagnostics.contains_message("found contract ‘test’"));
+    assert!(ns.diagnostics.contains_message("found contract 'test'"));
     assert!(ns
         .diagnostics
-        .contains_message("the given expression does not support ‘.offset‘ suffixes"));
+        .contains_message("the given expression does not support '.offset' suffixes"));
 }
 
 #[test]
@@ -1496,7 +1496,7 @@ contract testTypes {
     let ns = parse(file);
     assert!(ns
         .diagnostics
-        .contains_message("calldata variables only support ‘.offset‘ and ‘.length‘"));
+        .contains_message("calldata variables only support '.offset' and '.length'"));
 
     let file = r#"
 contract testTypes {
@@ -1512,5 +1512,5 @@ contract testTypes {
     let ns = parse(file);
     assert!(ns
         .diagnostics
-        .contains_message("the given expression does not support ‘.length‘ suffixes"));
+        .contains_message("the given expression does not support '.length' suffixes"));
 }

@@ -1,8 +1,8 @@
 strict digraph "tests/contract_testcases/substrate/structs/parse_structs_03.sol" {
 	Foo [label="name:Foo\ncontract: test_struct_parsing\ntests/contract_testcases/substrate/structs/parse_structs_03.sol:3:20-23"]
 	contract [label="contract test_struct_parsing\ntests/contract_testcases/substrate/structs/parse_structs_03.sol:2:9-38"]
-	diagnostic [label="storage location ‘memory’ not allowed for struct field\nlevel Error\ntests/contract_testcases/substrate/structs/parse_structs_03.sol:4:22-28"]
-	diagnostic_7 [label="storage location ‘calldata’ not allowed for struct field\nlevel Error\ntests/contract_testcases/substrate/structs/parse_structs_03.sol:5:22-30"]
+	diagnostic [label="storage location 'memory' not allowed for struct field\nlevel Error\ntests/contract_testcases/substrate/structs/parse_structs_03.sol:4:22-28"]
+	diagnostic_7 [label="storage location 'calldata' not allowed for struct field\nlevel Error\ntests/contract_testcases/substrate/structs/parse_structs_03.sol:5:22-30"]
 	structs -> Foo
 	contracts -> contract
 	diagnostics -> diagnostic [label="Error"]

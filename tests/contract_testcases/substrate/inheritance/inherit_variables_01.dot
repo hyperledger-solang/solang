@@ -5,9 +5,9 @@ strict digraph "tests/contract_testcases/substrate/inheritance/inherit_variables
 	base [label="base b\ntests/contract_testcases/substrate/inheritance/inherit_variables_01.sol:6:23-24"]
 	getFoo [label="function getFoo\ncontract: c\ntests/contract_testcases/substrate/inheritance/inherit_variables_01.sol:7:13-51\nsignature getFoo()\nvisibility public\nmutability nonpayable"]
 	returns [label="returns\nint256 "]
-	diagnostic [label="found contract ‘b’\nlevel Debug\ntests/contract_testcases/substrate/inheritance/inherit_variables_01.sol:2:9-20"]
-	diagnostic_9 [label="found contract ‘c’\nlevel Debug\ntests/contract_testcases/substrate/inheritance/inherit_variables_01.sol:6:9-24"]
-	diagnostic_10 [label="`foo' is not found\nlevel Error\ntests/contract_testcases/substrate/inheritance/inherit_variables_01.sol:8:24-27"]
+	diagnostic [label="found contract 'b'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/inherit_variables_01.sol:2:9-20"]
+	diagnostic_9 [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/inherit_variables_01.sol:6:9-24"]
+	diagnostic_10 [label="'foo' is not found\nlevel Error\ntests/contract_testcases/substrate/inheritance/inherit_variables_01.sol:8:24-27"]
 	contracts -> contract
 	contract -> var [label="variable"]
 	contracts -> contract_3

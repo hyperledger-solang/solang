@@ -3,7 +3,7 @@ strict digraph "tests/contract_testcases/substrate/functions/mutability_07.sol" 
 	add [label="function add\ncontract: c\ntests/contract_testcases/substrate/functions/mutability_07.sol:2:13-71\nsignature add(address)\nvisibility public\nmutability nonpayable"]
 	parameters [label="parameters\naddress a"]
 	returns [label="returns\nbool f\nbytes res"]
-	diagnostic [label="found contract ‘c’\nlevel Debug\ntests/contract_testcases/substrate/functions/mutability_07.sol:1:1-12"]
+	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/functions/mutability_07.sol:1:1-12"]
 	diagnostic_7 [label="incorrect number of return values, expected 2 but got 1\nlevel Error\ntests/contract_testcases/substrate/functions/mutability_07.sol:3:17-28"]
 	contracts -> contract
 	contract -> add [label="function"]

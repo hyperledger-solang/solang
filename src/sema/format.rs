@@ -47,7 +47,7 @@ pub fn string_format(
                 // ok, let's skip over it
                 format_iterator.next();
             } else {
-                diagnostics.push(Diagnostic::error(loc, String::from("unmatched ‘}’")));
+                diagnostics.push(Diagnostic::error(loc, String::from("unmatched '}'")));
                 return Err(());
             }
         }
@@ -160,7 +160,7 @@ fn parse_format_specifier(
                 Some((loc, ch)) => {
                     diagnostics.push(Diagnostic::error(
                         loc,
-                        format!("unexpected format char ‘{}’", ch),
+                        format!("unexpected format char '{}'", ch),
                     ));
                     return Err(());
                 }
@@ -178,14 +178,14 @@ fn parse_format_specifier(
                 Some((loc, ch)) => {
                     diagnostics.push(Diagnostic::error(
                         loc,
-                        format!("unexpected format char ‘{:}’, expected closing ‘}}’", ch),
+                        format!("unexpected format char '{:}', expected closing '}}'", ch),
                     ));
                     Err(())
                 }
                 None => {
                     diagnostics.push(Diagnostic::error(
                         last_loc,
-                        String::from("missing closing ‘}’"),
+                        String::from("missing closing '}'"),
                     ));
                     Err(())
                 }
@@ -194,14 +194,14 @@ fn parse_format_specifier(
         Some((loc, ch)) => {
             diagnostics.push(Diagnostic::error(
                 loc,
-                format!("unexpected format char ‘{}’", ch),
+                format!("unexpected format char '{}'", ch),
             ));
             Err(())
         }
         None => {
             diagnostics.push(Diagnostic::error(
                 last_loc,
-                String::from("missing closing ‘}’"),
+                String::from("missing closing '}'"),
             ));
             Err(())
         }

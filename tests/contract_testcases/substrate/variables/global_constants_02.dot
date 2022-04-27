@@ -1,4 +1,4 @@
 strict digraph "tests/contract_testcases/substrate/variables/global_constants_02.sol" {
-	diagnostic [label="‘external’: global variable cannot have visibility specifier\nlevel Error\ntests/contract_testcases/substrate/variables/global_constants_02.sol:1:15-23"]
+	diagnostic [label="'external': global variable cannot have visibility specifier\nlevel Error\ntests/contract_testcases/substrate/variables/global_constants_02.sol:1:15-23"]
 	diagnostics -> diagnostic [label="Error"]
 }

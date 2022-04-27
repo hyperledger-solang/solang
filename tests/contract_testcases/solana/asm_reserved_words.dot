@@ -6,7 +6,7 @@ strict digraph "tests/contract_testcases/solana/asm_reserved_words.sol" {
 	return [label="return\ntests/contract_testcases/solana/asm_reserved_words.sol:4:3-15"]
 	not [label="not\ntests/contract_testcases/solana/asm_reserved_words.sol:4:10-11"]
 	variable [label="variable: case\nbool\ntests/contract_testcases/solana/asm_reserved_words.sol:4:11-15"]
-	diagnostic [label="found contract ‘default’\nlevel Debug\ntests/contract_testcases/solana/asm_reserved_words.sol:1:1-2:18"]
+	diagnostic [label="found contract 'default'\nlevel Debug\ntests/contract_testcases/solana/asm_reserved_words.sol:1:1-2:18"]
 	contracts -> contract
 	contract -> switch [label="function"]
 	switch -> parameters [label="parameters"]

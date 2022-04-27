@@ -4,8 +4,8 @@ strict digraph "tests/contract_testcases/substrate/primitives/address_payable_ty
 	parameters [label="parameters\naddress payable a"]
 	contract_4 [label="contract other\ntests/contract_testcases/substrate/primitives/address_payable_type_03.sol:8:9-24"]
 	test_5 [label="function test\ncontract: other\ntests/contract_testcases/substrate/primitives/address_payable_type_03.sol:9:13-35\nsignature test()\nvisibility public\nmutability nonpayable"]
-	diagnostic [label="found contract ‘c’\nlevel Debug\ntests/contract_testcases/substrate/primitives/address_payable_type_03.sol:2:9-20"]
-	diagnostic_8 [label="found contract ‘other’\nlevel Debug\ntests/contract_testcases/substrate/primitives/address_payable_type_03.sol:8:9-24"]
+	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/primitives/address_payable_type_03.sol:2:9-20"]
+	diagnostic_8 [label="found contract 'other'\nlevel Debug\ntests/contract_testcases/substrate/primitives/address_payable_type_03.sol:8:9-24"]
 	diagnostic_9 [label="implicit conversion to contract other from address payable not allowed\nlevel Error\ntests/contract_testcases/substrate/primitives/address_payable_type_03.sol:4:27-28"]
 	contracts -> contract
 	contract -> test [label="function"]

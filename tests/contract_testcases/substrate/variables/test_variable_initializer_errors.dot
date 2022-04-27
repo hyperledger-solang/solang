@@ -3,8 +3,8 @@ strict digraph "tests/contract_testcases/substrate/variables/test_variable_initi
 	var [label="variable x\nvisibility internal\ntests/contract_testcases/substrate/variables/test_variable_initializer_errors.sol:2:13-25"]
 	number_literal [label="uint256 literal: 102\ntests/contract_testcases/substrate/variables/test_variable_initializer_errors.sol:2:22-25"]
 	var_5 [label="variable y\nvisibility internal\nconstant\ntests/contract_testcases/substrate/variables/test_variable_initializer_errors.sol:3:13-36"]
-	diagnostic [label="found contract ‘test’\nlevel Debug\ntests/contract_testcases/substrate/variables/test_variable_initializer_errors.sol:1:1-15"]
-	diagnostic_8 [label="cannot read contract variable ‘x’ in constant expression\nlevel Error\ntests/contract_testcases/substrate/variables/test_variable_initializer_errors.sol:3:31-32"]
+	diagnostic [label="found contract 'test'\nlevel Debug\ntests/contract_testcases/substrate/variables/test_variable_initializer_errors.sol:1:1-15"]
+	diagnostic_8 [label="cannot read contract variable 'x' in constant expression\nlevel Error\ntests/contract_testcases/substrate/variables/test_variable_initializer_errors.sol:3:31-32"]
 	contracts -> contract
 	contract -> var [label="variable"]
 	var -> number_literal [label="initializer"]

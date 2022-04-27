@@ -1,7 +1,7 @@
 strict digraph "tests/contract_testcases/substrate/builtins/block_02.sol" {
 	contract [label="contract bar\ntests/contract_testcases/substrate/builtins/block_02.sol:2:9-22"]
 	test [label="function test\ncontract: bar\ntests/contract_testcases/substrate/builtins/block_02.sol:3:13-35\nsignature test()\nvisibility public\nmutability nonpayable"]
-	diagnostic [label="found contract ‘bar’\nlevel Debug\ntests/contract_testcases/substrate/builtins/block_02.sol:2:9-22"]
+	diagnostic [label="found contract 'bar'\nlevel Debug\ntests/contract_testcases/substrate/builtins/block_02.sol:2:9-22"]
 	diagnostic_5 [label="implicit conversion would change sign from uint128 to int64\nlevel Error\ntests/contract_testcases/substrate/builtins/block_02.sol:4:27-50"]
 	contracts -> contract
 	contract -> test [label="function"]

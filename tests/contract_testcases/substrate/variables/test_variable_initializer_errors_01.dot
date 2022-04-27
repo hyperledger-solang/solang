@@ -5,7 +5,7 @@ strict digraph "tests/contract_testcases/substrate/variables/test_variable_initi
 	returns [label="returns\nuint256 "]
 	return [label="return\ntests/contract_testcases/substrate/variables/test_variable_initializer_errors_01.sol:3:17-27"]
 	number_literal [label="uint256 literal: 102\ntests/contract_testcases/substrate/variables/test_variable_initializer_errors_01.sol:3:24-27"]
-	diagnostic [label="found contract ‘test’\nlevel Debug\ntests/contract_testcases/substrate/variables/test_variable_initializer_errors_01.sol:1:1-15"]
+	diagnostic [label="found contract 'test'\nlevel Debug\ntests/contract_testcases/substrate/variables/test_variable_initializer_errors_01.sol:1:1-15"]
 	diagnostic_9 [label="cannot call function in constant expression\nlevel Error\ntests/contract_testcases/substrate/variables/test_variable_initializer_errors_01.sol:5:31-36"]
 	contracts -> contract
 	contract -> var [label="variable"]

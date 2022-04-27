@@ -7,9 +7,9 @@ strict digraph "tests/contract_testcases/substrate/contracts/contract_type_03.so
 	number_literal [label="uint32 literal: 11\ntests/contract_testcases/substrate/contracts/contract_type_03.sol:4:23-36"]
 	contract_7 [label="contract foo\ntests/contract_testcases/substrate/contracts/contract_type_03.sol:8:9-22"]
 	test1 [label="function test1\ncontract: foo\ntests/contract_testcases/substrate/contracts/contract_type_03.sol:9:13-36\nsignature test1()\nvisibility public\nmutability nonpayable"]
-	diagnostic [label="found contract ‘printer’\nlevel Debug\ntests/contract_testcases/substrate/contracts/contract_type_03.sol:2:9-26"]
-	diagnostic_11 [label="found contract ‘foo’\nlevel Debug\ntests/contract_testcases/substrate/contracts/contract_type_03.sol:8:9-22"]
-	diagnostic_12 [label="expected ‘contract printer’, found integer\nlevel Error\ntests/contract_testcases/substrate/contracts/contract_type_03.sol:10:29-32"]
+	diagnostic [label="found contract 'printer'\nlevel Debug\ntests/contract_testcases/substrate/contracts/contract_type_03.sol:2:9-26"]
+	diagnostic_11 [label="found contract 'foo'\nlevel Debug\ntests/contract_testcases/substrate/contracts/contract_type_03.sol:8:9-22"]
+	diagnostic_12 [label="expected 'contract printer', found integer\nlevel Error\ntests/contract_testcases/substrate/contracts/contract_type_03.sol:10:29-32"]
 	contracts -> contract
 	contract -> test [label="function"]
 	test -> expr [label="body"]

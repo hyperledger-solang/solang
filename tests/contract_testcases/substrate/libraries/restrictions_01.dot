@@ -1,6 +1,6 @@
 strict digraph "tests/contract_testcases/substrate/libraries/restrictions_01.sol" {
 	contract [label="contract c\ntests/contract_testcases/substrate/libraries/restrictions_01.sol:2:9-19"]
-	diagnostic [label="found library ‘c’\nlevel Debug\ntests/contract_testcases/substrate/libraries/restrictions_01.sol:2:9-19"]
+	diagnostic [label="found library 'c'\nlevel Debug\ntests/contract_testcases/substrate/libraries/restrictions_01.sol:2:9-19"]
 	diagnostic_5 [label="receive not allowed in a library\nlevel Error\ntests/contract_testcases/substrate/libraries/restrictions_01.sol:3:13-31"]
 	contracts -> contract
 	diagnostics -> diagnostic [label="Debug"]

@@ -13,9 +13,9 @@ strict digraph "tests/contract_testcases/solana/now.sol" {
 	number_literal [label="int256 literal: 5\ntests/contract_testcases/solana/now.sol:13:13-14"]
 	return [label="return\ntests/contract_testcases/solana/now.sol:14:3-13"]
 	variable [label="variable: now\nint256\ntests/contract_testcases/solana/now.sol:14:10-13"]
-	diagnostic [label="found contract ‘c’\nlevel Debug\ntests/contract_testcases/solana/now.sol:1:1-12"]
-	diagnostic_18 [label="`now' is not found\nlevel Error\ntests/contract_testcases/solana/now.sol:4:10-13"]
-	diagnostic_19 [label="unknown function or type ‘now’\nlevel Error\ntests/contract_testcases/solana/now.sol:7:3-6"]
+	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/solana/now.sol:1:1-12"]
+	diagnostic_18 [label="'now' is not found\nlevel Error\ntests/contract_testcases/solana/now.sol:4:10-13"]
+	diagnostic_19 [label="unknown function or type 'now'\nlevel Error\ntests/contract_testcases/solana/now.sol:7:3-6"]
 	diagnostic_20 [label="'now' was an alias for 'block.timestamp' in older versions of the Solidity language. Please use 'block.timestamp' instead.\nlevel Error\ntests/contract_testcases/solana/now.sol:10:10-13"]
 	structs -> S
 	contracts -> contract

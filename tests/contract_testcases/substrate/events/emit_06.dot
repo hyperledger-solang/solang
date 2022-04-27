@@ -5,8 +5,8 @@ strict digraph "tests/contract_testcases/substrate/events/emit_06.sol" {
 	emit [label="emit\nevent c.foo\ntests/contract_testcases/substrate/events/emit_06.sol:5:17-37"]
 	bool_literal [label="bool literal: true\ntests/contract_testcases/substrate/events/emit_06.sol:5:27-31"]
 	number_literal [label="uint32 literal: 102\ntests/contract_testcases/substrate/events/emit_06.sol:5:33-36"]
-	diagnostic [label="found contract ‘c’\nlevel Debug\ntests/contract_testcases/substrate/events/emit_06.sol:2:9-20"]
-	diagnostic_10 [label="function declared ‘view’ but this expression writes to state\nlevel Error\ntests/contract_testcases/substrate/events/emit_06.sol:5:17-37"]
+	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/events/emit_06.sol:2:9-20"]
+	diagnostic_10 [label="function declared 'view' but this expression writes to state\nlevel Error\ntests/contract_testcases/substrate/events/emit_06.sol:5:17-37"]
 	events -> foo
 	contracts -> contract
 	contract -> f [label="function"]

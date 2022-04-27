@@ -1,10 +1,10 @@
 strict digraph "tests/contract_testcases/substrate/functions/payable_05.sol" {
 	contract [label="contract c\ntests/contract_testcases/substrate/functions/payable_05.sol:2:9-20"]
 	node_2 [label="constructor \ncontract: c\ntests/contract_testcases/substrate/functions/payable_05.sol:3:13-33\nsignature ()\nvisibility public\nmutability nonpayable"]
-	diagnostic [label="found contract ‘c’\nlevel Debug\ntests/contract_testcases/substrate/functions/payable_05.sol:2:9-20"]
-	diagnostic_5 [label="‘public’: visibility for constructors is ignored\nlevel Warning\ntests/contract_testcases/substrate/functions/payable_05.sol:3:27-33"]
-	diagnostic_6 [label="‘public’: visibility for constructors is ignored\nlevel Warning\ntests/contract_testcases/substrate/functions/payable_05.sol:5:34-40"]
-	diagnostic_7 [label="all constructors should be defined ‘payable’ or not\nlevel Error\ntests/contract_testcases/substrate/functions/payable_05.sol:5:13-48"]
+	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/functions/payable_05.sol:2:9-20"]
+	diagnostic_5 [label="'public': visibility for constructors is ignored\nlevel Warning\ntests/contract_testcases/substrate/functions/payable_05.sol:3:27-33"]
+	diagnostic_6 [label="'public': visibility for constructors is ignored\nlevel Warning\ntests/contract_testcases/substrate/functions/payable_05.sol:5:34-40"]
+	diagnostic_7 [label="all constructors should be defined 'payable' or not\nlevel Error\ntests/contract_testcases/substrate/functions/payable_05.sol:5:13-48"]
 	note [label="location of previous definition\ntests/contract_testcases/substrate/functions/payable_05.sol:3:13-33"]
 	contracts -> contract
 	contract -> node_2 [label="constructor"]

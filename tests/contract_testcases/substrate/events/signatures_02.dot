@@ -7,7 +7,7 @@ strict digraph "tests/contract_testcases/substrate/events/signatures_02.sol" {
 	emit [label="emit\nevent foo\ntests/contract_testcases/substrate/events/signatures_02.sol:9:17-34"]
 	bool_literal [label="bool literal: true\ntests/contract_testcases/substrate/events/signatures_02.sol:9:26-30"]
 	number_literal [label="int256 literal: 1\ntests/contract_testcases/substrate/events/signatures_02.sol:9:32-33"]
-	diagnostic [label="found contract ‘c’\nlevel Debug\ntests/contract_testcases/substrate/events/signatures_02.sol:4:9-20"]
+	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/events/signatures_02.sol:4:9-20"]
 	events -> foo
 	events -> foo_2
 	events -> foo_3

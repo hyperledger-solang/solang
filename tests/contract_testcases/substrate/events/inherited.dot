@@ -7,8 +7,8 @@ strict digraph "tests/contract_testcases/substrate/events/inherited.sol" {
 	emit [label="emit\nevent base.foo\ntests/contract_testcases/substrate/events/inherited.sol:8:17-34"]
 	bool_literal [label="bool literal: true\ntests/contract_testcases/substrate/events/inherited.sol:8:26-30"]
 	number_literal [label="int256 literal: 1\ntests/contract_testcases/substrate/events/inherited.sol:8:32-33"]
-	diagnostic [label="found contract ‘base’\nlevel Debug\ntests/contract_testcases/substrate/events/inherited.sol:2:9-23"]
-	diagnostic_12 [label="found contract ‘c’\nlevel Debug\ntests/contract_testcases/substrate/events/inherited.sol:6:9-27"]
+	diagnostic [label="found contract 'base'\nlevel Debug\ntests/contract_testcases/substrate/events/inherited.sol:2:9-23"]
+	diagnostic_12 [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/events/inherited.sol:6:9-27"]
 	events -> foo
 	contracts -> contract
 	contracts -> contract_4

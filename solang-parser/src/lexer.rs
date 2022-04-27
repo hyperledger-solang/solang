@@ -371,10 +371,10 @@ impl fmt::Display for LexicalError {
             }
             LexicalError::MissingNumber(..) => write!(f, "missing number"),
             LexicalError::InvalidCharacterInHexLiteral(_, ch) => {
-                write!(f, "invalid character ‘{}’ in hex literal string", ch)
+                write!(f, "invalid character '{}' in hex literal string", ch)
             }
-            LexicalError::UnrecognisedToken(_, t) => write!(f, "unrecognised token ‘{}’", t),
-            LexicalError::ExpectedFrom(_, t) => write!(f, "‘{}’ found where ‘from’ expected", t),
+            LexicalError::UnrecognisedToken(_, t) => write!(f, "unrecognised token '{}'", t),
+            LexicalError::ExpectedFrom(_, t) => write!(f, "'{}' found where 'from' expected", t),
             LexicalError::MissingExponent(..) => write!(f, "missing number"),
             LexicalError::DoublePoints(..) => write!(f, "found two dots in number"),
             LexicalError::UnrecognisedDecimal(..) => {

@@ -2,7 +2,7 @@ strict digraph "tests/contract_testcases/substrate/functions/args_and_returns.so
 	contract [label="contract args\ntests/contract_testcases/substrate/functions/args_and_returns.sol:2:5-19"]
 	foo [label="function foo\ncontract: args\ntests/contract_testcases/substrate/functions/args_and_returns.sol:3:9-50\nsignature foo(bool,uint256)\nvisibility public\nmutability nonpayable"]
 	parameters [label="parameters\nbool arg1\nuint256 arg1"]
-	diagnostic [label="found contract ‘args’\nlevel Debug\ntests/contract_testcases/substrate/functions/args_and_returns.sol:2:5-19"]
+	diagnostic [label="found contract 'args'\nlevel Debug\ntests/contract_testcases/substrate/functions/args_and_returns.sol:2:5-19"]
 	diagnostic_6 [label="arg1 is already declared\nlevel Error\ntests/contract_testcases/substrate/functions/args_and_returns.sol:3:38-42"]
 	note [label="location of previous declaration\ntests/contract_testcases/substrate/functions/args_and_returns.sol:3:27-31"]
 	contracts -> contract

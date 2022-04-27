@@ -23,7 +23,7 @@ fn import_map_dup() {
 
     assert_eq!(
         stderr,
-        "error: import path ‘tests’: duplicate mapping for ‘foo’\n"
+        "error: import path 'tests': duplicate mapping for 'foo'\n"
     );
 }
 
@@ -46,7 +46,7 @@ fn import_map_badpath() {
 
     println!("stderr: {}", stderr);
 
-    assert!(stderr.contains("error: import path ‘/does/not/exist’: "));
+    assert!(stderr.contains("error: import path '/does/not/exist': "));
 }
 
 #[test]
@@ -78,7 +78,7 @@ fn import_map() {
 
     println!("stderr: {}", stderr);
 
-    assert!(stderr.contains("file not found ‘foo/bar.sol’"));
+    assert!(stderr.contains("file not found 'foo/bar.sol'"));
 }
 
 #[test]
@@ -110,5 +110,5 @@ fn import() {
 
     println!("stderr: {}", stderr);
 
-    assert!(stderr.contains("file not found ‘bar.sol’"));
+    assert!(stderr.contains("file not found 'bar.sol'"));
 }

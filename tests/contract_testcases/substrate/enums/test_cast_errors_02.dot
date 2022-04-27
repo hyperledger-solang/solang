@@ -6,7 +6,7 @@ strict digraph "tests/contract_testcases/substrate/enums/test_cast_errors_02.sol
 	return [label="return\ntests/contract_testcases/substrate/enums/test_cast_errors_02.sol:4:17-40"]
 	cast [label="cast uint8\ntests/contract_testcases/substrate/enums/test_cast_errors_02.sol:4:24-40"]
 	number_literal [label="enum test.state literal: 0\ntests/contract_testcases/substrate/enums/test_cast_errors_02.sol:4:30-39"]
-	diagnostic [label="found contract ‘test’\nlevel Debug\ntests/contract_testcases/substrate/enums/test_cast_errors_02.sol:1:1-15"]
+	diagnostic [label="found contract 'test'\nlevel Debug\ntests/contract_testcases/substrate/enums/test_cast_errors_02.sol:1:1-15"]
 	enums -> state
 	contracts -> contract
 	contract -> foo [label="function"]

@@ -2,8 +2,8 @@ strict digraph "tests/contract_testcases/ewasm/call/call_01.sol" {
 	contract [label="contract x\ntests/contract_testcases/ewasm/call/call_01.sol:2:9-20"]
 	f [label="function f\ncontract: x\ntests/contract_testcases/ewasm/call/call_01.sol:3:13-49\nsignature f(address)\nvisibility public\nmutability nonpayable"]
 	parameters [label="parameters\naddress payable a"]
-	diagnostic [label="found contract ‘x’\nlevel Debug\ntests/contract_testcases/ewasm/call/call_01.sol:2:9-20"]
-	diagnostic_6 [label="‘staticcall’ cannot have value specifed\nlevel Error\ntests/contract_testcases/ewasm/call/call_01.sol:4:45-71"]
+	diagnostic [label="found contract 'x'\nlevel Debug\ntests/contract_testcases/ewasm/call/call_01.sol:2:9-20"]
+	diagnostic_6 [label="'staticcall' cannot have value specifed\nlevel Error\ntests/contract_testcases/ewasm/call/call_01.sol:4:45-71"]
 	contracts -> contract
 	contract -> f [label="function"]
 	f -> parameters [label="parameters"]

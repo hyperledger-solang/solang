@@ -823,7 +823,7 @@ pub fn builtin_var(
                 diagnostics.push(Diagnostic::error(
                     *loc,
                     String::from(
-                        "use the function ‘tx.gasprice(gas)’ in stead, as ‘tx.gasprice’ may round down to zero. See https://solang.readthedocs.io/en/latest/language.html#gasprice",
+                        "use the function 'tx.gasprice(gas)' in stead, as 'tx.gasprice' may round down to zero. See https://solang.readthedocs.io/en/latest/language.html#gasprice",
                     ),
                 ));
             }
@@ -896,7 +896,7 @@ pub fn resolve_call(
             diagnostics.push(Diagnostic::error(
                 *loc,
                 format!(
-                    "cannot call function ‘{}’ in constant expression",
+                    "cannot call function '{}' in constant expression",
                     func.name
                 ),
             ));
@@ -907,7 +907,7 @@ pub fn resolve_call(
             diagnostics.push(Diagnostic::error(
                 *loc,
                 format!(
-                    "builtin function ‘{}’ expects {} arguments, {} provided",
+                    "builtin function '{}' expects {} arguments, {} provided",
                     func.name,
                     func.args.len(),
                     args.len()
@@ -955,7 +955,7 @@ pub fn resolve_call(
                         diagnostics.push(Diagnostic::warning(
                             *loc,
                             String::from(
-                                "the function call ‘tx.gasprice(1)’ may round down to zero. See https://solang.readthedocs.io/en/latest/language.html#gasprice",
+                                "the function call 'tx.gasprice(1)' may round down to zero. See https://solang.readthedocs.io/en/latest/language.html#gasprice",
                             ),
                         ));
                     }
@@ -1059,7 +1059,7 @@ pub fn resolve_namespace_call(
                         if let Some(storage) = &param.storage {
                             diagnostics.push(Diagnostic::error(
                                 storage.loc(),
-                                format!("storage modifier ‘{}’ not allowed", storage),
+                                format!("storage modifier '{}' not allowed", storage),
                             ));
                             broken = true;
                         }
@@ -1067,7 +1067,7 @@ pub fn resolve_namespace_call(
                         if let Some(name) = &param.name {
                             diagnostics.push(Diagnostic::error(
                                 name.loc,
-                                format!("unexpected identifier ‘{}’ in type", name.name),
+                                format!("unexpected identifier '{}' in type", name.name),
                             ));
                             broken = true;
                         }
@@ -1144,7 +1144,7 @@ pub fn resolve_namespace_call(
             } else {
                 diagnostics.push(Diagnostic::error(
                     *loc,
-                    "function requires one ‘bytes4’ selector argument".to_string(),
+                    "function requires one 'bytes4' selector argument".to_string(),
                 ));
 
                 return Err(());
@@ -1212,7 +1212,7 @@ pub fn resolve_namespace_call(
                         diagnostics.push(Diagnostic::error(
                             *loc,
                             format!(
-                                "first argument should be function, got ‘{}’",
+                                "first argument should be function, got '{}'",
                                 ty.to_string(ns)
                             ),
                         ));
@@ -1248,7 +1248,7 @@ pub fn resolve_namespace_call(
             } else {
                 diagnostics.push(Diagnostic::error(
                     *loc,
-                    "function requires one ‘string’ signature argument".to_string(),
+                    "function requires one 'string' signature argument".to_string(),
                 ));
 
                 return Err(());
@@ -1310,7 +1310,7 @@ pub fn resolve_method_call(
             diagnostics.push(Diagnostic::error(
                 id.loc,
                 format!(
-                    "cannot call function ‘{}’ in constant expression",
+                    "cannot call function '{}' in constant expression",
                     func.name
                 ),
             ));
@@ -1321,7 +1321,7 @@ pub fn resolve_method_call(
             diagnostics.push(Diagnostic::error(
                 id.loc,
                 format!(
-                    "builtin function ‘{}’ expects {} arguments, {} provided",
+                    "builtin function '{}' expects {} arguments, {} provided",
                     func.name,
                     func.args.len(),
                     args.len()

@@ -3,8 +3,8 @@ strict digraph "tests/contract_testcases/substrate/calls/try_catch_constructor_0
 	test [label="function test\ncontract: c\ntests/contract_testcases/substrate/calls/try_catch_constructor_05.sol:3:13-35\nsignature test()\nvisibility public\nmutability nonpayable"]
 	contract_3 [label="contract other\ntests/contract_testcases/substrate/calls/try_catch_constructor_05.sol:16:9-24"]
 	test_4 [label="function test\ncontract: other\ntests/contract_testcases/substrate/calls/try_catch_constructor_05.sol:17:13-35\nsignature test()\nvisibility public\nmutability nonpayable"]
-	diagnostic [label="found contract ‘c’\nlevel Debug\ntests/contract_testcases/substrate/calls/try_catch_constructor_05.sol:2:9-20"]
-	diagnostic_7 [label="found contract ‘other’\nlevel Debug\ntests/contract_testcases/substrate/calls/try_catch_constructor_05.sol:16:9-24"]
+	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/calls/try_catch_constructor_05.sol:2:9-20"]
+	diagnostic_7 [label="found contract 'other'\nlevel Debug\ntests/contract_testcases/substrate/calls/try_catch_constructor_05.sol:16:9-24"]
 	diagnostic_8 [label="unexpected code block\nlevel Error\ntests/contract_testcases/substrate/calls/try_catch_constructor_05.sol:4:33-6:18"]
 	contracts -> contract
 	contract -> test [label="function"]

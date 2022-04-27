@@ -1,8 +1,8 @@
 strict digraph "tests/contract_testcases/substrate/builtins/functions_01.sol" {
 	contract [label="contract bar\ntests/contract_testcases/substrate/builtins/functions_01.sol:2:9-22"]
 	test [label="function test\ncontract: bar\ntests/contract_testcases/substrate/builtins/functions_01.sol:3:13-35\nsignature test()\nvisibility public\nmutability nonpayable"]
-	diagnostic [label="found contract ‘bar’\nlevel Debug\ntests/contract_testcases/substrate/builtins/functions_01.sol:2:9-22"]
-	diagnostic_5 [label="builtin function ‘gasleft’ expects 0 arguments, 1 provided\nlevel Error\ntests/contract_testcases/substrate/builtins/functions_01.sol:4:27-34"]
+	diagnostic [label="found contract 'bar'\nlevel Debug\ntests/contract_testcases/substrate/builtins/functions_01.sol:2:9-22"]
+	diagnostic_5 [label="builtin function 'gasleft' expects 0 arguments, 1 provided\nlevel Error\ntests/contract_testcases/substrate/builtins/functions_01.sol:4:27-34"]
 	contracts -> contract
 	contract -> test [label="function"]
 	diagnostics -> diagnostic [label="Debug"]

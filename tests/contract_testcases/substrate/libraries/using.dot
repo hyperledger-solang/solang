@@ -1,7 +1,7 @@
 strict digraph "tests/contract_testcases/substrate/libraries/using.sol" {
 	contract [label="contract c\ntests/contract_testcases/substrate/libraries/using.sol:2:9-20"]
-	diagnostic [label="library ‘x’ not found\nlevel Error\ntests/contract_testcases/substrate/libraries/using.sol:3:19-20"]
-	diagnostic_5 [label="found contract ‘c’\nlevel Debug\ntests/contract_testcases/substrate/libraries/using.sol:2:9-20"]
+	diagnostic [label="library 'x' not found\nlevel Error\ntests/contract_testcases/substrate/libraries/using.sol:3:19-20"]
+	diagnostic_5 [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/libraries/using.sol:2:9-20"]
 	contracts -> contract
 	diagnostics -> diagnostic [label="Error"]
 	diagnostics -> diagnostic_5 [label="Debug"]

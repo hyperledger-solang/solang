@@ -1,8 +1,8 @@
 strict digraph "tests/contract_testcases/substrate/events/event_decl_08.sol" {
 	foo [label="name:foo\ncontract: 0\ntests/contract_testcases/substrate/events/event_decl_08.sol:3:19-22\nfield name:f1 ty:bool indexed:yes\nfield name:f2 ty:bool indexed:yes\nfield name:f3 ty:bool indexed:yes"]
 	contract [label="contract c\ntests/contract_testcases/substrate/events/event_decl_08.sol:2:9-20"]
-	diagnostic [label="found contract ‘c’\nlevel Debug\ntests/contract_testcases/substrate/events/event_decl_08.sol:2:9-20"]
-	diagnostic_7 [label="event ‘foo‘ has never been emitted\nlevel Warning\ntests/contract_testcases/substrate/events/event_decl_08.sol:3:19-22"]
+	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/events/event_decl_08.sol:2:9-20"]
+	diagnostic_7 [label="event 'foo' has never been emitted\nlevel Warning\ntests/contract_testcases/substrate/events/event_decl_08.sol:3:19-22"]
 	events -> foo
 	contracts -> contract
 	diagnostics -> diagnostic [label="Debug"]

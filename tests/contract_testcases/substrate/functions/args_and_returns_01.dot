@@ -3,7 +3,7 @@ strict digraph "tests/contract_testcases/substrate/functions/args_and_returns_01
 	foo [label="function foo\ncontract: args\ntests/contract_testcases/substrate/functions/args_and_returns_01.sol:3:9-79\nsignature foo(bool,uint256)\nvisibility public\nmutability nonpayable"]
 	parameters [label="parameters\nbool arg1\nuint256 arg2"]
 	returns [label="returns\naddress arg2\nuint256 "]
-	diagnostic [label="found contract ‘args’\nlevel Debug\ntests/contract_testcases/substrate/functions/args_and_returns_01.sol:2:5-19"]
+	diagnostic [label="found contract 'args'\nlevel Debug\ntests/contract_testcases/substrate/functions/args_and_returns_01.sol:2:5-19"]
 	diagnostic_7 [label="arg2 is already declared\nlevel Error\ntests/contract_testcases/substrate/functions/args_and_returns_01.sol:3:68-72"]
 	note [label="location of previous declaration\ntests/contract_testcases/substrate/functions/args_and_returns_01.sol:3:38-42"]
 	contracts -> contract

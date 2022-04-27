@@ -3,7 +3,7 @@ strict digraph "tests/contract_testcases/substrate/expressions/power.sol" {
 	power [label="function power\ncontract: test\ntests/contract_testcases/substrate/expressions/power.sol:2:13-75\nsignature power(uint64,int64)\nvisibility public\nmutability nonpayable"]
 	parameters [label="parameters\nuint64 base\nint64 exp"]
 	returns [label="returns\nuint64 "]
-	diagnostic [label="found contract ‘test’\nlevel Debug\ntests/contract_testcases/substrate/expressions/power.sol:1:1-15"]
+	diagnostic [label="found contract 'test'\nlevel Debug\ntests/contract_testcases/substrate/expressions/power.sol:1:1-15"]
 	diagnostic_7 [label="exponation (**) is not allowed with signed types\nlevel Error\ntests/contract_testcases/substrate/expressions/power.sol:3:29-31"]
 	contracts -> contract
 	contract -> power [label="function"]

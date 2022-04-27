@@ -41,7 +41,7 @@ pub fn parse(
             } => Diagnostic::parser_error(
                 pt::Loc::File(file_no, l, r),
                 format!(
-                    "unrecognised token `{}', expected {}",
+                    "unrecognised token '{}', expected {}",
                     token,
                     expected.join(", ")
                 ),
@@ -49,7 +49,7 @@ pub fn parse(
             ParseError::User { error } => Diagnostic::parser_error(error.loc(), error.to_string()),
             ParseError::ExtraToken { token } => Diagnostic::parser_error(
                 pt::Loc::File(file_no, token.0, token.2),
-                format!("extra token `{}' encountered", token.0),
+                format!("extra token '{}' encountered", token.0),
             ),
             ParseError::UnrecognizedEOF { location, expected } => Diagnostic::parser_error(
                 pt::Loc::File(file_no, location, location),

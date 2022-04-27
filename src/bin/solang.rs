@@ -180,7 +180,7 @@ fn main() {
     let address_length = match address_length.parse() {
         Ok(len) if (4..1024).contains(&len) => len,
         _ => {
-            eprintln!("error: address length ‘{}’ is not valid", address_length);
+            eprintln!("error: address length '{}' is not valid", address_length);
             std::process::exit(1);
         }
     };
@@ -190,7 +190,7 @@ fn main() {
     let value_length = match value_length.parse() {
         Ok(len) if (4..1024).contains(&len) => len,
         _ => {
-            eprintln!("error: value length ‘{}’ is not valid", value_length);
+            eprintln!("error: value length '{}' is not valid", value_length);
             std::process::exit(1);
         }
     };
@@ -207,7 +207,7 @@ fn main() {
 
     if !target.is_substrate() && matches.occurrences_of("ADDRESS_LENGTH") > 0 {
         eprintln!(
-            "error: address length cannot be modified for target ‘{}’",
+            "error: address length cannot be modified for target '{}'",
             target
         );
         std::process::exit(1);
@@ -215,7 +215,7 @@ fn main() {
 
     if !target.is_substrate() && matches.occurrences_of("VALUE_LENGTH") > 0 {
         eprintln!(
-            "error: value length cannot be modified for target ‘{}’",
+            "error: value length cannot be modified for target '{}'",
             target
         );
         std::process::exit(1);
@@ -255,7 +255,7 @@ fn main() {
     if let Some(paths) = matches.values_of_os("IMPORTPATH") {
         for path in paths {
             if let Err(e) = resolver.add_import_path(PathBuf::from(path)) {
-                eprintln!("error: import path ‘{}’: {}", path.to_string_lossy(), e);
+                eprintln!("error: import path '{}': {}", path.to_string_lossy(), e);
                 std::process::exit(1);
             }
         }
@@ -265,11 +265,11 @@ fn main() {
         for p in maps {
             if let Some((map, path)) = p.split_once('=') {
                 if let Err(e) = resolver.add_import_map(OsString::from(map), PathBuf::from(path)) {
-                    eprintln!("error: import path ‘{}’: {}", path, e);
+                    eprintln!("error: import path '{}': {}", path, e);
                     std::process::exit(1);
                 }
             } else {
-                eprintln!("error: import map ‘{}’: contains no ‘=’", p);
+                eprintln!("error: import map '{}': contains no '='", p);
                 std::process::exit(1);
             }
         }
@@ -733,7 +733,7 @@ fn create_file(path: &Path) -> File {
     if let Some(parent) = path.parent() {
         if let Err(err) = create_dir_all(parent) {
             eprintln!(
-                "error: cannot create output directory ‘{}’: {}",
+                "error: cannot create output directory '{}': {}",
                 parent.display(),
                 err
             );
@@ -744,7 +744,7 @@ fn create_file(path: &Path) -> File {
     match File::create(path) {
         Ok(file) => file,
         Err(err) => {
-            eprintln!("error: cannot create file ‘{}’: {}", path.display(), err,);
+            eprintln!("error: cannot create file '{}': {}", path.display(), err,);
             std::process::exit(1);
         }
     }

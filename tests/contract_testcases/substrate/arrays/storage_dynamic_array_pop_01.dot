@@ -2,8 +2,8 @@ strict digraph "tests/contract_testcases/substrate/arrays/storage_dynamic_array_
 	contract [label="contract foo\ntests/contract_testcases/substrate/arrays/storage_dynamic_array_pop_01.sol:2:9-22"]
 	var [label="variable bar\nvisibility internal\ntests/contract_testcases/substrate/arrays/storage_dynamic_array_pop_01.sol:3:13-25"]
 	test [label="function test\ncontract: foo\ntests/contract_testcases/substrate/arrays/storage_dynamic_array_pop_01.sol:5:13-35\nsignature test()\nvisibility public\nmutability nonpayable"]
-	diagnostic [label="found contract ‘foo’\nlevel Debug\ntests/contract_testcases/substrate/arrays/storage_dynamic_array_pop_01.sol:2:9-22"]
-	diagnostic_6 [label="method ‘pop()’ not allowed on fixed length array\nlevel Error\ntests/contract_testcases/substrate/arrays/storage_dynamic_array_pop_01.sol:6:21-24"]
+	diagnostic [label="found contract 'foo'\nlevel Debug\ntests/contract_testcases/substrate/arrays/storage_dynamic_array_pop_01.sol:2:9-22"]
+	diagnostic_6 [label="method 'pop()' not allowed on fixed length array\nlevel Error\ntests/contract_testcases/substrate/arrays/storage_dynamic_array_pop_01.sol:6:21-24"]
 	contracts -> contract
 	contract -> var [label="variable"]
 	contract -> test [label="function"]
