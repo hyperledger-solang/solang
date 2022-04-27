@@ -6,7 +6,7 @@ strict digraph "tests/contract_testcases/substrate/functions/mutability_11.sol" 
 	returns [label="returns\nint64 "]
 	return [label="return\nimplicit"]
 	constant [label="constant variable\ntest.foo\nint64\nimplicit"]
-	diagnostic [label="found contract ‘test’\nlevel Debug\ntests/contract_testcases/substrate/functions/mutability_11.sol:1:1-15"]
+	diagnostic [label="found contract 'test'\nlevel Debug\ntests/contract_testcases/substrate/functions/mutability_11.sol:1:1-15"]
 	contracts -> contract
 	contract -> var [label="variable"]
 	var -> number_literal [label="initializer"]

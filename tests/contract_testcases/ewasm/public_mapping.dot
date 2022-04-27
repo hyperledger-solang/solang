@@ -10,7 +10,7 @@ strict digraph "tests/contract_testcases/ewasm/public_mapping.sol" {
 	subscript [label="subscript struct foo.A[] storage\nimplicit"]
 	storage_var [label="storage variable\nfoo.map\nstruct foo.A[] storage\nimplicit"]
 	variable [label="variable: \nuint256\nimplicit"]
-	diagnostic [label="found contract ‘foo’\nlevel Debug\ntests/contract_testcases/ewasm/public_mapping.sol:1:1-14"]
+	diagnostic [label="found contract 'foo'\nlevel Debug\ntests/contract_testcases/ewasm/public_mapping.sol:1:1-14"]
 	diagnostic_15 [label="mapping in a struct variable cannot be public\nlevel Error\ntests/contract_testcases/ewasm/public_mapping.sol:6:5-19"]
 	structs -> A
 	contracts -> contract

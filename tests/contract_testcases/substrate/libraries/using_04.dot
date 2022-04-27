@@ -15,9 +15,9 @@ strict digraph "tests/contract_testcases/substrate/libraries/using_04.sol" {
 	variable_14 [label="variable: b\nuint64\ntests/contract_testcases/substrate/libraries/using_04.sol:12:28-29"]
 	variable_15 [label="variable: a\nuint64\ntests/contract_testcases/substrate/libraries/using_04.sol:12:32-33"]
 	variable_16 [label="variable: b\nuint64\ntests/contract_testcases/substrate/libraries/using_04.sol:12:36-37"]
-	diagnostic [label="found contract ‘test’\nlevel Debug\ntests/contract_testcases/substrate/libraries/using_04.sol:2:9-23"]
-	diagnostic_19 [label="found library ‘ints’\nlevel Debug\ntests/contract_testcases/substrate/libraries/using_04.sol:10:9-22"]
-	diagnostic_20 [label="method ‘max’ does not exist\nlevel Error\ntests/contract_testcases/substrate/libraries/using_04.sol:6:26-29"]
+	diagnostic [label="found contract 'test'\nlevel Debug\ntests/contract_testcases/substrate/libraries/using_04.sol:2:9-23"]
+	diagnostic_19 [label="found library 'ints'\nlevel Debug\ntests/contract_testcases/substrate/libraries/using_04.sol:10:9-22"]
+	diagnostic_20 [label="method 'max' does not exist\nlevel Error\ntests/contract_testcases/substrate/libraries/using_04.sol:6:26-29"]
 	contracts -> contract
 	contract -> using [label="base"]
 	contract -> foo [label="function"]

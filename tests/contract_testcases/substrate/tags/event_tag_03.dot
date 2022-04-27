@@ -1,7 +1,7 @@
 strict digraph "tests/contract_testcases/substrate/tags/event_tag_03.sol" {
 	x [label="name:x\ntests/contract_testcases/substrate/tags/event_tag_03.sol:4:15-16\nfield name:f1 ty:uint32 indexed:no\nfield name:f2 ty:uint32 indexed:no"]
 	tags [label="param: asdad\nparam: bar"]
-	diagnostic [label="event ‘x‘ has never been emitted\nlevel Warning\ntests/contract_testcases/substrate/tags/event_tag_03.sol:4:15-16"]
+	diagnostic [label="event 'x' has never been emitted\nlevel Warning\ntests/contract_testcases/substrate/tags/event_tag_03.sol:4:15-16"]
 	events -> x
 	x -> tags [label="tags"]
 	diagnostics -> diagnostic [label="Warning"]

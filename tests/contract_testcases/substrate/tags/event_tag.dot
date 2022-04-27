@@ -1,6 +1,6 @@
 strict digraph "tests/contract_testcases/substrate/tags/event_tag.sol" {
 	x [label="name:x\ntests/contract_testcases/substrate/tags/event_tag.sol:3:15-16\nfield name:f ty:uint32 indexed:no"]
-	diagnostic [label="tag ‘@param’ missing parameter name\nlevel Error\ntests/contract_testcases/substrate/tags/event_tag.sol:2:14-19"]
+	diagnostic [label="tag '@param' missing parameter name\nlevel Error\ntests/contract_testcases/substrate/tags/event_tag.sol:2:14-19"]
 	events -> x
 	diagnostics -> diagnostic [label="Error"]
 }

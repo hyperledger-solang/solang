@@ -1,7 +1,7 @@
 strict digraph "tests/contract_testcases/substrate/libraries/restrictions_08.sol" {
 	contract [label="contract c\ntests/contract_testcases/substrate/libraries/restrictions_08.sol:2:9-19"]
-	diagnostic [label="found library ‘c’\nlevel Debug\ntests/contract_testcases/substrate/libraries/restrictions_08.sol:2:9-19"]
-	diagnostic_5 [label="library ‘c’ is not allowed to have contract variable ‘x’\nlevel Error\ntests/contract_testcases/substrate/libraries/restrictions_08.sol:3:13-18"]
+	diagnostic [label="found library 'c'\nlevel Debug\ntests/contract_testcases/substrate/libraries/restrictions_08.sol:2:9-19"]
+	diagnostic_5 [label="library 'c' is not allowed to have contract variable 'x'\nlevel Error\ntests/contract_testcases/substrate/libraries/restrictions_08.sol:3:13-18"]
 	contracts -> contract
 	diagnostics -> diagnostic [label="Debug"]
 	diagnostics -> diagnostic_5 [label="Error"]

@@ -15,7 +15,7 @@ suite('Extension Test Suite', function () {
   test('Testing for Row and Col pos.', async () => {
     await testdiagnos(diagnosdoc1, [
       {
-        message: 'unrecognised token `aa\', expected ";", "="',
+        message: `unrecognised token 'aa', expected ";", "="`,
         range: toRange(4, 0, 5, 2),
         severity: vscode.DiagnosticSeverity.Error,
         source: 'solidity',
@@ -29,7 +29,7 @@ suite('Extension Test Suite', function () {
     await testdiagnos(diagnosdoc2, [
       {
         message:
-          'unrecognised token `}\', expected "!", "(", "+", "++", "-", "--", "[", "address", "bool", "byte", "bytes", "case", "default", "delete", "error", "false", "function", "leave", "mapping", "new", "payable", "revert", "string", "switch", "this", "true", "type", "~", Bytes, Int, Uint, address, hexnumber, hexstring, identifier, number, rational, string',
+          `unrecognised token '}', expected "!", "(", "+", "++", "-", "--", "[", "address", "bool", "byte", "bytes", "case", "default", "delete", "error", "false", "function", "leave", "mapping", "new", "payable", "revert", "string", "switch", "this", "true", "type", "~", Bytes, Int, Uint, address, hexnumber, hexstring, identifier, number, rational, string`,
         range: toRange(13, 1, 13, 2),
         severity: vscode.DiagnosticSeverity.Error,
         source: 'solidity',
@@ -48,13 +48,13 @@ suite('Extension Test Suite', function () {
   test('Testing for diagnostics warnings.', async () => {
     await testdiagnos(diagnosdoc4, [
       {
-        message: 'unknown pragma ‘foo’ with value ‘bar’ ignored',
+        message: `unknown pragma 'foo' with value 'bar' ignored`,
         range: toRange(0, 0, 0, 14),
         severity: vscode.DiagnosticSeverity.Warning,
         source: `solidity`,
       },
       {
-        message: 'function can be declared ‘pure’',
+        message: `function can be declared 'pure'`,
         range: toRange(3, 5, 3, 40),
         severity: vscode.DiagnosticSeverity.Warning,
         source: `solidity`,

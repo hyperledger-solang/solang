@@ -104,9 +104,9 @@ pub fn variable_decl<'a>(
                 if let Some(prev) = &has_immutable {
                     ns.diagnostics.push(Diagnostic::error_with_note(
                         *loc,
-                        "duplicate ‘immutable’ attribute".to_string(),
+                        "duplicate 'immutable' attribute".to_string(),
                         *prev,
-                        "previous ‘immutable’ attribute".to_string(),
+                        "previous 'immutable' attribute".to_string(),
                     ));
                 }
                 has_immutable = Some(*loc);
@@ -115,9 +115,9 @@ pub fn variable_decl<'a>(
                 if let Some(prev) = &has_override {
                     ns.diagnostics.push(Diagnostic::error_with_note(
                         *loc,
-                        "duplicate ‘override’ attribute".to_string(),
+                        "duplicate 'override' attribute".to_string(),
                         *prev,
-                        "previous ‘override’ attribute".to_string(),
+                        "previous 'override' attribute".to_string(),
                     ));
                 }
                 has_override = Some(*loc);
@@ -125,7 +125,7 @@ pub fn variable_decl<'a>(
             pt::VariableAttribute::Visibility(v) if contract_no.is_none() => {
                 ns.diagnostics.push(Diagnostic::error(
                     v.loc().unwrap(),
-                    format!("‘{}’: global variable cannot have visibility specifier", v),
+                    format!("'{}': global variable cannot have visibility specifier", v),
                 ));
                 return None;
             }
@@ -140,9 +140,9 @@ pub fn variable_decl<'a>(
                 if let Some(e) = &visibility {
                     ns.diagnostics.push(Diagnostic::error_with_note(
                         v.loc().unwrap(),
-                        format!("variable visibility redeclared `{}'", v),
+                        format!("variable visibility redeclared '{}'", v),
                         e.loc().unwrap(),
-                        format!("location of previous declaration of `{}'", e),
+                        format!("location of previous declaration of '{}'", e),
                     ));
                     return None;
                 }
@@ -156,7 +156,7 @@ pub fn variable_decl<'a>(
         if constant {
             ns.diagnostics.push(Diagnostic::error(
                 *loc,
-                "variable cannot be declared both ‘immutable’ and ‘constant’".to_string(),
+                "variable cannot be declared both 'immutable' and 'constant'".to_string(),
             ));
             constant = false;
         }
@@ -172,7 +172,7 @@ pub fn variable_decl<'a>(
     } else if let Some(loc) = &has_override {
         ns.diagnostics.push(Diagnostic::error(
             *loc,
-            "only public variable can be declared ‘override’".to_string(),
+            "only public variable can be declared 'override'".to_string(),
         ));
         has_override = None;
     }
@@ -184,7 +184,7 @@ pub fn variable_decl<'a>(
             ns.diagnostics.push(Diagnostic::error(
                 def.loc,
                 format!(
-                    "{} ‘{}’ is not allowed to have contract variable ‘{}’",
+                    "{} '{}' is not allowed to have contract variable '{}'",
                     contract.ty, contract.name.name, def.name.name
                 ),
             ));
@@ -216,18 +216,18 @@ pub fn variable_decl<'a>(
         ns.diagnostics.push(Diagnostic::error(
             def.ty.loc(),
             format!(
-                "variable of type internal function cannot be ‘{}’",
+                "variable of type internal function cannot be '{}'",
                 visibility
             ),
         ));
         return None;
     } else if let Some(ty) = ty.contains_builtins(ns, BuiltinStruct::AccountInfo) {
-        let message = format!("variable cannot be of builtin type ‘{}’", ty.to_string(ns));
+        let message = format!("variable cannot be of builtin type '{}'", ty.to_string(ns));
         ns.diagnostics
             .push(Diagnostic::error(def.ty.loc(), message));
         return None;
     } else if let Some(ty) = ty.contains_builtins(ns, BuiltinStruct::AccountMeta) {
-        let message = format!("variable cannot be of builtin type ‘{}’", ty.to_string(ns));
+        let message = format!("variable cannot be of builtin type '{}'", ty.to_string(ns));
         ns.diagnostics
             .push(Diagnostic::error(def.ty.loc(), message));
         return None;

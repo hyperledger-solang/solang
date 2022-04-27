@@ -56,8 +56,8 @@ strict digraph "tests/contract_testcases/substrate/arrays/lucas.sol" {
 	storage_load_55 [label="storage load bytes32\ntests/contract_testcases/substrate/arrays/lucas.sol:19:39-51"]
 	storage_var_56 [label="storage variable\nTest.baRR\nbytes32 storage\ntests/contract_testcases/substrate/arrays/lucas.sol:19:46-50"]
 	number_literal_57 [label="uint256 literal: 248\ntests/contract_testcases/substrate/arrays/lucas.sol:19:39-51"]
-	diagnostic [label="found contract ‘Test’\nlevel Debug\ntests/contract_testcases/substrate/arrays/lucas.sol:1:1-15"]
-	diagnostic_60 [label="storage variable ‘baRR‘ has been assigned, but never read\nlevel Warning\ntests/contract_testcases/substrate/arrays/lucas.sol:3:9-21"]
+	diagnostic [label="found contract 'Test'\nlevel Debug\ntests/contract_testcases/substrate/arrays/lucas.sol:1:1-15"]
+	diagnostic_60 [label="storage variable 'baRR' has been assigned, but never read\nlevel Warning\ntests/contract_testcases/substrate/arrays/lucas.sol:3:9-21"]
 	contracts -> contract
 	contract -> var [label="variable"]
 	contract -> var_3 [label="variable"]

@@ -189,9 +189,9 @@ pub fn resolve_fields(delay: ResolveFields, file_no: usize, ns: &mut Namespace) 
                     if structs_visited.contains(&struct_no) {
                         ns.diagnostics.push(Diagnostic::error_with_note(
                             def.loc,
-                            format!("struct ‘{}’ has infinite size", def.name),
+                            format!("struct '{}' has infinite size", def.name),
                             field.loc,
-                            format!("recursive field ‘{}’", field.name_as_str()),
+                            format!("recursive field '{}'", field.name_as_str()),
                         ));
                     } else {
                         structs_visited.push(struct_no);
@@ -253,7 +253,7 @@ fn resolve_contract<'a>(
         ns.diagnostics.push(Diagnostic::error(
             def.name.loc,
             format!(
-                "contract name ‘{}’ is reserved file name on Windows",
+                "contract name '{}' is reserved file name on Windows",
                 def.name.name
             ),
         ));
@@ -365,12 +365,12 @@ pub fn struct_decl(
             ns.diagnostics.push(Diagnostic::error_with_note(
                 field.name.loc,
                 format!(
-                    "struct ‘{}’ has duplicate struct field ‘{}’",
+                    "struct '{}' has duplicate struct field '{}'",
                     def.name.name, field.name.name
                 ),
                 other.loc,
                 format!(
-                    "location of previous declaration of ‘{}’",
+                    "location of previous declaration of '{}'",
                     other.name_as_str()
                 ),
             ));
@@ -386,7 +386,7 @@ pub fn struct_decl(
             ns.diagnostics.push(Diagnostic::error(
                 storage.loc(),
                 format!(
-                    "storage location ‘{}’ not allowed for struct field",
+                    "storage location '{}' not allowed for struct field",
                     storage
                 ),
             ));
@@ -410,7 +410,7 @@ pub fn struct_decl(
         if valid {
             ns.diagnostics.push(Diagnostic::error(
                 def.name.loc,
-                format!("struct definition for ‘{}’ has no fields", def.name.name),
+                format!("struct definition for '{}' has no fields", def.name.name),
             ));
         }
 
@@ -476,12 +476,12 @@ fn event_decl(
                 ns.diagnostics.push(Diagnostic::error_with_note(
                     name.loc,
                     format!(
-                        "event ‘{}’ has duplicate field name ‘{}’",
+                        "event '{}' has duplicate field name '{}'",
                         def.name.name, name.name
                     ),
                     other.loc,
                     format!(
-                        "location of previous declaration of ‘{}’",
+                        "location of previous declaration of '{}'",
                         other.name_as_str()
                     ),
                 ));
@@ -514,7 +514,7 @@ fn event_decl(
         ns.diagnostics.push(Diagnostic::error(
             def.name.loc,
             format!(
-                "anonymous event definition for ‘{}’ has {} indexed fields where 4 permitted",
+                "anonymous event definition for '{}' has {} indexed fields where 4 permitted",
                 def.name.name, indexed_fields
             ),
         ));
@@ -524,7 +524,7 @@ fn event_decl(
         ns.diagnostics.push(Diagnostic::error(
             def.name.loc,
             format!(
-                "event definition for ‘{}’ has {} indexed fields where 3 permitted",
+                "event definition for '{}' has {} indexed fields where 3 permitted",
                 def.name.name, indexed_fields
             ),
         ));
@@ -562,14 +562,14 @@ fn enum_decl(
     if enum_.values.is_empty() {
         ns.diagnostics.push(Diagnostic::error(
             enum_.name.loc,
-            format!("enum ‘{}’ has no fields", enum_.name.name),
+            format!("enum '{}' has no fields", enum_.name.name),
         ));
         valid = false;
     } else if enum_.values.len() > 256 {
         ns.diagnostics.push(Diagnostic::error(
             enum_.name.loc,
             format!(
-                "enum ‘{}’ has {} fields, which is more than the 256 limit",
+                "enum '{}' has {} fields, which is more than the 256 limit",
                 enum_.name.name,
                 enum_.values.len()
             ),

@@ -138,8 +138,8 @@ strict digraph "tests/contract_testcases/ewasm/standalone_call.sol" {
 	number_literal_138 [label="int256 literal: 2\ntests/contract_testcases/ewasm/standalone_call.sol:54:22-23"]
 	return_139 [label="return\ntests/contract_testcases/ewasm/standalone_call.sol:56:9-17"]
 	variable_140 [label="variable: b\nint256\ntests/contract_testcases/ewasm/standalone_call.sol:56:16-17"]
-	diagnostic [label="found contract ‘foo’\nlevel Debug\ntests/contract_testcases/ewasm/standalone_call.sol:1:1-14"]
-	diagnostic_143 [label="found contract ‘BABYLINK’\nlevel Debug\ntests/contract_testcases/ewasm/standalone_call.sol:6:1-7:19"]
+	diagnostic [label="found contract 'foo'\nlevel Debug\ntests/contract_testcases/ewasm/standalone_call.sol:1:1-14"]
+	diagnostic_143 [label="found contract 'BABYLINK'\nlevel Debug\ntests/contract_testcases/ewasm/standalone_call.sol:6:1-7:19"]
 	structs -> tts
 	contracts -> contract
 	contract -> bar [label="function"]

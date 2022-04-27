@@ -9,10 +9,10 @@ strict digraph "tests/contract_testcases/substrate/contracts/external_call_01.so
 	returns_8 [label="returns\nint32 "]
 	return [label="return\ntests/contract_testcases/substrate/contracts/external_call_01.sol:11:17-25"]
 	number_literal [label="int32 literal: 1\ntests/contract_testcases/substrate/contracts/external_call_01.sol:11:24-25"]
-	diagnostic [label="found contract ‘c’\nlevel Debug\ntests/contract_testcases/substrate/contracts/external_call_01.sol:2:9-20"]
-	diagnostic_13 [label="found contract ‘b’\nlevel Debug\ntests/contract_testcases/substrate/contracts/external_call_01.sol:9:9-20"]
+	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/contracts/external_call_01.sol:2:9-20"]
+	diagnostic_13 [label="found contract 'b'\nlevel Debug\ntests/contract_testcases/substrate/contracts/external_call_01.sol:9:9-20"]
 	diagnostic_14 [label="function expects 2 arguments, 1 provided\nlevel Error\ntests/contract_testcases/substrate/contracts/external_call_01.sol:5:24-43"]
-	diagnostic_15 [label="declaration of ‘b’ shadows contract name\nlevel Warning\ntests/contract_testcases/substrate/contracts/external_call_01.sol:10:42-43"]
+	diagnostic_15 [label="declaration of 'b' shadows contract name\nlevel Warning\ntests/contract_testcases/substrate/contracts/external_call_01.sol:10:42-43"]
 	note [label="previous declaration of contract name\ntests/contract_testcases/substrate/contracts/external_call_01.sol:9:9-20"]
 	contracts -> contract
 	contract -> var [label="variable"]

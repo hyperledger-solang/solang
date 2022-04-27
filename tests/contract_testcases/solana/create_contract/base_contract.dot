@@ -4,8 +4,8 @@ strict digraph "tests/contract_testcases/solana/create_contract/base_contract.so
 	contract [label="contract Math\ntests/contract_testcases/solana/create_contract/base_contract.sol:2:9-23"]
 	contract_7 [label="contract IsMath\ntests/contract_testcases/solana/create_contract/base_contract.sol:8:9-32"]
 	base [label="base Math\ntests/contract_testcases/solana/create_contract/base_contract.sol:8:28-32"]
-	diagnostic [label="found contract ‘Math’\nlevel Debug\ntests/contract_testcases/solana/create_contract/base_contract.sol:2:9-23"]
-	diagnostic_11 [label="found contract ‘IsMath’\nlevel Debug\ntests/contract_testcases/solana/create_contract/base_contract.sol:8:9-32"]
+	diagnostic [label="found contract 'Math'\nlevel Debug\ntests/contract_testcases/solana/create_contract/base_contract.sol:2:9-23"]
+	diagnostic_11 [label="found contract 'IsMath'\nlevel Debug\ntests/contract_testcases/solana/create_contract/base_contract.sol:8:9-32"]
 	enums -> MathError
 	structs -> WithMath
 	contracts -> contract

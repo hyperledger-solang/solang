@@ -4,7 +4,7 @@ strict digraph "tests/contract_testcases/substrate/inheritance/inherit_04.sol" {
 	contract_4 [label="contract b\ntests/contract_testcases/substrate/inheritance/inherit_04.sol:7:9-24"]
 	base_5 [label="base c\ntests/contract_testcases/substrate/inheritance/inherit_04.sol:7:23-24"]
 	contract_6 [label="contract c\ntests/contract_testcases/substrate/inheritance/inherit_04.sol:12:9-24"]
-	diagnostic [label="base ‘a’ from contract ‘c’ is cyclic\nlevel Error\ntests/contract_testcases/substrate/inheritance/inherit_04.sol:12:23-24"]
+	diagnostic [label="base 'a' from contract 'c' is cyclic\nlevel Error\ntests/contract_testcases/substrate/inheritance/inherit_04.sol:12:23-24"]
 	contracts -> contract
 	contract -> base [label="base"]
 	contracts -> contract_4

@@ -1,7 +1,7 @@
 strict digraph "tests/contract_testcases/substrate/tags/contract_02.sol" {
 	contract [label="contract test\ntests/contract_testcases/substrate/tags/contract_02.sol:10:9-23"]
 	tags [label="notice: So Hello, World\ntitle: Test\nauthor: Mr Foo\ndev: this is a contract"]
-	diagnostic [label="found contract ‘test’\nlevel Debug\ntests/contract_testcases/substrate/tags/contract_02.sol:10:9-23"]
+	diagnostic [label="found contract 'test'\nlevel Debug\ntests/contract_testcases/substrate/tags/contract_02.sol:10:9-23"]
 	contracts -> contract
 	contract -> tags [label="tags"]
 	diagnostics -> diagnostic [label="Debug"]

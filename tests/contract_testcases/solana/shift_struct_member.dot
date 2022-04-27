@@ -24,7 +24,7 @@ strict digraph "tests/contract_testcases/solana/shift_struct_member.sol" {
 	variable_24 [label="variable: self\nstruct FixedPoint.uq144x112\ntests/contract_testcases/solana/shift_struct_member.sol:19:24-28"]
 	zero_ext_25 [label="zero extend uint256\ntests/contract_testcases/solana/shift_struct_member.sol:19:32-34"]
 	number_literal_26 [label="uint8 literal: 112\ntests/contract_testcases/solana/shift_struct_member.sol:19:35-38"]
-	diagnostic [label="found library ‘FixedPoint’\nlevel Debug\ntests/contract_testcases/solana/shift_struct_member.sol:1:71-2:20"]
+	diagnostic [label="found library 'FixedPoint'\nlevel Debug\ntests/contract_testcases/solana/shift_struct_member.sol:1:71-2:20"]
 	structs -> uq144x112
 	structs -> uq112x112
 	contracts -> contract

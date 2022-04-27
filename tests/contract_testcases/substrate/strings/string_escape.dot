@@ -4,7 +4,7 @@ strict digraph "tests/contract_testcases/substrate/strings/string_escape.sol" {
 	var_decl [label="variable decl string f\ntests/contract_testcases/substrate/strings/string_escape.sol:4:21-36"]
 	alloc_array [label="alloc array string\ninitializer: \ntests/contract_testcases/substrate/strings/string_escape.sol:4:32-36"]
 	number_literal [label="uint32 literal: 0\ntests/contract_testcases/substrate/strings/string_escape.sol:4:32-36"]
-	diagnostic [label="found contract ‘c’\nlevel Debug\ntests/contract_testcases/substrate/strings/string_escape.sol:2:9-20"]
+	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/strings/string_escape.sol:2:9-20"]
 	diagnostic_8 [label="\x escape should be followed by two hex digits\nlevel Error\ntests/contract_testcases/substrate/strings/string_escape.sol:4:33-34"]
 	contracts -> contract
 	contract -> foo [label="function"]

@@ -2,7 +2,7 @@ strict digraph "tests/contract_testcases/solana/rational/rational.sol" {
 	contract [label="contract foo\ntests/contract_testcases/solana/rational/rational.sol:2:9-22"]
 	test [label="function test\ncontract: foo\ntests/contract_testcases/solana/rational/rational.sol:3:13-50\nsignature test()\nvisibility public\nmutability nonpayable"]
 	returns [label="returns\nuint256 "]
-	diagnostic [label="found contract ‘foo’\nlevel Debug\ntests/contract_testcases/solana/rational/rational.sol:2:9-22"]
+	diagnostic [label="found contract 'foo'\nlevel Debug\ntests/contract_testcases/solana/rational/rational.sol:2:9-22"]
 	diagnostic_7 [label="conversion to uint256 from rational not allowed\nlevel Error\ntests/contract_testcases/solana/rational/rational.sol:4:26-29"]
 	contracts -> contract
 	contract -> test [label="function"]

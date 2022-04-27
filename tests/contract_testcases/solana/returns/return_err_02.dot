@@ -14,7 +14,7 @@ strict digraph "tests/contract_testcases/solana/returns/return_err_02.sol" {
 	storage_var_14 [label="storage variable\nfoo.val\nuint256 storage\ntests/contract_testcases/solana/returns/return_err_02.sol:5:35-38"]
 	get [label="function get\ncontract: foo\ntests/contract_testcases/solana/returns/return_err_02.sol:8:13-55\nsignature get()\nvisibility public\nmutability nonpayable"]
 	returns_16 [label="returns\nuint256 \nuint256 "]
-	diagnostic [label="found contract ‘foo’\nlevel Debug\ntests/contract_testcases/solana/returns/return_err_02.sol:2:9-22"]
+	diagnostic [label="found contract 'foo'\nlevel Debug\ntests/contract_testcases/solana/returns/return_err_02.sol:2:9-22"]
 	diagnostic_19 [label="incorrect number of return values, expected 2 but got 3\nlevel Error\ntests/contract_testcases/solana/returns/return_err_02.sol:9:17-27"]
 	contracts -> contract
 	contract -> var [label="variable"]

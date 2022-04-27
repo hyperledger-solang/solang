@@ -1,8 +1,8 @@
 strict digraph "tests/contract_testcases/substrate/builtins/tx_03.sol" {
 	contract [label="contract bar\ntests/contract_testcases/substrate/builtins/tx_03.sol:2:9-22"]
 	test [label="function test\ncontract: bar\ntests/contract_testcases/substrate/builtins/tx_03.sol:3:13-35\nsignature test()\nvisibility public\nmutability nonpayable"]
-	diagnostic [label="found contract ‘bar’\nlevel Debug\ntests/contract_testcases/substrate/builtins/tx_03.sol:2:9-22"]
-	diagnostic_5 [label="builtin ‘tx.origin’ does not exist\nlevel Error\ntests/contract_testcases/substrate/builtins/tx_03.sol:4:27-29"]
+	diagnostic [label="found contract 'bar'\nlevel Debug\ntests/contract_testcases/substrate/builtins/tx_03.sol:2:9-22"]
+	diagnostic_5 [label="builtin 'tx.origin' does not exist\nlevel Error\ntests/contract_testcases/substrate/builtins/tx_03.sol:4:27-29"]
 	contracts -> contract
 	contract -> test [label="function"]
 	diagnostics -> diagnostic [label="Debug"]

@@ -10,7 +10,7 @@ strict digraph "tests/contract_testcases/substrate/variables/immutable_03.sol" {
 	storage_var [label="storage variable\nx.y\nint256[] storage\nimplicit"]
 	variable [label="variable: \nuint256\nimplicit"]
 	foo [label="function foo\ncontract: x\ntests/contract_testcases/substrate/variables/immutable_03.sol:4:13-34\nsignature foo()\nvisibility public\nmutability nonpayable"]
-	diagnostic [label="found contract ‘x’\nlevel Debug\ntests/contract_testcases/substrate/variables/immutable_03.sol:1:1-12"]
+	diagnostic [label="found contract 'x'\nlevel Debug\ntests/contract_testcases/substrate/variables/immutable_03.sol:1:1-12"]
 	diagnostic_14 [label="cannot call method on immutable array outside of constructor\nlevel Error\ntests/contract_testcases/substrate/variables/immutable_03.sol:5:17-25"]
 	contracts -> contract
 	contract -> var [label="variable"]

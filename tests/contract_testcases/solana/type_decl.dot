@@ -4,8 +4,8 @@ strict digraph "tests/contract_testcases/solana/type_decl.sol" {
 	contract [label="contract x\ntests/contract_testcases/solana/type_decl.sol:3:1-4:12"]
 	f [label="function f\ncontract: x\ntests/contract_testcases/solana/type_decl.sol:7:2-33\nsignature f(bytes32,bool)\nvisibility public\nmutability nonpayable"]
 	parameters [label="parameters\nusertype Addr \nusertype x.Binary "]
-	diagnostic [label="found contract ‘x’\nlevel Debug\ntests/contract_testcases/solana/type_decl.sol:3:1-4:12"]
-	diagnostic_10 [label="function can be declared ‘pure’\nlevel Warning\ntests/contract_testcases/solana/type_decl.sol:7:2-33"]
+	diagnostic [label="found contract 'x'\nlevel Debug\ntests/contract_testcases/solana/type_decl.sol:3:1-4:12"]
+	diagnostic_10 [label="function can be declared 'pure'\nlevel Warning\ntests/contract_testcases/solana/type_decl.sol:7:2-33"]
 	types -> Addr
 	types -> Binary
 	contracts -> contract

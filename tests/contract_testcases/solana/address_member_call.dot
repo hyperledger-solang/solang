@@ -80,8 +80,8 @@ strict digraph "tests/contract_testcases/solana/address_member_call.sol" {
 	variable_81 [label="variable: _receivers\naddress[]\ntests/contract_testcases/solana/address_member_call.sol:40:13-23"]
 	variable_82 [label="variable: _amounts\nuint64[]\ntests/contract_testcases/solana/address_member_call.sol:41:13-21"]
 	variable_83 [label="variable: _payment\nstring\ntests/contract_testcases/solana/address_member_call.sol:42:13-21"]
-	diagnostic [label="pragma ‘solidity’ is ignored\nlevel Debug\ntests/contract_testcases/solana/address_member_call.sol:1:32-2:24"]
-	diagnostic_86 [label="found contract ‘MyContract’\nlevel Debug\ntests/contract_testcases/solana/address_member_call.sol:3:1-4:21"]
+	diagnostic [label="pragma 'solidity' is ignored\nlevel Debug\ntests/contract_testcases/solana/address_member_call.sol:1:32-2:24"]
+	diagnostic_86 [label="found contract 'MyContract'\nlevel Debug\ntests/contract_testcases/solana/address_member_call.sol:3:1-4:21"]
 	events -> Receipt
 	contracts -> contract
 	contract -> send [label="function"]

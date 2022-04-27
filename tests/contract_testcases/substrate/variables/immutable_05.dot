@@ -7,9 +7,9 @@ strict digraph "tests/contract_testcases/substrate/variables/immutable_05.sol" {
 	return [label="return\nimplicit"]
 	storage_load [label="storage load int256\nimplicit"]
 	storage_var [label="storage variable\nx.y\nint256 storage\nimplicit"]
-	diagnostic [label="found contract ‘x’\nlevel Debug\ntests/contract_testcases/substrate/variables/immutable_05.sol:1:1-12"]
-	diagnostic_11 [label="duplicate ‘immutable’ attribute\nlevel Error\ntests/contract_testcases/substrate/variables/immutable_05.sol:2:34-43"]
-	note [label="previous ‘immutable’ attribute\ntests/contract_testcases/substrate/variables/immutable_05.sol:2:17-26"]
+	diagnostic [label="found contract 'x'\nlevel Debug\ntests/contract_testcases/substrate/variables/immutable_05.sol:1:1-12"]
+	diagnostic_11 [label="duplicate 'immutable' attribute\nlevel Error\ntests/contract_testcases/substrate/variables/immutable_05.sol:2:34-43"]
+	note [label="previous 'immutable' attribute\ntests/contract_testcases/substrate/variables/immutable_05.sol:2:17-26"]
 	contracts -> contract
 	contract -> var [label="variable"]
 	var -> number_literal [label="initializer"]

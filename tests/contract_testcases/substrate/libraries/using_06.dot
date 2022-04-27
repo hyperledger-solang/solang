@@ -22,8 +22,8 @@ strict digraph "tests/contract_testcases/substrate/libraries/using_06.sol" {
 	returns_21 [label="returns\nuint64 "]
 	return_22 [label="return\ntests/contract_testcases/substrate/libraries/using_06.sol:17:17-25"]
 	variable_23 [label="variable: a\nuint64\ntests/contract_testcases/substrate/libraries/using_06.sol:17:24-25"]
-	diagnostic [label="found contract ‘test’\nlevel Debug\ntests/contract_testcases/substrate/libraries/using_06.sol:2:9-23"]
-	diagnostic_26 [label="found library ‘ints’\nlevel Debug\ntests/contract_testcases/substrate/libraries/using_06.sol:10:9-22"]
+	diagnostic [label="found contract 'test'\nlevel Debug\ntests/contract_testcases/substrate/libraries/using_06.sol:2:9-23"]
+	diagnostic_26 [label="found library 'ints'\nlevel Debug\ntests/contract_testcases/substrate/libraries/using_06.sol:10:9-22"]
 	diagnostic_27 [label="cannot find overloaded library function which matches signature\nlevel Error\ntests/contract_testcases/substrate/libraries/using_06.sol:6:24-39"]
 	contracts -> contract
 	contract -> using [label="base"]

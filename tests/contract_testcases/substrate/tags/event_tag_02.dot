@@ -1,7 +1,7 @@
 strict digraph "tests/contract_testcases/substrate/tags/event_tag_02.sol" {
 	x [label="name:x\ntests/contract_testcases/substrate/tags/event_tag_02.sol:4:15-16\nfield name:f ty:uint32 indexed:no"]
 	tags [label="param: asdad"]
-	diagnostic [label="duplicate tag ‘@param’ for ‘f’\nlevel Error\ntests/contract_testcases/substrate/tags/event_tag_02.sol:3:14-19"]
+	diagnostic [label="duplicate tag '@param' for 'f'\nlevel Error\ntests/contract_testcases/substrate/tags/event_tag_02.sol:3:14-19"]
 	events -> x
 	x -> tags [label="tags"]
 	diagnostics -> diagnostic [label="Error"]

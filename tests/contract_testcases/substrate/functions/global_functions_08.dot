@@ -7,9 +7,9 @@ strict digraph "tests/contract_testcases/substrate/functions/global_functions_08
 	structmember [label="struct member #0 int32 storage\ntests/contract_testcases/substrate/functions/global_functions_08.sol:7:42-44"]
 	variable [label="variable: x\nstruct S storage\ntests/contract_testcases/substrate/functions/global_functions_08.sol:7:40-41"]
 	number_literal [label="int32 literal: 102\ntests/contract_testcases/substrate/functions/global_functions_08.sol:7:47-50"]
-	diagnostic [label="declaration of ‘x’ shadows function\nlevel Warning\ntests/contract_testcases/substrate/functions/global_functions_08.sol:7:30-31"]
+	diagnostic [label="declaration of 'x' shadows function\nlevel Warning\ntests/contract_testcases/substrate/functions/global_functions_08.sol:7:30-31"]
 	note [label="previous declaration of function\ntests/contract_testcases/substrate/functions/global_functions_08.sol:7:18-19"]
-	diagnostic_14 [label="function declared ‘view’ but this expression writes to state\nlevel Error\ntests/contract_testcases/substrate/functions/global_functions_08.sol:7:42-44"]
+	diagnostic_14 [label="function declared 'view' but this expression writes to state\nlevel Error\ntests/contract_testcases/substrate/functions/global_functions_08.sol:7:42-44"]
 	structs -> S
 	free_functions -> x [label="function"]
 	x -> parameters [label="parameters"]

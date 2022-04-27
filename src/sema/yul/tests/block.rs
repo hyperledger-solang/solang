@@ -44,7 +44,7 @@ contract testTypes {
     assert_eq!(ns.diagnostics.len(), 3);
     assert!(ns
         .diagnostics
-        .contains_message("found contract ‘testTypes’"));
+        .contains_message("found contract 'testTypes'"));
     assert!(ns
         .diagnostics
         .contains_message("inline assembly is not yet supported"));
@@ -100,7 +100,7 @@ contract testTypes {
     assert_eq!(ns.diagnostics.len(), 2);
     assert!(ns
         .diagnostics
-        .contains_message("found contract ‘testTypes’"));
+        .contains_message("found contract 'testTypes'"));
     assert!(ns
         .diagnostics
         .contains_message("inline assembly is not yet supported"));
@@ -153,7 +153,7 @@ contract testTypes {
     assert_eq!(ns.diagnostics.len(), 2);
     assert!(ns
         .diagnostics
-        .contains_message("found contract ‘testTypes’"));
+        .contains_message("found contract 'testTypes'"));
     assert!(ns
         .diagnostics
         .contains_message("inline assembly is not yet supported"));
@@ -219,7 +219,7 @@ contract testTypes {
     assert_eq!(ns.diagnostics.len(), 2);
     assert!(ns
         .diagnostics
-        .contains_message("found contract ‘testTypes’"));
+        .contains_message("found contract 'testTypes'"));
     assert!(ns
         .diagnostics
         .contains_message("inline assembly is not yet supported"));
@@ -248,7 +248,7 @@ contract testTypes {
     assert_eq!(ns.diagnostics.len(), 2);
     assert!(ns
         .diagnostics
-        .contains_message("found contract ‘testTypes’"));
+        .contains_message("found contract 'testTypes'"));
     assert!(ns
         .diagnostics
         .contains_message("inline assembly is not yet supported"));
@@ -297,12 +297,12 @@ contract testTypes {
     assert_eq!(ns.diagnostics.len(), 4);
     assert!(ns
         .diagnostics
-        .contains_message("found contract ‘testTypes’"));
+        .contains_message("found contract 'testTypes'"));
     assert!(ns
         .diagnostics
         .contains_message("inline assembly is not yet supported"));
     assert!(ns.diagnostics.contains_message("unreachable yul statement"));
     assert!(ns
         .diagnostics
-        .contains_message("yul variable ‘x‘ has never been read"));
+        .contains_message("yul variable 'x' has never been read"));
 }

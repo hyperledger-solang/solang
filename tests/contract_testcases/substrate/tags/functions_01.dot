@@ -3,8 +3,8 @@ strict digraph "tests/contract_testcases/substrate/tags/functions_01.sol" {
 	foo [label="function foo\ncontract: c\ntests/contract_testcases/substrate/tags/functions_01.sol:5:13-39\nsignature foo(int256)\nvisibility public\nmutability nonpayable"]
 	tags [label="param: "]
 	parameters [label="parameters\nint256 f"]
-	diagnostic [label="found contract ‘c’\nlevel Debug\ntests/contract_testcases/substrate/tags/functions_01.sol:2:9-20"]
-	diagnostic_7 [label="tag ‘@param’ no field ‘g’\nlevel Error\ntests/contract_testcases/substrate/tags/functions_01.sol:4:24-25"]
+	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/tags/functions_01.sol:2:9-20"]
+	diagnostic_7 [label="tag '@param' no field 'g'\nlevel Error\ntests/contract_testcases/substrate/tags/functions_01.sol:4:24-25"]
 	contracts -> contract
 	contract -> foo [label="function"]
 	foo -> tags [label="tags"]

@@ -108,7 +108,7 @@ fn enum_import() {
 
     assert_eq!(
         ns.diagnostics.first_error(),
-        "import ‘b.sol’ does not export ‘enum_c’"
+        "import 'b.sol' does not export 'enum_c'"
     );
 
     // from has special handling to avoid making it a keyword
@@ -127,7 +127,7 @@ fn enum_import() {
 
     assert_eq!(
         ns.diagnostics.first_error(),
-        "‘frum’ found where ‘from’ expected"
+        "'frum' found where 'from' expected"
     );
 
     let mut cache = FileResolver::new();
@@ -145,7 +145,7 @@ fn enum_import() {
 
     assert_eq!(
         ns.diagnostics.first_error(),
-        "‘frum’ found where ‘from’ expected"
+        "'frum' found where 'from' expected"
     );
 }
 
@@ -203,7 +203,7 @@ fn struct_import() {
     let ns =
         solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_substrate());
 
-    assert_eq!(ns.diagnostics.first_error(), "type ‘struct_a’ not found");
+    assert_eq!(ns.diagnostics.first_error(), "type 'struct_a' not found");
 }
 
 #[test]

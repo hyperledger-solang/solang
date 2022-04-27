@@ -8,8 +8,8 @@ strict digraph "tests/contract_testcases/substrate/calls/try_catch_constructor_0
 	list [label="list\ntests/contract_testcases/substrate/calls/try_catch_constructor_01.sol:15:17-35"]
 	number_literal [label="int32 literal: 102\ntests/contract_testcases/substrate/calls/try_catch_constructor_01.sol:15:25-28"]
 	bool_literal [label="bool literal: true\ntests/contract_testcases/substrate/calls/try_catch_constructor_01.sol:15:30-34"]
-	diagnostic [label="found contract ‘c’\nlevel Debug\ntests/contract_testcases/substrate/calls/try_catch_constructor_01.sol:2:9-20"]
-	diagnostic_12 [label="found contract ‘other’\nlevel Debug\ntests/contract_testcases/substrate/calls/try_catch_constructor_01.sol:13:9-24"]
+	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/calls/try_catch_constructor_01.sol:2:9-20"]
+	diagnostic_12 [label="found contract 'other'\nlevel Debug\ntests/contract_testcases/substrate/calls/try_catch_constructor_01.sol:13:9-24"]
 	diagnostic_13 [label="constructor returns single contract, not 2 values\nlevel Error\ntests/contract_testcases/substrate/calls/try_catch_constructor_01.sol:4:21-32"]
 	contracts -> contract
 	contract -> test [label="function"]

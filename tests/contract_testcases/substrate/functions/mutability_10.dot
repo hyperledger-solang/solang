@@ -4,8 +4,8 @@ strict digraph "tests/contract_testcases/substrate/functions/mutability_10.sol" 
 	returns [label="returns\nint64 "]
 	return [label="return\ntests/contract_testcases/substrate/functions/mutability_10.sol:3:17-27"]
 	number_literal [label="int64 literal: 102\ntests/contract_testcases/substrate/functions/mutability_10.sol:3:24-27"]
-	diagnostic [label="found contract ‘test’\nlevel Debug\ntests/contract_testcases/substrate/functions/mutability_10.sol:1:1-15"]
-	diagnostic_8 [label="function declared ‘view’ can be declared ‘pure’\nlevel Warning\ntests/contract_testcases/substrate/functions/mutability_10.sol:2:13-55"]
+	diagnostic [label="found contract 'test'\nlevel Debug\ntests/contract_testcases/substrate/functions/mutability_10.sol:1:1-15"]
+	diagnostic_8 [label="function declared 'view' can be declared 'pure'\nlevel Warning\ntests/contract_testcases/substrate/functions/mutability_10.sol:2:13-55"]
 	contracts -> contract
 	contract -> bar [label="function"]
 	bar -> returns [label="returns"]

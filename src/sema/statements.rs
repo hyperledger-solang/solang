@@ -74,7 +74,7 @@ pub fn resolve_function_body(
                             ns.diagnostics.push(Diagnostic::error(
                                 *loc,
                                 format!(
-                                    "contract ‘{}’ is not a base contract of ‘{}’",
+                                    "contract '{}' is not a base contract of '{}'",
                                     base.name.name, ns.contracts[contract_no].name,
                                 ),
                             ));
@@ -82,9 +82,9 @@ pub fn resolve_function_body(
                         } else if let Some(prev) = resolve_bases.get(&base_no) {
                             ns.diagnostics.push(Diagnostic::error_with_note(
                                 *loc,
-                                format!("duplicate base contract ‘{}’", base.name.name),
+                                format!("duplicate base contract '{}'", base.name.name),
                                 *prev,
-                                format!("previous base contract ‘{}’", base.name.name),
+                                format!("previous base contract '{}'", base.name.name),
                             ));
                             all_ok = false;
                         } else if let Some(args) = &base.args {
@@ -115,7 +115,7 @@ pub fn resolve_function_body(
                             ns.diagnostics.push(Diagnostic::error(
                                 *loc,
                                 format!(
-                                    "missing arguments to constructor of contract ‘{}’",
+                                    "missing arguments to constructor of contract '{}'",
                                     base.name.name
                                 ),
                             ));
@@ -126,12 +126,12 @@ pub fn resolve_function_body(
                         if base.args.is_none() {
                             ns.diagnostics.push(Diagnostic::error(
                                 *loc,
-                                format!("unknown function attribute ‘{}’", base.name.name),
+                                format!("unknown function attribute '{}'", base.name.name),
                             ));
                         } else {
                             ns.diagnostics.push(Diagnostic::error(
                                 base.name.loc,
-                                format!("contract ‘{}’ not found", base.name.name),
+                                format!("contract '{}' not found", base.name.name),
                             ));
                         }
                         all_ok = false;
@@ -152,7 +152,7 @@ pub fn resolve_function_body(
                     ns.diagnostics.push(Diagnostic::error(
                         def.loc,
                         format!(
-                            "missing arguments to contract ‘{}’ constructor",
+                            "missing arguments to contract '{}' constructor",
                             ns.contracts[base.contract_no].name
                         ),
                     ));
@@ -288,7 +288,7 @@ pub fn resolve_function_body(
         if !has_underscore {
             ns.diagnostics.push(Diagnostic::error(
                 body.loc().end_range(),
-                "missing ‘_’ in modifier".to_string(),
+                "missing '_' in modifier".to_string(),
             ));
         }
     }
@@ -716,7 +716,7 @@ fn statement(
                         if expr.ty().is_mapping() {
                             ns.diagnostics.push(Diagnostic::error(
                                 *loc,
-                                "‘delete’ cannot be applied to mapping type".to_string(),
+                                "'delete' cannot be applied to mapping type".to_string(),
                             ));
                             return Err(());
                         }
@@ -727,7 +727,7 @@ fn statement(
                     } else {
                         ns.diagnostics.push(Diagnostic::error(
                             *loc,
-                            "argument to ‘delete’ should be storage reference".to_string(),
+                            "argument to 'delete' should be storage reference".to_string(),
                         ));
 
                         Err(())
@@ -843,7 +843,7 @@ fn statement(
                 ns.diagnostics.push(Diagnostic::error(
                     error.loc,
                     format!(
-                        "revert with custom error ‘{}’ not supported yet",
+                        "revert with custom error '{}' not supported yet",
                         error.name
                     ),
                 ));
@@ -927,7 +927,7 @@ fn emit_event(
                     temp_diagnostics.push(Diagnostic::error(
                         *loc,
                         format!(
-                            "event type ‘{}’ has {} fields, {} provided",
+                            "event type '{}' has {} fields, {} provided",
                             event.name,
                             event.fields.len(),
                             args.len()
@@ -1008,7 +1008,7 @@ fn emit_event(
                 if arguments.contains_key(arg.name.name.as_str()) {
                     temp_diagnostics.push(Diagnostic::error(
                         arg.name.loc,
-                        format!("duplicate argument with name ‘{}’", arg.name.name),
+                        format!("duplicate argument with name '{}'", arg.name.name),
                     ));
                 }
 
@@ -1060,7 +1060,7 @@ fn emit_event(
                         temp_diagnostics.push(Diagnostic::error(
                         *loc,
                         format!(
-                            "event ‘{}’ cannot emitted by argument name since argument {} has no name",
+                            "event '{}' cannot emitted by argument name since argument {} has no name",
                             ns.events[*event_no].name, i,
                         ),
                     ));
@@ -1075,7 +1075,7 @@ fn emit_event(
                             temp_diagnostics.push(Diagnostic::error(
                                 *loc,
                                 format!(
-                                    "missing argument ‘{}’ to event ‘{}’",
+                                    "missing argument '{}' to event '{}'",
                                     param.name_as_str(),
                                     ns.events[*event_no].name,
                                 ),
@@ -1178,7 +1178,7 @@ fn destructure(
                 if let Some(storage) = storage {
                     diagnostics.push(Diagnostic::error(
                         storage.loc(),
-                        format!("storage modifier ‘{}’ not permitted on assignment", storage),
+                        format!("storage modifier '{}' not permitted on assignment", storage),
                     ));
                     return Err(());
                 }
@@ -1191,7 +1191,7 @@ fn destructure(
                         diagnostics.push(Diagnostic::error(
                             *loc,
                             format!(
-                                "cannot assign to constant ‘{}’",
+                                "cannot assign to constant '{}'",
                                 ns.contracts[*contract_no].variables[*var_no].name
                             ),
                         ));
@@ -1200,7 +1200,7 @@ fn destructure(
                     Expression::ConstantVariable(_, _, None, var_no) => {
                         diagnostics.push(Diagnostic::error(
                             *loc,
-                            format!("cannot assign to constant ‘{}’", ns.constants[*var_no].name),
+                            format!("cannot assign to constant '{}'", ns.constants[*var_no].name),
                         ));
                         return Err(());
                     }
@@ -1213,7 +1213,7 @@ fn destructure(
                             diagnostics.push(Diagnostic::error(
                                 *loc,
                                 format!(
-                                    "cannot assign to immutable ‘{}’ outside of constructor",
+                                    "cannot assign to immutable '{}' outside of constructor",
                                     store_var.name
                                 ),
                             ));
@@ -1470,7 +1470,7 @@ fn resolve_var_decl_ty(
             diagnostics.push(Diagnostic::error(
                 storage.loc(),
                 format!(
-                    "data location ‘{}’ only allowed for array, struct or mapping type",
+                    "data location '{}' only allowed for array, struct or mapping type",
                     storage
                 ),
             ));
@@ -1954,7 +1954,7 @@ fn try_catch(
                     diagnostics.push(Diagnostic::error(
                         ty.loc(),
                         format!(
-                            "type ‘{}’ does not match return value of function ‘{}’",
+                            "type '{}' does not match return value of function '{}'",
                             ret_ty.to_string(ns),
                             arg_ty.to_string(ns)
                         ),
@@ -2043,7 +2043,7 @@ fn try_catch(
                 if name.is_empty() {
                     "duplicate catch clause".to_string()
                 } else {
-                    format!("duplicate ‘{}’ catch clause", name)
+                    format!("duplicate '{}' catch clause", name)
                 },
             ));
             return Err(());
@@ -2061,7 +2061,7 @@ fn try_catch(
                         diagnostics.push(Diagnostic::error(
                             param.ty.loc(),
                             format!(
-                                "catch can only take ‘bytes memory’, not ‘{}’",
+                                "catch can only take ‘bytes memory’, not '{}'",
                                 catch_ty.to_string(ns)
                             ),
                         ));
@@ -2116,7 +2116,7 @@ fn try_catch(
                     ns.diagnostics.push(Diagnostic::error(
                         id.loc,
                         format!(
-                            "only catch ‘Error’ or ‘Panic’ is supported, not ‘{}’",
+                            "only catch 'Error' or 'Panic' is supported, not '{}'",
                             id.name
                         ),
                     ));
@@ -2130,7 +2130,7 @@ fn try_catch(
                     ns.diagnostics.push(Diagnostic::error(
                         param.ty.loc(),
                         format!(
-                            "catch Error(...) can only take ‘string memory’, not ‘{}’",
+                            "catch Error(...) can only take ‘string memory’, not '{}'",
                             error_ty.to_string(ns)
                         ),
                     ));
@@ -2139,7 +2139,7 @@ fn try_catch(
                     ns.diagnostics.push(Diagnostic::error(
                         param.ty.loc(),
                         format!(
-                            "catch Panic(...) can only take ‘uint256’, not ‘{}’",
+                            "catch Panic(...) can only take 'uint256', not '{}'",
                             error_ty.to_string(ns)
                         ),
                     ));

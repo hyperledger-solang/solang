@@ -3,7 +3,7 @@ strict digraph "tests/contract_testcases/substrate/functions/global_functions_06
 	x [label="function x\ntests/contract_testcases/substrate/functions/global_functions_06.sol:4:9-26\nsignature x()\nvisibility internal\nmutability pure"]
 	emit [label="emit\nevent foo\ntests/contract_testcases/substrate/functions/global_functions_06.sol:4:29-43"]
 	bool_literal [label="bool literal: true\ntests/contract_testcases/substrate/functions/global_functions_06.sol:4:38-42"]
-	diagnostic [label="function declared ‘pure’ but this expression writes to state\nlevel Error\ntests/contract_testcases/substrate/functions/global_functions_06.sol:4:29-43"]
+	diagnostic [label="function declared 'pure' but this expression writes to state\nlevel Error\ntests/contract_testcases/substrate/functions/global_functions_06.sol:4:29-43"]
 	events -> foo
 	free_functions -> x [label="function"]
 	x -> emit [label="body"]

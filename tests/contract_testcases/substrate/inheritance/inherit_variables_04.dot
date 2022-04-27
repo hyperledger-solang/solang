@@ -12,9 +12,9 @@ strict digraph "tests/contract_testcases/substrate/inheritance/inherit_variables
 	returns_11 [label="returns\nint256 "]
 	return_12 [label="return\ntests/contract_testcases/substrate/inheritance/inherit_variables_04.sol:8:17-27"]
 	constant_13 [label="constant variable\na.foo\nint256\ntests/contract_testcases/substrate/inheritance/inherit_variables_04.sol:8:24-27"]
-	diagnostic [label="found contract ‘a’\nlevel Debug\ntests/contract_testcases/substrate/inheritance/inherit_variables_04.sol:2:9-20"]
-	diagnostic_16 [label="found contract ‘c’\nlevel Debug\ntests/contract_testcases/substrate/inheritance/inherit_variables_04.sol:6:9-24"]
-	diagnostic_17 [label="function can be declared ‘pure’\nlevel Warning\ntests/contract_testcases/substrate/inheritance/inherit_variables_04.sol:7:13-51"]
+	diagnostic [label="found contract 'a'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/inherit_variables_04.sol:2:9-20"]
+	diagnostic_16 [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/inherit_variables_04.sol:6:9-24"]
+	diagnostic_17 [label="function can be declared 'pure'\nlevel Warning\ntests/contract_testcases/substrate/inheritance/inherit_variables_04.sol:7:13-51"]
 	contracts -> contract
 	contract -> var [label="variable"]
 	var -> number_literal [label="initializer"]

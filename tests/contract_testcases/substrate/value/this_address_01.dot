@@ -2,7 +2,7 @@ strict digraph "tests/contract_testcases/substrate/value/this_address_01.sol" {
 	contract [label="contract b\ntests/contract_testcases/substrate/value/this_address_01.sol:2:9-20"]
 	step1 [label="function step1\ncontract: b\ntests/contract_testcases/substrate/value/this_address_01.sol:3:13-54\nsignature step1()\nvisibility public\nmutability nonpayable"]
 	returns [label="returns\naddress "]
-	diagnostic [label="found contract ‘b’\nlevel Debug\ntests/contract_testcases/substrate/value/this_address_01.sol:2:9-20"]
+	diagnostic [label="found contract 'b'\nlevel Debug\ntests/contract_testcases/substrate/value/this_address_01.sol:2:9-20"]
 	diagnostic_6 [label="implicit conversion to address from contract b not allowed\nlevel Error\ntests/contract_testcases/substrate/value/this_address_01.sol:4:17-28"]
 	contracts -> contract
 	contract -> step1 [label="function"]

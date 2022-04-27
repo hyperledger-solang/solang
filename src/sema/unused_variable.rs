@@ -241,7 +241,7 @@ pub fn emit_warning_local_variable(variable: &symtable::Variable) -> Option<Diag
                 return Some(Diagnostic::warning(
                     variable.id.loc,
                     format!(
-                        "function parameter ‘{}‘ has never been read",
+                        "function parameter '{}' has never been read",
                         variable.id.name
                     ),
                 ));
@@ -254,7 +254,7 @@ pub fn emit_warning_local_variable(variable: &symtable::Variable) -> Option<Diag
                 return Some(Diagnostic::warning(
                     variable.id.loc,
                     format!(
-                        "return variable ‘{}‘ has never been assigned",
+                        "return variable '{}' has never been assigned",
                         variable.id.name
                     ),
                 ));
@@ -268,7 +268,7 @@ pub fn emit_warning_local_variable(variable: &symtable::Variable) -> Option<Diag
                 return Some(Diagnostic::warning(
                     variable.id.loc,
                     format!(
-                        "local variable ‘{}‘ has never been read nor assigned",
+                        "local variable '{}' has never been read nor assigned",
                         variable.id.name
                     ),
                 ));
@@ -278,7 +278,7 @@ pub fn emit_warning_local_variable(variable: &symtable::Variable) -> Option<Diag
                 return Some(Diagnostic::warning(
                     variable.id.loc,
                     format!(
-                        "local variable ‘{}‘ has been assigned, but never read",
+                        "local variable '{}' has been assigned, but never read",
                         variable.id.name
                     ),
                 ));
@@ -291,7 +291,7 @@ pub fn emit_warning_local_variable(variable: &symtable::Variable) -> Option<Diag
                 return Some(Diagnostic::warning(
                     variable.id.loc,
                     format!(
-                        "destructure variable ‘{}‘ has never been used",
+                        "destructure variable '{}' has never been used",
                         variable.id.name
                     ),
                 ));
@@ -305,7 +305,7 @@ pub fn emit_warning_local_variable(variable: &symtable::Variable) -> Option<Diag
                 return Some(Diagnostic::warning(
                     variable.id.loc,
                     format!(
-                        "try-catch returns variable ‘{}‘ has never been read",
+                        "try-catch returns variable '{}' has never been read",
                         variable.id.name
                     ),
                 ));
@@ -319,7 +319,7 @@ pub fn emit_warning_local_variable(variable: &symtable::Variable) -> Option<Diag
                 return Some(Diagnostic::warning(
                     variable.id.loc,
                     format!(
-                        "try-catch error bytes ‘{}‘ has never been used",
+                        "try-catch error bytes '{}' has never been used",
                         variable.id.name
                     ),
                 ));
@@ -333,7 +333,7 @@ pub fn emit_warning_local_variable(variable: &symtable::Variable) -> Option<Diag
                 return Some(Diagnostic::warning(
                     variable.id.loc,
                     format!(
-                        "try-catch error string ‘{}‘ has never been used",
+                        "try-catch error string '{}' has never been used",
                         variable.id.name
                     ),
                 ));
@@ -347,14 +347,14 @@ pub fn emit_warning_local_variable(variable: &symtable::Variable) -> Option<Diag
                 return Some(Diagnostic::warning(
                     variable.id.loc,
                     format!(
-                        "yul variable ‘{}‘ has never been read or assigned",
+                        "yul variable '{}' has never been read or assigned",
                         variable.id.name
                     ),
                 ));
             } else if !variable.read {
                 return Some(Diagnostic::warning(
                     variable.id.loc,
-                    format!("yul variable ‘{}‘ has never been read", variable.id.name),
+                    format!("yul variable '{}' has never been read", variable.id.name),
                 ));
             }
             None
@@ -369,14 +369,14 @@ fn emit_warning_contract_variables(variable: &ast::Variable) -> Option<Diagnosti
         return Some(Diagnostic::warning(
             variable.loc,
             format!(
-                "storage variable ‘{}‘ has been assigned, but never read",
+                "storage variable '{}' has been assigned, but never read",
                 variable.name
             ),
         ));
     } else if !variable.assigned && !variable.read {
         return Some(Diagnostic::warning(
             variable.loc,
-            format!("storage variable ‘{}‘ has never been used", variable.name),
+            format!("storage variable '{}' has never been used", variable.name),
         ));
     }
 
@@ -401,7 +401,7 @@ pub fn check_unused_namespace_variables(ns: &mut Namespace) {
         if !constant.read {
             ns.diagnostics.push(Diagnostic::warning(
                 constant.loc,
-                format!("global constant ‘{}‘ has never been used", constant.name),
+                format!("global constant '{}' has never been used", constant.name),
             ));
         }
     }
@@ -479,7 +479,7 @@ pub fn check_unused_events(ns: &mut Namespace) {
 
             ns.diagnostics.push(Diagnostic::warning(
                 event.loc,
-                format!("event ‘{}‘ has never been emitted", event.name),
+                format!("event '{}' has never been emitted", event.name),
             ));
         }
     }

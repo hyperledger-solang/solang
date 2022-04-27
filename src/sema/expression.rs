@@ -200,7 +200,7 @@ impl Expression {
                         diagnostics.push(Diagnostic::type_error(
                             *loc,
                             format!(
-                                "implicit conversion cannot change negative number to ‘{}’",
+                                "implicit conversion cannot change negative number to '{}'",
                                 to.to_string(ns)
                             ),
                         ));
@@ -221,7 +221,7 @@ impl Expression {
                     diagnostics.push(Diagnostic::type_error(
                         *loc,
                         format!(
-                            "implicit conversion would truncate from ‘{}’ to ‘{}’",
+                            "implicit conversion would truncate from '{}' to '{}'",
                             from.to_string(ns),
                             to.to_string(ns)
                         ),
@@ -242,7 +242,7 @@ impl Expression {
                     diagnostics.push(Diagnostic::type_error(
                         *loc,
                         format!(
-                            "implicit conversion would truncate from ‘{}’ to ‘{}’",
+                            "implicit conversion would truncate from '{}' to '{}'",
                             from.to_string(ns),
                             to.to_string(ns)
                         ),
@@ -265,7 +265,7 @@ impl Expression {
                     diagnostics.push(Diagnostic::type_error(
                         *loc,
                         format!(
-                            "negative number cannot be converted to type ‘{}’",
+                            "negative number cannot be converted to type '{}'",
                             to.to_string(ns)
                         ),
                     ));
@@ -274,7 +274,7 @@ impl Expression {
                     diagnostics.push(Diagnostic::type_error(
                         *loc,
                         format!(
-                            "number of {} bytes cannot be converted to type ‘{}’",
+                            "number of {} bytes cannot be converted to type '{}'",
                             bytes,
                             to.to_string(ns)
                         ),
@@ -323,7 +323,7 @@ impl Expression {
                     diagnostics.push(Diagnostic::type_error(
                         *loc,
                         format!(
-                            "implicit conversion would truncate from ‘{}’ to ‘{}’",
+                            "implicit conversion would truncate from '{}' to '{}'",
                             from.to_string(ns),
                             to.to_string(ns)
                         ),
@@ -1025,7 +1025,7 @@ impl Expression {
                     diagnostics.push(Diagnostic::type_error(
                         *loc,
                         format!(
-                            "function arguments do not match in conversion from ‘{}’ to ‘{}’",
+                            "function arguments do not match in conversion from '{}' to '{}'",
                             to.to_string(ns),
                             from.to_string(ns)
                         ),
@@ -1035,7 +1035,7 @@ impl Expression {
                     diagnostics.push(Diagnostic::type_error(
                         *loc,
                         format!(
-                            "function returns do not match in conversion from ‘{}’ to ‘{}’",
+                            "function returns do not match in conversion from '{}' to '{}'",
                             to.to_string(ns),
                             from.to_string(ns)
                         ),
@@ -1045,7 +1045,7 @@ impl Expression {
                     diagnostics.push(Diagnostic::type_error(
                         *loc,
                         format!(
-                            "function mutability not compatible in conversion from ‘{}’ to ‘{}’",
+                            "function mutability not compatible in conversion from '{}' to '{}'",
                             from.to_string(ns),
                             to.to_string(ns),
                         ),
@@ -1336,7 +1336,7 @@ pub fn bigint_to_expression(
         if !resolve_to.is_integer() {
             diagnostics.push(Diagnostic::error(
                 *loc,
-                format!("expected ‘{}’, found integer", resolve_to.to_string(ns)),
+                format!("expected '{}', found integer", resolve_to.to_string(ns)),
             ));
             return Err(());
         }
@@ -1352,7 +1352,7 @@ pub fn bigint_to_expression(
                 diagnostics.push(Diagnostic::error(
                     *loc,
                     format!(
-                        "negative literal {} not allowed for unsigned type ‘{}’",
+                        "negative literal {} not allowed for unsigned type '{}'",
                         n,
                         resolve_to.to_string(ns)
                     ),
@@ -1362,7 +1362,7 @@ pub fn bigint_to_expression(
                 diagnostics.push(Diagnostic::error(
                     *loc,
                     format!(
-                        "literal {} is too large to fit into type ‘{}’",
+                        "literal {} is too large to fit into type '{}'",
                         n,
                         resolve_to.to_string(ns)
                     ),
@@ -1379,7 +1379,7 @@ pub fn bigint_to_expression(
             diagnostics.push(Diagnostic::error(
                 *loc,
                 format!(
-                    "literal {} is too large to fit into type ‘{}’",
+                    "literal {} is too large to fit into type '{}'",
                     n,
                     resolve_to.to_string(ns)
                 ),
@@ -1434,7 +1434,7 @@ pub fn bigdecimal_to_expression(
         if !resolve_to.is_rational() {
             diagnostics.push(Diagnostic::error(
                 *loc,
-                format!("expected ‘{}’, found rational", resolve_to.to_string(ns)),
+                format!("expected '{}', found rational", resolve_to.to_string(ns)),
             ));
             return Err(());
         } else {
@@ -1856,7 +1856,7 @@ pub fn expression(
         pt::Expression::ArraySubscript(loc, _, None) => {
             diagnostics.push(Diagnostic::error(
                 *loc,
-                "expected expression before ‘]’ token".to_string(),
+                "expected expression before ']' token".to_string(),
             ));
 
             Err(())
@@ -2100,7 +2100,7 @@ fn hex_number_literal(
                 diagnostics.push(Diagnostic::error(
                     *loc,
                     format!(
-                        "address literal has incorrect checksum, expected ‘{}’",
+                        "address literal has incorrect checksum, expected '{}'",
                         address
                     ),
                 ));
@@ -2111,7 +2111,7 @@ fn hex_number_literal(
             diagnostics.push(Diagnostic::error(
                 *loc,
                 format!(
-                    "ethereum address literal ‘{}’ not supported on target {}",
+                    "ethereum address literal '{}' not supported on target {}",
                     n, ns.target
                 ),
             ));
@@ -2131,7 +2131,7 @@ fn hex_number_literal(
             diagnostics.push(Diagnostic::error(
                 *loc,
                 format!(
-                    "hex literal {} must be {} digits for type ‘bytes{}’",
+                    "hex literal {} must be {} digits for type 'bytes{}'",
                     n, expected_length, length,
                 ),
             ));
@@ -2276,7 +2276,7 @@ fn variable(
         return if context.constant {
             diagnostics.push(Diagnostic::error(
                 id.loc,
-                format!("cannot read variable ‘{}’ in constant expression", id.name),
+                format!("cannot read variable '{}' in constant expression", id.name),
             ));
             Err(())
         } else {
@@ -2316,7 +2316,7 @@ fn variable(
                 diagnostics.push(Diagnostic::error(
                     id.loc,
                     format!(
-                        "cannot read contract variable ‘{}’ in constant expression",
+                        "cannot read contract variable '{}' in constant expression",
                         id.name
                     ),
                 ));
@@ -2379,7 +2379,7 @@ fn variable(
             } else {
                 diagnostics.push(Diagnostic::error(
                     id.loc,
-                    format!("function ‘{}’ is overloaded", id.name),
+                    format!("function '{}' is overloaded", id.name),
                 ));
                 Err(())
             }
@@ -2842,7 +2842,7 @@ fn constructor(
             diagnostics.push(Diagnostic::error(
                 *loc,
                 format!(
-                    "new cannot construct current contract ‘{}’",
+                    "new cannot construct current contract '{}'",
                     ns.contracts[no].name
                 ),
             ));
@@ -2862,7 +2862,7 @@ fn constructor(
         diagnostics.push(Diagnostic::error(
             *loc,
             format!(
-                "cannot construct ‘{}’ of type ‘{}’",
+                "cannot construct '{}' of type '{}'",
                 ns.contracts[no].name, ns.contracts[no].ty
             ),
         ));
@@ -2875,7 +2875,7 @@ fn constructor(
         diagnostics.push(Diagnostic::error(
             *loc,
             format!(
-                "circular reference creating contract ‘{}’",
+                "circular reference creating contract '{}'",
                 ns.contracts[no].name
             ),
         ));
@@ -3035,7 +3035,7 @@ pub fn constructor_named_args(
             diagnostics.push(Diagnostic::error(
                 *loc,
                 format!(
-                    "new cannot construct current contract ‘{}’",
+                    "new cannot construct current contract '{}'",
                     ns.contracts[no].name
                 ),
             ));
@@ -3055,7 +3055,7 @@ pub fn constructor_named_args(
         diagnostics.push(Diagnostic::error(
             *loc,
             format!(
-                "cannot construct ‘{}’ of type ‘{}’",
+                "cannot construct '{}' of type '{}'",
                 ns.contracts[no].name, ns.contracts[no].ty
             ),
         ));
@@ -3068,7 +3068,7 @@ pub fn constructor_named_args(
         diagnostics.push(Diagnostic::error(
             *loc,
             format!(
-                "circular reference creating contract ‘{}’",
+                "circular reference creating contract '{}'",
                 ns.contracts[no].name
             ),
         ));
@@ -3085,7 +3085,7 @@ pub fn constructor_named_args(
         if let Some(prev) = arguments.get(arg.name.name.as_str()) {
             diagnostics.push(Diagnostic::error_with_note(
                 *loc,
-                format!("duplicate argument name ‘{}’", arg.name.name),
+                format!("duplicate argument name '{}'", arg.name.name),
                 prev.loc(),
                 String::from("location of previous argument"),
             ));
@@ -3131,7 +3131,7 @@ pub fn constructor_named_args(
                     matches = false;
                     diagnostics.push(Diagnostic::error(
                         *loc,
-                        format!("missing argument ‘{}’ to constructor", param.name_as_str()),
+                        format!("missing argument '{}' to constructor", param.name_as_str()),
                     ));
                     break;
                 }
@@ -3290,7 +3290,7 @@ pub fn type_name_expr(
                 diagnostics.push(Diagnostic::error(
                     *loc,
                     format!(
-                        "containing our own contract code for ‘{}’ would generate infinite size contract",
+                        "containing our own contract code for '{}' would generate infinite size contract",
                         ns.contracts[*no].name
                     ),
                 ));
@@ -3301,7 +3301,7 @@ pub fn type_name_expr(
                 diagnostics.push(Diagnostic::error(
                     *loc,
                     format!(
-                        "circular reference creating contract code for ‘{}’",
+                        "circular reference creating contract code for '{}'",
                         ns.contracts[*no].name
                     ),
                 ));
@@ -3322,7 +3322,7 @@ pub fn type_name_expr(
             diagnostics.push(Diagnostic::error(
                 *loc,
                 format!(
-                    "type ‘{}’ does not have type function {}",
+                    "type '{}' does not have type function {}",
                     ty.to_string(ns),
                     field.name
                 ),
@@ -3352,7 +3352,7 @@ pub fn new(
                 diagnostics.push(Diagnostic::error(
                     *loc,
                     format!(
-                        "new cannot allocate fixed array type ‘{}’",
+                        "new cannot allocate fixed array type '{}'",
                         ty.to_string(ns)
                     ),
                 ));
@@ -3362,7 +3362,7 @@ pub fn new(
             if let Type::Contract(_) = ty.as_ref() {
                 diagnostics.push(Diagnostic::error(
                     *loc,
-                    format!("new cannot construct array of ‘{}’", ty.to_string(ns)),
+                    format!("new cannot construct array of '{}'", ty.to_string(ns)),
                 ));
                 return Err(());
             }
@@ -3376,7 +3376,7 @@ pub fn new(
         _ => {
             diagnostics.push(Diagnostic::error(
                 *loc,
-                format!("new cannot allocate type ‘{}’", ty.to_string(ns)),
+                format!("new cannot allocate type '{}'", ty.to_string(ns)),
             ));
             return Err(());
         }
@@ -3679,7 +3679,7 @@ fn assign_single(
             diagnostics.push(Diagnostic::error(
                 *loc,
                 format!(
-                    "cannot assign to constant ‘{}’",
+                    "cannot assign to constant '{}'",
                     ns.contracts[*contract_no].variables[*var_no].name
                 ),
             ));
@@ -3688,7 +3688,7 @@ fn assign_single(
         Expression::ConstantVariable(loc, _, None, var_no) => {
             diagnostics.push(Diagnostic::error(
                 *loc,
-                format!("cannot assign to constant ‘{}’", ns.constants[*var_no].name),
+                format!("cannot assign to constant '{}'", ns.constants[*var_no].name),
             ));
             Err(())
         }
@@ -3701,7 +3701,7 @@ fn assign_single(
                         diagnostics.push(Diagnostic::error(
                             *loc,
                             format!(
-                                "cannot assign to immutable ‘{}’ outside of constructor",
+                                "cannot assign to immutable '{}' outside of constructor",
                                 store_var.name
                             ),
                         ));
@@ -3879,7 +3879,7 @@ fn assign_expr(
             diagnostics.push(Diagnostic::error(
                 *loc,
                 format!(
-                    "cannot assign to constant ‘{}’",
+                    "cannot assign to constant '{}'",
                     ns.contracts[*contract_no].variables[*var_no].name
                 ),
             ));
@@ -3888,7 +3888,7 @@ fn assign_expr(
         Expression::ConstantVariable(loc, _, None, var_no) => {
             diagnostics.push(Diagnostic::error(
                 *loc,
-                format!("cannot assign to constant ‘{}’", ns.constants[*var_no].name),
+                format!("cannot assign to constant '{}'", ns.constants[*var_no].name),
             ));
             Err(())
         }
@@ -3899,7 +3899,7 @@ fn assign_expr(
                     diagnostics.push(Diagnostic::error(
                         var.loc(),
                         format!(
-                            "variable ‘{}’ of incorrect type {}",
+                            "variable '{}' of incorrect type {}",
                             symtable.get_name(*n),
                             var_ty.to_string(ns)
                         ),
@@ -4020,7 +4020,7 @@ fn incr_decr(
             diagnostics.push(Diagnostic::error(
                 *loc,
                 format!(
-                    "cannot assign to constant ‘{}’",
+                    "cannot assign to constant '{}'",
                     ns.contracts[*contract_no].variables[*var_no].name
                 ),
             ));
@@ -4029,7 +4029,7 @@ fn incr_decr(
         Expression::ConstantVariable(loc, _, None, var_no) => {
             diagnostics.push(Diagnostic::error(
                 *loc,
-                format!("cannot assign to constant ‘{}’", ns.constants[*var_no].name),
+                format!("cannot assign to constant '{}'", ns.constants[*var_no].name),
             ));
             Err(())
         }
@@ -4040,7 +4040,7 @@ fn incr_decr(
                     diagnostics.push(Diagnostic::error(
                         var.loc(),
                         format!(
-                            "variable ‘{}’ of incorrect type {}",
+                            "variable '{}' of incorrect type {}",
                             symtable.get_name(*n),
                             var_ty.to_string(ns)
                         ),
@@ -4196,7 +4196,7 @@ fn member_access(
         if builtin::builtin_namespace(&namespace.name) {
             diagnostics.push(Diagnostic::error(
                 e.loc(),
-                format!("builtin ‘{}.{}’ does not exist", namespace.name, id.name),
+                format!("builtin '{}.{}' does not exist", namespace.name, id.name),
             ));
 
             return Err(());
@@ -4260,7 +4260,7 @@ fn member_access(
                         diagnostics.push(Diagnostic::error(
                             e.loc(),
                             format!(
-                                "contract ‘{}’ does not have a function called ‘{}’",
+                                "contract '{}' does not have a function called '{}'",
                                 ns.contracts[call_contract_no].name, id.name,
                             ),
                         ));
@@ -4271,7 +4271,7 @@ fn member_access(
                         diagnostics.push(Diagnostic::error(
                             e.loc(),
                             format!(
-                                "function ‘{}’ of contract ‘{}’ is overloaded",
+                                "function '{}' of contract '{}' is overloaded",
                                 id.name, ns.contracts[call_contract_no].name,
                             ),
                         ));
@@ -4305,7 +4305,7 @@ fn member_access(
                 diagnostics.push(Diagnostic::error(
                     id.loc,
                     format!(
-                        "struct ‘{}’ field ‘{}’ is readonly",
+                        "struct '{}' field '{}' is readonly",
                         ns.structs[*struct_no], id.name
                     ),
                 ));
@@ -4330,7 +4330,7 @@ fn member_access(
             diagnostics.push(Diagnostic::error(
                 id.loc,
                 format!(
-                    "struct ‘{}’ does not have a field called ‘{}’",
+                    "struct '{}' does not have a field called '{}'",
                     ns.structs[*struct_no], id.name
                 ),
             ));
@@ -4415,7 +4415,7 @@ fn member_access(
                     diagnostics.push(Diagnostic::error(
                         id.loc,
                         format!(
-                            "struct ‘{}’ does not have a field called ‘{}’",
+                            "struct '{}' does not have a field called '{}'",
                             ns.structs[n].name, id.name
                         ),
                     ));
@@ -4474,7 +4474,7 @@ fn member_access(
                     if !is_this {
                         diagnostics.push(Diagnostic::error(
                             expr.loc(),
-                            "substrate can only retrieve balance of this, like ‘address(this).balance’".to_string(),
+                            "substrate can only retrieve balance of this, like 'address(this).balance'".to_string(),
                         ));
                         return Err(());
                     }
@@ -4520,7 +4520,7 @@ fn member_access(
                 diagnostics.push(Diagnostic::error(
                     id.loc,
                     format!(
-                        "{} ‘{}’ has no public function ‘{}’",
+                        "{} '{}' has no public function '{}'",
                         ns.contracts[ref_contract_no].ty,
                         ns.contracts[ref_contract_no].name,
                         id.name
@@ -4533,7 +4533,7 @@ fn member_access(
                 diagnostics.push(Diagnostic::error(
                     id.loc,
                     format!(
-                        "function ‘{}’ of {} ‘{}’ is overloaded",
+                        "function '{}' of {} '{}' is overloaded",
                         id.name,
                         ns.contracts[ref_contract_no].ty,
                         ns.contracts[ref_contract_no].name
@@ -4578,7 +4578,7 @@ fn member_access(
         _ => (),
     }
 
-    diagnostics.push(Diagnostic::error(*loc, format!("‘{}’ not found", id.name)));
+    diagnostics.push(Diagnostic::error(*loc, format!("'{}' not found", id.name)));
 
     Err(())
 }
@@ -4626,7 +4626,7 @@ fn contract_constant(
                     diagnostics.push(Diagnostic::error(
                         *loc,
                         format!(
-                            "need instance of contract ‘{}’ to get variable value ‘{}’",
+                            "need instance of contract '{}' to get variable value '{}'",
                             ns.contracts[contract_no].name,
                             ns.contracts[contract_no].variables[var_no].name,
                         ),
@@ -4696,7 +4696,7 @@ fn array_subscript(
             diagnostics.push(Diagnostic::error(
                 *loc,
                 format!(
-                    "array subscript must be an unsigned integer, not ‘{}’",
+                    "array subscript must be an unsigned integer, not '{}'",
                     index.ty().to_string(ns)
                 ),
             ));
@@ -4793,7 +4793,7 @@ fn struct_literal(
         diagnostics.push(Diagnostic::error(
             *loc,
             format!(
-                "builtin struct ‘{}’ cannot be created using struct literal",
+                "builtin struct '{}' cannot be created using struct literal",
                 struct_def.name,
             ),
         ));
@@ -4802,7 +4802,7 @@ fn struct_literal(
         diagnostics.push(Diagnostic::error(
             *loc,
             format!(
-                "struct ‘{}’ has {} fields, not {}",
+                "struct '{}' has {} fields, not {}",
                 struct_def.name,
                 struct_def.fields.len(),
                 args.len()
@@ -4917,7 +4917,7 @@ fn call_function_type(
                 diagnostics.push(Diagnostic::error(
                     *loc,
                     format!(
-                        "sending value to function type ‘{}’ which is not payable",
+                        "sending value to function type '{}' which is not payable",
                         function.ty().to_string(ns),
                     ),
                 ));
@@ -5125,7 +5125,7 @@ pub fn call_position_args(
                 *loc,
                 format!("cannot call private {}", func.ty),
                 func.loc,
-                format!("declaration of {} ‘{}’", func.ty, func.name),
+                format!("declaration of {} '{}'", func.ty, func.name),
             ));
 
             continue;
@@ -5156,12 +5156,12 @@ pub fn call_position_args(
             if func_ty == pt::FunctionTy::Modifier {
                 diagnostics.push(Diagnostic::error(
                     id.loc,
-                    format!("unknown modifier ‘{}’", id.name),
+                    format!("unknown modifier '{}'", id.name),
                 ));
             } else {
                 diagnostics.push(Diagnostic::error(
                     id.loc,
-                    format!("unknown {} or type ‘{}’", func_ty, id.name),
+                    format!("unknown {} or type '{}'", func_ty, id.name),
                 ));
             }
         }
@@ -5196,7 +5196,7 @@ fn function_call_with_named_args(
         if arguments.contains_key(arg.name.name.as_str()) {
             diagnostics.push(Diagnostic::error(
                 arg.name.loc,
-                format!("duplicate argument with name ‘{}’", arg.name.name),
+                format!("duplicate argument with name '{}'", arg.name.name),
             ));
             return Err(());
         }
@@ -5245,7 +5245,7 @@ fn function_call_with_named_args(
                     diagnostics.push(Diagnostic::error(
                         *loc,
                         format!(
-                            "missing argument ‘{}’ to function ‘{}’",
+                            "missing argument '{}' to function '{}'",
                             param.name_as_str(),
                             id.name,
                         ),
@@ -5291,7 +5291,7 @@ fn function_call_with_named_args(
                 *loc,
                 "cannot call private function".to_string(),
                 func.loc,
-                format!("declaration of function ‘{}’", func.name),
+                format!("declaration of function '{}'", func.name),
             ));
 
             continue;
@@ -5321,7 +5321,7 @@ fn function_call_with_named_args(
         0 => {
             diagnostics.push(Diagnostic::error(
                 id.loc,
-                format!("unknown function or type ‘{}’", id.name),
+                format!("unknown function or type '{}'", id.name),
             ));
         }
         1 => diagnostics.extend(errors),
@@ -5356,7 +5356,7 @@ fn named_struct_literal(
         diagnostics.push(Diagnostic::error(
             *loc,
             format!(
-                "builtin struct ‘{}’ cannot be created using struct literal",
+                "builtin struct '{}' cannot be created using struct literal",
                 struct_def.name,
             ),
         ));
@@ -5365,7 +5365,7 @@ fn named_struct_literal(
         diagnostics.push(Diagnostic::error(
             *loc,
             format!(
-                "struct ‘{}’ has {} fields, not {}",
+                "struct '{}' has {} fields, not {}",
                 struct_def.name,
                 struct_def.fields.len(),
                 args.len()
@@ -5395,7 +5395,7 @@ fn named_struct_literal(
                     diagnostics.push(Diagnostic::error(
                         a.name.loc,
                         format!(
-                            "struct ‘{}’ has no field ‘{}’",
+                            "struct '{}' has no field '{}'",
                             struct_def.name, a.name.name,
                         ),
                     ));
@@ -5565,7 +5565,7 @@ fn method_call_pos_args(
             return if args.len() != 1 {
                 diagnostics.push(Diagnostic::error(
                     func.loc,
-                    "method ‘unwrap()’ takes one argument".to_string(),
+                    "method 'unwrap()' takes one argument".to_string(),
                 ));
                 Err(())
             } else {
@@ -5589,7 +5589,7 @@ fn method_call_pos_args(
             return if args.len() != 1 {
                 diagnostics.push(Diagnostic::error(
                     func.loc,
-                    "method ‘wrap()’ takes one argument".to_string(),
+                    "method 'wrap()' takes one argument".to_string(),
                 ));
                 Err(())
             } else {
@@ -5670,7 +5670,7 @@ fn method_call_pos_args(
                     if dim.last().unwrap().is_some() {
                         diagnostics.push(Diagnostic::error(
                             func.loc,
-                            "method ‘push()’ not allowed on fixed length array".to_string(),
+                            "method 'push()' not allowed on fixed length array".to_string(),
                         ));
                         return Err(());
                     }
@@ -5709,7 +5709,7 @@ fn method_call_pos_args(
                         _ => {
                             diagnostics.push(Diagnostic::error(
                                 func.loc,
-                                "method ‘push()’ takes at most 1 argument".to_string(),
+                                "method 'push()' takes at most 1 argument".to_string(),
                             ));
                             return Err(());
                         }
@@ -5726,7 +5726,7 @@ fn method_call_pos_args(
                     if dim.last().unwrap().is_some() {
                         diagnostics.push(Diagnostic::error(
                             func.loc,
-                            "method ‘pop()’ not allowed on fixed length array".to_string(),
+                            "method 'pop()' not allowed on fixed length array".to_string(),
                         ));
 
                         return Err(());
@@ -5735,7 +5735,7 @@ fn method_call_pos_args(
                     if !args.is_empty() {
                         diagnostics.push(Diagnostic::error(
                             func.loc,
-                            "method ‘pop()’ does not take any arguments".to_string(),
+                            "method 'pop()' does not take any arguments".to_string(),
                         ));
                         return Err(());
                     }
@@ -5809,7 +5809,7 @@ fn method_call_pos_args(
                         _ => {
                             diagnostics.push(Diagnostic::error(
                                 func.loc,
-                                "method ‘push()’ takes at most 1 argument".to_string(),
+                                "method 'push()' takes at most 1 argument".to_string(),
                             ));
                             return Err(());
                         }
@@ -5826,7 +5826,7 @@ fn method_call_pos_args(
                     if !args.is_empty() {
                         diagnostics.push(Diagnostic::error(
                             func.loc,
-                            "method ‘pop()’ does not take any arguments".to_string(),
+                            "method 'pop()' does not take any arguments".to_string(),
                         ));
                         return Err(());
                     }
@@ -5848,7 +5848,7 @@ fn method_call_pos_args(
             if ns.target == Target::Solana {
                 diagnostics.push(Diagnostic::error(
                     func.loc,
-                    format!("‘push()’ not supported on ‘bytes’ on target {}", ns.target),
+                    format!("'push()' not supported on 'bytes' on target {}", ns.target),
                 ));
                 return Err(());
             }
@@ -5882,7 +5882,7 @@ fn method_call_pos_args(
                 _ => {
                     diagnostics.push(Diagnostic::error(
                         func.loc,
-                        "method ‘push()’ takes at most 1 argument".to_string(),
+                        "method 'push()' takes at most 1 argument".to_string(),
                     ));
                     return Err(());
                 }
@@ -5899,7 +5899,7 @@ fn method_call_pos_args(
             if ns.target == Target::Solana {
                 diagnostics.push(Diagnostic::error(
                     func.loc,
-                    format!("‘pop()’ not supported on ‘bytes’ on target {}", ns.target),
+                    format!("'pop()' not supported on 'bytes' on target {}", ns.target),
                 ));
                 return Err(());
             }
@@ -5907,7 +5907,7 @@ fn method_call_pos_args(
             if !args.is_empty() {
                 diagnostics.push(Diagnostic::error(
                     func.loc,
-                    "method ‘pop()’ does not take any arguments".to_string(),
+                    "method 'pop()' does not take any arguments".to_string(),
                 ));
                 return Err(());
             }
@@ -5992,7 +5992,7 @@ fn method_call_pos_args(
                 if !ns.functions[*function_no].is_public() {
                     diagnostics.push(Diagnostic::error(
                         *loc,
-                        format!("function ‘{}’ is not ‘public’ or ‘external’", func.name),
+                        format!("function '{}' is not 'public' or 'external'", func.name),
                     ));
                     return Err(());
                 }
@@ -6002,7 +6002,7 @@ fn method_call_pos_args(
                         diagnostics.push(Diagnostic::error(
                             *loc,
                             format!(
-                                "sending value to function ‘{}’ which is not payable",
+                                "sending value to function '{}' which is not payable",
                                 func.name
                             ),
                         ));
@@ -6083,7 +6083,7 @@ fn method_call_pos_args(
                 diagnostics.push(Diagnostic::error(
                     *loc,
                     format!(
-                        "method ‘{}’ available on type ‘address payable’ not ‘address’",
+                        "method '{}' available on type ‘address payable’ not 'address'",
                         func.name,
                     ),
                 ));
@@ -6095,7 +6095,7 @@ fn method_call_pos_args(
                 diagnostics.push(Diagnostic::error(
                     *loc,
                     format!(
-                        "‘{}’ expects 1 argument, {} provided",
+                        "'{}' expects 1 argument, {} provided",
                         func.name,
                         args.len()
                     ),
@@ -6107,7 +6107,7 @@ fn method_call_pos_args(
             if let Some(loc) = call_args_loc {
                 diagnostics.push(Diagnostic::error(
                     loc,
-                    format!("call arguments not allowed on ‘{}’", func.name),
+                    format!("call arguments not allowed on '{}'", func.name),
                 ));
                 return Err(());
             }
@@ -6158,7 +6158,7 @@ fn method_call_pos_args(
             if ty != CallTy::Regular && call_args.value.is_some() {
                 diagnostics.push(Diagnostic::error(
                     *loc,
-                    format!("‘{}’ cannot have value specifed", func.name,),
+                    format!("'{}' cannot have value specifed", func.name,),
                 ));
 
                 return Err(());
@@ -6168,7 +6168,7 @@ fn method_call_pos_args(
                 diagnostics.push(Diagnostic::error(
                     *loc,
                     format!(
-                        "‘{}’ expects 1 argument, {} provided",
+                        "'{}' expects 1 argument, {} provided",
                         func.name,
                         args.len()
                     ),
@@ -6233,7 +6233,7 @@ fn method_call_pos_args(
 
     diagnostics.push(Diagnostic::error(
         func.loc,
-        format!("method ‘{}’ does not exist", func.name),
+        format!("method '{}' does not exist", func.name),
     ));
 
     Err(())
@@ -6342,7 +6342,7 @@ fn resolve_using(
                     *loc,
                     "cannot call private library function".to_string(),
                     libfunc.loc,
-                    format!("declaration of function ‘{}’", libfunc.name),
+                    format!("declaration of function '{}'", libfunc.name),
                 ));
 
                 continue;
@@ -6505,7 +6505,7 @@ fn method_call_named_args(
             if arguments.contains_key(arg.name.name.as_str()) {
                 diagnostics.push(Diagnostic::error(
                     arg.name.loc,
-                    format!("duplicate argument with name ‘{}’", arg.name.name),
+                    format!("duplicate argument with name '{}'", arg.name.name),
                 ));
                 return Err(());
             }
@@ -6552,7 +6552,7 @@ fn method_call_named_args(
                         diagnostics.push(Diagnostic::error(
                             *loc,
                             format!(
-                                "missing argument ‘{}’ to function ‘{}’",
+                                "missing argument '{}' to function '{}'",
                                 param.name_as_str(),
                                 func_name.name,
                             ),
@@ -6590,7 +6590,7 @@ fn method_call_named_args(
                     diagnostics.push(Diagnostic::error(
                         *loc,
                         format!(
-                            "function ‘{}’ is not ‘public’ or ‘external’",
+                            "function '{}' is not 'public' or 'external'",
                             func_name.name
                         ),
                     ));
@@ -6602,7 +6602,7 @@ fn method_call_named_args(
                         diagnostics.push(Diagnostic::error(
                             *loc,
                             format!(
-                                "sending value to function ‘{}’ which is not payable",
+                                "sending value to function '{}' which is not payable",
                                 func_name.name
                             ),
                         ));
@@ -6645,7 +6645,7 @@ fn method_call_named_args(
                 diagnostics.push(Diagnostic::error(
                     *loc,
                     format!(
-                        "contract ‘{}’ does not have function ‘{}’",
+                        "contract '{}' does not have function '{}'",
                         var_ty.deref_any().to_string(ns),
                         func_name.name
                     ),
@@ -6665,7 +6665,7 @@ fn method_call_named_args(
 
     diagnostics.push(Diagnostic::error(
         func_name.loc,
-        format!("method ‘{}’ does not exist", func_name.name),
+        format!("method '{}' does not exist", func_name.name),
     ));
 
     Err(())
@@ -6900,9 +6900,9 @@ fn parse_call_args(
         if let Some(prev) = args.get(&arg.name.name) {
             diagnostics.push(Diagnostic::error_with_note(
                 arg.loc,
-                format!("‘{}’ specified multiple times", arg.name.name),
+                format!("'{}' specified multiple times", arg.name.name),
                 prev.loc,
-                format!("location of previous declaration of ‘{}’", arg.name.name),
+                format!("location of previous declaration of '{}'", arg.name.name),
             ));
             return Err(());
         }
@@ -6944,7 +6944,7 @@ fn parse_call_args(
                     diagnostics.push(Diagnostic::error(
                         arg.loc,
                         format!(
-                            "‘gas’ not permitted for external calls or constructors on {}",
+                            "'gas' not permitted for external calls or constructors on {}",
                             ns.target
                         ),
                     ));
@@ -6974,7 +6974,7 @@ fn parse_call_args(
                     diagnostics.push(Diagnostic::error(
                         arg.loc,
                         format!(
-                            "‘space’ not permitted for external calls or constructors on {}",
+                            "'space' not permitted for external calls or constructors on {}",
                             ns.target
                         ),
                     ));
@@ -6984,7 +6984,7 @@ fn parse_call_args(
                 if external_call {
                     diagnostics.push(Diagnostic::error(
                         arg.loc,
-                        "‘space’ not valid for external calls".to_string(),
+                        "'space' not valid for external calls".to_string(),
                     ));
                     return Err(());
                 }
@@ -7013,7 +7013,7 @@ fn parse_call_args(
                     diagnostics.push(Diagnostic::error(
                         arg.loc,
                         format!(
-                            "‘salt’ not permitted for external calls or constructors on {}",
+                            "'salt' not permitted for external calls or constructors on {}",
                             ns.target
                         ),
                     ));
@@ -7023,7 +7023,7 @@ fn parse_call_args(
                 if external_call {
                     diagnostics.push(Diagnostic::error(
                         arg.loc,
-                        "‘salt’ not valid for external calls".to_string(),
+                        "'salt' not valid for external calls".to_string(),
                     ));
                     return Err(());
                 }
@@ -7050,7 +7050,7 @@ fn parse_call_args(
             _ => {
                 diagnostics.push(Diagnostic::error(
                     arg.loc,
-                    format!("‘{}’ not a valid call parameter", arg.name.name),
+                    format!("'{}' not a valid call parameter", arg.name.name),
                 ));
                 return Err(());
             }
@@ -7258,7 +7258,7 @@ pub fn function_call_expr(
                     if expr.tys().len() > 1 {
                         diagnostics.push(Diagnostic::error(
                             *loc,
-                            format!("builtin function ‘{}’ returns more than one value", id.name),
+                            format!("builtin function '{}' returns more than one value", id.name),
                         ));
                         Err(())
                     } else {

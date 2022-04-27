@@ -6,11 +6,11 @@ strict digraph "tests/contract_testcases/substrate/inheritance/base_contract_on_
 	contract_6 [label="contract apex\ntests/contract_testcases/substrate/inheritance/base_contract_on_constructor.sol:10:9-30"]
 	base [label="base base\ntests/contract_testcases/substrate/inheritance/base_contract_on_constructor.sol:10:26-30"]
 	node_8 [label="constructor \ncontract: apex\ntests/contract_testcases/substrate/inheritance/base_contract_on_constructor.sol:11:13-35\nsignature ()\nvisibility public\nmutability nonpayable"]
-	diagnostic [label="found contract ‘base’\nlevel Debug\ntests/contract_testcases/substrate/inheritance/base_contract_on_constructor.sol:2:9-23"]
-	diagnostic_11 [label="found contract ‘b’\nlevel Debug\ntests/contract_testcases/substrate/inheritance/base_contract_on_constructor.sol:6:9-20"]
-	diagnostic_12 [label="found contract ‘apex’\nlevel Debug\ntests/contract_testcases/substrate/inheritance/base_contract_on_constructor.sol:10:9-30"]
-	diagnostic_13 [label="‘public’: visibility for constructors is ignored\nlevel Warning\ntests/contract_testcases/substrate/inheritance/base_contract_on_constructor.sol:11:27-33"]
-	diagnostic_14 [label="contract ‘b’ is not a base contract of ‘apex’\nlevel Error\ntests/contract_testcases/substrate/inheritance/base_contract_on_constructor.sol:11:34-35"]
+	diagnostic [label="found contract 'base'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/base_contract_on_constructor.sol:2:9-23"]
+	diagnostic_11 [label="found contract 'b'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/base_contract_on_constructor.sol:6:9-20"]
+	diagnostic_12 [label="found contract 'apex'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/base_contract_on_constructor.sol:10:9-30"]
+	diagnostic_13 [label="'public': visibility for constructors is ignored\nlevel Warning\ntests/contract_testcases/substrate/inheritance/base_contract_on_constructor.sol:11:27-33"]
+	diagnostic_14 [label="contract 'b' is not a base contract of 'apex'\nlevel Error\ntests/contract_testcases/substrate/inheritance/base_contract_on_constructor.sol:11:34-35"]
 	structs -> s
 	structs -> s_2
 	contracts -> contract

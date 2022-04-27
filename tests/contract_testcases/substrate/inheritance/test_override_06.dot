@@ -17,9 +17,9 @@ strict digraph "tests/contract_testcases/substrate/inheritance/test_override_06.
 	assign_16 [label="assign\nint64 storage\ntests/contract_testcases/substrate/inheritance/test_override_06.sol:9:17-18"]
 	storage_var_17 [label="storage variable\na.x\nint64 storage\ntests/contract_testcases/substrate/inheritance/test_override_06.sol:9:17-18"]
 	number_literal_18 [label="int64 literal: 2\ntests/contract_testcases/substrate/inheritance/test_override_06.sol:9:21-22"]
-	diagnostic [label="found contract ‘a’\nlevel Debug\ntests/contract_testcases/substrate/inheritance/test_override_06.sol:2:9-20"]
-	diagnostic_21 [label="function ‘f’ overrides function in same contract\nlevel Error\ntests/contract_testcases/substrate/inheritance/test_override_06.sol:8:13-51"]
-	note [label="previous definition of ‘f’\ntests/contract_testcases/substrate/inheritance/test_override_06.sol:4:13-50"]
+	diagnostic [label="found contract 'a'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/test_override_06.sol:2:9-20"]
+	diagnostic_21 [label="function 'f' overrides function in same contract\nlevel Error\ntests/contract_testcases/substrate/inheritance/test_override_06.sol:8:13-51"]
+	note [label="previous definition of 'f'\ntests/contract_testcases/substrate/inheritance/test_override_06.sol:4:13-50"]
 	contracts -> contract
 	contract -> var [label="variable"]
 	var -> number_literal [label="initializer"]

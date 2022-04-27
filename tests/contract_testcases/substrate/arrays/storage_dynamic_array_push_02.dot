@@ -3,7 +3,7 @@ strict digraph "tests/contract_testcases/substrate/arrays/storage_dynamic_array_
 	contract [label="contract foo\ntests/contract_testcases/substrate/arrays/storage_dynamic_array_push_02.sol:2:9-22"]
 	var [label="variable bar\nvisibility internal\ntests/contract_testcases/substrate/arrays/storage_dynamic_array_push_02.sol:7:13-20"]
 	test [label="function test\ncontract: foo\ntests/contract_testcases/substrate/arrays/storage_dynamic_array_push_02.sol:9:13-35\nsignature test()\nvisibility public\nmutability nonpayable"]
-	diagnostic [label="found contract ‘foo’\nlevel Debug\ntests/contract_testcases/substrate/arrays/storage_dynamic_array_push_02.sol:2:9-22"]
+	diagnostic [label="found contract 'foo'\nlevel Debug\ntests/contract_testcases/substrate/arrays/storage_dynamic_array_push_02.sol:2:9-22"]
 	diagnostic_8 [label="function or method does not return a value\nlevel Error\ntests/contract_testcases/substrate/arrays/storage_dynamic_array_push_02.sol:10:35-39"]
 	structs -> s
 	contracts -> contract

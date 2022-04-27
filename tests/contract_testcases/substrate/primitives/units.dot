@@ -1,9 +1,9 @@
 strict digraph "tests/contract_testcases/substrate/primitives/units.sol" {
 	contract [label="contract c\ntests/contract_testcases/substrate/primitives/units.sol:2:9-20"]
 	test [label="function test\ncontract: c\ntests/contract_testcases/substrate/primitives/units.sol:3:13-35\nsignature test()\nvisibility public\nmutability nonpayable"]
-	diagnostic [label="found contract ‘c’\nlevel Debug\ntests/contract_testcases/substrate/primitives/units.sol:2:9-20"]
+	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/primitives/units.sol:2:9-20"]
 	diagnostic_5 [label="ethereum currency unit used while not targetting ethereum\nlevel Warning\ntests/contract_testcases/substrate/primitives/units.sol:4:29-34"]
-	diagnostic_6 [label="literal 1000000000000000000 is too large to fit into type ‘int32’\nlevel Error\ntests/contract_testcases/substrate/primitives/units.sol:4:27-34"]
+	diagnostic_6 [label="literal 1000000000000000000 is too large to fit into type 'int32'\nlevel Error\ntests/contract_testcases/substrate/primitives/units.sol:4:27-34"]
 	contracts -> contract
 	contract -> test [label="function"]
 	diagnostics -> diagnostic [label="Debug"]

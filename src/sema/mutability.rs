@@ -39,7 +39,7 @@ impl<'a> StateCheck<'a> {
             self.diagnostics.push(Diagnostic::error(
                 *loc,
                 format!(
-                    "function declared ‘{}’ but this expression writes to state",
+                    "function declared '{}' but this expression writes to state",
                     self.func.mutability
                 ),
             ));
@@ -53,7 +53,7 @@ impl<'a> StateCheck<'a> {
             self.diagnostics.push(Diagnostic::error(
                 *loc,
                 format!(
-                    "function declared ‘{}’ but this expression reads from state",
+                    "function declared '{}' but this expression reads from state",
                     self.func.mutability
                 ),
             ));
@@ -138,14 +138,14 @@ fn check_mutability(func: &Function, ns: &Namespace) -> Vec<Diagnostic> {
                 Mutability::Nonpayable(_) => {
                     state.diagnostics.push(Diagnostic::warning(
                         func.loc,
-                        "function can be declared ‘pure’".to_string(),
+                        "function can be declared 'pure'".to_string(),
                     ));
                 }
                 _ => {
                     state.diagnostics.push(Diagnostic::warning(
                         func.loc,
                         format!(
-                            "function declared ‘{}’ can be declared ‘pure’",
+                            "function declared '{}' can be declared 'pure'",
                             func.mutability
                         ),
                     ));
@@ -156,7 +156,7 @@ fn check_mutability(func: &Function, ns: &Namespace) -> Vec<Diagnostic> {
         if !state.does_write_state && state.does_read_state && func.mutability.is_default() {
             state.diagnostics.push(Diagnostic::warning(
                 func.loc,
-                "function can be declared ‘view’".to_string(),
+                "function can be declared 'view'".to_string(),
             ));
         }
     }

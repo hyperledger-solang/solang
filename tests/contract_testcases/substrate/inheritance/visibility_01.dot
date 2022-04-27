@@ -8,9 +8,9 @@ strict digraph "tests/contract_testcases/substrate/inheritance/visibility_01.sol
 	returns_7 [label="returns\nint256 "]
 	return [label="return\ntests/contract_testcases/substrate/inheritance/visibility_01.sol:8:17-27"]
 	number_literal [label="int256 literal: 102\ntests/contract_testcases/substrate/inheritance/visibility_01.sol:8:24-27"]
-	diagnostic [label="found abstract contract ‘y’\nlevel Debug\ntests/contract_testcases/substrate/inheritance/visibility_01.sol:2:9-29"]
-	diagnostic_12 [label="found contract ‘x’\nlevel Debug\ntests/contract_testcases/substrate/inheritance/visibility_01.sol:6:9-24"]
-	diagnostic_13 [label="visibility ‘internal’ of function ‘foo’ is not compatible with visibility ‘external’\nlevel Error\ntests/contract_testcases/substrate/inheritance/visibility_01.sol:7:13-59"]
+	diagnostic [label="found abstract contract 'y'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/visibility_01.sol:2:9-29"]
+	diagnostic_12 [label="found contract 'x'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/visibility_01.sol:6:9-24"]
+	diagnostic_13 [label="visibility 'internal' of function 'foo' is not compatible with visibility 'external'\nlevel Error\ntests/contract_testcases/substrate/inheritance/visibility_01.sol:7:13-59"]
 	note [label="location of base function\ntests/contract_testcases/substrate/inheritance/visibility_01.sol:3:13-58"]
 	contracts -> contract
 	contract -> foo [label="function"]

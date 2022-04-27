@@ -192,7 +192,7 @@ contract testTypes {
     assert_eq!(ns.diagnostics.len(), 2);
     assert!(ns
         .diagnostics
-        .contains_message("found contract ‘testTypes’"));
+        .contains_message("found contract 'testTypes'"));
     assert!(ns
         .diagnostics
         .contains_message("inline assembly is not yet supported"));
@@ -238,7 +238,7 @@ contract testTypes {
     assert_eq!(ns.diagnostics.len(), 2);
     assert!(ns
         .diagnostics
-        .contains_message("found contract ‘testTypes’"));
+        .contains_message("found contract 'testTypes'"));
     assert!(ns
         .diagnostics
         .contains_message("inline assembly is not yet supported"));
@@ -293,7 +293,7 @@ contract testTypes {
     assert_eq!(ns.diagnostics.len(), 2);
     assert!(ns
         .diagnostics
-        .contains_message("found contract ‘testTypes’"));
+        .contains_message("found contract 'testTypes'"));
     assert!(ns
         .diagnostics
         .contains_message("inline assembly is not yet supported"));
@@ -348,7 +348,7 @@ contract testTypes {
     assert_eq!(ns.diagnostics.len(), 2);
     assert!(ns
         .diagnostics
-        .contains_message("found contract ‘testTypes’"));
+        .contains_message("found contract 'testTypes'"));
     assert!(ns
         .diagnostics
         .contains_message("inline assembly is not yet supported"));

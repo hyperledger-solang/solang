@@ -509,14 +509,14 @@ fn resolve_member_access(
             if dims.last().unwrap().is_none() && id.name != "offset" && id.name != "length" {
                 ns.diagnostics.push(Diagnostic::error(
                     resolved_expr.loc(),
-                    "calldata variables only support ‘.offset‘ and ‘.length‘".to_string(),
+                    "calldata variables only support '.offset' and '.length'".to_string(),
                 ));
                 return Err(());
             } else if dims.last().unwrap().is_some() {
                 ns.diagnostics.push(Diagnostic::error(
                     resolved_expr.loc(),
                     format!(
-                        "the given expression does not support ‘.{}‘ suffixes",
+                        "the given expression does not support '.{}' suffixes",
                         suffix_type.to_string()
                     ),
                 ));
@@ -539,7 +539,7 @@ fn resolve_member_access(
             if id.name != "selector" && id.name != "address" {
                 ns.diagnostics.push(Diagnostic::error(
                     id.loc,
-                    "variables of type function pointer only support ‘.selector‘ and ‘.address‘ suffixes".to_string()
+                    "variables of type function pointer only support '.selector' and '.address' suffixes".to_string()
                 ));
                 return Err(());
             }
@@ -550,7 +550,7 @@ fn resolve_member_access(
             if id.name != "slot" && id.name != "offset" {
                 ns.diagnostics.push(Diagnostic::error(
                     id.loc,
-                    "state variables only support ‘.slot‘ and ‘.offset‘".to_string(),
+                    "state variables only support '.slot' and '.offset'".to_string(),
                 ));
                 return Err(());
             }
@@ -577,7 +577,7 @@ fn resolve_member_access(
             ns.diagnostics.push(Diagnostic::error(
                 resolved_expr.loc(),
                 format!(
-                    "the given expression does not support ‘.{}‘ suffixes",
+                    "the given expression does not support '.{}' suffixes",
                     suffix_type.to_string()
                 ),
             ));
@@ -606,7 +606,7 @@ pub(crate) fn check_type(
             | YulExpression::StorageVariable(..) => {
                 return Some(Diagnostic::error(
                     expr.loc(),
-                    "storage variables cannot be assigned any value in assembly. You may use ‘sstore()‘".to_string()
+                    "storage variables cannot be assigned any value in assembly. You may use 'sstore()'".to_string()
                 ));
             }
 
@@ -662,7 +662,7 @@ pub(crate) fn check_type(
         | YulExpression::StorageVariable(..) => {
             return Some(Diagnostic::error(
                 expr.loc(),
-                "Storage variables must be accessed with ‘.slot‘ or ‘.offset‘".to_string(),
+                "Storage variables must be accessed with '.slot' or '.offset'".to_string(),
             ));
         }
 
@@ -675,7 +675,7 @@ pub(crate) fn check_type(
             if dims[0].is_none() {
                 return Some(Diagnostic::error(
                     expr.loc(),
-                    "Calldata arrays must be accessed with ‘.offset‘, ‘.length‘ and the ‘calldatacopy‘ function".to_string()
+                    "Calldata arrays must be accessed with '.offset', '.length' and the 'calldatacopy' function".to_string()
                 ));
             }
         }

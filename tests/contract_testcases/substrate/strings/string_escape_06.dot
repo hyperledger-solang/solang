@@ -4,7 +4,7 @@ strict digraph "tests/contract_testcases/substrate/strings/string_escape_06.sol"
 	returns [label="returns\nbytes4 "]
 	return [label="return\ntests/contract_testcases/substrate/strings/string_escape_06.sol:3:9-25"]
 	bytes_literal [label="bytes4 literal: 414243ff\ntests/contract_testcases/substrate/strings/string_escape_06.sol:3:16-25"]
-	diagnostic [label="found contract ‘foo’\nlevel Debug\ntests/contract_testcases/substrate/strings/string_escape_06.sol:1:1-14"]
+	diagnostic [label="found contract 'foo'\nlevel Debug\ntests/contract_testcases/substrate/strings/string_escape_06.sol:1:1-14"]
 	contracts -> contract
 	contract -> bar [label="function"]
 	bar -> returns [label="returns"]

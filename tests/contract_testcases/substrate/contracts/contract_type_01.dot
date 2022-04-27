@@ -4,9 +4,9 @@ strict digraph "tests/contract_testcases/substrate/contracts/contract_type_01.so
 	var_decl [label="variable decl contract printer x\ntests/contract_testcases/substrate/contracts/contract_type_01.sol:4:17-50"]
 	cast [label="cast contract printer\ntests/contract_testcases/substrate/contracts/contract_type_01.sol:4:29-50"]
 	number_literal [label="address literal: 102\ntests/contract_testcases/substrate/contracts/contract_type_01.sol:4:37-49"]
-	diagnostic [label="found contract ‘printer’\nlevel Debug\ntests/contract_testcases/substrate/contracts/contract_type_01.sol:2:9-26"]
-	diagnostic_8 [label="local variable ‘x‘ has been assigned, but never read\nlevel Warning\ntests/contract_testcases/substrate/contracts/contract_type_01.sol:4:25-26"]
-	diagnostic_9 [label="function can be declared ‘pure’\nlevel Warning\ntests/contract_testcases/substrate/contracts/contract_type_01.sol:3:13-35"]
+	diagnostic [label="found contract 'printer'\nlevel Debug\ntests/contract_testcases/substrate/contracts/contract_type_01.sol:2:9-26"]
+	diagnostic_8 [label="local variable 'x' has been assigned, but never read\nlevel Warning\ntests/contract_testcases/substrate/contracts/contract_type_01.sol:4:25-26"]
+	diagnostic_9 [label="function can be declared 'pure'\nlevel Warning\ntests/contract_testcases/substrate/contracts/contract_type_01.sol:3:13-35"]
 	contracts -> contract
 	contract -> test [label="function"]
 	test -> var_decl [label="body"]

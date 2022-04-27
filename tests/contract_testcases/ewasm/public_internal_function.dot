@@ -1,8 +1,8 @@
 strict digraph "tests/contract_testcases/ewasm/public_internal_function.sol" {
 	A [label="name:A\ncontract: foo\ntests/contract_testcases/ewasm/public_internal_function.sol:2:12-13\nfield name:a ty:function() internal"]
 	contract [label="contract foo\ntests/contract_testcases/ewasm/public_internal_function.sol:1:1-14"]
-	diagnostic [label="found contract ‘foo’\nlevel Debug\ntests/contract_testcases/ewasm/public_internal_function.sol:1:1-14"]
-	diagnostic_7 [label="variable of type internal function cannot be ‘public’\nlevel Error\ntests/contract_testcases/ewasm/public_internal_function.sol:6:5-8"]
+	diagnostic [label="found contract 'foo'\nlevel Debug\ntests/contract_testcases/ewasm/public_internal_function.sol:1:1-14"]
+	diagnostic_7 [label="variable of type internal function cannot be 'public'\nlevel Error\ntests/contract_testcases/ewasm/public_internal_function.sol:6:5-8"]
 	structs -> A
 	contracts -> contract
 	diagnostics -> diagnostic [label="Debug"]

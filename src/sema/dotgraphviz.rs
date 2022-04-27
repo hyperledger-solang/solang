@@ -1692,7 +1692,7 @@ impl Dot {
             }
             YulExpression::MemberAccess(loc, member, suffix) => {
                 let labels = vec![
-                    format!("yul member ‘{}‘ access", suffix.to_string()),
+                    format!("yul member '{}' access", suffix.to_string()),
                     ns.loc_to_string(loc),
                 ];
 
@@ -1994,7 +1994,7 @@ impl Dot {
         ns: &Namespace,
     ) -> usize {
         let labels = vec![
-            format!("yul function call ‘{}‘", ns.yul_functions[*func_no].name),
+            format!("yul function call '{}'", ns.yul_functions[*func_no].name),
             ns.loc_to_string(loc),
         ];
 
@@ -2022,7 +2022,7 @@ impl Dot {
         ns: &Namespace,
     ) -> usize {
         let labels = vec![
-            format!("yul builtin call ‘{}‘", builtin_ty.to_string()),
+            format!("yul builtin call '{}'", builtin_ty.to_string()),
             ns.loc_to_string(loc),
         ];
 

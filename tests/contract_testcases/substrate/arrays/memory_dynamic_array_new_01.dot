@@ -1,7 +1,7 @@
 strict digraph "tests/contract_testcases/substrate/arrays/memory_dynamic_array_new_01.sol" {
 	contract [label="contract foo\ntests/contract_testcases/substrate/arrays/memory_dynamic_array_new_01.sol:2:9-22"]
 	test [label="function test\ncontract: foo\ntests/contract_testcases/substrate/arrays/memory_dynamic_array_new_01.sol:3:13-35\nsignature test()\nvisibility public\nmutability nonpayable"]
-	diagnostic [label="found contract ‘foo’\nlevel Debug\ntests/contract_testcases/substrate/arrays/memory_dynamic_array_new_01.sol:2:9-22"]
+	diagnostic [label="found contract 'foo'\nlevel Debug\ntests/contract_testcases/substrate/arrays/memory_dynamic_array_new_01.sol:2:9-22"]
 	diagnostic_5 [label="new dynamic array should have a single length argument\nlevel Error\ntests/contract_testcases/substrate/arrays/memory_dynamic_array_new_01.sol:4:36-53"]
 	contracts -> contract
 	contract -> test [label="function"]

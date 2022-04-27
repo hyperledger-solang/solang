@@ -11,8 +11,8 @@ strict digraph "tests/contract_testcases/substrate/function_types/ext_02.sol" {
 	returns_10 [label="returns\nbool "]
 	return_11 [label="return\ntests/contract_testcases/substrate/function_types/ext_02.sol:12:17-29"]
 	bool_literal_12 [label="bool literal: false\ntests/contract_testcases/substrate/function_types/ext_02.sol:12:24-29"]
-	diagnostic [label="found contract ‘ft’\nlevel Debug\ntests/contract_testcases/substrate/function_types/ext_02.sol:2:9-21"]
-	diagnostic_15 [label="function ‘foo’ of contract ‘ft’ is overloaded\nlevel Error\ntests/contract_testcases/substrate/function_types/ext_02.sol:4:66-69"]
+	diagnostic [label="found contract 'ft'\nlevel Debug\ntests/contract_testcases/substrate/function_types/ext_02.sol:2:9-21"]
+	diagnostic_15 [label="function 'foo' of contract 'ft' is overloaded\nlevel Error\ntests/contract_testcases/substrate/function_types/ext_02.sol:4:66-69"]
 	contracts -> contract
 	contract -> test [label="function"]
 	contract -> foo [label="function"]

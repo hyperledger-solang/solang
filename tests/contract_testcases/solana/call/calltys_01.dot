@@ -1,8 +1,8 @@
 strict digraph "tests/contract_testcases/solana/call/calltys_01.sol" {
 	contract [label="contract main\ntests/contract_testcases/solana/call/calltys_01.sol:2:9-23"]
 	test [label="function test\ncontract: main\ntests/contract_testcases/solana/call/calltys_01.sol:3:13-35\nsignature test()\nvisibility public\nmutability nonpayable"]
-	diagnostic [label="found contract ‘main’\nlevel Debug\ntests/contract_testcases/solana/call/calltys_01.sol:2:9-23"]
-	diagnostic_6 [label="method ‘delegatecall’ does not exist\nlevel Error\ntests/contract_testcases/solana/call/calltys_01.sol:6:19-31"]
+	diagnostic [label="found contract 'main'\nlevel Debug\ntests/contract_testcases/solana/call/calltys_01.sol:2:9-23"]
+	diagnostic_6 [label="method 'delegatecall' does not exist\nlevel Error\ntests/contract_testcases/solana/call/calltys_01.sol:6:19-31"]
 	contracts -> contract
 	contract -> test [label="function"]
 	diagnostics -> diagnostic [label="Debug"]

@@ -15,11 +15,11 @@ strict digraph "tests/contract_testcases/substrate/inheritance/inherit_types_02.
 	contract_15 [label="contract b\ntests/contract_testcases/substrate/inheritance/inherit_types_02.sol:12:9-24"]
 	base_16 [label="base c\ntests/contract_testcases/substrate/inheritance/inherit_types_02.sol:12:23-24"]
 	contract_17 [label="contract c\ntests/contract_testcases/substrate/inheritance/inherit_types_02.sol:16:9-20"]
-	diagnostic [label="found contract ‘a’\nlevel Debug\ntests/contract_testcases/substrate/inheritance/inherit_types_02.sol:2:9-27"]
-	diagnostic_20 [label="found contract ‘b’\nlevel Debug\ntests/contract_testcases/substrate/inheritance/inherit_types_02.sol:12:9-24"]
-	diagnostic_21 [label="found contract ‘c’\nlevel Debug\ntests/contract_testcases/substrate/inheritance/inherit_types_02.sol:16:9-20"]
-	diagnostic_22 [label="function can be declared ‘pure’\nlevel Warning\ntests/contract_testcases/substrate/inheritance/inherit_types_02.sol:3:13-52"]
-	diagnostic_23 [label="function can be declared ‘pure’\nlevel Warning\ntests/contract_testcases/substrate/inheritance/inherit_types_02.sol:7:13-53"]
+	diagnostic [label="found contract 'a'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/inherit_types_02.sol:2:9-27"]
+	diagnostic_20 [label="found contract 'b'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/inherit_types_02.sol:12:9-24"]
+	diagnostic_21 [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/inherit_types_02.sol:16:9-20"]
+	diagnostic_22 [label="function can be declared 'pure'\nlevel Warning\ntests/contract_testcases/substrate/inheritance/inherit_types_02.sol:3:13-52"]
+	diagnostic_23 [label="function can be declared 'pure'\nlevel Warning\ntests/contract_testcases/substrate/inheritance/inherit_types_02.sol:7:13-53"]
 	enums -> enum_y
 	enums -> enum_x
 	contracts -> contract

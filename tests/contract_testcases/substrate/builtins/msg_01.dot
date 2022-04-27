@@ -8,8 +8,8 @@ strict digraph "tests/contract_testcases/substrate/builtins/msg_01.sol" {
 	cast [label="cast uint128\ntests/contract_testcases/substrate/builtins/msg_01.sol:4:24-33"]
 	builtins [label="builtin Value\ntests/contract_testcases/substrate/builtins/msg_01.sol:4:24-33"]
 	variable [label="variable: v\nuint128\ntests/contract_testcases/substrate/builtins/msg_01.sol:4:36-37"]
-	diagnostic [label="found contract ‘bar’\nlevel Debug\ntests/contract_testcases/substrate/builtins/msg_01.sol:2:9-22"]
-	diagnostic_12 [label="function can be declared ‘pure’\nlevel Warning\ntests/contract_testcases/substrate/builtins/msg_01.sol:3:13-59"]
+	diagnostic [label="found contract 'bar'\nlevel Debug\ntests/contract_testcases/substrate/builtins/msg_01.sol:2:9-22"]
+	diagnostic_12 [label="function can be declared 'pure'\nlevel Warning\ntests/contract_testcases/substrate/builtins/msg_01.sol:3:13-59"]
 	contracts -> contract
 	contract -> test [label="function"]
 	test -> parameters [label="parameters"]

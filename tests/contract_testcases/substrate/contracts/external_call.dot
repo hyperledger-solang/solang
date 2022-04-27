@@ -9,8 +9,8 @@ strict digraph "tests/contract_testcases/substrate/contracts/external_call.sol" 
 	returns_8 [label="returns\nint32 "]
 	return [label="return\ntests/contract_testcases/substrate/contracts/external_call.sol:11:17-25"]
 	number_literal [label="int32 literal: 1\ntests/contract_testcases/substrate/contracts/external_call.sol:11:24-25"]
-	diagnostic [label="found contract ‘c’\nlevel Debug\ntests/contract_testcases/substrate/contracts/external_call.sol:2:9-20"]
-	diagnostic_13 [label="found contract ‘b’\nlevel Debug\ntests/contract_testcases/substrate/contracts/external_call.sol:9:9-20"]
+	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/contracts/external_call.sol:2:9-20"]
+	diagnostic_13 [label="found contract 'b'\nlevel Debug\ntests/contract_testcases/substrate/contracts/external_call.sol:9:9-20"]
 	diagnostic_14 [label="function expects 1 arguments, 0 provided\nlevel Error\ntests/contract_testcases/substrate/contracts/external_call.sol:5:24-33"]
 	contracts -> contract
 	contract -> var [label="variable"]

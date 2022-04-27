@@ -12,8 +12,8 @@ strict digraph "tests/contract_testcases/substrate/inheritance/simple_interface.
 	multiply [label="multiply\nuint32\ntests/contract_testcases/substrate/inheritance/simple_interface.sol:8:26-27"]
 	variable [label="variable: a\nuint32\ntests/contract_testcases/substrate/inheritance/simple_interface.sol:8:24-25"]
 	number_literal [label="uint32 literal: 2\ntests/contract_testcases/substrate/inheritance/simple_interface.sol:8:28-29"]
-	diagnostic [label="found interface ‘IFoo’\nlevel Debug\ntests/contract_testcases/substrate/inheritance/simple_interface.sol:2:9-24"]
-	diagnostic_16 [label="found contract ‘foo’\nlevel Debug\ntests/contract_testcases/substrate/inheritance/simple_interface.sol:6:9-29"]
+	diagnostic [label="found interface 'IFoo'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/simple_interface.sol:2:9-24"]
+	diagnostic_16 [label="found contract 'foo'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/simple_interface.sol:6:9-29"]
 	contracts -> contract
 	contract -> bar [label="function"]
 	bar -> parameters [label="parameters"]

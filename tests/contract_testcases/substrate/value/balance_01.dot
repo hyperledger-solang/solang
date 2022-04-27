@@ -3,8 +3,8 @@ strict digraph "tests/contract_testcases/substrate/value/balance_01.sol" {
 	step1 [label="function step1\ncontract: b\ntests/contract_testcases/substrate/value/balance_01.sol:3:13-57\nsignature step1(address)\nvisibility public\nmutability nonpayable"]
 	parameters [label="parameters\ncontract b j"]
 	returns [label="returns\nuint128 "]
-	diagnostic [label="found contract ‘b’\nlevel Debug\ntests/contract_testcases/substrate/value/balance_01.sol:2:9-20"]
-	diagnostic_7 [label="contract ‘b’ has no public function ‘balance’\nlevel Error\ntests/contract_testcases/substrate/value/balance_01.sol:4:26-33"]
+	diagnostic [label="found contract 'b'\nlevel Debug\ntests/contract_testcases/substrate/value/balance_01.sol:2:9-20"]
+	diagnostic_7 [label="contract 'b' has no public function 'balance'\nlevel Error\ntests/contract_testcases/substrate/value/balance_01.sol:4:26-33"]
 	contracts -> contract
 	contract -> step1 [label="function"]
 	step1 -> parameters [label="parameters"]

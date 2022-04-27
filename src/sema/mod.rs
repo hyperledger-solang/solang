@@ -233,7 +233,7 @@ fn resolve_import(
                     ns.diagnostics.push(ast::Diagnostic::error(
                         from.loc,
                         format!(
-                            "import ‘{}’ does not export ‘{}’",
+                            "import '{}' does not export '{}'",
                             filename.string, from.name
                         ),
                     ));
@@ -294,23 +294,23 @@ fn resolve_pragma(
     if name.name == "solidity" {
         ns.diagnostics.push(ast::Diagnostic::debug(
             *loc,
-            "pragma ‘solidity’ is ignored".to_string(),
+            "pragma 'solidity' is ignored".to_string(),
         ));
     } else if name.name == "experimental" && value.string == "ABIEncoderV2" {
         ns.diagnostics.push(ast::Diagnostic::debug(
             *loc,
-            "pragma ‘experimental’ with value ‘ABIEncoderV2’ is ignored".to_string(),
+            "pragma 'experimental' with value 'ABIEncoderV2' is ignored".to_string(),
         ));
     } else if name.name == "abicoder" && value.string == "v2" {
         ns.diagnostics.push(ast::Diagnostic::debug(
             *loc,
-            "pragma ‘abicoder’ with value ‘v2’ is ignored".to_string(),
+            "pragma 'abicoder' with value 'v2' is ignored".to_string(),
         ));
     } else {
         ns.diagnostics.push(ast::Diagnostic::warning(
             *loc,
             format!(
-                "unknown pragma ‘{}’ with value ‘{}’ ignored",
+                "unknown pragma '{}' with value '{}' ignored",
                 name.name, value.string
             ),
         ));
@@ -368,7 +368,7 @@ impl ast::Namespace {
         if builtin::is_reserved(&id.name) {
             self.diagnostics.push(ast::Diagnostic::error(
                 id.loc,
-                format!("‘{}’ shadows name of a builtin", id.name),
+                format!("'{}' shadows name of a builtin", id.name),
             ));
 
             return false;
@@ -692,7 +692,7 @@ impl ast::Namespace {
                 None if events.is_empty() => {
                     diagnostics.push(ast::Diagnostic::decl_error(
                         id.loc,
-                        format!("event ‘{}’ not found", id.name),
+                        format!("event '{}' not found", id.name),
                     ));
                     Err(())
                 }
@@ -728,30 +728,30 @@ impl ast::Namespace {
 
     pub fn wrong_symbol(sym: Option<&ast::Symbol>, id: &pt::Identifier) -> ast::Diagnostic {
         match sym {
-            None => ast::Diagnostic::decl_error(id.loc, format!("`{}' is not found", id.name)),
+            None => ast::Diagnostic::decl_error(id.loc, format!("'{}' is not found", id.name)),
             Some(ast::Symbol::Enum(..)) => {
-                ast::Diagnostic::decl_error(id.loc, format!("`{}' is an enum", id.name))
+                ast::Diagnostic::decl_error(id.loc, format!("'{}' is an enum", id.name))
             }
             Some(ast::Symbol::Struct(..)) => {
-                ast::Diagnostic::decl_error(id.loc, format!("`{}' is a struct", id.name))
+                ast::Diagnostic::decl_error(id.loc, format!("'{}' is a struct", id.name))
             }
             Some(ast::Symbol::Event(_)) => {
-                ast::Diagnostic::decl_error(id.loc, format!("`{}' is an event", id.name))
+                ast::Diagnostic::decl_error(id.loc, format!("'{}' is an event", id.name))
             }
             Some(ast::Symbol::Function(_)) => {
-                ast::Diagnostic::decl_error(id.loc, format!("`{}' is a function", id.name))
+                ast::Diagnostic::decl_error(id.loc, format!("'{}' is a function", id.name))
             }
             Some(ast::Symbol::Contract(..)) => {
-                ast::Diagnostic::decl_error(id.loc, format!("`{}' is a contract", id.name))
+                ast::Diagnostic::decl_error(id.loc, format!("'{}' is a contract", id.name))
             }
             Some(ast::Symbol::Import(..)) => {
-                ast::Diagnostic::decl_error(id.loc, format!("`{}' is an import", id.name))
+                ast::Diagnostic::decl_error(id.loc, format!("'{}' is an import", id.name))
             }
             Some(ast::Symbol::UserType(..)) => {
-                ast::Diagnostic::decl_error(id.loc, format!("`{}' is an user type", id.name))
+                ast::Diagnostic::decl_error(id.loc, format!("'{}' is an user type", id.name))
             }
             Some(ast::Symbol::Variable(..)) => {
-                ast::Diagnostic::decl_error(id.loc, format!("`{}' is a contract variable", id.name))
+                ast::Diagnostic::decl_error(id.loc, format!("'{}' is a contract variable", id.name))
             }
         }
     }
@@ -880,7 +880,7 @@ impl ast::Namespace {
         if builtin::is_reserved(&id.name) {
             self.diagnostics.push(ast::Diagnostic::warning(
                 id.loc,
-                format!("‘{}’ shadows name of a builtin", id.name),
+                format!("'{}' shadows name of a builtin", id.name),
             ));
             return;
         }
@@ -906,7 +906,7 @@ impl ast::Namespace {
                 let loc = *loc;
                 self.diagnostics.push(ast::Diagnostic::warning_with_note(
                     id.loc,
-                    format!("declaration of `{}' shadows enum definition", id.name),
+                    format!("declaration of '{}' shadows enum definition", id.name),
                     loc,
                     "previous definition of enum".to_string(),
                 ));
@@ -915,7 +915,7 @@ impl ast::Namespace {
                 let loc = *loc;
                 self.diagnostics.push(ast::Diagnostic::warning_with_note(
                     id.loc,
-                    format!("declaration of `{}' shadows struct definition", id.name),
+                    format!("declaration of '{}' shadows struct definition", id.name),
                     loc,
                     "previous definition of struct".to_string(),
                 ));
@@ -931,7 +931,7 @@ impl ast::Namespace {
 
                 self.diagnostics.push(ast::Diagnostic::warning_with_notes(
                     id.loc,
-                    format!("declaration of `{}' shadows event definition", id.name),
+                    format!("declaration of '{}' shadows event definition", id.name),
                     notes,
                 ));
             }
@@ -945,7 +945,7 @@ impl ast::Namespace {
                     .collect();
                 self.diagnostics.push(ast::Diagnostic::warning_with_notes(
                     id.loc,
-                    format!("declaration of ‘{}’ shadows function", id.name),
+                    format!("declaration of '{}' shadows function", id.name),
                     notes,
                 ));
             }
@@ -953,7 +953,7 @@ impl ast::Namespace {
                 let loc = *loc;
                 self.diagnostics.push(ast::Diagnostic::warning_with_note(
                     id.loc,
-                    format!("declaration of ‘{}’ shadows state variable", id.name),
+                    format!("declaration of '{}' shadows state variable", id.name),
                     loc,
                     "previous declaration of state variable".to_string(),
                 ));
@@ -962,7 +962,7 @@ impl ast::Namespace {
                 let loc = *loc;
                 self.diagnostics.push(ast::Diagnostic::warning_with_note(
                     id.loc,
-                    format!("declaration of ‘{}’ shadows contract name", id.name),
+                    format!("declaration of '{}' shadows contract name", id.name),
                     loc,
                     "previous declaration of contract name".to_string(),
                 ));
@@ -971,7 +971,7 @@ impl ast::Namespace {
                 let loc = *loc;
                 self.diagnostics.push(ast::Diagnostic::warning_with_note(
                     id.loc,
-                    format!("declaration of ‘{}’ shadows type", id.name),
+                    format!("declaration of '{}' shadows type", id.name),
                     loc,
                     "previous declaration of type".to_string(),
                 ));
@@ -980,7 +980,7 @@ impl ast::Namespace {
                 let loc = *loc;
                 self.diagnostics.push(ast::Diagnostic::warning_with_note(
                     id.loc,
-                    format!("declaration of ‘{}’ shadows import", id.name),
+                    format!("declaration of '{}' shadows import", id.name),
                     loc,
                     "previous declaration of import".to_string(),
                 ));
@@ -1083,10 +1083,10 @@ impl ast::Namespace {
                                 if let Some(e) = &mutability {
                                     diagnostics.push(ast::Diagnostic::error_with_note(
                                         m.loc(),
-                                        format!("function type mutability redeclared `{}'", m),
+                                        format!("function type mutability redeclared '{}'", m),
                                         e.loc(),
                                         format!(
-                                            "location of previous mutability declaration of `{}'",
+                                            "location of previous mutability declaration of '{}'",
                                             e
                                         ),
                                     ));
@@ -1097,7 +1097,7 @@ impl ast::Namespace {
                                 if let pt::Mutability::Constant(loc) = m {
                                     diagnostics.push(ast::Diagnostic::warning(
                                         *loc,
-                                        "‘constant’ is deprecated. Use ‘view’ instead".to_string(),
+                                        "'constant' is deprecated. Use 'view' instead".to_string(),
                                     ));
 
                                     mutability = Some(pt::Mutability::View(*loc));
@@ -1109,10 +1109,10 @@ impl ast::Namespace {
                                 if let Some(e) = &visibility {
                                     diagnostics.push(ast::Diagnostic::error_with_note(
                                         v.loc().unwrap(),
-                                        format!("function type visibility redeclared `{}'", v),
+                                        format!("function type visibility redeclared '{}'", v),
                                         e.loc().unwrap(),
                                         format!(
-                                            "location of previous visibility declaration of `{}'",
+                                            "location of previous visibility declaration of '{}'",
                                             e
                                         ),
                                     ));
@@ -1132,7 +1132,7 @@ impl ast::Namespace {
                         Some(v) => {
                             diagnostics.push(ast::Diagnostic::error(
                                 v.loc().unwrap(),
-                                format!("function type cannot have visibility attribute `{}'", v),
+                                format!("function type cannot have visibility attribute '{}'", v),
                             ));
                             success = false;
                             false
@@ -1164,14 +1164,14 @@ impl ast::Namespace {
                             pt::FunctionAttribute::Mutability(m) => {
                                 diagnostics.push(ast::Diagnostic::error(
                                     m.loc(),
-                                    format!("mutability `{}' cannot be declared after returns", m),
+                                    format!("mutability '{}' cannot be declared after returns", m),
                                 ));
                                 success = false;
                             }
                             pt::FunctionAttribute::Visibility(v) => {
                                 diagnostics.push(ast::Diagnostic::error(
                                     v.loc().unwrap(),
-                                    format!("visibility `{}' cannot be declared after returns", v),
+                                    format!("visibility '{}' cannot be declared after returns", v),
                                 ));
                                 success = false;
                             }
@@ -1237,7 +1237,7 @@ impl ast::Namespace {
                     if !casting {
                         diagnostics.push(ast::Diagnostic::decl_error(
                             id.loc(),
-                            "‘payable’ cannot be used for type declarations, only casting. use ‘address payable’"
+                            "'payable' cannot be used for type declarations, only casting. use ‘address payable’"
                                 .to_string(),
                         ));
                         return Err(());
@@ -1269,7 +1269,7 @@ impl ast::Namespace {
             None => {
                 diagnostics.push(ast::Diagnostic::decl_error(
                     id.loc,
-                    format!("type ‘{}’ not found", id.name),
+                    format!("type '{}' not found", id.name),
                 ));
                 Err(())
             }
@@ -1293,28 +1293,28 @@ impl ast::Namespace {
             Some(ast::Symbol::Event(_)) => {
                 diagnostics.push(ast::Diagnostic::decl_error(
                     id.loc,
-                    format!("‘{}’ is an event", id.name),
+                    format!("'{}' is an event", id.name),
                 ));
                 Err(())
             }
             Some(ast::Symbol::Function(_)) => {
                 diagnostics.push(ast::Diagnostic::decl_error(
                     id.loc,
-                    format!("‘{}’ is a function", id.name),
+                    format!("'{}' is a function", id.name),
                 ));
                 Err(())
             }
             Some(ast::Symbol::Variable(..)) => {
                 diagnostics.push(ast::Diagnostic::decl_error(
                     id.loc,
-                    format!("‘{}’ is a contract variable", id.name),
+                    format!("'{}' is a contract variable", id.name),
                 ));
                 Err(())
             }
             Some(ast::Symbol::Import(..)) => {
                 diagnostics.push(ast::Diagnostic::decl_error(
                     id.loc,
-                    format!("‘{}’ is an import variable", id.name),
+                    format!("'{}' is an import variable", id.name),
                 ));
                 Err(())
             }
@@ -1358,7 +1358,7 @@ impl ast::Namespace {
                 None => {
                     diagnostics.push(ast::Diagnostic::decl_error(
                         id.loc,
-                        format!("contract type ‘{}’ not found", id.name),
+                        format!("contract type '{}' not found", id.name),
                     ));
                     return Err(());
                 }
@@ -1366,7 +1366,7 @@ impl ast::Namespace {
                     if namespace.len() > 1 {
                         diagnostics.push(ast::Diagnostic::decl_error(
                             id.loc,
-                            format!("‘{}’ not found", namespace[1].name),
+                            format!("'{}' not found", namespace[1].name),
                         ));
                         return Err(());
                     };
@@ -1375,42 +1375,42 @@ impl ast::Namespace {
                 Some(ast::Symbol::Function(_)) => {
                     diagnostics.push(ast::Diagnostic::decl_error(
                         contract_name.loc,
-                        format!("‘{}’ is a function", contract_name.name),
+                        format!("'{}' is a function", contract_name.name),
                     ));
                     return Err(());
                 }
                 Some(ast::Symbol::Variable(..)) => {
                     diagnostics.push(ast::Diagnostic::decl_error(
                         contract_name.loc,
-                        format!("‘{}’ is a contract variable", contract_name.name),
+                        format!("'{}' is a contract variable", contract_name.name),
                     ));
                     return Err(());
                 }
                 Some(ast::Symbol::Event(_)) => {
                     diagnostics.push(ast::Diagnostic::decl_error(
                         contract_name.loc,
-                        format!("‘{}’ is an event", contract_name.name),
+                        format!("'{}' is an event", contract_name.name),
                     ));
                     return Err(());
                 }
                 Some(ast::Symbol::Struct(..)) => {
                     diagnostics.push(ast::Diagnostic::decl_error(
                         contract_name.loc,
-                        format!("‘{}’ is a struct", contract_name.name),
+                        format!("'{}' is a struct", contract_name.name),
                     ));
                     return Err(());
                 }
                 Some(ast::Symbol::Enum(..)) => {
                     diagnostics.push(ast::Diagnostic::decl_error(
                         contract_name.loc,
-                        format!("‘{}’ is an enum variable", contract_name.name),
+                        format!("'{}' is an enum variable", contract_name.name),
                     ));
                     return Err(());
                 }
                 Some(ast::Symbol::UserType(..)) => {
                     diagnostics.push(ast::Diagnostic::decl_error(
                         contract_name.loc,
-                        format!("‘{}’ is an user type", contract_name.name),
+                        format!("'{}' is an user type", contract_name.name),
                     ));
                     return Err(());
                 }

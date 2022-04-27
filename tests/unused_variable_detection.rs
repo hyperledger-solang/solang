@@ -49,7 +49,7 @@ fn emit_event() {
     assert_eq!(ns.diagnostics.count_warnings(), 1);
     assert_eq!(
         ns.diagnostics.first_warning().message,
-        "event ‘Hello‘ has never been emitted"
+        "event 'Hello' has never been emitted"
     );
 
     // Unused event
@@ -70,7 +70,7 @@ fn emit_event() {
     assert_eq!(ns.diagnostics.count_warnings(), 1);
     assert_eq!(
         ns.diagnostics.first_warning().message,
-        "event ‘Hello‘ has never been emitted"
+        "event 'Hello' has never been emitted"
     );
 
     // Unused event
@@ -91,7 +91,7 @@ fn emit_event() {
     assert_eq!(ns.diagnostics.count_warnings(), 1);
     assert_eq!(
         ns.diagnostics.first_warning().message,
-        "event ‘Hey‘ has never been emitted"
+        "event 'Hey' has never been emitted"
     );
 
     // make sure we don't complain about interfaces or abstract contracts
@@ -153,10 +153,10 @@ fn constant_variable() {
     assert_eq!(ns.diagnostics.count_warnings(), 2);
     assert!(ns
         .diagnostics
-        .warning_contains("storage variable ‘cte‘ has been assigned, but never read"));
+        .warning_contains("storage variable 'cte' has been assigned, but never read"));
     assert!(ns
         .diagnostics
-        .warning_contains("global constant ‘outside‘ has never been used"));
+        .warning_contains("global constant 'outside' has never been used"));
 }
 
 #[test]
@@ -176,11 +176,11 @@ fn storage_variable() {
     assert_eq!(warnings.len(), 2);
     assert_eq!(
         warnings[0].message,
-        "storage variable ‘str‘ has been assigned, but never read"
+        "storage variable 'str' has been assigned, but never read"
     );
     assert_eq!(
         warnings[1].message,
-        "storage variable ‘str2‘ has never been used"
+        "storage variable 'str2' has never been used"
     );
 
     let file = r#"
@@ -198,7 +198,7 @@ fn storage_variable() {
     assert_eq!(ns.diagnostics.count_warnings(), 1);
     assert_eq!(
         ns.diagnostics.first_warning().message,
-        "storage variable ‘str2‘ has been assigned, but never read"
+        "storage variable 'str2' has been assigned, but never read"
     );
 
     let file = r#"
@@ -243,13 +243,13 @@ fn state_variable() {
     assert_eq!(ns.diagnostics.count_warnings(), 3);
     assert!(ns
         .diagnostics
-        .warning_contains("local variable ‘b‘ has been assigned, but never read"));
+        .warning_contains("local variable 'b' has been assigned, but never read"));
     assert!(ns
         .diagnostics
-        .warning_contains("local variable ‘a‘ has been assigned, but never read"));
+        .warning_contains("local variable 'a' has been assigned, but never read"));
     assert!(ns
         .diagnostics
-        .warning_contains("local variable ‘c‘ has never been read nor assigned"));
+        .warning_contains("local variable 'c' has never been read nor assigned"));
 }
 
 #[test]
@@ -287,16 +287,16 @@ fn struct_usage() {
     assert_eq!(ns.diagnostics.count_warnings(), 4);
     assert!(ns
         .diagnostics
-        .warning_contains("local variable ‘t2‘ has been assigned, but never read"));
+        .warning_contains("local variable 't2' has been assigned, but never read"));
     assert!(ns
         .diagnostics
-        .warning_contains("storage variable ‘t1‘ has been assigned, but never read"));
+        .warning_contains("storage variable 't1' has been assigned, but never read"));
     assert!(ns
         .diagnostics
-        .warning_contains("local variable ‘t5‘ has never been read nor assigned"));
+        .warning_contains("local variable 't5' has never been read nor assigned"));
     assert!(ns
         .diagnostics
-        .warning_contains("storage variable ‘t6‘ has never been used"));
+        .warning_contains("storage variable 't6' has never been used"));
 }
 
 #[test]
@@ -333,16 +333,16 @@ fn subscript() {
     assert_eq!(ns.diagnostics.count_warnings(), 4);
     assert!(ns
         .diagnostics
-        .warning_contains("local variable ‘arr4‘ has been assigned, but never read"));
+        .warning_contains("local variable 'arr4' has been assigned, but never read"));
     assert!(ns
         .diagnostics
-        .warning_contains("storage variable ‘arr1‘ has been assigned, but never read"));
+        .warning_contains("storage variable 'arr1' has been assigned, but never read"));
     assert!(ns
         .diagnostics
-        .warning_contains("storage variable ‘arr2‘ has been assigned, but never read"));
+        .warning_contains("storage variable 'arr2' has been assigned, but never read"));
     assert!(ns
         .diagnostics
-        .warning_contains("storage variable ‘byteArr‘ has been assigned, but never read"));
+        .warning_contains("storage variable 'byteArr' has been assigned, but never read"));
 
     let file = r#"
         contract Test {
@@ -413,7 +413,7 @@ fn assign_trunc_cast() {
     assert_eq!(ns.diagnostics.count_warnings(), 1);
     assert!(ns
         .diagnostics
-        .warning_contains("storage variable ‘byteArr‘ has been assigned, but never read"));
+        .warning_contains("storage variable 'byteArr' has been assigned, but never read"));
 }
 
 #[test]
@@ -541,10 +541,10 @@ fn statements() {
     assert_eq!(ns.diagnostics.count_warnings(), 2);
     assert!(ns
         .diagnostics
-        .warning_contains("function parameter ‘a‘ has never been read"));
+        .warning_contains("function parameter 'a' has never been read"));
     assert!(ns
         .diagnostics
-        .warning_contains("local variable ‘ct‘ has been assigned, but never read",));
+        .warning_contains("local variable 'ct' has been assigned, but never read",));
 }
 
 #[test]
@@ -644,10 +644,10 @@ fn array_push_pop() {
     assert_eq!(ns.diagnostics.count_warnings(), 2);
     assert!(ns
         .diagnostics
-        .warning_contains("local variable ‘vec2‘ has been assigned, but never read"));
+        .warning_contains("local variable 'vec2' has been assigned, but never read"));
     assert!(ns
         .diagnostics
-        .warning_contains("storage variable ‘vec1‘ has been assigned, but never read"));
+        .warning_contains("storage variable 'vec1' has been assigned, but never read"));
 
     let file = r#"
         contract Test1 {
@@ -693,13 +693,13 @@ fn return_variable() {
     assert_eq!(ns.diagnostics.count_warnings(), 3);
     assert!(ns
         .diagnostics
-        .warning_contains("destructure variable ‘a‘ has never been used"));
+        .warning_contains("destructure variable 'a' has never been used"));
     assert!(ns
         .diagnostics
-        .warning_contains("return variable ‘hey‘ has never been assigned"));
+        .warning_contains("return variable 'hey' has never been assigned"));
     assert!(ns
         .diagnostics
-        .warning_contains("storage variable ‘testing‘ has been assigned, but never read"));
+        .warning_contains("storage variable 'testing' has been assigned, but never read"));
 }
 
 #[test]
@@ -729,13 +729,13 @@ fn try_catch() {
     assert_eq!(ns.diagnostics.count_warnings(), 3);
     assert!(ns
         .diagnostics
-        .warning_contains("try-catch error bytes ‘returnData‘ has never been used"));
+        .warning_contains("try-catch error bytes 'returnData' has never been used"));
     assert!(ns
         .diagnostics
-        .warning_contains("try-catch returns variable ‘returnedInstance‘ has never been read"));
+        .warning_contains("try-catch returns variable 'returnedInstance' has never been read"));
     assert!(ns
         .diagnostics
-        .warning_contains("try-catch error string ‘revertReason‘ has never been used"));
+        .warning_contains("try-catch error string 'revertReason' has never been used"));
 
     let file = r#"
     contract CalledContract {
@@ -767,7 +767,7 @@ fn try_catch() {
     assert_eq!(ns.diagnostics.count_warnings(), 1);
     assert!(ns
         .diagnostics
-        .warning_contains("storage variable ‘notOk‘ has been assigned, but never read"));
+        .warning_contains("storage variable 'notOk' has been assigned, but never read"));
 
     let file = r#"
     contract CalledContract {
@@ -883,7 +883,7 @@ fn subarray_mapping_struct_literal() {
     assert_eq!(ns.diagnostics.count_warnings(), 1);
     assert!(ns
         .diagnostics
-        .warning_contains("storage variable ‘choice‘ has been assigned, but never read"));
+        .warning_contains("storage variable 'choice' has been assigned, but never read"));
 }
 
 #[test]

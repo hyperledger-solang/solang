@@ -37,10 +37,10 @@ strict digraph "tests/contract_testcases/substrate/expressions/test_cast_errors_
 	internal_function [label="function(uint32) internal returns (void)\nfoo2.set_x\ntests/contract_testcases/substrate/expressions/test_cast_errors_04.sol:26:17-33"]
 	zero_ext_38 [label="zero extend uint32\ntests/contract_testcases/substrate/expressions/test_cast_errors_04.sol:26:23-32"]
 	variable_39 [label="variable: b\nenum foo2.X\ntests/contract_testcases/substrate/expressions/test_cast_errors_04.sol:26:30-31"]
-	diagnostic [label="found contract ‘foo’\nlevel Debug\ntests/contract_testcases/substrate/expressions/test_cast_errors_04.sol:1:1-14"]
-	diagnostic_42 [label="found contract ‘foo2’\nlevel Debug\ntests/contract_testcases/substrate/expressions/test_cast_errors_04.sol:13:9-23"]
-	diagnostic_43 [label="function can be declared ‘view’\nlevel Warning\ntests/contract_testcases/substrate/expressions/test_cast_errors_04.sol:8:13-55"]
-	diagnostic_44 [label="function can be declared ‘view’\nlevel Warning\ntests/contract_testcases/substrate/expressions/test_cast_errors_04.sol:21:13-53"]
+	diagnostic [label="found contract 'foo'\nlevel Debug\ntests/contract_testcases/substrate/expressions/test_cast_errors_04.sol:1:1-14"]
+	diagnostic_42 [label="found contract 'foo2'\nlevel Debug\ntests/contract_testcases/substrate/expressions/test_cast_errors_04.sol:13:9-23"]
+	diagnostic_43 [label="function can be declared 'view'\nlevel Warning\ntests/contract_testcases/substrate/expressions/test_cast_errors_04.sol:8:13-55"]
+	diagnostic_44 [label="function can be declared 'view'\nlevel Warning\ntests/contract_testcases/substrate/expressions/test_cast_errors_04.sol:21:13-53"]
 	enums -> X
 	contracts -> contract
 	contract -> var [label="variable"]
