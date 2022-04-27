@@ -13,6 +13,7 @@ strict digraph "tests/contract_testcases/ewasm/call/call_02.sol" {
 	diagnostic [label="found contract ‘x’\nlevel Debug\ntests/contract_testcases/ewasm/call/call_02.sol:2:9-20"]
 	diagnostic_14 [label="destructure variable ‘s‘ has never been used\nlevel Warning\ntests/contract_testcases/ewasm/call/call_02.sol:4:23-24"]
 	diagnostic_15 [label="destructure variable ‘bs‘ has never been used\nlevel Warning\ntests/contract_testcases/ewasm/call/call_02.sol:4:39-41"]
+	diagnostic_16 [label="function can be declared ‘view’\nlevel Warning\ntests/contract_testcases/ewasm/call/call_02.sol:3:13-49"]
 	contracts -> contract
 	contract -> f [label="function"]
 	f -> parameters [label="parameters"]
@@ -27,4 +28,5 @@ strict digraph "tests/contract_testcases/ewasm/call/call_02.sol" {
 	diagnostics -> diagnostic [label="Debug"]
 	diagnostics -> diagnostic_14 [label="Warning"]
 	diagnostics -> diagnostic_15 [label="Warning"]
+	diagnostics -> diagnostic_16 [label="Warning"]
 }

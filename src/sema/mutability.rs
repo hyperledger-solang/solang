@@ -297,7 +297,13 @@ fn read_expression(expr: &Expression, state: &mut StateCheck) -> bool {
             }
             _ => unreachable!(),
         },
-        Expression::ExternalFunctionCallRaw { loc, .. } => state.write(loc),
+        Expression::ExternalFunctionCallRaw { loc, .. } => {
+            if state.ns.target.is_substrate() {
+                state.write(loc)
+            } else {
+                state.read(loc)
+            }
+        }
         _ => {
             return true;
         }
