@@ -2384,9 +2384,16 @@ fn variable(
                 Err(())
             }
         }
+        None if id.name == "now" && matches!(resolve_to, ResolveTo::Type(Type::Uint(_))) => {
+            diagnostics.push(
+                Diagnostic::error(
+                    id.loc,
+                    "'now' was an alias for 'block.timestamp' in older versions of the Solidity language. Please use 'block.timestamp' instead.".to_string(),
+                ));
+            Err(())
+        }
         sym => {
-            let error = Namespace::wrong_symbol(sym, id);
-            diagnostics.push(error);
+            diagnostics.push(Namespace::wrong_symbol(sym, id));
             Err(())
         }
     }
