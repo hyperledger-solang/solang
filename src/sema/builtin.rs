@@ -2,7 +2,7 @@ use super::ast::{
     Builtin, BuiltinStruct, Diagnostic, Expression, Namespace, Parameter, StructDecl, Symbol, Type,
 };
 use super::eval::eval_const_number;
-use super::expression::{expression, ExprContext, ResolveTo};
+use super::expression::{args_sanity_check, expression, ExprContext, ResolveTo};
 use super::symtable::Symtable;
 use crate::parser::pt;
 use crate::parser::pt::CodeLocation;
@@ -878,16 +878,7 @@ pub fn resolve_call(
         .filter(|p| p.name == id && p.namespace == namespace && p.method.is_none())
         .collect::<Vec<&Prototype>>();
 
-    // check if the arguments are not garbage
-    let mut errors = false;
-
-    for arg in args {
-        errors |= expression(arg, context, ns, symtable, diagnostics, ResolveTo::Unknown).is_err();
-    }
-
-    if errors {
-        return Err(());
-    }
+    args_sanity_check(args, context, ns, symtable, diagnostics)?;
 
     let marker = diagnostics.len();
 
@@ -1304,6 +1295,8 @@ pub fn resolve_method_call(
         .filter(|func| func.name == id.name && func.method.as_ref() == Some(&expr_ty))
         .collect();
     let marker = diagnostics.len();
+
+    args_sanity_check(args, context, ns, symtable, diagnostics)?;
 
     for func in &matches {
         if context.constant && !func.constant {
