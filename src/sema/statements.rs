@@ -1,9 +1,9 @@
 use super::ast::*;
 use super::contracts::is_base;
 use super::expression::{
-    available_functions, call_expr, call_position_args, constructor_named_args, expression,
-    function_call_expr, match_constructor_to_args, named_call_expr, named_function_call_expr, new,
-    ExprContext, ResolveTo,
+    available_functions, call_expr, constructor_named_args, expression, function_call_expr,
+    function_call_pos_args, match_constructor_to_args, named_call_expr, named_function_call_expr,
+    new, ExprContext, ResolveTo,
 };
 use super::symtable::{LoopScopes, Symtable};
 use crate::parser::pt;
@@ -168,7 +168,7 @@ pub fn resolve_function_body(
 
         for attr in &def.attributes {
             if let pt::FunctionAttribute::BaseOrModifier(_, modifier) = attr {
-                if let Ok(e) = call_position_args(
+                if let Ok(e) = function_call_pos_args(
                     &modifier.loc,
                     &modifier.name,
                     pt::FunctionTy::Modifier,
