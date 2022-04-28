@@ -218,3 +218,24 @@ fn assignment_in_ternary() {
         );
     }
 }
+
+#[test]
+fn power() {
+    let mut vm = build_solidity(
+        r#"
+        contract foo {
+            function power() public returns (uint) {
+                return 2 ** 3 ** 4;
+            }
+        }"#,
+    );
+
+    vm.constructor("foo", &[], 0);
+
+    let returns = vm.function("power", &[], &[], 0, None);
+
+    assert_eq!(
+        returns,
+        vec![Token::Uint(U256::from(2417851639229258349412352u128))]
+    );
+}
