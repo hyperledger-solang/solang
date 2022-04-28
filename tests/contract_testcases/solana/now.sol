@@ -9,7 +9,10 @@ contract c {
 	function h() public returns (uint) {
 		return now;
 	}
-	function j() public returns (int) {
+	function j() public returns (bool) {
+		return now > 102;
+	}
+	function k() public returns (int) {
 		int now = 5;
 		return now;
 	}

@@ -1467,7 +1467,8 @@ pub fn compatible_mutability(left: &Mutability, right: &Mutability) -> bool {
 #[derive(PartialEq, Clone, Copy, Debug)]
 pub enum ResolveTo<'a> {
     Unknown,        // We don't know what we're looking for, best effort
-    Discard,        // We won't be using the result. For example, an expression as a statement/
+    Integer,        // Try to resolve to an integer type value (signed or unsigned, any bit width)
+    Discard,        // We won't be using the result. For example, an expression as a statement
     Type(&'a Type), // We will be wanting this type please, e.g. `int64 x = 1;`
 }
 
@@ -1566,8 +1567,8 @@ pub fn expression(
         }
         // compare
         pt::Expression::More(loc, l, r) => {
-            let left = expression(l, context, ns, symtable, diagnostics, ResolveTo::Unknown)?;
-            let right = expression(r, context, ns, symtable, diagnostics, ResolveTo::Unknown)?;
+            let left = expression(l, context, ns, symtable, diagnostics, ResolveTo::Integer)?;
+            let right = expression(r, context, ns, symtable, diagnostics, ResolveTo::Integer)?;
 
             check_var_usage_expression(ns, &left, &right, symtable);
             let ty = coerce_number(
@@ -1588,8 +1589,8 @@ pub fn expression(
             ))
         }
         pt::Expression::Less(loc, l, r) => {
-            let left = expression(l, context, ns, symtable, diagnostics, ResolveTo::Unknown)?;
-            let right = expression(r, context, ns, symtable, diagnostics, ResolveTo::Unknown)?;
+            let left = expression(l, context, ns, symtable, diagnostics, ResolveTo::Integer)?;
+            let right = expression(r, context, ns, symtable, diagnostics, ResolveTo::Integer)?;
 
             check_var_usage_expression(ns, &left, &right, symtable);
 
@@ -1611,8 +1612,8 @@ pub fn expression(
             ))
         }
         pt::Expression::MoreEqual(loc, l, r) => {
-            let left = expression(l, context, ns, symtable, diagnostics, ResolveTo::Unknown)?;
-            let right = expression(r, context, ns, symtable, diagnostics, ResolveTo::Unknown)?;
+            let left = expression(l, context, ns, symtable, diagnostics, ResolveTo::Integer)?;
+            let right = expression(r, context, ns, symtable, diagnostics, ResolveTo::Integer)?;
             check_var_usage_expression(ns, &left, &right, symtable);
 
             let ty = coerce_number(
@@ -1633,8 +1634,8 @@ pub fn expression(
             ))
         }
         pt::Expression::LessEqual(loc, l, r) => {
-            let left = expression(l, context, ns, symtable, diagnostics, ResolveTo::Unknown)?;
-            let right = expression(r, context, ns, symtable, diagnostics, ResolveTo::Unknown)?;
+            let left = expression(l, context, ns, symtable, diagnostics, ResolveTo::Integer)?;
+            let right = expression(r, context, ns, symtable, diagnostics, ResolveTo::Integer)?;
             check_var_usage_expression(ns, &left, &right, symtable);
 
             let ty = coerce_number(
@@ -2384,11 +2385,16 @@ fn variable(
                 Err(())
             }
         }
-        None if id.name == "now" && matches!(resolve_to, ResolveTo::Type(Type::Uint(_))) => {
+        None if id.name == "now"
+            && matches!(
+                resolve_to,
+                ResolveTo::Type(Type::Uint(_)) | ResolveTo::Integer
+            ) =>
+        {
             diagnostics.push(
                 Diagnostic::error(
                     id.loc,
-                    "'now' was an alias for 'block.timestamp' in older versions of the Solidity language. Please use 'block.timestamp' instead.".to_string(),
+                    "'now' is not found. 'now' was an alias for 'block.timestamp' in older versions of the Solidity language. Please use 'block.timestamp' instead.".to_string(),
                 ));
             Err(())
         }
@@ -3453,8 +3459,8 @@ fn equal(
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Result<Expression, ()> {
-    let left = expression(l, context, ns, symtable, diagnostics, ResolveTo::Unknown)?;
-    let right = expression(r, context, ns, symtable, diagnostics, ResolveTo::Unknown)?;
+    let left = expression(l, context, ns, symtable, diagnostics, ResolveTo::Integer)?;
+    let right = expression(r, context, ns, symtable, diagnostics, ResolveTo::Integer)?;
 
     check_var_usage_expression(ns, &left, &right, symtable);
 
