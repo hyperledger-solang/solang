@@ -533,9 +533,7 @@ fn resolve_member_access(
             return Err(());
         }
 
-        YulExpression::SolidityLocalVariable(_, Type::ExternalFunction { .. }, ..)
-        | YulExpression::ConstantVariable(_, Type::ExternalFunction { .. }, ..)
-        | YulExpression::StorageVariable(_, Type::ExternalFunction { .. }, ..) => {
+        YulExpression::SolidityLocalVariable(_, Type::ExternalFunction { .. }, ..) => {
             if id.name != "selector" && id.name != "address" {
                 ns.diagnostics.push(Diagnostic::error(
                     id.loc,
