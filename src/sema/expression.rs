@@ -3397,7 +3397,9 @@ pub fn new(
         ));
         return Err(());
     }
+
     let size_loc = args[0].loc();
+    let expected_ty = Type::Uint(32);
 
     let size_expr = expression(
         &args[0],
@@ -3405,12 +3407,33 @@ pub fn new(
         ns,
         symtable,
         diagnostics,
-        ResolveTo::Type(&Type::Uint(32)),
+        ResolveTo::Type(&expected_ty),
     )?;
 
     used_variable(ns, &size_expr, symtable);
 
-    let size = size_expr.cast(&size_loc, &Type::Uint(32), true, ns, diagnostics)?;
+    let size_ty = size_expr.ty();
+
+    let size = if size_ty.deref_any().bits(ns) > 32 {
+        diagnostics.push(Diagnostic::warning(
+            *loc,
+            format!(
+                "conversion truncates {} to {}, as memory size is type {} on target {}",
+                size_ty.deref_any().to_string(ns),
+                expected_ty.to_string(ns),
+                expected_ty.to_string(ns),
+                ns.target
+            ),
+        ));
+
+        Expression::CheckingTrunc(
+            size_loc,
+            expected_ty.clone(),
+            Box::new(size_expr.cast(&size_loc, &size_ty, true, ns, diagnostics)?),
+        )
+    } else {
+        size_expr.cast(&size_loc, &expected_ty, true, ns, diagnostics)?
+    };
 
     Ok(Expression::AllocDynamicArray(
         *loc,

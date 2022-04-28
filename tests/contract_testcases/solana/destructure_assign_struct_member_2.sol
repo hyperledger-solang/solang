@@ -14,9 +14,10 @@ contract Contract {
     }
 
     function test(address[] memory _tokens) public view {
+	uint size = 3;
 
         // get shares and eth required for each share
-        Struct1[] memory struct_1 = new Struct1[](3);
+        Struct1[] memory struct_1 = new Struct1[](size);
 
         (struct_1[0].a, struct_1[0].b,) = IUniswapV2Pair(_tokens[0]).getReserves();
 
