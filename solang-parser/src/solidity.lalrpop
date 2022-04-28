@@ -352,7 +352,7 @@ Precedence4: Expression = {
 }
 
 Precedence3: Expression = {
-    <l:Precedence3> <a:@L> "**" <b:@R> <r:Precedence2> => Expression::Power(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
+    <l:Precedence2> <a:@L> "**" <b:@R> <r:Precedence3> => Expression::Power(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
     Precedence2,
 }
 
