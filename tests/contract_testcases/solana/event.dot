@@ -14,7 +14,6 @@ strict digraph "tests/contract_testcases/solana/event.sol" {
 	diagnostic_16 [label="`b' is not found\nlevel Error\ntests/contract_testcases/solana/event.sol:9:34-35"]
 	diagnostic_17 [label="duplicate argument with name ‘no’\nlevel Error\ntests/contract_testcases/solana/event.sol:9:37-39"]
 	diagnostic_18 [label="`c' is a contract\nlevel Error\ntests/contract_testcases/solana/event.sol:9:41-42"]
-	diagnostic_19 [label="event ‘Foo‘ has never been emitted\nlevel Warning\ntests/contract_testcases/solana/event.sol:3:7-10"]
 	events -> Foo
 	contracts -> contract
 	contract -> foo [label="function"]
@@ -30,5 +29,4 @@ strict digraph "tests/contract_testcases/solana/event.sol" {
 	diagnostics -> diagnostic_16 [label="Error"]
 	diagnostics -> diagnostic_17 [label="Error"]
 	diagnostics -> diagnostic_18 [label="Error"]
-	diagnostics -> diagnostic_19 [label="Warning"]
 }

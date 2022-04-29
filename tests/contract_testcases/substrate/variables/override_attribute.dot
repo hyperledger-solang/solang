@@ -4,11 +4,9 @@ strict digraph "tests/contract_testcases/substrate/variables/override_attribute.
 	number_literal [label="int256 literal: 1\ntests/contract_testcases/substrate/variables/override_attribute.sol:2:30-31"]
 	diagnostic [label="found contract ‘x’\nlevel Debug\ntests/contract_testcases/substrate/variables/override_attribute.sol:1:1-12"]
 	diagnostic_7 [label="only public variable can be declared ‘override’\nlevel Error\ntests/contract_testcases/substrate/variables/override_attribute.sol:2:17-25"]
-	diagnostic_8 [label="storage variable ‘y‘ has been assigned, but never read\nlevel Warning\ntests/contract_testcases/substrate/variables/override_attribute.sol:2:13-31"]
 	contracts -> contract
 	contract -> var [label="variable"]
 	var -> number_literal [label="initializer"]
 	diagnostics -> diagnostic [label="Debug"]
 	diagnostics -> diagnostic_7 [label="Error"]
-	diagnostics -> diagnostic_8 [label="Warning"]
 }

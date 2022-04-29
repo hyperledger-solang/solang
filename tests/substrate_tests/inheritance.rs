@@ -1,4 +1,4 @@
-use crate::{build_solidity, no_errors};
+use crate::build_solidity;
 use parity_scale_codec::{Decode, Encode};
 use solang::file_resolver::FileResolver;
 use solang::Target;
@@ -36,7 +36,7 @@ fn test_abstract() {
         false,
     );
 
-    no_errors(ns.diagnostics);
+    assert!(!ns.diagnostics.any_errors());
 
     assert_eq!(contracts.len(), 1);
 
@@ -74,7 +74,7 @@ fn test_abstract() {
         false,
     );
 
-    no_errors(ns.diagnostics);
+    assert!(!ns.diagnostics.any_errors());
 
     assert_eq!(contracts.len(), 1);
 }

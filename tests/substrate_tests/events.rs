@@ -1,4 +1,4 @@
-use crate::{build_solidity, no_errors};
+use crate::build_solidity;
 use parity_scale_codec::{Decode, Encode};
 use solang::{file_resolver::FileResolver, Target};
 use std::ffi::OsStr;
@@ -88,7 +88,7 @@ fn event_imported() {
     let ns =
         solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_substrate());
 
-    no_errors(ns.diagnostics);
+    assert!(!ns.diagnostics.any_errors());
 
     let mut cache = FileResolver::new();
 
@@ -119,7 +119,7 @@ fn event_imported() {
     let ns =
         solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_substrate());
 
-    no_errors(ns.diagnostics);
+    assert!(!ns.diagnostics.any_errors());
 
     let mut cache = FileResolver::new();
 
@@ -150,7 +150,7 @@ fn event_imported() {
     let ns =
         solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_substrate());
 
-    no_errors(ns.diagnostics);
+    assert!(!ns.diagnostics.any_errors());
 
     let mut cache = FileResolver::new();
 
@@ -179,5 +179,5 @@ fn event_imported() {
     let ns =
         solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_substrate());
 
-    no_errors(ns.diagnostics);
+    assert!(!ns.diagnostics.any_errors());
 }

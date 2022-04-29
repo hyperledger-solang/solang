@@ -11,7 +11,7 @@ use tiny_keccak::{Hasher, Keccak};
 use wasmi::memory_units::Pages;
 use wasmi::*;
 
-use solang::{compile, file_resolver::FileResolver, sema::diagnostics, Target};
+use solang::{compile, file_resolver::FileResolver, Target};
 
 mod ewasm_tests;
 
@@ -823,7 +823,7 @@ fn build_solidity(src: &str) -> TestRuntime {
         false,
     );
 
-    diagnostics::print_diagnostics_plain(&cache, &ns, false);
+    ns.print_diagnostics_in_plain(&cache, false);
 
     for v in &res {
         println!("contract size:{}", v.0.len());

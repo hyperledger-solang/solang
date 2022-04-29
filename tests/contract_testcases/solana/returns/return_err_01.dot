@@ -6,7 +6,6 @@ strict digraph "tests/contract_testcases/solana/returns/return_err_01.sol" {
 	returns [label="returns\nuint256 \nuint256 "]
 	diagnostic [label="found contract ‘foo’\nlevel Debug\ntests/contract_testcases/solana/returns/return_err_01.sol:2:9-22"]
 	diagnostic_9 [label="incorrect number of return values, expected 2 but got 3\nlevel Error\ntests/contract_testcases/solana/returns/return_err_01.sol:6:17-39"]
-	diagnostic_10 [label="storage variable ‘val‘ has been assigned, but never read\nlevel Warning\ntests/contract_testcases/solana/returns/return_err_01.sol:3:13-33"]
 	contracts -> contract
 	contract -> var [label="variable"]
 	var -> number_literal [label="initializer"]
@@ -14,5 +13,4 @@ strict digraph "tests/contract_testcases/solana/returns/return_err_01.sol" {
 	get -> returns [label="returns"]
 	diagnostics -> diagnostic [label="Debug"]
 	diagnostics -> diagnostic_9 [label="Error"]
-	diagnostics -> diagnostic_10 [label="Warning"]
 }

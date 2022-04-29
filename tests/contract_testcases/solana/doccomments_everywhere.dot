@@ -133,7 +133,6 @@ strict digraph "tests/contract_testcases/solana/doccomments_everywhere.sol" {
 	diagnostic_135 [label="`_tokenIds' is not found\nlevel Error\ntests/contract_testcases/solana/doccomments_everywhere.sol:28:29-38"]
 	diagnostic_136 [label="cannot find overloaded function which matches signature\nlevel Error\ntests/contract_testcases/solana/doccomments_everywhere.sol:53:7-50"]
 	diagnostic_137 [label="cannot find overloaded function which matches signature\nlevel Error\ntests/contract_testcases/solana/doccomments_everywhere.sol:86:7-38"]
-	diagnostic_138 [label="event ‘MintProperty‘ has never been emitted\nlevel Warning\ntests/contract_testcases/solana/doccomments_everywhere.sol:15:9-21"]
 	events -> MintProperty
 	contracts -> contract
 	contract -> tags [label="tags"]
@@ -268,5 +267,4 @@ strict digraph "tests/contract_testcases/solana/doccomments_everywhere.sol" {
 	diagnostics -> diagnostic_135 [label="Error"]
 	diagnostics -> diagnostic_136 [label="Error"]
 	diagnostics -> diagnostic_137 [label="Error"]
-	diagnostics -> diagnostic_138 [label="Warning"]
 }

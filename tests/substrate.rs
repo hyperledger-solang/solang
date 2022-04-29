@@ -10,8 +10,6 @@ use wasmi::*;
 
 use solang::abi;
 use solang::file_resolver::FileResolver;
-use solang::sema::ast;
-use solang::sema::diagnostics;
 use solang::{compile, Target};
 
 mod substrate_tests;
@@ -1208,9 +1206,9 @@ pub fn build_solidity(src: &'static str) -> MockSubstrate {
         false,
     );
 
-    diagnostics::print_diagnostics_plain(&cache, &ns, false);
+    ns.print_diagnostics_in_plain(&cache, false);
 
-    no_errors(ns.diagnostics);
+    assert!(!ns.diagnostics.any_errors());
 
     assert!(!res.is_empty());
 
@@ -1254,7 +1252,7 @@ pub fn build_solidity_with_overflow_check(src: &'static str) -> MockSubstrate {
         true,
     );
 
-    diagnostics::print_diagnostics_plain(&cache, &ns, false);
+    ns.print_diagnostics_in_plain(&cache, false);
 
     assert!(!res.is_empty());
 
@@ -1283,21 +1281,4 @@ pub fn build_solidity_with_overflow_check(src: &'static str) -> MockSubstrate {
         current_program: 0,
         events: Vec::new(),
     }
-}
-
-pub(crate) fn first_error(errors: Vec<ast::Diagnostic>) -> String {
-    match errors.iter().find(|m| m.level == ast::Level::Error) {
-        Some(m) => m.message.to_owned(),
-        None => panic!("no errors found"),
-    }
-}
-
-pub(crate) fn no_errors(errors: Vec<ast::Diagnostic>) {
-    assert!(
-        errors
-            .iter()
-            .filter(|m| m.level == ast::Level::Error)
-            .count()
-            == 0
-    );
 }

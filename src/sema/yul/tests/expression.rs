@@ -1,13 +1,14 @@
 #![cfg(test)]
 
 use crate::ast::{Namespace, Parameter, Symbol, Type, Variable};
+use crate::diagnostics::Diagnostics;
 use crate::sema::expression::ExprContext;
 use crate::sema::symtable::{Symtable, VariableInitializer, VariableUsage};
 use crate::sema::yul::ast::{YulExpression, YulSuffix};
 use crate::sema::yul::builtin::YulBuiltInFunction;
 use crate::sema::yul::expression::{check_type, resolve_yul_expression};
 use crate::sema::yul::functions::FunctionsTable;
-use crate::sema::yul::tests::{assert_message_in_diagnostics, parse};
+use crate::sema::yul::tests::parse;
 use crate::{ast, Target};
 use num_bigint::BigInt;
 use num_traits::FromPrimitive;
@@ -93,11 +94,11 @@ fn resolve_number_literal() {
     assert!(parsed.is_ok());
     assert_eq!(ns.diagnostics.len(), 1);
     assert_eq!(
-        ns.diagnostics[0].message,
+        ns.diagnostics.iter().next().unwrap().message,
         "the provided literal requires 72 bits, but the type only supports 64"
     );
 
-    ns.diagnostics.clear();
+    ns.diagnostics = Diagnostics::default();
     let expr = pt::YulExpression::NumberLiteral(
         loc,
         BigInt::from_i32(-50).unwrap(),
@@ -110,11 +111,11 @@ fn resolve_number_literal() {
     assert!(parsed.is_err());
     assert_eq!(ns.diagnostics.len(), 1);
     assert_eq!(
-        ns.diagnostics[0].message,
+        ns.diagnostics.iter().next().unwrap().message,
         "signed integer cannot fit in unsigned integer"
     );
 
-    ns.diagnostics.clear();
+    ns.diagnostics = Diagnostics::default();
     let expr = pt::YulExpression::NumberLiteral(loc, BigInt::from(20), None);
     let parsed = resolve_yul_expression(&expr, &ctx, &mut symtable, &mut function_table, &mut ns);
     assert!(parsed.is_ok());
@@ -154,11 +155,11 @@ fn resolve_hex_number_literal() {
     assert!(resolved.is_ok());
     assert_eq!(ns.diagnostics.len(), 1);
     assert_eq!(
-        ns.diagnostics[0].message,
+        ns.diagnostics.iter().next().unwrap().message,
         "the provided literal requires 40 bits, but the type only supports 32"
     );
 
-    ns.diagnostics.clear();
+    ns.diagnostics = Diagnostics::default();
     let expr = pt::YulExpression::HexNumberLiteral(
         loc,
         "0xff".to_string(),
@@ -204,11 +205,11 @@ fn resolve_hex_string_literal() {
     assert!(resolved.is_err());
     assert_eq!(ns.diagnostics.len(), 1);
     assert_eq!(
-        ns.diagnostics[0].message,
+        ns.diagnostics.iter().next().unwrap().message,
         "hex string \"3ca\" has odd number of characters"
     );
 
-    ns.diagnostics.clear();
+    ns.diagnostics = Diagnostics::default();
     let expr = pt::YulExpression::HexStringLiteral(
         HexLiteral {
             loc,
@@ -223,11 +224,11 @@ fn resolve_hex_string_literal() {
     assert!(resolved.is_err());
     assert_eq!(ns.diagnostics.len(), 1);
     assert_eq!(
-        ns.diagnostics[0].message,
+        ns.diagnostics.iter().next().unwrap().message,
         "the specified type 'myType' does not exist"
     );
 
-    ns.diagnostics.clear();
+    ns.diagnostics = Diagnostics::default();
     let expr = pt::YulExpression::HexStringLiteral(
         HexLiteral {
             loc,
@@ -490,11 +491,11 @@ fn resolve_variable_contract() {
     assert!(res.is_err());
     assert_eq!(ns.diagnostics.len(), 1);
     assert_eq!(
-        ns.diagnostics[0].message,
+        ns.diagnostics.iter().next().unwrap().message,
         "only variables can be accessed inside assembly blocks"
     );
 
-    ns.diagnostics.clear();
+    ns.diagnostics = Diagnostics::default();
     let expr = pt::YulExpression::Variable(Identifier {
         loc,
         name: "none".to_string(),
@@ -502,9 +503,12 @@ fn resolve_variable_contract() {
     let res = resolve_yul_expression(&expr, &context, &mut symtable, &mut function_table, &mut ns);
     assert!(res.is_err());
     assert_eq!(ns.diagnostics.len(), 1);
-    assert_eq!(ns.diagnostics[0].message, "'none' is not found");
+    assert_eq!(
+        ns.diagnostics.iter().next().unwrap().message,
+        "'none' is not found"
+    );
 
-    ns.diagnostics.clear();
+    ns.diagnostics = Diagnostics::default();
     let expr = pt::YulExpression::Variable(Identifier {
         loc,
         name: "imut".to_string(),
@@ -513,7 +517,7 @@ fn resolve_variable_contract() {
     assert!(res.is_err());
     assert_eq!(ns.diagnostics.len(), 1);
     assert_eq!(
-        ns.diagnostics[0].message,
+        ns.diagnostics.iter().next().unwrap().message,
         "assembly access to immutable variables is not supported"
     );
 }
@@ -547,10 +551,10 @@ fn function_call() {
     assert!(res.is_err());
     assert_eq!(ns.diagnostics.len(), 1);
     assert_eq!(
-        ns.diagnostics[0].message,
+        ns.diagnostics.iter().next().unwrap().message,
         "verbatim functions are not yet supported in Solang"
     );
-    ns.diagnostics.clear();
+    ns.diagnostics = Diagnostics::default();
 
     let expr = pt::YulExpression::FunctionCall(Box::new(YulFunctionCall {
         loc,
@@ -564,10 +568,10 @@ fn function_call() {
     assert!(res.is_err());
     assert_eq!(ns.diagnostics.len(), 1);
     assert_eq!(
-        ns.diagnostics[0].message,
+        ns.diagnostics.iter().next().unwrap().message,
         "the internal EVM built-in 'linkersymbol' is not yet supported"
     );
-    ns.diagnostics.clear();
+    ns.diagnostics = Diagnostics::default();
 
     let arg = pt::YulExpression::BoolLiteral(
         Loc::File(0, 3, 5),
@@ -590,10 +594,10 @@ fn function_call() {
     assert!(res.is_err());
     assert_eq!(ns.diagnostics.len(), 1);
     assert_eq!(
-        ns.diagnostics[0].message,
+        ns.diagnostics.iter().next().unwrap().message,
         "builtin function 'add' requires 2 arguments, but 1 were provided"
     );
-    ns.diagnostics.clear();
+    ns.diagnostics = Diagnostics::default();
 
     let expr = pt::YulExpression::FunctionCall(Box::new(YulFunctionCall {
         loc,
@@ -642,10 +646,10 @@ fn function_call() {
     assert!(res.is_err());
     assert_eq!(ns.diagnostics.len(), 1);
     assert_eq!(
-        ns.diagnostics[0].message,
+        ns.diagnostics.iter().next().unwrap().message,
         "function 'myFunc' requires 0 arguments, but 1 were provided"
     );
-    ns.diagnostics.clear();
+    ns.diagnostics = Diagnostics::default();
 
     let expr = pt::YulExpression::FunctionCall(Box::new(YulFunctionCall {
         loc,
@@ -670,7 +674,10 @@ fn function_call() {
     let res = resolve_yul_expression(&expr, &context, &mut symtable, &mut function_table, &mut ns);
     assert!(res.is_err());
     assert_eq!(ns.diagnostics.len(), 1);
-    assert_eq!(ns.diagnostics[0].message, "function 'none' is not defined");
+    assert_eq!(
+        ns.diagnostics.iter().next().unwrap().message,
+        "function 'none' is not defined"
+    );
 }
 
 #[test]
@@ -754,10 +761,10 @@ fn check_arguments() {
     let _ = resolve_yul_expression(&expr, &context, &mut symtable, &mut function_table, &mut ns);
     assert!(!ns.diagnostics.is_empty());
     assert_eq!(
-        ns.diagnostics[0].message,
+        ns.diagnostics.iter().next().unwrap().message,
         "builtin function 'pop' returns nothing"
     );
-    ns.diagnostics.clear();
+    ns.diagnostics = Diagnostics::default();
 
     let expr = pt::YulExpression::FunctionCall(Box::new(YulFunctionCall {
         loc,
@@ -778,10 +785,10 @@ fn check_arguments() {
     let _ = resolve_yul_expression(&expr, &context, &mut symtable, &mut function_table, &mut ns);
     assert!(!ns.diagnostics.is_empty());
     assert_eq!(
-        ns.diagnostics[0].message,
+        ns.diagnostics.iter().next().unwrap().message,
         "function 'func1' returns nothing"
     );
-    ns.diagnostics.clear();
+    ns.diagnostics = Diagnostics::default();
 
     let expr = pt::YulExpression::FunctionCall(Box::new(YulFunctionCall {
         loc,
@@ -802,7 +809,7 @@ fn check_arguments() {
     let _ = resolve_yul_expression(&expr, &context, &mut symtable, &mut function_table, &mut ns);
     assert!(!ns.diagnostics.is_empty());
     assert_eq!(
-        ns.diagnostics[0].message,
+        ns.diagnostics.iter().next().unwrap().message,
         "function 'func2' has multiple returns and cannot be used in this scope"
     );
 }
@@ -857,10 +864,10 @@ fn test_member_access() {
     assert!(res.is_err());
     assert_eq!(ns.diagnostics.len(), 1);
     assert_eq!(
-        ns.diagnostics[0].message,
+        ns.diagnostics.iter().next().unwrap().message,
         "the provided suffix is not allowed in yul"
     );
-    ns.diagnostics.clear();
+    ns.diagnostics = Diagnostics::default();
 
     let expr = pt::YulExpression::Member(
         loc,
@@ -875,10 +882,10 @@ fn test_member_access() {
     assert!(res.is_err());
     assert_eq!(ns.diagnostics.len(), 1);
     assert_eq!(
-        ns.diagnostics[0].message,
+        ns.diagnostics.iter().next().unwrap().message,
         "the given expression does not support ‘.slot‘ suffixes"
     );
-    ns.diagnostics.clear();
+    ns.diagnostics = Diagnostics::default();
 
     let expr = pt::YulExpression::Member(
         loc,
@@ -999,10 +1006,9 @@ contract testTypes {
     "#;
 
     let ns = parse(file);
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "cannot assign a value to offset"
-    ));
+    assert!(ns
+        .diagnostics
+        .contains_message("cannot assign a value to offset"));
 
     let file = r#"
     contract testTypes {
@@ -1019,10 +1025,9 @@ contract testTypes {
     "#;
 
     let ns = parse(file);
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "cannot assign a value to length"
-    ));
+    assert!(ns
+        .diagnostics
+        .contains_message("cannot assign a value to length"));
 
     let file = r#"
 contract testTypes {
@@ -1039,8 +1044,7 @@ contract testTypes {
     "#;
 
     let ns = parse(file);
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
+    assert!(ns.diagnostics.contains_message(
         r#"unrecognised token `:=', expected ")", ",", "address", "bool", "break", "byte", "case", "continue", "default", "for", "function", "if", "leave", "let", "return", "revert", "switch", "{", "}", identifier"#
     ));
 
@@ -1059,10 +1063,9 @@ contract testTypes {
     "#;
 
     let ns = parse(file);
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "cannot assigned a value to a constant"
-    ));
+    assert!(ns
+        .diagnostics
+        .contains_message("cannot assigned a value to a constant"));
 
     let file = r#"
 contract testTypes {
@@ -1085,10 +1088,9 @@ contract testTypes {
     "#;
 
     let ns = parse(file);
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "cannot assign to slot of storage variable"
-    ));
+    assert!(ns
+        .diagnostics
+        .contains_message("cannot assign to slot of storage variable"));
 
     let file = r#"
     contract testTypes {
@@ -1111,18 +1113,15 @@ contract testTypes {
     "#;
     let ns = parse(file);
     assert_eq!(ns.diagnostics.len(), 3);
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "found contract ‘testTypes’"
-    ));
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "inline assembly is not yet supported"
-    ));
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "function parameter ‘vl‘ has never been read"
-    ));
+    assert!(ns
+        .diagnostics
+        .contains_message("found contract ‘testTypes’"));
+    assert!(ns
+        .diagnostics
+        .contains_message("inline assembly is not yet supported"));
+    assert!(ns
+        .diagnostics
+        .contains_message("function parameter ‘vl‘ has never been read"));
 
     let file = r#"
     contract testTypes {
@@ -1144,8 +1143,7 @@ contract testTypes {
 }   "#;
 
     let ns = parse(file);
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
+    assert!(ns.diagnostics.contains_message(
         "storage variables cannot be assigned any value in assembly. You may use ‘sstore()‘"
     ));
 
@@ -1168,10 +1166,9 @@ contract testTypes {
     }
 }    "#;
     let ns = parse(file);
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "Storage variables must be accessed with ‘.slot‘ or ‘.offset‘"
-    ));
+    assert!(ns
+        .diagnostics
+        .contains_message("Storage variables must be accessed with ‘.slot‘ or ‘.offset‘"));
 
     let file = r#"
 contract testTypes {
@@ -1186,8 +1183,7 @@ contract testTypes {
 }    "#;
 
     let ns = parse(file);
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
+    assert!(ns.diagnostics.contains_message(
         "Calldata arrays must be accessed with ‘.offset‘, ‘.length‘ and the ‘calldatacopy‘ function"
     ));
 }
@@ -1213,10 +1209,9 @@ contract testTypes {
 }    "#;
 
     let ns = parse(file);
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "there cannot be multiple suffixes to a name"
-    ));
+    assert!(ns
+        .diagnostics
+        .contains_message("there cannot be multiple suffixes to a name"));
 
     let file = r#"
 contract testTypes {
@@ -1238,10 +1233,9 @@ contract testTypes {
     "#;
 
     let ns = parse(file);
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "state variables only support ‘.slot‘ and ‘.offset‘"
-    ));
+    assert!(ns
+        .diagnostics
+        .contains_message("state variables only support ‘.slot‘ and ‘.offset‘"));
 
     let file = r#"
 contract testTypes {
@@ -1266,10 +1260,9 @@ contract testTypes {
 }    "#;
 
     let ns = parse(file);
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "only variables of type external function pointer support suffixes"
-    ));
+    assert!(ns
+        .diagnostics
+        .contains_message("only variables of type external function pointer support suffixes"));
 
     let file = r#"
 contract testTypes {
@@ -1294,8 +1287,7 @@ contract testTypes {
 }    "#;
 
     let ns = parse(file);
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
+    assert!(ns.diagnostics.contains_message(
         "variables of type function pointer only support ‘.selector‘ and ‘.address‘ suffixes"
     ));
 
@@ -1310,10 +1302,9 @@ contract testTypes {
     }
 }    "#;
     let ns = parse(file);
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "calldata variables only support ‘.offset‘ and ‘.length‘"
-    ));
+    assert!(ns
+        .diagnostics
+        .contains_message("calldata variables only support ‘.offset‘ and ‘.length‘"));
 
     let file = r#"
 contract testTypes {
@@ -1328,8 +1319,7 @@ contract testTypes {
 }
     "#;
     let ns = parse(file);
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
+    assert!(ns.diagnostics.contains_message(
         "the suffixes .offset and .slot can only be used in non-constant storage variables"
     ));
 
@@ -1346,10 +1336,9 @@ contract testTypes {
 }    "#;
 
     let ns = parse(file);
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "the provided suffix is not allowed in yul"
-    ));
+    assert!(ns
+        .diagnostics
+        .contains_message("the provided suffix is not allowed in yul"));
 }
 
 #[test]
@@ -1381,30 +1370,25 @@ contract testTypes {
     "#;
 
     let ns = parse(file);
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "32 bit unsigned integer may not fit into 32 bit signed integer"
-    ));
+    assert!(ns
+        .diagnostics
+        .contains_message("32 bit unsigned integer may not fit into 32 bit signed integer"));
 
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "signed integer may not be correctly represented as unsigned integer"
-    ));
+    assert!(ns
+        .diagnostics
+        .contains_message("signed integer may not be correctly represented as unsigned integer"));
 
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "256 bit type may not fit into 128 bit type"
-    ));
+    assert!(ns
+        .diagnostics
+        .contains_message("256 bit type may not fit into 128 bit type"));
 
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "256 bit type may not fit into 128 bit type"
-    ));
+    assert!(ns
+        .diagnostics
+        .contains_message("256 bit type may not fit into 128 bit type"));
 
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "Truncating argument to bool"
-    ));
+    assert!(ns
+        .diagnostics
+        .contains_message("Truncating argument to bool"));
 }
 
 #[test]
@@ -1423,15 +1407,11 @@ contract C {
 
     let ns = parse(file);
     assert_eq!(ns.diagnostics.len(), 2);
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "inline assembly is not yet supported"
-    ));
+    assert!(ns
+        .diagnostics
+        .contains_message("inline assembly is not yet supported"));
 
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "found contract ‘C’"
-    ));
+    assert!(ns.diagnostics.contains_message("found contract ‘C’"));
 }
 
 #[test]
@@ -1452,19 +1432,11 @@ contract test {
 }
     "#;
     let ns = parse(file);
-    assert_eq!(ns.diagnostics.len(), 3);
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "found contract ‘test’"
-    ));
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "the given expression does not support ‘.slot‘ suffixes"
-    ));
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "yul variable ‘x‘ has never been read"
-    ));
+    assert_eq!(ns.diagnostics.len(), 2);
+    assert!(ns.diagnostics.contains_message("found contract ‘test’"));
+    assert!(ns
+        .diagnostics
+        .contains_message("the given expression does not support ‘.slot‘ suffixes"));
 
     let file = r#"
     contract test {
@@ -1482,19 +1454,11 @@ contract test {
 }
     "#;
     let ns = parse(file);
-    assert_eq!(ns.diagnostics.len(), 3);
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "found contract ‘test’"
-    ));
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "the given expression does not support ‘.slot‘ suffixes"
-    ));
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "yul variable ‘x‘ has never been read"
-    ));
+    assert_eq!(ns.diagnostics.len(), 2);
+    assert!(ns.diagnostics.contains_message("found contract ‘test’"));
+    assert!(ns
+        .diagnostics
+        .contains_message("the given expression does not support ‘.slot‘ suffixes"));
 
     let file = r#"
     contract test {
@@ -1510,19 +1474,11 @@ contract test {
 }
     "#;
     let ns = parse(file);
-    assert_eq!(ns.diagnostics.len(), 3);
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "found contract ‘test’"
-    ));
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "the given expression does not support ‘.offset‘ suffixes"
-    ));
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "yul variable ‘x‘ has never been read"
-    ));
+    assert_eq!(ns.diagnostics.len(), 2);
+    assert!(ns.diagnostics.contains_message("found contract ‘test’"));
+    assert!(ns
+        .diagnostics
+        .contains_message("the given expression does not support ‘.offset‘ suffixes"));
 }
 
 #[test]
@@ -1538,10 +1494,9 @@ contract testTypes {
     }
 }    "#;
     let ns = parse(file);
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "calldata variables only support ‘.offset‘ and ‘.length‘"
-    ));
+    assert!(ns
+        .diagnostics
+        .contains_message("calldata variables only support ‘.offset‘ and ‘.length‘"));
 
     let file = r#"
 contract testTypes {
@@ -1555,8 +1510,7 @@ contract testTypes {
 }  "#;
 
     let ns = parse(file);
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "the given expression does not support ‘.length‘ suffixes"
-    ));
+    assert!(ns
+        .diagnostics
+        .contains_message("the given expression does not support ‘.length‘ suffixes"));
 }

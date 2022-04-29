@@ -8,7 +8,6 @@ strict digraph "tests/contract_testcases/substrate/inheritance/inherit_variables
 	diagnostic [label="found contract ‘b’\nlevel Debug\ntests/contract_testcases/substrate/inheritance/inherit_variables_01.sol:2:9-20"]
 	diagnostic_9 [label="found contract ‘c’\nlevel Debug\ntests/contract_testcases/substrate/inheritance/inherit_variables_01.sol:6:9-24"]
 	diagnostic_10 [label="`foo' is not found\nlevel Error\ntests/contract_testcases/substrate/inheritance/inherit_variables_01.sol:8:24-27"]
-	diagnostic_11 [label="storage variable ‘foo‘ has never been used\nlevel Warning\ntests/contract_testcases/substrate/inheritance/inherit_variables_01.sol:3:13-28"]
 	contracts -> contract
 	contract -> var [label="variable"]
 	contracts -> contract_3
@@ -18,5 +17,4 @@ strict digraph "tests/contract_testcases/substrate/inheritance/inherit_variables
 	diagnostics -> diagnostic [label="Debug"]
 	diagnostics -> diagnostic_9 [label="Debug"]
 	diagnostics -> diagnostic_10 [label="Error"]
-	diagnostics -> diagnostic_11 [label="Warning"]
 }

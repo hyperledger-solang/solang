@@ -6,7 +6,6 @@ strict digraph "tests/contract_testcases/substrate/strings/string_escape_05.sol"
 	number_literal [label="uint32 literal: 1\ntests/contract_testcases/substrate/strings/string_escape_05.sol:4:32-40"]
 	diagnostic [label="found contract ‘c’\nlevel Debug\ntests/contract_testcases/substrate/strings/string_escape_05.sol:2:9-20"]
 	diagnostic_8 [label="\u escape should be followed by four hex digits\nlevel Error\ntests/contract_testcases/substrate/strings/string_escape_05.sol:4:33-36"]
-	diagnostic_9 [label="local variable ‘f‘ has been assigned, but never read\nlevel Warning\ntests/contract_testcases/substrate/strings/string_escape_05.sol:4:28-29"]
 	contracts -> contract
 	contract -> foo [label="function"]
 	foo -> var_decl [label="body"]
@@ -14,5 +13,4 @@ strict digraph "tests/contract_testcases/substrate/strings/string_escape_05.sol"
 	alloc_array -> number_literal [label="length"]
 	diagnostics -> diagnostic [label="Debug"]
 	diagnostics -> diagnostic_8 [label="Error"]
-	diagnostics -> diagnostic_9 [label="Warning"]
 }

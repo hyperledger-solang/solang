@@ -903,7 +903,7 @@ fn resolve_bodies(
             .is_err()
         {
             broken = true;
-        } else {
+        } else if !ns.diagnostics.any_errors() {
             for variable in ns.functions[function_no].symtable.vars.values() {
                 if let Some(warning) = emit_warning_local_variable(variable) {
                     ns.diagnostics.push(warning);
@@ -1074,7 +1074,7 @@ fn check_base_args(contract_no: usize, ns: &mut ast::Namespace) {
         }
     }
 
-    ns.diagnostics.extend(diagnostics.into_iter());
+    ns.diagnostics.extend(diagnostics.into_iter().collect());
 }
 
 /// Compare two visibility levels

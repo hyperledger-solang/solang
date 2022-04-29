@@ -119,7 +119,7 @@ pub fn compile(
 ) -> (Vec<(Vec<u8>, String)>, ast::Namespace) {
     let mut ns = parse_and_resolve(filename, resolver, target);
 
-    if diagnostics::any_errors(&ns.diagnostics) {
+    if ns.diagnostics.any_errors() {
         return (Vec::new(), ns);
     }
 

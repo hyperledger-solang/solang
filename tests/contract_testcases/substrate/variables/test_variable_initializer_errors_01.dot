@@ -7,7 +7,6 @@ strict digraph "tests/contract_testcases/substrate/variables/test_variable_initi
 	number_literal [label="uint256 literal: 102\ntests/contract_testcases/substrate/variables/test_variable_initializer_errors_01.sol:3:24-27"]
 	diagnostic [label="found contract ‘test’\nlevel Debug\ntests/contract_testcases/substrate/variables/test_variable_initializer_errors_01.sol:1:1-15"]
 	diagnostic_9 [label="cannot call function in constant expression\nlevel Error\ntests/contract_testcases/substrate/variables/test_variable_initializer_errors_01.sol:5:31-36"]
-	diagnostic_10 [label="storage variable ‘y‘ has been assigned, but never read\nlevel Warning\ntests/contract_testcases/substrate/variables/test_variable_initializer_errors_01.sol:5:13-40"]
 	contracts -> contract
 	contract -> var [label="variable"]
 	contract -> foo [label="function"]
@@ -16,5 +15,4 @@ strict digraph "tests/contract_testcases/substrate/variables/test_variable_initi
 	return -> number_literal [label="expr"]
 	diagnostics -> diagnostic [label="Debug"]
 	diagnostics -> diagnostic_9 [label="Error"]
-	diagnostics -> diagnostic_10 [label="Warning"]
 }

@@ -1,4 +1,4 @@
-use crate::sema::yul::tests::{assert_message_in_diagnostics, parse};
+use crate::sema::yul::tests::parse;
 
 #[test]
 fn inside_function() {
@@ -16,10 +16,9 @@ fn inside_function() {
     }
     "#;
     let ns = parse(file);
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "function declared ‘pure’ but this expression reads from state"
-    ));
+    assert!(ns
+        .diagnostics
+        .contains_message("function declared ‘pure’ but this expression reads from state"));
 }
 
 #[test]
@@ -40,10 +39,9 @@ fn inside_argument() {
 }
     "#;
     let ns = parse(file);
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "function declared ‘pure’ but this expression reads from state"
-    ));
+    assert!(ns
+        .diagnostics
+        .contains_message("function declared ‘pure’ but this expression reads from state"));
 
     let file = r#"
     contract testTypes {
@@ -61,10 +59,9 @@ fn inside_argument() {
 }
     "#;
     let ns = parse(file);
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "function declared ‘pure’ but this expression reads from state"
-    ));
+    assert!(ns
+        .diagnostics
+        .contains_message("function declared ‘pure’ but this expression reads from state"));
 }
 
 #[test]
@@ -88,10 +85,9 @@ fn block() {
     "#;
 
     let ns = parse(file);
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "function declared ‘pure’ but this expression reads from state"
-    ));
+    assert!(ns
+        .diagnostics
+        .contains_message("function declared ‘pure’ but this expression reads from state"));
 }
 
 #[test]
@@ -112,10 +108,9 @@ fn assign_declaration() {
     "#;
 
     let ns = parse(file);
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "function declared ‘pure’ but this expression reads from state"
-    ));
+    assert!(ns
+        .diagnostics
+        .contains_message("function declared ‘pure’ but this expression reads from state"));
 
     let file = r#"
     contract testTypes {
@@ -133,10 +128,9 @@ fn assign_declaration() {
     "#;
 
     let ns = parse(file);
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "function declared ‘pure’ but this expression reads from state"
-    ));
+    assert!(ns
+        .diagnostics
+        .contains_message("function declared ‘pure’ but this expression reads from state"));
 }
 
 #[test]
@@ -155,10 +149,9 @@ fn if_block() {
 }    "#;
 
     let ns = parse(file);
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "function declared ‘pure’ but this expression reads from state"
-    ));
+    assert!(ns
+        .diagnostics
+        .contains_message("function declared ‘pure’ but this expression reads from state"));
 
     let file = r#"
     contract testTypes {
@@ -176,10 +169,9 @@ fn if_block() {
 }    "#;
 
     let ns = parse(file);
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "function declared ‘pure’ but this expression reads from state"
-    ));
+    assert!(ns
+        .diagnostics
+        .contains_message("function declared ‘pure’ but this expression reads from state"));
 }
 
 #[test]
@@ -201,10 +193,9 @@ fn switch() {
     "#;
 
     let ns = parse(file);
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "function declared ‘pure’ but this expression reads from state"
-    ));
+    assert!(ns
+        .diagnostics
+        .contains_message("function declared ‘pure’ but this expression reads from state"));
 
     let file = r#"
     contract testTypes {
@@ -224,10 +215,9 @@ fn switch() {
     "#;
 
     let ns = parse(file);
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "function declared ‘pure’ but this expression reads from state"
-    ));
+    assert!(ns
+        .diagnostics
+        .contains_message("function declared ‘pure’ but this expression reads from state"));
 
     let file = r#"
     contract testTypes {
@@ -247,10 +237,9 @@ fn switch() {
     "#;
 
     let ns = parse(file);
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "function declared ‘pure’ but this expression reads from state"
-    ));
+    assert!(ns
+        .diagnostics
+        .contains_message("function declared ‘pure’ but this expression reads from state"));
 }
 
 #[test]
@@ -268,10 +257,9 @@ fn test_for() {
     }
 }    "#;
     let ns = parse(file);
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "function declared ‘pure’ but this expression reads from state"
-    ));
+    assert!(ns
+        .diagnostics
+        .contains_message("function declared ‘pure’ but this expression reads from state"));
 
     let file = r#"
     contract testTypes {
@@ -286,10 +274,9 @@ fn test_for() {
     }
 }    "#;
     let ns = parse(file);
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "function declared ‘pure’ but this expression reads from state"
-    ));
+    assert!(ns
+        .diagnostics
+        .contains_message("function declared ‘pure’ but this expression reads from state"));
 
     let file = r#"
     contract testTypes {
@@ -305,10 +292,9 @@ fn test_for() {
 }
     "#;
     let ns = parse(file);
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "function declared ‘pure’ but this expression reads from state"
-    ));
+    assert!(ns
+        .diagnostics
+        .contains_message("function declared ‘pure’ but this expression reads from state"));
 
     let file = r#"
     contract testTypes {
@@ -323,10 +309,9 @@ fn test_for() {
     }
 }    "#;
     let ns = parse(file);
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "function declared ‘pure’ but this expression reads from state"
-    ));
+    assert!(ns
+        .diagnostics
+        .contains_message("function declared ‘pure’ but this expression reads from state"));
 }
 
 #[test]
@@ -344,10 +329,9 @@ fn pure_function() {
     }
 }    "#;
     let ns = parse(file);
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "function declared ‘pure’ but this expression reads from state"
-    ));
+    assert!(ns
+        .diagnostics
+        .contains_message("function declared ‘pure’ but this expression reads from state"));
 
     let file = r#"
         contract testTypes {
@@ -363,10 +347,9 @@ fn pure_function() {
 }    "#;
 
     let ns = parse(file);
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "function declared ‘pure’ but this expression writes to state"
-    ));
+    assert!(ns
+        .diagnostics
+        .contains_message("function declared ‘pure’ but this expression writes to state"));
 }
 
 #[test]
@@ -386,10 +369,9 @@ fn view_function() {
     "#;
 
     let ns = parse(file);
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "function declared ‘view’ but this expression writes to state"
-    ));
+    assert!(ns
+        .diagnostics
+        .contains_message("function declared ‘view’ but this expression writes to state"));
 
     let file = r#"
     contract testTypes {
@@ -406,14 +388,12 @@ fn view_function() {
 
     let ns = parse(file);
     assert_eq!(ns.diagnostics.len(), 2);
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "found contract ‘testTypes’"
-    ));
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "inline assembly is not yet supported"
-    ));
+    assert!(ns
+        .diagnostics
+        .contains_message("found contract ‘testTypes’"));
+    assert!(ns
+        .diagnostics
+        .contains_message("inline assembly is not yet supported"));
 }
 
 #[test]
@@ -433,12 +413,10 @@ fn function_without_modifier() {
     "#;
     let ns = parse(file);
     assert_eq!(ns.diagnostics.len(), 2);
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "found contract ‘testTypes’"
-    ));
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "inline assembly is not yet supported"
-    ));
+    assert!(ns
+        .diagnostics
+        .contains_message("found contract ‘testTypes’"));
+    assert!(ns
+        .diagnostics
+        .contains_message("inline assembly is not yet supported"));
 }

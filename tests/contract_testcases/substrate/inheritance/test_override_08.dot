@@ -14,7 +14,6 @@ strict digraph "tests/contract_testcases/substrate/inheritance/test_override_08.
 	diagnostic_14 [label="found contract ‘a’\nlevel Debug\ntests/contract_testcases/substrate/inheritance/test_override_08.sol:6:9-24"]
 	diagnostic_15 [label="contract ‘a’ missing override for function ‘bar’\nlevel Error\ntests/contract_testcases/substrate/inheritance/test_override_08.sol:6:9-24"]
 	note [label="declaration of function ‘bar’\ntests/contract_testcases/substrate/inheritance/test_override_08.sol:3:17-47"]
-	diagnostic_17 [label="function parameter ‘x‘ has never been read\nlevel Warning\ntests/contract_testcases/substrate/inheritance/test_override_08.sol:7:34-35"]
 	contracts -> contract
 	contract -> bar [label="function"]
 	bar -> parameters [label="parameters"]
@@ -30,5 +29,4 @@ strict digraph "tests/contract_testcases/substrate/inheritance/test_override_08.
 	diagnostics -> diagnostic_14 [label="Debug"]
 	diagnostics -> diagnostic_15 [label="Error"]
 	diagnostic_15 -> note [label="note"]
-	diagnostics -> diagnostic_17 [label="Warning"]
 }

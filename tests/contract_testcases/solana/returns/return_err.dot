@@ -5,12 +5,10 @@ strict digraph "tests/contract_testcases/solana/returns/return_err.sol" {
 	get [label="function get\ncontract: foo\ntests/contract_testcases/solana/returns/return_err.sol:5:13-34\nsignature get()\nvisibility public\nmutability nonpayable"]
 	diagnostic [label="found contract ‘foo’\nlevel Debug\ntests/contract_testcases/solana/returns/return_err.sol:2:9-22"]
 	diagnostic_8 [label="function has no return values\nlevel Error\ntests/contract_testcases/solana/returns/return_err.sol:6:17-27"]
-	diagnostic_9 [label="storage variable ‘val‘ has been assigned, but never read\nlevel Warning\ntests/contract_testcases/solana/returns/return_err.sol:3:13-33"]
 	contracts -> contract
 	contract -> var [label="variable"]
 	var -> number_literal [label="initializer"]
 	contract -> get [label="function"]
 	diagnostics -> diagnostic [label="Debug"]
 	diagnostics -> diagnostic_8 [label="Error"]
-	diagnostics -> diagnostic_9 [label="Warning"]
 }

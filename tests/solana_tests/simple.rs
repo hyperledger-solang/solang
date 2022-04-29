@@ -253,10 +253,10 @@ contract line {
 
     let ns = solang::parse_and_resolve(OsStr::new("test.sol"), &mut cache, Target::Solana);
 
-    solang::sema::diagnostics::print_diagnostics_plain(&cache, &ns, false);
+    ns.print_diagnostics_in_plain(&cache, false);
 
     assert_eq!(
-        ns.diagnostics[1].message,
+        ns.diagnostics.iter().nth(1).unwrap().message,
         "implicit conversion from int to address not allowed"
     );
 }

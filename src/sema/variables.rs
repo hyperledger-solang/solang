@@ -245,7 +245,6 @@ pub fn variable_decl<'a>(
                 lvalue: false,
                 yul_function: false,
             };
-
             match expression(
                 initializer,
                 &context,

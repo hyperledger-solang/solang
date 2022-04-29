@@ -11,9 +11,6 @@ strict digraph "tests/contract_testcases/substrate/value/external_call_value_02.
 	diagnostic [label="found contract ‘a’\nlevel Debug\ntests/contract_testcases/substrate/value/external_call_value_02.sol:2:9-20"]
 	diagnostic_12 [label="found contract ‘b’\nlevel Debug\ntests/contract_testcases/substrate/value/external_call_value_02.sol:8:9-20"]
 	diagnostic_13 [label="‘salt’ not valid for external calls\nlevel Error\ntests/contract_testcases/substrate/value/external_call_value_02.sol:4:24-31"]
-	diagnostic_14 [label="function parameter ‘l‘ has never been read\nlevel Warning\ntests/contract_testcases/substrate/value/external_call_value_02.sol:11:33-34"]
-	diagnostic_15 [label="local variable ‘f‘ has been assigned, but never read\nlevel Warning\ntests/contract_testcases/substrate/value/external_call_value_02.sol:12:19-20"]
-	diagnostic_16 [label="storage variable ‘x‘ has never been used\nlevel Warning\ntests/contract_testcases/substrate/value/external_call_value_02.sol:9:13-18"]
 	contracts -> contract
 	contract -> test [label="function"]
 	test -> parameters [label="parameters"]
@@ -26,7 +23,4 @@ strict digraph "tests/contract_testcases/substrate/value/external_call_value_02.
 	diagnostics -> diagnostic [label="Debug"]
 	diagnostics -> diagnostic_12 [label="Debug"]
 	diagnostics -> diagnostic_13 [label="Error"]
-	diagnostics -> diagnostic_14 [label="Warning"]
-	diagnostics -> diagnostic_15 [label="Warning"]
-	diagnostics -> diagnostic_16 [label="Warning"]
 }

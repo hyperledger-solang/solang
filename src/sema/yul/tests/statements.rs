@@ -1,6 +1,6 @@
 #![cfg(test)]
 
-use crate::sema::yul::tests::{assert_message_in_diagnostics, parse};
+use crate::sema::yul::tests::parse;
 
 #[test]
 fn variables_assignment_mismatch() {
@@ -15,10 +15,9 @@ contract testTypes {
     "#;
 
     let ns = parse(file);
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "a single value cannot be assigned to multiple variables"
-    ));
+    assert!(ns
+        .diagnostics
+        .contains_message("a single value cannot be assigned to multiple variables"));
 
     let file = r#"
 contract testTypes {
@@ -31,10 +30,9 @@ contract testTypes {
     "#;
 
     let ns = parse(file);
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "3 variables on the left hand side, but the function returns 1 values"
-    ));
+    assert!(ns
+        .diagnostics
+        .contains_message("3 variables on the left hand side, but the function returns 1 values"));
 
     let file = r#"
 contract testTypes {
@@ -52,10 +50,9 @@ contract testTypes {
     "#;
 
     let ns = parse(file);
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "3 variables on the left hand side, but the function returns 2 values"
-    ));
+    assert!(ns
+        .diagnostics
+        .contains_message("3 variables on the left hand side, but the function returns 2 values"));
 
     let file = r#"
 contract testTypes {
@@ -76,10 +73,9 @@ contract testTypes {
 
     let ns = parse(file);
 
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "1 variables on the left hand side, but the function returns 2 values"
-    ));
+    assert!(ns
+        .diagnostics
+        .contains_message("1 variables on the left hand side, but the function returns 2 values"));
 }
 
 #[test]
@@ -100,10 +96,9 @@ contract testTypes {
     "#;
 
     let ns = parse(file);
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "name 'foo' has been defined as a function"
-    ));
+    assert!(ns
+        .diagnostics
+        .contains_message("name 'foo' has been defined as a function"));
 
     let file = r#"
 contract testTypes {
@@ -121,10 +116,9 @@ contract testTypes {
     "#;
 
     let ns = parse(file);
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "'mulmod' is a built-in function and cannot be a variable name"
-    ));
+    assert!(ns
+        .diagnostics
+        .contains_message("'mulmod' is a built-in function and cannot be a variable name"));
 
     let file = r#"
     contract testTypes {
@@ -139,10 +133,9 @@ contract testTypes {
 
     let ns = parse(file);
 
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "the prefix 'verbatim' is reserved for verbatim functions"
-    ));
+    assert!(ns
+        .diagnostics
+        .contains_message("the prefix 'verbatim' is reserved for verbatim functions"));
 }
 
 #[test]
@@ -158,10 +151,9 @@ contract testTypes {
     "#;
 
     let ns = parse(file);
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "top level function calls must not return anything"
-    ));
+    assert!(ns
+        .diagnostics
+        .contains_message("top level function calls must not return anything"));
 
     let file = r#"
 contract testTypes {
@@ -178,10 +170,9 @@ contract testTypes {
     "#;
 
     let ns = parse(file);
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "top level function calls must not return anything"
-    ));
+    assert!(ns
+        .diagnostics
+        .contains_message("top level function calls must not return anything"));
 
     let file = r#"
 contract testTypes {
@@ -199,14 +190,12 @@ contract testTypes {
 
     let ns = parse(file);
     assert_eq!(ns.diagnostics.len(), 2);
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "found contract ‘testTypes’"
-    ));
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "inline assembly is not yet supported"
-    ));
+    assert!(ns
+        .diagnostics
+        .contains_message("found contract ‘testTypes’"));
+    assert!(ns
+        .diagnostics
+        .contains_message("inline assembly is not yet supported"));
 }
 
 #[test]
@@ -227,10 +216,9 @@ contract testTypes {
     "#;
 
     let ns = parse(file);
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "leave statement cannot be used outside a function"
-    ));
+    assert!(ns
+        .diagnostics
+        .contains_message("leave statement cannot be used outside a function"));
 
     let file = r#"
 contract testTypes {
@@ -248,14 +236,12 @@ contract testTypes {
 
     let ns = parse(file);
     assert_eq!(ns.diagnostics.len(), 2);
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "found contract ‘testTypes’"
-    ));
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "inline assembly is not yet supported"
-    ));
+    assert!(ns
+        .diagnostics
+        .contains_message("found contract ‘testTypes’"));
+    assert!(ns
+        .diagnostics
+        .contains_message("inline assembly is not yet supported"));
 }
 
 #[test]
@@ -276,10 +262,9 @@ contract testTypes {
     "#;
 
     let ns = parse(file);
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "continue statement outside a for loop"
-    ));
+    assert!(ns
+        .diagnostics
+        .contains_message("continue statement outside a for loop"));
 
     let file = r#"
 contract testTypes {
@@ -306,14 +291,12 @@ contract testTypes {
 
     let ns = parse(file);
     assert_eq!(ns.diagnostics.len(), 2);
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "found contract ‘testTypes’"
-    ));
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "inline assembly is not yet supported"
-    ));
+    assert!(ns
+        .diagnostics
+        .contains_message("found contract ‘testTypes’"));
+    assert!(ns
+        .diagnostics
+        .contains_message("inline assembly is not yet supported"));
 }
 
 #[test]
@@ -334,10 +317,9 @@ contract testTypes {
     "#;
 
     let ns = parse(file);
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "break statement outside a for loop"
-    ));
+    assert!(ns
+        .diagnostics
+        .contains_message("break statement outside a for loop"));
 
     let file = r#"
 contract testTypes {
@@ -364,12 +346,10 @@ contract testTypes {
 
     let ns = parse(file);
     assert_eq!(ns.diagnostics.len(), 2);
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "found contract ‘testTypes’"
-    ));
-    assert!(assert_message_in_diagnostics(
-        &ns.diagnostics,
-        "inline assembly is not yet supported"
-    ));
+    assert!(ns
+        .diagnostics
+        .contains_message("found contract ‘testTypes’"));
+    assert!(ns
+        .diagnostics
+        .contains_message("inline assembly is not yet supported"));
 }

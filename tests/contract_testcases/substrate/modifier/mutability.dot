@@ -8,7 +8,6 @@ strict digraph "tests/contract_testcases/substrate/modifier/mutability.sol" {
 	diagnostic [label="found contract ‘c’\nlevel Debug\ntests/contract_testcases/substrate/modifier/mutability.sol:2:9-20"]
 	diagnostic_9 [label="function parameter ‘x‘ has never been read\nlevel Warning\ntests/contract_testcases/substrate/modifier/mutability.sol:4:33-34"]
 	diagnostic_10 [label="function declared ‘pure’ but this expression reads from state\nlevel Error\ntests/contract_testcases/substrate/modifier/mutability.sol:6:32-35"]
-	diagnostic_11 [label="storage variable ‘var‘ has never been used\nlevel Warning\ntests/contract_testcases/substrate/modifier/mutability.sol:3:13-23"]
 	contracts -> contract
 	contract -> var [label="variable"]
 	contract -> foo [label="modifier"]
@@ -18,5 +17,4 @@ strict digraph "tests/contract_testcases/substrate/modifier/mutability.sol" {
 	diagnostics -> diagnostic [label="Debug"]
 	diagnostics -> diagnostic_9 [label="Warning"]
 	diagnostics -> diagnostic_10 [label="Error"]
-	diagnostics -> diagnostic_11 [label="Warning"]
 }

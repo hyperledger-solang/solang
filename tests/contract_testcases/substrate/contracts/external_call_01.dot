@@ -14,9 +14,6 @@ strict digraph "tests/contract_testcases/substrate/contracts/external_call_01.so
 	diagnostic_14 [label="function expects 2 arguments, 1 provided\nlevel Error\ntests/contract_testcases/substrate/contracts/external_call_01.sol:5:24-43"]
 	diagnostic_15 [label="declaration of ‘b’ shadows contract name\nlevel Warning\ntests/contract_testcases/substrate/contracts/external_call_01.sol:10:42-43"]
 	note [label="previous declaration of contract name\ntests/contract_testcases/substrate/contracts/external_call_01.sol:9:9-20"]
-	diagnostic_17 [label="function parameter ‘t‘ has never been read\nlevel Warning\ntests/contract_testcases/substrate/contracts/external_call_01.sol:10:34-35"]
-	diagnostic_18 [label="function parameter ‘b‘ has never been read\nlevel Warning\ntests/contract_testcases/substrate/contracts/external_call_01.sol:10:42-43"]
-	diagnostic_19 [label="storage variable ‘x‘ has never been used\nlevel Warning\ntests/contract_testcases/substrate/contracts/external_call_01.sol:3:13-16"]
 	contracts -> contract
 	contract -> var [label="variable"]
 	contract -> test [label="function"]
@@ -32,7 +29,4 @@ strict digraph "tests/contract_testcases/substrate/contracts/external_call_01.so
 	diagnostics -> diagnostic_14 [label="Error"]
 	diagnostics -> diagnostic_15 [label="Warning"]
 	diagnostic_15 -> note [label="note"]
-	diagnostics -> diagnostic_17 [label="Warning"]
-	diagnostics -> diagnostic_18 [label="Warning"]
-	diagnostics -> diagnostic_19 [label="Warning"]
 }
