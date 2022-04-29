@@ -22,7 +22,6 @@ SourceUnitPart: SourceUnitPart = {
     ImportDirective => <>,
     EnumDefinition => SourceUnitPart::EnumDefinition(<>),
     StructDefinition => SourceUnitPart::StructDefinition(<>),
-    EventDefinition => SourceUnitPart::EventDefinition(<>),
     ErrorDefinition => SourceUnitPart::ErrorDefinition(<>),
     FunctionDefinition => SourceUnitPart::FunctionDefinition(<>),
     VariableDefinition => SourceUnitPart::VariableDefinition(<>),

@@ -127,7 +127,6 @@ pub enum SourceUnitPart {
     ImportDirective(Vec<DocComment>, Import),
     EnumDefinition(Box<EnumDefinition>),
     StructDefinition(Box<StructDefinition>),
-    EventDefinition(Box<EventDefinition>),
     ErrorDefinition(Box<ErrorDefinition>),
     FunctionDefinition(Box<FunctionDefinition>),
     VariableDefinition(Box<VariableDefinition>),

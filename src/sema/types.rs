@@ -62,36 +62,6 @@ pub fn resolve_typenames<'a>(
                     delay.structs.push((pos, def, None));
                 }
             }
-            pt::SourceUnitPart::EventDefinition(def) => {
-                let pos = ns.events.len();
-
-                if let Some(Symbol::Event(events)) =
-                    ns.variable_symbols
-                        .get_mut(&(file_no, None, def.name.name.to_owned()))
-                {
-                    events.push((def.name.loc, pos));
-                } else if !ns.add_symbol(
-                    file_no,
-                    None,
-                    &def.name,
-                    Symbol::Event(vec![(def.name.loc, pos)]),
-                ) {
-                    continue;
-                }
-
-                ns.events.push(EventDecl {
-                    tags: Vec::new(),
-                    name: def.name.name.to_owned(),
-                    loc: def.name.loc,
-                    contract: None,
-                    fields: Vec::new(),
-                    anonymous: def.anonymous,
-                    signature: String::new(),
-                    used: false,
-                });
-
-                delay.events.push((pos, def, None));
-            }
             pt::SourceUnitPart::TypeDefinition(ty) => {
                 type_decl(ty, file_no, None, ns);
             }
