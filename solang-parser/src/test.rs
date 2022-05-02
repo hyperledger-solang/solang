@@ -1209,7 +1209,7 @@ fn test_solidity_semantic_tests() {
                 .split(&source)
                 .filter(|source_part| !source_part.is_empty())
             {
-                if let Some(err) = crate::parse(&source_part, 0)
+                if let Some(err) = crate::parse(source_part, 0)
                     .map_err(|diags| {
                         format!(
                             "{:?}:\n\t{}",

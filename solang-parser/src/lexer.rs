@@ -385,7 +385,7 @@ impl fmt::Display for LexicalError {
                 write!(f, "expected number after decimal point")
             }
             LexicalError::InvalidBigInt(_, err) => {
-                write!(f, "bigint error occurred: {}", err.to_string())
+                write!(f, "bigint error occurred: {err}")
             }
         }
     }
