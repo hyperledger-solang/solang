@@ -8,6 +8,7 @@ use std::fmt;
 pub struct Def {
     pub block_no: usize,
     pub instr_no: usize,
+    pub assignment_no: usize,
 }
 
 #[derive(Clone, Copy, PartialEq)]
@@ -96,16 +97,15 @@ fn instr_transfers(block_no: usize, block: &BasicBlock) -> Vec<Vec<Transfer>> {
     let mut transfers = Vec::new();
 
     for (instr_no, instr) in block.instr.iter().enumerate() {
-        let def = Def { block_no, instr_no };
 
         let set_var = |var_nos: &[usize]| {
             let mut transfer = Vec::new();
 
-            for var_no in var_nos.iter() {
+            for (assignment_no, var_no) in var_nos.iter().enumerate() {
                 transfer.insert(0, Transfer::Kill { var_no: *var_no });
 
                 transfer.push(Transfer::Gen {
-                    def,
+                    def: Def {block_no, instr_no, assignment_no},
                     var_no: *var_no,
                 });
             }
