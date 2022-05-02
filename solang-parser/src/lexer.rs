@@ -563,6 +563,7 @@ static KEYWORDS: phf::Map<&'static str, Token> = phf_map! {
     "days" => Token::Days,
     "weeks" => Token::Weeks,
     "wei" => Token::Wei,
+    "gwei" => Token::Gwei,
     "szabo" => Token::Szabo,
     "finney" => Token::Finney,
     "ether" => Token::Ether,
