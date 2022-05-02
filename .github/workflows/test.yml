@@ -39,6 +39,8 @@ jobs:
       # Make sure "git describe --tags" works for solang --version
       # checkout@v2 requires git 2.18 or higher, which is not in our image
       uses: actions/checkout@v1
+      with:
+        submodules: recursive
     - name: Rust stable
       run: rustup default 1.59.0
     - name: Build
@@ -60,6 +62,8 @@ jobs:
       # Make sure "git describe --tags" works for solang --version
       # checkout@v2 requires git 2.18 or higher, which is not in our image
       uses: actions/checkout@v1
+      with:
+        submodules: recursive
     - name: Rust stable
       run: rustup default 1.59.0
     - name: Build
@@ -80,6 +84,7 @@ jobs:
       with:
         # Make sure "git describe --tags" works for solang --version
         fetch-depth: 0
+        submodules: recursive
     - name: Download LLVM
       run: curl -sSL -o c:\llvm.zip https://github.com/hyperledger-labs/solang/releases/download/llvm13.0-1/llvm13.0-win.zip
     - name: Extract LLVM
@@ -114,6 +119,7 @@ jobs:
       with:
         # Make sure "git describe --tags" works for solang --version
         fetch-depth: 0
+        submodules: recursive
     - name: Download LLVM
       run: curl -L --output llvm13.0-mac-arm.tar.xz https://github.com/hyperledger-labs/solang/releases/download/llvm13.0-1/llvm13.0-mac-arm.tar.xz
     - name: Extract LLVM
@@ -138,6 +144,7 @@ jobs:
       with:
         # Make sure "git describe --tags" works for solang --version
         fetch-depth: 0
+        submodules: recursive
     - name: Download LLVM
       run: wget -q -O llvm13.0-mac-intel.tar.xz https://github.com/hyperledger-labs/solang/releases/download/llvm13.0-1/llvm13.0-mac-intel.tar.xz
     - name: Extract LLVM
