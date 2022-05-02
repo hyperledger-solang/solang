@@ -1964,6 +1964,7 @@ pub fn expression(
 
             match unit {
                 pt::Unit::Wei(loc)
+                | pt::Unit::Gwei(loc)
                 | pt::Unit::Finney(loc)
                 | pt::Unit::Szabo(loc)
                 | pt::Unit::Ether(loc)
@@ -1986,6 +1987,7 @@ pub fn expression(
                     pt::Unit::Days(_) => BigInt::from(60 * 60 * 24),
                     pt::Unit::Weeks(_) => BigInt::from(60 * 60 * 24 * 7),
                     pt::Unit::Wei(_) => BigInt::from(1),
+                    pt::Unit::Gwei(_) => BigInt::from(10).pow(9u32),
                     pt::Unit::Szabo(_) => BigInt::from(10).pow(12u32),
                     pt::Unit::Finney(_) => BigInt::from(10).pow(15u32),
                     pt::Unit::Ether(_) => BigInt::from(10).pow(18u32),
