@@ -1467,7 +1467,8 @@ pub fn compatible_mutability(left: &Mutability, right: &Mutability) -> bool {
 #[derive(PartialEq, Clone, Copy, Debug)]
 pub enum ResolveTo<'a> {
     Unknown,        // We don't know what we're looking for, best effort
-    Discard,        // We won't be using the result. For example, an expression as a statement/
+    Integer,        // Try to resolve to an integer type value (signed or unsigned, any bit width)
+    Discard,        // We won't be using the result. For example, an expression as a statement
     Type(&'a Type), // We will be wanting this type please, e.g. `int64 x = 1;`
 }
 
@@ -1566,8 +1567,8 @@ pub fn expression(
         }
         // compare
         pt::Expression::More(loc, l, r) => {
-            let left = expression(l, context, ns, symtable, diagnostics, ResolveTo::Unknown)?;
-            let right = expression(r, context, ns, symtable, diagnostics, ResolveTo::Unknown)?;
+            let left = expression(l, context, ns, symtable, diagnostics, ResolveTo::Integer)?;
+            let right = expression(r, context, ns, symtable, diagnostics, ResolveTo::Integer)?;
 
             check_var_usage_expression(ns, &left, &right, symtable);
             let ty = coerce_number(
@@ -1588,8 +1589,8 @@ pub fn expression(
             ))
         }
         pt::Expression::Less(loc, l, r) => {
-            let left = expression(l, context, ns, symtable, diagnostics, ResolveTo::Unknown)?;
-            let right = expression(r, context, ns, symtable, diagnostics, ResolveTo::Unknown)?;
+            let left = expression(l, context, ns, symtable, diagnostics, ResolveTo::Integer)?;
+            let right = expression(r, context, ns, symtable, diagnostics, ResolveTo::Integer)?;
 
             check_var_usage_expression(ns, &left, &right, symtable);
 
@@ -1611,8 +1612,8 @@ pub fn expression(
             ))
         }
         pt::Expression::MoreEqual(loc, l, r) => {
-            let left = expression(l, context, ns, symtable, diagnostics, ResolveTo::Unknown)?;
-            let right = expression(r, context, ns, symtable, diagnostics, ResolveTo::Unknown)?;
+            let left = expression(l, context, ns, symtable, diagnostics, ResolveTo::Integer)?;
+            let right = expression(r, context, ns, symtable, diagnostics, ResolveTo::Integer)?;
             check_var_usage_expression(ns, &left, &right, symtable);
 
             let ty = coerce_number(
@@ -1633,8 +1634,8 @@ pub fn expression(
             ))
         }
         pt::Expression::LessEqual(loc, l, r) => {
-            let left = expression(l, context, ns, symtable, diagnostics, ResolveTo::Unknown)?;
-            let right = expression(r, context, ns, symtable, diagnostics, ResolveTo::Unknown)?;
+            let left = expression(l, context, ns, symtable, diagnostics, ResolveTo::Integer)?;
+            let right = expression(r, context, ns, symtable, diagnostics, ResolveTo::Integer)?;
             check_var_usage_expression(ns, &left, &right, symtable);
 
             let ty = coerce_number(
@@ -2386,11 +2387,16 @@ fn variable(
                 Err(())
             }
         }
-        None if id.name == "now" && matches!(resolve_to, ResolveTo::Type(Type::Uint(_))) => {
+        None if id.name == "now"
+            && matches!(
+                resolve_to,
+                ResolveTo::Type(Type::Uint(_)) | ResolveTo::Integer
+            ) =>
+        {
             diagnostics.push(
                 Diagnostic::error(
                     id.loc,
-                    "'now' was an alias for 'block.timestamp' in older versions of the Solidity language. Please use 'block.timestamp' instead.".to_string(),
+                    "'now' is not found. 'now' was an alias for 'block.timestamp' in older versions of the Solidity language. Please use 'block.timestamp' instead.".to_string(),
                 ));
             Err(())
         }
@@ -3455,8 +3461,8 @@ fn equal(
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Result<Expression, ()> {
-    let left = expression(l, context, ns, symtable, diagnostics, ResolveTo::Unknown)?;
-    let right = expression(r, context, ns, symtable, diagnostics, ResolveTo::Unknown)?;
+    let left = expression(l, context, ns, symtable, diagnostics, ResolveTo::Integer)?;
+    let right = expression(r, context, ns, symtable, diagnostics, ResolveTo::Integer)?;
 
     check_var_usage_expression(ns, &left, &right, symtable);
 
@@ -5066,8 +5072,30 @@ pub fn available_super_functions(name: &str, contract_no: usize, ns: &Namespace)
     list
 }
 
+/// Test function arguments can be resolve at all (not resolved for specific type)
+/// When an argument to single
+pub fn args_sanity_check(
+    args: &[pt::Expression],
+    context: &ExprContext,
+    ns: &mut Namespace,
+    symtable: &mut Symtable,
+    diagnostics: &mut Vec<Diagnostic>,
+) -> Result<(), ()> {
+    let mut errors = false;
+
+    for arg in args {
+        errors |= expression(arg, context, ns, symtable, diagnostics, ResolveTo::Unknown).is_err();
+    }
+
+    if errors {
+        Err(())
+    } else {
+        Ok(())
+    }
+}
+
 /// Resolve a function call with positional arguments
-pub fn call_position_args(
+pub fn function_call_pos_args(
     loc: &pt::Loc,
     id: &pt::Identifier,
     func_ty: pt::FunctionTy,
@@ -5082,6 +5110,8 @@ pub fn call_position_args(
 ) -> Result<Expression, ()> {
     let mut name_matches = 0;
     let mut errors = Vec::new();
+
+    args_sanity_check(args, context, ns, symtable, diagnostics)?;
 
     // Try to resolve as a function call
     for function_no in function_nos {
@@ -5203,7 +5233,7 @@ pub fn call_position_args(
 }
 
 /// Resolve a function call with named arguments
-fn function_call_with_named_args(
+fn function_call_named_args(
     loc: &pt::Loc,
     id: &pt::Identifier,
     args: &[pt::NamedArgument],
@@ -5217,16 +5247,36 @@ fn function_call_with_named_args(
 ) -> Result<Expression, ()> {
     let mut arguments = HashMap::new();
 
+    // check if the arguments are not garbage
+    let mut errors = false;
+
     for arg in args {
         if arguments.contains_key(arg.name.name.as_str()) {
             diagnostics.push(Diagnostic::error(
                 arg.name.loc,
                 format!("duplicate argument with name '{}'", arg.name.name),
             ));
-            return Err(());
+            errors = true;
+        }
+
+        if expression(
+            &arg.expr,
+            context,
+            ns,
+            symtable,
+            diagnostics,
+            ResolveTo::Unknown,
+        )
+        .is_err()
+        {
+            errors = true;
         }
 
         arguments.insert(arg.name.name.as_str(), &arg.expr);
+    }
+
+    if errors {
+        return Err(());
     }
 
     // Try to resolve as a function call
@@ -5479,7 +5529,7 @@ fn method_call_pos_args(
                     return Err(());
                 }
 
-                return call_position_args(
+                return function_call_pos_args(
                     loc,
                     func,
                     pt::FunctionTy::Function,
@@ -5512,7 +5562,7 @@ fn method_call_pos_args(
                     return Err(());
                 }
 
-                return call_position_args(
+                return function_call_pos_args(
                     loc,
                     func,
                     pt::FunctionTy::Function,
@@ -5544,7 +5594,7 @@ fn method_call_pos_args(
                         return Err(());
                     }
 
-                    return call_position_args(
+                    return function_call_pos_args(
                         loc,
                         func,
                         pt::FunctionTy::Function,
@@ -5967,6 +6017,8 @@ fn method_call_pos_args(
 
             name_matches.push(*function_no);
         }
+
+        args_sanity_check(args, context, ns, symtable, diagnostics)?;
 
         for function_no in &name_matches {
             let params_len = ns.functions[*function_no].params.len();
@@ -6432,7 +6484,7 @@ fn method_call_named_args(
                     return Err(());
                 }
 
-                return function_call_with_named_args(
+                return function_call_named_args(
                     loc,
                     func_name,
                     args,
@@ -6464,7 +6516,7 @@ fn method_call_named_args(
                     return Err(());
                 }
 
-                return function_call_with_named_args(
+                return function_call_named_args(
                     loc,
                     func_name,
                     args,
@@ -6495,7 +6547,7 @@ fn method_call_named_args(
                         return Err(());
                     }
 
-                    return function_call_with_named_args(
+                    return function_call_named_args(
                         loc,
                         func_name,
                         args,
@@ -6526,16 +6578,36 @@ fn method_call_named_args(
 
         let mut arguments = HashMap::new();
 
+        // check if the arguments are not garbage
+        let mut errors = false;
+
         for arg in args {
             if arguments.contains_key(arg.name.name.as_str()) {
                 diagnostics.push(Diagnostic::error(
                     arg.name.loc,
                     format!("duplicate argument with name '{}'", arg.name.name),
                 ));
-                return Err(());
+                errors = true;
+            }
+
+            if expression(
+                &arg.expr,
+                context,
+                ns,
+                symtable,
+                diagnostics,
+                ResolveTo::Unknown,
+            )
+            .is_err()
+            {
+                errors = true;
             }
 
             arguments.insert(arg.name.name.as_str(), &arg.expr);
+        }
+
+        if errors {
+            return Err(());
         }
 
         let marker = diagnostics.len();
@@ -7328,7 +7400,7 @@ pub fn function_call_expr(
                     return Err(());
                 }
 
-                call_position_args(
+                function_call_pos_args(
                     loc,
                     id,
                     pt::FunctionTy::Function,
@@ -7394,7 +7466,7 @@ pub fn named_function_call_expr(
                 return Err(());
             }
 
-            function_call_with_named_args(
+            function_call_named_args(
                 loc,
                 id,
                 args,

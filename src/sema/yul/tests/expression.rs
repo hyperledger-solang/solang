@@ -1514,3 +1514,53 @@ contract testTypes {
         .diagnostics
         .contains_message("the given expression does not support '.length' suffixes"));
 }
+
+#[test]
+fn external_function() {
+    let file = r#"
+    contract test {
+
+    function testing(int a) public pure returns (int) {
+        return a + 4;
+    }
+
+    function (int) external returns (int) sPtr = this.testing;
+
+    function runTest() public returns (int) {
+        assembly {
+            let t := sPtr.address
+        }
+        return sPtr(3);
+    }
+}    "#;
+
+    let ns = parse(file);
+    assert_eq!(ns.diagnostics.len(), 2);
+    assert!(ns.diagnostics.contains_message("found contract 'test'"));
+    assert!(ns
+        .diagnostics
+        .contains_message("state variables only support '.slot' and '.offset'"));
+
+    let file = r#"
+    contract test {
+
+    function testing(int a) public pure returns (int) {
+        return a + 4;
+    }
+
+    function runTest() public returns (int) {
+    function (int) external returns (int) sPtr = this.testing;
+        assembly {
+            let t := sPtr.address
+            log0(1, t)
+        }
+        return sPtr(3);
+    }
+}   "#;
+    let ns = parse(file);
+    assert_eq!(ns.diagnostics.len(), 2);
+    assert!(ns.diagnostics.contains_message("found contract 'test'"));
+    assert!(ns
+        .diagnostics
+        .contains_message("inline assembly is not yet supported"));
+}
