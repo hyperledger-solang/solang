@@ -19,6 +19,7 @@ mod loops;
 mod mappings;
 mod modifier;
 mod primitives;
+mod storage;
 mod strings;
 mod structs;
 mod value;

@@ -97,7 +97,6 @@ fn instr_transfers(block_no: usize, block: &BasicBlock) -> Vec<Vec<Transfer>> {
     let mut transfers = Vec::new();
 
     for (instr_no, instr) in block.instr.iter().enumerate() {
-
         let set_var = |var_nos: &[usize]| {
             let mut transfer = Vec::new();
 
@@ -105,7 +104,11 @@ fn instr_transfers(block_no: usize, block: &BasicBlock) -> Vec<Vec<Transfer>> {
                 transfer.insert(0, Transfer::Kill { var_no: *var_no });
 
                 transfer.push(Transfer::Gen {
-                    def: Def {block_no, instr_no, assignment_no},
+                    def: Def {
+                        block_no,
+                        instr_no,
+                        assignment_no,
+                    },
                     var_no: *var_no,
                 });
             }

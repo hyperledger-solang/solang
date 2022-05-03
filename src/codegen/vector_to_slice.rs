@@ -164,13 +164,16 @@ fn update_vectors_to_slice(
 
     for block_no in 0..cfg.blocks.len() {
         for instr_no in 0..cfg.blocks[block_no].instr.len() {
-
             if let Instr::Set {
                 expr: Expression::AllocDynamicArray(..),
                 ..
             } = &cfg.blocks[block_no].instr[instr_no]
             {
-                let cur = Def { block_no, instr_no, assignment_no: 0 };
+                let cur = Def {
+                    block_no,
+                    instr_no,
+                    assignment_no: 0,
+                };
                 if !writable.contains(&cur) {
                     defs_to_be_updated.insert(cur);
                 }

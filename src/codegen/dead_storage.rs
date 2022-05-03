@@ -8,7 +8,11 @@ use std::fmt;
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
 enum Definition {
     Undefined,
-    Instr { block_no: usize, instr_no: usize, assignment_no: usize, },
+    Instr {
+        block_no: usize,
+        instr_no: usize,
+        assignment_no: usize,
+    },
 }
 
 impl fmt::Display for Definition {
@@ -17,7 +21,11 @@ impl fmt::Display for Definition {
             Definition::Undefined => {
                 write!(f, "undef")
             }
-            Definition::Instr { block_no, instr_no, assignment_no } => {
+            Definition::Instr {
+                block_no,
+                instr_no,
+                assignment_no,
+            } => {
                 write!(f, "({}, {}, {})", block_no, instr_no, assignment_no)
             }
         }
@@ -171,8 +179,11 @@ fn instr_transfers(block_no: usize, block: &BasicBlock) -> Vec<Vec<Transfer>> {
     let mut transfers = Vec::new();
 
     for (instr_no, instr) in block.instr.iter().enumerate() {
-
-        let def = Definition::Instr {block_no, instr_no, assignment_no: 0};
+        let def = Definition::Instr {
+            block_no,
+            instr_no,
+            assignment_no: 0,
+        };
         let set_var = |var_nos: &[usize]| {
             let mut transfer = Vec::new();
 
@@ -180,7 +191,11 @@ fn instr_transfers(block_no: usize, block: &BasicBlock) -> Vec<Vec<Transfer>> {
                 transfer.insert(0, Transfer::Kill { var_no: *var_no });
 
                 transfer.push(Transfer::Gen {
-                    def: Definition::Instr {block_no, instr_no, assignment_no },
+                    def: Definition::Instr {
+                        block_no,
+                        instr_no,
+                        assignment_no,
+                    },
                     var_no: *var_no,
                 });
             }
@@ -570,7 +585,11 @@ pub fn dead_storage(cfg: &mut ControlFlowGraph, _ns: &mut Namespace) {
                 Instr::SetStorage { .. }
                 | Instr::SetStorageBytes { .. }
                 | Instr::ClearStorage { .. } => {
-                    let def = Definition::Instr { block_no, instr_no, assignment_no: 0 };
+                    let def = Definition::Instr {
+                        block_no,
+                        instr_no,
+                        assignment_no: 0,
+                    };
 
                     // add an entry if there is not one there already
                     redundant_stores.entry(def).or_insert(true);
@@ -595,11 +614,16 @@ pub fn dead_storage(cfg: &mut ControlFlowGraph, _ns: &mut Namespace) {
     // remove all stores which are marked as still redundant
     for (def, redundant) in &redundant_stores {
         if *redundant {
-            if let Definition::Instr { block_no, instr_no, .. } = def {
+            if let Definition::Instr {
+                block_no, instr_no, ..
+            } = def
+            {
                 // Function calls should never be eliminated from the CFG, as they might have side effects
-                // In addition, AbiDecode might fail and might halt the execution.
-                if !matches!(cfg.blocks[*block_no].instr[*instr_no],
-                    Instr::Call {..} | Instr::AbiDecode { .. }) {
+                // In addition, AbiDecode might fail and halt the execution.
+                if !matches!(
+                    cfg.blocks[*block_no].instr[*instr_no],
+                    Instr::Call { .. } | Instr::AbiDecode { .. }
+                ) {
                     cfg.blocks[*block_no].instr[*instr_no] = Instr::Nop;
                 }
             }
@@ -611,7 +635,10 @@ fn get_storage_definition<'a>(
     def: &Definition,
     cfg: &'a ControlFlowGraph,
 ) -> Option<(usize, &'a Expression)> {
-    if let Definition::Instr { block_no, instr_no, .. } = def {
+    if let Definition::Instr {
+        block_no, instr_no, ..
+    } = def
+    {
         match &cfg.blocks[*block_no].instr[*instr_no] {
             Instr::LoadStorage { storage, res, .. } => Some((*res, storage)),
             _ => None,
@@ -622,7 +649,10 @@ fn get_storage_definition<'a>(
 }
 
 fn get_definition<'a>(def: &Definition, cfg: &'a ControlFlowGraph) -> Option<&'a Expression> {
-    if let Definition::Instr { block_no, instr_no, .. } = def {
+    if let Definition::Instr {
+        block_no, instr_no, ..
+    } = def
+    {
         match &cfg.blocks[*block_no].instr[*instr_no] {
             Instr::LoadStorage { storage, .. } => Some(storage),
             Instr::Set { expr, .. } => Some(expr),
@@ -635,7 +665,9 @@ fn get_definition<'a>(def: &Definition, cfg: &'a ControlFlowGraph) -> Option<&'a
 
 fn get_vars_at(def: &Definition, block_vars: &BlockVars) -> ReachingDefs {
     match def {
-        Definition::Instr { block_no, instr_no, .. } => {
+        Definition::Instr {
+            block_no, instr_no, ..
+        } => {
             let vars = if let Some(vars) = block_vars.get(block_no) {
                 vars[*instr_no].clone()
             } else {
