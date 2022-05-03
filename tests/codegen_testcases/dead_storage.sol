@@ -150,3 +150,22 @@ contract deadstorage {
 // CHECK: load storage slot((uint256 19
 // NOT-CHECK: load storage slot((uint256 19
 }
+
+contract foo {
+    struct S { int32 f1; }
+        S[] arr;
+
+    function g() private returns (S storage, S storage) {
+        return (arr[0], arr[1]);
+    }
+// BEGIN-CHECK: foo::foo::function::f
+    function f() public returns (S, S) {
+        S[] storage ptrArr = arr;
+        ptrArr.push(S({f1: 1}));
+        ptrArr.push(S({f1: 2}));
+// CHECK: %.temp.76, %.temp.77 = call foo::foo::function::g
+// CHECK: %temp.78 = load storage slot(%.temp.76) ty:struct foo.S
+// CHECK: %temp.79 = load storage slot(%.temp.77) ty:struct foo.S
+        return g();
+    }
+}
