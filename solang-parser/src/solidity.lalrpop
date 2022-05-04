@@ -890,17 +890,13 @@ YulExpression: YulExpression = {
 }
 
 YulFunctionDefinition: YulStatement = {
-    <l:@L> "function" <name: YulIdentifier> "(" <params: YulTypedIdentifierList> ")" <returns:("->" <YulTypedIdentifierList>)?>
+    <l:@L> "function" <name: YulIdentifier> "(" <params: YulTypedIdentifierList?> ")" <returns:("->" <YulTypedIdentifierList>)?>
     <body: YulBlock> <r:@R> => {
-        let returns = match returns {
-            Some(content) => content,
-            None => vec![]
-        };
         YulStatement::FunctionDefinition(Box::new(YulFunctionDefinition{
             loc: Loc::File(file_no, l, r),
             id: name,
-            params,
-            returns,
+            params: params.unwrap_or_default(),
+            returns: returns.unwrap_or_default(),
             body
             }
           )
