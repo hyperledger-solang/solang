@@ -1,7 +1,7 @@
 use super::cfg::{BasicBlock, ControlFlowGraph, Instr};
 use crate::codegen::Expression;
 use crate::parser::pt::Loc;
-use crate::sema::ast::Namespace;
+use crate::sema::ast::{Namespace, RetrieveType, Type};
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 
@@ -402,14 +402,14 @@ fn apply_transfers(
 
                     for (var_no, def) in vars.vars.iter() {
                         for def in def.keys() {
-                            if let Some((_, storage)) = get_storage_definition(def, cfg) {
+                            if let Some(storage_def) = get_storage_definition(def, cfg) {
                                 if let Some(expr) = expr {
                                     let storage_vars = get_vars_at(def, block_vars);
 
                                     if expression_compare(
                                         expr,
                                         vars,
-                                        storage,
+                                        storage_def.slot,
                                         &storage_vars,
                                         cfg,
                                         block_vars,
@@ -529,20 +529,21 @@ pub fn dead_storage(cfg: &mut ControlFlowGraph, _ns: &mut Namespace) {
                         if defs.len() == 1 {
                             let (def, _) = defs.iter().next().unwrap();
 
-                            if let Some((other, def_storage)) = get_storage_definition(def, cfg) {
+                            if let Some(storage_def) = get_storage_definition(def, cfg) {
                                 let def_vars = get_vars_at(def, &block_vars);
 
                                 if expression_compare(
                                     storage,
                                     vars,
-                                    def_storage,
+                                    storage_def.slot,
                                     &def_vars,
                                     cfg,
                                     &block_vars,
                                 ) == ExpressionCmp::Equal
-                                    && other != *res
+                                    && storage_def.var_no != *res
+                                    && ty == storage_def.ty
                                 {
-                                    found = Some(other);
+                                    found = Some(var_no);
                                     break;
                                 }
                             }
@@ -553,7 +554,7 @@ pub fn dead_storage(cfg: &mut ControlFlowGraph, _ns: &mut Namespace) {
                         cfg.blocks[block_no].instr[instr_no] = Instr::Set {
                             loc: Loc::Codegen,
                             res: *res,
-                            expr: Expression::Variable(Loc::Codegen, ty.clone(), var_no),
+                            expr: Expression::Variable(Loc::Codegen, ty.clone(), *var_no),
                         };
                     } else {
                         for (def, expr) in &vars.stores {
@@ -631,16 +632,28 @@ pub fn dead_storage(cfg: &mut ControlFlowGraph, _ns: &mut Namespace) {
     }
 }
 
+struct StorageDef<'a> {
+    var_no: usize,
+    slot: &'a Expression,
+    ty: &'a Type,
+}
+
 fn get_storage_definition<'a>(
     def: &Definition,
     cfg: &'a ControlFlowGraph,
-) -> Option<(usize, &'a Expression)> {
+) -> Option<StorageDef<'a>> {
     if let Definition::Instr {
         block_no, instr_no, ..
     } = def
     {
         match &cfg.blocks[*block_no].instr[*instr_no] {
-            Instr::LoadStorage { storage, res, .. } => Some((*res, storage)),
+            Instr::LoadStorage {
+                storage, res, ty, ..
+            } => Some(StorageDef {
+                var_no: *res,
+                slot: storage,
+                ty,
+            }),
             _ => None,
         }
     } else {
@@ -648,14 +661,17 @@ fn get_storage_definition<'a>(
     }
 }
 
-fn get_definition<'a>(def: &Definition, cfg: &'a ControlFlowGraph) -> Option<&'a Expression> {
+fn get_definition<'a>(
+    def: &Definition,
+    cfg: &'a ControlFlowGraph,
+) -> Option<(&'a Expression, Type)> {
     if let Definition::Instr {
         block_no, instr_no, ..
     } = def
     {
         match &cfg.blocks[*block_no].instr[*instr_no] {
-            Instr::LoadStorage { storage, .. } => Some(storage),
-            Instr::Set { expr, .. } => Some(expr),
+            Instr::LoadStorage { storage, ty, .. } => Some((storage, ty.clone())),
+            Instr::Set { expr, .. } => Some((expr, expr.ty())),
             _ => None,
         }
     } else {
@@ -780,17 +796,24 @@ fn expression_compare(
                 let right = right.iter().next().unwrap();
 
                 match (get_definition(left.0, cfg), get_definition(right.0, cfg)) {
-                    (Some(left_expr), Some(right_expr)) => {
+                    (Some((left_expr, left_ty)), Some((right_expr, right_ty))) => {
                         let left_vars = get_vars_at(left.0, block_vars);
                         let right_vars = get_vars_at(right.0, block_vars);
-                        expression_compare(
+
+                        let cmp = expression_compare(
                             left_expr,
                             &left_vars,
                             right_expr,
                             &right_vars,
                             cfg,
                             block_vars,
-                        )
+                        );
+
+                        if cmp == ExpressionCmp::Equal && left_ty != right_ty {
+                            ExpressionCmp::Unknown
+                        } else {
+                            cmp
+                        }
                     }
                     _ => ExpressionCmp::Unknown,
                 }
