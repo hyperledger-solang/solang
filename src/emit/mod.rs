@@ -498,7 +498,7 @@ pub trait TargetRuntime<'a> {
                         "invalid",
                     );
 
-                    let dest = bin
+                    let v = bin
                         .builder
                         .build_call(
                             bin.module.get_function("vector_new").unwrap(),
@@ -509,6 +509,15 @@ pub trait TargetRuntime<'a> {
                         .left()
                         .unwrap()
                         .into_pointer_value();
+
+                    let dest = bin.builder.build_pointer_cast(
+                        v,
+                        bin.module
+                            .get_struct_type("struct.vector")
+                            .unwrap()
+                            .ptr_type(AddressSpace::Generic),
+                        "vector",
+                    );
 
                     // get the slot for the elements
                     // this hashes in-place
@@ -2173,6 +2182,7 @@ pub trait TargetRuntime<'a> {
                     .try_as_basic_value()
                     .left()
                     .unwrap();
+
                 bin.builder
                     .build_pointer_cast(
                         v.into_pointer_value(),
