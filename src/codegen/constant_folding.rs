@@ -760,6 +760,9 @@ fn expression(
                                             bs.insert(0, 0);
                                         }
                                     }
+                                    Type::Address(_) => {
+                                        bs.resize(ns.address_length, 0);
+                                    }
                                     _ => unreachable!(),
                                 }
 
