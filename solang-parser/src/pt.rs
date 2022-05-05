@@ -142,6 +142,8 @@ pub enum Import {
     Rename(StringLiteral, Vec<(Identifier, Option<Identifier>)>, Loc),
 }
 
+pub type ParameterList = Vec<(Loc, Option<Parameter>)>;
+
 #[derive(Debug, PartialEq, Clone)]
 pub enum Type {
     Address,
@@ -158,8 +160,7 @@ pub enum Type {
     Function {
         params: Vec<(Loc, Option<Parameter>)>,
         attributes: Vec<FunctionAttribute>,
-        returns: Vec<(Loc, Option<Parameter>)>,
-        trailing_attributes: Vec<FunctionAttribute>,
+        returns: Option<(ParameterList, Vec<FunctionAttribute>)>,
     },
 }
 
@@ -425,7 +426,7 @@ pub enum Expression {
     HexLiteral(Vec<HexLiteral>),
     AddressLiteral(Loc, String),
     Variable(Identifier),
-    List(Loc, Vec<(Loc, Option<Parameter>)>),
+    List(Loc, ParameterList),
     ArrayLiteral(Loc, Vec<Expression>),
     Unit(Loc, Box<Expression>, Unit),
     This(Loc),
@@ -570,6 +571,7 @@ pub enum FunctionAttribute {
     Mutability(Mutability),
     Visibility(Visibility),
     Virtual(Loc),
+    Immutable(Loc),
     Override(Loc, Vec<Identifier>),
     BaseOrModifier(Loc, Base),
 }
@@ -602,10 +604,10 @@ pub struct FunctionDefinition {
     pub ty: FunctionTy,
     pub name: Option<Identifier>,
     pub name_loc: Loc,
-    pub params: Vec<(Loc, Option<Parameter>)>,
+    pub params: ParameterList,
     pub attributes: Vec<FunctionAttribute>,
     pub return_not_returns: Option<Loc>,
-    pub returns: Vec<(Loc, Option<Parameter>)>,
+    pub returns: ParameterList,
     pub body: Option<Statement>,
 }
 
@@ -643,7 +645,7 @@ pub enum Statement {
     Try(
         Loc,
         Expression,
-        Option<(Vec<(Loc, Option<Parameter>)>, Box<Statement>)>,
+        Option<(ParameterList, Box<Statement>)>,
         Vec<CatchClause>,
     ),
     DocComment(Loc, CommentType, String),

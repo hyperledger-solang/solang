@@ -94,21 +94,16 @@ FunctionType: Type = {
     "function" <params:ParameterList>
     <attributes:FunctionTypeAttribute*>
     <returns:("returns" <ParameterList> <FunctionTypeAttribute*>)?> => {
-        let (returns, trailing_attributes) = match returns {
-            Some((r, t)) => (r, t),
-            None => (Vec::new(), Vec::new())
-        };
-
         Type::Function {
             params,
             attributes,
             returns,
-            trailing_attributes,
         }
     }
 }
 
 FunctionTypeAttribute: FunctionAttribute = {
+    <l:@L> "immutable" <r:@R> => FunctionAttribute::Immutable(Loc::File(file_no, l, r)),
     Mutability => FunctionAttribute::Mutability(<>),
     Visibility => FunctionAttribute::Visibility(<>),
 }
@@ -574,6 +569,7 @@ Mutability: Mutability = {
 FunctionAttribute: FunctionAttribute = {
     Mutability => FunctionAttribute::Mutability(<>),
     Visibility => FunctionAttribute::Visibility(<>),
+    <l:@L> "immutable" <r:@R> => FunctionAttribute::Immutable(Loc::File(file_no, l, r)),
     <l:@L> "virtual" <r:@R> => FunctionAttribute::Virtual(Loc::File(file_no, <>)),
     <l:@L> "override" <r:@R> => FunctionAttribute::Override(Loc::File(file_no, <>), Vec::new()),
     <l:@L> "override" "(" <list:CommaOne<SolIdentifier>> ")" <r:@R> => FunctionAttribute::Override(Loc::File(file_no, l, r), list),
@@ -677,7 +673,10 @@ FunctionDefinition: Box<FunctionDefinition> = {
                     params,
                     attributes,
                     return_not_returns: None,
-                    returns,
+                    returns: match returns {
+                        Some((returns, _)) => returns,
+                        None => Vec::new(),
+                    },
                     body,
                 })
             },
