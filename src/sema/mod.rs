@@ -183,27 +183,38 @@ fn resolve_import(
         pt::Import::Rename(f, _, _) => f,
     };
 
-    let import_file_no = match resolver.resolve_file(parent, OsStr::new(&filename.string)) {
-        Err(message) => {
-            ns.diagnostics
-                .push(ast::Diagnostic::error(filename.loc, message));
+    let os_filename = OsStr::new(&filename.string);
 
-            return;
-        }
-        Ok(file) => {
-            if !ns.files.iter().any(|f| f.path == file.full_path) {
-                sema_file(&file, resolver, ns);
+    let import_file_no = if let Some(builtin_file_no) = ns
+        .files
+        .iter()
+        .position(|file| file.cache_no.is_none() && file.path == os_filename)
+    {
+        // import "solana"
+        builtin_file_no
+    } else {
+        match resolver.resolve_file(parent, os_filename) {
+            Err(message) => {
+                ns.diagnostics
+                    .push(ast::Diagnostic::error(filename.loc, message));
 
-                // give up if we failed
-                if ns.diagnostics.any_errors() {
-                    return;
-                }
+                return;
             }
+            Ok(file) => {
+                if !ns.files.iter().any(|f| f.path == file.full_path) {
+                    sema_file(&file, resolver, ns);
 
-            ns.files
-                .iter()
-                .position(|f| f.path == file.full_path)
-                .expect("import should be loaded by now")
+                    // give up if we failed
+                    if ns.diagnostics.any_errors() {
+                        return;
+                    }
+                }
+
+                ns.files
+                    .iter()
+                    .position(|f| f.path == file.full_path)
+                    .expect("import should be loaded by now")
+            }
         }
     };
 

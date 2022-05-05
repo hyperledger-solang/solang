@@ -244,10 +244,11 @@ impl FileResolver {
         } else {
             unreachable!();
         };
+        let cache_no = file.cache_no.unwrap();
         let (begin_line, mut begin_column) = file.offset_to_line_column(*start);
         let (end_line, mut end_column) = file.offset_to_line_column(*end);
 
-        let mut full_line = self.files[file.cache_no]
+        let mut full_line = self.files[cache_no]
             .lines()
             .nth(begin_line)
             .unwrap()
@@ -256,7 +257,7 @@ impl FileResolver {
         // If the loc spans across multiple lines, we concatenate them
         if begin_line != end_line {
             for i in begin_line + 1..=end_line {
-                let line = self.files[file.cache_no].lines().nth(i).unwrap();
+                let line = self.files[cache_no].lines().nth(i).unwrap();
                 if i == end_line {
                     end_column += full_line.len();
                 }
