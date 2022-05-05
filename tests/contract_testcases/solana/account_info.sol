@@ -1,3 +1,5 @@
+import "solana";
+
 contract c {
 	AccountInfo ai;
 

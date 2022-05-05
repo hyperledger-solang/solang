@@ -420,14 +420,14 @@ impl Symbol {
 }
 
 /// Any Solidity file, either the main file or anything that was imported
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct File {
     /// The on-disk filename
     pub path: PathBuf,
     /// Used for offset to line-column conversions
     pub line_starts: Vec<usize>,
     /// Indicates the file number in FileResolver.files
-    pub cache_no: usize,
+    pub cache_no: Option<usize>,
 }
 
 /// When resolving a Solidity file, this holds all the resolved items

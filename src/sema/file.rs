@@ -15,7 +15,7 @@ impl File {
         File {
             path,
             line_starts,
-            cache_no,
+            cache_no: Some(cache_no),
         }
     }
 
@@ -102,6 +102,14 @@ impl Namespace {
             Loc::Implicit => String::from("implicit"),
             Loc::CommandLine => String::from("commandline"),
         }
+    }
+
+    /// File number of the top level source unit which was compiled
+    pub fn top_file_no(&self) -> usize {
+        self.files
+            .iter()
+            .position(|file| file.cache_no.is_some())
+            .unwrap()
     }
 }
 

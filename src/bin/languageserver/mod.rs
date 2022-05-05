@@ -96,7 +96,7 @@ impl SolangServer {
             codegen(&mut ns, &Default::default());
 
             diags.extend(ns.diagnostics.iter().filter_map(|diag| {
-                if diag.pos.file_no() != 0 {
+                if diag.pos.file_no() != ns.top_file_no() {
                     // The first file is the one we wanted to parse; others are imported
                     return None;
                 }
@@ -121,14 +121,17 @@ impl SolangServer {
                                 location: Location {
                                     uri: Url::from_file_path(&ns.files[note.pos.file_no()].path)
                                         .unwrap(),
-                                    range: SolangServer::loc_to_range(&note.pos, &ns.files[0]),
+                                    range: SolangServer::loc_to_range(
+                                        &note.pos,
+                                        &ns.files[ns.top_file_no()],
+                                    ),
                                 },
                             })
                             .collect(),
                     )
                 };
 
-                let range = SolangServer::loc_to_range(&diag.pos, &ns.files[0]);
+                let range = SolangServer::loc_to_range(&diag.pos, &ns.files[ns.top_file_no()]);
 
                 Some(Diagnostic {
                     range,
@@ -151,7 +154,7 @@ impl SolangServer {
             self.files.lock().await.insert(
                 path,
                 Hovers {
-                    file: ns.files[0].clone(),
+                    file: ns.files[ns.top_file_no()].clone(),
                     lookup,
                 },
             );

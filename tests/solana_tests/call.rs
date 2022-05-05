@@ -343,6 +343,8 @@ fn internal_function_storage() {
 fn raw_call_accounts() {
     let mut vm = build_solidity(
         r#"
+        import {AccountMeta} from 'solana';
+
         contract SplToken {
             address constant tokenProgramId = address"TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
             address constant SYSVAR_RENT_PUBKEY = address"SysvarRent111111111111111111111111111111111";

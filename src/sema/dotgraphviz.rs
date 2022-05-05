@@ -2041,7 +2041,7 @@ impl Dot {
 impl Namespace {
     pub fn dotgraphviz(&self) -> String {
         let mut dot = Dot {
-            filename: format!("{}", self.files[0].path.display()),
+            filename: format!("{}", self.files[self.top_file_no()].path.display()),
             nodes: Vec::new(),
             edges: Vec::new(),
         };

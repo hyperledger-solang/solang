@@ -4,10 +4,13 @@ use crate::parser::pt::Loc;
 use codespan_reporting::{diagnostic, files, term};
 use itertools::Itertools;
 use serde::Serialize;
-use std::slice::Iter;
-use std::{io, sync::Arc};
+use std::{
+    collections::HashMap,
+    slice::Iter,
+    {io, sync::Arc},
+};
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct Diagnostics {
     contents: Vec<Diagnostic>,
     has_error: bool,
@@ -115,7 +118,10 @@ impl Diagnostics {
     }
 }
 
-fn convert_diagnostic(msg: &Diagnostic, file_id: &[usize]) -> diagnostic::Diagnostic<usize> {
+fn convert_diagnostic(
+    msg: &Diagnostic,
+    file_id: &HashMap<usize, usize>,
+) -> diagnostic::Diagnostic<usize> {
     let diagnostic = diagnostic::Diagnostic::new(match msg.level {
         Level::Debug => diagnostic::Severity::Help,
         Level::Info => diagnostic::Severity::Note,
@@ -127,13 +133,13 @@ fn convert_diagnostic(msg: &Diagnostic, file_id: &[usize]) -> diagnostic::Diagno
     let mut labels = Vec::new();
 
     if let Loc::File(file_no, start, end) = msg.pos {
-        labels.push(diagnostic::Label::primary(file_id[file_no], start..end));
+        labels.push(diagnostic::Label::primary(file_id[&file_no], start..end));
     }
 
     for note in &msg.notes {
         if let Loc::File(file_no, start, end) = note.pos {
             labels.push(
-                diagnostic::Label::secondary(file_id[file_no], start..end)
+                diagnostic::Label::secondary(file_id[&file_no], start..end)
                     .with_message(note.message.to_owned()),
             );
         } else {
@@ -234,13 +240,15 @@ impl Namespace {
     fn convert_files(
         &self,
         cache: &FileResolver,
-    ) -> (files::SimpleFiles<String, Arc<str>>, Vec<usize>) {
+    ) -> (files::SimpleFiles<String, Arc<str>>, HashMap<usize, usize>) {
         let mut files = files::SimpleFiles::new();
-        let mut file_id = Vec::new();
+        let mut file_id = HashMap::new();
 
-        for file in &self.files {
-            let (contents, _) = cache.get_file_contents_and_number(&file.path);
-            file_id.push(files.add(format!("{}", file), contents.to_owned()));
+        for (file_no, file) in self.files.iter().enumerate() {
+            if file.cache_no.is_some() {
+                let (contents, _) = cache.get_file_contents_and_number(&file.path);
+                file_id.insert(file_no, files.add(format!("{}", file), contents.to_owned()));
+            }
         }
 
         (files, file_id)
