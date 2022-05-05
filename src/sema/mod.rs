@@ -1081,7 +1081,6 @@ impl ast::Namespace {
                     params,
                     attributes,
                     returns,
-                    trailing_attributes,
                 } => {
                     let mut mutability: Option<pt::Mutability> = None;
                     let mut visibility: Option<pt::Visibility> = None;
@@ -1116,22 +1115,24 @@ impl ast::Namespace {
                                     mutability = Some(m.clone());
                                 }
                             }
-                            pt::FunctionAttribute::Visibility(v) => {
-                                if let Some(e) = &visibility {
-                                    diagnostics.push(ast::Diagnostic::error_with_note(
-                                        v.loc().unwrap(),
-                                        format!("function type visibility redeclared '{}'", v),
-                                        e.loc().unwrap(),
-                                        format!(
-                                            "location of previous visibility declaration of '{}'",
-                                            e
-                                        ),
-                                    ));
-                                    success = false;
-                                    continue;
-                                }
-
+                            pt::FunctionAttribute::Visibility(v @ pt::Visibility::Internal(_))
+                            | pt::FunctionAttribute::Visibility(v @ pt::Visibility::External(_))
+                                if visibility.is_none() =>
+                            {
                                 visibility = Some(v.clone());
+                            }
+                            pt::FunctionAttribute::Visibility(v) => {
+                                diagnostics.push(ast::Diagnostic::error(
+                                    v.loc().unwrap(),
+                                    format!("function type cannot have visibility '{}'", v),
+                                ));
+                                success = false;
+                            }
+                            pt::FunctionAttribute::Immutable(loc) => {
+                                diagnostics.push(ast::Diagnostic::error(
+                                    *loc,
+                                    "function type cannot be 'immutable'".to_string(),
+                                ));
                             }
                             _ => unreachable!(),
                         }
@@ -1159,6 +1160,11 @@ impl ast::Namespace {
                         diagnostics,
                     );
 
+                    let (returns, trailing_attributes): (&[_], &[_]) = match &returns {
+                        Some((returns, trailing_attributes)) => (returns, trailing_attributes),
+                        None => (&[], &[]),
+                    };
+
                     let (returns, returns_success) = resolve_returns(
                         returns,
                         is_external,
@@ -1172,6 +1178,13 @@ impl ast::Namespace {
                     // trailing visibility for contract variables should be removed already
                     for a in trailing_attributes {
                         match a {
+                            pt::FunctionAttribute::Immutable(loc) => {
+                                diagnostics.push(ast::Diagnostic::error(
+                                    *loc,
+                                    "function type cannot be 'immutable'".to_string(),
+                                ));
+                                success = false;
+                            }
                             pt::FunctionAttribute::Mutability(m) => {
                                 diagnostics.push(ast::Diagnostic::error(
                                     m.loc(),
@@ -1182,7 +1195,7 @@ impl ast::Namespace {
                             pt::FunctionAttribute::Visibility(v) => {
                                 diagnostics.push(ast::Diagnostic::error(
                                     v.loc().unwrap(),
-                                    format!("visibility '{}' cannot be declared after returns", v),
+                                    format!("function type cannot have visibility '{}'", v),
                                 ));
                                 success = false;
                             }

@@ -104,6 +104,14 @@ pub fn contract_function(
 
     for a in &func.attributes {
         match &a {
+            pt::FunctionAttribute::Immutable(loc) => {
+                ns.diagnostics.push(Diagnostic::error(
+                    *loc,
+                    "function cannot be declared 'immutable'".to_string(),
+                ));
+                success = false;
+                continue;
+            }
             pt::FunctionAttribute::Mutability(m) => {
                 if let Some(e) = &mutability {
                     ns.diagnostics.push(Diagnostic::error_with_note(
@@ -628,6 +636,14 @@ pub fn function(
 
     for a in &func.attributes {
         match &a {
+            pt::FunctionAttribute::Immutable(loc) => {
+                ns.diagnostics.push(Diagnostic::error(
+                    *loc,
+                    "function cannot be declared 'immutable'".to_string(),
+                ));
+                success = false;
+                continue;
+            }
             pt::FunctionAttribute::Mutability(m) => {
                 if let Some(e) = &mutability {
                     ns.diagnostics.push(Diagnostic::error_with_note(
