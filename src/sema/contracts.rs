@@ -834,55 +834,134 @@ fn resolve_using(
     for (contract_no, def) in contracts {
         for part in &def.parts {
             if let pt::ContractPart::Using(using) = part {
-                if let Ok(library_no) =
-                    ns.resolve_contract_with_namespace(file_no, &using.library, &mut diagnostics)
-                {
-                    if !ns.contracts[library_no].is_library() {
-                        ns.diagnostics.push(ast::Diagnostic::error(
-                            using.library.loc(),
-                            format!(
-                                "library expected but {} '{}' found",
-                                ns.contracts[library_no].ty, using.library
-                            ),
-                        ));
+                let ty = if let Some(expr) = &using.ty {
+                    let mut diagnostics = Vec::new();
 
-                        continue;
+                    match ns.resolve_type(
+                        file_no,
+                        Some(*contract_no),
+                        false,
+                        expr,
+                        &mut diagnostics,
+                    ) {
+                        Ok(ast::Type::Contract(contract_no))
+                            if ns.contracts[contract_no].is_library() =>
+                        {
+                            ns.diagnostics.push(ast::Diagnostic::error(
+                                expr.loc(),
+                                format!("using for library '{}' type not permitted", expr),
+                            ));
+                            continue;
+                        }
+                        Ok(ty) => Some(ty),
+                        Err(_) => {
+                            ns.diagnostics.extend(diagnostics);
+                            continue;
+                        }
                     }
+                } else {
+                    None
+                };
 
-                    let ty = if let Some(expr) = &using.ty {
-                        let mut diagnostics = Vec::new();
-
-                        match ns.resolve_type(
-                            file_no,
-                            Some(*contract_no),
-                            false,
-                            expr,
-                            &mut diagnostics,
-                        ) {
-                            Ok(ast::Type::Contract(contract_no))
-                                if ns.contracts[contract_no].is_library() =>
-                            {
+                let list = match &using.list {
+                    pt::UsingList::Library(library) => {
+                        if let Ok(library_no) =
+                            ns.resolve_contract_with_namespace(file_no, library, &mut diagnostics)
+                        {
+                            if ns.contracts[library_no].is_library() {
+                                ast::Using::Library(library_no)
+                            } else {
                                 ns.diagnostics.push(ast::Diagnostic::error(
-                                    using.library.loc(),
+                                    library.loc(),
                                     format!(
-                                        "using library '{}' to extend library not possible",
-                                        using.library,
+                                        "library expected but {} '{}' found",
+                                        ns.contracts[library_no].ty, library
                                     ),
                                 ));
                                 continue;
                             }
-                            Ok(ty) => Some(ty),
-                            Err(_) => {
-                                ns.diagnostics.extend(diagnostics);
-                                continue;
+                        } else {
+                            continue;
+                        }
+                    }
+                    pt::UsingList::Functions(functions) => {
+                        let mut res = Vec::new();
+
+                        for function_name in functions {
+                            if let Ok(list) = ns.resolve_free_function_with_namespace(
+                                file_no,
+                                function_name,
+                                &mut diagnostics,
+                            ) {
+                                if list.len() > 1 {
+                                    let notes = list
+                                        .iter()
+                                        .map(|(loc, _)| ast::Note {
+                                            pos: *loc,
+                                            message: format!("definition of '{}'", function_name),
+                                        })
+                                        .collect();
+
+                                    diagnostics.push(ast::Diagnostic::error_with_notes(
+                                        function_name.loc(),
+                                        format!("'{}' is an overloaded function", function_name),
+                                        notes,
+                                    ));
+                                    continue;
+                                }
+
+                                let (loc, func_no) = list[0];
+
+                                let func = &ns.functions[func_no];
+
+                                if func.params.is_empty() {
+                                    diagnostics.push(ast::Diagnostic::error_with_note(
+                                        function_name.loc(),
+                                        format!(
+                                            "'{}' has no arguments, at least one argument required",
+                                            function_name
+                                        ),
+                                        loc,
+                                        format!("definition of '{}'", function_name),
+                                    ));
+                                    continue;
+                                }
+
+                                if let Some(ty) = &ty {
+                                    if *ty != func.params[0].ty {
+                                        diagnostics.push(ast::Diagnostic::error_with_note(
+                                            function_name.loc(),
+                                            format!("function cannot be used since first argument is '{}' rather than the required '{}'", func.params[0].ty.to_string(ns), ty.to_string(ns)),
+                                            loc,
+                                            format!("definition of '{}'", function_name),
+                                        ));
+                                        continue;
+                                    }
+                                }
+
+                                res.push(func_no);
                             }
                         }
-                    } else {
-                        None
-                    };
 
-                    ns.contracts[*contract_no].using.push((library_no, ty));
+                        ast::Using::Functions(res)
+                    }
+                };
+
+                if let Some(global) = &using.global {
+                    if global.name == "global" {
+                        ns.diagnostics.push(ast::Diagnostic::error(
+                            global.loc,
+                            format!("'{}' on using within contract not permitted", global.name),
+                        ));
+                    } else {
+                        ns.diagnostics.push(ast::Diagnostic::error(
+                            global.loc,
+                            format!("'{}' not expected", global.name),
+                        ));
+                    }
                 }
+
+                ns.contracts[*contract_no].using.push((list, ty));
             }
         }
     }

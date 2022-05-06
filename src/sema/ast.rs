@@ -489,13 +489,18 @@ pub struct Base {
     pub constructor: Option<(usize, Vec<Expression>)>,
 }
 
+pub enum Using {
+    Library(usize),
+    Functions(Vec<usize>),
+}
+
 pub struct Contract {
     pub tags: Vec<Tag>,
     pub loc: pt::Loc,
     pub ty: pt::ContractTy,
     pub name: String,
     pub bases: Vec<Base>,
-    pub using: Vec<(usize, Option<Type>)>,
+    pub using: Vec<(Using, Option<Type>)>,
     pub layout: Vec<Layout>,
     pub fixed_layout_size: BigInt,
     pub functions: Vec<usize>,

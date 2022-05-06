@@ -686,16 +686,23 @@ FunctionDefinition: Box<FunctionDefinition> = {
 }
 
 Using: Box<Using> = {
-    <l:@L> "using" <library:SolIdentifierNamespace> "for" <ty:Precedence0> <r:@R> ";" => Box::new(Using {
+    <l:@L> "using" <list:UsingList> "for" <ty:Precedence0> <global:SolIdentifier?> <r:@R> ";" => Box::new(Using {
         loc: Loc::File(file_no, l, r),
-        library,
+        list,
         ty: Some(ty),
+        global,
     }),
-    <l:@L> "using" <library:SolIdentifierNamespace> "for" "*" <r:@R> ";" => Box::new(Using {
+    <l:@L> "using" <list:UsingList> "for" "*" <global:SolIdentifier?> <r:@R> ";" => Box::new(Using {
         loc: Loc::File(file_no, l, r),
-        library,
+        list,
         ty: None,
+        global,
     }),
+}
+
+UsingList: UsingList = {
+    SolIdentifierNamespace => UsingList::Library(<>),
+    "{" <Comma<SolIdentifierNamespace>> "}" => UsingList::Functions(<>),
 }
 
 BlockStatement: Statement = {

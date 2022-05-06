@@ -212,10 +212,17 @@ pub enum ContractPart {
 }
 
 #[derive(Debug, PartialEq, Clone)]
+pub enum UsingList {
+    Library(Expression),
+    Functions(Vec<Expression>),
+}
+
+#[derive(Debug, PartialEq, Clone)]
 pub struct Using {
     pub loc: Loc,
-    pub library: Expression,
+    pub list: UsingList,
     pub ty: Option<Expression>,
+    pub global: Option<Identifier>,
 }
 
 #[derive(Debug, PartialEq, Clone)]
