@@ -95,21 +95,16 @@ FunctionType: Type = {
     "function" <params:ParameterList>
     <attributes:FunctionTypeAttribute*>
     <returns:("returns" <ParameterList> <FunctionTypeAttribute*>)?> => {
-        let (returns, trailing_attributes) = match returns {
-            Some((r, t)) => (r, t),
-            None => (Vec::new(), Vec::new())
-        };
-
         Type::Function {
             params,
             attributes,
             returns,
-            trailing_attributes,
         }
     }
 }
 
 FunctionTypeAttribute: FunctionAttribute = {
+    <l:@L> "immutable" <r:@R> => FunctionAttribute::Immutable(Loc::File(file_no, l, r)),
     Mutability => FunctionAttribute::Mutability(<>),
     Visibility => FunctionAttribute::Visibility(<>),
 }
@@ -145,6 +140,13 @@ SolNoErrorIdentifier: Identifier = {
     <l:@L> "leave" <r:@R> => Identifier{loc: Loc::File(file_no, l, r), name: "leave".to_string()},
     <l:@L> "case" <r:@R> => Identifier{loc: Loc::File(file_no, l, r), name: "case".to_string()},
     <l:@L> "default" <r:@R> => Identifier{loc: Loc::File(file_no, l, r), name: "default".to_string()},
+}
+
+SolIdentifierNamespace: Expression = {
+    SolIdentifier => Expression::Variable(<>),
+    <l:@L> <e:SolIdentifierNamespace> "." <id:SolIdentifier> <r:@R> => {
+        Expression::MemberAccess(Loc::File(file_no, l, r), Box::new(e), id)
+    }
 }
 
 VariableDeclaration: VariableDeclaration = {
@@ -186,7 +188,7 @@ Bases: Vec<Base> = {
 }
 
 Base: Base = {
-    <l:@L> <name:SolIdentifier> <args:("(" <Comma<Expression>> ")")?> <r:@R> => Base {
+    <l:@L> <name:SolIdentifierNamespace> <args:("(" <Comma<Expression>> ")")?> <r:@R> => Base {
         loc: Loc::File(file_no, l, r),
         name,
         args
@@ -580,6 +582,7 @@ Mutability: Mutability = {
 FunctionAttribute: FunctionAttribute = {
     Mutability => FunctionAttribute::Mutability(<>),
     Visibility => FunctionAttribute::Visibility(<>),
+    <l:@L> "immutable" <r:@R> => FunctionAttribute::Immutable(Loc::File(file_no, l, r)),
     <l:@L> "virtual" <r:@R> => FunctionAttribute::Virtual(Loc::File(file_no, <>)),
     <l:@L> "override" <r:@R> => FunctionAttribute::Override(Loc::File(file_no, <>), Vec::new()),
     <l:@L> "override" "(" <list:CommaOne<SolIdentifier>> ")" <r:@R> => FunctionAttribute::Override(Loc::File(file_no, l, r), list),
@@ -683,7 +686,10 @@ FunctionDefinition: Box<FunctionDefinition> = {
                     params,
                     attributes,
                     return_not_returns: None,
-                    returns,
+                    returns: match returns {
+                        Some((returns, _)) => returns,
+                        None => Vec::new(),
+                    },
                     body,
                 })
             },
@@ -693,12 +699,12 @@ FunctionDefinition: Box<FunctionDefinition> = {
 }
 
 Using: Box<Using> = {
-    <l:@L> "using" <library:SolIdentifier> "for" <ty:Precedence0> <r:@R> ";" => Box::new(Using {
+    <l:@L> "using" <library:SolIdentifierNamespace> "for" <ty:Precedence0> <r:@R> ";" => Box::new(Using {
         loc: Loc::File(file_no, l, r),
         library,
         ty: Some(ty),
     }),
-    <l:@L> "using" <library:SolIdentifier> "for" "*" <r:@R> ";" => Box::new(Using {
+    <l:@L> "using" <library:SolIdentifierNamespace> "for" "*" <r:@R> ";" => Box::new(Using {
         loc: Loc::File(file_no, l, r),
         library,
         ty: None,
@@ -807,7 +813,7 @@ NonIfStatement: Statement = {
     <l:@L> "emit" <ty:FunctionCall> <r:@R> ";" => {
         Statement::Emit(Loc::File(file_no, l, r), ty)
     },
-    <l:@L> "revert" <error:SolIdentifier?> "(" <v:Comma<Expression>> ")" <r:@R> ";" => {
+    <l:@L> "revert" <error:SolIdentifierNamespace?> "(" <v:Comma<Expression>> ")" <r:@R> ";" => {
         Statement::Revert(Loc::File(file_no, l, r), error, v)
     },
 }

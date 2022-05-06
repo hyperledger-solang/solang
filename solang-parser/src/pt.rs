@@ -1,4 +1,4 @@
-use std::fmt;
+use std::fmt::{self, Display};
 
 use num_bigint::BigInt;
 use num_rational::BigRational;
@@ -143,6 +143,8 @@ pub enum Import {
     Rename(StringLiteral, Vec<(Identifier, Option<Identifier>)>, Loc),
 }
 
+pub type ParameterList = Vec<(Loc, Option<Parameter>)>;
+
 #[derive(Debug, PartialEq, Clone)]
 pub enum Type {
     Address,
@@ -159,8 +161,7 @@ pub enum Type {
     Function {
         params: Vec<(Loc, Option<Parameter>)>,
         attributes: Vec<FunctionAttribute>,
-        returns: Vec<(Loc, Option<Parameter>)>,
-        trailing_attributes: Vec<FunctionAttribute>,
+        returns: Option<(ParameterList, Vec<FunctionAttribute>)>,
     },
 }
 
@@ -224,7 +225,7 @@ pub enum ContractPart {
 #[derive(Debug, PartialEq, Clone)]
 pub struct Using {
     pub loc: Loc,
-    pub library: Identifier,
+    pub library: Expression,
     pub ty: Option<Expression>,
 }
 
@@ -250,7 +251,7 @@ impl fmt::Display for ContractTy {
 #[derive(Debug, PartialEq, Clone)]
 pub struct Base {
     pub loc: Loc,
-    pub name: Identifier,
+    pub name: Expression,
     pub args: Option<Vec<Expression>>,
 }
 
@@ -426,7 +427,7 @@ pub enum Expression {
     HexLiteral(Vec<HexLiteral>),
     AddressLiteral(Loc, String),
     Variable(Identifier),
-    List(Loc, Vec<(Loc, Option<Parameter>)>),
+    List(Loc, ParameterList),
     ArrayLiteral(Loc, Vec<Expression>),
     Unit(Loc, Box<Expression>, Unit),
     This(Loc),
@@ -495,6 +496,16 @@ impl CodeLocation for Expression {
             | Expression::AddressLiteral(loc, _) => *loc,
             Expression::StringLiteral(v) => v[0].loc,
             Expression::HexLiteral(v) => v[0].loc,
+        }
+    }
+}
+
+impl Display for Expression {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Expression::Variable(id) => write!(f, "{}", id.name),
+            Expression::MemberAccess(_, e, id) => write!(f, "{}.{}", e, id.name),
+            _ => unimplemented!(),
         }
     }
 }
@@ -571,6 +582,7 @@ pub enum FunctionAttribute {
     Mutability(Mutability),
     Visibility(Visibility),
     Virtual(Loc),
+    Immutable(Loc),
     Override(Loc, Vec<Identifier>),
     BaseOrModifier(Loc, Base),
 }
@@ -603,10 +615,10 @@ pub struct FunctionDefinition {
     pub ty: FunctionTy,
     pub name: Option<Identifier>,
     pub name_loc: Loc,
-    pub params: Vec<(Loc, Option<Parameter>)>,
+    pub params: ParameterList,
     pub attributes: Vec<FunctionAttribute>,
     pub return_not_returns: Option<Loc>,
-    pub returns: Vec<(Loc, Option<Parameter>)>,
+    pub returns: ParameterList,
     pub body: Option<Statement>,
 }
 
@@ -639,12 +651,12 @@ pub enum Statement {
     Continue(Loc),
     Break(Loc),
     Return(Loc, Option<Expression>),
-    Revert(Loc, Option<Identifier>, Vec<Expression>),
+    Revert(Loc, Option<Expression>, Vec<Expression>),
     Emit(Loc, Expression),
     Try(
         Loc,
         Expression,
-        Option<(Vec<(Loc, Option<Parameter>)>, Box<Statement>)>,
+        Option<(ParameterList, Box<Statement>)>,
         Vec<CatchClause>,
     ),
     DocComment(Loc, CommentType, String),

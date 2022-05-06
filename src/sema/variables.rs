@@ -57,20 +57,43 @@ pub fn variable_decl<'a>(
         _,
         pt::Type::Function {
             attributes,
-            trailing_attributes,
             returns,
             ..
         },
     ) = &mut ty
     {
-        if let Some(pt::FunctionAttribute::Visibility(v)) = trailing_attributes.last() {
-            attrs.push(pt::VariableAttribute::Visibility(v.clone()));
-            trailing_attributes.pop();
-        } else if returns.is_empty() {
-            if let Some(pt::FunctionAttribute::Visibility(v)) = attributes.last() {
-                attrs.push(pt::VariableAttribute::Visibility(v.clone()));
-                attributes.pop();
+        let mut filter_var_attrs = |attributes: &mut Vec<pt::FunctionAttribute>| {
+            if attributes.is_empty() {
+                return;
             }
+
+            let mut seen_visibility = false;
+
+            // here we must iterate in reverse order: we can only remove the *last* visibility attribute
+            // This is due to the insane syntax
+            // contract c {
+            //    function() external internal x;
+            // }
+            // The first external means the function type is external, the second internal means the visibility
+            // of the x is internal.
+            for attr_no in (0..attributes.len()).rev() {
+                if let pt::FunctionAttribute::Immutable(loc) = &attributes[attr_no] {
+                    attrs.push(pt::VariableAttribute::Immutable(*loc));
+                    attributes.remove(attr_no);
+                } else if !seen_visibility {
+                    if let pt::FunctionAttribute::Visibility(v) = &attributes[attr_no] {
+                        attrs.push(pt::VariableAttribute::Visibility(v.clone()));
+                        attributes.remove(attr_no);
+                        seen_visibility = true;
+                    }
+                }
+            }
+        };
+
+        if let Some((_, trailing_attributes)) = returns {
+            filter_var_attrs(trailing_attributes);
+        } else {
+            filter_var_attrs(attributes);
         }
     }
 
@@ -280,11 +303,11 @@ pub fn variable_decl<'a>(
         None
     };
 
-    let bases: Vec<&str> = if let Some(contract) = contract {
+    let bases = if let Some(contract) = contract {
         contract
             .base
             .iter()
-            .map(|base| -> &str { &base.name.name })
+            .map(|base| format!("{}", base.name))
             .collect()
     } else {
         Vec::new()

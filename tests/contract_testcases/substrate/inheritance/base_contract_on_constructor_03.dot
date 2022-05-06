@@ -3,7 +3,7 @@ strict digraph "tests/contract_testcases/substrate/inheritance/base_contract_on_
 	node_2 [label="constructor \ncontract: apex\ntests/contract_testcases/substrate/inheritance/base_contract_on_constructor_03.sol:3:13-39\nsignature ()\nvisibility public\nmutability nonpayable"]
 	diagnostic [label="found contract 'apex'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/base_contract_on_constructor_03.sol:2:9-23"]
 	diagnostic_5 [label="'public': visibility for constructors is ignored\nlevel Warning\ntests/contract_testcases/substrate/inheritance/base_contract_on_constructor_03.sol:3:33-39"]
-	diagnostic_6 [label="unknown function attribute 'oosda'\nlevel Error\ntests/contract_testcases/substrate/inheritance/base_contract_on_constructor_03.sol:3:27-32"]
+	diagnostic_6 [label="'oosda' not found\nlevel Error\ntests/contract_testcases/substrate/inheritance/base_contract_on_constructor_03.sol:3:27-32"]
 	contracts -> contract
 	contract -> node_2 [label="constructor"]
 	diagnostics -> diagnostic [label="Debug"]

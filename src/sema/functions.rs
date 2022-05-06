@@ -104,6 +104,14 @@ pub fn contract_function(
 
     for a in &func.attributes {
         match &a {
+            pt::FunctionAttribute::Immutable(loc) => {
+                ns.diagnostics.push(Diagnostic::error(
+                    *loc,
+                    "function cannot be declared 'immutable'".to_string(),
+                ));
+                success = false;
+                continue;
+            }
             pt::FunctionAttribute::Mutability(m) => {
                 if let Some(e) = &mutability {
                     ns.diagnostics.push(Diagnostic::error_with_note(
@@ -412,10 +420,10 @@ pub fn contract_function(
         None => "".to_owned(),
     };
 
-    let bases: Vec<&str> = contract
+    let bases: Vec<String> = contract
         .base
         .iter()
-        .map(|base| -> &str { &base.name.name })
+        .map(|base| format!("{}", base.name))
         .collect();
 
     let doc = resolve_tags(
@@ -628,6 +636,14 @@ pub fn function(
 
     for a in &func.attributes {
         match &a {
+            pt::FunctionAttribute::Immutable(loc) => {
+                ns.diagnostics.push(Diagnostic::error(
+                    *loc,
+                    "function cannot be declared 'immutable'".to_string(),
+                ));
+                success = false;
+                continue;
+            }
             pt::FunctionAttribute::Mutability(m) => {
                 if let Some(e) = &mutability {
                     ns.diagnostics.push(Diagnostic::error_with_note(

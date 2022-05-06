@@ -286,7 +286,7 @@ fn resolve_variable_reference(
             None => {
                 ns.diagnostics.push(Diagnostic::error(
                     id.loc,
-                    format!("'{}' is not found", id.name),
+                    format!("'{}' not found", id.name),
                 ));
                 Err(())
             }
@@ -303,7 +303,7 @@ fn resolve_variable_reference(
 
     ns.diagnostics.push(Diagnostic::error(
         id.loc,
-        format!("'{}' is not found", id.name),
+        format!("'{}' not found", id.name),
     ));
     Err(())
 }

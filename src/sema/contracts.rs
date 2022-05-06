@@ -109,6 +109,8 @@ pub fn resolve_base_contracts(
     file_no: usize,
     ns: &mut ast::Namespace,
 ) {
+    let mut diagnostics = Vec::new();
+
     for (contract_no, def) in contracts {
         for base in &def.base {
             if ns.contracts[*contract_no].is_library() {
@@ -122,76 +124,67 @@ pub fn resolve_base_contracts(
                 continue;
             }
             let name = &base.name;
-            match ns.resolve_contract(file_no, name) {
-                Some(no) => {
-                    if no == *contract_no {
-                        ns.diagnostics.push(ast::Diagnostic::error(
-                            name.loc,
-                            format!(
-                                "contract '{}' cannot have itself as a base contract",
-                                name.name
-                            ),
-                        ));
-                    } else if ns.contracts[*contract_no]
-                        .bases
-                        .iter()
-                        .any(|e| e.contract_no == no)
-                    {
-                        ns.diagnostics.push(ast::Diagnostic::error(
-                            name.loc,
-                            format!(
-                                "contract '{}' duplicate base '{}'",
-                                ns.contracts[*contract_no].name, name.name
-                            ),
-                        ));
-                    } else if is_base(*contract_no, no, ns) {
-                        ns.diagnostics.push(ast::Diagnostic::error(
-                            name.loc,
-                            format!(
-                                "base '{}' from contract '{}' is cyclic",
-                                name.name, ns.contracts[*contract_no].name
-                            ),
-                        ));
-                    } else if ns.contracts[*contract_no].is_interface()
-                        && !ns.contracts[no].is_interface()
-                    {
-                        ns.diagnostics.push(ast::Diagnostic::error(
-                            name.loc,
-                            format!(
-                                "interface '{}' cannot have {} '{}' as a base",
-                                ns.contracts[*contract_no].name, ns.contracts[no].ty, name.name
-                            ),
-                        ));
-                    } else if ns.contracts[no].is_library() {
-                        let contract = &ns.contracts[*contract_no];
-
-                        ns.diagnostics.push(ast::Diagnostic::error(
-                            name.loc,
-                            format!(
-                                "library '{}' cannot be used as base contract for {} '{}'",
-                                name.name, contract.ty, contract.name,
-                            ),
-                        ));
-                    } else {
-                        // We do not resolve the constructor arguments here, since we have not
-                        // resolved any variables. This means no constants can be used on base
-                        // constructor args, so we delay this until resolve_base_args()
-                        ns.contracts[*contract_no].bases.push(ast::Base {
-                            loc: base.loc,
-                            contract_no: no,
-                            constructor: None,
-                        });
-                    }
-                }
-                None => {
+            if let Ok(no) = ns.resolve_contract_with_namespace(file_no, name, &mut diagnostics) {
+                if no == *contract_no {
                     ns.diagnostics.push(ast::Diagnostic::error(
-                        name.loc,
-                        format!("contract '{}' not found", name.name),
+                        name.loc(),
+                        format!("contract '{}' cannot have itself as a base contract", name),
                     ));
+                } else if ns.contracts[*contract_no]
+                    .bases
+                    .iter()
+                    .any(|e| e.contract_no == no)
+                {
+                    ns.diagnostics.push(ast::Diagnostic::error(
+                        name.loc(),
+                        format!(
+                            "contract '{}' duplicate base '{}'",
+                            ns.contracts[*contract_no].name, name
+                        ),
+                    ));
+                } else if is_base(*contract_no, no, ns) {
+                    ns.diagnostics.push(ast::Diagnostic::error(
+                        name.loc(),
+                        format!(
+                            "base '{}' from contract '{}' is cyclic",
+                            name, ns.contracts[*contract_no].name
+                        ),
+                    ));
+                } else if ns.contracts[*contract_no].is_interface()
+                    && !ns.contracts[no].is_interface()
+                {
+                    ns.diagnostics.push(ast::Diagnostic::error(
+                        name.loc(),
+                        format!(
+                            "interface '{}' cannot have {} '{}' as a base",
+                            ns.contracts[*contract_no].name, ns.contracts[no].ty, name
+                        ),
+                    ));
+                } else if ns.contracts[no].is_library() {
+                    let contract = &ns.contracts[*contract_no];
+
+                    ns.diagnostics.push(ast::Diagnostic::error(
+                        name.loc(),
+                        format!(
+                            "library '{}' cannot be used as base contract for {} '{}'",
+                            name, contract.ty, contract.name,
+                        ),
+                    ));
+                } else {
+                    // We do not resolve the constructor arguments here, since we have not
+                    // resolved any variables. This means no constants can be used on base
+                    // constructor args, so we delay this until resolve_base_args()
+                    ns.contracts[*contract_no].bases.push(ast::Base {
+                        loc: base.loc,
+                        contract_no: no,
+                        constructor: None,
+                    });
                 }
             }
         }
     }
+
+    ns.diagnostics.extend(diagnostics);
 }
 
 /// Resolve the base contracts list and check for cycles. Returns true if no
@@ -217,7 +210,8 @@ fn resolve_base_args(
 
         for base in &def.base {
             let name = &base.name;
-            if let Some(base_no) = ns.resolve_contract(file_no, name) {
+            if let Ok(base_no) = ns.resolve_contract_with_namespace(file_no, name, &mut diagnostics)
+            {
                 if let Some(pos) = ns.contracts[*contract_no]
                     .bases
                     .iter()
@@ -825,16 +819,20 @@ fn resolve_using(
     file_no: usize,
     ns: &mut ast::Namespace,
 ) {
+    let mut diagnostics = Vec::new();
+
     for (contract_no, def) in contracts {
         for part in &def.parts {
             if let pt::ContractPart::Using(using) = part {
-                if let Some(library_no) = ns.resolve_contract(file_no, &using.library) {
+                if let Ok(library_no) =
+                    ns.resolve_contract_with_namespace(file_no, &using.library, &mut diagnostics)
+                {
                     if !ns.contracts[library_no].is_library() {
                         ns.diagnostics.push(ast::Diagnostic::error(
-                            using.library.loc,
+                            using.library.loc(),
                             format!(
                                 "library expected but {} '{}' found",
-                                ns.contracts[library_no].ty, using.library.name
+                                ns.contracts[library_no].ty, using.library
                             ),
                         ));
 
@@ -855,10 +853,10 @@ fn resolve_using(
                                 if ns.contracts[contract_no].is_library() =>
                             {
                                 ns.diagnostics.push(ast::Diagnostic::error(
-                                    using.library.loc,
+                                    using.library.loc(),
                                     format!(
                                         "using library '{}' to extend library not possible",
-                                        using.library.name,
+                                        using.library,
                                     ),
                                 ));
                                 continue;
@@ -874,15 +872,12 @@ fn resolve_using(
                     };
 
                     ns.contracts[*contract_no].using.push((library_no, ty));
-                } else {
-                    ns.diagnostics.push(ast::Diagnostic::error(
-                        using.library.loc,
-                        format!("library '{}' not found", using.library.name),
-                    ));
                 }
             }
         }
     }
+
+    ns.diagnostics.extend(diagnostics);
 }
 
 /// Resolve contract functions bodies
