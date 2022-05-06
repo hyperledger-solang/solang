@@ -15,7 +15,7 @@ use std::ops::{Add, Shl, Sub};
 use super::address::to_hexstr_eip55;
 use super::ast::{
     Builtin, BuiltinStruct, CallArgs, CallTy, Diagnostic, Expression, Function, Mutability,
-    Namespace, StringLocation, Symbol, Type,
+    Namespace, StringLocation, Symbol, Type, Using,
 };
 use super::builtin;
 use super::contracts::{is_base, visit_bases};
@@ -6326,118 +6326,130 @@ fn resolve_using(
     ns: &mut Namespace,
     resolve_to: ResolveTo,
 ) -> Result<Option<Expression>, ()> {
-    // first collect all possible libraries that match the using directive type
+    // first collect all possible functions that could be used for using
     // Use HashSet for deduplication.
     // If the using directive specifies a type, the type must match the type of
     // the method call object exactly.
-    let libraries: HashSet<usize> = ns.contracts[context.contract_no.unwrap()]
+    let possible_functions: HashSet<usize> = ns.contracts[context.contract_no.unwrap()]
         .using
         .iter()
-        .filter_map(|(library_no, ty)| match ty {
-            None => Some(*library_no),
-            Some(ty) if ty == self_ty => Some(*library_no),
-            _ => None,
+        .filter(|(_, ty)| {
+            if let Some(ty) = ty {
+                self_ty == ty
+            } else {
+                true
+            }
+        })
+        .flat_map(|(using, _)| {
+            match using {
+                Using::Library(library_no) => ns.contracts[*library_no].functions.iter(),
+                Using::Functions(functions) => functions.iter(),
+            }
+            .filter(|func_no| {
+                let libfunc = &ns.functions[**func_no];
+
+                libfunc.name == func.name && libfunc.ty == pt::FunctionTy::Function
+            })
+            .cloned()
         })
         .collect();
 
     let mut name_matches = 0;
     let mut errors = Vec::new();
 
-    for library_no in libraries {
-        for function_no in ns.contracts[library_no].functions.clone() {
-            let libfunc = &ns.functions[function_no];
-            if libfunc.name != func.name || libfunc.ty != pt::FunctionTy::Function {
-                continue;
-            }
+    for function_no in possible_functions {
+        let libfunc = &ns.functions[function_no];
+        if libfunc.name != func.name || libfunc.ty != pt::FunctionTy::Function {
+            continue;
+        }
 
-            name_matches += 1;
+        name_matches += 1;
 
-            let params_len = libfunc.params.len();
+        let params_len = libfunc.params.len();
 
-            if params_len != args.len() + 1 {
-                errors.push(Diagnostic::error(
-                    *loc,
-                    format!(
-                        "library function expects {} arguments, {} provided (including self)",
-                        params_len,
-                        args.len() + 1
-                    ),
-                ));
-                continue;
-            }
-            let mut matches = true;
-            let mut cast_args = Vec::new();
+        if params_len != args.len() + 1 {
+            errors.push(Diagnostic::error(
+                *loc,
+                format!(
+                    "using function expects {} arguments, {} provided (including self)",
+                    params_len,
+                    args.len() + 1
+                ),
+            ));
+            continue;
+        }
+        let mut matches = true;
+        let mut cast_args = Vec::new();
 
-            match self_expr.cast(
-                &self_expr.loc(),
-                &libfunc.params[0].ty,
-                true,
+        match self_expr.cast(
+            &self_expr.loc(),
+            &libfunc.params[0].ty,
+            true,
+            ns,
+            &mut errors,
+        ) {
+            Ok(e) => cast_args.push(e),
+            Err(()) => continue,
+        }
+
+        // check if arguments can be implicitly casted
+        for (i, arg) in args.iter().enumerate() {
+            let ty = ns.functions[function_no].params[i + 1].ty.clone();
+
+            let arg = match expression(
+                arg,
+                context,
                 ns,
+                symtable,
                 &mut errors,
+                ResolveTo::Type(&ty),
             ) {
-                Ok(e) => cast_args.push(e),
-                Err(()) => continue,
-            }
+                Ok(e) => e,
+                Err(()) => {
+                    matches = false;
+                    continue;
+                }
+            };
 
-            // check if arguments can be implicitly casted
-            for (i, arg) in args.iter().enumerate() {
-                let ty = ns.functions[function_no].params[i + 1].ty.clone();
-
-                let arg = match expression(
-                    arg,
-                    context,
-                    ns,
-                    symtable,
-                    &mut errors,
-                    ResolveTo::Type(&ty),
-                ) {
-                    Ok(e) => e,
-                    Err(()) => {
-                        matches = false;
-                        continue;
-                    }
-                };
-
-                match arg.cast(&arg.loc(), &ty, true, ns, &mut errors) {
-                    Ok(expr) => cast_args.push(expr),
-                    Err(_) => {
-                        matches = false;
-                        break;
-                    }
+            match arg.cast(&arg.loc(), &ty, true, ns, &mut errors) {
+                Ok(expr) => cast_args.push(expr),
+                Err(_) => {
+                    matches = false;
+                    break;
                 }
             }
-            if !matches {
-                continue;
-            }
-
-            let libfunc = &ns.functions[function_no];
-
-            if libfunc.is_private() {
-                errors.push(Diagnostic::error_with_note(
-                    *loc,
-                    "cannot call private library function".to_string(),
-                    libfunc.loc,
-                    format!("declaration of function '{}'", libfunc.name),
-                ));
-
-                continue;
-            }
-
-            let returns = function_returns(libfunc, resolve_to);
-            let ty = function_type(libfunc, false, resolve_to);
-
-            return Ok(Some(Expression::InternalFunctionCall {
-                loc: *loc,
-                returns,
-                function: Box::new(Expression::InternalFunction {
-                    loc: *loc,
-                    ty,
-                    function_no,
-                    signature: None,
-                }),
-                args: cast_args,
-            }));
         }
+        if !matches {
+            continue;
+        }
+
+        let libfunc = &ns.functions[function_no];
+
+        if libfunc.is_private() {
+            errors.push(Diagnostic::error_with_note(
+                *loc,
+                "cannot call private library function".to_string(),
+                libfunc.loc,
+                format!("declaration of function '{}'", libfunc.name),
+            ));
+
+            continue;
+        }
+
+        let returns = function_returns(libfunc, resolve_to);
+        let ty = function_type(libfunc, false, resolve_to);
+
+        return Ok(Some(Expression::InternalFunctionCall {
+            loc: *loc,
+            returns,
+            function: Box::new(Expression::InternalFunction {
+                loc: *loc,
+                ty,
+                function_no,
+                signature: None,
+            }),
+            args: cast_args,
+        }));
     }
 
     match name_matches {
@@ -6450,7 +6462,7 @@ fn resolve_using(
         _ => {
             diagnostics.push(Diagnostic::error(
                 *loc,
-                "cannot find overloaded library function which matches signature".to_string(),
+                "cannot find overloaded function which matches signature".to_string(),
             ));
             Err(())
         }

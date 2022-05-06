@@ -1,7 +1,7 @@
 strict digraph "tests/contract_testcases/solana/import_contracts_via_object.sol" {
 	contract [label="contract C\ntests/contract_testcases/solana/import_contracts_via_object.sol:2:1-3:20"]
 	base [label="base A\ntests/contract_testcases/solana/import_contracts_via_object.sol:3:15-20"]
-	using [label="using L"]
+	using [label="library L"]
 	node_5 [label="constructor \ncontract: C\ntests/contract_testcases/solana/import_contracts_via_object.sol:5:2-23\nsignature ()\nvisibility public\nmutability nonpayable"]
 	contract_6 [label="contract A\ntests/contract_testcases/solana/simple.sol:1:1-12"]
 	contract_7 [label="contract L\ntests/contract_testcases/solana/simple.sol:1:14-2:11"]

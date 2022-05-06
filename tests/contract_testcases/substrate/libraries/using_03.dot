@@ -11,7 +11,7 @@ strict digraph "tests/contract_testcases/substrate/libraries/using_03.sol" {
 	variable_10 [label="variable: a\nuint64\ntests/contract_testcases/substrate/libraries/using_03.sol:4:32-33"]
 	variable_11 [label="variable: b\nuint64\ntests/contract_testcases/substrate/libraries/using_03.sol:4:36-37"]
 	contract_12 [label="contract c\ntests/contract_testcases/substrate/libraries/using_03.sol:8:9-20"]
-	diagnostic [label="using library 'x' to extend library not possible\nlevel Error\ntests/contract_testcases/substrate/libraries/using_03.sol:9:19-20"]
+	diagnostic [label="using for library 'x' type not permitted\nlevel Error\ntests/contract_testcases/substrate/libraries/using_03.sol:9:25-26"]
 	diagnostic_15 [label="found library 'x'\nlevel Debug\ntests/contract_testcases/substrate/libraries/using_03.sol:2:9-19"]
 	diagnostic_16 [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/libraries/using_03.sol:8:9-20"]
 	contracts -> contract
