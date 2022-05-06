@@ -27,6 +27,7 @@ SourceUnitPart: SourceUnitPart = {
     FunctionDefinition => SourceUnitPart::FunctionDefinition(<>),
     VariableDefinition => SourceUnitPart::VariableDefinition(<>),
     TypeDefinition => SourceUnitPart::TypeDefinition(<>),
+    Using => SourceUnitPart::Using(<>),
     <l:@L> ";" <r:@R> => SourceUnitPart::StraySemicolon(Loc::File(file_no, l, r)),
 }
 
