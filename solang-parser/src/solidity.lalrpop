@@ -430,20 +430,25 @@ NoFunctionTyPrecedence0: Expression = {
     },
     <SolNoErrorIdentifier> => Expression::Variable(<>),
     <l:@L> <e:Precedence0> <u:Unit> <r:@R> => Expression::Unit(Loc::File(file_no, l, r), Box::new(e), u),
-    <l:@L> <n:number> <r:@R> => {
+    <l:@L> <n:number> <r:@R> =>? {
         let base: String = n.0.chars().filter(|v| *v != '_').collect();
         let exp: String = n.1.chars().filter(|v| *v != '_').collect();
 
         let n = if exp.is_empty() {
-            BigInt::from_str(&base).unwrap()
+            BigInt::from_str(&base)
+                .map_err(|err| ParseError::User { error:LexicalError::InvalidBigInt(Loc::File(file_no, l, r), err)})?
         } else {
-            let base = BigInt::from_str(&base).unwrap();
-            let exp = BigInt::from_str("10").unwrap().pow(BigUint::from_str(&exp).unwrap());
+            let base = BigInt::from_str(&base)
+                .map_err(|err| ParseError::User { error:LexicalError::InvalidBigInt(Loc::File(file_no, l, r), err)})?;
+            let exp = BigInt::from_str("10")
+                .unwrap()
+                .pow(BigUint::from_str(&exp)
+                .map_err(|err| ParseError::User { error:LexicalError::InvalidBigInt(Loc::File(file_no, l, r), err)})?);
 
             base.mul(exp)
         };
 
-        Expression::NumberLiteral(Loc::File(file_no, l, r), n)
+        Ok(Expression::NumberLiteral(Loc::File(file_no, l, r), n))
     },
     <l:@L> <n:rational> <r:@R> => {
         let mut significand: String = n.0.to_string();

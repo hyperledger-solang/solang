@@ -3,6 +3,7 @@
 //  - comments and doc comments
 //  - pragma value is [^;]+
 //
+use num_bigint::ParseBigIntError;
 use phf::phf_map;
 use std::fmt;
 use std::iter::Peekable;
@@ -359,6 +360,7 @@ pub enum LexicalError {
     DoublePoints(Loc),
     UnrecognisedDecimal(Loc),
     ExpectedFrom(Loc, String),
+    InvalidBigInt(Loc, ParseBigIntError),
 }
 
 impl fmt::Display for LexicalError {
@@ -382,6 +384,9 @@ impl fmt::Display for LexicalError {
             LexicalError::UnrecognisedDecimal(..) => {
                 write!(f, "expected number after decimal point")
             }
+            LexicalError::InvalidBigInt(_, err) => {
+                write!(f, "bigint error occurred: {}", err.to_string())
+            }
         }
     }
 }
@@ -398,7 +403,8 @@ impl CodeLocation for LexicalError {
             | LexicalError::ExpectedFrom(loc, ..)
             | LexicalError::MissingExponent(loc, ..)
             | LexicalError::DoublePoints(loc, ..)
-            | LexicalError::UnrecognisedDecimal(loc, ..) => *loc,
+            | LexicalError::UnrecognisedDecimal(loc, ..)
+            | LexicalError::InvalidBigInt(loc, ..) => *loc,
         }
     }
 }

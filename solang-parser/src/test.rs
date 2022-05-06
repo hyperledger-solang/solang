@@ -2,6 +2,8 @@ use crate::lexer;
 use crate::pt::*;
 use crate::solidity;
 use num_bigint::BigInt;
+use std::{fs, path::Path};
+use walkdir::WalkDir;
 
 #[test]
 fn parse_test() {
@@ -1183,4 +1185,54 @@ contract C {
 
     let (actual_parse_tree, _) = crate::parse(src, 0).unwrap();
     assert_eq!(actual_parse_tree.0.len(), 1);
+}
+
+#[test]
+fn test_solidity_semantic_tests() {
+    let source_delimiter = regex::Regex::new(r"====.*====").unwrap();
+
+    let errors = WalkDir::new(
+        Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("testdata/solidity/test/libsolidity/semanticTests"),
+    )
+    .follow_links(true)
+    .into_iter()
+    .filter_map(|e| e.ok())
+    .filter_map::<String, _>(|entry| {
+        if entry.file_name().to_string_lossy().ends_with(".sol") {
+            let source = match fs::read_to_string(entry.path()).map_err(|err| err.to_string()) {
+                Ok(source) => source,
+                Err(err) => return Some(err),
+            };
+
+            for source_part in source_delimiter
+                .split(&source)
+                .filter(|source_part| !source_part.is_empty())
+            {
+                if let Some(err) = crate::parse(&source_part, 0)
+                    .map_err(|diags| {
+                        format!(
+                            "{:?}:\n\t{}",
+                            entry.path(),
+                            diags
+                                .iter()
+                                .map(|diag| format!("{diag:?}"))
+                                .collect::<Vec<_>>()
+                                .join("\n\t")
+                        )
+                    })
+                    .err()
+                {
+                    return Some(err);
+                }
+            }
+
+            None
+        } else {
+            None
+        }
+    })
+    .collect::<Vec<_>>();
+
+    assert!(errors.is_empty(), "{}", errors.join("\n"));
 }
