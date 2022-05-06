@@ -417,6 +417,18 @@ impl Symbol {
             false
         }
     }
+
+    /// Is this a private symbol
+    pub fn is_private_variable(&self, ns: &Namespace) -> bool {
+        match self {
+            Symbol::Variable(_, Some(contract_no), var_no) => {
+                let visibility = &ns.contracts[*contract_no].variables[*var_no].visibility;
+
+                matches!(visibility, pt::Visibility::Private(_))
+            }
+            _ => false,
+        }
+    }
 }
 
 /// Any Solidity file, either the main file or anything that was imported

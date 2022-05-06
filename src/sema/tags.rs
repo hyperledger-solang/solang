@@ -8,7 +8,7 @@ pub fn resolve_tags(
     doc: &[pt::DocComment],
     params: Option<&[Parameter]>,
     returns: Option<&[Parameter]>,
-    bases: Option<&[&str]>,
+    bases: Option<&[String]>,
     ns: &mut Namespace,
 ) -> Vec<Tag> {
     let mut res: Vec<Tag> = Vec::new();

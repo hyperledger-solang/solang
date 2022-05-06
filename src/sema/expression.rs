@@ -2396,7 +2396,7 @@ fn variable(
             diagnostics.push(
                 Diagnostic::error(
                     id.loc,
-                    "'now' is not found. 'now' was an alias for 'block.timestamp' in older versions of the Solidity language. Please use 'block.timestamp' instead.".to_string(),
+                    "'now' not found. 'now' was an alias for 'block.timestamp' in older versions of the Solidity language. Please use 'block.timestamp' instead.".to_string(),
                 ));
             Err(())
         }
