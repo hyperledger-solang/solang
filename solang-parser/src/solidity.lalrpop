@@ -523,6 +523,7 @@ Unit: Unit = {
     <@L> "days" <@R> => Unit::Days(Loc::File(file_no, <>)),
     <@L> "weeks" <@R> => Unit::Weeks(Loc::File(file_no, <>)),
     <@L> "wei" <@R> => Unit::Wei(Loc::File(file_no, <>)),
+    <@L> "gwei" <@R> => Unit::Gwei(Loc::File(file_no, <>)),
     <@L> "szabo" <@R> => Unit::Szabo(Loc::File(file_no, <>)),
     <@L> "finney" <@R> => Unit::Finney(Loc::File(file_no, <>)),
     <@L> "ether" <@R> => Unit::Ether(Loc::File(file_no, <>)),
@@ -890,17 +891,13 @@ YulExpression: YulExpression = {
 }
 
 YulFunctionDefinition: YulStatement = {
-    <l:@L> "function" <name: YulIdentifier> "(" <params: YulTypedIdentifierList> ")" <returns:("->" <YulTypedIdentifierList>)?>
+    <l:@L> "function" <name: YulIdentifier> "(" <params: YulTypedIdentifierList?> ")" <returns:("->" <YulTypedIdentifierList>)?>
     <body: YulBlock> <r:@R> => {
-        let returns = match returns {
-            Some(content) => content,
-            None => vec![]
-        };
         YulStatement::FunctionDefinition(Box::new(YulFunctionDefinition{
             loc: Loc::File(file_no, l, r),
             id: name,
-            params,
-            returns,
+            params: params.unwrap_or_default(),
+            returns: returns.unwrap_or_default(),
             body
             }
           )
@@ -1123,6 +1120,7 @@ extern {
         "days" => Token::Days,
         "weeks" => Token::Weeks,
         "wei" => Token::Wei,
+        "gwei" => Token::Gwei,
         "szabo" => Token::Szabo,
         "finney" => Token::Finney,
         "ether" => Token::Ether,

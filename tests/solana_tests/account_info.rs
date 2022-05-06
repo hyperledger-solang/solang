@@ -5,6 +5,7 @@ use ethabi::{ethereum_types::U256, Token};
 fn lamports() {
     let mut vm = build_solidity(
         r#"
+        import 'solana';
         contract c {
             function test() public payable returns (uint64) {
                 for (uint32 i = 0; i < tx.accounts.length; i++) {
@@ -37,6 +38,7 @@ fn lamports() {
 fn owner() {
     let mut vm = build_solidity(
         r#"
+        import 'solana';
         contract c {
             function test() public payable returns (address) {
                 for (uint32 i = 0; i < tx.accounts.length; i++) {
@@ -65,6 +67,7 @@ fn owner() {
 fn data() {
     let mut vm = build_solidity(
         r#"
+        import 'solana';
         contract c {
             function test(uint32 index) public payable returns (uint8) {
                 for (uint32 i = 0; i < tx.accounts.length; i++) {

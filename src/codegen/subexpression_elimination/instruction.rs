@@ -307,6 +307,7 @@ impl AvailableExpressionSet {
             Instr::ExternalCall {
                 success,
                 address,
+                accounts,
                 payload,
                 value,
                 gas,
@@ -316,9 +317,14 @@ impl AvailableExpressionSet {
                     .as_ref()
                     .map(|expr| self.regenerate_expression(expr, ave, cst).1);
 
+                let new_accounts = accounts
+                    .as_ref()
+                    .map(|expr| self.regenerate_expression(expr, ave, cst).1);
+
                 Instr::ExternalCall {
                     success: *success,
                     address: new_address,
+                    accounts: new_accounts,
                     payload: self.regenerate_expression(payload, ave, cst).1,
                     value: self.regenerate_expression(value, ave, cst).1,
                     gas: self.regenerate_expression(gas, ave, cst).1,

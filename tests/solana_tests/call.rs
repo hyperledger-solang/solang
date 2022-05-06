@@ -1,4 +1,5 @@
-use crate::build_solidity;
+use crate::{build_solidity, Instruction, Pubkey};
+use base58::FromBase58;
 use ethabi::{ethereum_types::U256, Token};
 
 #[test]
@@ -336,4 +337,100 @@ fn internal_function_storage() {
     );
 
     assert_eq!(res, vec![Token::Int(U256::from(8))]);
+}
+
+#[test]
+fn raw_call_accounts() {
+    let mut vm = build_solidity(
+        r#"
+        import {AccountMeta} from 'solana';
+
+        contract SplToken {
+            address constant tokenProgramId = address"TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
+            address constant SYSVAR_RENT_PUBKEY = address"SysvarRent111111111111111111111111111111111";
+
+            struct InitializeMintInstruction {
+                uint8 instruction;
+                uint8 decimals;
+                address mintAuthority;
+                uint8 freezeAuthorityOption;
+                address freezeAuthority;
+            }
+
+            function create_mint_with_freezeauthority(uint8 decimals, address mintAuthority, address freezeAuthority) public {
+                InitializeMintInstruction instr = InitializeMintInstruction({
+                    instruction: 0,
+                    decimals: decimals,
+                    mintAuthority: mintAuthority,
+                    freezeAuthorityOption: 1,
+                    freezeAuthority: freezeAuthority
+                });
+
+                AccountMeta[2] metas = [
+                    AccountMeta({pubkey: instr.mintAuthority, is_writable: true, is_signer: false}),
+                    AccountMeta({pubkey: SYSVAR_RENT_PUBKEY, is_writable: false, is_signer: false})
+                ];
+
+                tokenProgramId.call{accounts: metas}(instr);
+            }
+        }"#,
+    );
+
+    vm.constructor("SplToken", &[], 0);
+
+    let token = Pubkey(
+        "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+            .from_base58()
+            .unwrap()
+            .try_into()
+            .unwrap(),
+    );
+
+    let test_args = |instr: &Instruction| {
+        let sysvar_rent = Pubkey(
+            "SysvarRent111111111111111111111111111111111"
+                .from_base58()
+                .unwrap()
+                .try_into()
+                .unwrap(),
+        );
+
+        assert_eq!(
+            &instr.data,
+            &[
+                0, 11, 113, 117, 105, 110, 113, 117, 97, 103, 105, 110, 116, 97, 113, 117, 97, 100,
+                114, 105, 110, 103, 101, 110, 116, 105, 108, 108, 105, 97, 114, 100, 116, 104, 1,
+                113, 117, 105, 110, 113, 117, 97, 103, 105, 110, 116, 97, 113, 117, 97, 100, 114,
+                105, 110, 103, 101, 110, 116, 105, 108, 108, 105, 111, 110, 116, 104, 115,
+            ]
+        );
+
+        assert!(instr.accounts[0].is_writable);
+        assert!(!instr.accounts[0].is_signer);
+        assert_eq!(
+            instr.accounts[0].pubkey,
+            Pubkey([
+                113, 117, 105, 110, 113, 117, 97, 103, 105, 110, 116, 97, 113, 117, 97, 100, 114,
+                105, 110, 103, 101, 110, 116, 105, 108, 108, 105, 97, 114, 100, 116, 104
+            ])
+        );
+
+        assert!(!instr.accounts[1].is_writable);
+        assert!(!instr.accounts[1].is_signer);
+        assert_eq!(instr.accounts[1].pubkey, sysvar_rent);
+    };
+
+    vm.call_test.insert(token, test_args);
+
+    vm.function(
+        "create_mint_with_freezeauthority",
+        &[
+            Token::Uint(U256::from(11)),
+            Token::FixedBytes(b"quinquagintaquadringentilliardth".to_vec()),
+            Token::FixedBytes(b"quinquagintaquadringentillionths".to_vec()),
+        ],
+        &[],
+        0,
+        None,
+    );
 }

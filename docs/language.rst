@@ -136,6 +136,82 @@ This also has a slightly more baroque syntax, which does exactly the same.
 
     import * as defs from "defines.sol";
 
+Builtin Imports
+_______________
+
+Some builtin functionality is only available after importing. The following structs
+can be imported via the special import file ``solana``.
+
+.. code-block:: javascript
+
+    import {AccountMeta, AccountInfo} from 'solana';
+
+Note that ``{AccountMeta, AccountInfo}`` can be omitted, renamed or imported via
+import object.
+
+.. code-block:: javascript
+
+    // Now AccountMeta will be known as AM
+    import {AccountMeta as AM} from 'solana';
+
+    // Now AccountMeta will be available as solana.AccountMeta
+    import 'solana' as solana;
+
+.. note::
+
+    The import file ``solana`` is only available when compiling for the Solana
+    target.
+
+.. _account_info:
+
+Builtin AccountInfo
++++++++++++++++++++
+
+The account info of all the accounts passed into the transaction. ``AccountInfo`` is a builtin
+structure with the following fields:
+
+address ``key``
+    The address (or public key) of the account
+
+uint64 ``lamports``
+    The lamports of the accounts. This field can be modified, however the lamports need to be
+    balanced for all accounts by the end of the transaction.
+
+bytes ``data```
+    The account data. This field can be modified, but use with caution.
+
+address ``owner``
+    The program that owns this account
+
+uint64 ``rent_epoch``
+    The next epoch when rent is due.
+
+bool ``is_signer``
+    Did this account sign the transaction
+
+bool ``is_writable``
+    Is this account writable in this transaction
+
+bool ``executable``
+    Is this account a program
+
+.. _account_meta:
+
+Builtin AccountMeta
++++++++++++++++++++
+
+When doing an external call (aka CPI), ``AccountMeta`` specifies which accounts
+should be passed to the callee.
+
+address ``pubkey``
+    The address (or public key) of the account
+
+bool ``is_writable``
+    Can the callee write to this account
+
+bool ``is_signer``
+    Can the callee assume this account signed the transaction
+
 
 Pragmas
 _______
@@ -1757,6 +1833,63 @@ The syntax for calling external call is the same as the external call, except fo
 that it must be done on a contract type variable. Any error in an external call can
 be handled with :ref:`try-catch`.
 
+Internal calls and externals calls
+___________________________________
+
+An internal function call is executed by the current contract. This
+is much more efficient than an external call, which requires the
+address of the contract to call, whose arguments must be *abi encoded* (also known
+as serialization). Then, the runtime must set up the VM for the called contract
+(the callee), decode the arguments, and encode return values. Lastly,
+the first contract (the caller) must decode return values.
+
+A method call done on a contract type will always be an external call.
+Note that ``this`` returns the current contract, so ``this.foo()`` will do an
+external call, which is much more expensive than ``foo()``.
+
+Passing accounts with external calls on Solana
+______________________________________________
+
+The Solana runtime allows you the specify the accounts to be passed for an
+external call. This is specified in an array of the struct ``AccountMeta``,
+see the section on :ref:`account_meta`.
+
+.. code-block:: javascript
+
+    import {AccountMeta} from 'solana';
+
+    contract SplToken {
+        address constant tokenProgramId = address"TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
+        address constant SYSVAR_RENT_PUBKEY = address"SysvarRent111111111111111111111111111111111";
+
+        struct InitializeMintInstruction {
+            uint8 instruction;
+            uint8 decimals;
+            address mintAuthority;
+            uint8 freezeAuthorityOption;
+            address freezeAuthority;
+        }
+
+        function create_mint_with_freezeauthority(uint8 decimals, address mintAuthority, address freezeAuthority) public {
+            InitializeMintInstruction instr = InitializeMintInstruction({
+                instruction: 0,
+                decimals: decimals,
+                mintAuthority: mintAuthority,
+                freezeAuthorityOption: 1,
+                freezeAuthority: freezeAuthority
+            });
+
+            AccountMeta[2] metas = [
+                AccountMeta({pubkey: instr.mintAuthority, is_writable: true, is_signer: false}),
+                AccountMeta({pubkey: SYSVAR_RENT_PUBKEY, is_writable: false, is_signer: false})
+            ];
+
+            tokenProgramId.call{accounts: metas}(instr);
+        }
+    }
+
+If ``{accounts}`` is not specified, then all account are passed.
+
 Passing value and gas with external calls
 _________________________________________
 
@@ -3013,36 +3146,30 @@ address ``tx.origin``
     The address that started this transaction. Not available on Parity Substrate or Solana.
 
 AccountInfo[] ``tx.accounts``
-    Only available on Solana.
+    Only available on Solana. See :ref:`account_info`. Here is an example:
 
-    The account info of all the accounts passed into the transaction. ``AccountInfo`` is a builtin
-    structure with the following fields:
+.. code-block:: javascript
 
-    address ``key``
-        The address (or public key) of the account
+    import {AccountInfo} from 'solana';
 
-    uint64 ``lamports``
-        The lamports of the accounts. This field can be modified, however the lamports need to be
-        balanced for all accounts by the end of the transaction.
+    contract SplToken {
+       function get_token_account(address token) internal view returns (AccountInfo) {
+               for (uint64 i = 0; i < tx.accounts.length; i++) {
+                       AccountInfo ai = tx.accounts[i];
+                       if (ai.key == token) {
+                               return ai;
+                       }
+               }
 
-    bytes ``data```
-        The account data. This field can be modified, but use with caution.
+               revert("token not found");
+       }
 
-    address ``owner``
-        The program that owns this account
+        function total_supply(address token) public view returns (uint64) {
+                AccountInfo account = get_token_account(token);
 
-    uint64 ``rent_epoch``
-        The next epoch when rent is due.
-
-    bool ``is_signer``
-        Did this account sign the transaction
-
-    bool ``is_writable``
-        Is this account writable in this transaction
-
-    bool ``executable``
-        Is this account a program
-
+                return account.data.readUint64LE(33);
+        }
+    }
 
 ``block`` properties
 ++++++++++++++++++++++

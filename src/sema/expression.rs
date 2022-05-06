@@ -14,8 +14,8 @@ use std::ops::{Add, Shl, Sub};
 
 use super::address::to_hexstr_eip55;
 use super::ast::{
-    Builtin, BuiltinStruct, CallTy, Diagnostic, Expression, Function, Mutability, Namespace,
-    StringLocation, Symbol, Type,
+    Builtin, BuiltinStruct, CallArgs, CallTy, Diagnostic, Expression, Function, Mutability,
+    Namespace, StringLocation, Symbol, Type,
 };
 use super::builtin;
 use super::contracts::{is_base, visit_bases};
@@ -1467,7 +1467,8 @@ pub fn compatible_mutability(left: &Mutability, right: &Mutability) -> bool {
 #[derive(PartialEq, Clone, Copy, Debug)]
 pub enum ResolveTo<'a> {
     Unknown,        // We don't know what we're looking for, best effort
-    Discard,        // We won't be using the result. For example, an expression as a statement/
+    Integer,        // Try to resolve to an integer type value (signed or unsigned, any bit width)
+    Discard,        // We won't be using the result. For example, an expression as a statement
     Type(&'a Type), // We will be wanting this type please, e.g. `int64 x = 1;`
 }
 
@@ -1566,8 +1567,8 @@ pub fn expression(
         }
         // compare
         pt::Expression::More(loc, l, r) => {
-            let left = expression(l, context, ns, symtable, diagnostics, ResolveTo::Unknown)?;
-            let right = expression(r, context, ns, symtable, diagnostics, ResolveTo::Unknown)?;
+            let left = expression(l, context, ns, symtable, diagnostics, ResolveTo::Integer)?;
+            let right = expression(r, context, ns, symtable, diagnostics, ResolveTo::Integer)?;
 
             check_var_usage_expression(ns, &left, &right, symtable);
             let ty = coerce_number(
@@ -1588,8 +1589,8 @@ pub fn expression(
             ))
         }
         pt::Expression::Less(loc, l, r) => {
-            let left = expression(l, context, ns, symtable, diagnostics, ResolveTo::Unknown)?;
-            let right = expression(r, context, ns, symtable, diagnostics, ResolveTo::Unknown)?;
+            let left = expression(l, context, ns, symtable, diagnostics, ResolveTo::Integer)?;
+            let right = expression(r, context, ns, symtable, diagnostics, ResolveTo::Integer)?;
 
             check_var_usage_expression(ns, &left, &right, symtable);
 
@@ -1611,8 +1612,8 @@ pub fn expression(
             ))
         }
         pt::Expression::MoreEqual(loc, l, r) => {
-            let left = expression(l, context, ns, symtable, diagnostics, ResolveTo::Unknown)?;
-            let right = expression(r, context, ns, symtable, diagnostics, ResolveTo::Unknown)?;
+            let left = expression(l, context, ns, symtable, diagnostics, ResolveTo::Integer)?;
+            let right = expression(r, context, ns, symtable, diagnostics, ResolveTo::Integer)?;
             check_var_usage_expression(ns, &left, &right, symtable);
 
             let ty = coerce_number(
@@ -1633,8 +1634,8 @@ pub fn expression(
             ))
         }
         pt::Expression::LessEqual(loc, l, r) => {
-            let left = expression(l, context, ns, symtable, diagnostics, ResolveTo::Unknown)?;
-            let right = expression(r, context, ns, symtable, diagnostics, ResolveTo::Unknown)?;
+            let left = expression(l, context, ns, symtable, diagnostics, ResolveTo::Integer)?;
+            let right = expression(r, context, ns, symtable, diagnostics, ResolveTo::Integer)?;
             check_var_usage_expression(ns, &left, &right, symtable);
 
             let ty = coerce_number(
@@ -1963,6 +1964,7 @@ pub fn expression(
 
             match unit {
                 pt::Unit::Wei(loc)
+                | pt::Unit::Gwei(loc)
                 | pt::Unit::Finney(loc)
                 | pt::Unit::Szabo(loc)
                 | pt::Unit::Ether(loc)
@@ -1985,6 +1987,7 @@ pub fn expression(
                     pt::Unit::Days(_) => BigInt::from(60 * 60 * 24),
                     pt::Unit::Weeks(_) => BigInt::from(60 * 60 * 24 * 7),
                     pt::Unit::Wei(_) => BigInt::from(1),
+                    pt::Unit::Gwei(_) => BigInt::from(10).pow(9u32),
                     pt::Unit::Szabo(_) => BigInt::from(10).pow(12u32),
                     pt::Unit::Finney(_) => BigInt::from(10).pow(15u32),
                     pt::Unit::Ether(_) => BigInt::from(10).pow(18u32),
@@ -2384,11 +2387,16 @@ fn variable(
                 Err(())
             }
         }
-        None if id.name == "now" && matches!(resolve_to, ResolveTo::Type(Type::Uint(_))) => {
+        None if id.name == "now"
+            && matches!(
+                resolve_to,
+                ResolveTo::Type(Type::Uint(_)) | ResolveTo::Integer
+            ) =>
+        {
             diagnostics.push(
                 Diagnostic::error(
                     id.loc,
-                    "'now' was an alias for 'block.timestamp' in older versions of the Solidity language. Please use 'block.timestamp' instead.".to_string(),
+                    "'now' is not found. 'now' was an alias for 'block.timestamp' in older versions of the Solidity language. Please use 'block.timestamp' instead.".to_string(),
                 ));
             Err(())
         }
@@ -2892,10 +2900,7 @@ fn constructor(
             contract_no: no,
             constructor_no,
             args: cast_args,
-            value: call_args.value,
-            gas: call_args.gas,
-            salt: call_args.salt,
-            space: call_args.space,
+            call_args,
         }),
         Err(()) => Err(()),
     }
@@ -3167,10 +3172,7 @@ pub fn constructor_named_args(
                 contract_no: no,
                 constructor_no: Some(function_no),
                 args: cast_args,
-                value: call_args.value,
-                gas: call_args.gas,
-                salt: call_args.salt,
-                space: call_args.space,
+                call_args,
             });
         }
     }
@@ -3181,10 +3183,7 @@ pub fn constructor_named_args(
             contract_no: no,
             constructor_no: None,
             args: Vec::new(),
-            value: call_args.value,
-            gas: call_args.gas,
-            salt: call_args.salt,
-            space: call_args.space,
+            call_args,
         }),
         1 => Err(()),
         _ => {
@@ -3453,8 +3452,8 @@ fn equal(
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Result<Expression, ()> {
-    let left = expression(l, context, ns, symtable, diagnostics, ResolveTo::Unknown)?;
-    let right = expression(r, context, ns, symtable, diagnostics, ResolveTo::Unknown)?;
+    let left = expression(l, context, ns, symtable, diagnostics, ResolveTo::Integer)?;
+    let right = expression(r, context, ns, symtable, diagnostics, ResolveTo::Integer)?;
 
     check_var_usage_expression(ns, &left, &right, symtable);
 
@@ -4935,7 +4934,7 @@ fn call_function_type(
     {
         let call_args = parse_call_args(call_args, true, context, ns, symtable, diagnostics)?;
 
-        let value = if let Some(value) = call_args.value {
+        if let Some(value) = &call_args.value {
             if !value.const_zero(ns) && !matches!(mutability, Mutability::Payable(_)) {
                 diagnostics.push(Diagnostic::error(
                     *loc,
@@ -4946,11 +4945,7 @@ fn call_function_type(
                 ));
                 return Err(());
             }
-
-            Some(value)
-        } else {
-            None
-        };
+        }
 
         if params.len() != args.len() {
             diagnostics.push(Diagnostic::error(
@@ -4989,8 +4984,7 @@ fn call_function_type(
             },
             function: Box::new(function),
             args: cast_args,
-            gas: call_args.gas,
-            value,
+            call_args,
         })
     } else {
         diagnostics.push(Diagnostic::error(
@@ -5064,8 +5058,30 @@ pub fn available_super_functions(name: &str, contract_no: usize, ns: &Namespace)
     list
 }
 
+/// Test function arguments can be resolve at all (not resolved for specific type)
+/// When an argument to single
+pub fn args_sanity_check(
+    args: &[pt::Expression],
+    context: &ExprContext,
+    ns: &mut Namespace,
+    symtable: &mut Symtable,
+    diagnostics: &mut Vec<Diagnostic>,
+) -> Result<(), ()> {
+    let mut errors = false;
+
+    for arg in args {
+        errors |= expression(arg, context, ns, symtable, diagnostics, ResolveTo::Unknown).is_err();
+    }
+
+    if errors {
+        Err(())
+    } else {
+        Ok(())
+    }
+}
+
 /// Resolve a function call with positional arguments
-pub fn call_position_args(
+pub fn function_call_pos_args(
     loc: &pt::Loc,
     id: &pt::Identifier,
     func_ty: pt::FunctionTy,
@@ -5080,6 +5096,8 @@ pub fn call_position_args(
 ) -> Result<Expression, ()> {
     let mut name_matches = 0;
     let mut errors = Vec::new();
+
+    args_sanity_check(args, context, ns, symtable, diagnostics)?;
 
     // Try to resolve as a function call
     for function_no in function_nos {
@@ -5201,7 +5219,7 @@ pub fn call_position_args(
 }
 
 /// Resolve a function call with named arguments
-fn function_call_with_named_args(
+fn function_call_named_args(
     loc: &pt::Loc,
     id: &pt::Identifier,
     args: &[pt::NamedArgument],
@@ -5215,16 +5233,36 @@ fn function_call_with_named_args(
 ) -> Result<Expression, ()> {
     let mut arguments = HashMap::new();
 
+    // check if the arguments are not garbage
+    let mut errors = false;
+
     for arg in args {
         if arguments.contains_key(arg.name.name.as_str()) {
             diagnostics.push(Diagnostic::error(
                 arg.name.loc,
                 format!("duplicate argument with name '{}'", arg.name.name),
             ));
-            return Err(());
+            errors = true;
+        }
+
+        if expression(
+            &arg.expr,
+            context,
+            ns,
+            symtable,
+            diagnostics,
+            ResolveTo::Unknown,
+        )
+        .is_err()
+        {
+            errors = true;
         }
 
         arguments.insert(arg.name.name.as_str(), &arg.expr);
+    }
+
+    if errors {
+        return Err(());
     }
 
     // Try to resolve as a function call
@@ -5477,7 +5515,7 @@ fn method_call_pos_args(
                     return Err(());
                 }
 
-                return call_position_args(
+                return function_call_pos_args(
                     loc,
                     func,
                     pt::FunctionTy::Function,
@@ -5510,7 +5548,7 @@ fn method_call_pos_args(
                     return Err(());
                 }
 
-                return call_position_args(
+                return function_call_pos_args(
                     loc,
                     func,
                     pt::FunctionTy::Function,
@@ -5542,7 +5580,7 @@ fn method_call_pos_args(
                         return Err(());
                     }
 
-                    return call_position_args(
+                    return function_call_pos_args(
                         loc,
                         func,
                         pt::FunctionTy::Function,
@@ -5966,6 +6004,8 @@ fn method_call_pos_args(
             name_matches.push(*function_no);
         }
 
+        args_sanity_check(args, context, ns, symtable, diagnostics)?;
+
         for function_no in &name_matches {
             let params_len = ns.functions[*function_no].params.len();
 
@@ -6020,7 +6060,7 @@ fn method_call_pos_args(
                     return Err(());
                 }
 
-                let value = if let Some(value) = call_args.value {
+                if let Some(value) = &call_args.value {
                     if !value.const_zero(ns) && !ns.functions[*function_no].is_payable() {
                         diagnostics.push(Diagnostic::error(
                             *loc,
@@ -6031,11 +6071,7 @@ fn method_call_pos_args(
                         ));
                         return Err(());
                     }
-
-                    Some(value)
-                } else {
-                    None
-                };
+                }
 
                 let func = &ns.functions[*function_no];
                 let returns = function_returns(func, resolve_to);
@@ -6057,8 +6093,7 @@ fn method_call_pos_args(
                         )?),
                     }),
                     args: cast_args,
-                    value,
-                    gas: call_args.gas,
+                    call_args,
                 });
             }
         }
@@ -6200,7 +6235,7 @@ fn method_call_pos_args(
                 return Err(());
             }
 
-            let expr = expression(
+            let args = expression(
                 &args[0],
                 context,
                 ns,
@@ -6209,7 +6244,25 @@ fn method_call_pos_args(
                 ResolveTo::Type(&Type::DynamicBytes),
             )?;
 
-            let args = expr.cast(&args[0].loc(), &Type::DynamicBytes, true, ns, diagnostics)?;
+            let mut args_ty = args.ty();
+
+            match args_ty.deref_any() {
+                Type::DynamicBytes => (),
+                Type::Bytes(_) => {
+                    args_ty = Type::DynamicBytes;
+                }
+                Type::Array(..) | Type::Struct(..) if !args_ty.is_dynamic(ns) => (),
+                _ => {
+                    diagnostics.push(Diagnostic::error(
+                        args.loc(),
+                        format!("‘{}’ is not fixed length type", args_ty.to_string(ns),),
+                    ));
+
+                    return Err(());
+                }
+            }
+
+            let args = args.cast(&args.loc(), args_ty.deref_any(), true, ns, diagnostics)?;
 
             return Ok(Expression::ExternalFunctionCallRaw {
                 loc: *loc,
@@ -6222,8 +6275,7 @@ fn method_call_pos_args(
                     ns,
                     diagnostics,
                 )?),
-                gas: call_args.gas,
-                value: call_args.value,
+                call_args,
             });
         }
     }
@@ -6430,7 +6482,7 @@ fn method_call_named_args(
                     return Err(());
                 }
 
-                return function_call_with_named_args(
+                return function_call_named_args(
                     loc,
                     func_name,
                     args,
@@ -6462,7 +6514,7 @@ fn method_call_named_args(
                     return Err(());
                 }
 
-                return function_call_with_named_args(
+                return function_call_named_args(
                     loc,
                     func_name,
                     args,
@@ -6493,7 +6545,7 @@ fn method_call_named_args(
                         return Err(());
                     }
 
-                    return function_call_with_named_args(
+                    return function_call_named_args(
                         loc,
                         func_name,
                         args,
@@ -6524,16 +6576,36 @@ fn method_call_named_args(
 
         let mut arguments = HashMap::new();
 
+        // check if the arguments are not garbage
+        let mut errors = false;
+
         for arg in args {
             if arguments.contains_key(arg.name.name.as_str()) {
                 diagnostics.push(Diagnostic::error(
                     arg.name.loc,
                     format!("duplicate argument with name '{}'", arg.name.name),
                 ));
-                return Err(());
+                errors = true;
+            }
+
+            if expression(
+                &arg.expr,
+                context,
+                ns,
+                symtable,
+                diagnostics,
+                ResolveTo::Unknown,
+            )
+            .is_err()
+            {
+                errors = true;
             }
 
             arguments.insert(arg.name.name.as_str(), &arg.expr);
+        }
+
+        if errors {
+            return Err(());
         }
 
         let marker = diagnostics.len();
@@ -6620,7 +6692,7 @@ fn method_call_named_args(
                     return Err(());
                 }
 
-                let value = if let Some(value) = call_args.value {
+                if let Some(value) = &call_args.value {
                     if !value.const_zero(ns) && !ns.functions[*function_no].is_payable() {
                         diagnostics.push(Diagnostic::error(
                             *loc,
@@ -6631,11 +6703,7 @@ fn method_call_named_args(
                         ));
                         return Err(());
                     }
-
-                    Some(value)
-                } else {
-                    None
-                };
+                }
 
                 let func = &ns.functions[*function_no];
                 let returns = function_returns(func, resolve_to);
@@ -6657,8 +6725,7 @@ fn method_call_named_args(
                         )?),
                     }),
                     args: cast_args,
-                    value,
-                    gas: call_args.gas,
+                    call_args,
                 });
             }
         }
@@ -6901,13 +6968,6 @@ pub fn collect_call_args<'a>(
     Ok((expr, named_arguments, loc))
 }
 
-struct CallArgs {
-    gas: Option<Box<Expression>>,
-    salt: Option<Box<Expression>>,
-    value: Option<Box<Expression>>,
-    space: Option<Box<Expression>>,
-}
-
 /// Parse call arguments for external calls
 fn parse_call_args(
     call_args: &[&pt::NamedArgument],
@@ -6938,6 +6998,7 @@ fn parse_call_args(
         value: None,
         salt: None,
         space: None,
+        accounts: None,
     };
 
     for arg in args.values() {
@@ -7069,6 +7130,50 @@ fn parse_call_args(
                     ns,
                     diagnostics,
                 )?));
+            }
+            "accounts" => {
+                if ns.target != Target::Solana {
+                    diagnostics.push(Diagnostic::error(
+                        arg.loc,
+                        format!(
+                            "‘accounts’ not permitted for external calls or constructors on {}",
+                            ns.target
+                        ),
+                    ));
+                    return Err(());
+                }
+
+                let expr = expression(
+                    &arg.expr,
+                    context,
+                    ns,
+                    symtable,
+                    diagnostics,
+                    ResolveTo::Unknown,
+                )?;
+
+                let mut correct_ty = false;
+                let expr_ty = expr.ty();
+
+                // if let chains would really help here
+                if let Type::Array(elem_ty, dims) = expr_ty.deref_memory() {
+                    if elem_ty.builtin_struct(ns) == BuiltinStruct::AccountMeta && dims.len() == 1 {
+                        correct_ty = true;
+                    }
+                }
+
+                if !correct_ty {
+                    diagnostics.push(Diagnostic::error(
+                        arg.loc,
+                        format!(
+                            "‘accounts’ takes array of AccountMeta, not ‘{}’",
+                            expr_ty.to_string(ns)
+                        ),
+                    ));
+                    return Err(());
+                }
+
+                res.accounts = Some(Box::new(expr));
             }
             _ => {
                 diagnostics.push(Diagnostic::error(
@@ -7326,7 +7431,7 @@ pub fn function_call_expr(
                     return Err(());
                 }
 
-                call_position_args(
+                function_call_pos_args(
                     loc,
                     id,
                     pt::FunctionTy::Function,
@@ -7392,7 +7497,7 @@ pub fn named_function_call_expr(
                 return Err(());
             }
 
-            function_call_with_named_args(
+            function_call_named_args(
                 loc,
                 id,
                 args,

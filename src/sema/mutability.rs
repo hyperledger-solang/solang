@@ -270,7 +270,8 @@ fn read_expression(expr: &Expression, state: &mut StateCheck) -> bool {
         | Expression::Builtin(loc, _, Builtin::TombstoneDeposit, _)
         | Expression::Builtin(loc, _, Builtin::MinimumBalance, _)
         | Expression::Builtin(loc, _, Builtin::Balance, _)
-        | Expression::Builtin(loc, _, Builtin::Random, _) => state.read(loc),
+        | Expression::Builtin(loc, _, Builtin::Random, _)
+        | Expression::Builtin(loc, _, Builtin::Accounts, _) => state.read(loc),
         Expression::Builtin(loc, _, Builtin::PayableSend, _)
         | Expression::Builtin(loc, _, Builtin::PayableTransfer, _)
         | Expression::Builtin(loc, _, Builtin::SelfDestruct, _) => state.write(loc),

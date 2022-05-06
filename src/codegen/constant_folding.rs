@@ -223,6 +223,7 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
                     payload,
                     value,
                     gas,
+                    accounts,
                     callty,
                 } => {
                     let value = expression(value, Some(&vars), cfg, ns).0;
@@ -231,10 +232,14 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
                     let address = address
                         .as_ref()
                         .map(|expr| expression(expr, Some(&vars), cfg, ns).0);
+                    let accounts = accounts
+                        .as_ref()
+                        .map(|expr| expression(expr, Some(&vars), cfg, ns).0);
 
                     cfg.blocks[block_no].instr[instr_no] = Instr::ExternalCall {
                         success: *success,
                         address,
+                        accounts,
                         payload,
                         value,
                         gas,
@@ -759,6 +764,9 @@ fn expression(
                                         while (*n as usize) < bs.len() {
                                             bs.insert(0, 0);
                                         }
+                                    }
+                                    Type::Address(_) => {
+                                        bs.resize(ns.address_length, 0);
                                     }
                                     _ => unreachable!(),
                                 }

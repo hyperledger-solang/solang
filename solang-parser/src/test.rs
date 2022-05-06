@@ -1165,3 +1165,22 @@ fn parse_user_defined_value_type() {
 
     assert_eq!(actual_parse_tree, expected_parse_tree);
 }
+
+#[test]
+fn parse_no_parameters_yul_function() {
+    let src = r#"
+contract C {
+	function testing() pure public {
+		assembly {
+			function multiple() -> ret1, ret2 {
+				ret1 := 1
+				ret2 := 2
+			}
+		}
+	}
+}
+    "#;
+
+    let (actual_parse_tree, _) = crate::parse(src, 0).unwrap();
+    assert_eq!(actual_parse_tree.0.len(), 1);
+}

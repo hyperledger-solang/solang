@@ -1,8 +1,9 @@
 use super::ast::{
-    Builtin, BuiltinStruct, Diagnostic, Expression, Namespace, Parameter, StructDecl, Symbol, Type,
+    Builtin, BuiltinStruct, Diagnostic, Expression, File, Namespace, Parameter, StructDecl, Symbol,
+    Type,
 };
 use super::eval::eval_const_number;
-use super::expression::{expression, ExprContext, ResolveTo};
+use super::expression::{args_sanity_check, expression, ExprContext, ResolveTo};
 use super::symtable::Symtable;
 use crate::parser::pt;
 use crate::parser::pt::CodeLocation;
@@ -11,6 +12,7 @@ use crate::Target;
 use num_bigint::BigInt;
 use num_traits::One;
 use once_cell::sync::Lazy;
+use std::path::PathBuf;
 
 pub struct Prototype {
     pub builtin: Builtin,
@@ -878,16 +880,7 @@ pub fn resolve_call(
         .filter(|p| p.name == id && p.namespace == namespace && p.method.is_none())
         .collect::<Vec<&Prototype>>();
 
-    // check if the arguments are not garbage
-    let mut errors = false;
-
-    for arg in args {
-        errors |= expression(arg, context, ns, symtable, diagnostics, ResolveTo::Unknown).is_err();
-    }
-
-    if errors {
-        return Err(());
-    }
+    args_sanity_check(args, context, ns, symtable, diagnostics)?;
 
     let marker = diagnostics.len();
 
@@ -1305,6 +1298,8 @@ pub fn resolve_method_call(
         .collect();
     let marker = diagnostics.len();
 
+    args_sanity_check(args, context, ns, symtable, diagnostics)?;
+
     for func in &matches {
         if context.constant && !func.constant {
             diagnostics.push(Diagnostic::error(
@@ -1396,6 +1391,14 @@ pub fn resolve_method_call(
 
 impl Namespace {
     pub fn add_solana_builtins(&mut self) {
+        let file_no = self.files.len();
+
+        self.files.push(File {
+            path: PathBuf::from("solana"),
+            line_starts: Vec::new(),
+            cache_no: None,
+        });
+
         let account_info_no = self.structs.len();
 
         let fields = vec![
@@ -1506,7 +1509,7 @@ impl Namespace {
         };
 
         assert!(self.add_symbol(
-            0,
+            file_no,
             None,
             &id,
             Symbol::Struct(pt::Loc::Builtin, account_info_no)
@@ -1567,7 +1570,7 @@ impl Namespace {
         };
 
         assert!(self.add_symbol(
-            0,
+            file_no,
             None,
             &id,
             Symbol::Struct(pt::Loc::Builtin, account_meta_no)

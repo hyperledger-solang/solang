@@ -289,6 +289,7 @@ fn units() {
         contract test {
             function foo() public {
                 assert(10 wei == 10);
+                assert(1 gwei == 1000_000_000);
                 assert(1 szabo == 1000_000_000_000);
                 assert(1 finney == 1000_000_000_000_000);
                 assert(1 ether == 1000_000_000_000_000_000);

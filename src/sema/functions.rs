@@ -34,7 +34,7 @@ pub fn contract_function(
             } else {
                 ns.diagnostics.push(Diagnostic::error(
                     func.name_loc,
-                    "function is missing a name. did you mean ‘fallback() external {…}’ or ‘receive() external {…}’?".to_string(),
+                    "function is missing a name. A function without a name is syntax for 'fallback() external' or 'receive() external' in older versions of the Solidity language, see https://solang.readthedocs.io/en/latest/language.html#fallback-and-receive-function".to_string(),
                 ));
                 return None;
             }
@@ -388,7 +388,7 @@ pub fn contract_function(
     if !is_virtual && func.body.is_none() {
         ns.diagnostics.push(Diagnostic::error(
             func.loc,
-            "function with no body must be marked 'virtual'".to_string(),
+            "function with no body missing 'virtual'. This was permitted in older versions of the Solidity language, please update.".to_string(),
         ));
         success = false;
     }

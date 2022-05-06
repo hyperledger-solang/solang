@@ -265,10 +265,7 @@ pub fn expression(
             contract_no,
             constructor_no,
             args,
-            value,
-            gas,
-            salt,
-            space,
+            call_args,
         } => {
             let address_res = vartab.temp_anonymous(&Type::Contract(*contract_no));
 
@@ -276,18 +273,21 @@ pub fn expression(
                 .iter()
                 .map(|v| expression(v, cfg, *contract_no, func, ns, vartab, opt))
                 .collect();
-            let gas = if let Some(gas) = gas {
+            let gas = if let Some(gas) = &call_args.gas {
                 expression(gas, cfg, *contract_no, func, ns, vartab, opt)
             } else {
                 default_gas(ns)
             };
-            let value = value
+            let value = call_args
+                .value
                 .as_ref()
                 .map(|value| expression(value, cfg, *contract_no, func, ns, vartab, opt));
-            let salt = salt
+            let salt = call_args
+                .salt
                 .as_ref()
                 .map(|salt| expression(salt, cfg, *contract_no, func, ns, vartab, opt));
-            let space = space
+            let space = call_args
+                .space
                 .as_ref()
                 .map(|space| expression(space, cfg, *contract_no, func, ns, vartab, opt));
 
@@ -1161,6 +1161,7 @@ fn payable_send(
             Instr::ExternalCall {
                 success: Some(success),
                 address: Some(address),
+                accounts: None,
                 payload: Expression::AllocDynamicArray(
                     *loc,
                     Type::DynamicBytes,
@@ -1207,6 +1208,7 @@ fn payable_transfer(
             vartab,
             Instr::ExternalCall {
                 success: None,
+                accounts: None,
                 address: Some(address),
                 payload: Expression::AllocDynamicArray(
                     *loc,
@@ -2068,26 +2070,30 @@ pub fn emit_function_call(
             loc,
             address,
             args,
-            value,
-            gas,
+            call_args,
             ty,
         } => {
             let args = expression(args, cfg, callee_contract_no, func, ns, vartab, opt);
             let address = expression(address, cfg, callee_contract_no, func, ns, vartab, opt);
-            let gas = if let Some(gas) = gas {
+            let gas = if let Some(gas) = &call_args.gas {
                 expression(gas, cfg, callee_contract_no, func, ns, vartab, opt)
             } else {
                 default_gas(ns)
             };
-            let value = if let Some(value) = value {
+            let value = if let Some(value) = &call_args.value {
                 expression(value, cfg, callee_contract_no, func, ns, vartab, opt)
             } else {
                 Expression::NumberLiteral(pt::Loc::Codegen, Type::Value, BigInt::zero())
             };
+            let accounts = call_args
+                .accounts
+                .as_ref()
+                .map(|expr| expression(expr, cfg, callee_contract_no, func, ns, vartab, opt));
 
             let success = vartab.temp_name("success", &Type::Bool);
 
-            let (payload, address) = if ns.target == Target::Solana {
+            let (payload, address) = if ns.target == Target::Solana && call_args.accounts.is_none()
+            {
                 (
                     Expression::AbiEncode {
                         loc: *loc,
@@ -2127,6 +2133,7 @@ pub fn emit_function_call(
                     address,
                     payload,
                     value,
+                    accounts,
                     gas,
                     callty: ty.clone(),
                 },
@@ -2141,9 +2148,8 @@ pub fn emit_function_call(
             loc,
             function,
             args,
-            value,
-            gas,
             returns,
+            call_args,
             ..
         } => {
             if let ast::Expression::ExternalFunction {
@@ -2159,12 +2165,12 @@ pub fn emit_function_call(
                     .map(|a| expression(a, cfg, callee_contract_no, func, ns, vartab, opt))
                     .collect();
                 let address = expression(address, cfg, callee_contract_no, func, ns, vartab, opt);
-                let gas = if let Some(gas) = gas {
+                let gas = if let Some(gas) = &call_args.gas {
                     expression(gas, cfg, callee_contract_no, func, ns, vartab, opt)
                 } else {
                     default_gas(ns)
                 };
-                let value = if let Some(value) = value {
+                let value = if let Some(value) = &call_args.value {
                     expression(value, cfg, callee_contract_no, func, ns, vartab, opt)
                 } else {
                     Expression::NumberLiteral(pt::Loc::Codegen, Type::Value, BigInt::zero())
@@ -2226,6 +2232,7 @@ pub fn emit_function_call(
                     vartab,
                     Instr::ExternalCall {
                         success: None,
+                        accounts: None,
                         address,
                         payload,
                         value,
@@ -2275,12 +2282,12 @@ pub fn emit_function_call(
                     .map(|a| expression(a, cfg, callee_contract_no, func, ns, vartab, opt))
                     .collect();
                 let function = expression(function, cfg, callee_contract_no, func, ns, vartab, opt);
-                let gas = if let Some(gas) = gas {
+                let gas = if let Some(gas) = &call_args.gas {
                     expression(gas, cfg, callee_contract_no, func, ns, vartab, opt)
                 } else {
                     default_gas(ns)
                 };
-                let value = if let Some(value) = value {
+                let value = if let Some(value) = &call_args.value {
                     expression(value, cfg, callee_contract_no, func, ns, vartab, opt)
                 } else {
                     Expression::NumberLiteral(pt::Loc::Codegen, Type::Value, BigInt::zero())
@@ -2312,6 +2319,7 @@ pub fn emit_function_call(
                     vartab,
                     Instr::ExternalCall {
                         success: None,
+                        accounts: None,
                         address: Some(address),
                         payload,
                         value,

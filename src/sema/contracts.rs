@@ -522,10 +522,10 @@ fn check_inheritance(contract_no: usize, ns: &mut ast::Namespace) {
                     continue;
                 }
 
-                // a function without body needs an override, if the contract is not an interface
+                // a function without body needs an override, if the contract is concrete
                 if previous_defs.is_empty()
                     && !cur.has_body
-                    && !ns.contracts[contract_no].is_interface()
+                    && ns.contracts[contract_no].is_concrete()
                 {
                     override_needed
                         .insert(signature.clone(), vec![(base_contract_no, function_no)]);

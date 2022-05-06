@@ -1029,8 +1029,7 @@ fn try_catch(
             loc,
             function,
             args,
-            value,
-            gas,
+            call_args,
             ..
         } => {
             if let Type::ExternalFunction {
@@ -1038,12 +1037,12 @@ fn try_catch(
                 ..
             } = function.ty()
             {
-                let value = if let Some(value) = value {
+                let value = if let Some(value) = &call_args.value {
                     expression(value, cfg, callee_contract_no, Some(func), ns, vartab, opt)
                 } else {
                     Expression::NumberLiteral(pt::Loc::Codegen, Type::Value, BigInt::zero())
                 };
-                let gas = if let Some(gas) = gas {
+                let gas = if let Some(gas) = &call_args.gas {
                     expression(gas, cfg, callee_contract_no, Some(func), ns, vartab, opt)
                 } else {
                     default_gas(ns)
@@ -1093,6 +1092,7 @@ fn try_catch(
                     Instr::ExternalCall {
                         success: Some(success),
                         address: Some(address),
+                        accounts: None,
                         payload,
                         value,
                         gas,
@@ -1153,10 +1153,7 @@ fn try_catch(
             contract_no,
             constructor_no,
             args,
-            value,
-            gas,
-            salt,
-            space,
+            call_args,
             ..
         } => {
             let address_res = match try_stmt.returns.get(0) {
@@ -1164,19 +1161,20 @@ fn try_catch(
                 _ => vartab.temp_anonymous(&Type::Contract(*contract_no)),
             };
 
-            let value = value.as_ref().map(|value| {
+            let value = call_args.value.as_ref().map(|value| {
                 expression(value, cfg, callee_contract_no, Some(func), ns, vartab, opt)
             });
 
-            let gas = if let Some(gas) = gas {
+            let gas = if let Some(gas) = &call_args.gas {
                 expression(gas, cfg, callee_contract_no, Some(func), ns, vartab, opt)
             } else {
                 default_gas(ns)
             };
-            let salt = salt
+            let salt = call_args
+                .salt
                 .as_ref()
                 .map(|salt| expression(salt, cfg, callee_contract_no, Some(func), ns, vartab, opt));
-            let space = space.as_ref().map(|space| {
+            let space = call_args.space.as_ref().map(|space| {
                 expression(space, cfg, callee_contract_no, Some(func), ns, vartab, opt)
             });
 

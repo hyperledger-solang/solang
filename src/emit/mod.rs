@@ -270,13 +270,14 @@ pub trait TargetRuntime<'a> {
     fn external_call<'b>(
         &self,
         bin: &Binary<'b>,
-        function: FunctionValue,
+        function: FunctionValue<'b>,
         success: Option<&mut BasicValueEnum<'b>>,
         payload: PointerValue<'b>,
         payload_len: IntValue<'b>,
         address: Option<PointerValue<'b>>,
         gas: IntValue<'b>,
         value: IntValue<'b>,
+        accounts: Option<(PointerValue<'b>, IntValue<'b>)>,
         ty: CallTy,
         ns: &Namespace,
     );
@@ -498,7 +499,7 @@ pub trait TargetRuntime<'a> {
                         "invalid",
                     );
 
-                    let dest = bin
+                    let v = bin
                         .builder
                         .build_call(
                             bin.module.get_function("vector_new").unwrap(),
@@ -509,6 +510,15 @@ pub trait TargetRuntime<'a> {
                         .left()
                         .unwrap()
                         .into_pointer_value();
+
+                    let dest = bin.builder.build_pointer_cast(
+                        v,
+                        bin.module
+                            .get_struct_type("struct.vector")
+                            .unwrap()
+                            .ptr_type(AddressSpace::Generic),
+                        "vector",
+                    );
 
                     // get the slot for the elements
                     // this hashes in-place
@@ -2173,6 +2183,7 @@ pub trait TargetRuntime<'a> {
                     .try_as_basic_value()
                     .left()
                     .unwrap();
+
                 bin.builder
                     .build_pointer_cast(
                         v.into_pointer_value(),
@@ -4111,6 +4122,7 @@ pub trait TargetRuntime<'a> {
                         value,
                         gas,
                         callty,
+                        accounts,
                     } => {
                         let gas = self
                             .expression(bin, gas, &w.vars, function, ns)
@@ -4118,6 +4130,7 @@ pub trait TargetRuntime<'a> {
                         let value = self
                             .expression(bin, value, &w.vars, function, ns)
                             .into_int_value();
+                        let payload_ty = payload.ty();
                         let payload = self.expression(bin, payload, &w.vars, function, ns);
 
                         let address = if let Some(address) = address {
@@ -4145,20 +4158,55 @@ pub trait TargetRuntime<'a> {
                             None
                         };
 
+                        let accounts = if let Some(accounts) = accounts {
+                            let ty = accounts.ty();
+
+                            let expr = self.expression(bin, accounts, &w.vars, function, ns);
+
+                            if let Some(n) = ty.array_length() {
+                                let accounts = expr.into_pointer_value();
+                                let len =
+                                    bin.context.i32_type().const_int(n.to_u64().unwrap(), false);
+
+                                Some((accounts, len))
+                            } else {
+                                let addr = bin.vector_bytes(expr);
+                                let len = bin.vector_len(expr);
+                                Some((addr, len))
+                            }
+                        } else {
+                            None
+                        };
+
                         let success = match success {
                             Some(n) => Some(&mut w.vars.get_mut(n).unwrap().value),
                             None => None,
+                        };
+
+                        let (payload_ptr, payload_len) = if payload_ty == Type::DynamicBytes {
+                            (bin.vector_bytes(payload), bin.vector_len(payload))
+                        } else {
+                            let ptr = payload.into_pointer_value();
+                            let len = ptr
+                                .get_type()
+                                .get_element_type()
+                                .size_of()
+                                .unwrap()
+                                .const_cast(bin.context.i32_type(), false);
+
+                            (ptr, len)
                         };
 
                         self.external_call(
                             bin,
                             function,
                             success,
-                            bin.vector_bytes(payload),
-                            bin.vector_len(payload),
+                            payload_ptr,
+                            payload_len,
                             address,
                             gas,
                             value,
+                            accounts,
                             callty.clone(),
                             ns,
                         );

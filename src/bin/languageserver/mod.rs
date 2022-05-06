@@ -96,7 +96,7 @@ impl SolangServer {
             codegen(&mut ns, &Default::default());
 
             diags.extend(ns.diagnostics.iter().filter_map(|diag| {
-                if diag.pos.file_no() != 0 {
+                if diag.pos.file_no() != ns.top_file_no() {
                     // The first file is the one we wanted to parse; others are imported
                     return None;
                 }
@@ -121,14 +121,17 @@ impl SolangServer {
                                 location: Location {
                                     uri: Url::from_file_path(&ns.files[note.pos.file_no()].path)
                                         .unwrap(),
-                                    range: SolangServer::loc_to_range(&note.pos, &ns.files[0]),
+                                    range: SolangServer::loc_to_range(
+                                        &note.pos,
+                                        &ns.files[ns.top_file_no()],
+                                    ),
                                 },
                             })
                             .collect(),
                     )
                 };
 
-                let range = SolangServer::loc_to_range(&diag.pos, &ns.files[0]);
+                let range = SolangServer::loc_to_range(&diag.pos, &ns.files[ns.top_file_no()]);
 
                 Some(Diagnostic {
                     range,
@@ -151,7 +154,7 @@ impl SolangServer {
             self.files.lock().await.insert(
                 path,
                 Hovers {
-                    file: ns.files[0].clone(),
+                    file: ns.files[ns.top_file_no()].clone(),
                     lookup,
                 },
             );
@@ -706,8 +709,7 @@ impl SolangServer {
                 loc,
                 function,
                 args,
-                value,
-                gas,
+                call_args,
                 ..
             } => {
                 if let ast::Expression::ExternalFunction {
@@ -748,10 +750,10 @@ impl SolangServer {
                     for expp in args {
                         SolangServer::construct_expr(expp, lookup_tbl, symtab, fnc_map, ns);
                     }
-                    if let Some(value) = value {
+                    if let Some(value) = &call_args.value {
                         SolangServer::construct_expr(value, lookup_tbl, symtab, fnc_map, ns);
                     }
-                    if let Some(gas) = gas {
+                    if let Some(gas) = &call_args.gas {
                         SolangServer::construct_expr(gas, lookup_tbl, symtab, fnc_map, ns);
                     }
                 }
@@ -759,16 +761,15 @@ impl SolangServer {
             ast::Expression::ExternalFunctionCallRaw {
                 address,
                 args,
-                value,
-                gas,
+                call_args,
                 ..
             } => {
                 SolangServer::construct_expr(args, lookup_tbl, symtab, fnc_map, ns);
                 SolangServer::construct_expr(address, lookup_tbl, symtab, fnc_map, ns);
-                if let Some(value) = value {
+                if let Some(value) = &call_args.value {
                     SolangServer::construct_expr(value, lookup_tbl, symtab, fnc_map, ns);
                 }
-                if let Some(gas) = gas {
+                if let Some(gas) = &call_args.gas {
                     SolangServer::construct_expr(gas, lookup_tbl, symtab, fnc_map, ns);
                 }
             }
@@ -777,24 +778,21 @@ impl SolangServer {
                 contract_no: _,
                 constructor_no: _,
                 args,
-                gas,
-                value,
-                salt,
-                space,
+                call_args,
             } => {
-                if let Some(gas) = gas {
+                if let Some(gas) = &call_args.gas {
                     SolangServer::construct_expr(gas, lookup_tbl, symtab, fnc_map, ns);
                 }
                 for expp in args {
                     SolangServer::construct_expr(expp, lookup_tbl, symtab, fnc_map, ns);
                 }
-                if let Some(optval) = value {
+                if let Some(optval) = &call_args.value {
                     SolangServer::construct_expr(optval, lookup_tbl, symtab, fnc_map, ns);
                 }
-                if let Some(optsalt) = salt {
+                if let Some(optsalt) = &call_args.salt {
                     SolangServer::construct_expr(optsalt, lookup_tbl, symtab, fnc_map, ns);
                 }
-                if let Some(space) = space {
+                if let Some(space) = &call_args.space {
                     SolangServer::construct_expr(space, lookup_tbl, symtab, fnc_map, ns);
                 }
             }

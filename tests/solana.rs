@@ -65,6 +65,7 @@ struct VirtualMachine {
     logs: String,
     events: Vec<Vec<Vec<u8>>>,
     return_data: Option<(Account, Vec<u8>)>,
+    call_test: HashMap<Pubkey, fn(instr: &Instruction)>,
 }
 
 #[derive(Clone)]
@@ -230,6 +231,7 @@ fn build_solidity(src: &str) -> VirtualMachine {
         logs: String::new(),
         events: Vec::new(),
         return_data: None,
+        call_test: HashMap::new(),
     }
 }
 
@@ -767,7 +769,7 @@ pub struct Instruction {
     pub data: Vec<u8>,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Hash, Eq, Clone)]
 pub struct Pubkey([u8; 32]);
 
 impl Pubkey {
@@ -973,7 +975,9 @@ impl<'a> SyscallObject<UserError> for SyscallInvokeSignedC<'a> {
 
             context.return_data = None;
 
-            if instruction.program_id.is_system_instruction() {
+            if let Some(handle) = context.call_test.get(&instruction.program_id) {
+                handle(&instruction);
+            } else if instruction.program_id.is_system_instruction() {
                 match bincode::deserialize::<u32>(&instruction.data).unwrap() {
                     0 => {
                         let create_account: CreateAccount =

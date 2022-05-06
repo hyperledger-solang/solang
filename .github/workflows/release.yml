@@ -34,7 +34,7 @@ jobs:
     - name: Add LLVM to Path
       run: echo "$(pwd)/llvm13.0/bin" >> $GITHUB_PATH
     - name: Rust stable
-      run: rustup default 1.56.1
+      run: rustup default 1.59.0
     - name: Build
       run: cargo build --verbose --release
     - name: Run tests
@@ -74,7 +74,7 @@ jobs:
     - name: Add LLVM to Path
       run: echo "$(pwd)/llvm13.0/bin" >> $GITHUB_PATH
     - name: Rust stable
-      run: rustup default 1.56.1
+      run: rustup default 1.59.0
     - name: Build
       run: cargo build --verbose --release
     - name: Run tests
