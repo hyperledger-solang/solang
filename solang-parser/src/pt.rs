@@ -132,6 +132,7 @@ pub enum SourceUnitPart {
     FunctionDefinition(Box<FunctionDefinition>),
     VariableDefinition(Box<VariableDefinition>),
     TypeDefinition(Box<TypeDefinition>),
+    Using(Box<Using>),
     StraySemicolon(Loc),
 }
 
