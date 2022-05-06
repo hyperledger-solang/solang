@@ -1,0 +1,10 @@
+strict digraph "tests/contract_testcases/solana/simple.sol" {
+	contract [label="contract A\ntests/contract_testcases/solana/simple.sol:1:1-12"]
+	contract_4 [label="contract L\ntests/contract_testcases/solana/simple.sol:1:14-2:11"]
+	diagnostic [label="found contract 'A'\nlevel Debug\ntests/contract_testcases/solana/simple.sol:1:1-12"]
+	diagnostic_7 [label="found library 'L'\nlevel Debug\ntests/contract_testcases/solana/simple.sol:1:14-2:11"]
+	contracts -> contract
+	contracts -> contract_4
+	diagnostics -> diagnostic [label="Debug"]
+	diagnostics -> diagnostic_7 [label="Debug"]
+}

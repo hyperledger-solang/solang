@@ -303,11 +303,11 @@ pub fn variable_decl<'a>(
         None
     };
 
-    let bases: Vec<&str> = if let Some(contract) = contract {
+    let bases = if let Some(contract) = contract {
         contract
             .base
             .iter()
-            .map(|base| -> &str { &base.name.name })
+            .map(|base| format!("{}", base.name))
             .collect()
     } else {
         Vec::new()

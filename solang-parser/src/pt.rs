@@ -1,4 +1,4 @@
-use std::fmt;
+use std::fmt::{self, Display};
 
 use num_bigint::BigInt;
 use num_rational::BigRational;
@@ -225,7 +225,7 @@ pub enum ContractPart {
 #[derive(Debug, PartialEq, Clone)]
 pub struct Using {
     pub loc: Loc,
-    pub library: Identifier,
+    pub library: Expression,
     pub ty: Option<Expression>,
 }
 
@@ -251,7 +251,7 @@ impl fmt::Display for ContractTy {
 #[derive(Debug, PartialEq, Clone)]
 pub struct Base {
     pub loc: Loc,
-    pub name: Identifier,
+    pub name: Expression,
     pub args: Option<Vec<Expression>>,
 }
 
@@ -500,6 +500,16 @@ impl CodeLocation for Expression {
     }
 }
 
+impl Display for Expression {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Expression::Variable(id) => write!(f, "{}", id.name),
+            Expression::MemberAccess(_, e, id) => write!(f, "{}.{}", e, id.name),
+            _ => unimplemented!(),
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct Parameter {
     pub loc: Loc,
@@ -641,7 +651,7 @@ pub enum Statement {
     Continue(Loc),
     Break(Loc),
     Return(Loc, Option<Expression>),
-    Revert(Loc, Option<Identifier>, Vec<Expression>),
+    Revert(Loc, Option<Expression>, Vec<Expression>),
     Emit(Loc, Expression),
     Try(
         Loc,

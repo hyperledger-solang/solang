@@ -505,7 +505,7 @@ fn resolve_variable_contract() {
     assert_eq!(ns.diagnostics.len(), 1);
     assert_eq!(
         ns.diagnostics.iter().next().unwrap().message,
-        "'none' is not found"
+        "'none' not found"
     );
 
     ns.diagnostics = Diagnostics::default();

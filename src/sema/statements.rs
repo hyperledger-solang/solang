@@ -65,26 +65,27 @@ pub fn resolve_function_body(
         let contract_no = contract_no.unwrap();
         let mut resolve_bases: BTreeMap<usize, pt::Loc> = BTreeMap::new();
         let mut all_ok = true;
+        let mut diagnostics = Vec::new();
 
         for attr in &def.attributes {
             if let pt::FunctionAttribute::BaseOrModifier(loc, base) = attr {
-                match ns.resolve_contract(file_no, &base.name) {
-                    Some(base_no) => {
+                match ns.resolve_contract_with_namespace(file_no, &base.name, &mut diagnostics) {
+                    Ok(base_no) => {
                         if base_no == contract_no || !is_base(base_no, contract_no, ns) {
                             ns.diagnostics.push(Diagnostic::error(
                                 *loc,
                                 format!(
                                     "contract '{}' is not a base contract of '{}'",
-                                    base.name.name, ns.contracts[contract_no].name,
+                                    base.name, ns.contracts[contract_no].name,
                                 ),
                             ));
                             all_ok = false;
                         } else if let Some(prev) = resolve_bases.get(&base_no) {
                             ns.diagnostics.push(Diagnostic::error_with_note(
                                 *loc,
-                                format!("duplicate base contract '{}'", base.name.name),
+                                format!("duplicate base contract '{}'", base.name),
                                 *prev,
-                                format!("previous base contract '{}'", base.name.name),
+                                format!("previous base contract '{}'", base.name),
                             ));
                             all_ok = false;
                         } else if let Some(args) = &base.args {
@@ -116,24 +117,13 @@ pub fn resolve_function_body(
                                 *loc,
                                 format!(
                                     "missing arguments to constructor of contract '{}'",
-                                    base.name.name
+                                    base.name
                                 ),
                             ));
                             all_ok = false;
                         }
                     }
-                    None => {
-                        if base.args.is_none() {
-                            ns.diagnostics.push(Diagnostic::error(
-                                *loc,
-                                format!("unknown function attribute '{}'", base.name.name),
-                            ));
-                        } else {
-                            ns.diagnostics.push(Diagnostic::error(
-                                base.name.loc,
-                                format!("contract '{}' not found", base.name.name),
-                            ));
-                        }
+                    Err(_) => {
                         all_ok = false;
                     }
                 }
@@ -159,6 +149,8 @@ pub fn resolve_function_body(
                 }
             }
         }
+
+        ns.diagnostics.extend(diagnostics);
     }
 
     // resolve modifiers on functions
@@ -168,26 +160,33 @@ pub fn resolve_function_body(
 
         for attr in &def.attributes {
             if let pt::FunctionAttribute::BaseOrModifier(_, modifier) = attr {
-                if let Ok(e) = function_call_pos_args(
-                    &modifier.loc,
-                    &modifier.name,
-                    pt::FunctionTy::Modifier,
-                    modifier.args.as_ref().unwrap_or(&Vec::new()),
-                    available_functions(
-                        &modifier.name.name,
-                        false,
-                        context.file_no,
-                        context.contract_no,
+                if let pt::Expression::Variable(modifier_name) = &modifier.name {
+                    if let Ok(e) = function_call_pos_args(
+                        &modifier.loc,
+                        modifier_name,
+                        pt::FunctionTy::Modifier,
+                        modifier.args.as_ref().unwrap_or(&Vec::new()),
+                        available_functions(
+                            &modifier_name.name,
+                            false,
+                            context.file_no,
+                            context.contract_no,
+                            ns,
+                        ),
+                        true,
+                        &context,
                         ns,
-                    ),
-                    true,
-                    &context,
-                    ns,
-                    ResolveTo::Unknown,
-                    &mut symtable,
-                    &mut diagnostics,
-                ) {
-                    modifiers.push(e);
+                        ResolveTo::Unknown,
+                        &mut symtable,
+                        &mut diagnostics,
+                    ) {
+                        modifiers.push(e);
+                    }
+                } else {
+                    ns.diagnostics.push(Diagnostic::error(
+                        def.loc,
+                        format!("unknown modifier '{}' on function", modifier.name),
+                    ));
                 }
             }
         }
@@ -841,11 +840,8 @@ fn statement(
         pt::Statement::Revert(loc, error, args) => {
             if let Some(error) = error {
                 ns.diagnostics.push(Diagnostic::error(
-                    error.loc,
-                    format!(
-                        "revert with custom error '{}' not supported yet",
-                        error.name
-                    ),
+                    error.loc(),
+                    format!("revert with custom error '{}' not supported yet", error),
                 ));
                 return Err(());
             }

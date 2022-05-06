@@ -3,7 +3,7 @@ strict digraph "tests/contract_testcases/substrate/variables/test_variable_error
 	foo [label="function foo\ncontract: test\ntests/contract_testcases/substrate/variables/test_variable_errors.sol:3:13-55\nsignature foo()\nvisibility public\nmutability pure"]
 	returns [label="returns\nint32 "]
 	diagnostic [label="found contract 'test'\nlevel Debug\ntests/contract_testcases/substrate/variables/test_variable_errors.sol:1:1-15"]
-	diagnostic_6 [label="'b' is not found\nlevel Error\ntests/contract_testcases/substrate/variables/test_variable_errors.sol:4:27-28"]
+	diagnostic_6 [label="'b' not found\nlevel Error\ntests/contract_testcases/substrate/variables/test_variable_errors.sol:4:27-28"]
 	contracts -> contract
 	contract -> foo [label="function"]
 	foo -> returns [label="returns"]

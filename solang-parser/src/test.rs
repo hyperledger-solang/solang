@@ -1089,10 +1089,10 @@ fn parse_revert_test() {
                         unchecked: false,
                         statements: vec![Statement::Revert(
                             Loc::File(0, 107, 125),
-                            Some(Identifier {
+                            Some(Expression::Variable(Identifier {
                                 loc: Loc::File(0, 114, 123),
                                 name: "BAR_ERROR".to_string(),
-                            }),
+                            })),
                             vec![],
                         )],
                     }),

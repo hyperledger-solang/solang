@@ -420,10 +420,10 @@ pub fn contract_function(
         None => "".to_owned(),
     };
 
-    let bases: Vec<&str> = contract
+    let bases: Vec<String> = contract
         .base
         .iter()
-        .map(|base| -> &str { &base.name.name })
+        .map(|base| format!("{}", base.name))
         .collect();
 
     let doc = resolve_tags(
