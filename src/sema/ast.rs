@@ -450,6 +450,8 @@ pub struct Namespace {
     pub structs: Vec<StructDecl>,
     pub events: Vec<EventDecl>,
     pub contracts: Vec<Contract>,
+    /// Global using declarations
+    pub using: Vec<Using>,
     /// All type declarations
     pub user_types: Vec<UserTypeDecl>,
     /// All functions
@@ -489,7 +491,13 @@ pub struct Base {
     pub constructor: Option<(usize, Vec<Expression>)>,
 }
 
-pub enum Using {
+pub struct Using {
+    pub list: UsingList,
+    pub ty: Option<Type>,
+    pub file_no: Option<usize>,
+}
+
+pub enum UsingList {
     Library(usize),
     Functions(Vec<usize>),
 }
@@ -500,7 +508,7 @@ pub struct Contract {
     pub ty: pt::ContractTy,
     pub name: String,
     pub bases: Vec<Base>,
-    pub using: Vec<(Using, Option<Type>)>,
+    pub using: Vec<Using>,
     pub layout: Vec<Layout>,
     pub fixed_layout_size: BigInt,
     pub functions: Vec<usize>,
