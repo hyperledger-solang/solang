@@ -36,6 +36,7 @@ impl Namespace {
             enums: Vec::new(),
             structs: Vec::new(),
             events: Vec::new(),
+            using: Vec::new(),
             contracts: Vec::new(),
             user_types: Vec::new(),
             functions: Vec::new(),

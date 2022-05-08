@@ -30,6 +30,7 @@ pub mod tags;
 mod tests;
 mod types;
 mod unused_variable;
+mod using;
 mod variables;
 pub mod yul;
 
@@ -136,6 +137,15 @@ fn sema_file(file: &ResolvedFile, resolver: &mut FileResolver, ns: &mut ast::Nam
             }
             pt::SourceUnitPart::DocComment(doccomment) => doccomments.push(doccomment),
             _ => doccomments.clear(),
+        }
+    }
+
+    // Now we can resolve the global using directives
+    for part in &pt.0 {
+        if let pt::SourceUnitPart::Using(using) = part {
+            if let Ok(using) = using::using_decl(using, file_no, None, ns) {
+                ns.using.push(using);
+            }
         }
     }
 

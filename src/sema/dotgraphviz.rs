@@ -2229,9 +2229,9 @@ impl Namespace {
                 dot.add_tags(&var.tags, node);
             }
 
-            for (libraries, ty) in &c.using {
-                let mut labels = match libraries {
-                    Using::Functions(functions) => functions
+            for using in &c.using {
+                let mut labels = match &using.list {
+                    UsingList::Functions(functions) => functions
                         .iter()
                         .map(|func_no| {
                             let func = &self.functions[*func_no];
@@ -2239,14 +2239,14 @@ impl Namespace {
                             format!("function {} {}", func.name, self.loc_to_string(&func.loc))
                         })
                         .collect(),
-                    Using::Library(library_no) => {
+                    UsingList::Library(library_no) => {
                         let library = &self.contracts[*library_no];
 
                         vec![format!("library {}", library.name)]
                     }
                 };
 
-                if let Some(ty) = ty {
+                if let Some(ty) = &using.ty {
                     labels.insert(0, format!("using for {}", ty.to_string(self)));
                 }
 
