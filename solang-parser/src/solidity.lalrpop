@@ -719,6 +719,9 @@ OpenStatement: Statement = {
     <l:@L> "if" "(" <cond:Expression> ")" <body:ClosedStatement> "else" <o:OpenStatement> <r:@R> => {
         Statement::If(Loc::File(file_no, l, r), cond, Box::new(body), Some(Box::new(o)))
     },
+    <l:@L> "for" "(" <b:SimpleStatement?> ";" <c:Expression?> ";" <n:SimpleStatement?> ")" <block:OpenStatement> <r:@R> => {
+        Statement::For(Loc::File(file_no, l, r), box_option(b), box_option(c), box_option(n), Some(Box::new(block)))
+    },
     <l:@L> "while" "(" <e:Expression> ")" <b:OpenStatement> <r:@R> => {
         Statement::While(Loc::File(file_no, l, r), e, Box::new(b))
     }
