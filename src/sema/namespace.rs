@@ -36,6 +36,7 @@ impl Namespace {
             enums: Vec::new(),
             structs: Vec::new(),
             events: Vec::new(),
+            using: Vec::new(),
             contracts: Vec::new(),
             user_types: Vec::new(),
             functions: Vec::new(),
@@ -336,6 +337,47 @@ impl Namespace {
 
         if let Some(Symbol::Contract(_, contract_no)) = s {
             Ok(*contract_no)
+        } else {
+            let error = Namespace::wrong_symbol(s, &id);
+
+            diagnostics.push(error);
+
+            Err(())
+        }
+    }
+
+    /// Resolve a free function name with namespace
+    pub fn resolve_free_function_with_namespace(
+        &mut self,
+        file_no: usize,
+        expr: &pt::Expression,
+        diagnostics: &mut Vec<Diagnostic>,
+    ) -> Result<Vec<(pt::Loc, usize)>, ()> {
+        let (namespace, id, dimensions) = self.expr_to_type(file_no, None, expr, diagnostics)?;
+
+        if !dimensions.is_empty() {
+            diagnostics.push(Diagnostic::decl_error(
+                expr.loc(),
+                "array type found where function expected".to_string(),
+            ));
+            return Err(());
+        }
+
+        let id = match id {
+            pt::Expression::Variable(id) => id,
+            _ => {
+                diagnostics.push(Diagnostic::decl_error(
+                    expr.loc(),
+                    "expression found where function expected".to_string(),
+                ));
+                return Err(());
+            }
+        };
+
+        let s = self.resolve_namespace(namespace, file_no, None, &id, diagnostics)?;
+
+        if let Some(Symbol::Function(list)) = s {
+            Ok(list.clone())
         } else {
             let error = Namespace::wrong_symbol(s, &id);
 

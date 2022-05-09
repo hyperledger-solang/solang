@@ -1,6 +1,6 @@
 strict digraph "tests/contract_testcases/substrate/libraries/using.sol" {
 	contract [label="contract c\ntests/contract_testcases/substrate/libraries/using.sol:2:9-20"]
-	diagnostic [label="'x' not found\nlevel Error\ntests/contract_testcases/substrate/libraries/using.sol:3:19-20"]
+	diagnostic [label="type 'x' not found\nlevel Error\ntests/contract_testcases/substrate/libraries/using.sol:3:25-26"]
 	diagnostic_5 [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/libraries/using.sol:2:9-20"]
 	contracts -> contract
 	diagnostics -> diagnostic [label="Error"]

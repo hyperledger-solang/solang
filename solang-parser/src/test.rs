@@ -1,4 +1,4 @@
-use crate::lexer;
+use crate::lexer::Lexer;
 use crate::pt::*;
 use crate::solidity;
 use num_bigint::BigInt;
@@ -43,32 +43,17 @@ fn parse_test() {
                 }"#;
 
     let mut comments = Vec::new();
-    let lex = lexer::Lexer::new(src, 0, &mut comments);
+    let lex = Lexer::new(src, 0, &mut comments);
 
     let actual_parse_tree = solidity::SourceUnitParser::new()
         .parse(src, 0, lex)
         .unwrap();
 
     let expected_parse_tree = SourceUnit(vec![
+        SourceUnitPart::DocComment(DocComment{ loc: Loc::File(0,3, 14), ty: CommentType::Line, comment: " @title Foo".to_string()}),
+        SourceUnitPart::DocComment(DocComment{ loc: Loc::File(0,34,51), ty: CommentType::Line, comment: " @description Foo".to_string()}),
+        SourceUnitPart::DocComment(DocComment{ loc: Loc::File(0,71,75), ty: CommentType::Line, comment: " Bar".to_string()}),
         SourceUnitPart::ContractDefinition(Box::new(ContractDefinition {
-            doc: vec![
-                DocComment::Line {
-                    comment: SingleDocComment {
-                        tag_offset: 5,
-                        tag: "title".to_string(),
-                        value_offset: 11,
-                        value: "Foo".to_string(),
-                    },
-                },
-                DocComment::Line {
-                    comment: SingleDocComment {
-                        tag_offset: 36,
-                        tag: "description".to_string(),
-                        value_offset: 48,
-                        value: "Foo\nBar".to_string(),
-                    },
-                },
-            ],
             loc: Loc::File(0, 92, 105),
             ty: ContractTy::Contract(Loc::File(0, 92, 100)),
             name: Identifier {
@@ -77,41 +62,10 @@ fn parse_test() {
             },
             base: Vec::new(),
             parts: vec![
+                ContractPart::DocComment(DocComment{ loc: Loc::File(0,130,191), ty: CommentType::Block, comment: "\n                    @title Jurisdiction\n                    ".to_string()}),
+                ContractPart::DocComment(DocComment{ loc: Loc::File(0,217,230), ty: CommentType::Line, comment: " @author Anon".to_string()}),
+                ContractPart::DocComment(DocComment{ loc: Loc::File(0,254,389), ty: CommentType::Block, comment: "\n                    @description Data for\n                    jurisdiction\n                    @dev It's a struct\n                    ".to_string()}),
                 ContractPart::StructDefinition(Box::new(StructDefinition {
-                    doc: vec![
-                        DocComment::Block {
-                            comments: vec![SingleDocComment {
-                                tag_offset: 152,
-                                tag: "title".to_string(),
-                                value_offset: 158,
-                                value: "Jurisdiction".to_string(),
-                            }],
-                        },
-                        DocComment::Line {
-                            comment: SingleDocComment {
-                                tag_offset: 219,
-                                tag: "author".to_string(),
-                                value_offset: 226,
-                                value: "Anon".to_string(),
-                            },
-                        },
-                        DocComment::Block {
-                            comments: vec![
-                                SingleDocComment {
-                                    tag_offset: 276,
-                                    tag: "description".to_string(),
-                                    value_offset: 288,
-                                    value: "Data for\njurisdiction".to_string(),
-                                },
-                                SingleDocComment {
-                                    tag_offset: 351,
-                                    tag: "dev".to_string(),
-                                    value_offset: 355,
-                                    value: "It's a struct".to_string(),
-                                },
-                            ],
-                        },
-                    ],
                     name: Identifier {
                         loc: Loc::File(0, 419, 431),
                         name: "Jurisdiction".to_string(),
@@ -157,7 +111,6 @@ fn parse_test() {
                     ],
                 })),
                 ContractPart::VariableDefinition(Box::new(VariableDefinition {
-                    doc: vec![],
                     ty: Expression::Type(Loc::File(0, 630, 636), Type::String),
                     attrs: vec![],
                     name: Identifier {
@@ -168,7 +121,6 @@ fn parse_test() {
                     initializer: None,
                 })),
                 ContractPart::VariableDefinition(Box::new(VariableDefinition {
-                    doc: vec![],
                     ty: Expression::Type(Loc::File(0, 667, 672), Type::Int(64)),
                     attrs: vec![],
                     name: Identifier {
@@ -181,7 +133,6 @@ fn parse_test() {
             ],
         })),
         SourceUnitPart::FunctionDefinition(Box::new(FunctionDefinition {
-            doc: vec![],
             loc: Loc::File(0, 720, 735),
             ty: FunctionTy::Function,
             name: Some(Identifier {
@@ -357,227 +308,98 @@ fn parse_error_test() {
     let (actual_parse_tree, _) = crate::parse(src, 0).unwrap();
     assert_eq!(actual_parse_tree.0.len(), 2);
 
-    let expected_parse_tree = SourceUnit
-            (vec![
-                SourceUnitPart::ErrorDefinition(Box::new(ErrorDefinition {
-                    doc: vec![],
-                    loc: Loc::File(
-                        0,
-                        10,
-                        58,
-                    ),
+    let expected_parse_tree = SourceUnit(vec![
+        SourceUnitPart::ErrorDefinition(Box::new(ErrorDefinition {
+            loc: Loc::File(0, 10, 58),
+            name: Identifier {
+                loc: Loc::File(0, 16, 21),
+                name: "Outer".to_string(),
+            },
+            fields: vec![
+                ErrorParameter {
+                    ty: Expression::Type(Loc::File(0, 22, 29), Type::Uint(256)),
+                    loc: Loc::File(0, 22, 39),
+                    name: Some(Identifier {
+                        loc: Loc::File(0, 30, 39),
+                        name: "available".to_string(),
+                    }),
+                },
+                ErrorParameter {
+                    ty: Expression::Type(Loc::File(0, 41, 48), Type::Uint(256)),
+                    loc: Loc::File(0, 41, 57),
+                    name: Some(Identifier {
+                        loc: Loc::File(0, 49, 57),
+                        name: "required".to_string(),
+                    }),
+                },
+            ],
+        })),
+        SourceUnitPart::ContractDefinition(Box::new(ContractDefinition {
+            loc: Loc::File(0, 69, 88),
+            ty: ContractTy::Contract(Loc::File(0, 69, 77)),
+            name: Identifier {
+                loc: Loc::File(0, 78, 87),
+                name: "TestToken".to_string(),
+            },
+            base: vec![],
+            parts: vec![
+                ContractPart::ErrorDefinition(Box::new(ErrorDefinition {
+                    loc: Loc::File(0, 102, 120),
                     name: Identifier {
-                        loc: Loc::File(
-                            0,
-                            16,
-                            21,
-                        ),
-                        name: "Outer".to_string(),
+                        loc: Loc::File(0, 108, 118),
+                        name: "NotPending".to_string(),
+                    },
+                    fields: vec![],
+                })),
+                ContractPart::DocComment(DocComment {
+                    loc: Loc::File(0, 137, 199),
+                    ty: CommentType::Line,
+                    comment: " Insufficient balance for transfer. Needed `required` but only"
+                        .to_string(),
+                }),
+                ContractPart::DocComment(DocComment {
+                    loc: Loc::File(0, 215, 238),
+                    ty: CommentType::Line,
+                    comment: " `available` available.".to_string(),
+                }),
+                ContractPart::DocComment(DocComment {
+                    loc: Loc::File(0, 254, 290),
+                    ty: CommentType::Line,
+                    comment: " @param available balance available.".to_string(),
+                }),
+                ContractPart::DocComment(DocComment {
+                    loc: Loc::File(0, 306, 352),
+                    ty: CommentType::Line,
+                    comment: " @param required requested amount to transfer.".to_string(),
+                }),
+                ContractPart::ErrorDefinition(Box::new(ErrorDefinition {
+                    loc: Loc::File(0, 365, 427),
+                    name: Identifier {
+                        loc: Loc::File(0, 371, 390),
+                        name: "InsufficientBalance".to_string(),
                     },
                     fields: vec![
                         ErrorParameter {
-                            ty: Expression::Type(
-                                Loc::File(
-                                    0,
-                                    22,
-                                    29,
-                                ),
-                                Type::Uint(
-                                    256,
-                                ),
-                            ),
-                            loc: Loc::File(
-                                0,
-                                22,
-                                39,
-                            ),
-                            name: Some(
-                                Identifier {
-                                    loc: Loc::File(
-                                        0,
-                                        30,
-                                        39,
-                                    ),
-                                    name: "available".to_string(),
-                                },
-                            ),
+                            ty: Expression::Type(Loc::File(0, 391, 398), Type::Uint(256)),
+                            loc: Loc::File(0, 391, 408),
+                            name: Some(Identifier {
+                                loc: Loc::File(0, 399, 408),
+                                name: "available".to_string(),
+                            }),
                         },
                         ErrorParameter {
-                            ty: Expression::Type(
-                                Loc::File(
-                                    0,
-                                    41,
-                                    48,
-                                ),
-                                Type::Uint(
-                                    256,
-                                ),
-                            ),
-                            loc: Loc::File(
-                                0,
-                                41,
-                                57,
-                            ),
-                            name: Some(
-                                Identifier {
-                                    loc: Loc::File(
-                                        0,
-                                        49,
-                                        57,
-                                    ),
-                                    name: "required".to_string(),
-                                },
-                            ),
+                            ty: Expression::Type(Loc::File(0, 410, 417), Type::Uint(256)),
+                            loc: Loc::File(0, 410, 426),
+                            name: Some(Identifier {
+                                loc: Loc::File(0, 418, 426),
+                                name: "required".to_string(),
+                            }),
                         },
                     ],
                 })),
-                SourceUnitPart::ContractDefinition(Box::new(
-                    ContractDefinition {
-                        doc: vec![],
-                        loc: Loc::File(
-                            0,
-                            69,
-                            88,
-                        ),
-                        ty: ContractTy::Contract(
-                            Loc::File(
-                                0,
-                                69,
-                                77,
-                            ),
-                        ),
-                        name: Identifier {
-                            loc: Loc::File(
-                                0,
-                                78,
-                                87,
-                            ),
-                            name: "TestToken".to_string(),
-                        },
-                        base: vec![],
-                        parts: vec![
-                            ContractPart::ErrorDefinition(Box::new(
-                                ErrorDefinition {
-                                    doc: vec![],
-                                    loc: Loc::File(
-                                        0,
-                                        102,
-                                        120,
-                                    ),
-                                    name: Identifier {
-                                        loc: Loc::File(
-                                            0,
-                                            108,
-                                            118,
-                                        ),
-                                        name: "NotPending".to_string(),
-                                    },
-                                    fields: vec![],
-                                },
-                            )),
-                            ContractPart::ErrorDefinition(Box::new(
-                                ErrorDefinition {
-                                    doc: vec![
-                                        DocComment::Line {
-                                            comment: SingleDocComment {
-                                                tag_offset: 276,
-                                                tag: "notice".to_string(),
-                                                value_offset: 276,
-                                                value: "Insufficient balance for transfer. Needed `required` but only\n`available` available.".to_string(),
-                                            },
-                                        },
-                                        DocComment::Line {
-                                            comment: SingleDocComment {
-                                                tag_offset: 256,
-                                                tag: "param".to_string(),
-                                                value_offset: 262,
-                                                value: "available balance available.".to_string(),
-                                            },
-                                        },
-                                        DocComment::Line {
-                                            comment: SingleDocComment {
-                                                tag_offset: 308,
-                                                tag: "param".to_string(),
-                                                value_offset: 314,
-                                                value: "required requested amount to transfer.".to_string(),
-                                            },
-                                        },
-                                    ],
-                                    loc: Loc::File(
-                                        0,
-                                        365,
-                                        427,
-                                    ),
-                                    name: Identifier {
-                                        loc: Loc::File(
-                                            0,
-                                            371,
-                                            390,
-                                        ),
-                                        name: "InsufficientBalance".to_string(),
-                                    },
-                                    fields: vec![
-                                        ErrorParameter {
-                                            ty: Expression::Type(
-                                                Loc::File(
-                                                    0,
-                                                    391,
-                                                    398,
-                                                ),
-                                                Type::Uint(
-                                                    256,
-                                                ),
-                                            ),
-                                            loc: Loc::File(
-                                                0,
-                                                391,
-                                                408,
-                                            ),
-                                            name: Some(
-                                                Identifier {
-                                                    loc: Loc::File(
-                                                        0,
-                                                        399,
-                                                        408,
-                                                    ),
-                                                    name: "available".to_string(),
-                                                },
-                                            ),
-                                        },
-                                        ErrorParameter {
-                                            ty: Expression::Type(
-                                                Loc::File(
-                                                    0,
-                                                    410,
-                                                    417,
-                                                ),
-                                                Type::Uint(
-                                                    256,
-                                                ),
-                                            ),
-                                            loc: Loc::File(
-                                                0,
-                                                410,
-                                                426,
-                                            ),
-                                            name: Some(
-                                                Identifier {
-                                                    loc: Loc::File(
-                                                        0,
-                                                        418,
-                                                        426,
-                                                    ),
-                                                    name: "required".to_string(),
-                                                },
-                                            ),
-                                        },
-                                    ],
-                                },
-                            )),
-                        ],
-                    },
-                ))
-            ]);
+            ],
+        })),
+    ]);
 
     assert_eq!(actual_parse_tree, expected_parse_tree);
 }
@@ -619,14 +441,13 @@ fn test_assembly_parser() {
                 }"#;
 
     let mut comments = Vec::new();
-    let lex = lexer::Lexer::new(src, 0, &mut comments);
+    let lex = Lexer::new(src, 0, &mut comments);
     let actual_parse_tree = solidity::SourceUnitParser::new()
         .parse(src, 0, lex)
         .unwrap();
 
     let expected_parse_tree = SourceUnit(vec![SourceUnitPart::FunctionDefinition(Box::new(
         FunctionDefinition {
-            doc: vec![],
             loc: Loc::File(0, 17, 32),
             ty: FunctionTy::Function,
             name: Some(Identifier {
@@ -1055,7 +876,6 @@ fn parse_revert_test() {
 
     let expected_parse_tree = SourceUnit(vec![SourceUnitPart::ContractDefinition(Box::new(
         ContractDefinition {
-            doc: vec![],
             loc: Loc::File(0, 9, 28),
             ty: ContractTy::Contract(Loc::File(0, 9, 17)),
             name: Identifier {
@@ -1065,7 +885,6 @@ fn parse_revert_test() {
             base: vec![],
             parts: vec![
                 ContractPart::ErrorDefinition(Box::new(ErrorDefinition {
-                    doc: vec![],
                     loc: Loc::File(0, 42, 59),
                     name: Identifier {
                         loc: Loc::File(0, 48, 57),
@@ -1074,7 +893,6 @@ fn parse_revert_test() {
                     fields: vec![],
                 })),
                 ContractPart::FunctionDefinition(Box::new(FunctionDefinition {
-                    doc: vec![],
                     loc: Loc::File(0, 73, 89),
                     ty: FunctionTy::Function,
                     name: Some(Identifier {
@@ -1136,7 +954,6 @@ fn parse_user_defined_value_type() {
 
     let expected_parse_tree = SourceUnit(vec![
         SourceUnitPart::TypeDefinition(Box::new(TypeDefinition {
-            doc: vec![],
             loc: Loc::File(0, 9, 32),
             name: Identifier {
                 loc: Loc::File(0, 14, 21),
@@ -1145,7 +962,6 @@ fn parse_user_defined_value_type() {
             ty: Expression::Type(Loc::File(0, 25, 32), Type::Uint(256)),
         })),
         SourceUnitPart::ContractDefinition(Box::new(ContractDefinition {
-            doc: vec![],
             loc: Loc::File(0, 42, 61),
             ty: ContractTy::Contract(Loc::File(0, 42, 50)),
             name: Identifier {
@@ -1154,7 +970,6 @@ fn parse_user_defined_value_type() {
             },
             base: vec![],
             parts: vec![ContractPart::TypeDefinition(Box::new(TypeDefinition {
-                doc: vec![],
                 loc: Loc::File(0, 75, 98),
                 name: Identifier {
                     loc: Loc::File(0, 80, 87),

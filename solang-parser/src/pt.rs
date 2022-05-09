@@ -3,8 +3,6 @@ use std::fmt::{self, Display};
 use num_bigint::BigInt;
 use num_rational::BigRational;
 
-use crate::lexer::CommentType;
-
 #[derive(Debug, PartialEq, PartialOrd, Ord, Eq, Hash, Clone, Copy)]
 /// file no, start offset, end offset (in bytes)
 pub enum Loc {
@@ -94,27 +92,17 @@ pub enum Comment {
     Block(Loc, String),
 }
 
-#[derive(Debug, PartialEq, Clone)]
-pub enum DocComment {
-    Line { comment: SingleDocComment },
-    Block { comments: Vec<SingleDocComment> },
-}
-
-impl DocComment {
-    pub fn comments(&self) -> Vec<&SingleDocComment> {
-        match self {
-            DocComment::Line { comment } => vec![comment],
-            DocComment::Block { comments } => comments.iter().collect(),
-        }
-    }
+#[derive(Copy, Clone, PartialEq, Debug)]
+pub enum CommentType {
+    Line,
+    Block,
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct SingleDocComment {
-    pub tag: String,
-    pub tag_offset: usize,
-    pub value: String,
-    pub value_offset: usize,
+pub struct DocComment {
+    pub loc: Loc,
+    pub ty: CommentType,
+    pub comment: String,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -123,8 +111,8 @@ pub struct SourceUnit(pub Vec<SourceUnitPart>);
 #[derive(Debug, PartialEq, Clone)]
 pub enum SourceUnitPart {
     ContractDefinition(Box<ContractDefinition>),
-    PragmaDirective(Loc, Vec<DocComment>, Identifier, StringLiteral),
-    ImportDirective(Vec<DocComment>, Import),
+    PragmaDirective(Loc, Identifier, StringLiteral),
+    ImportDirective(Import),
     EnumDefinition(Box<EnumDefinition>),
     StructDefinition(Box<StructDefinition>),
     EventDefinition(Box<EventDefinition>),
@@ -132,6 +120,7 @@ pub enum SourceUnitPart {
     FunctionDefinition(Box<FunctionDefinition>),
     VariableDefinition(Box<VariableDefinition>),
     TypeDefinition(Box<TypeDefinition>),
+    DocComment(DocComment),
     Using(Box<Using>),
     StraySemicolon(Loc),
 }
@@ -203,7 +192,6 @@ pub struct VariableDeclaration {
 #[derive(Debug, PartialEq, Clone)]
 #[allow(clippy::vec_box)]
 pub struct StructDefinition {
-    pub doc: Vec<DocComment>,
     pub loc: Loc,
     pub name: Identifier,
     pub fields: Vec<VariableDeclaration>,
@@ -220,13 +208,21 @@ pub enum ContractPart {
     TypeDefinition(Box<TypeDefinition>),
     StraySemicolon(Loc),
     Using(Box<Using>),
+    DocComment(DocComment),
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum UsingList {
+    Library(Expression),
+    Functions(Vec<Expression>),
 }
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Using {
     pub loc: Loc,
-    pub library: Expression,
+    pub list: UsingList,
     pub ty: Option<Expression>,
+    pub global: Option<Identifier>,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -257,7 +253,6 @@ pub struct Base {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct ContractDefinition {
-    pub doc: Vec<DocComment>,
     pub loc: Loc,
     pub ty: ContractTy,
     pub name: Identifier,
@@ -275,7 +270,6 @@ pub struct EventParameter {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct EventDefinition {
-    pub doc: Vec<DocComment>,
     pub loc: Loc,
     pub name: Identifier,
     pub fields: Vec<EventParameter>,
@@ -291,7 +285,6 @@ pub struct ErrorParameter {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct ErrorDefinition {
-    pub doc: Vec<DocComment>,
     pub loc: Loc,
     pub name: Identifier,
     pub fields: Vec<ErrorParameter>,
@@ -299,7 +292,6 @@ pub struct ErrorDefinition {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct EnumDefinition {
-    pub doc: Vec<DocComment>,
     pub loc: Loc,
     pub name: Identifier,
     pub values: Vec<Identifier>,
@@ -315,7 +307,6 @@ pub enum VariableAttribute {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct VariableDefinition {
-    pub doc: Vec<DocComment>,
     pub loc: Loc,
     pub ty: Expression,
     pub attrs: Vec<VariableAttribute>,
@@ -325,7 +316,6 @@ pub struct VariableDefinition {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct TypeDefinition {
-    pub doc: Vec<DocComment>,
     pub loc: Loc,
     pub name: Identifier,
     pub ty: Expression,
@@ -610,7 +600,6 @@ impl fmt::Display for FunctionTy {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct FunctionDefinition {
-    pub doc: Vec<DocComment>,
     pub loc: Loc,
     pub ty: FunctionTy,
     pub name: Option<Identifier>,
@@ -652,6 +641,7 @@ pub enum Statement {
     Break(Loc),
     Return(Loc, Option<Expression>),
     Revert(Loc, Option<Expression>, Vec<Expression>),
+    RevertNamedArgs(Loc, Option<Expression>, Vec<NamedArgument>),
     Emit(Loc, Expression),
     Try(
         Loc,
@@ -659,7 +649,7 @@ pub enum Statement {
         Option<(ParameterList, Box<Statement>)>,
         Vec<CatchClause>,
     ),
-    DocComment(Loc, CommentType, String),
+    DocComment(DocComment),
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -770,9 +760,10 @@ impl CodeLocation for Statement {
             | Statement::Break(loc)
             | Statement::Return(loc, ..)
             | Statement::Revert(loc, ..)
+            | Statement::RevertNamedArgs(loc, ..)
             | Statement::Emit(loc, ..)
-            | Statement::Try(loc, ..)
-            | Statement::DocComment(loc, ..) => *loc,
+            | Statement::Try(loc, ..) => *loc,
+            Statement::DocComment(comment) => comment.loc,
         }
     }
 }

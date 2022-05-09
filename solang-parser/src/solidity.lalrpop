@@ -1,14 +1,12 @@
 use std::str::FromStr;
 use num_bigint::{BigUint, BigInt};
-use num_traits::Pow;
-use num_traits::Zero;
+use num_traits::{Pow, Zero};
+use num_rational::BigRational;
 use std::ops::Mul;
 use lalrpop_util::ParseError;
 use super::pt::*;
 use super::box_option;
-use super::lexer::{Token, LexicalError, CommentType};
-use super::doc::tags;
-use num_rational::BigRational;
+use super::lexer::{Token, LexicalError};
 
 grammar<'input>(input: &'input str, file_no: usize);
 
@@ -28,24 +26,27 @@ SourceUnitPart: SourceUnitPart = {
     VariableDefinition => SourceUnitPart::VariableDefinition(<>),
     TypeDefinition => SourceUnitPart::TypeDefinition(<>),
     Using => SourceUnitPart::Using(<>),
+    <l:@L> <c:DocComment> <r:@R> => {
+        SourceUnitPart::DocComment(DocComment { loc: Loc::File(file_no, l, r), ty: c.0, comment: c.1.to_string()})
+    },
     <l:@L> ";" <r:@R> => SourceUnitPart::StraySemicolon(Loc::File(file_no, l, r)),
 }
 
 ImportDirective: SourceUnitPart = {
-    <doc:DocComments> <l:@L> "import" <s:StringLiteral> <r:@R> ";" => SourceUnitPart::ImportDirective(doc, Import::Plain(s, Loc::File(file_no, l, r))),
-    <doc:DocComments> <l:@L> "import" <s:StringLiteral> "as" <id:SolIdentifier> <r:@R> ";" => SourceUnitPart::ImportDirective(doc, Import::GlobalSymbol(s, id, Loc::File(file_no, l, r))),
-    <doc:DocComments> <l:@L> "import" "*" "as" <id:SolIdentifier> <from:SolIdentifier> <s:StringLiteral> <r:@R> ";" =>? {
+    <l:@L> "import" <s:StringLiteral> <r:@R> ";" => SourceUnitPart::ImportDirective(Import::Plain(s, Loc::File(file_no, l, r))),
+    <l:@L> "import" <s:StringLiteral> "as" <id:SolIdentifier> <r:@R> ";" => SourceUnitPart::ImportDirective(Import::GlobalSymbol(s, id, Loc::File(file_no, l, r))),
+    <l:@L> "import" "*" "as" <id:SolIdentifier> <from:SolIdentifier> <s:StringLiteral> <r:@R> ";" =>? {
         if from.name != "from" {
             Err(ParseError::User { error: LexicalError::ExpectedFrom(from.loc, from.name)})
         } else {
-            Ok(SourceUnitPart::ImportDirective(doc, Import::GlobalSymbol(s, id, Loc::File(file_no, l, r))))
+            Ok(SourceUnitPart::ImportDirective(Import::GlobalSymbol(s, id, Loc::File(file_no, l, r))))
         }
     },
-    <doc:DocComments> <l:@L> "import" "{" <rename:CommaOne<ImportRename>> "}" <from:SolIdentifier> <s:StringLiteral> <r:@R> ";" =>? {
+    <l:@L> "import" "{" <rename:CommaOne<ImportRename>> "}" <from:SolIdentifier> <s:StringLiteral> <r:@R> ";" =>? {
         if from.name != "from" {
             Err(ParseError::User { error:LexicalError::ExpectedFrom(from.loc, from.name)})
         } else {
-            Ok(SourceUnitPart::ImportDirective(doc, Import::Rename(s, rename, Loc::File(file_no, l, r))))
+            Ok(SourceUnitPart::ImportDirective(Import::Rename(s, rename, Loc::File(file_no, l, r))))
         }
     }
 }
@@ -57,15 +58,7 @@ ImportRename: (Identifier, Option<Identifier>) = {
 
 PragmaDirective: SourceUnitPart = {
     // The lexer does special parsing for String literal; it isn't really a string literal
-    <doc:DocComments> <l:@L> "pragma" <i:SolIdentifier> <s:StringLiteral> <r:@R> ";" => SourceUnitPart::PragmaDirective(Loc::File(file_no, l, r), doc, i, s)
-}
-
-DocComments: Vec<DocComment> = {
-    SingleDocComment* => tags(&<>)
-}
-
-SingleDocComment: (usize, CommentType, &'input str) = {
-    <l:@L> <c:DocComment> => (l, c.0, c.1)
+    <l:@L> "pragma" <i:SolIdentifier> <s:StringLiteral> <r:@R> ";" => SourceUnitPart::PragmaDirective(Loc::File(file_no, l, r), i, s)
 }
 
 Type: Type = {
@@ -156,8 +149,8 @@ VariableDeclaration: VariableDeclaration = {
 }
 
 StructDefinition: Box<StructDefinition> = {
-    <doc:DocComments> <l:@L> "struct" <name:SolIdentifier> "{" <fields:(<VariableDeclaration> ";")*> "}" <r:@R> => {
-        Box::new(StructDefinition{loc: Loc::File(file_no, l, r), doc, name, fields})
+    <l:@L> "struct" <name:SolIdentifier> "{" <fields:(<VariableDeclaration> ";")*> "}" <r:@R> => {
+        Box::new(StructDefinition{loc: Loc::File(file_no, l, r), name, fields})
     }
 }
 
@@ -178,6 +171,9 @@ ContractPart: ContractPart = {
     ModifierDefinition => ContractPart::FunctionDefinition(<>),
     ConstructorDefinition => ContractPart::FunctionDefinition(<>),
     TypeDefinition => ContractPart::TypeDefinition(<>),
+    <l:@L> <c:DocComment> <r:@R> => {
+        ContractPart::DocComment(DocComment { loc: Loc::File(file_no, l, r), ty: c.0, comment: c.1.to_string()})
+    },
     <l:@L> ";" <r:@R> => ContractPart::StraySemicolon(Loc::File(file_no, l, r)),
     Using => ContractPart::Using(<>),
 }
@@ -196,9 +192,9 @@ Base: Base = {
 }
 
 ContractDefinition: Box<ContractDefinition> = {
-    <doc:DocComments> <l:@L> <ty:ContractTy> <name:SolIdentifier> <base:Bases> <r:@R>
+    <l:@L> <ty:ContractTy> <name:SolIdentifier> <base:Bases> <r:@R>
     "{" <parts:(<ContractPart>)*> "}" => {
-        Box::new(ContractDefinition{doc, loc: Loc::File(file_no, l, r), ty, name, base, parts})
+        Box::new(ContractDefinition{loc: Loc::File(file_no, l, r), ty, name, base, parts})
     }
 }
 
@@ -215,31 +211,31 @@ ErrorParameter: ErrorParameter = {
 }
 
 EventDefinition: Box<EventDefinition> = {
-    <doc:DocComments> <l:@L> "event" <name:SolIdentifier> "(" <v:Comma<EventParameter>> ")" <a:"anonymous"?> <r:@R> ";" => {
+    <l:@L> "event" <name:SolIdentifier> "(" <v:Comma<EventParameter>> ")" <a:"anonymous"?> <r:@R> ";" => {
         Box::new(EventDefinition{
-            loc: Loc::File(file_no, l, r), doc, name, fields: v, anonymous: a.is_some()
+            loc: Loc::File(file_no, l, r), name, fields: v, anonymous: a.is_some()
         })
     },
 }
 
 ErrorDefinition: Box<ErrorDefinition> = {
-    <doc:DocComments> <l:@L> "error" <name:SolIdentifier> "(" <v:Comma<ErrorParameter>> ")" <r:@R> ";" => {
+    <l:@L> "error" <name:SolIdentifier> "(" <v:Comma<ErrorParameter>> ")" <r:@R> ";" => {
         Box::new(ErrorDefinition{
-            loc: Loc::File(file_no, l, r), doc, name, fields: v
+            loc: Loc::File(file_no, l, r), name, fields: v
         })
     },
 }
 
 EnumDefinition: Box<EnumDefinition> = {
-    <doc:DocComments> <l:@L> "enum" <name:SolIdentifier> "{" <values:Comma<SolIdentifier>> "}" <r:@R> => {
-        Box::new(EnumDefinition{loc: Loc::File(file_no, l, r), doc, name, values})
+    <l:@L> "enum" <name:SolIdentifier> "{" <values:Comma<SolIdentifier>> "}" <r:@R> => {
+        Box::new(EnumDefinition{loc: Loc::File(file_no, l, r), name, values})
     }
 }
 
 VariableDefinition: Box<VariableDefinition> = {
-    <doc:DocComments> <l:@L> <ty:NoFunctionTyPrecedence0> <attrs:VariableAttribute*> <name:SolIdentifier> <e:("=" <Expression>)?> <r:@R> ";" => {
+    <l:@L> <ty:NoFunctionTyPrecedence0> <attrs:VariableAttribute*> <name:SolIdentifier> <e:("=" <Expression>)?> <r:@R> ";" => {
         Box::new(VariableDefinition{
-            doc, loc: Loc::File(file_no, l, r), ty, attrs, name, initializer: e,
+            loc: Loc::File(file_no, l, r), ty, attrs, name, initializer: e,
         })
     },
     // attributes cause shift-reduce errors with function type, since a function type contract variable can be declare as
@@ -247,17 +243,17 @@ VariableDefinition: Box<VariableDefinition> = {
     //     // f is a variable with internal visibility referencing an external function
     //     function() external internal f;
     // }
-    <doc:DocComments> <l:@L> <ty:FunctionTyPrecedence0> <name:SolIdentifier> <e:("=" <Expression>)?> <r:@R> ";" => {
+    <l:@L> <ty:FunctionTyPrecedence0> <name:SolIdentifier> <e:("=" <Expression>)?> <r:@R> ";" => {
         Box::new(VariableDefinition{
-            doc, loc: Loc::File(file_no, l, r), ty, attrs: Vec::new(), name, initializer: e,
+            loc: Loc::File(file_no, l, r), ty, attrs: Vec::new(), name, initializer: e,
         })
     }
 }
 
 TypeDefinition: Box<TypeDefinition> = {
-    <doc:DocComments> <l:@L> "type" <name:SolIdentifier> "is" <ty:Precedence0> <r:@R> ";" => {
+    <l:@L> "type" <name:SolIdentifier> "is" <ty:Precedence0> <r:@R> ";" => {
         Box::new(TypeDefinition{
-            loc: Loc::File(file_no, l, r), doc, name, ty
+            loc: Loc::File(file_no, l, r), name, ty
         })
     },
 }
@@ -609,14 +605,13 @@ returns: Option<Loc> = {
 // Modifiers can't have attributes or return values, but we parse them anyway so we can give nice
 // error messages. The parameter list is optional
 ModifierDefinition: Box<FunctionDefinition> = {
-    <doc:DocComments> <l:@L> "modifier" <nl:@L> <name:SolIdentifier> <nr:@R> <params:ParameterList?>
+    <l:@L> "modifier" <nl:@L> <name:SolIdentifier> <nr:@R> <params:ParameterList?>
     <attributes:FunctionAttribute*>
     <returns:(returns ParameterList)?> <r:@R> <body:BlockStatementOrSemiColon> => {
         let params = params.unwrap_or(Vec::new());
         let (return_not_returns, returns) = returns.unwrap_or((None, Vec::new()));
 
         Box::new(FunctionDefinition{
-            doc,
             loc: Loc::File(file_no, l, r),
             ty: FunctionTy::Modifier,
             name: Some(name),
@@ -631,13 +626,12 @@ ModifierDefinition: Box<FunctionDefinition> = {
 }
 
 ConstructorDefinition: Box<FunctionDefinition> = {
-    <doc:DocComments> <l:@L> <ty:FunctionTy> <nl:@L> <name:SolIdentifier?> <nr:@R> <params:ParameterList>
+    <l:@L> <ty:FunctionTy> <nl:@L> <name:SolIdentifier?> <nr:@R> <params:ParameterList>
     <attributes:FunctionAttribute*>
     <returns:(returns ParameterList)?> <r:@R> <body:BlockStatementOrSemiColon> => {
         let (return_not_returns, returns) = returns.unwrap_or((None, Vec::new()));
 
         Box::new(FunctionDefinition{
-            doc,
             loc: Loc::File(file_no, l, r),
             ty,
             name,
@@ -652,13 +646,12 @@ ConstructorDefinition: Box<FunctionDefinition> = {
 }
 
 FunctionDefinition: Box<FunctionDefinition> = {
-    <doc:DocComments> <l:@L> "function" <nl:@L> <name:SolIdentifier> <nr:@R> <params:ParameterList>
+    <l:@L> "function" <nl:@L> <name:SolIdentifier> <nr:@R> <params:ParameterList>
     <attributes:FunctionAttribute*>
     <returns:(returns ParameterList)?> <r:@R> <body:BlockStatementOrSemiColon> => {
         let (return_not_returns, returns) = returns.unwrap_or((None, Vec::new()));
 
         Box::new(FunctionDefinition{
-            doc,
             loc: Loc::File(file_no, l, r),
             ty: FunctionTy::Function,
             name: Some(name),
@@ -672,13 +665,12 @@ FunctionDefinition: Box<FunctionDefinition> = {
     },
     // Old-style fallback function without name. Sema will give a nice error message
     // with some instructions how to update your syntax
-    <doc:DocComments> <l:@L> <ft:FunctionType> <r:@R> <body:BlockStatementOrSemiColon> => {
+    <l:@L> <ft:FunctionType> <r:@R> <body:BlockStatementOrSemiColon> => {
         match ft {
             // we're dropping the trailing attributes, but this production is for
             // generating an error messages
             Type::Function { params, attributes, returns, .. } => {
                 Box::new(FunctionDefinition{
-                    doc,
                     loc: Loc::File(file_no, l, r),
                     ty: FunctionTy::Function,
                     name: None,
@@ -699,16 +691,23 @@ FunctionDefinition: Box<FunctionDefinition> = {
 }
 
 Using: Box<Using> = {
-    <l:@L> "using" <library:SolIdentifierNamespace> "for" <ty:Precedence0> <r:@R> ";" => Box::new(Using {
+    <l:@L> "using" <list:UsingList> "for" <ty:Precedence0> <global:SolIdentifier?> <r:@R> ";" => Box::new(Using {
         loc: Loc::File(file_no, l, r),
-        library,
+        list,
         ty: Some(ty),
+        global,
     }),
-    <l:@L> "using" <library:SolIdentifierNamespace> "for" "*" <r:@R> ";" => Box::new(Using {
+    <l:@L> "using" <list:UsingList> "for" "*" <global:SolIdentifier?> <r:@R> ";" => Box::new(Using {
         loc: Loc::File(file_no, l, r),
-        library,
+        list,
         ty: None,
+        global,
     }),
+}
+
+UsingList: UsingList = {
+    SolIdentifierNamespace => UsingList::Library(<>),
+    "{" <Comma<SolIdentifierNamespace>> "}" => UsingList::Functions(<>),
 }
 
 BlockStatement: Statement = {
@@ -724,6 +723,9 @@ OpenStatement: Statement = {
     },
     <l:@L> "if" "(" <cond:Expression> ")" <body:ClosedStatement> "else" <o:OpenStatement> <r:@R> => {
         Statement::If(Loc::File(file_no, l, r), cond, Box::new(body), Some(Box::new(o)))
+    },
+    <l:@L> "for" "(" <b:SimpleStatement?> ";" <c:Expression?> ";" <n:SimpleStatement?> ")" <block:OpenStatement> <r:@R> => {
+        Statement::For(Loc::File(file_no, l, r), box_option(b), box_option(c), box_option(n), Some(Box::new(block)))
     },
     <l:@L> "while" "(" <e:Expression> ")" <b:OpenStatement> <r:@R> => {
         Statement::While(Loc::File(file_no, l, r), e, Box::new(b))
@@ -749,7 +751,9 @@ ClosedStatement: Statement = {
 Statement: Statement = {
     OpenStatement,
     ClosedStatement,
-    <l:@L> <c:DocComment> <r:@R> => Statement::DocComment(Loc::File(file_no, l, r), c.0, c.1.to_string()),
+    <l:@L> <c:DocComment> <r:@R> => {
+        Statement::DocComment(DocComment { loc: Loc::File(file_no, l, r), ty: c.0, comment: c.1.to_string()})
+    }
 }
 
 SimpleStatement: Statement = {
@@ -815,6 +819,9 @@ NonIfStatement: Statement = {
     },
     <l:@L> "revert" <error:SolIdentifierNamespace?> "(" <v:Comma<Expression>> ")" <r:@R> ";" => {
         Statement::Revert(Loc::File(file_no, l, r), error, v)
+    },
+    <l:@L> "revert" <error:SolIdentifierNamespace?> "(" "{" <v:Comma<NamedArgument>> "}" ")" <r:@R> ";" => {
+        Statement::RevertNamedArgs(Loc::File(file_no, l, r), error, v)
     },
 }
 

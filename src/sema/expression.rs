@@ -8,7 +8,6 @@ use num_traits::ToPrimitive;
 use num_traits::Zero;
 use std::cmp;
 use std::cmp::Ordering;
-use std::collections::HashSet;
 use std::collections::{BTreeMap, HashMap};
 use std::ops::{Add, Shl, Sub};
 
@@ -22,7 +21,7 @@ use super::contracts::{is_base, visit_bases};
 use super::eval::eval_const_number;
 use super::eval::eval_const_rational;
 use super::format::string_format;
-use super::symtable::Symtable;
+use super::{symtable::Symtable, using};
 use crate::ast::RetrieveType;
 use crate::parser::pt;
 use crate::parser::pt::CodeLocation;
@@ -6101,7 +6100,7 @@ fn method_call_pos_args(
         let self_ty = var_ty.deref_any();
 
         // what about call args
-        match resolve_using(
+        match using::try_resolve_using_call(
             loc,
             func,
             &var_expr,
@@ -6281,28 +6280,26 @@ fn method_call_pos_args(
     }
 
     // resolve it using library extension
-    if context.contract_no.is_some() {
-        let self_ty = var_ty.deref_any();
+    let self_ty = var_ty.deref_any();
 
-        match resolve_using(
-            loc,
-            func,
-            &var_expr,
-            self_ty,
-            context,
-            args,
-            symtable,
-            diagnostics,
-            ns,
-            resolve_to,
-        ) {
-            Ok(Some(expr)) => {
-                return Ok(expr);
-            }
-            Ok(None) => (),
-            Err(_) => {
-                return Err(());
-            }
+    match using::try_resolve_using_call(
+        loc,
+        func,
+        &var_expr,
+        self_ty,
+        context,
+        args,
+        symtable,
+        diagnostics,
+        ns,
+        resolve_to,
+    ) {
+        Ok(Some(expr)) => {
+            return Ok(expr);
+        }
+        Ok(None) => (),
+        Err(_) => {
+            return Err(());
         }
     }
 
@@ -6312,149 +6309,6 @@ fn method_call_pos_args(
     ));
 
     Err(())
-}
-
-fn resolve_using(
-    loc: &pt::Loc,
-    func: &pt::Identifier,
-    self_expr: &Expression,
-    self_ty: &Type,
-    context: &ExprContext,
-    args: &[pt::Expression],
-    symtable: &mut Symtable,
-    diagnostics: &mut Vec<Diagnostic>,
-    ns: &mut Namespace,
-    resolve_to: ResolveTo,
-) -> Result<Option<Expression>, ()> {
-    // first collect all possible libraries that match the using directive type
-    // Use HashSet for deduplication.
-    // If the using directive specifies a type, the type must match the type of
-    // the method call object exactly.
-    let libraries: HashSet<usize> = ns.contracts[context.contract_no.unwrap()]
-        .using
-        .iter()
-        .filter_map(|(library_no, ty)| match ty {
-            None => Some(*library_no),
-            Some(ty) if ty == self_ty => Some(*library_no),
-            _ => None,
-        })
-        .collect();
-
-    let mut name_matches = 0;
-    let mut errors = Vec::new();
-
-    for library_no in libraries {
-        for function_no in ns.contracts[library_no].functions.clone() {
-            let libfunc = &ns.functions[function_no];
-            if libfunc.name != func.name || libfunc.ty != pt::FunctionTy::Function {
-                continue;
-            }
-
-            name_matches += 1;
-
-            let params_len = libfunc.params.len();
-
-            if params_len != args.len() + 1 {
-                errors.push(Diagnostic::error(
-                    *loc,
-                    format!(
-                        "library function expects {} arguments, {} provided (including self)",
-                        params_len,
-                        args.len() + 1
-                    ),
-                ));
-                continue;
-            }
-            let mut matches = true;
-            let mut cast_args = Vec::new();
-
-            match self_expr.cast(
-                &self_expr.loc(),
-                &libfunc.params[0].ty,
-                true,
-                ns,
-                &mut errors,
-            ) {
-                Ok(e) => cast_args.push(e),
-                Err(()) => continue,
-            }
-
-            // check if arguments can be implicitly casted
-            for (i, arg) in args.iter().enumerate() {
-                let ty = ns.functions[function_no].params[i + 1].ty.clone();
-
-                let arg = match expression(
-                    arg,
-                    context,
-                    ns,
-                    symtable,
-                    &mut errors,
-                    ResolveTo::Type(&ty),
-                ) {
-                    Ok(e) => e,
-                    Err(()) => {
-                        matches = false;
-                        continue;
-                    }
-                };
-
-                match arg.cast(&arg.loc(), &ty, true, ns, &mut errors) {
-                    Ok(expr) => cast_args.push(expr),
-                    Err(_) => {
-                        matches = false;
-                        break;
-                    }
-                }
-            }
-            if !matches {
-                continue;
-            }
-
-            let libfunc = &ns.functions[function_no];
-
-            if libfunc.is_private() {
-                errors.push(Diagnostic::error_with_note(
-                    *loc,
-                    "cannot call private library function".to_string(),
-                    libfunc.loc,
-                    format!("declaration of function '{}'", libfunc.name),
-                ));
-
-                continue;
-            }
-
-            let returns = function_returns(libfunc, resolve_to);
-            let ty = function_type(libfunc, false, resolve_to);
-
-            return Ok(Some(Expression::InternalFunctionCall {
-                loc: *loc,
-                returns,
-                function: Box::new(Expression::InternalFunction {
-                    loc: *loc,
-                    ty,
-                    function_no,
-                    signature: None,
-                }),
-                args: cast_args,
-            }));
-        }
-    }
-
-    match name_matches {
-        0 => Ok(None),
-        1 => {
-            diagnostics.extend(errors);
-
-            Err(())
-        }
-        _ => {
-            diagnostics.push(Diagnostic::error(
-                *loc,
-                "cannot find overloaded library function which matches signature".to_string(),
-            ));
-            Err(())
-        }
-    }
 }
 
 fn method_call_named_args(
@@ -7528,7 +7382,7 @@ pub fn named_function_call_expr(
 }
 
 /// Get the return values for a function call
-fn function_returns(ftype: &Function, resolve_to: ResolveTo) -> Vec<Type> {
+pub(crate) fn function_returns(ftype: &Function, resolve_to: ResolveTo) -> Vec<Type> {
     if !ftype.returns.is_empty() && !matches!(resolve_to, ResolveTo::Discard) {
         ftype.returns.iter().map(|p| p.ty.clone()).collect()
     } else {
@@ -7537,7 +7391,7 @@ fn function_returns(ftype: &Function, resolve_to: ResolveTo) -> Vec<Type> {
 }
 
 /// Get the function type for an internal.external function call
-fn function_type(func: &Function, external: bool, resolve_to: ResolveTo) -> Type {
+pub(crate) fn function_type(func: &Function, external: bool, resolve_to: ResolveTo) -> Type {
     let params = func.params.iter().map(|p| p.ty.clone()).collect();
     let mutability = func.mutability.clone();
     let returns = function_returns(func, resolve_to);

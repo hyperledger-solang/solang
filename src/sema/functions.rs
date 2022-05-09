@@ -2,7 +2,7 @@ use super::ast::{
     BuiltinStruct, Diagnostic, Function, Mutability, Namespace, Parameter, Symbol, Type,
 };
 use super::contracts::is_base;
-use super::tags::resolve_tags;
+use super::tags::{resolve_tags, DocComment};
 use crate::parser::pt;
 use crate::parser::pt::CodeLocation;
 use crate::parser::pt::OptionalCodeLocation;
@@ -12,6 +12,7 @@ use crate::Target;
 pub fn contract_function(
     contract: &pt::ContractDefinition,
     func: &pt::FunctionDefinition,
+    tags: &[DocComment],
     file_no: usize,
     contract_no: usize,
     ns: &mut Namespace,
@@ -429,7 +430,7 @@ pub fn contract_function(
     let doc = resolve_tags(
         func.loc.file_no(),
         "function",
-        &func.doc,
+        tags,
         Some(&params),
         Some(&returns),
         Some(&bases),
@@ -624,10 +625,11 @@ pub fn contract_function(
     }
 }
 
-/// Resolve function declaration outside a contract
+/// Resolve free function
 pub fn function(
     func: &pt::FunctionDefinition,
     file_no: usize,
+    tags: &[DocComment],
     ns: &mut Namespace,
 ) -> Option<usize> {
     let mut success = true;
@@ -742,7 +744,7 @@ pub fn function(
     let doc = resolve_tags(
         func.loc.file_no(),
         "function",
-        &func.doc,
+        tags,
         Some(&params),
         Some(&returns),
         None,

@@ -6,12 +6,14 @@ use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::convert::TryInto;
 use tiny_keccak::{Hasher, Keccak};
 
-use super::ast;
-use super::expression::{compatible_mutability, match_constructor_to_args, ExprContext};
-use super::functions;
-use super::statements;
-use super::symtable::Symtable;
-use super::variables;
+use super::{
+    ast,
+    expression::{compatible_mutability, match_constructor_to_args, ExprContext},
+    functions, statements,
+    symtable::Symtable,
+    tags::parse_doccomments,
+    using, variables,
+};
 #[cfg(feature = "llvm")]
 use crate::emit;
 use crate::sema::unused_variable::emit_warning_local_variable;
@@ -762,6 +764,7 @@ fn resolve_declarations<'a>(
     ));
 
     let mut function_no_bodies = Vec::new();
+    let mut doccomments = Vec::new();
 
     // resolve state variables. We may need a constant to resolve the array
     // dimension of a function argument.
@@ -771,20 +774,27 @@ fn resolve_declarations<'a>(
 
     // resolve function signatures
     for parts in &def.parts {
-        if let pt::ContractPart::FunctionDefinition(ref f) = parts {
-            if let Some(function_no) =
-                functions::contract_function(def, f, file_no, contract_no, ns)
-            {
-                if f.body.is_some() {
-                    delayed.function_bodies.push(DelayedResolveFunction {
-                        contract_no,
-                        function_no,
-                        function: f.as_ref(),
-                    });
-                } else {
-                    function_no_bodies.push(function_no);
+        match parts {
+            pt::ContractPart::FunctionDefinition(ref f) => {
+                let tags = parse_doccomments(&doccomments);
+                doccomments.clear();
+
+                if let Some(function_no) =
+                    functions::contract_function(def, f, &tags, file_no, contract_no, ns)
+                {
+                    if f.body.is_some() {
+                        delayed.function_bodies.push(DelayedResolveFunction {
+                            contract_no,
+                            function_no,
+                            function: f.as_ref(),
+                        });
+                    } else {
+                        function_no_bodies.push(function_no);
+                    }
                 }
             }
+            pt::ContractPart::DocComment(doccomment) => doccomments.push(doccomment),
+            _ => doccomments.clear(),
         }
     }
 
@@ -819,65 +829,15 @@ fn resolve_using(
     file_no: usize,
     ns: &mut ast::Namespace,
 ) {
-    let mut diagnostics = Vec::new();
-
     for (contract_no, def) in contracts {
         for part in &def.parts {
             if let pt::ContractPart::Using(using) = part {
-                if let Ok(library_no) =
-                    ns.resolve_contract_with_namespace(file_no, &using.library, &mut diagnostics)
-                {
-                    if !ns.contracts[library_no].is_library() {
-                        ns.diagnostics.push(ast::Diagnostic::error(
-                            using.library.loc(),
-                            format!(
-                                "library expected but {} '{}' found",
-                                ns.contracts[library_no].ty, using.library
-                            ),
-                        ));
-
-                        continue;
-                    }
-
-                    let ty = if let Some(expr) = &using.ty {
-                        let mut diagnostics = Vec::new();
-
-                        match ns.resolve_type(
-                            file_no,
-                            Some(*contract_no),
-                            false,
-                            expr,
-                            &mut diagnostics,
-                        ) {
-                            Ok(ast::Type::Contract(contract_no))
-                                if ns.contracts[contract_no].is_library() =>
-                            {
-                                ns.diagnostics.push(ast::Diagnostic::error(
-                                    using.library.loc(),
-                                    format!(
-                                        "using library '{}' to extend library not possible",
-                                        using.library,
-                                    ),
-                                ));
-                                continue;
-                            }
-                            Ok(ty) => Some(ty),
-                            Err(_) => {
-                                ns.diagnostics.extend(diagnostics);
-                                continue;
-                            }
-                        }
-                    } else {
-                        None
-                    };
-
-                    ns.contracts[*contract_no].using.push((library_no, ty));
+                if let Ok(using) = using::using_decl(using, file_no, Some(*contract_no), ns) {
+                    ns.contracts[*contract_no].using.push(using);
                 }
             }
         }
     }
-
-    ns.diagnostics.extend(diagnostics);
 }
 
 /// Resolve contract functions bodies

@@ -1,11 +1,158 @@
 use super::ast::{Diagnostic, Namespace, Parameter, Tag};
 use crate::parser::pt;
 
-/// Resolve the tags for a type
+#[derive(Debug, PartialEq, Clone)]
+pub enum DocComment {
+    Line { comment: DocCommentTag },
+    Block { comments: Vec<DocCommentTag> },
+}
+
+impl DocComment {
+    pub fn comments(&self) -> Vec<&DocCommentTag> {
+        match self {
+            DocComment::Line { comment } => vec![comment],
+            DocComment::Block { comments } => comments.iter().collect(),
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct DocCommentTag {
+    pub tag: String,
+    pub tag_offset: usize,
+    pub value: String,
+    pub value_offset: usize,
+}
+
+// Parse the DocComments tags from the parse tree
+pub fn parse_doccomments(lines: &[&pt::DocComment]) -> Vec<DocComment> {
+    // first extract the tags
+    let mut tags = Vec::new();
+
+    let lines = to_lines(lines);
+
+    for (ty, comment_lines) in lines {
+        let mut single_tags = Vec::new();
+
+        for (start_offset, line) in comment_lines {
+            let mut chars = line.char_indices().peekable();
+
+            if let Some((_, '@')) = chars.peek() {
+                // step over @
+                let (tag_start, _) = chars.next().unwrap();
+                let mut tag_end = tag_start;
+
+                while let Some((offset, c)) = chars.peek() {
+                    if c.is_whitespace() {
+                        break;
+                    }
+
+                    tag_end = *offset;
+
+                    chars.next();
+                }
+
+                let leading = line[tag_end + 1..]
+                    .chars()
+                    .take_while(|ch| ch.is_whitespace())
+                    .count();
+
+                // tag value
+                single_tags.push(DocCommentTag {
+                    tag_offset: start_offset + tag_start + 1,
+                    tag: line[tag_start + 1..tag_end + 1].to_owned(),
+                    value_offset: start_offset + tag_end + leading + 1,
+                    value: line[tag_end + 1..].trim().to_owned(),
+                });
+            } else if !single_tags.is_empty() || !tags.is_empty() {
+                let line = line.trim();
+                if !line.is_empty() {
+                    let single_doc_comment = if let Some(single_tag) = single_tags.last_mut() {
+                        Some(single_tag)
+                    } else if let Some(tag) = tags.last_mut() {
+                        match tag {
+                            DocComment::Line { comment } => Some(comment),
+                            DocComment::Block { comments } => comments.last_mut(),
+                        }
+                    } else {
+                        None
+                    };
+
+                    if let Some(comment) = single_doc_comment {
+                        comment.value.push('\n');
+                        comment.value.push_str(line);
+                    }
+                }
+            } else {
+                let leading = line.chars().take_while(|ch| ch.is_whitespace()).count();
+
+                single_tags.push(DocCommentTag {
+                    tag_offset: start_offset + start_offset + leading,
+                    tag: String::from("notice"),
+                    value_offset: start_offset + start_offset + leading,
+                    value: line.trim().to_owned(),
+                });
+            }
+        }
+
+        match ty {
+            pt::CommentType::Line if !single_tags.is_empty() => tags.push(DocComment::Line {
+                comment: single_tags[0].to_owned(),
+            }),
+            pt::CommentType::Block => tags.push(DocComment::Block {
+                comments: single_tags,
+            }),
+            _ => {}
+        }
+    }
+
+    tags
+}
+
+/// Convert the comment to lines, stripping whitespace and leading * in block comments
+fn to_lines<'a>(comments: &'a [&pt::DocComment]) -> Vec<(pt::CommentType, Vec<(usize, &'a str)>)> {
+    let mut res = Vec::new();
+
+    for comment in comments.iter() {
+        let mut grouped_comments = Vec::new();
+
+        match comment.ty {
+            pt::CommentType::Line => {
+                let leading = comment
+                    .comment
+                    .chars()
+                    .take_while(|ch| ch.is_whitespace())
+                    .count();
+
+                grouped_comments.push((comment.loc.start() + leading, comment.comment.trim()));
+            }
+            pt::CommentType::Block => {
+                let mut start = comment.loc.start();
+
+                for s in comment.comment.lines() {
+                    if let Some((i, _)) = s
+                        .char_indices()
+                        .find(|(_, ch)| !ch.is_whitespace() && *ch != '*')
+                    {
+                        grouped_comments.push((start + i, s[i..].trim_end()));
+                    }
+
+                    start += s.len() + 1;
+                }
+            }
+        }
+
+        res.push((comment.ty, grouped_comments));
+    }
+
+    res
+}
+
+/// Resolve the tags for a type from parsed doccomment
 pub fn resolve_tags(
     file_no: usize,
     ty: &str,
-    doc: &[pt::DocComment],
+    tags: &[DocComment],
     params: Option<&[Parameter]>,
     returns: Option<&[Parameter]>,
     bases: Option<&[String]>,
@@ -13,7 +160,7 @@ pub fn resolve_tags(
 ) -> Vec<Tag> {
     let mut res: Vec<Tag> = Vec::new();
 
-    for c in doc.iter().flat_map(pt::DocComment::comments) {
+    for c in tags.iter().flat_map(DocComment::comments) {
         match c.tag.as_str() {
             "notice" | "author" | "title" | "dev" => {
                 // fold fields with the same name
