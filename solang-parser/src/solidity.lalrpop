@@ -812,6 +812,9 @@ NonIfStatement: Statement = {
     <l:@L> "revert" <error:SolIdentifierNamespace?> "(" <v:Comma<Expression>> ")" <r:@R> ";" => {
         Statement::Revert(Loc::File(file_no, l, r), error, v)
     },
+    <l:@L> "revert" <error:SolIdentifierNamespace?> "(" "{" <v:Comma<NamedArgument>> "}" ")" <r:@R> ";" => {
+        Statement::RevertNamedArgs(Loc::File(file_no, l, r), error, v)
+    },
 }
 
 YulIdentifier: Identifier = {

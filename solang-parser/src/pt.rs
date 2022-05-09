@@ -641,6 +641,7 @@ pub enum Statement {
     Break(Loc),
     Return(Loc, Option<Expression>),
     Revert(Loc, Option<Expression>, Vec<Expression>),
+    RevertNamedArgs(Loc, Option<Expression>, Vec<NamedArgument>),
     Emit(Loc, Expression),
     Try(
         Loc,
@@ -759,6 +760,7 @@ impl CodeLocation for Statement {
             | Statement::Break(loc)
             | Statement::Return(loc, ..)
             | Statement::Revert(loc, ..)
+            | Statement::RevertNamedArgs(loc, ..)
             | Statement::Emit(loc, ..)
             | Statement::Try(loc, ..) => *loc,
             Statement::DocComment(comment) => comment.loc,
