@@ -1,0 +1,22 @@
+strict digraph "tests/contract_testcases/solana/comment_tests.sol" {
+	contract [label="contract Splitter\ntests/contract_testcases/solana/comment_tests.sol:1:1-19"]
+	var [label="variable hello\nvisibility public\ntests/contract_testcases/solana/comment_tests.sol:2:5-40"]
+	alloc_array [label="alloc array string\ninitializer: 48656c6c6f20776f726421\ntests/contract_testcases/solana/comment_tests.sol:2:27-40"]
+	number_literal [label="uint32 literal: 11\ntests/contract_testcases/solana/comment_tests.sol:2:27-40"]
+	hello [label="function hello\ncontract: Splitter\ntests/contract_testcases/solana/comment_tests.sol:2:19-24\nsignature hello()\nvisibility public\nmutability view"]
+	returns [label="returns\nstring "]
+	return [label="return\nimplicit"]
+	storage_load [label="storage load string\nimplicit"]
+	storage_var [label="storage variable\nSplitter.hello\nstring storage\nimplicit"]
+	diagnostic [label="found contract 'Splitter'\nlevel Debug\ntests/contract_testcases/solana/comment_tests.sol:1:1-19"]
+	contracts -> contract
+	contract -> var [label="variable"]
+	var -> alloc_array [label="initializer"]
+	alloc_array -> number_literal [label="length"]
+	contract -> hello [label="function"]
+	hello -> returns [label="returns"]
+	hello -> return [label="body"]
+	return -> storage_load [label="expr"]
+	storage_load -> storage_var [label="expr"]
+	diagnostics -> diagnostic [label="Debug"]
+}

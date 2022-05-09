@@ -5,6 +5,7 @@ use super::{
         BuiltinStruct, Contract, Diagnostic, EnumDecl, EventDecl, Namespace, Parameter, StructDecl,
         Symbol, Tag, Type, UserTypeDecl,
     },
+    tags::{parse_doccomments, DocComment},
     SOLANA_SPARSE_ARRAY_SIZE,
 };
 use crate::parser::pt;
@@ -17,8 +18,22 @@ use std::ops::Mul;
 
 /// List the types which should be resolved later
 pub struct ResolveFields<'a> {
-    pub structs: Vec<(usize, &'a pt::StructDefinition, Option<usize>)>,
-    pub events: Vec<(usize, &'a pt::EventDefinition, Option<usize>)>,
+    structs: Vec<ResolveStructFields<'a>>,
+    events: Vec<ResolveEventFields<'a>>,
+}
+
+struct ResolveEventFields<'a> {
+    event_no: usize,
+    pt: &'a pt::EventDefinition,
+    comments: Vec<DocComment>,
+    contract: Option<usize>,
+}
+
+struct ResolveStructFields<'a> {
+    struct_no: usize,
+    pt: &'a pt::StructDefinition,
+    comments: Vec<DocComment>,
+    contract: Option<usize>,
 }
 
 /// Resolve all the types we can find (enums, structs, contracts). structs can have other
@@ -28,6 +43,7 @@ pub fn resolve_typenames<'a>(
     file_no: usize,
     ns: &mut Namespace,
 ) -> ResolveFields<'a> {
+    let mut doccomments = Vec::new();
     let mut delay = ResolveFields {
         structs: Vec::new(),
         events: Vec::new(),
@@ -38,16 +54,33 @@ pub fn resolve_typenames<'a>(
     // done
     for part in &s.0 {
         match part {
+            pt::SourceUnitPart::DocComment(doccomment) => {
+                doccomments.push(doccomment);
+            }
             pt::SourceUnitPart::ContractDefinition(def) => {
-                resolve_contract(def, file_no, &mut delay, ns);
+                let tags = parse_doccomments(&doccomments);
+                doccomments.clear();
+
+                resolve_contract(def, &tags, file_no, &mut delay, ns);
             }
             pt::SourceUnitPart::EnumDefinition(def) => {
-                let _ = enum_decl(def, file_no, None, ns);
+                let tags = parse_doccomments(&doccomments);
+                doccomments.clear();
+
+                let _ = enum_decl(def, file_no, &tags, None, ns);
             }
             pt::SourceUnitPart::StructDefinition(def) => {
-                let pos = ns.structs.len();
+                let tags = parse_doccomments(&doccomments);
+                doccomments.clear();
 
-                if ns.add_symbol(file_no, None, &def.name, Symbol::Struct(def.name.loc, pos)) {
+                let struct_no = ns.structs.len();
+
+                if ns.add_symbol(
+                    file_no,
+                    None,
+                    &def.name,
+                    Symbol::Struct(def.name.loc, struct_no),
+                ) {
                     ns.structs.push(StructDecl {
                         tags: Vec::new(),
                         name: def.name.name.to_owned(),
@@ -59,22 +92,30 @@ pub fn resolve_typenames<'a>(
                         storage_offsets: Vec::new(),
                     });
 
-                    delay.structs.push((pos, def, None));
+                    delay.structs.push(ResolveStructFields {
+                        struct_no,
+                        pt: def,
+                        comments: tags,
+                        contract: None,
+                    });
                 }
             }
             pt::SourceUnitPart::EventDefinition(def) => {
-                let pos = ns.events.len();
+                let event_no = ns.events.len();
+
+                let tags = parse_doccomments(&doccomments);
+                doccomments.clear();
 
                 if let Some(Symbol::Event(events)) =
                     ns.variable_symbols
                         .get_mut(&(file_no, None, def.name.name.to_owned()))
                 {
-                    events.push((def.name.loc, pos));
+                    events.push((def.name.loc, event_no));
                 } else if !ns.add_symbol(
                     file_no,
                     None,
                     &def.name,
-                    Symbol::Event(vec![(def.name.loc, pos)]),
+                    Symbol::Event(vec![(def.name.loc, event_no)]),
                 ) {
                     continue;
                 }
@@ -90,10 +131,18 @@ pub fn resolve_typenames<'a>(
                     used: false,
                 });
 
-                delay.events.push((pos, def, None));
+                delay.events.push(ResolveEventFields {
+                    event_no,
+                    pt: def,
+                    comments: tags,
+                    contract: None,
+                });
             }
             pt::SourceUnitPart::TypeDefinition(ty) => {
-                type_decl(ty, file_no, None, ns);
+                let tags = parse_doccomments(&doccomments);
+                doccomments.clear();
+
+                type_decl(ty, file_no, &tags, None, ns);
             }
             _ => (),
         }
@@ -105,6 +154,7 @@ pub fn resolve_typenames<'a>(
 fn type_decl(
     def: &pt::TypeDefinition,
     file_no: usize,
+    tags: &[DocComment],
     contract_no: Option<usize>,
     ns: &mut Namespace,
 ) {
@@ -143,15 +193,7 @@ fn type_decl(
         return;
     }
 
-    let tags = resolve_tags(
-        def.name.loc.file_no(),
-        "type",
-        &def.doc,
-        None,
-        None,
-        None,
-        ns,
-    );
+    let tags = resolve_tags(def.name.loc.file_no(), "type", tags, None, None, None, ns);
 
     ns.user_types.push(UserTypeDecl {
         tags,
@@ -164,10 +206,12 @@ fn type_decl(
 
 pub fn resolve_fields(delay: ResolveFields, file_no: usize, ns: &mut Namespace) {
     // now we can resolve the fields for the structs
-    for (pos, def, contract) in delay.structs {
-        if let Some((tags, fields)) = struct_decl(def, file_no, contract, ns) {
-            ns.structs[pos].tags = tags;
-            ns.structs[pos].fields = fields;
+    for resolve in delay.structs {
+        if let Some((tags, fields)) =
+            struct_decl(resolve.pt, file_no, &resolve.comments, resolve.contract, ns)
+        {
+            ns.structs[resolve.struct_no].tags = tags;
+            ns.structs[resolve.struct_no].fields = fields;
         }
     }
 
@@ -211,11 +255,14 @@ pub fn resolve_fields(delay: ResolveFields, file_no: usize, ns: &mut Namespace) 
     }
 
     // now we can resolve the fields for the events
-    for (pos, def, contract) in delay.events {
-        if let Some((tags, fields)) = event_decl(def, file_no, contract, ns) {
-            ns.events[pos].signature = ns.signature(&ns.events[pos].name, &fields);
-            ns.events[pos].fields = fields;
-            ns.events[pos].tags = tags;
+    for event in delay.events {
+        if let Some((tags, fields)) =
+            event_decl(event.pt, file_no, &event.comments, event.contract, ns)
+        {
+            ns.events[event.event_no].signature =
+                ns.signature(&ns.events[event.event_no].name, &fields);
+            ns.events[event.event_no].fields = fields;
+            ns.events[event.event_no].tags = tags;
         }
     }
 }
@@ -223,6 +270,7 @@ pub fn resolve_fields(delay: ResolveFields, file_no: usize, ns: &mut Namespace) 
 /// Resolve all the types in a contract
 fn resolve_contract<'a>(
     def: &'a pt::ContractDefinition,
+    contract_tags: &[DocComment],
     file_no: usize,
     delay: &mut ResolveFields<'a>,
     ns: &mut Namespace,
@@ -232,7 +280,7 @@ fn resolve_contract<'a>(
     let doc = resolve_tags(
         def.name.loc.file_no(),
         "contract",
-        &def.doc,
+        contract_tags,
         None,
         None,
         None,
@@ -259,52 +307,71 @@ fn resolve_contract<'a>(
         ));
     }
 
+    let mut doccomments = Vec::new();
+
     for parts in &def.parts {
         match parts {
+            pt::ContractPart::DocComment(doccomment) => {
+                doccomments.push(doccomment);
+            }
             pt::ContractPart::EnumDefinition(ref e) => {
-                if !enum_decl(e, file_no, Some(contract_no), ns) {
+                let tags = parse_doccomments(&doccomments);
+                doccomments.clear();
+
+                if !enum_decl(e, file_no, &tags, Some(contract_no), ns) {
                     broken = true;
                 }
             }
-            pt::ContractPart::StructDefinition(ref s) => {
-                let pos = ns.structs.len();
+            pt::ContractPart::StructDefinition(ref pt) => {
+                let struct_no = ns.structs.len();
+
+                let tags = parse_doccomments(&doccomments);
+                doccomments.clear();
 
                 if ns.add_symbol(
                     file_no,
                     Some(contract_no),
-                    &s.name,
-                    Symbol::Struct(s.name.loc, pos),
+                    &pt.name,
+                    Symbol::Struct(pt.name.loc, struct_no),
                 ) {
                     ns.structs.push(StructDecl {
                         tags: Vec::new(),
-                        name: s.name.name.to_owned(),
+                        name: pt.name.name.to_owned(),
                         builtin: BuiltinStruct::None,
-                        loc: s.name.loc,
+                        loc: pt.name.loc,
                         contract: Some(def.name.name.to_owned()),
                         fields: Vec::new(),
                         offsets: Vec::new(),
                         storage_offsets: Vec::new(),
                     });
 
-                    delay.structs.push((pos, s, Some(contract_no)));
+                    delay.structs.push(ResolveStructFields {
+                        struct_no,
+                        pt,
+                        comments: tags,
+                        contract: Some(contract_no),
+                    });
                 } else {
                     broken = true;
                 }
             }
-            pt::ContractPart::EventDefinition(ref s) => {
-                let pos = ns.events.len();
+            pt::ContractPart::EventDefinition(ref pt) => {
+                let tags = parse_doccomments(&doccomments);
+                doccomments.clear();
+
+                let event_no = ns.events.len();
 
                 if let Some(Symbol::Event(events)) = ns.variable_symbols.get_mut(&(
                     file_no,
                     Some(contract_no),
-                    s.name.name.to_owned(),
+                    pt.name.name.to_owned(),
                 )) {
-                    events.push((s.name.loc, pos));
+                    events.push((pt.name.loc, event_no));
                 } else if !ns.add_symbol(
                     file_no,
                     Some(contract_no),
-                    &s.name,
-                    Symbol::Event(vec![(s.name.loc, pos)]),
+                    &pt.name,
+                    Symbol::Event(vec![(pt.name.loc, event_no)]),
                 ) {
                     broken = true;
                     continue;
@@ -312,19 +379,27 @@ fn resolve_contract<'a>(
 
                 ns.events.push(EventDecl {
                     tags: Vec::new(),
-                    name: s.name.name.to_owned(),
-                    loc: s.name.loc,
+                    name: pt.name.name.to_owned(),
+                    loc: pt.name.loc,
                     contract: Some(contract_no),
                     fields: Vec::new(),
-                    anonymous: s.anonymous,
+                    anonymous: pt.anonymous,
                     signature: String::new(),
                     used: false,
                 });
 
-                delay.events.push((pos, s, Some(contract_no)));
+                delay.events.push(ResolveEventFields {
+                    event_no,
+                    pt,
+                    comments: tags,
+                    contract: Some(contract_no),
+                });
             }
             pt::ContractPart::TypeDefinition(ty) => {
-                type_decl(ty, file_no, Some(contract_no), ns);
+                let tags = parse_doccomments(&doccomments);
+                doccomments.clear();
+
+                type_decl(ty, file_no, &tags, Some(contract_no), ns);
             }
             _ => (),
         }
@@ -340,6 +415,7 @@ fn resolve_contract<'a>(
 pub fn struct_decl(
     def: &pt::StructDefinition,
     file_no: usize,
+    tags: &[DocComment],
     contract_no: Option<usize>,
     ns: &mut Namespace,
 ) -> Option<(Vec<Tag>, Vec<Parameter>)> {
@@ -421,7 +497,7 @@ pub fn struct_decl(
         let doc = resolve_tags(
             def.name.loc.file_no(),
             "struct",
-            &def.doc,
+            tags,
             Some(&fields),
             None,
             None,
@@ -441,6 +517,7 @@ pub fn struct_decl(
 fn event_decl(
     def: &pt::EventDefinition,
     file_no: usize,
+    tags: &[DocComment],
     contract_no: Option<usize>,
     ns: &mut Namespace,
 ) -> Option<(Vec<Tag>, Vec<Parameter>)> {
@@ -536,7 +613,7 @@ fn event_decl(
         let doc = resolve_tags(
             def.name.loc.file_no(),
             "event",
-            &def.doc,
+            tags,
             Some(&fields),
             None,
             None,
@@ -554,6 +631,7 @@ fn event_decl(
 fn enum_decl(
     enum_: &pt::EnumDefinition,
     file_no: usize,
+    tags: &[DocComment],
     contract_no: Option<usize>,
     ns: &mut Namespace,
 ) -> bool {
@@ -595,15 +673,7 @@ fn enum_decl(
         entries.insert(e.name.to_string(), (e.loc, i));
     }
 
-    let tags = resolve_tags(
-        enum_.name.loc.file_no(),
-        "enum",
-        &enum_.doc,
-        None,
-        None,
-        None,
-        ns,
-    );
+    let tags = resolve_tags(enum_.name.loc.file_no(), "enum", tags, None, None, None, ns);
 
     let decl = EnumDecl {
         tags,

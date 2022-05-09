@@ -9,15 +9,9 @@ use std::iter::Peekable;
 use std::str::CharIndices;
 use unicode_xid::UnicodeXID;
 
-use crate::pt::{CodeLocation, Comment, Loc};
+use crate::pt::{CodeLocation, Comment, CommentType, Loc};
 
 pub type Spanned<Token, Loc, Error> = Result<(Loc, Token, Loc), Error>;
-
-#[derive(Copy, Clone, PartialEq, Debug)]
-pub enum CommentType {
-    Line,
-    Block,
-}
 
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub enum Token<'input> {

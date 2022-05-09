@@ -6,7 +6,6 @@ use lalrpop_util::ParseError;
 pub use diagnostics::Diagnostic;
 
 pub mod diagnostics;
-mod doc;
 pub mod lexer;
 pub mod pt;
 #[cfg(test)]

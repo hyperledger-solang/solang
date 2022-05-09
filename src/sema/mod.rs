@@ -1,7 +1,10 @@
-use self::contracts::visit_bases;
-use self::functions::{resolve_params, resolve_returns};
-use self::symtable::Symtable;
-use self::variables::variable_decl;
+use self::{
+    contracts::visit_bases,
+    functions::{resolve_params, resolve_returns},
+    symtable::Symtable,
+    tags::parse_doccomments,
+    variables::variable_decl,
+};
 use crate::file_resolver::{FileResolver, ResolvedFile};
 use crate::parser::{parse, pt};
 use crate::sema::unused_variable::{check_unused_events, check_unused_namespace_variables};
@@ -90,10 +93,10 @@ fn sema_file(file: &ResolvedFile, resolver: &mut FileResolver, ns: &mut ast::Nam
     // resolve pragmas and imports
     for part in &pt.0 {
         match part {
-            pt::SourceUnitPart::PragmaDirective(loc, _, name, value) => {
+            pt::SourceUnitPart::PragmaDirective(loc, name, value) => {
                 resolve_pragma(loc, name, value, ns);
             }
-            pt::SourceUnitPart::ImportDirective(_, import) => {
+            pt::SourceUnitPart::ImportDirective(import) => {
                 resolve_import(import, Some(file), file_no, resolver, ns);
             }
             _ => (),
@@ -113,18 +116,26 @@ fn sema_file(file: &ResolvedFile, resolver: &mut FileResolver, ns: &mut ast::Nam
 
     // resolve functions/constants outside of contracts
     let mut resolve_bodies = Vec::new();
+    let mut doccomments = Vec::new();
 
     for part in &pt.0 {
         match part {
             pt::SourceUnitPart::FunctionDefinition(func) => {
-                if let Some(func_no) = functions::function(func, file_no, ns) {
+                let tags = parse_doccomments(&doccomments);
+                doccomments.clear();
+
+                if let Some(func_no) = functions::function(func, file_no, &tags, ns) {
                     resolve_bodies.push((func_no, func));
                 }
             }
             pt::SourceUnitPart::VariableDefinition(var) => {
-                variable_decl(None, var, file_no, None, ns, &mut Symtable::new());
+                let tags = parse_doccomments(&doccomments);
+                doccomments.clear();
+
+                variable_decl(None, var, file_no, &tags, None, ns, &mut Symtable::new());
             }
-            _ => (),
+            pt::SourceUnitPart::DocComment(doccomment) => doccomments.push(doccomment),
+            _ => doccomments.clear(),
         }
     }
 
