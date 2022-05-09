@@ -212,10 +212,17 @@ pub enum ContractPart {
 }
 
 #[derive(Debug, PartialEq, Clone)]
+pub enum UsingList {
+    Library(Expression),
+    Functions(Vec<Expression>),
+}
+
+#[derive(Debug, PartialEq, Clone)]
 pub struct Using {
     pub loc: Loc,
-    pub library: Expression,
+    pub list: UsingList,
     pub ty: Option<Expression>,
+    pub global: Option<Identifier>,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -634,6 +641,7 @@ pub enum Statement {
     Break(Loc),
     Return(Loc, Option<Expression>),
     Revert(Loc, Option<Expression>, Vec<Expression>),
+    RevertNamedArgs(Loc, Option<Expression>, Vec<NamedArgument>),
     Emit(Loc, Expression),
     Try(
         Loc,
@@ -752,6 +760,7 @@ impl CodeLocation for Statement {
             | Statement::Break(loc)
             | Statement::Return(loc, ..)
             | Statement::Revert(loc, ..)
+            | Statement::RevertNamedArgs(loc, ..)
             | Statement::Emit(loc, ..)
             | Statement::Try(loc, ..) => *loc,
             Statement::DocComment(comment) => comment.loc,

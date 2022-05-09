@@ -12,7 +12,7 @@ use super::{
     functions, statements,
     symtable::Symtable,
     tags::parse_doccomments,
-    variables,
+    using, variables,
 };
 #[cfg(feature = "llvm")]
 use crate::emit;
@@ -829,65 +829,15 @@ fn resolve_using(
     file_no: usize,
     ns: &mut ast::Namespace,
 ) {
-    let mut diagnostics = Vec::new();
-
     for (contract_no, def) in contracts {
         for part in &def.parts {
             if let pt::ContractPart::Using(using) = part {
-                if let Ok(library_no) =
-                    ns.resolve_contract_with_namespace(file_no, &using.library, &mut diagnostics)
-                {
-                    if !ns.contracts[library_no].is_library() {
-                        ns.diagnostics.push(ast::Diagnostic::error(
-                            using.library.loc(),
-                            format!(
-                                "library expected but {} '{}' found",
-                                ns.contracts[library_no].ty, using.library
-                            ),
-                        ));
-
-                        continue;
-                    }
-
-                    let ty = if let Some(expr) = &using.ty {
-                        let mut diagnostics = Vec::new();
-
-                        match ns.resolve_type(
-                            file_no,
-                            Some(*contract_no),
-                            false,
-                            expr,
-                            &mut diagnostics,
-                        ) {
-                            Ok(ast::Type::Contract(contract_no))
-                                if ns.contracts[contract_no].is_library() =>
-                            {
-                                ns.diagnostics.push(ast::Diagnostic::error(
-                                    using.library.loc(),
-                                    format!(
-                                        "using library '{}' to extend library not possible",
-                                        using.library,
-                                    ),
-                                ));
-                                continue;
-                            }
-                            Ok(ty) => Some(ty),
-                            Err(_) => {
-                                ns.diagnostics.extend(diagnostics);
-                                continue;
-                            }
-                        }
-                    } else {
-                        None
-                    };
-
-                    ns.contracts[*contract_no].using.push((library_no, ty));
+                if let Ok(using) = using::using_decl(using, file_no, Some(*contract_no), ns) {
+                    ns.contracts[*contract_no].using.push(using);
                 }
             }
         }
     }
-
-    ns.diagnostics.extend(diagnostics);
 }
 
 /// Resolve contract functions bodies

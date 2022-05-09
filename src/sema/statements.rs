@@ -868,6 +868,13 @@ fn statement(
 
             Ok(reachable)
         }
+        pt::Statement::RevertNamedArgs(loc, _, _) => {
+            ns.diagnostics.push(Diagnostic::error(
+                *loc,
+                "revert with custom errors or named arguments not supported yet".to_string(),
+            ));
+            Err(())
+        }
         pt::Statement::DocComment(..) => Ok(true),
     }
 }

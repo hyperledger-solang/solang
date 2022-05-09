@@ -2229,30 +2229,32 @@ impl Namespace {
                 dot.add_tags(&var.tags, node);
             }
 
-            for (library, ty) in &c.using {
-                if let Some(ty) = ty {
-                    dot.add_node(
-                        Node::new(
-                            "using",
-                            vec![format!(
-                                "using {} for {}",
-                                self.contracts[*library].name,
-                                ty.to_string(self)
-                            )],
-                        ),
-                        Some(contract),
-                        Some(String::from("base")),
-                    );
-                } else {
-                    dot.add_node(
-                        Node::new(
-                            "using",
-                            vec![format!("using {}", self.contracts[*library].name)],
-                        ),
-                        Some(contract),
-                        Some(String::from("base")),
-                    );
+            for using in &c.using {
+                let mut labels = match &using.list {
+                    UsingList::Functions(functions) => functions
+                        .iter()
+                        .map(|func_no| {
+                            let func = &self.functions[*func_no];
+
+                            format!("function {} {}", func.name, self.loc_to_string(&func.loc))
+                        })
+                        .collect(),
+                    UsingList::Library(library_no) => {
+                        let library = &self.contracts[*library_no];
+
+                        vec![format!("library {}", library.name)]
+                    }
+                };
+
+                if let Some(ty) = &using.ty {
+                    labels.insert(0, format!("using for {}", ty.to_string(self)));
                 }
+
+                dot.add_node(
+                    Node::new("using", labels),
+                    Some(contract),
+                    Some(String::from("base")),
+                );
             }
 
             for func in &c.functions {

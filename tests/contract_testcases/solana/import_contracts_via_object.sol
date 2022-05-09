@@ -5,4 +5,7 @@ contract C is IMP.A {
 	constructor() IMP.A() {
 		revert IMP.E();
 	}
+	function foo() public {
+		revert IMP.E({foo: 1});
+	}
 }
