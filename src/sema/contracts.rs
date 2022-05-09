@@ -6,12 +6,14 @@ use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::convert::TryInto;
 use tiny_keccak::{Hasher, Keccak};
 
-use super::ast;
-use super::expression::{compatible_mutability, match_constructor_to_args, ExprContext};
-use super::functions;
-use super::statements;
-use super::symtable::Symtable;
-use super::variables;
+use super::{
+    ast,
+    expression::{compatible_mutability, match_constructor_to_args, ExprContext},
+    functions, statements,
+    symtable::Symtable,
+    tags::parse_doccomments,
+    variables,
+};
 #[cfg(feature = "llvm")]
 use crate::emit;
 use crate::sema::unused_variable::emit_warning_local_variable;
@@ -762,6 +764,7 @@ fn resolve_declarations<'a>(
     ));
 
     let mut function_no_bodies = Vec::new();
+    let mut doccomments = Vec::new();
 
     // resolve state variables. We may need a constant to resolve the array
     // dimension of a function argument.
@@ -771,20 +774,27 @@ fn resolve_declarations<'a>(
 
     // resolve function signatures
     for parts in &def.parts {
-        if let pt::ContractPart::FunctionDefinition(ref f) = parts {
-            if let Some(function_no) =
-                functions::contract_function(def, f, file_no, contract_no, ns)
-            {
-                if f.body.is_some() {
-                    delayed.function_bodies.push(DelayedResolveFunction {
-                        contract_no,
-                        function_no,
-                        function: f.as_ref(),
-                    });
-                } else {
-                    function_no_bodies.push(function_no);
+        match parts {
+            pt::ContractPart::FunctionDefinition(ref f) => {
+                let tags = parse_doccomments(&doccomments);
+                doccomments.clear();
+
+                if let Some(function_no) =
+                    functions::contract_function(def, f, &tags, file_no, contract_no, ns)
+                {
+                    if f.body.is_some() {
+                        delayed.function_bodies.push(DelayedResolveFunction {
+                            contract_no,
+                            function_no,
+                            function: f.as_ref(),
+                        });
+                    } else {
+                        function_no_bodies.push(function_no);
+                    }
                 }
             }
+            pt::ContractPart::DocComment(doccomment) => doccomments.push(doccomment),
+            _ => doccomments.clear(),
         }
     }
 

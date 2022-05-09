@@ -6,7 +6,7 @@ use super::{
     expression::{expression, ExprContext, ResolveTo},
     symtable::Symtable,
     symtable::{VariableInitializer, VariableUsage},
-    tags::resolve_tags,
+    tags::{parse_doccomments, resolve_tags, DocComment},
 };
 use crate::parser::pt::{self, CodeLocation, OptionalCodeLocation};
 
@@ -24,14 +24,28 @@ pub fn contract_variables<'a>(
 ) -> Vec<DelayedResolveInitializer<'a>> {
     let mut symtable = Symtable::new();
     let mut delayed = Vec::new();
+    let mut doccomments = Vec::new();
 
     for parts in &def.parts {
-        if let pt::ContractPart::VariableDefinition(ref s) = parts {
-            if let Some(delay) =
-                variable_decl(Some(def), s, file_no, Some(contract_no), ns, &mut symtable)
-            {
-                delayed.push(delay);
+        match parts {
+            pt::ContractPart::VariableDefinition(ref s) => {
+                let tags = parse_doccomments(&doccomments);
+                doccomments.clear();
+
+                if let Some(delay) = variable_decl(
+                    Some(def),
+                    s,
+                    file_no,
+                    &tags,
+                    Some(contract_no),
+                    ns,
+                    &mut symtable,
+                ) {
+                    delayed.push(delay);
+                }
             }
+            pt::ContractPart::DocComment(doccomment) => doccomments.push(doccomment),
+            _ => doccomments.clear(),
         }
     }
 
@@ -42,6 +56,7 @@ pub fn variable_decl<'a>(
     contract: Option<&pt::ContractDefinition>,
     def: &'a pt::VariableDefinition,
     file_no: usize,
+    tags: &[DocComment],
     contract_no: Option<usize>,
     ns: &mut Namespace,
     symtable: &mut Symtable,
@@ -320,7 +335,7 @@ pub fn variable_decl<'a>(
         } else {
             "state variable"
         },
-        &def.doc,
+        tags,
         None,
         None,
         Some(&bases),
