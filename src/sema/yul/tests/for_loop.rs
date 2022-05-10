@@ -131,13 +131,10 @@ contract testTypes {
     "#;
 
     let ns = parse(file);
-    assert_eq!(ns.diagnostics.len(), 3);
+    assert_eq!(ns.diagnostics.len(), 2);
     assert!(ns
         .diagnostics
         .contains_message("found contract 'testTypes'"));
-    assert!(ns
-        .diagnostics
-        .contains_message("inline assembly is not yet supported"));
     assert!(ns
         .diagnostics
         .contains_message("yul variable 'x' has never been read"));

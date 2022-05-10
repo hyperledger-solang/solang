@@ -1,3 +1,4 @@
+use crate::ast::Type;
 use crate::codegen::cfg::{ASTFunction, ControlFlowGraph, Instr};
 use crate::codegen::reaching_definitions::{apply_transfers, VarDefs};
 use crate::codegen::{Builtin, Expression};
@@ -96,7 +97,10 @@ pub fn find_undefined_variables_in_expression(
                     {
                         // If an undefined definition reaches this read and the variable
                         // has not been modified since its definition, it is undefined
-                        if matches!(instr_expr, Expression::Undefined(_)) && !*modified {
+                        if matches!(instr_expr, Expression::Undefined(_))
+                            && !*modified
+                            && !matches!(var.ty, Type::Array(..))
+                        {
                             add_diagnostic(var, pos, &exp.loc(), ctx.diagnostics);
                         }
                     }
@@ -145,3 +149,5 @@ fn add_diagnostic(
         message: "Variable read before being defined".to_string(),
     });
 }
+
+// TODO: undefined variables are not yet compatible with Yul

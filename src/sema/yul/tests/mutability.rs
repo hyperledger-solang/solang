@@ -348,7 +348,7 @@ fn pure_function() {
 }    "#;
 
     let ns = parse(file);
-    // TODO: There is not implemented function that writes to state
+    // TODO: There is no implemented function that writes to state
     assert!(ns
         .diagnostics
         .contains_message("builtin 'log0' is not available for target ewasm. Please, open a GitHub issue if there is need to support this function."));
@@ -390,13 +390,10 @@ fn view_function() {
 }    "#;
 
     let ns = parse(file);
-    assert_eq!(ns.diagnostics.len(), 2);
+    assert_eq!(ns.diagnostics.len(), 1);
     assert!(ns
         .diagnostics
         .contains_message("found contract 'testTypes'"));
-    assert!(ns
-        .diagnostics
-        .contains_message("inline assembly is not yet supported"));
 }
 
 #[test]
@@ -415,13 +412,10 @@ fn function_without_modifier() {
 }
     "#;
     let ns = parse(file);
-    assert_eq!(ns.diagnostics.len(), 4);
+    assert_eq!(ns.diagnostics.len(), 3);
     assert!(ns
         .diagnostics
         .contains_message("found contract 'testTypes'"));
-    assert!(ns
-        .diagnostics
-        .contains_message("inline assembly is not yet supported"));
     assert!(ns
         .diagnostics
         .contains_message("yul variable 'x' has never been read"));

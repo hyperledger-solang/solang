@@ -1119,13 +1119,10 @@ contract testTypes {
 }
     "#;
     let ns = parse(file);
-    assert_eq!(ns.diagnostics.len(), 3);
+    assert_eq!(ns.diagnostics.len(), 2);
     assert!(ns
         .diagnostics
         .contains_message("found contract 'testTypes'"));
-    assert!(ns
-        .diagnostics
-        .contains_message("inline assembly is not yet supported"));
     assert!(ns
         .diagnostics
         .contains_message("function parameter 'vl' has never been read"));
@@ -1564,11 +1561,8 @@ fn external_function() {
     }
 }   "#;
     let ns = parse(file);
-    assert_eq!(ns.diagnostics.len(), 3);
+    assert_eq!(ns.diagnostics.len(), 2);
     assert!(ns.diagnostics.contains_message("found contract 'test'"));
-    assert!(ns
-        .diagnostics
-        .contains_message("inline assembly is not yet supported"));
     assert!(ns
         .diagnostics
         .contains_message("yul variable 't' has never been read"));

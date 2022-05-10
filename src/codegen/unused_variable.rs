@@ -76,3 +76,5 @@ pub fn should_remove_variable(pos: &usize, func: &Function, opt: &Options) -> bo
 
     false
 }
+
+// TODO: unused variables should remove Yul assignments!

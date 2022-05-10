@@ -19,12 +19,13 @@ pub struct InlineAssembly {
 pub struct YulBlock {
     pub loc: pt::Loc,
     pub reachable: bool,
+    pub next_reachable: bool,
     pub body: Vec<YulStatement>,
 }
 
 impl YulBlock {
     pub fn is_next_reachable(&self) -> bool {
-        self.body.is_empty() || (!self.body.is_empty() && self.body.last().unwrap().is_reachable())
+        self.body.is_empty() || (!self.body.is_empty() && self.next_reachable)
     }
 }
 

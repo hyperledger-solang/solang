@@ -1295,6 +1295,12 @@ pub fn coerce_number(
         (Type::Int(_), Type::Rational) => {
             return Ok(Type::Rational);
         }
+        (Type::Bool, Type::Int(_) | Type::Uint(_)) => {
+            return Ok(r.clone());
+        }
+        (Type::Int(_) | Type::Uint(_), Type::Bool) => {
+            return Ok(l.clone());
+        }
         _ => (),
     }
 

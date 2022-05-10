@@ -3222,6 +3222,19 @@ pub trait TargetRuntime<'a> {
             );
 
             bin.builder.build_load(dest, "val")
+        } else if matches!(from, Type::Bool) && matches!(to, Type::Int(_) | Type::Uint(_)) {
+            bin.builder
+                .build_int_cast(
+                    val.into_int_value(),
+                    bin.llvm_type(to, ns).into_int_type(),
+                    "bool_to_int_cast",
+                )
+                .into()
+        } else if from.is_reference_type(ns) && matches!(to, Type::Uint(_)) {
+            bin.builder.build_ptr_to_int(val.into_pointer_value(),
+                bin.llvm_type(to, ns).into_int_type(),
+                "ptr_to_int"
+            ).into()
         } else {
             val
         }

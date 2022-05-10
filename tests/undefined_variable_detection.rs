@@ -9,7 +9,6 @@ fn parse_and_codegen(src: &'static str) -> Namespace {
     let mut cache = FileResolver::new();
     cache.set_file_contents("test.sol", src.to_string());
     let mut ns = parse_and_resolve(OsStr::new("test.sol"), &mut cache, Target::Ewasm);
-
     let opt = Options {
         dead_storage: false,
         constant_folding: false,
@@ -426,13 +425,7 @@ fn array() {
     "#;
     let ns = parse_and_codegen(file);
     let errors = ns.diagnostics.errors();
-    assert_eq!(errors.len(), 1);
-    assert_eq!(errors[0].message, "Variable 'vec' is undefined");
-    assert_eq!(errors[0].notes.len(), 1);
-    assert_eq!(
-        errors[0].notes[0].message,
-        "Variable read before being defined"
-    );
+    assert_eq!(errors.len(), 0);
 
     let file = r#"
     contract test {

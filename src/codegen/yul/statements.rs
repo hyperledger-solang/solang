@@ -150,7 +150,7 @@ fn process_variable_declaration(
             Instr::Set {
                 loc: *loc,
                 res: item.0,
-                expr: initializer[var_index].clone(),
+                expr: initializer[var_index].clone().cast(&item.1, ns),
             },
         );
     }
@@ -196,7 +196,6 @@ fn cfg_single_assigment(
         ast::YulExpression::YulLocalVariable(_, ty, var_no)
         | ast::YulExpression::SolidityLocalVariable(_, ty, None, var_no) => {
             // Ensure both types are compatible
-            // TODO: Does this work (for vectors and structs, which are pointers)?
             let rhs = rhs.cast(ty, ns);
             cfg.add(
                 vartab,
@@ -215,7 +214,6 @@ fn cfg_single_assigment(
             var_no,
         ) => {
             // This is an assignment to a pointer, so we make sure the rhs has a compatible size
-            // TODO: Does this work?
             let rhs = rhs.cast(ty, ns);
             cfg.add(
                 vartab,
@@ -374,9 +372,9 @@ fn process_for_block(
         return;
     }
 
-    let body_block = cfg.new_basic_block("body".to_string());
     let cond_block = cfg.new_basic_block("cond".to_string());
     let next_block = cfg.new_basic_block("next".to_string());
+    let body_block = cfg.new_basic_block("body".to_string());
     let end_block = cfg.new_basic_block("end_for".to_string());
 
     cfg.add(vartab, Instr::Branch { block: cond_block });

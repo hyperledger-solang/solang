@@ -76,8 +76,11 @@ strict digraph "tests/contract_testcases/solana/yul/function_cal_cond.sol" {
 =======
 	diagnostic_73 [label="yul variable 'x' has never been read\nlevel Warning\ntests/contract_testcases/solana/yul/function_cal_cond.sol:20:25-26"]
 	diagnostic_74 [label="yul variable 'x' has never been read\nlevel Warning\ntests/contract_testcases/solana/yul/function_cal_cond.sol:31:21-22"]
+<<<<<<< HEAD
 	diagnostic_75 [label="inline assembly is not yet supported\nlevel Error\ntests/contract_testcases/solana/yul/function_cal_cond.sol:3:9-33:10"]
 >>>>>>> Partial support for Yul
+=======
+>>>>>>> Add tests for yul codegen
 	contracts -> contract
 	contract -> testAsm [label="function"]
 	testAsm -> inline_assembly [label="body"]
@@ -155,6 +158,9 @@ strict digraph "tests/contract_testcases/solana/yul/function_cal_cond.sol" {
 =======
 	diagnostics -> diagnostic_73 [label="Warning"]
 	diagnostics -> diagnostic_74 [label="Warning"]
+<<<<<<< HEAD
 	diagnostics -> diagnostic_75 [label="Error"]
 >>>>>>> Partial support for Yul
+=======
+>>>>>>> Add tests for yul codegen
 }

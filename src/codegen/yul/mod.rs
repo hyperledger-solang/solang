@@ -74,9 +74,9 @@ fn yul_function_cfg(
     populate_named_returns(yul_func, ns, &mut cfg, &mut vartab);
 
     let returns = if yul_func.returns.is_empty() {
-        None
+        Instr::Return { value: vec![] }
     } else {
-        Some(Instr::Return {
+        Instr::Return {
             value: yul_func
                 .symtable
                 .returns
@@ -89,7 +89,7 @@ fn yul_function_cfg(
                     )
                 })
                 .collect::<Vec<Expression>>(),
-        })
+        }
     };
 
     for stmt in &yul_func.body {
@@ -100,7 +100,7 @@ fn yul_function_cfg(
             ns,
             &mut cfg,
             &mut vartab,
-            &returns,
+            &Some(returns.clone()),
             opt,
         );
     }
@@ -108,9 +108,7 @@ fn yul_function_cfg(
     if yul_func.body.is_empty()
         || (!yul_func.body.is_empty() && yul_func.body.last().unwrap().is_reachable())
     {
-        if let Some(ret) = returns {
-            cfg.add(&mut vartab, ret);
-        }
+        cfg.add(&mut vartab, returns);
     }
 
     let (vars, next_id) = vartab.drain();

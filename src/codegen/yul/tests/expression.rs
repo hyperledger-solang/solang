@@ -8,7 +8,7 @@ use crate::codegen::{Builtin, Expression, Options};
 use crate::sema::yul::ast;
 use crate::sema::yul::ast::YulSuffix;
 use crate::{sema, Target};
-use num_bigint::BigInt;
+use num_bigint::{BigInt, Sign};
 use solang_parser::pt::{ContractTy, Loc, StorageLocation, Visibility};
 
 #[test]
@@ -66,7 +66,11 @@ fn string_literal() {
     let res = expression(&expr, 0, &ns, &mut vartab, &mut cfg, &opt);
     assert_eq!(
         res,
-        Expression::BytesLiteral(loc, Type::Uint(128), vec![0, 3, 255, 127])
+        Expression::NumberLiteral(
+            loc,
+            Type::Uint(128),
+            BigInt::from_bytes_be(Sign::Plus, &[0, 3, 255, 127])
+        )
     );
 }
 
@@ -611,5 +615,3 @@ fn address_suffix_panic() {
     );
     let _res = expression(&expr, 0, &ns, &mut vartab, &mut cfg, &opt);
 }
-
-// TODO: function calls need cfg tests

@@ -111,11 +111,8 @@ fn correct_contracts() {
 }    "#;
 
     let ns = parse(file);
-    assert_eq!(ns.diagnostics.len(), 2);
+    assert_eq!(ns.diagnostics.len(), 1);
     assert!(ns
         .diagnostics
         .contains_message("found contract 'testTypes'"));
-    assert!(ns
-        .diagnostics
-        .contains_message("inline assembly is not yet supported"));
 }

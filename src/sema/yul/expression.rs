@@ -696,11 +696,21 @@ pub(crate) fn check_type(
                 }
             }
 
-            YulExpression::MemberAccess(_, _, YulSuffix::Offset) => {
-                return Some(Diagnostic::error(
-                    expr.loc(),
-                    "cannot assign a value to offset".to_string(),
-                ));
+            YulExpression::MemberAccess(_, member, YulSuffix::Offset) => {
+                if !matches!(
+                    **member,
+                    YulExpression::SolidityLocalVariable(
+                        _,
+                        _,
+                        Some(StorageLocation::Calldata(_)),
+                        _
+                    )
+                ) {
+                    return Some(Diagnostic::error(
+                        expr.loc(),
+                        "cannot assign a value to offset".to_string(),
+                    ));
+                }
             }
             YulExpression::MemberAccess(_, exp, YulSuffix::Slot) => {
                 if matches!(**exp, YulExpression::StorageVariable(..)) {
@@ -747,7 +757,7 @@ pub(crate) fn check_type(
             Some(StorageLocation::Calldata(_)),
             ..,
         ) => {
-            if dims[0].is_none() {
+            if dims.last().unwrap().is_none() {
                 return Some(Diagnostic::error(
                     expr.loc(),
                     "Calldata arrays must be accessed with '.offset', '.length' and the 'calldatacopy' function".to_string()

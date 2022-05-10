@@ -1,7 +1,8 @@
+use crate::ast::Type;
 use crate::codegen::Expression;
 
 /// This enum defines operator types for the graph
-#[derive(PartialEq, Eq, Hash, Copy, Clone)]
+#[derive(PartialEq, Eq, Hash, Clone)]
 pub enum Operator {
     Add,
     Subtract,
@@ -32,10 +33,10 @@ pub enum Operator {
     StringCompare,
     //Unary operations
     Not,
-    ZeroExt,
-    SignExt,
-    Trunc,
-    Cast,
+    ZeroExt(Type),
+    SignExt(Type),
+    Trunc(Type),
+    Cast(Type),
     BytesCast,
     UnaryMinus,
     Complement,
@@ -60,10 +61,10 @@ impl Expression {
             Expression::ShiftRight(_, _, _, _, true) => Operator::SignedShiftRight,
             Expression::ShiftRight(_, _, _, _, false) => Operator::UnsignedShiftRight,
             Expression::Not(..) => Operator::Not,
-            Expression::ZeroExt(..) => Operator::ZeroExt,
-            Expression::SignExt(..) => Operator::SignExt,
-            Expression::Trunc(..) => Operator::Trunc,
-            Expression::Cast(..) => Operator::Cast,
+            Expression::ZeroExt(_, ty, ..) => Operator::ZeroExt(ty.clone()),
+            Expression::SignExt(_, ty, ..) => Operator::SignExt(ty.clone()),
+            Expression::Trunc(_, ty, ..) => Operator::Trunc(ty.clone()),
+            Expression::Cast(_, ty, ..) => Operator::Cast(ty.clone()),
             Expression::BytesCast(..) => Operator::BytesCast,
             Expression::UnaryMinus(..) => Operator::UnaryMinus,
             Expression::SignedMore(..) => Operator::SignedMore,

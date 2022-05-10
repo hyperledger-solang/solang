@@ -6,7 +6,7 @@ use crate::codegen::yul::builtin::process_builtin;
 use crate::codegen::{Builtin, Expression, Options};
 use crate::sema::yul::ast;
 use crate::sema::yul::ast::YulSuffix;
-use num_bigint::BigInt;
+use num_bigint::{BigInt, Sign};
 use solang_parser::pt;
 use solang_parser::pt::{Loc, StorageLocation};
 
@@ -37,7 +37,7 @@ pub(crate) fn expression(
             Expression::NumberLiteral(*loc, ty.clone(), value.clone())
         }
         ast::YulExpression::StringLiteral(loc, value, ty) => {
-            Expression::BytesLiteral(*loc, ty.clone(), value.clone())
+            Expression::NumberLiteral(*loc, ty.clone(), BigInt::from_bytes_be(Sign::Plus, value))
         }
         ast::YulExpression::YulLocalVariable(loc, ty, var_no) => {
             Expression::Variable(*loc, ty.clone(), *var_no)
@@ -101,7 +101,6 @@ fn process_member_access(
     match suffix {
         YulSuffix::Slot => match expr {
             ast::YulExpression::StorageVariable(_, _, contract_no, var_no) => {
-                // TODO: Check if defaulting type to Uint(256) is going to work
                 return ns.contracts[*contract_no].get_storage_slot(
                     *contract_no,
                     *var_no,
@@ -115,7 +114,6 @@ fn process_member_access(
                 Some(StorageLocation::Storage(_)),
                 var_no,
             ) => {
-                // TODO: Check if defaulting type to Uint(256) is going to work
                 return Expression::Variable(*loc, Type::Uint(256), *var_no);
             }
 
@@ -129,19 +127,18 @@ fn process_member_access(
                 Some(StorageLocation::Storage(_)),
                 ..,
             ) => {
-                // TODO: Check if defaulting type to Uint(256) is going to work
                 return Expression::NumberLiteral(Loc::Codegen, Type::Uint(256), BigInt::from(0));
             }
 
             ast::YulExpression::SolidityLocalVariable(
                 _,
-                Type::Array(_, ref dims),
+                ty @ Type::Array(_, ref dims),
                 Some(StorageLocation::Calldata(_)),
                 var_no,
             ) => {
                 if dims.last().unwrap().is_none() {
-                    // TODO: Check if defaulting type to Uint(256) is going to work
-                    return Expression::Variable(*loc, Type::Uint(256), *var_no);
+                    return Expression::Cast(*loc, Type::Uint(256), Box::new(
+                        Expression::Variable(*loc, ty.clone(), *var_no)));
                 }
             }
 
@@ -156,11 +153,10 @@ fn process_member_access(
                 _,
             ) = expr
             {
-                // TODO: Check if defaulting type to Uint(256) is going to work
                 if dims.last().unwrap().is_none() {
                     return Expression::Builtin(
                         *loc,
-                        vec![Type::Uint(256)],
+                        vec![Type::Uint(32)],
                         Builtin::ArrayLength,
                         vec![expression(expr, contract_no, ns, vartab, cfg, opt)],
                     );
@@ -168,19 +164,27 @@ fn process_member_access(
             }
         }
 
-        YulSuffix::Selector | YulSuffix::Address => {
+        YulSuffix::Address => {
             if let ast::YulExpression::SolidityLocalVariable(_, Type::ExternalFunction { .. }, ..) =
                 expr
             {
-                // TODO: Check if defaulting type to Uint(256) is going to work
                 return Expression::Builtin(
                     *loc,
-                    vec![Type::Uint(256)],
-                    if matches!(suffix, YulSuffix::Selector) {
-                        Builtin::FunctionSelector
-                    } else {
-                        Builtin::ExternalFunctionAddress
-                    },
+                    vec![Type::Address(false)],
+                        Builtin::ExternalFunctionAddress,
+                    vec![expression(expr, contract_no, ns, vartab, cfg, opt)],
+                );
+            }
+        }
+
+        YulSuffix::Selector => {
+            if let ast::YulExpression::SolidityLocalVariable(_, Type::ExternalFunction { .. }, ..) =
+            expr
+            {
+                return Expression::Builtin(
+                    *loc,
+                    vec![Type::Uint(32)],
+                        Builtin::FunctionSelector,
                     vec![expression(expr, contract_no, ns, vartab, cfg, opt)],
                 );
             }
@@ -199,10 +203,12 @@ pub(crate) fn process_function_call(
     ns: &Namespace,
     opt: &Options,
 ) -> Vec<Expression> {
-    let args = args
-        .iter()
-        .map(|a| expression(a, contract_no, ns, vartab, cfg, opt))
-        .collect();
+    let mut codegen_args: Vec<Expression> = Vec::with_capacity(args.len());
+    for (param_no, item) in ns.yul_functions[function_no].params.iter().enumerate() {
+        codegen_args.push(
+            expression(&args[param_no], contract_no, ns, vartab, cfg, opt).cast(&item.ty, ns),
+        );
+    }
 
     let cfg_no = ns.yul_functions[function_no].cfg_no;
 
@@ -213,7 +219,7 @@ pub(crate) fn process_function_call(
                 res: Vec::new(),
                 return_tys: Vec::new(),
                 call: InternalCallTy::Static(cfg_no),
-                args,
+                args: codegen_args,
             },
         );
 
@@ -241,7 +247,7 @@ pub(crate) fn process_function_call(
         Instr::Call {
             res,
             call: InternalCallTy::Static(cfg_no),
-            args,
+            args: codegen_args,
             return_tys,
         },
     );

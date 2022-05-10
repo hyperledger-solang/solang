@@ -800,7 +800,7 @@ static YUL_BUILTIN: [YulBuiltinPrototype; 76] =
             doc: "selfdestruct(a) ends execution, destroy current contract and sends funds to a",
             ty: YulBuiltInFunction::SelfDestruct,
             stops_execution: true,
-            availability: [false, false, false],
+            availability: [true, true, true],
         },
         YulBuiltinPrototype {
             name: "invalid",
@@ -944,7 +944,7 @@ static YUL_BUILTIN: [YulBuiltinPrototype; 76] =
             doc: "Returns the current block's gas limit",
             ty: YulBuiltInFunction::GasLimit,
             stops_execution: false,
-            availability: [true, true, false],
+            availability: [true, false, false],
         },
     ];
 

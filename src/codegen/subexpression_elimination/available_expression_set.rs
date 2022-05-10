@@ -132,7 +132,9 @@ impl AvailableExpressionSet {
         let operator = exp.get_ave_operator();
 
         if let Some(exp_id) = self.expr_map.get(&ExpressionType::BinaryOperation(
-            left_id, right_id, operator,
+            left_id,
+            right_id,
+            operator.clone(),
         )) {
             Some(*exp_id)
         } else {
@@ -383,7 +385,7 @@ impl AvailableExpressionSet {
 
         let operator = exp.get_ave_operator();
         let expr_type_1 =
-            ExpressionType::BinaryOperation(left_id.unwrap(), right_id.unwrap(), operator);
+            ExpressionType::BinaryOperation(left_id.unwrap(), right_id.unwrap(), operator.clone());
         let expr_type_2 =
             ExpressionType::BinaryOperation(right_id.unwrap(), left_id.unwrap(), operator);
 

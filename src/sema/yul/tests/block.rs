@@ -41,13 +41,10 @@ contract testTypes {
 }
     "#;
     let ns = parse(file);
-    assert_eq!(ns.diagnostics.len(), 3);
+    assert_eq!(ns.diagnostics.len(), 2);
     assert!(ns
         .diagnostics
         .contains_message("found contract 'testTypes'"));
-    assert!(ns
-        .diagnostics
-        .contains_message("inline assembly is not yet supported"));
     assert!(ns
         .diagnostics
         .contains_message("yul function has never been used"));
@@ -97,13 +94,10 @@ contract testTypes {
 }
     "#;
     let ns = parse(file);
-    assert_eq!(ns.diagnostics.len(), 2);
+    assert_eq!(ns.diagnostics.len(), 1);
     assert!(ns
         .diagnostics
         .contains_message("found contract 'testTypes'"));
-    assert!(ns
-        .diagnostics
-        .contains_message("inline assembly is not yet supported"));
 }
 
 #[test]
@@ -150,13 +144,10 @@ contract testTypes {
 }
     "#;
     let ns = parse(file);
-    assert_eq!(ns.diagnostics.len(), 2);
+    assert_eq!(ns.diagnostics.len(), 1);
     assert!(ns
         .diagnostics
         .contains_message("found contract 'testTypes'"));
-    assert!(ns
-        .diagnostics
-        .contains_message("inline assembly is not yet supported"));
 }
 
 #[test]
@@ -293,13 +284,10 @@ contract testTypes {
 }   "#;
 
     let ns = parse(file);
-    assert_eq!(ns.diagnostics.len(), 5);
+    assert_eq!(ns.diagnostics.len(), 4);
     assert!(ns
         .diagnostics
         .contains_message("found contract 'testTypes'"));
-    assert!(ns
-        .diagnostics
-        .contains_message("inline assembly is not yet supported"));
     assert!(ns.diagnostics.contains_message("unreachable yul statement"));
     assert!(ns
         .diagnostics

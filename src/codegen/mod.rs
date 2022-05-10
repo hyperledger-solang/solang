@@ -876,21 +876,20 @@ impl Expression {
                 Expression::BytesCast(self.loc(), from.clone(), to.clone(), Box::new(self.clone()))
             }
 
-            // (Type::Uint(from_len) | Type::Int(from_len), Type::Ref(_) | Type::StorageRef(_, _)) => {
-            //     // TODO: Does this cast work? No, it does not.
-            //     let to_len = ns.target.ptr_size();
-            //     match from_len.cmp(&to_len) {
-            //         Ordering::Equal => {
-            //             Expression::Cast(self.loc(), Type::Uint(to_len), Box::new(self.clone()))
-            //         }
-            //         Ordering::Less => {
-            //             Expression::ZeroExt(self.loc(), Type::Uint(to_len), Box::new(self.clone()))
-            //         }
-            //         Ordering::Greater => {
-            //             Expression::Trunc(self.loc(), Type::Uint(to_len), Box::new(self.clone()))
-            //         }
-            //     }
-            // }
+            (Type::Bool, Type::Int(_) | Type::Uint(_)) => {
+                Expression::Cast(self.loc(), to.clone(), Box::new(self.clone()))
+            }
+
+            (Type::Int(_) | Type::Uint(_), Type::Bool) => Expression::NotEqual(
+                self.loc(),
+                Box::new(Expression::NumberLiteral(
+                    self.loc(),
+                    self.ty(),
+                    BigInt::zero(),
+                )),
+                Box::new(self.clone()),
+            ),
+
             (Type::Bytes(_), Type::Uint(_))
             | (Type::Bytes(_), Type::Int(_))
             | (Type::Uint(_), Type::Bytes(_))
