@@ -3,10 +3,9 @@
 //  - comments and doc comments
 //  - pragma value is [^;]+
 //
+use itertools::{peek_nth, PeekNth};
 use phf::phf_map;
-use std::fmt;
-use std::iter::Peekable;
-use std::str::CharIndices;
+use std::{fmt, str::CharIndices};
 use unicode_xid::UnicodeXID;
 
 use crate::pt::{CodeLocation, Comment, CommentType, Loc};
@@ -335,7 +334,7 @@ impl<'input> fmt::Display for Token<'input> {
 
 pub struct Lexer<'input> {
     input: &'input str,
-    chars: Peekable<CharIndices<'input>>,
+    chars: PeekNth<CharIndices<'input>>,
     comments: &'input mut Vec<Comment>,
     file_no: usize,
     last_tokens: [Option<Token<'input>>; 2],
@@ -350,8 +349,6 @@ pub enum LexicalError {
     InvalidCharacterInHexLiteral(Loc, char),
     UnrecognisedToken(Loc, String),
     MissingExponent(Loc),
-    DoublePoints(Loc),
-    UnrecognisedDecimal(Loc),
     ExpectedFrom(Loc, String),
 }
 
@@ -372,10 +369,6 @@ impl fmt::Display for LexicalError {
             LexicalError::UnrecognisedToken(_, t) => write!(f, "unrecognised token '{}'", t),
             LexicalError::ExpectedFrom(_, t) => write!(f, "'{}' found where 'from' expected", t),
             LexicalError::MissingExponent(..) => write!(f, "missing number"),
-            LexicalError::DoublePoints(..) => write!(f, "found two dots in number"),
-            LexicalError::UnrecognisedDecimal(..) => {
-                write!(f, "expected number after decimal point")
-            }
         }
     }
 }
@@ -390,9 +383,7 @@ impl CodeLocation for LexicalError {
             | LexicalError::InvalidCharacterInHexLiteral(loc, _)
             | LexicalError::UnrecognisedToken(loc, ..)
             | LexicalError::ExpectedFrom(loc, ..)
-            | LexicalError::MissingExponent(loc, ..)
-            | LexicalError::DoublePoints(loc, ..)
-            | LexicalError::UnrecognisedDecimal(loc, ..) => *loc,
+            | LexicalError::MissingExponent(loc, ..) => *loc,
         }
     }
 }
@@ -579,7 +570,7 @@ impl<'input> Lexer<'input> {
     pub fn new(input: &'input str, file_no: usize, comments: &'input mut Vec<Comment>) -> Self {
         Lexer {
             input,
-            chars: input.char_indices().peekable(),
+            chars: peek_nth(input.char_indices()),
             comments,
             file_no,
             last_tokens: [None, None],
@@ -650,41 +641,22 @@ impl<'input> Lexer<'input> {
             rational_start = start + 1;
         }
 
-        if let Some((i, '.')) = self.chars.peek() {
-            if is_rational {
-                return Err(LexicalError::DoublePoints(Loc::File(
-                    self.file_no,
-                    start,
-                    self.input.len(),
-                )));
-            }
-            rational_start = *i + 1;
-            rational_end = *i + 1;
-            let mut has_number = false;
-            is_rational = true;
-            self.chars.next();
-            while let Some((i, ch)) = self.chars.peek() {
-                if *ch == '.' {
-                    return Err(LexicalError::DoublePoints(Loc::File(
-                        self.file_no,
-                        start,
-                        self.input.len(),
-                    )));
+        if let Some((_, '.')) = self.chars.peek() {
+            if let Some((i, ch)) = self.chars.peek_nth(1) {
+                if ch.is_ascii_digit() && !is_rational {
+                    rational_start = *i;
+                    rational_end = *i;
+                    is_rational = true;
+                    self.chars.next(); // advance over '.'
+                    while let Some((i, ch)) = self.chars.peek() {
+                        if !ch.is_ascii_digit() {
+                            break;
+                        }
+                        rational_end = *i;
+                        end = *i;
+                        self.chars.next();
+                    }
                 }
-                if !ch.is_ascii_digit() {
-                    break;
-                }
-                has_number = true;
-                rational_end = *i;
-                end = *i;
-                self.chars.next();
-            }
-            if !has_number {
-                return Err(LexicalError::UnrecognisedDecimal(Loc::File(
-                    self.file_no,
-                    start,
-                    self.input.len(),
-                )));
             }
         }
 
@@ -715,13 +687,6 @@ impl<'input> Lexer<'input> {
             let significand = &self.input[start..=end_before_rational];
             let mantissa = &self.input[rational_start..=rational_end];
 
-            if mantissa.is_empty() {
-                return Err(LexicalError::UnrecognisedDecimal(Loc::File(
-                    self.file_no,
-                    start,
-                    self.input.len(),
-                )));
-            }
             let exp = &self.input[exp_start..=end];
             return Ok((
                 start,
@@ -1608,6 +1573,31 @@ fn lexertest() {
         vec!(
             Err(LexicalError::MissingExponent(Loc::File(0, 0, 3))),
             Ok((2, Token::Identifier("a"), 3))
+        )
+    );
+
+    let tokens = Lexer::new(r#"42.a"#, 0, &mut comments)
+        .collect::<Vec<Result<(usize, Token, usize), LexicalError>>>();
+
+    assert_eq!(
+        tokens,
+        vec!(
+            Ok((0, Token::Number("42", ""), 2)),
+            Ok((2, Token::Member, 3)),
+            Ok((3, Token::Identifier("a"), 4))
+        )
+    );
+
+    let tokens = Lexer::new(r#"42..a"#, 0, &mut comments)
+        .collect::<Vec<Result<(usize, Token, usize), LexicalError>>>();
+
+    assert_eq!(
+        tokens,
+        vec!(
+            Ok((0, Token::Number("42", ""), 2)),
+            Ok((2, Token::Member, 3)),
+            Ok((3, Token::Member, 4)),
+            Ok((4, Token::Identifier("a"), 5))
         )
     );
 }
