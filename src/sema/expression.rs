@@ -6097,14 +6097,11 @@ fn method_call_pos_args(
             }
         }
 
-        let self_ty = var_ty.deref_any();
-
         // what about call args
         match using::try_resolve_using_call(
             loc,
             func,
             &var_expr,
-            self_ty,
             context,
             args,
             symtable,
@@ -6280,13 +6277,10 @@ fn method_call_pos_args(
     }
 
     // resolve it using library extension
-    let self_ty = var_ty.deref_any();
-
     match using::try_resolve_using_call(
         loc,
         func,
         &var_expr,
-        self_ty,
         context,
         args,
         symtable,
