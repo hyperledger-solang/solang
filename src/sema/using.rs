@@ -169,14 +169,17 @@ fn possible_functions(
     using: &[Using],
     file_no: usize,
     function_name: &str,
-    self_ty: &Type,
+    self_expr: &Expression,
     ns: &Namespace,
 ) -> HashSet<usize> {
+    let mut diagnostics = Vec::new();
     using
         .iter()
         .filter(|using| {
             if let Some(ty) = &using.ty {
-                self_ty == ty
+                self_expr
+                    .cast(&self_expr.loc(), ty, true, ns, &mut diagnostics)
+                    .is_ok()
             } else {
                 true
             }
@@ -201,11 +204,10 @@ fn possible_functions(
         .collect()
 }
 
-pub(crate) fn try_resolve_using_call(
+pub(super) fn try_resolve_using_call(
     loc: &pt::Loc,
     func: &pt::Identifier,
     self_expr: &Expression,
-    self_ty: &Type,
     context: &ExprContext,
     args: &[pt::Expression],
     symtable: &mut Symtable,
@@ -217,14 +219,14 @@ pub(crate) fn try_resolve_using_call(
     // Use HashSet for deduplication.
     // If the using directive specifies a type, the type must match the type of
     // the method call object exactly.
-    let mut functions = possible_functions(&ns.using, context.file_no, &func.name, self_ty, ns);
+    let mut functions = possible_functions(&ns.using, context.file_no, &func.name, self_expr, ns);
 
     if let Some(contract_no) = context.contract_no {
         functions.extend(possible_functions(
             &ns.contracts[contract_no].using,
             context.file_no,
             &func.name,
-            self_ty,
+            self_expr,
             ns,
         ));
     }
