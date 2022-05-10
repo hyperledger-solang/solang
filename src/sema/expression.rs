@@ -784,13 +784,7 @@ impl Expression {
                 match eval_const_rational(self, ns) {
                     Ok((_, big_number)) => {
                         if big_number.is_integer() {
-                            let expr = Expression::NumberLiteral(
-                                self.loc(),
-                                to.clone(),
-                                big_number.to_integer(),
-                            );
-
-                            return expr.cast(loc, to, true, ns, diagnostics);
+                            return Ok(Expression::Cast(*loc, to.clone(), Box::new(self.clone())));
                         }
 
                         diagnostics.push(Diagnostic::type_error(
