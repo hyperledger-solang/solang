@@ -527,7 +527,11 @@ pub fn expression(
             }
         }
         ast::Expression::Cast(loc, ty, e) => {
-            if matches!(ty, Type::String | Type::DynamicBytes)
+            if e.ty() == Type::Rational {
+                let (_, n) = eval_const_rational(e, ns).unwrap();
+
+                Expression::NumberLiteral(*loc, ty.clone(), n.to_integer())
+            } else if matches!(ty, Type::String | Type::DynamicBytes)
                 && matches!(expr.ty(), Type::String | Type::DynamicBytes)
             {
                 expression(e, cfg, contract_no, func, ns, vartab, opt)
