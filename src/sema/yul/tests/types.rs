@@ -26,7 +26,7 @@ fn incompatible_argument() {
 contract testTypes {
     function testAsm() public view {
         assembly {
-            let x := add(log0(0, 1), 5)
+            let x := add(invalid(), 5)
         }
     }
 }
@@ -34,7 +34,7 @@ contract testTypes {
     let ns = parse(file);
     assert!(ns
         .diagnostics
-        .contains_message("builtin function 'log0' returns nothing"));
+        .contains_message("builtin function 'invalid' returns nothing"));
 
     let file = r#"
     contract testTypes {

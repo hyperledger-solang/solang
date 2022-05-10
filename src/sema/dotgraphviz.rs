@@ -1685,7 +1685,7 @@ impl Dot {
             YulExpression::BuiltInCall(loc, builtin_ty, args) => {
                 self.add_yul_builtin_call(loc, builtin_ty, args, parent, parent_rel, symtable, ns);
             }
-            YulExpression::FunctionCall(loc, func_no, args) => {
+            YulExpression::FunctionCall(loc, func_no, args, _) => {
                 self.add_yul_function_call(loc, func_no, args, parent, parent_rel, symtable, ns);
             }
             YulExpression::MemberAccess(loc, member, suffix) => {
@@ -1798,7 +1798,7 @@ impl Dot {
                 );
 
                 for (decl_no, item) in declared_vars.iter().enumerate() {
-                    let var = &symtable.vars[item];
+                    let var = &symtable.vars[&item.0];
                     self.add_node(
                         Node::new(
                             "var_decl_item",

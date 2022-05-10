@@ -58,15 +58,28 @@ impl Expression {
                 Box::new(left.clone()),
                 Box::new(right.clone()),
             ),
-
-            Expression::Divide(loc, expr_type, ..) => Expression::Divide(
+            Expression::UnsignedDivide(loc, expr_type, ..) => Expression::UnsignedDivide(
                 *loc,
                 expr_type.clone(),
                 Box::new(left.clone()),
                 Box::new(right.clone()),
             ),
 
-            Expression::Modulo(loc, expr_type, ..) => Expression::Modulo(
+            Expression::SignedDivide(loc, expr_type, ..) => Expression::SignedDivide(
+                *loc,
+                expr_type.clone(),
+                Box::new(left.clone()),
+                Box::new(right.clone()),
+            ),
+
+            Expression::SignedModulo(loc, expr_type, ..) => Expression::SignedModulo(
+                *loc,
+                expr_type.clone(),
+                Box::new(left.clone()),
+                Box::new(right.clone()),
+            ),
+
+            Expression::UnsignedModulo(loc, expr_type, ..) => Expression::UnsignedModulo(
                 *loc,
                 expr_type.clone(),
                 Box::new(left.clone()),
@@ -96,12 +109,20 @@ impl Expression {
                 *check,
             ),
 
-            Expression::More(loc, ..) => {
-                Expression::More(*loc, Box::new(left.clone()), Box::new(right.clone()))
+            Expression::SignedMore(loc, ..) => {
+                Expression::SignedMore(*loc, Box::new(left.clone()), Box::new(right.clone()))
             }
 
-            Expression::Less(loc, ..) => {
-                Expression::Less(*loc, Box::new(left.clone()), Box::new(right.clone()))
+            Expression::UnsignedMore(loc, ..) => {
+                Expression::UnsignedMore(*loc, Box::new(left.clone()), Box::new(right.clone()))
+            }
+
+            Expression::UnsignedLess(loc, ..) => {
+                Expression::UnsignedLess(*loc, Box::new(left.clone()), Box::new(right.clone()))
+            }
+
+            Expression::SignedLess(loc, ..) => {
+                Expression::SignedLess(*loc, Box::new(left.clone()), Box::new(right.clone()))
             }
 
             Expression::MoreEqual(loc, ..) => {
@@ -209,13 +230,17 @@ impl Expression {
     pub fn get_non_commutative_operands(&self) -> Option<(&Expression, &Expression)> {
         match self {
             Expression::Subtract(_, _, _, left, right)
-            | Expression::Divide(_, _, left, right)
-            | Expression::Modulo(_, _, left, right)
+            | Expression::UnsignedDivide(_, _, left, right)
+            | Expression::SignedDivide(_, _, left, right)
+            | Expression::SignedModulo(_, _, left, right)
+            | Expression::UnsignedModulo(_, _, left, right)
             | Expression::Power(_, _, _, left, right)
             | Expression::ShiftLeft(_, _, left, right)
             | Expression::ShiftRight(_, _, left, right, _)
-            | Expression::More(_, left, right)
-            | Expression::Less(_, left, right)
+            | Expression::SignedMore(_, left, right)
+            | Expression::UnsignedMore(_, left, right)
+            | Expression::SignedLess(_, left, right)
+            | Expression::UnsignedLess(_, left, right)
             | Expression::MoreEqual(_, left, right)
             | Expression::LessEqual(_, left, right) => Some((left, right)),
 

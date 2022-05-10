@@ -506,7 +506,8 @@ fn expression(
                 left.1 && right.1,
             )
         }
-        Expression::Divide(loc, ty, left, right) => {
+        Expression::UnsignedDivide(loc, ty, left, right)
+        | Expression::SignedDivide(loc, ty, left, right) => {
             let left = expression(left, vars, cfg, ns);
             let right = expression(right, vars, cfg, ns);
 
@@ -518,13 +519,22 @@ fn expression(
                     return bigint_to_expression(loc, ty, left.div(right));
                 }
             }
-
             (
-                Expression::Divide(*loc, ty.clone(), Box::new(left.0), Box::new(right.0)),
+                if matches!(expr, Expression::SignedDivide(..)) {
+                    Expression::SignedDivide(*loc, ty.clone(), Box::new(left.0), Box::new(right.0))
+                } else {
+                    Expression::UnsignedDivide(
+                        *loc,
+                        ty.clone(),
+                        Box::new(left.0),
+                        Box::new(right.0),
+                    )
+                },
                 left.1 && right.1,
             )
         }
-        Expression::Modulo(loc, ty, left, right) => {
+        Expression::SignedModulo(loc, ty, left, right)
+        | Expression::UnsignedModulo(loc, ty, left, right) => {
             let left = expression(left, vars, cfg, ns);
             let right = expression(right, vars, cfg, ns);
 
@@ -538,7 +548,16 @@ fn expression(
             }
 
             (
-                Expression::Modulo(*loc, ty.clone(), Box::new(left.0), Box::new(right.0)),
+                if matches!(expr, Expression::SignedModulo(..)) {
+                    Expression::SignedModulo(*loc, ty.clone(), Box::new(left.0), Box::new(right.0))
+                } else {
+                    Expression::UnsignedModulo(
+                        *loc,
+                        ty.clone(),
+                        Box::new(left.0),
+                        Box::new(right.0),
+                    )
+                },
                 left.1 && right.1,
             )
         }
@@ -843,21 +862,39 @@ fn expression(
                 false,
             )
         }
-        Expression::More(loc, left, right) => {
+        Expression::UnsignedMore(loc, left, right) => {
             let left = expression(left, vars, cfg, ns);
             let right = expression(right, vars, cfg, ns);
 
             (
-                Expression::More(*loc, Box::new(left.0), Box::new(right.0)),
+                Expression::UnsignedMore(*loc, Box::new(left.0), Box::new(right.0)),
                 false,
             )
         }
-        Expression::Less(loc, left, right) => {
+        Expression::SignedMore(loc, left, right) => {
             let left = expression(left, vars, cfg, ns);
             let right = expression(right, vars, cfg, ns);
 
             (
-                Expression::Less(*loc, Box::new(left.0), Box::new(right.0)),
+                Expression::SignedMore(*loc, Box::new(left.0), Box::new(right.0)),
+                false,
+            )
+        }
+        Expression::SignedLess(loc, left, right) => {
+            let left = expression(left, vars, cfg, ns);
+            let right = expression(right, vars, cfg, ns);
+
+            (
+                Expression::SignedLess(*loc, Box::new(left.0), Box::new(right.0)),
+                false,
+            )
+        }
+        Expression::UnsignedLess(loc, left, right) => {
+            let left = expression(left, vars, cfg, ns);
+            let right = expression(right, vars, cfg, ns);
+
+            (
+                Expression::UnsignedLess(*loc, Box::new(left.0), Box::new(right.0)),
                 false,
             )
         }

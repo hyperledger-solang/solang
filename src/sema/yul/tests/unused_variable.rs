@@ -10,7 +10,7 @@ contract testTypes {
             let a
             for {let i := 11
               } lt(i, 10) {i := add(i, 1)
-            stop()
+            invalid()
         } {
                 let x := shr(i, 2)
                 let b := shr(6, 5)
@@ -35,7 +35,7 @@ contract testTypes {
             for {let i := 11
                 let c :=5
               } lt(i, 10) {i := add(i, 1)
-            stop()
+            invalid()
         } {
                 let x := shr(i, 2)
                 let b := shr(6, 5)
@@ -63,7 +63,7 @@ fn correct_contracts() {
             for {let i := 11
                 let c :=5
               } c {i := add(i, 1)
-            stop()
+            invalid()
         } {
                 let x := shr(i, 2)
                 let b := shr(6, 5)
@@ -100,12 +100,12 @@ fn correct_contracts() {
         int b;
     }
     test tt1;
-    function testAsm(uint256[] calldata vl) public {
+    function testAsm(uint256[] calldata vl) view public {
         test storage tt2 = tt1;
         assembly {
             let g := vl.length
             let adr := add(g, tt2.slot)
-            sstore(adr, b.slot)
+            tt2.slot := sub(adr, b.slot)
         }
     }
 }    "#;

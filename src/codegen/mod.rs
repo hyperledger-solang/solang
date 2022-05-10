@@ -30,6 +30,7 @@ use std::cmp::Ordering;
 use crate::ast::Function;
 use crate::ast::{FormatArg, RetrieveType, StringLocation, Type};
 use crate::codegen::cfg::ASTFunction;
+use crate::codegen::yul::generate_yul_function_cfg;
 use crate::sema::Recurse;
 use num_bigint::{BigInt, Sign};
 use num_rational::BigRational;
@@ -180,11 +181,10 @@ fn contract(contract_no: usize, ns: &mut Namespace, opt: &Options) {
             cfg_no += 1;
         }
 
-        // TODO: This should be done when we create a CFG for yul functions, which is not the case yet
-        // for yul_fn_no in &ns.contracts[contract_no].yul_functions {
-        //     ns.yul_functions[*yul_fn_no].cfg_no = cfg_no;
-        //     cfg_no += 1;
-        // }
+        for yul_fn_no in &ns.contracts[contract_no].yul_functions {
+            ns.yul_functions[*yul_fn_no].cfg_no = cfg_no;
+            cfg_no += 1;
+        }
 
         all_cfg.resize(cfg_no, ControlFlowGraph::placeholder());
 
@@ -206,9 +206,9 @@ fn contract(contract_no: usize, ns: &mut Namespace, opt: &Options) {
             )
         }
 
-        // for yul_func_no in &ns.contracts[contract_no].yul_functions {
-        //     // TODO: Generate Yul function CFG
-        // }
+        for yul_func_no in ns.contracts[contract_no].yul_functions.clone() {
+            generate_yul_function_cfg(contract_no, yul_func_no, &mut all_cfg, ns, opt);
+        }
 
         // Generate cfg for storage initializers
         let cfg = storage_initializer(contract_no, ns, opt);
@@ -244,8 +244,12 @@ fn storage_initializer(contract_no: usize, ns: &mut Namespace, opt: &Options) ->
         let var = &ns.contracts[layout.contract_no].variables[layout.var_no];
 
         if let Some(init) = &var.initializer {
-            let storage =
-                ns.contracts[contract_no].get_storage_slot(layout.contract_no, layout.var_no, ns);
+            let storage = ns.contracts[contract_no].get_storage_slot(
+                layout.contract_no,
+                layout.var_no,
+                ns,
+                None,
+            );
 
             let value = expression(init, &mut cfg, contract_no, None, ns, &mut vartab, opt);
 
@@ -266,7 +270,7 @@ fn storage_initializer(contract_no: usize, ns: &mut Namespace, opt: &Options) ->
     cfg.vars = vars;
     ns.next_id = next_id;
 
-    optimize_and_check_cfg(&mut cfg, ns, None, opt);
+    optimize_and_check_cfg(&mut cfg, ns, ASTFunction::None, opt);
 
     cfg
 }
@@ -357,7 +361,8 @@ pub enum Expression {
     CodeLiteral(pt::Loc, usize, bool),
     Complement(pt::Loc, Type, Box<Expression>),
     ConstArrayLiteral(pt::Loc, Type, Vec<u32>, Vec<Expression>),
-    Divide(pt::Loc, Type, Box<Expression>, Box<Expression>),
+    UnsignedDivide(pt::Loc, Type, Box<Expression>, Box<Expression>),
+    SignedDivide(pt::Loc, Type, Box<Expression>, Box<Expression>),
     Equal(pt::Loc, Box<Expression>, Box<Expression>),
     ExternalFunction {
         loc: pt::Loc,
@@ -371,11 +376,14 @@ pub enum Expression {
     InternalFunctionCfg(usize),
     Keccak256(pt::Loc, Type, Vec<Expression>),
     List(pt::Loc, Vec<Expression>),
-    Less(pt::Loc, Box<Expression>, Box<Expression>),
+    SignedLess(pt::Loc, Box<Expression>, Box<Expression>),
+    UnsignedLess(pt::Loc, Box<Expression>, Box<Expression>),
     LessEqual(pt::Loc, Box<Expression>, Box<Expression>),
     Load(pt::Loc, Type, Box<Expression>),
-    Modulo(pt::Loc, Type, Box<Expression>, Box<Expression>),
-    More(pt::Loc, Box<Expression>, Box<Expression>),
+    UnsignedModulo(pt::Loc, Type, Box<Expression>, Box<Expression>),
+    SignedModulo(pt::Loc, Type, Box<Expression>, Box<Expression>),
+    SignedMore(pt::Loc, Box<Expression>, Box<Expression>),
+    UnsignedMore(pt::Loc, Box<Expression>, Box<Expression>),
     MoreEqual(pt::Loc, Box<Expression>, Box<Expression>),
     Multiply(pt::Loc, Type, bool, Box<Expression>, Box<Expression>),
     Not(pt::Loc, Box<Expression>),
@@ -441,8 +449,10 @@ impl CodeLocation for Expression {
             | Expression::FormatString(loc, ..)
             | Expression::LessEqual(loc, ..)
             | Expression::BoolLiteral(loc, ..)
-            | Expression::Divide(loc, ..)
-            | Expression::Modulo(loc, ..)
+            | Expression::UnsignedDivide(loc, ..)
+            | Expression::SignedDivide(loc, ..)
+            | Expression::UnsignedModulo(loc, ..)
+            | Expression::SignedModulo(loc, ..)
             | Expression::Power(loc, ..)
             | Expression::BitwiseOr(loc, ..)
             | Expression::BitwiseAnd(loc, ..)
@@ -451,7 +461,8 @@ impl CodeLocation for Expression {
             | Expression::NotEqual(loc, ..)
             | Expression::Complement(loc, ..)
             | Expression::UnaryMinus(loc, ..)
-            | Expression::Less(loc, ..)
+            | Expression::UnsignedLess(loc, ..)
+            | Expression::SignedLess(loc, ..)
             | Expression::Not(loc, ..)
             | Expression::StructLiteral(loc, ..)
             | Expression::ArrayLiteral(loc, ..)
@@ -467,7 +478,8 @@ impl CodeLocation for Expression {
             | Expression::RationalNumberLiteral(loc, ..)
             | Expression::AllocDynamicArray(loc, ..)
             | Expression::BytesCast(loc, ..)
-            | Expression::More(loc, ..)
+            | Expression::SignedMore(loc, ..)
+            | Expression::UnsignedMore(loc, ..)
             | Expression::ZeroExt(loc, ..) => *loc,
 
             Expression::InternalFunctionCfg(_) | Expression::Poison | Expression::Undefined(_) => {
@@ -496,12 +508,15 @@ impl Recurse for Expression {
 
             Expression::BitwiseAnd(_, _, left, right)
             | Expression::BitwiseOr(_, _, left, right)
-            | Expression::Divide(_, _, left, right)
+            | Expression::UnsignedDivide(_, _, left, right)
+            | Expression::SignedDivide(_, _, left, right)
             | Expression::Equal(_, left, right)
-            | Expression::Less(_, left, right)
+            | Expression::UnsignedLess(_, left, right)
+            | Expression::SignedLess(_, left, right)
             | Expression::LessEqual(_, left, right)
             | Expression::BitwiseXor(_, _, left, right)
-            | Expression::More(_, left, right)
+            | Expression::SignedMore(_, left, right)
+            | Expression::UnsignedMore(_, left, right)
             | Expression::MoreEqual(_, left, right)
             | Expression::Multiply(_, _, _, left, right)
             | Expression::NotEqual(_, left, right)
@@ -588,8 +603,10 @@ impl RetrieveType for Expression {
             | Expression::NumberLiteral(_, ty, ..)
             | Expression::Multiply(_, ty, ..)
             | Expression::Subtract(_, ty, ..)
-            | Expression::Divide(_, ty, ..)
-            | Expression::Modulo(_, ty, ..)
+            | Expression::SignedDivide(_, ty, ..)
+            | Expression::UnsignedDivide(_, ty, ..)
+            | Expression::SignedModulo(_, ty, ..)
+            | Expression::UnsignedModulo(_, ty, ..)
             | Expression::Power(_, ty, ..)
             | Expression::BitwiseOr(_, ty, ..)
             | Expression::BitwiseAnd(_, ty, ..)
@@ -613,10 +630,12 @@ impl RetrieveType for Expression {
 
             Expression::BoolLiteral(..)
             | Expression::MoreEqual(..)
-            | Expression::More(..)
+            | Expression::SignedMore(..)
+            | Expression::UnsignedMore(..)
             | Expression::Not(..)
             | Expression::NotEqual(..)
-            | Expression::Less(..)
+            | Expression::UnsignedLess(..)
+            | Expression::SignedLess(..)
             | Expression::Equal(..)
             | Expression::StringCompare(..)
             | Expression::LessEqual(..) => Type::Bool,
@@ -857,6 +876,21 @@ impl Expression {
                 Expression::BytesCast(self.loc(), from.clone(), to.clone(), Box::new(self.clone()))
             }
 
+            // (Type::Uint(from_len) | Type::Int(from_len), Type::Ref(_) | Type::StorageRef(_, _)) => {
+            //     // TODO: Does this cast work? No, it does not.
+            //     let to_len = ns.target.ptr_size();
+            //     match from_len.cmp(&to_len) {
+            //         Ordering::Equal => {
+            //             Expression::Cast(self.loc(), Type::Uint(to_len), Box::new(self.clone()))
+            //         }
+            //         Ordering::Less => {
+            //             Expression::ZeroExt(self.loc(), Type::Uint(to_len), Box::new(self.clone()))
+            //         }
+            //         Ordering::Greater => {
+            //             Expression::Trunc(self.loc(), Type::Uint(to_len), Box::new(self.clone()))
+            //         }
+            //     }
+            // }
             (Type::Bytes(_), Type::Uint(_))
             | (Type::Bytes(_), Type::Int(_))
             | (Type::Uint(_), Type::Bytes(_))
@@ -928,7 +962,13 @@ impl Expression {
                     Box::new(filter(left, ctx)),
                     Box::new(filter(right, ctx)),
                 ),
-                Expression::Divide(loc, ty, left, right) => Expression::Divide(
+                Expression::UnsignedDivide(loc, ty, left, right) => Expression::UnsignedDivide(
+                    *loc,
+                    ty.clone(),
+                    Box::new(filter(left, ctx)),
+                    Box::new(filter(right, ctx)),
+                ),
+                Expression::SignedDivide(loc, ty, left, right) => Expression::SignedDivide(
                     *loc,
                     ty.clone(),
                     Box::new(filter(left, ctx)),
@@ -995,12 +1035,22 @@ impl Expression {
                     from.clone(),
                     Box::new(filter(expr, ctx)),
                 ),
-                Expression::More(loc, left, right) => Expression::More(
+                Expression::SignedMore(loc, left, right) => Expression::SignedMore(
                     *loc,
                     Box::new(filter(left, ctx)),
                     Box::new(filter(right, ctx)),
                 ),
-                Expression::Less(loc, left, right) => Expression::Less(
+                Expression::UnsignedMore(loc, left, right) => Expression::UnsignedMore(
+                    *loc,
+                    Box::new(filter(left, ctx)),
+                    Box::new(filter(right, ctx)),
+                ),
+                Expression::UnsignedLess(loc, left, right) => Expression::UnsignedLess(
+                    *loc,
+                    Box::new(filter(left, ctx)),
+                    Box::new(filter(right, ctx)),
+                ),
+                Expression::SignedLess(loc, left, right) => Expression::SignedLess(
                     *loc,
                     Box::new(filter(left, ctx)),
                     Box::new(filter(right, ctx)),

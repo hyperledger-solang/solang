@@ -386,6 +386,13 @@ pub(crate) fn resolve_function_call(
 
     if let Some(built_in) = parse_builtin_keyword(func_call.id.name.as_str()) {
         let prototype = &built_in.get_prototype_info();
+        if !prototype.is_available(&ns.target) {
+            ns.diagnostics.push(Diagnostic::error(
+                func_call.loc,
+                format!("builtin '{}' is not available for target {}. Please, open a GitHub issue if there is need to support this function.", prototype.name, ns.target)
+            ));
+            return Err(());
+        }
         if prototype.no_args as usize != func_call.arguments.len() {
             ns.diagnostics.push(Diagnostic {
                 level: Level::Error,
@@ -445,6 +452,7 @@ pub(crate) fn resolve_function_call(
             func_call.id.loc,
             fn_no,
             resolved_arguments,
+            func.returns.clone(),
         ));
         function_table.function_called(fn_no);
         return resolved_fn;
@@ -666,11 +674,26 @@ pub(crate) fn check_type(
                 ));
             }
 
-            YulExpression::MemberAccess(_, _, YulSuffix::Length) => {
-                return Some(Diagnostic::error(
-                    expr.loc(),
-                    "cannot assign a value to length".to_string(),
-                ));
+            YulExpression::MemberAccess(_, member, YulSuffix::Length) => {
+                return if matches!(
+                    **member,
+                    YulExpression::SolidityLocalVariable(
+                        _,
+                        _,
+                        Some(StorageLocation::Calldata(_)),
+                        _
+                    )
+                ) {
+                    Some(Diagnostic::error(
+                        expr.loc(),
+                        "assignment to length is not implemented. If there is need for this feature, please file a Github issue.".to_string(),
+                    ))
+                } else {
+                    Some(Diagnostic::error(
+                        expr.loc(),
+                        "this expression does not support the '.length' suffix".to_string(),
+                    ))
+                }
             }
 
             YulExpression::MemberAccess(_, _, YulSuffix::Offset) => {
@@ -684,6 +707,19 @@ pub(crate) fn check_type(
                     return Some(Diagnostic::error(
                         exp.loc(),
                         "cannot assign to slot of storage variable".to_string(),
+                    ));
+                }
+            }
+
+            YulExpression::MemberAccess(_, exp, YulSuffix::Address)
+            | YulExpression::MemberAccess(_, exp, YulSuffix::Selector) => {
+                if matches!(
+                    **exp,
+                    YulExpression::SolidityLocalVariable(_, Type::ExternalFunction { .. }, _, _)
+                ) {
+                    return Some(Diagnostic::error(
+                        expr.loc(),
+                        "assignment to selector and address is not implemented. If there is need for these features, please file a GitHub issue".to_string()
                     ));
                 }
             }

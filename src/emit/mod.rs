@@ -1322,7 +1322,7 @@ pub trait TargetRuntime<'a> {
                 )
                 .into()
             }
-            Expression::Divide(_, _, l, r) if !l.ty().is_signed_int() => {
+            Expression::UnsignedDivide(_, _, l, r) => {
                 let left = self
                     .expression(bin, l, vartab, function, ns)
                     .into_int_value();
@@ -1420,7 +1420,7 @@ pub trait TargetRuntime<'a> {
                     bin.builder.build_int_unsigned_div(left, right, "").into()
                 }
             }
-            Expression::Divide(_, _, l, r) => {
+            Expression::SignedDivide(_, _, l, r) => {
                 let left = self
                     .expression(bin, l, vartab, function, ns)
                     .into_int_value();
@@ -1566,7 +1566,7 @@ pub trait TargetRuntime<'a> {
                     bin.builder.build_int_signed_div(left, right, "").into()
                 }
             }
-            Expression::Modulo(_, _, l, r) if !l.ty().is_signed_int() => {
+            Expression::UnsignedModulo(_, _, l, r) => {
                 let left = self
                     .expression(bin, l, vartab, function, ns)
                     .into_int_value();
@@ -1664,7 +1664,7 @@ pub trait TargetRuntime<'a> {
                     bin.builder.build_int_unsigned_rem(left, right, "").into()
                 }
             }
-            Expression::Modulo(_, _, l, r) => {
+            Expression::SignedModulo(_, _, l, r) => {
                 let left = self
                     .expression(bin, l, vartab, function, ns)
                     .into_int_value();
@@ -1875,7 +1875,7 @@ pub trait TargetRuntime<'a> {
                     .build_int_compare(IntPredicate::NE, left, right, "")
                     .into()
             }
-            Expression::More(_, l, r) => {
+            Expression::SignedMore(_, l, r) | Expression::UnsignedMore(_, l, r) => {
                 if l.ty().is_address() {
                     self.compare_address(bin, l, r, IntPredicate::SGT, vartab, function, ns)
                         .into()
@@ -1889,7 +1889,7 @@ pub trait TargetRuntime<'a> {
 
                     bin.builder
                         .build_int_compare(
-                            if l.ty().is_signed_int() {
+                            if matches!(e, Expression::SignedMore(..)) {
                                 IntPredicate::SGT
                             } else {
                                 IntPredicate::UGT
@@ -1927,7 +1927,7 @@ pub trait TargetRuntime<'a> {
                         .into()
                 }
             }
-            Expression::Less(_, l, r) => {
+            Expression::SignedLess(_, l, r) | Expression::UnsignedLess(_, l, r) => {
                 if l.ty().is_address() {
                     self.compare_address(bin, l, r, IntPredicate::SLT, vartab, function, ns)
                         .into()
@@ -1941,7 +1941,7 @@ pub trait TargetRuntime<'a> {
 
                     bin.builder
                         .build_int_compare(
-                            if l.ty().is_signed_int() {
+                            if matches!(e, Expression::SignedLess(..)) {
                                 IntPredicate::SLT
                             } else {
                                 IntPredicate::ULT

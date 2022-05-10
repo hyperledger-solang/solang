@@ -1240,7 +1240,7 @@ fn get_int_length(
     }
 }
 
-fn coerce_number(
+pub fn coerce_number(
     l: &Type,
     l_loc: &pt::Loc,
     r: &Type,

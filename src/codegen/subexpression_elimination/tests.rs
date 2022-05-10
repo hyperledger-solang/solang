@@ -236,7 +236,7 @@ fn complex_expression() {
         Box::new(cte.clone()),
         Box::new(arg.clone()),
     );
-    let div = Expression::Divide(
+    let div = Expression::SignedDivide(
         Loc::Codegen,
         Type::Int(8),
         Box::new(sum.clone()),
@@ -257,7 +257,7 @@ fn complex_expression() {
         Box::new(div.clone()),
         true,
     );
-    let modu = Expression::Modulo(
+    let modu = Expression::SignedModulo(
         Loc::Codegen,
         Type::Int(8),
         Box::new(cte.clone()),
@@ -374,7 +374,7 @@ fn kill() {
         Box::new(cte.clone()),
         Box::new(arg.clone()),
     );
-    let div = Expression::Divide(
+    let div = Expression::SignedDivide(
         Loc::Codegen,
         Type::Int(8),
         Box::new(sum.clone()),
@@ -395,7 +395,7 @@ fn kill() {
         Box::new(div.clone()),
         true,
     );
-    let modu = Expression::Modulo(
+    let modu = Expression::SignedModulo(
         Loc::Codegen,
         Type::Int(8),
         Box::new(cte.clone()),
@@ -463,7 +463,7 @@ fn clone() {
         Box::new(cte.clone()),
         Box::new(arg.clone()),
     );
-    let div = Expression::Divide(
+    let div = Expression::SignedDivide(
         Loc::Codegen,
         Type::Int(8),
         Box::new(sum.clone()),
@@ -484,7 +484,7 @@ fn clone() {
         Box::new(div.clone()),
         true,
     );
-    let modu = Expression::Modulo(
+    let modu = Expression::SignedModulo(
         Loc::Codegen,
         Type::Int(8),
         Box::new(cte.clone()),
@@ -550,7 +550,7 @@ fn intersect() {
         Box::new(cte.clone()),
         Box::new(arg.clone()),
     );
-    let div = Expression::Divide(
+    let div = Expression::SignedDivide(
         Loc::Codegen,
         Type::Int(8),
         Box::new(sum.clone()),
@@ -571,7 +571,7 @@ fn intersect() {
         Box::new(div.clone()),
         true,
     );
-    let modu = Expression::Modulo(
+    let modu = Expression::SignedModulo(
         Loc::Codegen,
         Type::Int(8),
         Box::new(cte.clone()),

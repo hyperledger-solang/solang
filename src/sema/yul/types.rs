@@ -81,14 +81,14 @@ pub(crate) fn verify_type_from_expression(
             }
         }
 
-        YulExpression::FunctionCall(_, function_no, ..) => {
+        YulExpression::FunctionCall(_, function_no, _, returns) => {
             let func = function_table.get(*function_no).unwrap();
-            if func.returns.is_empty() {
+            if returns.is_empty() {
                 Err(Diagnostic::error(
                     expr.loc(),
                     format!("function '{}' returns nothing", func.id.name),
                 ))
-            } else if func.returns.len() > 1 {
+            } else if returns.len() > 1 {
                 Err(Diagnostic::error(
                     expr.loc(),
                     format!(
@@ -97,7 +97,7 @@ pub(crate) fn verify_type_from_expression(
                     ),
                 ))
             } else {
-                Ok(func.returns[0].ty.clone())
+                Ok(returns[0].ty.clone())
             }
         }
     }

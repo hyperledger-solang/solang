@@ -41,7 +41,7 @@ strict digraph "tests/contract_testcases/solana/yul/yul_switch.sol" {
 	return [label="return\ntests/contract_testcases/solana/yul/yul_switch.sol:16:9-17"]
 	variable [label="variable: y\nuint256\ntests/contract_testcases/solana/yul/yul_switch.sol:16:16-17"]
 	diagnostic [label="found contract 'testTypes'\nlevel Debug\ntests/contract_testcases/solana/yul/yul_switch.sol:1:1-20"]
-	diagnostic_45 [label="inline assembly is not yet supported\nlevel Error\ntests/contract_testcases/solana/yul/yul_switch.sol:5:9-14:10"]
+	diagnostic_45 [label="switch statements have no implementation in code generation yet. Please, file a GitHub issue if there is urgent need for such a feature\nlevel Error\ntests/contract_testcases/solana/yul/yul_switch.sol:6:13-11:14"]
 	contracts -> contract
 	contract -> var [label="variable"]
 	contract -> testAsm [label="function"]

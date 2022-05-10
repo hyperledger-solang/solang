@@ -72,6 +72,7 @@ contract testTypes {
 
 #[test]
 fn correct_switch() {
+    // TODO: switch statements are not yet implemented
     let file = r#"
 contract testTypes {
     function testAsm() public pure {
@@ -98,11 +99,7 @@ contract testTypes {
     "#;
 
     let ns = parse(file);
-    assert_eq!(ns.diagnostics.len(), 2);
     assert!(ns
         .diagnostics
-        .contains_message("found contract 'testTypes'"));
-    assert!(ns
-        .diagnostics
-        .contains_message("inline assembly is not yet supported"));
+        .contains_message("switch statements have no implementation in code generation yet. Please, file a GitHub issue if there is urgent need for such a feature"));
 }

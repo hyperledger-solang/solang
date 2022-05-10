@@ -43,7 +43,7 @@ contract testTypes {
         assembly {
 
             let a := 0
-            stop()
+            invalid()
             for {let i := 11
             } lt(i, 10) {i := add(i, 1)
         } {
@@ -68,7 +68,7 @@ contract testTypes {
 
             let a := 0
             for {let i := 11
-                stop()
+                invalid()
             } lt(i, 10) {i := add(i, 1)
         } {
                 a := shr(i, 2)
@@ -98,7 +98,7 @@ contract testTypes {
                 a := shr(i, 2)
                 let b := shr(6, 5)
                     a := mul(a, b)
-                stop()
+                invalid()
             }
             let x := 5
         }
@@ -117,7 +117,7 @@ contract testTypes {
             let a := 0
             for {let i := 11
             } lt(i, 10) {i := add(i, 1)
-            stop()
+            invalid()
         } {
                 a := shr(i, 2)
                 let b := shr(6, 5)

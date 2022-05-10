@@ -277,7 +277,7 @@ contract testTypes {
                 } lt(i, 0x100) {
                     i := add(i, 0x20)
                 } {
-                    x := add(x, mload(i))
+                    x := add(x, i)
                     if lt(x, 30) {
                         continue
                     }
@@ -332,7 +332,7 @@ contract testTypes {
                 } lt(i, 0x100) {
                     i := add(i, 0x20)
                 } {
-                    x := add(x, mload(i))
+                    x := add(x, i)
                     if lt(x, 30) {
                         break
                     }
