@@ -53,7 +53,8 @@ jobs:
   linux-arm:
     name: Linux Arm
     runs-on: linux-arm64
-    if: ${{ github.repository_owner == 'hyperledger-labs' }}
+    # Don't run linux-arm64 on pull requests, it takes 38 minutes and only has one runner
+    if: ${{ github.repository_owner == 'hyperledger-labs' && github.ref == 'refs/heads/main' }}
     container: ghcr.io/hyperledger-labs/solang:ci
     steps:
     - name: Checkout sources
