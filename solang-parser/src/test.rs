@@ -1026,7 +1026,7 @@ fn test_libsolidity() {
     }
 
     let source_delimiter = regex::Regex::new(r"====.*====").unwrap();
-    let error_matcher = regex::Regex::new(r"// ----\n// \w+ \d+:").unwrap();
+    let error_matcher = regex::Regex::new(r"// ----\n// \w+( \d+)?:").unwrap();
 
     let semantic_tests = WalkDir::new(
         Path::new(env!("CARGO_MANIFEST_DIR"))
