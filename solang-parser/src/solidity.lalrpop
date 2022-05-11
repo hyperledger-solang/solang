@@ -433,18 +433,30 @@ NoFunctionTyPrecedence0: Expression = {
         let base: String = n.0.chars().filter(|v| *v != '_').collect();
         let exp: String = n.1.chars().filter(|v| *v != '_').collect();
 
-        let n = if exp.is_empty() {
-            BigInt::from_str(&base)
-                .map_err(|err| ParseError::User { error:LexicalError::InvalidBigInt(Loc::File(file_no, l, r), err)})?
-        } else {
-            let base = BigInt::from_str(&base)
-                .map_err(|err| ParseError::User { error:LexicalError::InvalidBigInt(Loc::File(file_no, l, r), err)})?;
-            let exp = BigInt::from_str("10")
-                .unwrap()
-                .pow(BigUint::from_str(&exp)
-                .map_err(|err| ParseError::User { error:LexicalError::InvalidBigInt(Loc::File(file_no, l, r), err)})?);
+        let base = BigInt::from_str(&base)
+            .map_err(|err| ParseError::User { error:LexicalError::InvalidBigInt(Loc::File(file_no, l, r), err)})?;
 
-            base.mul(exp)
+        let n = if exp.is_empty() {
+            base
+        } else {
+            let b10 = BigInt::from_str("10").unwrap();
+
+            if exp.starts_with('-') {
+                let exp = b10.pow(BigUint::from_str(&exp[1..])
+                    .map_err(|err| ParseError::User { error:LexicalError::InvalidBigInt(Loc::File(file_no, l, r), err)})?);
+                let res = BigRational::new(base, exp);
+
+                if res.is_integer() {
+                    res.to_integer()
+                } else {
+                    return Ok(Expression::RationalNumberLiteral(Loc::File(file_no, l, r), res));
+                }
+            } else {
+                let exp = b10.pow(BigUint::from_str(&exp)
+                    .map_err(|err| ParseError::User { error:LexicalError::InvalidBigInt(Loc::File(file_no, l, r), err)})?);
+
+                base.mul(exp)
+            }
         };
 
         Ok(Expression::NumberLiteral(Loc::File(file_no, l, r), n))
