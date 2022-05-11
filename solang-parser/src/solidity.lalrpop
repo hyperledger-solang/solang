@@ -536,8 +536,6 @@ Unit: Unit = {
     <@L> "weeks" <@R> => Unit::Weeks(Loc::File(file_no, <>)),
     <@L> "wei" <@R> => Unit::Wei(Loc::File(file_no, <>)),
     <@L> "gwei" <@R> => Unit::Gwei(Loc::File(file_no, <>)),
-    <@L> "szabo" <@R> => Unit::Szabo(Loc::File(file_no, <>)),
-    <@L> "finney" <@R> => Unit::Finney(Loc::File(file_no, <>)),
     <@L> "ether" <@R> => Unit::Ether(Loc::File(file_no, <>)),
 }
 
@@ -1148,8 +1146,6 @@ extern {
         "weeks" => Token::Weeks,
         "wei" => Token::Wei,
         "gwei" => Token::Gwei,
-        "szabo" => Token::Szabo,
-        "finney" => Token::Finney,
         "ether" => Token::Ether,
         "this" => Token::This,
         "as" => Token::As,
