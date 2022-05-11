@@ -849,7 +849,7 @@ fn returns(
         .returns
         .iter()
         .zip(uncast_values.into_iter())
-        .map(|(left, right)| destructure_load(&right.loc(), &right.cast(&left.ty, ns), cfg, vartab))
+        .map(|(left, right)| cast_and_try_load(&right.loc(), &right, &left.ty, ns, cfg, vartab))
         .collect();
 
     cfg.add(vartab, Instr::Return { value: cast_values });
@@ -934,7 +934,7 @@ fn destructure(
                 // nothing to do
             }
             DestructureField::VariableDecl(res, param) => {
-                let expr = destructure_load(&param.loc, &right.cast(&param.ty, ns), cfg, vartab);
+                let expr = cast_and_try_load(&param.loc, &right, &param.ty, ns, cfg, vartab);
 
                 if should_remove_variable(res, func, opt) {
                     continue;
@@ -950,12 +950,7 @@ fn destructure(
                 );
             }
             DestructureField::Expression(left) => {
-                let expr = destructure_load(
-                    &left.loc(),
-                    &right.cast(left.ty().deref_any(), ns),
-                    cfg,
-                    vartab,
-                );
+                let expr = cast_and_try_load(&left.loc(), &right, &left.ty(), ns, cfg, vartab);
 
                 if should_remove_assignment(ns, left, func, opt) {
                     continue;
@@ -968,19 +963,28 @@ fn destructure(
 }
 
 /// During a destructure statement, sema only checks if the cast is possible. During codegen, we
-/// perform the cast to a StorageRef if that is the case. The cast function, however, does not add
-/// instructions to the CFG. Here, we add a load instruction to fetch the variables from storage.
-fn destructure_load(
+/// perform the real cast and add an instruction to the CFG to load a value from the storage if want it.
+/// The existing codegen cast function does not manage the CFG, so the loads must be done here.
+fn cast_and_try_load(
     loc: &pt::Loc,
     expr: &Expression,
+    to_ty: &Type,
+    ns: &Namespace,
     cfg: &mut ControlFlowGraph,
     vartab: &mut Vartable,
 ) -> Expression {
-    if let Type::StorageRef(_, ty) = expr.ty() {
-        if let Expression::Subscript(_, _, ty, ..) = &expr {
+    let casted_expr = expr.cast(to_ty, ns);
+
+    if let Type::StorageRef(_, ty) = casted_expr.ty() {
+        if let Expression::Subscript(_, _, ty, ..) = &casted_expr {
             if ty.is_storage_bytes() {
-                return expr.clone();
+                return casted_expr;
             }
+        }
+
+        if matches!(to_ty, Type::StorageRef(..)) {
+            // If we want a storage reference, there is no need to load from storage
+            return casted_expr;
         }
 
         let anonymous_no = vartab.temp_anonymous(&*ty);
@@ -989,14 +993,14 @@ fn destructure_load(
             Instr::LoadStorage {
                 res: anonymous_no,
                 ty: (*ty).clone(),
-                storage: expr.clone(),
+                storage: casted_expr,
             },
         );
 
         return Expression::Variable(*loc, (*ty).clone(), anonymous_no);
     }
 
-    expr.clone()
+    casted_expr
 }
 
 /// Resolve try catch statement
