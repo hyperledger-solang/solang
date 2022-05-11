@@ -11,7 +11,6 @@ use crate::sema::yul::functions::FunctionsTable;
 use crate::sema::yul::tests::parse;
 use crate::{ast, Target};
 use num_bigint::BigInt;
-use num_traits::FromPrimitive;
 use solang_parser::pt;
 use solang_parser::pt::{
     ContractTy, HexLiteral, Identifier, Loc, StorageLocation, StringLiteral, Visibility,
@@ -84,7 +83,8 @@ fn resolve_number_literal() {
     let mut ns = Namespace::new(Target::Solana);
     let expr = pt::YulExpression::NumberLiteral(
         loc,
-        BigInt::from_u128(0xffffffffffffffffff).unwrap(),
+        "4722366482869645213695".to_string(),
+        "".to_string(),
         Some(Identifier {
             loc,
             name: "u64".to_string(),
@@ -101,7 +101,8 @@ fn resolve_number_literal() {
     ns.diagnostics = Diagnostics::default();
     let expr = pt::YulExpression::NumberLiteral(
         loc,
-        BigInt::from_i32(-50).unwrap(),
+        "-50".to_string(),
+        "".to_string(),
         Some(Identifier {
             loc,
             name: "u128".to_string(),
@@ -116,7 +117,7 @@ fn resolve_number_literal() {
     );
 
     ns.diagnostics = Diagnostics::default();
-    let expr = pt::YulExpression::NumberLiteral(loc, BigInt::from(20), None);
+    let expr = pt::YulExpression::NumberLiteral(loc, "20".to_string(), "".to_string(), None);
     let parsed = resolve_yul_expression(&expr, &ctx, &mut symtable, &mut function_table, &mut ns);
     assert!(parsed.is_ok());
     assert!(ns.diagnostics.is_empty());
@@ -752,7 +753,8 @@ fn check_arguments() {
             },
             arguments: vec![pt::YulExpression::NumberLiteral(
                 loc,
-                BigInt::from(23),
+                "23".to_string(),
+                "".to_string(),
                 None,
             )],
         }))],

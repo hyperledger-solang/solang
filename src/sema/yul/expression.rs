@@ -9,10 +9,12 @@ use crate::sema::yul::types::{
 };
 use crate::sema::yul::unused_variable::{assigned_variable, used_variable};
 use num_bigint::{BigInt, Sign};
-use num_traits::Num;
+use num_rational::BigRational;
+use num_traits::{Num, Pow};
 use solang_parser::diagnostics::{ErrorType, Level};
 use solang_parser::pt::{CodeLocation, Identifier, Loc, StorageLocation, YulFunctionCall};
 use solang_parser::{pt, Diagnostic};
+use std::{ops::Mul, str::FromStr};
 
 /// Given a keyword, returns the suffix it represents in YUL
 fn get_suffix_from_string(suffix_name: &str) -> Option<YulSuffix> {
@@ -37,8 +39,8 @@ pub(crate) fn resolve_yul_expression(
     match expr {
         pt::YulExpression::BoolLiteral(loc, value, ty) => resolve_bool_literal(loc, value, ty, ns),
 
-        pt::YulExpression::NumberLiteral(loc, value, ty) => {
-            resolve_number_literal(loc, value, ty, ns)
+        pt::YulExpression::NumberLiteral(loc, base, exp, ty) => {
+            resolve_number_literal(loc, base, exp, ty, ns)
         }
 
         pt::YulExpression::HexNumberLiteral(loc, value, ty) => {
@@ -115,10 +117,49 @@ fn resolve_bool_literal(
 
 fn resolve_number_literal(
     loc: &pt::Loc,
-    value: &BigInt,
+    integer: &str,
+    exp: &str,
     ty: &Option<pt::Identifier>,
     ns: &mut Namespace,
 ) -> Result<YulExpression, ()> {
+    let integer = BigInt::from_str(integer).unwrap();
+
+    let value = if exp.is_empty() {
+        integer
+    } else {
+        let base10 = BigInt::from_str("10").unwrap();
+
+        if let Some(abs_exp) = exp.strip_prefix('-') {
+            if let Ok(exp) = u8::from_str(abs_exp) {
+                let res = BigRational::new(integer, base10.pow(exp));
+
+                if res.is_integer() {
+                    res.to_integer()
+                } else {
+                    ns.diagnostics.push(Diagnostic::error(
+                        *loc,
+                        "rational numbers not permitted".to_string(),
+                    ));
+                    return Err(());
+                }
+            } else {
+                ns.diagnostics.push(Diagnostic::error(
+                    *loc,
+                    format!("exponent '{}' too large", exp),
+                ));
+                return Err(());
+            }
+        } else if let Ok(exp) = u8::from_str(exp) {
+            integer.mul(base10.pow(exp))
+        } else {
+            ns.diagnostics.push(Diagnostic::error(
+                *loc,
+                format!("exponent '{}' too large", exp),
+            ));
+            return Err(());
+        }
+    };
+
     let new_type = if let Some(type_id) = ty {
         if let Some(asm_type) = get_type_from_string(&type_id.name) {
             if matches!(asm_type, Type::Uint(_)) && matches!(value.sign(), Sign::Minus) {
@@ -140,7 +181,7 @@ fn resolve_number_literal(
             return Err(());
         }
     } else {
-        get_type_from_big_int(value)
+        get_type_from_big_int(&value)
     };
 
     let type_size = new_type.get_type_size();
@@ -163,7 +204,7 @@ fn resolve_number_literal(
         });
     }
 
-    Ok(YulExpression::NumberLiteral(*loc, value.clone(), new_type))
+    Ok(YulExpression::NumberLiteral(*loc, value, new_type))
 }
 
 fn resolve_hex_literal(
