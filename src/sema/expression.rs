@@ -1,16 +1,3 @@
-use num_bigint::BigInt;
-use num_bigint::Sign;
-use num_traits::FromPrimitive;
-use num_traits::Num;
-use num_traits::One;
-use num_traits::Pow;
-use num_traits::ToPrimitive;
-use num_traits::Zero;
-use std::cmp;
-use std::cmp::Ordering;
-use std::collections::{BTreeMap, HashMap};
-use std::ops::{Add, Shl, Sub};
-
 use super::address::to_hexstr_eip55;
 use super::ast::{
     Builtin, BuiltinStruct, CallArgs, CallTy, Diagnostic, Expression, Function, Mutability,
@@ -30,8 +17,17 @@ use crate::sema::unused_variable::{
 };
 use crate::Target;
 use base58::{FromBase58, FromBase58Error};
+use num_bigint::{BigInt, Sign};
 use num_rational::BigRational;
+use num_traits::{FromPrimitive, Num, One, Pow, ToPrimitive, Zero};
 use solang_parser::pt::Loc;
+use std::{
+    cmp,
+    cmp::Ordering,
+    collections::{BTreeMap, HashMap},
+    ops::{Add, Mul, Shl, Sub},
+    str::FromStr,
+};
 
 impl RetrieveType for Expression {
     fn ty(&self) -> Type {
@@ -1314,6 +1310,142 @@ fn coerce_number(
     })
 }
 
+/// Resolve the given number literal, multiplied by value of unit
+fn number_literal(
+    loc: &pt::Loc,
+    integer: &str,
+    exp: &str,
+    ns: &Namespace,
+    unit: &BigInt,
+    diagnostics: &mut Vec<Diagnostic>,
+    resolve_to: ResolveTo,
+) -> Result<Expression, ()> {
+    let integer = BigInt::from_str(integer).unwrap();
+
+    let n = if exp.is_empty() {
+        integer
+    } else {
+        let base10 = BigInt::from_str("10").unwrap();
+
+        if let Some(abs_exp) = exp.strip_prefix('-') {
+            if let Ok(exp) = u8::from_str(abs_exp) {
+                let res = BigRational::new(integer, base10.pow(exp));
+
+                if res.is_integer() {
+                    res.to_integer()
+                } else {
+                    return Ok(Expression::RationalNumberLiteral(*loc, Type::Rational, res));
+                }
+            } else {
+                diagnostics.push(Diagnostic::error(
+                    *loc,
+                    format!("exponent '{}' too large", exp),
+                ));
+                return Err(());
+            }
+        } else if let Ok(exp) = u8::from_str(exp) {
+            integer.mul(base10.pow(exp))
+        } else {
+            diagnostics.push(Diagnostic::error(
+                *loc,
+                format!("exponent '{}' too large", exp),
+            ));
+            return Err(());
+        }
+    };
+
+    bigint_to_expression(loc, &n.mul(unit), ns, diagnostics, resolve_to)
+}
+
+/// Resolve the given rational number literal, multiplied by value of unit
+fn rational_number_literal(
+    loc: &pt::Loc,
+    integer: &str,
+    fraction: &str,
+    exp: &str,
+    unit: &BigInt,
+    ns: &Namespace,
+    diagnostics: &mut Vec<Diagnostic>,
+    resolve_to: ResolveTo,
+) -> Result<Expression, ()> {
+    let mut integer = integer.to_owned();
+    let len = fraction.len();
+    let exp_negative = exp.starts_with('-');
+
+    let denominator = BigInt::from_str("10").unwrap().pow(len);
+    let zero_index = fraction
+        .chars()
+        .position(|c| c != '0')
+        .unwrap_or(usize::MAX);
+    let n = if exp.is_empty() {
+        if integer.is_empty() || integer == "0" {
+            if zero_index < usize::MAX {
+                BigRational::new(
+                    BigInt::from_str(&fraction[zero_index..]).unwrap(),
+                    denominator,
+                )
+            } else {
+                BigRational::from(BigInt::zero())
+            }
+        } else {
+            integer.push_str(fraction);
+            BigRational::new(BigInt::from_str(&integer).unwrap(), denominator)
+        }
+    } else {
+        let exp = if let Ok(exp) = u8::from_str(if exp_negative { &exp[1..] } else { exp }) {
+            exp
+        } else {
+            diagnostics.push(Diagnostic::error(
+                *loc,
+                format!("exponent '{}' too large", exp),
+            ));
+            return Err(());
+        };
+        let exp_result = BigInt::from_str("10").unwrap().pow(exp);
+
+        if integer.is_empty() || integer == "0" {
+            if zero_index < usize::MAX {
+                if exp_negative {
+                    BigRational::new(
+                        BigInt::from_str(&fraction[zero_index..]).unwrap(),
+                        denominator.mul(exp_result),
+                    )
+                } else {
+                    BigRational::new(
+                        BigInt::from_str(&fraction[zero_index..])
+                            .unwrap()
+                            .mul(exp_result),
+                        denominator,
+                    )
+                }
+            } else {
+                BigRational::from(BigInt::zero())
+            }
+        } else {
+            integer.push_str(fraction);
+            if exp_negative {
+                BigRational::new(
+                    BigInt::from_str(&integer).unwrap(),
+                    denominator.mul(exp_result),
+                )
+            } else {
+                BigRational::new(
+                    BigInt::from_str(&integer).unwrap().mul(exp_result),
+                    denominator,
+                )
+            }
+        }
+    };
+
+    let res = n.mul(unit);
+
+    if res.is_integer() {
+        bigint_to_expression(loc, &res.to_integer(), ns, diagnostics, resolve_to)
+    } else {
+        Ok(Expression::RationalNumberLiteral(*loc, Type::Rational, res))
+    }
+}
+
 /// Try to convert a BigInt into a Expression::NumberLiteral. This checks for sign,
 /// width and creates to correct Type.
 pub fn bigint_to_expression(
@@ -1414,33 +1546,6 @@ pub fn bigint_to_expression(
     }
 }
 
-/// Try to convert a Bigfloat into a Expression::RationalNumberLiteral. This checks for sign,
-/// width and creates to correct Type.
-pub fn bigdecimal_to_expression(
-    loc: &pt::Loc,
-    n: &BigRational,
-    ns: &Namespace,
-    diagnostics: &mut Vec<Diagnostic>,
-    resolve_to: ResolveTo,
-) -> Result<Expression, ()> {
-    if let ResolveTo::Type(resolve_to) = resolve_to {
-        if !resolve_to.is_rational() {
-            diagnostics.push(Diagnostic::error(
-                *loc,
-                format!("expected '{}', found rational", resolve_to.to_string(ns)),
-            ));
-            return Err(());
-        } else {
-            return Ok(Expression::RationalNumberLiteral(
-                *loc,
-                resolve_to.clone(),
-                n.clone(),
-            ));
-        };
-    }
-    Err(())
-}
-
 /// Compare two mutability levels
 pub fn compatible_mutability(left: &Mutability, right: &Mutability) -> bool {
     matches!(
@@ -1508,14 +1613,27 @@ pub fn expression(
             Ok(string_literal(v, context.file_no, diagnostics, resolve_to))
         }
         pt::Expression::HexLiteral(v) => hex_literal(v, diagnostics),
-        pt::Expression::NumberLiteral(loc, b) => {
-            bigint_to_expression(loc, b, ns, diagnostics, resolve_to)
+        pt::Expression::NumberLiteral(loc, integer, exp) => number_literal(
+            loc,
+            integer,
+            exp,
+            ns,
+            &BigInt::one(),
+            diagnostics,
+            resolve_to,
+        ),
+        pt::Expression::RationalNumberLiteral(loc, integer, fraction, exp) => {
+            rational_number_literal(
+                loc,
+                integer,
+                fraction,
+                exp,
+                &BigInt::one(),
+                ns,
+                diagnostics,
+                resolve_to,
+            )
         }
-        pt::Expression::RationalNumberLiteral(loc, b) => Ok(Expression::RationalNumberLiteral(
-            *loc,
-            Type::Rational,
-            b.clone(),
-        )),
         pt::Expression::HexNumberLiteral(loc, n) => {
             hex_number_literal(loc, n, ns, diagnostics, resolve_to)
         }
@@ -1675,9 +1793,15 @@ pub fn expression(
             Ok(Expression::Complement(*loc, expr_ty, Box::new(expr)))
         }
         pt::Expression::UnaryMinus(loc, e) => match e.as_ref() {
-            pt::Expression::NumberLiteral(_, n) => {
-                bigint_to_expression(loc, &-n, ns, diagnostics, resolve_to)
-            }
+            pt::Expression::NumberLiteral(_, integer, exp) => number_literal(
+                loc,
+                integer,
+                exp,
+                ns,
+                &BigInt::from(-1),
+                diagnostics,
+                resolve_to,
+            ),
             pt::Expression::HexNumberLiteral(_, v) => {
                 // a hex literal with a minus before it cannot be an address literal or a bytesN value
                 let s: String = v.chars().skip(2).filter(|v| *v != '_').collect();
@@ -1686,8 +1810,17 @@ pub fn expression(
 
                 bigint_to_expression(loc, &-n, ns, diagnostics, resolve_to)
             }
-            pt::Expression::RationalNumberLiteral(_, r) => {
-                bigdecimal_to_expression(loc, &-r, ns, diagnostics, resolve_to)
+            pt::Expression::RationalNumberLiteral(loc, integer, fraction, exp) => {
+                rational_number_literal(
+                    loc,
+                    integer,
+                    fraction,
+                    exp,
+                    &BigInt::from(-1),
+                    ns,
+                    diagnostics,
+                    resolve_to,
+                )
             }
             e => {
                 let expr = expression(e, context, ns, symtable, diagnostics, resolve_to)?;
@@ -1697,8 +1830,8 @@ pub fn expression(
 
                 if let Expression::NumberLiteral(_, _, n) = expr {
                     bigint_to_expression(loc, &-n, ns, diagnostics, resolve_to)
-                } else if let Expression::RationalNumberLiteral(_, _, r) = expr {
-                    bigdecimal_to_expression(loc, &-r, ns, diagnostics, resolve_to)
+                } else if let Expression::RationalNumberLiteral(_, ty, r) = expr {
+                    Ok(Expression::RationalNumberLiteral(*loc, ty, -r))
                 } else {
                     get_int_length(&expr_type, loc, false, ns, diagnostics)?;
 
@@ -1937,24 +2070,6 @@ pub fn expression(
             Err(())
         }
         pt::Expression::Unit(loc, expr, unit) => {
-            let n = match expr.as_ref() {
-                pt::Expression::NumberLiteral(_, n) => n,
-                pt::Expression::HexNumberLiteral(loc, _) => {
-                    diagnostics.push(Diagnostic::error(
-                        *loc,
-                        "hexadecimal numbers cannot be used with unit denominations".to_owned(),
-                    ));
-                    return Err(());
-                }
-                _ => {
-                    diagnostics.push(Diagnostic::error(
-                        *loc,
-                        "unit denominations can only be used with number literals".to_owned(),
-                    ));
-                    return Err(());
-                }
-            };
-
             match unit {
                 pt::Unit::Wei(loc) | pt::Unit::Gwei(loc) | pt::Unit::Ether(loc)
                     if ns.target != crate::Target::Ewasm =>
@@ -1967,22 +2082,48 @@ pub fn expression(
                 _ => (),
             }
 
-            bigint_to_expression(
-                loc,
-                &(n * match unit {
-                    pt::Unit::Seconds(_) => BigInt::from(1),
-                    pt::Unit::Minutes(_) => BigInt::from(60),
-                    pt::Unit::Hours(_) => BigInt::from(60 * 60),
-                    pt::Unit::Days(_) => BigInt::from(60 * 60 * 24),
-                    pt::Unit::Weeks(_) => BigInt::from(60 * 60 * 24 * 7),
-                    pt::Unit::Wei(_) => BigInt::from(1),
-                    pt::Unit::Gwei(_) => BigInt::from(10).pow(9u32),
-                    pt::Unit::Ether(_) => BigInt::from(10).pow(18u32),
-                }),
-                ns,
-                diagnostics,
-                resolve_to,
-            )
+            let unit = match unit {
+                pt::Unit::Seconds(_) => BigInt::from(1),
+                pt::Unit::Minutes(_) => BigInt::from(60),
+                pt::Unit::Hours(_) => BigInt::from(60 * 60),
+                pt::Unit::Days(_) => BigInt::from(60 * 60 * 24),
+                pt::Unit::Weeks(_) => BigInt::from(60 * 60 * 24 * 7),
+                pt::Unit::Wei(_) => BigInt::from(1),
+                pt::Unit::Gwei(_) => BigInt::from(10).pow(9u32),
+                pt::Unit::Ether(_) => BigInt::from(10).pow(18u32),
+            };
+
+            match expr.as_ref() {
+                pt::Expression::NumberLiteral(_, integer, exp) => {
+                    number_literal(loc, integer, exp, ns, &unit, diagnostics, resolve_to)
+                }
+                pt::Expression::RationalNumberLiteral(_, significant, mantissa, exp) => {
+                    rational_number_literal(
+                        loc,
+                        significant,
+                        mantissa,
+                        exp,
+                        &unit,
+                        ns,
+                        diagnostics,
+                        resolve_to,
+                    )
+                }
+                pt::Expression::HexNumberLiteral(loc, _) => {
+                    diagnostics.push(Diagnostic::error(
+                        *loc,
+                        "hexadecimal numbers cannot be used with unit denominations".to_owned(),
+                    ));
+                    Err(())
+                }
+                _ => {
+                    diagnostics.push(Diagnostic::error(
+                        *loc,
+                        "unit denominations can only be used with number literals".to_owned(),
+                    ));
+                    Err(())
+                }
+            }
         }
         pt::Expression::This(loc) => match context.contract_no {
             Some(contract_no) => Ok(Expression::Builtin(

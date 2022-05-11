@@ -189,13 +189,13 @@ impl<'input> fmt::Display for Token<'input> {
             Token::StringLiteral(s) => write!(f, "\"{}\"", s),
             Token::HexLiteral(hex) => write!(f, "{}", hex),
             Token::AddressLiteral(address) => write!(f, "{}", address),
-            Token::Number(base, exp) if exp.is_empty() => write!(f, "{}", base),
-            Token::Number(base, exp) => write!(f, "{}e{}", base, exp),
-            Token::RationalNumber(significand, mantissa, exp) if exp.is_empty() => {
-                write!(f, "{}.{}", significand, mantissa)
+            Token::Number(integer, exp) if exp.is_empty() => write!(f, "{}", integer),
+            Token::Number(integer, exp) => write!(f, "{}e{}", integer, exp),
+            Token::RationalNumber(integer, fraction, exp) if exp.is_empty() => {
+                write!(f, "{}.{}", integer, fraction)
             }
-            Token::RationalNumber(significand, mantissa, exp) => {
-                write!(f, "{}.{}e{}", significand, mantissa, exp)
+            Token::RationalNumber(integer, fraction, exp) => {
+                write!(f, "{}.{}e{}", integer, fraction, exp)
             }
             Token::HexNumber(n) => write!(f, "{}", n),
             Token::Uint(w) => write!(f, "uint{}", w),
@@ -678,21 +678,21 @@ impl<'input> Lexer<'input> {
         }
 
         if is_rational {
-            let significand = &self.input[start..=end_before_rational];
-            let mantissa = &self.input[rational_start..=rational_end];
-
+            let integer = &self.input[start..=end_before_rational];
+            let fraction = &self.input[rational_start..=rational_end];
             let exp = &self.input[exp_start..=end];
+
             return Ok((
                 start,
-                Token::RationalNumber(significand, mantissa, exp),
+                Token::RationalNumber(integer, fraction, exp),
                 end + 1,
             ));
         }
 
-        let base = &self.input[start..=old_end];
+        let integer = &self.input[start..=old_end];
         let exp = &self.input[exp_start..=end];
 
-        Ok((start, Token::Number(base, exp), end + 1))
+        Ok((start, Token::Number(integer, exp), end + 1))
     }
 
     fn string(
