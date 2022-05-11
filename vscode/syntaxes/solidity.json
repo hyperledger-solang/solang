@@ -258,7 +258,7 @@
             "name": "constant.language.time.solidity"
         },
         "constant-currency": {
-            "match": "\\b(ether|wei|finney|szabo)\\b",
+            "match": "\\b(ether|wei)\\b",
             "name": "constant.language.currency.solidity"
         },
         "number": {

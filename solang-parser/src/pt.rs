@@ -349,8 +349,6 @@ pub enum Unit {
     Weeks(Loc),
     Wei(Loc),
     Gwei(Loc),
-    Szabo(Loc),
-    Finney(Loc),
     Ether(Loc),
 }
 
