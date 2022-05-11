@@ -92,7 +92,7 @@ strict digraph "tests/contract_testcases/ewasm/standalone_call.sol" {
 	call_internal_function_92 [label="call internal function\ntests/contract_testcases/ewasm/standalone_call.sol:39:10-24"]
 	internal_function_93 [label="function() internal pure returns (int256)\nBABYLINK.singleReturn\ntests/contract_testcases/ewasm/standalone_call.sol:39:10-24"]
 	expr_94 [label="expression\ntests/contract_testcases/ewasm/standalone_call.sol:40:9-24"]
-	unary_minus [label="unary minus int256\ntests/contract_testcases/ewasm/standalone_call.sol:40:9-10"]
+	unary_minus [label="unary minus int256\ntests/contract_testcases/ewasm/standalone_call.sol:40:9-24"]
 	call_internal_function_96 [label="call internal function\ntests/contract_testcases/ewasm/standalone_call.sol:40:10-24"]
 	internal_function_97 [label="function() internal pure returns (int256)\nBABYLINK.singleReturn\ntests/contract_testcases/ewasm/standalone_call.sol:40:10-24"]
 	var_decl_98 [label="variable decl contract foo r\ntests/contract_testcases/ewasm/standalone_call.sol:41:9-26"]
