@@ -2310,13 +2310,46 @@ pub fn emit_function_call(
                     vec![function],
                 );
 
-                tys.insert(0, Type::Bytes(4));
+                let (payload, address) = if ns.target == Target::Solana {
+                    tys.insert(0, Type::Address(false));
+                    tys.insert(1, Type::Address(false));
+                    tys.insert(2, Type::Uint(64));
+                    tys.insert(3, Type::Bytes(4));
+                    tys.insert(4, Type::Bytes(1));
+                    tys.insert(5, Type::Bytes(4));
 
-                let payload = Expression::AbiEncode {
-                    loc: *loc,
-                    tys,
-                    packed: vec![selector],
-                    args,
+                    (
+                        Expression::AbiEncode {
+                            loc: *loc,
+                            tys,
+                            packed: vec![
+                                address,
+                                Expression::Builtin(
+                                    *loc,
+                                    vec![Type::Address(false)],
+                                    Builtin::GetAddress,
+                                    Vec::new(),
+                                ),
+                                value.clone(),
+                                Expression::NumberLiteral(*loc, Type::Bytes(4), BigInt::zero()),
+                                Expression::NumberLiteral(*loc, Type::Bytes(1), BigInt::zero()),
+                                selector,
+                            ],
+                            args,
+                        },
+                        None,
+                    )
+                } else {
+                    tys.insert(0, Type::Bytes(4));
+                    (
+                        Expression::AbiEncode {
+                            loc: *loc,
+                            tys,
+                            packed: vec![selector],
+                            args,
+                        },
+                        Some(address),
+                    )
                 };
 
                 cfg.add(
@@ -2324,7 +2357,7 @@ pub fn emit_function_call(
                     Instr::ExternalCall {
                         success: None,
                         accounts: None,
-                        address: Some(address),
+                        address,
                         payload,
                         value,
                         gas,

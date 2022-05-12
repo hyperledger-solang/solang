@@ -154,6 +154,36 @@ fn external_raw_call_with_returns() {
 }
 
 #[test]
+fn call_external_func_type() {
+    let mut vm = build_solidity(
+        r#"
+    contract testing {
+
+    function testPtr(int a) public pure returns (int, int) {
+        return (a/2, 3);
+    }
+
+    function doTest() public view returns (int, int) {
+    function(int) external pure returns (int, int) sfPtr = this.testPtr;
+
+       (int a, int b) = sfPtr(2);
+       return (a, b);
+    }
+}
+    "#,
+    );
+
+    vm.constructor("testing", &[], 0);
+
+    let res = vm.function("doTest", &[], &[], 0, None);
+
+    assert_eq!(
+        res,
+        vec![Token::Int(U256::from(1)), Token::Int(U256::from(3))]
+    );
+}
+
+#[test]
 fn external_call_with_string_returns() {
     let mut vm = build_solidity(
         r#"
