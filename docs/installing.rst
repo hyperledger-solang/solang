@@ -8,11 +8,11 @@ Download release binaries
 
 There are binaries available on github releases:
 
-- `Linux x86-64 <https://github.com/hyperledger-labs/solang/releases/download/v0.1.10/solang-linux-x86-64>`_
-- `Linux arm64 <https://github.com/hyperledger-labs/solang/releases/download/v0.1.10/solang-linux-arm64>`_
-- `Windows x64 <https://github.com/hyperledger-labs/solang/releases/download/v0.1.10/solang.exe>`_
-- `MacOS intel <https://github.com/hyperledger-labs/solang/releases/download/v0.1.10/solang-mac-intel>`_
-- `MacOS arm <https://github.com/hyperledger-labs/solang/releases/download/v0.1.10/solang-mac-arm>`_
+- `Linux x86-64 <https://github.com/hyperledger-labs/solang/releases/download/v0.1.11/solang-linux-x86-64>`_
+- `Linux arm64 <https://github.com/hyperledger-labs/solang/releases/download/v0.1.11/solang-linux-arm64>`_
+- `Windows x64 <https://github.com/hyperledger-labs/solang/releases/download/v0.1.11/solang.exe>`_
+- `MacOS intel <https://github.com/hyperledger-labs/solang/releases/download/v0.1.11/solang-mac-intel>`_
+- `MacOS arm <https://github.com/hyperledger-labs/solang/releases/download/v0.1.11/solang-mac-arm>`_
 
 On MacOS, remember to remove the quarantine attribute using ``xattr -d com.apple.quarantine solang-mac-arm``
 in the terminal.
@@ -22,7 +22,7 @@ Using ghcr.io/hyperledger-labs/solang containers
 
 New images are automatically made available on
 `solang containers <https://github.com/hyperledger-labs/solang/pkgs/container/solang>`_.
-There is a release `v0.1.10` tag and a `latest` tag:
+There is a release `v0.1.11` tag and a `latest` tag:
 
 .. code-block:: bash
 
@@ -64,7 +64,7 @@ These patches make it possible to generate code for Solana, and fixes some
 concurrency issues in the lld linker.
 
 You can either download the pre-built libraries from
-`github <https://github.com/hyperledger-labs/solang/releases/tag/v0.1.10>`_
+`github <https://github.com/hyperledger-labs/solang/releases/tag/v0.1.11>`_
 or build your own from source. After that, you need to add the `bin` directory to your
 path, so that the build system of Solang can find the correct version of llvm to use.
 
@@ -72,7 +72,7 @@ Installing LLVM on Linux
 ________________________
 
 A pre-built version of llvm, specifically configured for Solang, is available at
-`<https://github.com/hyperledger-labs/solang/releases/download/v0.1.10/llvm13.0-linux-x86-64.tar.xz>`_.
+`<https://github.com/hyperledger-labs/solang/releases/download/v0.1.11/llvm13.0-linux-x86-64.tar.xz>`_.
 After downloading, untar the file in a terminal and add it to your path.
 
 .. code-block:: bash
@@ -84,7 +84,7 @@ Installing LLVM on Windows
 __________________________
 
 A pre-built version of llvm, specifically configured for Solang, is available at
-`<https://github.com/hyperledger-labs/solang/releases/download/v0.1.10/llvm13.0-win.zip>`_.
+`<https://github.com/hyperledger-labs/solang/releases/download/v0.1.11/llvm13.0-win.zip>`_.
 
 After unzipping the file, add the bin directory to your path.
 
@@ -96,8 +96,8 @@ Installing LLVM on Mac
 ______________________
 
 A pre-built version of llvm for intel macs, is available at
-`<https://github.com/hyperledger-labs/solang/releases/download/v0.1.10/llvm13.0-mac-intel.tar.xz>`_ and for arm macs there is
-`<https://github.com/hyperledger-labs/solang/releases/download/v0.1.10/llvm13.0-mac-arm.tar.xz>`_. After downloading,
+`<https://github.com/hyperledger-labs/solang/releases/download/v0.1.11/llvm13.0-mac-intel.tar.xz>`_ and for arm macs there is
+`<https://github.com/hyperledger-labs/solang/releases/download/v0.1.11/llvm13.0-mac-arm.tar.xz>`_. After downloading,
 untar the file in a terminal and add it to your path like so:
 
 .. code-block:: bash
