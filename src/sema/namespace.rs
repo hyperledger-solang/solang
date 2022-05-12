@@ -309,36 +309,25 @@ impl Namespace {
     pub fn resolve_contract_with_namespace(
         &mut self,
         file_no: usize,
-        expr: &pt::Expression,
+        name: &pt::IdentifierPath,
         diagnostics: &mut Vec<Diagnostic>,
     ) -> Result<usize, ()> {
-        let (namespace, id, dimensions) = self.expr_to_type(file_no, None, expr, diagnostics)?;
-
-        if !dimensions.is_empty() {
+        let (id, namespace) = if let Some((id, namespace)) = name.identifiers.split_last() {
+            (id, namespace.iter().collect())
+        } else {
             diagnostics.push(Diagnostic::decl_error(
-                expr.loc(),
-                "array type found where contract type expected".to_string(),
+                name.loc,
+                "empty identifier path".to_string(),
             ));
             return Err(());
-        }
-
-        let id = match id {
-            pt::Expression::Variable(id) => id,
-            _ => {
-                diagnostics.push(Diagnostic::decl_error(
-                    expr.loc(),
-                    "expression found where contract type expected".to_string(),
-                ));
-                return Err(());
-            }
         };
 
-        let s = self.resolve_namespace(namespace, file_no, None, &id, diagnostics)?;
+        let s = self.resolve_namespace(namespace, file_no, None, id, diagnostics)?;
 
         if let Some(Symbol::Contract(_, contract_no)) = s {
             Ok(*contract_no)
         } else {
-            let error = Namespace::wrong_symbol(s, &id);
+            let error = Namespace::wrong_symbol(s, id);
 
             diagnostics.push(error);
 
@@ -350,36 +339,25 @@ impl Namespace {
     pub fn resolve_free_function_with_namespace(
         &mut self,
         file_no: usize,
-        expr: &pt::Expression,
+        name: &pt::IdentifierPath,
         diagnostics: &mut Vec<Diagnostic>,
     ) -> Result<Vec<(pt::Loc, usize)>, ()> {
-        let (namespace, id, dimensions) = self.expr_to_type(file_no, None, expr, diagnostics)?;
-
-        if !dimensions.is_empty() {
+        let (id, namespace) = if let Some((id, namespace)) = name.identifiers.split_last() {
+            (id, namespace.iter().collect())
+        } else {
             diagnostics.push(Diagnostic::decl_error(
-                expr.loc(),
-                "array type found where function expected".to_string(),
+                name.loc,
+                "empty identifier path".to_string(),
             ));
             return Err(());
-        }
-
-        let id = match id {
-            pt::Expression::Variable(id) => id,
-            _ => {
-                diagnostics.push(Diagnostic::decl_error(
-                    expr.loc(),
-                    "expression found where function expected".to_string(),
-                ));
-                return Err(());
-            }
         };
 
-        let s = self.resolve_namespace(namespace, file_no, None, &id, diagnostics)?;
+        let s = self.resolve_namespace(namespace, file_no, None, id, diagnostics)?;
 
         if let Some(Symbol::Function(list)) = s {
             Ok(list.clone())
         } else {
-            let error = Namespace::wrong_symbol(s, &id);
+            let error = Namespace::wrong_symbol(s, id);
 
             diagnostics.push(error);
 

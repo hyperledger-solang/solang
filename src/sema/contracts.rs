@@ -129,7 +129,7 @@ pub fn resolve_base_contracts(
             if let Ok(no) = ns.resolve_contract_with_namespace(file_no, name, &mut diagnostics) {
                 if no == *contract_no {
                     ns.diagnostics.push(ast::Diagnostic::error(
-                        name.loc(),
+                        name.loc,
                         format!("contract '{}' cannot have itself as a base contract", name),
                     ));
                 } else if ns.contracts[*contract_no]
@@ -138,7 +138,7 @@ pub fn resolve_base_contracts(
                     .any(|e| e.contract_no == no)
                 {
                     ns.diagnostics.push(ast::Diagnostic::error(
-                        name.loc(),
+                        name.loc,
                         format!(
                             "contract '{}' duplicate base '{}'",
                             ns.contracts[*contract_no].name, name
@@ -146,7 +146,7 @@ pub fn resolve_base_contracts(
                     ));
                 } else if is_base(*contract_no, no, ns) {
                     ns.diagnostics.push(ast::Diagnostic::error(
-                        name.loc(),
+                        name.loc,
                         format!(
                             "base '{}' from contract '{}' is cyclic",
                             name, ns.contracts[*contract_no].name
@@ -156,7 +156,7 @@ pub fn resolve_base_contracts(
                     && !ns.contracts[no].is_interface()
                 {
                     ns.diagnostics.push(ast::Diagnostic::error(
-                        name.loc(),
+                        name.loc,
                         format!(
                             "interface '{}' cannot have {} '{}' as a base",
                             ns.contracts[*contract_no].name, ns.contracts[no].ty, name
@@ -166,7 +166,7 @@ pub fn resolve_base_contracts(
                     let contract = &ns.contracts[*contract_no];
 
                     ns.diagnostics.push(ast::Diagnostic::error(
-                        name.loc(),
+                        name.loc,
                         format!(
                             "library '{}' cannot be used as base contract for {} '{}'",
                             name, contract.ty, contract.name,
