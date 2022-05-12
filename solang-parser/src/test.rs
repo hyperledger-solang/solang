@@ -1,7 +1,6 @@
 use crate::lexer::Lexer;
 use crate::pt::*;
 use crate::solidity;
-use num_bigint::BigInt;
 use std::sync::mpsc;
 use std::time::Duration;
 use std::{fs, path::Path, thread};
@@ -158,8 +157,8 @@ fn parse_test() {
                             name: "sum".to_string(),
                         })),
                         vec![
-                            Expression::NumberLiteral(Loc::File(0, 765, 766), 1.into()),
-                            Expression::NumberLiteral(Loc::File(0, 768, 769), 1.into()),
+                            Expression::NumberLiteral(Loc::File(0, 765, 766), "1".to_string(), "".to_string()),
+                            Expression::NumberLiteral(Loc::File(0, 768, 769), "1".to_string(), "".to_string()),
                         ],
                     ),
                     Some((
@@ -194,7 +193,7 @@ fn parse_test() {
                                         })),
                                         Box::new(Expression::NumberLiteral(
                                             Loc::File(0, 830, 831),
-                                            2.into(),
+                                            "2".to_string(), "".to_string(),
                                         )),
                                     )],
                                 ),
@@ -482,7 +481,7 @@ fn test_assembly_parser() {
                                     }],
                                     Some(YulExpression::NumberLiteral(
                                         Loc::File(0, 107, 108),
-                                        BigInt::from(0),
+                                        "0".to_string(), "".to_string(),
                                         None,
                                     )),
                                 ),
@@ -502,7 +501,7 @@ fn test_assembly_parser() {
                                             }],
                                             Some(YulExpression::NumberLiteral(
                                                 Loc::File(0, 148, 149),
-                                                BigInt::from(0),
+                                                "0".to_string(), "".to_string(),
                                                 None,
                                             )),
                                         )],
@@ -682,7 +681,7 @@ fn test_assembly_parser() {
                                         Loc::File(0, 510, 620),
                                         YulExpression::NumberLiteral(
                                             Loc::File(0, 515, 516),
-                                            BigInt::from(0),
+                                            "0".to_string(), "".to_string(),
                                             None,
                                         ),
                                         YulBlock {
@@ -697,12 +696,12 @@ fn test_assembly_parser() {
                                                     arguments: vec![
                                                         YulExpression::NumberLiteral(
                                                             Loc::File(0, 554, 555),
-                                                            BigInt::from(0),
+                                                            "0".to_string(), "".to_string(),
                                                             None,
                                                         ),
                                                         YulExpression::NumberLiteral(
                                                             Loc::File(0, 557, 558),
-                                                            BigInt::from(0),
+                                                            "0".to_string(), "".to_string(),
                                                             None,
                                                         ),
                                                     ],
@@ -806,7 +805,7 @@ fn test_assembly_parser() {
                                                                     arguments: vec![
                                                                         YulExpression::NumberLiteral(
                                                                             Loc::File(0, 924, 930),
-                                                                            BigInt::from(3),
+                                                                            "3".to_string(), "".to_string(),
                                                                             Some(Identifier {
                                                                                 loc: Loc::File(0, 926, 930),
                                                                                 name: "u256".to_string(),
@@ -814,7 +813,7 @@ fn test_assembly_parser() {
                                                                         ),
                                                                         YulExpression::NumberLiteral(
                                                                             Loc::File(0, 932, 938),
-                                                                            BigInt::from(2),
+                                                                            "2".to_string(), "".to_string(),
                                                                             Some(Identifier {
                                                                                 loc: Loc::File(0, 934, 938),
                                                                                 name: "u256".to_string(),

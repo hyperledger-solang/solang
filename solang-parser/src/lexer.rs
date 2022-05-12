@@ -4,7 +4,6 @@
 //  - pragma value is [^;]+
 //
 use itertools::{peek_nth, PeekNth};
-use num_bigint::ParseBigIntError;
 use phf::phf_map;
 use std::{fmt, str::CharIndices};
 use unicode_xid::UnicodeXID;
@@ -159,8 +158,6 @@ pub enum Token<'input> {
     Weeks,
     Gwei,
     Wei,
-    Szabo,
-    Finney,
     Ether,
 
     This,
@@ -192,13 +189,13 @@ impl<'input> fmt::Display for Token<'input> {
             Token::StringLiteral(s) => write!(f, "\"{}\"", s),
             Token::HexLiteral(hex) => write!(f, "{}", hex),
             Token::AddressLiteral(address) => write!(f, "{}", address),
-            Token::Number(base, exp) if exp.is_empty() => write!(f, "{}", base),
-            Token::Number(base, exp) => write!(f, "{}e{}", base, exp),
-            Token::RationalNumber(significand, mantissa, exp) if exp.is_empty() => {
-                write!(f, "{}.{}", significand, mantissa)
+            Token::Number(integer, exp) if exp.is_empty() => write!(f, "{}", integer),
+            Token::Number(integer, exp) => write!(f, "{}e{}", integer, exp),
+            Token::RationalNumber(integer, fraction, exp) if exp.is_empty() => {
+                write!(f, "{}.{}", integer, fraction)
             }
-            Token::RationalNumber(significand, mantissa, exp) => {
-                write!(f, "{}.{}e{}", significand, mantissa, exp)
+            Token::RationalNumber(integer, fraction, exp) => {
+                write!(f, "{}.{}e{}", integer, fraction, exp)
             }
             Token::HexNumber(n) => write!(f, "{}", n),
             Token::Uint(w) => write!(f, "uint{}", w),
@@ -309,8 +306,6 @@ impl<'input> fmt::Display for Token<'input> {
             Token::Weeks => write!(f, "weeks"),
             Token::Gwei => write!(f, "gwei"),
             Token::Wei => write!(f, "wei"),
-            Token::Szabo => write!(f, "szabo"),
-            Token::Finney => write!(f, "finney"),
             Token::Ether => write!(f, "ether"),
             Token::This => write!(f, "this"),
             Token::As => write!(f, "as"),
@@ -351,7 +346,6 @@ pub enum LexicalError {
     UnrecognisedToken(Loc, String),
     MissingExponent(Loc),
     ExpectedFrom(Loc, String),
-    InvalidBigInt(Loc, ParseBigIntError),
 }
 
 impl fmt::Display for LexicalError {
@@ -371,9 +365,6 @@ impl fmt::Display for LexicalError {
             LexicalError::UnrecognisedToken(_, t) => write!(f, "unrecognised token '{}'", t),
             LexicalError::ExpectedFrom(_, t) => write!(f, "'{}' found where 'from' expected", t),
             LexicalError::MissingExponent(..) => write!(f, "missing number"),
-            LexicalError::InvalidBigInt(_, err) => {
-                write!(f, "bigint error occurred: {err}")
-            }
         }
     }
 }
@@ -388,8 +379,7 @@ impl CodeLocation for LexicalError {
             | LexicalError::InvalidCharacterInHexLiteral(loc, _)
             | LexicalError::UnrecognisedToken(loc, ..)
             | LexicalError::ExpectedFrom(loc, ..)
-            | LexicalError::MissingExponent(loc, ..)
-            | LexicalError::InvalidBigInt(loc, ..) => *loc,
+            | LexicalError::MissingExponent(loc, ..) => *loc,
         }
     }
 }
@@ -555,8 +545,6 @@ static KEYWORDS: phf::Map<&'static str, Token> = phf_map! {
     "weeks" => Token::Weeks,
     "wei" => Token::Wei,
     "gwei" => Token::Gwei,
-    "szabo" => Token::Szabo,
-    "finney" => Token::Finney,
     "ether" => Token::Ether,
     "this" => Token::This,
     "as" => Token::As,
@@ -690,21 +678,21 @@ impl<'input> Lexer<'input> {
         }
 
         if is_rational {
-            let significand = &self.input[start..=end_before_rational];
-            let mantissa = &self.input[rational_start..=rational_end];
-
+            let integer = &self.input[start..=end_before_rational];
+            let fraction = &self.input[rational_start..=rational_end];
             let exp = &self.input[exp_start..=end];
+
             return Ok((
                 start,
-                Token::RationalNumber(significand, mantissa, exp),
+                Token::RationalNumber(integer, fraction, exp),
                 end + 1,
             ));
         }
 
-        let base = &self.input[start..=old_end];
+        let integer = &self.input[start..=old_end];
         let exp = &self.input[exp_start..=end];
 
-        Ok((start, Token::Number(base, exp), end + 1))
+        Ok((start, Token::Number(integer, exp), end + 1))
     }
 
     fn string(

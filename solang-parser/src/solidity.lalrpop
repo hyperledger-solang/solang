@@ -1,8 +1,3 @@
-use std::str::FromStr;
-use num_bigint::{BigUint, BigInt};
-use num_traits::{Pow, Zero};
-use num_rational::BigRational;
-use std::ops::Mul;
 use lalrpop_util::ParseError;
 use super::pt::*;
 use super::box_option;
@@ -362,8 +357,8 @@ Precedence2: Expression = {
     <a:@L> "new" <call:FunctionCall> <b:@R> => Expression::New(Loc::File(file_no, a, b), Box::new(call)),
     <a:@L> "++" <b:@R> <e:Precedence2> => Expression::PreIncrement(Loc::File(file_no, a, b), Box::new(e)),
     <a:@L> "--" <b:@R> <e:Precedence2> => Expression::PreDecrement(Loc::File(file_no, a, b), Box::new(e)),
-    <a:@L> "+" <b:@R> <e:Precedence2> => Expression::UnaryPlus(Loc::File(file_no, a, b), Box::new(e)),
-    <a:@L> "-" <b:@R> <e:Precedence2> => Expression::UnaryMinus(Loc::File(file_no, a, b), Box::new(e)),
+    <a:@L> "+" <e:Precedence2> <b:@R>  => Expression::UnaryPlus(Loc::File(file_no, a, b), Box::new(e)),
+    <a:@L> "-" <e:Precedence2> <b:@R> => Expression::UnaryMinus(Loc::File(file_no, a, b), Box::new(e)),
     <l:@L> "error" <r:@R> => Expression::Variable(Identifier{loc: Loc::File(file_no, l, r), name: "error".to_string()}),
     <l:@L> "revert" <r:@R> => Expression::Variable(Identifier{loc: Loc::File(file_no, l, r), name: "revert".to_string()}),
     Precedence0,
@@ -429,91 +424,18 @@ NoFunctionTyPrecedence0: Expression = {
     },
     <SolNoErrorIdentifier> => Expression::Variable(<>),
     <l:@L> <e:Precedence0> <u:Unit> <r:@R> => Expression::Unit(Loc::File(file_no, l, r), Box::new(e), u),
-    <l:@L> <n:number> <r:@R> =>? {
-        let base: String = n.0.chars().filter(|v| *v != '_').collect();
+    <l:@L> <n:number> <r:@R> => {
+        let integer: String = n.0.chars().filter(|v| *v != '_').collect();
         let exp: String = n.1.chars().filter(|v| *v != '_').collect();
 
-        let base = BigInt::from_str(&base)
-            .map_err(|err| ParseError::User { error:LexicalError::InvalidBigInt(Loc::File(file_no, l, r), err)})?;
-
-        let n = if exp.is_empty() {
-            base
-        } else {
-            let b10 = BigInt::from_str("10").unwrap();
-
-            if exp.starts_with('-') {
-                let exp = b10.pow(BigUint::from_str(&exp[1..])
-                    .map_err(|err| ParseError::User { error:LexicalError::InvalidBigInt(Loc::File(file_no, l, r), err)})?);
-                let res = BigRational::new(base, exp);
-
-                if res.is_integer() {
-                    res.to_integer()
-                } else {
-                    return Ok(Expression::RationalNumberLiteral(Loc::File(file_no, l, r), res));
-                }
-            } else {
-                let exp = b10.pow(BigUint::from_str(&exp)
-                    .map_err(|err| ParseError::User { error:LexicalError::InvalidBigInt(Loc::File(file_no, l, r), err)})?);
-
-                base.mul(exp)
-            }
-        };
-
-        Ok(Expression::NumberLiteral(Loc::File(file_no, l, r), n))
+        Expression::NumberLiteral(Loc::File(file_no, l, r), integer, exp)
     },
     <l:@L> <n:rational> <r:@R> => {
-        let mut significand: String = n.0.to_string();
-        let mantissa: String = n.1.to_string();
-        let exp: String = n.2.to_string();
-        let len = if mantissa.is_empty() {
-            0
-        } else {
-            mantissa.len()
-        };
-        let mut test = false;
-        if exp.starts_with("-") {
-            test = true;
-        }
+        let integer: String = n.0.chars().filter(|v| *v != '_').collect();
+        let fraction: String = n.1.chars().filter(|v| *v != '_').collect();
+        let exp: String = n.2.chars().filter(|v| *v != '_').collect();
 
-        let denominator = BigInt::from_str("10").unwrap().pow(BigUint::from(len as u64));
-        let zero_index = mantissa.chars().position(|c| c != '0').unwrap_or(usize::MAX);
-        let n =  if exp.is_empty() {
-            if significand.is_empty() || significand == "0" {
-                if zero_index < usize::MAX {
-                    BigRational::new(BigInt::from_str(&mantissa[zero_index..]).unwrap(), denominator)
-                } else {
-                    BigRational::from(BigInt::zero())
-                }
-            } else {
-                significand.push_str(&mantissa);
-                BigRational::new(BigInt::from_str(&significand).unwrap(), denominator)
-            }
-        } else {
-            if significand.is_empty() || significand == "0" {
-                if zero_index < usize::MAX {
-                    if test {
-                        let exp_result = BigInt::from_str("10").unwrap().pow(BigUint::from_str(&exp[1..]).unwrap());
-                        BigRational::new(BigInt::from_str(&mantissa[zero_index..]).unwrap(), denominator.mul(exp_result))
-                    } else {
-                        let exp_result = BigInt::from_str("10").unwrap().pow(BigUint::from_str(&exp).unwrap());
-                        BigRational::new(BigInt::from_str(&mantissa[zero_index..]).unwrap().mul(exp_result), denominator)
-                    }
-                } else {
-                    BigRational::from(BigInt::zero())
-                }
-            } else {
-                significand.push_str(&mantissa);
-                if test {
-                    let exp_result = BigInt::from_str("10").unwrap().pow(BigUint::from_str(&exp[1..]).unwrap());
-                    BigRational::new(BigInt::from_str(&significand).unwrap(), denominator.mul(exp_result))
-                } else {
-                    let exp_result = BigInt::from_str("10").unwrap().pow(BigUint::from_str(&exp).unwrap());
-                    BigRational::new(BigInt::from_str(&significand).unwrap().mul(exp_result), denominator)
-                }
-            }
-        };
-
-        Expression::RationalNumberLiteral(Loc::File(file_no, l, r), n)
+        Expression::RationalNumberLiteral(Loc::File(file_no, l, r), integer, fraction, exp)
     },
     <l:@L> <n:hexnumber> <r:@R> => {
         Expression::HexNumberLiteral(Loc::File(file_no, l, r), n.to_owned())
@@ -539,8 +461,6 @@ Unit: Unit = {
     <@L> "weeks" <@R> => Unit::Weeks(Loc::File(file_no, <>)),
     <@L> "wei" <@R> => Unit::Wei(Loc::File(file_no, <>)),
     <@L> "gwei" <@R> => Unit::Gwei(Loc::File(file_no, <>)),
-    <@L> "szabo" <@R> => Unit::Szabo(Loc::File(file_no, <>)),
-    <@L> "finney" <@R> => Unit::Finney(Loc::File(file_no, <>)),
     <@L> "ether" <@R> => Unit::Ether(Loc::File(file_no, <>)),
 }
 
@@ -874,19 +794,10 @@ YulLiteral: YulExpression = {
     <a:@L> "true" <t_type:(":" <YulIdentifier>)?> <b:@R> => YulExpression::BoolLiteral(Loc::File(file_no, a, b), true, t_type),
     <a:@L> "false" <t_type:(":" <YulIdentifier>)?> <b:@R> => YulExpression::BoolLiteral(Loc::File(file_no, a, b), false, t_type),
     <l:@L> <n:number> <t_type:(":" <YulIdentifier>)?> <r:@R> => {
-        let base: String = n.0.chars().filter(|v| *v != '_').collect();
+        let integer: String = n.0.chars().filter(|v| *v != '_').collect();
         let exp: String = n.1.chars().filter(|v| *v != '_').collect();
 
-        let n = if exp.is_empty() {
-            BigInt::from_str(&base).unwrap()
-        } else {
-            let base = BigInt::from_str(&base).unwrap();
-            let exp = BigInt::from_str("10").unwrap().pow(BigUint::from_str(&exp).unwrap());
-
-            base.mul(exp)
-        };
-
-        YulExpression::NumberLiteral(Loc::File(file_no, l, r), n, t_type)
+        YulExpression::NumberLiteral(Loc::File(file_no, l, r), integer, exp, t_type)
     },
     <l:@L> <n:hexnumber> <t_type:(":" <YulIdentifier>)?> <r:@R> => {
         YulExpression::HexNumberLiteral(Loc::File(file_no, l, r), n.to_owned(), t_type)
@@ -1151,8 +1062,6 @@ extern {
         "weeks" => Token::Weeks,
         "wei" => Token::Wei,
         "gwei" => Token::Gwei,
-        "szabo" => Token::Szabo,
-        "finney" => Token::Finney,
         "ether" => Token::Ether,
         "this" => Token::This,
         "as" => Token::As,

@@ -1,8 +1,5 @@
 use std::fmt::{self, Display};
 
-use num_bigint::BigInt;
-use num_rational::BigRational;
-
 #[derive(Debug, PartialEq, PartialOrd, Ord, Eq, Hash, Clone, Copy)]
 /// file no, start offset, end offset (in bytes)
 pub enum Loc {
@@ -349,8 +346,6 @@ pub enum Unit {
     Weeks(Loc),
     Wei(Loc),
     Gwei(Loc),
-    Szabo(Loc),
-    Finney(Loc),
     Ether(Loc),
 }
 
@@ -409,8 +404,8 @@ pub enum Expression {
     AssignDivide(Loc, Box<Expression>, Box<Expression>),
     AssignModulo(Loc, Box<Expression>, Box<Expression>),
     BoolLiteral(Loc, bool),
-    NumberLiteral(Loc, BigInt),
-    RationalNumberLiteral(Loc, BigRational),
+    NumberLiteral(Loc, String, String),
+    RationalNumberLiteral(Loc, String, String, String),
     HexNumberLiteral(Loc, String),
     StringLiteral(Vec<StringLiteral>),
     Type(Loc, Type),
@@ -474,8 +469,8 @@ impl CodeLocation for Expression {
             | Expression::AssignDivide(loc, ..)
             | Expression::AssignModulo(loc, ..)
             | Expression::BoolLiteral(loc, _)
-            | Expression::NumberLiteral(loc, _)
-            | Expression::RationalNumberLiteral(loc, _)
+            | Expression::NumberLiteral(loc, ..)
+            | Expression::RationalNumberLiteral(loc, ..)
             | Expression::HexNumberLiteral(loc, _)
             | Expression::ArrayLiteral(loc, _)
             | Expression::List(loc, _)
@@ -698,7 +693,7 @@ pub struct YulBlock {
 #[derive(Debug, PartialEq, Clone)]
 pub enum YulExpression {
     BoolLiteral(Loc, bool, Option<Identifier>),
-    NumberLiteral(Loc, BigInt, Option<Identifier>),
+    NumberLiteral(Loc, String, String, Option<Identifier>),
     HexNumberLiteral(Loc, String, Option<Identifier>),
     HexStringLiteral(HexLiteral, Option<Identifier>),
     StringLiteral(StringLiteral, Option<Identifier>),
