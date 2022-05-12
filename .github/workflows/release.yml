@@ -211,8 +211,9 @@ jobs:
         tag: ${{ github.ref }}
 
   container:
-    name: Container
+    name: Container Image
     runs-on: ubuntu-20.04
+    if: ${{ github.repository_owner != 'hyperledger-labs' }}
     steps:
     - name: Checkout sources
       uses: actions/checkout@v2
@@ -222,3 +223,17 @@ jobs:
     - run: |
         echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin
         docker push ghcr.io/${GITHUB_REPOSITORY}:${GITHUB_REF/refs\/tags\//}
+
+  container-multiarch:
+    name: Multiarch Container Image
+    runs-on: macos-arm
+    if: ${{ github.repository_owner == 'hyperledger-labs' }}
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v2
+    - run: |
+        echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin
+        docker buildx build . --push \
+          -t ghcr.io/${GITHUB_REPOSITORY}:${GITHUB_REF/refs\/tags\//} \
+          --platform linux/arm64,linux/amd64 \
+          --label org.opencontainers.image.description="Solidity Compiler for Solana, Substrate, and ewasm version $(git describe --tags)"
