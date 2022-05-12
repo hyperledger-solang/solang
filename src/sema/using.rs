@@ -52,7 +52,7 @@ pub(crate) fn using_decl(
                     UsingList::Library(library_no)
                 } else {
                     ns.diagnostics.push(Diagnostic::error(
-                        library.loc(),
+                        library.loc,
                         format!(
                             "library expected but {} '{}' found",
                             ns.contracts[library_no].ty, library
@@ -84,7 +84,7 @@ pub(crate) fn using_decl(
                             .collect();
 
                         diagnostics.push(Diagnostic::error_with_notes(
-                            function_name.loc(),
+                            function_name.loc,
                             format!("'{}' is an overloaded function", function_name),
                             notes,
                         ));
@@ -97,7 +97,7 @@ pub(crate) fn using_decl(
 
                     if func.params.is_empty() {
                         diagnostics.push(Diagnostic::error_with_note(
-                            function_name.loc(),
+                            function_name.loc,
                             format!(
                                 "'{}' has no arguments, at least one argument required",
                                 function_name
@@ -111,7 +111,7 @@ pub(crate) fn using_decl(
                     if let Some(ty) = &ty {
                         if *ty != func.params[0].ty {
                             diagnostics.push(Diagnostic::error_with_note(
-                                function_name.loc(),
+                                function_name.loc,
                                 format!("function cannot be used since first argument is '{}' rather than the required '{}'", func.params[0].ty.to_string(ns), ty.to_string(ns)),
                                 loc,
                                 format!("definition of '{}'", function_name),
