@@ -743,7 +743,7 @@ fn dynamic_array_push() {
 
         contract foo {
             function test() public {
-                int[] bar = new int[](1);
+                int[] bar = (new int[])(1);
 
                 bar[0] = 128;
                 bar.push(64);
@@ -763,7 +763,7 @@ fn dynamic_array_push() {
 
         contract foo {
             function test() public {
-                bytes bar = new bytes(1);
+                bytes bar = (new bytes)(1);
 
                 bar[0] = 128;
                 bar.push(64);

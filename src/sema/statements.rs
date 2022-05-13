@@ -1789,16 +1789,26 @@ fn try_catch(
 
     let fcall = match expr {
         pt::Expression::FunctionCall(loc, ty, args) => {
-            let res = function_call_expr(
-                loc,
-                ty,
-                args,
-                context,
-                ns,
-                symtable,
-                diagnostics,
-                ResolveTo::Unknown,
-            )?;
+            let res = match ty.as_ref() {
+                pt::Expression::New(_, ty) => {
+                    new(loc, ty, args, context, ns, symtable, diagnostics)?
+                }
+                pt::Expression::FunctionCallBlock(loc, expr, _)
+                    if matches!(expr.as_ref(), pt::Expression::New(..)) =>
+                {
+                    new(loc, ty, args, context, ns, symtable, diagnostics)?
+                }
+                _ => function_call_expr(
+                    loc,
+                    ty,
+                    args,
+                    context,
+                    ns,
+                    symtable,
+                    diagnostics,
+                    ResolveTo::Unknown,
+                )?,
+            };
             check_function_call(ns, &res, symtable);
             res
         }

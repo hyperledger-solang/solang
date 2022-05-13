@@ -3471,6 +3471,12 @@ pub fn new(
 ) -> Result<Expression, ()> {
     let (ty, call_args, call_args_loc) = collect_call_args(ty, diagnostics)?;
 
+    let ty = if let pt::Expression::New(_, ty) = ty {
+        ty
+    } else {
+        ty
+    };
+
     let ty = ns.resolve_type(context.file_no, context.contract_no, false, ty, diagnostics)?;
 
     match &ty {
@@ -7285,16 +7291,24 @@ pub fn call_expr(
         Err(_) => (),
     }
 
-    let expr = function_call_expr(
-        loc,
-        ty,
-        args,
-        context,
-        ns,
-        symtable,
-        diagnostics,
-        resolve_to,
-    )?;
+    let expr = match ty {
+        pt::Expression::New(_, ty) => new(loc, ty, args, context, ns, symtable, diagnostics)?,
+        pt::Expression::FunctionCallBlock(loc, expr, _)
+            if matches!(expr.as_ref(), pt::Expression::New(..)) =>
+        {
+            new(loc, ty, args, context, ns, symtable, diagnostics)?
+        }
+        _ => function_call_expr(
+            loc,
+            ty,
+            args,
+            context,
+            ns,
+            symtable,
+            diagnostics,
+            resolve_to,
+        )?,
+    };
 
     check_function_call(ns, &expr, symtable);
     if expr.tys().len() > 1 && !is_destructible {
