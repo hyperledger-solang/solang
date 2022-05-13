@@ -173,7 +173,10 @@ jobs:
 
   mac-intel:
     name: Mac Intel
-    runs-on: macos-latest
+    # The Hyperledger self-hosted intel macs have the label macos-latest
+    # and run macos 12. We don't want to build llvm on macos 12, because
+    # then it can't be used on macos 11.
+    runs-on: macos-11
     steps:
     - name: Checkout sources
       uses: actions/checkout@v2
