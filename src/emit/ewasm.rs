@@ -17,9 +17,9 @@ use inkwell::AddressSpace;
 use inkwell::IntPredicate;
 use inkwell::OptimizationLevel;
 
-use super::ethabiencoder;
-use super::{Binary, TargetRuntime, Variable};
+use crate::emit::ethabiencoder;
 use crate::emit::Generate;
+use crate::emit::{Binary, TargetRuntime, Variable};
 
 pub struct EwasmTarget {
     abi: ethabiencoder::EthAbiDecoder,
