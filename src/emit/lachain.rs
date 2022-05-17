@@ -284,7 +284,6 @@ impl LachainTarget {
     fn declare_externals(&self, binary: &mut Binary) {
         let u8_ptr_ty = binary.context.i8_type().ptr_type(AddressSpace::Generic);
         let u32_ty = binary.context.i32_type();
-        let u8_ty = binary.context.i8_type();
         let void_ty = binary.context.void_type();
 
         let ftype = void_ty.fn_type(&[u8_ptr_ty.into(), u8_ptr_ty.into()], false);
@@ -716,7 +715,7 @@ impl LachainTarget {
             void_ty.fn_type(
                 &[
                     u8_ptr_ty.into(), // hashOffset
-                    u8_ty.into(),     // vOffset
+                    u32_ty.into(),    // v
                     u8_ptr_ty.into(), // rOffset
                     u8_ptr_ty.into(), // sOffset
                     u8_ptr_ty.into(), // resultOffset

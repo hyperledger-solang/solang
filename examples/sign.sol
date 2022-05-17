@@ -8,7 +8,7 @@ contract Sign {
         // Divide the signature in r, s and v variables
         bytes32 r;
         bytes32 s;
-        uint8 v;
+        uint32 v;
 
         bytes memory rA = new bytes(32);
         bytes memory sA = new bytes(32);
@@ -20,7 +20,12 @@ contract Sign {
 
         r = bytes32(rA);
         s = bytes32(sA);
-        v = uint8(signature[64]);
+        
+        if (signature.length == 65) {
+            v = uint8(signature[65]);
+        } else {
+            v = uint8(signature[64]) * 256 + uint8(signature[65]);
+        }
 
         // If the signature is valid (and not malleable), return the signer address
         return ecrecover(hash, v, r, s);

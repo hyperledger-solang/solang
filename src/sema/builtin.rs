@@ -291,7 +291,7 @@ static BUILTIN_FUNCTIONS: [Prototype; 27] = [
         builtin: Builtin::Ecrecover,
         namespace: None,
         name: "ecrecover",
-        args: &[Type::Bytes(32), Type::Uint(8), Type::Bytes(32), Type::Bytes(32)],
+        args: &[Type::Bytes(32), Type::Uint(32), Type::Bytes(32), Type::Bytes(32)],
         ret: &[Type::Address(true)],
         target: &[],
         doc: "Recover the address associated with the public key from elliptic curve signature or return zero on error",
