@@ -15,7 +15,7 @@ use num_traits::ToPrimitive;
 use std::collections::HashMap;
 use std::convert::TryFrom;
 
-use super::{Binary, TargetRuntime, Variable};
+use crate::emit::{Binary, TargetRuntime, Variable};
 
 // When using the seal api, we use our own scratch buffer.
 const SCRATCH_SIZE: u32 = 32 * 1024;

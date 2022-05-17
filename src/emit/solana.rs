@@ -15,9 +15,9 @@ use inkwell::{context::Context, types::BasicTypeEnum};
 use inkwell::{AddressSpace, IntPredicate, OptimizationLevel};
 use num_traits::ToPrimitive;
 
-use super::ethabiencoder;
-use super::loop_builder::LoopBuilder;
-use super::{Binary, ReturnCode, TargetRuntime, Variable};
+use crate::emit::ethabiencoder;
+use crate::emit::loop_builder::LoopBuilder;
+use crate::emit::{Binary, ReturnCode, TargetRuntime, Variable};
 
 pub struct SolanaTarget {
     abi: ethabiencoder::EthAbiDecoder,

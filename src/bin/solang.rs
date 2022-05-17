@@ -585,7 +585,7 @@ fn process_file(
     Ok(ns)
 }
 
-fn save_intermediates(binary: &solang::emit::Binary, matches: &ArgMatches) -> bool {
+fn save_intermediates(binary: &solang::emit::binary::Binary, matches: &ArgMatches) -> bool {
     let verbose = matches.is_present("VERBOSE");
 
     match matches.value_of("EMIT") {
