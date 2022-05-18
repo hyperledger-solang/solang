@@ -130,10 +130,11 @@ SolNoErrorIdentifier: Identifier = {
     <l:@L> "default" <r:@R> => Identifier{loc: Loc::File(file_no, l, r), name: "default".to_string()},
 }
 
-SolIdentifierNamespace: Expression = {
-    SolIdentifier => Expression::Variable(<>),
-    <l:@L> <e:SolIdentifierNamespace> "." <id:SolIdentifier> <r:@R> => {
-        Expression::MemberAccess(Loc::File(file_no, l, r), Box::new(e), id)
+SolIdentifierPath: IdentifierPath = {
+    <l:@L> <e:SolIdentifier> <v:("." <SolIdentifier>)*> <r:@R> => {
+        let mut v = v;
+        v.insert(0, e);
+        IdentifierPath { loc: Loc::File(file_no, l, r), identifiers: v }
     }
 }
 
@@ -179,7 +180,7 @@ Bases: Vec<Base> = {
 }
 
 Base: Base = {
-    <l:@L> <name:SolIdentifierNamespace> <args:("(" <Comma<Expression>> ")")?> <r:@R> => Base {
+    <l:@L> <name:SolIdentifierPath> <args:("(" <Comma<Expression>> ")")?> <r:@R> => Base {
         loc: Loc::File(file_no, l, r),
         name,
         args
@@ -354,7 +355,7 @@ Precedence2: Expression = {
     <a:@L> "!" <b:@R> <e:Precedence2> => Expression::Not(Loc::File(file_no, a, b), Box::new(e)),
     <a:@L> "~" <b:@R> <e:Precedence2> => Expression::Complement(Loc::File(file_no, a, b), Box::new(e)),
     <a:@L> "delete" <b:@R> <e:Precedence2> => Expression::Delete(Loc::File(file_no, a, b), Box::new(e)),
-    <a:@L> "new" <call:FunctionCall> <b:@R> => Expression::New(Loc::File(file_no, a, b), Box::new(call)),
+    <a:@L> "new" <call:Precedence2> <b:@R> => Expression::New(Loc::File(file_no, a, b), Box::new(call)),
     <a:@L> "++" <b:@R> <e:Precedence2> => Expression::PreIncrement(Loc::File(file_no, a, b), Box::new(e)),
     <a:@L> "--" <b:@R> <e:Precedence2> => Expression::PreDecrement(Loc::File(file_no, a, b), Box::new(e)),
     <a:@L> "+" <e:Precedence2> <b:@R>  => Expression::UnaryPlus(Loc::File(file_no, a, b), Box::new(e)),
@@ -638,8 +639,8 @@ Using: Box<Using> = {
 }
 
 UsingList: UsingList = {
-    SolIdentifierNamespace => UsingList::Library(<>),
-    "{" <Comma<SolIdentifierNamespace>> "}" => UsingList::Functions(<>),
+    SolIdentifierPath => UsingList::Library(<>),
+    "{" <Comma<SolIdentifierPath>> "}" => UsingList::Functions(<>),
 }
 
 BlockStatement: Statement = {
@@ -749,10 +750,10 @@ NonIfStatement: Statement = {
     <l:@L> "emit" <ty:FunctionCall> <r:@R> ";" => {
         Statement::Emit(Loc::File(file_no, l, r), ty)
     },
-    <l:@L> "revert" <error:SolIdentifierNamespace?> "(" <v:Comma<Expression>> ")" <r:@R> ";" => {
+    <l:@L> "revert" <error:SolIdentifierPath?> "(" <v:Comma<Expression>> ")" <r:@R> ";" => {
         Statement::Revert(Loc::File(file_no, l, r), error, v)
     },
-    <l:@L> "revert" <error:SolIdentifierNamespace?> "(" "{" <v:Comma<NamedArgument>> "}" ")" <r:@R> ";" => {
+    <l:@L> "revert" <error:SolIdentifierPath?> "(" "{" <v:Comma<NamedArgument>> "}" ")" <r:@R> ";" => {
         Statement::RevertNamedArgs(Loc::File(file_no, l, r), error, v)
     },
 }

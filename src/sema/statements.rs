@@ -160,7 +160,13 @@ pub fn resolve_function_body(
 
         for attr in &def.attributes {
             if let pt::FunctionAttribute::BaseOrModifier(_, modifier) = attr {
-                if let pt::Expression::Variable(modifier_name) = &modifier.name {
+                if modifier.name.identifiers.len() != 1 {
+                    ns.diagnostics.push(Diagnostic::error(
+                        def.loc,
+                        format!("unknown modifier '{}' on function", modifier.name),
+                    ));
+                } else {
+                    let modifier_name = &modifier.name.identifiers[0];
                     if let Ok(e) = function_call_pos_args(
                         &modifier.loc,
                         modifier_name,
@@ -182,11 +188,6 @@ pub fn resolve_function_body(
                     ) {
                         modifiers.push(e);
                     }
-                } else {
-                    ns.diagnostics.push(Diagnostic::error(
-                        def.loc,
-                        format!("unknown modifier '{}' on function", modifier.name),
-                    ));
                 }
             }
         }
@@ -840,7 +841,7 @@ fn statement(
         pt::Statement::Revert(loc, error, args) => {
             if let Some(error) = error {
                 ns.diagnostics.push(Diagnostic::error(
-                    error.loc(),
+                    error.loc,
                     format!("revert with custom error '{}' not supported yet", error),
                 ));
                 return Err(());
@@ -1788,16 +1789,26 @@ fn try_catch(
 
     let fcall = match expr {
         pt::Expression::FunctionCall(loc, ty, args) => {
-            let res = function_call_expr(
-                loc,
-                ty,
-                args,
-                context,
-                ns,
-                symtable,
-                diagnostics,
-                ResolveTo::Unknown,
-            )?;
+            let res = match ty.as_ref() {
+                pt::Expression::New(_, ty) => {
+                    new(loc, ty, args, context, ns, symtable, diagnostics)?
+                }
+                pt::Expression::FunctionCallBlock(loc, expr, _)
+                    if matches!(expr.as_ref(), pt::Expression::New(..)) =>
+                {
+                    new(loc, ty, args, context, ns, symtable, diagnostics)?
+                }
+                _ => function_call_expr(
+                    loc,
+                    ty,
+                    args,
+                    context,
+                    ns,
+                    symtable,
+                    diagnostics,
+                    ResolveTo::Unknown,
+                )?,
+            };
             check_function_call(ns, &res, symtable);
             res
         }
