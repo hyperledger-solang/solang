@@ -275,7 +275,7 @@ fn try_catch_external_calls() {
             child c;
 
             function create_child() public {
-                c = new child();
+                c = (new child)();
             }
 
             function call_child() public view returns (int64) {
@@ -332,7 +332,7 @@ fn try_catch_constructor() {
         contract c {
             function test() public {
                 int x;
-                try new other() {
+                try (new other)() {
                     x = 102;
                 } catch (bytes) {
                     x = 2;
