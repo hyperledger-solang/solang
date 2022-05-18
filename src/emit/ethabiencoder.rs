@@ -3076,21 +3076,11 @@ impl EthAbiDecoder {
                     .left()
                     .unwrap();
 
-                let v = binary.builder.build_pointer_cast(
-                    v.into_pointer_value(),
-                    binary
-                        .module
-                        .get_struct_type("struct.vector")
-                        .unwrap()
-                        .ptr_type(AddressSpace::Generic),
-                    "string",
-                );
-
                 if let Some(to) = to {
                     binary.builder.build_store(to, v);
                 }
 
-                v.into()
+                v
             }
             ast::Type::UserType(no) => self.decode_primitive(
                 binary,

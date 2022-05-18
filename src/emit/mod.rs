@@ -485,7 +485,7 @@ pub trait TargetRuntime<'a> {
                         "invalid",
                     );
 
-                    let v = bin
+                    let dest = bin
                         .builder
                         .build_call(
                             bin.module.get_function("vector_new").unwrap(),
@@ -496,15 +496,6 @@ pub trait TargetRuntime<'a> {
                         .left()
                         .unwrap()
                         .into_pointer_value();
-
-                    let dest = bin.builder.build_pointer_cast(
-                        v,
-                        bin.module
-                            .get_struct_type("struct.vector")
-                            .unwrap()
-                            .ptr_type(AddressSpace::Generic),
-                        "vector",
-                    );
 
                     // get the slot for the elements
                     // this hashes in-place
@@ -1257,8 +1248,7 @@ pub trait TargetRuntime<'a> {
                     true,
                 );
 
-                let v = bin
-                    .builder
+                bin.builder
                     .build_call(
                         bin.module.get_function("vector_new").unwrap(),
                         &[size.into(), elem_size.into(), init.into()],
@@ -1266,18 +1256,7 @@ pub trait TargetRuntime<'a> {
                     )
                     .try_as_basic_value()
                     .left()
-                    .unwrap();
-
-                bin.builder
-                    .build_pointer_cast(
-                        v.into_pointer_value(),
-                        bin.module
-                            .get_struct_type("struct.vector")
-                            .unwrap()
-                            .ptr_type(AddressSpace::Generic),
-                        "vector",
-                    )
-                    .into()
+                    .unwrap()
             }
             Expression::Add(_, _, unchecked, l, r) => {
                 let left = self
@@ -2159,8 +2138,7 @@ pub trait TargetRuntime<'a> {
                     "",
                 );
 
-                let v = bin
-                    .builder
+                bin.builder
                     .build_call(
                         bin.module.get_function("vector_new").unwrap(),
                         &[size.into(), elem_size.into(), init.into()],
@@ -2168,18 +2146,7 @@ pub trait TargetRuntime<'a> {
                     )
                     .try_as_basic_value()
                     .left()
-                    .unwrap();
-
-                bin.builder
-                    .build_pointer_cast(
-                        v.into_pointer_value(),
-                        bin.module
-                            .get_struct_type("struct.vector")
-                            .unwrap()
-                            .ptr_type(AddressSpace::Generic),
-                        "vector",
-                    )
-                    .into()
+                    .unwrap()
             }
             Expression::BytesCast(_, Type::DynamicBytes, Type::Bytes(n), e) => {
                 let array = self.expression(bin, e, vartab, function, ns);
@@ -2668,8 +2635,7 @@ pub trait TargetRuntime<'a> {
                 let (left, left_len) = self.string_location(bin, l, vartab, function, ns);
                 let (right, right_len) = self.string_location(bin, r, vartab, function, ns);
 
-                let v = bin
-                    .builder
+                bin.builder
                     .build_call(
                         bin.module.get_function("concat").unwrap(),
                         &[left.into(), left_len.into(), right.into(), right_len.into()],
@@ -2677,18 +2643,7 @@ pub trait TargetRuntime<'a> {
                     )
                     .try_as_basic_value()
                     .left()
-                    .unwrap();
-
-                bin.builder
-                    .build_pointer_cast(
-                        v.into_pointer_value(),
-                        bin.module
-                            .get_struct_type("struct.vector")
-                            .unwrap()
-                            .ptr_type(AddressSpace::Generic),
-                        "vector",
-                    )
-                    .into()
+                    .unwrap()
             }
             Expression::ReturnData(_) => self.return_data(bin, function).into(),
             Expression::StorageArrayLength { array, elem_ty, .. } => {
