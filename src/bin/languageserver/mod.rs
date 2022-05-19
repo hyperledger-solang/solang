@@ -1,4 +1,5 @@
 use clap::ArgMatches;
+use rust_lapper::{Interval, Lapper};
 use serde_json::Value;
 use solang::{
     codegen,
@@ -9,14 +10,16 @@ use solang::{
     sema::{ast, builtin::get_prototype, symtable, tags::render},
     Target,
 };
-use std::{cmp::Ordering, collections::HashMap, ffi::OsString, path::PathBuf};
+use std::{collections::HashMap, ffi::OsString, path::PathBuf};
 use tokio::sync::Mutex;
 use tower_lsp::{jsonrpc::Result, lsp_types::*, Client, LanguageServer, LspService, Server};
 
-pub struct Hovers {
+struct Hovers {
     file: ast::File,
-    lookup: Vec<(usize, usize, String)>,
+    lookup: Lapper<usize, String>,
 }
+
+type HoverEntry = Interval<usize, String>;
 
 pub struct SolangServer {
     client: Client,
@@ -144,18 +147,16 @@ impl SolangServer {
 
             let res = self.client.publish_diagnostics(uri, diags, None);
 
-            let mut lookup: Vec<(usize, usize, String)> = Vec::new();
+            let mut lookup: Vec<HoverEntry> = Vec::new();
             let mut fnc_map: HashMap<String, String> = HashMap::new();
 
             SolangServer::traverse(&ns, &mut lookup, &mut fnc_map);
-
-            lookup.sort_by_key(|k| k.0);
 
             self.files.lock().await.insert(
                 path,
                 Hovers {
                     file: ns.files[ns.top_file_no()].clone(),
-                    lookup,
+                    lookup: Lapper::new(lookup),
                 },
             );
 
@@ -194,7 +195,7 @@ impl SolangServer {
     // statements and traversing inside the contents of the statements.
     fn construct_stmt(
         stmt: &ast::Statement,
-        lookup_tbl: &mut Vec<(usize, usize, String)>,
+        lookup_tbl: &mut Vec<HoverEntry>,
         symtab: &symtable::Symtable,
         fnc_map: &HashMap<String, String>,
         ns: &ast::Namespace,
@@ -205,24 +206,27 @@ impl SolangServer {
                     SolangServer::construct_stmt(stmt, lookup_tbl, symtab, fnc_map, ns);
                 }
             }
-            ast::Statement::VariableDecl(loc, var_no, _param, expr) => {
+            ast::Statement::VariableDecl(loc, var_no, param, expr) => {
                 if let Some(exp) = expr {
                     SolangServer::construct_expr(exp, lookup_tbl, symtab, fnc_map, ns);
                 }
-                let mut msg = SolangServer::expanded_ty(&_param.ty, ns);
-                msg = format!("{} {}", msg, _param.name_as_str());
+                let mut val = format!(
+                    "{} {}",
+                    SolangServer::expanded_ty(&param.ty, ns),
+                    param.name_as_str()
+                );
                 if let Some(expr) = ns.var_constants.get(loc) {
                     match expr {
                         codegen::Expression::BytesLiteral(_, ast::Type::Bytes(_), bs)
                         | codegen::Expression::BytesLiteral(_, ast::Type::DynamicBytes, bs) => {
-                            msg.push_str(&format!(" = hex\"{}\"", hex::encode(&bs)));
+                            val.push_str(&format!(" = hex\"{}\"", hex::encode(&bs)));
                         }
                         codegen::Expression::BytesLiteral(_, ast::Type::String, bs) => {
-                            msg.push_str(&format!(" = \"{}\"", String::from_utf8_lossy(bs)));
+                            val.push_str(&format!(" = \"{}\"", String::from_utf8_lossy(bs)));
                         }
                         codegen::Expression::NumberLiteral(_, ast::Type::Uint(_), n)
                         | codegen::Expression::NumberLiteral(_, ast::Type::Int(_), n) => {
-                            msg.push_str(&format!(" = {}", n));
+                            val.push_str(&format!(" = {}", n));
                         }
                         _ => (),
                     }
@@ -230,11 +234,15 @@ impl SolangServer {
 
                 if let Some(var) = symtab.vars.get(var_no) {
                     if var.slice {
-                        msg.push_str("\nreadonly: compiled to slice\n")
+                        val.push_str("\nreadonly: compiled to slice\n")
                     }
                 }
 
-                lookup_tbl.push((_param.loc.start(), _param.loc.end(), msg));
+                lookup_tbl.push(HoverEntry {
+                    start: param.loc.start(),
+                    stop: param.loc.end(),
+                    val,
+                });
             }
             ast::Statement::If(_locs, _, expr, stat1, stat2) => {
                 SolangServer::construct_expr(expr, lookup_tbl, symtab, fnc_map, ns);
@@ -309,13 +317,13 @@ impl SolangServer {
             } => {
                 let event = &ns.events[*event_no];
 
-                let mut msg = render(&event.tags);
+                let mut val = render(&event.tags);
 
-                msg.push_str(&format!("```\nevent {} {{\n", event.symbol_name(ns)));
+                val.push_str(&format!("```\nevent {} {{\n", event.symbol_name(ns)));
 
                 let mut iter = event.fields.iter().peekable();
                 while let Some(field) = iter.next() {
-                    msg.push_str(&format!(
+                    val.push_str(&format!(
                         "\t{}{}{}{}\n",
                         field.ty.to_string(ns),
                         if field.indexed { " indexed " } else { " " },
@@ -324,12 +332,16 @@ impl SolangServer {
                     ));
                 }
 
-                msg.push_str(&format!(
+                val.push_str(&format!(
                     "}}{};\n```\n",
                     if event.anonymous { " anonymous" } else { "" }
                 ));
 
-                lookup_tbl.push((event_loc.start(), event_loc.end(), msg));
+                lookup_tbl.push(HoverEntry {
+                    start: event_loc.start(),
+                    stop: event_loc.end(),
+                    val,
+                });
 
                 for arg in args {
                     SolangServer::construct_expr(arg, lookup_tbl, symtab, fnc_map, ns);
@@ -360,7 +372,7 @@ impl SolangServer {
     // the respective expression type messages in the table.
     fn construct_expr(
         expr: &ast::Expression,
-        lookup_tbl: &mut Vec<(usize, usize, String)>,
+        lookup_tbl: &mut Vec<HoverEntry>,
         symtab: &symtable::Symtable,
         fnc_map: &HashMap<String, String>,
         ns: &ast::Namespace,
@@ -368,20 +380,35 @@ impl SolangServer {
         match expr {
             // Variable types expression
             ast::Expression::BoolLiteral(locs, vl) => {
-                let msg = format!("(bool) {}", vl);
-                lookup_tbl.push((locs.start(), locs.end(), msg));
+                let val = format!("(bool) {}", vl);
+                lookup_tbl.push(HoverEntry {
+                    start: locs.start(),
+                    stop: locs.end(),
+                    val,
+                });
             }
             ast::Expression::BytesLiteral(locs, typ, _vec_lst) => {
-                let msg = format!("({})", typ.to_string(ns));
-                lookup_tbl.push((locs.start(), locs.end(), msg));
+                let val = format!("({})", typ.to_string(ns));
+                lookup_tbl.push(HoverEntry {
+                    start: locs.start(),
+                    stop: locs.end(),
+                    val,
+                });
             }
             ast::Expression::CodeLiteral(locs, _val, _) => {
-                let msg = format!("({})", _val);
-                lookup_tbl.push((locs.start(), locs.end(), msg));
+                let val = format!("({})", _val);
+                lookup_tbl.push(HoverEntry {
+                    start: locs.start(),
+                    stop: locs.end(),
+                    val,
+                });
             }
             ast::Expression::NumberLiteral(locs, typ, _) => {
-                let msg = typ.to_string(ns);
-                lookup_tbl.push((locs.start(), locs.end(), msg));
+                lookup_tbl.push(HoverEntry {
+                    start: locs.start(),
+                    stop: locs.end(),
+                    val: typ.to_string(ns),
+                });
             }
             ast::Expression::StructLiteral(_locs, _typ, expr) => {
                 for expp in expr {
@@ -401,77 +428,77 @@ impl SolangServer {
 
             // Arithmetic expression
             ast::Expression::Add(locs, ty, unchecked, expr1, expr2) => {
-                lookup_tbl.push((
-                    locs.start(),
-                    locs.end(),
-                    format!(
-                        "{} {}addition",
+                lookup_tbl.push(HoverEntry {
+                    start: locs.start(),
+                    stop: locs.end(),
+                    val: format!(
+                        "{} {} addition",
                         if *unchecked { "unchecked " } else { "" },
                         ty.to_string(ns)
                     ),
-                ));
+                });
 
                 SolangServer::construct_expr(expr1, lookup_tbl, symtab, fnc_map, ns);
                 SolangServer::construct_expr(expr2, lookup_tbl, symtab, fnc_map, ns);
             }
             ast::Expression::Subtract(locs, ty, unchecked, expr1, expr2) => {
-                lookup_tbl.push((
-                    locs.start(),
-                    locs.end(),
-                    format!(
-                        "{} {}subtraction",
+                lookup_tbl.push(HoverEntry {
+                    start: locs.start(),
+                    stop: locs.end(),
+                    val: format!(
+                        "{} {} subtraction",
                         if *unchecked { "unchecked " } else { "" },
                         ty.to_string(ns)
                     ),
-                ));
+                });
 
                 SolangServer::construct_expr(expr1, lookup_tbl, symtab, fnc_map, ns);
                 SolangServer::construct_expr(expr2, lookup_tbl, symtab, fnc_map, ns);
             }
             ast::Expression::Multiply(locs, ty, unchecked, expr1, expr2) => {
-                lookup_tbl.push((
-                    locs.start(),
-                    locs.end(),
-                    format!(
-                        "{} {}multiply",
+                lookup_tbl.push(HoverEntry {
+                    start: locs.start(),
+                    stop: locs.end(),
+                    val: format!(
+                        "{} {} multiply",
                         if *unchecked { "unchecked " } else { "" },
                         ty.to_string(ns)
                     ),
-                ));
+                });
 
                 SolangServer::construct_expr(expr1, lookup_tbl, symtab, fnc_map, ns);
                 SolangServer::construct_expr(expr2, lookup_tbl, symtab, fnc_map, ns);
             }
             ast::Expression::Divide(locs, ty, expr1, expr2) => {
-                lookup_tbl.push((
-                    locs.start(),
-                    locs.end(),
-                    format!("{} divide", ty.to_string(ns)),
-                ));
+                lookup_tbl.push(HoverEntry {
+                    start: locs.start(),
+                    stop: locs.end(),
+                    val: format!("{} divide", ty.to_string(ns)),
+                });
 
                 SolangServer::construct_expr(expr1, lookup_tbl, symtab, fnc_map, ns);
                 SolangServer::construct_expr(expr2, lookup_tbl, symtab, fnc_map, ns);
             }
             ast::Expression::Modulo(locs, ty, expr1, expr2) => {
-                lookup_tbl.push((
-                    locs.start(),
-                    locs.end(),
-                    format!("{} modulo", ty.to_string(ns)),
-                ));
+                lookup_tbl.push(HoverEntry {
+                    start: locs.start(),
+                    stop: locs.end(),
+                    val: format!("{} modulo", ty.to_string(ns)),
+                });
 
                 SolangServer::construct_expr(expr1, lookup_tbl, symtab, fnc_map, ns);
                 SolangServer::construct_expr(expr2, lookup_tbl, symtab, fnc_map, ns);
             }
             ast::Expression::Power(locs, ty, unchecked, expr1, expr2) => {
-                lookup_tbl.push((
-                    locs.start(),
-                    locs.end(),
-                    format!(
+                lookup_tbl.push(HoverEntry {
+                    start: locs.start(),
+                    stop: locs.end(),
+                    val: format!(
                         "{} {}power",
                         if *unchecked { "unchecked " } else { "" },
                         ty.to_string(ns)
                     ),
-                ));
+                });
 
                 SolangServer::construct_expr(expr1, lookup_tbl, symtab, fnc_map, ns);
                 SolangServer::construct_expr(expr2, lookup_tbl, symtab, fnc_map, ns);
@@ -501,20 +528,20 @@ impl SolangServer {
 
             // Variable expression
             ast::Expression::Variable(loc, typ, var_no) => {
-                let mut msg = SolangServer::expanded_ty(typ, ns);
+                let mut val = SolangServer::expanded_ty(typ, ns);
 
                 if let Some(expr) = ns.var_constants.get(loc) {
                     match expr {
                         codegen::Expression::BytesLiteral(_, ast::Type::Bytes(_), bs)
                         | codegen::Expression::BytesLiteral(_, ast::Type::DynamicBytes, bs) => {
-                            msg.push_str(&format!(" hex\"{}\"", hex::encode(&bs)));
+                            val.push_str(&format!(" hex\"{}\"", hex::encode(&bs)));
                         }
                         codegen::Expression::BytesLiteral(_, ast::Type::String, bs) => {
-                            msg.push_str(&format!(" \"{}\"", String::from_utf8_lossy(bs)));
+                            val.push_str(&format!(" \"{}\"", String::from_utf8_lossy(bs)));
                         }
                         codegen::Expression::NumberLiteral(_, ast::Type::Uint(_), n)
                         | codegen::Expression::NumberLiteral(_, ast::Type::Int(_), n) => {
-                            msg.push_str(&format!(" {}", n));
+                            val.push_str(&format!(" {}", n));
                         }
                         _ => (),
                     }
@@ -522,19 +549,31 @@ impl SolangServer {
 
                 if let Some(var) = symtab.vars.get(var_no) {
                     if var.slice {
-                        msg.push_str("\nreadonly: compiles to slice\n")
+                        val.push_str("\nreadonly: compiles to slice\n")
                     }
                 }
 
-                lookup_tbl.push((loc.start(), loc.end(), msg));
+                lookup_tbl.push(HoverEntry {
+                    start: loc.start(),
+                    stop: loc.end(),
+                    val,
+                });
             }
             ast::Expression::ConstantVariable(locs, typ, _val1, _val2) => {
-                let msg = format!("constant ({})", SolangServer::expanded_ty(typ, ns,));
-                lookup_tbl.push((locs.start(), locs.end(), msg));
+                let val = format!("constant ({})", SolangServer::expanded_ty(typ, ns,));
+                lookup_tbl.push(HoverEntry {
+                    start: locs.start(),
+                    stop: locs.end(),
+                    val,
+                });
             }
             ast::Expression::StorageVariable(locs, typ, _val1, _val2) => {
-                let msg = format!("({})", SolangServer::expanded_ty(typ, ns));
-                lookup_tbl.push((locs.start(), locs.end(), msg));
+                let val = format!("({})", SolangServer::expanded_ty(typ, ns));
+                lookup_tbl.push(HoverEntry {
+                    start: locs.start(),
+                    stop: locs.end(),
+                    val,
+                });
             }
 
             // Load expression
@@ -675,7 +714,7 @@ impl SolangServer {
                     let fnc = &ns.functions[*function_no];
                     let msg_tg = render(&fnc.tags[..]);
 
-                    let mut param_msg = format!("{} \n\n {} {}(", msg_tg, fnc.ty, fnc.name);
+                    let mut val = format!("{} \n\n {} {}(", msg_tg, fnc.ty, fnc.name);
 
                     for parm in &*fnc.params {
                         let msg = format!(
@@ -683,10 +722,10 @@ impl SolangServer {
                             parm.name_as_str(),
                             SolangServer::expanded_ty(&parm.ty, ns)
                         );
-                        param_msg = format!("{} {}", param_msg, msg);
+                        val = format!("{} {}", val, msg);
                     }
 
-                    param_msg = format!("{} ) returns (", param_msg);
+                    val = format!("{} ) returns (", val);
 
                     for ret in &*fnc.returns {
                         let msg = format!(
@@ -694,11 +733,15 @@ impl SolangServer {
                             ret.name_as_str(),
                             SolangServer::expanded_ty(&ret.ty, ns)
                         );
-                        param_msg = format!("{} {}", param_msg, msg);
+                        val = format!("{} {}", val, msg);
                     }
 
-                    param_msg = format!("{})", param_msg);
-                    lookup_tbl.push((loc.start(), loc.end(), param_msg));
+                    val = format!("{})", val);
+                    lookup_tbl.push(HoverEntry {
+                        start: loc.start(),
+                        stop: loc.end(),
+                        val,
+                    });
                 }
 
                 for arg in args {
@@ -721,7 +764,7 @@ impl SolangServer {
                     // modifiers do not have mutability, bases or modifiers itself
                     let fnc = &ns.functions[*function_no];
                     let msg_tg = render(&fnc.tags[..]);
-                    let mut param_msg = format!("{} \n\n {} {}(", msg_tg, fnc.ty, fnc.name);
+                    let mut val = format!("{} \n\n {} {}(", msg_tg, fnc.ty, fnc.name);
 
                     for parm in &*fnc.params {
                         let msg = format!(
@@ -729,10 +772,10 @@ impl SolangServer {
                             parm.name_as_str(),
                             SolangServer::expanded_ty(&parm.ty, ns)
                         );
-                        param_msg = format!("{} {}", param_msg, msg);
+                        val = format!("{} {}", val, msg);
                     }
 
-                    param_msg = format!("{} ) \n\n returns (", param_msg);
+                    val = format!("{} ) \n\n returns (", val);
 
                     for ret in &*fnc.returns {
                         let msg = format!(
@@ -740,11 +783,15 @@ impl SolangServer {
                             ret.name_as_str(),
                             SolangServer::expanded_ty(&ret.ty, ns)
                         );
-                        param_msg = format!("{} {}", param_msg, msg);
+                        val = format!("{} {}", val, msg);
                     }
 
-                    param_msg = format!("{})", param_msg);
-                    lookup_tbl.push((loc.start(), loc.end(), param_msg));
+                    val = format!("{})", val);
+                    lookup_tbl.push(HoverEntry {
+                        start: loc.start(),
+                        stop: loc.end(),
+                        val,
+                    });
 
                     SolangServer::construct_expr(address, lookup_tbl, symtab, fnc_map, ns);
                     for expp in args {
@@ -797,8 +844,12 @@ impl SolangServer {
                 }
             }
             ast::Expression::Builtin(_locs, _typ, _builtin, expr) => {
-                let msg = SolangServer::construct_builtins(_builtin, ns);
-                lookup_tbl.push((_locs.start(), _locs.end(), msg));
+                let val = SolangServer::construct_builtins(_builtin, ns);
+                lookup_tbl.push(HoverEntry {
+                    start: _locs.start(),
+                    stop: _locs.end(),
+                    val,
+                });
                 for expp in expr {
                     SolangServer::construct_expr(expp, lookup_tbl, symtab, fnc_map, ns);
                 }
@@ -820,14 +871,21 @@ impl SolangServer {
     // Constructs contract fields and stores it in the lookup table.
     fn construct_cont(
         contvar: &ast::Variable,
-        lookup_tbl: &mut Vec<(usize, usize, String)>,
+        lookup_tbl: &mut Vec<HoverEntry>,
         samptb: &symtable::Symtable,
         fnc_map: &HashMap<String, String>,
         ns: &ast::Namespace,
     ) {
-        let msg_typ = SolangServer::expanded_ty(&contvar.ty, ns);
-        let msg = format!("{} {}", msg_typ, contvar.name);
-        lookup_tbl.push((contvar.loc.start(), contvar.loc.end(), msg));
+        let val = format!(
+            "{} {}",
+            SolangServer::expanded_ty(&contvar.ty, ns),
+            contvar.name
+        );
+        lookup_tbl.push(HoverEntry {
+            start: contvar.loc.start(),
+            stop: contvar.loc.end(),
+            val,
+        });
         if let Some(expr) = &contvar.initializer {
             SolangServer::construct_expr(expr, lookup_tbl, samptb, fnc_map, ns);
         }
@@ -836,28 +894,39 @@ impl SolangServer {
     // Constructs struct fields and stores it in the lookup table.
     fn construct_strct(
         strfld: &ast::Parameter,
-        lookup_tbl: &mut Vec<(usize, usize, String)>,
+        lookup_tbl: &mut Vec<HoverEntry>,
         ns: &ast::Namespace,
     ) {
-        let msg_typ = &strfld.ty.to_string(ns);
-        let msg = format!("{} {}", msg_typ, strfld.name_as_str());
-        lookup_tbl.push((strfld.loc.start(), strfld.loc.end(), msg));
+        let val = format!("{} {}", strfld.ty.to_string(ns), strfld.name_as_str());
+        lookup_tbl.push(HoverEntry {
+            start: strfld.loc.start(),
+            stop: strfld.loc.end(),
+            val,
+        });
     }
 
     // Traverses namespace to build messages stored in the lookup table for hover feature.
     fn traverse(
         ns: &ast::Namespace,
-        lookup_tbl: &mut Vec<(usize, usize, String)>,
+        lookup_tbl: &mut Vec<HoverEntry>,
         fnc_map: &mut HashMap<String, String>,
     ) {
         for enm in &ns.enums {
             for (nam, vals) in &enm.values {
-                let evnt_msg = format!("{} {}, \n\n", nam, vals.1);
-                lookup_tbl.push((vals.0.start(), vals.0.end(), evnt_msg));
+                let val = format!("{} {}, \n\n", nam, vals.1);
+                lookup_tbl.push(HoverEntry {
+                    start: vals.0.start(),
+                    stop: vals.0.end(),
+                    val,
+                });
             }
 
-            let msg_tg = render(&enm.tags[..]);
-            lookup_tbl.push((enm.loc.start(), (enm.loc.start() + enm.name.len()), msg_tg));
+            let val = render(&enm.tags[..]);
+            lookup_tbl.push(HoverEntry {
+                start: enm.loc.start(),
+                stop: enm.loc.start() + enm.name.len(),
+                val,
+            });
         }
 
         for strct in &ns.structs {
@@ -866,8 +935,12 @@ impl SolangServer {
                     SolangServer::construct_strct(filds, lookup_tbl, ns);
                 }
 
-                let msg_tg = render(&strct.tags[..]);
-                lookup_tbl.push((*start, start + strct.name.len(), msg_tg));
+                let val = render(&strct.tags[..]);
+                lookup_tbl.push(HoverEntry {
+                    start: *start,
+                    stop: start + strct.name.len(),
+                    val,
+                });
             }
         }
 
@@ -878,13 +951,21 @@ impl SolangServer {
             }
 
             for parm in &*fnc.params {
-                let msg = SolangServer::expanded_ty(&parm.ty, ns);
-                lookup_tbl.push((parm.loc.start(), parm.loc.end(), msg));
+                let val = SolangServer::expanded_ty(&parm.ty, ns);
+                lookup_tbl.push(HoverEntry {
+                    start: parm.loc.start(),
+                    stop: parm.loc.end(),
+                    val,
+                });
             }
 
             for ret in &*fnc.returns {
-                let msg = SolangServer::expanded_ty(&ret.ty, ns);
-                lookup_tbl.push((ret.loc.start(), ret.loc.end(), msg));
+                let val = SolangServer::expanded_ty(&ret.ty, ns);
+                lookup_tbl.push(HoverEntry {
+                    start: ret.loc.start(),
+                    stop: ret.loc.end(),
+                    val,
+                });
             }
 
             for stmt in &fnc.body {
@@ -896,32 +977,32 @@ impl SolangServer {
             let samptb = symtable::Symtable::new();
             SolangServer::construct_cont(constant, lookup_tbl, &samptb, fnc_map, ns);
 
-            let msg_tg = render(&constant.tags[..]);
-            lookup_tbl.push((
-                constant.loc.start(),
-                (constant.loc.start() + constant.name.len()),
-                msg_tg,
-            ));
+            let val = render(&constant.tags[..]);
+            lookup_tbl.push(HoverEntry {
+                start: constant.loc.start(),
+                stop: constant.loc.start() + constant.name.len(),
+                val,
+            });
         }
 
         for contrct in &ns.contracts {
-            let msg_tg = render(&contrct.tags[..]);
-            lookup_tbl.push((
-                contrct.loc.start(),
-                (contrct.loc.start() + msg_tg.len()),
-                msg_tg,
-            ));
+            let val = render(&contrct.tags[..]);
+            lookup_tbl.push(HoverEntry {
+                start: contrct.loc.start(),
+                stop: contrct.loc.start() + val.len(),
+                val,
+            });
 
             for varscont in &contrct.variables {
                 let samptb = symtable::Symtable::new();
                 SolangServer::construct_cont(varscont, lookup_tbl, &samptb, fnc_map, ns);
 
-                let msg_tg = render(&varscont.tags[..]);
-                lookup_tbl.push((
-                    varscont.loc.start(),
-                    (varscont.loc.start() + varscont.name.len()),
-                    msg_tg,
-                ));
+                let val = render(&varscont.tags[..]);
+                lookup_tbl.push(HoverEntry {
+                    start: varscont.loc.start(),
+                    stop: varscont.loc.start() + varscont.name.len(),
+                    val,
+                });
             }
         }
 
@@ -929,20 +1010,20 @@ impl SolangServer {
             for filds in &entdcl.fields {
                 SolangServer::construct_strct(filds, lookup_tbl, ns);
             }
-            let msg_tg = render(&entdcl.tags[..]);
-            lookup_tbl.push((
-                entdcl.loc.start(),
-                (entdcl.loc.start() + entdcl.name.len()),
-                msg_tg,
-            ));
+            let val = render(&entdcl.tags[..]);
+            lookup_tbl.push(HoverEntry {
+                start: entdcl.loc.start(),
+                stop: entdcl.loc.start() + entdcl.name.len(),
+                val,
+            });
         }
 
         for lookup in lookup_tbl.iter_mut() {
             if let Some(msg) = ns
                 .hover_overrides
-                .get(&pt::Loc::File(0, lookup.0, lookup.1))
+                .get(&pt::Loc::File(0, lookup.start, lookup.stop))
             {
-                lookup.2 = msg.clone();
+                lookup.val = msg.clone();
             }
         }
     }
@@ -1127,21 +1208,19 @@ impl LanguageServer for SolangServer {
                     .file
                     .get_offset(pos.line as usize, pos.character as usize);
 
-                if let Ok(pos) = hovers.lookup.binary_search_by(|entry| {
-                    if entry.0 > offset {
-                        Ordering::Greater
-                    } else if entry.1 < offset {
-                        Ordering::Less
-                    } else {
-                        Ordering::Equal
-                    }
-                }) {
-                    let msg = &hovers.lookup[pos];
-                    let loc = pt::Loc::File(0, msg.0, msg.1);
+                // The shortest hover for the position will be most informative
+                if let Some(hover) = hovers
+                    .lookup
+                    .find(offset, offset)
+                    .min_by(|a, b| (a.stop - a.start).cmp(&(b.stop - b.start)))
+                {
+                    let loc = pt::Loc::File(0, hover.start, hover.stop);
                     let range = SolangServer::loc_to_range(&loc, &hovers.file);
 
                     return Ok(Some(Hover {
-                        contents: HoverContents::Scalar(MarkedString::String(msg.2.to_string())),
+                        contents: HoverContents::Scalar(MarkedString::String(
+                            hover.val.to_string(),
+                        )),
                         range: Some(range),
                     }));
                 }
