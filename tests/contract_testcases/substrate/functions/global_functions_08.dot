@@ -3,7 +3,7 @@ strict digraph "tests/contract_testcases/substrate/functions/global_functions_08
 	x [label="function x\ntests/contract_testcases/substrate/functions/global_functions_08.sol:7:9-37\nsignature x(struct S)\nvisibility internal\nmutability view"]
 	parameters [label="parameters\nstruct S storage x"]
 	expr [label="expression\ntests/contract_testcases/substrate/functions/global_functions_08.sol:7:40-50"]
-	assign [label="assign\nint32 storage\ntests/contract_testcases/substrate/functions/global_functions_08.sol:7:45-46"]
+	assign [label="assign\nint32 storage\ntests/contract_testcases/substrate/functions/global_functions_08.sol:7:40-50"]
 	structmember [label="struct member #0 int32 storage\ntests/contract_testcases/substrate/functions/global_functions_08.sol:7:42-44"]
 	variable [label="variable: x\nstruct S storage\ntests/contract_testcases/substrate/functions/global_functions_08.sol:7:40-41"]
 	number_literal [label="int32 literal: 102\ntests/contract_testcases/substrate/functions/global_functions_08.sol:7:47-50"]

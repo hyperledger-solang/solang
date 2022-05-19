@@ -4,7 +4,7 @@ strict digraph "tests/contract_testcases/substrate/expressions/power_02.sol" {
 	parameters [label="parameters\nint64 base\nint64 exp"]
 	returns [label="returns\nint64 "]
 	diagnostic [label="found contract 'test'\nlevel Debug\ntests/contract_testcases/substrate/expressions/power_02.sol:1:1-15"]
-	diagnostic_7 [label="exponation (**) is not allowed with signed types\nlevel Error\ntests/contract_testcases/substrate/expressions/power_02.sol:3:29-31"]
+	diagnostic_7 [label="exponation (**) is not allowed with signed types\nlevel Error\ntests/contract_testcases/substrate/expressions/power_02.sol:3:24-35"]
 	contracts -> contract
 	contract -> power [label="function"]
 	power -> parameters [label="parameters"]

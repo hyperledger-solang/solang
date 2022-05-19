@@ -4,7 +4,7 @@ strict digraph "tests/contract_testcases/solana/negative_exponent.sol" {
 	returns [label="returns\nuint256 "]
 	return [label="return\ntests/contract_testcases/solana/negative_exponent.sol:3:2-20"]
 	cast [label="cast uint256\ntests/contract_testcases/solana/negative_exponent.sol:3:2-20"]
-	add [label="add\nrational\ntests/contract_testcases/solana/negative_exponent.sol:3:14-15"]
+	add [label="add\nrational\ntests/contract_testcases/solana/negative_exponent.sol:3:9-20"]
 	rational_literal [label="rational rational literal: 1/20\ntests/contract_testcases/solana/negative_exponent.sol:3:9-13"]
 	rational_literal_9 [label="rational rational literal: 39/20\ntests/contract_testcases/solana/negative_exponent.sol:3:16-20"]
 	g [label="function g\ncontract: c\ntests/contract_testcases/solana/negative_exponent.sol:5:5-44\nsignature g()\nvisibility public\nmutability pure"]

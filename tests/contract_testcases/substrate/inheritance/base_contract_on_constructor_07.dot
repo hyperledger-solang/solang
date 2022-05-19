@@ -4,7 +4,7 @@ strict digraph "tests/contract_testcases/substrate/inheritance/base_contract_on_
 	node_3 [label="constructor \ncontract: c\ntests/contract_testcases/substrate/inheritance/base_contract_on_constructor_07.sol:3:13-45\nsignature (int64)\nvisibility public\nmutability nonpayable"]
 	parameters [label="parameters\nint64 x"]
 	b [label="b"]
-	add [label="add\nint64\ntests/contract_testcases/substrate/inheritance/base_contract_on_constructor_07.sol:3:37-38"]
+	add [label="add\nint64\ntests/contract_testcases/substrate/inheritance/base_contract_on_constructor_07.sol:3:36-39"]
 	variable [label="variable: x\nint64\ntests/contract_testcases/substrate/inheritance/base_contract_on_constructor_07.sol:3:36-37"]
 	number_literal [label="int64 literal: 3\ntests/contract_testcases/substrate/inheritance/base_contract_on_constructor_07.sol:3:38-39"]
 	contract_9 [label="contract b\ntests/contract_testcases/substrate/inheritance/base_contract_on_constructor_07.sol:6:9-33"]

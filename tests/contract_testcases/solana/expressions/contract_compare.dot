@@ -4,7 +4,7 @@ strict digraph "tests/contract_testcases/solana/expressions/contract_compare.sol
 	parameters [label="parameters\ncontract d left\ncontract d right"]
 	returns [label="returns\nbool "]
 	return [label="return\ntests/contract_testcases/solana/expressions/contract_compare.sol:4:3-22"]
-	less [label="less\ntests/contract_testcases/solana/expressions/contract_compare.sol:4:15-16"]
+	less [label="less\ntests/contract_testcases/solana/expressions/contract_compare.sol:4:10-22"]
 	variable [label="variable: left\ncontract d\ntests/contract_testcases/solana/expressions/contract_compare.sol:4:10-14"]
 	variable_9 [label="variable: right\ncontract d\ntests/contract_testcases/solana/expressions/contract_compare.sol:4:17-22"]
 	cmp_10 [label="function cmp\ncontract: c\ntests/contract_testcases/solana/expressions/contract_compare.sol:7:2-53\nsignature cmp(bytes32,bytes32)\nvisibility public\nmutability nonpayable"]

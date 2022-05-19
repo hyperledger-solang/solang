@@ -22,7 +22,7 @@ strict digraph "tests/contract_testcases/substrate/contracts/external_call_03.so
 	parameters_21 [label="parameters\nint32 t"]
 	returns_22 [label="returns\nint32 "]
 	return_23 [label="return\ntests/contract_testcases/substrate/contracts/external_call_03.sol:18:17-29"]
-	multiply [label="multiply\nint32\ntests/contract_testcases/substrate/contracts/external_call_03.sol:18:26-27"]
+	multiply [label="multiply\nint32\ntests/contract_testcases/substrate/contracts/external_call_03.sol:18:24-29"]
 	storage_load_25 [label="storage load int32\ntests/contract_testcases/substrate/contracts/external_call_03.sol:18:24-25"]
 	storage_var_26 [label="storage variable\nb.x\nint32 storage\ntests/contract_testcases/substrate/contracts/external_call_03.sol:18:24-25"]
 	variable_27 [label="variable: t\nint32\ntests/contract_testcases/substrate/contracts/external_call_03.sol:18:28-29"]
