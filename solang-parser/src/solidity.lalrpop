@@ -815,15 +815,16 @@ YulLiteral: YulExpression = {
 }
 
 YulFunctionCall: YulFunctionCall = {
-    <l:@L> <id:YulIdentifier> "(" <arguments:Comma<YulExpression>> ")" <r:@R> =>
-     YulFunctionCall{loc: Loc::File(file_no, l, r), id, arguments}
+    <l:@L> <id:YulIdentifier> "(" <arguments:Comma<YulExpression>> ")" <r:@R> => {
+        YulFunctionCall{loc: Loc::File(file_no, l, r), id, arguments}
+    }
 }
 
 YulPath: YulExpression = {
- <YulIdentifier> => YulExpression::Variable(<>),
- <l:@L> <array:YulPath> "." <member:YulIdentifier> <r:@R> => {
-         YulExpression::Member(Loc::File(file_no, l, r), Box::new(array), member)
-     },
+    <YulIdentifier> => YulExpression::Variable(<>),
+    <l:@L> <array:YulPath> "." <member:YulIdentifier> <r:@R> => {
+        YulExpression::Member(Loc::File(file_no, l, r), Box::new(array), member)
+    },
 }
 
 YulExpression: YulExpression = {
@@ -835,17 +836,14 @@ YulExpression: YulExpression = {
 YulFunctionDefinition: YulStatement = {
     <l:@L> "function" <name: YulIdentifier> "(" <params: YulTypedIdentifierList?> ")" <returns:("->" <YulTypedIdentifierList>)?>
     <body: YulBlock> <r:@R> => {
-        YulStatement::FunctionDefinition(Box::new(YulFunctionDefinition{
+        YulStatement::FunctionDefinition(Box::new(YulFunctionDefinition {
             loc: Loc::File(file_no, l, r),
             id: name,
             params: params.unwrap_or_default(),
             returns: returns.unwrap_or_default(),
             body
-            }
-          )
-        )
- }
-
+        }))
+    }
 }
 
 YulTypedIdentifierList: Vec<YulTypedIdentifier> = {
@@ -853,13 +851,15 @@ YulTypedIdentifierList: Vec<YulTypedIdentifier> = {
 }
 
 YulType: YulTypedIdentifier = {
-    <l:@L> <var_name:YulIdentifier> ":" <var_type:YulIdentifier> <r:@R> =>
-       YulTypedIdentifier{
+    <l:@L> <var_name:YulIdentifier> ":" <var_type:YulIdentifier> <r:@R> => {
+       YulTypedIdentifier {
             loc: Loc::File(file_no, l, r),
             id: var_name, ty: Some(var_type)
-       },
-    <l:@L> <id:YulIdentifier> <r:@R> =>
-       YulTypedIdentifier{loc: Loc::File(file_no, l, r), id, ty: None},
+        }
+    },
+    <l:@L> <id:YulIdentifier> <r:@R> => {
+       YulTypedIdentifier{loc: Loc::File(file_no, l, r), id, ty: None}
+    },
 }
 
 YulSwitch: YulStatement = {
@@ -910,13 +910,15 @@ YulIf: YulStatement = {
 }
 
 YulAssignment: YulStatement = {
- <l:@L> <paths:CommaOne<YulPath>> ":=" <expr:YulExpression> <r:@R> =>
- YulStatement::Assign(Loc::File(file_no, l, r), paths, expr)
+    <l:@L> <paths:CommaOne<YulPath>> ":=" <expr:YulExpression> <r:@R> => {
+        YulStatement::Assign(Loc::File(file_no, l, r), paths, expr)
+    }
 }
 
 YulVariableDeclaration: YulStatement = {
-    <l:@L>  "let" <names:YulTypedIdentifierList> <expr:(":=" <YulExpression>)?> <r:@R> =>
-    YulStatement::VariableDeclaration(Loc::File(file_no, l, r), names, expr),
+    <l:@L>  "let" <names:YulTypedIdentifierList> <expr:(":=" <YulExpression>)?> <r:@R> => {
+        YulStatement::VariableDeclaration(Loc::File(file_no, l, r), names, expr)
+    }
 }
 
 
