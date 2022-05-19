@@ -4,7 +4,7 @@ strict digraph "tests/contract_testcases/substrate/expressions/test_cast_errors_
 	parameters [label="parameters\nint32 foo\nuint16 bar"]
 	returns [label="returns\nbool "]
 	expr [label="expression\ntests/contract_testcases/substrate/expressions/test_cast_errors_02.sol:3:17-26"]
-	assign [label="assign\nint32\ntests/contract_testcases/substrate/expressions/test_cast_errors_02.sol:3:21-22"]
+	assign [label="assign\nint32\ntests/contract_testcases/substrate/expressions/test_cast_errors_02.sol:3:17-26"]
 	variable [label="variable: foo\nint32\ntests/contract_testcases/substrate/expressions/test_cast_errors_02.sol:3:17-20"]
 	zero_ext [label="zero extend int32\ntests/contract_testcases/substrate/expressions/test_cast_errors_02.sol:3:23-26"]
 	variable_9 [label="variable: bar\nuint16\ntests/contract_testcases/substrate/expressions/test_cast_errors_02.sol:3:23-26"]

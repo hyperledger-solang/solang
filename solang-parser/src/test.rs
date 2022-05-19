@@ -182,7 +182,7 @@ fn parse_test() {
                                         name: "assert".to_string(),
                                     })),
                                     vec![Expression::Equal(
-                                        Loc::File(0, 827, 829),
+                                        Loc::File(0, 823, 831),
                                         Box::new(Expression::Variable(Identifier {
                                             loc: Loc::File(0, 823, 826),
                                             name: "sum".to_string(),

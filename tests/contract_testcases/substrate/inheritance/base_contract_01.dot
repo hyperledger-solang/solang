@@ -8,7 +8,7 @@ strict digraph "tests/contract_testcases/substrate/inheritance/base_contract_01.
 	parameters_7 [label="parameters\nuint64 a"]
 	returns [label="returns\nuint64 "]
 	return [label="return\ntests/contract_testcases/substrate/inheritance/base_contract_01.sol:8:17-31"]
-	add [label="add\nuint64\ntests/contract_testcases/substrate/inheritance/base_contract_01.sol:8:26-27"]
+	add [label="add\nuint64\ntests/contract_testcases/substrate/inheritance/base_contract_01.sol:8:24-31"]
 	variable [label="variable: a\nuint64\ntests/contract_testcases/substrate/inheritance/base_contract_01.sol:8:24-25"]
 	number_literal [label="uint64 literal: 102\ntests/contract_testcases/substrate/inheritance/base_contract_01.sol:8:28-31"]
 	diagnostic [label="found contract 'base'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/base_contract_01.sol:2:9-23"]
