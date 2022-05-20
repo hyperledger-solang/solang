@@ -644,6 +644,7 @@ pub enum Statement {
     Assembly {
         loc: Loc,
         dialect: Option<StringLiteral>,
+        flags: Option<Vec<StringLiteral>>,
         block: YulBlock,
     },
     Args(Loc, Vec<NamedArgument>),

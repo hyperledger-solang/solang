@@ -721,10 +721,11 @@ NonIfStatement: Statement = {
     <l:@L> "unchecked" "{" <statements:Statement*> "}" <r:@R> => {
         Statement::Block { loc: Loc::File(file_no, l, r), unchecked: true, statements }
     },
-    <l:@L> "assembly" <dialect:StringLiteral?> <block:YulBlock> <r:@R> => {
+    <l:@L> "assembly" <dialect:StringLiteral?> <flags:AssemblyFlags?> <block:YulBlock> <r:@R> => {
         Statement::Assembly {
             loc: Loc::File(file_no, l, r),
             dialect: dialect.map(|dialect| dialect.to_owned()),
+            flags: flags.map(|flag| flag.to_owned()),
             block
         }
     },
@@ -756,6 +757,10 @@ NonIfStatement: Statement = {
     <l:@L> "revert" <error:SolIdentifierPath?> "(" "{" <v:Comma<NamedArgument>> "}" ")" <r:@R> ";" => {
         Statement::RevertNamedArgs(Loc::File(file_no, l, r), error, v)
     },
+}
+
+AssemblyFlags: Vec<StringLiteral> = {
+    "(" <CommaOne<StringLiteral>> ")" => <>,
 }
 
 YulIdentifier: Identifier = {

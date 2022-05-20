@@ -6,7 +6,7 @@ strict digraph "tests/contract_testcases/solana/yul/return_in_asm.sol" {
 	yul_number_literal [label="uint256 literal: 0\ntests/contract_testcases/solana/yul/return_in_asm.sol:4:20-21"]
 	yul_number_literal_7 [label="uint256 literal: 0\ntests/contract_testcases/solana/yul/return_in_asm.sol:4:23-24"]
 	diagnostic [label="found contract 'Contract'\nlevel Debug\ntests/contract_testcases/solana/yul/return_in_asm.sol:1:1-19"]
-	diagnostic_10 [label="inline assembly is not yet supported\nlevel Error\ntests/contract_testcases/solana/yul/return_in_asm.sol:3:9-5:10"]
+	diagnostic_10 [label="flag 'memory-safe' not supported\nlevel Error\ntests/contract_testcases/solana/yul/return_in_asm.sol:3:19-32"]
 	contracts -> contract
 	contract -> node_3 [label="constructor"]
 	node_3 -> inline_assembly [label="body"]
