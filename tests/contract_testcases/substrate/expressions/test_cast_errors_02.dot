@@ -11,8 +11,8 @@ strict digraph "tests/contract_testcases/substrate/expressions/test_cast_errors_
 	return [label="return\ntests/contract_testcases/substrate/expressions/test_cast_errors_02.sol:4:17-29"]
 	bool_literal [label="bool literal: false\ntests/contract_testcases/substrate/expressions/test_cast_errors_02.sol:4:24-29"]
 	diagnostic [label="found contract 'test'\nlevel Debug\ntests/contract_testcases/substrate/expressions/test_cast_errors_02.sol:1:1-15"]
-	diagnostic_14 [label="function parameter 'foo' has never been read\nlevel Warning\ntests/contract_testcases/substrate/expressions/test_cast_errors_02.sol:2:35-38"]
-	diagnostic_15 [label="function can be declared 'pure'\nlevel Warning\ntests/contract_testcases/substrate/expressions/test_cast_errors_02.sol:2:13-73"]
+	diagnostic_14 [label="function can be declared 'pure'\nlevel Warning\ntests/contract_testcases/substrate/expressions/test_cast_errors_02.sol:2:13-73"]
+	diagnostic_15 [label="function parameter 'foo' has never been read\nlevel Warning\ntests/contract_testcases/substrate/expressions/test_cast_errors_02.sol:2:35-38"]
 	contracts -> contract
 	contract -> foobar [label="function"]
 	foobar -> parameters [label="parameters"]

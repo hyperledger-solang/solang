@@ -159,10 +159,10 @@ impl Symtable {
             ns.diagnostics.push(Diagnostic {
                 level: Level::Error,
                 ty: ErrorType::DeclarationError,
-                pos: id.loc,
+                loc: id.loc,
                 message: format!("variable name '{}' already used in this scope", id.name),
                 notes: vec![Note {
-                    pos: var.id.loc,
+                    loc: var.id.loc,
                     message: "found previous declaration here".to_string(),
                 }],
             });

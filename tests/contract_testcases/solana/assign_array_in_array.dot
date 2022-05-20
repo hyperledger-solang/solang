@@ -41,14 +41,14 @@ strict digraph "tests/contract_testcases/solana/assign_array_in_array.sol" {
 	alloc_array_41 [label="alloc array uint256[]\ntests/contract_testcases/solana/assign_array_in_array.sol:23:12-28"]
 	number_literal_42 [label="uint32 literal: 4\ntests/contract_testcases/solana/assign_array_in_array.sol:23:26-27"]
 	diagnostic [label="found contract 'C'\nlevel Debug\ntests/contract_testcases/solana/assign_array_in_array.sol:1:60-2:12"]
-	diagnostic_45 [label="local variable 'iPj' has been assigned, but never read\nlevel Warning\ntests/contract_testcases/solana/assign_array_in_array.sol:4:24-27"]
-	diagnostic_46 [label="local variable 'iPj' has been assigned, but never read\nlevel Warning\ntests/contract_testcases/solana/assign_array_in_array.sol:9:23-26"]
-	diagnostic_47 [label="local variable 'iPj' has been assigned, but never read\nlevel Warning\ntests/contract_testcases/solana/assign_array_in_array.sol:17:10-13"]
-	diagnostic_48 [label="local variable 'iPj' has been assigned, but never read\nlevel Warning\ntests/contract_testcases/solana/assign_array_in_array.sol:22:12-15"]
-	diagnostic_49 [label="function can be declared 'pure'\nlevel Warning\ntests/contract_testcases/solana/assign_array_in_array.sol:3:2-25"]
-	diagnostic_50 [label="function can be declared 'pure'\nlevel Warning\ntests/contract_testcases/solana/assign_array_in_array.sol:8:2-27"]
-	diagnostic_51 [label="function can be declared 'pure'\nlevel Warning\ntests/contract_testcases/solana/assign_array_in_array.sol:16:2-32"]
-	diagnostic_52 [label="function can be declared 'pure'\nlevel Warning\ntests/contract_testcases/solana/assign_array_in_array.sol:21:2-34"]
+	diagnostic_45 [label="function can be declared 'pure'\nlevel Warning\ntests/contract_testcases/solana/assign_array_in_array.sol:3:2-25"]
+	diagnostic_46 [label="local variable 'iPj' has been assigned, but never read\nlevel Warning\ntests/contract_testcases/solana/assign_array_in_array.sol:4:24-27"]
+	diagnostic_47 [label="function can be declared 'pure'\nlevel Warning\ntests/contract_testcases/solana/assign_array_in_array.sol:8:2-27"]
+	diagnostic_48 [label="local variable 'iPj' has been assigned, but never read\nlevel Warning\ntests/contract_testcases/solana/assign_array_in_array.sol:9:23-26"]
+	diagnostic_49 [label="function can be declared 'pure'\nlevel Warning\ntests/contract_testcases/solana/assign_array_in_array.sol:16:2-32"]
+	diagnostic_50 [label="local variable 'iPj' has been assigned, but never read\nlevel Warning\ntests/contract_testcases/solana/assign_array_in_array.sol:17:10-13"]
+	diagnostic_51 [label="function can be declared 'pure'\nlevel Warning\ntests/contract_testcases/solana/assign_array_in_array.sol:21:2-34"]
+	diagnostic_52 [label="local variable 'iPj' has been assigned, but never read\nlevel Warning\ntests/contract_testcases/solana/assign_array_in_array.sol:22:12-15"]
 	structs -> Sfixed
 	structs -> Sdynamic
 	contracts -> contract

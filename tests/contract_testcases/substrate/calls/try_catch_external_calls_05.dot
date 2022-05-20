@@ -9,10 +9,10 @@ strict digraph "tests/contract_testcases/substrate/calls/try_catch_external_call
 	number_literal [label="int32 literal: 102\ntests/contract_testcases/substrate/calls/try_catch_external_calls_05.sol:21:25-28"]
 	bool_literal [label="bool literal: true\ntests/contract_testcases/substrate/calls/try_catch_external_calls_05.sol:21:30-34"]
 	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/calls/try_catch_external_calls_05.sol:2:9-20"]
-	diagnostic_12 [label="found contract 'other'\nlevel Debug\ntests/contract_testcases/substrate/calls/try_catch_external_calls_05.sol:19:9-24"]
-	diagnostic_13 [label="catch Error(...) can only take ‘string memory’, not 'bytes'\nlevel Error\ntests/contract_testcases/substrate/calls/try_catch_external_calls_05.sol:8:31-36"]
-	diagnostic_14 [label="catch Panic(...) can only take 'uint256', not 'uint128'\nlevel Error\ntests/contract_testcases/substrate/calls/try_catch_external_calls_05.sol:10:31-38"]
-	diagnostic_15 [label="catch can only take ‘bytes memory’, not 'string'\nlevel Error\ntests/contract_testcases/substrate/calls/try_catch_external_calls_05.sol:12:26-32"]
+	diagnostic_12 [label="catch Error(...) can only take ‘string memory’, not 'bytes'\nlevel Error\ntests/contract_testcases/substrate/calls/try_catch_external_calls_05.sol:8:31-36"]
+	diagnostic_13 [label="catch Panic(...) can only take 'uint256', not 'uint128'\nlevel Error\ntests/contract_testcases/substrate/calls/try_catch_external_calls_05.sol:10:31-38"]
+	diagnostic_14 [label="catch can only take ‘bytes memory’, not 'string'\nlevel Error\ntests/contract_testcases/substrate/calls/try_catch_external_calls_05.sol:12:26-32"]
+	diagnostic_15 [label="found contract 'other'\nlevel Debug\ntests/contract_testcases/substrate/calls/try_catch_external_calls_05.sol:19:9-24"]
 	contracts -> contract
 	contract -> test [label="function"]
 	contracts -> contract_3
@@ -23,8 +23,8 @@ strict digraph "tests/contract_testcases/substrate/calls/try_catch_external_call
 	list -> number_literal [label="entry #0"]
 	list -> bool_literal [label="entry #1"]
 	diagnostics -> diagnostic [label="Debug"]
-	diagnostics -> diagnostic_12 [label="Debug"]
+	diagnostics -> diagnostic_12 [label="Error"]
 	diagnostics -> diagnostic_13 [label="Error"]
 	diagnostics -> diagnostic_14 [label="Error"]
-	diagnostics -> diagnostic_15 [label="Error"]
+	diagnostics -> diagnostic_15 [label="Debug"]
 }

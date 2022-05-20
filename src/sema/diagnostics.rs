@@ -116,6 +116,13 @@ impl Diagnostics {
 
         false
     }
+
+    // We may have duplicate entries. Also ensure diagnostics are give in order
+    // of location
+    pub fn sort_and_dedup(&mut self) {
+        self.contents.sort();
+        self.contents.dedup();
+    }
 }
 
 fn convert_diagnostic(
@@ -132,12 +139,12 @@ fn convert_diagnostic(
 
     let mut labels = Vec::new();
 
-    if let Loc::File(file_no, start, end) = msg.pos {
+    if let Loc::File(file_no, start, end) = msg.loc {
         labels.push(diagnostic::Label::primary(file_id[&file_no], start..end));
     }
 
     for note in &msg.notes {
-        if let Loc::File(file_no, start, end) = note.pos {
+        if let Loc::File(file_no, start, end) = note.loc {
             labels.push(
                 diagnostic::Label::secondary(file_id[&file_no], start..end)
                     .with_message(note.message.to_owned()),
@@ -214,7 +221,7 @@ impl Namespace {
 
             term::emit(&mut buffer, &config, &files, &diagnostic).unwrap();
 
-            let location = if let Loc::File(file_no, start, end) = msg.pos {
+            let location = if let Loc::File(file_no, start, end) = msg.loc {
                 Some(LocJson {
                     file: format!("{}", self.files[file_no]),
                     start: start + 1,

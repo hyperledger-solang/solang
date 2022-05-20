@@ -5,9 +5,9 @@ strict digraph "tests/contract_testcases/substrate/contracts/contract_name_06.so
 	return [label="return\ntests/contract_testcases/substrate/contracts/contract_name_06.sol:3:17-25"]
 	number_literal [label="int256 literal: 0\ntests/contract_testcases/substrate/contracts/contract_name_06.sol:3:24-25"]
 	diagnostic [label="found contract 'test'\nlevel Debug\ntests/contract_testcases/substrate/contracts/contract_name_06.sol:1:1-15"]
-	diagnostic_8 [label="declaration of 'test' shadows contract name\nlevel Warning\ntests/contract_testcases/substrate/contracts/contract_name_06.sol:2:46-50"]
+	diagnostic_8 [label="function can be declared 'pure'\nlevel Warning\ntests/contract_testcases/substrate/contracts/contract_name_06.sol:2:13-51"]
+	diagnostic_9 [label="declaration of 'test' shadows contract name\nlevel Warning\ntests/contract_testcases/substrate/contracts/contract_name_06.sol:2:46-50"]
 	note [label="previous declaration of contract name\ntests/contract_testcases/substrate/contracts/contract_name_06.sol:1:1-15"]
-	diagnostic_10 [label="function can be declared 'pure'\nlevel Warning\ntests/contract_testcases/substrate/contracts/contract_name_06.sol:2:13-51"]
 	contracts -> contract
 	contract -> f [label="function"]
 	f -> returns [label="returns"]
@@ -15,6 +15,6 @@ strict digraph "tests/contract_testcases/substrate/contracts/contract_name_06.so
 	return -> number_literal [label="expr"]
 	diagnostics -> diagnostic [label="Debug"]
 	diagnostics -> diagnostic_8 [label="Warning"]
-	diagnostic_8 -> note [label="note"]
-	diagnostics -> diagnostic_10 [label="Warning"]
+	diagnostics -> diagnostic_9 [label="Warning"]
+	diagnostic_9 -> note [label="note"]
 }

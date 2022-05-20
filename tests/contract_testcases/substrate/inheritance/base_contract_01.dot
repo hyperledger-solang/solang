@@ -14,8 +14,8 @@ strict digraph "tests/contract_testcases/substrate/inheritance/base_contract_01.
 	diagnostic [label="found contract 'base'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/base_contract_01.sol:2:9-23"]
 	diagnostic_15 [label="'public': visibility for constructors is ignored\nlevel Warning\ntests/contract_testcases/substrate/inheritance/base_contract_01.sol:3:35-41"]
 	diagnostic_16 [label="found contract 'apex'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/base_contract_01.sol:6:9-36"]
-	diagnostic_17 [label="conversion from bool to uint64 not possible\nlevel Error\ntests/contract_testcases/substrate/inheritance/base_contract_01.sol:6:31-35"]
-	diagnostic_18 [label="missing arguments to base contract 'base' constructor\nlevel Error\ntests/contract_testcases/substrate/inheritance/base_contract_01.sol:6:9-36"]
+	diagnostic_17 [label="missing arguments to base contract 'base' constructor\nlevel Error\ntests/contract_testcases/substrate/inheritance/base_contract_01.sol:6:9-36"]
+	diagnostic_18 [label="conversion from bool to uint64 not possible\nlevel Error\ntests/contract_testcases/substrate/inheritance/base_contract_01.sol:6:31-35"]
 	contracts -> contract
 	contract -> node_2 [label="constructor"]
 	node_2 -> parameters [label="parameters"]

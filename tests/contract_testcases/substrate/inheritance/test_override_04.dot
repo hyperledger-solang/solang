@@ -17,9 +17,9 @@ strict digraph "tests/contract_testcases/substrate/inheritance/test_override_04.
 	variable_16 [label="variable: a\nuint64\ntests/contract_testcases/substrate/inheritance/test_override_04.sol:10:24-25"]
 	number_literal_17 [label="uint64 literal: 102\ntests/contract_testcases/substrate/inheritance/test_override_04.sol:10:28-31"]
 	diagnostic [label="found contract 'base'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/test_override_04.sol:2:9-29"]
-	diagnostic_20 [label="found contract 'bar'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/test_override_04.sol:8:9-22"]
-	diagnostic_21 [label="function 'foo' overrides function which is not virtual\nlevel Error\ntests/contract_testcases/substrate/inheritance/test_override_04.sol:3:13-74"]
+	diagnostic_20 [label="function 'foo' overrides function which is not virtual\nlevel Error\ntests/contract_testcases/substrate/inheritance/test_override_04.sol:3:13-74"]
 	note [label="previous definition of function 'foo'\ntests/contract_testcases/substrate/inheritance/test_override_04.sol:9:13-60"]
+	diagnostic_22 [label="found contract 'bar'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/test_override_04.sol:8:9-22"]
 	contracts -> contract
 	contract -> base [label="base"]
 	contract -> foo [label="function"]
@@ -38,7 +38,7 @@ strict digraph "tests/contract_testcases/substrate/inheritance/test_override_04.
 	add_15 -> variable_16 [label="left"]
 	add_15 -> number_literal_17 [label="right"]
 	diagnostics -> diagnostic [label="Debug"]
-	diagnostics -> diagnostic_20 [label="Debug"]
-	diagnostics -> diagnostic_21 [label="Error"]
-	diagnostic_21 -> note [label="note"]
+	diagnostics -> diagnostic_20 [label="Error"]
+	diagnostic_20 -> note [label="note"]
+	diagnostics -> diagnostic_22 [label="Debug"]
 }

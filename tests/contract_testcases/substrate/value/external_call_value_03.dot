@@ -9,9 +9,9 @@ strict digraph "tests/contract_testcases/substrate/value/external_call_value_03.
 	var_decl [label="variable decl contract a f\ntests/contract_testcases/substrate/value/external_call_value_03.sol:12:17-30"]
 	constructor [label="constructor contract a\ntests/contract_testcases/substrate/value/external_call_value_03.sol:12:23-30"]
 	diagnostic [label="found contract 'a'\nlevel Debug\ntests/contract_testcases/substrate/value/external_call_value_03.sol:2:9-20"]
-	diagnostic_12 [label="found contract 'b'\nlevel Debug\ntests/contract_testcases/substrate/value/external_call_value_03.sol:8:9-20"]
-	diagnostic_13 [label="'value' specified multiple times\nlevel Error\ntests/contract_testcases/substrate/value/external_call_value_03.sol:4:34-42"]
+	diagnostic_12 [label="'value' specified multiple times\nlevel Error\ntests/contract_testcases/substrate/value/external_call_value_03.sol:4:34-42"]
 	note [label="location of previous declaration of 'value'\ntests/contract_testcases/substrate/value/external_call_value_03.sol:4:24-32"]
+	diagnostic_14 [label="found contract 'b'\nlevel Debug\ntests/contract_testcases/substrate/value/external_call_value_03.sol:8:9-20"]
 	contracts -> contract
 	contract -> test [label="function"]
 	test -> parameters [label="parameters"]
@@ -22,7 +22,7 @@ strict digraph "tests/contract_testcases/substrate/value/external_call_value_03.
 	test_6 -> var_decl [label="body"]
 	var_decl -> constructor [label="init"]
 	diagnostics -> diagnostic [label="Debug"]
-	diagnostics -> diagnostic_12 [label="Debug"]
-	diagnostics -> diagnostic_13 [label="Error"]
-	diagnostic_13 -> note [label="note"]
+	diagnostics -> diagnostic_12 [label="Error"]
+	diagnostic_12 -> note [label="note"]
+	diagnostics -> diagnostic_14 [label="Debug"]
 }

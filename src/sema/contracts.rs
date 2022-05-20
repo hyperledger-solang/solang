@@ -347,7 +347,7 @@ fn check_inheritance(contract_no: usize, ns: &mut ast::Namespace) {
                             None
                         } else {
                             Some(ast::Note {
-                                pos: func.loc,
+                                loc: func.loc,
                                 message: format!(
                                     "function '{}' is not specified 'virtual'",
                                     func.name
@@ -513,7 +513,7 @@ fn check_inheritance(contract_no: usize, ns: &mut ast::Namespace) {
                 if previous_defs.is_empty() && cur.is_override.is_some() {
                     ns.diagnostics.push(ast::Diagnostic::error(
                         cur.loc,
-                        format!("function '{}' does not override anything", cur.name),
+                        format!("'{}' does not override anything", cur.name),
                     ));
                     continue;
                 }
@@ -715,7 +715,7 @@ fn check_inheritance(contract_no: usize, ns: &mut ast::Namespace) {
                 let func = &ns.functions[*function_no];
 
                 ast::Note {
-                    pos: func.loc,
+                    loc: func.loc,
                     message: format!("previous definition of function '{}'", func.name),
                 }
             })
@@ -803,7 +803,7 @@ fn resolve_declarations<'a>(
             let notes = function_no_bodies
                 .into_iter()
                 .map(|function_no| ast::Note {
-                    pos: ns.functions[function_no].loc,
+                    loc: ns.functions[function_no].loc,
                     message: format!(
                         "location of function '{}' with no body",
                         ns.functions[function_no].name

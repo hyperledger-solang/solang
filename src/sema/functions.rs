@@ -177,35 +177,32 @@ pub fn contract_function(
                 }
 
                 let mut list = Vec::new();
+                let mut diagnostics = Vec::new();
 
                 for name in bases {
-                    match ns.resolve_contract(file_no, name) {
-                        Some(no) => {
-                            if list.contains(&no) {
-                                ns.diagnostics.push(Diagnostic::error(
-                                    name.loc,
-                                    format!("function duplicate override '{}'", name.name),
-                                ));
-                            } else if !is_base(no, contract_no, ns) {
-                                ns.diagnostics.push(Diagnostic::error(
-                                    name.loc,
-                                    format!(
-                                        "override '{}' is not a base contract of '{}'",
-                                        name.name, ns.contracts[contract_no].name
-                                    ),
-                                ));
-                            } else {
-                                list.push(no);
-                            }
-                        }
-                        None => {
-                            ns.diagnostics.push(Diagnostic::error(
+                    if let Ok(no) =
+                        ns.resolve_contract_with_namespace(file_no, name, &mut diagnostics)
+                    {
+                        if list.contains(&no) {
+                            diagnostics.push(Diagnostic::error(
                                 name.loc,
-                                format!("contract '{}' in override list not found", name.name),
+                                format!("function duplicate override '{}'", name),
                             ));
+                        } else if !is_base(no, contract_no, ns) {
+                            diagnostics.push(Diagnostic::error(
+                                name.loc,
+                                format!(
+                                    "override '{}' is not a base contract of '{}'",
+                                    name, ns.contracts[contract_no].name
+                                ),
+                            ));
+                        } else {
+                            list.push(no);
                         }
                     }
                 }
+
+                ns.diagnostics.extend(diagnostics);
 
                 is_override = Some((*loc, list));
             }

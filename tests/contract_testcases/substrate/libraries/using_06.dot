@@ -23,8 +23,8 @@ strict digraph "tests/contract_testcases/substrate/libraries/using_06.sol" {
 	return_22 [label="return\ntests/contract_testcases/substrate/libraries/using_06.sol:17:17-25"]
 	variable_23 [label="variable: a\nuint64\ntests/contract_testcases/substrate/libraries/using_06.sol:17:24-25"]
 	diagnostic [label="found contract 'test'\nlevel Debug\ntests/contract_testcases/substrate/libraries/using_06.sol:2:9-23"]
-	diagnostic_26 [label="found library 'ints'\nlevel Debug\ntests/contract_testcases/substrate/libraries/using_06.sol:10:9-22"]
-	diagnostic_27 [label="cannot find overloaded function which matches signature\nlevel Error\ntests/contract_testcases/substrate/libraries/using_06.sol:6:24-39"]
+	diagnostic_26 [label="cannot find overloaded function which matches signature\nlevel Error\ntests/contract_testcases/substrate/libraries/using_06.sol:6:24-39"]
+	diagnostic_27 [label="found library 'ints'\nlevel Debug\ntests/contract_testcases/substrate/libraries/using_06.sol:10:9-22"]
 	contracts -> contract
 	contract -> using [label="base"]
 	contract -> foo [label="function"]
@@ -49,6 +49,6 @@ strict digraph "tests/contract_testcases/substrate/libraries/using_06.sol" {
 	max_19 -> return_22 [label="body"]
 	return_22 -> variable_23 [label="expr"]
 	diagnostics -> diagnostic [label="Debug"]
-	diagnostics -> diagnostic_26 [label="Debug"]
-	diagnostics -> diagnostic_27 [label="Error"]
+	diagnostics -> diagnostic_26 [label="Error"]
+	diagnostics -> diagnostic_27 [label="Debug"]
 }

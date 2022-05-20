@@ -179,7 +179,7 @@ pub fn parse_and_resolve(
                 ty: ast::ErrorType::ParserError,
                 level: ast::Level::Error,
                 message,
-                pos: pt::Loc::CommandLine,
+                loc: pt::Loc::CommandLine,
                 notes: Vec::new(),
             });
         }
@@ -187,6 +187,8 @@ pub fn parse_and_resolve(
             sema::sema(&file, resolver, &mut ns);
         }
     }
+
+    ns.diagnostics.sort_and_dedup();
 
     ns
 }

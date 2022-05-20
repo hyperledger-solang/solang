@@ -26,9 +26,9 @@ strict digraph "tests/contract_testcases/substrate/inheritance/multiple_override
 	variable_25 [label="variable: a\nuint64\ntests/contract_testcases/substrate/inheritance/multiple_override.sol:16:24-25"]
 	number_literal_26 [label="uint64 literal: 103\ntests/contract_testcases/substrate/inheritance/multiple_override.sol:16:28-31"]
 	diagnostic [label="found contract 'base'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/multiple_override.sol:2:9-35"]
-	diagnostic_29 [label="found contract 'bar'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/multiple_override.sol:8:9-22"]
-	diagnostic_30 [label="found contract 'bar2'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/multiple_override.sol:14:9-23"]
-	diagnostic_31 [label="function 'foo' should specify override list 'override(bar2,bar)'\nlevel Error\ntests/contract_testcases/substrate/inheritance/multiple_override.sol:3:36-44"]
+	diagnostic_29 [label="function 'foo' should specify override list 'override(bar2,bar)'\nlevel Error\ntests/contract_testcases/substrate/inheritance/multiple_override.sol:3:36-44"]
+	diagnostic_30 [label="found contract 'bar'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/multiple_override.sol:8:9-22"]
+	diagnostic_31 [label="found contract 'bar2'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/multiple_override.sol:14:9-23"]
 	contracts -> contract
 	contract -> base [label="base"]
 	contract -> base_3 [label="base"]
@@ -56,7 +56,7 @@ strict digraph "tests/contract_testcases/substrate/inheritance/multiple_override
 	add_24 -> variable_25 [label="left"]
 	add_24 -> number_literal_26 [label="right"]
 	diagnostics -> diagnostic [label="Debug"]
-	diagnostics -> diagnostic_29 [label="Debug"]
+	diagnostics -> diagnostic_29 [label="Error"]
 	diagnostics -> diagnostic_30 [label="Debug"]
-	diagnostics -> diagnostic_31 [label="Error"]
+	diagnostics -> diagnostic_31 [label="Debug"]
 }

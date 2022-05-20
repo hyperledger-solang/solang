@@ -228,10 +228,10 @@ fn resolve_variable_declaration(
             ns.diagnostics.push(Diagnostic {
                 level: Level::Error,
                 ty: ErrorType::DeclarationError,
-                pos: item.loc,
+                loc: item.loc,
                 message: format!("name '{}' has been defined as a function", item.id.name),
                 notes: vec![Note {
-                    pos: func.id.loc,
+                    loc: func.id.loc,
                     message: "function defined here".to_string(),
                 }],
             });

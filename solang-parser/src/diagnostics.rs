@@ -32,131 +32,131 @@ pub enum ErrorType {
 
 #[derive(Debug, Eq, Hash, PartialOrd, Ord, PartialEq)]
 pub struct Note {
-    pub pos: pt::Loc,
+    pub loc: pt::Loc,
     pub message: String,
 }
 
 #[derive(Debug, Eq, Hash, PartialOrd, Ord, PartialEq)]
 pub struct Diagnostic {
+    pub loc: pt::Loc,
     pub level: Level,
     pub ty: ErrorType,
-    pub pos: pt::Loc,
     pub message: String,
     pub notes: Vec<Note>,
 }
 
 impl Diagnostic {
-    pub fn debug(pos: Loc, message: String) -> Self {
+    pub fn debug(loc: Loc, message: String) -> Self {
         Diagnostic {
             level: Level::Debug,
             ty: ErrorType::None,
-            pos,
+            loc,
             message,
             notes: Vec::new(),
         }
     }
 
-    pub fn info(pos: Loc, message: String) -> Self {
+    pub fn info(loc: Loc, message: String) -> Self {
         Diagnostic {
             level: Level::Info,
             ty: ErrorType::None,
-            pos,
+            loc,
             message,
             notes: Vec::new(),
         }
     }
 
-    pub fn parser_error(pos: Loc, message: String) -> Self {
+    pub fn parser_error(loc: Loc, message: String) -> Self {
         Diagnostic {
             level: Level::Error,
             ty: ErrorType::ParserError,
-            pos,
+            loc,
             message,
             notes: Vec::new(),
         }
     }
 
-    pub fn error(pos: Loc, message: String) -> Self {
+    pub fn error(loc: Loc, message: String) -> Self {
         Diagnostic {
             level: Level::Error,
             ty: ErrorType::SyntaxError,
-            pos,
+            loc,
             message,
             notes: Vec::new(),
         }
     }
 
-    pub fn decl_error(pos: Loc, message: String) -> Self {
+    pub fn decl_error(loc: Loc, message: String) -> Self {
         Diagnostic {
             level: Level::Error,
             ty: ErrorType::DeclarationError,
-            pos,
+            loc,
             message,
             notes: Vec::new(),
         }
     }
 
-    pub fn type_error(pos: Loc, message: String) -> Self {
+    pub fn type_error(loc: Loc, message: String) -> Self {
         Diagnostic {
             level: Level::Error,
             ty: ErrorType::TypeError,
-            pos,
+            loc,
             message,
             notes: Vec::new(),
         }
     }
 
-    pub fn warning(pos: Loc, message: String) -> Self {
+    pub fn warning(loc: Loc, message: String) -> Self {
         Diagnostic {
             level: Level::Warning,
             ty: ErrorType::Warning,
-            pos,
+            loc,
             message,
             notes: Vec::new(),
         }
     }
 
-    pub fn warning_with_note(pos: Loc, message: String, note_pos: Loc, note: String) -> Self {
+    pub fn warning_with_note(loc: Loc, message: String, note_loc: Loc, note: String) -> Self {
         Diagnostic {
             level: Level::Warning,
             ty: ErrorType::Warning,
-            pos,
+            loc,
             message,
             notes: vec![Note {
-                pos: note_pos,
+                loc: note_loc,
                 message: note,
             }],
         }
     }
 
-    pub fn warning_with_notes(pos: Loc, message: String, notes: Vec<Note>) -> Self {
+    pub fn warning_with_notes(loc: Loc, message: String, notes: Vec<Note>) -> Self {
         Diagnostic {
             level: Level::Warning,
             ty: ErrorType::Warning,
-            pos,
+            loc,
             message,
             notes,
         }
     }
 
-    pub fn error_with_note(pos: Loc, message: String, note_pos: Loc, note: String) -> Self {
+    pub fn error_with_note(loc: Loc, message: String, note_loc: Loc, note: String) -> Self {
         Diagnostic {
             level: Level::Error,
             ty: ErrorType::None,
-            pos,
+            loc,
             message,
             notes: vec![Note {
-                pos: note_pos,
+                loc: note_loc,
                 message: note,
             }],
         }
     }
 
-    pub fn error_with_notes(pos: Loc, message: String, notes: Vec<Note>) -> Self {
+    pub fn error_with_notes(loc: Loc, message: String, notes: Vec<Note>) -> Self {
         Diagnostic {
             level: Level::Error,
             ty: ErrorType::None,
-            pos,
+            loc,
             message,
             notes,
         }

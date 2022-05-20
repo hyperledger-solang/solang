@@ -13,10 +13,10 @@ strict digraph "tests/contract_testcases/solana/using_import.sol" {
 	variable_13 [label="variable: s\nstruct S\ntests/contract_testcases/solana/using_import.sol:9:3-4"]
 	contract_14 [label="contract A\ntests/contract_testcases/solana/simple.sol:1:1-12"]
 	contract_15 [label="contract L\ntests/contract_testcases/solana/simple.sol:1:14-2:11"]
-	diagnostic [label="found contract 'A'\nlevel Debug\ntests/contract_testcases/solana/simple.sol:1:1-12"]
-	diagnostic_18 [label="found library 'L'\nlevel Debug\ntests/contract_testcases/solana/simple.sol:1:14-2:11"]
-	diagnostic_19 [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/solana/using_import.sol:5:1-6:12"]
-	diagnostic_20 [label="function can be declared 'pure'\nlevel Warning\ntests/contract_testcases/solana/using_import.sol:7:2-35"]
+	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/solana/using_import.sol:5:1-6:12"]
+	diagnostic_18 [label="function can be declared 'pure'\nlevel Warning\ntests/contract_testcases/solana/using_import.sol:7:2-35"]
+	diagnostic_19 [label="found contract 'A'\nlevel Debug\ntests/contract_testcases/solana/simple.sol:1:1-12"]
+	diagnostic_20 [label="found library 'L'\nlevel Debug\ntests/contract_testcases/solana/simple.sol:1:14-2:11"]
 	structs -> S
 	contracts -> contract
 	contract -> test [label="function"]
@@ -32,7 +32,7 @@ strict digraph "tests/contract_testcases/solana/using_import.sol" {
 	contracts -> contract_14
 	contracts -> contract_15
 	diagnostics -> diagnostic [label="Debug"]
-	diagnostics -> diagnostic_18 [label="Debug"]
+	diagnostics -> diagnostic_18 [label="Warning"]
 	diagnostics -> diagnostic_19 [label="Debug"]
-	diagnostics -> diagnostic_20 [label="Warning"]
+	diagnostics -> diagnostic_20 [label="Debug"]
 }

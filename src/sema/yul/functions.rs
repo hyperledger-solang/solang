@@ -95,10 +95,10 @@ impl FunctionsTable {
             return Some(Diagnostic {
                 level: Level::Error,
                 ty: ErrorType::DeclarationError,
-                pos: id.loc,
+                loc: id.loc,
                 message: format!("function name '{}' is already taken", id.name),
                 notes: vec![Note {
-                    pos: func.id.loc,
+                    loc: func.id.loc,
                     message: "previous declaration found here".to_string(),
                 }],
             });
@@ -169,10 +169,10 @@ pub(crate) fn process_function_header(
         ns.diagnostics.push(Diagnostic {
             level: Level::Error,
             ty: ErrorType::DeclarationError,
-            pos: func_def.id.loc,
+            loc: func_def.id.loc,
             message: format!("function '{}' is already defined", func_def.id.name),
             notes: vec![Note {
-                pos: defined_func.id.loc,
+                loc: defined_func.id.loc,
                 message: "found definition here".to_string(),
             }],
         });
