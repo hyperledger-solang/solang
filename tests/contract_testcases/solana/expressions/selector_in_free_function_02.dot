@@ -10,10 +10,10 @@ strict digraph "tests/contract_testcases/solana/expressions/selector_in_free_fun
 	external_function [label="function() external\nI.X\ntests/contract_testcases/solana/expressions/selector_in_free_function_02.sol:8:26-27"]
 	variable [label="variable: t\ncontract I\ntests/contract_testcases/solana/expressions/selector_in_free_function_02.sol:8:24-25"]
 	diagnostic [label="found contract 'I'\nlevel Debug\ntests/contract_testcases/solana/expressions/selector_in_free_function_02.sol:2:9-20"]
-	diagnostic_14 [label="found contract 'foo'\nlevel Debug\ntests/contract_testcases/solana/expressions/selector_in_free_function_02.sol:6:9-22"]
-	diagnostic_15 [label="function parameter 't' has never been read\nlevel Warning\ntests/contract_testcases/solana/expressions/selector_in_free_function_02.sol:7:26-27"]
-	diagnostic_16 [label="function can be declared 'pure'\nlevel Warning\ntests/contract_testcases/solana/expressions/selector_in_free_function_02.sol:3:13-34"]
-	diagnostic_17 [label="function can be declared 'pure'\nlevel Warning\ntests/contract_testcases/solana/expressions/selector_in_free_function_02.sol:7:13-52"]
+	diagnostic_14 [label="function can be declared 'pure'\nlevel Warning\ntests/contract_testcases/solana/expressions/selector_in_free_function_02.sol:3:13-34"]
+	diagnostic_15 [label="found contract 'foo'\nlevel Debug\ntests/contract_testcases/solana/expressions/selector_in_free_function_02.sol:6:9-22"]
+	diagnostic_16 [label="function can be declared 'pure'\nlevel Warning\ntests/contract_testcases/solana/expressions/selector_in_free_function_02.sol:7:13-52"]
+	diagnostic_17 [label="function parameter 't' has never been read\nlevel Warning\ntests/contract_testcases/solana/expressions/selector_in_free_function_02.sol:7:26-27"]
 	contracts -> contract
 	contract -> X [label="function"]
 	contracts -> contract_4
@@ -25,8 +25,8 @@ strict digraph "tests/contract_testcases/solana/expressions/selector_in_free_fun
 	builtins -> external_function [label="arg #0"]
 	external_function -> variable [label="address"]
 	diagnostics -> diagnostic [label="Debug"]
-	diagnostics -> diagnostic_14 [label="Debug"]
-	diagnostics -> diagnostic_15 [label="Warning"]
+	diagnostics -> diagnostic_14 [label="Warning"]
+	diagnostics -> diagnostic_15 [label="Debug"]
 	diagnostics -> diagnostic_16 [label="Warning"]
 	diagnostics -> diagnostic_17 [label="Warning"]
 }

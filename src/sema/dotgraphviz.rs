@@ -2269,7 +2269,7 @@ impl Namespace {
             for diag in self.diagnostics.iter() {
                 let mut labels = vec![diag.message.to_string(), format!("level {:?}", diag.level)];
 
-                labels.push(self.loc_to_string(&diag.pos));
+                labels.push(self.loc_to_string(&diag.loc));
 
                 let node = dot.add_node(
                     Node::new("diagnostic", labels),
@@ -2281,7 +2281,7 @@ impl Namespace {
                     dot.add_node(
                         Node::new(
                             "note",
-                            vec![note.message.to_string(), self.loc_to_string(&note.pos)],
+                            vec![note.message.to_string(), self.loc_to_string(&note.loc)],
                         ),
                         Some(node),
                         Some(String::from("note")),

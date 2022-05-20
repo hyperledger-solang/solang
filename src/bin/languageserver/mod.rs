@@ -99,7 +99,7 @@ impl SolangServer {
             codegen(&mut ns, &Default::default());
 
             diags.extend(ns.diagnostics.iter().filter_map(|diag| {
-                if diag.pos.file_no() != ns.top_file_no() {
+                if diag.loc.file_no() != ns.top_file_no() {
                     // The first file is the one we wanted to parse; others are imported
                     return None;
                 }
@@ -122,10 +122,10 @@ impl SolangServer {
                             .map(|note| DiagnosticRelatedInformation {
                                 message: note.message.to_string(),
                                 location: Location {
-                                    uri: Url::from_file_path(&ns.files[note.pos.file_no()].path)
+                                    uri: Url::from_file_path(&ns.files[note.loc.file_no()].path)
                                         .unwrap(),
                                     range: SolangServer::loc_to_range(
-                                        &note.pos,
+                                        &note.loc,
                                         &ns.files[ns.top_file_no()],
                                     ),
                                 },
@@ -134,7 +134,7 @@ impl SolangServer {
                     )
                 };
 
-                let range = SolangServer::loc_to_range(&diag.pos, &ns.files[ns.top_file_no()]);
+                let range = SolangServer::loc_to_range(&diag.loc, &ns.files[ns.top_file_no()]);
 
                 Some(Diagnostic {
                     range,

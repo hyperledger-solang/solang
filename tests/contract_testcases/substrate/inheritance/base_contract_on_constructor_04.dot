@@ -6,8 +6,8 @@ strict digraph "tests/contract_testcases/substrate/inheritance/base_contract_on_
 	base [label="base base\ntests/contract_testcases/substrate/inheritance/base_contract_on_constructor_04.sol:6:26-30"]
 	foo [label="function foo\ncontract: apex\ntests/contract_testcases/substrate/inheritance/base_contract_on_constructor_04.sol:7:17-43\nsignature foo()\nvisibility public\nmutability pure"]
 	diagnostic [label="found contract 'base'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/base_contract_on_constructor_04.sol:2:9-23"]
-	diagnostic_9 [label="found contract 'apex'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/base_contract_on_constructor_04.sol:6:9-30"]
-	diagnostic_10 [label="function parameter 'x' has never been read\nlevel Warning\ntests/contract_testcases/substrate/inheritance/base_contract_on_constructor_04.sol:3:30-31"]
+	diagnostic_9 [label="function parameter 'x' has never been read\nlevel Warning\ntests/contract_testcases/substrate/inheritance/base_contract_on_constructor_04.sol:3:30-31"]
+	diagnostic_10 [label="found contract 'apex'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/base_contract_on_constructor_04.sol:6:9-30"]
 	diagnostic_11 [label="missing arguments to base contract 'base' constructor\nlevel Error\ntests/contract_testcases/substrate/inheritance/base_contract_on_constructor_04.sol:6:9-30"]
 	contracts -> contract
 	contract -> node_2 [label="constructor"]
@@ -16,7 +16,7 @@ strict digraph "tests/contract_testcases/substrate/inheritance/base_contract_on_
 	contract_4 -> base [label="base"]
 	contract_4 -> foo [label="function"]
 	diagnostics -> diagnostic [label="Debug"]
-	diagnostics -> diagnostic_9 [label="Debug"]
-	diagnostics -> diagnostic_10 [label="Warning"]
+	diagnostics -> diagnostic_9 [label="Warning"]
+	diagnostics -> diagnostic_10 [label="Debug"]
 	diagnostics -> diagnostic_11 [label="Error"]
 }

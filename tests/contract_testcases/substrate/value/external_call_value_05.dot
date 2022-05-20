@@ -9,8 +9,8 @@ strict digraph "tests/contract_testcases/substrate/value/external_call_value_05.
 	var_decl [label="variable decl contract a f\ntests/contract_testcases/substrate/value/external_call_value_05.sol:12:17-30"]
 	constructor [label="constructor contract a\ntests/contract_testcases/substrate/value/external_call_value_05.sol:12:23-30"]
 	diagnostic [label="found contract 'a'\nlevel Debug\ntests/contract_testcases/substrate/value/external_call_value_05.sol:2:9-20"]
-	diagnostic_12 [label="found contract 'b'\nlevel Debug\ntests/contract_testcases/substrate/value/external_call_value_05.sol:8:9-20"]
-	diagnostic_13 [label="code block found where list of call arguments expected, like ‘{gas: 5000}’\nlevel Error\ntests/contract_testcases/substrate/value/external_call_value_05.sol:4:33-45"]
+	diagnostic_12 [label="code block found where list of call arguments expected, like ‘{gas: 5000}’\nlevel Error\ntests/contract_testcases/substrate/value/external_call_value_05.sol:4:33-45"]
+	diagnostic_13 [label="found contract 'b'\nlevel Debug\ntests/contract_testcases/substrate/value/external_call_value_05.sol:8:9-20"]
 	contracts -> contract
 	contract -> test [label="function"]
 	test -> parameters [label="parameters"]
@@ -21,6 +21,6 @@ strict digraph "tests/contract_testcases/substrate/value/external_call_value_05.
 	test_6 -> var_decl [label="body"]
 	var_decl -> constructor [label="init"]
 	diagnostics -> diagnostic [label="Debug"]
-	diagnostics -> diagnostic_12 [label="Debug"]
-	diagnostics -> diagnostic_13 [label="Error"]
+	diagnostics -> diagnostic_12 [label="Error"]
+	diagnostics -> diagnostic_13 [label="Debug"]
 }

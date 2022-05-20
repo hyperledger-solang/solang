@@ -6,8 +6,8 @@ strict digraph "tests/contract_testcases/substrate/value/external_call_value_08.
 	var [label="variable x\nvisibility internal\ntests/contract_testcases/substrate/value/external_call_value_08.sol:8:13-18"]
 	test_6 [label="function test\ncontract: b\ntests/contract_testcases/substrate/value/external_call_value_08.sol:10:13-35\nsignature test()\nvisibility public\nmutability nonpayable"]
 	diagnostic [label="found contract 'a'\nlevel Debug\ntests/contract_testcases/substrate/value/external_call_value_08.sol:2:9-20"]
-	diagnostic_9 [label="found contract 'b'\nlevel Debug\ntests/contract_testcases/substrate/value/external_call_value_08.sol:7:9-20"]
-	diagnostic_10 [label="function parameter 'l' has never been read\nlevel Warning\ntests/contract_testcases/substrate/value/external_call_value_08.sol:3:33-34"]
+	diagnostic_9 [label="function parameter 'l' has never been read\nlevel Warning\ntests/contract_testcases/substrate/value/external_call_value_08.sol:3:33-34"]
+	diagnostic_10 [label="found contract 'b'\nlevel Debug\ntests/contract_testcases/substrate/value/external_call_value_08.sol:7:9-20"]
 	diagnostic_11 [label="sending value to function 'test' which is not payable\nlevel Error\ntests/contract_testcases/substrate/value/external_call_value_08.sol:12:17-46"]
 	contracts -> contract
 	contract -> test [label="function"]
@@ -16,7 +16,7 @@ strict digraph "tests/contract_testcases/substrate/value/external_call_value_08.
 	contract_4 -> var [label="variable"]
 	contract_4 -> test_6 [label="function"]
 	diagnostics -> diagnostic [label="Debug"]
-	diagnostics -> diagnostic_9 [label="Debug"]
-	diagnostics -> diagnostic_10 [label="Warning"]
+	diagnostics -> diagnostic_9 [label="Warning"]
+	diagnostics -> diagnostic_10 [label="Debug"]
 	diagnostics -> diagnostic_11 [label="Error"]
 }

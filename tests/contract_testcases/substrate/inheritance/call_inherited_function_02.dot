@@ -25,9 +25,9 @@ strict digraph "tests/contract_testcases/substrate/inheritance/call_inherited_fu
 	number_literal_24 [label="uint64 literal: 3\ntests/contract_testcases/substrate/inheritance/call_inherited_function_02.sol:14:32-33"]
 	number_literal_25 [label="uint64 literal: 3\ntests/contract_testcases/substrate/inheritance/call_inherited_function_02.sol:14:38-39"]
 	diagnostic [label="found contract 'base'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/call_inherited_function_02.sol:2:9-23"]
-	diagnostic_28 [label="found contract 'apex'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/call_inherited_function_02.sol:8:9-30"]
-	diagnostic_29 [label="function 'foo' with this signature already defined\nlevel Error\ntests/contract_testcases/substrate/inheritance/call_inherited_function_02.sol:3:13-59"]
+	diagnostic_28 [label="function 'foo' with this signature already defined\nlevel Error\ntests/contract_testcases/substrate/inheritance/call_inherited_function_02.sol:3:13-59"]
 	note [label="previous definition of function 'foo'\ntests/contract_testcases/substrate/inheritance/call_inherited_function_02.sol:9:13-59"]
+	diagnostic_30 [label="found contract 'apex'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/call_inherited_function_02.sol:8:9-30"]
 	contracts -> contract
 	contract -> foo [label="function"]
 	foo -> parameters [label="parameters"]
@@ -54,7 +54,7 @@ strict digraph "tests/contract_testcases/substrate/inheritance/call_inherited_fu
 	call_internal_function -> number_literal_24 [label="arg #0"]
 	add_21 -> number_literal_25 [label="right"]
 	diagnostics -> diagnostic [label="Debug"]
-	diagnostics -> diagnostic_28 [label="Debug"]
-	diagnostics -> diagnostic_29 [label="Error"]
-	diagnostic_29 -> note [label="note"]
+	diagnostics -> diagnostic_28 [label="Error"]
+	diagnostic_28 -> note [label="note"]
+	diagnostics -> diagnostic_30 [label="Debug"]
 }

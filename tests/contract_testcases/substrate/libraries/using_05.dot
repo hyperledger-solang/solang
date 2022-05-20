@@ -16,8 +16,8 @@ strict digraph "tests/contract_testcases/substrate/libraries/using_05.sol" {
 	variable_15 [label="variable: a\nuint64\ntests/contract_testcases/substrate/libraries/using_05.sol:12:32-33"]
 	variable_16 [label="variable: b\nuint64\ntests/contract_testcases/substrate/libraries/using_05.sol:12:36-37"]
 	diagnostic [label="found contract 'test'\nlevel Debug\ntests/contract_testcases/substrate/libraries/using_05.sol:2:9-23"]
-	diagnostic_19 [label="found library 'ints'\nlevel Debug\ntests/contract_testcases/substrate/libraries/using_05.sol:10:9-22"]
-	diagnostic_20 [label="using function expects 2 arguments, 3 provided (including self)\nlevel Error\ntests/contract_testcases/substrate/libraries/using_05.sol:6:24-39"]
+	diagnostic_19 [label="using function expects 2 arguments, 3 provided (including self)\nlevel Error\ntests/contract_testcases/substrate/libraries/using_05.sol:6:24-39"]
+	diagnostic_20 [label="found library 'ints'\nlevel Debug\ntests/contract_testcases/substrate/libraries/using_05.sol:10:9-22"]
 	contracts -> contract
 	contract -> using [label="base"]
 	contract -> foo [label="function"]
@@ -35,6 +35,6 @@ strict digraph "tests/contract_testcases/substrate/libraries/using_05.sol" {
 	conditional -> variable_15 [label="left"]
 	conditional -> variable_16 [label="right"]
 	diagnostics -> diagnostic [label="Debug"]
-	diagnostics -> diagnostic_19 [label="Debug"]
-	diagnostics -> diagnostic_20 [label="Error"]
+	diagnostics -> diagnostic_19 [label="Error"]
+	diagnostics -> diagnostic_20 [label="Debug"]
 }

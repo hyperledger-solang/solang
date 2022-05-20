@@ -7,10 +7,10 @@ strict digraph "tests/contract_testcases/substrate/tags/functions_09.sol" {
 	returns [label="returns\nint256 a\nbool k"]
 	contract_7 [label="contract b\ntests/contract_testcases/substrate/tags/functions_09.sol:9:9-20"]
 	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/tags/functions_09.sol:2:9-24"]
-	diagnostic_10 [label="found contract 'b'\nlevel Debug\ntests/contract_testcases/substrate/tags/functions_09.sol:9:9-20"]
-	diagnostic_11 [label="function parameter 'x' has never been read\nlevel Warning\ntests/contract_testcases/substrate/tags/functions_09.sol:6:30-31"]
-	diagnostic_12 [label="return variable 'a' has never been assigned\nlevel Warning\ntests/contract_testcases/substrate/tags/functions_09.sol:6:58-59"]
-	diagnostic_13 [label="return variable 'k' has never been assigned\nlevel Warning\ntests/contract_testcases/substrate/tags/functions_09.sol:6:66-67"]
+	diagnostic_10 [label="function parameter 'x' has never been read\nlevel Warning\ntests/contract_testcases/substrate/tags/functions_09.sol:6:30-31"]
+	diagnostic_11 [label="return variable 'a' has never been assigned\nlevel Warning\ntests/contract_testcases/substrate/tags/functions_09.sol:6:58-59"]
+	diagnostic_12 [label="return variable 'k' has never been assigned\nlevel Warning\ntests/contract_testcases/substrate/tags/functions_09.sol:6:66-67"]
+	diagnostic_13 [label="found contract 'b'\nlevel Debug\ntests/contract_testcases/substrate/tags/functions_09.sol:9:9-20"]
 	contracts -> contract
 	contract -> base [label="base"]
 	contract -> foo [label="function"]
@@ -19,8 +19,8 @@ strict digraph "tests/contract_testcases/substrate/tags/functions_09.sol" {
 	foo -> returns [label="returns"]
 	contracts -> contract_7
 	diagnostics -> diagnostic [label="Debug"]
-	diagnostics -> diagnostic_10 [label="Debug"]
+	diagnostics -> diagnostic_10 [label="Warning"]
 	diagnostics -> diagnostic_11 [label="Warning"]
 	diagnostics -> diagnostic_12 [label="Warning"]
-	diagnostics -> diagnostic_13 [label="Warning"]
+	diagnostics -> diagnostic_13 [label="Debug"]
 }

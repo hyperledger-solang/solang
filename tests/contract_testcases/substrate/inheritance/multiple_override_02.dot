@@ -29,10 +29,10 @@ strict digraph "tests/contract_testcases/substrate/inheritance/multiple_override
 	contract_28 [label="contract bar3\ntests/contract_testcases/substrate/inheritance/multiple_override_02.sol:20:9-23"]
 	f [label="function f\ncontract: bar3\ntests/contract_testcases/substrate/inheritance/multiple_override_02.sol:21:13-32\nsignature f()\nvisibility public\nmutability nonpayable"]
 	diagnostic [label="found contract 'base'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/multiple_override_02.sol:2:9-41"]
-	diagnostic_32 [label="found contract 'bar'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/multiple_override_02.sol:8:9-22"]
-	diagnostic_33 [label="found contract 'bar2'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/multiple_override_02.sol:14:9-23"]
-	diagnostic_34 [label="found contract 'bar3'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/multiple_override_02.sol:20:9-23"]
-	diagnostic_35 [label="function 'foo' includes extraneous overrides 'bar3', specify 'override(bar2,bar)'\nlevel Error\ntests/contract_testcases/substrate/inheritance/multiple_override_02.sol:3:36-59"]
+	diagnostic_32 [label="function 'foo' includes extraneous overrides 'bar3', specify 'override(bar2,bar)'\nlevel Error\ntests/contract_testcases/substrate/inheritance/multiple_override_02.sol:3:36-59"]
+	diagnostic_33 [label="found contract 'bar'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/multiple_override_02.sol:8:9-22"]
+	diagnostic_34 [label="found contract 'bar2'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/multiple_override_02.sol:14:9-23"]
+	diagnostic_35 [label="found contract 'bar3'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/multiple_override_02.sol:20:9-23"]
 	contracts -> contract
 	contract -> base [label="base"]
 	contract -> base_3 [label="base"]
@@ -63,8 +63,8 @@ strict digraph "tests/contract_testcases/substrate/inheritance/multiple_override
 	contracts -> contract_28
 	contract_28 -> f [label="function"]
 	diagnostics -> diagnostic [label="Debug"]
-	diagnostics -> diagnostic_32 [label="Debug"]
+	diagnostics -> diagnostic_32 [label="Error"]
 	diagnostics -> diagnostic_33 [label="Debug"]
 	diagnostics -> diagnostic_34 [label="Debug"]
-	diagnostics -> diagnostic_35 [label="Error"]
+	diagnostics -> diagnostic_35 [label="Debug"]
 }

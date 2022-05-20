@@ -15,10 +15,10 @@ strict digraph "tests/contract_testcases/substrate/inheritance/inherit_types_01.
 	base_15 [label="base c\ntests/contract_testcases/substrate/inheritance/inherit_types_01.sol:12:23-24"]
 	contract_16 [label="contract c\ntests/contract_testcases/substrate/inheritance/inherit_types_01.sol:16:9-20"]
 	diagnostic [label="found contract 'a'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/inherit_types_01.sol:2:9-24"]
-	diagnostic_19 [label="found contract 'b'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/inherit_types_01.sol:12:9-24"]
-	diagnostic_20 [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/inherit_types_01.sol:16:9-20"]
-	diagnostic_21 [label="function can be declared 'pure'\nlevel Warning\ntests/contract_testcases/substrate/inheritance/inherit_types_01.sol:3:13-52"]
-	diagnostic_22 [label="function can be declared 'pure'\nlevel Warning\ntests/contract_testcases/substrate/inheritance/inherit_types_01.sol:7:13-53"]
+	diagnostic_19 [label="function can be declared 'pure'\nlevel Warning\ntests/contract_testcases/substrate/inheritance/inherit_types_01.sol:3:13-52"]
+	diagnostic_20 [label="function can be declared 'pure'\nlevel Warning\ntests/contract_testcases/substrate/inheritance/inherit_types_01.sol:7:13-53"]
+	diagnostic_21 [label="found contract 'b'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/inherit_types_01.sol:12:9-24"]
+	diagnostic_22 [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/inherit_types_01.sol:16:9-20"]
 	enums -> enum_y
 	enums -> enum_x
 	contracts -> contract
@@ -35,8 +35,8 @@ strict digraph "tests/contract_testcases/substrate/inheritance/inherit_types_01.
 	contract_14 -> base_15 [label="base"]
 	contracts -> contract_16
 	diagnostics -> diagnostic [label="Debug"]
-	diagnostics -> diagnostic_19 [label="Debug"]
-	diagnostics -> diagnostic_20 [label="Debug"]
-	diagnostics -> diagnostic_21 [label="Warning"]
-	diagnostics -> diagnostic_22 [label="Warning"]
+	diagnostics -> diagnostic_19 [label="Warning"]
+	diagnostics -> diagnostic_20 [label="Warning"]
+	diagnostics -> diagnostic_21 [label="Debug"]
+	diagnostics -> diagnostic_22 [label="Debug"]
 }
