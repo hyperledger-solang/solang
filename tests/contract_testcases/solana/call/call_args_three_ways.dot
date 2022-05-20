@@ -5,7 +5,7 @@ strict digraph "tests/contract_testcases/solana/call/call_args_three_ways.sol" {
 	constructor [label="constructor contract D\ntests/contract_testcases/solana/call/call_args_three_ways.sol:4:9-28"]
 	number_literal [label="uint64 literal: 1\ntests/contract_testcases/solana/call/call_args_three_ways.sol:4:23-24"]
 	var_decl_7 [label="variable decl contract D dd\ntests/contract_testcases/solana/call/call_args_three_ways.sol:5:3-29"]
-	constructor_8 [label="constructor contract D\ntests/contract_testcases/solana/call/call_args_three_ways.sol:5:17-27"]
+	constructor_8 [label="constructor contract D\ntests/contract_testcases/solana/call/call_args_three_ways.sol:5:10-27"]
 	number_literal_9 [label="uint64 literal: 1\ntests/contract_testcases/solana/call/call_args_three_ways.sol:5:25-26"]
 	var_decl_10 [label="variable decl contract D ddd\ntests/contract_testcases/solana/call/call_args_three_ways.sol:6:3-28"]
 	constructor_11 [label="constructor contract D\ntests/contract_testcases/solana/call/call_args_three_ways.sol:6:11-28"]

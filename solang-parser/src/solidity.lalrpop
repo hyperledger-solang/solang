@@ -375,7 +375,7 @@ FunctionCall: Expression = {
     <a:@L> <i:FunctionCallPrecedence> "(" <v:Comma<Expression>> ")" <b:@R> => {
         Expression::FunctionCall(Loc::File(file_no, a, b), Box::new(i), v)
     },
-    <i:FunctionCallPrecedence> <l:@L> <block:BlockStatement> <r:@R> => {
+    <l:@L> <i:FunctionCallPrecedence> <block:BlockStatement> <r:@R> => {
         Expression::FunctionCallBlock(Loc::File(file_no, l, r), Box::new(i), Box::new(block))
     },
     <a:@L> <i:FunctionCallPrecedence> "(" "{" <v:Comma<NamedArgument>> "}" ")" <b:@R> => {
