@@ -10,7 +10,7 @@ strict digraph "tests/contract_testcases/substrate/inheritance/test_override_02.
 	contract_9 [label="contract bar\ntests/contract_testcases/substrate/inheritance/test_override_02.sol:8:9-22"]
 	f [label="function f\ncontract: bar\ntests/contract_testcases/substrate/inheritance/test_override_02.sol:9:13-33\nsignature f()\nvisibility private\nmutability nonpayable"]
 	diagnostic [label="found contract 'base'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/test_override_02.sol:2:9-23"]
-	diagnostic_13 [label="function 'foo' does not override anything\nlevel Error\ntests/contract_testcases/substrate/inheritance/test_override_02.sol:3:13-74"]
+	diagnostic_13 [label="'foo' does not override anything\nlevel Error\ntests/contract_testcases/substrate/inheritance/test_override_02.sol:3:13-74"]
 	diagnostic_14 [label="override 'bar' is not a base contract of 'base'\nlevel Error\ntests/contract_testcases/substrate/inheritance/test_override_02.sol:3:45-48"]
 	diagnostic_15 [label="found contract 'bar'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/test_override_02.sol:8:9-22"]
 	contracts -> contract

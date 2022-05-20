@@ -513,7 +513,7 @@ fn check_inheritance(contract_no: usize, ns: &mut ast::Namespace) {
                 if previous_defs.is_empty() && cur.is_override.is_some() {
                     ns.diagnostics.push(ast::Diagnostic::error(
                         cur.loc,
-                        format!("function '{}' does not override anything", cur.name),
+                        format!("'{}' does not override anything", cur.name),
                     ));
                     continue;
                 }

@@ -326,7 +326,7 @@ pub enum VariableAttribute {
     Visibility(Visibility),
     Constant(Loc),
     Immutable(Loc),
-    Override(Loc),
+    Override(Loc, Vec<IdentifierPath>),
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -595,7 +595,7 @@ pub enum FunctionAttribute {
     Visibility(Visibility),
     Virtual(Loc),
     Immutable(Loc),
-    Override(Loc, Vec<Identifier>),
+    Override(Loc, Vec<IdentifierPath>),
     BaseOrModifier(Loc, Base),
 }
 

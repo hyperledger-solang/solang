@@ -265,7 +265,10 @@ VariableAttribute: VariableAttribute = {
     Visibility => VariableAttribute::Visibility(<>),
     <l:@L> "constant" <r:@R> => VariableAttribute::Constant(Loc::File(file_no, l, r)),
     <l:@L> "immutable" <r:@R> => VariableAttribute::Immutable(Loc::File(file_no, l, r)),
-    <l:@L> "override" <r:@R> => VariableAttribute::Override(Loc::File(file_no, l, r))
+    <l:@L> "override" <r:@R> => VariableAttribute::Override(Loc::File(file_no, l, r), Vec::new()),
+    <l:@L> "override" "(" <list:CommaOne<SolIdentifierPath>> ")" <r:@R> => {
+        VariableAttribute::Override(Loc::File(file_no, l, r), list)
+    }
 }
 
 Expression: Expression = {
@@ -514,7 +517,9 @@ FunctionAttribute: FunctionAttribute = {
     <l:@L> "immutable" <r:@R> => FunctionAttribute::Immutable(Loc::File(file_no, l, r)),
     <l:@L> "virtual" <r:@R> => FunctionAttribute::Virtual(Loc::File(file_no, <>)),
     <l:@L> "override" <r:@R> => FunctionAttribute::Override(Loc::File(file_no, <>), Vec::new()),
-    <l:@L> "override" "(" <list:CommaOne<SolIdentifier>> ")" <r:@R> => FunctionAttribute::Override(Loc::File(file_no, l, r), list),
+    <l:@L> "override" "(" <list:CommaOne<SolIdentifierPath>> ")" <r:@R> => {
+        FunctionAttribute::Override(Loc::File(file_no, l, r), list)
+    },
     <l:@L> <base:Base> <r:@R> => FunctionAttribute::BaseOrModifier(Loc::File(file_no, l, r), base),
 }
 
