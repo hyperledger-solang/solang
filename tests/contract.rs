@@ -93,7 +93,7 @@ fn parse_file(path: PathBuf, target: Target) -> io::Result<()> {
     // The dot files may have had their end of lines mangled on Windows
     let test_dot = test_dot.replace("\r\n", "\n");
 
-    assert_eq!(generated_dot, test_dot);
+    pretty_assertions::assert_eq!(generated_dot, test_dot);
 
     Ok(())
 }
