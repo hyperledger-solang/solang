@@ -62,20 +62,29 @@ impl<'a> Binary<'a> {
         opt: OptimizationLevel,
         math_overflow_check: bool,
     ) -> Self {
+        let std_lib = load_stdlib(context, &ns.target);
         match ns.target {
             Target::Substrate { .. } => substrate::SubstrateTarget::build(
                 context,
+                &std_lib,
                 contract,
                 ns,
                 filename,
                 opt,
                 math_overflow_check,
             ),
-            Target::Ewasm => {
-                ewasm::EwasmTarget::build(context, contract, ns, filename, opt, math_overflow_check)
-            }
+            Target::Ewasm => ewasm::EwasmTarget::build(
+                context,
+                &std_lib,
+                contract,
+                ns,
+                filename,
+                opt,
+                math_overflow_check,
+            ),
             Target::Solana => solana::SolanaTarget::build(
                 context,
+                &std_lib,
                 contract,
                 ns,
                 filename,
@@ -95,7 +104,15 @@ impl<'a> Binary<'a> {
     ) -> Self {
         assert!(namespaces.iter().all(|ns| ns.target == Target::Solana));
 
-        solana::SolanaTarget::build_bundle(context, namespaces, filename, opt, math_overflow_check)
+        let std_lib = load_stdlib(context, &Target::Solana);
+        solana::SolanaTarget::build_bundle(
+            context,
+            &std_lib,
+            namespaces,
+            filename,
+            opt,
+            math_overflow_check,
+        )
     }
 
     /// Compile the bin and return the code as bytes. The result is
@@ -228,6 +245,7 @@ impl<'a> Binary<'a> {
         filename: &str,
         opt: OptimizationLevel,
         math_overflow_check: bool,
+        std_lib: &Module<'a>,
         runtime: Option<Box<Binary<'a>>>,
     ) -> Self {
         LLVM_INIT.get_or_init(|| {
@@ -241,9 +259,7 @@ impl<'a> Binary<'a> {
         module.set_triple(&triple);
         module.set_source_file_name(filename);
 
-        // stdlib
-        let intr = load_stdlib(context, &target);
-        module.link_in_module(intr).unwrap();
+        module.link_in_module(std_lib.clone()).unwrap();
 
         let selector =
             module.add_global(context.i32_type(), Some(AddressSpace::Generic), "selector");
@@ -912,8 +928,7 @@ impl<'a> Binary<'a> {
             Some(s) => self.emit_global_string("const_string", s, true),
         };
 
-        let v = self
-            .builder
+        self.builder
             .build_call(
                 self.module.get_function("vector_new").unwrap(),
                 &[size.into(), elem_size.into(), init.into()],
@@ -921,16 +936,8 @@ impl<'a> Binary<'a> {
             )
             .try_as_basic_value()
             .left()
-            .unwrap();
-
-        self.builder.build_pointer_cast(
-            v.into_pointer_value(),
-            self.module
-                .get_struct_type("struct.vector")
-                .unwrap()
-                .ptr_type(AddressSpace::Generic),
-            "vector",
-        )
+            .unwrap()
+            .into_pointer_value()
     }
 
     /// Number of element in a vector

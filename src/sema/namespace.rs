@@ -83,7 +83,7 @@ impl Namespace {
             let notes = v
                 .iter()
                 .map(|(pos, _)| Note {
-                    pos: *pos,
+                    loc: *pos,
                     message: "location of previous definition".to_owned(),
                 })
                 .collect();
@@ -173,7 +173,7 @@ impl Namespace {
                 let notes = v
                     .iter()
                     .map(|(pos, _)| Note {
-                        pos: *pos,
+                        loc: *pos,
                         message: "location of previous definition".to_owned(),
                     })
                     .collect();
@@ -678,7 +678,7 @@ impl Namespace {
                 let notes = events
                     .iter()
                     .map(|(pos, _)| Note {
-                        pos: *pos,
+                        loc: *pos,
                         message: "previous definition of event".to_owned(),
                     })
                     .collect();
@@ -693,7 +693,7 @@ impl Namespace {
                 let notes = v
                     .iter()
                     .map(|(pos, _)| Note {
-                        pos: *pos,
+                        loc: *pos,
                         message: "previous declaration of function".to_owned(),
                     })
                     .collect();

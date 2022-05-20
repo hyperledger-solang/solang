@@ -4,7 +4,7 @@ strict digraph "tests/contract_testcases/substrate/builtins/msg_01.sol" {
 	parameters [label="parameters\nuint128 v"]
 	returns [label="returns\nbool "]
 	return [label="return\ntests/contract_testcases/substrate/builtins/msg_01.sol:4:17-37"]
-	more [label="more\ntests/contract_testcases/substrate/builtins/msg_01.sol:4:34-35"]
+	more [label="more\ntests/contract_testcases/substrate/builtins/msg_01.sol:4:24-37"]
 	cast [label="cast uint128\ntests/contract_testcases/substrate/builtins/msg_01.sol:4:24-33"]
 	builtins [label="builtin Value\ntests/contract_testcases/substrate/builtins/msg_01.sol:4:24-33"]
 	variable [label="variable: v\nuint128\ntests/contract_testcases/substrate/builtins/msg_01.sol:4:36-37"]

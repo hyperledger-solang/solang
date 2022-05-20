@@ -326,7 +326,7 @@ pub enum VariableAttribute {
     Visibility(Visibility),
     Constant(Loc),
     Immutable(Loc),
-    Override(Loc),
+    Override(Loc, Vec<IdentifierPath>),
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -595,7 +595,7 @@ pub enum FunctionAttribute {
     Visibility(Visibility),
     Virtual(Loc),
     Immutable(Loc),
-    Override(Loc, Vec<Identifier>),
+    Override(Loc, Vec<IdentifierPath>),
     BaseOrModifier(Loc, Base),
 }
 
@@ -644,6 +644,7 @@ pub enum Statement {
     Assembly {
         loc: Loc,
         dialect: Option<StringLiteral>,
+        flags: Option<Vec<StringLiteral>>,
         block: YulBlock,
     },
     Args(Loc, Vec<NamedArgument>),

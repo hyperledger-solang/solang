@@ -4,7 +4,7 @@ strict digraph "tests/contract_testcases/substrate/inheritance/call_inherited_fu
 	parameters [label="parameters\nuint64 a"]
 	returns [label="returns\nuint64 "]
 	return [label="return\ntests/contract_testcases/substrate/inheritance/call_inherited_function_01.sol:4:17-31"]
-	add [label="add\nuint64\ntests/contract_testcases/substrate/inheritance/call_inherited_function_01.sol:4:26-27"]
+	add [label="add\nuint64\ntests/contract_testcases/substrate/inheritance/call_inherited_function_01.sol:4:24-31"]
 	variable [label="variable: a\nuint64\ntests/contract_testcases/substrate/inheritance/call_inherited_function_01.sol:4:24-25"]
 	number_literal [label="uint64 literal: 102\ntests/contract_testcases/substrate/inheritance/call_inherited_function_01.sol:4:28-31"]
 	contract_9 [label="contract apex\ntests/contract_testcases/substrate/inheritance/call_inherited_function_01.sol:8:9-30"]

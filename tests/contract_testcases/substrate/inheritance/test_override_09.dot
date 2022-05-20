@@ -6,9 +6,9 @@ strict digraph "tests/contract_testcases/substrate/inheritance/test_override_09.
 	base [label="base b\ntests/contract_testcases/substrate/inheritance/test_override_09.sol:6:23-24"]
 	diagnostic [label="found interface 'b'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/test_override_09.sol:2:9-21"]
 	diagnostic_8 [label="found contract 'a'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/test_override_09.sol:6:9-24"]
-	diagnostic_9 [label="function with no body missing 'virtual'. This was permitted in older versions of the Solidity language, please update.\nlevel Error\ntests/contract_testcases/substrate/inheritance/test_override_09.sol:7:17-54"]
-	diagnostic_10 [label="contract 'a' missing override for function 'bar'\nlevel Error\ntests/contract_testcases/substrate/inheritance/test_override_09.sol:6:9-24"]
+	diagnostic_9 [label="contract 'a' missing override for function 'bar'\nlevel Error\ntests/contract_testcases/substrate/inheritance/test_override_09.sol:6:9-24"]
 	note [label="declaration of function 'bar'\ntests/contract_testcases/substrate/inheritance/test_override_09.sol:3:17-47"]
+	diagnostic_11 [label="function with no body missing 'virtual'. This was permitted in older versions of the Solidity language, please update.\nlevel Error\ntests/contract_testcases/substrate/inheritance/test_override_09.sol:7:17-54"]
 	contracts -> contract
 	contract -> bar [label="function"]
 	bar -> parameters [label="parameters"]
@@ -17,6 +17,6 @@ strict digraph "tests/contract_testcases/substrate/inheritance/test_override_09.
 	diagnostics -> diagnostic [label="Debug"]
 	diagnostics -> diagnostic_8 [label="Debug"]
 	diagnostics -> diagnostic_9 [label="Error"]
-	diagnostics -> diagnostic_10 [label="Error"]
-	diagnostic_10 -> note [label="note"]
+	diagnostic_9 -> note [label="note"]
+	diagnostics -> diagnostic_11 [label="Error"]
 }

@@ -78,7 +78,7 @@ pub(crate) fn using_decl(
                         let notes = list
                             .iter()
                             .map(|(loc, _)| Note {
-                                pos: *loc,
+                                loc: *loc,
                                 message: format!("definition of '{}'", function_name),
                             })
                             .collect();

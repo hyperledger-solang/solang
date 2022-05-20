@@ -3,6 +3,7 @@ use super::{
         BuiltinStruct, Diagnostic, Expression, Function, Namespace, Parameter, Statement, Symbol,
         Type, Variable,
     },
+    contracts::is_base,
     expression::{expression, ExprContext, ResolveTo},
     symtable::Symtable,
     symtable::{VariableInitializer, VariableUsage},
@@ -125,7 +126,7 @@ pub fn variable_decl<'a>(
     let mut constant = false;
     let mut visibility: Option<pt::Visibility> = None;
     let mut has_immutable: Option<pt::Loc> = None;
-    let mut has_override: Option<pt::Loc> = None;
+    let mut is_override: Option<(pt::Loc, Vec<usize>)> = None;
 
     for attr in attrs {
         match &attr {
@@ -149,8 +150,8 @@ pub fn variable_decl<'a>(
                 }
                 has_immutable = Some(*loc);
             }
-            pt::VariableAttribute::Override(loc) => {
-                if let Some(prev) = &has_override {
+            pt::VariableAttribute::Override(loc, bases) => {
+                if let Some((prev, _)) = &is_override {
                     ns.diagnostics.push(Diagnostic::error_with_note(
                         *loc,
                         "duplicate 'override' attribute".to_string(),
@@ -158,7 +159,43 @@ pub fn variable_decl<'a>(
                         "previous 'override' attribute".to_string(),
                     ));
                 }
-                has_override = Some(*loc);
+
+                let mut list = Vec::new();
+                let mut diagnostics = Vec::new();
+
+                if let Some(contract_no) = contract_no {
+                    for name in bases {
+                        if let Ok(no) =
+                            ns.resolve_contract_with_namespace(file_no, name, &mut diagnostics)
+                        {
+                            if list.contains(&no) {
+                                diagnostics.push(Diagnostic::error(
+                                    name.loc,
+                                    format!("duplicate override '{}'", name),
+                                ));
+                            } else if !is_base(no, contract_no, ns) {
+                                diagnostics.push(Diagnostic::error(
+                                    name.loc,
+                                    format!(
+                                        "override '{}' is not a base contract of '{}'",
+                                        name, ns.contracts[contract_no].name
+                                    ),
+                                ));
+                            } else {
+                                list.push(no);
+                            }
+                        }
+                    }
+
+                    is_override = Some((*loc, list));
+                } else {
+                    diagnostics.push(Diagnostic::error(
+                        *loc,
+                        "global variable has no bases contracts to override".to_string(),
+                    ));
+                }
+
+                ns.diagnostics.extend(diagnostics);
             }
             pt::VariableAttribute::Visibility(v) if contract_no.is_none() => {
                 ns.diagnostics.push(Diagnostic::error(
@@ -207,12 +244,12 @@ pub fn variable_decl<'a>(
 
     if let pt::Visibility::Public(_) = &visibility {
         // override allowed
-    } else if let Some(loc) = &has_override {
+    } else if let Some((loc, _)) = &is_override {
         ns.diagnostics.push(Diagnostic::error(
             *loc,
             "only public variable can be declared 'override'".to_string(),
         ));
-        has_override = None;
+        is_override = None;
     }
 
     if let Some(contract) = contract {
@@ -452,7 +489,7 @@ pub fn variable_decl<'a>(
             )];
             func.is_accessor = true;
             func.has_body = true;
-            func.is_override = has_override.map(|loc| (loc, Vec::new()));
+            func.is_override = is_override;
             func.symtable = symtable;
 
             // add the function to the namespace and then to our contract

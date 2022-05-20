@@ -7,11 +7,11 @@ strict digraph "tests/contract_testcases/solana/import_contracts_via_object.sol"
 	foo [label="function foo\ncontract: C\ntests/contract_testcases/solana/import_contracts_via_object.sol:8:2-23\nsignature foo()\nvisibility public\nmutability nonpayable"]
 	contract_8 [label="contract A\ntests/contract_testcases/solana/simple.sol:1:1-12"]
 	contract_9 [label="contract L\ntests/contract_testcases/solana/simple.sol:1:14-2:11"]
-	diagnostic [label="found contract 'A'\nlevel Debug\ntests/contract_testcases/solana/simple.sol:1:1-12"]
-	diagnostic_12 [label="found library 'L'\nlevel Debug\ntests/contract_testcases/solana/simple.sol:1:14-2:11"]
-	diagnostic_13 [label="found contract 'C'\nlevel Debug\ntests/contract_testcases/solana/import_contracts_via_object.sol:2:1-3:20"]
-	diagnostic_14 [label="revert with custom error 'IMP.E' not supported yet\nlevel Error\ntests/contract_testcases/solana/import_contracts_via_object.sol:6:10-15"]
-	diagnostic_15 [label="revert with custom errors or named arguments not supported yet\nlevel Error\ntests/contract_testcases/solana/import_contracts_via_object.sol:9:3-25"]
+	diagnostic [label="found contract 'C'\nlevel Debug\ntests/contract_testcases/solana/import_contracts_via_object.sol:2:1-3:20"]
+	diagnostic_12 [label="revert with custom error 'IMP.E' not supported yet\nlevel Error\ntests/contract_testcases/solana/import_contracts_via_object.sol:6:10-15"]
+	diagnostic_13 [label="revert with custom errors or named arguments not supported yet\nlevel Error\ntests/contract_testcases/solana/import_contracts_via_object.sol:9:3-25"]
+	diagnostic_14 [label="found contract 'A'\nlevel Debug\ntests/contract_testcases/solana/simple.sol:1:1-12"]
+	diagnostic_15 [label="found library 'L'\nlevel Debug\ntests/contract_testcases/solana/simple.sol:1:14-2:11"]
 	structs -> S
 	contracts -> contract
 	contract -> base [label="base"]
@@ -21,8 +21,8 @@ strict digraph "tests/contract_testcases/solana/import_contracts_via_object.sol"
 	contracts -> contract_8
 	contracts -> contract_9
 	diagnostics -> diagnostic [label="Debug"]
-	diagnostics -> diagnostic_12 [label="Debug"]
-	diagnostics -> diagnostic_13 [label="Debug"]
-	diagnostics -> diagnostic_14 [label="Error"]
-	diagnostics -> diagnostic_15 [label="Error"]
+	diagnostics -> diagnostic_12 [label="Error"]
+	diagnostics -> diagnostic_13 [label="Error"]
+	diagnostics -> diagnostic_14 [label="Debug"]
+	diagnostics -> diagnostic_15 [label="Debug"]
 }

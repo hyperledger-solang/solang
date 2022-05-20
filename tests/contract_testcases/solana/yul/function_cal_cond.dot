@@ -71,9 +71,9 @@ strict digraph "tests/contract_testcases/solana/yul/function_cal_cond.sol" {
 	var_decl_item [label="yul variable declaration uint256 x\ntests/contract_testcases/solana/yul/function_cal_cond.sol:31:21-22"]
 	yul_number_literal_72 [label="uint256 literal: 5\ntests/contract_testcases/solana/yul/function_cal_cond.sol:31:26-27"]
 	diagnostic [label="found contract 'testTypes'\nlevel Debug\ntests/contract_testcases/solana/yul/function_cal_cond.sol:1:1-20"]
-	diagnostic_75 [label="unreachable yul statement\nlevel Warning\ntests/contract_testcases/solana/yul/function_cal_cond.sol:31:17-27"]
-	diagnostic_76 [label="yul variable 'x' has never been read\nlevel Warning\ntests/contract_testcases/solana/yul/function_cal_cond.sol:31:21-22"]
-	diagnostic_77 [label="inline assembly is not yet supported\nlevel Error\ntests/contract_testcases/solana/yul/function_cal_cond.sol:3:9-33:10"]
+	diagnostic_75 [label="inline assembly is not yet supported\nlevel Error\ntests/contract_testcases/solana/yul/function_cal_cond.sol:3:9-33:10"]
+	diagnostic_76 [label="unreachable yul statement\nlevel Warning\ntests/contract_testcases/solana/yul/function_cal_cond.sol:31:17-27"]
+	diagnostic_77 [label="yul variable 'x' has never been read\nlevel Warning\ntests/contract_testcases/solana/yul/function_cal_cond.sol:31:21-22"]
 	contracts -> contract
 	contract -> testAsm [label="function"]
 	testAsm -> inline_assembly [label="body"]
@@ -146,7 +146,7 @@ strict digraph "tests/contract_testcases/solana/yul/function_cal_cond.sol" {
 	yul_var_decl -> var_decl_item [label="decl item #0"]
 	yul_var_decl -> yul_number_literal_72 [label="init"]
 	diagnostics -> diagnostic [label="Debug"]
-	diagnostics -> diagnostic_75 [label="Warning"]
+	diagnostics -> diagnostic_75 [label="Error"]
 	diagnostics -> diagnostic_76 [label="Warning"]
-	diagnostics -> diagnostic_77 [label="Error"]
+	diagnostics -> diagnostic_77 [label="Warning"]
 }

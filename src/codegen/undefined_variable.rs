@@ -124,7 +124,7 @@ fn add_diagnostic(
             Diagnostic {
                 level: Level::Error,
                 ty: ErrorType::TypeError,
-                pos: var.id.loc,
+                loc: var.id.loc,
                 message: format!("Variable '{}' is undefined", var.id.name),
                 notes: vec![],
             },
@@ -133,7 +133,7 @@ fn add_diagnostic(
 
     let diag = diagnostics.get_mut(var_no).unwrap();
     diag.notes.push(Note {
-        pos: *expr_loc,
+        loc: *expr_loc,
         message: "Variable read before being defined".to_string(),
     });
 }

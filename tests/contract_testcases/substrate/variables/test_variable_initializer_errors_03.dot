@@ -1,7 +1,7 @@
 strict digraph "tests/contract_testcases/substrate/variables/test_variable_initializer_errors_03.sol" {
 	contract [label="contract test\ntests/contract_testcases/substrate/variables/test_variable_initializer_errors_03.sol:1:1-15"]
 	var [label="variable x\nvisibility internal\ntests/contract_testcases/substrate/variables/test_variable_initializer_errors_03.sol:2:13-29"]
-	add [label="add\nuint256\ntests/contract_testcases/substrate/variables/test_variable_initializer_errors_03.sol:2:24-25"]
+	add [label="add\nuint256\ntests/contract_testcases/substrate/variables/test_variable_initializer_errors_03.sol:2:22-29"]
 	constant [label="constant variable\ntest.y\nuint256\ntests/contract_testcases/substrate/variables/test_variable_initializer_errors_03.sol:2:22-23"]
 	number_literal [label="uint256 literal: 102\ntests/contract_testcases/substrate/variables/test_variable_initializer_errors_03.sol:2:26-29"]
 	var_7 [label="variable y\nvisibility internal\nconstant\ntests/contract_testcases/substrate/variables/test_variable_initializer_errors_03.sol:3:13-34"]

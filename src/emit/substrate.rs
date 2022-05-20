@@ -3,7 +3,7 @@ use crate::codegen::cfg::HashTy;
 use crate::parser::pt;
 use crate::sema::ast;
 use inkwell::context::Context;
-use inkwell::module::Linkage;
+use inkwell::module::{Linkage, Module};
 use inkwell::types::{BasicType, IntType};
 use inkwell::values::{
     ArrayValue, BasicValueEnum, CallableValue, FunctionValue, IntValue, PointerValue,
@@ -27,6 +27,7 @@ pub struct SubstrateTarget {
 impl SubstrateTarget {
     pub fn build<'a>(
         context: &'a Context,
+        std_lib: &Module<'a>,
         contract: &'a ast::Contract,
         ns: &'a ast::Namespace,
         filename: &'a str,
@@ -40,6 +41,7 @@ impl SubstrateTarget {
             filename,
             opt,
             math_overflow_check,
+            std_lib,
             None,
         );
 
@@ -939,19 +941,7 @@ impl SubstrateTarget {
                             binary.builder.build_store(elem, val);
                         },
                     );
-
-                    binary
-                        .builder
-                        .build_pointer_cast(
-                            v,
-                            binary
-                                .module
-                                .get_struct_type("struct.vector")
-                                .unwrap()
-                                .ptr_type(AddressSpace::Generic),
-                            "string",
-                        )
-                        .into()
+                    v.into()
                 }
             }
             ast::Type::String | ast::Type::DynamicBytes => {
@@ -977,18 +967,7 @@ impl SubstrateTarget {
 
                 self.check_overrun(binary, function, *data, end, false);
 
-                binary
-                    .builder
-                    .build_pointer_cast(
-                        v.into_pointer_value(),
-                        binary
-                            .module
-                            .get_struct_type("struct.vector")
-                            .unwrap()
-                            .ptr_type(AddressSpace::Generic),
-                        "string",
-                    )
-                    .into()
+                v
             }
             ast::Type::Ref(ty) => self.decode_ty(binary, function, ty, data, end, ns),
             ast::Type::ExternalFunction { .. } => {
@@ -4198,20 +4177,9 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                     .left()
                     .unwrap();
 
-                // vector_new should return vector* but after llvm module merging, this can be vector.1*
-                let v = binary.builder.build_pointer_cast(
-                    v.into_pointer_value(),
-                    binary
-                        .module
-                        .get_struct_type("struct.vector")
-                        .unwrap()
-                        .ptr_type(AddressSpace::Generic),
-                    "calldata",
-                );
-
                 let data = unsafe {
                     binary.builder.build_gep(
-                        v,
+                        v.into_pointer_value(),
                         &[
                             binary.context.i32_type().const_zero(),
                             binary.context.i32_type().const_int(2, false),
@@ -4248,7 +4216,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                     "",
                 );
 
-                v.into()
+                v
             }
             codegen::Expression::Builtin(_, _, codegen::Builtin::BlockNumber, _) => {
                 let block_number =

@@ -5,7 +5,7 @@ use crate::{codegen, Target};
 use std::collections::HashMap;
 use std::str;
 
-use inkwell::module::Linkage;
+use inkwell::module::{Linkage, Module};
 use inkwell::types::{BasicType, IntType};
 use inkwell::values::{
     ArrayValue, BasicMetadataValueEnum, BasicValueEnum, FunctionValue, IntValue, PointerValue,
@@ -37,6 +37,7 @@ pub struct Contract<'a> {
 impl SolanaTarget {
     pub fn build<'a>(
         context: &'a Context,
+        std_lib: &Module<'a>,
         contract: &'a ast::Contract,
         ns: &'a ast::Namespace,
         filename: &'a str,
@@ -55,6 +56,7 @@ impl SolanaTarget {
             filename,
             opt,
             math_overflow_check,
+            std_lib,
             None,
         );
 
@@ -113,6 +115,7 @@ impl SolanaTarget {
     /// Build a bundle of contracts from the same namespace
     pub fn build_bundle<'a>(
         context: &'a Context,
+        std_lib: &Module<'a>,
         namespaces: &'a [ast::Namespace],
         filename: &str,
         opt: OptimizationLevel,
@@ -130,6 +133,7 @@ impl SolanaTarget {
             filename,
             opt,
             math_overflow_check,
+            std_lib,
             None,
         );
 
