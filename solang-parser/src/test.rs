@@ -719,6 +719,7 @@ fn test_assembly_parser() {
                             loc: Loc::File(0, 63, 71),
                             string: "evmasm".to_string(),
                         }),
+                        flags: None,
                     },
                     Statement::Assembly {
                         loc: Loc::File(0, 758, 1027),
@@ -840,6 +841,7 @@ fn test_assembly_parser() {
                             ))],
                         },
                         dialect: None,
+                        flags: None,
                     },
                 ],
             }),

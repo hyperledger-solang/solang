@@ -823,6 +823,7 @@ fn statement(
         pt::Statement::Assembly {
             loc,
             dialect,
+            flags,
             block,
         } => {
             if dialect.is_some() && dialect.as_ref().unwrap().string != "evmasm" {
@@ -831,6 +832,15 @@ fn statement(
                     "only evmasm dialect is supported".to_string(),
                 ));
                 return Err(());
+            }
+
+            if let Some(flags) = flags {
+                for flag in flags {
+                    ns.diagnostics.push(Diagnostic::error(
+                        flag.loc,
+                        format!("flag '{}' not supported", flag.string),
+                    ));
+                }
             }
 
             let resolved_asm =
