@@ -9,8 +9,8 @@ strict digraph "tests/contract_testcases/substrate/inheritance/base_contract_on_
 	bool_literal [label="bool literal: true\ntests/contract_testcases/substrate/inheritance/base_contract_on_constructor_05.sol:7:32-36"]
 	foo [label="function foo\ncontract: apex\ntests/contract_testcases/substrate/inheritance/base_contract_on_constructor_05.sol:8:13-39\nsignature foo()\nvisibility public\nmutability pure"]
 	diagnostic [label="found contract 'base'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/base_contract_on_constructor_05.sol:2:9-23"]
-	diagnostic_12 [label="found contract 'apex'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/base_contract_on_constructor_05.sol:6:9-30"]
-	diagnostic_13 [label="function parameter 'x' has never been read\nlevel Warning\ntests/contract_testcases/substrate/inheritance/base_contract_on_constructor_05.sol:3:30-31"]
+	diagnostic_12 [label="function parameter 'x' has never been read\nlevel Warning\ntests/contract_testcases/substrate/inheritance/base_contract_on_constructor_05.sol:3:30-31"]
+	diagnostic_13 [label="found contract 'apex'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/base_contract_on_constructor_05.sol:6:9-30"]
 	diagnostic_14 [label="duplicate base contract 'base'\nlevel Error\ntests/contract_testcases/substrate/inheritance/base_contract_on_constructor_05.sol:7:38-49"]
 	note [label="previous base contract 'base'\ntests/contract_testcases/substrate/inheritance/base_contract_on_constructor_05.sol:7:27-37"]
 	contracts -> contract
@@ -23,8 +23,8 @@ strict digraph "tests/contract_testcases/substrate/inheritance/base_contract_on_
 	base_7 -> bool_literal [label="arg #0"]
 	contract_4 -> foo [label="function"]
 	diagnostics -> diagnostic [label="Debug"]
-	diagnostics -> diagnostic_12 [label="Debug"]
-	diagnostics -> diagnostic_13 [label="Warning"]
+	diagnostics -> diagnostic_12 [label="Warning"]
+	diagnostics -> diagnostic_13 [label="Debug"]
 	diagnostics -> diagnostic_14 [label="Error"]
 	diagnostic_14 -> note [label="note"]
 }

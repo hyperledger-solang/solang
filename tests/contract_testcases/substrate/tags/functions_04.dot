@@ -4,8 +4,8 @@ strict digraph "tests/contract_testcases/substrate/tags/functions_04.sol" {
 	tags [label="return: here we are"]
 	returns [label="returns\nint256 a\nbool "]
 	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/tags/functions_04.sol:2:9-20"]
-	diagnostic_7 [label="return variable 'a' has never been assigned\nlevel Warning\ntests/contract_testcases/substrate/tags/functions_04.sol:4:48-49"]
-	diagnostic_8 [label="function can be declared 'pure'\nlevel Warning\ntests/contract_testcases/substrate/tags/functions_04.sol:4:13-56"]
+	diagnostic_7 [label="function can be declared 'pure'\nlevel Warning\ntests/contract_testcases/substrate/tags/functions_04.sol:4:13-56"]
+	diagnostic_8 [label="return variable 'a' has never been assigned\nlevel Warning\ntests/contract_testcases/substrate/tags/functions_04.sol:4:48-49"]
 	contracts -> contract
 	contract -> foo [label="function"]
 	foo -> tags [label="tags"]

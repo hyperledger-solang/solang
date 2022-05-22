@@ -102,7 +102,7 @@ fn constructor_value() {
         r##"
         contract b {
             function step1() public {
-                a f = new a{value: 0}();
+                a f = (new a){value: 0}();
             }
         }
 
@@ -154,7 +154,7 @@ fn constructor_value() {
         r##"
         contract b {
             function step1() public {
-                try new a{value: 511}() {
+                try (new a{value: 511})() {
                     //
                 }
                 catch (bytes) {
@@ -185,7 +185,7 @@ fn constructor_value() {
         r##"
         contract b {
             function step1() public {
-                try new a{value: 511}() returns (a) {
+                try (new a){value: 511}() returns (a) {
                     //
                 }
                 catch (bytes) {

@@ -83,6 +83,33 @@ pub struct Identifier {
     pub name: String,
 }
 
+impl Display for Identifier {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.name)
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct IdentifierPath {
+    pub loc: Loc,
+    pub identifiers: Vec<Identifier>,
+}
+
+impl Display for IdentifierPath {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if let Some(ident) = self.identifiers.get(0) {
+            ident.fmt(f)?;
+        } else {
+            return Ok(());
+        }
+        for ident in self.identifiers[1..].iter() {
+            f.write_str(".")?;
+            ident.fmt(f)?;
+        }
+        Ok(())
+    }
+}
+
 #[derive(Debug, PartialEq, Clone)]
 pub enum Comment {
     Line(Loc, String),
@@ -210,8 +237,8 @@ pub enum ContractPart {
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum UsingList {
-    Library(Expression),
-    Functions(Vec<Expression>),
+    Library(IdentifierPath),
+    Functions(Vec<IdentifierPath>),
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -244,7 +271,7 @@ impl fmt::Display for ContractTy {
 #[derive(Debug, PartialEq, Clone)]
 pub struct Base {
     pub loc: Loc,
-    pub name: Expression,
+    pub name: IdentifierPath,
     pub args: Option<Vec<Expression>>,
 }
 
@@ -299,7 +326,7 @@ pub enum VariableAttribute {
     Visibility(Visibility),
     Constant(Loc),
     Immutable(Loc),
-    Override(Loc),
+    Override(Loc, Vec<IdentifierPath>),
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -568,7 +595,7 @@ pub enum FunctionAttribute {
     Visibility(Visibility),
     Virtual(Loc),
     Immutable(Loc),
-    Override(Loc, Vec<Identifier>),
+    Override(Loc, Vec<IdentifierPath>),
     BaseOrModifier(Loc, Base),
 }
 
@@ -617,6 +644,7 @@ pub enum Statement {
     Assembly {
         loc: Loc,
         dialect: Option<StringLiteral>,
+        flags: Option<Vec<StringLiteral>>,
         block: YulBlock,
     },
     Args(Loc, Vec<NamedArgument>),
@@ -635,8 +663,8 @@ pub enum Statement {
     Continue(Loc),
     Break(Loc),
     Return(Loc, Option<Expression>),
-    Revert(Loc, Option<Expression>, Vec<Expression>),
-    RevertNamedArgs(Loc, Option<Expression>, Vec<NamedArgument>),
+    Revert(Loc, Option<IdentifierPath>, Vec<Expression>),
+    RevertNamedArgs(Loc, Option<IdentifierPath>, Vec<NamedArgument>),
     Emit(Loc, Expression),
     Try(
         Loc,

@@ -130,10 +130,11 @@ SolNoErrorIdentifier: Identifier = {
     <l:@L> "default" <r:@R> => Identifier{loc: Loc::File(file_no, l, r), name: "default".to_string()},
 }
 
-SolIdentifierNamespace: Expression = {
-    SolIdentifier => Expression::Variable(<>),
-    <l:@L> <e:SolIdentifierNamespace> "." <id:SolIdentifier> <r:@R> => {
-        Expression::MemberAccess(Loc::File(file_no, l, r), Box::new(e), id)
+SolIdentifierPath: IdentifierPath = {
+    <l:@L> <e:SolIdentifier> <v:("." <SolIdentifier>)*> <r:@R> => {
+        let mut v = v;
+        v.insert(0, e);
+        IdentifierPath { loc: Loc::File(file_no, l, r), identifiers: v }
     }
 }
 
@@ -179,7 +180,7 @@ Bases: Vec<Base> = {
 }
 
 Base: Base = {
-    <l:@L> <name:SolIdentifierNamespace> <args:("(" <Comma<Expression>> ")")?> <r:@R> => Base {
+    <l:@L> <name:SolIdentifierPath> <args:("(" <Comma<Expression>> ")")?> <r:@R> => Base {
         loc: Loc::File(file_no, l, r),
         name,
         args
@@ -264,7 +265,10 @@ VariableAttribute: VariableAttribute = {
     Visibility => VariableAttribute::Visibility(<>),
     <l:@L> "constant" <r:@R> => VariableAttribute::Constant(Loc::File(file_no, l, r)),
     <l:@L> "immutable" <r:@R> => VariableAttribute::Immutable(Loc::File(file_no, l, r)),
-    <l:@L> "override" <r:@R> => VariableAttribute::Override(Loc::File(file_no, l, r))
+    <l:@L> "override" <r:@R> => VariableAttribute::Override(Loc::File(file_no, l, r), Vec::new()),
+    <l:@L> "override" "(" <list:CommaOne<SolIdentifierPath>> ")" <r:@R> => {
+        VariableAttribute::Override(Loc::File(file_no, l, r), list)
+    }
 }
 
 Expression: Expression = {
@@ -272,91 +276,91 @@ Expression: Expression = {
 }
 
 Precedence14: Expression = {
-    <l:Precedence13> <a:@L> "=" <b:@R> <r:Precedence14> => Expression::Assign(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
-    <l:Precedence13> <a:@L> "|=" <b:@R> <r:Precedence14> => Expression::AssignOr(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
-    <l:Precedence13> <a:@L> "^=" <b:@R> <r:Precedence14> => Expression::AssignXor(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
-    <l:Precedence13> <a:@L> "&=" <b:@R> <r:Precedence14> => Expression::AssignAnd(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
-    <l:Precedence13> <a:@L> "<<=" <b:@R> <r:Precedence14> => Expression::AssignShiftLeft(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
-    <l:Precedence13> <a:@L> ">>=" <b:@R> <r:Precedence14> => Expression::AssignShiftRight(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
-    <l:Precedence13> <a:@L> "+=" <b:@R> <r:Precedence14> => Expression::AssignAdd(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
-    <l:Precedence13> <a:@L> "-=" <b:@R> <r:Precedence14> => Expression::AssignSubtract(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
-    <l:Precedence13> <a:@L> "*=" <b:@R> <r:Precedence14> => Expression::AssignMultiply(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
-    <l:Precedence13> <a:@L> "/=" <b:@R> <r:Precedence14> => Expression::AssignDivide(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
-    <l:Precedence13> <a:@L> "%=" <b:@R> <r:Precedence14> => Expression::AssignModulo(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
-    <c:Precedence13> <a:@L> "?" <l:Precedence14> ":" <b:@R> <r:Precedence14> => Expression::Ternary(Loc::File(file_no, a, b), Box::new(c), Box::new(l), Box::new(r)),
+    <a:@L> <l:Precedence13> "=" <r:Precedence14> <b:@R> => Expression::Assign(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
+    <a:@L> <l:Precedence13> "|=" <r:Precedence14> <b:@R> => Expression::AssignOr(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
+    <a:@L> <l:Precedence13> "^=" <r:Precedence14> <b:@R> => Expression::AssignXor(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
+    <a:@L> <l:Precedence13> "&=" <r:Precedence14> <b:@R> => Expression::AssignAnd(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
+    <a:@L> <l:Precedence13> "<<=" <r:Precedence14> <b:@R> => Expression::AssignShiftLeft(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
+    <a:@L> <l:Precedence13> ">>=" <r:Precedence14> <b:@R> => Expression::AssignShiftRight(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
+    <a:@L> <l:Precedence13> "+=" <r:Precedence14> <b:@R> => Expression::AssignAdd(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
+    <a:@L> <l:Precedence13> "-=" <r:Precedence14> <b:@R> => Expression::AssignSubtract(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
+    <a:@L> <l:Precedence13> "*=" <r:Precedence14> <b:@R> => Expression::AssignMultiply(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
+    <a:@L> <l:Precedence13> "/=" <r:Precedence14> <b:@R> => Expression::AssignDivide(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
+    <a:@L> <l:Precedence13> "%=" <r:Precedence14> <b:@R> => Expression::AssignModulo(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
+    <a:@L> <c:Precedence13> "?" <l:Precedence14> ":" <r:Precedence14> <b:@R> => Expression::Ternary(Loc::File(file_no, a, b), Box::new(c), Box::new(l), Box::new(r)),
     Precedence13,
 }
 
 Precedence13: Expression = {
-    <l:Precedence13> <a:@L> "||" <b:@R> <r:Precedence12> => Expression::Or(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
+    <a:@L> <l:Precedence13> "||" <r:Precedence12> <b:@R> => Expression::Or(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
     Precedence12,
 }
 
 Precedence12: Expression = {
-    <l:Precedence12> <a:@L> "&&" <b:@R> <r:Precedence11> => Expression::And(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
+    <a:@L> <l:Precedence12> "&&" <r:Precedence11> <b:@R> => Expression::And(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
     Precedence11,
 }
 
 Precedence11: Expression = {
-    <l:Precedence11> <a:@L> "==" <b:@R> <r:Precedence10> => Expression::Equal(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
-    <l:Precedence11> <a:@L> "!=" <b:@R> <r:Precedence10> => Expression::NotEqual(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
+    <a:@L> <l:Precedence11> "==" <r:Precedence10> <b:@R> => Expression::Equal(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
+    <a:@L> <l:Precedence11> "!=" <r:Precedence10> <b:@R> => Expression::NotEqual(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
     Precedence10,
 }
 
 Precedence10: Expression = {
-    <l:Precedence10> <a:@L> "<" <b:@R> <r:Precedence9> => Expression::Less(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
-    <l:Precedence10> <a:@L> ">" <b:@R> <r:Precedence9> => Expression::More(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
-    <l:Precedence10> <a:@L> "<=" <b:@R> <r:Precedence9> => Expression::LessEqual(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
-    <l:Precedence10> <a:@L> ">=" <b:@R> <r:Precedence9> => Expression::MoreEqual(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
+    <a:@L> <l:Precedence10> "<" <r:Precedence9> <b:@R> => Expression::Less(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
+    <a:@L> <l:Precedence10> ">" <r:Precedence9> <b:@R> => Expression::More(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
+    <a:@L> <l:Precedence10> "<=" <r:Precedence9> <b:@R> => Expression::LessEqual(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
+    <a:@L> <l:Precedence10> ">=" <r:Precedence9> <b:@R> => Expression::MoreEqual(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
     Precedence9,
 }
 
 Precedence9: Expression = {
-    <l:Precedence9> <a:@L> "|" <b:@R> <r:Precedence8> => Expression::BitwiseOr(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
+    <a:@L> <l:Precedence9> "|" <r:Precedence8> <b:@R> => Expression::BitwiseOr(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
     Precedence8,
 }
 
 Precedence8: Expression = {
-    <l:Precedence8> <a:@L> "^" <b:@R> <r:Precedence7> => Expression::BitwiseXor(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
+    <a:@L> <l:Precedence8> "^" <r:Precedence7> <b:@R> => Expression::BitwiseXor(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
     Precedence7,
 }
 
 Precedence7: Expression = {
-    <l:Precedence7> <a:@L> "&" <b:@R> <r:Precedence6> => Expression::BitwiseAnd(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
+    <a:@L> <l:Precedence7> "&" <r:Precedence6> <b:@R> => Expression::BitwiseAnd(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
     Precedence6,
 }
 
 Precedence6: Expression = {
-    <l:Precedence6> <a:@L> "<<" <b:@R> <r:Precedence5> => Expression::ShiftLeft(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
-    <l:Precedence6> <a:@L> ">>" <b:@R> <r:Precedence5> => Expression::ShiftRight(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
+    <a:@L> <l:Precedence6> "<<" <r:Precedence5> <b:@R> => Expression::ShiftLeft(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
+    <a:@L> <l:Precedence6> ">>" <r:Precedence5> <b:@R> => Expression::ShiftRight(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
     Precedence5,
 }
 
 Precedence5: Expression = {
-    <l:Precedence5> <a:@L> "+" <b:@R> <r:Precedence4> => Expression::Add(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
-    <l:Precedence5> <a:@L> "-" <b:@R> <r:Precedence4> => Expression::Subtract(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
+    <a:@L> <l:Precedence5> "+" <r:Precedence4> <b:@R> => Expression::Add(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
+    <a:@L> <l:Precedence5> "-" <r:Precedence4> <b:@R> => Expression::Subtract(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
     Precedence4,
 }
 
 Precedence4: Expression = {
-    <l:Precedence4> <a:@L> "*" <b:@R> <r:Precedence3> => Expression::Multiply(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
-    <l:Precedence4> <a:@L> "/" <b:@R> <r:Precedence3> => Expression::Divide(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
-    <l:Precedence4> <a:@L> "%" <b:@R> <r:Precedence3> => Expression::Modulo(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
+    <a:@L> <l:Precedence4> "*" <r:Precedence3> <b:@R> => Expression::Multiply(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
+    <a:@L> <l:Precedence4> "/" <r:Precedence3> <b:@R> => Expression::Divide(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
+    <a:@L> <l:Precedence4> "%" <r:Precedence3> <b:@R> => Expression::Modulo(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
     Precedence3,
 }
 
 Precedence3: Expression = {
-    <l:Precedence2> <a:@L> "**" <b:@R> <r:Precedence3> => Expression::Power(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
+    <a:@L> <l:Precedence2> "**" <r:Precedence3> <b:@R> => Expression::Power(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
     Precedence2,
 }
 
 Precedence2: Expression = {
-    <a:@L> "!" <b:@R> <e:Precedence2> => Expression::Not(Loc::File(file_no, a, b), Box::new(e)),
-    <a:@L> "~" <b:@R> <e:Precedence2> => Expression::Complement(Loc::File(file_no, a, b), Box::new(e)),
-    <a:@L> "delete" <b:@R> <e:Precedence2> => Expression::Delete(Loc::File(file_no, a, b), Box::new(e)),
-    <a:@L> "new" <call:FunctionCall> <b:@R> => Expression::New(Loc::File(file_no, a, b), Box::new(call)),
-    <a:@L> "++" <b:@R> <e:Precedence2> => Expression::PreIncrement(Loc::File(file_no, a, b), Box::new(e)),
-    <a:@L> "--" <b:@R> <e:Precedence2> => Expression::PreDecrement(Loc::File(file_no, a, b), Box::new(e)),
+    <a:@L> "!" <e:Precedence2> <b:@R> => Expression::Not(Loc::File(file_no, a, b), Box::new(e)),
+    <a:@L> "~" <e:Precedence2> <b:@R> => Expression::Complement(Loc::File(file_no, a, b), Box::new(e)),
+    <a:@L> "delete" <e:Precedence2> <b:@R>  => Expression::Delete(Loc::File(file_no, a, b), Box::new(e)),
+    <a:@L> "new" <call:Precedence2> <b:@R> => Expression::New(Loc::File(file_no, a, b), Box::new(call)),
+    <a:@L> "++" <e:Precedence2> <b:@R> => Expression::PreIncrement(Loc::File(file_no, a, b), Box::new(e)),
+    <a:@L> "--" <e:Precedence2> <b:@R> => Expression::PreDecrement(Loc::File(file_no, a, b), Box::new(e)),
     <a:@L> "+" <e:Precedence2> <b:@R>  => Expression::UnaryPlus(Loc::File(file_no, a, b), Box::new(e)),
     <a:@L> "-" <e:Precedence2> <b:@R> => Expression::UnaryMinus(Loc::File(file_no, a, b), Box::new(e)),
     <l:@L> "error" <r:@R> => Expression::Variable(Identifier{loc: Loc::File(file_no, l, r), name: "error".to_string()}),
@@ -374,7 +378,7 @@ FunctionCall: Expression = {
     <a:@L> <i:FunctionCallPrecedence> "(" <v:Comma<Expression>> ")" <b:@R> => {
         Expression::FunctionCall(Loc::File(file_no, a, b), Box::new(i), v)
     },
-    <i:FunctionCallPrecedence> <l:@L> <block:BlockStatement> <r:@R> => {
+    <l:@L> <i:FunctionCallPrecedence> <block:BlockStatement> <r:@R> => {
         Expression::FunctionCallBlock(Loc::File(file_no, l, r), Box::new(i), Box::new(block))
     },
     <a:@L> <i:FunctionCallPrecedence> "(" "{" <v:Comma<NamedArgument>> "}" ")" <b:@R> => {
@@ -513,7 +517,9 @@ FunctionAttribute: FunctionAttribute = {
     <l:@L> "immutable" <r:@R> => FunctionAttribute::Immutable(Loc::File(file_no, l, r)),
     <l:@L> "virtual" <r:@R> => FunctionAttribute::Virtual(Loc::File(file_no, <>)),
     <l:@L> "override" <r:@R> => FunctionAttribute::Override(Loc::File(file_no, <>), Vec::new()),
-    <l:@L> "override" "(" <list:CommaOne<SolIdentifier>> ")" <r:@R> => FunctionAttribute::Override(Loc::File(file_no, l, r), list),
+    <l:@L> "override" "(" <list:CommaOne<SolIdentifierPath>> ")" <r:@R> => {
+        FunctionAttribute::Override(Loc::File(file_no, l, r), list)
+    },
     <l:@L> <base:Base> <r:@R> => FunctionAttribute::BaseOrModifier(Loc::File(file_no, l, r), base),
 }
 
@@ -638,8 +644,8 @@ Using: Box<Using> = {
 }
 
 UsingList: UsingList = {
-    SolIdentifierNamespace => UsingList::Library(<>),
-    "{" <Comma<SolIdentifierNamespace>> "}" => UsingList::Functions(<>),
+    SolIdentifierPath => UsingList::Library(<>),
+    "{" <Comma<SolIdentifierPath>> "}" => UsingList::Functions(<>),
 }
 
 BlockStatement: Statement = {
@@ -720,10 +726,11 @@ NonIfStatement: Statement = {
     <l:@L> "unchecked" "{" <statements:Statement*> "}" <r:@R> => {
         Statement::Block { loc: Loc::File(file_no, l, r), unchecked: true, statements }
     },
-    <l:@L> "assembly" <dialect:StringLiteral?> <block:YulBlock> <r:@R> => {
+    <l:@L> "assembly" <dialect:StringLiteral?> <flags:AssemblyFlags?> <block:YulBlock> <r:@R> => {
         Statement::Assembly {
             loc: Loc::File(file_no, l, r),
             dialect: dialect.map(|dialect| dialect.to_owned()),
+            flags: flags.map(|flag| flag.to_owned()),
             block
         }
     },
@@ -749,12 +756,16 @@ NonIfStatement: Statement = {
     <l:@L> "emit" <ty:FunctionCall> <r:@R> ";" => {
         Statement::Emit(Loc::File(file_no, l, r), ty)
     },
-    <l:@L> "revert" <error:SolIdentifierNamespace?> "(" <v:Comma<Expression>> ")" <r:@R> ";" => {
+    <l:@L> "revert" <error:SolIdentifierPath?> "(" <v:Comma<Expression>> ")" <r:@R> ";" => {
         Statement::Revert(Loc::File(file_no, l, r), error, v)
     },
-    <l:@L> "revert" <error:SolIdentifierNamespace?> "(" "{" <v:Comma<NamedArgument>> "}" ")" <r:@R> ";" => {
+    <l:@L> "revert" <error:SolIdentifierPath?> "(" "{" <v:Comma<NamedArgument>> "}" ")" <r:@R> ";" => {
         Statement::RevertNamedArgs(Loc::File(file_no, l, r), error, v)
     },
+}
+
+AssemblyFlags: Vec<StringLiteral> = {
+    "(" <CommaOne<StringLiteral>> ")" => <>,
 }
 
 YulIdentifier: Identifier = {
@@ -814,15 +825,16 @@ YulLiteral: YulExpression = {
 }
 
 YulFunctionCall: YulFunctionCall = {
-    <l:@L> <id:YulIdentifier> "(" <arguments:Comma<YulExpression>> ")" <r:@R> =>
-     YulFunctionCall{loc: Loc::File(file_no, l, r), id, arguments}
+    <l:@L> <id:YulIdentifier> "(" <arguments:Comma<YulExpression>> ")" <r:@R> => {
+        YulFunctionCall{loc: Loc::File(file_no, l, r), id, arguments}
+    }
 }
 
 YulPath: YulExpression = {
- <YulIdentifier> => YulExpression::Variable(<>),
- <l:@L> <array:YulPath> "." <member:YulIdentifier> <r:@R> => {
-         YulExpression::Member(Loc::File(file_no, l, r), Box::new(array), member)
-     },
+    <YulIdentifier> => YulExpression::Variable(<>),
+    <l:@L> <array:YulPath> "." <member:YulIdentifier> <r:@R> => {
+        YulExpression::Member(Loc::File(file_no, l, r), Box::new(array), member)
+    },
 }
 
 YulExpression: YulExpression = {
@@ -834,17 +846,14 @@ YulExpression: YulExpression = {
 YulFunctionDefinition: YulStatement = {
     <l:@L> "function" <name: YulIdentifier> "(" <params: YulTypedIdentifierList?> ")" <returns:("->" <YulTypedIdentifierList>)?>
     <body: YulBlock> <r:@R> => {
-        YulStatement::FunctionDefinition(Box::new(YulFunctionDefinition{
+        YulStatement::FunctionDefinition(Box::new(YulFunctionDefinition {
             loc: Loc::File(file_no, l, r),
             id: name,
             params: params.unwrap_or_default(),
             returns: returns.unwrap_or_default(),
             body
-            }
-          )
-        )
- }
-
+        }))
+    }
 }
 
 YulTypedIdentifierList: Vec<YulTypedIdentifier> = {
@@ -852,13 +861,15 @@ YulTypedIdentifierList: Vec<YulTypedIdentifier> = {
 }
 
 YulType: YulTypedIdentifier = {
-    <l:@L> <var_name:YulIdentifier> ":" <var_type:YulIdentifier> <r:@R> =>
-       YulTypedIdentifier{
+    <l:@L> <var_name:YulIdentifier> ":" <var_type:YulIdentifier> <r:@R> => {
+       YulTypedIdentifier {
             loc: Loc::File(file_no, l, r),
             id: var_name, ty: Some(var_type)
-       },
-    <l:@L> <id:YulIdentifier> <r:@R> =>
-       YulTypedIdentifier{loc: Loc::File(file_no, l, r), id, ty: None},
+        }
+    },
+    <l:@L> <id:YulIdentifier> <r:@R> => {
+       YulTypedIdentifier{loc: Loc::File(file_no, l, r), id, ty: None}
+    },
 }
 
 YulSwitch: YulStatement = {
@@ -909,13 +920,15 @@ YulIf: YulStatement = {
 }
 
 YulAssignment: YulStatement = {
- <l:@L> <paths:CommaOne<YulPath>> ":=" <expr:YulExpression> <r:@R> =>
- YulStatement::Assign(Loc::File(file_no, l, r), paths, expr)
+    <l:@L> <paths:CommaOne<YulPath>> ":=" <expr:YulExpression> <r:@R> => {
+        YulStatement::Assign(Loc::File(file_no, l, r), paths, expr)
+    }
 }
 
 YulVariableDeclaration: YulStatement = {
-    <l:@L>  "let" <names:YulTypedIdentifierList> <expr:(":=" <YulExpression>)?> <r:@R> =>
-    YulStatement::VariableDeclaration(Loc::File(file_no, l, r), names, expr),
+    <l:@L>  "let" <names:YulTypedIdentifierList> <expr:(":=" <YulExpression>)?> <r:@R> => {
+        YulStatement::VariableDeclaration(Loc::File(file_no, l, r), names, expr)
+    }
 }
 
 

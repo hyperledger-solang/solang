@@ -5,14 +5,14 @@ strict digraph "tests/contract_testcases/substrate/tags/variables_01.sol" {
 	tags [label="notice: so here we are\ntitle: i figured it out\ninheritdoc: b"]
 	contract_6 [label="contract b\ntests/contract_testcases/substrate/tags/variables_01.sol:9:9-20"]
 	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/tags/variables_01.sol:2:9-24"]
-	diagnostic_9 [label="found contract 'b'\nlevel Debug\ntests/contract_testcases/substrate/tags/variables_01.sol:9:9-20"]
-	diagnostic_10 [label="storage variable 'y' has never been used\nlevel Warning\ntests/contract_testcases/substrate/tags/variables_01.sol:6:13-18"]
+	diagnostic_9 [label="storage variable 'y' has never been used\nlevel Warning\ntests/contract_testcases/substrate/tags/variables_01.sol:6:13-18"]
+	diagnostic_10 [label="found contract 'b'\nlevel Debug\ntests/contract_testcases/substrate/tags/variables_01.sol:9:9-20"]
 	contracts -> contract
 	contract -> base [label="base"]
 	contract -> var [label="variable"]
 	var -> tags [label="tags"]
 	contracts -> contract_6
 	diagnostics -> diagnostic [label="Debug"]
-	diagnostics -> diagnostic_9 [label="Debug"]
-	diagnostics -> diagnostic_10 [label="Warning"]
+	diagnostics -> diagnostic_9 [label="Warning"]
+	diagnostics -> diagnostic_10 [label="Debug"]
 }

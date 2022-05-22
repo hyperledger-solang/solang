@@ -186,7 +186,7 @@ fn parse_test() {
                                         name: "assert".to_string(),
                                     })),
                                     vec![Expression::Equal(
-                                        Loc::File(0, 827, 829),
+                                        Loc::File(0, 823, 831),
                                         Box::new(Expression::Variable(Identifier {
                                             loc: Loc::File(0, 823, 826),
                                             name: "sum".to_string(),
@@ -723,6 +723,7 @@ fn test_assembly_parser() {
                             loc: Loc::File(0, 63, 71),
                             string: "evmasm".to_string(),
                         }),
+                        flags: None,
                     },
                     Statement::Assembly {
                         loc: Loc::File(0, 758, 1027),
@@ -844,6 +845,7 @@ fn test_assembly_parser() {
                             ))],
                         },
                         dialect: None,
+                        flags: None,
                     },
                 ],
             }),
@@ -910,10 +912,13 @@ fn parse_revert_test() {
                         unchecked: false,
                         statements: vec![Statement::Revert(
                             Loc::File(0, 107, 125),
-                            Some(Expression::Variable(Identifier {
+                            Some(IdentifierPath {
                                 loc: Loc::File(0, 114, 123),
-                                name: "BAR_ERROR".to_string(),
-                            })),
+                                identifiers: vec![Identifier {
+                                    loc: Loc::File(0, 114, 123),
+                                    name: "BAR_ERROR".to_string(),
+                                }],
+                            }),
                             vec![],
                         )],
                     }),

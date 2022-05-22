@@ -8,20 +8,26 @@ use std::{
 };
 
 #[test]
-fn contract_tests() -> io::Result<()> {
-    let targets = read_dir("tests/contract_testcases")?;
+fn solana_contracts() -> io::Result<()> {
+    contract_tests("tests/contract_testcases/solana", Target::Solana)
+}
 
-    for target in targets {
-        let path = target?.path();
+#[test]
+fn substrate_contracts() -> io::Result<()> {
+    contract_tests(
+        "tests/contract_testcases/substrate",
+        Target::default_substrate(),
+    )
+}
 
-        if let Some(filename) = path.file_name() {
-            if let Some(target) = Target::from(&filename.to_string_lossy()) {
-                recurse_directory(path, target)?;
-            }
-        }
-    }
+#[test]
+fn ewasm_contracts() -> io::Result<()> {
+    contract_tests("tests/contract_testcases/ewasm", Target::Ewasm)
+}
 
-    Ok(())
+fn contract_tests(file_path: &str, target: Target) -> io::Result<()> {
+    let path = PathBuf::from(file_path);
+    recurse_directory(path, target)
 }
 
 fn recurse_directory(path: PathBuf, target: Target) -> io::Result<()> {
@@ -87,7 +93,7 @@ fn parse_file(path: PathBuf, target: Target) -> io::Result<()> {
     // The dot files may have had their end of lines mangled on Windows
     let test_dot = test_dot.replace("\r\n", "\n");
 
-    assert_eq!(generated_dot, test_dot);
+    pretty_assertions::assert_eq!(generated_dot, test_dot);
 
     Ok(())
 }

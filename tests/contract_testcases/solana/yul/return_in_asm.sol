@@ -1,6 +1,6 @@
 contract Contract {
     constructor() {
-        assembly {
+        assembly ("memory-safe") {
             return(0, 0)
         }
     }

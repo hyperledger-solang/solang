@@ -7,9 +7,9 @@ strict digraph "tests/contract_testcases/substrate/libraries/using_09.sol" {
 	call_internal_function [label="call internal function\ntests/contract_testcases/substrate/libraries/using_09.sol:14:3-10"]
 	internal_function [label="function(struct S) internal returns (void)\nfree function bar\ntests/contract_testcases/substrate/libraries/using_09.sol:14:3-10"]
 	variable [label="variable: s\nstruct S\ntests/contract_testcases/substrate/libraries/using_09.sol:14:3-4"]
-	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/libraries/using_09.sol:11:1-12:12"]
-	diagnostic_12 [label="function can be declared 'pure'\nlevel Warning\ntests/contract_testcases/substrate/libraries/using_09.sol:1:1-19"]
-	diagnostic_13 [label="function can be declared 'pure'\nlevel Warning\ntests/contract_testcases/substrate/libraries/using_09.sol:2:21-3:24"]
+	diagnostic [label="function can be declared 'pure'\nlevel Warning\ntests/contract_testcases/substrate/libraries/using_09.sol:1:1-19"]
+	diagnostic_12 [label="function can be declared 'pure'\nlevel Warning\ntests/contract_testcases/substrate/libraries/using_09.sol:2:21-3:24"]
+	diagnostic_13 [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/libraries/using_09.sol:11:1-12:12"]
 	structs -> S
 	contracts -> contract
 	contract -> f [label="function"]
@@ -18,7 +18,7 @@ strict digraph "tests/contract_testcases/substrate/libraries/using_09.sol" {
 	expr -> call_internal_function [label="expr"]
 	call_internal_function -> internal_function [label="function"]
 	call_internal_function -> variable [label="arg #0"]
-	diagnostics -> diagnostic [label="Debug"]
+	diagnostics -> diagnostic [label="Warning"]
 	diagnostics -> diagnostic_12 [label="Warning"]
-	diagnostics -> diagnostic_13 [label="Warning"]
+	diagnostics -> diagnostic_13 [label="Debug"]
 }

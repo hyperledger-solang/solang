@@ -157,8 +157,8 @@ pub fn compile_many<'a>(
     filename: &str,
     opt: inkwell::OptimizationLevel,
     math_overflow_check: bool,
-) -> emit::Binary<'a> {
-    emit::Binary::build_bundle(context, namespaces, filename, opt, math_overflow_check)
+) -> emit::binary::Binary<'a> {
+    emit::binary::Binary::build_bundle(context, namespaces, filename, opt, math_overflow_check)
 }
 
 /// Parse and resolve the Solidity source code provided in src, for the target chain as specified in target.
@@ -179,7 +179,7 @@ pub fn parse_and_resolve(
                 ty: ast::ErrorType::ParserError,
                 level: ast::Level::Error,
                 message,
-                pos: pt::Loc::CommandLine,
+                loc: pt::Loc::CommandLine,
                 notes: Vec::new(),
             });
         }
@@ -187,6 +187,8 @@ pub fn parse_and_resolve(
             sema::sema(&file, resolver, &mut ns);
         }
     }
+
+    ns.diagnostics.sort_and_dedup();
 
     ns
 }

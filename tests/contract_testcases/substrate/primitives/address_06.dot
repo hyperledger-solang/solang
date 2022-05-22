@@ -5,7 +5,7 @@ strict digraph "tests/contract_testcases/substrate/primitives/address_06.sol" {
 	bar [label="function bar\ncontract: test\ntests/contract_testcases/substrate/primitives/address_06.sol:4:13-50\nsignature bar()\nvisibility private\nmutability nonpayable"]
 	returns [label="returns\nbool "]
 	return [label="return\ntests/contract_testcases/substrate/primitives/address_06.sol:5:17-40"]
-	more [label="more\ntests/contract_testcases/substrate/primitives/address_06.sol:5:28-29"]
+	more [label="more\ntests/contract_testcases/substrate/primitives/address_06.sol:5:24-40"]
 	storage_load [label="storage load address\ntests/contract_testcases/substrate/primitives/address_06.sol:5:24-27"]
 	storage_var [label="storage variable\ntest.foo\naddress storage\ntests/contract_testcases/substrate/primitives/address_06.sol:5:24-27"]
 	number_literal_10 [label="address literal: 0\ntests/contract_testcases/substrate/primitives/address_06.sol:5:30-40"]

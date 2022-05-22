@@ -6,8 +6,8 @@ strict digraph "tests/contract_testcases/substrate/strings/basic_tests_03.sol" {
 	alloc_array [label="alloc array bytes\ntests/contract_testcases/substrate/strings/basic_tests_03.sol:4:39-51"]
 	number_literal [label="uint32 literal: 2\ntests/contract_testcases/substrate/strings/basic_tests_03.sol:4:49-50"]
 	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/strings/basic_tests_03.sol:2:9-20"]
-	diagnostic_9 [label="local variable 'f' has been assigned, but never read\nlevel Warning\ntests/contract_testcases/substrate/strings/basic_tests_03.sol:4:28-29"]
-	diagnostic_10 [label="function can be declared 'pure'\nlevel Warning\ntests/contract_testcases/substrate/strings/basic_tests_03.sol:3:13-34"]
+	diagnostic_9 [label="function can be declared 'pure'\nlevel Warning\ntests/contract_testcases/substrate/strings/basic_tests_03.sol:3:13-34"]
+	diagnostic_10 [label="local variable 'f' has been assigned, but never read\nlevel Warning\ntests/contract_testcases/substrate/strings/basic_tests_03.sol:4:28-29"]
 	contracts -> contract
 	contract -> foo [label="function"]
 	foo -> var_decl [label="body"]

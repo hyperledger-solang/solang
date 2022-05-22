@@ -9,8 +9,8 @@ strict digraph "tests/contract_testcases/substrate/calls/try_catch_external_call
 	number_literal [label="int32 literal: 102\ntests/contract_testcases/substrate/calls/try_catch_external_calls.sol:17:25-28"]
 	bool_literal [label="bool literal: true\ntests/contract_testcases/substrate/calls/try_catch_external_calls.sol:17:30-34"]
 	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/calls/try_catch_external_calls.sol:2:9-20"]
-	diagnostic_12 [label="found contract 'other'\nlevel Debug\ntests/contract_testcases/substrate/calls/try_catch_external_calls.sol:15:9-24"]
-	diagnostic_13 [label="try returns list has 1 entries while function returns 2 values\nlevel Error\ntests/contract_testcases/substrate/calls/try_catch_external_calls.sol:6:21-29"]
+	diagnostic_12 [label="try returns list has 1 entries while function returns 2 values\nlevel Error\ntests/contract_testcases/substrate/calls/try_catch_external_calls.sol:6:21-29"]
+	diagnostic_13 [label="found contract 'other'\nlevel Debug\ntests/contract_testcases/substrate/calls/try_catch_external_calls.sol:15:9-24"]
 	contracts -> contract
 	contract -> test [label="function"]
 	contracts -> contract_3
@@ -21,6 +21,6 @@ strict digraph "tests/contract_testcases/substrate/calls/try_catch_external_call
 	list -> number_literal [label="entry #0"]
 	list -> bool_literal [label="entry #1"]
 	diagnostics -> diagnostic [label="Debug"]
-	diagnostics -> diagnostic_12 [label="Debug"]
-	diagnostics -> diagnostic_13 [label="Error"]
+	diagnostics -> diagnostic_12 [label="Error"]
+	diagnostics -> diagnostic_13 [label="Debug"]
 }

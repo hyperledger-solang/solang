@@ -2,6 +2,22 @@
 All notable changes to [Solang](https://github.com/hyperledger-labs/solang/)
 will be documented here.
 
+## [0.1.11]
+
+### Added
+- Added support for Solidity user types
+- Support `using` syntax on file scope
+- Support binding functions with `using`
+- Implemented parsing and semantic analysis of yul (code generation is to
+  follow)
+- The language server uses the `--import` and `--importmap` arguments
+- On Solana, it is possible to set the accounts during CPI using the
+  `accounts:` call argument.
+
+### Fixed
+- Fixed associativity of the power operator
+- A huge amount of fixes improving compatibility with solc
+
 ## [0.1.10]
 
 ### Added

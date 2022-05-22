@@ -53,8 +53,8 @@ impl ast::Contract {
         filename: &'a str,
         opt: inkwell::OptimizationLevel,
         math_overflow_check: bool,
-    ) -> emit::Binary {
-        emit::Binary::build(context, self, ns, filename, opt, math_overflow_check)
+    ) -> emit::binary::Binary {
+        emit::binary::Binary::build(context, self, ns, filename, opt, math_overflow_check)
     }
 
     /// Selector for this contract. This is used by Solana contract bundle
@@ -129,7 +129,7 @@ pub fn resolve_base_contracts(
             if let Ok(no) = ns.resolve_contract_with_namespace(file_no, name, &mut diagnostics) {
                 if no == *contract_no {
                     ns.diagnostics.push(ast::Diagnostic::error(
-                        name.loc(),
+                        name.loc,
                         format!("contract '{}' cannot have itself as a base contract", name),
                     ));
                 } else if ns.contracts[*contract_no]
@@ -138,7 +138,7 @@ pub fn resolve_base_contracts(
                     .any(|e| e.contract_no == no)
                 {
                     ns.diagnostics.push(ast::Diagnostic::error(
-                        name.loc(),
+                        name.loc,
                         format!(
                             "contract '{}' duplicate base '{}'",
                             ns.contracts[*contract_no].name, name
@@ -146,7 +146,7 @@ pub fn resolve_base_contracts(
                     ));
                 } else if is_base(*contract_no, no, ns) {
                     ns.diagnostics.push(ast::Diagnostic::error(
-                        name.loc(),
+                        name.loc,
                         format!(
                             "base '{}' from contract '{}' is cyclic",
                             name, ns.contracts[*contract_no].name
@@ -156,7 +156,7 @@ pub fn resolve_base_contracts(
                     && !ns.contracts[no].is_interface()
                 {
                     ns.diagnostics.push(ast::Diagnostic::error(
-                        name.loc(),
+                        name.loc,
                         format!(
                             "interface '{}' cannot have {} '{}' as a base",
                             ns.contracts[*contract_no].name, ns.contracts[no].ty, name
@@ -166,7 +166,7 @@ pub fn resolve_base_contracts(
                     let contract = &ns.contracts[*contract_no];
 
                     ns.diagnostics.push(ast::Diagnostic::error(
-                        name.loc(),
+                        name.loc,
                         format!(
                             "library '{}' cannot be used as base contract for {} '{}'",
                             name, contract.ty, contract.name,
@@ -347,7 +347,7 @@ fn check_inheritance(contract_no: usize, ns: &mut ast::Namespace) {
                             None
                         } else {
                             Some(ast::Note {
-                                pos: func.loc,
+                                loc: func.loc,
                                 message: format!(
                                     "function '{}' is not specified 'virtual'",
                                     func.name
@@ -513,7 +513,7 @@ fn check_inheritance(contract_no: usize, ns: &mut ast::Namespace) {
                 if previous_defs.is_empty() && cur.is_override.is_some() {
                     ns.diagnostics.push(ast::Diagnostic::error(
                         cur.loc,
-                        format!("function '{}' does not override anything", cur.name),
+                        format!("'{}' does not override anything", cur.name),
                     ));
                     continue;
                 }
@@ -715,7 +715,7 @@ fn check_inheritance(contract_no: usize, ns: &mut ast::Namespace) {
                 let func = &ns.functions[*function_no];
 
                 ast::Note {
-                    pos: func.loc,
+                    loc: func.loc,
                     message: format!("previous definition of function '{}'", func.name),
                 }
             })
@@ -803,7 +803,7 @@ fn resolve_declarations<'a>(
             let notes = function_no_bodies
                 .into_iter()
                 .map(|function_no| ast::Note {
-                    pos: ns.functions[function_no].loc,
+                    loc: ns.functions[function_no].loc,
                     message: format!(
                         "location of function '{}' with no body",
                         ns.functions[function_no].name

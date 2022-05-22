@@ -8,7 +8,7 @@ use std::str;
 
 use inkwell::attributes::{Attribute, AttributeLoc};
 use inkwell::context::Context;
-use inkwell::module::Linkage;
+use inkwell::module::{Linkage, Module};
 use inkwell::types::IntType;
 use inkwell::values::{
     ArrayValue, BasicMetadataValueEnum, BasicValueEnum, FunctionValue, IntValue, PointerValue,
@@ -17,9 +17,9 @@ use inkwell::AddressSpace;
 use inkwell::IntPredicate;
 use inkwell::OptimizationLevel;
 
-use super::ethabiencoder;
-use super::{Binary, TargetRuntime, Variable};
+use crate::emit::ethabiencoder;
 use crate::emit::Generate;
+use crate::emit::{Binary, TargetRuntime, Variable};
 
 pub struct EwasmTarget {
     abi: ethabiencoder::EthAbiDecoder,
@@ -28,6 +28,7 @@ pub struct EwasmTarget {
 impl EwasmTarget {
     pub fn build<'a>(
         context: &'a Context,
+        std_lib: &Module<'a>,
         contract: &'a ast::Contract,
         ns: &'a ast::Namespace,
         filename: &'a str,
@@ -45,6 +46,7 @@ impl EwasmTarget {
             filename,
             opt,
             math_overflow_check,
+            std_lib,
             None,
         );
 
@@ -74,6 +76,7 @@ impl EwasmTarget {
             filename,
             opt,
             math_overflow_check,
+            std_lib,
             Some(Box::new(runtime_code)),
         );
 

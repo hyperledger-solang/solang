@@ -4,7 +4,7 @@ strict digraph "tests/contract_testcases/solana/contract_var_base_function_init.
 	parameters [label="parameters\nint256 a"]
 	returns [label="returns\nint256 "]
 	return [label="return\ntests/contract_testcases/solana/contract_var_base_function_init.sol:3:9-19"]
-	divide [label="divide\nint256\ntests/contract_testcases/solana/contract_var_base_function_init.sol:3:17-18"]
+	divide [label="divide\nint256\ntests/contract_testcases/solana/contract_var_base_function_init.sol:3:16-19"]
 	variable [label="variable: a\nint256\ntests/contract_testcases/solana/contract_var_base_function_init.sol:3:16-17"]
 	number_literal [label="int256 literal: 2\ntests/contract_testcases/solana/contract_var_base_function_init.sol:3:18-19"]
 	contract_10 [label="contract testing\ntests/contract_testcases/solana/contract_var_base_function_init.sol:6:1-7:22"]

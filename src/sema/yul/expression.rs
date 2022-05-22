@@ -49,7 +49,7 @@ pub(crate) fn resolve_yul_expression(
         pt::YulExpression::HexStringLiteral(value, ty) => {
             if (value.hex.len() % 2) != 0 {
                 ns.diagnostics.push(Diagnostic {
-                    pos: value.loc,
+                    loc: value.loc,
                     ty: ErrorType::DeclarationError,
                     level: Level::Error,
                     message: format!("hex string \"{}\" has odd number of characters", value.hex),
@@ -164,7 +164,7 @@ fn resolve_number_literal(
         if let Some(asm_type) = get_type_from_string(&type_id.name) {
             if matches!(asm_type, Type::Uint(_)) && matches!(value.sign(), Sign::Minus) {
                 ns.diagnostics.push(Diagnostic {
-                    pos: *loc,
+                    loc: *loc,
                     level: Level::Error,
                     ty: ErrorType::TypeError,
                     message: "signed integer cannot fit in unsigned integer".to_string(),
@@ -195,7 +195,7 @@ fn resolve_number_literal(
         ns.diagnostics.push(Diagnostic {
             level: Level::Error,
             ty: ErrorType::TypeError,
-            pos: *loc,
+            loc: *loc,
             message: format!(
                 "the provided literal requires {} bits, but the type only supports {}",
                 bits_needed, type_size
@@ -222,7 +222,7 @@ fn resolve_hex_literal(
         ns.diagnostics.push(Diagnostic {
             level: Level::Error,
             ty: ErrorType::TypeError,
-            pos: *loc,
+            loc: *loc,
             message: format!(
                 "the provided literal requires {} bits, but the type only supports {}",
                 val.bits(),
@@ -248,7 +248,7 @@ fn resolve_string_literal(
         ns.diagnostics.push(Diagnostic {
             level: Level::Error,
             ty: ErrorType::DeclarationError,
-            pos: *loc,
+            loc: *loc,
             message: format!(
                 "the provided literal requires {} bits, but the type only supports {}",
                 byte_array.len() * 8,
@@ -390,7 +390,7 @@ pub(crate) fn resolve_function_call(
             ns.diagnostics.push(Diagnostic {
                 level: Level::Error,
                 ty: ErrorType::TypeError,
-                pos: func_call.loc,
+                loc: func_call.loc,
                 message: format!(
                     "builtin function '{}' requires {} arguments, but {} were provided",
                     prototype.name,
