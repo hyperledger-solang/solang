@@ -17,7 +17,7 @@ helps arithmetic of large types, and also means that the functions are constant 
 are constant. For example:
 
 
-.. code-block:: javascript
+.. code-block:: solidity
 
     bytes32 hash = keccak256('foobar');
 
@@ -36,7 +36,7 @@ of arithmetic may be replaced:
 - 256 or 128 bit divide maybe replaced by 64 bit divide or shift
 - 256 or 128 bit modulo maybe replaced by 64 bit modulo or bitwise and
 
-.. code-block:: javascript
+.. code-block:: solidity
 
     contract test {
         function f() public {
@@ -66,7 +66,7 @@ redundant load from and store to contract storage. If the same variable is read 
 the first load is re-used. Similarly, if there is are two successive stores to the same variable, the first
 one is removed as it is redundant. For example:
 
-.. code-block:: javascript
+.. code-block:: solidity
 
     contract test {
         int a;
@@ -97,7 +97,7 @@ A `bytes` or `string` variable can be stored in a vector, which is a modifyable 
 which is a pointer to readonly memory and an a length. Since a vector is modifyable, each instance requires
 a allocation. For example:
 
-.. code-block:: javascript
+.. code-block:: solidity
 
     contract test {
         function can_be_slice() public {
@@ -134,7 +134,7 @@ Unused Variable Elimination
 During the semantic analysis, Solang detects unused variables and raises warnings for them.
 During codegen, we remove all assignments that have been made to this unused variable. There is an example below:
 
-.. code-block:: javascript
+.. code-block:: solidity
 
     contract test {
 
@@ -167,7 +167,7 @@ of the expression. To disable this feature, use `solang --no-cse`.
 
 Check out the example below. It contains multiple common subexpressions:
 
-.. code-block:: javascript
+.. code-block:: solidity
 
      contract test {
 

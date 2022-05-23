@@ -26,7 +26,7 @@ The extension can be found on the `Visual Studio Marketplace <https://marketplac
 
 On first start, the extension will ask to download the Solang binary. Once this is done, it should just automatically work.
 However, you should set the blockchain target in the extension settings. The Solidity language differs in subtle ways depending on which target you are
-building for. Different blockchains offer different builtins, for example. See the :ref:`language documentation <language>`.
+building for. Different blockchains offer different builtins, for example. See the :ref:`builtins documentation <builtins>` for more information.
 
 .. image:: extension-config.png
 
