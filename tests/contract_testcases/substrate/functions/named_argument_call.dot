@@ -4,8 +4,8 @@ strict digraph "tests/contract_testcases/substrate/functions/named_argument_call
 	parameters [label="parameters\nbool arg1\nuint256 arg2"]
 	bar [label="function bar\ncontract: args\ntests/contract_testcases/substrate/functions/named_argument_call.sol:6:9-31\nsignature bar()\nvisibility private\nmutability nonpayable"]
 	diagnostic [label="found contract 'args'\nlevel Debug\ntests/contract_testcases/substrate/functions/named_argument_call.sol:2:5-19"]
-	diagnostic_7 [label="function parameter 'arg1' has never been read\nlevel Warning\ntests/contract_testcases/substrate/functions/named_argument_call.sol:3:27-31"]
-	diagnostic_8 [label="function parameter 'arg2' has never been read\nlevel Warning\ntests/contract_testcases/substrate/functions/named_argument_call.sol:3:38-42"]
+	diagnostic_7 [label="function parameter 'arg1' has never been read or assigned\nlevel Warning\ntests/contract_testcases/substrate/functions/named_argument_call.sol:3:27-31"]
+	diagnostic_8 [label="function parameter 'arg2' has never been read or assigned\nlevel Warning\ntests/contract_testcases/substrate/functions/named_argument_call.sol:3:38-42"]
 	diagnostic_9 [label="function expects 2 arguments, 1 provided\nlevel Error\ntests/contract_testcases/substrate/functions/named_argument_call.sol:7:13-33"]
 	contracts -> contract
 	contract -> foo [label="function"]

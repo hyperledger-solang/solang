@@ -541,7 +541,7 @@ fn statements() {
     assert_eq!(ns.diagnostics.count_warnings(), 2);
     assert!(ns
         .diagnostics
-        .warning_contains("function parameter 'a' has never been read"));
+        .warning_contains("function parameter 'a' has never been read or assigned"));
     assert!(ns
         .diagnostics
         .warning_contains("local variable 'ct' has been assigned, but never read",));

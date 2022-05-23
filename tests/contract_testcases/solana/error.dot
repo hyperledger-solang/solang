@@ -4,7 +4,7 @@ strict digraph "tests/contract_testcases/solana/error.sol" {
 	parameters [label="parameters\ncontract error x"]
 	diagnostic [label="found contract 'error'\nlevel Debug\ntests/contract_testcases/solana/error.sol:1:1-2:16"]
 	diagnostic_7 [label="function can be declared 'pure'\nlevel Warning\ntests/contract_testcases/solana/error.sol:5:2-30"]
-	diagnostic_8 [label="function parameter 'x' has never been read\nlevel Warning\ntests/contract_testcases/solana/error.sol:5:21-22"]
+	diagnostic_8 [label="function parameter 'x' has never been read or assigned\nlevel Warning\ntests/contract_testcases/solana/error.sol:5:21-22"]
 	contracts -> contract
 	contract -> foo [label="function"]
 	foo -> parameters [label="parameters"]

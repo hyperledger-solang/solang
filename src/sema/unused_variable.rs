@@ -3,6 +3,7 @@ use crate::parser::pt::{ContractTy, Loc};
 use crate::sema::ast::{Builtin, CallArgs, Diagnostic, Expression, Namespace};
 use crate::sema::symtable::{Symtable, VariableUsage};
 use crate::sema::{ast, contracts::visit_bases, symtable};
+use solang_parser::pt::StorageLocation;
 
 /// Mark variables as assigned, either in the symbol table (for local variables) or in the
 /// Namespace (for storage variables)
@@ -228,7 +229,17 @@ pub fn check_var_usage_expression(
 pub fn emit_warning_local_variable(variable: &symtable::Variable) -> Option<Diagnostic> {
     match &variable.usage_type {
         VariableUsage::Parameter => {
-            if !variable.read {
+            if !variable.read && !variable.assigned {
+                return Some(Diagnostic::warning(
+                    variable.id.loc,
+                    format!(
+                        "function parameter '{}' has never been read or assigned",
+                        variable.id.name
+                    ),
+                ));
+            } else if !variable.read
+                && !matches!(variable.storage_location, Some(StorageLocation::Storage(_)))
+            {
                 return Some(Diagnostic::warning(
                     variable.id.loc,
                     format!(

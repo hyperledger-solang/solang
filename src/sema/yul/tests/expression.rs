@@ -1123,7 +1123,7 @@ contract testTypes {
         .contains_message("inline assembly is not yet supported"));
     assert!(ns
         .diagnostics
-        .contains_message("function parameter 'vl' has never been read"));
+        .contains_message("function parameter 'vl' has never been read or assigned"));
 
     let file = r#"
     contract testTypes {

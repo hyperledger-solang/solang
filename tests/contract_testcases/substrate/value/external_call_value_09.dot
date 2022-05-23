@@ -17,7 +17,7 @@ strict digraph "tests/contract_testcases/substrate/value/external_call_value_09.
 	trunc [label="checking truncate uint128\ntests/contract_testcases/substrate/value/external_call_value_09.sol:13:31-32"]
 	variable_17 [label="variable: x\nuint256\ntests/contract_testcases/substrate/value/external_call_value_09.sol:13:31-32"]
 	diagnostic [label="found contract 'a'\nlevel Debug\ntests/contract_testcases/substrate/value/external_call_value_09.sol:2:9-20"]
-	diagnostic_20 [label="function parameter 'l' has never been read\nlevel Warning\ntests/contract_testcases/substrate/value/external_call_value_09.sol:3:33-34"]
+	diagnostic_20 [label="function parameter 'l' has never been read or assigned\nlevel Warning\ntests/contract_testcases/substrate/value/external_call_value_09.sol:3:33-34"]
 	diagnostic_21 [label="found contract 'b'\nlevel Debug\ntests/contract_testcases/substrate/value/external_call_value_09.sol:7:9-20"]
 	diagnostic_22 [label="storage variable 'x' has never been used\nlevel Warning\ntests/contract_testcases/substrate/value/external_call_value_09.sol:8:13-18"]
 	diagnostic_23 [label="declaration of 'x' shadows state variable\nlevel Warning\ntests/contract_testcases/substrate/value/external_call_value_09.sol:11:25-26"]

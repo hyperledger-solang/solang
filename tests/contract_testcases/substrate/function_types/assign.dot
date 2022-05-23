@@ -4,7 +4,7 @@ strict digraph "tests/contract_testcases/substrate/function_types/assign.sol" {
 	parameters [label="parameters\nint32 arg1"]
 	foo [label="function foo\ncontract: test\ntests/contract_testcases/substrate/function_types/assign.sol:4:13-34\nsignature foo()\nvisibility public\nmutability nonpayable"]
 	diagnostic [label="found contract 'test'\nlevel Debug\ntests/contract_testcases/substrate/function_types/assign.sol:1:1-15"]
-	diagnostic_7 [label="function parameter 'arg1' has never been read\nlevel Warning\ntests/contract_testcases/substrate/function_types/assign.sol:2:30-34"]
+	diagnostic_7 [label="function parameter 'arg1' has never been read or assigned\nlevel Warning\ntests/contract_testcases/substrate/function_types/assign.sol:2:30-34"]
 	diagnostic_8 [label="function mutability not compatible in conversion from 'function(int32) internal' to 'function(int32) internal pure'\nlevel Error\ntests/contract_testcases/substrate/function_types/assign.sol:5:42-43"]
 	contracts -> contract
 	contract -> x [label="function"]

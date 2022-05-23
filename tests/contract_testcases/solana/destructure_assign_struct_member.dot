@@ -23,7 +23,7 @@ strict digraph "tests/contract_testcases/solana/destructure_assign_struct_member
 	variable_23 [label="variable: id\nuint176\ntests/contract_testcases/solana/destructure_assign_struct_member.sol:13:46-48"]
 	number_literal_24 [label="uint176 literal: 2\ntests/contract_testcases/solana/destructure_assign_struct_member.sol:13:49-50"]
 	diagnostic [label="found contract 'TestContract'\nlevel Debug\ntests/contract_testcases/solana/destructure_assign_struct_member.sol:1:57-2:23"]
-	diagnostic_27 [label="function parameter 'needHash' has never been read\nlevel Warning\ntests/contract_testcases/solana/destructure_assign_struct_member.sol:12:39-47"]
+	diagnostic_27 [label="function parameter 'needHash' has never been read or assigned\nlevel Warning\ntests/contract_testcases/solana/destructure_assign_struct_member.sol:12:39-47"]
 	structs -> Data
 	contracts -> contract
 	contract -> var [label="variable"]
