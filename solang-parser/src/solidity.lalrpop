@@ -74,7 +74,7 @@ NoFunctionType: Type = {
     Bytes => Type::Bytes(<>),
     // prior to 0.8.0 `byte` used to be an alias for `bytes1`
     "byte" => Type::Bytes(1),
-    <l:@L> "mapping" "(" <k:Precedence0> "=>" <v:Precedence0> ")" <r:@R> => {
+    <l:@L> "mapping" "(" <k:AnyType> "=>" <v:AnyType> ")" <r:@R> => {
         Type::Mapping(Loc::File(file_no, l, r), Box::new(k), Box::new(v))
     },
 }
@@ -139,7 +139,7 @@ SolIdentifierPath: IdentifierPath = {
 }
 
 VariableDeclaration: VariableDeclaration = {
-    <l:@L> <ty:Precedence0> <storage:StorageLocation?> <name:SolIdentifier> <r:@R> => VariableDeclaration {
+    <l:@L> <ty:AnyType> <storage:StorageLocation?> <name:SolIdentifier> <r:@R> => VariableDeclaration {
         loc: Loc::File(file_no, l, r), ty, storage, name
     },
 }
@@ -195,13 +195,13 @@ ContractDefinition: Box<ContractDefinition> = {
 }
 
 EventParameter: EventParameter = {
-    <l:@L> <ty:Precedence0> <i:"indexed"?> <name:SolIdentifier?> <r:@R> => EventParameter{
+    <l:@L> <ty:AnyType> <i:"indexed"?> <name:SolIdentifier?> <r:@R> => EventParameter{
         loc: Loc::File(file_no, l, r), ty, indexed: i.is_some(), name
     }
 }
 
 ErrorParameter: ErrorParameter = {
-    <l:@L> <ty:Precedence0> <name:SolIdentifier?> <r:@R> => ErrorParameter{
+    <l:@L> <ty:AnyType> <name:SolIdentifier?> <r:@R> => ErrorParameter{
         loc: Loc::File(file_no, l, r), ty, name
     }
 }
@@ -234,6 +234,13 @@ VariableDefinition: Box<VariableDefinition> = {
             loc: Loc::File(file_no, l, r), ty, attrs, name, initializer: e,
         })
     },
+    <l:@L> "error" <er:@R> <attrs:VariableAttribute*> <name:SolIdentifier> <e:("=" <Expression>)?> <r:@R> ";" => {
+        let ty = Expression::Variable(Identifier{loc: Loc::File(file_no, l, r), name: "error".to_string()});
+
+        Box::new(VariableDefinition{
+            loc: Loc::File(file_no, l, r), ty, attrs, name, initializer: e,
+        })
+    },
     // attributes cause shift-reduce errors with function type, since a function type contract variable can be declare as
     // contract foo {
     //     // f is a variable with internal visibility referencing an external function
@@ -247,7 +254,7 @@ VariableDefinition: Box<VariableDefinition> = {
 }
 
 TypeDefinition: Box<TypeDefinition> = {
-    <l:@L> "type" <name:SolIdentifier> "is" <ty:Precedence0> <r:@R> ";" => {
+    <l:@L> "type" <name:SolIdentifier> "is" <ty:AnyType> <r:@R> ";" => {
         Box::new(TypeDefinition{
             loc: Loc::File(file_no, l, r), name, ty
         })
@@ -389,6 +396,11 @@ FunctionCall: Expression = {
 FunctionCallPrecedence: Expression = {
     NoFunctionTyPrecedence0,
     <l:@L> "type" <r:@R> => Expression::Variable(Identifier{loc: Loc::File(file_no, l, r), name: "type".to_string()}),
+}
+
+AnyType: Expression = {
+    <l:@L> "error" <r:@R> => Expression::Variable(Identifier{loc: Loc::File(file_no, l, r), name: "error".to_string()}),
+    Precedence0
 }
 
 Precedence0: Expression = {
@@ -629,7 +641,7 @@ FunctionDefinition: Box<FunctionDefinition> = {
 }
 
 Using: Box<Using> = {
-    <l:@L> "using" <list:UsingList> "for" <ty:Precedence0> <global:SolIdentifier?> <r:@R> ";" => Box::new(Using {
+    <l:@L> "using" <list:UsingList> "for" <ty:AnyType> <global:SolIdentifier?> <r:@R> ";" => Box::new(Using {
         loc: Loc::File(file_no, l, r),
         list,
         ty: Some(ty),
