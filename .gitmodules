@@ -1,0 +1,3 @@
+[submodule "solang-parser/testdata/solidity"]
+	path = solang-parser/testdata/solidity
+	url = https://github.com/ethereum/solidity
