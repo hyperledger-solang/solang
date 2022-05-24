@@ -3,3 +3,5 @@ Cargo.lock
 /target
 **/*.rs.bk
 
+#IntelliJ-like IDE configuration
+/.idea/

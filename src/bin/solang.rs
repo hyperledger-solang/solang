@@ -64,9 +64,15 @@ fn main() {
             Arg::new("OPT")
                 .help("Set llvm optimizer level")
                 .short('O')
+                .use_value_delimiter(false)
+                .long_help("\
+None = 0,      // -O0
+Less = 1,      // -O1
+Default = 2,   // -O2, -Os, -OS
+Aggressive = 3 // -O3")
                 .takes_value(true)
-                .possible_values(&["none", "less", "default", "aggressive"])
-                .default_value("default"),
+                .possible_values(&["0", "1", "2", "3", "s", "S"])
+                .default_value("2"),
         )
         .arg(
             Arg::new("TARGET")
@@ -301,10 +307,13 @@ fn main() {
         }
     } else {
         let opt_level = match matches.value_of("OPT").unwrap() {
-            "none" => OptimizationLevel::None,
-            "less" => OptimizationLevel::Less,
-            "default" => OptimizationLevel::Default,
-            "aggressive" => OptimizationLevel::Aggressive,
+            "0" => OptimizationLevel::None,
+            "1" => OptimizationLevel::Less,
+            "2" => OptimizationLevel::Default,
+            // According to https://llvm.org/doxygen/CodeGen_8h_source.html -O2 and -Os are default
+            "s" => OptimizationLevel::Default,
+            "S" => OptimizationLevel::Default,
+            "3" => OptimizationLevel::Aggressive,
             _ => unreachable!(),
         };
 
