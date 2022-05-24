@@ -30,6 +30,22 @@ jobs:
       - name: Run cargo clippy
         run: cargo clippy --workspace --tests --bins -- -D warnings -D clippy::inconsistent-struct-constructor
 
+  docs:
+    name: Docs
+    runs-on: ubuntu-latest
+    container: ubuntu:22.04
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+      - name: Install sphinx
+        run: |
+          export DEBIAN_FRONTEND=noninteractive
+          apt-get update
+          apt-get install -y python3-sphinx python3-sphinx-rtd-theme
+      - name: Build docs
+        run: make html
+        working-directory: docs
+
   linux-x86-64:
     name: Linux x86-64
     runs-on: ubuntu-20.04
