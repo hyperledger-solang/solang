@@ -10,7 +10,7 @@ This is the `ink! flipper example <https://substrate.dev/substrate-contracts-wor
 written in Solidity:
 
 .. include:: ../examples/flipper.sol
-  :code: javascript
+  :code: solidity
 
 Example
 -------
@@ -18,4 +18,4 @@ Example
 A few simple arithmetic functions.
 
 .. include:: ../examples/example.sol
-  :code: javascript
+  :code: solidity
