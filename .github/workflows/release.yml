@@ -141,13 +141,13 @@ jobs:
     - run: git clone --depth 1 --branch solana-rustc/13.0-2021-08-08 https://github.com/solana-labs/llvm-project.git
     - name: Install Ninja
       uses: llvm/actions/install-ninja@main
-    - run: arch -arm64 cmake -G Ninja -DLLVM_ENABLE_ASSERTIONS=On -DLLVM_ENABLE_TERMINFO=Off
+    - run: cmake -G Ninja -DLLVM_ENABLE_ASSERTIONS=On -DLLVM_ENABLE_TERMINFO=Off
         -DLLVM_ENABLE_LIBXML2=Off -DLLVM_ENABLE_ZLIB=Off
         -DLLVM_ENABLE_PROJECTS='clang;lld'
         -DLLVM_TARGETS_TO_BUILD='WebAssembly;BPF'
         -DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_INSTALL_PREFIX=../llvm13.0 llvm
       working-directory: ./llvm-project/
-    - run: arch -arm64 cmake --build . --target install
+    - run: cmake --build . --target install
       working-directory: ./llvm-project/
     - run: tar Jcf ./llvm13.0-mac-arm.tar.xz ./llvm13.0/
     - name: Upload llvm
