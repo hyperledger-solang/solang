@@ -127,12 +127,11 @@ fn build_solidity(src: &str) -> VirtualMachine {
     ns.print_diagnostics_in_plain(&cache, false);
 
     let context = inkwell::context::Context::create();
-
-    let namespaces = vec![ns];
+    let namespaces = &[&ns];
 
     let binary = compile_many(
         &context,
-        &namespaces,
+        namespaces,
         "bundle.sol",
         inkwell::OptimizationLevel::Default,
         false,
@@ -145,15 +144,12 @@ fn build_solidity(src: &str) -> VirtualMachine {
     let mut account_data = HashMap::new();
     let mut programs = Vec::new();
 
-    // resolve
-    let ns = &namespaces[0];
-
     for contract_no in 0..ns.contracts.len() {
         if !ns.contracts[contract_no].is_concrete() {
             continue;
         }
 
-        let (abi, _) = generate_abi(contract_no, ns, &code, false);
+        let (abi, _) = generate_abi(contract_no, &ns, &code, false);
 
         let program = account_new();
 

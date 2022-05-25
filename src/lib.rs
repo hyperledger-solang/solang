@@ -153,7 +153,7 @@ pub fn compile(
 #[cfg(feature = "llvm")]
 pub fn compile_many<'a>(
     context: &'a inkwell::context::Context,
-    namespaces: &'a [ast::Namespace],
+    namespaces: &'a [&ast::Namespace],
     filename: &str,
     opt: inkwell::OptimizationLevel,
     math_overflow_check: bool,

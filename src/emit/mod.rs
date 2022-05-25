@@ -2285,7 +2285,7 @@ pub trait TargetRuntime<'a> {
 
                     self.storage_subscript(bin, function, ty, array, index, ns)
                         .into()
-                } else if elem_ty.builtin_struct(ns) != BuiltinStruct::None {
+                } else if elem_ty.builtin_struct(ns) == BuiltinStruct::AccountInfo {
                     let array = self
                         .expression(bin, a, vartab, function, ns)
                         .into_pointer_value();
