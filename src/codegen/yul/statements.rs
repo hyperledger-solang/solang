@@ -12,6 +12,7 @@ use num_traits::FromPrimitive;
 use solang_parser::pt;
 use solang_parser::pt::StorageLocation;
 
+/// Transform YUL statements into CFG instructions
 pub(crate) fn statement(
     yul_statement: &YulStatement,
     contract_no: usize,
@@ -66,7 +67,7 @@ pub(crate) fn statement(
 
         YulStatement::Switch { .. } => {
             // Switch statements should use LLVM switch instruction, which requires changes in emit.
-            unimplemented!("Switch statements for yul are not implemented yet");
+            unreachable!("Switch statements for yul are not implemented yet");
         }
 
         YulStatement::For {
@@ -119,6 +120,7 @@ pub(crate) fn statement(
     }
 }
 
+/// Add variable declaration to the CFG
 fn process_variable_declaration(
     loc: &pt::Loc,
     vars: &[(usize, Type)],
@@ -156,6 +158,7 @@ fn process_variable_declaration(
     }
 }
 
+/// Add assignments to the CFG
 fn process_assignment(
     loc: &pt::Loc,
     lhs: &[ast::YulExpression],
@@ -184,6 +187,7 @@ fn process_assignment(
     cfg_single_assigment(loc, &lhs[0], codegen_rhs, ns, cfg, vartab);
 }
 
+/// As YUL assignments may contain multiple variables, this function treats one assignment at a time.
 fn cfg_single_assigment(
     loc: &pt::Loc,
     lhs: &ast::YulExpression,
@@ -225,7 +229,7 @@ fn cfg_single_assigment(
             )
         }
 
-        ast::YulExpression::MemberAccess(_, member, suffix) => {
+        ast::YulExpression::SuffixAccess(_, member, suffix) => {
             match &**member {
                 ast::YulExpression::SolidityLocalVariable(
                     _,
@@ -295,6 +299,7 @@ fn cfg_single_assigment(
     }
 }
 
+/// Add an if statement to the CFG
 fn process_if_block(
     cond: &ast::YulExpression,
     block: &ast::YulBlock,
@@ -350,6 +355,7 @@ fn process_if_block(
     cfg.set_basic_block(endif);
 }
 
+/// Add the for statement to the CFG
 fn process_for_block(
     loc: &pt::Loc,
     init_block: &ast::YulBlock,

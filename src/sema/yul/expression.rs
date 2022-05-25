@@ -78,8 +78,8 @@ pub(crate) fn resolve_yul_expression(
             resolve_function_call(function_table, func_call, context, symtable, ns)
         }
 
-        pt::YulExpression::Member(loc, expr, id) => {
-            resolve_member_access(loc, expr, id, context, symtable, function_table, ns)
+        pt::YulExpression::SuffixAccess(loc, expr, id) => {
+            resolve_suffix_access(loc, expr, id, context, symtable, function_table, ns)
         }
     }
 }
@@ -389,7 +389,12 @@ pub(crate) fn resolve_function_call(
         if !prototype.is_available(&ns.target) {
             ns.diagnostics.push(Diagnostic::error(
                 func_call.loc,
-                format!("builtin '{}' is not available for target {}. Please, open a GitHub issue if there is need to support this function.", prototype.name, ns.target)
+                format!(
+                    "builtin '{}' is not available for target {}. Please, open a GitHub issue \
+                at https://github.com/hyperledger-labs/solang/issues \
+                if there is need to support this function",
+                    prototype.name, ns.target
+                ),
             ));
             return Err(());
         }
@@ -518,7 +523,7 @@ fn check_function_argument(
 }
 
 /// Resolve variables accessed with suffixes (e.g. 'var.slot', 'var.offset')
-fn resolve_member_access(
+fn resolve_suffix_access(
     loc: &pt::Loc,
     expr: &pt::YulExpression,
     id: &Identifier,
@@ -603,7 +608,7 @@ fn resolve_member_access(
             }
         }
 
-        YulExpression::MemberAccess(..) => {
+        YulExpression::SuffixAccess(..) => {
             ns.diagnostics.push(Diagnostic::error(
                 id.loc,
                 "there cannot be multiple suffixes to a name".to_string(),
@@ -632,7 +637,7 @@ fn resolve_member_access(
         }
     }
 
-    Ok(YulExpression::MemberAccess(
+    Ok(YulExpression::SuffixAccess(
         *loc,
         Box::new(resolved_expr),
         suffix_type,
@@ -674,7 +679,7 @@ pub(crate) fn check_type(
                 ));
             }
 
-            YulExpression::MemberAccess(_, member, YulSuffix::Length) => {
+            YulExpression::SuffixAccess(_, member, YulSuffix::Length) => {
                 return if matches!(
                     **member,
                     YulExpression::SolidityLocalVariable(
@@ -686,7 +691,9 @@ pub(crate) fn check_type(
                 ) {
                     Some(Diagnostic::error(
                         expr.loc(),
-                        "assignment to length is not implemented. If there is need for this feature, please file a Github issue.".to_string(),
+                        "assignment to length is not implemented. If there is need for this feature, please file a Github issue \
+                        at https://github.com/hyperledger-labs/solang/issues\
+                        ".to_string(),
                     ))
                 } else {
                     Some(Diagnostic::error(
@@ -696,7 +703,7 @@ pub(crate) fn check_type(
                 }
             }
 
-            YulExpression::MemberAccess(_, member, YulSuffix::Offset) => {
+            YulExpression::SuffixAccess(_, member, YulSuffix::Offset) => {
                 if !matches!(
                     **member,
                     YulExpression::SolidityLocalVariable(
@@ -712,7 +719,7 @@ pub(crate) fn check_type(
                     ));
                 }
             }
-            YulExpression::MemberAccess(_, exp, YulSuffix::Slot) => {
+            YulExpression::SuffixAccess(_, exp, YulSuffix::Slot) => {
                 if matches!(**exp, YulExpression::StorageVariable(..)) {
                     return Some(Diagnostic::error(
                         exp.loc(),
@@ -721,15 +728,18 @@ pub(crate) fn check_type(
                 }
             }
 
-            YulExpression::MemberAccess(_, exp, YulSuffix::Address)
-            | YulExpression::MemberAccess(_, exp, YulSuffix::Selector) => {
+            YulExpression::SuffixAccess(_, exp, YulSuffix::Address)
+            | YulExpression::SuffixAccess(_, exp, YulSuffix::Selector) => {
                 if matches!(
                     **exp,
                     YulExpression::SolidityLocalVariable(_, Type::ExternalFunction { .. }, _, _)
                 ) {
                     return Some(Diagnostic::error(
                         expr.loc(),
-                        "assignment to selector and address is not implemented. If there is need for these features, please file a GitHub issue".to_string()
+                        "assignment to selector and address is not implemented. \
+                        If there is need for these features, please file a GitHub issue at \
+                        https://github.com/hyperledger-labs/solang/issues"
+                            .to_string(),
                     ));
                 }
             }

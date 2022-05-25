@@ -75,7 +75,7 @@ contract test {
         // we're upcasting to 256 bits, but known bits will track this
         uint i = arg1;
         print("i:{}".format(i / 1e6));
-// CHECK: zext uint256 unsigned((trunc uint64 %i) / uint64 1000000))
+// CHECK: (zext uint256 (unsigned divide (trunc uint64 %i) / uint64 1000000)
     }
 
 // BEGIN-CHECK: test::function::f8
@@ -84,7 +84,7 @@ contract test {
         for (uint i = 1e9; i < 1e9+101; i++) {
             print("i:{}".format(i / 1e6));
         }
-// CHECK: (%i / uint256 1000000)
+// CHECK: (unsigned divide %i / uint256 1000000)
     }
 
 
@@ -106,7 +106,7 @@ contract test {
         for (int i = 30; i >= 0; i--) {
             print("i:{}".format(i % 0x1_0000_0001));
         }
-// CHECK: (sext int256 signed((trunc int64 %i) % int64 4294967297))
+// CHECK: sext int256 (signed modulo (trunc int64 %i) % int64 4294967297)
     }
 
 // BEGIN-CHECK: test::function::f11
@@ -114,6 +114,6 @@ contract test {
         for (int i = 0; i != 102; i++) {
             print("i:{}".format(i % 0x1_0000_0001));
         }
-// CHECK: (%i % int256 4294967297)
+// CHECK: (signed modulo %i % int256 4294967297)
     }
 }

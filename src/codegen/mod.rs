@@ -181,6 +181,7 @@ fn contract(contract_no: usize, ns: &mut Namespace, opt: &Options) {
             cfg_no += 1;
         }
 
+        // create a cfg number for yul functions
         for yul_fn_no in &ns.contracts[contract_no].yul_functions {
             ns.yul_functions[*yul_fn_no].cfg_no = cfg_no;
             cfg_no += 1;
@@ -206,6 +207,7 @@ fn contract(contract_no: usize, ns: &mut Namespace, opt: &Options) {
             )
         }
 
+        // generate the cfg for yul functions
         for yul_func_no in ns.contracts[contract_no].yul_functions.clone() {
             generate_yul_function_cfg(contract_no, yul_func_no, &mut all_cfg, ns, opt);
         }

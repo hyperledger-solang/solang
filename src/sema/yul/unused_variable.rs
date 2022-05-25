@@ -15,7 +15,7 @@ pub(crate) fn assigned_variable(ns: &mut Namespace, exp: &YulExpression, symtabl
             ns.contracts[*contract_no].variables[*var_no].assigned = true;
         }
 
-        YulExpression::MemberAccess(_, member, _) => {
+        YulExpression::SuffixAccess(_, member, _) => {
             assigned_variable(ns, member, symtable);
         }
 
@@ -35,7 +35,7 @@ pub(crate) fn used_variable(ns: &mut Namespace, exp: &YulExpression, symtable: &
             ns.contracts[*contract_no].variables[*var_no].read = true;
         }
 
-        YulExpression::MemberAccess(_, member, _) => {
+        YulExpression::SuffixAccess(_, member, _) => {
             used_variable(ns, member, symtable);
         }
 

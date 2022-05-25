@@ -1688,14 +1688,14 @@ impl Dot {
             YulExpression::FunctionCall(loc, func_no, args, _) => {
                 self.add_yul_function_call(loc, func_no, args, parent, parent_rel, symtable, ns);
             }
-            YulExpression::MemberAccess(loc, member, suffix) => {
+            YulExpression::SuffixAccess(loc, member, suffix) => {
                 let labels = vec![
-                    format!("yul member '{}' access", suffix.to_string()),
+                    format!("yul suffix '{}' access", suffix.to_string()),
                     ns.loc_to_string(loc),
                 ];
 
                 let node = self.add_node(
-                    Node::new("yul_member_access", labels),
+                    Node::new("yul_suffix_access", labels),
                     Some(parent),
                     Some(parent_rel),
                 );

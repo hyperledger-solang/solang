@@ -67,7 +67,11 @@ impl AvailableExpressionSet {
     }
 
     /// When we exit two blocks, we must intersect their set of available expressions
-    pub fn intersect_sets(&mut self, set_2: &AvailableExpressionSet) {
+    pub fn intersect_sets(
+        &mut self,
+        set_2: &AvailableExpressionSet,
+        cst: &CommonSubExpressionTracker,
+    ) {
         self.expr_map
             .retain(|key, value| AvailableExpressionSet::check_intersection(key, value, set_2));
 
@@ -82,7 +86,9 @@ impl AvailableExpressionSet {
                 let node_2_id = set_2.expr_map.get(key).unwrap();
 
                 node_1.on_parent_block = true;
-                node_1.parent_block = std::cmp::min(
+                // Find the common ancestor of both blocks. The deepest block after which there are
+                // multiple paths to both blocks.
+                node_1.parent_block = cst.find_parent_block(
                     node_1.parent_block,
                     set_2.expression_memory[node_2_id].borrow().parent_block,
                 );
@@ -179,8 +185,23 @@ impl AvailableExpressionSet {
         Some(ave.add_binary_node(exp, self, left_id, right_id))
     }
 
-    /// Add an expression to the graph if it is not there
+    /// Add expression to the graph and check if it is available on a parallel branch.
     pub fn gen_expression(
+        &mut self,
+        exp: &Expression,
+        ave: &mut AvailableExpression,
+        cst: &mut CommonSubExpressionTracker,
+    ) -> Option<NodeId> {
+        let id = self.gen_expression_aux(exp, ave, cst);
+        if let Some(id) = id {
+            let node = &*self.expression_memory.get(&id).unwrap().borrow();
+            cst.check_availability_on_branches(&node.expr_type);
+        }
+        id
+    }
+
+    /// Add an expression to the graph if it is not there
+    pub fn gen_expression_aux(
         &mut self,
         exp: &Expression,
         ave: &mut AvailableExpression,
@@ -196,7 +217,6 @@ impl AvailableExpressionSet {
                 return Some(ave.add_variable_node(exp, self));
             }
 
-            //Expression::ConstantVariable(..)
             Expression::NumberLiteral(..)
             | Expression::BoolLiteral(..)
             | Expression::BytesLiteral(..) => {

@@ -138,16 +138,16 @@ contract testing {
             // CHECK: ty:uint256 %n = uint256 0
             let n := l_storage_vec.offset
 
-            // CHECK: ty:uint256 %o = (arg #0)
+            // CHECK: ty:uint256 %o = uint256((arg #0))
             let o := vl.offset
 
-            // CHECK: ty:uint256 %p = (builtin ArrayLength ((arg #0)))
+            // CHECK: ty:uint256 %p = (zext uint256 (builtin ArrayLength ((arg #0))))
             let p := vl.length
 
-            // CHECK: ty:uint256 %q = (builtin ExternalFunctionAddress (%fPtr))
+            // CHECK: ty:uint256 %q = uint256((builtin ExternalFunctionAddress (%fPtr)))
             let q := fPtr.address
 
-            // CHECK: ty:uint256 %r = (builtin FunctionSelector (%fPtr))
+            // CHECK: ty:uint256 %r = (zext uint256 (builtin FunctionSelector (%fPtr)))
             let r := fPtr.selector
 
             // CHECK: ty:uint256 %s = (arg #1)

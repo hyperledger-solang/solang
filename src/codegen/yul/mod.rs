@@ -16,6 +16,7 @@ mod expression;
 mod statements;
 mod tests;
 
+/// Create the CFG instructions for inline assembly statements
 pub fn inline_assembly_cfg(
     inline_assembly: &InlineAssembly,
     contract_no: usize,
@@ -30,6 +31,7 @@ pub fn inline_assembly_cfg(
     }
 }
 
+/// Create the CFG for yul functions
 pub(crate) fn generate_yul_function_cfg(
     contract_no: usize,
     function_no: usize,
@@ -43,6 +45,7 @@ pub(crate) fn generate_yul_function_cfg(
     all_cfgs[ns.yul_functions[function_no].cfg_no] = cfg;
 }
 
+/// Generate the CFG containing all the instructions from a YUL function
 fn yul_function_cfg(
     contract_no: usize,
     function_no: usize,

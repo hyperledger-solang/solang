@@ -2,7 +2,7 @@ use crate::ast::Type;
 use crate::codegen::Expression;
 
 /// This enum defines operator types for the graph
-#[derive(PartialEq, Eq, Hash, Clone)]
+#[derive(PartialEq, Eq, Hash, Clone, Debug)]
 pub enum Operator {
     Add,
     Subtract,

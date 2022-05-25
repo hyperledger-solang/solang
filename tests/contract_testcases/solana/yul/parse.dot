@@ -3,22 +3,12 @@ strict digraph "tests/contract_testcases/solana/yul/parse.sol" {
 	get [label="function get\ncontract: foo\ntests/contract_testcases/solana/yul/parse.sol:3:13-51\nsignature get()\nvisibility public\nmutability nonpayable"]
 	returns [label="returns\nbytes4 "]
 	diagnostic [label="found contract 'foo'\nlevel Debug\ntests/contract_testcases/solana/yul/parse.sol:2:9-22"]
-<<<<<<< HEAD
-	diagnostic_17 [label="function can be declared 'pure'\nlevel Warning\ntests/contract_testcases/solana/yul/parse.sol:3:13-51"]
-	diagnostic_18 [label="inline assembly is not yet supported\nlevel Error\ntests/contract_testcases/solana/yul/parse.sol:4:17-7:18"]
-=======
-	diagnostic_7 [label="builtin 'mload' is not available for target solana. Please, open a GitHub issue if there is need to support this function.\nlevel Error\ntests/contract_testcases/solana/yul/parse.sol:5:44-55"]
+	diagnostic_7 [label="builtin 'mload' is not available for target solana. Please, open a GitHub issue at https://github.com/hyperledger-labs/solang/issues if there is need to support this function\nlevel Error\ntests/contract_testcases/solana/yul/parse.sol:5:44-55"]
 	diagnostic_8 [label="missing return statement\nlevel Error\ntests/contract_testcases/solana/yul/parse.sol:8:14"]
->>>>>>> Partial support for Yul
 	contracts -> contract
 	contract -> get [label="function"]
 	get -> returns [label="returns"]
 	diagnostics -> diagnostic [label="Debug"]
-<<<<<<< HEAD
-	diagnostics -> diagnostic_17 [label="Warning"]
-	diagnostics -> diagnostic_18 [label="Error"]
-=======
 	diagnostics -> diagnostic_7 [label="Error"]
 	diagnostics -> diagnostic_8 [label="Error"]
->>>>>>> Partial support for Yul
 }

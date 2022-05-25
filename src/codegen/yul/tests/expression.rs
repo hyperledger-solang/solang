@@ -257,7 +257,7 @@ fn slot_suffix() {
     let mut cfg = ControlFlowGraph::placeholder();
     let opt = Options::default();
 
-    let expr = ast::YulExpression::MemberAccess(
+    let expr = ast::YulExpression::SuffixAccess(
         loc,
         Box::new(ast::YulExpression::StorageVariable(
             loc,
@@ -273,7 +273,7 @@ fn slot_suffix() {
         Expression::NumberLiteral(Loc::Codegen, Type::Uint(256), BigInt::from(2))
     );
 
-    let expr = ast::YulExpression::MemberAccess(
+    let expr = ast::YulExpression::SuffixAccess(
         loc,
         Box::new(ast::YulExpression::SolidityLocalVariable(
             loc,
@@ -296,7 +296,7 @@ fn slot_suffix_panic() {
     let mut cfg = ControlFlowGraph::placeholder();
     let opt = Options::default();
 
-    let expr = ast::YulExpression::MemberAccess(
+    let expr = ast::YulExpression::SuffixAccess(
         loc,
         Box::new(ast::YulExpression::SolidityLocalVariable(
             loc,
@@ -318,7 +318,7 @@ fn offset_suffix() {
     let mut cfg = ControlFlowGraph::placeholder();
     let opt = Options::default();
 
-    let expr = ast::YulExpression::MemberAccess(
+    let expr = ast::YulExpression::SuffixAccess(
         loc,
         Box::new(ast::YulExpression::StorageVariable(
             loc,
@@ -335,7 +335,7 @@ fn offset_suffix() {
         Expression::NumberLiteral(Loc::Codegen, Type::Uint(256), BigInt::from(0))
     );
 
-    let expr = ast::YulExpression::MemberAccess(
+    let expr = ast::YulExpression::SuffixAccess(
         loc,
         Box::new(ast::YulExpression::SolidityLocalVariable(
             loc,
@@ -351,7 +351,7 @@ fn offset_suffix() {
         Expression::NumberLiteral(Loc::Codegen, Type::Uint(256), BigInt::from(0))
     );
 
-    let expr = ast::YulExpression::MemberAccess(
+    let expr = ast::YulExpression::SuffixAccess(
         loc,
         Box::new(ast::YulExpression::SolidityLocalVariable(
             loc,
@@ -362,7 +362,18 @@ fn offset_suffix() {
         YulSuffix::Offset,
     );
     let res = expression(&expr, 0, &ns, &mut vartab, &mut cfg, &opt);
-    assert_eq!(res, Expression::Variable(loc, Type::Uint(256), 1));
+    assert_eq!(
+        res,
+        Expression::Cast(
+            loc,
+            Type::Uint(256),
+            Box::new(Expression::Variable(
+                loc,
+                Type::Array(Box::new(Type::Uint(256)), vec![None]),
+                1
+            ))
+        )
+    );
 }
 
 #[test]
@@ -374,7 +385,7 @@ fn offset_suffix_panic_calldata() {
     let mut cfg = ControlFlowGraph::placeholder();
     let opt = Options::default();
 
-    let expr = ast::YulExpression::MemberAccess(
+    let expr = ast::YulExpression::SuffixAccess(
         loc,
         Box::new(ast::YulExpression::SolidityLocalVariable(
             loc,
@@ -397,7 +408,7 @@ fn offset_suffix_panic_other() {
     let mut cfg = ControlFlowGraph::placeholder();
     let opt = Options::default();
 
-    let expr = ast::YulExpression::MemberAccess(
+    let expr = ast::YulExpression::SuffixAccess(
         loc,
         Box::new(ast::YulExpression::YulLocalVariable(loc, Type::Int(32), 3)),
         YulSuffix::Offset,
@@ -414,7 +425,7 @@ fn length_suffix() {
     let mut cfg = ControlFlowGraph::placeholder();
     let opt = Options::default();
 
-    let expr = ast::YulExpression::MemberAccess(
+    let expr = ast::YulExpression::SuffixAccess(
         loc,
         Box::new(ast::YulExpression::SolidityLocalVariable(
             loc,
@@ -433,7 +444,7 @@ fn length_suffix() {
         res,
         Expression::Builtin(
             loc,
-            vec![Type::Uint(256)],
+            vec![Type::Uint(32)],
             Builtin::ArrayLength,
             vec![Expression::Variable(
                 loc,
@@ -456,7 +467,7 @@ fn length_suffix_panic() {
     let mut cfg = ControlFlowGraph::placeholder();
     let opt = Options::default();
 
-    let expr = ast::YulExpression::MemberAccess(
+    let expr = ast::YulExpression::SuffixAccess(
         loc,
         Box::new(ast::YulExpression::SolidityLocalVariable(
             loc,
@@ -494,7 +505,7 @@ fn selector_suffix() {
     let mut cfg = ControlFlowGraph::placeholder();
     let opt = Options::default();
 
-    let expr = ast::YulExpression::MemberAccess(
+    let expr = ast::YulExpression::SuffixAccess(
         loc,
         Box::new(ast::YulExpression::SolidityLocalVariable(
             loc,
@@ -514,7 +525,7 @@ fn selector_suffix() {
         res,
         Expression::Builtin(
             loc,
-            vec![Type::Uint(256)],
+            vec![Type::Uint(32)],
             Builtin::FunctionSelector,
             vec![Expression::Variable(
                 loc,
@@ -538,7 +549,7 @@ fn selector_suffix_panic() {
     let mut cfg = ControlFlowGraph::placeholder();
     let opt = Options::default();
 
-    let expr = ast::YulExpression::MemberAccess(
+    let expr = ast::YulExpression::SuffixAccess(
         loc,
         Box::new(ast::YulExpression::SolidityLocalVariable(
             loc,
@@ -559,7 +570,7 @@ fn address_suffix() {
     let mut cfg = ControlFlowGraph::placeholder();
     let opt = Options::default();
 
-    let expr = ast::YulExpression::MemberAccess(
+    let expr = ast::YulExpression::SuffixAccess(
         loc,
         Box::new(ast::YulExpression::SolidityLocalVariable(
             loc,
@@ -579,7 +590,7 @@ fn address_suffix() {
         res,
         Expression::Builtin(
             loc,
-            vec![Type::Uint(256)],
+            vec![Type::Address(false)],
             Builtin::ExternalFunctionAddress,
             vec![Expression::Variable(
                 loc,
@@ -603,7 +614,7 @@ fn address_suffix_panic() {
     let mut cfg = ControlFlowGraph::placeholder();
     let opt = Options::default();
 
-    let expr = ast::YulExpression::MemberAccess(
+    let expr = ast::YulExpression::SuffixAccess(
         loc,
         Box::new(ast::YulExpression::SolidityLocalVariable(
             loc,

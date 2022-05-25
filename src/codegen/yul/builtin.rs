@@ -7,7 +7,7 @@ use crate::sema::expression::coerce_number;
 use crate::sema::yul::ast;
 use crate::sema::yul::builtin::YulBuiltInFunction;
 use num_bigint::BigInt;
-use num_traits::FromPrimitive;
+use num_traits::{FromPrimitive, Zero};
 use solang_parser::pt;
 
 impl Expression {
@@ -26,6 +26,7 @@ impl Expression {
     }
 }
 
+/// Transfrom YUL builtin functions into CFG instructions
 pub(crate) fn process_builtin(
     loc: &pt::Loc,
     builtin_ty: &YulBuiltInFunction,
@@ -141,7 +142,7 @@ pub(crate) fn process_builtin(
         | YulBuiltInFunction::Origin
         => {
             let function_ty = builtin_ty.get_prototype_info();
-            unimplemented!("{} yul builtin not implemented", function_ty.name);
+            unreachable!("{} yul builtin not implemented", function_ty.name);
         }
 
         YulBuiltInFunction::Gas => {
@@ -212,6 +213,7 @@ pub(crate) fn process_builtin(
     }
 }
 
+/// Process arithmetic operations with two arguments
 fn process_binary_arithmetic(
     loc: &pt::Loc,
     builtin_ty: &YulBuiltInFunction,
@@ -281,20 +283,22 @@ fn process_binary_arithmetic(
         YulBuiltInFunction::Xor => {
             Expression::BitwiseXor(*loc, left.ty(), Box::new(left), Box::new(right))
         }
+        // For bit shifting, the syntax is the following: shr(x, y) shifts right y by x bits.
         YulBuiltInFunction::Shl => {
-            Expression::ShiftLeft(*loc, left.ty(), Box::new(left), Box::new(right))
+            Expression::ShiftLeft(*loc, left.ty(), Box::new(right), Box::new(left))
         }
         YulBuiltInFunction::Shr => {
-            Expression::ShiftRight(*loc, left.ty(), Box::new(left), Box::new(right), false)
+            Expression::ShiftRight(*loc, left.ty(), Box::new(right), Box::new(left), false)
         }
         YulBuiltInFunction::Sar => {
-            Expression::ShiftRight(*loc, left.ty(), Box::new(left), Box::new(right), true)
+            Expression::ShiftRight(*loc, left.ty(), Box::new(right), Box::new(left), true)
         }
 
         _ => panic!("This is not a binary arithmetic operation!"),
     }
 }
 
+/// This function matches the type between the right and left hand sides of operations
 fn equalize_types(
     mut left: Expression,
     mut right: Expression,
@@ -337,6 +341,8 @@ fn equalize_types(
     (left, right)
 }
 
+/// In some Yul functions, we need to branch if the argument is zero.
+/// e.g. 'x := div(y, 0)'. Division by zero returns 0 in Yul.
 fn branch_if_zero(
     variable: Expression,
     codegen_expr: Expression,
@@ -351,7 +357,7 @@ fn branch_if_zero(
         Box::new(Expression::NumberLiteral(
             pt::Loc::Codegen,
             variable.ty(),
-            BigInt::from(0),
+            BigInt::zero(),
         )),
     );
 
@@ -389,12 +395,15 @@ fn branch_if_zero(
         },
     );
     cfg.add(vartab, Instr::Branch { block: endif });
-    cfg.set_phis(endif, vartab.pop_dirty_tracker());
+    let mut phis = vartab.pop_dirty_tracker();
+    phis.insert(temp);
+    cfg.set_phis(endif, phis);
     cfg.set_basic_block(endif);
 
     Expression::Variable(pt::Loc::Codegen, Type::Uint(256), temp)
 }
 
+/// This function implements the byte builtin
 fn byte_builtin(
     loc: &pt::Loc,
     args: &[ast::YulExpression],
@@ -437,7 +446,7 @@ fn byte_builtin(
         Instr::Set {
             loc: pt::Loc::Codegen,
             res: temp,
-            expr: Expression::NumberLiteral(pt::Loc::Codegen, Type::Uint(256), BigInt::from(0)),
+            expr: Expression::NumberLiteral(pt::Loc::Codegen, Type::Uint(256), BigInt::zero()),
         },
     );
     cfg.add(vartab, Instr::Branch { block: endif });
@@ -496,7 +505,9 @@ fn byte_builtin(
     );
     cfg.add(vartab, Instr::Branch { block: endif });
 
-    cfg.set_phis(endif, vartab.pop_dirty_tracker());
+    let mut phis = vartab.pop_dirty_tracker();
+    phis.insert(temp);
+    cfg.set_phis(endif, phis);
     cfg.set_basic_block(endif);
 
     Expression::Variable(pt::Loc::Codegen, Type::Uint(256), temp)

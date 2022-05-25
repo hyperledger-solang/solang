@@ -18,7 +18,7 @@ contract testing {
                     // CHECK: return
                 }
                 // CHECK: block2: # endif
-                // CHECK: ty:uint256 %x = ((arg #0) << uint256 2)
+                // CHECK: ty:uint256 %x = (uint256 2 << (arg #0))
                 x := shl(a, 2)
                 // CHECK: return
             }
@@ -30,7 +30,7 @@ contract testing {
                 if lt(a, 2) {
                     // CHECK: block1: # then
                     ret1 := add(sub(a,b), mul(shr(a, 2), 3))
-                    // CHECK: ty:uint256 %ret1 = uint256(((int256((arg #0)) - (sext int256 (arg #1))) + int256((((arg #0) >> uint256 2) * uint256 3))))
+                    // CHECK: ty:uint256 %ret1 = uint256(((int256((arg #0)) - (sext int256 (arg #1))) + int256(((uint256 2 >> (arg #0)) * uint256 3))))
                     leave
                     // CHECK: return %ret1
                 }

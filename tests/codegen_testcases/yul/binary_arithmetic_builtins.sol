@@ -69,9 +69,10 @@ contract testing {
             // CHECK: ty:uint256 %temp.49 = uint256 0
             // CHECK: branch block3
             // CHECK: block2: # else
-            // CHECK: ty:uint256 %temp.49 = unsigned((arg #0) / (arg #1))
+            // CHECK: ty:uint256 %temp.49 = (unsigned divide (arg #0) / (arg #1))
             // CHECK: branch block3
             // CHECK: block3: # endif
+            // CHECK: # phis: temp.49
             // CHECK: ty:uint256 %e = %temp.49
             
             let f := sdiv(c, d)
@@ -80,9 +81,10 @@ contract testing {
             // CHECK: ty:uint256 %temp.50 = uint256 0
             // CHECK: branch block6
             // CHECK: block5: # else
-            // CHECK: ty:uint256 %temp.50 = signed((arg #2) / (arg #3))
+            // CHECK: ty:uint256 %temp.50 = (signed divide (arg #2) / (arg #3))
             // CHECK: branch block6
             // CHECK: block6: # endif
+            // CHECK: # phis: temp.50
             // CHECK: ty:uint256 %f = %temp.50
 
 
@@ -92,9 +94,10 @@ contract testing {
             // CHECK: ty:uint256 %temp.51 = uint256 0
             // CHECK: branch block9
             // CHECK: block8: # else
-            // CHECK: ty:uint256 %temp.51 = unsigned((arg #0) % (arg #1))
+            // CHECK: ty:uint256 %temp.51 = (unsigned modulo (arg #0) % (arg #1))
             // CHECK: branch block9
             // CHECK: block9: # endif
+            // CHECK: # phis: temp.51
             // CHECK: ty:uint256 %g = %temp.51
 
             let h := smod(c, d)
@@ -103,9 +106,10 @@ contract testing {
             // CHECK: ty:uint256 %temp.52 = uint256 0
             // CHECK: branch block12
             // CHECK: block11: # else
-            // CHECK: ty:uint256 %temp.52 = signed((arg #2) % (arg #3))
+            // CHECK: ty:uint256 %temp.52 = (signed modulo (arg #2) % (arg #3))
             // CHECK: branch block12
             // CHECK: block12: # endif
+            // CHECK: # phis: temp.52
             // CHECK: ty:uint256 %h = %temp.52
         }
     }
@@ -121,16 +125,16 @@ contract testing {
 // BEGIN-CHECK: testing::testing::function::compare__uint64_uint64_int64_int64
     function compare(uint64 a, uint64 b, int64 c, int64 d) public pure {
         assembly {
-            // CHECK: ty:bool %e = unsigned((arg #0) < (arg #1))
+            // CHECK: ty:bool %e = (unsigned less (arg #0) < (arg #1))
             let e : bool := lt(a, b)
 
-            // CHECK: ty:uint8 %f = uint8(unsigned((arg #0) > (arg #1)))
+            // CHECK: ty:uint8 %f = uint8((unsigned more (arg #0) > (arg #1)))
             let f : u8 := gt(a, b)
 
-            // CHECK: ty:int8 %h = int8(signed((arg #2) < (arg #3)))
+            // CHECK: ty:int8 %h = int8((signed less (arg #2) < (arg #3)))
             let h : s8 := slt(c, d)
 
-            // CHECK: ty:uint256 %i = uint256(signed((arg #0) > (arg #1)))
+            // CHECK: ty:uint256 %i = uint256((signed more (arg #0) > (arg #1)))
             let i := sgt(a, b)
 
             // CHECK: ty:uint256 %j = uint256(((zext int72 (arg #0)) == (sext int72 (arg #3))))
@@ -147,13 +151,13 @@ contract testing {
             // CHECK: ty:uint256 %d = uint256(((arg #1) ^ int256((arg #0))))
             let d := xor(b, a)
 
-            // CHECK: ty:uint256 %e = uint256((int256((arg #0)) << (arg #1)))
+            // CHECK: ty:uint256 %e = uint256(((arg #1) << int256((arg #0))))
             let e := shl(a, b)
 
-            // CHECK: ty:uint256 %f = uint256(((arg #1) >> int256((arg #0))))
+            // CHECK: ty:uint256 %f = uint256((int256((arg #0)) >> (arg #1)))
             let f := shr(b, a)
 
-            // CHECK: ty:uint256 %g = uint256((int256((arg #0)) >> (arg #1)))
+            // CHECK: ty:uint256 %g = uint256(((arg #1) >> int256((arg #0))))
             let g := sar(a, b)
         }
     }

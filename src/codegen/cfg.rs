@@ -339,7 +339,7 @@ pub struct ControlFlowGraph {
     current: usize,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 pub enum ASTFunction {
     SolidityFunction(usize),
     YulFunction(usize),
@@ -505,22 +505,22 @@ impl ControlFlowGraph {
                 self.expr_to_string(contract, ns, r)
             ),
             Expression::SignedDivide(_, _, l, r) => format!(
-                "signed({} / {})",
+                "(signed divide {} / {})",
                 self.expr_to_string(contract, ns, l),
                 self.expr_to_string(contract, ns, r),
             ),
             Expression::UnsignedDivide(_, _, l, r) => format!(
-                "unsigned({} / {})",
+                "(unsigned divide {} / {})",
                 self.expr_to_string(contract, ns, l),
                 self.expr_to_string(contract, ns, r),
             ),
             Expression::SignedModulo(_, _, l, r) => format!(
-                "signed({} % {})",
+                "(signed modulo {} % {})",
                 self.expr_to_string(contract, ns, l),
                 self.expr_to_string(contract, ns, r)
             ),
             Expression::UnsignedModulo(_, _, l, r) => format!(
-                "unsigned({} % {})",
+                "(unsigned modulo {} % {})",
                 self.expr_to_string(contract, ns, l),
                 self.expr_to_string(contract, ns, r)
             ),
@@ -549,22 +549,22 @@ impl ControlFlowGraph {
                 self.expr_to_string(contract, ns, e)
             ),
             Expression::UnsignedMore(_, l, r) => format!(
-                "unsigned({} > {})",
+                "(unsigned more {} > {})",
                 self.expr_to_string(contract, ns, l),
                 self.expr_to_string(contract, ns, r)
             ),
             Expression::SignedMore(_, l, r) => format!(
-                "signed({} > {})",
+                "(signed more {} > {})",
                 self.expr_to_string(contract, ns, l),
                 self.expr_to_string(contract, ns, r)
             ),
             Expression::UnsignedLess(_, l, r) => format!(
-                "unsigned({} < {})",
+                "(unsigned less {} < {})",
                 self.expr_to_string(contract, ns, l),
                 self.expr_to_string(contract, ns, r)
             ),
             Expression::SignedLess(_, l, r) => format!(
-                "signed({} < {})",
+                "(signed less {} < {})",
                 self.expr_to_string(contract, ns, l),
                 self.expr_to_string(contract, ns, r)
             ),
@@ -1220,7 +1220,7 @@ pub fn optimize_and_check_cfg(
     opt: &Options,
 ) {
     reaching_definitions::find(cfg);
-    if !matches!(func_no, ASTFunction::None) {
+    if func_no != ASTFunction::None {
         // If there are undefined variables, we raise an error and don't run optimizations
         if undefined_variable::find_undefined_variables(cfg, ns, func_no) {
             return;
@@ -1240,7 +1240,7 @@ pub fn optimize_and_check_cfg(
     }
 
     // If the function is a default constructor, there is nothing to optimize.
-    if opt.common_subexpression_elimination && !matches!(func_no, ASTFunction::None) {
+    if opt.common_subexpression_elimination && func_no != ASTFunction::None {
         common_sub_expression_elimination(cfg, ns);
     }
 }
@@ -1498,6 +1498,7 @@ fn function_cfg(
     cfg
 }
 
+/// Populate the arguments of a function
 pub(crate) fn populate_arguments<T: FunctionAttributes>(
     func: &T,
     cfg: &mut ControlFlowGraph,
@@ -1518,6 +1519,7 @@ pub(crate) fn populate_arguments<T: FunctionAttributes>(
     }
 }
 
+/// Populate returns of functions that have named returns
 pub(crate) fn populate_named_returns<T: FunctionAttributes>(
     func: &T,
     ns: &Namespace,

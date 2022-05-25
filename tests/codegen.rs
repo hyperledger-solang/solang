@@ -9,7 +9,6 @@ fn solidity_testcases() {
     run_test_for_path("./tests/codegen_testcases/solidity/");
 }
 
-// A new function here allows tests to run in parallel, consuming less time
 #[test]
 fn yul_testcases() {
     run_test_for_path("./tests/codegen_testcases/yul/")

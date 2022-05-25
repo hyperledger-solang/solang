@@ -40,7 +40,7 @@ pub enum YulExpression {
     StorageVariable(pt::Loc, Type, usize, usize),
     BuiltInCall(pt::Loc, YulBuiltInFunction, Vec<YulExpression>),
     FunctionCall(pt::Loc, usize, Vec<YulExpression>, Arc<Vec<Parameter>>),
-    MemberAccess(pt::Loc, Box<YulExpression>, YulSuffix),
+    SuffixAccess(pt::Loc, Box<YulExpression>, YulSuffix),
 }
 
 impl RetrieveType for YulExpression {
@@ -54,7 +54,7 @@ impl RetrieveType for YulExpression {
             | YulExpression::ConstantVariable(_, ty, ..)
             | YulExpression::StorageVariable(_, ty, ..) => ty.clone(),
 
-            YulExpression::MemberAccess(..) => Type::Uint(256),
+            YulExpression::SuffixAccess(..) => Type::Uint(256),
 
             YulExpression::BuiltInCall(_, ty, ..) => {
                 let prototype = ty.get_prototype_info();
@@ -110,7 +110,7 @@ impl CodeLocation for YulExpression {
             | YulExpression::ConstantVariable(loc, ..)
             | YulExpression::StorageVariable(loc, ..)
             | YulExpression::BuiltInCall(loc, ..)
-            | YulExpression::MemberAccess(loc, ..)
+            | YulExpression::SuffixAccess(loc, ..)
             | YulExpression::FunctionCall(loc, ..) => *loc,
         }
     }
@@ -210,7 +210,7 @@ impl Recurse for YulExpression {
                     arg.recurse(cx, f);
                 }
             }
-            YulExpression::MemberAccess(_, expr, _) => {
+            YulExpression::SuffixAccess(_, expr, _) => {
                 expr.recurse(cx, f);
             }
 

@@ -727,7 +727,7 @@ pub enum YulExpression {
     StringLiteral(StringLiteral, Option<Identifier>),
     Variable(Identifier),
     FunctionCall(Box<YulFunctionCall>),
-    Member(Loc, Box<YulExpression>, Identifier),
+    SuffixAccess(Loc, Box<YulExpression>, Identifier),
 }
 
 #[derive(Debug, PartialEq, Clone)]

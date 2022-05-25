@@ -10,6 +10,7 @@ use num_bigint::{BigInt, Sign};
 use solang_parser::pt;
 use solang_parser::pt::{Loc, StorageLocation};
 
+/// Transform AST expressions into CFG expressions
 pub(crate) fn expression(
     expr: &ast::YulExpression,
     contract_no: usize,
@@ -72,8 +73,8 @@ pub(crate) fn expression(
         ast::YulExpression::SolidityLocalVariable(loc, ty, _, var_no) => {
             Expression::Variable(*loc, ty.clone(), *var_no)
         }
-        ast::YulExpression::MemberAccess(loc, expr, suffix) => {
-            process_member_access(loc, expr, suffix, contract_no, vartab, cfg, ns, opt)
+        ast::YulExpression::SuffixAccess(loc, expr, suffix) => {
+            process_suffix_access(loc, expr, suffix, contract_no, vartab, cfg, ns, opt)
         }
         ast::YulExpression::FunctionCall(_, function_no, args, _) => {
             let mut returns =
@@ -88,7 +89,8 @@ pub(crate) fn expression(
     }
 }
 
-fn process_member_access(
+/// Transform YUL suffixes into CFG instructions
+fn process_suffix_access(
     loc: &pt::Loc,
     expr: &ast::YulExpression,
     suffix: &YulSuffix,
@@ -137,8 +139,11 @@ fn process_member_access(
                 var_no,
             ) => {
                 if dims.last().unwrap().is_none() {
-                    return Expression::Cast(*loc, Type::Uint(256), Box::new(
-                        Expression::Variable(*loc, ty.clone(), *var_no)));
+                    return Expression::Cast(
+                        *loc,
+                        Type::Uint(256),
+                        Box::new(Expression::Variable(*loc, ty.clone(), *var_no)),
+                    );
                 }
             }
 
@@ -171,7 +176,7 @@ fn process_member_access(
                 return Expression::Builtin(
                     *loc,
                     vec![Type::Address(false)],
-                        Builtin::ExternalFunctionAddress,
+                    Builtin::ExternalFunctionAddress,
                     vec![expression(expr, contract_no, ns, vartab, cfg, opt)],
                 );
             }
@@ -179,12 +184,12 @@ fn process_member_access(
 
         YulSuffix::Selector => {
             if let ast::YulExpression::SolidityLocalVariable(_, Type::ExternalFunction { .. }, ..) =
-            expr
+                expr
             {
                 return Expression::Builtin(
                     *loc,
                     vec![Type::Uint(32)],
-                        Builtin::FunctionSelector,
+                    Builtin::FunctionSelector,
                     vec![expression(expr, contract_no, ns, vartab, cfg, opt)],
                 );
             }
@@ -194,6 +199,7 @@ fn process_member_access(
     unreachable!("Expression does not support suffixes");
 }
 
+/// Add function call instructions to the CFG
 pub(crate) fn process_function_call(
     function_no: usize,
     args: &[ast::YulExpression],

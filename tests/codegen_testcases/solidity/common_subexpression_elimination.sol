@@ -40,7 +40,7 @@ contract c1 {
         // CHECK: ty:int256 %d = (%x * %1.cse_temp)
         // CHECK: ty:int256 %2.cse_temp = (%x + %d)
         // CHECK: ty:int256 %3.cse_temp = ((arg #0) - (arg #1))
-        // CEHCK: branchcond signed(%2.cse_temp > int256 0), block1, block2
+        // CEHCK: branchcond (signed more %2.cse_temp > int256 0), block1, block2
         if (x + d > 0) {
 			int t = a-b;
             // CHECK: ty:int256 %t = %3.cse_temp
@@ -67,12 +67,12 @@ contract c1 {
         x = a+b-54;
         int d = x*(a+b);
 
-        // CHECK: branchcond signed(%2.cse_temp > int256 0), block1, block2
+        // CHECK: branchcond (signed more %2.cse_temp > int256 0), block1, block2
         if (x + d > 0) {
             // CHECK: ty:int256 %t = ((arg #0) - (arg #1))
 			int t = a-b;
 			bool e1 = t>3;
-            // CHECK: branchcond signed(%2.cse_temp < int256 0), block4, block5
+            // CHECK: branchcond (signed less %2.cse_temp < int256 0), block4, block5
             // CHECK: return ((%x - %d) + ((arg #0) - (arg #1)))
 		}
 		 else if (x+d < 0) {
@@ -96,7 +96,7 @@ contract c1 {
         int d = x*(a+b);
         int p = x+d;
         // CHECK: ty:int256 %2.cse_temp = (%x + %d)
-        // CHECK:branchcond signed(%2.cse_temp > int256 0), block2, block3
+        // CHECK:branchcond (signed more %2.cse_temp > int256 0), block2, block3
         while (x+d > 0) {
             // CHECK: ty:int256 %t = ((arg #0) - (arg #1))
             int t = a-b;
@@ -137,7 +137,7 @@ contract c1 {
 			bool e1 = t > 3;
             // CHECK: ty:int256 %x = (%x + %d)
 			x = x+d;
-        // CHECK: branchcond signed((%x + %d) > int256 0), block1, block3
+        // CHECK: branchcond (signed more (%x + %d) > int256 0), block1, block3
 		} while(x+d > 0);
         int t = 3;
         bool p = t < 2;
@@ -218,7 +218,8 @@ contract c1 {
         // CHECK:  ty:int256 %1.cse_temp = ((arg #0) + (arg #1))
         int x = a + b + instance.a;
         // CHECK: ty:int256 %x = (%1.cse_temp + (load (struct %instance field 0)))
-        // CHECK: branchcond signed((%x + int256((load (struct %instance field 1)))) < int256 0)
+        // CHECK: ty:int256 %2.cse_temp = ((arg #0) * (arg #1))
+        // CHECK: branchcond (signed less (%x + int256((load (struct %instance field 1)))) < int256 0)
         if(x  + int(instance.b) < 0) {
             // CHECK: ty:uint256 %p = uint256((%1.cse_temp + (load (struct %instance field 0))))
             uint p = uint(a+b+instance.a);
@@ -227,7 +228,7 @@ contract c1 {
 
 
         int8 trunc = int8(x);
-        // CHECK: ty:bool %e2 = signed((sext int16 %trunc) > int16 2)
+        // CHECK: ty:bool %e2 = (signed more (sext int16 %trunc) > int16 2)
         bool e2 = trunc > 2;
         int8 trunc2 = 8 + int8(x);
         bool e3 = trunc2 < trunc;
@@ -239,7 +240,6 @@ contract c1 {
             int p2 = a+b;
             int p3 = p2 - x + a + b;
             int p4 = p2-x;
-            // CHECK: ty:int256 %2.cse_temp = ((arg #0) * (arg #1))
             int p5 = p3 + a*b+45;
             // CHECK: ty:int256 %p5 = ((%p3 + %2.cse_temp) + int256 45)
 
@@ -272,7 +272,7 @@ contract c1 {
 			bool e1 = t > 3;
             // CHECK: ty:int256 %x = (%x + %d)
 			x = x+d;
-        // CHECK: branchcond signed((%x + %d) > int256 0), block1, block3
+        // CHECK: branchcond (signed more (%x + %d) > int256 0), block1, block3
 		} while(x+d > 0);
         int t = 3;
         bool p = t < 2;
@@ -292,7 +292,7 @@ contract c1 {
         string ast = "Hello!";
         string bst = "from Solang";
         string cst = ast + bst;
-        // CHECK: ty:int256 %1.cse_temp = signed((arg #0) / (int256 2 * (arg #1)))
+        // CHECK: ty:int256 %1.cse_temp = (signed divide (arg #0) / (int256 2 * (arg #1)))
         // CHECK: call c1::c1::function::get__int256_int256 %1.cse_temp, (arg #1)
         int p = a + get(a/(2*b), b);
 
@@ -318,7 +318,7 @@ contract c1 {
             ast = ast + "a";
         }
 
-        // CHECK: call c1::c1::function::get__int256_int256 (arg #1), signed((arg #0) / (arg #1))
+        // CHECK: call c1::c1::function::get__int256_int256 (arg #1), (signed divide (arg #0) / (arg #1))
         return get(b, a/b);
     }
 
@@ -380,7 +380,7 @@ contract c1 {
             }
         }
 
-        // CHECK: branchcond signed((%a + (arg #1)) < int256 0), block14, block15
+        // CHECK: branchcond (signed less (%a + (arg #1)) < int256 0), block14, block15
         while(a+b < 0) {
             // CHECK: branchcond (strcmp (%c) ("a")), block16, block17
             if("a" == c) {
@@ -393,7 +393,7 @@ contract c1 {
             if("a" == c) {
                 a = a+b;
             }
-            // CHECK: branchcond signed((%a + (arg #1)) > int256 0), block18, block20
+            // CHECK: branchcond (signed more (%a + (arg #1)) > int256 0), block18, block20
         } while(a+b > 0);
 
         for(int p=0; p<a; ++p) {
@@ -446,6 +446,7 @@ contract c1 {
             return (a << b) + 1;
         }
 
+        // CHECK: ty:uint256 %2.cse_temp = ((arg #0) & (arg #1))
         // CHECK: branchcond %1.cse_temp, block4, block3
         if(!b1 || c > 0) {
             // CHECK: = %b1
@@ -453,18 +454,17 @@ contract c1 {
             return a << b + 1;
         }
 
-        // CHECK: branchcond unsigned(%c > uint256 0), block11, block12
+        // CHECK: branchcond (unsigned more %c > uint256 0), block11, block12
         for(int i=0; c > 0 && i<10; ++i) {
             c++;
         }
 
-        // CHECK: ty:uint256 %2.cse_temp = ((arg #0) & (arg #1))
         // CHECK: branchcond (%2.cse_temp == uint256 0), block13, block14
         if (a & b == 0) {
             return c--;
         }
 
-        // CHECK: branchcond unsigned(%2.cse_temp > uint256 1), block15, block16
+        // CHECK: branchcond (unsigned more %2.cse_temp > uint256 1), block15, block16
         if (a & b > 1) {
             return a;
         }
@@ -478,13 +478,14 @@ contract c1 {
          bool e = k>0;
 
         for(int i=1; a-b < 0; i++) {
-            // CHECK: ty:int256 %p = ((%1.cse_temp * int256 5) - signed(%k / (arg #0)))
+            // CHECK: ty:int256 %4.cse_temp = (signed divide %k / (arg #0))
+            // CHECK: ty:int256 %p = ((%1.cse_temp * int256 5) - %4.cse_temp)
             int p = (a-b)*5-k/a;
             b++;
             // CHECK: ty:int256 %1.cse_temp = ((arg #0) - %b)
-            // CHECK: branchcond signed(%1.cse_temp < int256 0), block1, block4
+            // CHECK: branchcond (signed less %1.cse_temp < int256 0), block1, block4
             // CHECK: 	ty:int256 %2.cse_temp = ((arg #0) - %b)
-            // CHECK: branchcond signed(%2.cse_temp > int256 0), block6, block7
+            // CHECK: branchcond (signed more %2.cse_temp > int256 0), block6, block7
             while(a-b > 0) {
                 // CHECK: ty:int256 %p = (%2.cse_temp * int256 5)
                 p = (a-b)*5;
@@ -494,12 +495,11 @@ contract c1 {
         }
 
         do {
-            // CHECK: ty:int256 %4.cse_temp = signed(%k / (arg #0)
             // CHECK: ty:int256 %p.170 = ((((arg #0) - %b) * int256 5) - %4.cse_temp)
             int p = (a-b)*5-k/a;
             b++;
             bool e2 = p<1;
-            // CHECK: branchcond signed(((arg #0) - %b) < int256 0), block8, block10
+            // CHECK: branchcond (signed less ((arg #0) - %b) < int256 0), block8, block10
         }while(a - b < 0);
 
         int g = b;
@@ -507,13 +507,13 @@ contract c1 {
         uint p1 = uint(a)**uint(g);
         bool e9 = p1 == 0;
         // CHECK: ty:int256 %3.cse_temp = ((arg #0) - %b)
-        // CHECK: branchcond signed(%3.cse_temp < int256 0), block12, block13
+        // CHECK: branchcond (signed less %3.cse_temp < int256 0), block12, block13
         while(a - b < 0) {
             // CHECK: = ((%3.cse_temp * int256 5) - %4.cse_temp)
             int p = (a-b)*5-k/a;
             b=4;
             // CHECK: ty:int256 %5.cse_temp = ((arg #0) - int256 4)
-            // CHECK: branchcond signed(%5.cse_temp > int256 0), block14, block15
+            // CHECK: branchcond (signed more %5.cse_temp > int256 0), block14, block15
             if (a-b > 0) {
                 // CHECK: return (%4.cse_temp + int256(%p1))
                 // CHECK:  = (%5.cse_temp * int256 4)

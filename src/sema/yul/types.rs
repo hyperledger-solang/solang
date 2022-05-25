@@ -58,7 +58,7 @@ pub(crate) fn verify_type_from_expression(
         | YulExpression::SolidityLocalVariable(_, ty, None, _) => Ok(ty.clone()),
 
         YulExpression::SolidityLocalVariable(_, _, Some(_), _)
-        | YulExpression::MemberAccess(..)
+        | YulExpression::SuffixAccess(..)
         | YulExpression::StorageVariable(..) => Ok(Type::Uint(256)),
 
         YulExpression::BuiltInCall(_, ty, _) => {

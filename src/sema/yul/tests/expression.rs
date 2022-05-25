@@ -769,7 +769,7 @@ fn check_arguments() {
     assert!(!ns.diagnostics.is_empty());
     assert_eq!(
         ns.diagnostics.iter().next().unwrap().message,
-        "builtin 'pop' is not available for target ewasm. Please, open a GitHub issue if there is need to support this function."
+        "builtin 'pop' is not available for target ewasm. Please, open a GitHub issue at https://github.com/hyperledger-labs/solang/issues if there is need to support this function"
     );
     ns.diagnostics = Diagnostics::default();
 
@@ -858,7 +858,7 @@ fn test_member_access() {
         Symbol::Variable(loc, Some(0), 0),
     );
 
-    let expr = pt::YulExpression::Member(
+    let expr = pt::YulExpression::SuffixAccess(
         loc,
         Box::new(pt::YulExpression::BoolLiteral(loc, true, None)),
         Identifier {
@@ -876,7 +876,7 @@ fn test_member_access() {
     );
     ns.diagnostics = Diagnostics::default();
 
-    let expr = pt::YulExpression::Member(
+    let expr = pt::YulExpression::SuffixAccess(
         loc,
         Box::new(pt::YulExpression::BoolLiteral(loc, true, None)),
         Identifier {
@@ -894,7 +894,7 @@ fn test_member_access() {
     );
     ns.diagnostics = Diagnostics::default();
 
-    let expr = pt::YulExpression::Member(
+    let expr = pt::YulExpression::SuffixAccess(
         loc,
         Box::new(pt::YulExpression::Variable(Identifier {
             loc,
@@ -910,7 +910,7 @@ fn test_member_access() {
     assert!(res.is_ok());
     assert!(ns.diagnostics.is_empty());
     assert_eq!(
-        YulExpression::MemberAccess(
+        YulExpression::SuffixAccess(
             loc,
             Box::new(YulExpression::StorageVariable(loc, Type::Bool, 0, 0)),
             YulSuffix::Slot
@@ -1034,7 +1034,7 @@ contract testTypes {
     let ns = parse(file);
     assert!(ns
         .diagnostics
-        .contains_message("assignment to length is not implemented. If there is need for this feature, please file a Github issue."));
+        .contains_message("assignment to length is not implemented. If there is need for this feature, please file a Github issue at https://github.com/hyperledger-labs/solang/issues"));
 
     let file = r#"
 contract testTypes {
@@ -1413,7 +1413,7 @@ contract C {
     assert_eq!(ns.diagnostics.len(), 2);
     assert!(ns
         .diagnostics
-        .contains_message("assignment to selector and address is not implemented. If there is need for these features, please file a GitHub issue"));
+        .contains_message("assignment to selector and address is not implemented. If there is need for these features, please file a GitHub issue at https://github.com/hyperledger-labs/solang/issues"));
 
     assert!(ns.diagnostics.contains_message("found contract 'C'"));
 }
@@ -1584,7 +1584,7 @@ contract foo {
 
     let ns = parse_and_resolve(OsStr::new("test.sol"), &mut cache, Target::Solana);
 
-    assert!(ns.diagnostics.contains_message("builtin 'gaslimit' is not available for target solana. Please, open a GitHub issue if there is need to support this function."));
+    assert!(ns.diagnostics.contains_message("builtin 'gaslimit' is not available for target solana. Please, open a GitHub issue at https://github.com/hyperledger-labs/solang/issues if there is need to support this function"));
 
     let file = r#"
 contract foo {
@@ -1608,7 +1608,7 @@ contract foo {
         },
     );
 
-    assert!(ns.diagnostics.contains_message("builtin 'coinbase' is not available for target substrate. Please, open a GitHub issue if there is need to support this function."));
+    assert!(ns.diagnostics.contains_message("builtin 'coinbase' is not available for target substrate. Please, open a GitHub issue at https://github.com/hyperledger-labs/solang/issues if there is need to support this function"));
 
     let file = r#"
     contract foo {
@@ -1625,5 +1625,5 @@ contract foo {
 
     let ns = parse_and_resolve(OsStr::new("test.sol"), &mut cache, Target::Ewasm);
 
-    assert!(ns.diagnostics.contains_message("builtin 'log0' is not available for target ewasm. Please, open a GitHub issue if there is need to support this function."));
+    assert!(ns.diagnostics.contains_message("builtin 'log0' is not available for target ewasm. Please, open a GitHub issue at https://github.com/hyperledger-labs/solang/issues if there is need to support this function"));
 }

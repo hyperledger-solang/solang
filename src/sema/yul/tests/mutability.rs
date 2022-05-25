@@ -351,7 +351,7 @@ fn pure_function() {
     // TODO: There is no implemented function that writes to state
     assert!(ns
         .diagnostics
-        .contains_message("builtin 'log0' is not available for target ewasm. Please, open a GitHub issue if there is need to support this function."));
+        .contains_message("builtin 'log0' is not available for target ewasm. Please, open a GitHub issue at https://github.com/hyperledger-labs/solang/issues if there is need to support this function"));
 }
 
 #[test]
@@ -374,7 +374,7 @@ fn view_function() {
     let ns = parse(file);
     assert!(ns
         .diagnostics
-        .contains_message("builtin 'create' is not available for target ewasm. Please, open a GitHub issue if there is need to support this function."));
+        .contains_message("builtin 'create' is not available for target ewasm. Please, open a GitHub issue at https://github.com/hyperledger-labs/solang/issues if there is need to support this function"));
 
     let file = r#"
     contract testTypes {

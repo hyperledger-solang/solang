@@ -21,9 +21,10 @@ contract testing {
             // CHECK: ty:uint256 %temp.11 = uint256 0
             // CHECK: branch block3
             // CHECK: block2: # else
-            // CHECK: ty:uint256 %temp.11 = unsigned(((arg #0) + (arg #1)) % (arg #2))
+            // CHECK: ty:uint256 %temp.11 = (unsigned modulo ((arg #0) + (arg #1)) % (arg #2))
             // CHECK: branch block3
             // CHECK: block3: # endif
+            // CHECK: # phis: temp.11
             // CHECK: ty:uint256 %x = %temp.11
 
             let y :s32  := mulmod(a, b, c)
@@ -32,9 +33,10 @@ contract testing {
             // CHECK: ty:uint256 %temp.12 = uint256 0
             // CHECK: branch block6
             // CHECK: block5: # else
-            // CHECK: ty:uint256 %temp.12 = unsigned(((arg #0) * (arg #1)) % (arg #2))
+            // CHECK: ty:uint256 %temp.12 = (unsigned modulo ((arg #0) * (arg #1)) % (arg #2))
             // CHECK: branch block6
             // CHECK: block6: # endif
+            // CHECK: # phis: temp.12
             // CHECK: ty:int32 %y = (trunc int32 %temp.12)
         }
     }
@@ -51,6 +53,7 @@ contract testing {
             // CHECK: ty:uint256 %temp.13 = (((sext uint256 (arg #0)) >> ((uint256 31 - (arg #1)) << uint256 3)) & uint256 255)
             // CHECK: branch block3
             // CHECK: block3: # endif
+            // CHECK: # phis: temp.13
             // CHECK: ty:uint256 %x = %temp.13
         }
     }

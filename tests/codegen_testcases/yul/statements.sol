@@ -23,13 +23,13 @@ contract testing {
     // BEGIN-CHECK: testing::testing::function::yul_block__uint16_int16
     function yul_block(uint16 a, int16 b) public pure {
         assembly {
-            // CHECK: ty:uint256 %x = (sext uint256 ((zext int24 (arg #0)) >> (sext int24 (arg #1))))
+            // CHECK: ty:uint256 %x = (sext uint256 ((sext int24 (arg #1)) >> (zext int24 (arg #0))))
             let x := shr(a, b)
             {
-                // CHECK: ty:uint256 %y = ((sext uint256 ((zext int24 (arg #0)) >> (sext int24 (arg #1)))) * (zext uint256 (arg #0)))
+                // CHECK: ty:uint256 %y = ((sext uint256 ((sext int24 (arg #1)) >> (zext int24 (arg #0)))) * (zext uint256 (arg #0)))
                 let y := mul(x, a)
 
-                // CHECK: ty:uint8 %g = uint8(unsigned(int256(((sext uint256 ((zext int24 (arg #0)) >> (sext int24 (arg #1)))) * (zext uint256 (arg #0)))) < (sext int256 (arg #1))))
+                // CHECK: ty:uint8 %g = uint8((unsigned less int256(((sext uint256 ((sext int24 (arg #1)) >> (zext int24 (arg #0)))) * (zext uint256 (arg #0)))) < (sext int256 (arg #1))))
                 let g : u8 := lt(y, b)
             }
         }
@@ -93,7 +93,7 @@ contract testing {
             }
             // CHECK: block4: # endif
 
-            // CHECK: branchcond unsigned(%x < uint256 3), block5, block6
+            // CHECK: branchcond (unsigned less %x < uint256 3), block5, block6
             if lt(x, 3) {
             // CHECK: block5: # then
 
@@ -103,7 +103,7 @@ contract testing {
             }
             // CHECK: block6: # endif
 
-            // CHECK: branchcond unsigned(%x < uint256 3), block7, block8
+            // CHECK: branchcond (unsigned less %x < uint256 3), block7, block8
             if lt(x, 3) {
             // CHECK: block7: # then
             // CHECK: ty:uint256 %x = uint256 6
@@ -154,7 +154,7 @@ contract testing {
                 // CHECK: branch block5
                 let i := 1
                 // CHECK: block5: # cond
-                // CHECK: branchcond unsigned(%i.27 < uint256 10), block7, block8
+                // CHECK: branchcond (unsigned less %i.27 < uint256 10), block7, block8
             } lt(i, 10) {
                 // CHECK: block6: # next
                 i := add(i, 1)
@@ -162,7 +162,7 @@ contract testing {
                 // CHECK: branch block5
             } {
                 // CHECK: block7: # body
-                // CHECK: ty:uint256 %i.27 = (%i.27 >> uint256 2)
+                // CHECK: ty:uint256 %i.27 = (uint256 2 >> %i.27)
                 i := shr(i, 2)
                 // CHECK: branch block6
             }
@@ -217,7 +217,7 @@ contract testing {
             } eq(j, 3) {
                 // CHECK: block18: # next
                 j := shr(j, 2)
-                // CHECK: ty:uint256 %j = (%j >> uint256 2)
+                // CHECK: ty:uint256 %j = (uint256 2 >> %j)
                 invalid()
                 // CHECK: assert-failure
             } {
@@ -232,7 +232,7 @@ contract testing {
                 let i := 0
                 // CHECK: branch block21
                 // CHECK: block21: # cond
-                // CHECK: branchcond unsigned(%i.31 < uint256 10), block23, block24
+                // CHECK: branchcond (unsigned less %i.31 < uint256 10), block23, block24
             } lt(i, 10) {
                 // CHECK: block22: # next
                 i := add(i, 1)
@@ -251,7 +251,7 @@ contract testing {
 // NOT-CHECK: branch
 
                     // CHECK: block25: # cond
-                    // CHECK: branchcond unsigned(%j.32 < uint256 10), block27, block28
+                    // CHECK: branchcond (unsigned less %j.32 < uint256 10), block27, block28
                 } lt(j, 10) {
                     // CHECK: ty:uint256 %j.32 = (%j.32 + uint256 1)
                     j := add(j, 1)
@@ -285,7 +285,7 @@ contract testing {
             // CHECK: ty:uint256 %i = uint256 1
             // CHECK: branch block1
             // CHECK: block1: # cond
-            // CHECK: branchcond unsigned(%i < uint256 10), block3, block4
+            // CHECK: branchcond (unsigned less %i < uint256 10), block3, block4
             } lt(i, 10) {i := add(i, 1)
             // CHECK: block2: # next
             // CHECK: ty:uint256 %i = (%i + uint256 1)
@@ -293,8 +293,8 @@ contract testing {
             } {
                 // CHECK: block3: # body
                 i := shr(i, 2)
-                // CHECK: ty:uint256 %i = (%i >> uint256 2)
-                // CHECK: branchcond unsigned(%i > uint256 10), block5, block6
+                // CHECK: ty:uint256 %i = (uint256 2 >> %i)
+                // CHECK: branchcond (unsigned more %i > uint256 10), block5, block6
                 if gt(i, 10) {
                     break
                 }
@@ -319,7 +319,7 @@ contract testing {
                 // CHECK: ty:uint256 %i = uint256 1
                 let i := 1
                 // CHECK: branch block1
-                // CHECK: branchcond unsigned(%i < uint256 10), block3, block4
+                // CHECK: branchcond (unsigned less %i < uint256 10), block3, block4
             } lt(i, 10) {
                 // CHECK: block2: # next
                 i := add(i, 1)
@@ -338,20 +338,20 @@ contract testing {
 
                     // inner for condition
                     // CHECK: block5: # cond
-                    // CHECK: branchcond unsigned(%j < uint256 10), block7, block8
+                    // CHECK: branchcond (unsigned less %j < uint256 10), block7, block8
                     // CHECK: block6: # next
                     // CHECK: ty:uint256 %j = (%j + uint256 1)
                     // CHECK: branch block5
                     j := add(j, 1)
                 } {
                     // CHECK: block7: # body
-                    // CHECK: branchcond unsigned(%j > uint256 5), block9, block10
+                    // CHECK: branchcond (unsigned more %j > uint256 5), block9, block10
                     if gt(j, 5) {
                         break
                     }
                     // After inner for:
                     // CHECK: block8: # end_for
-                    // CHECK: branchcond unsigned(%i > uint256 5), block11, block12
+                    // CHECK: branchcond (unsigned more %i > uint256 5), block11, block12
                     
                     // Inside inner if:
                     // CHECK: block9: # then
@@ -383,7 +383,7 @@ contract testing {
             // CHECK: ty:uint256 %i = uint256 1
             // CHECK: branch block1
             // CHECK: block1: # cond
-            // CHECK: branchcond unsigned(%i < uint256 10), block3, block4
+            // CHECK: branchcond (unsigned less %i < uint256 10), block3, block4
             } lt(i, 10) {i := add(i, 1)
             // CHECK: block2: # next
             // CHECK: ty:uint256 %i = (%i + uint256 1)
@@ -391,8 +391,8 @@ contract testing {
             } {
                 // CHECK: block3: # body
                 i := shr(i, 2)
-                // CHECK: ty:uint256 %i = (%i >> uint256 2)
-                // CHECK: branchcond unsigned(%i > uint256 10), block5, block6
+                // CHECK: ty:uint256 %i = (uint256 2 >> %i)
+                // CHECK: branchcond (unsigned more %i > uint256 10), block5, block6
                 if gt(i, 10) {
                     continue
                 }
@@ -417,7 +417,7 @@ contract testing {
                 // CHECK: ty:uint256 %i = uint256 1
                 let i := 1
                 // CHECK: branch block1
-                // CHECK: branchcond unsigned(%i < uint256 10), block3, block4
+                // CHECK: branchcond (unsigned less %i < uint256 10), block3, block4
             } lt(i, 10) {
                 // CHECK: block2: # next
                 i := add(i, 1)
@@ -436,20 +436,20 @@ contract testing {
 
                     // inner for condition
                     // CHECK: block5: # cond
-                    // CHECK: branchcond unsigned(%j < uint256 10), block7, block8
+                    // CHECK: branchcond (unsigned less %j < uint256 10), block7, block8
                     // CHECK: block6: # next
                     // CHECK: ty:uint256 %j = (%j + uint256 1)
                     // CHECK: branch block5
                     j := add(j, 1)
                 } {
                     // CHECK: block7: # body
-                    // CHECK: branchcond unsigned(%j > uint256 5), block9, block10
+                    // CHECK: branchcond (unsigned more %j > uint256 5), block9, block10
                     if gt(j, 5) {
                         continue
                     }
                     // After inner for:
                     // CHECK: block8: # end_for
-                    // CHECK: branchcond unsigned(%i > uint256 5), block11, block12
+                    // CHECK: branchcond (unsigned more %i > uint256 5), block11, block12
                     
                     // Inside inner if:
                     // CHECK: block9: # then

@@ -3231,10 +3231,13 @@ pub trait TargetRuntime<'a> {
                 )
                 .into()
         } else if from.is_reference_type(ns) && matches!(to, Type::Uint(_)) {
-            bin.builder.build_ptr_to_int(val.into_pointer_value(),
-                bin.llvm_type(to, ns).into_int_type(),
-                "ptr_to_int"
-            ).into()
+            bin.builder
+                .build_ptr_to_int(
+                    val.into_pointer_value(),
+                    bin.llvm_type(to, ns).into_int_type(),
+                    "ptr_to_int",
+                )
+                .into()
         } else {
             val
         }
