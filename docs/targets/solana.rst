@@ -1,6 +1,3 @@
-Targets
-=======
-
 Solana
 ______
 
@@ -75,50 +72,3 @@ The contract can be used via the `@solana/solidity <https://www.npmjs.com/packag
 package has `documentation <https://solana-labs.github.io/solana-solidity.js/>`_ and there
 are `some examples <https://solana-labs.github.io/solana-solidity.js/>`_. There is also
 `solang's integration tests <https://github.com/hyperledger-labs/solang/tree/main/integration/solana>`_.
-
-Parity Substrate
-________________
-
-Solang works with Parity Substrate 2.0 or later.
-
-The Parity Substrate has the following differences to Ethereum Solidity:
-
-- The address type is 32 bytes, not 20 bytes. This is what Substrate calls an "account"
-- An address literal has to be specified using the ``address"5GBWmgdFAMqm8ZgAHGobqDqX6tjLxJhv53ygjNtaaAn3sjeZ"`` syntax
-- ABI encoding and decoding is done using the `SCALE <https://substrate.dev/docs/en/knowledgebase/advanced/codec>`_ encoding
-- Multiple constructors are allowed, and can be overloaded
-- There is no ``ecrecover()`` builtin function, or any other function to recover or verify cryptographic signatures at runtime
-- Only functions called via rpc may return values; when calling a function in a transaction, the return values cannot be accessed
-- An `assert()`, `require()`, or `revert()` executes the wasm unreachable instruction. The reason code is lost
-
-There is an solidity example which can be found in the
-`examples <https://github.com/hyperledger-labs/solang/tree/main/examples>`_
-directory. Write this to flipper.sol and run:
-
-.. code-block:: bash
-
-  solang --target substrate flipper.sol
-
-Now you should have a file called ``flipper.contract``. The file contains both the ABI and contract wasm.
-It can be used directly in the
-`Polkadot UI <https://substrate.dev/substrate-contracts-workshop/#/0/deploy-contract>`_, as if the contract was written in ink!.
-
-
-Hyperledger Burrow (ewasm)
-__________________________
-
-The ewasm specification is not finalized yet. There is no `create2` or `chainid` call, and the keccak256 precompile
-contract has not been finalized yet.
-
-In Burrow, Solang is used transparently by the ``burrow deploy`` tool if it is given the ``--wasm`` argument.
-When building and deploying a Solidity contract, rather than running the ``solc`` compiler, it will run
-the ``solang`` compiler and deploy it as a wasm contract.
-
-This is documented in the `burrow documentation <https://hyperledger.github.io/burrow/#/reference/wasm>`_.
-
-ewasm has been tested with `Hyperledger Burrow <https://github.com/hyperledger/burrow>`_.
-Please use the latest master version of burrow, as ewasm support is still maturing in Burrow.
-
-Some language features have not been fully implemented yet on ewasm:
-
-- Contract storage variables types ``string``, ``bytes`` and function types are not implemented
