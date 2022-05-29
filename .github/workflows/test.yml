@@ -132,13 +132,13 @@ jobs:
     if: ${{ github.repository_owner == 'hyperledger-labs' }}
     steps:
     - name: Checkout sources
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         # Make sure "git describe --tags" works for solang --version
         fetch-depth: 0
         submodules: recursive
-    - name: Download LLVM
-      run: curl -L --output llvm13.0-mac-arm.tar.xz https://github.com/hyperledger-labs/solang/releases/download/v0.1.11/llvm13.0-mac-arm.tar.xz
+    - name: Get LLVM
+      run: ${{ github.workspace }}/.github/workflows/llvm-cache.sh llvm13.0-mac-arm.tar.xz
     - name: Extract LLVM
       run: tar Jxf llvm13.0-mac-arm.tar.xz
     - name: Add LLVM to Path
@@ -162,8 +162,8 @@ jobs:
         # Make sure "git describe --tags" works for solang --version
         fetch-depth: 0
         submodules: recursive
-    - name: Download LLVM
-      run: wget -q -O llvm13.0-mac-intel.tar.xz https://github.com/hyperledger-labs/solang/releases/download/v0.1.11/llvm13.0-mac-intel.tar.xz
+    - name: Get LLVM
+      run: ${{ github.workspace }}/.github/workflows/llvm-cache.sh llvm13.0-mac-intel.tar.xz
     - name: Extract LLVM
       run: tar Jxf llvm13.0-mac-intel.tar.xz
     - name: Add LLVM to Path
@@ -180,10 +180,11 @@ jobs:
   image-multiarch:
     name: Multiarch Container Image
     runs-on: macos-arm
+    needs: [mac-arm, mac-intel]
     if: ${{ github.repository_owner == 'hyperledger-labs' }}
     steps:
     - name: Checkout sources
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         # Make sure "git describe --tags" works for solang --version
         fetch-depth: 0
