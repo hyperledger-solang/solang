@@ -25,8 +25,15 @@ Contents
    installing
    running
    extension
-   targets
    examples
+
+.. toctree::
+   :maxdepth: 3
+   :caption: Targets
+
+   targets/solana.rst
+   targets/substrate.rst
+   targets/burrow.rst
 
 .. toctree::
    :maxdepth: 3

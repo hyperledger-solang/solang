@@ -4077,7 +4077,8 @@ pub trait TargetRuntime<'a> {
                         let address = if let Some(address) = address {
                             let address = self.expression(bin, address, &w.vars, function, ns);
 
-                            let addr = bin.builder.build_array_alloca(
+                            let addr = bin.build_array_alloca(
+                                function,
                                 bin.context.i8_type(),
                                 bin.context
                                     .i32_type()
