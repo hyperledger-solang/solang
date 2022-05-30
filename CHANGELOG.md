@@ -2,6 +2,20 @@
 All notable changes to [Solang](https://github.com/hyperledger-labs/solang/)
 will be documented here.
 
+## [Unreleased]
+
+### Added
+- Added spl-token integration for Solana
+
+### Changed
+- The documentation has been re-arranged for readability.
+
+### Fixed
+- Fixed many parser issues. Now solang-parser parses all files in the
+  Ethereum Solidity test suite. First run
+  `git submodule update --init --recursive` to fetch the test files, and
+  then run the test with `cargo test --workspace`.
+
 ## [0.1.11]
 
 ### Added

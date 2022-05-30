@@ -131,7 +131,7 @@ Here is a brief description of what we envision for the next versions.
 | Milestone | Status      |
 | --------- |-------------|
 | Specify values as "1 sol" and "1e9 lamports" | In progress |
-| Solana SPL tokens compatibility | In progress |
+| Solana SPL tokens compatibility | Completed |
 
 ### V0.3
 
