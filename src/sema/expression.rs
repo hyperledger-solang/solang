@@ -679,9 +679,9 @@ impl Expression {
                         Expression::Trunc(*loc, address_to_int, Box::new(self.clone()))
                     } else if *from_len < address_bits {
                         if from.is_signed_int() {
-                            Expression::ZeroExt(*loc, to.clone(), Box::new(self.clone()))
+                            Expression::ZeroExt(*loc, address_to_int, Box::new(self.clone()))
                         } else {
-                            Expression::SignExt(*loc, to.clone(), Box::new(self.clone()))
+                            Expression::SignExt(*loc, address_to_int, Box::new(self.clone()))
                         }
                     } else {
                         self.clone()
