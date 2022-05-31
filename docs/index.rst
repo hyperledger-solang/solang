@@ -56,6 +56,17 @@ Contents
    language/managing_values.rst
    language/builtins.rst
    language/tags.rst
+   language/inline_assembly.rst
+
+.. toctree::
+   :maxdepth: 3
+   :caption: Yul language
+
+   yul_language/yul.rst
+   yul_language/statements.rst
+   yul_language/types.rst
+   yul_language/functions.rst
+   yul_language/builtins.rst
 
 .. toctree::
    :maxdepth: 3

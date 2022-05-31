@@ -144,13 +144,13 @@ Here is a brief description of what we envision for the next versions.
 
 ### V0.4
 
-| Milestone                         | Status       |
-|-----------------------------------|--------------|
-| Call Solidity from Rust           | Not started  |
-| Generate code for inline assembly | Not started  |
-| Improve management over optimization passes | Not Started  |
-| Dead code elimination | Not started  |
-| ewasm target | Not started  |
+| Milestone                         | Status      |
+|-----------------------------------|-------------|
+| Call Solidity from Rust           | Not started |
+| Generate code for inline assembly | Completed   |
+| Improve management over optimization passes | Not Started |
+| Dead code elimination | Not started |
+| ewasm target | Not started |
 
 
 

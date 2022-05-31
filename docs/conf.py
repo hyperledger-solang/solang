@@ -15,6 +15,12 @@
 # sys.path.insert(0, os.path.abspath('.'))
 import os
 
+from pygments_lexer_solidity import SolidityLexer, YulLexer
+
+def setup(sphinx):
+    sphinx.add_lexer('Solidity', SolidityLexer)
+    sphinx.add_lexer('Yul', YulLexer)
+
 # -- Project information -----------------------------------------------------
 
 project = 'Solang Solidity Compiler'
