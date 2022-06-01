@@ -116,7 +116,7 @@ impl SolanaTarget {
     pub fn build_bundle<'a>(
         context: &'a Context,
         std_lib: &Module<'a>,
-        namespaces: &'a [ast::Namespace],
+        namespaces: &'a [&ast::Namespace],
         filename: &str,
         opt: OptimizationLevel,
         math_overflow_check: bool,

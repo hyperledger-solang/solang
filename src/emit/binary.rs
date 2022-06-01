@@ -97,7 +97,7 @@ impl<'a> Binary<'a> {
     /// Build the LLVM IR for a set of contracts in a single namespace
     pub fn build_bundle(
         context: &'a Context,
-        namespaces: &'a [Namespace],
+        namespaces: &'a [&Namespace],
         filename: &str,
         opt: OptimizationLevel,
         math_overflow_check: bool,

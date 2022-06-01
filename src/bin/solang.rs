@@ -331,6 +331,8 @@ fn main() {
             }
         }
 
+        let namespaces = namespaces.iter().collect::<Vec<_>>();
+
         if let Some("ast-dot") = matches.value_of("EMIT") {
             std::process::exit(0);
         }
