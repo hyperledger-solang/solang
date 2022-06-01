@@ -1,4 +1,4 @@
-use crate::ast::Namespace;
+use crate::ast::{Namespace, Type};
 use crate::sema::expression::ExprContext;
 use crate::sema::symtable::{LoopScopes, Symtable, VariableInitializer, VariableUsage};
 use crate::sema::yul::ast::{YulExpression, YulStatement};
@@ -108,6 +108,13 @@ pub(crate) fn resolve_yul_statement(
                 ns,
             )?;
             resolved_statements.push(resolved_switch.0);
+            ns.diagnostics.push(
+                Diagnostic::error(
+                    switch_statement.loc,
+                    "switch statements have no implementation in code generation yet. Please, file a GitHub issue \
+                    if there is urgent need for such a feature".to_string()
+                )
+            );
             Ok(resolved_switch.1)
         }
 
@@ -189,9 +196,8 @@ fn resolve_top_level_function_call(
                 !func_prototype.stops_execution,
             ))
         }
-        Ok(YulExpression::FunctionCall(loc, function_no, args)) => {
-            let func = function_table.get(function_no).unwrap();
-            if !func.returns.is_empty() {
+        Ok(YulExpression::FunctionCall(loc, function_no, args, returns)) => {
+            if !returns.is_empty() {
                 ns.diagnostics.push(Diagnostic::error(
                     loc,
                     "top level function calls must not return anything".to_string(),
@@ -222,7 +228,7 @@ fn resolve_variable_declaration(
     symtable: &mut Symtable,
     ns: &mut Namespace,
 ) -> Result<YulStatement, ()> {
-    let mut added_variables: Vec<usize> = Vec::with_capacity(variables.len());
+    let mut added_variables: Vec<(usize, Type)> = Vec::with_capacity(variables.len());
     for item in variables {
         if let Some(func) = function_table.find(&item.id.name) {
             ns.diagnostics.push(Diagnostic {
@@ -259,13 +265,13 @@ fn resolve_variable_declaration(
 
         if let Some(pos) = symtable.exclusive_add(
             &item.id,
-            ty,
+            ty.clone(),
             ns,
             VariableInitializer::Yul(initializer.is_some()),
             VariableUsage::YulLocalVariable,
             None,
         ) {
-            added_variables.push(pos);
+            added_variables.push((pos, ty));
         } else {
             return Err(());
         }

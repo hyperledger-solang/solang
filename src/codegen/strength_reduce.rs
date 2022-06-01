@@ -298,7 +298,8 @@ fn expression_reduce(expr: &Expression, vars: &Variables, ns: &mut Namespace) ->
 
                 expr.clone()
             }
-            Expression::Divide(loc, ty, left, right) => {
+            Expression::UnsignedDivide(loc, ty, left, right)
+            | Expression::SignedDivide(loc, ty, left, right) => {
                 let bits = ty.bits(ns) as usize;
 
                 if bits >= 128 {
@@ -352,7 +353,7 @@ fn expression_reduce(expr: &Expression, vars: &Variables, ns: &mut Namespace) ->
                                 return Expression::SignExt(
                                     *loc,
                                     ty.clone(),
-                                    Box::new(Expression::Divide(
+                                    Box::new(Expression::UnsignedDivide(
                                         *loc,
                                         Type::Int(64),
                                         Box::new(left.as_ref().clone().cast(&Type::Int(64), ns)),
@@ -375,7 +376,7 @@ fn expression_reduce(expr: &Expression, vars: &Variables, ns: &mut Namespace) ->
                             return Expression::ZeroExt(
                                 *loc,
                                 ty.clone(),
-                                Box::new(Expression::Divide(
+                                Box::new(Expression::UnsignedDivide(
                                     *loc,
                                     Type::Uint(64),
                                     Box::new(left.as_ref().clone().cast(&Type::Uint(64), ns)),
@@ -388,7 +389,8 @@ fn expression_reduce(expr: &Expression, vars: &Variables, ns: &mut Namespace) ->
 
                 expr.clone()
             }
-            Expression::Modulo(loc, ty, left, right) => {
+            Expression::SignedModulo(loc, ty, left, right)
+            | Expression::UnsignedModulo(loc, ty, left, right) => {
                 let bits = ty.bits(ns) as usize;
 
                 if bits >= 128 {
@@ -440,7 +442,7 @@ fn expression_reduce(expr: &Expression, vars: &Variables, ns: &mut Namespace) ->
                                 return Expression::SignExt(
                                     *loc,
                                     ty.clone(),
-                                    Box::new(Expression::Modulo(
+                                    Box::new(Expression::SignedModulo(
                                         *loc,
                                         Type::Int(64),
                                         Box::new(left.as_ref().clone().cast(&Type::Int(64), ns)),
@@ -463,7 +465,7 @@ fn expression_reduce(expr: &Expression, vars: &Variables, ns: &mut Namespace) ->
                             return Expression::ZeroExt(
                                 *loc,
                                 ty.clone(),
-                                Box::new(Expression::Modulo(
+                                Box::new(Expression::UnsignedModulo(
                                     *loc,
                                     Type::Uint(64),
                                     Box::new(left.as_ref().clone().cast(&Type::Uint(64), ns)),
@@ -1173,7 +1175,7 @@ fn expression_values(expr: &Expression, vars: &Variables, ns: &Namespace) -> Has
                 })
                 .collect()
         }
-        Expression::More(_, left, right) => {
+        Expression::SignedMore(_, left, right) | Expression::UnsignedMore(_, left, right) => {
             let ty = left.ty();
 
             let left = expression_values(left, vars, ns);
@@ -1289,7 +1291,7 @@ fn expression_values(expr: &Expression, vars: &Variables, ns: &Namespace) -> Has
                 })
                 .collect()
         }
-        Expression::Less(_, left, right) => {
+        Expression::SignedLess(_, left, right) | Expression::UnsignedLess(_, left, right) => {
             let ty = left.ty();
 
             let left = expression_values(left, vars, ns);
@@ -2158,7 +2160,7 @@ fn expresson_known_bits() {
     vars.insert(1, var2);
 
     // should always be true
-    let expr = Expression::More(
+    let expr = Expression::UnsignedMore(
         loc,
         Box::new(Expression::Variable(loc, Type::Uint(64), 0)),
         Box::new(Expression::Variable(loc, Type::Uint(64), 1)),
@@ -2210,7 +2212,7 @@ fn expresson_known_bits() {
     vars.insert(1, var2);
 
     // should always be true
-    let expr = Expression::More(
+    let expr = Expression::UnsignedMore(
         loc,
         Box::new(Expression::Variable(loc, Type::Uint(64), 0)),
         Box::new(Expression::Variable(loc, Type::Uint(64), 1)),
@@ -2266,7 +2268,7 @@ fn expresson_known_bits() {
     vars.insert(1, var2);
 
     // should always be true
-    let expr = Expression::Less(
+    let expr = Expression::UnsignedLess(
         loc,
         Box::new(Expression::Variable(loc, Type::Uint(64), 0)),
         Box::new(Expression::Variable(loc, Type::Uint(64), 1)),

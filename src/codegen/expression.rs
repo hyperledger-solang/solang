@@ -32,7 +32,7 @@ pub fn expression(
     match expr {
         ast::Expression::StorageVariable(_, _, var_contract_no, var_no) => {
             // base storage variables should precede contract variables, not overlap
-            ns.contracts[contract_no].get_storage_slot(*var_contract_no, *var_no, ns)
+            ns.contracts[contract_no].get_storage_slot(*var_contract_no, *var_no, ns, None)
         }
         ast::Expression::StorageLoad(loc, ty, expr) => {
             let storage = expression(expr, cfg, contract_no, func, ns, vartab, opt);
@@ -80,18 +80,24 @@ pub fn expression(
                 )
             }
         }
-        ast::Expression::Divide(loc, ty, left, right) => Expression::Divide(
-            *loc,
-            ty.clone(),
-            Box::new(expression(left, cfg, contract_no, func, ns, vartab, opt)),
-            Box::new(expression(right, cfg, contract_no, func, ns, vartab, opt)),
-        ),
-        ast::Expression::Modulo(loc, ty, left, right) => Expression::Modulo(
-            *loc,
-            ty.clone(),
-            Box::new(expression(left, cfg, contract_no, func, ns, vartab, opt)),
-            Box::new(expression(right, cfg, contract_no, func, ns, vartab, opt)),
-        ),
+        ast::Expression::Divide(loc, ty, left, right) => {
+            let l = expression(left, cfg, contract_no, func, ns, vartab, opt);
+            let r = expression(right, cfg, contract_no, func, ns, vartab, opt);
+            if ty.is_signed_int() {
+                Expression::SignedDivide(*loc, ty.clone(), Box::new(l), Box::new(r))
+            } else {
+                Expression::UnsignedDivide(*loc, ty.clone(), Box::new(l), Box::new(r))
+            }
+        }
+        ast::Expression::Modulo(loc, ty, left, right) => {
+            let l = expression(left, cfg, contract_no, func, ns, vartab, opt);
+            let r = expression(right, cfg, contract_no, func, ns, vartab, opt);
+            if ty.is_signed_int() {
+                Expression::SignedModulo(*loc, ty.clone(), Box::new(l), Box::new(r))
+            } else {
+                Expression::UnsignedModulo(*loc, ty.clone(), Box::new(l), Box::new(r))
+            }
+        }
         ast::Expression::Power(loc, ty, unchecked, left, right) => Expression::Power(
             *loc,
             ty.clone(),
@@ -140,21 +146,29 @@ pub fn expression(
             Box::new(expression(left, cfg, contract_no, func, ns, vartab, opt)),
             Box::new(expression(right, cfg, contract_no, func, ns, vartab, opt)),
         ),
-        ast::Expression::More(loc, left, right) => Expression::More(
-            *loc,
-            Box::new(expression(left, cfg, contract_no, func, ns, vartab, opt)),
-            Box::new(expression(right, cfg, contract_no, func, ns, vartab, opt)),
-        ),
+        ast::Expression::More(loc, left, right) => {
+            let l = expression(left, cfg, contract_no, func, ns, vartab, opt);
+            let r = expression(right, cfg, contract_no, func, ns, vartab, opt);
+            if l.ty().is_signed_int() {
+                Expression::SignedMore(*loc, Box::new(l), Box::new(r))
+            } else {
+                Expression::UnsignedMore(*loc, Box::new(l), Box::new(r))
+            }
+        }
         ast::Expression::MoreEqual(loc, left, right) => Expression::MoreEqual(
             *loc,
             Box::new(expression(left, cfg, contract_no, func, ns, vartab, opt)),
             Box::new(expression(right, cfg, contract_no, func, ns, vartab, opt)),
         ),
-        ast::Expression::Less(loc, left, right) => Expression::Less(
-            *loc,
-            Box::new(expression(left, cfg, contract_no, func, ns, vartab, opt)),
-            Box::new(expression(right, cfg, contract_no, func, ns, vartab, opt)),
-        ),
+        ast::Expression::Less(loc, left, right) => {
+            let l = expression(left, cfg, contract_no, func, ns, vartab, opt);
+            let r = expression(right, cfg, contract_no, func, ns, vartab, opt);
+            if l.ty().is_signed_int() {
+                Expression::SignedLess(*loc, Box::new(l), Box::new(r))
+            } else {
+                Expression::UnsignedLess(*loc, Box::new(l), Box::new(r))
+            }
+        }
         ast::Expression::LessEqual(loc, left, right) => Expression::LessEqual(
             *loc,
             Box::new(expression(left, cfg, contract_no, func, ns, vartab, opt)),
@@ -400,7 +414,6 @@ pub fn expression(
                 ast::Expression::ExternalFunction { function_no, .. }
                 | ast::Expression::InternalFunction { function_no, .. } => {
                     let selector = ns.functions[*function_no].selector();
-
                     Expression::NumberLiteral(*loc, Type::Bytes(4), BigInt::from(selector))
                 }
                 _ => {

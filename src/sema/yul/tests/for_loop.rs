@@ -43,7 +43,7 @@ contract testTypes {
         assembly {
 
             let a := 0
-            stop()
+            invalid()
             for {let i := 11
             } lt(i, 10) {i := add(i, 1)
         } {
@@ -68,7 +68,7 @@ contract testTypes {
 
             let a := 0
             for {let i := 11
-                stop()
+                invalid()
             } lt(i, 10) {i := add(i, 1)
         } {
                 a := shr(i, 2)
@@ -98,7 +98,7 @@ contract testTypes {
                 a := shr(i, 2)
                 let b := shr(6, 5)
                     a := mul(a, b)
-                stop()
+                invalid()
             }
             let x := 5
         }
@@ -117,7 +117,7 @@ contract testTypes {
             let a := 0
             for {let i := 11
             } lt(i, 10) {i := add(i, 1)
-            stop()
+            invalid()
         } {
                 a := shr(i, 2)
                 let b := shr(6, 5)
@@ -131,13 +131,10 @@ contract testTypes {
     "#;
 
     let ns = parse(file);
-    assert_eq!(ns.diagnostics.len(), 3);
+    assert_eq!(ns.diagnostics.len(), 2);
     assert!(ns
         .diagnostics
         .contains_message("found contract 'testTypes'"));
-    assert!(ns
-        .diagnostics
-        .contains_message("inline assembly is not yet supported"));
     assert!(ns
         .diagnostics
         .contains_message("yul variable 'x' has never been read"));

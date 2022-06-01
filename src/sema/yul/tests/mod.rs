@@ -17,5 +17,5 @@ pub(crate) fn parse(src: &'static str) -> ast::Namespace {
     let mut cache = FileResolver::new();
     cache.set_file_contents("test.sol", src.to_string());
 
-    parse_and_resolve(OsStr::new("test.sol"), &mut cache, Target::Solana)
+    parse_and_resolve(OsStr::new("test.sol"), &mut cache, Target::Ewasm)
 }

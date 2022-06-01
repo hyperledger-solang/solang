@@ -11,6 +11,7 @@ use crate::ast;
 use crate::codegen::unused_variable::{
     should_remove_assignment, should_remove_variable, SideEffectsCheckParameters,
 };
+use crate::codegen::yul::inline_assembly_cfg;
 use crate::codegen::{Builtin, Expression};
 use crate::parser::pt;
 use crate::parser::pt::CodeLocation;
@@ -23,7 +24,7 @@ use num_traits::Zero;
 use tiny_keccak::{Hasher, Keccak};
 
 /// Resolve a statement, which might be a block of statements or an entire body of a function
-pub fn statement(
+pub(crate) fn statement(
     stmt: &Statement,
     func: &Function,
     cfg: &mut ControlFlowGraph,
@@ -625,8 +626,8 @@ pub fn statement(
             }
         }
 
-        Statement::Assembly(..) => {
-            unimplemented!("Assembly block codegen not yet ready");
+        Statement::Assembly(inline_assembly, ..) => {
+            inline_assembly_cfg(inline_assembly, contract_no, ns, cfg, vartab, opt);
         }
     }
 }
@@ -1362,22 +1363,22 @@ impl LoopScopes {
         LoopScopes(LinkedList::new())
     }
 
-    fn new_scope(&mut self, break_bb: usize, continue_bb: usize) {
+    pub(crate) fn new_scope(&mut self, break_bb: usize, continue_bb: usize) {
         self.0.push_front(LoopScope {
             break_bb,
             continue_bb,
         })
     }
 
-    fn leave_scope(&mut self) -> LoopScope {
+    pub(crate) fn leave_scope(&mut self) -> LoopScope {
         self.0.pop_front().expect("should be in loop scope")
     }
 
-    fn do_break(&mut self) -> usize {
+    pub(crate) fn do_break(&mut self) -> usize {
         self.0.front().unwrap().break_bb
     }
 
-    fn do_continue(&mut self) -> usize {
+    pub(crate) fn do_continue(&mut self) -> usize {
         self.0.front().unwrap().continue_bb
     }
 }

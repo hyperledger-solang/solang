@@ -5,9 +5,18 @@ use std::io::{BufRead, BufReader};
 use std::{fs, path::PathBuf};
 
 #[test]
-fn testcases() {
+fn solidity_testcases() {
+    run_test_for_path("./tests/codegen_testcases/solidity/");
+}
+
+#[test]
+fn yul_testcases() {
+    run_test_for_path("./tests/codegen_testcases/yul/")
+}
+
+fn run_test_for_path(path: &str) {
     let ext = OsString::from("sol");
-    for entry in fs::read_dir("./tests/codegen_testcases/").unwrap() {
+    for entry in fs::read_dir(path).unwrap() {
         let path = entry.unwrap().path();
 
         if path.is_file() && path.extension() == Some(&ext) {
@@ -92,6 +101,8 @@ fn testcase(path: PathBuf) {
             Some(Test::NotCheck(needle)) => {
                 if !line.contains(needle) {
                     current_check += 1;
+                    // We should not advance line during a not check
+                    current_line -= 1;
                 }
             }
             Some(Test::Rewind) => {

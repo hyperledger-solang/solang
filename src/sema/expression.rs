@@ -1240,7 +1240,7 @@ fn get_int_length(
     }
 }
 
-fn coerce_number(
+pub fn coerce_number(
     l: &Type,
     l_loc: &pt::Loc,
     r: &Type,
@@ -1294,6 +1294,12 @@ fn coerce_number(
         }
         (Type::Int(_), Type::Rational) => {
             return Ok(Type::Rational);
+        }
+        (Type::Bool, Type::Int(_) | Type::Uint(_)) => {
+            return Ok(r.clone());
+        }
+        (Type::Int(_) | Type::Uint(_), Type::Bool) => {
+            return Ok(l.clone());
         }
         _ => (),
     }

@@ -113,6 +113,7 @@ fn resolve_for_init_block(
         YulBlock {
             loc: init_block.loc,
             reachable,
+            next_reachable,
             body,
         },
         next_reachable,

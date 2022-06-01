@@ -41,13 +41,10 @@ contract testTypes {
 }
     "#;
     let ns = parse(file);
-    assert_eq!(ns.diagnostics.len(), 3);
+    assert_eq!(ns.diagnostics.len(), 2);
     assert!(ns
         .diagnostics
         .contains_message("found contract 'testTypes'"));
-    assert!(ns
-        .diagnostics
-        .contains_message("inline assembly is not yet supported"));
     assert!(ns
         .diagnostics
         .contains_message("yul function has never been used"));
@@ -97,13 +94,10 @@ contract testTypes {
 }
     "#;
     let ns = parse(file);
-    assert_eq!(ns.diagnostics.len(), 2);
+    assert_eq!(ns.diagnostics.len(), 1);
     assert!(ns
         .diagnostics
         .contains_message("found contract 'testTypes'"));
-    assert!(ns
-        .diagnostics
-        .contains_message("inline assembly is not yet supported"));
 }
 
 #[test]
@@ -150,13 +144,10 @@ contract testTypes {
 }
     "#;
     let ns = parse(file);
-    assert_eq!(ns.diagnostics.len(), 2);
+    assert_eq!(ns.diagnostics.len(), 1);
     assert!(ns
         .diagnostics
         .contains_message("found contract 'testTypes'"));
-    assert!(ns
-        .diagnostics
-        .contains_message("inline assembly is not yet supported"));
 }
 
 #[test]
@@ -193,7 +184,7 @@ contract testTypes {
     "#;
 
     let ns = parse(file);
-    assert!(ns.diagnostics.contains_message("unreachable yul statement"));
+    assert!(ns.diagnostics.contains_message("switch statements have no implementation in code generation yet. Please, file a GitHub issue if there is urgent need for such a feature"));
 
     let file = r#"
 contract testTypes {
@@ -216,13 +207,12 @@ contract testTypes {
     }
 }    "#;
     let ns = parse(file);
-    assert_eq!(ns.diagnostics.len(), 2);
     assert!(ns
         .diagnostics
         .contains_message("found contract 'testTypes'"));
     assert!(ns
         .diagnostics
-        .contains_message("inline assembly is not yet supported"));
+        .contains_message("switch statements have no implementation in code generation yet. Please, file a GitHub issue if there is urgent need for such a feature"));
 
     let file = r#"
     contract testTypes {
@@ -245,20 +235,19 @@ contract testTypes {
 }    "#;
 
     let ns = parse(file);
-    assert_eq!(ns.diagnostics.len(), 2);
     assert!(ns
         .diagnostics
         .contains_message("found contract 'testTypes'"));
     assert!(ns
         .diagnostics
-        .contains_message("inline assembly is not yet supported"));
+        .contains_message("switch statements have no implementation in code generation yet. Please, file a GitHub issue if there is urgent need for such a feature"));
 }
 
 #[test]
 fn unreachable_after_leave() {
     let file = r#"
 contract testTypes {
-    function testAsm() public pure {
+    function testAsm() pure public {
         assembly {
             {
                 function tryThis(b, a) -> c {
@@ -268,7 +257,7 @@ contract testTypes {
                     }
                     b := add(a, 6)
                     c := tryThat(b, 2)
-                    return(b, 0)
+                    invalid()
                 }
 
                 {
@@ -276,7 +265,8 @@ contract testTypes {
                         e := shr(d, 3)
                     }
 
-                    revert(tryThis(foo(3), 2), 4)
+                    let y := tryThis(foo(3), 2)
+                    invalid()
                 }
 
                 function tryThat(b, a) -> c {
@@ -285,24 +275,24 @@ contract testTypes {
                         leave
                     }
                     c := 5
-                    return(b, 0)
+                    invalid()
                 }
                 let x := 5
             }
         }
     }
-}    "#;
+}   "#;
 
     let ns = parse(file);
     assert_eq!(ns.diagnostics.len(), 4);
     assert!(ns
         .diagnostics
         .contains_message("found contract 'testTypes'"));
-    assert!(ns
-        .diagnostics
-        .contains_message("inline assembly is not yet supported"));
     assert!(ns.diagnostics.contains_message("unreachable yul statement"));
     assert!(ns
         .diagnostics
         .contains_message("yul variable 'x' has never been read"));
+    assert!(ns
+        .diagnostics
+        .contains_message("yul variable 'y' has never been read"));
 }

@@ -1252,7 +1252,7 @@ impl Type {
             Type::InternalFunction { .. } => false,
             Type::ExternalFunction { .. } => false,
             Type::UserType(no) => ns.user_types[*no].ty.is_reference_type(ns),
-            _ => unreachable!(),
+            _ => false,
         }
     }
 

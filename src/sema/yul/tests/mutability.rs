@@ -48,7 +48,7 @@ fn inside_argument() {
     function testAsm(uint[] calldata vl) public pure {
         assembly {
             {
-                return(balance(4), 5)
+                let y := add(balance(4), 5)
                 function foo(a, b) {
                     let x := 5
                     let ret := add(sub(b, x), a)
@@ -141,7 +141,7 @@ fn if_block() {
         assembly {
             {
                 if balance(5) {
-                    return(0, 1)
+                    invalid()
                 }
             }
         }
@@ -161,7 +161,7 @@ fn if_block() {
                 let x := 2
                 if gt(x, 4) {
                     x := balance(4)
-                    return(0, x)
+                    invalid()
                 }
             }
         }
@@ -176,6 +176,7 @@ fn if_block() {
 
 #[test]
 fn switch() {
+    // TODO: switch statements are not yet supported, so there is no way to test mutability here
     let file = r#"
     contract testTypes {
     function testAsm(uint[] calldata vl) public pure {
@@ -195,7 +196,7 @@ fn switch() {
     let ns = parse(file);
     assert!(ns
         .diagnostics
-        .contains_message("function declared 'pure' but this expression reads from state"));
+        .contains_message("switch statements have no implementation in code generation yet. Please, file a GitHub issue if there is urgent need for such a feature"));
 
     let file = r#"
     contract testTypes {
@@ -217,7 +218,7 @@ fn switch() {
     let ns = parse(file);
     assert!(ns
         .diagnostics
-        .contains_message("function declared 'pure' but this expression reads from state"));
+        .contains_message("switch statements have no implementation in code generation yet. Please, file a GitHub issue if there is urgent need for such a feature"));
 
     let file = r#"
     contract testTypes {
@@ -239,7 +240,7 @@ fn switch() {
     let ns = parse(file);
     assert!(ns
         .diagnostics
-        .contains_message("function declared 'pure' but this expression reads from state"));
+        .contains_message("switch statements have no implementation in code generation yet. Please, file a GitHub issue if there is urgent need for such a feature"));
 }
 
 #[test]
@@ -347,9 +348,10 @@ fn pure_function() {
 }    "#;
 
     let ns = parse(file);
+    // TODO: There is no implemented function that writes to state
     assert!(ns
         .diagnostics
-        .contains_message("function declared 'pure' but this expression writes to state"));
+        .contains_message("builtin 'log0' is not available for target ewasm. Please, open a GitHub issue at https://github.com/hyperledger-labs/solang/issues if there is need to support this function"));
 }
 
 #[test]
@@ -368,10 +370,11 @@ fn view_function() {
 }
     "#;
 
+    // TODO: There is no implemented function that writes to the state, so there is no way to test mutability here
     let ns = parse(file);
     assert!(ns
         .diagnostics
-        .contains_message("function declared 'view' but this expression writes to state"));
+        .contains_message("builtin 'create' is not available for target ewasm. Please, open a GitHub issue at https://github.com/hyperledger-labs/solang/issues if there is need to support this function"));
 
     let file = r#"
     contract testTypes {
@@ -379,7 +382,7 @@ fn view_function() {
         assembly {
             {
                 for {let i := 6} gt(i, 0) {} {
-                    return(selfbalance(), i)
+                    i := add(selfbalance(), i)
                 }
             }
         }
@@ -387,13 +390,10 @@ fn view_function() {
 }    "#;
 
     let ns = parse(file);
-    assert_eq!(ns.diagnostics.len(), 2);
+    assert_eq!(ns.diagnostics.len(), 1);
     assert!(ns
         .diagnostics
         .contains_message("found contract 'testTypes'"));
-    assert!(ns
-        .diagnostics
-        .contains_message("inline assembly is not yet supported"));
 }
 
 #[test]
@@ -404,7 +404,7 @@ fn function_without_modifier() {
         assembly {
             {
                 for {let i := caller()} gt(i, 0) {} {
-                    return(create(1, 2, 3), i)
+                    let x := add(i, 2)
                 }
             }
         }
@@ -412,11 +412,14 @@ fn function_without_modifier() {
 }
     "#;
     let ns = parse(file);
-    assert_eq!(ns.diagnostics.len(), 2);
+    assert_eq!(ns.diagnostics.len(), 3);
     assert!(ns
         .diagnostics
         .contains_message("found contract 'testTypes'"));
     assert!(ns
         .diagnostics
-        .contains_message("inline assembly is not yet supported"));
+        .contains_message("yul variable 'x' has never been read"));
+    assert!(ns
+        .diagnostics
+        .contains_message("function can be declared 'view'"));
 }

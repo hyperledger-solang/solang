@@ -236,7 +236,7 @@ fn complex_expression() {
         Box::new(cte.clone()),
         Box::new(arg.clone()),
     );
-    let div = Expression::Divide(
+    let div = Expression::SignedDivide(
         Loc::Codegen,
         Type::Int(8),
         Box::new(sum.clone()),
@@ -257,7 +257,7 @@ fn complex_expression() {
         Box::new(div.clone()),
         true,
     );
-    let modu = Expression::Modulo(
+    let modu = Expression::SignedModulo(
         Loc::Codegen,
         Type::Int(8),
         Box::new(cte.clone()),
@@ -374,7 +374,7 @@ fn kill() {
         Box::new(cte.clone()),
         Box::new(arg.clone()),
     );
-    let div = Expression::Divide(
+    let div = Expression::SignedDivide(
         Loc::Codegen,
         Type::Int(8),
         Box::new(sum.clone()),
@@ -395,7 +395,7 @@ fn kill() {
         Box::new(div.clone()),
         true,
     );
-    let modu = Expression::Modulo(
+    let modu = Expression::SignedModulo(
         Loc::Codegen,
         Type::Int(8),
         Box::new(cte.clone()),
@@ -463,7 +463,7 @@ fn clone() {
         Box::new(cte.clone()),
         Box::new(arg.clone()),
     );
-    let div = Expression::Divide(
+    let div = Expression::SignedDivide(
         Loc::Codegen,
         Type::Int(8),
         Box::new(sum.clone()),
@@ -484,7 +484,7 @@ fn clone() {
         Box::new(div.clone()),
         true,
     );
-    let modu = Expression::Modulo(
+    let modu = Expression::SignedModulo(
         Loc::Codegen,
         Type::Int(8),
         Box::new(cte.clone()),
@@ -550,7 +550,7 @@ fn intersect() {
         Box::new(cte.clone()),
         Box::new(arg.clone()),
     );
-    let div = Expression::Divide(
+    let div = Expression::SignedDivide(
         Loc::Codegen,
         Type::Int(8),
         Box::new(sum.clone()),
@@ -571,7 +571,7 @@ fn intersect() {
         Box::new(div.clone()),
         true,
     );
-    let modu = Expression::Modulo(
+    let modu = Expression::SignedModulo(
         Loc::Codegen,
         Type::Int(8),
         Box::new(cte.clone()),
@@ -605,10 +605,16 @@ fn intersect() {
     let mut ave = AvailableExpression::default();
     let mut set = AvailableExpressionSet::default();
     let mut cst = CommonSubExpressionTracker::default();
+    let cfg_dag = vec![vec![1, 2], vec![], vec![1]];
+    cst.set_dag(cfg_dag);
 
+    ave.set_cur_block(0);
+    cst.set_cur_block(0);
     set.process_instruction(&instr, &mut ave, &mut cst);
     set.process_instruction(&instr2, &mut ave, &mut cst);
-    let mut set_2 = set.clone_for_parent_block(1);
+    let mut set_2 = set.clone_for_parent_block(0);
+    cst.set_cur_block(2);
+    ave.set_cur_block(2);
     set.kill(1);
 
     let sum2 = Expression::Add(
@@ -634,9 +640,11 @@ fn intersect() {
     };
 
     set.process_instruction(&instr3, &mut ave, &mut cst);
+    cst.set_cur_block(1);
+    ave.set_cur_block(1);
     set_2.process_instruction(&instr3, &mut ave, &mut cst);
 
-    set_2.intersect_sets(&set);
+    set_2.intersect_sets(&set, &cst);
 
     // Available expressions
     assert!(set_2.find_expression(&unary).is_some());

@@ -12,6 +12,7 @@ use super::{
     vartable::{Vars, Vartable},
     vector_to_slice, Options,
 };
+use crate::ast::FunctionAttributes;
 use crate::codegen::subexpression_elimination::common_sub_expression_elimination;
 use crate::codegen::{undefined_variable, Expression, LLVMName};
 use crate::parser::pt;
@@ -338,7 +339,7 @@ pub struct ControlFlowGraph {
     current: usize,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Copy, PartialEq)]
 pub enum ASTFunction {
     SolidityFunction(usize),
     YulFunction(usize),
@@ -503,13 +504,23 @@ impl ControlFlowGraph {
                 self.expr_to_string(contract, ns, l),
                 self.expr_to_string(contract, ns, r)
             ),
-            Expression::Divide(_, _, l, r) => format!(
-                "({} / {})",
+            Expression::SignedDivide(_, _, l, r) => format!(
+                "(signed divide {} / {})",
+                self.expr_to_string(contract, ns, l),
+                self.expr_to_string(contract, ns, r),
+            ),
+            Expression::UnsignedDivide(_, _, l, r) => format!(
+                "(unsigned divide {} / {})",
+                self.expr_to_string(contract, ns, l),
+                self.expr_to_string(contract, ns, r),
+            ),
+            Expression::SignedModulo(_, _, l, r) => format!(
+                "(signed modulo {} % {})",
                 self.expr_to_string(contract, ns, l),
                 self.expr_to_string(contract, ns, r)
             ),
-            Expression::Modulo(_, _, l, r) => format!(
-                "({} % {})",
+            Expression::UnsignedModulo(_, _, l, r) => format!(
+                "(unsigned modulo {} % {})",
                 self.expr_to_string(contract, ns, l),
                 self.expr_to_string(contract, ns, r)
             ),
@@ -537,13 +548,23 @@ impl ControlFlowGraph {
                 ty.to_string(ns),
                 self.expr_to_string(contract, ns, e)
             ),
-            Expression::More(_, l, r) => format!(
-                "({} > {})",
+            Expression::UnsignedMore(_, l, r) => format!(
+                "(unsigned more {} > {})",
                 self.expr_to_string(contract, ns, l),
                 self.expr_to_string(contract, ns, r)
             ),
-            Expression::Less(_, l, r) => format!(
-                "({} < {})",
+            Expression::SignedMore(_, l, r) => format!(
+                "(signed more {} > {})",
+                self.expr_to_string(contract, ns, l),
+                self.expr_to_string(contract, ns, r)
+            ),
+            Expression::UnsignedLess(_, l, r) => format!(
+                "(unsigned less {} < {})",
+                self.expr_to_string(contract, ns, l),
+                self.expr_to_string(contract, ns, r)
+            ),
+            Expression::SignedLess(_, l, r) => format!(
+                "(signed less {} < {})",
                 self.expr_to_string(contract, ns, l),
                 self.expr_to_string(contract, ns, r)
             ),
@@ -1151,7 +1172,16 @@ pub fn generate_cfg(
         cfg.selector = func.selector();
     }
 
-    optimize_and_check_cfg(&mut cfg, ns, function_no, opt);
+    optimize_and_check_cfg(
+        &mut cfg,
+        ns,
+        if let Some(func_no) = function_no {
+            ASTFunction::SolidityFunction(func_no)
+        } else {
+            ASTFunction::None
+        },
+        opt,
+    );
 
     all_cfgs[cfg_no] = cfg;
 }
@@ -1186,13 +1216,13 @@ fn resolve_modifier_call<'a>(
 pub fn optimize_and_check_cfg(
     cfg: &mut ControlFlowGraph,
     ns: &mut Namespace,
-    func_no: Option<usize>,
+    func_no: ASTFunction,
     opt: &Options,
 ) {
     reaching_definitions::find(cfg);
-    if let Some(function) = func_no {
+    if func_no != ASTFunction::None {
         // If there are undefined variables, we raise an error and don't run optimizations
-        if undefined_variable::find_undefined_variables(cfg, ns, function) {
+        if undefined_variable::find_undefined_variables(cfg, ns, func_no) {
             return;
         }
     }
@@ -1210,7 +1240,7 @@ pub fn optimize_and_check_cfg(
     }
 
     // If the function is a default constructor, there is nothing to optimize.
-    if opt.common_subexpression_elimination && func_no.is_some() {
+    if opt.common_subexpression_elimination && func_no != ASTFunction::None {
         common_sub_expression_elimination(cfg, ns);
     }
 }
@@ -1296,19 +1326,7 @@ fn function_cfg(
     };
 
     // populate the argument variables
-    for (i, arg) in func.symtable.arguments.iter().enumerate() {
-        if let Some(pos) = arg {
-            let var = &func.symtable.vars[pos];
-            cfg.add(
-                &mut vartab,
-                Instr::Set {
-                    loc: func.params[i].loc,
-                    res: *pos,
-                    expr: Expression::FunctionArg(var.id.loc, var.ty.clone(), i),
-                },
-            );
-        }
-    }
+    populate_arguments(func, &mut cfg, &mut vartab);
 
     // Hold your breath, this is the trickest part of the codegen ahead.
     // For each contract, the top-level constructor calls the base constructors. The base
@@ -1429,20 +1447,7 @@ fn function_cfg(
     }
 
     // named returns should be populated
-    for (i, pos) in func.symtable.returns.iter().enumerate() {
-        if let Some(name) = &func.returns[i].id {
-            if let Some(expr) = func.returns[i].ty.default(ns) {
-                cfg.add(
-                    &mut vartab,
-                    Instr::Set {
-                        loc: name.loc,
-                        res: *pos,
-                        expr,
-                    },
-                );
-            }
-        }
-    }
+    populate_named_returns(func, ns, &mut cfg, &mut vartab);
 
     for stmt in &func.body {
         statement(
@@ -1491,6 +1496,50 @@ fn function_cfg(
 
     // walk cfg to check for use for before initialize
     cfg
+}
+
+/// Populate the arguments of a function
+pub(crate) fn populate_arguments<T: FunctionAttributes>(
+    func: &T,
+    cfg: &mut ControlFlowGraph,
+    vartab: &mut Vartable,
+) {
+    for (i, arg) in func.get_symbol_table().arguments.iter().enumerate() {
+        if let Some(pos) = arg {
+            let var = &func.get_symbol_table().vars[pos];
+            cfg.add(
+                vartab,
+                Instr::Set {
+                    loc: func.get_parameters()[i].loc,
+                    res: *pos,
+                    expr: Expression::FunctionArg(var.id.loc, var.ty.clone(), i),
+                },
+            );
+        }
+    }
+}
+
+/// Populate returns of functions that have named returns
+pub(crate) fn populate_named_returns<T: FunctionAttributes>(
+    func: &T,
+    ns: &Namespace,
+    cfg: &mut ControlFlowGraph,
+    vartab: &mut Vartable,
+) {
+    for (i, pos) in func.get_symbol_table().returns.iter().enumerate() {
+        if let Some(name) = &func.get_returns()[i].id {
+            if let Some(expr) = func.get_returns()[i].ty.default(ns) {
+                cfg.add(
+                    vartab,
+                    Instr::Set {
+                        loc: name.loc,
+                        res: *pos,
+                        expr,
+                    },
+                );
+            }
+        }
+    }
 }
 
 /// Generate the CFG for a modifier on a function
@@ -1682,13 +1731,18 @@ impl Contract {
         var_contract_no: usize,
         var_no: usize,
         ns: &Namespace,
+        ty: Option<Type>,
     ) -> Expression {
         if let Some(layout) = self
             .layout
             .iter()
             .find(|l| l.contract_no == var_contract_no && l.var_no == var_no)
         {
-            Expression::NumberLiteral(pt::Loc::Codegen, ns.storage_type(), layout.slot.clone())
+            Expression::NumberLiteral(
+                pt::Loc::Codegen,
+                ty.unwrap_or_else(|| ns.storage_type()),
+                layout.slot.clone(),
+            )
         } else {
             panic!("get_storage_slot called on non-storage variable");
         }

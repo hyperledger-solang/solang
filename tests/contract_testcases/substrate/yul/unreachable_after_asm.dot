@@ -6,7 +6,7 @@ strict digraph "tests/contract_testcases/substrate/yul/unreachable_after_asm.sol
 	diagnostic [label="found contract 'testTypes'\nlevel Debug\ntests/contract_testcases/substrate/yul/unreachable_after_asm.sol:1:1-20"]
 	diagnostic_7 [label="flag 'memory-safe' not supported\nlevel Error\ntests/contract_testcases/substrate/yul/unreachable_after_asm.sol:5:19-32"]
 	diagnostic_8 [label="flag 'meh' not supported\nlevel Error\ntests/contract_testcases/substrate/yul/unreachable_after_asm.sol:5:34-39"]
-	diagnostic_9 [label="unreachable statement\nlevel Error\ntests/contract_testcases/substrate/yul/unreachable_after_asm.sol:17:9-19:10"]
+	diagnostic_9 [label="unreachable statement\nlevel Error\ntests/contract_testcases/substrate/yul/unreachable_after_asm.sol:10:9-12:10"]
 	contracts -> contract
 	contract -> var [label="variable"]
 	contract -> testAsm [label="function"]
