@@ -29,7 +29,7 @@ pub fn add_external_functions(contract_no: usize, ns: &mut Namespace) {
     }
 
     // we've now collected all the functions which are called.
-    while !call_list.solidity.is_empty() {
+    while !call_list.solidity.is_empty() || !call_list.yul.is_empty() {
         let mut new_call_list = CallList::default();
 
         for function_no in &call_list.solidity {

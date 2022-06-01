@@ -61,14 +61,6 @@ impl<'a> StateCheck<'a> {
 
         self.does_read_state = true;
     }
-
-    //TODO: This is a temporary solution while inline assembly is not supported in codegen
-    fn has_yul(&mut self, loc: &pt::Loc) {
-        self.diagnostics.push(Diagnostic::error(
-            *loc,
-            "inline assembly is not yet supported".to_string(),
-        ));
-    }
 }
 
 fn check_mutability(func: &Function, ns: &Namespace) -> Vec<Diagnostic> {
@@ -226,7 +218,6 @@ fn recurse_statements(stmts: &[Statement], ns: &Namespace, state: &mut StateChec
             Statement::Emit { loc, .. } => state.write(loc),
             Statement::Break(_) | Statement::Continue(_) | Statement::Underscore(_) => (),
             Statement::Assembly(inline_assembly, _) => {
-                state.has_yul(&inline_assembly.loc);
                 for function_no in inline_assembly.functions.start..inline_assembly.functions.end {
                     recurse_yul_statements(&ns.yul_functions[function_no].body, state);
                 }

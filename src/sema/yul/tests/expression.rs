@@ -9,13 +9,15 @@ use crate::sema::yul::builtin::YulBuiltInFunction;
 use crate::sema::yul::expression::{check_type, resolve_yul_expression};
 use crate::sema::yul::functions::FunctionsTable;
 use crate::sema::yul::tests::parse;
-use crate::{ast, Target};
+use crate::{ast, parse_and_resolve, FileResolver, Target};
 use num_bigint::BigInt;
 use solang_parser::pt;
 use solang_parser::pt::{
     ContractTy, HexLiteral, Identifier, Loc, StorageLocation, StringLiteral, Visibility,
     YulFunctionCall,
 };
+use std::ffi::OsStr;
+use std::sync::Arc;
 
 #[test]
 fn resolve_bool_literal() {
@@ -662,7 +664,10 @@ fn function_call() {
     }));
     let res = resolve_yul_expression(&expr, &context, &mut symtable, &mut function_table, &mut ns);
     assert!(res.is_ok());
-    assert_eq!(YulExpression::FunctionCall(loc, 0, vec![]), res.unwrap());
+    assert_eq!(
+        YulExpression::FunctionCall(loc, 0, vec![], Arc::new(vec![])),
+        res.unwrap()
+    );
 
     let expr = pt::YulExpression::FunctionCall(Box::new(YulFunctionCall {
         loc,
@@ -764,7 +769,7 @@ fn check_arguments() {
     assert!(!ns.diagnostics.is_empty());
     assert_eq!(
         ns.diagnostics.iter().next().unwrap().message,
-        "builtin function 'pop' returns nothing"
+        "builtin 'pop' is not available for target ewasm. Please, open a GitHub issue at https://github.com/hyperledger-labs/solang/issues if there is need to support this function"
     );
     ns.diagnostics = Diagnostics::default();
 
@@ -853,7 +858,7 @@ fn test_member_access() {
         Symbol::Variable(loc, Some(0), 0),
     );
 
-    let expr = pt::YulExpression::Member(
+    let expr = pt::YulExpression::SuffixAccess(
         loc,
         Box::new(pt::YulExpression::BoolLiteral(loc, true, None)),
         Identifier {
@@ -871,7 +876,7 @@ fn test_member_access() {
     );
     ns.diagnostics = Diagnostics::default();
 
-    let expr = pt::YulExpression::Member(
+    let expr = pt::YulExpression::SuffixAccess(
         loc,
         Box::new(pt::YulExpression::BoolLiteral(loc, true, None)),
         Identifier {
@@ -889,7 +894,7 @@ fn test_member_access() {
     );
     ns.diagnostics = Diagnostics::default();
 
-    let expr = pt::YulExpression::Member(
+    let expr = pt::YulExpression::SuffixAccess(
         loc,
         Box::new(pt::YulExpression::Variable(Identifier {
             loc,
@@ -905,7 +910,7 @@ fn test_member_access() {
     assert!(res.is_ok());
     assert!(ns.diagnostics.is_empty());
     assert_eq!(
-        YulExpression::MemberAccess(
+        YulExpression::SuffixAccess(
             loc,
             Box::new(YulExpression::StorageVariable(loc, Type::Bool, 0, 0)),
             YulSuffix::Slot
@@ -1029,7 +1034,7 @@ contract testTypes {
     let ns = parse(file);
     assert!(ns
         .diagnostics
-        .contains_message("cannot assign a value to length"));
+        .contains_message("assignment to length is not implemented. If there is need for this feature, please file a Github issue at https://github.com/hyperledger-labs/solang/issues"));
 
     let file = r#"
 contract testTypes {
@@ -1114,13 +1119,10 @@ contract testTypes {
 }
     "#;
     let ns = parse(file);
-    assert_eq!(ns.diagnostics.len(), 3);
+    assert_eq!(ns.diagnostics.len(), 2);
     assert!(ns
         .diagnostics
         .contains_message("found contract 'testTypes'"));
-    assert!(ns
-        .diagnostics
-        .contains_message("inline assembly is not yet supported"));
     assert!(ns
         .diagnostics
         .contains_message("function parameter 'vl' has never been read"));
@@ -1411,7 +1413,7 @@ contract C {
     assert_eq!(ns.diagnostics.len(), 2);
     assert!(ns
         .diagnostics
-        .contains_message("inline assembly is not yet supported"));
+        .contains_message("assignment to selector and address is not implemented. If there is need for these features, please file a GitHub issue at https://github.com/hyperledger-labs/solang/issues"));
 
     assert!(ns.diagnostics.contains_message("found contract 'C'"));
 }
@@ -1554,7 +1556,6 @@ fn external_function() {
     function (int) external returns (int) sPtr = this.testing;
         assembly {
             let t := sPtr.address
-            log0(1, t)
         }
         return sPtr(3);
     }
@@ -1564,5 +1565,65 @@ fn external_function() {
     assert!(ns.diagnostics.contains_message("found contract 'test'"));
     assert!(ns
         .diagnostics
-        .contains_message("inline assembly is not yet supported"));
+        .contains_message("yul variable 't' has never been read"));
+}
+
+#[test]
+fn unsupported_builtin() {
+    let file = r#"
+contract foo {
+       function testing() view public {
+       assembly {
+           let f := gaslimit()
+       }
+    }
+}
+    "#;
+    let mut cache = FileResolver::new();
+    cache.set_file_contents("test.sol", file.to_string());
+
+    let ns = parse_and_resolve(OsStr::new("test.sol"), &mut cache, Target::Solana);
+
+    assert!(ns.diagnostics.contains_message("builtin 'gaslimit' is not available for target solana. Please, open a GitHub issue at https://github.com/hyperledger-labs/solang/issues if there is need to support this function"));
+
+    let file = r#"
+contract foo {
+       function testing() view public {
+       assembly {
+           let f := coinbase()
+       }
+    }
+}
+    "#;
+
+    let mut cache = FileResolver::new();
+    cache.set_file_contents("test.sol", file.to_string());
+
+    let ns = parse_and_resolve(
+        OsStr::new("test.sol"),
+        &mut cache,
+        Target::Substrate {
+            address_length: 32,
+            value_length: 16,
+        },
+    );
+
+    assert!(ns.diagnostics.contains_message("builtin 'coinbase' is not available for target substrate. Please, open a GitHub issue at https://github.com/hyperledger-labs/solang/issues if there is need to support this function"));
+
+    let file = r#"
+    contract foo {
+       function testing() public {
+       assembly {
+           log0(1, 2)
+       }
+    }
+}
+    "#;
+
+    let mut cache = FileResolver::new();
+    cache.set_file_contents("test.sol", file.to_string());
+
+    let ns = parse_and_resolve(OsStr::new("test.sol"), &mut cache, Target::Ewasm);
+
+    assert!(ns.diagnostics.contains_message("builtin 'log0' is not available for target ewasm. Please, open a GitHub issue at https://github.com/hyperledger-labs/solang/issues if there is need to support this function"));
 }

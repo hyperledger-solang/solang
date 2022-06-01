@@ -845,7 +845,7 @@ YulFunctionCall: YulFunctionCall = {
 YulPath: YulExpression = {
     <YulIdentifier> => YulExpression::Variable(<>),
     <l:@L> <array:YulPath> "." <member:YulIdentifier> <r:@R> => {
-        YulExpression::Member(Loc::File(file_no, l, r), Box::new(array), member)
+        YulExpression::SuffixAccess(Loc::File(file_no, l, r), Box::new(array), member)
     },
 }
 

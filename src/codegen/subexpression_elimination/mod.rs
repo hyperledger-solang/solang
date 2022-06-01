@@ -57,7 +57,7 @@ pub struct BasicExpression {
 }
 
 /// Type of constant to streamline the use of a hashmap
-#[derive(Eq, PartialEq, Hash, Clone)]
+#[derive(Eq, PartialEq, Hash, Clone, Debug)]
 pub enum ConstantType {
     Bool(bool),
     Bytes(Vec<u8>),
@@ -65,7 +65,7 @@ pub enum ConstantType {
 }
 
 /// The type of expression that a node represents
-#[derive(Clone, PartialEq, Hash, Eq)]
+#[derive(Clone, PartialEq, Hash, Eq, Debug)]
 pub enum ExpressionType {
     BinaryOperation(NodeId, NodeId, Operator),
     UnaryOperation(NodeId, Operator),
@@ -90,20 +90,22 @@ pub fn common_sub_expression_elimination(cfg: &mut ControlFlowGraph, ns: &mut Na
     let mut cst = CommonSubExpressionTracker::default();
 
     let mut sets: HashMap<usize, AvailableExpressionSet> = HashMap::new();
-    let visiting_order = find_visiting_order(cfg);
+    let (visiting_order, dag) = find_visiting_order(cfg);
+    cst.set_dag(dag);
     sets.insert(0, AvailableExpressionSet::default());
 
     // First pass: identify common subexpressions using available expressiona analysis
     for (block_no, cycle) in &visiting_order {
         let cur_block = &cfg.blocks[*block_no];
         ave.set_cur_block(*block_no);
+        cst.set_cur_block(*block_no);
         let mut cur_set = sets.remove(block_no).unwrap();
         kill_loop_variables(cur_block, &mut cur_set, *cycle);
         for instr in cur_block.instr.iter() {
             cur_set.process_instruction(instr, &mut ave, &mut cst);
         }
 
-        add_neighbor_blocks(cur_block, &cur_set, block_no, &mut sets);
+        add_neighbor_blocks(cur_block, &cur_set, block_no, &mut sets, &cst);
     }
 
     cst.create_variables(ns, cfg);
@@ -127,7 +129,7 @@ pub fn common_sub_expression_elimination(cfg: &mut ControlFlowGraph, ns: &mut Na
         }
 
         cur_block.instr = new_instructions;
-        add_neighbor_blocks(cur_block, &cur_set, block_no, &mut sets);
+        add_neighbor_blocks(cur_block, &cur_set, block_no, &mut sets, &cst);
     }
 
     cst.add_parent_block_instructions(cfg);
@@ -139,10 +141,11 @@ fn add_neighbor_blocks(
     cur_set: &AvailableExpressionSet,
     block_no: &usize,
     sets: &mut HashMap<usize, AvailableExpressionSet>,
+    cst: &CommonSubExpressionTracker,
 ) {
     for edge in block_edges(cur_block) {
         if let Some(set) = sets.get_mut(&edge) {
-            set.intersect_sets(cur_set);
+            set.intersect_sets(cur_set, cst);
         } else {
             sets.insert(edge, cur_set.clone_for_parent_block(*block_no));
         }
@@ -160,14 +163,17 @@ fn kill_loop_variables(block: &BasicBlock, cur_set: &mut AvailableExpressionSet,
     }
 }
 
-/// Find the correct visiting order for the CFG traversal. The visiting order should be the same
-/// as the execution order.
-fn find_visiting_order(cfg: &ControlFlowGraph) -> Vec<(usize, bool)> {
+/// Find the correct visiting order for the CFG traversal, using topological sorting. The visiting
+/// order should be the same as the execution order. This function also returns a DAG for the
+/// execution graph. This helps us find the lowest common ancestor later.
+fn find_visiting_order(cfg: &ControlFlowGraph) -> (Vec<(usize, bool)>, Vec<Vec<usize>>) {
     let mut order: Vec<(usize, bool)> = Vec::with_capacity(cfg.blocks.len());
     let mut visited: HashSet<usize> = HashSet::new();
     let mut stack: HashSet<usize> = HashSet::new();
     let mut has_cycle: Vec<bool> = vec![false; cfg.blocks.len()];
     let mut degrees: Vec<i32> = vec![0; cfg.blocks.len()];
+    let mut dag: Vec<Vec<usize>> = Vec::new();
+    dag.resize(cfg.blocks.len(), vec![]);
 
     cfg_dfs(
         0,
@@ -176,6 +182,7 @@ fn find_visiting_order(cfg: &ControlFlowGraph) -> Vec<(usize, bool)> {
         &mut stack,
         &mut degrees,
         &mut has_cycle,
+        &mut dag,
     );
 
     let mut queue: VecDeque<usize> = VecDeque::new();
@@ -191,7 +198,7 @@ fn find_visiting_order(cfg: &ControlFlowGraph) -> Vec<(usize, bool)> {
         }
     }
 
-    order
+    (order, dag)
 }
 
 /// Run DFS (depth first search) in the CFG to find cycles.
@@ -202,24 +209,29 @@ fn cfg_dfs(
     stack: &mut HashSet<usize>,
     degrees: &mut Vec<i32>,
     has_cycle: &mut Vec<bool>,
-) {
+    dag: &mut Vec<Vec<usize>>,
+) -> bool {
     if visited.contains(&block_no) {
-        return;
+        return true;
     }
 
     if stack.contains(&block_no) {
         degrees[block_no] -= 1;
         has_cycle[block_no] = true;
-        return;
+        return false;
     }
 
     stack.insert(block_no);
 
     for edge in block_edges(&cfg.blocks[block_no]) {
         degrees[edge] += 1;
-        cfg_dfs(edge, cfg, visited, stack, degrees, has_cycle);
+        if cfg_dfs(edge, cfg, visited, stack, degrees, has_cycle, dag) {
+            dag[block_no].push(edge);
+        }
     }
 
     stack.remove(&block_no);
     visited.insert(block_no);
+
+    true
 }

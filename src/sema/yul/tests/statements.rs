@@ -189,13 +189,10 @@ contract testTypes {
     "#;
 
     let ns = parse(file);
-    assert_eq!(ns.diagnostics.len(), 2);
+    assert_eq!(ns.diagnostics.len(), 1);
     assert!(ns
         .diagnostics
         .contains_message("found contract 'testTypes'"));
-    assert!(ns
-        .diagnostics
-        .contains_message("inline assembly is not yet supported"));
 }
 
 #[test]
@@ -235,13 +232,10 @@ contract testTypes {
     "#;
 
     let ns = parse(file);
-    assert_eq!(ns.diagnostics.len(), 2);
+    assert_eq!(ns.diagnostics.len(), 1);
     assert!(ns
         .diagnostics
         .contains_message("found contract 'testTypes'"));
-    assert!(ns
-        .diagnostics
-        .contains_message("inline assembly is not yet supported"));
 }
 
 #[test]
@@ -277,7 +271,7 @@ contract testTypes {
                 } lt(i, 0x100) {
                     i := add(i, 0x20)
                 } {
-                    x := add(x, mload(i))
+                    x := add(x, i)
                     if lt(x, 30) {
                         continue
                     }
@@ -290,13 +284,10 @@ contract testTypes {
     "#;
 
     let ns = parse(file);
-    assert_eq!(ns.diagnostics.len(), 2);
+    assert_eq!(ns.diagnostics.len(), 1);
     assert!(ns
         .diagnostics
         .contains_message("found contract 'testTypes'"));
-    assert!(ns
-        .diagnostics
-        .contains_message("inline assembly is not yet supported"));
 }
 
 #[test]
@@ -332,7 +323,7 @@ contract testTypes {
                 } lt(i, 0x100) {
                     i := add(i, 0x20)
                 } {
-                    x := add(x, mload(i))
+                    x := add(x, i)
                     if lt(x, 30) {
                         break
                     }
@@ -345,11 +336,8 @@ contract testTypes {
     "#;
 
     let ns = parse(file);
-    assert_eq!(ns.diagnostics.len(), 2);
+    assert_eq!(ns.diagnostics.len(), 1);
     assert!(ns
         .diagnostics
         .contains_message("found contract 'testTypes'"));
-    assert!(ns
-        .diagnostics
-        .contains_message("inline assembly is not yet supported"));
 }

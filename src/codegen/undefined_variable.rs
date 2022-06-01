@@ -1,4 +1,5 @@
-use crate::codegen::cfg::{ControlFlowGraph, Instr};
+use crate::ast::Type;
+use crate::codegen::cfg::{ASTFunction, ControlFlowGraph, Instr};
 use crate::codegen::reaching_definitions::{apply_transfers, VarDefs};
 use crate::codegen::{Builtin, Expression};
 use crate::parser::pt::{Loc, StorageLocation};
@@ -10,7 +11,7 @@ use std::collections::HashMap;
 /// We use this struct in expression.recurse function to provide all the
 /// parameters for detecting undefined variables
 pub struct FindUndefinedVariablesParams<'a> {
-    pub func_no: usize,
+    pub func_no: ASTFunction,
     pub defs: &'a VarDefs,
     pub ns: &'a mut Namespace,
     pub cfg: &'a ControlFlowGraph,
@@ -22,7 +23,7 @@ pub struct FindUndefinedVariablesParams<'a> {
 pub fn find_undefined_variables(
     cfg: &ControlFlowGraph,
     ns: &mut Namespace,
-    func_no: usize,
+    func_no: ASTFunction,
 ) -> bool {
     let mut diagnostics: HashMap<usize, Diagnostic> = HashMap::new();
     for block in &cfg.blocks {
@@ -49,7 +50,7 @@ pub fn find_undefined_variables(
 
 /// Checks for undefined variables in an expression associated to an instruction
 pub fn check_variables_in_expression(
-    func_no: usize,
+    func_no: ASTFunction,
     instr: &Instr,
     defs: &VarDefs,
     ns: &mut Namespace,
@@ -77,10 +78,18 @@ pub fn find_undefined_variables_in_expression(
 ) -> bool {
     match &exp {
         Expression::Variable(_, _, pos) => {
-            if let (Some(def_map), Some(var)) = (
-                ctx.defs.get(pos),
-                ctx.ns.functions[ctx.func_no].symtable.vars.get(pos),
-            ) {
+            let variable = match ctx.func_no {
+                ASTFunction::YulFunction(func_no) => {
+                    ctx.ns.yul_functions[func_no].symtable.vars.get(pos)
+                }
+                ASTFunction::SolidityFunction(func_no) => {
+                    ctx.ns.functions[func_no].symtable.vars.get(pos)
+                }
+
+                ASTFunction::None => None,
+            };
+
+            if let (Some(def_map), Some(var)) = (ctx.defs.get(pos), variable) {
                 for (def, modified) in def_map {
                     if let Instr::Set {
                         expr: instr_expr, ..
@@ -88,7 +97,10 @@ pub fn find_undefined_variables_in_expression(
                     {
                         // If an undefined definition reaches this read and the variable
                         // has not been modified since its definition, it is undefined
-                        if matches!(instr_expr, Expression::Undefined(_)) && !*modified {
+                        if matches!(instr_expr, Expression::Undefined(_))
+                            && !*modified
+                            && !matches!(var.ty, Type::Array(..))
+                        {
                             add_diagnostic(var, pos, &exp.loc(), ctx.diagnostics);
                         }
                     }
@@ -137,3 +149,5 @@ fn add_diagnostic(
         message: "Variable read before being defined".to_string(),
     });
 }
+
+// TODO: undefined variables are not yet compatible with Yul

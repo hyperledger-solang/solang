@@ -49,7 +49,7 @@ impl AvailableExpression {
     ) -> NodeId {
         let operation = exp.get_ave_operator();
         let new_node = Rc::new(RefCell::new(BasicExpression {
-            expr_type: ExpressionType::BinaryOperation(left, right, operation),
+            expr_type: ExpressionType::BinaryOperation(left, right, operation.clone()),
             expression_id: self.global_id_counter,
             children: Default::default(),
             available_variable: AvailableVariable::Unavailable,
@@ -94,7 +94,7 @@ impl AvailableExpression {
     ) -> NodeId {
         let operation = exp.get_ave_operator();
         let new_node = Rc::new(RefCell::new(BasicExpression {
-            expr_type: ExpressionType::UnaryOperation(parent, operation),
+            expr_type: ExpressionType::UnaryOperation(parent, operation.clone()),
             expression_id: self.global_id_counter,
             children: Default::default(),
             available_variable: AvailableVariable::Unavailable,

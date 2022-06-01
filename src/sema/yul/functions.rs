@@ -48,9 +48,9 @@ impl FunctionsTable {
     pub fn leave_scope(&mut self, ns: &mut Namespace) {
         let scope = self.scopes.pop_back().unwrap();
         for function_no in scope.values() {
-            let header = &self.lookup[*function_no];
+            let header = &self.lookup[*function_no - self.offset];
             if header.called {
-                self.resolved_functions[*function_no].called = true;
+                self.resolved_functions[*function_no - self.offset].called = true;
             } else {
                 ns.diagnostics.push(Diagnostic::warning(
                     header.id.loc,

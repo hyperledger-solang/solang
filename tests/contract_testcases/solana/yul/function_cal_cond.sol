@@ -9,7 +9,7 @@ contract testTypes {
                     }
                     b := add(a, 6)
                     c := tryThat(b, 2)
-                    return(b, 0)
+                    invalid()
                 }
 
                 {
@@ -17,7 +17,7 @@ contract testTypes {
                         e := shr(d, 3)
                     }
 
-                    revert(tryThis(foo(3), 2), 4)
+                    let x := sub(tryThis(foo(3), 2), 4)
                 }
 
                 function tryThat(b, a) -> c {
@@ -26,7 +26,7 @@ contract testTypes {
                         leave
                     }
                     c := 5
-                    return(b, 0)
+                    invalid()
                 }
                 let x := 5
             }

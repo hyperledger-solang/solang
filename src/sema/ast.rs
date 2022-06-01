@@ -224,6 +224,28 @@ pub struct Function {
     pub emits_events: Vec<usize>,
 }
 
+/// This trait provides a single interface for fetching paramenters, returns and the symbol table
+/// for both yul and solidity functions
+pub trait FunctionAttributes {
+    fn get_symbol_table(&self) -> &Symtable;
+    fn get_parameters(&self) -> &Vec<Parameter>;
+    fn get_returns(&self) -> &Vec<Parameter>;
+}
+
+impl FunctionAttributes for Function {
+    fn get_symbol_table(&self) -> &Symtable {
+        &self.symtable
+    }
+
+    fn get_parameters(&self) -> &Vec<Parameter> {
+        &*self.params
+    }
+
+    fn get_returns(&self) -> &Vec<Parameter> {
+        &*self.returns
+    }
+}
+
 impl Function {
     pub fn new(
         loc: pt::Loc,

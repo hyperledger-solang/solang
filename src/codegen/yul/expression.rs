@@ -1,18 +1,19 @@
-use crate::ast::{Function, Namespace, Type};
+use crate::ast::{Namespace, Type};
 use crate::codegen;
-use crate::codegen::cfg::ControlFlowGraph;
+use crate::codegen::cfg::{ControlFlowGraph, Instr, InternalCallTy};
 use crate::codegen::vartable::Vartable;
-use crate::codegen::{Expression, Options};
+use crate::codegen::yul::builtin::process_builtin;
+use crate::codegen::{Builtin, Expression, Options};
 use crate::sema::yul::ast;
-use num_bigint::BigInt;
-use solang_parser::pt::StorageLocation;
+use crate::sema::yul::ast::YulSuffix;
+use num_bigint::{BigInt, Sign};
+use solang_parser::pt;
+use solang_parser::pt::{Loc, StorageLocation};
 
-// TODO: This is a workaround to avoid compiler warnings during development.
-#[allow(dead_code)]
+/// Transform AST expressions into CFG expressions
 pub(crate) fn expression(
     expr: &ast::YulExpression,
     contract_no: usize,
-    func: Option<&Function>,
     ns: &Namespace,
     vartab: &mut Vartable,
     cfg: &mut ControlFlowGraph,
@@ -37,7 +38,7 @@ pub(crate) fn expression(
             Expression::NumberLiteral(*loc, ty.clone(), value.clone())
         }
         ast::YulExpression::StringLiteral(loc, value, ty) => {
-            Expression::BytesLiteral(*loc, ty.clone(), value.clone())
+            Expression::NumberLiteral(*loc, ty.clone(), BigInt::from_bytes_be(Sign::Plus, value))
         }
         ast::YulExpression::YulLocalVariable(loc, ty, var_no) => {
             Expression::Variable(*loc, ty.clone(), *var_no)
@@ -50,7 +51,7 @@ pub(crate) fn expression(
                     .unwrap(),
                 cfg,
                 contract_no,
-                func,
+                None,
                 ns,
                 vartab,
                 opt,
@@ -60,7 +61,7 @@ pub(crate) fn expression(
             ns.constants[*var_no].initializer.as_ref().unwrap(),
             cfg,
             contract_no,
-            func,
+            None,
             ns,
             vartab,
             opt,
@@ -72,8 +73,190 @@ pub(crate) fn expression(
         ast::YulExpression::SolidityLocalVariable(loc, ty, _, var_no) => {
             Expression::Variable(*loc, ty.clone(), *var_no)
         }
+        ast::YulExpression::SuffixAccess(loc, expr, suffix) => {
+            process_suffix_access(loc, expr, suffix, contract_no, vartab, cfg, ns, opt)
+        }
+        ast::YulExpression::FunctionCall(_, function_no, args, _) => {
+            let mut returns =
+                process_function_call(*function_no, args, contract_no, vartab, cfg, ns, opt);
+            assert_eq!(returns.len(), 1);
+            returns.remove(0)
+        }
 
-        // TODO: This is a workaround to avoid compiler errors
-        _ => Expression::Poison,
+        ast::YulExpression::BuiltInCall(loc, builtin_ty, args) => {
+            process_builtin(loc, builtin_ty, args, contract_no, ns, vartab, cfg, opt)
+        }
     }
+}
+
+/// Transform YUL suffixes into CFG instructions
+fn process_suffix_access(
+    loc: &pt::Loc,
+    expr: &ast::YulExpression,
+    suffix: &YulSuffix,
+    contract_no: usize,
+    vartab: &mut Vartable,
+    cfg: &mut ControlFlowGraph,
+    ns: &Namespace,
+    opt: &Options,
+) -> Expression {
+    match suffix {
+        YulSuffix::Slot => match expr {
+            ast::YulExpression::StorageVariable(_, _, contract_no, var_no) => {
+                return ns.contracts[*contract_no].get_storage_slot(
+                    *contract_no,
+                    *var_no,
+                    ns,
+                    Some(Type::Uint(256)),
+                );
+            }
+            ast::YulExpression::SolidityLocalVariable(
+                loc,
+                _,
+                Some(StorageLocation::Storage(_)),
+                var_no,
+            ) => {
+                return Expression::Variable(*loc, Type::Uint(256), *var_no);
+            }
+
+            _ => (),
+        },
+        YulSuffix::Offset => match expr {
+            ast::YulExpression::StorageVariable(..)
+            | ast::YulExpression::SolidityLocalVariable(
+                _,
+                _,
+                Some(StorageLocation::Storage(_)),
+                ..,
+            ) => {
+                return Expression::NumberLiteral(Loc::Codegen, Type::Uint(256), BigInt::from(0));
+            }
+
+            ast::YulExpression::SolidityLocalVariable(
+                _,
+                ty @ Type::Array(_, ref dims),
+                Some(StorageLocation::Calldata(_)),
+                var_no,
+            ) => {
+                if dims.last().unwrap().is_none() {
+                    return Expression::Cast(
+                        *loc,
+                        Type::Uint(256),
+                        Box::new(Expression::Variable(*loc, ty.clone(), *var_no)),
+                    );
+                }
+            }
+
+            _ => (),
+        },
+
+        YulSuffix::Length => {
+            if let ast::YulExpression::SolidityLocalVariable(
+                _,
+                Type::Array(_, ref dims),
+                Some(StorageLocation::Calldata(_)),
+                _,
+            ) = expr
+            {
+                if dims.last().unwrap().is_none() {
+                    return Expression::Builtin(
+                        *loc,
+                        vec![Type::Uint(32)],
+                        Builtin::ArrayLength,
+                        vec![expression(expr, contract_no, ns, vartab, cfg, opt)],
+                    );
+                }
+            }
+        }
+
+        YulSuffix::Address => {
+            if let ast::YulExpression::SolidityLocalVariable(_, Type::ExternalFunction { .. }, ..) =
+                expr
+            {
+                return Expression::Builtin(
+                    *loc,
+                    vec![Type::Address(false)],
+                    Builtin::ExternalFunctionAddress,
+                    vec![expression(expr, contract_no, ns, vartab, cfg, opt)],
+                );
+            }
+        }
+
+        YulSuffix::Selector => {
+            if let ast::YulExpression::SolidityLocalVariable(_, Type::ExternalFunction { .. }, ..) =
+                expr
+            {
+                return Expression::Builtin(
+                    *loc,
+                    vec![Type::Uint(32)],
+                    Builtin::FunctionSelector,
+                    vec![expression(expr, contract_no, ns, vartab, cfg, opt)],
+                );
+            }
+        }
+    }
+
+    unreachable!("Expression does not support suffixes");
+}
+
+/// Add function call instructions to the CFG
+pub(crate) fn process_function_call(
+    function_no: usize,
+    args: &[ast::YulExpression],
+    contract_no: usize,
+    vartab: &mut Vartable,
+    cfg: &mut ControlFlowGraph,
+    ns: &Namespace,
+    opt: &Options,
+) -> Vec<Expression> {
+    let mut codegen_args: Vec<Expression> = Vec::with_capacity(args.len());
+    for (param_no, item) in ns.yul_functions[function_no].params.iter().enumerate() {
+        codegen_args.push(
+            expression(&args[param_no], contract_no, ns, vartab, cfg, opt).cast(&item.ty, ns),
+        );
+    }
+
+    let cfg_no = ns.yul_functions[function_no].cfg_no;
+
+    if ns.yul_functions[function_no].returns.is_empty() {
+        cfg.add(
+            vartab,
+            Instr::Call {
+                res: Vec::new(),
+                return_tys: Vec::new(),
+                call: InternalCallTy::Static(cfg_no),
+                args: codegen_args,
+            },
+        );
+
+        return vec![Expression::Poison];
+    }
+
+    let mut res = Vec::new();
+    let mut returns = Vec::new();
+    let mut return_tys = Vec::new();
+
+    for ret in &*ns.yul_functions[function_no].returns {
+        let id = pt::Identifier {
+            loc: ret.loc,
+            name: ret.name_as_str().to_owned(),
+        };
+
+        let temp_pos = vartab.temp(&id, &ret.ty);
+        return_tys.push(ret.ty.clone());
+        res.push(temp_pos);
+        returns.push(Expression::Variable(id.loc, ret.ty.clone(), temp_pos));
+    }
+
+    cfg.add(
+        vartab,
+        Instr::Call {
+            res,
+            call: InternalCallTy::Static(cfg_no),
+            args: codegen_args,
+            return_tys,
+        },
+    );
+
+    returns
 }

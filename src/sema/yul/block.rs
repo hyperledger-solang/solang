@@ -41,6 +41,7 @@ pub fn resolve_yul_block(
         YulBlock {
             loc: *loc,
             reachable,
+            next_reachable,
             body,
         },
         next_reachable,
