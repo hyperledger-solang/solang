@@ -825,7 +825,7 @@ pub fn builtin_var(
                 diagnostics.push(Diagnostic::error(
                     *loc,
                     String::from(
-                        "use the function 'tx.gasprice(gas)' in stead, as 'tx.gasprice' may round down to zero. See https://solang.readthedocs.io/en/latest/language.html#gasprice",
+                        "use the function 'tx.gasprice(gas)' in stead, as 'tx.gasprice' may round down to zero. See https://solang.readthedocs.io/en/latest/language/builtins.html#gasprice",
                     ),
                 ));
             }
@@ -948,7 +948,7 @@ pub fn resolve_call(
                         diagnostics.push(Diagnostic::warning(
                             *loc,
                             String::from(
-                                "the function call 'tx.gasprice(1)' may round down to zero. See https://solang.readthedocs.io/en/latest/language.html#gasprice",
+                                "the function call 'tx.gasprice(1)' may round down to zero. See https://solang.readthedocs.io/en/latest/language/builtins.html#gasprice",
                             ),
                         ));
                     }

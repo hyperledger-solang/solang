@@ -8,7 +8,7 @@ strict digraph "tests/contract_testcases/substrate/functions/fallback.sol" {
 	storage_load [label="storage load int64\ntests/contract_testcases/substrate/functions/fallback.sol:6:17-30"]
 	storage_var [label="storage variable\ntest.result\nint64 storage\ntests/contract_testcases/substrate/functions/fallback.sol:6:24-30"]
 	diagnostic [label="found contract 'test'\nlevel Debug\ntests/contract_testcases/substrate/functions/fallback.sol:2:9-23"]
-	diagnostic_11 [label="function is missing a name. A function without a name is syntax for 'fallback() external' or 'receive() external' in older versions of the Solidity language, see https://solang.readthedocs.io/en/latest/language.html#fallback-and-receive-function\nlevel Error\ntests/contract_testcases/substrate/functions/fallback.sol:9:13-32"]
+	diagnostic_11 [label="function is missing a name. A function without a name is syntax for 'fallback() external' or 'receive() external' in older versions of the Solidity language, see https://solang.readthedocs.io/en/latest/language/functions.html#fallback-and-receive-function\nlevel Error\ntests/contract_testcases/substrate/functions/fallback.sol:9:13-32"]
 	contracts -> contract
 	contract -> var [label="variable"]
 	var -> number_literal [label="initializer"]
