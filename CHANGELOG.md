@@ -6,6 +6,7 @@ will be documented here.
 
 ### Added
 - Added spl-token integration for Solana
+- Solang now generates code for inline assembly, including many Yul builtins
 
 ### Changed
 - The documentation has been re-arranged for readability.

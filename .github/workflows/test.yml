@@ -33,15 +33,17 @@ jobs:
   docs:
     name: Docs
     runs-on: ubuntu-latest
-    container: ubuntu:22.04
+    container: ubuntu:20.04
     steps:
       - name: Checkout sources
         uses: actions/checkout@v2
-      - name: Install sphinx
+      - name: Install Python
         run: |
-          export DEBIAN_FRONTEND=noninteractive
           apt-get update
-          apt-get install -y python3-sphinx python3-sphinx-rtd-theme
+          apt-get install -y python3-pip
+      - name: Install Docs requiremets
+        run : |
+          pip install -r requirements.txt
       - name: Build docs
         run: make html
         working-directory: docs
