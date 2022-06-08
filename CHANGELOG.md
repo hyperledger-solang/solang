@@ -2,7 +2,7 @@
 All notable changes to [Solang](https://github.com/hyperledger-labs/solang/)
 will be documented here.
 
-## [Unreleased]
+## v0.1.12 Cario
 
 ### Added
 - Added spl-token integration for Solana
@@ -18,7 +18,7 @@ will be documented here.
   `git submodule update --init --recursive` to fetch the test files, and
   then run the test with `cargo test --workspace`.
 
-## [0.1.11]
+## v0.1.11 Nuremberg
 
 ### Added
 - Added support for Solidity user types
@@ -34,7 +34,7 @@ will be documented here.
 - Fixed associativity of the power operator
 - A huge amount of fixes improving compatibility with solc
 
-## [0.1.10]
+## v0.1.10 Barcelona
 
 ### Added
 - On Solana, the accounts that were passed into the transactions are listed in
@@ -50,7 +50,7 @@ will be documented here.
 - The ast datastructure has been simplified.
 - Many bugfixes across the entire tree.
 
-## [0.1.9]
+## v0.1.9
 
 ### Added
 - Added support for solc import mapppings using `--importmap`
@@ -77,7 +77,7 @@ will be documented here.
 - The Sawtooth Sabre target has been removed.
 - The generic target has been removed.
 
-## [0.1.8]
+## v0.1.8
 
 ### Added
 - Added a strength reduce pass to eliminate 256/128 bit multiply, division,
@@ -111,7 +111,7 @@ will be documented here.
 - Fixed array support in the ethereum abi encoder and decoder
 - Fixed issues in arithmetic on non-power-of-2 types (e.g. uint112)
 
-## [0.1.7]
+## v0.1.7
 
 ### Added
 - Added a constant folding optimization pass to improve codegen. When variables fold
@@ -133,7 +133,7 @@ will be documented here.
 - Ewasm uses precompiles for keccak hashing
 - Various ewasm fixes for Hyperledger Burrow
 
-## [0.1.6]
+## v0.1.6
 
 ### Added
 - New Visual Studio Code extension developed under Hyperledger Mentorship
@@ -144,7 +144,7 @@ will be documented here.
 - Constants can be declared outside of contracts
 - String formatting using python style "..{}..".format(n)
 
-## [0.1.5]
+## v0.1.5
 
 ### Added
 - Function types are implemented
@@ -154,7 +154,7 @@ will be documented here.
 ### Changed
 - The Substrate target requires Substrate 2.0
 
-## [0.1.4]
+## v0.1.4
 
 ### Added
 - `event` can be declared and emitted with `emit`
@@ -163,7 +163,7 @@ will be documented here.
 - All major Solidity language features implemented, see our language status page:
   https://solang.readthedocs.io/en/latest/status.html
 
-## [0.1.3]
+## v0.1.3
 
 ### Added
 - `import` directives are supported
