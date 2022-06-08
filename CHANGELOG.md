@@ -10,6 +10,7 @@ will be documented here.
 
 ### Changed
 - The documentation has been re-arranged for readability.
+- The solang parser can parse the same syntax as Ethereum Solidity 0.8.
 
 ### Fixed
 - Fixed many parser issues. Now solang-parser parses all files in the
