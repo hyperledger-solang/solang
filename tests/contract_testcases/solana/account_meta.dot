@@ -1,5 +1,5 @@
 strict digraph "tests/contract_testcases/solana/account_meta.sol" {
-	contract [label="contract spl\ntests/contract_testcases/solana/account_meta.sol:2:1-3:14"]
+	contract [label="contract spl\ntests/contract_testcases/solana/account_meta.sol:2:1-18:2"]
 	foo [label="function foo\ncontract: spl\ntests/contract_testcases/solana/account_meta.sol:4:2-47\nsignature foo()\nvisibility public\nmutability nonpayable"]
 	returns [label="returns\nbool \naddress "]
 	var_decl [label="variable decl struct AccountMeta meta\ntests/contract_testcases/solana/account_meta.sol:5:3-75"]
@@ -46,7 +46,7 @@ strict digraph "tests/contract_testcases/solana/account_meta.sol" {
 	subscript_46 [label="subscript struct AccountMeta[2]\ntests/contract_testcases/solana/account_meta.sol:15:32-39"]
 	variable_47 [label="variable: meta\nstruct AccountMeta[2]\ntests/contract_testcases/solana/account_meta.sol:15:32-36"]
 	number_literal_48 [label="uint32 literal: 0\ntests/contract_testcases/solana/account_meta.sol:15:37-38"]
-	diagnostic [label="found contract 'spl'\nlevel Debug\ntests/contract_testcases/solana/account_meta.sol:2:1-3:14"]
+	diagnostic [label="found contract 'spl'\nlevel Debug\ntests/contract_testcases/solana/account_meta.sol:2:1-18:2"]
 	diagnostic_51 [label="function can be declared 'pure'\nlevel Warning\ntests/contract_testcases/solana/account_meta.sol:4:2-47"]
 	diagnostic_52 [label="function can be declared 'pure'\nlevel Warning\ntests/contract_testcases/solana/account_meta.sol:9:2-56"]
 	contracts -> contract

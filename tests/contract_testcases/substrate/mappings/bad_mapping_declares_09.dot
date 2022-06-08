@@ -1,8 +1,8 @@
 strict digraph "tests/contract_testcases/substrate/mappings/bad_mapping_declares_09.sol" {
-	contract [label="contract c\ntests/contract_testcases/substrate/mappings/bad_mapping_declares_09.sol:2:9-20"]
+	contract [label="contract c\ntests/contract_testcases/substrate/mappings/bad_mapping_declares_09.sol:2:9-7:10"]
 	var [label="variable data\nvisibility internal\ntests/contract_testcases/substrate/mappings/bad_mapping_declares_09.sol:3:13-39"]
 	test [label="function test\ncontract: c\ntests/contract_testcases/substrate/mappings/bad_mapping_declares_09.sol:4:13-35\nsignature test()\nvisibility public\nmutability nonpayable"]
-	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/mappings/bad_mapping_declares_09.sol:2:9-20"]
+	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/mappings/bad_mapping_declares_09.sol:2:9-7:10"]
 	diagnostic_6 [label="'delete' cannot be applied to mapping type\nlevel Error\ntests/contract_testcases/substrate/mappings/bad_mapping_declares_09.sol:5:17-28"]
 	contracts -> contract
 	contract -> var [label="variable"]

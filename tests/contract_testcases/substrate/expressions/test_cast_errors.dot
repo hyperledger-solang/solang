@@ -1,8 +1,8 @@
 strict digraph "tests/contract_testcases/substrate/expressions/test_cast_errors.sol" {
-	contract [label="contract test\ntests/contract_testcases/substrate/expressions/test_cast_errors.sol:1:1-15"]
+	contract [label="contract test\ntests/contract_testcases/substrate/expressions/test_cast_errors.sol:1:1-5:10"]
 	foo [label="function foo\ncontract: test\ntests/contract_testcases/substrate/expressions/test_cast_errors.sol:2:13-42\nsignature foo(uint256)\nvisibility public\nmutability nonpayable"]
 	parameters [label="parameters\nuint256 bar"]
-	diagnostic [label="found contract 'test'\nlevel Debug\ntests/contract_testcases/substrate/expressions/test_cast_errors.sol:1:1-15"]
+	diagnostic [label="found contract 'test'\nlevel Debug\ntests/contract_testcases/substrate/expressions/test_cast_errors.sol:1:1-5:10"]
 	diagnostic_6 [label="conversion from uint256 to bool not possible\nlevel Error\ntests/contract_testcases/substrate/expressions/test_cast_errors.sol:3:35-38"]
 	contracts -> contract
 	contract -> foo [label="function"]

@@ -1,5 +1,5 @@
 strict digraph "tests/contract_testcases/solana/expressions/bytes32_0_02.sol" {
-	contract [label="contract foo\ntests/contract_testcases/solana/expressions/bytes32_0_02.sol:2:9-22"]
+	contract [label="contract foo\ntests/contract_testcases/solana/expressions/bytes32_0_02.sol:2:9-14:10"]
 	var [label="variable x\nvisibility public\ntests/contract_testcases/solana/expressions/bytes32_0_02.sol:3:13-36"]
 	number_literal [label="bytes32 literal: 0\ntests/contract_testcases/solana/expressions/bytes32_0_02.sol:3:32-36"]
 	var_5 [label="variable y\nvisibility public\ntests/contract_testcases/solana/expressions/bytes32_0_02.sol:4:13-42"]
@@ -37,7 +37,7 @@ strict digraph "tests/contract_testcases/solana/expressions/bytes32_0_02.sol" {
 	storage_var_37 [label="storage variable\nfoo.z3\nbytes3 storage\nimplicit"]
 	b32 [label="function b32\ncontract: foo\ntests/contract_testcases/solana/expressions/bytes32_0_02.sol:11:13-59\nsignature b32()\nvisibility public\nmutability pure"]
 	returns_39 [label="returns\nbytes32 r"]
-	diagnostic [label="found contract 'foo'\nlevel Debug\ntests/contract_testcases/solana/expressions/bytes32_0_02.sol:2:9-22"]
+	diagnostic [label="found contract 'foo'\nlevel Debug\ntests/contract_testcases/solana/expressions/bytes32_0_02.sol:2:9-14:10"]
 	diagnostic_42 [label="negative number cannot be converted to type 'bytes32'\nlevel Error\ntests/contract_testcases/solana/expressions/bytes32_0_02.sol:12:21-32"]
 	contracts -> contract
 	contract -> var [label="variable"]

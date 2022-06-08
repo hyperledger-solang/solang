@@ -1,6 +1,6 @@
 strict digraph "tests/contract_testcases/substrate/structs/parse_structs.sol" {
 	Foo [label="name:Foo\ncontract: test_struct_parsing\ntests/contract_testcases/substrate/structs/parse_structs.sol:3:20-23"]
-	contract [label="contract test_struct_parsing\ntests/contract_testcases/substrate/structs/parse_structs.sol:2:9-38"]
+	contract [label="contract test_struct_parsing\ntests/contract_testcases/substrate/structs/parse_structs.sol:2:9-7:10"]
 	diagnostic [label="struct 'Foo' has duplicate struct field 'a'\nlevel Error\ntests/contract_testcases/substrate/structs/parse_structs.sol:5:22-23"]
 	note [label="location of previous declaration of 'a'\ntests/contract_testcases/substrate/structs/parse_structs.sol:4:17-23"]
 	structs -> Foo

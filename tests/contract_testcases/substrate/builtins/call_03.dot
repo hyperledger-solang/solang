@@ -1,15 +1,15 @@
 strict digraph "tests/contract_testcases/substrate/builtins/call_03.sol" {
-	contract [label="contract superior\ntests/contract_testcases/substrate/builtins/call_03.sol:2:9-27"]
+	contract [label="contract superior\ntests/contract_testcases/substrate/builtins/call_03.sol:2:9-8:10"]
 	test [label="function test\ncontract: superior\ntests/contract_testcases/substrate/builtins/call_03.sol:3:13-35\nsignature test()\nvisibility public\nmutability nonpayable"]
-	contract_3 [label="contract inferior\ntests/contract_testcases/substrate/builtins/call_03.sol:10:9-27"]
+	contract_3 [label="contract inferior\ntests/contract_testcases/substrate/builtins/call_03.sol:10:9-14:10"]
 	baa [label="function baa\ncontract: inferior\ntests/contract_testcases/substrate/builtins/call_03.sol:11:13-34\nsignature baa()\nvisibility public\nmutability nonpayable"]
 	expr [label="expression\ntests/contract_testcases/substrate/builtins/call_03.sol:12:17-30"]
 	builtins [label="builtin Print\ntests/contract_testcases/substrate/builtins/call_03.sol:12:17-22"]
 	alloc_array [label="alloc array string\ninitializer: 42616121\ntests/contract_testcases/substrate/builtins/call_03.sol:12:23-29"]
 	number_literal [label="uint32 literal: 4\ntests/contract_testcases/substrate/builtins/call_03.sol:12:23-29"]
-	diagnostic [label="found contract 'superior'\nlevel Debug\ntests/contract_testcases/substrate/builtins/call_03.sol:2:9-27"]
+	diagnostic [label="found contract 'superior'\nlevel Debug\ntests/contract_testcases/substrate/builtins/call_03.sol:2:9-8:10"]
 	diagnostic_11 [label="conversion from bool to bytes not possible\nlevel Error\ntests/contract_testcases/substrate/builtins/call_03.sol:6:14-21"]
-	diagnostic_12 [label="found contract 'inferior'\nlevel Debug\ntests/contract_testcases/substrate/builtins/call_03.sol:10:9-27"]
+	diagnostic_12 [label="found contract 'inferior'\nlevel Debug\ntests/contract_testcases/substrate/builtins/call_03.sol:10:9-14:10"]
 	contracts -> contract
 	contract -> test [label="function"]
 	contracts -> contract_3

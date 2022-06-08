@@ -1,7 +1,7 @@
 strict digraph "tests/contract_testcases/substrate/inheritance/test_interface_06.sol" {
-	contract [label="contract bar\ntests/contract_testcases/substrate/inheritance/test_interface_06.sol:2:9-23"]
+	contract [label="contract bar\ntests/contract_testcases/substrate/inheritance/test_interface_06.sol:2:9-4:10"]
 	foo [label="function foo\ncontract: bar\ntests/contract_testcases/substrate/inheritance/test_interface_06.sol:3:13-44\nsignature foo()\nvisibility external\nmutability nonpayable\nvirtual"]
-	diagnostic [label="found interface 'bar'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/test_interface_06.sol:2:9-23"]
+	diagnostic [label="found interface 'bar'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/test_interface_06.sol:2:9-4:10"]
 	diagnostic_5 [label="functions in an interface are implicitly virtual\nlevel Warning\ntests/contract_testcases/substrate/inheritance/test_interface_06.sol:3:28-35"]
 	contracts -> contract
 	contract -> foo [label="function"]

@@ -1,6 +1,6 @@
 strict digraph "tests/contract_testcases/solana/now.sol" {
 	S [label="name:S\ncontract: c\ntests/contract_testcases/solana/now.sol:2:9-10\nfield name:f1 ty:int256"]
-	contract [label="contract c\ntests/contract_testcases/solana/now.sol:1:1-12"]
+	contract [label="contract c\ntests/contract_testcases/solana/now.sol:1:1-19:2"]
 	f [label="function f\ncontract: c\ntests/contract_testcases/solana/now.sol:3:2-38\nsignature f((int256))\nvisibility public\nmutability nonpayable"]
 	parameters [label="parameters\nstruct c.S s"]
 	returns [label="returns\nint256 "]
@@ -15,7 +15,7 @@ strict digraph "tests/contract_testcases/solana/now.sol" {
 	number_literal [label="int256 literal: 5\ntests/contract_testcases/solana/now.sol:16:13-14"]
 	return [label="return\ntests/contract_testcases/solana/now.sol:17:3-13"]
 	variable [label="variable: now\nint256\ntests/contract_testcases/solana/now.sol:17:10-13"]
-	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/solana/now.sol:1:1-12"]
+	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/solana/now.sol:1:1-19:2"]
 	diagnostic_20 [label="'now' not found\nlevel Error\ntests/contract_testcases/solana/now.sol:4:10-13"]
 	diagnostic_21 [label="unknown function or type 'now'\nlevel Error\ntests/contract_testcases/solana/now.sol:7:3-6"]
 	diagnostic_22 [label="'now' not found. 'now' was an alias for 'block.timestamp' in older versions of the Solidity language. Please use 'block.timestamp' instead.\nlevel Error\ntests/contract_testcases/solana/now.sol:10:10-13"]

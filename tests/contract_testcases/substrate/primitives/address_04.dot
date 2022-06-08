@@ -1,7 +1,7 @@
 strict digraph "tests/contract_testcases/substrate/primitives/address_04.sol" {
-	contract [label="contract test\ntests/contract_testcases/substrate/primitives/address_04.sol:1:1-15"]
+	contract [label="contract test\ntests/contract_testcases/substrate/primitives/address_04.sol:1:1-3:10"]
 	var [label="variable foo\nvisibility internal\ntests/contract_testcases/substrate/primitives/address_04.sol:2:13-84"]
-	diagnostic [label="found contract 'test'\nlevel Debug\ntests/contract_testcases/substrate/primitives/address_04.sol:1:1-15"]
+	diagnostic [label="found contract 'test'\nlevel Debug\ntests/contract_testcases/substrate/primitives/address_04.sol:1:1-3:10"]
 	diagnostic_6 [label="address literal 5GBWmgdFAMqm8ZgAHGobqDqX6tjLxJhv53ygjNtaaAn3sjZZ hash incorrect checksum\nlevel Error\ntests/contract_testcases/substrate/primitives/address_04.sol:2:27-84"]
 	contracts -> contract
 	contract -> var [label="variable"]

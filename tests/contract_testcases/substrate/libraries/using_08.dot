@@ -1,6 +1,6 @@
 strict digraph "tests/contract_testcases/substrate/libraries/using_08.sol" {
 	S [label="name:S\ntests/contract_testcases/substrate/libraries/using_08.sol:2:8-9\nfield name:f1 ty:int256"]
-	contract [label="contract c\ntests/contract_testcases/substrate/libraries/using_08.sol:13:1-14:12"]
+	contract [label="contract c\ntests/contract_testcases/substrate/libraries/using_08.sol:13:1-18:2"]
 	f [label="function f\ncontract: c\ntests/contract_testcases/substrate/libraries/using_08.sol:15:2-31\nsignature f((int256))\nvisibility public\nmutability nonpayable"]
 	parameters [label="parameters\nstruct S s"]
 	expr [label="expression\ntests/contract_testcases/substrate/libraries/using_08.sol:16:3-10"]
@@ -10,7 +10,7 @@ strict digraph "tests/contract_testcases/substrate/libraries/using_08.sol" {
 	diagnostic [label="using must be bound to specific type, '*' cannot be used on file scope\nlevel Error\ntests/contract_testcases/substrate/libraries/using_08.sol:4:1-5:18"]
 	diagnostic_12 [label="'global' only permitted on user defined types\nlevel Error\ntests/contract_testcases/substrate/libraries/using_08.sol:6:21-27"]
 	diagnostic_13 [label="'meh' not expected, did you mean 'global'?\nlevel Error\ntests/contract_testcases/substrate/libraries/using_08.sol:8:19-22"]
-	diagnostic_14 [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/libraries/using_08.sol:13:1-14:12"]
+	diagnostic_14 [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/libraries/using_08.sol:13:1-18:2"]
 	structs -> S
 	contracts -> contract
 	contract -> f [label="function"]

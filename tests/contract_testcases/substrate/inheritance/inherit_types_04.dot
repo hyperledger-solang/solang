@@ -1,6 +1,6 @@
 strict digraph "tests/contract_testcases/substrate/inheritance/inherit_types_04.sol" {
 	foo [label="name:foo\ncontract: b\ntests/contract_testcases/substrate/inheritance/inherit_types_04.sol:7:20-23\nfield name:f1 ty:uint32\nfield name:f2 ty:uint32"]
-	contract [label="contract a\ntests/contract_testcases/substrate/inheritance/inherit_types_04.sol:2:9-24"]
+	contract [label="contract a\ntests/contract_testcases/substrate/inheritance/inherit_types_04.sol:2:9-4:10"]
 	base [label="base b\ntests/contract_testcases/substrate/inheritance/inherit_types_04.sol:2:23-24"]
 	var [label="variable var1\nvisibility public\ntests/contract_testcases/substrate/inheritance/inherit_types_04.sol:3:13-28"]
 	var1 [label="function var1\ncontract: a\ntests/contract_testcases/substrate/inheritance/inherit_types_04.sol:3:24-28\nsignature var1()\nvisibility public\nmutability view"]
@@ -8,9 +8,9 @@ strict digraph "tests/contract_testcases/substrate/inheritance/inherit_types_04.
 	return [label="return\nimplicit"]
 	storage_load [label="storage load struct b.foo\nimplicit"]
 	storage_var [label="storage variable\na.var1\nstruct b.foo storage\nimplicit"]
-	contract_11 [label="contract b\ntests/contract_testcases/substrate/inheritance/inherit_types_04.sol:6:9-20"]
-	diagnostic [label="found contract 'a'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/inherit_types_04.sol:2:9-24"]
-	diagnostic_14 [label="found contract 'b'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/inherit_types_04.sol:6:9-20"]
+	contract_11 [label="contract b\ntests/contract_testcases/substrate/inheritance/inherit_types_04.sol:6:9-11:10"]
+	diagnostic [label="found contract 'a'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/inherit_types_04.sol:2:9-4:10"]
+	diagnostic_14 [label="found contract 'b'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/inherit_types_04.sol:6:9-11:10"]
 	structs -> foo
 	contracts -> contract
 	contract -> base [label="base"]

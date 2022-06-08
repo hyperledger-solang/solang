@@ -1,6 +1,6 @@
 strict digraph "tests/contract_testcases/substrate/inheritance/test_override.sol" {
-	contract [label="contract base\ntests/contract_testcases/substrate/inheritance/test_override.sol:2:9-23"]
-	diagnostic [label="found contract 'base'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/test_override.sol:2:9-23"]
+	contract [label="contract base\ntests/contract_testcases/substrate/inheritance/test_override.sol:2:9-6:10"]
+	diagnostic [label="found contract 'base'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/test_override.sol:2:9-6:10"]
 	diagnostic_5 [label="function redeclared 'override'\nlevel Error\ntests/contract_testcases/substrate/inheritance/test_override.sol:3:45-53"]
 	note [label="location of previous declaration of 'override'\ntests/contract_testcases/substrate/inheritance/test_override.sol:3:36-44"]
 	contracts -> contract

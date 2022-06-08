@@ -1,5 +1,5 @@
 strict digraph "tests/contract_testcases/solana/large_exponent.sol" {
-	contract [label="contract C\ntests/contract_testcases/solana/large_exponent.sol:1:1-12"]
+	contract [label="contract C\ntests/contract_testcases/solana/large_exponent.sol:1:1-16:2"]
 	var [label="variable a\nvisibility internal\nconstant\ntests/contract_testcases/solana/large_exponent.sol:2:6-31"]
 	var_4 [label="variable b\nvisibility internal\nconstant\ntests/contract_testcases/solana/large_exponent.sol:3:6-34"]
 	var_5 [label="variable c\nvisibility internal\nconstant\ntests/contract_testcases/solana/large_exponent.sol:4:6-33"]
@@ -7,7 +7,7 @@ strict digraph "tests/contract_testcases/solana/large_exponent.sol" {
 	inline_assembly [label="inline assembly\ntests/contract_testcases/solana/large_exponent.sol:6:2-8:3"]
 	g [label="function g\ncontract: C\ntests/contract_testcases/solana/large_exponent.sol:10:6-26\nsignature g()\nvisibility private\nmutability nonpayable"]
 	inline_assembly_9 [label="inline assembly\ntests/contract_testcases/solana/large_exponent.sol:11:2-13:3"]
-	diagnostic [label="found contract 'C'\nlevel Debug\ntests/contract_testcases/solana/large_exponent.sol:1:1-12"]
+	diagnostic [label="found contract 'C'\nlevel Debug\ntests/contract_testcases/solana/large_exponent.sol:1:1-16:2"]
 	diagnostic_12 [label="literal 1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000 is too large to fit into type 'int256'\nlevel Error\ntests/contract_testcases/solana/large_exponent.sol:2:26-31"]
 	diagnostic_13 [label="exponent '-65535' too large\nlevel Error\ntests/contract_testcases/solana/large_exponent.sol:3:26-34"]
 	diagnostic_14 [label="exponent '65537' too large\nlevel Error\ntests/contract_testcases/solana/large_exponent.sol:4:26-33"]

@@ -1,9 +1,9 @@
 strict digraph "tests/contract_testcases/substrate/functions/args_and_returns_02.sol" {
-	contract [label="contract args\ntests/contract_testcases/substrate/functions/args_and_returns_02.sol:2:5-19"]
+	contract [label="contract args\ntests/contract_testcases/substrate/functions/args_and_returns_02.sol:2:5-5:6"]
 	foo [label="function foo\ncontract: args\ntests/contract_testcases/substrate/functions/args_and_returns_02.sol:3:9-74\nsignature foo(bool,uint256)\nvisibility public\nmutability nonpayable"]
 	parameters [label="parameters\nbool arg1\nuint256 arg2"]
 	returns [label="returns\naddress \nuint256 "]
-	diagnostic [label="found contract 'args'\nlevel Debug\ntests/contract_testcases/substrate/functions/args_and_returns_02.sol:2:5-19"]
+	diagnostic [label="found contract 'args'\nlevel Debug\ntests/contract_testcases/substrate/functions/args_and_returns_02.sol:2:5-5:6"]
 	diagnostic_7 [label="missing return statement\nlevel Error\ntests/contract_testcases/substrate/functions/args_and_returns_02.sol:4:10"]
 	contracts -> contract
 	contract -> foo [label="function"]

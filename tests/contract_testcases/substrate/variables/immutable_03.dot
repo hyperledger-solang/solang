@@ -1,5 +1,5 @@
 strict digraph "tests/contract_testcases/substrate/variables/immutable_03.sol" {
-	contract [label="contract x\ntests/contract_testcases/substrate/variables/immutable_03.sol:1:1-12"]
+	contract [label="contract x\ntests/contract_testcases/substrate/variables/immutable_03.sol:1:1-7:10"]
 	var [label="variable y\nvisibility public\nimmutable\ntests/contract_testcases/substrate/variables/immutable_03.sol:2:13-37"]
 	y [label="function y\ncontract: x\ntests/contract_testcases/substrate/variables/immutable_03.sol:2:36-37\nsignature y(uint256)\nvisibility public\nmutability view"]
 	parameters [label="parameters\nuint256 "]
@@ -10,7 +10,7 @@ strict digraph "tests/contract_testcases/substrate/variables/immutable_03.sol" {
 	storage_var [label="storage variable\nx.y\nint256[] storage\nimplicit"]
 	variable [label="variable: \nuint256\nimplicit"]
 	foo [label="function foo\ncontract: x\ntests/contract_testcases/substrate/variables/immutable_03.sol:4:13-34\nsignature foo()\nvisibility public\nmutability nonpayable"]
-	diagnostic [label="found contract 'x'\nlevel Debug\ntests/contract_testcases/substrate/variables/immutable_03.sol:1:1-12"]
+	diagnostic [label="found contract 'x'\nlevel Debug\ntests/contract_testcases/substrate/variables/immutable_03.sol:1:1-7:10"]
 	diagnostic_14 [label="cannot call method on immutable array outside of constructor\nlevel Error\ntests/contract_testcases/substrate/variables/immutable_03.sol:5:17-25"]
 	contracts -> contract
 	contract -> var [label="variable"]

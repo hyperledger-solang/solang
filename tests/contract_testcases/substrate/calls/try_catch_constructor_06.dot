@@ -1,12 +1,12 @@
 strict digraph "tests/contract_testcases/substrate/calls/try_catch_constructor_06.sol" {
-	contract [label="contract c\ntests/contract_testcases/substrate/calls/try_catch_constructor_06.sol:2:9-20"]
+	contract [label="contract c\ntests/contract_testcases/substrate/calls/try_catch_constructor_06.sol:2:9-14:10"]
 	test [label="function test\ncontract: c\ntests/contract_testcases/substrate/calls/try_catch_constructor_06.sol:3:13-42\nsignature test(address)\nvisibility public\nmutability nonpayable"]
 	parameters [label="parameters\ncontract other o"]
-	contract_4 [label="contract other\ntests/contract_testcases/substrate/calls/try_catch_constructor_06.sol:16:9-24"]
+	contract_4 [label="contract other\ntests/contract_testcases/substrate/calls/try_catch_constructor_06.sol:16:9-19:10"]
 	test_5 [label="function test\ncontract: other\ntests/contract_testcases/substrate/calls/try_catch_constructor_06.sol:17:13-35\nsignature test()\nvisibility public\nmutability nonpayable"]
-	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/calls/try_catch_constructor_06.sol:2:9-20"]
+	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/calls/try_catch_constructor_06.sol:2:9-14:10"]
 	diagnostic_8 [label="unexpected code block\nlevel Error\ntests/contract_testcases/substrate/calls/try_catch_constructor_06.sol:4:30-6:18"]
-	diagnostic_9 [label="found contract 'other'\nlevel Debug\ntests/contract_testcases/substrate/calls/try_catch_constructor_06.sol:16:9-24"]
+	diagnostic_9 [label="found contract 'other'\nlevel Debug\ntests/contract_testcases/substrate/calls/try_catch_constructor_06.sol:16:9-19:10"]
 	contracts -> contract
 	contract -> test [label="function"]
 	test -> parameters [label="parameters"]

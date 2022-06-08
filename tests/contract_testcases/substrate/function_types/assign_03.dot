@@ -1,12 +1,12 @@
 strict digraph "tests/contract_testcases/substrate/function_types/assign_03.sol" {
-	contract [label="contract test\ntests/contract_testcases/substrate/function_types/assign_03.sol:1:1-15"]
+	contract [label="contract test\ntests/contract_testcases/substrate/function_types/assign_03.sol:1:1-9:10"]
 	x [label="function x\ncontract: test\ntests/contract_testcases/substrate/function_types/assign_03.sol:2:13-59\nsignature x(int32)\nvisibility internal\nmutability nonpayable"]
 	parameters [label="parameters\nint32 arg1"]
 	returns [label="returns\nbool "]
 	return [label="return\ntests/contract_testcases/substrate/function_types/assign_03.sol:3:17-29"]
 	bool_literal [label="bool literal: false\ntests/contract_testcases/substrate/function_types/assign_03.sol:3:24-29"]
 	foo [label="function foo\ncontract: test\ntests/contract_testcases/substrate/function_types/assign_03.sol:6:13-34\nsignature foo()\nvisibility public\nmutability nonpayable"]
-	diagnostic [label="found contract 'test'\nlevel Debug\ntests/contract_testcases/substrate/function_types/assign_03.sol:1:1-15"]
+	diagnostic [label="found contract 'test'\nlevel Debug\ntests/contract_testcases/substrate/function_types/assign_03.sol:1:1-9:10"]
 	diagnostic_10 [label="function parameter 'arg1' has never been read\nlevel Warning\ntests/contract_testcases/substrate/function_types/assign_03.sol:2:30-34"]
 	diagnostic_11 [label="function returns do not match in conversion from 'function(int32) internal' to 'function(int32) internal returns (bool)'\nlevel Error\ntests/contract_testcases/substrate/function_types/assign_03.sol:7:37-38"]
 	contracts -> contract

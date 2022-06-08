@@ -1,5 +1,5 @@
 strict digraph "tests/contract_testcases/solana/contract_var_base_function_init.sol" {
-	contract [label="contract b\ntests/contract_testcases/solana/contract_var_base_function_init.sol:1:1-12"]
+	contract [label="contract b\ntests/contract_testcases/solana/contract_var_base_function_init.sol:1:1-5:2"]
 	testPtr [label="function testPtr\ncontract: b\ntests/contract_testcases/solana/contract_var_base_function_init.sol:2:5-54\nsignature testPtr(int256)\nvisibility public\nmutability pure"]
 	parameters [label="parameters\nint256 a"]
 	returns [label="returns\nint256 "]
@@ -7,7 +7,7 @@ strict digraph "tests/contract_testcases/solana/contract_var_base_function_init.
 	divide [label="divide\nint256\ntests/contract_testcases/solana/contract_var_base_function_init.sol:3:16-19"]
 	variable [label="variable: a\nint256\ntests/contract_testcases/solana/contract_var_base_function_init.sol:3:16-17"]
 	number_literal [label="int256 literal: 2\ntests/contract_testcases/solana/contract_var_base_function_init.sol:3:18-19"]
-	contract_10 [label="contract testing\ntests/contract_testcases/solana/contract_var_base_function_init.sol:6:1-7:22"]
+	contract_10 [label="contract testing\ntests/contract_testcases/solana/contract_var_base_function_init.sol:6:1-10:2"]
 	base [label="base b\ntests/contract_testcases/solana/contract_var_base_function_init.sol:7:21-22"]
 	var [label="variable sfPtr\nvisibility internal\ntests/contract_testcases/solana/contract_var_base_function_init.sol:8:5-67"]
 	cast [label="cast function(int256) external pure returns (int256)\ntests/contract_testcases/solana/contract_var_base_function_init.sol:8:55-67"]
@@ -16,8 +16,8 @@ strict digraph "tests/contract_testcases/solana/contract_var_base_function_init.
 	var_16 [label="variable sgPtr\nvisibility internal\ntests/contract_testcases/solana/contract_var_base_function_init.sol:9:5-62"]
 	cast_17 [label="cast function(int256) internal pure returns (int256)\ntests/contract_testcases/solana/contract_var_base_function_init.sol:9:55-62"]
 	internal_function [label="function(int256) internal pure returns (int256)\nb.testPtr\ntests/contract_testcases/solana/contract_var_base_function_init.sol:9:55-62"]
-	diagnostic [label="found contract 'b'\nlevel Debug\ntests/contract_testcases/solana/contract_var_base_function_init.sol:1:1-12"]
-	diagnostic_21 [label="found contract 'testing'\nlevel Debug\ntests/contract_testcases/solana/contract_var_base_function_init.sol:6:1-7:22"]
+	diagnostic [label="found contract 'b'\nlevel Debug\ntests/contract_testcases/solana/contract_var_base_function_init.sol:1:1-5:2"]
+	diagnostic_21 [label="found contract 'testing'\nlevel Debug\ntests/contract_testcases/solana/contract_var_base_function_init.sol:6:1-10:2"]
 	diagnostic_22 [label="storage variable 'sfPtr' has been assigned, but never read\nlevel Warning\ntests/contract_testcases/solana/contract_var_base_function_init.sol:8:5-67"]
 	diagnostic_23 [label="storage variable 'sgPtr' has been assigned, but never read\nlevel Warning\ntests/contract_testcases/solana/contract_var_base_function_init.sol:9:5-62"]
 	contracts -> contract

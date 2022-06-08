@@ -1,6 +1,6 @@
 strict digraph "tests/contract_testcases/substrate/inheritance/test_interface_02.sol" {
-	contract [label="contract foo\ntests/contract_testcases/substrate/inheritance/test_interface_02.sol:2:9-23"]
-	diagnostic [label="found interface 'foo'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/test_interface_02.sol:2:9-23"]
+	contract [label="contract foo\ntests/contract_testcases/substrate/inheritance/test_interface_02.sol:2:9-4:10"]
+	diagnostic [label="found interface 'foo'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/test_interface_02.sol:2:9-4:10"]
 	diagnostic_5 [label="function marked 'virtual' cannot also be 'private'\nlevel Error\ntests/contract_testcases/substrate/inheritance/test_interface_02.sol:3:13-35"]
 	diagnostic_6 [label="functions must be declared 'external' in an interface\nlevel Error\ntests/contract_testcases/substrate/inheritance/test_interface_02.sol:3:13-35"]
 	contracts -> contract

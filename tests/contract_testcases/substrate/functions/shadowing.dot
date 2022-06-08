@@ -1,5 +1,5 @@
 strict digraph "tests/contract_testcases/substrate/functions/shadowing.sol" {
-	contract [label="contract test\ntests/contract_testcases/substrate/functions/shadowing.sol:2:5-19"]
+	contract [label="contract test\ntests/contract_testcases/substrate/functions/shadowing.sol:2:5-16:6"]
 	var [label="variable result\nvisibility internal\ntests/contract_testcases/substrate/functions/shadowing.sol:3:9-22"]
 	goodset [label="function goodset\ncontract: test\ntests/contract_testcases/substrate/functions/shadowing.sol:5:9-44\nsignature goodset(uint64)\nvisibility public\nmutability nonpayable"]
 	parameters [label="parameters\nuint64 val"]
@@ -16,7 +16,7 @@ strict digraph "tests/contract_testcases/substrate/functions/shadowing.sol" {
 	return [label="return\ntests/contract_testcases/substrate/functions/shadowing.sol:14:13-26"]
 	storage_load [label="storage load uint64\ntests/contract_testcases/substrate/functions/shadowing.sol:14:13-26"]
 	storage_var_17 [label="storage variable\ntest.result\nuint64 storage\ntests/contract_testcases/substrate/functions/shadowing.sol:14:20-26"]
-	diagnostic [label="found contract 'test'\nlevel Debug\ntests/contract_testcases/substrate/functions/shadowing.sol:2:5-19"]
+	diagnostic [label="found contract 'test'\nlevel Debug\ntests/contract_testcases/substrate/functions/shadowing.sol:2:5-16:6"]
 	diagnostic_20 [label="function can be declared 'pure'\nlevel Warning\ntests/contract_testcases/substrate/functions/shadowing.sol:9:9-43"]
 	diagnostic_21 [label="declaration of 'result' shadows state variable\nlevel Warning\ntests/contract_testcases/substrate/functions/shadowing.sol:10:20-26"]
 	note [label="previous declaration of state variable\ntests/contract_testcases/substrate/functions/shadowing.sol:3:9-22"]

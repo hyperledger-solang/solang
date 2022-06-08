@@ -1,6 +1,6 @@
 strict digraph "tests/contract_testcases/substrate/expressions/test_cast_errors_04.sol" {
 	X [label="name: X\ncontract: foo2\ntests/contract_testcases/substrate/expressions/test_cast_errors_04.sol:14:13-33\nvalue: Y1\nvalue: Y2\nvalue: Y3"]
-	contract [label="contract foo\ntests/contract_testcases/substrate/expressions/test_cast_errors_04.sol:1:1-14"]
+	contract [label="contract foo\ntests/contract_testcases/substrate/expressions/test_cast_errors_04.sol:1:1-11:10"]
 	var [label="variable bar\nvisibility internal\ntests/contract_testcases/substrate/expressions/test_cast_errors_04.sol:2:13-21"]
 	set_bar [label="function set_bar\ncontract: foo\ntests/contract_testcases/substrate/expressions/test_cast_errors_04.sol:4:13-46\nsignature set_bar(uint32)\nvisibility public\nmutability nonpayable"]
 	parameters [label="parameters\nuint32 b"]
@@ -15,7 +15,7 @@ strict digraph "tests/contract_testcases/substrate/expressions/test_cast_errors_
 	trunc [label="truncate uint32\ntests/contract_testcases/substrate/expressions/test_cast_errors_04.sol:9:24-35"]
 	storage_load [label="storage load uint256\ntests/contract_testcases/substrate/expressions/test_cast_errors_04.sol:9:24-35"]
 	storage_var_17 [label="storage variable\nfoo.bar\nuint256 storage\ntests/contract_testcases/substrate/expressions/test_cast_errors_04.sol:9:31-34"]
-	contract_18 [label="contract foo2\ntests/contract_testcases/substrate/expressions/test_cast_errors_04.sol:13:9-23"]
+	contract_18 [label="contract foo2\ntests/contract_testcases/substrate/expressions/test_cast_errors_04.sol:13:9-28:10"]
 	var_19 [label="variable y\nvisibility internal\ntests/contract_testcases/substrate/expressions/test_cast_errors_04.sol:15:13-16"]
 	set_x [label="function set_x\ncontract: foo2\ntests/contract_testcases/substrate/expressions/test_cast_errors_04.sol:17:13-44\nsignature set_x(uint32)\nvisibility public\nmutability nonpayable"]
 	parameters_21 [label="parameters\nuint32 b"]
@@ -37,9 +37,9 @@ strict digraph "tests/contract_testcases/substrate/expressions/test_cast_errors_
 	internal_function [label="function(uint32) internal returns (void)\nfoo2.set_x\ntests/contract_testcases/substrate/expressions/test_cast_errors_04.sol:26:17-33"]
 	zero_ext_38 [label="zero extend uint32\ntests/contract_testcases/substrate/expressions/test_cast_errors_04.sol:26:23-32"]
 	variable_39 [label="variable: b\nenum foo2.X\ntests/contract_testcases/substrate/expressions/test_cast_errors_04.sol:26:30-31"]
-	diagnostic [label="found contract 'foo'\nlevel Debug\ntests/contract_testcases/substrate/expressions/test_cast_errors_04.sol:1:1-14"]
+	diagnostic [label="found contract 'foo'\nlevel Debug\ntests/contract_testcases/substrate/expressions/test_cast_errors_04.sol:1:1-11:10"]
 	diagnostic_42 [label="function can be declared 'view'\nlevel Warning\ntests/contract_testcases/substrate/expressions/test_cast_errors_04.sol:8:13-55"]
-	diagnostic_43 [label="found contract 'foo2'\nlevel Debug\ntests/contract_testcases/substrate/expressions/test_cast_errors_04.sol:13:9-23"]
+	diagnostic_43 [label="found contract 'foo2'\nlevel Debug\ntests/contract_testcases/substrate/expressions/test_cast_errors_04.sol:13:9-28:10"]
 	diagnostic_44 [label="function can be declared 'view'\nlevel Warning\ntests/contract_testcases/substrate/expressions/test_cast_errors_04.sol:21:13-53"]
 	enums -> X
 	contracts -> contract

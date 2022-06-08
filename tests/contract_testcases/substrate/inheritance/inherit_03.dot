@@ -1,6 +1,6 @@
 strict digraph "tests/contract_testcases/substrate/inheritance/inherit_03.sol" {
-	contract [label="contract a\ntests/contract_testcases/substrate/inheritance/inherit_03.sol:2:9-20"]
-	contract_3 [label="contract b\ntests/contract_testcases/substrate/inheritance/inherit_03.sol:7:9-27"]
+	contract [label="contract a\ntests/contract_testcases/substrate/inheritance/inherit_03.sol:2:9-5:10"]
+	contract_3 [label="contract b\ntests/contract_testcases/substrate/inheritance/inherit_03.sol:7:9-10:10"]
 	base [label="base a\ntests/contract_testcases/substrate/inheritance/inherit_03.sol:7:23-24"]
 	diagnostic [label="contract 'b' duplicate base 'a'\nlevel Error\ntests/contract_testcases/substrate/inheritance/inherit_03.sol:7:26-27"]
 	contracts -> contract

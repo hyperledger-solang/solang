@@ -1,8 +1,8 @@
 strict digraph "tests/contract_testcases/substrate/mappings/bad_mapping_declares.sol" {
 	s [label="name:s\ncontract: c\ntests/contract_testcases/substrate/mappings/bad_mapping_declares.sol:3:20-21\nfield name:x ty:uint32\nfield name:data ty:mapping(uint256 => address)"]
-	contract [label="contract c\ntests/contract_testcases/substrate/mappings/bad_mapping_declares.sol:2:9-20"]
+	contract [label="contract c\ntests/contract_testcases/substrate/mappings/bad_mapping_declares.sol:2:9-13:10"]
 	test [label="function test\ncontract: c\ntests/contract_testcases/substrate/mappings/bad_mapping_declares.sol:8:13-35\nsignature test()\nvisibility public\nmutability nonpayable"]
-	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/mappings/bad_mapping_declares.sol:2:9-20"]
+	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/mappings/bad_mapping_declares.sol:2:9-13:10"]
 	diagnostic_7 [label="mapping only allowed in storage\nlevel Error\ntests/contract_testcases/substrate/mappings/bad_mapping_declares.sol:9:17-18"]
 	structs -> s
 	contracts -> contract

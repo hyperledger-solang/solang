@@ -1,6 +1,6 @@
 strict digraph "tests/contract_testcases/substrate/function_types/decls_06.sol" {
-	contract [label="contract test\ntests/contract_testcases/substrate/function_types/decls_06.sol:1:1-15"]
-	diagnostic [label="found contract 'test'\nlevel Debug\ntests/contract_testcases/substrate/function_types/decls_06.sol:1:1-15"]
+	contract [label="contract test\ntests/contract_testcases/substrate/function_types/decls_06.sol:1:1-4:10"]
+	diagnostic [label="found contract 'test'\nlevel Debug\ntests/contract_testcases/substrate/function_types/decls_06.sol:1:1-4:10"]
 	diagnostic_5 [label="parameter of type ‘function internal’ not allowed public or external functions\nlevel Error\ntests/contract_testcases/substrate/function_types/decls_06.sol:2:26-72"]
 	contracts -> contract
 	diagnostics -> diagnostic [label="Debug"]

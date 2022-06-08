@@ -1,5 +1,5 @@
 strict digraph "tests/contract_testcases/substrate/functions/mutability.sol" {
-	contract [label="contract test\ntests/contract_testcases/substrate/functions/mutability.sol:1:1-15"]
+	contract [label="contract test\ntests/contract_testcases/substrate/functions/mutability.sol:1:1-7:10"]
 	var [label="variable foo\nvisibility internal\ntests/contract_testcases/substrate/functions/mutability.sol:2:13-32"]
 	number_literal [label="int64 literal: 1844674\ntests/contract_testcases/substrate/functions/mutability.sol:2:25-32"]
 	bar [label="function bar\ncontract: test\ntests/contract_testcases/substrate/functions/mutability.sol:4:13-55\nsignature bar()\nvisibility public\nmutability pure"]
@@ -7,7 +7,7 @@ strict digraph "tests/contract_testcases/substrate/functions/mutability.sol" {
 	return [label="return\ntests/contract_testcases/substrate/functions/mutability.sol:5:17-27"]
 	storage_load [label="storage load int64\ntests/contract_testcases/substrate/functions/mutability.sol:5:17-27"]
 	storage_var [label="storage variable\ntest.foo\nint64 storage\ntests/contract_testcases/substrate/functions/mutability.sol:5:24-27"]
-	diagnostic [label="found contract 'test'\nlevel Debug\ntests/contract_testcases/substrate/functions/mutability.sol:1:1-15"]
+	diagnostic [label="found contract 'test'\nlevel Debug\ntests/contract_testcases/substrate/functions/mutability.sol:1:1-7:10"]
 	diagnostic_11 [label="function declared 'pure' but this expression reads from state\nlevel Error\ntests/contract_testcases/substrate/functions/mutability.sol:5:17-27"]
 	contracts -> contract
 	contract -> var [label="variable"]

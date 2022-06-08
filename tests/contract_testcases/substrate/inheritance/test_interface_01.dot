@@ -1,6 +1,6 @@
 strict digraph "tests/contract_testcases/substrate/inheritance/test_interface_01.sol" {
-	contract [label="contract foo\ntests/contract_testcases/substrate/inheritance/test_interface_01.sol:2:9-23"]
-	diagnostic [label="found interface 'foo'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/test_interface_01.sol:2:9-23"]
+	contract [label="contract foo\ntests/contract_testcases/substrate/inheritance/test_interface_01.sol:2:9-4:10"]
+	diagnostic [label="found interface 'foo'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/test_interface_01.sol:2:9-4:10"]
 	diagnostic_5 [label="function in an interface cannot have a body\nlevel Error\ntests/contract_testcases/substrate/inheritance/test_interface_01.sol:3:13-36"]
 	contracts -> contract
 	diagnostics -> diagnostic [label="Debug"]

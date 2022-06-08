@@ -1,7 +1,7 @@
 strict digraph "tests/contract_testcases/substrate/builtins/abi_encode_with_selector.sol" {
-	contract [label="contract printer\ntests/contract_testcases/substrate/builtins/abi_encode_with_selector.sol:2:9-26"]
+	contract [label="contract printer\ntests/contract_testcases/substrate/builtins/abi_encode_with_selector.sol:2:9-6:10"]
 	test [label="function test\ncontract: printer\ntests/contract_testcases/substrate/builtins/abi_encode_with_selector.sol:3:13-35\nsignature test()\nvisibility public\nmutability nonpayable"]
-	diagnostic [label="found contract 'printer'\nlevel Debug\ntests/contract_testcases/substrate/builtins/abi_encode_with_selector.sol:2:9-26"]
+	diagnostic [label="found contract 'printer'\nlevel Debug\ntests/contract_testcases/substrate/builtins/abi_encode_with_selector.sol:2:9-6:10"]
 	diagnostic_5 [label="function requires one 'bytes4' selector argument\nlevel Error\ntests/contract_testcases/substrate/builtins/abi_encode_with_selector.sol:4:27-51"]
 	contracts -> contract
 	contract -> test [label="function"]

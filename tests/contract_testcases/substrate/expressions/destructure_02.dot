@@ -1,8 +1,8 @@
 strict digraph "tests/contract_testcases/substrate/expressions/destructure_02.sol" {
-	contract [label="contract test\ntests/contract_testcases/substrate/expressions/destructure_02.sol:1:1-15"]
+	contract [label="contract test\ntests/contract_testcases/substrate/expressions/destructure_02.sol:1:1-8:10"]
 	foo [label="function foo\ncontract: test\ntests/contract_testcases/substrate/expressions/destructure_02.sol:2:13-42\nsignature foo(uint256)\nvisibility public\nmutability nonpayable"]
 	parameters [label="parameters\nuint256 bar"]
-	diagnostic [label="found contract 'test'\nlevel Debug\ntests/contract_testcases/substrate/expressions/destructure_02.sol:1:1-15"]
+	diagnostic [label="found contract 'test'\nlevel Debug\ntests/contract_testcases/substrate/expressions/destructure_02.sol:1:1-8:10"]
 	diagnostic_6 [label="storage modifier 'memory' not permitted on assignment\nlevel Error\ntests/contract_testcases/substrate/expressions/destructure_02.sol:6:20-26"]
 	contracts -> contract
 	contract -> foo [label="function"]

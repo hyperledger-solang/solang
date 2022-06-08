@@ -1,11 +1,11 @@
 strict digraph "tests/contract_testcases/substrate/strings/basic_tests_04.sol" {
-	contract [label="contract c\ntests/contract_testcases/substrate/strings/basic_tests_04.sol:2:9-20"]
+	contract [label="contract c\ntests/contract_testcases/substrate/strings/basic_tests_04.sol:2:9-6:10"]
 	foo [label="function foo\ncontract: c\ntests/contract_testcases/substrate/strings/basic_tests_04.sol:3:13-34\nsignature foo()\nvisibility public\nmutability nonpayable"]
 	var_decl [label="variable decl bytes f\ntests/contract_testcases/substrate/strings/basic_tests_04.sol:4:21-51"]
 	cast [label="cast bytes\ntests/contract_testcases/substrate/strings/basic_tests_04.sol:4:31-51"]
 	alloc_array [label="alloc array string\ntests/contract_testcases/substrate/strings/basic_tests_04.sol:4:37-50"]
 	number_literal [label="uint32 literal: 2\ntests/contract_testcases/substrate/strings/basic_tests_04.sol:4:48-49"]
-	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/strings/basic_tests_04.sol:2:9-20"]
+	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/strings/basic_tests_04.sol:2:9-6:10"]
 	diagnostic_9 [label="function can be declared 'pure'\nlevel Warning\ntests/contract_testcases/substrate/strings/basic_tests_04.sol:3:13-34"]
 	diagnostic_10 [label="local variable 'f' has been assigned, but never read\nlevel Warning\ntests/contract_testcases/substrate/strings/basic_tests_04.sol:4:27-28"]
 	contracts -> contract

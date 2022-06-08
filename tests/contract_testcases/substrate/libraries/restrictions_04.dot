@@ -1,7 +1,7 @@
 strict digraph "tests/contract_testcases/substrate/libraries/restrictions_04.sol" {
-	contract [label="contract c\ntests/contract_testcases/substrate/libraries/restrictions_04.sol:2:9-19"]
+	contract [label="contract c\ntests/contract_testcases/substrate/libraries/restrictions_04.sol:2:9-4:10"]
 	foo [label="function foo\ncontract: c\ntests/contract_testcases/substrate/libraries/restrictions_04.sol:3:13-42\nsignature foo()\nvisibility public\nmutability nonpayable"]
-	diagnostic [label="found library 'c'\nlevel Debug\ntests/contract_testcases/substrate/libraries/restrictions_04.sol:2:9-19"]
+	diagnostic [label="found library 'c'\nlevel Debug\ntests/contract_testcases/substrate/libraries/restrictions_04.sol:2:9-4:10"]
 	diagnostic_5 [label="functions in a library cannot be virtual\nlevel Error\ntests/contract_testcases/substrate/libraries/restrictions_04.sol:3:28-35"]
 	contracts -> contract
 	contract -> foo [label="function"]

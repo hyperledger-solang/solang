@@ -1,5 +1,5 @@
 strict digraph "tests/contract_testcases/substrate/inheritance/inherit.sol" {
-	contract [label="contract a\ntests/contract_testcases/substrate/inheritance/inherit.sol:2:9-24"]
+	contract [label="contract a\ntests/contract_testcases/substrate/inheritance/inherit.sol:2:9-5:10"]
 	diagnostic [label="contract 'a' cannot have itself as a base contract\nlevel Error\ntests/contract_testcases/substrate/inheritance/inherit.sol:2:23-24"]
 	contracts -> contract
 	diagnostics -> diagnostic [label="Error"]

@@ -1,13 +1,13 @@
 strict digraph "tests/contract_testcases/substrate/contracts/contract_name_06.sol" {
-	contract [label="contract test\ntests/contract_testcases/substrate/contracts/contract_name_06.sol:1:1-15"]
+	contract [label="contract test\ntests/contract_testcases/substrate/contracts/contract_name_06.sol:1:1-5:10"]
 	f [label="function f\ncontract: test\ntests/contract_testcases/substrate/contracts/contract_name_06.sol:2:13-51\nsignature f()\nvisibility public\nmutability nonpayable"]
 	returns [label="returns\nint256 test"]
 	return [label="return\ntests/contract_testcases/substrate/contracts/contract_name_06.sol:3:17-25"]
 	number_literal [label="int256 literal: 0\ntests/contract_testcases/substrate/contracts/contract_name_06.sol:3:24-25"]
-	diagnostic [label="found contract 'test'\nlevel Debug\ntests/contract_testcases/substrate/contracts/contract_name_06.sol:1:1-15"]
+	diagnostic [label="found contract 'test'\nlevel Debug\ntests/contract_testcases/substrate/contracts/contract_name_06.sol:1:1-5:10"]
 	diagnostic_8 [label="function can be declared 'pure'\nlevel Warning\ntests/contract_testcases/substrate/contracts/contract_name_06.sol:2:13-51"]
 	diagnostic_9 [label="declaration of 'test' shadows contract name\nlevel Warning\ntests/contract_testcases/substrate/contracts/contract_name_06.sol:2:46-50"]
-	note [label="previous declaration of contract name\ntests/contract_testcases/substrate/contracts/contract_name_06.sol:1:1-15"]
+	note [label="previous declaration of contract name\ntests/contract_testcases/substrate/contracts/contract_name_06.sol:1:1-5:10"]
 	contracts -> contract
 	contract -> f [label="function"]
 	f -> returns [label="returns"]

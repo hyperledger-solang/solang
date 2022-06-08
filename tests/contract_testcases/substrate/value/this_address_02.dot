@@ -1,8 +1,8 @@
 strict digraph "tests/contract_testcases/substrate/value/this_address_02.sol" {
-	contract [label="contract b\ntests/contract_testcases/substrate/value/this_address_02.sol:2:9-20"]
+	contract [label="contract b\ntests/contract_testcases/substrate/value/this_address_02.sol:2:9-6:10"]
 	step1 [label="function step1\ncontract: b\ntests/contract_testcases/substrate/value/this_address_02.sol:3:13-43\nsignature step1(address)\nvisibility public\nmutability nonpayable"]
 	parameters [label="parameters\ncontract b other"]
-	diagnostic [label="found contract 'b'\nlevel Debug\ntests/contract_testcases/substrate/value/this_address_02.sol:2:9-20"]
+	diagnostic [label="found contract 'b'\nlevel Debug\ntests/contract_testcases/substrate/value/this_address_02.sol:2:9-6:10"]
 	diagnostic_6 [label="expression is not assignable\nlevel Error\ntests/contract_testcases/substrate/value/this_address_02.sol:4:17-21"]
 	contracts -> contract
 	contract -> step1 [label="function"]

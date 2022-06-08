@@ -1,5 +1,5 @@
 strict digraph "tests/contract_testcases/solana/power.sol" {
-	contract [label="contract AstExample\ntests/contract_testcases/solana/power.sol:2:1-3:21"]
+	contract [label="contract AstExample\ntests/contract_testcases/solana/power.sol:2:1-7:2"]
 	node_3 [label="constructor \ncontract: AstExample\ntests/contract_testcases/solana/power.sol:4:5-19\nsignature ()\nvisibility public\nmutability nonpayable"]
 	expr [label="expression\ntests/contract_testcases/solana/power.sol:5:9-20"]
 	power [label="power\nuint256\ntests/contract_testcases/solana/power.sol:5:9-20"]
@@ -8,7 +8,7 @@ strict digraph "tests/contract_testcases/solana/power.sol" {
 	number_literal_8 [label="uint256 literal: 2\ntests/contract_testcases/solana/power.sol:5:14-15"]
 	number_literal_9 [label="uint256 literal: 3\ntests/contract_testcases/solana/power.sol:5:19-20"]
 	diagnostic [label="pragma 'solidity' is ignored\nlevel Debug\ntests/contract_testcases/solana/power.sol:1:1-24"]
-	diagnostic_12 [label="found contract 'AstExample'\nlevel Debug\ntests/contract_testcases/solana/power.sol:2:1-3:21"]
+	diagnostic_12 [label="found contract 'AstExample'\nlevel Debug\ntests/contract_testcases/solana/power.sol:2:1-7:2"]
 	contracts -> contract
 	contract -> node_3 [label="constructor"]
 	node_3 -> expr [label="body"]

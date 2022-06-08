@@ -1,9 +1,9 @@
 strict digraph "tests/contract_testcases/substrate/libraries/using_01.sol" {
-	contract [label="contract x\ntests/contract_testcases/substrate/libraries/using_01.sol:2:9-20"]
+	contract [label="contract x\ntests/contract_testcases/substrate/libraries/using_01.sol:2:9-4:10"]
 	node_2 [label="constructor \ncontract: x\ntests/contract_testcases/substrate/libraries/using_01.sol:3:13-27\nsignature ()\nvisibility public\nmutability nonpayable"]
-	contract_3 [label="contract c\ntests/contract_testcases/substrate/libraries/using_01.sol:6:9-20"]
-	diagnostic [label="found contract 'x'\nlevel Debug\ntests/contract_testcases/substrate/libraries/using_01.sol:2:9-20"]
-	diagnostic_6 [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/libraries/using_01.sol:6:9-20"]
+	contract_3 [label="contract c\ntests/contract_testcases/substrate/libraries/using_01.sol:6:9-8:10"]
+	diagnostic [label="found contract 'x'\nlevel Debug\ntests/contract_testcases/substrate/libraries/using_01.sol:2:9-4:10"]
+	diagnostic_6 [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/libraries/using_01.sol:6:9-8:10"]
 	diagnostic_7 [label="library expected but contract 'x' found\nlevel Error\ntests/contract_testcases/substrate/libraries/using_01.sol:7:19-20"]
 	contracts -> contract
 	contract -> node_2 [label="constructor"]

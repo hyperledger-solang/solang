@@ -1,16 +1,16 @@
 strict digraph "tests/contract_testcases/substrate/calls/try_catch_constructor_02.sol" {
-	contract [label="contract c\ntests/contract_testcases/substrate/calls/try_catch_constructor_02.sol:2:9-20"]
+	contract [label="contract c\ntests/contract_testcases/substrate/calls/try_catch_constructor_02.sol:2:9-11:10"]
 	test [label="function test\ncontract: c\ntests/contract_testcases/substrate/calls/try_catch_constructor_02.sol:3:13-35\nsignature test()\nvisibility public\nmutability nonpayable"]
-	contract_3 [label="contract other\ntests/contract_testcases/substrate/calls/try_catch_constructor_02.sol:13:9-24"]
+	contract_3 [label="contract other\ntests/contract_testcases/substrate/calls/try_catch_constructor_02.sol:13:9-17:10"]
 	test_4 [label="function test\ncontract: other\ntests/contract_testcases/substrate/calls/try_catch_constructor_02.sol:14:13-57\nsignature test()\nvisibility public\nmutability nonpayable"]
 	returns [label="returns\nint32 \nbool "]
 	return [label="return\ntests/contract_testcases/substrate/calls/try_catch_constructor_02.sol:15:17-35"]
 	list [label="list\ntests/contract_testcases/substrate/calls/try_catch_constructor_02.sol:15:17-35"]
 	number_literal [label="int32 literal: 102\ntests/contract_testcases/substrate/calls/try_catch_constructor_02.sol:15:25-28"]
 	bool_literal [label="bool literal: true\ntests/contract_testcases/substrate/calls/try_catch_constructor_02.sol:15:30-34"]
-	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/calls/try_catch_constructor_02.sol:2:9-20"]
+	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/calls/try_catch_constructor_02.sol:2:9-11:10"]
 	diagnostic_12 [label="try only supports external calls or constructor calls\nlevel Error\ntests/contract_testcases/substrate/calls/try_catch_constructor_02.sol:4:21-35"]
-	diagnostic_13 [label="found contract 'other'\nlevel Debug\ntests/contract_testcases/substrate/calls/try_catch_constructor_02.sol:13:9-24"]
+	diagnostic_13 [label="found contract 'other'\nlevel Debug\ntests/contract_testcases/substrate/calls/try_catch_constructor_02.sol:13:9-17:10"]
 	contracts -> contract
 	contract -> test [label="function"]
 	contracts -> contract_3

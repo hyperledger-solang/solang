@@ -1,7 +1,7 @@
 strict digraph "tests/contract_testcases/substrate/builtins/abi_decode_04.sol" {
-	contract [label="contract printer\ntests/contract_testcases/substrate/builtins/abi_decode_04.sol:2:9-26"]
+	contract [label="contract printer\ntests/contract_testcases/substrate/builtins/abi_decode_04.sol:2:9-6:10"]
 	test [label="function test\ncontract: printer\ntests/contract_testcases/substrate/builtins/abi_decode_04.sol:3:13-35\nsignature test()\nvisibility public\nmutability nonpayable"]
-	diagnostic [label="found contract 'printer'\nlevel Debug\ntests/contract_testcases/substrate/builtins/abi_decode_04.sol:2:9-26"]
+	diagnostic [label="found contract 'printer'\nlevel Debug\ntests/contract_testcases/substrate/builtins/abi_decode_04.sol:2:9-6:10"]
 	diagnostic_5 [label="key of mapping cannot be array type\nlevel Error\ntests/contract_testcases/substrate/builtins/abi_decode_04.sol:4:60-66"]
 	contracts -> contract
 	contract -> test [label="function"]

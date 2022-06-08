@@ -3,13 +3,13 @@ strict digraph "tests/contract_testcases/substrate/events/signatures.sol" {
 	bar [label="name:bar\ntests/contract_testcases/substrate/events/signatures.sol:3:15-18\nfield name:a ty:bool indexed:no\nfield name:b ty:int256 indexed:no"]
 	foo_3 [label="name:foo\ncontract: 0\ntests/contract_testcases/substrate/events/signatures.sol:6:19-22\nfield name:b ty:int256 indexed:no"]
 	bar_4 [label="name:bar\ncontract: 0\ntests/contract_testcases/substrate/events/signatures.sol:7:19-22\nfield name:b ty:int256 indexed:no"]
-	contract [label="contract c\ntests/contract_testcases/substrate/events/signatures.sol:5:9-20"]
+	contract [label="contract c\ntests/contract_testcases/substrate/events/signatures.sol:5:9-12:10"]
 	f [label="function f\ncontract: c\ntests/contract_testcases/substrate/events/signatures.sol:9:13-32\nsignature f()\nvisibility public\nmutability nonpayable"]
 	emit [label="emit\nevent foo\ntests/contract_testcases/substrate/events/signatures.sol:10:17-34"]
 	bool_literal [label="bool literal: true\ntests/contract_testcases/substrate/events/signatures.sol:10:26-30"]
 	number_literal [label="int256 literal: 1\ntests/contract_testcases/substrate/events/signatures.sol:10:32-33"]
 	diagnostic [label="event 'bar' has never been emitted\nlevel Warning\ntests/contract_testcases/substrate/events/signatures.sol:3:15-18"]
-	diagnostic_13 [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/events/signatures.sol:5:9-20"]
+	diagnostic_13 [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/events/signatures.sol:5:9-12:10"]
 	diagnostic_14 [label="event 'bar' has never been emitted\nlevel Warning\ntests/contract_testcases/substrate/events/signatures.sol:7:19-22"]
 	events -> foo
 	events -> bar

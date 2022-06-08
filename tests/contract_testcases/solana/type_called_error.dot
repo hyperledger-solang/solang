@@ -1,6 +1,6 @@
 strict digraph "tests/contract_testcases/solana/type_called_error.sol" {
 	error [label="name:error\ntests/contract_testcases/solana/type_called_error.sol:1:8-13\nfield name:f1 ty:int256"]
-	contract [label="contract c\ntests/contract_testcases/solana/type_called_error.sol:8:1-9:12"]
+	contract [label="contract c\ntests/contract_testcases/solana/type_called_error.sol:8:1-16:2"]
 	var [label="variable v1\nvisibility public\ntests/contract_testcases/solana/type_called_error.sol:10:2-17"]
 	v1 [label="function v1\ncontract: c\ntests/contract_testcases/solana/type_called_error.sol:10:15-17\nsignature v1()\nvisibility public\nmutability view"]
 	returns [label="returns\nstruct error "]
@@ -16,7 +16,7 @@ strict digraph "tests/contract_testcases/solana/type_called_error.sol" {
 	variable [label="variable: e\nstruct error\ntests/contract_testcases/solana/type_called_error.sol:13:3-4"]
 	return_17 [label="return\ntests/contract_testcases/solana/type_called_error.sol:14:3-11"]
 	variable_18 [label="variable: e\nstruct error\ntests/contract_testcases/solana/type_called_error.sol:14:10-11"]
-	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/solana/type_called_error.sol:8:1-9:12"]
+	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/solana/type_called_error.sol:8:1-16:2"]
 	structs -> error
 	contracts -> contract
 	contract -> var [label="variable"]

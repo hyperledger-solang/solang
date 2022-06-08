@@ -1,9 +1,9 @@
 strict digraph "tests/contract_testcases/substrate/modifier/function_modifier_01.sol" {
-	contract [label="contract c\ntests/contract_testcases/substrate/modifier/function_modifier_01.sol:2:9-20"]
+	contract [label="contract c\ntests/contract_testcases/substrate/modifier/function_modifier_01.sol:2:9-6:10"]
 	foo [label="modifier foo\ncontract: c\ntests/contract_testcases/substrate/modifier/function_modifier_01.sol:3:13-28\nmutability nonpayable"]
 	underscore [label="undersore\ntests/contract_testcases/substrate/modifier/function_modifier_01.sol:3:30-31"]
 	bar [label="function bar\ncontract: c\ntests/contract_testcases/substrate/modifier/function_modifier_01.sol:5:13-41\nsignature bar()\nvisibility public\nmutability nonpayable"]
-	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/modifier/function_modifier_01.sol:2:9-20"]
+	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/modifier/function_modifier_01.sol:2:9-6:10"]
 	diagnostic_7 [label="modifier expects 0 arguments, 1 provided\nlevel Error\ntests/contract_testcases/substrate/modifier/function_modifier_01.sol:5:28-34"]
 	contracts -> contract
 	contract -> foo [label="modifier"]

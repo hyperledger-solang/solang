@@ -1,6 +1,6 @@
 strict digraph "tests/contract_testcases/solana/doccomments_everywhere.sol" {
 	MintProperty [label="name:MintProperty\ncontract: 0\ntests/contract_testcases/solana/doccomments_everywhere.sol:15:9-21\nfield name:id ty:uint256 indexed:no"]
-	contract [label="contract Property\ntests/contract_testcases/solana/doccomments_everywhere.sol:4:107-5:19"]
+	contract [label="contract Property\ntests/contract_testcases/solana/doccomments_everywhere.sol:4:107-99:2"]
 	tags [label="author: Max Campbell (https://github.com/maxall41), RafaCypherpunk (https://github.com/RafaCypherpunk)"]
 	var [label="variable pricePerShare_\nvisibility public\ntests/contract_testcases/solana/doccomments_everywhere.sol:9:3-52"]
 	var_7 [label="variable valueLocked_\nvisibility public\ntests/contract_testcases/solana/doccomments_everywhere.sol:10:3-50"]
@@ -126,7 +126,7 @@ strict digraph "tests/contract_testcases/solana/doccomments_everywhere.sol" {
 	sellShares [label="function sellShares\ncontract: Property\ntests/contract_testcases/solana/doccomments_everywhere.sol:77:3-59\nsignature sellShares(uint256,uint256)\nvisibility public\nmutability nonpayable"]
 	parameters_128 [label="parameters\nuint256 shares_\nuint256 _id"]
 	diagnostic [label="pragma 'solidity' is ignored\nlevel Debug\ntests/contract_testcases/solana/doccomments_everywhere.sol:1:1-24"]
-	diagnostic_131 [label="found contract 'Property'\nlevel Debug\ntests/contract_testcases/solana/doccomments_everywhere.sol:4:107-5:19"]
+	diagnostic_131 [label="found contract 'Property'\nlevel Debug\ntests/contract_testcases/solana/doccomments_everywhere.sol:4:107-99:2"]
 	diagnostic_132 [label="'Counters' not found\nlevel Error\ntests/contract_testcases/solana/doccomments_everywhere.sol:6:22-30"]
 	diagnostic_133 [label="'Counters' not found\nlevel Error\ntests/contract_testcases/solana/doccomments_everywhere.sol:7:3-11"]
 	diagnostic_134 [label="'ERC1155' not found\nlevel Error\ntests/contract_testcases/solana/doccomments_everywhere.sol:17:17-24"]
