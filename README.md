@@ -8,7 +8,7 @@
 
 Welcome to Solang, a new Solidity compiler written in rust which uses
 llvm as the compiler backend. Solang can compile Solidity for Solana,
-Substrate, and ewasm. Solang is source compatible with Solidity 0.7, with
+Substrate, and ewasm. Solang is source compatible with Solidity 0.8, with
 some caveats due to differences in the underlying blockchain.
 
 Solang is under active development right now, and has
