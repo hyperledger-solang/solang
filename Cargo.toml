@@ -56,7 +56,7 @@ wasmi = "0.11"
 rand = "0.7"
 sha2 = "0.10"
 # solana_rbpf makes api changes in patch versions
-solana_rbpf = "=0.2.24"
+solana_rbpf = "=0.2.31"
 byteorder = "1.4"
 assert_cmd = "2.0"
 bincode = "1.3"

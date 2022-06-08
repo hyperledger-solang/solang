@@ -12,10 +12,14 @@ use solana_rbpf::{
     ebpf,
     elf::Executable,
     error::EbpfError,
-    memory_region::{AccessType, MemoryMapping},
+    memory_region::{AccessType, MemoryMapping, MemoryRegion},
     question_mark,
+    syscalls::BpfSyscallContext,
     user_error::UserError,
-    vm::{Config, EbpfVm, SyscallObject, SyscallRegistry, TestInstructionMeter},
+    verifier::RequisiteVerifier,
+    vm::{
+        Config, EbpfVm, SyscallObject, SyscallRegistry, TestInstructionMeter, VerifiedExecutable,
+    },
 };
 use solang::{
     abi::generate_abi,
@@ -367,7 +371,21 @@ fn update_parameters(
     }
 }
 
+#[derive(Clone)]
+struct SyscallContext<'a> {
+    vm: Rc<RefCell<&'a mut VirtualMachine>>,
+    input: &'a [u8],
+    refs: Rc<RefCell<&'a mut Vec<AccountRef>>>,
+    allocator: Rc<RefCell<&'a mut Allocator>>,
+}
+
 struct SolPanic();
+impl SolPanic {
+    /// new
+    pub fn init<C, E>(_unused: C) -> Box<dyn SyscallObject<UserError>> {
+        Box::new(Self {})
+    }
+}
 
 impl SyscallObject<UserError> for SolPanic {
     fn call(
@@ -377,7 +395,7 @@ impl SyscallObject<UserError> for SolPanic {
         _dest: u64,
         _arg4: u64,
         _arg5: u64,
-        _memory_mapping: &MemoryMapping,
+        _memory_mapping: &mut MemoryMapping,
         result: &mut Result<u64, EbpfError<UserError>>,
     ) {
         println!("sol_panic_()");
@@ -386,7 +404,13 @@ impl SyscallObject<UserError> for SolPanic {
 }
 
 struct SolLog<'a> {
-    context: Rc<RefCell<&'a mut VirtualMachine>>,
+    context: SyscallContext<'a>,
+}
+impl<'a> SolLog<'a> {
+    /// new
+    pub fn init(context: SyscallContext<'a>) -> Box<(dyn SyscallObject<UserError> + 'a)> {
+        Box::new(Self { context })
+    }
 }
 
 impl<'a> SyscallObject<UserError> for SolLog<'a> {
@@ -397,7 +421,7 @@ impl<'a> SyscallObject<UserError> for SolLog<'a> {
         _arg3: u64,
         _arg4: u64,
         _arg5: u64,
-        memory_mapping: &MemoryMapping,
+        memory_mapping: &mut MemoryMapping,
         result: &mut Result<u64, EbpfError<UserError>>,
     ) {
         let host_addr = question_mark!(memory_mapping.map(AccessType::Load, vm_addr, len), result);
@@ -415,8 +439,8 @@ impl<'a> SyscallObject<UserError> for SolLog<'a> {
             ))
             .unwrap();
             println!("log: {}", message);
-            if let Ok(mut context) = self.context.try_borrow_mut() {
-                context.logs.push_str(message);
+            if let Ok(mut vm) = self.context.vm.try_borrow_mut() {
+                vm.logs.push_str(message);
             }
             *result = Ok(0)
         }
@@ -424,7 +448,13 @@ impl<'a> SyscallObject<UserError> for SolLog<'a> {
 }
 
 struct SolLogPubKey<'a> {
-    context: Rc<RefCell<&'a mut VirtualMachine>>,
+    context: SyscallContext<'a>,
+}
+impl<'a> SolLogPubKey<'a> {
+    /// new
+    pub fn init(context: SyscallContext<'a>) -> Box<(dyn SyscallObject<UserError> + 'a)> {
+        Box::new(Self { context })
+    }
 }
 
 impl<'a> SyscallObject<UserError> for SolLogPubKey<'a> {
@@ -435,7 +465,7 @@ impl<'a> SyscallObject<UserError> for SolLogPubKey<'a> {
         _arg3: u64,
         _arg4: u64,
         _arg5: u64,
-        memory_mapping: &MemoryMapping,
+        memory_mapping: &mut MemoryMapping,
         result: &mut Result<u64, EbpfError<UserError>>,
     ) {
         let account = question_mark!(
@@ -444,14 +474,20 @@ impl<'a> SyscallObject<UserError> for SolLogPubKey<'a> {
         );
         let message = account[0].to_base58();
         println!("log pubkey: {}", message);
-        if let Ok(mut context) = self.context.try_borrow_mut() {
-            context.logs.push_str(&message);
+        if let Ok(mut vm) = self.context.vm.try_borrow_mut() {
+            vm.logs.push_str(&message);
         }
         *result = Ok(0)
     }
 }
 
 struct SolSha256();
+impl SolSha256 {
+    /// new
+    pub fn init<C, E>(_unused: C) -> Box<dyn SyscallObject<UserError>> {
+        Box::new(Self {})
+    }
+}
 
 impl SyscallObject<UserError> for SolSha256 {
     fn call(
@@ -461,7 +497,7 @@ impl SyscallObject<UserError> for SolSha256 {
         dest: u64,
         _arg4: u64,
         _arg5: u64,
-        memory_mapping: &MemoryMapping,
+        memory_mapping: &mut MemoryMapping,
         result: &mut Result<u64, EbpfError<UserError>>,
     ) {
         let arrays = question_mark!(
@@ -492,6 +528,12 @@ impl SyscallObject<UserError> for SolSha256 {
 }
 
 struct SolKeccak256();
+impl SolKeccak256 {
+    /// new
+    pub fn init<C, E>(_unused: C) -> Box<dyn SyscallObject<UserError>> {
+        Box::new(Self {})
+    }
+}
 
 impl SyscallObject<UserError> for SolKeccak256 {
     fn call(
@@ -501,7 +543,7 @@ impl SyscallObject<UserError> for SolKeccak256 {
         dest: u64,
         _arg4: u64,
         _arg5: u64,
-        memory_mapping: &MemoryMapping,
+        memory_mapping: &mut MemoryMapping,
         result: &mut Result<u64, EbpfError<UserError>>,
     ) {
         let arrays = question_mark!(
@@ -532,7 +574,13 @@ impl SyscallObject<UserError> for SolKeccak256 {
 }
 
 struct SyscallSetReturnData<'a> {
-    context: Rc<RefCell<&'a mut VirtualMachine>>,
+    context: SyscallContext<'a>,
+}
+impl<'a> SyscallSetReturnData<'a> {
+    /// new
+    pub fn init(context: SyscallContext<'a>) -> Box<(dyn SyscallObject<UserError> + 'a)> {
+        Box::new(Self { context })
+    }
 }
 
 impl<'a> SyscallObject<UserError> for SyscallSetReturnData<'a> {
@@ -543,18 +591,18 @@ impl<'a> SyscallObject<UserError> for SyscallSetReturnData<'a> {
         _arg3: u64,
         _arg4: u64,
         _arg5: u64,
-        memory_mapping: &MemoryMapping,
+        memory_mapping: &mut MemoryMapping,
         result: &mut Result<u64, EbpfError<UserError>>,
     ) {
         assert!(len <= 1024, "sol_set_return_data: length is {}", len);
 
         let buf = question_mark!(translate_slice::<u8>(memory_mapping, addr, len), result);
 
-        if let Ok(mut context) = self.context.try_borrow_mut() {
+        if let Ok(mut vm) = self.context.vm.try_borrow_mut() {
             if len == 0 {
-                context.return_data = None;
+                vm.return_data = None;
             } else {
-                context.return_data = Some((context.stack[0].program, buf.to_vec()));
+                vm.return_data = Some((vm.stack[0].program, buf.to_vec()));
             }
 
             *result = Ok(0);
@@ -565,7 +613,13 @@ impl<'a> SyscallObject<UserError> for SyscallSetReturnData<'a> {
 }
 
 struct SyscallGetReturnData<'a> {
-    context: Rc<RefCell<&'a mut VirtualMachine>>,
+    context: SyscallContext<'a>,
+}
+impl<'a> SyscallGetReturnData<'a> {
+    /// new
+    pub fn init(context: SyscallContext<'a>) -> Box<(dyn SyscallObject<UserError> + 'a)> {
+        Box::new(Self { context })
+    }
 }
 
 impl<'a> SyscallObject<UserError> for SyscallGetReturnData<'a> {
@@ -576,11 +630,11 @@ impl<'a> SyscallObject<UserError> for SyscallGetReturnData<'a> {
         program_id_addr: u64,
         _arg4: u64,
         _arg5: u64,
-        memory_mapping: &MemoryMapping,
+        memory_mapping: &mut MemoryMapping,
         result: &mut Result<u64, EbpfError<UserError>>,
     ) {
-        if let Ok(context) = self.context.try_borrow() {
-            if let Some((program_id, return_data)) = &context.return_data {
+        if let Ok(vm) = self.context.vm.try_borrow() {
+            if let Some((program_id, return_data)) = &vm.return_data {
                 let length = std::cmp::min(len, return_data.len() as u64);
 
                 if len > 0 {
@@ -610,7 +664,13 @@ impl<'a> SyscallObject<UserError> for SyscallGetReturnData<'a> {
 }
 
 struct SyscallLogData<'a> {
-    context: Rc<RefCell<&'a mut VirtualMachine>>,
+    context: SyscallContext<'a>,
+}
+impl<'a> SyscallLogData<'a> {
+    /// new
+    pub fn init(context: SyscallContext<'a>) -> Box<(dyn SyscallObject<UserError> + 'a)> {
+        Box::new(Self { context })
+    }
 }
 
 impl<'a> SyscallObject<UserError> for SyscallLogData<'a> {
@@ -621,10 +681,10 @@ impl<'a> SyscallObject<UserError> for SyscallLogData<'a> {
         _arg3: u64,
         _arg4: u64,
         _arg5: u64,
-        memory_mapping: &MemoryMapping,
+        memory_mapping: &mut MemoryMapping,
         result: &mut Result<u64, EbpfError<UserError>>,
     ) {
-        if let Ok(mut context) = self.context.try_borrow_mut() {
+        if let Ok(mut vm) = self.context.vm.try_borrow_mut() {
             let untranslated_events =
                 question_mark!(translate_slice::<&[u8]>(memory_mapping, addr, len), result);
 
@@ -643,7 +703,7 @@ impl<'a> SyscallObject<UserError> for SyscallLogData<'a> {
                 events.push(event.to_vec());
             }
 
-            context.events.push(events.to_vec());
+            vm.events.push(events.to_vec());
 
             *result = Ok(0);
         } else {
@@ -688,14 +748,20 @@ impl From<Ed25519SigCheckError> for u64 {
 /// memory chunk is given to the allocator during allocator creation and
 /// information about that memory (start address and size) is passed
 /// to the VM to use for enforcement.
-pub struct SyscallAllocFree {
-    allocator: Allocator,
+struct SyscallAllocFree<'a> {
+    context: SyscallContext<'a>,
+}
+impl<'a> SyscallAllocFree<'a> {
+    /// new
+    pub fn init(context: SyscallContext<'a>) -> Box<(dyn SyscallObject<UserError> + 'a)> {
+        Box::new(Self { context })
+    }
 }
 
 const DEFAULT_HEAP_SIZE: usize = 32 * 1024;
 /// Start of the input buffers in the memory map
 
-impl SyscallObject<UserError> for SyscallAllocFree {
+impl<'a> SyscallObject<UserError> for SyscallAllocFree<'a> {
     fn call(
         &mut self,
         size: u64,
@@ -703,22 +769,26 @@ impl SyscallObject<UserError> for SyscallAllocFree {
         _arg3: u64,
         _arg4: u64,
         _arg5: u64,
-        _memory_mapping: &MemoryMapping,
+        _memory_mapping: &mut MemoryMapping,
         result: &mut Result<u64, EbpfError<UserError>>,
     ) {
-        let align = align_of::<u128>();
-        let layout = match Layout::from_size_align(size as usize, align) {
-            Ok(layout) => layout,
-            Err(_) => {
-                *result = Ok(0);
-                return;
+        if let Ok(mut allocator) = self.context.allocator.try_borrow_mut() {
+            let align = align_of::<u128>();
+            let layout = match Layout::from_size_align(size as usize, align) {
+                Ok(layout) => layout,
+                Err(_) => {
+                    *result = Ok(0);
+                    return;
+                }
+            };
+            *result = if free_addr == 0 {
+                Ok(allocator.alloc(layout))
+            } else {
+                allocator.dealloc(free_addr, layout);
+                Ok(0)
             }
-        };
-        *result = if free_addr == 0 {
-            Ok(self.allocator.alloc(layout))
         } else {
-            self.allocator.dealloc(free_addr, layout);
-            Ok(0)
+            panic!();
         }
     }
 }
@@ -851,9 +921,13 @@ fn translate_slice_inner<'a, T>(
 }
 
 struct SyscallInvokeSignedC<'a> {
-    context: Rc<RefCell<&'a mut VirtualMachine>>,
-    input: &'a [u8],
-    refs: Rc<RefCell<&'a mut Vec<AccountRef>>>,
+    context: SyscallContext<'a>,
+}
+impl<'a> SyscallInvokeSignedC<'a> {
+    /// new
+    pub fn init(context: SyscallContext<'a>) -> Box<(dyn SyscallObject<UserError> + 'a)> {
+        Box::new(Self { context })
+    }
 }
 
 impl<'a> SyscallInvokeSignedC<'a> {
@@ -919,7 +993,7 @@ impl<'a> SyscallObject<UserError> for SyscallInvokeSignedC<'a> {
         _account_infos_len: u64,
         signers_seeds_addr: u64,
         signers_seeds_len: u64,
-        memory_mapping: &MemoryMapping,
+        memory_mapping: &mut MemoryMapping,
         result: &mut Result<u64, EbpfError<UserError>>,
     ) {
         let instruction = self
@@ -940,7 +1014,7 @@ impl<'a> SyscallObject<UserError> for SyscallInvokeSignedC<'a> {
             result
         );
 
-        if let Ok(mut context) = self.context.try_borrow_mut() {
+        if let Ok(mut vm) = self.context.vm.try_borrow_mut() {
             let signers: Vec<Pubkey> = seeds
                 .iter()
                 .map(|seed| {
@@ -953,7 +1027,7 @@ impl<'a> SyscallObject<UserError> for SyscallInvokeSignedC<'a> {
                             })
                             .collect();
 
-                    let pda = create_program_address(&context.stack[0].program, &seeds);
+                    let pda = create_program_address(&vm.stack[0].program, &seeds);
 
                     println!(
                         "pda: {} seeds {}",
@@ -969,9 +1043,9 @@ impl<'a> SyscallObject<UserError> for SyscallInvokeSignedC<'a> {
                 })
                 .collect();
 
-            context.return_data = None;
+            vm.return_data = None;
 
-            if let Some(handle) = context.call_test.get(&instruction.program_id) {
+            if let Some(handle) = vm.call_test.get(&instruction.program_id) {
                 handle(&instruction);
             } else if instruction.program_id.is_system_instruction() {
                 match bincode::deserialize::<u32>(&instruction.data).unwrap() {
@@ -996,14 +1070,14 @@ impl<'a> SyscallObject<UserError> for SyscallInvokeSignedC<'a> {
                             create_account.program_id.to_base58()
                         );
 
-                        assert_eq!(context.account_data[&address.0].data.len(), 0);
+                        assert_eq!(vm.account_data[&address.0].data.len(), 0);
 
-                        if let Some(entry) = context.account_data.get_mut(&address.0) {
+                        if let Some(entry) = vm.account_data.get_mut(&address.0) {
                             entry.data = vec![0; create_account.space as usize];
                             entry.owner = Some(create_account.program_id);
                         }
 
-                        let mut refs = self.refs.try_borrow_mut().unwrap();
+                        let mut refs = self.context.refs.try_borrow_mut().unwrap();
 
                         for r in refs.iter_mut() {
                             if r.account == address.0 {
@@ -1030,7 +1104,7 @@ impl<'a> SyscallObject<UserError> for SyscallInvokeSignedC<'a> {
                             assign.owner.to_base58(),
                         );
 
-                        if let Some(entry) = context.account_data.get_mut(&address.0) {
+                        if let Some(entry) = vm.account_data.get_mut(&address.0) {
                             entry.owner = Some(assign.owner);
                         }
                     }
@@ -1056,7 +1130,7 @@ impl<'a> SyscallObject<UserError> for SyscallInvokeSignedC<'a> {
                             hex::encode(create_account.program_id)
                         );
 
-                        context.account_data.insert(
+                        vm.account_data.insert(
                             new_address,
                             AccountState {
                                 data: vec![0; create_account.space as usize],
@@ -1065,7 +1139,7 @@ impl<'a> SyscallObject<UserError> for SyscallInvokeSignedC<'a> {
                             },
                         );
 
-                        context.programs.push(Contract {
+                        vm.programs.push(Contract {
                             program: create_account.program_id,
                             abi: None,
                             data: new_address,
@@ -1090,13 +1164,13 @@ impl<'a> SyscallObject<UserError> for SyscallInvokeSignedC<'a> {
                             allocate.space,
                         );
 
-                        assert_eq!(context.account_data[&address.0].data.len(), 0);
+                        assert_eq!(vm.account_data[&address.0].data.len(), 0);
 
-                        if let Some(entry) = context.account_data.get_mut(&address.0) {
+                        if let Some(entry) = vm.account_data.get_mut(&address.0) {
                             entry.data = vec![0; allocate.space as usize];
                         }
 
-                        let mut refs = self.refs.try_borrow_mut().unwrap();
+                        let mut refs = self.context.refs.try_borrow_mut().unwrap();
 
                         for r in refs.iter_mut() {
                             if r.account == address.0 {
@@ -1115,23 +1189,23 @@ impl<'a> SyscallObject<UserError> for SyscallInvokeSignedC<'a> {
                     hex::encode(instruction.program_id.0)
                 );
 
-                let p = context
+                let p = vm
                     .programs
                     .iter()
                     .find(|p| p.program == instruction.program_id.0 && p.data == data_id)
                     .unwrap()
                     .clone();
 
-                context.stack.insert(0, p);
+                vm.stack.insert(0, p);
 
-                let res = context.execute(&instruction.data, &[]);
+                let res = vm.execute(&instruction.data, &[]);
                 assert_eq!(res, Ok(0));
 
-                let refs = self.refs.try_borrow().unwrap();
+                let refs = self.context.refs.try_borrow().unwrap();
 
-                update_parameters(self.input, &refs, &context.account_data);
+                update_parameters(self.context.input, &refs, &vm.account_data);
 
-                context.stack.remove(0);
+                vm.stack.remove(0);
             }
         }
 
@@ -1154,133 +1228,116 @@ impl VirtualMachine {
 
         let mut syscall_registry = SyscallRegistry::default();
         syscall_registry
-            .register_syscall_by_name(b"sol_panic_", SolPanic::call)
+            .register_syscall_by_name(
+                b"sol_panic_",
+                SolPanic::init::<BpfSyscallContext, UserError>,
+                SolPanic::call,
+            )
             .unwrap();
 
         syscall_registry
-            .register_syscall_by_name(b"sol_log_", SolLog::call)
+            .register_syscall_by_name(b"sol_log_", SolLog::init, SolLog::call)
             .unwrap();
 
         syscall_registry
-            .register_syscall_by_name(b"sol_log_pubkey", SolLogPubKey::call)
+            .register_syscall_by_name(b"sol_log_pubkey", SolLogPubKey::init, SolLogPubKey::call)
             .unwrap();
 
         syscall_registry
-            .register_syscall_by_name(b"sol_sha256", SolSha256::call)
+            .register_syscall_by_name(
+                b"sol_sha256",
+                SolSha256::init::<BpfSyscallContext, UserError>,
+                SolSha256::call,
+            )
             .unwrap();
 
         syscall_registry
-            .register_syscall_by_name(b"sol_keccak256", SolKeccak256::call)
+            .register_syscall_by_name(
+                b"sol_keccak256",
+                SolKeccak256::init::<BpfSyscallContext, UserError>,
+                SolKeccak256::call,
+            )
             .unwrap();
 
         syscall_registry
-            .register_syscall_by_name(b"sol_invoke_signed_c", SyscallInvokeSignedC::call)
+            .register_syscall_by_name(
+                b"sol_invoke_signed_c",
+                SyscallInvokeSignedC::init,
+                SyscallInvokeSignedC::call,
+            )
             .unwrap();
 
         syscall_registry
-            .register_syscall_by_name(b"sol_alloc_free_", SyscallAllocFree::call)
+            .register_syscall_by_name(
+                b"sol_alloc_free_",
+                SyscallAllocFree::init,
+                SyscallAllocFree::call,
+            )
             .unwrap();
 
         syscall_registry
-            .register_syscall_by_name(b"sol_set_return_data", SyscallSetReturnData::call)
+            .register_syscall_by_name(
+                b"sol_set_return_data",
+                SyscallSetReturnData::init,
+                SyscallSetReturnData::call,
+            )
             .unwrap();
 
         syscall_registry
-            .register_syscall_by_name(b"sol_get_return_data", SyscallGetReturnData::call)
+            .register_syscall_by_name(
+                b"sol_get_return_data",
+                SyscallGetReturnData::init,
+                SyscallGetReturnData::call,
+            )
             .unwrap();
 
         syscall_registry
-            .register_syscall_by_name(b"sol_log_data", SyscallLogData::call)
+            .register_syscall_by_name(b"sol_log_data", SyscallLogData::init, SyscallLogData::call)
             .unwrap();
 
         let executable = Executable::<UserError, TestInstructionMeter>::from_elf(
             &self.account_data[&program.program].data,
-            None,
             Config::default(),
             syscall_registry,
         )
         .expect("should work");
 
-        let mut vm = EbpfVm::<UserError, TestInstructionMeter>::new(
-            &executable,
+        let verified_executable = VerifiedExecutable::<
+            RequisiteVerifier,
+            UserError,
+            TestInstructionMeter,
+        >::from_executable(executable)
+        .unwrap();
+
+        let parameter_region =
+            MemoryRegion::new_writable(&mut parameter_bytes, ebpf::MM_INPUT_START);
+        let mut vm = EbpfVm::<RequisiteVerifier, UserError, TestInstructionMeter>::new(
+            &verified_executable,
             &mut heap,
-            &mut parameter_bytes,
+            vec![parameter_region],
         )
         .unwrap();
 
-        let context = Rc::new(RefCell::new(self));
-        let refs = Rc::new(RefCell::new(&mut refs));
+        let mut allocator = Allocator::new(DEFAULT_HEAP_SIZE as u64, ebpf::MM_HEAP_START);
 
-        vm.bind_syscall_context_object(
-            Box::new(SolLog {
-                context: context.clone(),
-            }),
-            None,
-        )
-        .unwrap();
+        let context = SyscallContext {
+            vm: Rc::new(RefCell::new(self)),
+            allocator: Rc::new(RefCell::new(&mut allocator)),
+            input: &parameter_bytes,
+            refs: Rc::new(RefCell::new(&mut refs)),
+        };
 
-        vm.bind_syscall_context_object(
-            Box::new(SolLogPubKey {
-                context: context.clone(),
-            }),
-            None,
-        )
-        .unwrap();
-
-        vm.bind_syscall_context_object(
-            Box::new(SyscallAllocFree {
-                allocator: Allocator::new(DEFAULT_HEAP_SIZE as u64, ebpf::MM_HEAP_START),
-            }),
-            None,
-        )
-        .unwrap();
-
-        vm.bind_syscall_context_object(
-            Box::new(SyscallInvokeSignedC {
-                context: context.clone(),
-                input: &parameter_bytes,
-                refs: refs.clone(),
-            }),
-            None,
-        )
-        .unwrap();
-
-        vm.bind_syscall_context_object(
-            Box::new(SyscallSetReturnData {
-                context: context.clone(),
-            }),
-            None,
-        )
-        .unwrap();
-
-        vm.bind_syscall_context_object(
-            Box::new(SyscallGetReturnData {
-                context: context.clone(),
-            }),
-            None,
-        )
-        .unwrap();
-
-        vm.bind_syscall_context_object(
-            Box::new(SyscallLogData {
-                context: context.clone(),
-            }),
-            None,
-        )
-        .unwrap();
+        vm.bind_syscall_context_objects(context).unwrap();
 
         let res = vm.execute_program_interpreted(&mut TestInstructionMeter { remaining: 1000000 });
 
-        let mut elf = context.try_borrow_mut().unwrap();
-        let refs = refs.try_borrow().unwrap();
+        deserialize_parameters(&parameter_bytes, &refs, &mut self.account_data);
 
-        deserialize_parameters(&parameter_bytes, &refs, &mut elf.account_data);
-
-        let output = &elf.account_data[&elf.stack[0].data].data;
+        let output = &self.account_data[&self.stack[0].data].data;
 
         VirtualMachine::validate_heap(output);
 
-        if let Some((_, return_data)) = &elf.return_data {
+        if let Some((_, return_data)) = &self.return_data {
             println!("return: {}", hex::encode(&return_data));
         }
 
