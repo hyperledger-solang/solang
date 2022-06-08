@@ -1,5 +1,5 @@
 strict digraph "tests/contract_testcases/solana/expressions/bytes32_0.sol" {
-	contract [label="contract x\ntests/contract_testcases/solana/expressions/bytes32_0.sol:2:9-20"]
+	contract [label="contract x\ntests/contract_testcases/solana/expressions/bytes32_0.sol:2:9-14:10"]
 	b32 [label="function b32\ncontract: x\ntests/contract_testcases/solana/expressions/bytes32_0.sol:3:13-59\nsignature b32()\nvisibility public\nmutability pure"]
 	returns [label="returns\nbytes32 r"]
 	expr [label="expression\ntests/contract_testcases/solana/expressions/bytes32_0.sol:4:17-31"]
@@ -18,7 +18,7 @@ strict digraph "tests/contract_testcases/solana/expressions/bytes32_0.sol" {
 	assign_18 [label="assign\nbytes3\ntests/contract_testcases/solana/expressions/bytes32_0.sol:12:17-37"]
 	variable_19 [label="variable: r\nbytes3\ntests/contract_testcases/solana/expressions/bytes32_0.sol:12:17-18"]
 	number_literal_20 [label="bytes3 literal: 74291\ntests/contract_testcases/solana/expressions/bytes32_0.sol:12:21-37"]
-	diagnostic [label="found contract 'x'\nlevel Debug\ntests/contract_testcases/solana/expressions/bytes32_0.sol:2:9-20"]
+	diagnostic [label="found contract 'x'\nlevel Debug\ntests/contract_testcases/solana/expressions/bytes32_0.sol:2:9-14:10"]
 	contracts -> contract
 	contract -> b32 [label="function"]
 	b32 -> returns [label="returns"]

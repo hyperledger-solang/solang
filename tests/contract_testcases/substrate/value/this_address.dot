@@ -1,11 +1,11 @@
 strict digraph "tests/contract_testcases/substrate/value/this_address.sol" {
-	contract [label="contract b\ntests/contract_testcases/substrate/value/this_address.sol:2:9-20"]
+	contract [label="contract b\ntests/contract_testcases/substrate/value/this_address.sol:2:9-6:10"]
 	step1 [label="function step1\ncontract: b\ntests/contract_testcases/substrate/value/this_address.sol:3:13-62\nsignature step1()\nvisibility public\nmutability nonpayable"]
 	returns [label="returns\naddress payable "]
 	return [label="return\ntests/contract_testcases/substrate/value/this_address.sol:4:17-37"]
 	cast [label="cast address payable\ntests/contract_testcases/substrate/value/this_address.sol:4:24-37"]
 	builtins [label="builtin GetAddress\ntests/contract_testcases/substrate/value/this_address.sol:4:32-36"]
-	diagnostic [label="found contract 'b'\nlevel Debug\ntests/contract_testcases/substrate/value/this_address.sol:2:9-20"]
+	diagnostic [label="found contract 'b'\nlevel Debug\ntests/contract_testcases/substrate/value/this_address.sol:2:9-6:10"]
 	diagnostic_9 [label="function can be declared 'view'\nlevel Warning\ntests/contract_testcases/substrate/value/this_address.sol:3:13-62"]
 	contracts -> contract
 	contract -> step1 [label="function"]

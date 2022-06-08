@@ -1,12 +1,12 @@
 strict digraph "tests/contract_testcases/solana/accessor/constant_01.sol" {
-	contract [label="contract x\ntests/contract_testcases/solana/accessor/constant_01.sol:2:9-20"]
+	contract [label="contract x\ntests/contract_testcases/solana/accessor/constant_01.sol:2:9-5:10"]
 	var [label="variable foo\nvisibility internal\ntests/contract_testcases/solana/accessor/constant_01.sol:3:13-22"]
 	var_4 [label="variable z\nvisibility public\nconstant\ntests/contract_testcases/solana/accessor/constant_01.sol:4:13-55"]
 	z [label="function z\ncontract: x\ntests/contract_testcases/solana/accessor/constant_01.sol:4:37-38\nsignature z()\nvisibility public\nmutability view"]
 	returns [label="returns\nbytes32 "]
 	return [label="return\nimplicit"]
 	constant [label="constant variable\nx.z\nbytes32\nimplicit"]
-	diagnostic [label="found contract 'x'\nlevel Debug\ntests/contract_testcases/solana/accessor/constant_01.sol:2:9-20"]
+	diagnostic [label="found contract 'x'\nlevel Debug\ntests/contract_testcases/solana/accessor/constant_01.sol:2:9-5:10"]
 	diagnostic_11 [label="cannot read contract variable 'foo' in constant expression\nlevel Error\ntests/contract_testcases/solana/accessor/constant_01.sol:4:51-54"]
 	contracts -> contract
 	contract -> var [label="variable"]

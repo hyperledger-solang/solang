@@ -22,3 +22,4 @@ itertools = "0.10"
 [dev-dependencies]
 walkdir = "2.3.2"
 regex = "1.5.5"
+pretty_assertions = "1.2"

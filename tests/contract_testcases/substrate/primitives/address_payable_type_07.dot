@@ -1,11 +1,11 @@
 strict digraph "tests/contract_testcases/substrate/primitives/address_payable_type_07.sol" {
-	contract [label="contract c\ntests/contract_testcases/substrate/primitives/address_payable_type_07.sol:2:9-20"]
+	contract [label="contract c\ntests/contract_testcases/substrate/primitives/address_payable_type_07.sol:2:9-6:10"]
 	test [label="function test\ncontract: c\ntests/contract_testcases/substrate/primitives/address_payable_type_07.sol:3:13-44\nsignature test(address)\nvisibility public\nmutability nonpayable"]
 	parameters [label="parameters\naddress a"]
 	var_decl [label="variable decl address payable b\ntests/contract_testcases/substrate/primitives/address_payable_type_07.sol:4:17-55"]
 	cast [label="cast address payable\ntests/contract_testcases/substrate/primitives/address_payable_type_07.sol:4:37-55"]
 	variable [label="variable: a\naddress\ntests/contract_testcases/substrate/primitives/address_payable_type_07.sol:4:53-54"]
-	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/primitives/address_payable_type_07.sol:2:9-20"]
+	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/primitives/address_payable_type_07.sol:2:9-6:10"]
 	diagnostic_9 [label="function can be declared 'pure'\nlevel Warning\ntests/contract_testcases/substrate/primitives/address_payable_type_07.sol:3:13-44"]
 	diagnostic_10 [label="local variable 'b' has been assigned, but never read\nlevel Warning\ntests/contract_testcases/substrate/primitives/address_payable_type_07.sol:4:33-34"]
 	contracts -> contract

@@ -1,6 +1,6 @@
 strict digraph "tests/contract_testcases/substrate/account_info.sol" {
-	contract [label="contract c\ntests/contract_testcases/substrate/account_info.sol:1:1-12"]
-	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/account_info.sol:1:1-12"]
+	contract [label="contract c\ntests/contract_testcases/substrate/account_info.sol:1:1-6:2"]
+	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/account_info.sol:1:1-6:2"]
 	diagnostic_5 [label="type 'AccountInfo' not found\nlevel Error\ntests/contract_testcases/substrate/account_info.sol:2:2-13"]
 	diagnostic_6 [label="type 'AccountInfo' not found\nlevel Error\ntests/contract_testcases/substrate/account_info.sol:4:15-26"]
 	diagnostic_7 [label="type 'AccountInfo' not found\nlevel Error\ntests/contract_testcases/substrate/account_info.sol:4:44-55"]

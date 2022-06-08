@@ -1,8 +1,8 @@
 strict digraph "tests/contract_testcases/substrate/variables/global_constants_04.sol" {
-	contract [label="contract test\ntests/contract_testcases/substrate/variables/global_constants_04.sol:1:25-39"]
+	contract [label="contract test\ntests/contract_testcases/substrate/variables/global_constants_04.sol:1:25-41"]
 	diagnostic [label="test is already defined as a contract name\nlevel Error\ntests/contract_testcases/substrate/variables/global_constants_04.sol:1:15-19"]
-	note [label="location of previous definition\ntests/contract_testcases/substrate/variables/global_constants_04.sol:1:25-39"]
-	diagnostic_6 [label="found contract 'test'\nlevel Debug\ntests/contract_testcases/substrate/variables/global_constants_04.sol:1:25-39"]
+	note [label="location of previous definition\ntests/contract_testcases/substrate/variables/global_constants_04.sol:1:25-41"]
+	diagnostic_6 [label="found contract 'test'\nlevel Debug\ntests/contract_testcases/substrate/variables/global_constants_04.sol:1:25-41"]
 	contracts -> contract
 	diagnostics -> diagnostic [label="Error"]
 	diagnostic -> note [label="note"]

@@ -1,14 +1,14 @@
 strict digraph "tests/contract_testcases/substrate/inheritance/test_abstract_01.sol" {
-	contract [label="contract foo\ntests/contract_testcases/substrate/inheritance/test_abstract_01.sol:2:9-31"]
+	contract [label="contract foo\ntests/contract_testcases/substrate/inheritance/test_abstract_01.sol:2:9-8:10"]
 	node_2 [label="constructor \ncontract: foo\ntests/contract_testcases/substrate/inheritance/test_abstract_01.sol:3:13-41\nsignature (int256)\nvisibility public\nmutability nonpayable"]
 	parameters [label="parameters\nint256 arg1"]
 	f1 [label="function f1\ncontract: foo\ntests/contract_testcases/substrate/inheritance/test_abstract_01.sol:6:13-33\nsignature f1()\nvisibility public\nmutability nonpayable"]
-	contract_5 [label="contract bar\ntests/contract_testcases/substrate/inheritance/test_abstract_01.sol:10:9-22"]
+	contract_5 [label="contract bar\ntests/contract_testcases/substrate/inheritance/test_abstract_01.sol:10:9-14:10"]
 	test [label="function test\ncontract: bar\ntests/contract_testcases/substrate/inheritance/test_abstract_01.sol:11:13-35\nsignature test()\nvisibility public\nmutability nonpayable"]
-	diagnostic [label="found abstract contract 'foo'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/test_abstract_01.sol:2:9-31"]
+	diagnostic [label="found abstract contract 'foo'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/test_abstract_01.sol:2:9-8:10"]
 	diagnostic_9 [label="function parameter 'arg1' has never been read\nlevel Warning\ntests/contract_testcases/substrate/inheritance/test_abstract_01.sol:3:29-33"]
 	diagnostic_10 [label="'public': visibility for constructors is ignored\nlevel Warning\ntests/contract_testcases/substrate/inheritance/test_abstract_01.sol:3:35-41"]
-	diagnostic_11 [label="found contract 'bar'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/test_abstract_01.sol:10:9-22"]
+	diagnostic_11 [label="found contract 'bar'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/test_abstract_01.sol:10:9-14:10"]
 	diagnostic_12 [label="cannot construct 'foo' of type 'abstract contract'\nlevel Error\ntests/contract_testcases/substrate/inheritance/test_abstract_01.sol:12:25-42"]
 	contracts -> contract
 	contract -> node_2 [label="constructor"]

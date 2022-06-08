@@ -188,8 +188,8 @@ Base: Base = {
 }
 
 ContractDefinition: Box<ContractDefinition> = {
-    <l:@L> <ty:ContractTy> <name:SolIdentifier> <base:Bases> <r:@R>
-    "{" <parts:(<ContractPart>)*> "}" => {
+    <l:@L> <ty:ContractTy> <name:SolIdentifier> <base:Bases>
+    "{" <parts:(<ContractPart>)*> "}" <r:@R> => {
         Box::new(ContractDefinition{loc: Loc::File(file_no, l, r), ty, name, base, parts})
     }
 }

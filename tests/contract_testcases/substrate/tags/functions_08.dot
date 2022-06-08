@@ -1,8 +1,8 @@
 strict digraph "tests/contract_testcases/substrate/tags/functions_08.sol" {
-	contract [label="contract c\ntests/contract_testcases/substrate/tags/functions_08.sol:2:9-20"]
+	contract [label="contract c\ntests/contract_testcases/substrate/tags/functions_08.sol:2:9-5:10"]
 	foo [label="function foo\ncontract: c\ntests/contract_testcases/substrate/tags/functions_08.sol:4:13-58\nsignature foo()\nvisibility public\nmutability nonpayable"]
 	returns [label="returns\nint256 a\nbool b"]
-	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/tags/functions_08.sol:2:9-20"]
+	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/tags/functions_08.sol:2:9-5:10"]
 	diagnostic_6 [label="base contract 'b' not found in tag '@inheritdoc'\nlevel Error\ntests/contract_testcases/substrate/tags/functions_08.sol:3:29-30"]
 	contracts -> contract
 	contract -> foo [label="function"]

@@ -1,6 +1,6 @@
 strict digraph "tests/contract_testcases/substrate/inheritance/test_interface.sol" {
-	contract [label="contract foo\ntests/contract_testcases/substrate/inheritance/test_interface.sol:2:9-23"]
-	diagnostic [label="found interface 'foo'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/test_interface.sol:2:9-23"]
+	contract [label="contract foo\ntests/contract_testcases/substrate/inheritance/test_interface.sol:2:9-5:10"]
+	diagnostic [label="found interface 'foo'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/test_interface.sol:2:9-5:10"]
 	diagnostic_5 [label="constructor not allowed in an interface\nlevel Error\ntests/contract_testcases/substrate/inheritance/test_interface.sol:3:13-41"]
 	diagnostic_6 [label="'public': visibility for constructors is ignored\nlevel Warning\ntests/contract_testcases/substrate/inheritance/test_interface.sol:3:35-41"]
 	contracts -> contract

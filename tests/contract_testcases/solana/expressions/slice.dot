@@ -1,8 +1,8 @@
 strict digraph "tests/contract_testcases/solana/expressions/slice.sol" {
-	contract [label="contract slice\ntests/contract_testcases/solana/expressions/slice.sol:1:1-2:16"]
+	contract [label="contract slice\ntests/contract_testcases/solana/expressions/slice.sol:1:1-9:2"]
 	foo [label="function foo\ncontract: slice\ntests/contract_testcases/solana/expressions/slice.sol:3:5-35\nsignature foo(bytes)\nvisibility public\nmutability nonpayable"]
 	parameters [label="parameters\nbytes foo"]
-	diagnostic [label="found contract 'slice'\nlevel Debug\ntests/contract_testcases/solana/expressions/slice.sol:1:1-2:16"]
+	diagnostic [label="found contract 'slice'\nlevel Debug\ntests/contract_testcases/solana/expressions/slice.sol:1:1-9:2"]
 	diagnostic_7 [label="declaration of 'foo' shadows function\nlevel Warning\ntests/contract_testcases/solana/expressions/slice.sol:3:24-27"]
 	note [label="previous declaration of function\ntests/contract_testcases/solana/expressions/slice.sol:3:14-17"]
 	diagnostic_9 [label="slice not supported yet\nlevel Error\ntests/contract_testcases/solana/expressions/slice.sol:4:20-27"]

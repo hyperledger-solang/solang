@@ -1,12 +1,12 @@
 strict digraph "tests/contract_testcases/solana/using_literal.sol" {
-	contract [label="contract C\ntests/contract_testcases/solana/using_literal.sol:4:1-5:12"]
+	contract [label="contract C\ntests/contract_testcases/solana/using_literal.sol:4:1-9:2"]
 	foo [label="function foo\ncontract: C\ntests/contract_testcases/solana/using_literal.sol:6:2-42\nsignature foo()\nvisibility public\nmutability pure"]
 	returns [label="returns\nint256 "]
 	return [label="return\ntests/contract_testcases/solana/using_literal.sol:7:3-21"]
 	call_internal_function [label="call internal function\ntests/contract_testcases/solana/using_literal.sol:7:10-21"]
 	internal_function [label="function(int256) internal pure returns (int256)\nfree function double\ntests/contract_testcases/solana/using_literal.sol:7:10-21"]
 	number_literal [label="int256 literal: 42\ntests/contract_testcases/solana/using_literal.sol:7:10-12"]
-	diagnostic [label="found contract 'C'\nlevel Debug\ntests/contract_testcases/solana/using_literal.sol:4:1-5:12"]
+	diagnostic [label="found contract 'C'\nlevel Debug\ntests/contract_testcases/solana/using_literal.sol:4:1-9:2"]
 	contracts -> contract
 	contract -> foo [label="function"]
 	foo -> returns [label="returns"]

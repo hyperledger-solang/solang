@@ -1,5 +1,5 @@
 strict digraph "tests/contract_testcases/substrate/libraries/using_07.sol" {
-	contract [label="contract C\ntests/contract_testcases/substrate/libraries/using_07.sol:10:1-11:12"]
+	contract [label="contract C\ntests/contract_testcases/substrate/libraries/using_07.sol:10:1-22:2"]
 	using [label="using for int256"]
 	using_4 [label="using for uint256"]
 	using_5 [label="using for int256\nfunction foo3 tests/contract_testcases/substrate/libraries/using_07.sol:3:23-4:35\nfunction foo4 tests/contract_testcases/substrate/libraries/using_07.sol:6:2-7:42"]
@@ -14,7 +14,7 @@ strict digraph "tests/contract_testcases/substrate/libraries/using_07.sol" {
 	internal_function_14 [label="function(int256,int256) internal returns (void)\nfree function foo4\ntests/contract_testcases/substrate/libraries/using_07.sol:20:3-12"]
 	variable_15 [label="variable: a\nint256\ntests/contract_testcases/substrate/libraries/using_07.sol:20:3-4"]
 	number_literal [label="int256 literal: 1\ntests/contract_testcases/substrate/libraries/using_07.sol:20:10-11"]
-	diagnostic [label="found contract 'C'\nlevel Debug\ntests/contract_testcases/substrate/libraries/using_07.sol:10:1-11:12"]
+	diagnostic [label="found contract 'C'\nlevel Debug\ntests/contract_testcases/substrate/libraries/using_07.sol:10:1-22:2"]
 	diagnostic_19 [label="'foo1' has no arguments, at least one argument required\nlevel Error\ntests/contract_testcases/substrate/libraries/using_07.sol:12:9-13"]
 	note [label="definition of 'foo1'\ntests/contract_testcases/substrate/libraries/using_07.sol:1:10-14"]
 	diagnostic_21 [label="'global' on using within contract not permitted\nlevel Error\ntests/contract_testcases/substrate/libraries/using_07.sol:12:23-29"]

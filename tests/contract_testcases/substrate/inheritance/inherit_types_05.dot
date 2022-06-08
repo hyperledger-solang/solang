@@ -1,18 +1,18 @@
 strict digraph "tests/contract_testcases/substrate/inheritance/inherit_types_05.sol" {
 	foo [label="name: foo\ncontract: c\ntests/contract_testcases/substrate/inheritance/inherit_types_05.sol:10:13-32\nvalue: f1\nvalue: f2"]
 	foo_3 [label="name:foo\ncontract: b\ntests/contract_testcases/substrate/inheritance/inherit_types_05.sol:3:20-23\nfield name:f1 ty:uint32\nfield name:f2 ty:uint32"]
-	contract [label="contract b\ntests/contract_testcases/substrate/inheritance/inherit_types_05.sol:2:9-20"]
-	contract_6 [label="contract c\ntests/contract_testcases/substrate/inheritance/inherit_types_05.sol:9:9-20"]
-	contract_7 [label="contract a\ntests/contract_testcases/substrate/inheritance/inherit_types_05.sol:13:9-27"]
+	contract [label="contract b\ntests/contract_testcases/substrate/inheritance/inherit_types_05.sol:2:9-7:10"]
+	contract_6 [label="contract c\ntests/contract_testcases/substrate/inheritance/inherit_types_05.sol:9:9-11:10"]
+	contract_7 [label="contract a\ntests/contract_testcases/substrate/inheritance/inherit_types_05.sol:13:9-16:10"]
 	base [label="base b\ntests/contract_testcases/substrate/inheritance/inherit_types_05.sol:13:23-24"]
 	base_9 [label="base c\ntests/contract_testcases/substrate/inheritance/inherit_types_05.sol:13:26-27"]
 	test [label="function test\ncontract: a\ntests/contract_testcases/substrate/inheritance/inherit_types_05.sol:14:13-40\nsignature test((uint32,uint32))\nvisibility public\nmutability nonpayable"]
 	parameters [label="parameters\nstruct b.foo x"]
-	diagnostic [label="found contract 'b'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/inherit_types_05.sol:2:9-20"]
+	diagnostic [label="found contract 'b'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/inherit_types_05.sol:2:9-7:10"]
 	diagnostic_14 [label="already defined 'foo'\nlevel Error\ntests/contract_testcases/substrate/inheritance/inherit_types_05.sol:3:20-23"]
 	note [label="previous definition of 'foo'\ntests/contract_testcases/substrate/inheritance/inherit_types_05.sol:10:18-21"]
-	diagnostic_16 [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/inherit_types_05.sol:9:9-20"]
-	diagnostic_17 [label="found contract 'a'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/inherit_types_05.sol:13:9-27"]
+	diagnostic_16 [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/inherit_types_05.sol:9:9-11:10"]
+	diagnostic_17 [label="found contract 'a'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/inherit_types_05.sol:13:9-16:10"]
 	enums -> foo
 	structs -> foo_3
 	contracts -> contract

@@ -1,6 +1,6 @@
 strict digraph "tests/contract_testcases/ewasm/rubixi.sol" {
 	Participant [label="name:Participant\ncontract: Rubixi\ntests/contract_testcases/ewasm/rubixi.sol:25:17-28\nfield name:etherAddress ty:address\nfield name:payout ty:uint256"]
-	contract [label="contract Rubixi\ntests/contract_testcases/ewasm/rubixi.sol:4:2-18"]
+	contract [label="contract Rubixi\ntests/contract_testcases/ewasm/rubixi.sol:4:2-156:3"]
 	var [label="variable balance\nvisibility private\ntests/contract_testcases/ewasm/rubixi.sol:7:10-34"]
 	number_literal [label="uint256 literal: 0\ntests/contract_testcases/ewasm/rubixi.sol:7:33-34"]
 	var_6 [label="variable collectedFees\nvisibility private\ntests/contract_testcases/ewasm/rubixi.sol:8:10-40"]
@@ -383,7 +383,7 @@ strict digraph "tests/contract_testcases/ewasm/rubixi.sol" {
 	variable_383 [label="variable: orderInPyramid\nuint256\ntests/contract_testcases/ewasm/rubixi.sol:153:48-62"]
 	number_literal_384 [label="uint256 literal: 1000000000000000000\ntests/contract_testcases/ewasm/rubixi.sol:153:73-80"]
 	diagnostic [label="pragma 'solidity' is ignored\nlevel Debug\ntests/contract_testcases/ewasm/rubixi.sol:2:2-25"]
-	diagnostic_387 [label="found contract 'Rubixi'\nlevel Debug\ntests/contract_testcases/ewasm/rubixi.sol:4:2-18"]
+	diagnostic_387 [label="found contract 'Rubixi'\nlevel Debug\ntests/contract_testcases/ewasm/rubixi.sol:4:2-156:3"]
 	diagnostic_388 [label="local variable 'payoutToSend' has been assigned, but never read\nlevel Warning\ntests/contract_testcases/ewasm/rubixi.sol:67:31-43"]
 	diagnostic_389 [label="return variable 'Address' has never been assigned\nlevel Warning\ntests/contract_testcases/ewasm/rubixi.sol:150:87-94"]
 	structs -> Participant

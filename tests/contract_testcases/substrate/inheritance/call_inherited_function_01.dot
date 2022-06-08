@@ -1,5 +1,5 @@
 strict digraph "tests/contract_testcases/substrate/inheritance/call_inherited_function_01.sol" {
-	contract [label="contract base\ntests/contract_testcases/substrate/inheritance/call_inherited_function_01.sol:2:9-23"]
+	contract [label="contract base\ntests/contract_testcases/substrate/inheritance/call_inherited_function_01.sol:2:9-6:10"]
 	foo [label="function foo\ncontract: base\ntests/contract_testcases/substrate/inheritance/call_inherited_function_01.sol:3:13-60\nsignature foo(uint64)\nvisibility private\nmutability nonpayable"]
 	parameters [label="parameters\nuint64 a"]
 	returns [label="returns\nuint64 "]
@@ -7,12 +7,12 @@ strict digraph "tests/contract_testcases/substrate/inheritance/call_inherited_fu
 	add [label="add\nuint64\ntests/contract_testcases/substrate/inheritance/call_inherited_function_01.sol:4:24-31"]
 	variable [label="variable: a\nuint64\ntests/contract_testcases/substrate/inheritance/call_inherited_function_01.sol:4:24-25"]
 	number_literal [label="uint64 literal: 102\ntests/contract_testcases/substrate/inheritance/call_inherited_function_01.sol:4:28-31"]
-	contract_9 [label="contract apex\ntests/contract_testcases/substrate/inheritance/call_inherited_function_01.sol:8:9-30"]
+	contract_9 [label="contract apex\ntests/contract_testcases/substrate/inheritance/call_inherited_function_01.sol:8:9-12:10"]
 	base [label="base base\ntests/contract_testcases/substrate/inheritance/call_inherited_function_01.sol:8:26-30"]
 	bar [label="function bar\ncontract: apex\ntests/contract_testcases/substrate/inheritance/call_inherited_function_01.sol:9:13-51\nsignature bar()\nvisibility public\nmutability nonpayable"]
 	returns_12 [label="returns\nuint64 "]
-	diagnostic [label="found contract 'base'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/call_inherited_function_01.sol:2:9-23"]
-	diagnostic_15 [label="found contract 'apex'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/call_inherited_function_01.sol:8:9-30"]
+	diagnostic [label="found contract 'base'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/call_inherited_function_01.sol:2:9-6:10"]
+	diagnostic_15 [label="found contract 'apex'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/call_inherited_function_01.sol:8:9-12:10"]
 	diagnostic_16 [label="cannot call private function\nlevel Error\ntests/contract_testcases/substrate/inheritance/call_inherited_function_01.sol:10:24-35"]
 	note [label="declaration of function 'foo'\ntests/contract_testcases/substrate/inheritance/call_inherited_function_01.sol:3:13-60"]
 	contracts -> contract

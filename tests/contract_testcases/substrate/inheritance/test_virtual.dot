@@ -1,6 +1,6 @@
 strict digraph "tests/contract_testcases/substrate/inheritance/test_virtual.sol" {
-	contract [label="contract c\ntests/contract_testcases/substrate/inheritance/test_virtual.sol:2:9-20"]
-	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/test_virtual.sol:2:9-20"]
+	contract [label="contract c\ntests/contract_testcases/substrate/inheritance/test_virtual.sol:2:9-4:10"]
+	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/test_virtual.sol:2:9-4:10"]
 	diagnostic_5 [label="function with no body missing 'virtual'. This was permitted in older versions of the Solidity language, please update.\nlevel Error\ntests/contract_testcases/substrate/inheritance/test_virtual.sol:3:13-35"]
 	contracts -> contract
 	diagnostics -> diagnostic [label="Debug"]

@@ -1,9 +1,9 @@
 strict digraph "tests/contract_testcases/substrate/expressions/test_cast_errors_03.sol" {
-	contract [label="contract test\ntests/contract_testcases/substrate/expressions/test_cast_errors_03.sol:1:1-15"]
+	contract [label="contract test\ntests/contract_testcases/substrate/expressions/test_cast_errors_03.sol:1:1-6:10"]
 	foobar [label="function foobar\ncontract: test\ntests/contract_testcases/substrate/expressions/test_cast_errors_03.sol:2:13-73\nsignature foobar(uint32,int16)\nvisibility public\nmutability nonpayable"]
 	parameters [label="parameters\nuint32 foo\nint16 bar"]
 	returns [label="returns\nbool "]
-	diagnostic [label="found contract 'test'\nlevel Debug\ntests/contract_testcases/substrate/expressions/test_cast_errors_03.sol:1:1-15"]
+	diagnostic [label="found contract 'test'\nlevel Debug\ntests/contract_testcases/substrate/expressions/test_cast_errors_03.sol:1:1-6:10"]
 	diagnostic_7 [label="implicit conversion would change sign from int16 to uint32\nlevel Error\ntests/contract_testcases/substrate/expressions/test_cast_errors_03.sol:3:23-26"]
 	contracts -> contract
 	contract -> foobar [label="function"]

@@ -1,15 +1,15 @@
 strict digraph "tests/contract_testcases/substrate/inheritance/inherit_types.sol" {
 	enum_x [label="name: enum_x\ncontract: b\ntests/contract_testcases/substrate/inheritance/inherit_types.sol:9:13-35\nvalue: x1\nvalue: x2"]
-	contract [label="contract a\ntests/contract_testcases/substrate/inheritance/inherit_types.sol:2:9-24"]
+	contract [label="contract a\ntests/contract_testcases/substrate/inheritance/inherit_types.sol:2:9-6:10"]
 	base [label="base b\ntests/contract_testcases/substrate/inheritance/inherit_types.sol:2:23-24"]
 	test [label="function test\ncontract: a\ntests/contract_testcases/substrate/inheritance/inherit_types.sol:3:13-52\nsignature test()\nvisibility public\nmutability nonpayable"]
 	returns [label="returns\nenum b.enum_x "]
 	return [label="return\ntests/contract_testcases/substrate/inheritance/inherit_types.sol:4:17-33"]
 	number_literal [label="enum b.enum_x literal: 1\ntests/contract_testcases/substrate/inheritance/inherit_types.sol:4:24-33"]
-	contract_9 [label="contract b\ntests/contract_testcases/substrate/inheritance/inherit_types.sol:8:9-20"]
-	diagnostic [label="found contract 'a'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/inherit_types.sol:2:9-24"]
+	contract_9 [label="contract b\ntests/contract_testcases/substrate/inheritance/inherit_types.sol:8:9-10:10"]
+	diagnostic [label="found contract 'a'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/inherit_types.sol:2:9-6:10"]
 	diagnostic_12 [label="function can be declared 'pure'\nlevel Warning\ntests/contract_testcases/substrate/inheritance/inherit_types.sol:3:13-52"]
-	diagnostic_13 [label="found contract 'b'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/inherit_types.sol:8:9-20"]
+	diagnostic_13 [label="found contract 'b'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/inherit_types.sol:8:9-10:10"]
 	enums -> enum_x
 	contracts -> contract
 	contract -> base [label="base"]

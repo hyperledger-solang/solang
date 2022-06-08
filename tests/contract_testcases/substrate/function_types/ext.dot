@@ -1,5 +1,5 @@
 strict digraph "tests/contract_testcases/substrate/function_types/ext.sol" {
-	contract [label="contract test\ntests/contract_testcases/substrate/function_types/ext.sol:1:1-15"]
+	contract [label="contract test\ntests/contract_testcases/substrate/function_types/ext.sol:1:1-9:10"]
 	x [label="function x\ncontract: test\ntests/contract_testcases/substrate/function_types/ext.sol:2:13-59\nsignature x(int64)\nvisibility internal\nmutability nonpayable"]
 	parameters [label="parameters\nint64 arg1"]
 	returns [label="returns\nbool "]
@@ -8,7 +8,7 @@ strict digraph "tests/contract_testcases/substrate/function_types/ext.sol" {
 	returns_7 [label="returns\nbool "]
 	return [label="return\ntests/contract_testcases/substrate/function_types/ext.sol:7:17-29"]
 	bool_literal [label="bool literal: false\ntests/contract_testcases/substrate/function_types/ext.sol:7:24-29"]
-	diagnostic [label="found contract 'test'\nlevel Debug\ntests/contract_testcases/substrate/function_types/ext.sol:1:1-15"]
+	diagnostic [label="found contract 'test'\nlevel Debug\ntests/contract_testcases/substrate/function_types/ext.sol:1:1-9:10"]
 	diagnostic_12 [label="conversion from function(int32) internal returns (bool) to function(int32) external returns (bool) not possible\nlevel Error\ntests/contract_testcases/substrate/function_types/ext.sol:3:61-64"]
 	contracts -> contract
 	contract -> x [label="function"]

@@ -3,7 +3,7 @@ strict digraph "tests/contract_testcases/substrate/structs/parse_structs_09.sol"
 	D [label="name:D\ncontract: con\ntests/contract_testcases/substrate/structs/parse_structs_09.sol:7:20-21\nfield name:c ty:struct con.C"]
 	B [label="name:B\ncontract: con\ntests/contract_testcases/substrate/structs/parse_structs_09.sol:11:20-21\nfield name:c ty:struct con.C\nfield name:d ty:struct con.D"]
 	A [label="name:A\ncontract: con\ntests/contract_testcases/substrate/structs/parse_structs_09.sol:16:20-21\nfield name:d ty:struct con.D\nfield name:b ty:struct con.B\nfield name:c ty:struct con.C"]
-	contract [label="contract con\ntests/contract_testcases/substrate/structs/parse_structs_09.sol:2:9-22"]
+	contract [label="contract con\ntests/contract_testcases/substrate/structs/parse_structs_09.sol:2:9-21:10"]
 	diagnostic [label="contract name 'con' is reserved file name on Windows\nlevel Error\ntests/contract_testcases/substrate/structs/parse_structs_09.sol:2:18-21"]
 	structs -> C
 	structs -> D

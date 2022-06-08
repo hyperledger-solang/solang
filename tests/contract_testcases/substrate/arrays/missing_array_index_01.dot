@@ -1,8 +1,8 @@
 strict digraph "tests/contract_testcases/substrate/arrays/missing_array_index_01.sol" {
-	contract [label="contract c\ntests/contract_testcases/substrate/arrays/missing_array_index_01.sol:2:9-20"]
+	contract [label="contract c\ntests/contract_testcases/substrate/arrays/missing_array_index_01.sol:2:9-8:10"]
 	foo [label="function foo\ncontract: c\ntests/contract_testcases/substrate/arrays/missing_array_index_01.sol:3:13-50\nsignature foo()\nvisibility public\nmutability nonpayable"]
 	returns [label="returns\nuint8 "]
-	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/arrays/missing_array_index_01.sol:2:9-20"]
+	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/arrays/missing_array_index_01.sol:2:9-8:10"]
 	diagnostic_6 [label="conversion from uint8[5] to uint8[4] not possible\nlevel Error\ntests/contract_testcases/substrate/arrays/missing_array_index_01.sol:4:43-60"]
 	contracts -> contract
 	contract -> foo [label="function"]

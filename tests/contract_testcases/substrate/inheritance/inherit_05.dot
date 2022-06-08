@@ -1,10 +1,10 @@
 strict digraph "tests/contract_testcases/substrate/inheritance/inherit_05.sol" {
-	contract [label="contract a\ntests/contract_testcases/substrate/inheritance/inherit_05.sol:2:9-24"]
+	contract [label="contract a\ntests/contract_testcases/substrate/inheritance/inherit_05.sol:2:9-5:10"]
 	base [label="base b\ntests/contract_testcases/substrate/inheritance/inherit_05.sol:2:23-24"]
-	contract_4 [label="contract b\ntests/contract_testcases/substrate/inheritance/inherit_05.sol:7:9-24"]
+	contract_4 [label="contract b\ntests/contract_testcases/substrate/inheritance/inherit_05.sol:7:9-10:10"]
 	base_5 [label="base c\ntests/contract_testcases/substrate/inheritance/inherit_05.sol:7:23-24"]
-	contract_6 [label="contract d\ntests/contract_testcases/substrate/inheritance/inherit_05.sol:12:9-20"]
-	contract_7 [label="contract c\ntests/contract_testcases/substrate/inheritance/inherit_05.sol:17:9-27"]
+	contract_6 [label="contract d\ntests/contract_testcases/substrate/inheritance/inherit_05.sol:12:9-15:10"]
+	contract_7 [label="contract c\ntests/contract_testcases/substrate/inheritance/inherit_05.sol:17:9-20:10"]
 	base_8 [label="base d\ntests/contract_testcases/substrate/inheritance/inherit_05.sol:17:23-24"]
 	diagnostic [label="base 'a' from contract 'c' is cyclic\nlevel Error\ntests/contract_testcases/substrate/inheritance/inherit_05.sol:17:26-27"]
 	contracts -> contract

@@ -1,5 +1,5 @@
 strict digraph "tests/contract_testcases/substrate/value/this_address_03.sol" {
-	contract [label="contract b\ntests/contract_testcases/substrate/value/this_address_03.sol:2:9-20"]
+	contract [label="contract b\ntests/contract_testcases/substrate/value/this_address_03.sol:2:9-13:10"]
 	var [label="variable s\nvisibility internal\ntests/contract_testcases/substrate/value/this_address_03.sol:3:13-20"]
 	step1 [label="function step1\ncontract: b\ntests/contract_testcases/substrate/value/this_address_03.sol:5:13-52\nsignature step1()\nvisibility public\nmutability nonpayable"]
 	returns [label="returns\nint32 "]
@@ -9,7 +9,7 @@ strict digraph "tests/contract_testcases/substrate/value/this_address_03.sol" {
 	assign [label="assign\nint32 storage\ntests/contract_testcases/substrate/value/this_address_03.sol:11:17-18"]
 	storage_var [label="storage variable\nb.s\nint32 storage\ntests/contract_testcases/substrate/value/this_address_03.sol:11:17-18"]
 	variable [label="variable: n\nint32\ntests/contract_testcases/substrate/value/this_address_03.sol:11:21-22"]
-	diagnostic [label="found contract 'b'\nlevel Debug\ntests/contract_testcases/substrate/value/this_address_03.sol:2:9-20"]
+	diagnostic [label="found contract 'b'\nlevel Debug\ntests/contract_testcases/substrate/value/this_address_03.sol:2:9-13:10"]
 	diagnostic_13 [label="function 'other' is not 'public' or 'external'\nlevel Error\ntests/contract_testcases/substrate/value/this_address_03.sol:6:17-32"]
 	contracts -> contract
 	contract -> var [label="variable"]

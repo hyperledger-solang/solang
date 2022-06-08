@@ -1,5 +1,5 @@
 strict digraph "tests/contract_testcases/substrate/arrays/lucas.sol" {
-	contract [label="contract Test\ntests/contract_testcases/substrate/arrays/lucas.sol:1:1-15"]
+	contract [label="contract Test\ntests/contract_testcases/substrate/arrays/lucas.sol:1:1-21:6"]
 	var [label="variable byteArr\nvisibility internal\ntests/contract_testcases/substrate/arrays/lucas.sol:2:9-22"]
 	var_3 [label="variable baRR\nvisibility internal\ntests/contract_testcases/substrate/arrays/lucas.sol:3:9-21"]
 	get [label="function get\ncontract: Test\ntests/contract_testcases/substrate/arrays/lucas.sol:5:9-30\nsignature get()\nvisibility public\nmutability nonpayable"]
@@ -56,7 +56,7 @@ strict digraph "tests/contract_testcases/substrate/arrays/lucas.sol" {
 	storage_load_55 [label="storage load bytes32\ntests/contract_testcases/substrate/arrays/lucas.sol:19:39-51"]
 	storage_var_56 [label="storage variable\nTest.baRR\nbytes32 storage\ntests/contract_testcases/substrate/arrays/lucas.sol:19:46-50"]
 	number_literal_57 [label="uint256 literal: 248\ntests/contract_testcases/substrate/arrays/lucas.sol:19:39-51"]
-	diagnostic [label="found contract 'Test'\nlevel Debug\ntests/contract_testcases/substrate/arrays/lucas.sol:1:1-15"]
+	diagnostic [label="found contract 'Test'\nlevel Debug\ntests/contract_testcases/substrate/arrays/lucas.sol:1:1-21:6"]
 	diagnostic_60 [label="storage variable 'baRR' has been assigned, but never read\nlevel Warning\ntests/contract_testcases/substrate/arrays/lucas.sol:3:9-21"]
 	contracts -> contract
 	contract -> var [label="variable"]

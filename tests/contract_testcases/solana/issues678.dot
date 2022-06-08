@@ -1,7 +1,7 @@
 strict digraph "tests/contract_testcases/solana/issues678.sol" {
 	Share [label="name:Share\ncontract: Shares\ntests/contract_testcases/solana/issues678.sol:7:12-17\nfield name:shareOwner ty:address payable\nfield name:amount ty:uint256"]
 	Transfer [label="name:Transfer\ncontract: 0\ntests/contract_testcases/solana/issues678.sol:5:11-19\nfield name:to ty:address indexed:no\nfield name:amount ty:uint256 indexed:no\nfield name:balance ty:uint256 indexed:no"]
-	contract [label="contract Shares\ntests/contract_testcases/solana/issues678.sol:3:1-4:17"]
+	contract [label="contract Shares\ntests/contract_testcases/solana/issues678.sol:3:1-56:2"]
 	var [label="variable _shares\nvisibility private\ntests/contract_testcases/solana/issues678.sol:12:5-28"]
 	node_7 [label="constructor \ncontract: Shares\ntests/contract_testcases/solana/issues678.sol:15:5-19\nsignature ()\nvisibility public\nmutability nonpayable"]
 	tags [label="notice: Create the shares object that gives the shares to every body"]
@@ -156,7 +156,7 @@ strict digraph "tests/contract_testcases/solana/issues678.sol" {
 	cast_157 [label="cast address\ntests/contract_testcases/solana/issues678.sol:53:42-55"]
 	builtins_158 [label="builtin GetAddress\ntests/contract_testcases/solana/issues678.sol:53:50-54"]
 	diagnostic [label="pragma 'solidity' is ignored\nlevel Debug\ntests/contract_testcases/solana/issues678.sol:1:32-2:23"]
-	diagnostic_161 [label="found contract 'Shares'\nlevel Debug\ntests/contract_testcases/solana/issues678.sol:3:1-4:17"]
+	diagnostic_161 [label="found contract 'Shares'\nlevel Debug\ntests/contract_testcases/solana/issues678.sol:3:1-56:2"]
 	structs -> Share
 	events -> Transfer
 	contracts -> contract

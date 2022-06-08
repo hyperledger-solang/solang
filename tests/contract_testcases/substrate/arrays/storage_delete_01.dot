@@ -1,8 +1,8 @@
 strict digraph "tests/contract_testcases/substrate/arrays/storage_delete_01.sol" {
-	contract [label="contract foo\ntests/contract_testcases/substrate/arrays/storage_delete_01.sol:2:9-22"]
+	contract [label="contract foo\ntests/contract_testcases/substrate/arrays/storage_delete_01.sol:2:9-8:10"]
 	var [label="variable bar\nvisibility internal\ntests/contract_testcases/substrate/arrays/storage_delete_01.sol:3:13-24"]
 	test [label="function test\ncontract: foo\ntests/contract_testcases/substrate/arrays/storage_delete_01.sol:5:13-35\nsignature test()\nvisibility public\nmutability nonpayable"]
-	diagnostic [label="found contract 'foo'\nlevel Debug\ntests/contract_testcases/substrate/arrays/storage_delete_01.sol:2:9-22"]
+	diagnostic [label="found contract 'foo'\nlevel Debug\ntests/contract_testcases/substrate/arrays/storage_delete_01.sol:2:9-8:10"]
 	diagnostic_6 [label="delete not allowed in expression\nlevel Error\ntests/contract_testcases/substrate/arrays/storage_delete_01.sol:6:27-37"]
 	contracts -> contract
 	contract -> var [label="variable"]

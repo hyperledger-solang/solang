@@ -1,5 +1,5 @@
 strict digraph "tests/contract_testcases/substrate/functions/mutability_02.sol" {
-	contract [label="contract test\ntests/contract_testcases/substrate/functions/mutability_02.sol:1:1-15"]
+	contract [label="contract test\ntests/contract_testcases/substrate/functions/mutability_02.sol:1:1-5:10"]
 	bar [label="function bar\ncontract: test\ntests/contract_testcases/substrate/functions/mutability_02.sol:2:13-75\nsignature bar(int64[])\nvisibility private\nmutability pure"]
 	parameters [label="parameters\nint64[] storage foo"]
 	returns [label="returns\nint64 "]
@@ -8,7 +8,7 @@ strict digraph "tests/contract_testcases/substrate/functions/mutability_02.sol" 
 	subscript [label="subscript int64[] storage\ntests/contract_testcases/substrate/functions/mutability_02.sol:3:24-30"]
 	variable [label="variable: foo\nint64[] storage\ntests/contract_testcases/substrate/functions/mutability_02.sol:3:24-27"]
 	number_literal [label="uint256 literal: 0\ntests/contract_testcases/substrate/functions/mutability_02.sol:3:28-29"]
-	diagnostic [label="found contract 'test'\nlevel Debug\ntests/contract_testcases/substrate/functions/mutability_02.sol:1:1-15"]
+	diagnostic [label="found contract 'test'\nlevel Debug\ntests/contract_testcases/substrate/functions/mutability_02.sol:1:1-5:10"]
 	diagnostic_12 [label="function declared 'pure' but this expression reads from state\nlevel Error\ntests/contract_testcases/substrate/functions/mutability_02.sol:3:17-30"]
 	contracts -> contract
 	contract -> bar [label="function"]

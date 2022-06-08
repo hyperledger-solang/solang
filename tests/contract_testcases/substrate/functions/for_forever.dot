@@ -1,8 +1,8 @@
 strict digraph "tests/contract_testcases/substrate/functions/for_forever.sol" {
-	contract [label="contract test\ntests/contract_testcases/substrate/functions/for_forever.sol:2:5-19"]
+	contract [label="contract test\ntests/contract_testcases/substrate/functions/for_forever.sol:2:5-9:6"]
 	goodset [label="function goodset\ncontract: test\ntests/contract_testcases/substrate/functions/for_forever.sol:3:9-49\nsignature goodset()\nvisibility public\nmutability nonpayable"]
 	returns [label="returns\nbool "]
-	diagnostic [label="found contract 'test'\nlevel Debug\ntests/contract_testcases/substrate/functions/for_forever.sol:2:5-19"]
+	diagnostic [label="found contract 'test'\nlevel Debug\ntests/contract_testcases/substrate/functions/for_forever.sol:2:5-9:6"]
 	diagnostic_6 [label="unreachable statement\nlevel Error\ntests/contract_testcases/substrate/functions/for_forever.sol:7:13-19"]
 	contracts -> contract
 	contract -> goodset [label="function"]

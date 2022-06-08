@@ -1,7 +1,7 @@
 strict digraph "tests/contract_testcases/substrate/functions/stray_semicolon_01.sol" {
 	a [label="name:a\ncontract: x\ntests/contract_testcases/substrate/functions/stray_semicolon_01.sol:1:21-22\nfield name:f1 ty:uint32"]
-	contract [label="contract x\ntests/contract_testcases/substrate/functions/stray_semicolon_01.sol:1:1-12"]
-	diagnostic [label="found contract 'x'\nlevel Debug\ntests/contract_testcases/substrate/functions/stray_semicolon_01.sol:1:1-12"]
+	contract [label="contract x\ntests/contract_testcases/substrate/functions/stray_semicolon_01.sol:1:1-40"]
+	diagnostic [label="found contract 'x'\nlevel Debug\ntests/contract_testcases/substrate/functions/stray_semicolon_01.sol:1:1-40"]
 	diagnostic_7 [label="stray semicolon\nlevel Error\ntests/contract_testcases/substrate/functions/stray_semicolon_01.sol:1:37-38"]
 	structs -> a
 	contracts -> contract

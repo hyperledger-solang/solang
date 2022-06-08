@@ -1,7 +1,7 @@
 strict digraph "tests/contract_testcases/substrate/arrays/data_locations_02.sol" {
 	foo2 [label="name: foo2\ncontract: foo\ntests/contract_testcases/substrate/arrays/data_locations_02.sol:3:13-37\nvalue: bar1\nvalue: bar2"]
-	contract [label="contract foo\ntests/contract_testcases/substrate/arrays/data_locations_02.sol:2:9-22"]
-	diagnostic [label="found contract 'foo'\nlevel Debug\ntests/contract_testcases/substrate/arrays/data_locations_02.sol:2:9-22"]
+	contract [label="contract foo\ntests/contract_testcases/substrate/arrays/data_locations_02.sol:2:9-6:10"]
+	diagnostic [label="found contract 'foo'\nlevel Debug\ntests/contract_testcases/substrate/arrays/data_locations_02.sol:2:9-6:10"]
 	diagnostic_7 [label="data location 'memory' can only be specified for array, struct or mapping\nlevel Error\ntests/contract_testcases/substrate/arrays/data_locations_02.sol:4:31-37"]
 	enums -> foo2
 	contracts -> contract

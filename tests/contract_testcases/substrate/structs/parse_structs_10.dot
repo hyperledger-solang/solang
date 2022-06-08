@@ -3,7 +3,7 @@ strict digraph "tests/contract_testcases/substrate/structs/parse_structs_10.sol"
 	D [label="name:D\ncontract: con\ntests/contract_testcases/substrate/structs/parse_structs_10.sol:8:20-21\nfield name:c ty:struct con.C"]
 	B [label="name:B\ncontract: con\ntests/contract_testcases/substrate/structs/parse_structs_10.sol:12:20-21\nfield name:d ty:struct con.D"]
 	A [label="name:A\ncontract: con\ntests/contract_testcases/substrate/structs/parse_structs_10.sol:16:20-21\nfield name:d ty:struct con.D\nfield name:b ty:struct con.B\nfield name:c ty:struct con.C"]
-	contract [label="contract con\ntests/contract_testcases/substrate/structs/parse_structs_10.sol:2:9-22"]
+	contract [label="contract con\ntests/contract_testcases/substrate/structs/parse_structs_10.sol:2:9-21:10"]
 	diagnostic [label="contract name 'con' is reserved file name on Windows\nlevel Error\ntests/contract_testcases/substrate/structs/parse_structs_10.sol:2:18-21"]
 	diagnostic_10 [label="struct 'C' has infinite size\nlevel Error\ntests/contract_testcases/substrate/structs/parse_structs_10.sol:3:20-21"]
 	note [label="recursive field 'b'\ntests/contract_testcases/substrate/structs/parse_structs_10.sol:5:17-20"]

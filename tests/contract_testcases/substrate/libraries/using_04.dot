@@ -1,5 +1,5 @@
 strict digraph "tests/contract_testcases/substrate/libraries/using_04.sol" {
-	contract [label="contract test\ntests/contract_testcases/substrate/libraries/using_04.sol:2:9-23"]
+	contract [label="contract test\ntests/contract_testcases/substrate/libraries/using_04.sol:2:9-8:10"]
 	using [label="using for uint64\nlibrary ints"]
 	foo [label="function foo\ncontract: test\ntests/contract_testcases/substrate/libraries/using_04.sol:4:13-64\nsignature foo(uint32)\nvisibility public\nmutability pure"]
 	parameters [label="parameters\nuint32 x"]
@@ -10,7 +10,7 @@ strict digraph "tests/contract_testcases/substrate/libraries/using_04.sol" {
 	zero_ext [label="zero extend uint64\ntests/contract_testcases/substrate/libraries/using_04.sol:6:24-25"]
 	variable [label="variable: x\nuint32\ntests/contract_testcases/substrate/libraries/using_04.sol:6:24-25"]
 	number_literal [label="uint64 literal: 65536\ntests/contract_testcases/substrate/libraries/using_04.sol:6:30-35"]
-	contract_12 [label="contract ints\ntests/contract_testcases/substrate/libraries/using_04.sol:10:9-22"]
+	contract_12 [label="contract ints\ntests/contract_testcases/substrate/libraries/using_04.sol:10:9-14:10"]
 	max [label="function max\ncontract: ints\ntests/contract_testcases/substrate/libraries/using_04.sol:11:13-76\nsignature max(uint64,uint64)\nvisibility internal\nmutability pure"]
 	parameters_14 [label="parameters\nuint64 a\nuint64 b"]
 	returns_15 [label="returns\nuint64 "]
@@ -21,8 +21,8 @@ strict digraph "tests/contract_testcases/substrate/libraries/using_04.sol" {
 	variable_20 [label="variable: b\nuint64\ntests/contract_testcases/substrate/libraries/using_04.sol:12:28-29"]
 	variable_21 [label="variable: a\nuint64\ntests/contract_testcases/substrate/libraries/using_04.sol:12:32-33"]
 	variable_22 [label="variable: b\nuint64\ntests/contract_testcases/substrate/libraries/using_04.sol:12:36-37"]
-	diagnostic [label="found contract 'test'\nlevel Debug\ntests/contract_testcases/substrate/libraries/using_04.sol:2:9-23"]
-	diagnostic_25 [label="found library 'ints'\nlevel Debug\ntests/contract_testcases/substrate/libraries/using_04.sol:10:9-22"]
+	diagnostic [label="found contract 'test'\nlevel Debug\ntests/contract_testcases/substrate/libraries/using_04.sol:2:9-8:10"]
+	diagnostic_25 [label="found library 'ints'\nlevel Debug\ntests/contract_testcases/substrate/libraries/using_04.sol:10:9-14:10"]
 	contracts -> contract
 	contract -> using [label="base"]
 	contract -> foo [label="function"]

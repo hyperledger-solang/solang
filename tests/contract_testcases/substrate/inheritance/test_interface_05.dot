@@ -1,6 +1,6 @@
 strict digraph "tests/contract_testcases/substrate/inheritance/test_interface_05.sol" {
-	contract [label="contract foo\ntests/contract_testcases/substrate/inheritance/test_interface_05.sol:2:9-27"]
-	contract_3 [label="contract a\ntests/contract_testcases/substrate/inheritance/test_interface_05.sol:6:9-20"]
+	contract [label="contract foo\ntests/contract_testcases/substrate/inheritance/test_interface_05.sol:2:9-4:10"]
+	contract_3 [label="contract a\ntests/contract_testcases/substrate/inheritance/test_interface_05.sol:6:9-8:10"]
 	diagnostic [label="interface 'foo' cannot have contract 'a' as a base\nlevel Error\ntests/contract_testcases/substrate/inheritance/test_interface_05.sol:2:26-27"]
 	contracts -> contract
 	contracts -> contract_3

@@ -1,10 +1,10 @@
 strict digraph "tests/contract_testcases/substrate/strings/string_escape_03.sol" {
-	contract [label="contract c\ntests/contract_testcases/substrate/strings/string_escape_03.sol:2:9-20"]
+	contract [label="contract c\ntests/contract_testcases/substrate/strings/string_escape_03.sol:2:9-6:10"]
 	foo [label="function foo\ncontract: c\ntests/contract_testcases/substrate/strings/string_escape_03.sol:3:13-34\nsignature foo()\nvisibility public\nmutability nonpayable"]
 	var_decl [label="variable decl string f\ntests/contract_testcases/substrate/strings/string_escape_03.sol:4:21-36"]
 	alloc_array [label="alloc array string\ninitializer: \ntests/contract_testcases/substrate/strings/string_escape_03.sol:4:32-36"]
 	number_literal [label="uint32 literal: 0\ntests/contract_testcases/substrate/strings/string_escape_03.sol:4:32-36"]
-	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/strings/string_escape_03.sol:2:9-20"]
+	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/strings/string_escape_03.sol:2:9-6:10"]
 	diagnostic_8 [label="\u escape should be followed by four hex digits\nlevel Error\ntests/contract_testcases/substrate/strings/string_escape_03.sol:4:33-34"]
 	contracts -> contract
 	contract -> foo [label="function"]

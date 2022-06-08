@@ -1,6 +1,7 @@
 use crate::lexer::Lexer;
 use crate::pt::*;
 use crate::solidity;
+use pretty_assertions::assert_eq;
 use std::sync::mpsc;
 use std::time::Duration;
 use std::{fs, path::Path, thread};
@@ -55,7 +56,7 @@ fn parse_test() {
         SourceUnitPart::DocComment(DocComment{ loc: Loc::File(0,34,51), ty: CommentType::Line, comment: " @description Foo".to_string()}),
         SourceUnitPart::DocComment(DocComment{ loc: Loc::File(0,71,75), ty: CommentType::Line, comment: " Bar".to_string()}),
         SourceUnitPart::ContractDefinition(Box::new(ContractDefinition {
-            loc: Loc::File(0, 92, 105),
+            loc: Loc::File(0, 92, 702),
             ty: ContractTy::Contract(Loc::File(0, 92, 100)),
             name: Identifier {
                 loc: Loc::File(0, 101, 104),
@@ -336,7 +337,7 @@ fn parse_error_test() {
             ],
         })),
         SourceUnitPart::ContractDefinition(Box::new(ContractDefinition {
-            loc: Loc::File(0, 69, 88),
+            loc: Loc::File(0, 69, 438),
             ty: ContractTy::Contract(Loc::File(0, 69, 77)),
             name: Identifier {
                 loc: Loc::File(0, 78, 87),
@@ -879,7 +880,7 @@ fn parse_revert_test() {
 
     let expected_parse_tree = SourceUnit(vec![SourceUnitPart::ContractDefinition(Box::new(
         ContractDefinition {
-            loc: Loc::File(0, 9, 28),
+            loc: Loc::File(0, 9, 150),
             ty: ContractTy::Contract(Loc::File(0, 9, 17)),
             name: Identifier {
                 loc: Loc::File(0, 18, 27),
@@ -968,7 +969,7 @@ fn parse_user_defined_value_type() {
             ty: Expression::Type(Loc::File(0, 25, 32), Type::Uint(256)),
         })),
         SourceUnitPart::ContractDefinition(Box::new(ContractDefinition {
-            loc: Loc::File(0, 42, 61),
+            loc: Loc::File(0, 42, 109),
             ty: ContractTy::Contract(Loc::File(0, 42, 50)),
             name: Identifier {
                 loc: Loc::File(0, 51, 60),
