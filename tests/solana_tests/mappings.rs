@@ -693,3 +693,55 @@ fn mapping_in_struct_in_dynamic_array() {
 
     assert_eq!(returns, vec![Token::Int(U256::from(2147483647))]);
 }
+
+#[test]
+fn mapping_delete() {
+    let mut vm = build_solidity(
+        r#"
+contract DeleteTest {
+
+    struct data_struct  {
+        address addr1;
+	    address addr2;
+    }
+
+    mapping(uint => data_struct) example;
+
+    function addData() public  {
+        data_struct dt = data_struct({addr1: address(this), addr2: msg.sender});
+        uint id = 1;
+        example[id] = dt;
+    }
+
+    function deltest() external {
+        uint id = 1;
+        delete example[id];
+    }
+
+    function get() public view returns (data_struct calldata) {
+        uint id = 1;
+        return example[id];
+    }
+
+}
+        "#,
+    );
+
+    vm.constructor("DeleteTest", &[], 0);
+    let _ = vm.function("addData", &[], &[], 0, None);
+    let _ = vm.function("deltest", &[], &[], 0, None);
+    let returns = vm.function("get", &[], &[], 0, None);
+    assert_eq!(
+        returns,
+        vec![Token::Tuple(vec![
+            Token::FixedBytes(vec![
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0
+            ]),
+            Token::FixedBytes(vec![
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0
+            ])
+        ])],
+    );
+}

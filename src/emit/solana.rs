@@ -5,6 +5,7 @@ use crate::{codegen, Target};
 use std::collections::HashMap;
 use std::str;
 
+use crate::ast::Type;
 use inkwell::module::{Linkage, Module};
 use inkwell::types::{BasicType, IntType};
 use inkwell::values::{
@@ -868,6 +869,15 @@ impl SolanaTarget {
 
                 self.storage_free(binary, &field.ty, data, offset, function, zero, ns);
             }
+        } else if matches!(ty, Type::Address(_) | Type::Contract(_)) {
+            let ty = binary.llvm_type(ty, ns);
+
+            binary.builder.build_store(
+                binary
+                    .builder
+                    .build_pointer_cast(member, ty.ptr_type(AddressSpace::Generic), ""),
+                ty.into_array_type().const_zero(),
+            );
         } else {
             let ty = binary.llvm_type(ty, ns);
 
