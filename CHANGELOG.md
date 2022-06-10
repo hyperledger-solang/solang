@@ -2,7 +2,7 @@
 All notable changes to [Solang](https://github.com/hyperledger-labs/solang/)
 will be documented here.
 
-## v0.1.12 Cario
+## v0.1.12 Cairo
 
 ### Added
 - Added spl-token integration for Solana
