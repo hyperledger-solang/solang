@@ -10,7 +10,7 @@ use solang::{
     sema::{ast, builtin::get_prototype, symtable, tags::render},
     Target,
 };
-use std::{collections::HashMap, ffi::OsString, path::PathBuf};
+use std::{collections::HashMap, ffi::OsString, fmt::Write, path::PathBuf};
 use tokio::sync::Mutex;
 use tower_lsp::{jsonrpc::Result, lsp_types::*, Client, LanguageServer, LspService, Server};
 
@@ -219,14 +219,14 @@ impl SolangServer {
                     match expr {
                         codegen::Expression::BytesLiteral(_, ast::Type::Bytes(_), bs)
                         | codegen::Expression::BytesLiteral(_, ast::Type::DynamicBytes, bs) => {
-                            val.push_str(&format!(" = hex\"{}\"", hex::encode(&bs)));
+                            write!(val, " = hex\"{}\"", hex::encode(&bs)).unwrap();
                         }
                         codegen::Expression::BytesLiteral(_, ast::Type::String, bs) => {
-                            val.push_str(&format!(" = \"{}\"", String::from_utf8_lossy(bs)));
+                            write!(val, " = \"{}\"", String::from_utf8_lossy(bs)).unwrap();
                         }
                         codegen::Expression::NumberLiteral(_, ast::Type::Uint(_), n)
                         | codegen::Expression::NumberLiteral(_, ast::Type::Int(_), n) => {
-                            val.push_str(&format!(" = {}", n));
+                            write!(val, " = {}", n).unwrap();
                         }
                         _ => (),
                     }
@@ -319,23 +319,27 @@ impl SolangServer {
 
                 let mut val = render(&event.tags);
 
-                val.push_str(&format!("```\nevent {} {{\n", event.symbol_name(ns)));
+                write!(val, "```\nevent {} {{\n", event.symbol_name(ns)).unwrap();
 
                 let mut iter = event.fields.iter().peekable();
                 while let Some(field) = iter.next() {
-                    val.push_str(&format!(
-                        "\t{}{}{}{}\n",
+                    writeln!(
+                        val,
+                        "\t{}{}{}{}",
                         field.ty.to_string(ns),
                         if field.indexed { " indexed " } else { " " },
                         field.name_as_str(),
                         if iter.peek().is_some() { "," } else { "" }
-                    ));
+                    )
+                    .unwrap();
                 }
 
-                val.push_str(&format!(
+                write!(
+                    val,
                     "}}{};\n```\n",
                     if event.anonymous { " anonymous" } else { "" }
-                ));
+                )
+                .unwrap();
 
                 lookup_tbl.push(HoverEntry {
                     start: event_loc.start(),
@@ -534,14 +538,14 @@ impl SolangServer {
                     match expr {
                         codegen::Expression::BytesLiteral(_, ast::Type::Bytes(_), bs)
                         | codegen::Expression::BytesLiteral(_, ast::Type::DynamicBytes, bs) => {
-                            val.push_str(&format!(" hex\"{}\"", hex::encode(&bs)));
+                            write!(val, " hex\"{}\"", hex::encode(&bs)).unwrap();
                         }
                         codegen::Expression::BytesLiteral(_, ast::Type::String, bs) => {
-                            val.push_str(&format!(" \"{}\"", String::from_utf8_lossy(bs)));
+                            write!(val, " \"{}\"", String::from_utf8_lossy(bs)).unwrap();
                         }
                         codegen::Expression::NumberLiteral(_, ast::Type::Uint(_), n)
                         | codegen::Expression::NumberLiteral(_, ast::Type::Int(_), n) => {
-                            val.push_str(&format!(" {}", n));
+                            write!(val, " {}", n).unwrap();
                         }
                         _ => (),
                     }
@@ -1038,16 +1042,18 @@ impl SolangServer {
 
                 let mut msg = render(&strct.tags);
 
-                msg.push_str(&format!("```\nstruct {} {{\n", strct));
+                writeln!(msg, "```\nstruct {} {{", strct).unwrap();
 
                 let mut iter = strct.fields.iter().peekable();
                 while let Some(field) = iter.next() {
-                    msg.push_str(&format!(
-                        "\t{} {}{}\n",
+                    writeln!(
+                        msg,
+                        "\t{} {}{}",
                         field.ty.to_string(ns),
                         field.name_as_str(),
                         if iter.peek().is_some() { "," } else { "" }
-                    ));
+                    )
+                    .unwrap();
                 }
 
                 msg.push_str("};\n```\n");
@@ -1059,7 +1065,7 @@ impl SolangServer {
 
                 let mut msg = render(&enm.tags);
 
-                msg.push_str(&format!("```\nenum {} {{\n", enm));
+                write!(msg, "```\nenum {} {{\n", enm).unwrap();
 
                 // display the enum values in-order
                 let mut values = Vec::new();
@@ -1072,11 +1078,13 @@ impl SolangServer {
                 let mut iter = values.iter().peekable();
 
                 while let Some(value) = iter.next() {
-                    msg.push_str(&format!(
-                        "\t{}{}\n",
+                    writeln!(
+                        msg,
+                        "\t{}{}",
                         value,
                         if iter.peek().is_some() { "," } else { "" }
-                    ));
+                    )
+                    .unwrap();
                 }
 
                 msg.push_str("};\n```\n");

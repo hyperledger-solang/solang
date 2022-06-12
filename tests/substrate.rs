@@ -3,7 +3,7 @@ use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 use rand::Rng;
 use sha2::{Digest, Sha256};
-use std::{collections::HashMap, ffi::OsStr, fmt};
+use std::{collections::HashMap, ffi::OsStr, fmt, fmt::Write};
 use tiny_keccak::{Hasher, Keccak};
 use wasmi::memory_units::Pages;
 use wasmi::*;
@@ -1170,9 +1170,9 @@ impl MockSubstrate {
                             break;
                         }
                         let b = buf[offset + i];
-                        hex.push_str(&format!(" {:02x}", b));
+                        write!(hex, " {:02x}", b).unwrap();
                         if b.is_ascii() && !b.is_ascii_control() {
-                            chars.push_str(&format!("  {}", b as char));
+                            write!(chars, "  {}", b as char).unwrap();
                         } else {
                             chars.push_str("   ");
                         }

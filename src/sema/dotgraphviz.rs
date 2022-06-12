@@ -1,9 +1,13 @@
-use super::ast::*;
-use crate::parser::pt;
-use crate::sema::symtable::Symtable;
-use crate::sema::yul::ast::{YulBlock, YulExpression, YulStatement};
-use crate::sema::yul::builtin::YulBuiltInFunction;
-use solang_parser::pt::Loc;
+use crate::sema::{
+    ast::*,
+    symtable::Symtable,
+    yul::{
+        ast::{YulBlock, YulExpression, YulStatement},
+        builtin::YulBuiltInFunction,
+    },
+};
+use solang_parser::{pt, pt::Loc};
+use std::fmt::Write;
 
 struct Node {
     name: String,
@@ -37,25 +41,31 @@ impl Dot {
 
         for node in &self.nodes {
             if !node.labels.is_empty() {
-                result.push_str(&format!(
-                    "\t{} [label=\"{}\"]\n",
+                writeln!(
+                    result,
+                    "\t{} [label=\"{}\"]",
                     node.name,
                     node.labels.join("\\n")
-                ));
+                )
+                .unwrap();
             }
         }
 
         for edge in &self.edges {
             if let Some(label) = &edge.label {
-                result.push_str(&format!(
-                    "\t{} -> {} [label=\"{}\"]\n",
+                writeln!(
+                    result,
+                    "\t{} -> {} [label=\"{}\"]",
                     self.nodes[edge.from].name, self.nodes[edge.to].name, label
-                ));
+                )
+                .unwrap();
             } else {
-                result.push_str(&format!(
-                    "\t{} -> {}\n",
+                writeln!(
+                    result,
+                    "\t{} -> {}",
                     self.nodes[edge.from].name, self.nodes[edge.to].name
-                ));
+                )
+                .unwrap();
             }
         }
 

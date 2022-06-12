@@ -8,13 +8,11 @@ use super::{
     tags::{parse_doccomments, DocComment},
     SOLANA_SPARSE_ARRAY_SIZE,
 };
-use crate::parser::pt;
-use crate::parser::pt::CodeLocation;
+use crate::parser::{pt, pt::CodeLocation};
 use crate::Target;
 use num_bigint::BigInt;
 use num_traits::{One, Zero};
-use std::collections::HashMap;
-use std::ops::Mul;
+use std::{collections::HashMap, fmt::Write, ops::Mul};
 
 /// List the types which should be resolved later
 pub struct ResolveFields<'a> {
@@ -839,18 +837,20 @@ impl Type {
                 );
 
                 if !mutability.is_default() {
-                    s.push_str(&format!(" {}", mutability));
+                    write!(s, " {}", mutability).unwrap();
                 }
 
                 if !returns.is_empty() {
-                    s.push_str(&format!(
+                    write!(
+                        s,
                         " returns ({})",
                         returns
                             .iter()
                             .map(|ty| ty.to_string(ns))
                             .collect::<Vec<String>>()
                             .join(",")
-                    ));
+                    )
+                    .unwrap();
                 }
 
                 s
