@@ -1,5 +1,6 @@
 use super::ast::{Diagnostic, Namespace, Parameter, Tag};
 use crate::parser::pt;
+use std::fmt::Write;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum DocComment {
@@ -321,7 +322,7 @@ pub fn render(tags: &[Tag]) -> String {
     }
 
     if let Some(tag) = tags.iter().find(|e| e.tag == "author") {
-        s.push_str(&format!("Author: {}", &tag.value));
+        write!(s, "Author: {}", &tag.value).unwrap();
     }
 
     s

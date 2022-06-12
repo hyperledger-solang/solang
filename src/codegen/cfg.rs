@@ -1,8 +1,8 @@
 use indexmap::IndexMap;
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
-use std::fmt;
 use std::str;
 use std::sync::Arc;
+use std::{fmt, fmt::Write};
 
 use super::statements::{statement, LoopScopes};
 use super::{
@@ -1027,20 +1027,23 @@ impl ControlFlowGraph {
         let mut s = format!("block{}: # {}\n", pos, self.blocks[pos].name);
 
         if let Some(ref phis) = self.blocks[pos].phis {
-            s.push_str(&format!(
-                "\t# phis: {}\n",
+            writeln!(
+                s,
+                "\t# phis: {}",
                 phis.iter()
                     .map(|p| -> &str { &self.vars[p].id.name })
                     .collect::<Vec<&str>>()
                     .join(",")
-            ));
+            )
+            .unwrap();
         }
 
         let defs = &self.blocks[pos].defs;
 
         if !defs.is_empty() {
-            s.push_str(&format!(
-                "\t# reaching:{}\n",
+            writeln!(
+                s,
+                "\t# reaching:{}",
                 defs.iter()
                     .map(|(var_no, defs)| format!(
                         " {}:[{}]",
@@ -1052,11 +1055,12 @@ impl ControlFlowGraph {
                     ))
                     .collect::<Vec<String>>()
                     .join(", ")
-            ));
+            )
+            .unwrap();
         }
 
         for ins in &self.blocks[pos].instr {
-            s.push_str(&format!("\t{}\n", self.instr_to_string(contract, ns, ins)));
+            writeln!(s, "\t{}", self.instr_to_string(contract, ns, ins)).unwrap();
         }
 
         s
@@ -1692,31 +1696,38 @@ impl Contract {
 
         for cfg in &self.cfg {
             if !cfg.is_placeholder() {
-                out += &format!(
-                    "\n# {} {} public:{} selector:{} nonpayable:{}\n",
+                writeln!(
+                    out,
+                    "\n# {} {} public:{} selector:{} nonpayable:{}",
                     cfg.ty,
                     cfg.name,
                     cfg.public,
                     hex::encode(cfg.selector.to_be_bytes()),
                     cfg.nonpayable,
-                );
+                )
+                .unwrap();
 
-                out += &format!(
-                    "# params: {}\n",
+                writeln!(
+                    out,
+                    "# params: {}",
                     cfg.params
                         .iter()
                         .map(|p| p.ty.to_string(ns))
                         .collect::<Vec<String>>()
                         .join(",")
-                );
-                out += &format!(
-                    "# returns: {}\n",
+                )
+                .unwrap();
+
+                writeln!(
+                    out,
+                    "# returns: {}",
                     cfg.returns
                         .iter()
                         .map(|p| p.ty.to_string(ns))
                         .collect::<Vec<String>>()
                         .join(",")
-                );
+                )
+                .unwrap();
 
                 out += &cfg.to_string(self, ns);
             }

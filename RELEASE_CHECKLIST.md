@@ -15,3 +15,4 @@
 - Wait for build to succeed
 - `cargo publish`
 - Release new version of vscode plugin if needed
+- Mention release in Discord (Solana, Hyperledger) and Hyperledger /dev/weekly
