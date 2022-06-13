@@ -85,7 +85,7 @@ const PROGRAM_SO = readFileSync('./bundle.so');
 
     console.log('Program deployment finished, deploying the flipper contract ...');
 
-    await contract.deploy('flipper', [true], program, storage, 17);
+    await contract.deploy('flipper', [true], storage, 17);
 
     const res = await contract.functions.get();
     console.log('state: ' + res.result);

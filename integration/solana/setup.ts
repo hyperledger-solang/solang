@@ -17,7 +17,7 @@ export async function loadContract(name: string, abifile: string, args: any[] = 
     const storage = Keypair.generate();
     const contract = new Contract(connection, program.publicKey, storage.publicKey, abi, payerAccount);
 
-    await contract.deploy(name, args, program, storage, space);
+    await contract.deploy(name, args, storage, space);
 
     return { contract, connection, payer: payerAccount, program, storage };
 }
@@ -28,7 +28,7 @@ export async function load2ndContract(connection: Connection, program: Keypair, 
     const storage = Keypair.generate();
     const contract = new Contract(connection, program.publicKey, storage.publicKey, abi, payerAccount);
 
-    await contract.deploy(name, args, program, storage, space);
+    await contract.deploy(name, args, storage, space);
 
     return contract;
 }
