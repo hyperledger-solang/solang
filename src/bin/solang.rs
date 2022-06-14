@@ -1,18 +1,24 @@
-use clap::{Arg, ArgMatches, Command};
+use clap::{
+    builder::{ArgAction, ValueParser},
+    value_parser, Arg, ArgMatches, Command, ValueSource,
+};
 use itertools::Itertools;
 use num_traits::cast::ToPrimitive;
 use serde::Serialize;
-use std::collections::HashMap;
-use std::ffi::{OsStr, OsString};
-use std::fs::{create_dir_all, File};
-use std::io::prelude::*;
-use std::path::{Path, PathBuf};
-
-use solang::abi;
-use solang::codegen::{codegen, OptimizationLevel, Options};
-use solang::emit::Generate;
-use solang::file_resolver::FileResolver;
-use solang::sema::{ast::Namespace, diagnostics};
+use solang::{
+    abi,
+    codegen::{codegen, OptimizationLevel, Options},
+    emit::Generate,
+    file_resolver::FileResolver,
+    sema::{ast::Namespace, diagnostics},
+};
+use std::{
+    collections::HashMap,
+    ffi::{OsStr, OsString},
+    fs::{create_dir_all, File},
+    io::prelude::*,
+    path::{Path, PathBuf},
+};
 
 mod doc;
 mod languageserver;
@@ -50,7 +56,7 @@ fn main() {
                 .help("Solidity input files")
                 .required(true)
                 .conflicts_with("LANGUAGESERVER")
-                .allow_invalid_utf8(true)
+                .value_parser(ValueParser::os_string())
                 .multiple_values(true),
         )
         .arg(
@@ -58,14 +64,14 @@ fn main() {
                 .help("Emit compiler state at early stage")
                 .long("emit")
                 .takes_value(true)
-                .possible_values(&["ast-dot", "cfg", "llvm-ir", "llvm-bc", "object", "asm"]),
+                .value_parser(["ast-dot", "cfg", "llvm-ir", "llvm-bc", "object", "asm"]),
         )
         .arg(
             Arg::new("OPT")
                 .help("Set llvm optimizer level")
                 .short('O')
                 .takes_value(true)
-                .possible_values(&["none", "less", "default", "aggressive"])
+                .value_parser(["none", "less", "default", "aggressive"])
                 .default_value("default"),
         )
         .arg(
@@ -73,7 +79,7 @@ fn main() {
                 .help("Target to build for")
                 .long("target")
                 .takes_value(true)
-                .possible_values(&["solana", "substrate", "ewasm"])
+                .value_parser(["solana", "substrate", "ewasm"])
                 .required(true),
         )
         .arg(
@@ -81,12 +87,14 @@ fn main() {
                 .help("Address length on Substrate")
                 .long("address-length")
                 .takes_value(true)
+                .value_parser(value_parser!(u64).range(4..1024))
                 .default_value("32"),
         )
         .arg(
             Arg::new("VALUE_LENGTH")
                 .help("Value length on Substrate")
                 .long("value-length")
+                .value_parser(value_parser!(u64).range(4..1024))
                 .takes_value(true)
                 .default_value("16"),
         )
@@ -115,8 +123,8 @@ fn main() {
                 .short('I')
                 .long("importpath")
                 .takes_value(true)
-                .allow_invalid_utf8(true)
-                .multiple_occurrences(true),
+                .value_parser(ValueParser::path_buf())
+                .action(ArgAction::Append),
         )
         .arg(
             Arg::new("IMPORTMAP")
@@ -124,36 +132,41 @@ fn main() {
                 .short('m')
                 .long("importmap")
                 .takes_value(true)
-                .multiple_occurrences(true),
+                .action(ArgAction::Append),
         )
         .arg(
             Arg::new("CONSTANTFOLDING")
                 .help("Disable constant folding codegen optimization")
                 .long("no-constant-folding")
+                .action(ArgAction::SetFalse)
                 .display_order(1),
         )
         .arg(
             Arg::new("STRENGTHREDUCE")
                 .help("Disable strength reduce codegen optimization")
                 .long("no-strength-reduce")
+                .action(ArgAction::SetFalse)
                 .display_order(2),
         )
         .arg(
             Arg::new("DEADSTORAGE")
                 .help("Disable dead storage codegen optimization")
                 .long("no-dead-storage")
+                .action(ArgAction::SetFalse)
                 .display_order(3),
         )
         .arg(
             Arg::new("VECTORTOSLICE")
                 .help("Disable vector to slice codegen optimization")
                 .long("no-vector-to-slice")
+                .action(ArgAction::SetFalse)
                 .display_order(4),
         )
         .arg(
             Arg::new("COMMONSUBEXPRESSIONELIMINATION")
                 .help("Disable common subexpression elimination")
                 .long("no-cse")
+                .action(ArgAction::SetFalse)
                 .display_order(5),
         )
         .arg(
@@ -175,37 +188,23 @@ fn main() {
         )
         .get_matches();
 
-    let address_length = matches.value_of("ADDRESS_LENGTH").unwrap();
+    let address_length = matches.get_one::<u64>("ADDRESS_LENGTH").unwrap();
 
-    let address_length = match address_length.parse() {
-        Ok(len) if (4..1024).contains(&len) => len,
-        _ => {
-            eprintln!("error: address length '{}' is not valid", address_length);
-            std::process::exit(1);
-        }
-    };
+    let value_length = matches.get_one::<u64>("VALUE_LENGTH").unwrap();
 
-    let value_length = matches.value_of("VALUE_LENGTH").unwrap();
-
-    let value_length = match value_length.parse() {
-        Ok(len) if (4..1024).contains(&len) => len,
-        _ => {
-            eprintln!("error: value length '{}' is not valid", value_length);
-            std::process::exit(1);
-        }
-    };
-
-    let target = match matches.value_of("TARGET") {
-        Some("solana") => solang::Target::Solana,
-        Some("substrate") => solang::Target::Substrate {
-            address_length,
-            value_length,
+    let target = match matches.get_one::<String>("TARGET").unwrap().as_str() {
+        "solana" => solang::Target::Solana,
+        "substrate" => solang::Target::Substrate {
+            address_length: *address_length as usize,
+            value_length: *value_length as usize,
         },
-        Some("ewasm") => solang::Target::Ewasm,
+        "ewasm" => solang::Target::Ewasm,
         _ => unreachable!(),
     };
 
-    if !target.is_substrate() && matches.occurrences_of("ADDRESS_LENGTH") > 0 {
+    if !target.is_substrate()
+        && matches.value_source("ADDRESS_LENGTH") == Some(ValueSource::CommandLine)
+    {
         eprintln!(
             "error: address length cannot be modified for target '{}'",
             target
@@ -213,7 +212,9 @@ fn main() {
         std::process::exit(1);
     }
 
-    if !target.is_substrate() && matches.occurrences_of("VALUE_LENGTH") > 0 {
+    if !target.is_substrate()
+        && matches.value_source("VALUE_LENGTH") == Some(ValueSource::CommandLine)
+    {
         eprintln!(
             "error: value length cannot be modified for target '{}'",
             target
@@ -221,11 +222,11 @@ fn main() {
         std::process::exit(1);
     }
 
-    if matches.is_present("LANGUAGESERVER") {
+    if matches.contains_id("LANGUAGESERVER") {
         languageserver::start_server(target, matches);
     }
 
-    let verbose = matches.is_present("VERBOSE");
+    let verbose = matches.contains_id("VERBOSE");
     let mut json = JsonResult {
         errors: Vec::new(),
         target: target.to_string(),
@@ -237,31 +238,31 @@ fn main() {
         eprintln!("info: Solang version {}", env!("GIT_HASH"));
     }
 
-    let math_overflow_check = matches.is_present("MATHOVERFLOW");
+    let math_overflow_check = matches.contains_id("MATHOVERFLOW");
 
     let mut resolver = FileResolver::new();
 
-    for filename in matches.values_of_os("INPUT").unwrap() {
+    for filename in matches.get_many::<OsString>("INPUT").unwrap() {
         if let Ok(path) = PathBuf::from(filename).canonicalize() {
-            let _ = resolver.add_import_path(path.parent().unwrap().to_path_buf());
+            let _ = resolver.add_import_path(path.parent().unwrap());
         }
     }
 
-    if let Err(e) = resolver.add_import_path(PathBuf::from(".")) {
+    if let Err(e) = resolver.add_import_path(&PathBuf::from(".")) {
         eprintln!("error: cannot add current directory to import path: {}", e);
         std::process::exit(1);
     }
 
-    if let Some(paths) = matches.values_of_os("IMPORTPATH") {
+    if let Some(paths) = matches.get_many::<PathBuf>("IMPORTPATH") {
         for path in paths {
-            if let Err(e) = resolver.add_import_path(PathBuf::from(path)) {
+            if let Err(e) = resolver.add_import_path(path) {
                 eprintln!("error: import path '{}': {}", path.to_string_lossy(), e);
                 std::process::exit(1);
             }
         }
     }
 
-    if let Some(maps) = matches.values_of("IMPORTMAP") {
+    if let Some(maps) = matches.get_many::<String>("IMPORTMAP") {
         for p in maps {
             if let Some((map, path)) = p.split_once('=') {
                 if let Err(e) = resolver.add_import_map(OsString::from(map), PathBuf::from(path)) {
@@ -275,12 +276,12 @@ fn main() {
         }
     }
 
-    if matches.is_present("DOC") {
-        let verbose = matches.is_present("VERBOSE");
+    if matches.contains_id("DOC") {
+        let verbose = matches.contains_id("VERBOSE");
         let mut success = true;
         let mut files = Vec::new();
 
-        for filename in matches.values_of_os("INPUT").unwrap() {
+        for filename in matches.get_many::<&OsString>("INPUT").unwrap() {
             let ns = solang::parse_and_resolve(filename, &mut resolver, target);
 
             ns.print_diagnostics(&resolver, verbose);
@@ -297,10 +298,16 @@ fn main() {
 
         if success {
             // generate docs
-            doc::generate_docs(matches.value_of("OUTPUT").unwrap_or("."), &files, verbose);
+            doc::generate_docs(
+                matches
+                    .get_one::<String>("OUTPUT")
+                    .unwrap_or(&String::from(".")),
+                &files,
+                verbose,
+            );
         }
     } else {
-        let opt_level = match matches.value_of("OPT").unwrap() {
+        let opt_level = match matches.get_one::<String>("OPT").unwrap().as_str() {
             "none" => OptimizationLevel::None,
             "less" => OptimizationLevel::Less,
             "default" => OptimizationLevel::Default,
@@ -309,12 +316,14 @@ fn main() {
         };
 
         let opt = Options {
-            dead_storage: !matches.is_present("DEADSTORAGE"),
-            constant_folding: !matches.is_present("CONSTANTFOLDING"),
-            strength_reduce: !matches.is_present("STRENGTHREDUCE"),
-            vector_to_slice: !matches.is_present("VECTORTOSLICE"),
+            dead_storage: *matches.get_one::<bool>("DEADSTORAGE").unwrap(),
+            constant_folding: *matches.get_one::<bool>("CONSTANTFOLDING").unwrap(),
+            strength_reduce: *matches.get_one::<bool>("STRENGTHREDUCE").unwrap(),
+            vector_to_slice: *matches.get_one::<bool>("VECTORTOSLICE").unwrap(),
             math_overflow_check,
-            common_subexpression_elimination: !matches.is_present("COMMONSUBEXPRESSIONELIMINATION"),
+            common_subexpression_elimination: *matches
+                .get_one::<bool>("COMMONSUBEXPRESSIONELIMINATION")
+                .unwrap(),
             opt_level,
         };
 
@@ -322,7 +331,7 @@ fn main() {
 
         let mut errors = false;
 
-        for filename in matches.values_of_os("INPUT").unwrap() {
+        for filename in matches.get_many::<OsString>("INPUT").unwrap() {
             match process_file(filename, &mut resolver, target, &matches, &mut json, &opt) {
                 Ok(ns) => namespaces.push(ns),
                 Err(_) => {
@@ -333,12 +342,12 @@ fn main() {
 
         let namespaces = namespaces.iter().collect::<Vec<_>>();
 
-        if let Some("ast-dot") = matches.value_of("EMIT") {
+        if let Some("ast-dot") = matches.get_one::<String>("EMIT").map(|v| v.as_str()) {
             std::process::exit(0);
         }
 
         if errors {
-            if matches.is_present("STD-JSON") {
+            if matches.contains_id("STD-JSON") {
                 println!("{}", serde_json::to_string(&json).unwrap());
                 std::process::exit(0);
             } else {
@@ -361,7 +370,7 @@ fn main() {
             if !save_intermediates(&binary, &matches) {
                 let bin_filename = output_file(&matches, "bundle", target.file_extension());
 
-                if matches.is_present("VERBOSE") {
+                if matches.contains_id("VERBOSE") {
                     eprintln!(
                         "info: Saving binary {} for contracts: {}",
                         bin_filename.display(),
@@ -386,7 +395,7 @@ fn main() {
                     .code(Generate::Linked)
                     .expect("llvm code emit should work");
 
-                if matches.is_present("STD-JSON") {
+                if matches.contains_id("STD-JSON") {
                     json.program = hex::encode_upper(&code);
                 } else {
                     let mut file = create_file(&bin_filename);
@@ -422,14 +431,19 @@ fn main() {
             }
         }
 
-        if matches.is_present("STD-JSON") {
+        if matches.contains_id("STD-JSON") {
             println!("{}", serde_json::to_string(&json).unwrap());
         }
     }
 }
 
 fn output_file(matches: &ArgMatches, stem: &str, ext: &str) -> PathBuf {
-    Path::new(matches.value_of("OUTPUT").unwrap_or(".")).join(format!("{}.{}", stem, ext))
+    Path::new(
+        matches
+            .get_one::<String>("OUTPUT")
+            .unwrap_or(&String::from(".")),
+    )
+    .join(format!("{}.{}", stem, ext))
 }
 
 fn process_file(
@@ -440,7 +454,7 @@ fn process_file(
     json: &mut JsonResult,
     opt: &Options,
 ) -> Result<Namespace, ()> {
-    let verbose = matches.is_present("VERBOSE");
+    let verbose = matches.contains_id("VERBOSE");
 
     let mut json_contracts = HashMap::new();
 
@@ -450,14 +464,14 @@ fn process_file(
     // codegen all the contracts; some additional errors/warnings will be detected here
     codegen(&mut ns, opt);
 
-    if matches.is_present("STD-JSON") {
+    if matches.contains_id("STD-JSON") {
         let mut out = ns.diagnostics_as_json(resolver);
         json.errors.append(&mut out);
     } else {
         ns.print_diagnostics(resolver, verbose);
     }
 
-    if let Some("ast-dot") = matches.value_of("EMIT") {
+    if let Some("ast-dot") = matches.get_one::<String>("EMIT").map(|v| v.as_str()) {
         let filepath = PathBuf::from(filename);
         let stem = filepath.file_stem().unwrap().to_string_lossy();
         let dot_filename = output_file(matches, &stem, "dot");
@@ -490,13 +504,13 @@ fn process_file(
             continue;
         }
 
-        if let Some("cfg") = matches.value_of("EMIT") {
+        if let Some("cfg") = matches.get_one::<String>("EMIT").map(|v| v.as_str()) {
             println!("{}", resolved_contract.print_cfg(&ns));
             continue;
         }
 
         if target == solang::Target::Solana {
-            if matches.is_present("STD-JSON") {
+            if matches.contains_id("STD-JSON") {
                 json_contracts.insert(
                     resolved_contract.name.to_owned(),
                     JsonContract {
@@ -539,7 +553,7 @@ fn process_file(
             continue;
         }
 
-        if matches.is_present("STD-JSON") {
+        if matches.contains_id("STD-JSON") {
             json_contracts.insert(
                 binary.name.to_owned(),
                 JsonContract {
@@ -588,9 +602,9 @@ fn process_file(
 }
 
 fn save_intermediates(binary: &solang::emit::binary::Binary, matches: &ArgMatches) -> bool {
-    let verbose = matches.is_present("VERBOSE");
+    let verbose = matches.contains_id("VERBOSE");
 
-    match matches.value_of("EMIT") {
+    match matches.get_one::<String>("EMIT").map(|v| v.as_str()) {
         Some("llvm-ir") => {
             if let Some(runtime) = &binary.runtime {
                 // In Ethereum, an ewasm contract has two parts, deployer and runtime. The deployer code returns the runtime wasm

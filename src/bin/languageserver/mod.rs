@@ -53,13 +53,13 @@ impl SolangServer {
 
             let dir = path.parent().unwrap();
 
-            let _ = resolver.add_import_path(PathBuf::from(dir));
+            let _ = resolver.add_import_path(dir);
 
             let mut diags = Vec::new();
 
-            if let Some(paths) = self.matches.values_of_os("IMPORTPATH") {
+            if let Some(paths) = self.matches.get_many::<PathBuf>("IMPORTPATH") {
                 for path in paths {
-                    if let Err(e) = resolver.add_import_path(PathBuf::from(path)) {
+                    if let Err(e) = resolver.add_import_path(path) {
                         diags.push(Diagnostic {
                             message: format!("import path '{}': {}", path.to_string_lossy(), e),
                             severity: Some(DiagnosticSeverity::ERROR),
@@ -69,7 +69,7 @@ impl SolangServer {
                 }
             }
 
-            if let Some(maps) = self.matches.values_of("IMPORTMAP") {
+            if let Some(maps) = self.matches.get_many::<String>("IMPORTMAP") {
                 for p in maps {
                     if let Some((map, path)) = p.split_once('=') {
                         if let Err(e) =
