@@ -3,8 +3,8 @@ use super::{
     expression::{expression, function_returns, function_type, ExprContext, ResolveTo},
     symtable::Symtable,
 };
-use crate::parser::pt;
-use crate::parser::pt::CodeLocation;
+use solang_parser::pt;
+use solang_parser::pt::CodeLocation;
 use std::collections::HashSet;
 
 /// Resolve a using declaration in either file scope or contract scope

@@ -4,9 +4,9 @@ use std::fs::File;
 use std::io::prelude::*;
 use std::path::Path;
 
-use solang::parser::pt;
 use solang::sema::ast;
 use solang::sema::contracts::visit_bases;
+use solang_parser::pt;
 
 #[derive(Serialize)]
 struct Field<'a> {

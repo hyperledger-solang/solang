@@ -5,8 +5,8 @@ use std::str;
 use std::sync::Arc;
 
 use super::ast::{Diagnostic, Namespace, Type};
-use crate::parser::pt;
 use crate::sema::ast::Expression;
+use solang_parser::pt;
 
 #[derive(Clone, Debug)]
 pub struct Variable {

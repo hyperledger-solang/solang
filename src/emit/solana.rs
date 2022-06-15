@@ -1,7 +1,7 @@
 use crate::codegen::cfg::HashTy;
-use crate::parser::pt;
 use crate::sema::ast;
 use crate::{codegen, Target};
+use solang_parser::pt;
 use std::collections::HashMap;
 use std::str;
 

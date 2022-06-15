@@ -4,9 +4,9 @@ use crate::codegen::cfg::Instr;
 use crate::codegen::subexpression_elimination::common_subexpression_tracker::CommonSubExpressionTracker;
 use crate::codegen::subexpression_elimination::{AvailableExpression, AvailableExpressionSet};
 use crate::codegen::Expression;
-use crate::parser::pt::Loc;
 use crate::sema::ast::{StringLocation, Type};
 use num_bigint::{BigInt, Sign};
+use solang_parser::pt::Loc;
 
 #[test]
 fn add_variable_function_arg() {

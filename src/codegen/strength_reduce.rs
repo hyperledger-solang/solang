@@ -1605,7 +1605,8 @@ fn test_highest_bit() {
 
 #[test]
 fn expresson_known_bits() {
-    use crate::{parser::pt::Loc, Target};
+    use crate::Target;
+    use solang_parser::pt::Loc;
 
     let ns = Namespace::new(Target::default_substrate());
     let loc = Loc::Codegen;

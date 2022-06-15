@@ -1,9 +1,9 @@
 use crate::codegen::{Builtin, Expression};
-use crate::parser::pt;
 use crate::sema::ast::RetrieveType;
 use crate::sema::ast::{
     BuiltinStruct, CallTy, Contract, FormatArg, Namespace, Parameter, StringLocation, Type,
 };
+use solang_parser::pt;
 use std::convert::TryFrom;
 use std::fmt;
 use std::str;

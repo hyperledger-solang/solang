@@ -10,8 +10,6 @@ use super::eval::eval_const_rational;
 use super::format::string_format;
 use super::{symtable::Symtable, using};
 use crate::ast::RetrieveType;
-use crate::parser::pt;
-use crate::parser::pt::CodeLocation;
 use crate::sema::unused_variable::{
     assigned_variable, check_function_call, check_var_usage_expression, used_variable,
 };
@@ -20,6 +18,8 @@ use base58::{FromBase58, FromBase58Error};
 use num_bigint::{BigInt, Sign};
 use num_rational::BigRational;
 use num_traits::{FromPrimitive, Num, One, Pow, ToPrimitive, Zero};
+use solang_parser::pt;
+use solang_parser::pt::CodeLocation;
 use solang_parser::pt::Loc;
 use std::{
     cmp,

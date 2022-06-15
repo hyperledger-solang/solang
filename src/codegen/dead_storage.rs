@@ -1,7 +1,7 @@
 use super::cfg::{BasicBlock, ControlFlowGraph, Instr};
 use crate::codegen::Expression;
-use crate::parser::pt::Loc;
 use crate::sema::ast::{Namespace, RetrieveType, Type};
+use solang_parser::pt::Loc;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 

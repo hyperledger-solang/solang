@@ -1,5 +1,5 @@
 use super::ast::{File, Namespace};
-use crate::parser::pt::Loc;
+use solang_parser::pt::Loc;
 use std::{fmt, path};
 
 impl File {

@@ -3,11 +3,11 @@ use crate::codegen::{
     vartable::{Storage, Variable},
     ControlFlowGraph, Expression, Instr,
 };
-use crate::parser::pt::OptionalCodeLocation;
-use crate::parser::pt::{Identifier, Loc};
 use crate::sema::ast::RetrieveType;
 use crate::sema::ast::{Namespace, Type};
 use bitflags::bitflags;
+use solang_parser::pt::OptionalCodeLocation;
+use solang_parser::pt::{Identifier, Loc};
 use std::collections::{HashMap, VecDeque};
 
 #[derive(Clone)]

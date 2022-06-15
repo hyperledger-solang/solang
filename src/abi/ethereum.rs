@@ -1,7 +1,7 @@
 // ethereum style ABIs
-use crate::parser::pt;
 use crate::sema::ast::{Namespace, Parameter, Type};
 use serde::Serialize;
+use solang_parser::pt;
 
 #[derive(Serialize)]
 #[allow(clippy::upper_case_acronyms)]

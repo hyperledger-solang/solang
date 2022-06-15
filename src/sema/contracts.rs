@@ -1,7 +1,7 @@
-use crate::parser::pt;
-use crate::parser::pt::CodeLocation;
 use num_bigint::BigInt;
 use num_traits::Zero;
+use solang_parser::pt;
+use solang_parser::pt::CodeLocation;
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::convert::TryInto;
 use tiny_keccak::{Hasher, Keccak};

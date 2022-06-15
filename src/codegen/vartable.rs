@@ -1,11 +1,8 @@
+use crate::sema::{ast::Type, symtable::Symtable};
 use indexmap::IndexMap;
 use num_bigint::BigInt;
+use solang_parser::pt;
 use std::collections::BTreeSet;
-
-use crate::{
-    parser::pt,
-    sema::{ast::Type, symtable::Symtable},
-};
 
 #[derive(Clone)]
 pub struct Variable {

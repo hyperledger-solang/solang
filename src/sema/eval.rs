@@ -6,8 +6,8 @@ use num_traits::ToPrimitive;
 use num_traits::Zero;
 
 use super::ast::{Diagnostic, Expression, Namespace};
-use crate::parser::pt;
-use crate::parser::pt::CodeLocation;
+use solang_parser::pt;
+use solang_parser::pt::CodeLocation;
 
 /// Resolve an expression where a compile-time constant is expected
 pub fn eval_const_number(
