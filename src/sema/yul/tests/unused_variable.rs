@@ -100,7 +100,7 @@ fn correct_contracts() {
         int b;
     }
     test tt1;
-    function testAsm(uint256[] calldata vl) view public {
+    function testAsm(uint256[] calldata vl) pure public {
         test storage tt2 = tt1;
         assembly {
             let g := vl.length
