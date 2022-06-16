@@ -1107,7 +1107,7 @@ contract testTypes {
     }
 
     test tt1;
-    function testAsm(uint[] calldata vl) public view {
+    function testAsm(uint[] calldata vl) public pure {
         test storage tt2 = tt1;
         assembly {
             {
