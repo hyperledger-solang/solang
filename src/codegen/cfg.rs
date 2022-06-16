@@ -15,13 +15,13 @@ use super::{
 use crate::ast::FunctionAttributes;
 use crate::codegen::subexpression_elimination::common_sub_expression_elimination;
 use crate::codegen::{undefined_variable, Expression, LLVMName};
-use crate::parser::pt;
-use crate::parser::pt::CodeLocation;
 use crate::sema::ast::RetrieveType;
 use crate::sema::ast::{CallTy, Contract, Function, Namespace, Parameter, StringLocation, Type};
 use crate::sema::contracts::{collect_base_args, visit_bases};
 use crate::sema::Recurse;
 use crate::{ast, Target};
+use solang_parser::pt;
+use solang_parser::pt::CodeLocation;
 
 #[derive(Clone)]
 #[allow(clippy::large_enum_variant)]

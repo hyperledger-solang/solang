@@ -9,7 +9,7 @@ use super::{
     symtable::{VariableInitializer, VariableUsage},
     tags::{parse_doccomments, resolve_tags, DocComment},
 };
-use crate::parser::pt::{self, CodeLocation, OptionalCodeLocation};
+use solang_parser::pt::{self, CodeLocation, OptionalCodeLocation};
 
 pub struct DelayedResolveInitializer<'a> {
     var_no: usize,

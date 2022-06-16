@@ -8,14 +8,14 @@ use super::{
     symtable::Symtable,
     visit_bases, ArrayDimension,
 };
-use crate::parser::{
-    pt,
-    pt::{CodeLocation, OptionalCodeLocation},
-};
 use crate::Target;
 use num_bigint::BigInt;
 use num_traits::Signed;
 use num_traits::Zero;
+use solang_parser::{
+    pt,
+    pt::{CodeLocation, OptionalCodeLocation},
+};
 use std::collections::HashMap;
 
 impl Namespace {

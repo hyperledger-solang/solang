@@ -6,9 +6,9 @@ use self::{
     variables::variable_decl,
 };
 use crate::file_resolver::{FileResolver, ResolvedFile};
-use crate::parser::{parse, pt};
 use crate::sema::unused_variable::{check_unused_events, check_unused_namespace_variables};
 use num_bigint::BigInt;
+use solang_parser::{parse, pt};
 use std::ffi::OsStr;
 
 mod address;

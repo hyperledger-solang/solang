@@ -2,10 +2,10 @@ use crate::ast::Type;
 use crate::codegen::cfg::{ASTFunction, ControlFlowGraph, Instr};
 use crate::codegen::reaching_definitions::{apply_transfers, VarDefs};
 use crate::codegen::{Builtin, Expression};
-use crate::parser::pt::{Loc, StorageLocation};
 use crate::sema::ast::{Diagnostic, ErrorType, Level, Namespace, Note};
 use crate::sema::symtable;
 use solang_parser::pt::CodeLocation;
+use solang_parser::pt::{Loc, StorageLocation};
 use std::collections::HashMap;
 
 /// We use this struct in expression.recurse function to provide all the

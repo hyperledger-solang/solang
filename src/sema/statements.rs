@@ -6,15 +6,15 @@ use super::expression::{
     new, ExprContext, ResolveTo,
 };
 use super::symtable::{LoopScopes, Symtable};
-use crate::parser::pt;
-use crate::parser::pt::CatchClause;
-use crate::parser::pt::CodeLocation;
-use crate::parser::pt::OptionalCodeLocation;
 use crate::sema::builtin;
 use crate::sema::symtable::{VariableInitializer, VariableUsage};
 use crate::sema::unused_variable::{assigned_variable, check_function_call, used_variable};
 use crate::sema::yul::resolve_inline_assembly;
 use crate::sema::Recurse;
+use solang_parser::pt;
+use solang_parser::pt::CatchClause;
+use solang_parser::pt::CodeLocation;
+use solang_parser::pt::OptionalCodeLocation;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::sync::Arc;
 

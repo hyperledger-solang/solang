@@ -1,6 +1,5 @@
 use crate::codegen;
 use crate::codegen::cfg::HashTy;
-use crate::parser::pt;
 use crate::sema::ast;
 use inkwell::context::Context;
 use inkwell::module::{Linkage, Module};
@@ -12,6 +11,7 @@ use inkwell::AddressSpace;
 use inkwell::IntPredicate;
 use inkwell::OptimizationLevel;
 use num_traits::ToPrimitive;
+use solang_parser::pt;
 use std::collections::HashMap;
 use std::convert::TryFrom;
 

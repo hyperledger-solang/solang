@@ -8,8 +8,6 @@ use super::{
 };
 use crate::codegen::unused_variable::should_remove_assignment;
 use crate::codegen::{Builtin, Expression};
-use crate::parser::pt;
-use crate::parser::pt::CodeLocation;
 use crate::sema::ast;
 use crate::sema::ast::RetrieveType;
 use crate::sema::ast::{CallTy, FormatArg, Function, Namespace, Parameter, StringLocation, Type};
@@ -18,6 +16,8 @@ use crate::sema::expression::{bigint_to_expression, ResolveTo};
 use crate::Target;
 use num_bigint::BigInt;
 use num_traits::{FromPrimitive, One, ToPrimitive, Zero};
+use solang_parser::pt;
+use solang_parser::pt::CodeLocation;
 use std::ops::Mul;
 
 pub fn expression(

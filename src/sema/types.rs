@@ -8,10 +8,10 @@ use super::{
     tags::{parse_doccomments, DocComment},
     SOLANA_SPARSE_ARRAY_SIZE,
 };
-use crate::parser::{pt, pt::CodeLocation};
 use crate::Target;
 use num_bigint::BigInt;
 use num_traits::{One, Zero};
+use solang_parser::{pt, pt::CodeLocation};
 use std::{collections::HashMap, fmt::Write, ops::Mul};
 
 /// List the types which should be resolved later

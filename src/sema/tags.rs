@@ -1,5 +1,5 @@
 use super::ast::{Diagnostic, Namespace, Parameter, Tag};
-use crate::parser::pt;
+use solang_parser::pt;
 use std::fmt::Write;
 
 #[derive(Debug, PartialEq, Clone)]

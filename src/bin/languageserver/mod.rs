@@ -6,10 +6,10 @@ use solang::{
     codegen::codegen,
     file_resolver::FileResolver,
     parse_and_resolve,
-    parser::pt,
     sema::{ast, builtin::get_prototype, symtable, tags::render},
     Target,
 };
+use solang_parser::pt;
 use std::{collections::HashMap, ffi::OsString, fmt::Write, path::PathBuf};
 use tokio::sync::Mutex;
 use tower_lsp::{jsonrpc::Result, lsp_types::*, Client, LanguageServer, LspService, Server};

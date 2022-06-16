@@ -3,10 +3,10 @@ use super::ast::{
 };
 use super::contracts::is_base;
 use super::tags::{resolve_tags, DocComment};
-use crate::parser::pt;
-use crate::parser::pt::CodeLocation;
-use crate::parser::pt::OptionalCodeLocation;
 use crate::Target;
+use solang_parser::pt;
+use solang_parser::pt::CodeLocation;
+use solang_parser::pt::OptionalCodeLocation;
 
 /// Resolve function declaration in a contract
 pub fn contract_function(
