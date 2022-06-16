@@ -1,5 +1,4 @@
 // Parity Substrate style ABIs/Abi
-use crate::parser::pt;
 use crate::sema::ast;
 use crate::sema::tags::render;
 use contract_metadata::*;
@@ -7,6 +6,7 @@ use num_traits::ToPrimitive;
 use semver::Version;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
+use solang_parser::pt;
 use std::convert::TryInto;
 
 #[derive(Deserialize, Serialize)]

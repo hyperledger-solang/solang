@@ -1,14 +1,14 @@
 use super::symtable::Symtable;
 use crate::codegen::cfg::ControlFlowGraph;
 use crate::diagnostics::Diagnostics;
-pub use crate::parser::diagnostics::*;
-use crate::parser::pt;
-use crate::parser::pt::{CodeLocation, OptionalCodeLocation};
 use crate::sema::yul::ast::{InlineAssembly, YulFunction};
 use crate::sema::Recurse;
 use crate::{codegen, Target};
 use num_bigint::BigInt;
 use num_rational::BigRational;
+pub use solang_parser::diagnostics::*;
+use solang_parser::pt;
+use solang_parser::pt::{CodeLocation, OptionalCodeLocation};
 use std::sync::Arc;
 use std::{
     collections::{BTreeMap, HashMap},

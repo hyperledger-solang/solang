@@ -2,10 +2,10 @@ use super::ast::{
     Builtin, DestructureField, Diagnostic, Expression, Function, Mutability, Namespace, Statement,
     Type,
 };
-use crate::parser::pt;
 use crate::sema::ast::RetrieveType;
 use crate::sema::yul::ast::{YulExpression, YulStatement};
 use crate::sema::Recurse;
+use solang_parser::pt;
 
 /// check state mutability
 pub fn mutability(file_no: usize, ns: &mut Namespace) {

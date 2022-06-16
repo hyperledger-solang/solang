@@ -1,8 +1,8 @@
 use crate::ast::EventDecl;
-use crate::parser::pt::{ContractTy, Loc};
 use crate::sema::ast::{Builtin, CallArgs, Diagnostic, Expression, Namespace};
 use crate::sema::symtable::{Symtable, VariableUsage};
 use crate::sema::{ast, contracts::visit_bases, symtable};
+use solang_parser::pt::{ContractTy, Loc};
 
 /// Mark variables as assigned, either in the symbol table (for local variables) or in the
 /// Namespace (for storage variables)

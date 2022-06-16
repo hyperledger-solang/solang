@@ -5,13 +5,13 @@ use super::ast::{
 use super::eval::eval_const_number;
 use super::expression::{args_sanity_check, expression, ExprContext, ResolveTo};
 use super::symtable::Symtable;
-use crate::parser::pt;
-use crate::parser::pt::CodeLocation;
 use crate::sema::ast::RetrieveType;
 use crate::Target;
 use num_bigint::BigInt;
 use num_traits::One;
 use once_cell::sync::Lazy;
+use solang_parser::pt;
+use solang_parser::pt::CodeLocation;
 use std::path::PathBuf;
 
 pub struct Prototype {

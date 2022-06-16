@@ -13,14 +13,14 @@ use crate::codegen::unused_variable::{
 };
 use crate::codegen::yul::inline_assembly_cfg;
 use crate::codegen::{Builtin, Expression};
-use crate::parser::pt;
-use crate::parser::pt::CodeLocation;
 use crate::sema::ast::RetrieveType;
 use crate::sema::ast::{
     CallTy, DestructureField, Function, Namespace, Parameter, Statement, TryCatch, Type,
 };
 use crate::sema::Recurse;
 use num_traits::Zero;
+use solang_parser::pt;
+use solang_parser::pt::CodeLocation;
 use tiny_keccak::{Hasher, Keccak};
 
 /// Resolve a statement, which might be a block of statements or an entire body of a function

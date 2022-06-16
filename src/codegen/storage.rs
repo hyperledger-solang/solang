@@ -11,9 +11,9 @@ use super::{
     cfg::{ControlFlowGraph, Instr},
     vartable::Vartable,
 };
-use crate::parser::pt;
 use crate::sema::ast::RetrieveType;
 use crate::sema::ast::{Function, Namespace, Type};
+use solang_parser::pt;
 
 /// Given a storage slot which is the start of the array, calculate the
 /// offset of the array element. This function exists to avoid doing

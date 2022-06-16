@@ -1,5 +1,5 @@
-use crate::parser::pt::Loc;
-use crate::parser::pt::OptionalCodeLocation;
+use solang_parser::pt::Loc;
+use solang_parser::pt::OptionalCodeLocation;
 
 /// This struct manages expressions assigned to an existing variable.
 #[derive(Clone)]

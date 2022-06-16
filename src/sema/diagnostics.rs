@@ -1,9 +1,9 @@
 use super::ast::{Diagnostic, Level, Namespace};
 use crate::file_resolver::FileResolver;
-use crate::parser::pt::Loc;
 use codespan_reporting::{diagnostic, files, term};
 use itertools::Itertools;
 use serde::Serialize;
+use solang_parser::pt::Loc;
 use std::{
     collections::HashMap,
     slice::Iter,
