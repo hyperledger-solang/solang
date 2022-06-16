@@ -73,6 +73,7 @@ impl From<inkwell::OptimizationLevel> for OptimizationLevel {
     }
 }
 
+#[derive(Debug)]
 pub struct Options {
     pub dead_storage: bool,
     pub constant_folding: bool,

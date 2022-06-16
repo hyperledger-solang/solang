@@ -48,7 +48,7 @@ impl FileResolver {
     }
 
     /// Add import path
-    pub fn add_import_path(&mut self, path: PathBuf) -> io::Result<()> {
+    pub fn add_import_path(&mut self, path: &Path) -> io::Result<()> {
         self.import_paths.push((None, path.canonicalize()?));
         Ok(())
     }
