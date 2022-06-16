@@ -239,14 +239,10 @@ fn read_expression(expr: &Expression, state: &mut StateCheck) -> bool {
             right.recurse(state, read_expression);
             left.recurse(state, write_expression);
         }
-        Expression::StorageArrayLength { loc, .. }
-        | Expression::StorageVariable(loc, _, _, _)
-        | Expression::StorageLoad(loc, _, _) => state.read(loc),
-        Expression::Subscript(loc, _, ty, ..) | Expression::Variable(loc, ty, _)
-            if ty.is_contract_storage() =>
-        {
+        Expression::StorageArrayLength { loc, .. } | Expression::StorageLoad(loc, _, _) => {
             state.read(loc)
         }
+        Expression::Subscript(loc, _, ty, ..) if ty.is_contract_storage() => state.read(loc),
         Expression::Builtin(loc, _, Builtin::GetAddress, _)
         | Expression::Builtin(loc, _, Builtin::BlockNumber, _)
         | Expression::Builtin(loc, _, Builtin::Timestamp, _)
