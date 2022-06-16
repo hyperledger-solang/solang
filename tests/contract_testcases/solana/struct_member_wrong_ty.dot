@@ -1,0 +1,14 @@
+strict digraph "tests/contract_testcases/solana/struct_member_wrong_ty.sol" {
+	tt [label="name:tt\ncontract: DeleteTest\ntests/contract_testcases/solana/struct_member_wrong_ty.sol:3:16-18\nfield name:vec ty:int256[4]"]
+	contract [label="contract DeleteTest\ntests/contract_testcases/solana/struct_member_wrong_ty.sol:1:1-13:2"]
+	getVec [label="function getVec\ncontract: DeleteTest\ntests/contract_testcases/solana/struct_member_wrong_ty.sol:7:5-43\nsignature getVec()\nvisibility public\nmutability nonpayable"]
+	returns [label="returns\nint256 "]
+	diagnostic [label="found contract 'DeleteTest'\nlevel Debug\ntests/contract_testcases/solana/struct_member_wrong_ty.sol:1:1-13:2"]
+	diagnostic_8 [label="conversion from int256[4] to int256[] not possible\nlevel Error\ntests/contract_testcases/solana/struct_member_wrong_ty.sol:9:36-39"]
+	structs -> tt
+	contracts -> contract
+	contract -> getVec [label="function"]
+	getVec -> returns [label="returns"]
+	diagnostics -> diagnostic [label="Debug"]
+	diagnostics -> diagnostic_8 [label="Error"]
+}
