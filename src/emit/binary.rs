@@ -834,7 +834,7 @@ impl<'a> Binary<'a> {
                         false,
                     )
                     .as_basic_type_enum(),
-                Type::Mapping(..) => unreachable!(),
+                Type::Mapping(..) => self.llvm_type(&ns.storage_type(), ns),
                 Type::Ref(r) => self
                     .llvm_type(r, ns)
                     .ptr_type(AddressSpace::Generic)
