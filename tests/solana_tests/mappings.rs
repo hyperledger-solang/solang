@@ -745,3 +745,56 @@ contract DeleteTest {
         ])],
     );
 }
+
+#[test]
+fn mapping_within_struct() {
+    let mut vm = build_solidity(
+        r#"
+contract CrowdFunding {
+    struct Funder {
+        address addr;
+        uint amount;
+    }
+
+    struct Campaign {
+        mapping(uint => Funder)[2] arr_mp;
+        mapping (uint => Funder) funders;
+    }
+
+    uint numCampaigns;
+    mapping (uint => Campaign) campaigns;
+
+
+function newCampaign() public returns (uint campaignID) {
+    campaignID = numCampaigns++;
+    Campaign storage _campaign = campaigns[campaignID];
+    _campaign.funders[0] = Funder(msg.sender, 100);
+    _campaign.arr_mp[1][0] = Funder(msg.sender, 105);
+}
+
+function getAmt() public view returns (uint) {
+    Campaign storage _campaign = campaigns[numCampaigns - 1];
+    return _campaign.funders[0].amount;
+}
+
+function getArrAmt() public view returns (uint) {
+    Campaign storage _campaign = campaigns[numCampaigns - 1];
+    return _campaign.arr_mp[1][0].amount;
+}
+
+}
+        "#,
+    );
+
+    vm.constructor("CrowdFunding", &[], 0);
+
+    let ret = vm.function("newCampaign", &[], &[], 0, None);
+
+    assert_eq!(ret, vec![Token::Uint(U256::from(0))]);
+
+    let ret = vm.function("getAmt", &[], &[], 0, None);
+    assert_eq!(ret, vec![Token::Uint(U256::from(100))]);
+
+    let ret = vm.function("getArrAmt", &[], &[], 0, None);
+    assert_eq!(ret, vec![Token::Uint(U256::from(105))]);
+}
