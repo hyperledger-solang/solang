@@ -148,15 +148,29 @@ impl Expression {
         }
 
         // First of all, if we have a ref then derefence it
-        if let Type::Ref(r) = from {
+        if let Type::Ref(r) = &from {
             return if r.is_fixed_reference_type() {
-                // Accessing a struct/fixed size array within an array/struct gives
-                // a Type::Ref(..) the element, this type is just a simple pointer,
-                // like it would have been without the Type::Ref(..)
+                // A struct/fixed array *value* is simply the type, e.g. Type::Struct(_)
+                // An assignable struct value, e.g. member of another struct, is Type::Ref(Type:Struct(_)).
+                // However, the underlying types are identical: simply a pointer.
+                //
+                // So a Type::Ref(Type::Struct(_)) can be cast to Type::Struct(_).
                 //
                 // The Type::Ref(..) just means it can be used as an l-value and assigned
                 // a new value, unlike say, a struct literal.
-                self.cast(loc, &Type::Ref(r), implicit, ns, diagnostics)
+                if r.as_ref() == to {
+                    Ok(self.clone())
+                } else {
+                    diagnostics.push(Diagnostic::type_error(
+                        *loc,
+                        format!(
+                            "conversion from {} to {} not possible",
+                            from.to_string(ns),
+                            to.to_string(ns)
+                        ),
+                    ));
+                    Err(())
+                }
             } else {
                 Expression::Load(*loc, r.as_ref().clone(), Box::new(self.clone())).cast(
                     loc,
