@@ -1,8 +1,16 @@
 strict digraph "tests/contract_testcases/substrate/inheritance/test_interface_04.sol" {
 	contract [label="contract foo\ntests/contract_testcases/substrate/inheritance/test_interface_04.sol:2:9-4:10"]
-	contract_3 [label="contract a\ntests/contract_testcases/substrate/inheritance/test_interface_04.sol:6:9-8:10"]
-	diagnostic [label="interface 'foo' cannot have abstract contract 'a' as a base\nlevel Error\ntests/contract_testcases/substrate/inheritance/test_interface_04.sol:2:26-27"]
+	contract_2 [label="contract a\ntests/contract_testcases/substrate/inheritance/test_interface_04.sol:6:9-8:10"]
+	f [label="function f\ncontract: a\ntests/contract_testcases/substrate/inheritance/test_interface_04.sol:7:13-34\nsignature f()\nvisibility internal\nmutability nonpayable"]
+	diagnostic [label="found interface 'foo'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/test_interface_04.sol:2:9-4:10"]
+	diagnostic_6 [label="interface 'foo' cannot have abstract contract 'a' as a base\nlevel Error\ntests/contract_testcases/substrate/inheritance/test_interface_04.sol:2:26-27"]
+	diagnostic_7 [label="functions must be declared 'external' in an interface\nlevel Error\ntests/contract_testcases/substrate/inheritance/test_interface_04.sol:3:13-36"]
+	diagnostic_8 [label="found abstract contract 'a'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/test_interface_04.sol:6:9-8:10"]
 	contracts -> contract
-	contracts -> contract_3
-	diagnostics -> diagnostic [label="Error"]
+	contracts -> contract_2
+	contract_2 -> f [label="function"]
+	diagnostics -> diagnostic [label="Debug"]
+	diagnostics -> diagnostic_6 [label="Error"]
+	diagnostics -> diagnostic_7 [label="Error"]
+	diagnostics -> diagnostic_8 [label="Debug"]
 }

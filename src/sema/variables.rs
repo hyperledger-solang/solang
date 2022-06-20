@@ -474,6 +474,7 @@ pub fn variable_decl<'a>(
                     ty_loc: Some(def.ty.loc()),
                     indexed: false,
                     readonly: false,
+                    recursive: false,
                 }],
                 ns,
             );
@@ -562,6 +563,7 @@ fn collect_parameters<'a>(
                 ty_loc: None,
                 indexed: false,
                 readonly: false,
+                recursive: false,
             });
 
             collect_parameters(value, symtable, params, expr, ns)
@@ -611,6 +613,7 @@ fn collect_parameters<'a>(
                     ty_loc: None,
                     indexed: false,
                     readonly: false,
+                    recursive: false,
                 });
             }
 

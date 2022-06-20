@@ -2395,6 +2395,7 @@ pub fn emit_function_call(
                             id: None,
                             indexed: false,
                             readonly: false,
+                            recursive: false,
                         });
                     }
 
@@ -2444,6 +2445,7 @@ pub fn emit_function_call(
                             ty_loc: Some(*loc),
                             indexed: false,
                             readonly: false,
+                            recursive: false,
                         })
                         .collect(),
                     data,
