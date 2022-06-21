@@ -2085,7 +2085,7 @@ fn try_catch(
                         diagnostics.push(Diagnostic::error(
                             param.ty.loc(),
                             format!(
-                                "catch can only take ‘bytes memory’, not '{}'",
+                                "catch can only take 'bytes memory', not '{}'",
                                 catch_ty.to_string(ns)
                             ),
                         ));
@@ -2154,7 +2154,7 @@ fn try_catch(
                     ns.diagnostics.push(Diagnostic::error(
                         param.ty.loc(),
                         format!(
-                            "catch Error(...) can only take ‘string memory’, not '{}'",
+                            "catch Error(...) can only take 'string memory', not '{}'",
                             error_ty.to_string(ns)
                         ),
                     ));

@@ -2,7 +2,7 @@ strict digraph "tests/contract_testcases/substrate/inheritance/test_virtual_02.s
 	contract [label="contract c\ntests/contract_testcases/substrate/inheritance/test_virtual_02.sol:2:9-5:10"]
 	test [label="function test\ncontract: c\ntests/contract_testcases/substrate/inheritance/test_virtual_02.sol:3:13-43\nsignature test()\nvisibility public\nmutability nonpayable\nvirtual"]
 	test2 [label="function test2\ncontract: c\ntests/contract_testcases/substrate/inheritance/test_virtual_02.sol:4:13-44\nsignature test2()\nvisibility public\nmutability nonpayable\nvirtual"]
-	diagnostic [label="contract should be marked ‘abstract contract’ since it has 2 functions with no body\nlevel Error\ntests/contract_testcases/substrate/inheritance/test_virtual_02.sol:2:9-17"]
+	diagnostic [label="contract should be marked 'abstract contract' since it has 2 functions with no body\nlevel Error\ntests/contract_testcases/substrate/inheritance/test_virtual_02.sol:2:9-17"]
 	note [label="location of function 'test' with no body\ntests/contract_testcases/substrate/inheritance/test_virtual_02.sol:3:13-43"]
 	note_7 [label="location of function 'test2' with no body\ntests/contract_testcases/substrate/inheritance/test_virtual_02.sol:4:13-44"]
 	diagnostic_8 [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/test_virtual_02.sol:2:9-5:10"]

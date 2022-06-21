@@ -11,7 +11,7 @@ strict digraph "tests/contract_testcases/substrate/calls/try_catch_external_call
 	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/calls/try_catch_external_calls_03.sol:2:9-13:10"]
 	diagnostic_12 [label="x is already declared\nlevel Error\ntests/contract_testcases/substrate/calls/try_catch_external_calls_03.sol:6:45-46"]
 	note [label="location of previous declaration\ntests/contract_testcases/substrate/calls/try_catch_external_calls_03.sol:5:23-24"]
-	diagnostic_14 [label="catch can only take ‘bytes memory’, not 'string'\nlevel Error\ntests/contract_testcases/substrate/calls/try_catch_external_calls_03.sol:8:26-32"]
+	diagnostic_14 [label="catch can only take 'bytes memory', not 'string'\nlevel Error\ntests/contract_testcases/substrate/calls/try_catch_external_calls_03.sol:8:26-32"]
 	diagnostic_15 [label="found contract 'other'\nlevel Debug\ntests/contract_testcases/substrate/calls/try_catch_external_calls_03.sol:15:9-19:10"]
 	contracts -> contract
 	contract -> test [label="function"]
