@@ -9,7 +9,7 @@ strict digraph "tests/contract_testcases/substrate/calls/try_catch_external_call
 	number_literal [label="int32 literal: 102\ntests/contract_testcases/substrate/calls/try_catch_external_calls_02.sol:17:25-28"]
 	bool_literal [label="bool literal: true\ntests/contract_testcases/substrate/calls/try_catch_external_calls_02.sol:17:30-34"]
 	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/calls/try_catch_external_calls_02.sol:2:9-13:10"]
-	diagnostic_12 [label="catch can only take ‘bytes memory’, not 'string'\nlevel Error\ntests/contract_testcases/substrate/calls/try_catch_external_calls_02.sol:8:26-32"]
+	diagnostic_12 [label="catch can only take 'bytes memory', not 'string'\nlevel Error\ntests/contract_testcases/substrate/calls/try_catch_external_calls_02.sol:8:26-32"]
 	diagnostic_13 [label="found contract 'other'\nlevel Debug\ntests/contract_testcases/substrate/calls/try_catch_external_calls_02.sol:15:9-19:10"]
 	contracts -> contract
 	contract -> test [label="function"]

@@ -6289,7 +6289,7 @@ fn method_call_pos_args(
                 diagnostics.push(Diagnostic::error(
                     *loc,
                     format!(
-                        "method '{}' available on type ‘address payable’ not 'address'",
+                        "method '{}' available on type 'address payable' not 'address'",
                         func.name,
                     ),
                 ));
@@ -6403,7 +6403,7 @@ fn method_call_pos_args(
                 _ => {
                     diagnostics.push(Diagnostic::error(
                         args.loc(),
-                        format!("‘{}’ is not fixed length type", args_ty.to_string(ns),),
+                        format!("'{}' is not fixed length type", args_ty.to_string(ns),),
                     ));
 
                     return Err(());
@@ -6955,7 +6955,7 @@ pub fn collect_call_args<'a>(
             _ => {
                 diagnostics.push(Diagnostic::error(
                     block.loc(),
-                    "code block found where list of call arguments expected, like ‘{gas: 5000}’"
+                    "code block found where list of call arguments expected, like '{gas: 5000}'"
                         .to_string(),
                 ));
                 return Err(());
@@ -7136,7 +7136,7 @@ fn parse_call_args(
                     diagnostics.push(Diagnostic::error(
                         arg.loc,
                         format!(
-                            "‘accounts’ not permitted for external calls or constructors on {}",
+                            "'accounts' not permitted for external calls or constructors on {}",
                             ns.target
                         ),
                     ));
@@ -7166,7 +7166,7 @@ fn parse_call_args(
                     diagnostics.push(Diagnostic::error(
                         arg.loc,
                         format!(
-                            "‘accounts’ takes array of AccountMeta, not ‘{}’",
+                            "'accounts' takes array of AccountMeta, not '{}'",
                             expr_ty.to_string(ns)
                         ),
                     ));
