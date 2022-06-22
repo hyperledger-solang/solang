@@ -814,7 +814,7 @@ fn resolve_declarations<'a>(
             ns.diagnostics.push(ast::Diagnostic::error_with_notes(
                     *loc,
                     format!(
-                        "contract should be marked ‘abstract contract’ since it has {} functions with no body",
+                        "contract should be marked 'abstract contract' since it has {} functions with no body",
                         notes.len()
                     ),
                     notes,

@@ -1004,7 +1004,7 @@ impl Namespace {
                     if !casting {
                         diagnostics.push(Diagnostic::decl_error(
                             id.loc(),
-                            "'payable' cannot be used for type declarations, only casting. use ‘address payable’"
+                            "'payable' cannot be used for type declarations, only casting. use 'address payable'"
                                 .to_string(),
                         ));
                         return Err(());

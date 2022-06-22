@@ -559,7 +559,7 @@ pub fn contract_function(
             if func.ty == pt::FunctionTy::Fallback {
                 ns.diagnostics.push(Diagnostic::error(
                     func.loc,
-                    format!("{} function must not be declare payable, use ‘receive() external payable’ instead", func.ty),
+                    format!("{} function must not be declare payable, use 'receive() external payable' instead", func.ty),
                 ));
                 return None;
             }
@@ -822,7 +822,7 @@ pub fn resolve_params(
                     if ty.contains_internal_function(ns) {
                         diagnostics.push(Diagnostic::error(
                         p.ty.loc(),
-                        "parameter of type ‘function internal’ not allowed public or external functions".to_string(),
+                        "parameter of type 'function internal' not allowed public or external functions".to_string(),
                     ));
                         success = false;
                     }
@@ -927,7 +927,7 @@ pub fn resolve_returns(
                     if ty.contains_internal_function(ns) {
                         diagnostics.push(Diagnostic::error(
                         r.ty.loc(),
-                        "return type ‘function internal’ not allowed in public or external functions"
+                        "return type 'function internal' not allowed in public or external functions"
                             .to_string(),
                     ));
                         success = false;
