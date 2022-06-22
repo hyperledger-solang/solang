@@ -6068,11 +6068,8 @@ fn method_call_pos_args(
                 return Err(());
             }
 
-            let elem_ty = match &var_ty {
-                Type::Array(ty, _) => ty,
-                Type::DynamicBytes => &Type::Uint(8),
-                _ => unreachable!(),
-            };
+            let elem_ty = var_ty.array_elem();
+
             let val = match args.len() {
                 0 => {
                     return Ok(Expression::Builtin(
@@ -6089,10 +6086,10 @@ fn method_call_pos_args(
                         ns,
                         symtable,
                         diagnostics,
-                        ResolveTo::Type(elem_ty),
+                        ResolveTo::Type(&elem_ty),
                     )?;
 
-                    val_expr.cast(&args[0].loc(), elem_ty, true, ns, diagnostics)?
+                    val_expr.cast(&args[0].loc(), &elem_ty, true, ns, diagnostics)?
                 }
                 _ => {
                     diagnostics.push(Diagnostic::error(
