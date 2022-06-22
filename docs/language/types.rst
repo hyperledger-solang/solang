@@ -51,7 +51,7 @@ The largest value an ``uint8`` can hold is (2 :superscript:`8`) - 1 = 255. So, t
 
 .. code-block:: none
 
-    literal 300 is too large to fit into type ‘uint8’
+    literal 300 is too large to fit into type 'uint8'
 
 .. tip::
 

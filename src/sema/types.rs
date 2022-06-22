@@ -175,7 +175,7 @@ fn type_decl(
     ) {
         ns.diagnostics.push(Diagnostic::error(
             def.ty.loc(),
-            format!("’{}’ is not an elementary value type", ty.to_string(ns)),
+            format!("'{}' is not an elementary value type", ty.to_string(ns)),
         ));
         return;
     }
