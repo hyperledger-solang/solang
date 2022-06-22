@@ -1102,6 +1102,7 @@ impl Type {
             Type::Int(_) => true,
             Type::Uint(_) => true,
             Type::Value => true,
+            Type::Bytes(1) => true,
             Type::Ref(r) => r.is_integer(),
             Type::StorageRef(_, r) => r.is_integer(),
             _ => false,
@@ -1293,11 +1294,11 @@ impl Type {
         matches!(self, Type::StorageRef(..))
     }
 
-    /// Is this a reference to contract storage?
+    /// Is this a reference to dynamic memory (arrays, strings)
     pub fn is_dynamic_memory(&self) -> bool {
         match self {
-            Type::DynamicBytes => true,
-            Type::Array(_, dim) if dim.len() == 1 && dim[0].is_none() => true,
+            Type::String | Type::DynamicBytes => true,
+            Type::Array(_, dim) if dim.last().unwrap().is_none() => true,
             Type::Ref(ty) => ty.is_dynamic_memory(),
             _ => false,
         }
