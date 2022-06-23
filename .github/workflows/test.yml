@@ -181,22 +181,18 @@ jobs:
 
   image-multiarch:
     name: Multiarch Container Image
-    runs-on: macos-arm
-    needs: [mac-arm, mac-intel]
-    if: ${{ github.repository_owner == 'hyperledger-labs' }}
+    runs-on: linux-arm64
+    # Don't run this on pull requests, it takes 28 minutes and only has one runner
+    if: ${{ github.repository_owner == 'hyperledger-labs' && github.ref == 'refs/heads/main' }}
     steps:
     - name: Checkout sources
       uses: actions/checkout@v3
       with:
         # Make sure "git describe --tags" works for solang --version
         fetch-depth: 0
-    - run: echo "::set-output name=push::--push"
-      id: push
-      if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     - run: |
         echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin
-        docker buildx build . \
-          ${{steps.push.outputs.push}} \
+        docker buildx build . --push \
           -t ghcr.io/${GITHUB_REPOSITORY}:latest \
           --platform linux/arm64,linux/amd64 \
           --label org.opencontainers.image.description="Solidity Compiler for Solana, Substrate, and ewasm version $(git describe --tags)"
@@ -204,7 +200,7 @@ jobs:
   image:
     name: Container Image
     runs-on: ubuntu-20.04
-    if: ${{ github.repository_owner != 'hyperledger-labs' }}
+    if: ${{ github.repository_owner != 'hyperledger-labs' || github.ref != 'refs/heads/main' }}
     steps:
     - name: Checkout sources
       uses: actions/checkout@v2
