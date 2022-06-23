@@ -14,8 +14,18 @@ There are binaries available on github releases:
 - `MacOS intel <https://github.com/hyperledger-labs/solang/releases/download/v0.1.12/solang-mac-intel>`_
 - `MacOS arm <https://github.com/hyperledger-labs/solang/releases/download/v0.1.12/solang-mac-arm>`_
 
-On MacOS, remember to remove the quarantine attribute using ``xattr -d com.apple.quarantine solang-mac-arm``
-in the terminal.
+On MacOS, remember to give execution permission to the file and remove it from quarantine by executing the following commands:
+
+.. code-block:: bash
+
+    chmod +x solang-mac-arm
+    xattr -d com.apple.quarantine solang-mac-arm
+
+If you are using an Intel based Mac, please, exchange ``solang-mac-arm`` by ``solang-mac-intel`` in both of the above commands.
+
+On Linux, permission to execute the binary is also necessary, so, please, run ``chmod +x solang-linux-x86-64``. If you
+are using an Arm based Linux, the command is the following: ``chmod +x solang-linux-arm64``.
+
 
 Using ghcr.io/hyperledger-labs/solang containers
 ------------------------------------------------

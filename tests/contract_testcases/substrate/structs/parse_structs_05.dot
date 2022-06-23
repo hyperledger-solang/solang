@@ -1,8 +1,10 @@
 strict digraph "tests/contract_testcases/substrate/structs/parse_structs_05.sol" {
-	Foo [label="name:Foo\ncontract: test_struct_parsing\ntests/contract_testcases/substrate/structs/parse_structs_05.sol:3:20-23"]
+	Foo [label="name:Foo\ncontract: test_struct_parsing\ntests/contract_testcases/substrate/structs/parse_structs_05.sol:3:20-23\nfield name:x ty:unresolved"]
 	contract [label="contract test_struct_parsing\ntests/contract_testcases/substrate/structs/parse_structs_05.sol:2:9-6:10"]
-	diagnostic [label="type 'boolean' not found\nlevel Error\ntests/contract_testcases/substrate/structs/parse_structs_05.sol:4:17-24"]
+	diagnostic [label="found contract 'test_struct_parsing'\nlevel Debug\ntests/contract_testcases/substrate/structs/parse_structs_05.sol:2:9-6:10"]
+	diagnostic_7 [label="type 'boolean' not found\nlevel Error\ntests/contract_testcases/substrate/structs/parse_structs_05.sol:4:17-24"]
 	structs -> Foo
 	contracts -> contract
-	diagnostics -> diagnostic [label="Error"]
+	diagnostics -> diagnostic [label="Debug"]
+	diagnostics -> diagnostic_7 [label="Error"]
 }

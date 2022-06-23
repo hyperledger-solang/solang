@@ -110,11 +110,6 @@ fn sema_file(file: &ResolvedFile, resolver: &mut FileResolver, ns: &mut ast::Nam
     // struct fields or event fields can have types defined elsewhere.
     types::resolve_fields(fields, file_no, ns);
 
-    // give up if we failed
-    if ns.diagnostics.any_errors() {
-        return;
-    }
-
     // resolve functions/constants outside of contracts
     let mut resolve_bodies = Vec::new();
     let mut doccomments = Vec::new();

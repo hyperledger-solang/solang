@@ -57,6 +57,8 @@ pub enum Type {
     Unreachable,
     /// DynamicBytes and String are lowered to a vector.
     Slice,
+    /// We could not resolve this type
+    Unresolved,
 }
 
 pub trait RetrieveType {
@@ -151,13 +153,18 @@ impl fmt::Display for EnumDecl {
 #[derive(PartialEq, Clone, Debug)]
 pub struct Parameter {
     pub loc: pt::Loc,
-    // The name can empty (e.g. in an event field or unnamed parameter/return)
+    /// The name can empty (e.g. in an event field or unnamed parameter/return)
     pub id: Option<pt::Identifier>,
     pub ty: Type,
-    // Yul function parameters may not have a type identifier
+    /// Yul function parameters may not have a type identifier
     pub ty_loc: Option<pt::Loc>,
+    /// Event fields may indexed, which means they are sent to the log
     pub indexed: bool,
+    /// Some builtin structs have readonly fields
     pub readonly: bool,
+    /// A struct may contain itself which make the struct infinite size in
+    /// memory. This boolean specifies which field introduces the recursion.
+    pub recursive: bool,
 }
 
 impl Parameter {

@@ -158,7 +158,7 @@ fn type_decl(
 ) {
     let mut diagnostics = Vec::new();
 
-    let ty = match ns.resolve_type(file_no, contract_no, false, &def.ty, &mut diagnostics) {
+    let mut ty = match ns.resolve_type(file_no, contract_no, false, &def.ty, &mut diagnostics) {
         Ok(ty) => ty,
         Err(_) => {
             ns.diagnostics.extend(diagnostics);
@@ -177,7 +177,7 @@ fn type_decl(
             def.ty.loc(),
             format!("'{}' is not an elementary value type", ty.to_string(ns)),
         ));
-        return;
+        ty = Type::Unresolved;
     }
 
     let pos = ns.user_types.len();
@@ -202,66 +202,63 @@ fn type_decl(
     });
 }
 
+/// check if a struct contains itself. This function calls itself recursively
+fn find_struct_recursion(struct_no: usize, structs_visited: &mut Vec<usize>, ns: &mut Namespace) {
+    let def = ns.structs[struct_no].clone();
+    let mut types_seen = Vec::new();
+
+    for (field_no, field) in def.fields.iter().enumerate() {
+        if let Type::Struct(field_struct_no) = field.ty {
+            if types_seen.contains(&field_struct_no) {
+                continue;
+            }
+
+            types_seen.push(field_struct_no);
+
+            if structs_visited.contains(&field_struct_no) {
+                ns.diagnostics.push(Diagnostic::error_with_note(
+                    def.loc,
+                    format!("struct '{}' has infinite size", def.name),
+                    field.loc,
+                    format!("recursive field '{}'", field.name_as_str()),
+                ));
+
+                ns.structs[struct_no].fields[field_no].recursive = true;
+            } else {
+                structs_visited.push(field_struct_no);
+                find_struct_recursion(field_struct_no, structs_visited, ns);
+                structs_visited.pop();
+            }
+        }
+    }
+}
+
 pub fn resolve_fields(delay: ResolveFields, file_no: usize, ns: &mut Namespace) {
     // now we can resolve the fields for the structs
     for resolve in delay.structs {
-        if let Some((tags, fields)) =
-            struct_decl(resolve.pt, file_no, &resolve.comments, resolve.contract, ns)
-        {
-            ns.structs[resolve.struct_no].tags = tags;
-            ns.structs[resolve.struct_no].fields = fields;
-        }
+        let (tags, fields) =
+            struct_decl(resolve.pt, file_no, &resolve.comments, resolve.contract, ns);
+
+        ns.structs[resolve.struct_no].tags = tags;
+        ns.structs[resolve.struct_no].fields = fields;
     }
 
     // struct can contain other structs, and we have to check for recursiveness,
     // i.e. "struct a { b f1; } struct b { a f1; }"
-    for struct_no in 0..ns.structs.len() {
-        fn check(struct_no: usize, structs_visited: &mut Vec<usize>, ns: &mut Namespace) {
-            let def = ns.structs[struct_no].clone();
-            let mut types_seen = Vec::new();
+    (0..ns.structs.len())
+        .for_each(|struct_no| find_struct_recursion(struct_no, &mut vec![struct_no], ns));
 
-            for field in &def.fields {
-                if let Type::Struct(struct_no) = field.ty {
-                    if types_seen.contains(&struct_no) {
-                        continue;
-                    }
-
-                    types_seen.push(struct_no);
-
-                    if structs_visited.contains(&struct_no) {
-                        ns.diagnostics.push(Diagnostic::error_with_note(
-                            def.loc,
-                            format!("struct '{}' has infinite size", def.name),
-                            field.loc,
-                            format!("recursive field '{}'", field.name_as_str()),
-                        ));
-                    } else {
-                        structs_visited.push(struct_no);
-                        check(struct_no, structs_visited, ns);
-                        let _ = structs_visited.pop();
-                    }
-                }
-            }
-        }
-
-        check(struct_no, &mut vec![struct_no], ns);
-    }
-
-    // Do not attempt to call struct offsets if there are any infinitely recursive structs
-    if !ns.diagnostics.any_errors() {
-        struct_offsets(ns);
-    }
+    // Calculate the offset of each field in all the struct types
+    struct_offsets(ns);
 
     // now we can resolve the fields for the events
     for event in delay.events {
-        if let Some((tags, fields)) =
-            event_decl(event.pt, file_no, &event.comments, event.contract, ns)
-        {
-            ns.events[event.event_no].signature =
-                ns.signature(&ns.events[event.event_no].name, &fields);
-            ns.events[event.event_no].fields = fields;
-            ns.events[event.event_no].tags = tags;
-        }
+        let (tags, fields) = event_decl(event.pt, file_no, &event.comments, event.contract, ns);
+
+        ns.events[event.event_no].signature =
+            ns.signature(&ns.events[event.event_no].name, &fields);
+        ns.events[event.event_no].fields = fields;
+        ns.events[event.event_no].tags = tags;
     }
 }
 
@@ -416,8 +413,7 @@ pub fn struct_decl(
     tags: &[DocComment],
     contract_no: Option<usize>,
     ns: &mut Namespace,
-) -> Option<(Vec<Tag>, Vec<Parameter>)> {
-    let mut valid = true;
+) -> (Vec<Tag>, Vec<Parameter>) {
     let mut fields: Vec<Parameter> = Vec::new();
 
     for field in &def.fields {
@@ -427,8 +423,7 @@ pub fn struct_decl(
             Ok(s) => s,
             Err(()) => {
                 ns.diagnostics.extend(diagnostics);
-                valid = false;
-                continue;
+                Type::Unresolved
             }
         };
 
@@ -448,7 +443,6 @@ pub fn struct_decl(
                     other.name_as_str()
                 ),
             ));
-            valid = false;
             continue;
         }
 
@@ -464,7 +458,6 @@ pub fn struct_decl(
                     storage
                 ),
             ));
-            valid = false;
         }
 
         fields.push(Parameter {
@@ -477,35 +470,28 @@ pub fn struct_decl(
             ty_loc: Some(field.ty.loc()),
             indexed: false,
             readonly: false,
+            recursive: false,
         });
     }
 
     if fields.is_empty() {
-        if valid {
-            ns.diagnostics.push(Diagnostic::error(
-                def.name.loc,
-                format!("struct definition for '{}' has no fields", def.name.name),
-            ));
-        }
-
-        valid = false;
+        ns.diagnostics.push(Diagnostic::error(
+            def.name.loc,
+            format!("struct definition for '{}' has no fields", def.name.name),
+        ));
     }
 
-    if valid {
-        let doc = resolve_tags(
-            def.name.loc.file_no(),
-            "struct",
-            tags,
-            Some(&fields),
-            None,
-            None,
-            ns,
-        );
+    let doc = resolve_tags(
+        def.name.loc.file_no(),
+        "struct",
+        tags,
+        Some(&fields),
+        None,
+        None,
+        ns,
+    );
 
-        Some((doc, fields))
-    } else {
-        None
-    }
+    (doc, fields)
 }
 
 /// Resolve a parsed event definition. The return value will be true if the entire
@@ -518,20 +504,19 @@ fn event_decl(
     tags: &[DocComment],
     contract_no: Option<usize>,
     ns: &mut Namespace,
-) -> Option<(Vec<Tag>, Vec<Parameter>)> {
-    let mut valid = true;
+) -> (Vec<Tag>, Vec<Parameter>) {
     let mut fields: Vec<Parameter> = Vec::new();
     let mut indexed_fields = 0;
 
     for field in &def.fields {
         let mut diagnostics = Vec::new();
 
-        let ty = match ns.resolve_type(file_no, contract_no, false, &field.ty, &mut diagnostics) {
+        let mut ty = match ns.resolve_type(file_no, contract_no, false, &field.ty, &mut diagnostics)
+        {
             Ok(s) => s,
             Err(()) => {
                 ns.diagnostics.extend(diagnostics);
-                valid = false;
-                continue;
+                Type::Unresolved
             }
         };
 
@@ -540,7 +525,7 @@ fn event_decl(
                 field.loc,
                 "mapping type is not permitted as event field".to_string(),
             ));
-            valid = false;
+            ty = Type::Unresolved;
         }
 
         let name = if let Some(name) = &field.name {
@@ -560,7 +545,6 @@ fn event_decl(
                         other.name_as_str()
                     ),
                 ));
-                valid = false;
                 continue;
             }
             Some(pt::Identifier {
@@ -582,6 +566,7 @@ fn event_decl(
             ty_loc: Some(field.ty.loc()),
             indexed: field.indexed,
             readonly: false,
+            recursive: false,
         });
     }
 
@@ -593,8 +578,6 @@ fn event_decl(
                 def.name.name, indexed_fields
             ),
         ));
-
-        valid = false;
     } else if !def.anonymous && indexed_fields > 3 {
         ns.diagnostics.push(Diagnostic::error(
             def.name.loc,
@@ -603,25 +586,19 @@ fn event_decl(
                 def.name.name, indexed_fields
             ),
         ));
-
-        valid = false;
     }
 
-    if valid {
-        let doc = resolve_tags(
-            def.name.loc.file_no(),
-            "event",
-            tags,
-            Some(&fields),
-            None,
-            None,
-            ns,
-        );
+    let doc = resolve_tags(
+        def.name.loc.file_no(),
+        "event",
+        tags,
+        Some(&fields),
+        None,
+        None,
+        ns,
+    );
 
-        Some((doc, fields))
-    } else {
-        None
-    }
+    (doc, fields)
 }
 
 /// Parse enum declaration. If the declaration is invalid, it is still generated
@@ -726,7 +703,9 @@ fn struct_offsets(ns: &mut Namespace) {
 
                 offsets.push(offset.clone());
 
-                offset += field.ty.size_of(ns);
+                if !field.recursive {
+                    offset += field.ty.size_of(ns);
+                }
             }
 
             // add entry for overall size
@@ -750,17 +729,19 @@ fn struct_offsets(ns: &mut Namespace) {
             let mut largest_alignment = BigInt::zero();
 
             for field in &ns.structs[struct_no].fields {
-                let alignment = field.ty.storage_align(ns);
-                largest_alignment = std::cmp::max(alignment.clone(), largest_alignment.clone());
-                let remainder = offset.clone() % alignment.clone();
+                if !field.recursive {
+                    let alignment = field.ty.storage_align(ns);
+                    largest_alignment = std::cmp::max(alignment.clone(), largest_alignment.clone());
+                    let remainder = offset.clone() % alignment.clone();
 
-                if remainder > BigInt::zero() {
-                    offset += alignment - remainder;
+                    if remainder > BigInt::zero() {
+                        offset += alignment - remainder;
+                    }
+
+                    storage_offsets.push(offset.clone());
+
+                    offset += field.ty.storage_slots(ns);
                 }
-
-                storage_offsets.push(offset.clone());
-
-                offset += field.ty.storage_slots(ns);
             }
 
             // add entry for overall size
@@ -862,6 +843,7 @@ impl Type {
             Type::Void => "void".to_owned(),
             Type::Unreachable => "unreachable".to_owned(),
             Type::Slice => "slice".to_owned(),
+            Type::Unresolved => "unresolved".to_owned(),
         }
     }
 
@@ -922,6 +904,8 @@ impl Type {
             }
             Type::InternalFunction { .. } | Type::ExternalFunction { .. } => "function".to_owned(),
             Type::UserType(n) => ns.user_types[*n].ty.to_signature_string(say_tuple, ns),
+            // TODO: should an unresolved type not match another unresolved type?
+            Type::Unresolved => "unresolved".to_owned(),
             _ => unreachable!(),
         }
     }
@@ -963,6 +947,7 @@ impl Type {
             Type::InternalFunction { .. } => false,
             Type::ExternalFunction { .. } => false,
             Type::Slice => false,
+            Type::Unresolved => false,
             _ => unreachable!("{:?}", self),
         }
     }
@@ -1042,7 +1027,7 @@ impl Type {
                 // Address and selector
                 Type::Address(false).size_of(ns) + Type::Uint(32).size_of(ns)
             }
-            Type::Mapping(..) => BigInt::zero(),
+            Type::Unresolved | Type::Mapping(..) => BigInt::zero(),
             Type::Ref(ty) | Type::StorageRef(_, ty) => ty.size_of(ns),
             Type::UserType(no) => ns.user_types[*no].ty.size_of(ns),
             _ => unimplemented!("sizeof on {:?}", self),
@@ -1064,7 +1049,7 @@ impl Type {
             Type::Struct(n) => ns.structs[*n]
                 .fields
                 .iter()
-                .map(|f| f.ty.align_of(ns))
+                .map(|f| if f.recursive { 1 } else { f.ty.align_of(ns) })
                 .max()
                 .unwrap(),
             Type::InternalFunction { .. } => ns.target.ptr_size().into(),
@@ -1162,6 +1147,7 @@ impl Type {
                 }
                 Type::Mapping(..) => BigInt::from(SOLANA_BUCKET_SIZE) * BigInt::from(4),
                 Type::Ref(ty) | Type::StorageRef(_, ty) => ty.storage_slots(ns),
+                Type::Unresolved => BigInt::one(),
                 _ => unimplemented!(),
             }
         } else {
@@ -1170,7 +1156,13 @@ impl Type {
                 Type::Struct(n) => ns.structs[*n]
                     .fields
                     .iter()
-                    .map(|f| f.ty.storage_slots(ns))
+                    .map(|f| {
+                        if f.recursive {
+                            BigInt::one()
+                        } else {
+                            f.ty.storage_slots(ns)
+                        }
+                    })
                     .sum(),
                 Type::Array(ty, dims) => {
                     let one = BigInt::one();
@@ -1211,7 +1203,13 @@ impl Type {
                 Type::Struct(n) => ns.structs[*n]
                     .fields
                     .iter()
-                    .map(|field| field.ty.storage_align(ns))
+                    .map(|field| {
+                        if field.recursive {
+                            BigInt::one()
+                        } else {
+                            field.ty.storage_align(ns)
+                        }
+                    })
                     .max()
                     .unwrap(),
                 Type::String | Type::DynamicBytes => BigInt::from(4),
@@ -1219,6 +1217,7 @@ impl Type {
                 Type::ExternalFunction { .. } => BigInt::from(ns.address_length),
                 Type::Mapping(..) => BigInt::from(4),
                 Type::Ref(ty) | Type::StorageRef(_, ty) => ty.storage_align(ns),
+                Type::Unresolved => BigInt::one(),
                 _ => unimplemented!(),
             };
 
@@ -1337,7 +1336,7 @@ impl Type {
             Type::Struct(n) => ns.structs[*n]
                 .fields
                 .iter()
-                .any(|f| f.ty.contains_mapping(ns)),
+                .any(|f| !f.recursive && f.ty.contains_mapping(ns)),
             Type::StorageRef(_, r) | Type::Ref(r) => r.contains_mapping(ns),
             _ => false,
         }
@@ -1351,7 +1350,7 @@ impl Type {
             Type::Struct(n) => ns.structs[*n]
                 .fields
                 .iter()
-                .any(|f| f.ty.contains_internal_function(ns)),
+                .any(|f| !f.recursive && f.ty.contains_internal_function(ns)),
             Type::StorageRef(_, r) | Type::Ref(r) => r.contains_internal_function(ns),
             _ => false,
         }
@@ -1378,10 +1377,13 @@ impl Type {
                 .contains_builtins(ns, builtin)
                 .or_else(|| value.contains_builtins(ns, builtin)),
             Type::Struct(n) if ns.structs[*n].builtin == builtin => Some(self),
-            Type::Struct(n) => ns.structs[*n]
-                .fields
-                .iter()
-                .find_map(|f| f.ty.contains_builtins(ns, builtin)),
+            Type::Struct(n) => ns.structs[*n].fields.iter().find_map(|f| {
+                if f.recursive {
+                    None
+                } else {
+                    f.ty.contains_builtins(ns, builtin)
+                }
+            }),
             Type::StorageRef(_, r) | Type::Ref(r) => r.contains_builtins(ns, builtin),
             _ => None,
         }
