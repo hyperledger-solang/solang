@@ -147,6 +147,10 @@ impl Expression {
             return Ok(self.clone());
         }
 
+        if from == Type::Unresolved || *to == Type::Unresolved {
+            return Ok(self.clone());
+        }
+
         // First of all, if we have a ref then derefence it
         if let Type::Ref(r) = &from {
             return if r.is_fixed_reference_type() {
@@ -1478,32 +1482,50 @@ pub fn bigint_to_expression(
     let bits = n.bits();
 
     if let ResolveTo::Type(resolve_to) = resolve_to {
-        if !resolve_to.is_integer() {
-            diagnostics.push(Diagnostic::error(
-                *loc,
-                format!("expected '{}', found integer", resolve_to.to_string(ns)),
-            ));
-            return Err(());
-        }
-
-        let permitted_bits = if resolve_to.is_signed_int() {
-            resolve_to.bits(ns) as u64 - 1
-        } else {
-            resolve_to.bits(ns) as u64
-        };
-
-        return if n.sign() == Sign::Minus {
-            if !resolve_to.is_signed_int() {
+        if *resolve_to != Type::Unresolved {
+            if !resolve_to.is_integer() {
                 diagnostics.push(Diagnostic::error(
                     *loc,
-                    format!(
-                        "negative literal {} not allowed for unsigned type '{}'",
-                        n,
-                        resolve_to.to_string(ns)
-                    ),
+                    format!("expected '{}', found integer", resolve_to.to_string(ns)),
                 ));
-                Err(())
-            } else if n.add(1u32).bits() > permitted_bits {
+                return Err(());
+            }
+
+            let permitted_bits = if resolve_to.is_signed_int() {
+                resolve_to.bits(ns) as u64 - 1
+            } else {
+                resolve_to.bits(ns) as u64
+            };
+
+            return if n.sign() == Sign::Minus {
+                if !resolve_to.is_signed_int() {
+                    diagnostics.push(Diagnostic::error(
+                        *loc,
+                        format!(
+                            "negative literal {} not allowed for unsigned type '{}'",
+                            n,
+                            resolve_to.to_string(ns)
+                        ),
+                    ));
+                    Err(())
+                } else if n.add(1u32).bits() > permitted_bits {
+                    diagnostics.push(Diagnostic::error(
+                        *loc,
+                        format!(
+                            "literal {} is too large to fit into type '{}'",
+                            n,
+                            resolve_to.to_string(ns)
+                        ),
+                    ));
+                    Err(())
+                } else {
+                    Ok(Expression::NumberLiteral(
+                        *loc,
+                        resolve_to.clone(),
+                        n.clone(),
+                    ))
+                }
+            } else if bits > permitted_bits {
                 diagnostics.push(Diagnostic::error(
                     *loc,
                     format!(
@@ -1519,24 +1541,8 @@ pub fn bigint_to_expression(
                     resolve_to.clone(),
                     n.clone(),
                 ))
-            }
-        } else if bits > permitted_bits {
-            diagnostics.push(Diagnostic::error(
-                *loc,
-                format!(
-                    "literal {} is too large to fit into type '{}'",
-                    n,
-                    resolve_to.to_string(ns)
-                ),
-            ));
-            Err(())
-        } else {
-            Ok(Expression::NumberLiteral(
-                *loc,
-                resolve_to.clone(),
-                n.clone(),
-            ))
-        };
+            };
+        }
     }
 
     // Return smallest type

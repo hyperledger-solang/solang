@@ -1,10 +1,12 @@
 strict digraph "tests/contract_testcases/substrate/structs/parse_structs.sol" {
-	Foo [label="name:Foo\ncontract: test_struct_parsing\ntests/contract_testcases/substrate/structs/parse_structs.sol:3:20-23"]
+	Foo [label="name:Foo\ncontract: test_struct_parsing\ntests/contract_testcases/substrate/structs/parse_structs.sol:3:20-23\nfield name:a ty:bool"]
 	contract [label="contract test_struct_parsing\ntests/contract_testcases/substrate/structs/parse_structs.sol:2:9-7:10"]
-	diagnostic [label="struct 'Foo' has duplicate struct field 'a'\nlevel Error\ntests/contract_testcases/substrate/structs/parse_structs.sol:5:22-23"]
+	diagnostic [label="found contract 'test_struct_parsing'\nlevel Debug\ntests/contract_testcases/substrate/structs/parse_structs.sol:2:9-7:10"]
+	diagnostic_7 [label="struct 'Foo' has duplicate struct field 'a'\nlevel Error\ntests/contract_testcases/substrate/structs/parse_structs.sol:5:22-23"]
 	note [label="location of previous declaration of 'a'\ntests/contract_testcases/substrate/structs/parse_structs.sol:4:17-23"]
 	structs -> Foo
 	contracts -> contract
-	diagnostics -> diagnostic [label="Error"]
-	diagnostic -> note [label="note"]
+	diagnostics -> diagnostic [label="Debug"]
+	diagnostics -> diagnostic_7 [label="Error"]
+	diagnostic_7 -> note [label="note"]
 }

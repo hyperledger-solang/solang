@@ -1412,6 +1412,7 @@ impl Namespace {
                 ty_loc: None,
                 indexed: false,
                 readonly: true,
+                recursive: false,
             },
             Parameter {
                 loc: pt::Loc::Builtin,
@@ -1423,6 +1424,7 @@ impl Namespace {
                 ty_loc: None,
                 indexed: false,
                 readonly: false,
+                recursive: false,
             },
             Parameter {
                 loc: pt::Loc::Builtin,
@@ -1434,6 +1436,7 @@ impl Namespace {
                 ty_loc: None,
                 indexed: false,
                 readonly: true,
+                recursive: false,
             },
             Parameter {
                 loc: pt::Loc::Builtin,
@@ -1445,6 +1448,7 @@ impl Namespace {
                 ty_loc: None,
                 indexed: false,
                 readonly: true,
+                recursive: false,
             },
             Parameter {
                 loc: pt::Loc::Builtin,
@@ -1456,6 +1460,7 @@ impl Namespace {
                 ty_loc: None,
                 indexed: false,
                 readonly: true,
+                recursive: false,
             },
             Parameter {
                 loc: pt::Loc::Builtin,
@@ -1467,6 +1472,7 @@ impl Namespace {
                 ty_loc: None,
                 indexed: false,
                 readonly: true,
+                recursive: false,
             },
             Parameter {
                 loc: pt::Loc::Builtin,
@@ -1478,6 +1484,7 @@ impl Namespace {
                 ty_loc: None,
                 indexed: false,
                 readonly: true,
+                recursive: false,
             },
             Parameter {
                 loc: pt::Loc::Builtin,
@@ -1489,6 +1496,7 @@ impl Namespace {
                 ty_loc: None,
                 indexed: false,
                 readonly: true,
+                recursive: false,
             },
         ];
 
@@ -1528,6 +1536,7 @@ impl Namespace {
                 ty_loc: None,
                 indexed: false,
                 readonly: false,
+                recursive: false,
             },
             Parameter {
                 loc: pt::Loc::Builtin,
@@ -1539,6 +1548,7 @@ impl Namespace {
                 ty_loc: None,
                 indexed: false,
                 readonly: false,
+                recursive: false,
             },
             Parameter {
                 loc: pt::Loc::Builtin,
@@ -1550,6 +1560,7 @@ impl Namespace {
                 ty_loc: None,
                 indexed: false,
                 readonly: false,
+                recursive: false,
             },
         ];
 
