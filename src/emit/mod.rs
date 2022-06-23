@@ -695,10 +695,8 @@ pub trait TargetRuntime<'a> {
         ns: &Namespace,
     ) {
         match ty.deref_any() {
-            Type::Array(_, dim) => {
+            Type::Array(elem_ty, dim) => {
                 if let Some(d) = &dim[0] {
-                    let ty = ty.array_deref();
-
                     bin.emit_static_loop_with_int(
                         function,
                         bin.context.i64_type().const_zero(),
@@ -713,15 +711,15 @@ pub trait TargetRuntime<'a> {
                                 )
                             };
 
-                            if ty.is_reference_type(ns)
-                                && !ty.deref_memory().is_fixed_reference_type()
+                            if elem_ty.is_reference_type(ns)
+                                && !elem_ty.deref_memory().is_fixed_reference_type()
                             {
                                 elem = bin.builder.build_load(elem, "").into_pointer_value();
                             }
 
                             self.storage_store_slot(
                                 bin,
-                                &ty,
+                                elem_ty,
                                 slot,
                                 slot_ptr,
                                 elem.into(),
@@ -729,10 +727,10 @@ pub trait TargetRuntime<'a> {
                                 ns,
                             );
 
-                            if !ty.is_reference_type(ns) {
+                            if !elem_ty.is_reference_type(ns) {
                                 *slot = bin.builder.build_int_add(
                                     *slot,
-                                    bin.number_literal(256, &ty.storage_slots(ns), ns),
+                                    bin.number_literal(256, &elem_ty.storage_slots(ns), ns),
                                     "",
                                 );
                             }
@@ -745,9 +743,9 @@ pub trait TargetRuntime<'a> {
                     let slot_ty = Type::Uint(256);
 
                     // details about our array elements
-                    let elem_ty = bin.llvm_field_ty(&ty.array_elem(), ns);
+                    let llvm_elem_ty = bin.llvm_field_ty(elem_ty, ns);
                     let elem_size = bin.builder.build_int_truncate(
-                        elem_ty.size_of().unwrap(),
+                        llvm_elem_ty.size_of().unwrap(),
                         bin.context.i32_type(),
                         "size_of",
                     );
@@ -792,8 +790,6 @@ pub trait TargetRuntime<'a> {
                         .build_load(new_slot, "elem_slot")
                         .into_int_value();
 
-                    let ty = ty.array_deref();
-
                     bin.emit_loop_cond_first_with_int(
                         function,
                         bin.context.i32_type().const_zero(),
@@ -816,19 +812,19 @@ pub trait TargetRuntime<'a> {
 
                             let mut elem = bin.builder.build_pointer_cast(
                                 data,
-                                elem_ty.ptr_type(AddressSpace::Generic),
+                                llvm_elem_ty.ptr_type(AddressSpace::Generic),
                                 "entry",
                             );
 
-                            if ty.is_reference_type(ns)
-                                && !ty.deref_memory().is_fixed_reference_type()
+                            if elem_ty.is_reference_type(ns)
+                                && !elem_ty.deref_memory().is_fixed_reference_type()
                             {
                                 elem = bin.builder.build_load(elem, "").into_pointer_value();
                             }
 
                             self.storage_store_slot(
                                 bin,
-                                &ty,
+                                elem_ty,
                                 slot,
                                 slot_ptr,
                                 elem.into(),
@@ -836,10 +832,10 @@ pub trait TargetRuntime<'a> {
                                 ns,
                             );
 
-                            if !ty.is_reference_type(ns) {
+                            if !elem_ty.is_reference_type(ns) {
                                 *slot = bin.builder.build_int_add(
                                     *slot,
-                                    bin.number_literal(256, &ty.storage_slots(ns), ns),
+                                    bin.number_literal(256, &elem_ty.storage_slots(ns), ns),
                                     "",
                                 );
                             }
@@ -854,12 +850,12 @@ pub trait TargetRuntime<'a> {
                         previous_size,
                         &mut elem_slot,
                         |_: IntValue<'a>, slot: &mut IntValue<'a>| {
-                            self.storage_delete_slot(bin, &ty, slot, slot_ptr, function, ns);
+                            self.storage_delete_slot(bin, elem_ty, slot, slot_ptr, function, ns);
 
-                            if !ty.is_reference_type(ns) {
+                            if !elem_ty.is_reference_type(ns) {
                                 *slot = bin.builder.build_int_add(
                                     *slot,
-                                    bin.number_literal(256, &ty.storage_slots(ns), ns),
+                                    bin.number_literal(256, &elem_ty.storage_slots(ns), ns),
                                     "",
                                 );
                             }
