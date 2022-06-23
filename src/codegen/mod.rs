@@ -1193,6 +1193,7 @@ pub enum Builtin {
     GasLimit,
     Gasprice,
     GetAddress,
+    ExtCodeSize,
     MinimumBalance,
     MulMod,
     Keccak256,

@@ -76,6 +76,7 @@ pub enum Extern {
     revert,
     printMem,
     getCodeSize,
+    getExternalCodeSize,
     codeCopy,
     create,
     call,
@@ -564,6 +565,21 @@ impl Externals for TestRuntime {
 
                 Ok(None)
             }
+            Some(Extern::getExternalCodeSize) => {
+                let address_ptr: u32 = args.nth_checked(0)?;
+
+                let mut addr = [0u8; 20];
+
+                if let Err(e) = self.vm.memory.get_into(address_ptr, &mut addr) {
+                    panic!("getExternalCodeSize: {}", e);
+                }
+
+                let size = self.accounts.get(&addr).map(|a| a.0.len()).unwrap();
+
+                println!("getExternalCodeSize: {} {}", hex::encode(&addr), size);
+
+                Ok(Some(RuntimeValue::I32(size as i32)))
+            }
             _ => panic!("external {} unknown", index),
         }
     }
@@ -590,6 +606,7 @@ impl ModuleImportResolver for TestRuntime {
             "getAddress" => Extern::getAddress,
             "getExternalBalance" => Extern::getExternalBalance,
             "selfDestruct" => Extern::selfDestruct,
+            "getExternalCodeSize" => Extern::getExternalCodeSize,
             "log" => Extern::log,
             _ => {
                 panic!("{} not implemented", field_name);

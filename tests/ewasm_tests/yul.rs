@@ -41,6 +41,13 @@ contract testing  {
             ret := a
         }
     }
+
+    function test_extcodesize() public view returns (uint256 ret) {
+        assembly {
+            let a := address()
+            ret := extcodesize(a)
+        }
+    }
 }
 "#,
     );
@@ -91,6 +98,18 @@ contract testing  {
         returns,
         vec![Token::Uint(Uint::from_big_endian(
             runtime.value.to_be_bytes().as_ref()
+        ))]
+    );
+
+    let returns = runtime.function("test_extcodesize", &[]);
+    assert_eq!(
+        returns,
+        vec![Token::Uint(Uint::from_big_endian(
+            runtime.accounts[&runtime.vm.cur]
+                .0
+                .len()
+                .to_be_bytes()
+                .as_ref()
         ))]
     );
 }
