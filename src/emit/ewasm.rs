@@ -123,6 +123,7 @@ impl EwasmTarget {
             "getBlockCoinbase",
             "getCaller",
             "log",
+            "getExternalCodeSize",
         ]);
 
         deploy_code
@@ -551,6 +552,17 @@ impl EwasmTarget {
                     u8_ptr_ty.into(), // topic2
                     u8_ptr_ty.into(), // topic3
                     u8_ptr_ty.into(), // topic4
+                ],
+                false,
+            ),
+            Some(Linkage::External),
+        );
+
+        binary.module.add_function(
+            "getExternalCodeSize",
+            u32_ty.fn_type(
+                &[
+                    u8_ptr_ty.into(), // address_ptr
                 ],
                 false,
             ),
@@ -2050,6 +2062,35 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
                 );
 
                 binary.builder.build_load(balance, "balance")
+            }
+            codegen::Expression::Builtin(_, _, codegen::Builtin::ExtCodeSize, addr) => {
+                let addr = self
+                    .expression(binary, &addr[0], vartab, function, ns)
+                    .into_array_value();
+
+                let address = binary
+                    .builder
+                    .build_alloca(binary.address_type(ns), "address");
+
+                binary.builder.build_store(address, addr);
+
+                binary
+                    .builder
+                    .build_call(
+                        binary.module.get_function("getExternalCodeSize").unwrap(),
+                        &[binary
+                            .builder
+                            .build_pointer_cast(
+                                address,
+                                binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                                "",
+                            )
+                            .into()],
+                        "code_size",
+                    )
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap()
             }
             _ => unimplemented!("{:?}", expr),
         }

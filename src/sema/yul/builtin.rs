@@ -684,7 +684,7 @@ static YUL_BUILTIN: [YulBuiltinPrototype; 76] =
             doc: "extcodesize(a) returns the size of the code at address a",
             ty: YulBuiltInFunction::ExtCodeSize,
             stops_execution: false,
-            availability: [false, false, false],
+            availability: [true, false, false],
         },
         YulBuiltinPrototype {
             name: "extcodecopy",

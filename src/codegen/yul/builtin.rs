@@ -115,7 +115,6 @@ pub(crate) fn process_builtin(
         // Functions that manage code memory
         | YulBuiltInFunction::CodeSize
         | YulBuiltInFunction::CodeCopy
-        | YulBuiltInFunction::ExtCodeSize
         | YulBuiltInFunction::ExtCodeCopy
         | YulBuiltInFunction::ExtCodeHash
         // Functions that manage return data
@@ -184,6 +183,11 @@ pub(crate) fn process_builtin(
 
         YulBuiltInFunction::GasPrice => {
             Expression::Builtin(*loc, vec![Type::Uint(64)], Builtin::Gasprice, vec![])
+        }
+
+        YulBuiltInFunction::ExtCodeSize => {
+            let address = expression(&args[0], contract_no, ns, vartab, cfg, opt).cast(&Type::Address(false), ns);
+            Expression::Builtin(*loc, vec![Type::Uint(32)], Builtin::ExtCodeSize, vec![address])
         }
 
         YulBuiltInFunction::BlockHash => {
