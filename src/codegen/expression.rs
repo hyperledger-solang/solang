@@ -621,7 +621,11 @@ pub fn expression(
 
                 let address_arr =
                     match expression(&args[0], cfg, contract_no, func, ns, vartab, opt) {
-                        Expression::Variable(_, _, pos) => pos,
+                        Expression::Variable(_, _, pos) => {
+                            vartab.set_dirty(pos);
+
+                            pos
+                        }
                         _ => unreachable!(),
                     };
 
@@ -760,7 +764,11 @@ fn memory_array_push(
 ) -> Expression {
     let address_res = vartab.temp_anonymous(ty);
     let address_arr = match expression(array, cfg, contract_no, func, ns, vartab, opt) {
-        Expression::Variable(_, _, pos) => pos,
+        Expression::Variable(_, _, pos) => {
+            vartab.set_dirty(pos);
+
+            pos
+        }
         _ => unreachable!(),
     };
     cfg.add(
