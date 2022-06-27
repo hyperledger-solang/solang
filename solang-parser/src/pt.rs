@@ -388,6 +388,7 @@ pub enum Expression {
         Option<Box<Expression>>,
         Option<Box<Expression>>,
     ),
+    Parenthesis(Loc, Box<Expression>),
     MemberAccess(Loc, Box<Expression>, Identifier),
     FunctionCall(Loc, Box<Expression>, Vec<Expression>),
     FunctionCallBlock(Loc, Box<Expression>, Box<Statement>),
@@ -451,6 +452,7 @@ impl CodeLocation for Expression {
             Expression::PostIncrement(loc, _)
             | Expression::PostDecrement(loc, _)
             | Expression::New(loc, _)
+            | Expression::Parenthesis(loc, _)
             | Expression::ArraySubscript(loc, ..)
             | Expression::ArraySlice(loc, ..)
             | Expression::MemberAccess(loc, ..)
@@ -518,6 +520,16 @@ impl Display for Expression {
             Expression::Variable(id) => write!(f, "{}", id.name),
             Expression::MemberAccess(_, e, id) => write!(f, "{}.{}", e, id.name),
             _ => unimplemented!(),
+        }
+    }
+}
+
+impl Expression {
+    pub fn remove_parenthesis(&self) -> &Expression {
+        if let Expression::Parenthesis(_, expr) = self {
+            expr
+        } else {
+            self
         }
     }
 }
