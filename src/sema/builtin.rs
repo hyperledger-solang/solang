@@ -1086,7 +1086,7 @@ pub fn resolve_namespace_call(
                     context.file_no,
                     context.contract_no,
                     false,
-                    &args[1],
+                    args[1].remove_parenthesis(),
                     diagnostics,
                 )?;
 

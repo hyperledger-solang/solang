@@ -1625,6 +1625,9 @@ pub fn expression(
     resolve_to: ResolveTo,
 ) -> Result<Expression, ()> {
     match expr {
+        pt::Expression::Parenthesis(_, expr) => {
+            expression(expr, context, ns, symtable, diagnostics, resolve_to)
+        }
         pt::Expression::ArrayLiteral(loc, exprs) => {
             let res = array_literal(loc, exprs, context, ns, symtable, diagnostics, resolve_to);
 
@@ -1966,7 +1969,7 @@ pub fn expression(
                 return Err(());
             }
 
-            match call.as_ref() {
+            match call.remove_parenthesis() {
                 pt::Expression::FunctionCall(_, ty, args) => {
                     let res = new(loc, ty, args, context, ns, symtable, diagnostics);
 
@@ -2025,9 +2028,16 @@ pub fn expression(
         pt::Expression::ArraySubscript(loc, array, Some(index)) => {
             array_subscript(loc, array, index, context, ns, symtable, diagnostics)
         }
-        pt::Expression::MemberAccess(loc, e, id) => {
-            member_access(loc, e, id, context, ns, symtable, diagnostics, resolve_to)
-        }
+        pt::Expression::MemberAccess(loc, e, id) => member_access(
+            loc,
+            e.remove_parenthesis(),
+            id,
+            context,
+            ns,
+            symtable,
+            diagnostics,
+            resolve_to,
+        ),
         pt::Expression::Or(loc, left, right) => {
             let boolty = Type::Bool;
             let l = expression(
@@ -3497,7 +3507,7 @@ pub fn new(
 ) -> Result<Expression, ()> {
     let (ty, call_args, call_args_loc) = collect_call_args(ty, diagnostics)?;
 
-    let ty = if let pt::Expression::New(_, ty) = ty {
+    let ty = if let pt::Expression::New(_, ty) = ty.remove_parenthesis() {
         ty
     } else {
         ty
@@ -7273,6 +7283,7 @@ pub fn call_expr(
     resolve_to: ResolveTo,
 ) -> Result<Expression, ()> {
     let mut nullsink = Vec::new();
+    let ty = ty.remove_parenthesis();
 
     match ns.resolve_type(
         context.file_no,
@@ -7314,10 +7325,10 @@ pub fn call_expr(
         Err(_) => (),
     }
 
-    let expr = match ty {
+    let expr = match ty.remove_parenthesis() {
         pt::Expression::New(_, ty) => new(loc, ty, args, context, ns, symtable, diagnostics)?,
         pt::Expression::FunctionCallBlock(loc, expr, _)
-            if matches!(expr.as_ref(), pt::Expression::New(..)) =>
+            if matches!(expr.remove_parenthesis(), pt::Expression::New(..)) =>
         {
             new(loc, ty, args, context, ns, symtable, diagnostics)?
         }
@@ -7358,7 +7369,7 @@ pub fn function_call_expr(
 ) -> Result<Expression, ()> {
     let (ty, call_args, call_args_loc) = collect_call_args(ty, diagnostics)?;
 
-    match ty {
+    match ty.remove_parenthesis() {
         pt::Expression::MemberAccess(_, member, func) => {
             if context.constant {
                 diagnostics.push(Diagnostic::error(

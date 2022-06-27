@@ -1313,7 +1313,7 @@ fn destructure_values(
     ns: &mut Namespace,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Result<Expression, ()> {
-    let expr = match expr {
+    let expr = match expr.remove_parenthesis() {
         pt::Expression::FunctionCall(loc, ty, args) => {
             let res = function_call_expr(
                 loc,
@@ -1533,7 +1533,7 @@ fn return_with_values(
     let function_no = context.function_no.unwrap();
 
     let no_returns = ns.functions[function_no].returns.len();
-    let expr_returns = match returns {
+    let expr_returns = match returns.remove_parenthesis() {
         pt::Expression::FunctionCall(loc, ty, args) => {
             let expr = call_expr(
                 loc,
@@ -1724,48 +1724,50 @@ pub fn parameter_list_to_expr_list<'a>(
     e: &'a pt::Expression,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Result<Vec<&'a pt::Expression>, ()> {
-    if let pt::Expression::List(_, v) = &e {
-        let mut list = Vec::new();
-        let mut broken = false;
+    match e {
+        pt::Expression::List(_, v) => {
+            let mut list = Vec::new();
+            let mut broken = false;
 
-        for e in v {
-            match &e.1 {
-                None => {
-                    diagnostics.push(Diagnostic::error(e.0, "stray comma".to_string()));
-                    broken = true;
-                }
-                Some(pt::Parameter {
-                    name: Some(name), ..
-                }) => {
-                    diagnostics.push(Diagnostic::error(
-                        name.loc,
-                        "single value expected".to_string(),
-                    ));
-                    broken = true;
-                }
-                Some(pt::Parameter {
-                    storage: Some(storage),
-                    ..
-                }) => {
-                    diagnostics.push(Diagnostic::error(
-                        storage.loc(),
-                        "storage specified not permitted here".to_string(),
-                    ));
-                    broken = true;
-                }
-                Some(pt::Parameter { ty, .. }) => {
-                    list.push(ty);
+            for e in v {
+                match &e.1 {
+                    None => {
+                        diagnostics.push(Diagnostic::error(e.0, "stray comma".to_string()));
+                        broken = true;
+                    }
+                    Some(pt::Parameter {
+                        name: Some(name), ..
+                    }) => {
+                        diagnostics.push(Diagnostic::error(
+                            name.loc,
+                            "single value expected".to_string(),
+                        ));
+                        broken = true;
+                    }
+                    Some(pt::Parameter {
+                        storage: Some(storage),
+                        ..
+                    }) => {
+                        diagnostics.push(Diagnostic::error(
+                            storage.loc(),
+                            "storage specified not permitted here".to_string(),
+                        ));
+                        broken = true;
+                    }
+                    Some(pt::Parameter { ty, .. }) => {
+                        list.push(ty);
+                    }
                 }
             }
-        }
 
-        if !broken {
-            Ok(list)
-        } else {
-            Err(())
+            if !broken {
+                Ok(list)
+            } else {
+                Err(())
+            }
         }
-    } else {
-        Ok(vec![e])
+        pt::Expression::Parenthesis(_, e) => Ok(vec![e]),
+        e => Ok(vec![e]),
     }
 }
 
@@ -1782,7 +1784,7 @@ fn try_catch(
     ns: &mut Namespace,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Result<(Statement, bool), ()> {
-    let mut expr = expr;
+    let mut expr = expr.remove_parenthesis();
     let mut ok = None;
 
     while let pt::Expression::FunctionCallBlock(_, e, block) = expr {
@@ -1799,14 +1801,14 @@ fn try_catch(
         expr = e.as_ref();
     }
 
-    let fcall = match expr {
+    let fcall = match expr.remove_parenthesis() {
         pt::Expression::FunctionCall(loc, ty, args) => {
-            let res = match ty.as_ref() {
+            let res = match ty.remove_parenthesis() {
                 pt::Expression::New(_, ty) => {
                     new(loc, ty, args, context, ns, symtable, diagnostics)?
                 }
                 pt::Expression::FunctionCallBlock(loc, expr, _)
-                    if matches!(expr.as_ref(), pt::Expression::New(..)) =>
+                    if matches!(expr.remove_parenthesis(), pt::Expression::New(..)) =>
                 {
                     new(loc, ty, args, context, ns, symtable, diagnostics)?
                 }
@@ -1841,7 +1843,7 @@ fn try_catch(
             res
         }
         pt::Expression::New(loc, call) => {
-            let mut call = call.as_ref();
+            let mut call = call.remove_parenthesis();
 
             while let pt::Expression::FunctionCallBlock(_, expr, block) = call {
                 if ok.is_some() {
@@ -1854,7 +1856,7 @@ fn try_catch(
 
                 ok = Some(block.as_ref());
 
-                call = expr.as_ref();
+                call = expr.remove_parenthesis();
             }
 
             match call {
