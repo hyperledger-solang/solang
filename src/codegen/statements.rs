@@ -195,7 +195,7 @@ pub(crate) fn statement(
 
             cfg.set_basic_block(body);
 
-            vartab.new_dirty_tracker(ns.next_id);
+            vartab.new_dirty_tracker();
             loops.new_scope(end, cond);
 
             let mut body_reachable = true;
@@ -263,7 +263,7 @@ pub(crate) fn statement(
 
             cfg.set_basic_block(body);
 
-            vartab.new_dirty_tracker(ns.next_id);
+            vartab.new_dirty_tracker();
             loops.new_scope(end, cond);
 
             let mut body_reachable = true;
@@ -335,7 +335,7 @@ pub(crate) fn statement(
                 },
             );
 
-            vartab.new_dirty_tracker(ns.next_id);
+            vartab.new_dirty_tracker();
 
             let mut body_reachable = true;
 
@@ -443,7 +443,7 @@ pub(crate) fn statement(
             // continue goes to next
             loops.new_scope(end_block, next_block);
 
-            vartab.new_dirty_tracker(ns.next_id);
+            vartab.new_dirty_tracker();
 
             let mut body_reachable = true;
 
@@ -662,7 +662,7 @@ fn if_then(
 
     cfg.set_basic_block(then);
 
-    vartab.new_dirty_tracker(ns.next_id);
+    vartab.new_dirty_tracker();
 
     let mut reachable = true;
 
@@ -725,7 +725,7 @@ fn if_then_else(
     // then
     cfg.set_basic_block(then);
 
-    vartab.new_dirty_tracker(ns.next_id);
+    vartab.new_dirty_tracker();
 
     let mut then_reachable = true;
 
@@ -809,7 +809,7 @@ fn returns(
                 },
             );
 
-            vartab.new_dirty_tracker(ns.next_id);
+            vartab.new_dirty_tracker();
 
             cfg.set_basic_block(left_block);
             returns(left, cfg, contract_no, func, ns, vartab, opt);
@@ -882,7 +882,7 @@ fn destructure(
             },
         );
 
-        vartab.new_dirty_tracker(ns.next_id);
+        vartab.new_dirty_tracker();
 
         cfg.set_basic_block(left_block);
 
@@ -1218,7 +1218,7 @@ fn try_catch(
         _ => unreachable!(),
     }
 
-    vartab.new_dirty_tracker(ns.next_id);
+    vartab.new_dirty_tracker();
 
     let mut finally_reachable = true;
 
