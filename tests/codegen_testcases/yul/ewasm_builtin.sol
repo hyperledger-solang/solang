@@ -44,6 +44,9 @@ contract Testing {
             // CHECK: ty:uint256 %m = (zext uint256 (builtin GasLimit ()))
             let m := gaslimit()
 
+            // CHECK: ty:uint256 %n = (zext uint256 (builtin ExtCodeSize (address((trunc uint160 %b)))))
+            let n := extcodesize(b)
+
             // CHECK: assert-failure
             invalid()
         }
