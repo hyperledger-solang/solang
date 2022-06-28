@@ -958,7 +958,6 @@ fn expr_or(
     opt: &Options,
 ) -> Expression {
     let l = expression(left, cfg, contract_no, func, ns, vartab, opt);
-    vartab.new_dirty_tracker(ns.next_id);
     let pos = vartab.temp(
         &pt::Identifier {
             name: "or".to_owned(),
@@ -966,6 +965,7 @@ fn expr_or(
         },
         &Type::Bool,
     );
+    vartab.new_dirty_tracker();
     let right_side = cfg.new_basic_block("or_right_side".to_string());
     let end_or = cfg.new_basic_block("or_end".to_string());
     cfg.add(
@@ -996,9 +996,7 @@ fn expr_or(
     );
     cfg.add(vartab, Instr::Branch { block: end_or });
     cfg.set_basic_block(end_or);
-    let mut phis = vartab.pop_dirty_tracker();
-    phis.insert(pos);
-    cfg.set_phis(end_or, phis);
+    cfg.set_phis(end_or, vartab.pop_dirty_tracker());
     Expression::Variable(*loc, Type::Bool, pos)
 }
 
@@ -1014,7 +1012,6 @@ fn and(
     opt: &Options,
 ) -> Expression {
     let l = expression(left, cfg, contract_no, func, ns, vartab, opt);
-    vartab.new_dirty_tracker(ns.next_id);
     let pos = vartab.temp(
         &pt::Identifier {
             name: "and".to_owned(),
@@ -1022,6 +1019,7 @@ fn and(
         },
         &Type::Bool,
     );
+    vartab.new_dirty_tracker();
     let right_side = cfg.new_basic_block("and_right_side".to_string());
     let end_and = cfg.new_basic_block("and_end".to_string());
     cfg.add(
@@ -1052,9 +1050,7 @@ fn and(
     );
     cfg.add(vartab, Instr::Branch { block: end_and });
     cfg.set_basic_block(end_and);
-    let mut phis = vartab.pop_dirty_tracker();
-    phis.insert(pos);
-    cfg.set_phis(end_and, phis);
+    cfg.set_phis(end_and, vartab.pop_dirty_tracker());
     Expression::Variable(*loc, Type::Bool, pos)
 }
 
@@ -1798,8 +1794,6 @@ fn ternary(
 ) -> Expression {
     let cond = expression(cond, cfg, contract_no, func, ns, vartab, opt);
 
-    vartab.new_dirty_tracker(ns.next_id);
-
     let pos = vartab.temp(
         &pt::Identifier {
             name: "ternary_result".to_owned(),
@@ -1807,6 +1801,8 @@ fn ternary(
         },
         ty,
     );
+
+    vartab.new_dirty_tracker();
 
     let left_block = cfg.new_basic_block("left_value".to_string());
     let right_block = cfg.new_basic_block("right_value".to_string());
@@ -1853,9 +1849,7 @@ fn ternary(
 
     cfg.set_basic_block(done_block);
 
-    let mut phis = vartab.pop_dirty_tracker();
-    phis.insert(pos);
-    cfg.set_phis(done_block, phis);
+    cfg.set_phis(done_block, vartab.pop_dirty_tracker());
 
     Expression::Variable(*loc, ty.clone(), pos)
 }

@@ -161,9 +161,11 @@ impl Vartable {
         }
     }
 
-    pub fn new_dirty_tracker(&mut self, lim: usize) {
+    /// Track dirty variables for phi instructions.
+    /// Any variable created after this command will not be considered dirty.
+    pub fn new_dirty_tracker(&mut self) {
         self.dirty.push(DirtyTracker {
-            lim,
+            lim: self.next_id,
             set: BTreeSet::new(),
         });
     }

@@ -91,7 +91,7 @@ pub(crate) fn process_builtin(
             let mod_arg = expression(&args[2], contract_no, ns, vartab, cfg, opt);
             let (mod_left, mod_right) = equalize_types(main_expr, mod_arg, ns);
             let codegen_expr = Expression::UnsignedModulo(*loc, mod_left.ty(), Box::new(mod_left), Box::new(mod_right.clone()));
-            branch_if_zero(mod_right, codegen_expr, ns, cfg, vartab)
+            branch_if_zero(mod_right, codegen_expr, cfg, vartab)
         }
 
         YulBuiltInFunction::SignExtend
@@ -249,12 +249,12 @@ fn process_binary_arithmetic(
                 Box::new(left),
                 Box::new(right.clone()),
             );
-            branch_if_zero(right, expr, ns, cfg, vartab)
+            branch_if_zero(right, expr, cfg, vartab)
         }
         YulBuiltInFunction::SDiv => {
             let expr =
                 Expression::SignedDivide(*loc, left.ty(), Box::new(left), Box::new(right.clone()));
-            branch_if_zero(right, expr, ns, cfg, vartab)
+            branch_if_zero(right, expr, cfg, vartab)
         }
         YulBuiltInFunction::Mod => {
             let expr = Expression::UnsignedModulo(
@@ -263,12 +263,12 @@ fn process_binary_arithmetic(
                 Box::new(left),
                 Box::new(right.clone()),
             );
-            branch_if_zero(right, expr, ns, cfg, vartab)
+            branch_if_zero(right, expr, cfg, vartab)
         }
         YulBuiltInFunction::SMod => {
             let expr =
                 Expression::SignedModulo(*loc, left.ty(), Box::new(left), Box::new(right.clone()));
-            branch_if_zero(right, expr, ns, cfg, vartab)
+            branch_if_zero(right, expr, cfg, vartab)
         }
         YulBuiltInFunction::Exp => {
             Expression::Power(*loc, left.ty(), true, Box::new(left), Box::new(right))
@@ -350,7 +350,6 @@ fn equalize_types(
 fn branch_if_zero(
     variable: Expression,
     codegen_expr: Expression,
-    ns: &Namespace,
     cfg: &mut ControlFlowGraph,
     vartab: &mut Vartable,
 ) -> Expression {
@@ -378,7 +377,7 @@ fn branch_if_zero(
     );
 
     cfg.set_basic_block(then);
-    vartab.new_dirty_tracker(ns.next_id);
+    vartab.new_dirty_tracker();
     cfg.add(
         vartab,
         Instr::Set {
@@ -399,9 +398,7 @@ fn branch_if_zero(
         },
     );
     cfg.add(vartab, Instr::Branch { block: endif });
-    let mut phis = vartab.pop_dirty_tracker();
-    phis.insert(temp);
-    cfg.set_phis(endif, phis);
+    cfg.set_phis(endif, vartab.pop_dirty_tracker());
     cfg.set_basic_block(endif);
 
     Expression::Variable(pt::Loc::Codegen, Type::Uint(256), temp)
@@ -444,7 +441,7 @@ fn byte_builtin(
     );
 
     cfg.set_basic_block(then);
-    vartab.new_dirty_tracker(ns.next_id);
+    vartab.new_dirty_tracker();
     cfg.add(
         vartab,
         Instr::Set {
@@ -509,9 +506,7 @@ fn byte_builtin(
     );
     cfg.add(vartab, Instr::Branch { block: endif });
 
-    let mut phis = vartab.pop_dirty_tracker();
-    phis.insert(temp);
-    cfg.set_phis(endif, phis);
+    cfg.set_phis(endif, vartab.pop_dirty_tracker());
     cfg.set_basic_block(endif);
 
     Expression::Variable(pt::Loc::Codegen, Type::Uint(256), temp)
