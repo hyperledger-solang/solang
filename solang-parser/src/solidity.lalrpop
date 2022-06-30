@@ -482,7 +482,7 @@ Unit: Unit = {
 
 StringLiteral: StringLiteral = {
     <l:@L> <s:string> <r:@R> => {
-        StringLiteral{ loc: Loc::File(file_no, l, r), string: s.to_string() }
+        StringLiteral{ loc: Loc::File(file_no, l, r), string: s.1.to_string() }
     }
 }
 
@@ -971,7 +971,7 @@ extern {
 
     enum Token<'input> {
         identifier => Token::Identifier(<&'input str>),
-        string => Token::StringLiteral(<&'input str>),
+        string => Token::StringLiteral(<bool>, <&'input str>),
         hexstring => Token::HexLiteral(<&'input str>),
         address => Token::AddressLiteral(<&'input str>),
         number => Token::Number(<&'input str>, <&'input str>),
