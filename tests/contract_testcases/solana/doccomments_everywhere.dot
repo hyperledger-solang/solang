@@ -130,9 +130,10 @@ strict digraph "tests/contract_testcases/solana/doccomments_everywhere.sol" {
 	diagnostic_132 [label="'Counters' not found\nlevel Error\ntests/contract_testcases/solana/doccomments_everywhere.sol:6:22-30"]
 	diagnostic_133 [label="'Counters' not found\nlevel Error\ntests/contract_testcases/solana/doccomments_everywhere.sol:7:3-11"]
 	diagnostic_134 [label="'ERC1155' not found\nlevel Error\ntests/contract_testcases/solana/doccomments_everywhere.sol:17:17-24"]
-	diagnostic_135 [label="'_tokenIds' not found\nlevel Error\ntests/contract_testcases/solana/doccomments_everywhere.sol:28:29-38"]
-	diagnostic_136 [label="cannot find overloaded function which matches signature\nlevel Error\ntests/contract_testcases/solana/doccomments_everywhere.sol:53:7-50"]
-	diagnostic_137 [label="cannot find overloaded function which matches signature\nlevel Error\ntests/contract_testcases/solana/doccomments_everywhere.sol:86:7-38"]
+	diagnostic_135 [label="target solana does not support receive() functions, see https://solang.readthedocs.io/en/latest/language/functions.html#fallback-and-receive-function\nlevel Error\ntests/contract_testcases/solana/doccomments_everywhere.sol:19:3-29"]
+	diagnostic_136 [label="'_tokenIds' not found\nlevel Error\ntests/contract_testcases/solana/doccomments_everywhere.sol:28:29-38"]
+	diagnostic_137 [label="cannot find overloaded function which matches signature\nlevel Error\ntests/contract_testcases/solana/doccomments_everywhere.sol:53:7-50"]
+	diagnostic_138 [label="cannot find overloaded function which matches signature\nlevel Error\ntests/contract_testcases/solana/doccomments_everywhere.sol:86:7-38"]
 	events -> MintProperty
 	contracts -> contract
 	contract -> tags [label="tags"]
@@ -267,4 +268,5 @@ strict digraph "tests/contract_testcases/solana/doccomments_everywhere.sol" {
 	diagnostics -> diagnostic_135 [label="Error"]
 	diagnostics -> diagnostic_136 [label="Error"]
 	diagnostics -> diagnostic_137 [label="Error"]
+	diagnostics -> diagnostic_138 [label="Error"]
 }

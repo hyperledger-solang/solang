@@ -73,6 +73,15 @@ package has `documentation <https://solana-labs.github.io/solana-solidity.js/>`_
 are `some examples <https://solana-labs.github.io/solana-solidity.js/>`_. There is also
 `solang's integration tests <https://github.com/hyperledger-labs/solang/tree/main/integration/solana>`_.
 
+Receive function
+________________
+
+In Solidity the `receive()` function, when defined, is called whenever the native
+balance for an account gets credited, for example through a contract calling
+``account.transfer(value);``. On Solana, there is no method that implement
+this. The balance of an account can be credited without any code being executed.
+
+`receive()` functions are not permitted on the Solana target.
 
 Builtin Imports
 ________________

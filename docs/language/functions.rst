@@ -478,3 +478,7 @@ Both functions must be declared ``external``.
             // execute if function selector does not match "foo(uint32)" and value sent
         }
     }
+
+..  note::
+    On Solana, there is no mechanism to have some code executed if an account
+    gets credited. So, `receive()` functions are not supported.
