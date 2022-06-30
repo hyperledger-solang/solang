@@ -24,17 +24,17 @@ fn builtins() {
         }"#,
     );
 
-    vm.constructor("timestamp", &[], 0);
+    vm.constructor("timestamp", &[]);
 
-    let returns = vm.function("mr_now", &[], &[], 0, None);
+    let returns = vm.function("mr_now", &[], &[], None);
 
     assert_eq!(returns, vec![Token::Uint(U256::from(1620656423))]);
 
-    let returns = vm.function("mr_slot", &[], &[], 0, None);
+    let returns = vm.function("mr_slot", &[], &[], None);
 
     assert_eq!(returns, vec![Token::Uint(U256::from(70818331))]);
 
-    let returns = vm.function("mr_blocknumber", &[], &[], 0, None);
+    let returns = vm.function("mr_blocknumber", &[], &[], None);
 
     assert_eq!(returns, vec![Token::Uint(U256::from(70818331))]);
 
@@ -42,7 +42,6 @@ fn builtins() {
         "msg_data",
         &[Token::Uint(U256::from(0xdeadcafeu32))],
         &[],
-        0,
         None,
     );
 
@@ -58,7 +57,7 @@ fn builtins() {
         )]
     );
 
-    let returns = vm.function("sig", &[], &[], 0, None);
+    let returns = vm.function("sig", &[], &[], None);
 
     if let Token::FixedBytes(v) = &returns[0] {
         println!("{}", hex::encode(v));

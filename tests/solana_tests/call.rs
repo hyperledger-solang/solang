@@ -23,15 +23,9 @@ fn simple_external_call() {
         }"#,
     );
 
-    vm.constructor("bar1", &[], 0);
+    vm.constructor("bar1", &[]);
 
-    vm.function(
-        "test_bar",
-        &[Token::String(String::from("yo"))],
-        &[],
-        0,
-        None,
-    );
+    vm.function("test_bar", &[Token::String(String::from("yo"))], &[], None);
 
     assert_eq!(vm.logs, "bar1 says: yo");
 
@@ -41,13 +35,12 @@ fn simple_external_call() {
 
     vm.set_program(0);
 
-    vm.constructor("bar0", &[], 0);
+    vm.constructor("bar0", &[]);
 
     vm.function(
         "test_bar",
         &[Token::String(String::from("uncle beau"))],
         &[],
-        0,
         None,
     );
 
@@ -59,7 +52,6 @@ fn simple_external_call() {
         "test_other",
         &[Token::FixedBytes(bar1_account.to_vec())],
         &[],
-        0,
         None,
     );
 
@@ -83,9 +75,9 @@ fn external_call_with_returns() {
         }"#,
     );
 
-    vm.constructor("bar1", &[], 0);
+    vm.constructor("bar1", &[]);
 
-    let res = vm.function("test_bar", &[Token::Int(U256::from(21))], &[], 0, None);
+    let res = vm.function("test_bar", &[Token::Int(U256::from(21))], &[], None);
 
     assert_eq!(res, vec![Token::Int(U256::from(24))]);
 
@@ -93,13 +85,12 @@ fn external_call_with_returns() {
 
     vm.set_program(0);
 
-    vm.constructor("bar0", &[], 0);
+    vm.constructor("bar0", &[]);
 
     let res = vm.function(
         "test_other",
         &[Token::FixedBytes(bar1_account.to_vec())],
         &[],
-        0,
         None,
     );
 
@@ -130,9 +121,9 @@ fn external_raw_call_with_returns() {
         }"#,
     );
 
-    vm.constructor("bar1", &[], 0);
+    vm.constructor("bar1", &[]);
 
-    let res = vm.function("test_bar", &[Token::Int(U256::from(21))], &[], 0, None);
+    let res = vm.function("test_bar", &[Token::Int(U256::from(21))], &[], None);
 
     assert_eq!(res, vec![Token::Int(U256::from(24))]);
 
@@ -140,13 +131,12 @@ fn external_raw_call_with_returns() {
 
     vm.set_program(0);
 
-    vm.constructor("bar0", &[], 0);
+    vm.constructor("bar0", &[]);
 
     let res = vm.function(
         "test_other",
         &[Token::FixedBytes(bar1_account.to_vec())],
         &[],
-        0,
         None,
     );
 
@@ -173,9 +163,9 @@ fn call_external_func_type() {
     "#,
     );
 
-    vm.constructor("testing", &[], 0);
+    vm.constructor("testing", &[]);
 
-    let res = vm.function("doTest", &[], &[], 0, None);
+    let res = vm.function("doTest", &[], &[], None);
 
     assert_eq!(
         res,
@@ -219,9 +209,9 @@ fn external_call_with_string_returns() {
         }"#,
     );
 
-    vm.constructor("bar1", &[], 0);
+    vm.constructor("bar1", &[]);
 
-    let res = vm.function("test_bar", &[Token::Int(U256::from(22))], &[], 0, None);
+    let res = vm.function("test_bar", &[Token::Int(U256::from(22))], &[], None);
 
     assert_eq!(res, vec![Token::String(String::from("foo:22"))]);
 
@@ -229,7 +219,7 @@ fn external_call_with_string_returns() {
 
     vm.set_program(0);
 
-    vm.constructor("bar0", &[], 0);
+    vm.constructor("bar0", &[]);
 
     let bar0_account = vm.stack[0].data;
 
@@ -237,7 +227,6 @@ fn external_call_with_string_returns() {
         "test_other",
         &[Token::FixedBytes(bar1_account.to_vec())],
         &[],
-        0,
         None,
     );
 
@@ -247,7 +236,6 @@ fn external_call_with_string_returns() {
         "test_this",
         &[Token::FixedBytes(bar1_account.to_vec())],
         &[],
-        0,
         None,
     );
 
@@ -255,7 +243,6 @@ fn external_call_with_string_returns() {
         "test_sender",
         &[Token::FixedBytes(bar1_account.to_vec())],
         &[],
-        0,
         None,
     );
 
@@ -286,9 +273,9 @@ fn encode_call() {
         }"#,
     );
 
-    vm.constructor("bar1", &[], 0);
+    vm.constructor("bar1", &[]);
 
-    let res = vm.function("test_bar", &[Token::Int(U256::from(21))], &[], 0, None);
+    let res = vm.function("test_bar", &[Token::Int(U256::from(21))], &[], None);
 
     assert_eq!(res, vec![Token::Int(U256::from(24))]);
 
@@ -296,13 +283,12 @@ fn encode_call() {
 
     vm.set_program(0);
 
-    vm.constructor("bar0", &[], 0);
+    vm.constructor("bar0", &[]);
 
     let res = vm.function(
         "test_other",
         &[Token::FixedBytes(bar1_account.to_vec())],
         &[],
-        0,
         None,
     );
 
@@ -338,9 +324,9 @@ fn internal_function_storage() {
         }"#,
     );
 
-    vm.constructor("ft", &[], 0);
+    vm.constructor("ft", &[]);
 
-    let res = vm.function("set_op", &[Token::Bool(true)], &[], 0, None);
+    let res = vm.function("set_op", &[Token::Bool(true)], &[], None);
 
     assert_eq!(res, vec![]);
 
@@ -348,13 +334,12 @@ fn internal_function_storage() {
         "test",
         &[Token::Int(U256::from(3)), Token::Int(U256::from(5))],
         &[],
-        0,
         None,
     );
 
     assert_eq!(res, vec![Token::Int(U256::from(15))]);
 
-    let res = vm.function("set_op", &[Token::Bool(false)], &[], 0, None);
+    let res = vm.function("set_op", &[Token::Bool(false)], &[], None);
 
     assert_eq!(res, vec![]);
 
@@ -362,7 +347,6 @@ fn internal_function_storage() {
         "test",
         &[Token::Int(U256::from(3)), Token::Int(U256::from(5))],
         &[],
-        0,
         None,
     );
 
@@ -406,7 +390,7 @@ fn raw_call_accounts() {
         }"#,
     );
 
-    vm.constructor("SplToken", &[], 0);
+    vm.constructor("SplToken", &[]);
 
     let token = Pubkey(
         "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
@@ -460,7 +444,6 @@ fn raw_call_accounts() {
             Token::FixedBytes(b"quinquagintaquadringentillionths".to_vec()),
         ],
         &[],
-        0,
         None,
     );
 }

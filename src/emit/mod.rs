@@ -339,41 +339,43 @@ pub trait TargetRuntime<'a> {
 
     /// If we receive a value transfer, and we are "payable", abort with revert
     fn abort_if_value_transfer(&self, binary: &Binary, function: FunctionValue, ns: &Namespace) {
-        let value = self.value_transferred(binary, ns);
+        if ns.target != Target::Solana {
+            let value = self.value_transferred(binary, ns);
 
-        let got_value = binary.builder.build_int_compare(
-            IntPredicate::NE,
-            value,
-            binary.value_type(ns).const_zero(),
-            "is_value_transfer",
-        );
+            let got_value = binary.builder.build_int_compare(
+                IntPredicate::NE,
+                value,
+                binary.value_type(ns).const_zero(),
+                "is_value_transfer",
+            );
 
-        let not_value_transfer = binary
-            .context
-            .append_basic_block(function, "not_value_transfer");
-        let abort_value_transfer = binary
-            .context
-            .append_basic_block(function, "abort_value_transfer");
-
-        binary.builder.build_conditional_branch(
-            got_value,
-            abort_value_transfer,
-            not_value_transfer,
-        );
-
-        binary.builder.position_at_end(abort_value_transfer);
-
-        self.assert_failure(
-            binary,
-            binary
+            let not_value_transfer = binary
                 .context
-                .i8_type()
-                .ptr_type(AddressSpace::Generic)
-                .const_null(),
-            binary.context.i32_type().const_zero(),
-        );
+                .append_basic_block(function, "not_value_transfer");
+            let abort_value_transfer = binary
+                .context
+                .append_basic_block(function, "abort_value_transfer");
 
-        binary.builder.position_at_end(not_value_transfer);
+            binary.builder.build_conditional_branch(
+                got_value,
+                abort_value_transfer,
+                not_value_transfer,
+            );
+
+            binary.builder.position_at_end(abort_value_transfer);
+
+            self.assert_failure(
+                binary,
+                binary
+                    .context
+                    .i8_type()
+                    .ptr_type(AddressSpace::Generic)
+                    .const_null(),
+                binary.context.i32_type().const_zero(),
+            );
+
+            binary.builder.position_at_end(not_value_transfer);
+        }
     }
 
     /// Recursively load a type from bin storage
@@ -4485,60 +4487,79 @@ pub trait TargetRuntime<'a> {
             return;
         }
 
-        let got_value = if bin.function_abort_value_transfers {
-            bin.context.bool_type().const_zero()
+        if ns.target == Target::Solana {
+            match fallback {
+                Some((cfg_no, _)) => {
+                    let args = if ns.target == Target::Solana {
+                        vec![function.get_last_param().unwrap().into()]
+                    } else {
+                        vec![]
+                    };
+
+                    bin.builder.build_call(functions[&cfg_no], &args, "");
+
+                    self.return_empty_abi(bin);
+                }
+                None => {
+                    self.return_code(bin, bin.context.i32_type().const_int(2, false));
+                }
+            }
         } else {
-            let value = self.value_transferred(bin, ns);
+            let got_value = if bin.function_abort_value_transfers {
+                bin.context.bool_type().const_zero()
+            } else {
+                let value = self.value_transferred(bin, ns);
 
-            bin.builder.build_int_compare(
-                IntPredicate::NE,
-                value,
-                bin.value_type(ns).const_zero(),
-                "is_value_transfer",
-            )
-        };
+                bin.builder.build_int_compare(
+                    IntPredicate::NE,
+                    value,
+                    bin.value_type(ns).const_zero(),
+                    "is_value_transfer",
+                )
+            };
 
-        let fallback_block = bin.context.append_basic_block(function, "fallback");
-        let receive_block = bin.context.append_basic_block(function, "receive");
+            let fallback_block = bin.context.append_basic_block(function, "fallback");
+            let receive_block = bin.context.append_basic_block(function, "receive");
 
-        bin.builder
-            .build_conditional_branch(got_value, receive_block, fallback_block);
+            bin.builder
+                .build_conditional_branch(got_value, receive_block, fallback_block);
 
-        bin.builder.position_at_end(fallback_block);
+            bin.builder.position_at_end(fallback_block);
 
-        match fallback {
-            Some((cfg_no, _)) => {
-                let args = if ns.target == Target::Solana {
-                    vec![function.get_last_param().unwrap().into()]
-                } else {
-                    vec![]
-                };
+            match fallback {
+                Some((cfg_no, _)) => {
+                    let args = if ns.target == Target::Solana {
+                        vec![function.get_last_param().unwrap().into()]
+                    } else {
+                        vec![]
+                    };
 
-                bin.builder.build_call(functions[&cfg_no], &args, "");
+                    bin.builder.build_call(functions[&cfg_no], &args, "");
 
-                self.return_empty_abi(bin);
+                    self.return_empty_abi(bin);
+                }
+                None => {
+                    self.return_code(bin, bin.context.i32_type().const_int(2, false));
+                }
             }
-            None => {
-                self.return_code(bin, bin.context.i32_type().const_int(2, false));
-            }
-        }
 
-        bin.builder.position_at_end(receive_block);
+            bin.builder.position_at_end(receive_block);
 
-        match receive {
-            Some((cfg_no, _)) => {
-                let args = if ns.target == Target::Solana {
-                    vec![function.get_last_param().unwrap().into()]
-                } else {
-                    vec![]
-                };
+            match receive {
+                Some((cfg_no, _)) => {
+                    let args = if ns.target == Target::Solana {
+                        vec![function.get_last_param().unwrap().into()]
+                    } else {
+                        vec![]
+                    };
 
-                bin.builder.build_call(functions[&cfg_no], &args, "");
+                    bin.builder.build_call(functions[&cfg_no], &args, "");
 
-                self.return_empty_abi(bin);
-            }
-            None => {
-                self.return_code(bin, bin.context.i32_type().const_int(2, false));
+                    self.return_empty_abi(bin);
+                }
+                None => {
+                    self.return_code(bin, bin.context.i32_type().const_int(2, false));
+                }
             }
         }
     }

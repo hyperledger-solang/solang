@@ -65,7 +65,7 @@ suite('Extension Test Suite', function () {
   // Tests for hover.
   this.timeout(20000);
   const hoverdoc1 = getDocUri('hover1.sol');
-  test('Testing for Hover.', async () => {
+  test('Testing for Hover', async () => {
     await testhover(hoverdoc1);
   });
 });
@@ -89,7 +89,7 @@ async function testhover(docUri: vscode.Uri) {
 
   const contentarr1 = actualhover[0].contents as vscode.MarkdownString[];
 
-  assert.equal(contentarr1[0].value, '(mapping(address => uint256))');
+  assert.strictEqual(contentarr1[0].value, '(mapping(address => uint256))');
 
   const pos2 = new vscode.Position(78, 19);
 
@@ -101,7 +101,7 @@ async function testhover(docUri: vscode.Uri) {
 
   const contentarr2 = actualhover2[0].contents as vscode.MarkdownString[];
 
-  assert.equal(
+  assert.strictEqual(
     contentarr2[0].value,
     '```\nevent SimpleAuction.HighestBidIncreased {\n\taddress bidder,\n\tuint256 amount\n};\n```\n'
   );
@@ -116,7 +116,7 @@ async function testhover(docUri: vscode.Uri) {
 
   const contentarr3 = actualhover3[0].contents as vscode.MarkdownString[];
 
-  assert.equal(contentarr3[0].value, '[built-in]  void require (bool): Abort execution if argument evaulates to false');
+  assert.strictEqual(contentarr3[0].value, '[built-in]  void require (bool): Abort execution if argument evaulates to false');
 }
 
 async function testdiagnos(docUri: vscode.Uri, expecteddiag: vscode.Diagnostic[]) {
@@ -127,9 +127,9 @@ async function testdiagnos(docUri: vscode.Uri, expecteddiag: vscode.Diagnostic[]
   if (actualDiagnostics) {
     expecteddiag.forEach((expectedDiagnostic, i) => {
       const actualDiagnostic = actualDiagnostics[i];
-      assert.equal(actualDiagnostic.message, expectedDiagnostic.message);
-      assert.deepEqual(actualDiagnostic.range, expectedDiagnostic.range);
-      assert.equal(actualDiagnostic.severity, expectedDiagnostic.severity);
+      assert.strictEqual(actualDiagnostic.message, expectedDiagnostic.message);
+      assert.deepStrictEqual(actualDiagnostic.range, expectedDiagnostic.range);
+      assert.strictEqual(actualDiagnostic.severity, expectedDiagnostic.severity);
     });
   } else {
     console.error('the diagnostics are incorrect', actualDiagnostics);

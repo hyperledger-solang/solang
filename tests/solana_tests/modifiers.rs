@@ -26,16 +26,16 @@ fn returns_and_phis_needed() {
         }"#,
     );
 
-    vm.constructor("c", &[], 0);
+    vm.constructor("c", &[]);
 
-    let returns = vm.function("func", &[Token::Bool(false)], &[], 0, None);
+    let returns = vm.function("func", &[Token::Bool(false)], &[], None);
 
     assert_eq!(
         returns,
         vec![Token::Int(U256::from(40)), Token::Bool(false)]
     );
 
-    let returns = vm.function("func", &[Token::Bool(true)], &[], 0, None);
+    let returns = vm.function("func", &[Token::Bool(true)], &[], None);
 
     assert_eq!(returns, vec![Token::Int(U256::from(12)), Token::Bool(true)]);
 }

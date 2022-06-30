@@ -15,8 +15,6 @@ static const SolPubkey instructions_address = {0x06, 0xa7, 0xd5, 0x17, 0x18, 0x7
 // The address 'Ed25519SigVerify111111111111111111111111111' base58 decoded
 static const SolPubkey ed25519_address = {0x03, 0x7d, 0x46, 0xd6, 0x7c, 0x93, 0xfb, 0xbe, 0x12, 0xf9, 0x42, 0x8f, 0x83, 0x8d, 0x40, 0xff, 0x05, 0x70, 0x74, 0x49, 0x27, 0xf4, 0x8a, 0x64, 0xfc, 0xca, 0x70, 0x44, 0x80, 0x00, 0x00, 0x00};
 
-static void sol_pay(SolParameters *params);
-
 uint64_t
 entrypoint(const uint8_t *input)
 {
@@ -56,8 +54,6 @@ entrypoint(const uint8_t *input)
     {
         return ERROR_INVALID_INSTRUCTION_DATA;
     }
-
-    sol_pay(&params);
 
     return solang_dispatch(&params);
 }
@@ -248,62 +244,6 @@ uint64_t *sol_account_lamport(
     sol_panic();
 
     return NULL;
-}
-
-static void sol_pay(SolParameters *params)
-{
-    SolAccountInfo *sender = NULL, *to = NULL;
-
-    if (params->value)
-    {
-        for (int i = 0; i < params->ka_num; i++)
-        {
-            if (!sender)
-            {
-                if (SolPubkey_same(params->sender, params->ka[i].key))
-                {
-                    sender = &params->ka[i];
-                }
-            }
-            if (!to)
-            {
-                if (SolPubkey_same(params->account_id, params->ka[i].key))
-                {
-                    to = &params->ka[i];
-                }
-            }
-            if (sender && to)
-            {
-                break;
-            }
-        }
-
-        if (!sender)
-        {
-            sol_log_pubkey(params->sender);
-            sol_log("sender account missing from transaction");
-            sol_panic();
-        }
-
-        if (!to)
-        {
-            sol_log_pubkey(params->account_id);
-            sol_log("contract account missing from transaction");
-            sol_panic();
-        }
-
-        if (__builtin_sub_overflow(*sender->lamports, params->value, sender->lamports))
-        {
-            sol_log("sender does not have enough balance");
-            sol_panic();
-        }
-
-        if (__builtin_add_overflow(*to->lamports, params->value, to->lamports))
-        {
-            sol_log("recipient lamports overflows");
-            sol_panic();
-        }
-    }
 }
 
 void sol_transfer(uint8_t *to_address, uint64_t lamports, SolParameters *params)

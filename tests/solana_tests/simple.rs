@@ -18,13 +18,13 @@ fn simple() {
         }"#,
     );
 
-    vm.constructor("foo", &[], 0);
+    vm.constructor("foo", &[]);
 
     assert_eq!(vm.logs, "Hello from constructor");
 
     vm.logs.truncate(0);
 
-    vm.function("test", &[], &[], 0, None);
+    vm.function("test", &[], &[], None);
 
     assert_eq!(vm.logs, "Hello from function");
 }
@@ -42,7 +42,7 @@ fn format() {
         }"#,
     );
 
-    vm.constructor("foo", &[], 0);
+    vm.constructor("foo", &[]);
 
     assert_eq!(
         vm.logs,
@@ -67,7 +67,7 @@ fn parameters() {
         }"#,
     );
 
-    vm.constructor("foo", &[], 0);
+    vm.constructor("foo", &[]);
 
     vm.function(
         "test",
@@ -76,7 +76,6 @@ fn parameters() {
             ethabi::Token::Uint(U256::from(10)),
         ],
         &[],
-        0,
         None,
     );
 
@@ -91,7 +90,6 @@ fn parameters() {
             ethabi::Token::Uint(U256::from(102)),
         ],
         &[],
-        0,
         None,
     );
 
@@ -109,9 +107,9 @@ fn returns() {
         }"#,
     );
 
-    vm.constructor("foo", &[], 0);
+    vm.constructor("foo", &[]);
 
-    let returns = vm.function("test", &[ethabi::Token::Uint(U256::from(10))], &[], 0, None);
+    let returns = vm.function("test", &[ethabi::Token::Uint(U256::from(10))], &[], None);
 
     assert_eq!(returns, vec![ethabi::Token::Uint(U256::from(100))]);
 
@@ -124,13 +122,12 @@ fn returns() {
         }"#,
     );
 
-    vm.constructor("foo", &[], 0);
+    vm.constructor("foo", &[]);
 
     let returns = vm.function(
         "test",
         &[ethabi::Token::Uint(U256::from(982451653))],
         &[],
-        0,
         None,
     );
 
@@ -169,25 +166,25 @@ fn flipper() {
         }"#,
     );
 
-    vm.constructor("flipper", &[ethabi::Token::Bool(true)], 0);
+    vm.constructor("flipper", &[ethabi::Token::Bool(true)]);
 
     assert_eq!(
         vm.data()[0..17].to_vec(),
         hex::decode("6fc90ec500000000000000001800000001").unwrap()
     );
 
-    let returns = vm.function("get", &[], &[], 0, None);
+    let returns = vm.function("get", &[], &[], None);
 
     assert_eq!(returns, vec![ethabi::Token::Bool(true)]);
 
-    vm.function("flip", &[], &[], 0, None);
+    vm.function("flip", &[], &[], None);
 
     assert_eq!(
         vm.data()[0..17].to_vec(),
         hex::decode("6fc90ec500000000000000001800000000").unwrap()
     );
 
-    let returns = vm.function("get", &[], &[], 0, None);
+    let returns = vm.function("get", &[], &[], None);
 
     assert_eq!(returns, vec![ethabi::Token::Bool(false)]);
 }
@@ -223,15 +220,15 @@ fn incrementer() {
         }"#,
     );
 
-    vm.constructor("incrementer", &[ethabi::Token::Uint(U256::from(5))], 0);
+    vm.constructor("incrementer", &[ethabi::Token::Uint(U256::from(5))]);
 
-    let returns = vm.function("get", &[], &[], 0, None);
+    let returns = vm.function("get", &[], &[], None);
 
     assert_eq!(returns, vec![ethabi::Token::Uint(U256::from(5))]);
 
-    vm.function("inc", &[ethabi::Token::Uint(U256::from(7))], &[], 0, None);
+    vm.function("inc", &[ethabi::Token::Uint(U256::from(7))], &[], None);
 
-    let returns = vm.function("get", &[], &[], 0, None);
+    let returns = vm.function("get", &[], &[], None);
 
     assert_eq!(returns, vec![ethabi::Token::Uint(U256::from(12))]);
 }
@@ -278,7 +275,7 @@ fn two_arrays() {
         }"#,
     );
 
-    vm.constructor("two_arrays", &[], 0);
+    vm.constructor("two_arrays", &[]);
 }
 
 #[test]
@@ -303,9 +300,9 @@ fn dead_storage_bug() {
         }"#,
     );
 
-    vm.constructor("deadstorage", &[], 0);
+    vm.constructor("deadstorage", &[]);
 
-    let returns = vm.function("v", &[], &[], 0, None);
+    let returns = vm.function("v", &[], &[], None);
 
     assert_eq!(returns, vec![ethabi::Token::Uint(U256::from(9991))]);
 }

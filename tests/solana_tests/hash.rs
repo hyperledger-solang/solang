@@ -14,8 +14,8 @@ fn constants_hash_tests() {
         }"##,
     );
 
-    runtime.constructor("tester", &[], 0);
-    runtime.function("test", &[], &[], 0, None);
+    runtime.constructor("tester", &[]);
+    runtime.function("test", &[], &[], None);
 
     let mut runtime = build_solidity(
         r##"
@@ -28,8 +28,8 @@ fn constants_hash_tests() {
         }"##,
     );
 
-    runtime.constructor("tester", &[], 0);
-    runtime.function("test", &[], &[], 0, None);
+    runtime.constructor("tester", &[]);
+    runtime.function("test", &[], &[], None);
 
     let mut runtime = build_solidity(
         r##"
@@ -42,8 +42,8 @@ fn constants_hash_tests() {
         }"##,
     );
 
-    runtime.constructor("tester", &[], 0);
-    runtime.function("test", &[], &[], 0, None);
+    runtime.constructor("tester", &[]);
+    runtime.function("test", &[], &[], None);
 }
 
 #[test]
@@ -59,12 +59,11 @@ fn hash_tests() {
         }"##,
     );
 
-    runtime.constructor("tester", &[], 0);
+    runtime.constructor("tester", &[]);
     let hash = runtime.function(
         "test",
         &[Token::Bytes(b"Hello, World!".to_vec())],
         &[],
-        0,
         None,
     );
 
@@ -86,12 +85,11 @@ fn hash_tests() {
         }"##,
     );
 
-    runtime.constructor("tester", &[], 0);
+    runtime.constructor("tester", &[]);
     let hash = runtime.function(
         "test",
         &[Token::Bytes(b"Hello, World!".to_vec())],
         &[],
-        0,
         None,
     );
 
@@ -114,12 +112,11 @@ fn hash_tests() {
         }"##,
     );
 
-    runtime.constructor("tester", &[], 0);
+    runtime.constructor("tester", &[]);
     let hash = runtime.function(
         "test",
         &[Token::Bytes(b"Hello, World!".to_vec())],
         &[],
-        0,
         None,
     );
 
