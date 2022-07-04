@@ -852,6 +852,7 @@ impl Type {
             Type::Unreachable => "unreachable".to_owned(),
             Type::Slice(ty) => format!("{} slice", ty.to_string(ns)),
             Type::Unresolved => "unresolved".to_owned(),
+            Type::BufferPointer => "buffer_pointer".to_owned(),
         }
     }
 
@@ -932,6 +933,14 @@ impl Type {
             Type::Array(ty, dim) if dim.len() == 1 => Type::Ref(ty.clone()),
             Type::Bytes(_) => Type::Bytes(1),
             _ => panic!("deref on non-array"),
+        }
+    }
+
+    /// Fetch the type of an array element
+    pub fn elem_ty(&self) -> Self {
+        match self {
+            Type::Array(ty, _) => *ty.clone(),
+            _ => unreachable!("Type is no an array"),
         }
     }
 

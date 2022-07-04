@@ -2,6 +2,7 @@ mod array_boundary;
 pub mod cfg;
 mod constant_folding;
 mod dead_storage;
+mod encoding;
 mod expression;
 mod external_functions;
 mod reaching_definitions;
@@ -36,7 +37,7 @@ use num_bigint::{BigInt, Sign};
 use num_rational::BigRational;
 use num_traits::{FromPrimitive, Zero};
 use solang_parser::pt;
-use solang_parser::pt::{CodeLocation, Loc};
+use solang_parser::pt::CodeLocation;
 
 // The sizeof(struct account_data_header)
 pub const SOLANA_FIRST_OFFSET: u64 = 16;
@@ -425,10 +426,16 @@ pub enum Expression {
     Undefined(Type),
     Variable(pt::Loc, Type, usize),
     ZeroExt(pt::Loc, Type, Box<Expression>),
+    AdvancePointer {
+        loc: pt::Loc,
+        ty: Type,
+        pointer: Box<Expression>,
+        bytes_offset: Box<Expression>,
+    },
 }
 
 impl CodeLocation for Expression {
-    fn loc(&self) -> Loc {
+    fn loc(&self) -> pt::Loc {
         match self {
             Expression::AbiEncode { loc, .. }
             | Expression::StorageArrayLength { loc, .. }
@@ -483,7 +490,8 @@ impl CodeLocation for Expression {
             | Expression::BytesCast(loc, ..)
             | Expression::SignedMore(loc, ..)
             | Expression::UnsignedMore(loc, ..)
-            | Expression::ZeroExt(loc, ..) => *loc,
+            | Expression::ZeroExt(loc, ..)
+            | Expression::AdvancePointer { loc, .. } => *loc,
 
             Expression::InternalFunctionCfg(_) | Expression::Poison | Expression::Undefined(_) => {
                 pt::Loc::Codegen
@@ -528,6 +536,11 @@ impl Recurse for Expression {
             | Expression::Power(_, _, _, left, right)
             | Expression::Subscript(_, _, _, left, right)
             | Expression::Subtract(_, _, _, left, right)
+            | Expression::AdvancePointer {
+                pointer: left,
+                bytes_offset: right,
+                ..
+            }
             | Expression::Add(_, _, _, left, right) => {
                 left.recurse(cx, f);
                 right.recurse(cx, f);
@@ -629,7 +642,8 @@ impl RetrieveType for Expression {
             | Expression::AllocDynamicArray(_, ty, ..)
             | Expression::BytesCast(_, ty, ..)
             | Expression::RationalNumberLiteral(_, ty, ..)
-            | Expression::Subscript(_, ty, ..) => ty.clone(),
+            | Expression::Subscript(_, ty, ..)
+            | Expression::AdvancePointer { ty, .. } => ty.clone(),
 
             Expression::BoolLiteral(..)
             | Expression::MoreEqual(..)
@@ -1077,6 +1091,17 @@ impl Expression {
                     Box::new(filter(left, ctx)),
                     Box::new(filter(right, ctx)),
                 ),
+                Expression::AdvancePointer {
+                    loc,
+                    ty,
+                    pointer,
+                    bytes_offset: offset,
+                } => Expression::AdvancePointer {
+                    loc: *loc,
+                    ty: ty.clone(),
+                    pointer: Box::new(filter(pointer, ctx)),
+                    bytes_offset: Box::new(filter(offset, ctx)),
+                },
                 Expression::Not(loc, expr) => Expression::Not(*loc, Box::new(filter(expr, ctx))),
                 Expression::Complement(loc, ty, expr) => {
                     Expression::Complement(*loc, ty.clone(), Box::new(filter(expr, ctx)))

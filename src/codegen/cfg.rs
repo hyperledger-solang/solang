@@ -158,6 +158,12 @@ pub enum Instr {
         offset: Expression,
         value: Expression,
     },
+    /// Copies bytes from source address to destination address
+    MemCopy {
+        source: Expression,
+        destination: Expression,
+        bytes: Expression,
+    },
     /// Do nothing
     Nop,
 }
@@ -271,6 +277,16 @@ impl Instr {
             Instr::WriteBuffer { offset, value, .. } => {
                 value.recurse(cx, f);
                 offset.recurse(cx, f);
+            }
+
+            Instr::MemCopy {
+                source: from,
+                destination: to,
+                bytes,
+            } => {
+                from.recurse(cx, f);
+                to.recurse(cx, f);
+                bytes.recurse(cx, f);
             }
 
             Instr::AssertFailure { expr: None }
@@ -764,6 +780,17 @@ impl ControlFlowGraph {
                     .join(", ")
             ),
             Expression::Undefined(_) => "undef".to_string(),
+            Expression::AdvancePointer {
+                pointer,
+                bytes_offset,
+                ..
+            } => {
+                format!(
+                    "(advance ptr: {}, by {})",
+                    self.expr_to_string(contract, ns, pointer),
+                    self.expr_to_string(contract, ns, bytes_offset)
+                )
+            }
             Expression::GetRef(_, _, expr) => {
                 format!("(deref {}", self.expr_to_string(contract, ns, expr))
             }
@@ -1100,6 +1127,18 @@ impl ControlFlowGraph {
                     .join(", ")
             ),
             Instr::Nop => String::from("nop"),
+            Instr::MemCopy {
+                source: from,
+                destination: to,
+                bytes,
+            } => {
+                format!(
+                    "memcpy src: {}, dest: {}, bytes_len: {}",
+                    self.expr_to_string(contract, ns, from),
+                    self.expr_to_string(contract, ns, to),
+                    self.expr_to_string(contract, ns, bytes)
+                )
+            }
         }
     }
 
@@ -1848,5 +1887,19 @@ impl Namespace {
         } else {
             Type::Uint(256)
         }
+    }
+
+    /// Checks if struct contains only primitive types and returns its size
+    pub fn is_primitive_type_struct(&self, struct_no: usize) -> Option<BigInt> {
+        let mut size = BigInt::from(0u8);
+        for field in &self.structs[struct_no].fields {
+            if !field.ty.is_primitive() {
+                return None;
+            } else {
+                size.add_assign(field.ty.size_of(self));
+            }
+        }
+
+        Some(size)
     }
 }
