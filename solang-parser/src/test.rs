@@ -36,7 +36,7 @@ fn parse_test() {
                     try sum(1, 1) returns (uint sum) {
                         assert(sum == 2);
                     } catch (bytes memory b) {
-                        revert('meh');
+                        revert(unicode'très');
                     } catch Error(string memory error) {
                         revert(error);
                     } catch Panic(uint x) {
@@ -147,10 +147,10 @@ fn parse_test() {
             return_not_returns: None,
             returns: vec![],
             body: Some(Statement::Block {
-                loc: Loc::File(0, 735, 1138),
+                loc: Loc::File(0, 735, 1147),
                 unchecked: false,
                 statements: vec![Statement::Try(
-                    Loc::File(0, 757, 1120),
+                    Loc::File(0, 757, 1129),
                     Expression::FunctionCall(
                         Loc::File(0, 761, 770),
                         Box::new(Expression::Variable(Identifier {
@@ -203,7 +203,7 @@ fn parse_test() {
                     )),
                     vec![
                         CatchClause::Simple(
-                            Loc::File(0, 856, 941),
+                            Loc::File(0, 856, 950),
                             Some(Parameter {
                                 loc: Loc::File(0, 863, 877),
                                 ty: Expression::Type(Loc::File(0, 863, 868), Type::DynamicBytes),
@@ -214,69 +214,71 @@ fn parse_test() {
                                 }),
                             }),
                             Statement::Block {
-                                loc: Loc::File(0, 879, 941),
+                                loc: Loc::File(0, 879, 950),
                                 unchecked: false,
                                 statements: vec![Statement::Revert(
-                                    Loc::File(0, 905, 918),
+                                    Loc::File(0, 905, 927),
                                     None,
                                     vec![Expression::StringLiteral(vec![StringLiteral {
-                                        loc: Loc::File(0, 912, 917),
-                                        string: "meh".to_string(),
+                                        loc: Loc::File(0, 912, 926),
+                                        unicode: true,
+                                        string: "très".to_string(),
                                     }])],
                                 )],
                             },
                         ),
                         CatchClause::Named(
-                            Loc::File(0, 942, 1037),
+                            Loc::File(0, 951, 1046),
                             Identifier {
-                                loc: Loc::File(0, 948, 953),
+                                loc: Loc::File(0, 957, 962),
                                 name: "Error".to_string(),
                             },
                             Parameter {
-                                loc: Loc::File(0, 954, 973),
-                                ty: Expression::Type(Loc::File(0, 954, 960), Type::String),
-                                storage: Some(StorageLocation::Memory(Loc::File(0, 961, 967))),
+                                loc: Loc::File(0, 963, 982),
+                                ty: Expression::Type(Loc::File(0, 963, 969), Type::String),
+                                storage: Some(StorageLocation::Memory(Loc::File(0, 970, 976))),
                                 name: Some(Identifier {
-                                    loc: Loc::File(0, 968, 973),
+                                    loc: Loc::File(0, 977, 982),
                                     name: "error".to_string(),
                                 }),
                             },
                             Statement::Block {
-                                loc: Loc::File(0, 975, 1037),
+                                loc: Loc::File(0, 984, 1046),
                                 unchecked: false,
                                 statements: vec![Statement::Revert(
-                                    Loc::File(0, 1001, 1014),
+                                    Loc::File(0, 1010, 1023),
                                     None,
                                     vec![Expression::Variable(Identifier {
-                                        loc: Loc::File(0, 1008, 1013),
+                                        loc: Loc::File(0, 1017, 1022),
                                         name: "error".to_string(),
                                     })],
                                 )],
                             },
                         ),
                         CatchClause::Named(
-                            Loc::File(0, 1038, 1120),
+                            Loc::File(0, 1047, 1129),
                             Identifier {
-                                loc: Loc::File(0, 1044, 1049),
+                                loc: Loc::File(0, 1053, 1058),
                                 name: "Panic".to_string(),
                             },
                             Parameter {
-                                loc: Loc::File(0, 1050, 1056),
-                                ty: Expression::Type(Loc::File(0, 1050, 1054), Type::Uint(256)),
+                                loc: Loc::File(0, 1059, 1065),
+                                ty: Expression::Type(Loc::File(0, 1059, 1063), Type::Uint(256)),
                                 storage: None,
                                 name: Some(Identifier {
-                                    loc: Loc::File(0, 1055, 1056),
+                                    loc: Loc::File(0, 1064, 1065),
                                     name: "x".to_string(),
                                 }),
                             },
                             Statement::Block {
-                                loc: Loc::File(0, 1058, 1120),
+                                loc: Loc::File(0, 1067, 1129),
                                 unchecked: false,
                                 statements: vec![Statement::Revert(
-                                    Loc::File(0, 1084, 1097),
+                                    Loc::File(0, 1093, 1106),
                                     None,
                                     vec![Expression::StringLiteral(vec![StringLiteral {
-                                        loc: Loc::File(0, 1091, 1096),
+                                        loc: Loc::File(0, 1100, 1105),
+                                        unicode: false,
                                         string: "feh".to_string(),
                                     }])],
                                 )],
@@ -722,6 +724,7 @@ fn test_assembly_parser() {
                         },
                         dialect: Some(StringLiteral {
                             loc: Loc::File(0, 63, 71),
+                            unicode: false,
                             string: "evmasm".to_string(),
                         }),
                         flags: None,
@@ -790,6 +793,7 @@ fn test_assembly_parser() {
                                                             YulExpression::StringLiteral(
                                                                 StringLiteral {
                                                                     loc: Loc::File(0, 909, 914),
+                                                                    unicode: false,
                                                                     string: "abc".to_string(),
                                                                 },
                                                                 Some(Identifier {
