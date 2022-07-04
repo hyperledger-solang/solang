@@ -228,6 +228,23 @@ jobs:
         asset_name: solang-mac-intel
         tag: ${{ github.ref }}
 
+  mac-universal:
+    name: Mac Universal Binary
+    runs-on: macos-latest
+    needs: [mac-arm, mac-intel]
+    steps:
+    - run: |
+        curl -L --output solang-mac-intel https://github.com/hyperledger-labs/solang/releases/download/${GITHUB_REF/refs\/tags\//}/solang-mac-intel
+        curl -L --output solang-mac-arm https://github.com/hyperledger-labs/solang/releases/download/${GITHUB_REF/refs\/tags\//}/solang-mac-arm
+        lipo -create -output solang-mac solang-mac-intel solang-mac-arm
+    - name: Upload binary
+      uses: svenstaro/upload-release-action@v2
+      with:
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        file: solang-mac
+        asset_name: solang-mac
+        tag: ${{ github.ref }}
+
   container:
     name: Container Image
     runs-on: ubuntu-20.04
