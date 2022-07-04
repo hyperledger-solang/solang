@@ -35,14 +35,14 @@ fn test_returns() {
     "#;
 
     let mut vm = build_solidity(file);
-    vm.constructor("c1", &[], 0);
-    let _ = vm.function("assign", &[], &[], 0, None);
-    let returns = vm.function("pb1", &[], &[], 0, None);
+    vm.constructor("c1", &[]);
+    let _ = vm.function("assign", &[], &[], None);
+    let returns = vm.function("pb1", &[], &[], None);
 
     assert_eq!(returns, vec![Token::Int(U256::from(5))]);
 
-    let returns = vm.function("test1", &[], &[], 0, None);
+    let returns = vm.function("test1", &[], &[], None);
     assert_eq!(returns, vec![Token::Int(U256::from(52))]);
-    let returns = vm.function("test2", &[], &[], 0, None);
+    let returns = vm.function("test2", &[], &[], None);
     assert_eq!(returns, vec![Token::Int(U256::from(5))]);
 }

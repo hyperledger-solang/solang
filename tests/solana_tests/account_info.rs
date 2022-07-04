@@ -25,11 +25,11 @@ fn lamports() {
         }"#,
     );
 
-    vm.constructor("c", &[], 0);
+    vm.constructor("c", &[]);
 
     vm.account_data.get_mut(&vm.origin).unwrap().lamports = 17672630920854456917u64;
 
-    let returns = vm.function("test", &[], &[], 0, None);
+    let returns = vm.function("test", &[], &[], None);
 
     assert_eq!(returns[0], Token::Uint(U256::from(17672630920854456917u64)));
 }
@@ -54,9 +54,9 @@ fn owner() {
         }"#,
     );
 
-    vm.constructor("c", &[], 0);
+    vm.constructor("c", &[]);
 
-    let returns = vm.function("test", &[], &[], 0, None);
+    let returns = vm.function("test", &[], &[], None);
 
     let owner = vm.stack[0].program.to_vec();
 
@@ -95,10 +95,10 @@ fn data() {
         }"#,
     );
 
-    vm.constructor("c", &[], 0);
+    vm.constructor("c", &[]);
 
     for i in 0..10 {
-        let returns = vm.function("test", &[Token::Uint(U256::from(i))], &[], 0, None);
+        let returns = vm.function("test", &[Token::Uint(U256::from(i))], &[], None);
 
         let this = &vm.stack[0].data;
 
@@ -107,7 +107,7 @@ fn data() {
         assert_eq!(returns[0], Token::Uint(U256::from(val)));
     }
 
-    let returns = vm.function("test2", &[], &[], 0, None);
+    let returns = vm.function("test2", &[], &[], None);
 
     let this = &vm.stack[0].data;
 

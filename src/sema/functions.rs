@@ -529,46 +529,53 @@ pub fn contract_function(
 
         Some(pos)
     } else if func.ty == pt::FunctionTy::Receive || func.ty == pt::FunctionTy::Fallback {
-        if let Some(prev_func_no) = ns.contracts[contract_no]
-            .functions
-            .iter()
-            .find(|func_no| ns.functions[**func_no].ty == func.ty)
-        {
-            let prev_loc = ns.functions[*prev_func_no].loc;
-
-            ns.diagnostics.push(Diagnostic::error_with_note(
-                func.loc,
-                format!("{} function already defined", func.ty),
-                prev_loc,
-                "location of previous definition".to_string(),
-            ));
-            return None;
-        }
-
-        if let pt::Visibility::External(_) = fdecl.visibility {
-            // ok
-        } else {
+        if func.ty == pt::FunctionTy::Receive && ns.target == Target::Solana {
             ns.diagnostics.push(Diagnostic::error(
                 func.loc,
-                format!("{} function must be declared external", func.ty),
+                format!("target {} does not support receive() functions, see https://solang.readthedocs.io/en/latest/language/functions.html#fallback-and-receive-function", ns.target),
             ));
-            return None;
-        }
+        } else {
+            if let Some(prev_func_no) = ns.contracts[contract_no]
+                .functions
+                .iter()
+                .find(|func_no| ns.functions[**func_no].ty == func.ty)
+            {
+                let prev_loc = ns.functions[*prev_func_no].loc;
 
-        if fdecl.is_payable() {
-            if func.ty == pt::FunctionTy::Fallback {
-                ns.diagnostics.push(Diagnostic::error(
+                ns.diagnostics.push(Diagnostic::error_with_note(
                     func.loc,
-                    format!("{} function must not be declare payable, use 'receive() external payable' instead", func.ty),
+                    format!("{} function already defined", func.ty),
+                    prev_loc,
+                    "location of previous definition".to_string(),
                 ));
                 return None;
             }
-        } else if func.ty == pt::FunctionTy::Receive {
-            ns.diagnostics.push(Diagnostic::error(
-                func.loc,
-                format!("{} function must be declared payable", func.ty),
-            ));
-            return None;
+
+            if let pt::Visibility::External(_) = fdecl.visibility {
+                // ok
+            } else {
+                ns.diagnostics.push(Diagnostic::error(
+                    func.loc,
+                    format!("{} function must be declared external", func.ty),
+                ));
+                return None;
+            }
+
+            if fdecl.is_payable() {
+                if func.ty == pt::FunctionTy::Fallback {
+                    ns.diagnostics.push(Diagnostic::error(
+                    func.loc,
+                    format!("{} function must not be declare payable, use 'receive() external payable' instead", func.ty),
+                ));
+                    return None;
+                }
+            } else if func.ty == pt::FunctionTy::Receive {
+                ns.diagnostics.push(Diagnostic::error(
+                    func.loc,
+                    format!("{} function must be declared payable", func.ty),
+                ));
+                return None;
+            }
         }
 
         let pos = ns.functions.len();

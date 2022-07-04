@@ -829,6 +829,14 @@ pub fn builtin_var(
                     ),
                 ));
             }
+            if ns.target == Target::Solana && p.builtin == Builtin::Value {
+                diagnostics.push(Diagnostic::error(
+                    *loc,
+                    String::from(
+                        "Solana Cross Program Invocation (CPI) cannot transfer native value. See https://solang.readthedocs.io/en/latest/language/functions.html#value_transfer",
+                    ),
+                ));
+            }
             return Some((p.builtin, p.ret[0].clone()));
         }
     }

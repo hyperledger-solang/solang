@@ -7020,24 +7020,40 @@ fn parse_call_args(
     for arg in args.values() {
         match arg.name.name.as_str() {
             "value" => {
-                let ty = Type::Value;
+                if ns.target == Target::Solana {
+                    diagnostics.push(Diagnostic::error(
+                        arg.loc,
+                "Solana Cross Program Invocation (CPI) cannot transfer native value. See https://solang.readthedocs.io/en/latest/language/functions.html#value_transfer".to_string(),
+                    ));
 
-                let expr = expression(
-                    &arg.expr,
-                    context,
-                    ns,
-                    symtable,
-                    diagnostics,
-                    ResolveTo::Type(&ty),
-                )?;
+                    expression(
+                        &arg.expr,
+                        context,
+                        ns,
+                        symtable,
+                        diagnostics,
+                        ResolveTo::Unknown,
+                    )?;
+                } else {
+                    let ty = Type::Value;
 
-                res.value = Some(Box::new(expr.cast(
-                    &arg.expr.loc(),
-                    &ty,
-                    true,
-                    ns,
-                    diagnostics,
-                )?));
+                    let expr = expression(
+                        &arg.expr,
+                        context,
+                        ns,
+                        symtable,
+                        diagnostics,
+                        ResolveTo::Type(&ty),
+                    )?;
+
+                    res.value = Some(Box::new(expr.cast(
+                        &arg.expr.loc(),
+                        &ty,
+                        true,
+                        ns,
+                        diagnostics,
+                    )?));
+                }
             }
             "gas" => {
                 if ns.target == Target::Solana {
