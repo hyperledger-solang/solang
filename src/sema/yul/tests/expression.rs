@@ -270,6 +270,7 @@ fn resolve_string_literal() {
     let expr = pt::YulExpression::StringLiteral(
         StringLiteral {
             loc,
+            unicode: false,
             string: r#"ab\xffa\u00e0g"#.to_string(),
         },
         Some(Identifier {

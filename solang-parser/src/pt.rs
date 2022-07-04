@@ -348,6 +348,7 @@ pub struct TypeDefinition {
 #[derive(Debug, PartialEq, Clone)]
 pub struct StringLiteral {
     pub loc: Loc,
+    pub unicode: bool,
     pub string: String,
 }
 

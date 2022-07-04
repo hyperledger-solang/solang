@@ -482,7 +482,7 @@ Unit: Unit = {
 
 StringLiteral: StringLiteral = {
     <l:@L> <s:string> <r:@R> => {
-        StringLiteral{ loc: Loc::File(file_no, l, r), string: s.1.to_string() }
+        StringLiteral{ loc: Loc::File(file_no, l, r), unicode: s.0, string: s.1.to_string() }
     }
 }
 
