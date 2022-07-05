@@ -48,7 +48,7 @@ pub struct JsonResult {
 
 fn main() {
     let matches = Command::new("solang")
-        .version(&*format!("version {}", env!("GIT_HASH")))
+        .version(&*format!("version {}", env!("SOLANG_VERSION")))
         .author(env!("CARGO_PKG_AUTHORS"))
         .about(env!("CARGO_PKG_DESCRIPTION"))
         .arg(
@@ -235,7 +235,7 @@ fn main() {
     };
 
     if verbose {
-        eprintln!("info: Solang version {}", env!("GIT_HASH"));
+        eprintln!("info: Solang version {}", env!("SOLANG_VERSION"));
     }
 
     let math_overflow_check = matches.contains_id("MATHOVERFLOW");
