@@ -1511,20 +1511,16 @@ impl SolanaTarget {
             ),
             // data
             2 => {
-                let data_len = binary.builder.build_int_truncate(
-                    binary
-                        .builder
-                        .build_load(
-                            binary
-                                .builder
-                                .build_struct_gep(account_info, 2, "data_len")
-                                .unwrap(),
-                            "data_len",
-                        )
-                        .into_int_value(),
-                    binary.context.i32_type(),
-                    "data_len",
-                );
+                let data_len = binary
+                    .builder
+                    .build_load(
+                        binary
+                            .builder
+                            .build_struct_gep(account_info, 2, "data_len")
+                            .unwrap(),
+                        "data_len",
+                    )
+                    .into_int_value();
 
                 let data = binary.builder.build_load(
                     binary

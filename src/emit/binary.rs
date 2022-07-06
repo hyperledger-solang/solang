@@ -864,7 +864,9 @@ impl<'a> Binary<'a> {
                                 .i8_type()
                                 .ptr_type(AddressSpace::Generic)
                                 .into(),
-                            self.context.i32_type().into(),
+                            self.context
+                                .custom_width_int_type(ns.target.ptr_size().into())
+                                .into(),
                         ],
                         false,
                     ),
@@ -946,10 +948,14 @@ impl<'a> Binary<'a> {
             // slice
             let slice = vector.into_struct_value();
 
-            self.builder
-                .build_extract_value(slice, 1, "slice_len")
-                .unwrap()
-                .into_int_value()
+            self.builder.build_int_truncate(
+                self.builder
+                    .build_extract_value(slice, 1, "slice_len")
+                    .unwrap()
+                    .into_int_value(),
+                self.context.i32_type(),
+                "len",
+            )
         } else {
             let struct_ty = vector
                 .into_pointer_value()

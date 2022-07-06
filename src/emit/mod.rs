@@ -2476,7 +2476,7 @@ pub trait TargetRuntime<'a> {
                         .const_named_struct(&[
                             data.into(),
                             bin.context
-                                .i32_type()
+                                .custom_width_int_type(ns.target.ptr_size().into())
                                 .const_int(init.len() as u64, false)
                                 .into(),
                         ])
