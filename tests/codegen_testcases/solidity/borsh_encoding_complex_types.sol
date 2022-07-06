@@ -50,7 +50,7 @@ contract EncodingTest {
 	    // CHECK: branch block6   
 
         // CHECK: block8: # end_for
-	    // CHECK: ty:uint32 %temp.11 = (%temp.11 - uint32 4)
+	    // CHECK: ty:uint32 %temp.11 = (%temp.11 - uint32 0)
 	    // CHECK: ty:bytes %b = %abi_encoded.temp.10
         return b;
     }
@@ -98,7 +98,7 @@ contract EncodingTest {
 	    // CHECK: branch block6
 
         // CHECK: block8: # end_for
-	    // CHECK: ty:uint32 %temp.18 = (%temp.18 - uint32 12)
+	    // CHECK: ty:uint32 %temp.18 = (%temp.18 - uint32 8)
 	    // CHECK: ty:bytes %b = %abi_encoded.temp.17
 
         return b;
@@ -162,7 +162,7 @@ contract EncodingTest {
 	    // CHECK: branch block13
 
         // CHECK: block12: # end_for
-	    // CHECK: ty:uint32 %temp.27 = (%temp.27 - uint32 4)
+	    // CHECK: ty:uint32 %temp.27 = (%temp.27 - uint32 0)
 	    // CHECK: ty:bytes %b = %abi_encoded.temp.26
 
         // CHECK: block13: # cond
@@ -180,7 +180,7 @@ contract EncodingTest {
 	    // CHECK: branch block14
 
         // CHECK: block16: # end_for
-	    // CHECK: ty:uint32 %temp.29 = (%temp.29 - ((%temp.27 + uint32 8) + uint32 4))
+	    // CHECK: ty:uint32 %temp.29 = (%temp.29 - (%temp.27 + uint32 8))
 	    // CHECK: ty:uint32 %temp.27 = ((uint32 8 + %temp.29) + %temp.27)
 	    // CHECK: branch block10
 

@@ -64,6 +64,7 @@ ed25519-dalek = "1.0"
 path-slash = "0.1"
 pretty_assertions = "1.2"
 byte-slice-cast = "1.2.1"
+borsh = "0.9.3"
 
 [package.metadata.docs.rs]
 no-default-features = true

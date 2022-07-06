@@ -7,7 +7,8 @@ contract Array_bound_Test {
         uint256 size,
         uint32 size32
     ) public pure returns (uint256) {
-        // CHECK: ty:uint32 %array_length.temp.23 = (trunc uint32 (arg #1))
+        // CHECK: ty:uint32 %1.cse_temp = (trunc uint32 (arg #1))
+	    // CHECK: ty:uint32 %array_length.temp.23 = %1.cse_temp
         uint256[] a = new uint256[](size);
 
         // CHECK: ty:uint32 %array_length.temp.24 = (arg #2)
@@ -16,7 +17,7 @@ contract Array_bound_Test {
         // CHECK: ty:uint32 %array_length.temp.25 = uint32 20
         uint256[] d = new uint256[](20);
 
-        // CHECK: ty:uint32 %array_length.temp.23 = (%array_length.temp.23 + uint32 1)
+        // CHECK: ty:uint32 %array_length.temp.23 = (%1.cse_temp + uint32 1)
         a.push();
 
         // CHECK: ty:uint32 %array_length.temp.24 = ((arg #2) - uint32 1)
@@ -34,11 +35,11 @@ contract Array_bound_Test {
         bool[] b = new bool[](210);
 
         if (cond) {
-            // CHECK: ty:uint32 %array_length.temp.29 = uint32 211
+            // CHECK: ty:uint32 %array_length.temp.30 = uint32 211
             b.push(true);
         }
 
-        // CHECK: return %array_length.temp.29
+        // CHECK: return %array_length.temp.30
         return b.length;
     }
 
@@ -78,14 +79,14 @@ contract Array_bound_Test {
         int256[] vec = new int256[](10);
 
         for (int256 i = 0; i < 5; i++) {
-            // CHECK: branchcond (unsigned more %array_length.temp.39 > uint32 20), block5, block6
+            // CHECK: branchcond (unsigned more %array_length.temp.40 > uint32 20), block5, block6
             if (vec.length > 20) {
                 break;
             }
             vec.push(3);
         }
 
-        // CHECK: branchcond (%array_length.temp.39 == uint32 15), block7, block8
+        // CHECK: branchcond (%array_length.temp.40 == uint32 15), block7, block8
         assert(vec.length == 15);
     }
 

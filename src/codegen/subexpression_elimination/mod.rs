@@ -94,7 +94,7 @@ pub fn common_sub_expression_elimination(cfg: &mut ControlFlowGraph, ns: &mut Na
     cst.set_dag(dag);
     sets.insert(0, AvailableExpressionSet::default());
 
-    // First pass: identify common subexpressions using available expressiona analysis
+    // First pass: identify common subexpressions using available expressions analysis
     for (block_no, cycle) in &visiting_order {
         let cur_block = &cfg.blocks[*block_no];
         ave.set_cur_block(*block_no);

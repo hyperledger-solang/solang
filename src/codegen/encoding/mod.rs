@@ -72,7 +72,7 @@ fn get_expr_size<T: Encoding>(
         | Type::Bool
         | Type::Address(_)
         | Type::Bytes(_) => {
-            let size = ty.size_of(ns);
+            let size = ty.memory_size_of(ns);
             Expression::NumberLiteral(Loc::Codegen, Type::Uint(32), size)
         }
 
@@ -97,7 +97,7 @@ fn get_expr_size<T: Encoding>(
 
         Type::Array(ty, dims) => {
             let primitive_size = if ty.is_primitive() {
-                Some(ty.size_of(ns))
+                Some(ty.memory_size_of(ns))
             } else if let Type::Struct(struct_no) = &**ty {
                 ns.is_primitive_type_struct(*struct_no)
             } else {
@@ -138,31 +138,6 @@ fn get_expr_size<T: Encoding>(
                     },
                 );
 
-                if dims.last().unwrap().is_none() {
-                    cfg.add(
-                        vartab,
-                        Instr::Set {
-                            loc: Loc::Codegen,
-                            res: size_var,
-                            expr: Expression::Add(
-                                Loc::Codegen,
-                                Type::Uint(32),
-                                false,
-                                Box::new(Expression::Variable(
-                                    Loc::Codegen,
-                                    Type::Uint(32),
-                                    size_var,
-                                )),
-                                Box::new(Expression::NumberLiteral(
-                                    Loc::Codegen,
-                                    Type::Uint(32),
-                                    BigInt::from(4u8),
-                                )),
-                            ),
-                        },
-                    );
-                }
-
                 size_var
             } else {
                 let size_var = vartab.temp_name(
@@ -196,6 +171,27 @@ fn get_expr_size<T: Encoding>(
                 );
                 size_var
             };
+
+            if dims.last().unwrap().is_none() {
+                cfg.add(
+                    vartab,
+                    Instr::Set {
+                        loc: Loc::Codegen,
+                        res: size_var,
+                        expr: Expression::Add(
+                            Loc::Codegen,
+                            Type::Uint(32),
+                            false,
+                            Box::new(Expression::Variable(Loc::Codegen, Type::Uint(32), size_var)),
+                            Box::new(Expression::NumberLiteral(
+                                Loc::Codegen,
+                                Type::Uint(32),
+                                BigInt::from(4u8),
+                            )),
+                        ),
+                    },
+                );
+            }
 
             Expression::Variable(Loc::Codegen, Type::Uint(32), size_var)
         }
@@ -338,7 +334,7 @@ fn load_array_item(arr: &Expression, dims: &[Option<BigInt>], indexes: &[usize])
         let local_ty = Type::Array(Box::new(elem_ty.clone()), dims[0..i].to_vec());
         deref = Expression::Subscript(
             Loc::Codegen,
-            local_ty.clone(),
+            Type::Ref(Box::new(local_ty.clone())),
             ty,
             Box::new(deref.clone()),
             Box::new(Expression::Variable(
@@ -474,6 +470,15 @@ fn finish_array_loop(for_loop: &ForLoop, vartab: &mut Vartable, cfg: &mut Contro
 
 /// Loads a struct member
 fn load_struct_member(ty: Type, expr: Expression, field: usize) -> Expression {
+    if matches!(ty, Type::Struct(_)) {
+        return Expression::StructMember(
+            Loc::Codegen,
+            Type::Ref(Box::new(ty)),
+            Box::new(expr),
+            field,
+        );
+    }
+
     Expression::Load(
         Loc::Codegen,
         ty.clone(),

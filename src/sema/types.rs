@@ -1355,7 +1355,7 @@ impl Type {
     /// Is this a reference to dynamic memory (arrays, strings)
     pub fn is_dynamic_memory(&self) -> bool {
         match self {
-            Type::String | Type::DynamicBytes => true,
+            Type::String | Type::DynamicBytes | Type::Slice => true,
             Type::Array(_, dim) if dim.last() == Some(&ArrayLength::Dynamic) => true,
             Type::Ref(ty) => ty.is_dynamic_memory(),
             _ => false,

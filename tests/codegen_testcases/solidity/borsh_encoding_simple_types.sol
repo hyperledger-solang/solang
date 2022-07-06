@@ -166,63 +166,64 @@ contract EncodingTest {
         // CHECK: memcpy src: %temp.84, dest: (advance ptr: %abi_encoded.temp.85, by uint32 0), bytes_len: uint32 8
         // CHECK: ty:uint32 %1.cse_temp = (uint32 0 + uint32 8)
         // CHECK: writebuffer buffer:%abi_encoded.temp.85 offset:%1.cse_temp value:(load (struct %ss field 0))
-        // CHECK: writebuffer buffer:%abi_encoded.temp.85 offset:(%1.cse_temp + uint32 16) value:(load (struct %ss field 1))
-        // CHECK: writebuffer buffer:%abi_encoded.temp.85 offset:(%1.cse_temp + uint32 1) value:(load (struct %ss field 2))
+        // CHECK: ty:uint32 %2.cse_temp = (%1.cse_temp + uint32 16)
+        // CHECK: writebuffer buffer:%abi_encoded.temp.85 offset:%2.cse_temp value:(load (struct %ss field 1))
+        // CHECK: writebuffer buffer:%abi_encoded.temp.85 offset:(%2.cse_temp + uint32 1) value:(load (struct %ss field 2))
         // CHECK: ty:bytes %b = %abi_encoded.temp.85
         return b;
     }
 
-    uint32[] int_vec;
     // BEGIN-CHECK: EncodingTest::EncodingTest::function::primitiveStruct
     function primitiveStruct() public view returns (bytes memory) {
         uint32[4] memory mem_vec = [uint32(1), 2, 3, 4];
         noPadStruct[2] memory str_vec = [noPadStruct(1,2), noPadStruct(3, 4)];
         bytes memory b1 = abi.encode(test_vec_1, mem_vec, str_vec);
-        // CHECK: %temp.87 = load storage slot(uint32 16) ty:struct EncodingTest.noPadStruct[]
-	    // CHECK: ty:uint32 %temp.88 = ((builtin ArrayLength (%temp.87)) * uint32 8)
-	    // CHECK: ty:uint32 %temp.88 = (%temp.88 + uint32 4)
-	    // CHECK: ty:uint32 %temp.89 = uint32 16
+        // CHECK: %temp.88 = load storage slot(uint32 16) ty:struct EncodingTest.noPadStruct[]
+	    // CHECK: ty:uint32 %temp.89 = ((builtin ArrayLength (%temp.88)) * uint32 8)
+	    // CHECK: ty:uint32 %temp.89 = (%temp.89 + uint32 4)
 	    // CHECK: ty:uint32 %temp.90 = uint32 16
-	    // CHECK: ty:bytes %abi_encoded.temp.91 = (alloc bytes len ((%temp.88 + %temp.89) + %temp.90))
+	    // CHECK: ty:uint32 %temp.91 = uint32 16
+	    // CHECK: ty:bytes %abi_encoded.temp.92 = (alloc bytes len ((%temp.89 + %temp.90) + %temp.91))
 
-        // CHECK: ty:uint32 %temp.92 = uint32 4
-        // CHECK: ty:uint32 %for_i_0.temp.93 = uint32 0
+        // CHECK: ty:uint32 %temp.93 = uint32 4
+        // CHECK: ty:uint32 %for_i_0.temp.94 = uint32 0
         // CHECK: branch block1
 
         // CHECK: block1: # cond
-        // CHECK: branchcond (unsigned less %for_i_0.temp.93 < (builtin ArrayLength (%temp.87))), block3, block4
+        // CHECK: branchcond (unsigned less %for_i_0.temp.94 < (builtin ArrayLength (%temp.88))), block3, block4
 
         // CHECK: block2: # next
-        // CHECK: ty:uint32 %for_i_0.temp.93 = (%for_i_0.temp.93 + uint32 1)
+        // CHECK: ty:uint32 %for_i_0.temp.94 = (%for_i_0.temp.94 + uint32 1)
         // CHECK: branch block1
 
         // CHECK: block3: # body
-        // CHECK: memcpy src: (subscript struct EncodingTest.noPadStruct[] %temp.87[%for_i_0.temp.93]), dest: (advance ptr: %abi_encoded.temp.91, by %temp.92), bytes_len: uint32 8
-        // CHECK: ty:uint32 %temp.92 = (uint32 8 + %temp.92)
+        // CHECK: memcpy src: (subscript struct EncodingTest.noPadStruct[] %temp.88[%for_i_0.temp.94]), dest: (advance ptr: %abi_encoded.temp.92, by %temp.93), bytes_len: uint32 8
+        // CHECK: ty:uint32 %temp.93 = (uint32 8 + %temp.93)
         // CHECK: branch block2
         
         // CHECK: block4: # end_for
-        // CHECK: ty:uint32 %temp.92 = (%temp.92 - uint32 4)
-        // CHECK: memcpy src: %mem_vec, dest: (advance ptr: %abi_encoded.temp.91, by (uint32 0 + %temp.92)), bytes_len: uint32 16
-        // CHECK: ty:uint32 %temp.94 = ((uint32 0 + %temp.92) + uint32 16)
-        // CHECK: ty:uint32 %for_i_0.temp.95 = uint32 0
+        // CHECK: ty:uint32 %temp.93 = (%temp.93 - uint32 0)
+        // CHECK: memcpy src: %mem_vec, dest: (advance ptr: %abi_encoded.temp.92, by (uint32 0 + %temp.93)), bytes_len: uint32 16
+        // CHECK: ty:uint32 %2.cse_temp = ((uint32 0 + %temp.93) + uint32 16)
+        // CHECK: ty:uint32 %temp.95 = %2.cse_temp
+        // CHECK: ty:uint32 %for_i_0.temp.96 = uint32 0
         // CHECK: branch block5
 
         // CHECK: block5: # cond
-        // CHECK: branchcond (unsigned less %for_i_0.temp.95 < uint32 2), block7, block8
+        // CHECK: branchcond (unsigned less %for_i_0.temp.96 < uint32 2), block7, block8
 
         // CHECK: block6: # next
-        // CHECK: ty:uint32 %for_i_0.temp.95 = (%for_i_0.temp.95 + uint32 1)
+        // CHECK: ty:uint32 %for_i_0.temp.96 = (%for_i_0.temp.96 + uint32 1)
         // CHECK: branch block5
 
         // CHECK: block7: # body
-        // CHECK: memcpy src: (subscript struct EncodingTest.noPadStruct[2] %str_vec[%for_i_0.temp.95]), dest: (advance ptr: %abi_encoded.temp.91, by %temp.94), bytes_len: uint32 8
-        // CHECK: ty:uint32 %temp.94 = (uint32 8 + %temp.94)
+        // CHECK: memcpy src: (subscript struct EncodingTest.noPadStruct[2] %str_vec[%for_i_0.temp.96]), dest: (advance ptr: %abi_encoded.temp.92, by %temp.95), bytes_len: uint32 8
+        // CHECK: ty:uint32 %temp.95 = (uint32 8 + %temp.95)
         // CHECK: branch block6
 
         // CHECK: block8: # end_for
-        // CHECK: ty:uint32 %temp.94 = (%temp.94 - %temp.94)
-        // CHECK: ty:bytes %b1 = %abi_encoded.temp.91
+        // CHECK: ty:uint32 %temp.95 = (%temp.95 - %2.cse_temp)
+        // CHECK: ty:bytes %b1 = %abi_encoded.temp.92
         // CHECK: return %b1
         return b1;
     }

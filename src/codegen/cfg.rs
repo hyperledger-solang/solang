@@ -19,6 +19,7 @@ use num_traits::One;
 use solang_parser::pt;
 use solang_parser::pt::CodeLocation;
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
+use std::ops::AddAssign;
 use std::str;
 use std::sync::Arc;
 use std::{fmt, fmt::Write};
@@ -1896,7 +1897,7 @@ impl Namespace {
             if !field.ty.is_primitive() {
                 return None;
             } else {
-                size.add_assign(field.ty.size_of(self));
+                size.add_assign(field.ty.memory_size_of(self));
             }
         }
 

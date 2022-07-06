@@ -37,6 +37,7 @@ impl AvailableExpressionSet {
                         node.available_variable = AvailableVariable::Available(*res, *loc);
                     }
                 }
+                cst.invalidate_mapped_variable(res);
                 self.kill(*res);
             }
 
