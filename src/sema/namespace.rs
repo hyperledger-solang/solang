@@ -6,7 +6,7 @@ use super::{
     expression::{expression, ExprContext, ResolveTo},
     resolve_params, resolve_returns,
     symtable::Symtable,
-    visit_bases, ArrayDimension,
+    ArrayDimension,
 };
 use crate::Target;
 use num_bigint::BigInt;
@@ -394,7 +394,7 @@ impl Namespace {
 
             // If we're in a contract, then event can be defined in current contract or its bases
             if let Some(contract_no) = contract_no {
-                for contract_no in visit_bases(contract_no, self).into_iter().rev() {
+                for contract_no in self.contract_bases(contract_no).into_iter().rev() {
                     match self.variable_symbols.get(&(
                         file_no,
                         Some(contract_no),

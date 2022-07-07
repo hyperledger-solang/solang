@@ -1,5 +1,4 @@
 use self::{
-    contracts::visit_bases,
     functions::{resolve_params, resolve_returns},
     symtable::Symtable,
     tags::parse_doccomments,
@@ -14,11 +13,11 @@ use std::ffi::OsStr;
 mod address;
 pub mod ast;
 pub mod builtin;
-pub mod contracts;
+pub(crate) mod contracts;
 pub mod diagnostics;
 mod dotgraphviz;
-pub mod eval;
-pub mod expression;
+pub(crate) mod eval;
+pub(crate) mod expression;
 mod file;
 mod format;
 mod functions;
@@ -32,7 +31,7 @@ mod types;
 mod unused_variable;
 mod using;
 mod variables;
-pub mod yul;
+pub(crate) mod yul;
 
 pub type ArrayDimension = Option<(pt::Loc, BigInt)>;
 

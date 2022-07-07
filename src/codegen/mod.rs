@@ -23,7 +23,6 @@ use self::{
 #[cfg(feature = "llvm")]
 use crate::emit::Generate;
 use crate::sema::ast::{Layout, Namespace};
-use crate::sema::contracts::visit_bases;
 use crate::{ast, Target};
 use std::cmp::Ordering;
 
@@ -286,7 +285,7 @@ fn layout(contract_no: usize, ns: &mut Namespace) {
         BigInt::zero()
     };
 
-    for base_contract_no in visit_bases(contract_no, ns) {
+    for base_contract_no in ns.contract_bases(contract_no) {
         for var_no in 0..ns.contracts[base_contract_no].variables.len() {
             if !ns.contracts[base_contract_no].variables[var_no].constant {
                 let ty = ns.contracts[base_contract_no].variables[var_no].ty.clone();

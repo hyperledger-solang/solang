@@ -5,7 +5,6 @@ use std::io::prelude::*;
 use std::path::Path;
 
 use solang::sema::ast;
-use solang::sema::contracts::visit_bases;
 use solang_parser::pt;
 
 #[derive(Serialize)]
@@ -337,7 +336,7 @@ pub fn generate_docs(outdir: &str, files: &[ast::Namespace], verbose: bool) {
                 })
                 .collect();
 
-            let bases = visit_bases(contract_no, file);
+            let bases = file.contract_bases(contract_no);
 
             let mut base_variables = Vec::new();
             let mut base_functions = Vec::new();

@@ -17,7 +17,7 @@ use crate::codegen::subexpression_elimination::common_sub_expression_elimination
 use crate::codegen::{undefined_variable, Expression, LLVMName};
 use crate::sema::ast::RetrieveType;
 use crate::sema::ast::{CallTy, Contract, Function, Namespace, Parameter, StringLocation, Type};
-use crate::sema::contracts::{collect_base_args, visit_bases};
+use crate::sema::contracts::collect_base_args;
 use crate::sema::Recurse;
 use crate::{ast, Target};
 use solang_parser::pt;
@@ -1356,7 +1356,7 @@ fn function_cfg(
         // We shouldn't have problems. sema should have checked this
         assert!(diagnostics.is_empty());
 
-        let order = visit_bases(contract_no, ns);
+        let order = ns.contract_bases(contract_no);
         let mut gen_base_args: HashMap<usize, (usize, Vec<Expression>)> = HashMap::new();
 
         for base_no in order.iter().rev() {
