@@ -4,7 +4,7 @@ use super::ast::{
     Namespace, StringLocation, Symbol, Type,
 };
 use super::builtin;
-use super::contracts::{is_base, visit_bases};
+use super::contracts::is_base;
 use super::eval::eval_const_number;
 use super::eval::eval_const_rational;
 use super::format::string_format;
@@ -5206,7 +5206,7 @@ pub fn available_functions(
 pub fn available_super_functions(name: &str, contract_no: usize, ns: &Namespace) -> Vec<usize> {
     let mut list = Vec::new();
 
-    for base_contract_no in visit_bases(contract_no, ns).into_iter().rev() {
+    for base_contract_no in ns.contract_bases(contract_no).into_iter().rev() {
         if base_contract_no == contract_no {
             continue;
         }

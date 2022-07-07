@@ -6,7 +6,7 @@ use crate::sema::yul::functions::{
     process_function_header, resolve_function_definition, FunctionsTable,
 };
 use crate::sema::yul::statements::resolve_yul_statement;
-use solang_parser::{pt, Diagnostic};
+use solang_parser::{diagnostics::Diagnostic, pt};
 
 /// Resolve an yul block.
 /// Returns the resolved block and a boolean that tells us if the next statement is reachable.

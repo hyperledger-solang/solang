@@ -1,6 +1,5 @@
 use lalrpop_util::ParseError;
 use super::pt::*;
-use super::box_option;
 use super::lexer::{Token, LexicalError};
 
 grammar<'input>(input: &'input str, file_no: usize);
@@ -416,8 +415,8 @@ NoFunctionTyPrecedence0: Expression = {
     <a:@L> <e:Precedence0> "++" <b:@R> => Expression::PostIncrement(Loc::File(file_no, a, b), Box::new(e)),
     <a:@L> <e:Precedence0> "--" <b:@R> => Expression::PostDecrement(Loc::File(file_no, a, b), Box::new(e)),
     <FunctionCall> => <>,
-    <a:@L> <e:Precedence0> "[" <i:Expression?> "]" <b:@R> => Expression::ArraySubscript(Loc::File(file_no, a, b), Box::new(e), box_option(i)),
-    <a:@L> <e:Precedence0> "[" <l:Expression?> ":" <r:Expression?> "]" <b:@R> => Expression::ArraySlice(Loc::File(file_no, a, b), Box::new(e), box_option(l), box_option(r)),
+    <a:@L> <e:Precedence0> "[" <i:Expression?> "]" <b:@R> => Expression::ArraySubscript(Loc::File(file_no, a, b), Box::new(e), i.map(Box::new)),
+    <a:@L> <e:Precedence0> "[" <l:Expression?> ":" <r:Expression?> "]" <b:@R> => Expression::ArraySlice(Loc::File(file_no, a, b), Box::new(e), l.map(Box::new), r.map(Box::new)),
     <a:@L> <e:Precedence0> "." <i:SolIdentifier> <b:@R> => Expression::MemberAccess(Loc::File(file_no, a, b), Box::new(e), i),
     // Solidity has ".address" members on external function types. Address is a keyword, so special casing needed
     <a:@L> <e:Precedence0> "." <al:@L> "address" <b:@R> => {
@@ -675,7 +674,7 @@ OpenStatement: Statement = {
         Statement::If(Loc::File(file_no, l, r), cond, Box::new(body), Some(Box::new(o)))
     },
     <l:@L> "for" "(" <b:SimpleStatement?> ";" <c:Expression?> ";" <n:SimpleStatement?> ")" <block:OpenStatement> <r:@R> => {
-        Statement::For(Loc::File(file_no, l, r), box_option(b), box_option(c), box_option(n), Some(Box::new(block)))
+        Statement::For(Loc::File(file_no, l, r), b.map(Box::new), c.map(Box::new), n.map(Box::new), Some(Box::new(block)))
     },
     <l:@L> "while" "(" <e:Expression> ")" <b:OpenStatement> <r:@R> => {
         Statement::While(Loc::File(file_no, l, r), e, Box::new(b))
@@ -691,10 +690,10 @@ ClosedStatement: Statement = {
         Statement::While(Loc::File(file_no, l, r), e, Box::new(b))
     },
     <l:@L> "for" "(" <b:SimpleStatement?> ";" <c:Expression?> ";" <n:SimpleStatement?> ")" <block:ClosedStatement> <r:@R> => {
-        Statement::For(Loc::File(file_no, l, r), box_option(b), box_option(c), box_option(n), Some(Box::new(block)))
+        Statement::For(Loc::File(file_no, l, r), b.map(Box::new), c.map(Box::new), n.map(Box::new), Some(Box::new(block)))
     },
     <l:@L> "for" "(" <b:SimpleStatement?> ";" <c:Expression?> ";" <n:SimpleStatement?> ")" <r:@R> ";" => {
-        Statement::For(Loc::File(file_no, l, r), box_option(b), box_option(c), box_option(n), None)
+        Statement::For(Loc::File(file_no, l, r), b.map(Box::new), c.map(Box::new), n.map(Box::new), None)
     }
 }
 

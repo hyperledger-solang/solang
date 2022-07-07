@@ -244,23 +244,25 @@ fn resolve_base_args(
     ns.diagnostics.extend(diagnostics);
 }
 
-/// Visit base contracts in depth-first post-order
-pub fn visit_bases(contract_no: usize, ns: &ast::Namespace) -> Vec<usize> {
-    let mut order = Vec::new();
+impl ast::Namespace {
+    /// base contracts in depth-first post-order
+    pub fn contract_bases(&self, contract_no: usize) -> Vec<usize> {
+        let mut order = Vec::new();
 
-    fn base(contract_no: usize, order: &mut Vec<usize>, ns: &ast::Namespace) {
-        for b in ns.contracts[contract_no].bases.iter().rev() {
-            base(b.contract_no, order, ns);
+        fn base(contract_no: usize, order: &mut Vec<usize>, ns: &ast::Namespace) {
+            for b in ns.contracts[contract_no].bases.iter().rev() {
+                base(b.contract_no, order, ns);
+            }
+
+            if !order.contains(&contract_no) {
+                order.push(contract_no);
+            }
         }
 
-        if !order.contains(&contract_no) {
-            order.push(contract_no);
-        }
+        base(contract_no, &mut order, self);
+
+        order
     }
-
-    base(contract_no, &mut order, ns);
-
-    order
 }
 
 // Is a contract a base of another contract
@@ -282,7 +284,7 @@ fn check_inheritance(contract_no: usize, ns: &mut ast::Namespace) {
     let mut variable_syms: HashMap<String, ast::Symbol> = HashMap::new();
     let mut override_needed: BTreeMap<String, Vec<(usize, usize)>> = BTreeMap::new();
 
-    for base_contract_no in visit_bases(contract_no, ns) {
+    for base_contract_no in ns.contract_bases(contract_no) {
         // find file number where contract is defined
         let contract_file_no = ns.contracts[base_contract_no].loc.file_no();
 
@@ -976,7 +978,8 @@ fn check_base_args(contract_no: usize, ns: &mut ast::Namespace) {
     }
 
     let mut diagnostics = BTreeSet::new();
-    let base_args_needed = visit_bases(contract_no, ns)
+    let base_args_needed = ns
+        .contract_bases(contract_no)
         .into_iter()
         .filter(|base_no| {
             *base_no != contract_no && ns.contracts[*base_no].constructor_needs_arguments(ns)

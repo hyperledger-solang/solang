@@ -13,7 +13,7 @@ use num_rational::BigRational;
 use num_traits::{Num, Pow};
 use solang_parser::diagnostics::{ErrorType, Level};
 use solang_parser::pt::{CodeLocation, Identifier, Loc, StorageLocation, YulFunctionCall};
-use solang_parser::{pt, Diagnostic};
+use solang_parser::{diagnostics::Diagnostic, pt};
 use std::{ops::Mul, str::FromStr};
 
 /// Given a keyword, returns the suffix it represents in YUL

@@ -2,8 +2,7 @@
 use crate::ast::{Expression, Parameter, Statement, TryCatch, Type};
 use crate::sema::expression::unescape;
 use crate::sema::yul::ast::InlineAssembly;
-use solang_parser::pt::Loc;
-use solang_parser::Diagnostic;
+use solang_parser::{diagnostics::Diagnostic, pt::Loc};
 
 #[test]
 fn test_unescape() {

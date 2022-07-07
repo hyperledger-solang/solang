@@ -7,7 +7,7 @@ use crate::sema::yul::builtin::{parse_builtin_keyword, yul_unsupported_builtin};
 use crate::sema::yul::types::get_type_from_string;
 use solang_parser::diagnostics::{ErrorType, Level, Note};
 use solang_parser::pt::YulFunctionDefinition;
-use solang_parser::{pt, Diagnostic};
+use solang_parser::{diagnostics::Diagnostic, pt};
 use std::collections::{HashMap, LinkedList};
 use std::sync::Arc;
 
