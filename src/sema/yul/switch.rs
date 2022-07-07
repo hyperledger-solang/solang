@@ -7,7 +7,7 @@ use crate::sema::yul::expression::{check_type, resolve_yul_expression};
 use crate::sema::yul::functions::FunctionsTable;
 use crate::sema::yul::types::verify_type_from_expression;
 use solang_parser::pt::{CodeLocation, YulSwitchOptions};
-use solang_parser::{pt, Diagnostic};
+use solang_parser::{diagnostics::Diagnostic, pt};
 
 /// Resolve switch statement
 /// Returns the resolved block and a bool to indicate if the next statement is reachable.
