@@ -179,6 +179,25 @@ bool ``is_writable``
 bool ``is_signer``
     Can the callee assume this account signed the transaction
 
+Builtin create_program_address
+++++++++++++++++++++++++++++++
+
+This function returns the program derived address for a program address and
+the provided seeds. See the Solana documentation on
+`program derived adddresses <https://edge.docs.solana.com/developing/programming-model/calling-between-programs#program-derived-addresses>`_.
+
+.. code-block:: solidity
+
+    import {create_program_address} from 'solana';
+
+    contract pda {
+        address token = address"TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
+
+        function create_pda(bytes seed2) public returns (address) {
+            return create_program_address(["kabang", seed2], token);
+        }
+    }
+
 Using spl-token
 _______________
 

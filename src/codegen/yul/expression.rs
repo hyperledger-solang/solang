@@ -224,7 +224,7 @@ pub(crate) fn process_function_call(
             Instr::Call {
                 res: Vec::new(),
                 return_tys: Vec::new(),
-                call: InternalCallTy::Static(cfg_no),
+                call: InternalCallTy::Static { cfg_no },
                 args: codegen_args,
             },
         );
@@ -252,7 +252,7 @@ pub(crate) fn process_function_call(
         vartab,
         Instr::Call {
             res,
-            call: InternalCallTy::Static(cfg_no),
+            call: InternalCallTy::Static { cfg_no },
             args: codegen_args,
             return_tys,
         },

@@ -1,3 +1,4 @@
+import 'solana';
 
 contract builtins {
 	function hash_ripemd160(bytes bs) public returns (bytes20) {
@@ -18,5 +19,9 @@ contract builtins {
 
 	function mr_slot() public returns (uint64) {
 		return block.slot;
+	}
+
+	function pda(bytes seed1, bytes seed2, address addr) public returns (address) {
+		return create_program_address([seed1, seed2], addr);
 	}
 }

@@ -1061,6 +1061,17 @@ impl Expression {
                     Ok(Expression::Cast(*loc, to.clone(), Box::new(self.clone())))
                 }
             }
+            // Match any array with ArrayLength::AnyFixed if is it fixed for that dimension, and the
+            // element type and other dimensions also match
+            (Type::Array(from_elem, from_dim), Type::Array(to_elem, to_dim))
+                if from_elem == to_elem
+                    && from_dim.len() == to_dim.len()
+                    && from_dim.iter().zip(to_dim.iter()).all(|(f, t)| {
+                        f == t || matches!((f, t), (ArrayLength::Fixed(_), ArrayLength::AnyFixed))
+                    }) =>
+            {
+                Ok(self.clone())
+            }
             _ => {
                 diagnostics.push(Diagnostic::cast_error(
                     *loc,
@@ -2200,8 +2211,8 @@ fn string_literal(
 
     let length = result.len();
 
-    if let ResolveTo::Type(Type::String) = resolve_to {
-        Expression::AllocDynamicArray(
+    match resolve_to {
+        ResolveTo::Type(Type::String) => Expression::AllocDynamicArray(
             loc,
             Type::String,
             Box::new(Expression::NumberLiteral(
@@ -2210,9 +2221,20 @@ fn string_literal(
                 BigInt::from(length),
             )),
             Some(result),
-        )
-    } else {
-        Expression::BytesLiteral(loc, Type::Bytes(length as u8), result)
+        ),
+        ResolveTo::Type(Type::Slice(ty)) if ty.as_ref() == &Type::Bytes(1) => {
+            Expression::AllocDynamicArray(
+                loc,
+                Type::Slice(ty.clone()),
+                Box::new(Expression::NumberLiteral(
+                    loc,
+                    Type::Uint(32),
+                    BigInt::from(length),
+                )),
+                Some(result),
+            )
+        }
+        _ => Expression::BytesLiteral(loc, Type::Bytes(length as u8), result),
     }
 }
 

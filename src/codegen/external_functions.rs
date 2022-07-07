@@ -1,6 +1,7 @@
 use crate::sema::ast::{DestructureField, Expression, Namespace, Statement};
 use crate::sema::Recurse;
 use indexmap::IndexSet;
+use solang_parser::pt;
 
 #[derive(Default)]
 struct CallList {
@@ -42,9 +43,11 @@ pub fn add_external_functions(contract_no: usize, ns: &mut Namespace) {
 
         // add functions to contract functions list
         for function_no in &call_list.solidity {
-            ns.contracts[contract_no]
-                .all_functions
-                .insert(*function_no, usize::MAX);
+            if ns.functions[*function_no].loc != pt::Loc::Builtin {
+                ns.contracts[contract_no]
+                    .all_functions
+                    .insert(*function_no, usize::MAX);
+            }
         }
 
         for yul_function_no in &call_list.yul {

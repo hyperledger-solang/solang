@@ -1497,6 +1497,7 @@ impl Type {
             Type::Ref(r) => r.to_llvm_string(ns),
             Type::StorageRef(_, r) => r.to_llvm_string(ns),
             Type::UserType(no) => ns.user_types[*no].ty.to_llvm_string(ns),
+            Type::Slice(ty) => format!("slice:{}", ty.to_llvm_string(ns)),
             _ => unreachable!(),
         }
     }

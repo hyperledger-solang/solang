@@ -1,4 +1,5 @@
 use crate::build_solidity;
+use base58::ToBase58;
 use ethabi::{ethereum_types::U256, Token};
 
 #[test]
@@ -67,4 +68,33 @@ fn builtins() {
         returns,
         vec![Token::FixedBytes(hex::decode("00a7029b").unwrap())]
     );
+}
+
+#[test]
+fn pda() {
+    let mut vm = build_solidity(
+        r#"
+        import 'solana';
+
+        contract pda {
+            function create_pda() public returns (address) {
+                address program_id = address"BPFLoaderUpgradeab1e11111111111111111111111";
+
+                return create_program_address(["Talking", "Squirrels"], program_id);
+            }
+        }"#,
+    );
+
+    vm.constructor("pda", &[]);
+
+    let returns = vm.function("create_pda", &[], &[], None);
+
+    if let Token::FixedBytes(bs) = &returns[0] {
+        assert_eq!(
+            bs.to_base58(),
+            "2fnQrngrQT4SeLcdToJAD96phoEjNL2man2kfRLCASVk"
+        );
+    } else {
+        panic!("{:?} not expected", returns);
+    }
 }

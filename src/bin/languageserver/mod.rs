@@ -949,7 +949,7 @@ impl SolangServer {
         }
 
         for fnc in &ns.functions {
-            if fnc.is_accessor {
+            if fnc.is_accessor || fnc.loc == pt::Loc::Builtin {
                 // accessor functions are synthetic; ignore them, all the locations are fake
                 continue;
             }

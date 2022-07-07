@@ -285,8 +285,9 @@ impl Instr {
 #[derive(Clone, Debug)]
 #[allow(clippy::large_enum_variant)]
 pub enum InternalCallTy {
-    Static(usize),
+    Static { cfg_no: usize },
     Dynamic(Expression),
+    Builtin { ast_func_no: usize },
 }
 
 #[derive(Clone, PartialEq)]
@@ -904,7 +905,24 @@ impl ControlFlowGraph {
             }
             Instr::Call {
                 res,
-                call: InternalCallTy::Static(cfg_no),
+                call: InternalCallTy::Builtin { ast_func_no },
+                args,
+                ..
+            } => format!(
+                "{} = call builtin {} {}",
+                res.iter()
+                    .map(|local| format!("%{}", self.vars[local].id.name))
+                    .collect::<Vec<String>>()
+                    .join(", "),
+                ns.functions[*ast_func_no].name,
+                args.iter()
+                    .map(|expr| self.expr_to_string(contract, ns, expr))
+                    .collect::<Vec<String>>()
+                    .join(", ")
+            ),
+            Instr::Call {
+                res,
+                call: InternalCallTy::Static { cfg_no },
                 args,
                 ..
             } => format!(
@@ -1492,7 +1510,7 @@ fn function_cfg(
                     Instr::Call {
                         res: Vec::new(),
                         return_tys: Vec::new(),
-                        call: InternalCallTy::Static(cfg_no),
+                        call: InternalCallTy::Static { cfg_no },
                         args,
                     },
                 );
@@ -1504,7 +1522,7 @@ fn function_cfg(
                     Instr::Call {
                         res: Vec::new(),
                         return_tys: Vec::new(),
-                        call: InternalCallTy::Static(cfg_no),
+                        call: InternalCallTy::Static { cfg_no },
                         args: Vec::new(),
                     },
                 );
@@ -1695,7 +1713,7 @@ pub fn generate_modifier_dispatch(
     // create the instruction for the place holder
     let placeholder = Instr::Call {
         res: func.symtable.returns.clone(),
-        call: InternalCallTy::Static(cfg_no),
+        call: InternalCallTy::Static { cfg_no },
         return_tys,
         args: func
             .params

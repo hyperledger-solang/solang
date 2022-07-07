@@ -2012,14 +2012,22 @@ pub fn emit_function_call(
                     .collect();
 
                 let function_no = if let Some(signature) = signature {
-                    &ns.contracts[callee_contract_no].virtual_functions[signature]
+                    ns.contracts[callee_contract_no].virtual_functions[signature]
                 } else {
-                    function_no
+                    *function_no
                 };
 
-                let cfg_no = ns.contracts[callee_contract_no].all_functions[function_no];
+                let ftype = &ns.functions[function_no];
 
-                let ftype = &ns.functions[*function_no];
+                let call = if ns.functions[function_no].loc == pt::Loc::Builtin {
+                    InternalCallTy::Builtin {
+                        ast_func_no: function_no,
+                    }
+                } else {
+                    InternalCallTy::Static {
+                        cfg_no: ns.contracts[callee_contract_no].all_functions[&function_no],
+                    }
+                };
 
                 if !ftype.returns.is_empty() {
                     let mut res = Vec::new();
@@ -2042,7 +2050,7 @@ pub fn emit_function_call(
                         vartab,
                         Instr::Call {
                             res,
-                            call: InternalCallTy::Static(cfg_no),
+                            call,
                             args,
                             return_tys,
                         },
@@ -2055,7 +2063,7 @@ pub fn emit_function_call(
                         Instr::Call {
                             res: Vec::new(),
                             return_tys: Vec::new(),
-                            call: InternalCallTy::Static(cfg_no),
+                            call,
                             args,
                         },
                     );

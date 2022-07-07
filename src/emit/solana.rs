@@ -73,7 +73,7 @@ impl SolanaTarget {
             context.i64_type().const_int(2u64 << 32, false),
         );
         // externals
-        target.declare_externals(&mut binary);
+        target.declare_externals(&mut binary, ns);
 
         target.emit_functions(&mut binary, contract, ns);
 
@@ -151,7 +151,7 @@ impl SolanaTarget {
         );
 
         // externals
-        target.declare_externals(&mut binary);
+        target.declare_externals(&mut binary, namespaces[0]);
 
         let mut contracts: Vec<Contract> = Vec::new();
 
@@ -204,6 +204,7 @@ impl SolanaTarget {
             "sol_alloc_free_",
             "sol_get_return_data",
             "sol_set_return_data",
+            "sol_create_program_address",
             "sol_sha256",
             "sol_keccak256",
             "sol_log_data",
@@ -212,11 +213,17 @@ impl SolanaTarget {
         binary
     }
 
-    fn declare_externals(&self, binary: &mut Binary) {
+    fn declare_externals(&self, binary: &mut Binary, ns: &ast::Namespace) {
         let void_ty = binary.context.void_type();
         let u8_ptr = binary.context.i8_type().ptr_type(AddressSpace::Generic);
         let u64_ty = binary.context.i64_type();
         let u32_ty = binary.context.i32_type();
+        let address = binary.address_type(ns).ptr_type(AddressSpace::Generic);
+        let seeds = binary.llvm_type(
+            &Type::Ref(Box::new(Type::Slice(Box::new(Type::Bytes(1))))),
+            ns,
+        );
+
         let sol_bytes = binary
             .context
             .struct_type(&[u8_ptr.into(), u64_ty.into()], false)
@@ -302,6 +309,18 @@ impl SolanaTarget {
             "sol_log_data",
             void_ty.fn_type(
                 &[fields.ptr_type(AddressSpace::Generic).into(), u64_ty.into()],
+                false,
+            ),
+            None,
+        );
+        function
+            .as_global_value()
+            .set_unnamed_address(UnnamedAddress::Local);
+
+        let function = binary.module.add_function(
+            "sol_create_program_address",
+            u64_ty.fn_type(
+                &[seeds.into(), u64_ty.into(), address.into(), address.into()],
                 false,
             ),
             None,
@@ -3032,6 +3051,67 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
 
             binary.builder.position_at_end(success_block);
         }
+    }
+
+    fn builtin_function(
+        &self,
+        binary: &Binary<'a>,
+        func: &ast::Function,
+        args: &[BasicMetadataValueEnum<'a>],
+        ns: &ast::Namespace,
+    ) -> BasicValueEnum<'a> {
+        // only create_program_address supported right now
+        assert_eq!(func.name, "create_program_address");
+
+        let func = binary
+            .module
+            .get_function("sol_create_program_address")
+            .unwrap();
+
+        // first argument are the seeds
+        let seeds = binary.builder.build_pointer_cast(
+            args[0].into_pointer_value(),
+            func.get_first_param()
+                .unwrap()
+                .get_type()
+                .into_pointer_type(),
+            "seeds",
+        );
+
+        let seed_count = binary.context.i64_type().const_int(
+            args[0]
+                .into_pointer_value()
+                .get_type()
+                .get_element_type()
+                .into_array_type()
+                .len() as u64,
+            false,
+        );
+
+        // address
+        let address = binary
+            .builder
+            .build_alloca(binary.address_type(ns), "address");
+
+        binary
+            .builder
+            .build_store(address, args[1].into_array_value());
+
+        binary
+            .builder
+            .build_call(
+                func,
+                &[
+                    seeds.into(),
+                    seed_count.into(),
+                    address.into(),
+                    args[2], // return value
+                ],
+                "",
+            )
+            .try_as_basic_value()
+            .left()
+            .unwrap()
     }
 
     /// Call external binary
