@@ -44,6 +44,14 @@ impl Loc {
         }
     }
 
+    /// Return the file_no if the location is in a file
+    pub fn try_file_no(&self) -> Option<usize> {
+        match self {
+            Loc::File(file_no, _, _) => Some(*file_no),
+            _ => None,
+        }
+    }
+
     pub fn start(&self) -> usize {
         match self {
             Loc::File(_, start, _) => *start,

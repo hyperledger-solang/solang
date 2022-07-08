@@ -5843,6 +5843,35 @@ fn method_call_pos_args(
         }
     }
 
+    if let Some(mut path) = ns.expr_to_identifier_path(var) {
+        path.identifiers.push(func.clone());
+
+        if let Ok(list) =
+            ns.resolve_free_function_with_namespace(context.file_no, &path, &mut Vec::new())
+        {
+            if let Some(loc) = call_args_loc {
+                diagnostics.push(Diagnostic::error(
+                    loc,
+                    "call arguments not allowed on internal calls".to_string(),
+                ));
+            }
+
+            return function_call_pos_args(
+                loc,
+                func,
+                pt::FunctionTy::Function,
+                args,
+                list.iter().map(|(_, no)| *no).collect(),
+                false,
+                context,
+                ns,
+                resolve_to,
+                symtable,
+                diagnostics,
+            );
+        }
+    }
+
     let var_expr = expression(var, context, ns, symtable, diagnostics, ResolveTo::Unknown)?;
 
     if let Some(expr) =
@@ -6581,6 +6610,34 @@ fn method_call_named_args(
                     );
                 }
             }
+        }
+    }
+
+    if let Some(mut path) = ns.expr_to_identifier_path(var) {
+        path.identifiers.push(func_name.clone());
+
+        if let Ok(list) =
+            ns.resolve_free_function_with_namespace(context.file_no, &path, &mut Vec::new())
+        {
+            if let Some(loc) = call_args_loc {
+                diagnostics.push(Diagnostic::error(
+                    loc,
+                    "call arguments not allowed on internal calls".to_string(),
+                ));
+            }
+
+            return function_call_named_args(
+                loc,
+                func_name,
+                args,
+                list.iter().map(|(_, no)| *no).collect(),
+                false,
+                context,
+                resolve_to,
+                ns,
+                symtable,
+                diagnostics,
+            );
         }
     }
 

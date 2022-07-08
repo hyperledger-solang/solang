@@ -245,6 +245,25 @@ fn resolve_import(
                     }
 
                     ns.add_symbol(file_no, None, symbol, import);
+                } else if let Some(import) =
+                    ns.function_symbols
+                        .get(&(import_file_no, None, from.name.to_owned()))
+                {
+                    let import = import.clone();
+
+                    let symbol = rename_to.as_ref().unwrap_or(from);
+
+                    // Only add symbol if it does not already exist with same definition
+                    if let Some(existing) =
+                        ns.function_symbols
+                            .get(&(file_no, None, symbol.name.clone()))
+                    {
+                        if existing == &import {
+                            continue;
+                        }
+                    }
+
+                    ns.add_symbol(file_no, None, symbol, import);
                 } else {
                     ns.diagnostics.push(ast::Diagnostic::error(
                         from.loc,
@@ -287,6 +306,34 @@ fn resolve_import(
                 }
 
                 ns.add_symbol(file_no, contract_no, &new_symbol, symbol);
+            }
+
+            let exports = ns
+                .function_symbols
+                .iter()
+                .filter_map(|((file_no, contract_no, id), symbol)| {
+                    if *file_no == import_file_no && contract_no.is_none() {
+                        Some((id.clone(), symbol.clone()))
+                    } else {
+                        None
+                    }
+                })
+                .collect::<Vec<(String, ast::Symbol)>>();
+
+            for (name, symbol) in exports {
+                let new_symbol = pt::Identifier {
+                    name: name.clone(),
+                    loc: filename.loc,
+                };
+
+                // Only add symbol if it does not already exist with same definition
+                if let Some(existing) = ns.function_symbols.get(&(file_no, None, name.clone())) {
+                    if existing == &symbol {
+                        continue;
+                    }
+                }
+
+                ns.add_symbol(file_no, None, &new_symbol, symbol);
             }
         }
         pt::Import::GlobalSymbol(_, symbol, _) => {
