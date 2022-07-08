@@ -11,7 +11,7 @@ use solang_parser::pt;
 pub fn mutability(file_no: usize, ns: &mut Namespace) {
     if !ns.diagnostics.any_errors() {
         for func in &ns.functions {
-            if func.loc.file_no() != file_no {
+            if func.loc.try_file_no() != Some(file_no) {
                 continue;
             }
 
