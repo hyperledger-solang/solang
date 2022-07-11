@@ -302,7 +302,7 @@ impl SubstrateTarget {
 
         binary.module.add_function(
             "seal_debug_message",
-            binary.context.void_type().fn_type(
+            binary.context.i32_type().fn_type(
                 &[
                     u8_ptr,  // string_ptr
                     u32_val, // string_len
