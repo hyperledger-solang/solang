@@ -800,7 +800,7 @@ impl SubstrateTarget {
                 dest.into()
             }
             ast::Type::Array(_, dim) => {
-                if let Some(d) = &dim.last().unwrap() {
+                if let Some(ast::ArrayLength::Fixed(d)) = dim.last() {
                     let llvm_ty = binary.llvm_type(ty.deref_any(), ns);
 
                     let size = llvm_ty
@@ -1216,7 +1216,7 @@ impl SubstrateTarget {
                 arg,
                 data,
             ),
-            ast::Type::Array(_, dim) if dim.last().unwrap().is_some() => {
+            ast::Type::Array(_, dim) if matches!(dim.last(), Some(ast::ArrayLength::Fixed(_))) => {
                 let arg = if load {
                     binary
                         .builder
@@ -1230,7 +1230,7 @@ impl SubstrateTarget {
                 let normal_array = binary.context.append_basic_block(function, "normal_array");
                 let done_array = binary.context.append_basic_block(function, "done_array");
 
-                let dim = dim.last().unwrap().as_ref().unwrap().to_u64().unwrap();
+                let dim = ty.array_length().unwrap().to_u64().unwrap();
 
                 let elem_ty = ty.array_deref();
 
@@ -1690,11 +1690,13 @@ impl SubstrateTarget {
 
                 sum.as_basic_value().into_int_value()
             }
-            ast::Type::Array(_, dims) if dims.last().unwrap().is_some() => {
-                let array_length = binary.context.i32_type().const_int(
-                    dims.last().unwrap().as_ref().unwrap().to_u64().unwrap(),
-                    false,
-                );
+            ast::Type::Array(_, dims)
+                if matches!(dims.last(), Some(ast::ArrayLength::Fixed(_))) =>
+            {
+                let array_length = binary
+                    .context
+                    .i32_type()
+                    .const_int(ty.array_length().unwrap().to_u64().unwrap(), false);
 
                 let elem_ty = ty.array_deref();
 
@@ -1811,7 +1813,7 @@ impl SubstrateTarget {
                     )
                 }
             }
-            ast::Type::Array(_, dims) if dims.last().unwrap().is_none() => {
+            ast::Type::Array(_, dims) if dims.last() == Some(&ast::ArrayLength::Dynamic) => {
                 let arg = if load {
                     binary.builder.build_load(arg.into_pointer_value(), "")
                 } else {

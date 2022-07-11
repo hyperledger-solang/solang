@@ -5,6 +5,7 @@ use crate::codegen::cfg::ControlFlowGraph;
 use crate::codegen::vartable::Vartable;
 use crate::codegen::yul::expression::expression;
 use crate::codegen::{Builtin, Expression, Options};
+use crate::sema::ast::ArrayLength;
 use crate::sema::yul::ast;
 use crate::sema::yul::ast::YulSuffix;
 use crate::{sema, Target};
@@ -355,7 +356,7 @@ fn offset_suffix() {
         loc,
         Box::new(ast::YulExpression::SolidityLocalVariable(
             loc,
-            Type::Array(Box::new(Type::Uint(256)), vec![None]),
+            Type::Array(Box::new(Type::Uint(256)), vec![ArrayLength::Dynamic]),
             Some(StorageLocation::Calldata(loc)),
             1,
         )),
@@ -369,7 +370,7 @@ fn offset_suffix() {
             Type::Uint(256),
             Box::new(Expression::Variable(
                 loc,
-                Type::Array(Box::new(Type::Uint(256)), vec![None]),
+                Type::Array(Box::new(Type::Uint(256)), vec![ArrayLength::Dynamic]),
                 1
             ))
         )
@@ -389,7 +390,10 @@ fn offset_suffix_panic_calldata() {
         loc,
         Box::new(ast::YulExpression::SolidityLocalVariable(
             loc,
-            Type::Array(Box::new(Type::Uint(32)), vec![None, Some(BigInt::from(3))]),
+            Type::Array(
+                Box::new(Type::Uint(32)),
+                vec![ArrayLength::Dynamic, ArrayLength::Fixed(BigInt::from(3))],
+            ),
             Some(StorageLocation::Calldata(loc)),
             3,
         )),
@@ -431,7 +435,11 @@ fn length_suffix() {
             loc,
             Type::Array(
                 Box::new(Type::Uint(32)),
-                vec![None, Some(BigInt::from(3)), None],
+                vec![
+                    ArrayLength::Dynamic,
+                    ArrayLength::Fixed(BigInt::from(3)),
+                    ArrayLength::Dynamic,
+                ],
             ),
             Some(StorageLocation::Calldata(loc)),
             3,
@@ -450,7 +458,11 @@ fn length_suffix() {
                 loc,
                 Type::Array(
                     Box::new(Type::Uint(32)),
-                    vec![None, Some(BigInt::from(3)), None]
+                    vec![
+                        ArrayLength::Dynamic,
+                        ArrayLength::Fixed(BigInt::from(3)),
+                        ArrayLength::Dynamic
+                    ]
                 ),
                 3
             )]
@@ -471,7 +483,10 @@ fn length_suffix_panic() {
         loc,
         Box::new(ast::YulExpression::SolidityLocalVariable(
             loc,
-            Type::Array(Box::new(Type::Uint(32)), vec![None, Some(BigInt::from(3))]),
+            Type::Array(
+                Box::new(Type::Uint(32)),
+                vec![ArrayLength::Dynamic, ArrayLength::Fixed(BigInt::from(3))],
+            ),
             Some(StorageLocation::Calldata(loc)),
             3,
         )),
@@ -489,7 +504,11 @@ fn length_suffix_panic() {
                 loc,
                 Type::Array(
                     Box::new(Type::Uint(32)),
-                    vec![None, Some(BigInt::from(3)), None]
+                    vec![
+                        ArrayLength::Dynamic,
+                        ArrayLength::Fixed(BigInt::from(3)),
+                        ArrayLength::Dynamic
+                    ]
                 ),
                 3
             )]

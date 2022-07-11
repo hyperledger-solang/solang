@@ -2,8 +2,8 @@ use super::tags::resolve_tags;
 use super::SOLANA_BUCKET_SIZE;
 use super::{
     ast::{
-        BuiltinStruct, Contract, Diagnostic, EnumDecl, EventDecl, Namespace, Parameter, StructDecl,
-        Symbol, Tag, Type, UserTypeDecl,
+        ArrayLength, BuiltinStruct, Contract, Diagnostic, EnumDecl, EventDecl, Namespace,
+        Parameter, StructDecl, Symbol, Tag, Type, UserTypeDecl,
     },
     diagnostics::Diagnostics,
     SOLANA_SPARSE_ARRAY_SIZE,
@@ -794,9 +794,9 @@ impl Type {
                 "{}{}",
                 ty.to_string(ns),
                 len.iter()
-                    .map(|l| match l {
-                        None => "[]".to_string(),
-                        Some(l) => format!("[{}]", l),
+                    .map(|len| match len {
+                        ArrayLength::Fixed(len) => format!("[{}]", len),
+                        _ => "[]".to_string(),
                     })
                     .collect::<String>()
             ),
@@ -890,9 +890,9 @@ impl Type {
                 "{}{}",
                 ty.to_signature_string(say_tuple, ns),
                 len.iter()
-                    .map(|l| match l {
-                        None => "[]".to_string(),
-                        Some(l) => format!("[{}]", l),
+                    .map(|len| match len {
+                        ArrayLength::Fixed(len) => format!("[{}]", len),
+                        _ => "[]".to_string(),
                     })
                     .collect::<String>()
             ),
@@ -945,7 +945,7 @@ impl Type {
             Type::Bytes(_) => false,
             Type::Enum(_) => false,
             Type::Struct(_) => true,
-            Type::Array(_, dims) => dims.last().unwrap().is_some(),
+            Type::Array(_, dims) => matches!(dims.last(), Some(ArrayLength::Fixed(_))),
             Type::DynamicBytes => false,
             Type::String => false,
             Type::Mapping(..) => false,
@@ -996,7 +996,7 @@ impl Type {
         match self {
             Type::StorageRef(_, ty) => ty.array_length(),
             Type::Ref(ty) => ty.array_length(),
-            Type::Array(_, dim) => dim.last().unwrap().as_ref(),
+            Type::Array(_, dim) => dim.last().unwrap().array_length(),
             _ => panic!("array_length on non-array"),
         }
     }
@@ -1016,8 +1016,9 @@ impl Type {
                 ty.memory_size_of(ns).mul(
                     dims.iter()
                         .map(|d| match d {
-                            None => &pointer_size,
-                            Some(n) => n,
+                            ArrayLength::Dynamic => &pointer_size,
+                            ArrayLength::Fixed(n) => n,
+                            ArrayLength::AnyFixed => unreachable!(),
                         })
                         .product::<BigInt>(),
                 )
@@ -1052,8 +1053,9 @@ impl Type {
                 ty.solana_storage_size(ns).mul(
                     dims.iter()
                         .map(|d| match d {
-                            None => &pointer_size,
-                            Some(d) => d,
+                            ArrayLength::Dynamic => &pointer_size,
+                            ArrayLength::Fixed(d) => d,
+                            ArrayLength::AnyFixed => panic!("unknown length"),
                         })
                         .product::<BigInt>(),
                 )
@@ -1155,7 +1157,9 @@ impl Type {
                 Type::Value => BigInt::from(ns.value_length),
                 Type::Uint(n) | Type::Int(n) => BigInt::from(n / 8),
                 Type::Rational => unreachable!(),
-                Type::Array(_, dims) if dims.last().unwrap().is_none() => BigInt::from(4),
+                Type::Array(_, dims) if dims.last() == Some(&ArrayLength::Dynamic) => {
+                    BigInt::from(4)
+                }
                 Type::Array(ty, dims) => {
                     let pointer_size = BigInt::from(4);
                     if self.is_sparse_solana(ns) {
@@ -1164,8 +1168,11 @@ impl Type {
                         ty.storage_slots(ns).mul(
                             dims.iter()
                                 .map(|d| match d {
-                                    None => &pointer_size,
-                                    Some(d) => d,
+                                    ArrayLength::Dynamic => &pointer_size,
+                                    ArrayLength::Fixed(d) => d,
+                                    ArrayLength::AnyFixed => {
+                                        panic!("unknown length");
+                                    }
                                 })
                                 .product::<BigInt>(),
                         )
@@ -1207,9 +1214,12 @@ impl Type {
                     ty.storage_slots(ns)
                         * dims
                             .iter()
-                            .map(|l| match l {
-                                None => &one,
-                                Some(l) => l,
+                            .map(|len| match len {
+                                ArrayLength::Dynamic => &one,
+                                ArrayLength::Fixed(len) => len,
+                                ArrayLength::AnyFixed => {
+                                    unreachable!("unknown length")
+                                }
                             })
                             .product::<BigInt>()
                 }
@@ -1229,7 +1239,9 @@ impl Type {
                 Type::Value => BigInt::from(ns.value_length),
                 Type::Uint(n) | Type::Int(n) => BigInt::from(n / 8),
                 Type::Rational => unreachable!(),
-                Type::Array(_, dims) if dims.last().unwrap().is_none() => BigInt::from(4),
+                Type::Array(_, dims) if dims.last() == Some(&ArrayLength::Dynamic) => {
+                    BigInt::from(4)
+                }
                 Type::Array(ty, _) => {
                     if self.is_sparse_solana(ns) {
                         BigInt::from(4)
@@ -1299,7 +1311,7 @@ impl Type {
             Type::String | Type::DynamicBytes => true,
             Type::Ref(r) => r.is_dynamic(ns),
             Type::Array(ty, dim) => {
-                if dim.iter().any(|d| d.is_none()) {
+                if dim.iter().any(|d| d == &ArrayLength::Dynamic) {
                     return true;
                 }
 
@@ -1334,7 +1346,7 @@ impl Type {
     pub fn is_dynamic_memory(&self) -> bool {
         match self {
             Type::String | Type::DynamicBytes => true,
-            Type::Array(_, dim) if dim.last().unwrap().is_none() => true,
+            Type::Array(_, dim) if dim.last() == Some(&ArrayLength::Dynamic) => true,
             Type::Ref(ty) => ty.is_dynamic_memory(),
             _ => false,
         }
@@ -1470,8 +1482,8 @@ impl Type {
                 ty.to_llvm_string(ns),
                 len.iter()
                     .map(|r| match r {
-                        None => ":".to_string(),
-                        Some(r) => format!(":{}", r),
+                        ArrayLength::Dynamic | ArrayLength::AnyFixed => ":".to_string(),
+                        ArrayLength::Fixed(r) => format!(":{}", r),
                     })
                     .collect::<String>()
             ),
@@ -1492,14 +1504,14 @@ impl Type {
     pub fn is_sparse_solana(&self, ns: &Namespace) -> bool {
         match self.deref_any() {
             Type::Mapping(..) => true,
-            Type::Array(_, dims) if dims.last().unwrap().is_none() => false,
+            Type::Array(_, dims) if dims.last() == Some(&ArrayLength::Dynamic) => false,
             Type::Array(ty, dims) => {
                 let pointer_size = BigInt::from(4);
                 let len = ty.storage_slots(ns).mul(
                     dims.iter()
                         .map(|d| match d {
-                            None => &pointer_size,
-                            Some(d) => d,
+                            ArrayLength::Fixed(d) => d,
+                            _ => &pointer_size,
                         })
                         .product::<BigInt>(),
                 );

@@ -1,6 +1,6 @@
 #![cfg(test)]
 
-use crate::ast::{Namespace, Parameter, Symbol, Type, Variable};
+use crate::ast::{ArrayLength, Namespace, Parameter, Symbol, Type, Variable};
 use crate::diagnostics::Diagnostics;
 use crate::sema::expression::ExprContext;
 use crate::sema::symtable::{Symtable, VariableInitializer, VariableUsage};
@@ -986,7 +986,7 @@ fn test_check_types() {
 
     let expr = YulExpression::SolidityLocalVariable(
         loc,
-        Type::Array(Box::new(Type::Int(8)), vec![None]),
+        Type::Array(Box::new(Type::Int(8)), vec![ArrayLength::Dynamic]),
         Some(StorageLocation::Calldata(loc)),
         0,
     );

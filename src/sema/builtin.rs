@@ -1,6 +1,6 @@
 use super::ast::{
-    Builtin, BuiltinStruct, Diagnostic, Expression, File, Namespace, Parameter, StructDecl, Symbol,
-    Type,
+    ArrayLength, Builtin, BuiltinStruct, Diagnostic, Expression, File, Namespace, Parameter,
+    StructDecl, Symbol, Type,
 };
 use super::diagnostics::Diagnostics;
 use super::eval::eval_const_number;
@@ -501,7 +501,10 @@ static BUILTIN_VARIABLE: Lazy<[Prototype; 15]> = Lazy::new(|| {
             method: None,
             name: "accounts",
             params: vec![],
-            ret: vec![Type::Array(Box::new(Type::Struct(0)), vec![None])],
+            ret: vec![Type::Array(
+                Box::new(Type::Struct(0)),
+                vec![ArrayLength::Dynamic],
+            )],
             target: vec![Target::Solana],
             doc: "Accounts passed into transaction",
             constant: false,

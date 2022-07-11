@@ -1,4 +1,4 @@
-use crate::ast::{Namespace, Type};
+use crate::ast::{ArrayLength, Namespace, Type};
 use crate::codegen;
 use crate::codegen::cfg::{ControlFlowGraph, Instr, InternalCallTy};
 use crate::codegen::vartable::Vartable;
@@ -138,7 +138,7 @@ fn process_suffix_access(
                 Some(StorageLocation::Calldata(_)),
                 var_no,
             ) => {
-                if dims.last().unwrap().is_none() {
+                if dims.last() == Some(&ArrayLength::Dynamic) {
                     return Expression::Cast(
                         *loc,
                         Type::Uint(256),
@@ -158,7 +158,7 @@ fn process_suffix_access(
                 _,
             ) = expr
             {
-                if dims.last().unwrap().is_none() {
+                if dims.last() == Some(&ArrayLength::Dynamic) {
                     return Expression::Builtin(
                         *loc,
                         vec![Type::Uint(32)],

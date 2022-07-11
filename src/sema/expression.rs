@@ -1,7 +1,7 @@
 use super::address::to_hexstr_eip55;
 use super::ast::{
-    Builtin, BuiltinStruct, CallArgs, CallTy, Diagnostic, Expression, Function, Mutability,
-    Namespace, StringLocation, Symbol, Type,
+    ArrayLength, Builtin, BuiltinStruct, CallArgs, CallTy, Diagnostic, Expression, Function,
+    Mutability, Namespace, StringLocation, Symbol, Type,
 };
 use super::builtin;
 use super::contracts::is_base;
@@ -3551,7 +3551,7 @@ pub fn new(
 
     match &ty {
         Type::Array(ty, dim) => {
-            if dim.last().unwrap().is_some() {
+            if matches!(dim.last(), Some(ArrayLength::Fixed(_))) {
                 diagnostics.push(Diagnostic::error(
                     *loc,
                     format!(
@@ -4591,13 +4591,13 @@ fn member_access(
         Type::Array(_, dim) => {
             if id.name == "length" {
                 return match dim.last().unwrap() {
-                    None => Ok(Expression::Builtin(
+                    ArrayLength::Dynamic => Ok(Expression::Builtin(
                         *loc,
                         vec![Type::Uint(32)],
                         Builtin::ArrayLength,
                         vec![expr],
                     )),
-                    Some(d) => {
+                    ArrayLength::Fixed(d) => {
                         //We should not eliminate an array from the code when 'length' is called
                         //So the variable is also assigned a value to be read from 'length'
                         assigned_variable(ns, &expr, symtable);
@@ -4610,6 +4610,7 @@ fn member_access(
                             ResolveTo::Type(&Type::Uint(32)),
                         )
                     }
+                    ArrayLength::AnyFixed => unreachable!(),
                 };
             }
         }
@@ -4652,7 +4653,7 @@ fn member_access(
                 if id.name == "length" {
                     let elem_ty = expr.ty().storage_array_elem().deref_into();
 
-                    if let Some(dim) = &dim.last().unwrap() {
+                    if let Some(ArrayLength::Fixed(dim)) = dim.last() {
                         // sparse array could be large than ns.storage_type() on Solana
                         if dim.bits() > ns.storage_type().bits(ns) as u64 {
                             return Ok(Expression::StorageArrayLength {
@@ -5943,7 +5944,7 @@ fn method_call_pos_args(
                 }
 
                 if func.name == "push" {
-                    if dim.last().unwrap().is_some() {
+                    if matches!(dim.last(), Some(ArrayLength::Fixed(_))) {
                         diagnostics.push(Diagnostic::error(
                             func.loc,
                             "method 'push()' not allowed on fixed length array".to_string(),
@@ -5999,7 +6000,7 @@ fn method_call_pos_args(
                     ));
                 }
                 if func.name == "pop" {
-                    if dim.last().unwrap().is_some() {
+                    if matches!(dim.last(), Some(ArrayLength::Fixed(_))) {
                         diagnostics.push(Diagnostic::error(
                             func.loc,
                             "method 'pop()' not allowed on fixed length array".to_string(),
@@ -6950,8 +6951,8 @@ fn array_literal(
     let aty = Type::Array(
         Box::new(ty),
         dims.iter()
-            .map(|n| Some(BigInt::from_u32(*n).unwrap()))
-            .collect::<Vec<Option<BigInt>>>(),
+            .map(|n| ArrayLength::Fixed(BigInt::from_u32(*n).unwrap()))
+            .collect::<Vec<ArrayLength>>(),
     );
 
     if context.constant {

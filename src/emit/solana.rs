@@ -807,7 +807,7 @@ impl SolanaTarget {
             let mut free_array = None;
 
             if elem_ty.is_dynamic(ns) || zero {
-                let length = if let Some(length) = dim.last().unwrap().as_ref() {
+                let length = if let Some(ast::ArrayLength::Fixed(length)) = dim.last() {
                     binary
                         .context
                         .i32_type()
@@ -2248,7 +2248,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                 let length;
                 let mut slot = *slot;
 
-                if dim.last().unwrap().is_some() {
+                if matches!(dim.last().unwrap(), ast::ArrayLength::Fixed(_)) {
                     // LLVMSizeOf() produces an i64 and malloc takes i32
                     let size = binary.builder.build_int_truncate(
                         llvm_ty.size_of().unwrap(),
@@ -2274,7 +2274,11 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                         "dest",
                     );
                     length = binary.context.i32_type().const_int(
-                        dim.last().unwrap().as_ref().unwrap().to_u64().unwrap(),
+                        if let Some(ast::ArrayLength::Fixed(d)) = dim.last() {
+                            d.to_u64().unwrap()
+                        } else {
+                            unreachable!()
+                        },
                         false,
                     );
                 } else {
@@ -2549,7 +2553,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                 "offset_ptr",
             );
 
-            let length = if let Some(length) = dim.last().unwrap().as_ref() {
+            let length = if let Some(ast::ArrayLength::Fixed(length)) = dim.last() {
                 binary
                     .context
                     .i32_type()
@@ -2560,7 +2564,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
 
             let mut elem_slot = *offset;
 
-            if dim.last().unwrap().is_none() {
+            if Some(&ast::ArrayLength::Dynamic) == dim.last() {
                 // reallocate to the right size
                 let member_size = binary
                     .context
