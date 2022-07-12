@@ -10,7 +10,7 @@ Solana has the following differences to Ethereum Solidity:
 - There is no ``ecrecover()`` builtin function, but there is a ``signatureVerify()`` function which can check ed25519
   signatures.
 - Solana has no concept of gas, so there is no gas functions
-- Solana balance is stored in a ``uint64``, so ``msg.value``, *address* ``.balance``, ``.transfer()`` and ``.send()``
+- Solana balance is stored in a ``uint64``, so *address* ``.balance``, ``.transfer()`` and ``.send()``
   all use uint64 rather than `uint256`.
 
 This is how to build your Solidity for Solana:
@@ -73,6 +73,34 @@ package has `documentation <https://solana-labs.github.io/solana-solidity.js/>`_
 are `some examples <https://solana-labs.github.io/solana-solidity.js/>`_. There is also
 `solang's integration tests <https://github.com/hyperledger-labs/solang/tree/main/integration/solana>`_.
 
+.. _value_transfer:
+
+Transfering native value with a function call
+_____________________________________________
+
+The Solidity langauge on Ethereum allows value transfers with an external call
+or constructor, using the ``auction.bid{value: 501}()`` syntax.
+Solana Cross Program Invocation (CPI) does not support this. This means that:
+
+ - Specifying `value:`` on an external call or constructor is not permitted
+ - The `payable` keyword has no effect
+ - `msg.value` is not supported
+
+.. note::
+
+    Hypothetically, the caller could transfer native balance and then inform the
+    callee about the amount transferred by specifying this in the instruction data.
+    However, it would be trivial to forge such an operation.
+
+Receive function
+________________
+
+In Solidity the `receive()` function, when defined, is called whenever the native
+balance for an account gets credited, for example through a contract calling
+``account.transfer(value);``. On Solana, there is no method that implement
+this. The balance of an account can be credited without any code being executed.
+
+`receive()` functions are not permitted on the Solana target.
 
 Builtin Imports
 ________________

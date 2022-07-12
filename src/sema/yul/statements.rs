@@ -11,7 +11,7 @@ use crate::sema::yul::switch::{resolve_condition, resolve_switch};
 use crate::sema::yul::types::get_default_type_from_identifier;
 use solang_parser::diagnostics::{ErrorType, Level, Note};
 use solang_parser::pt::YulTypedIdentifier;
-use solang_parser::{pt, Diagnostic};
+use solang_parser::{diagnostics::Diagnostic, pt};
 
 /// Resolves an yul statement. Returns a boolean that indicates if the next statement is reachable.
 pub(crate) fn resolve_yul_statement(

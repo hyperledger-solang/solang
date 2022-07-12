@@ -2,8 +2,8 @@ use crate::ast::{Namespace, Type};
 use crate::pt::CodeLocation;
 use crate::sema::yul::ast::YulExpression;
 use crate::sema::yul::functions::FunctionsTable;
+use solang_parser::diagnostics::Diagnostic;
 use solang_parser::pt::Identifier;
-use solang_parser::Diagnostic;
 
 /// Retrieves an YUL type from a keyword
 pub(crate) fn get_type_from_string(text: &str) -> Option<Type> {

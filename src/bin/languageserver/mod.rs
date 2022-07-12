@@ -1139,7 +1139,10 @@ impl LanguageServer for SolangServer {
         self.client
             .log_message(
                 MessageType::INFO,
-                format!("solang language server {} initialized", env!("GIT_HASH")),
+                format!(
+                    "solang language server {} initialized",
+                    env!("SOLANG_VERSION")
+                ),
             )
             .await;
     }

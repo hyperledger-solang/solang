@@ -1,7 +1,7 @@
 use crate::ast::EventDecl;
 use crate::sema::ast::{Builtin, CallArgs, Diagnostic, Expression, Namespace};
 use crate::sema::symtable::{Symtable, VariableUsage};
-use crate::sema::{ast, contracts::visit_bases, symtable};
+use crate::sema::{ast, symtable};
 use solang_parser::pt::{ContractTy, Loc};
 
 /// Mark variables as assigned, either in the symbol table (for local variables) or in the
@@ -439,7 +439,7 @@ pub fn check_unused_events(ns: &mut Namespace) {
             }
 
             // is there a base contract with the same name
-            for base_no in visit_bases(contract_no, ns) {
+            for base_no in ns.contract_bases(contract_no) {
                 let base_file_no = ns.contracts[base_no].loc.file_no();
 
                 if let Some(ast::Symbol::Event(events)) =

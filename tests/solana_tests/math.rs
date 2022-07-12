@@ -38,7 +38,7 @@ fn safe_math() {
         }"#,
     );
 
-    vm.constructor("math", &[], 0);
+    vm.constructor("math", &[]);
 
     let returns = vm.function(
         "mul_test",
@@ -51,7 +51,6 @@ fn safe_math() {
             )),
         ],
         &[],
-        0,
         None,
     );
 
@@ -73,7 +72,6 @@ fn safe_math() {
             )),
         ],
         &[],
-        0,
         None,
     );
 
@@ -95,7 +93,6 @@ fn safe_math() {
             )),
         ],
         &[],
-        0,
         None,
     );
 
@@ -117,7 +114,6 @@ fn safe_math() {
             )),
         ],
         &[],
-        0,
         None,
     );
 
@@ -134,7 +130,6 @@ fn safe_math() {
             )),
         ],
         &[],
-        0,
         None,
     );
 
@@ -151,7 +146,6 @@ fn safe_math() {
             )),
         ],
         &[],
-        0,
         None,
     );
 

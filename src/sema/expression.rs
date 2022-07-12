@@ -4,7 +4,7 @@ use super::ast::{
     Namespace, StringLocation, Symbol, Type,
 };
 use super::builtin;
-use super::contracts::{is_base, visit_bases};
+use super::contracts::is_base;
 use super::eval::eval_const_number;
 use super::eval::eval_const_rational;
 use super::format::string_format;
@@ -4638,7 +4638,7 @@ fn member_access(
                     });
                 }
             }
-            Type::Bytes(_) | Type::DynamicBytes => {
+            Type::Bytes(_) | Type::DynamicBytes | Type::String => {
                 if id.name == "length" {
                     let elem_ty = expr.ty().storage_array_elem().deref_into();
 
@@ -5206,7 +5206,7 @@ pub fn available_functions(
 pub fn available_super_functions(name: &str, contract_no: usize, ns: &Namespace) -> Vec<usize> {
     let mut list = Vec::new();
 
-    for base_contract_no in visit_bases(contract_no, ns).into_iter().rev() {
+    for base_contract_no in ns.contract_bases(contract_no).into_iter().rev() {
         if base_contract_no == contract_no {
             continue;
         }
@@ -5840,6 +5840,35 @@ fn method_call_pos_args(
                     vec![expr.cast(&expr.loc(), &elem_ty, true, ns, diagnostics)?],
                 ))
             };
+        }
+    }
+
+    if let Some(mut path) = ns.expr_to_identifier_path(var) {
+        path.identifiers.push(func.clone());
+
+        if let Ok(list) =
+            ns.resolve_free_function_with_namespace(context.file_no, &path, &mut Vec::new())
+        {
+            if let Some(loc) = call_args_loc {
+                diagnostics.push(Diagnostic::error(
+                    loc,
+                    "call arguments not allowed on internal calls".to_string(),
+                ));
+            }
+
+            return function_call_pos_args(
+                loc,
+                func,
+                pt::FunctionTy::Function,
+                args,
+                list.iter().map(|(_, no)| *no).collect(),
+                false,
+                context,
+                ns,
+                resolve_to,
+                symtable,
+                diagnostics,
+            );
         }
     }
 
@@ -6584,6 +6613,34 @@ fn method_call_named_args(
         }
     }
 
+    if let Some(mut path) = ns.expr_to_identifier_path(var) {
+        path.identifiers.push(func_name.clone());
+
+        if let Ok(list) =
+            ns.resolve_free_function_with_namespace(context.file_no, &path, &mut Vec::new())
+        {
+            if let Some(loc) = call_args_loc {
+                diagnostics.push(Diagnostic::error(
+                    loc,
+                    "call arguments not allowed on internal calls".to_string(),
+                ));
+            }
+
+            return function_call_named_args(
+                loc,
+                func_name,
+                args,
+                list.iter().map(|(_, no)| *no).collect(),
+                false,
+                context,
+                resolve_to,
+                ns,
+                symtable,
+                diagnostics,
+            );
+        }
+    }
+
     let var_expr = expression(var, context, ns, symtable, diagnostics, ResolveTo::Unknown)?;
     let var_ty = var_expr.ty();
 
@@ -7020,24 +7077,40 @@ fn parse_call_args(
     for arg in args.values() {
         match arg.name.name.as_str() {
             "value" => {
-                let ty = Type::Value;
+                if ns.target == Target::Solana {
+                    diagnostics.push(Diagnostic::error(
+                        arg.loc,
+                "Solana Cross Program Invocation (CPI) cannot transfer native value. See https://solang.readthedocs.io/en/latest/language/functions.html#value_transfer".to_string(),
+                    ));
 
-                let expr = expression(
-                    &arg.expr,
-                    context,
-                    ns,
-                    symtable,
-                    diagnostics,
-                    ResolveTo::Type(&ty),
-                )?;
+                    expression(
+                        &arg.expr,
+                        context,
+                        ns,
+                        symtable,
+                        diagnostics,
+                        ResolveTo::Unknown,
+                    )?;
+                } else {
+                    let ty = Type::Value;
 
-                res.value = Some(Box::new(expr.cast(
-                    &arg.expr.loc(),
-                    &ty,
-                    true,
-                    ns,
-                    diagnostics,
-                )?));
+                    let expr = expression(
+                        &arg.expr,
+                        context,
+                        ns,
+                        symtable,
+                        diagnostics,
+                        ResolveTo::Type(&ty),
+                    )?;
+
+                    res.value = Some(Box::new(expr.cast(
+                        &arg.expr.loc(),
+                        &ty,
+                        true,
+                        ns,
+                        diagnostics,
+                    )?));
+                }
             }
             "gas" => {
                 if ns.target == Target::Solana {

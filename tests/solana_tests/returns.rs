@@ -28,21 +28,21 @@ fn return_single() {
             }
         }"#,
     );
-    vm.constructor("foo", &[], 0);
+    vm.constructor("foo", &[]);
 
-    let returns = vm.function("f", &[], &[], 0, None);
+    let returns = vm.function("f", &[], &[], None);
     assert_eq!(returns, vec![Token::Uint(U256::from(2)),]);
 
-    let returns = vm.function("g", &[], &[], 0, None);
+    let returns = vm.function("g", &[], &[], None);
     assert_eq!(returns, vec![Token::Uint(U256::from(3)),]);
 
-    let returns = vm.function("h", &[], &[], 0, None);
+    let returns = vm.function("h", &[], &[], None);
     assert_eq!(returns, vec![Token::Uint(U256::from(2)),]);
 
-    let returns = vm.function("i", &[], &[], 0, None);
+    let returns = vm.function("i", &[], &[], None);
     assert_eq!(returns, vec![Token::Uint(U256::from(24)),]);
 
-    let returns = vm.function("j", &[], &[], 0, None);
+    let returns = vm.function("j", &[], &[], None);
     assert_eq!(returns, vec![Token::Uint(U256::from(5)),]);
 }
 
@@ -57,8 +57,8 @@ fn return_ternary() {
         }"#,
     );
 
-    vm.constructor("foo", &[], 0);
-    let returns = vm.function("f", &[], &[], 0, None);
+    vm.constructor("foo", &[]);
+    let returns = vm.function("f", &[], &[], None);
 
     assert_eq!(
         returns,
@@ -74,8 +74,8 @@ fn return_ternary() {
         }"#,
     );
 
-    vm.constructor("foo", &[], 0);
-    let returns = vm.function("f", &[], &[], 0, None);
+    vm.constructor("foo", &[]);
+    let returns = vm.function("f", &[], &[], None);
 
     assert_eq!(
         returns,
@@ -105,10 +105,10 @@ fn return_nothing() {
         }"#,
     );
 
-    vm.constructor("foo", &[], 0);
-    let _returns = vm.function("strange", &[], &[], 0, None);
-    let _returns = vm.function("inc", &[], &[], 0, None);
-    let returns = vm.function("get", &[], &[], 0, None);
+    vm.constructor("foo", &[]);
+    let _returns = vm.function("strange", &[], &[], None);
+    let _returns = vm.function("inc", &[], &[], None);
+    let returns = vm.function("get", &[], &[], None);
 
     assert_eq!(returns, vec![Token::Uint(U256::from(2)),]);
 
@@ -135,9 +135,9 @@ fn return_nothing() {
         }"#,
     );
 
-    vm.constructor("foo", &[], 0);
-    let _returns = vm.function("f", &[], &[], 0, None);
-    let returns = vm.function("get", &[], &[], 0, None);
+    vm.constructor("foo", &[]);
+    let _returns = vm.function("f", &[], &[], None);
+    let returns = vm.function("get", &[], &[], None);
 
     assert_eq!(returns, vec![Token::Uint(U256::from(5)),]);
 }
@@ -157,8 +157,8 @@ fn return_function() {
         }"#,
     );
 
-    vm.constructor("foo", &[], 0);
-    let returns = vm.function("f", &[], &[], 0, None);
+    vm.constructor("foo", &[]);
+    let returns = vm.function("f", &[], &[], None);
 
     assert_eq!(
         returns,
@@ -178,8 +178,8 @@ fn return_function() {
         }"#,
     );
 
-    vm.constructor("foo", &[], 0);
-    let returns = vm.function("f", &[], &[], 0, None);
+    vm.constructor("foo", &[]);
+    let returns = vm.function("f", &[], &[], None);
 
     assert_eq!(
         returns,

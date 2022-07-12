@@ -5,7 +5,7 @@ use crate::sema::yul::ast::{YulBlock, YulStatement};
 use crate::sema::yul::block::{process_statements, resolve_yul_block};
 use crate::sema::yul::functions::FunctionsTable;
 use crate::sema::yul::switch::resolve_condition;
-use solang_parser::{pt, Diagnostic};
+use solang_parser::{diagnostics::Diagnostic, pt};
 
 /// Resolve a for-loop statement
 /// Returns the resolved block and a bool to indicate if the next statement is reachable.

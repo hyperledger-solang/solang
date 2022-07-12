@@ -15,7 +15,7 @@ pub type Spanned<Token, Loc, Error> = Result<(Loc, Token, Loc), Error>;
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub enum Token<'input> {
     Identifier(&'input str),
-    StringLiteral(&'input str),
+    StringLiteral(bool, &'input str),
     AddressLiteral(&'input str),
     HexLiteral(&'input str),
     Number(&'input str, &'input str),
@@ -186,7 +186,8 @@ impl<'input> fmt::Display for Token<'input> {
             Token::DocComment(CommentType::Line, s) => write!(f, "///{}", s),
             Token::DocComment(CommentType::Block, s) => write!(f, "/**{}\n*/", s),
             Token::Identifier(id) => write!(f, "{}", id),
-            Token::StringLiteral(s) => write!(f, "\"{}\"", s),
+            Token::StringLiteral(false, s) => write!(f, "\"{}\"", s),
+            Token::StringLiteral(true, s) => write!(f, "unicode\"{}\"", s),
             Token::HexLiteral(hex) => write!(f, "{}", hex),
             Token::AddressLiteral(address) => write!(f, "{}", address),
             Token::Number(integer, exp) if exp.is_empty() => write!(f, "{}", integer),
@@ -697,6 +698,7 @@ impl<'input> Lexer<'input> {
 
     fn string(
         &mut self,
+        unicode: bool,
         token_start: usize,
         string_start: usize,
         quote_char: char,
@@ -727,7 +729,7 @@ impl<'input> Lexer<'input> {
 
         Ok((
             token_start,
-            Token::StringLiteral(&self.input[string_start..end]),
+            Token::StringLiteral(unicode, &self.input[string_start..end]),
             end + 1,
         ))
     }
@@ -760,7 +762,7 @@ impl<'input> Lexer<'input> {
 
                                 self.chars.next();
 
-                                return Some(self.string(start, start + 8, quote_char));
+                                return Some(self.string(true, start, start + 8, quote_char));
                             }
                             _ => (),
                         }
@@ -843,7 +845,7 @@ impl<'input> Lexer<'input> {
                     };
                 }
                 Some((start, quote_char @ '"')) | Some((start, quote_char @ '\'')) => {
-                    return Some(self.string(start, start + 1, quote_char));
+                    return Some(self.string(false, start, start + 1, quote_char));
                 }
                 Some((start, '/')) => {
                     match self.chars.peek() {
@@ -1176,7 +1178,7 @@ impl<'input> Lexer<'input> {
                     return if let Some(start) = start {
                         Some(Ok((
                             start,
-                            Token::StringLiteral(&self.input[start..end]),
+                            Token::StringLiteral(false, &self.input[start..end]),
                             end,
                         )))
                     } else {
@@ -1307,7 +1309,10 @@ fn lexertest() {
     let tokens = Lexer::new("\"foo\"", 0, &mut comments)
         .collect::<Vec<Result<(usize, Token, usize), LexicalError>>>();
 
-    assert_eq!(tokens, vec!(Ok((0, Token::StringLiteral("foo"), 5)),));
+    assert_eq!(
+        tokens,
+        vec!(Ok((0, Token::StringLiteral(false, "foo"), 5)),)
+    );
 
     let tokens = Lexer::new("pragma solidity >=0.5.0 <0.7.0;", 0, &mut comments)
         .collect::<Vec<Result<(usize, Token, usize), LexicalError>>>();
@@ -1317,7 +1322,7 @@ fn lexertest() {
         vec!(
             Ok((0, Token::Pragma, 6)),
             Ok((7, Token::Identifier("solidity"), 15)),
-            Ok((16, Token::StringLiteral(">=0.5.0 <0.7.0"), 30)),
+            Ok((16, Token::StringLiteral(false, ">=0.5.0 <0.7.0"), 30)),
             Ok((30, Token::Semicolon, 31)),
         )
     );
@@ -1330,7 +1335,7 @@ fn lexertest() {
         vec!(
             Ok((0, Token::Pragma, 6)),
             Ok((7, Token::Identifier("solidity"), 15)),
-            Ok((17, Token::StringLiteral(">=0.5.0 <0.7.0"), 31)),
+            Ok((17, Token::StringLiteral(false, ">=0.5.0 <0.7.0"), 31)),
             Ok((34, Token::Semicolon, 35)),
         )
     );
@@ -1343,7 +1348,7 @@ fn lexertest() {
         vec!(
             Ok((0, Token::Pragma, 6)),
             Ok((7, Token::Identifier("solidity"), 15)),
-            Ok((16, Token::StringLiteral("赤"), 19)),
+            Ok((16, Token::StringLiteral(false, "赤"), 19)),
             Ok((19, Token::Semicolon, 20))
         )
     );
@@ -1440,7 +1445,7 @@ fn lexertest() {
         vec!(
             Ok((0, Token::Pragma, 6)),
             Ok((7, Token::Identifier("foo"), 10)),
-            Ok((11, Token::StringLiteral("bar"), 14)),
+            Ok((11, Token::StringLiteral(false, "bar"), 14)),
         )
     );
 
@@ -1518,7 +1523,7 @@ fn lexertest() {
     let tokens = Lexer::new(r#"unicode"€""#, 0, &mut comments)
         .collect::<Vec<Result<(usize, Token, usize), LexicalError>>>();
 
-    assert_eq!(tokens, vec!(Ok((0, Token::StringLiteral("€"), 12)),));
+    assert_eq!(tokens, vec!(Ok((0, Token::StringLiteral(true, "€"), 12)),));
 
     let tokens = Lexer::new(r#"unicode "€""#, 0, &mut comments)
         .collect::<Vec<Result<(usize, Token, usize), LexicalError>>>();
@@ -1527,7 +1532,7 @@ fn lexertest() {
         tokens,
         vec!(
             Ok((0, Token::Identifier("unicode"), 7)),
-            Ok((8, Token::StringLiteral("€"), 13)),
+            Ok((8, Token::StringLiteral(false, "€"), 13)),
         )
     );
 

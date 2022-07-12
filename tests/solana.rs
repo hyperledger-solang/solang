@@ -1344,12 +1344,12 @@ impl VirtualMachine {
         res
     }
 
-    fn constructor(&mut self, name: &str, args: &[Token], value: u64) {
+    fn constructor(&mut self, name: &str, args: &[Token]) {
         let program = &self.stack[0];
 
         println!("constructor for {}", hex::encode(&program.data));
 
-        let mut calldata = VirtualMachine::input(&program.data, &self.origin, value, name, &[]);
+        let mut calldata = VirtualMachine::input(&program.data, &self.origin, name, &[]);
 
         if let Some(constructor) = &program.abi.as_ref().unwrap().constructor {
             calldata.extend(&constructor.encode_input(vec![], args).unwrap());
@@ -1365,7 +1365,6 @@ impl VirtualMachine {
         name: &str,
         args: &[Token],
         seeds: &[&(Account, Vec<u8>)],
-        value: u64,
         sender: Option<&Account>,
     ) -> Vec<Token> {
         let program = &self.stack[0];
@@ -1379,7 +1378,6 @@ impl VirtualMachine {
             } else {
                 &self.origin
             },
-            value,
             name,
             seeds,
         );
@@ -1414,7 +1412,6 @@ impl VirtualMachine {
         name: &str,
         args: &[Token],
         seeds: &[&(Account, Vec<u8>)],
-        value: u64,
         sender: Option<&Account>,
     ) -> Result<u64, EbpfError<UserError>> {
         let program = &self.stack[0];
@@ -1428,7 +1425,6 @@ impl VirtualMachine {
             } else {
                 &self.origin
             },
-            value,
             name,
             seeds,
         );
@@ -1448,13 +1444,12 @@ impl VirtualMachine {
     fn input(
         recv: &Account,
         sender: &Account,
-        value: u64,
         name: &str,
         seeds: &[&(Account, Vec<u8>)],
     ) -> Vec<u8> {
         let mut calldata: Vec<u8> = recv.to_vec();
         calldata.extend_from_slice(sender);
-        calldata.extend_from_slice(&value.to_le_bytes());
+        calldata.extend_from_slice(&0u64.to_le_bytes());
 
         let mut hasher = Keccak::v256();
         let mut hash = [0u8; 32];

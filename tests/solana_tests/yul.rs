@@ -57,9 +57,9 @@ contract testing  {
       "#,
     );
 
-    vm.constructor("testing", &[], 0);
+    vm.constructor("testing", &[]);
 
-    let returns = vm.function("test_slot", &[], &[], 0, None);
+    let returns = vm.function("test_slot", &[], &[], None);
     assert_eq!(returns, vec![Token::Uint(U256::from(56016))]);
 
     let returns = vm.function(
@@ -71,7 +71,6 @@ contract testing  {
             Token::Uint(U256::from(11)),
         ])],
         &[],
-        0,
         None,
     );
     assert_eq!(
@@ -82,7 +81,7 @@ contract testing  {
         ]
     );
 
-    let returns = vm.function("selector_address", &[], &[], 0, None);
+    let returns = vm.function("selector_address", &[], &[], None);
     assert_eq!(
         returns,
         vec![
@@ -132,27 +131,21 @@ contract testing  {
       "#,
     );
 
-    vm.constructor("testing", &[], 0);
+    vm.constructor("testing", &[]);
 
-    let returns = vm.function("general_test", &[Token::Uint(Uint::from(5))], &[], 0, None);
+    let returns = vm.function("general_test", &[Token::Uint(Uint::from(5))], &[], None);
     assert_eq!(
         returns,
         vec![Token::Uint(Uint::from(100)), Token::Uint(Uint::from(20))]
     );
 
-    let returns = vm.function("general_test", &[Token::Uint(Uint::from(78))], &[], 0, None);
+    let returns = vm.function("general_test", &[Token::Uint(Uint::from(78))], &[], None);
     assert_eq!(
         returns,
         vec![Token::Uint(Uint::from(20)), Token::Uint(Uint::from(0))]
     );
 
-    let returns = vm.function(
-        "general_test",
-        &[Token::Uint(Uint::from(259))],
-        &[],
-        0,
-        None,
-    );
+    let returns = vm.function("general_test", &[Token::Uint(Uint::from(259))], &[], None);
     assert_eq!(
         returns,
         vec![Token::Uint(Uint::from(0)), Token::Uint(Uint::from(10))]
@@ -189,7 +182,7 @@ contract c {
         "#,
     );
 
-    vm.constructor("c", &[], 0);
+    vm.constructor("c", &[]);
     let num: Vec<u8> = vec![
         0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
         0x11, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2a, 0x2b, 0x2c, 0x2d, 0x2e,
@@ -199,7 +192,6 @@ contract c {
         "getByte",
         &[Token::Uint(U256::from_big_endian(&num))],
         &[],
-        0,
         None,
     );
     assert_eq!(returns, vec![Token::Uint(U256::from(6))]);
@@ -208,7 +200,6 @@ contract c {
         "divide",
         &[Token::Uint(U256::from(4)), Token::Uint(U256::from(3))],
         &[],
-        0,
         None,
     );
     assert_eq!(
@@ -220,7 +211,6 @@ contract c {
         "divide",
         &[Token::Uint(U256::from(4)), Token::Uint(U256::from(0))],
         &[],
-        0,
         None,
     );
     assert_eq!(
@@ -236,7 +226,6 @@ contract c {
             Token::Uint(U256::from(3)),
         ],
         &[],
-        0,
         None,
     );
     assert_eq!(
@@ -252,7 +241,6 @@ contract c {
             Token::Uint(U256::from(0)),
         ],
         &[],
-        0,
         None,
     );
     assert_eq!(

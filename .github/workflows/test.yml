@@ -179,6 +179,25 @@ jobs:
         name: solang-mac-intel
         path: ./target/debug/solang
 
+  mac-universal:
+    name: Mac Universal Binary
+    runs-on: macos-latest
+    needs: [mac-arm, mac-intel]
+    steps:
+    - uses: actions/download-artifact@master
+      with:
+        name: solang-mac-intel
+    - run: mv solang solang-mac-intel
+    - uses: actions/download-artifact@master
+      with:
+        name: solang-mac-arm
+    - run: mv solang solang-mac-arm
+    - run: lipo -create -output solang-mac solang-mac-intel solang-mac-arm
+    - uses: actions/upload-artifact@master
+      with:
+        name: solang-mac
+        path: solang-mac
+
   image-multiarch:
     name: Multiarch Container Image
     runs-on: linux-arm64

@@ -3,6 +3,7 @@ mod enums;
 #[allow(clippy::unreadable_literal, clippy::naive_bytecount)]
 mod expressions;
 
+mod array_boundary_check;
 mod arrays;
 mod builtins;
 mod calls;

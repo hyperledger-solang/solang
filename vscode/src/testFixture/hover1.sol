@@ -42,7 +42,7 @@ contract SimpleAuction {
     /// together with this transaction.
     /// The value will only be refunded if the
     /// auction is not won.
-    function bid() public payable {
+    function bid(uint value) public {
         // No arguments are necessary, all
         // information is already part of
         // the transaction. The keyword payable
@@ -62,7 +62,7 @@ contract SimpleAuction {
         // function execution including
         // it having received the money).
         require(
-            msg.value > highestBid,
+            value > highestBid,
             "There already is a higher bid."
         );
 
@@ -75,8 +75,8 @@ contract SimpleAuction {
             pendingReturns[highestBidder] += highestBid;
         }
         highestBidder = msg.sender;
-        highestBid = msg.value;
-        emit HighestBidIncreased(msg.sender, msg.value);
+        highestBid = value;
+        emit HighestBidIncreased(msg.sender, value);
     }
 
     /// Withdraw a bid that was overbid.

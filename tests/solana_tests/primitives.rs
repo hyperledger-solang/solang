@@ -24,9 +24,9 @@ fn assert_false() {
         }"#,
     );
 
-    vm.constructor("foo", &[], 0);
+    vm.constructor("foo", &[]);
 
-    vm.function("assert_fails", &[], &[], 0, None);
+    vm.function("assert_fails", &[], &[], None);
 }
 
 #[test]
@@ -41,9 +41,9 @@ fn assert_true() {
         }"#,
     );
 
-    vm.constructor("foo", &[], 0);
+    vm.constructor("foo", &[]);
 
-    vm.function("assert_fails", &[], &[], 0, None);
+    vm.function("assert_fails", &[], &[], None);
 }
 
 #[test]
@@ -73,18 +73,18 @@ fn boolean() {
         }"#,
     );
 
-    vm.constructor("foo", &[], 0);
+    vm.constructor("foo", &[]);
 
-    let returns = vm.function("return_true", &[], &[], 0, None);
+    let returns = vm.function("return_true", &[], &[], None);
 
     assert_eq!(returns, vec![ethabi::Token::Bool(true),]);
 
-    let returns = vm.function("return_false", &[], &[], 0, None);
+    let returns = vm.function("return_false", &[], &[], None);
 
     assert_eq!(returns, vec![ethabi::Token::Bool(false),]);
 
-    vm.function("true_arg", &[ethabi::Token::Bool(true)], &[], 0, None);
-    vm.function("false_arg", &[ethabi::Token::Bool(false)], &[], 0, None);
+    vm.function("true_arg", &[ethabi::Token::Bool(true)], &[], None);
+    vm.function("false_arg", &[ethabi::Token::Bool(false)], &[], None);
 }
 
 #[test]
@@ -107,9 +107,9 @@ fn address() {
         }"#,
     );
 
-    vm.constructor("foo", &[], 0);
+    vm.constructor("foo", &[]);
 
-    let returns = vm.function("return_address", &[], &[], 0, None);
+    let returns = vm.function("return_address", &[], &[], None);
 
     assert_eq!(
         returns,
@@ -126,7 +126,6 @@ fn address() {
             134, 82, 130, 112, 97, 218, 24, 157, 198, 40, 105, 118, 27,
         ])],
         &[],
-        0,
         None,
     );
 }
@@ -152,19 +151,13 @@ fn test_enum() {
         }"#,
     );
 
-    vm.constructor("foo", &[], 0);
+    vm.constructor("foo", &[]);
 
-    let returns = vm.function("return_enum", &[], &[], 0, None);
+    let returns = vm.function("return_enum", &[], &[], None);
 
     assert_eq!(returns, vec![ethabi::Token::Uint(U256::from(9))]);
 
-    vm.function(
-        "enum_arg",
-        &[ethabi::Token::Uint(U256::from(6))],
-        &[],
-        0,
-        None,
-    );
+    vm.function("enum_arg", &[ethabi::Token::Uint(U256::from(6))], &[], None);
 }
 
 #[test]
@@ -206,9 +199,9 @@ fn bytes() {
 
         let mut vm = build_solidity(&src);
 
-        vm.constructor("test", &[], 0);
+        vm.constructor("test", &[]);
 
-        let returns = vm.function("return_literal", &[], &[], 0, None);
+        let returns = vm.function("return_literal", &[], &[], None);
 
         assert_eq!(
             returns,
@@ -219,7 +212,6 @@ fn bytes() {
             "return_arg",
             &[ethabi::Token::FixedBytes(vec![1, 2, 3, 4, 5, 6, 7])],
             &[],
-            0,
             None,
         );
 
@@ -245,7 +237,6 @@ fn bytes() {
                     ethabi::Token::FixedBytes(b.to_vec()),
                 ],
                 &[],
-                0,
                 None,
             );
 
@@ -267,7 +258,6 @@ fn bytes() {
                     ethabi::Token::FixedBytes(b.to_vec()),
                 ],
                 &[],
-                0,
                 None,
             );
 
@@ -282,7 +272,6 @@ fn bytes() {
                     ethabi::Token::FixedBytes(b.to_vec()),
                 ],
                 &[],
-                0,
                 None,
             );
 
@@ -301,7 +290,6 @@ fn bytes() {
                     ethabi::Token::Uint(U256::from(r)),
                 ],
                 &[],
-                0,
                 None,
             );
 
@@ -324,7 +312,6 @@ fn bytes() {
                     ethabi::Token::Uint(U256::from(r)),
                 ],
                 &[],
-                0,
                 None,
             );
 
@@ -399,7 +386,7 @@ fn uint() {
 
         let mut vm = build_solidity(&src);
 
-        vm.constructor("test", &[], 0);
+        vm.constructor("test", &[]);
 
         println!("width:{}", width);
 
@@ -422,7 +409,7 @@ fn uint() {
             truncate_uint(&mut a, width);
             truncate_uint(&mut b, width);
 
-            let res = vm.function("pass", &[ethabi::Token::Uint(a)], &[], 0, None);
+            let res = vm.function("pass", &[ethabi::Token::Uint(a)], &[], None);
 
             println!("{:x} = {:?} o", a, res);
 
@@ -430,7 +417,6 @@ fn uint() {
                 "add",
                 &[ethabi::Token::Uint(a), ethabi::Token::Uint(b)],
                 &[],
-                0,
                 None,
             );
 
@@ -446,7 +432,6 @@ fn uint() {
                 "sub",
                 &[ethabi::Token::Uint(a), ethabi::Token::Uint(b)],
                 &[],
-                0,
                 None,
             );
 
@@ -460,7 +445,6 @@ fn uint() {
                 "mul",
                 &[ethabi::Token::Uint(a), ethabi::Token::Uint(b)],
                 &[],
-                0,
                 None,
             );
 
@@ -474,7 +458,6 @@ fn uint() {
                 "pow",
                 &[ethabi::Token::Uint(a), ethabi::Token::Uint(b)],
                 &[],
-                0,
                 None,
             );
 
@@ -489,7 +472,6 @@ fn uint() {
                     "div",
                     &[ethabi::Token::Uint(a), ethabi::Token::Uint(b)],
                     &[],
-                    0,
                     None,
                 );
 
@@ -503,7 +485,6 @@ fn uint() {
                     "mod",
                     &[ethabi::Token::Uint(a), ethabi::Token::Uint(b)],
                     &[],
-                    0,
                     None,
                 );
 
@@ -518,7 +499,6 @@ fn uint() {
                 "or",
                 &[ethabi::Token::Uint(a), ethabi::Token::Uint(b)],
                 &[],
-                0,
                 None,
             );
 
@@ -537,7 +517,6 @@ fn uint() {
                 "and",
                 &[ethabi::Token::Uint(a), ethabi::Token::Uint(b)],
                 &[],
-                0,
                 None,
             );
 
@@ -556,7 +535,6 @@ fn uint() {
                 "xor",
                 &[ethabi::Token::Uint(a), ethabi::Token::Uint(b)],
                 &[],
-                0,
                 None,
             );
 
@@ -577,7 +555,6 @@ fn uint() {
                 "shift_left",
                 &[ethabi::Token::Uint(a), ethabi::Token::Uint(U256::from(r))],
                 &[],
-                0,
                 None,
             );
 
@@ -591,7 +568,6 @@ fn uint() {
                 "shift_right",
                 &[ethabi::Token::Uint(a), ethabi::Token::Uint(U256::from(r))],
                 &[],
-                0,
                 None,
             );
 
@@ -672,7 +648,7 @@ fn int() {
 
         let mut vm = build_solidity(&src);
 
-        vm.constructor("test", &[], 0);
+        vm.constructor("test", &[]);
 
         for _ in 0..10 {
             let mut a_bs = Vec::new();
@@ -697,7 +673,6 @@ fn int() {
                 "add",
                 &[ethabi::Token::Int(a), ethabi::Token::Int(b)],
                 &[],
-                0,
                 None,
             );
 
@@ -711,7 +686,6 @@ fn int() {
                 "sub",
                 &[ethabi::Token::Int(a), ethabi::Token::Int(b)],
                 &[],
-                0,
                 None,
             );
 
@@ -723,7 +697,6 @@ fn int() {
                 "mul",
                 &[ethabi::Token::Int(a), ethabi::Token::Int(b)],
                 &[],
-                0,
                 None,
             );
 
@@ -736,7 +709,6 @@ fn int() {
                     "div",
                     &[ethabi::Token::Int(a), ethabi::Token::Int(b)],
                     &[],
-                    0,
                     None,
                 );
 
@@ -748,7 +720,6 @@ fn int() {
                     "mod",
                     &[ethabi::Token::Int(a), ethabi::Token::Int(b)],
                     &[],
-                    0,
                     None,
                 );
 
@@ -763,7 +734,6 @@ fn int() {
                 "or",
                 &[ethabi::Token::Int(a), ethabi::Token::Int(b)],
                 &[],
-                0,
                 None,
             );
 
@@ -782,7 +752,6 @@ fn int() {
                 "and",
                 &[ethabi::Token::Int(a), ethabi::Token::Int(b)],
                 &[],
-                0,
                 None,
             );
 
@@ -801,7 +770,6 @@ fn int() {
                 "xor",
                 &[ethabi::Token::Int(a), ethabi::Token::Int(b)],
                 &[],
-                0,
                 None,
             );
 
@@ -822,7 +790,6 @@ fn int() {
                 "shift_left",
                 &[ethabi::Token::Int(a), ethabi::Token::Uint(U256::from(r))],
                 &[],
-                0,
                 None,
             );
 
@@ -836,7 +803,6 @@ fn int() {
                 "shift_right",
                 &[ethabi::Token::Int(a), ethabi::Token::Uint(U256::from(r))],
                 &[],
-                0,
                 None,
             );
 

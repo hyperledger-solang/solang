@@ -42,7 +42,7 @@ fn verify() {
         }"#,
     );
 
-    vm.constructor("foo", &[], 0);
+    vm.constructor("foo", &[]);
 
     let mut csprng = rand::thread_rng();
     let keypair: Keypair = Keypair::generate(&mut csprng);
@@ -66,7 +66,6 @@ fn verify() {
             Token::Bytes(signature_bs.clone()),
         ],
         &[],
-        0,
         None,
     );
 
@@ -98,7 +97,6 @@ fn verify() {
             Token::Bytes(signature_bs.clone()),
         ],
         &[],
-        0,
         None,
     );
 
@@ -129,7 +127,6 @@ fn verify() {
             Token::Bytes(signature_bs),
         ],
         &[],
-        0,
         None,
     );
 

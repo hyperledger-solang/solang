@@ -10,9 +10,9 @@ fn types() {
         }"#,
     );
 
-    vm.constructor("foo", &[], 0);
+    vm.constructor("foo", &[]);
 
-    let returns = vm.function("f1", &[], &[], 0, None);
+    let returns = vm.function("f1", &[], &[], None);
 
     assert_eq!(returns, vec![Token::Int(U256::from(102))]);
 
@@ -23,9 +23,9 @@ fn types() {
         }"#,
     );
 
-    vm.constructor("foo", &[], 0);
+    vm.constructor("foo", &[]);
 
-    let returns = vm.function("f1", &[Token::Uint(U256::from(2))], &[], 0, None);
+    let returns = vm.function("f1", &[Token::Uint(U256::from(2))], &[], None);
 
     assert_eq!(returns, vec![Token::Int(U256::from(5))]);
 
@@ -43,13 +43,12 @@ fn types() {
         }"#,
     );
 
-    vm.constructor("foo", &[], 0);
+    vm.constructor("foo", &[]);
 
     let returns = vm.function(
         "f1",
         &[Token::Uint(U256::from(1)), Token::Uint(U256::from(2))],
         &[],
-        0,
         None,
     );
 
@@ -67,9 +66,9 @@ fn types() {
         }"#,
     );
 
-    vm.constructor("foo", &[], 0);
+    vm.constructor("foo", &[]);
 
-    let returns = vm.function("f1", &[Token::Int(U256::from(4000))], &[], 0, None);
+    let returns = vm.function("f1", &[Token::Int(U256::from(4000))], &[], None);
 
     assert_eq!(returns, vec![Token::Uint(U256::from(2))]);
 }
@@ -88,9 +87,9 @@ fn interfaces() {
         "#,
     );
 
-    vm.constructor("foo", &[], 0);
+    vm.constructor("foo", &[]);
 
-    let returns = vm.function("f1", &[], &[], 0, None);
+    let returns = vm.function("f1", &[], &[], None);
 
     assert_eq!(returns, vec![Token::FixedBytes(b"ab".to_vec())]);
 }
@@ -104,9 +103,9 @@ fn constant() {
         }"#,
     );
 
-    vm.constructor("x", &[], 0);
+    vm.constructor("x", &[]);
 
-    let returns = vm.function("z", &[], &[], 0, None);
+    let returns = vm.function("z", &[], &[], None);
 
     assert_eq!(
         returns,
@@ -123,9 +122,9 @@ fn constant() {
         }"#,
     );
 
-    vm.constructor("x", &[], 0);
+    vm.constructor("x", &[]);
 
-    let returns = vm.function("z", &[], &[], 0, None);
+    let returns = vm.function("z", &[], &[], None);
 
     assert_eq!(
         returns,
@@ -142,9 +141,9 @@ fn constant() {
         }"#,
     );
 
-    vm.constructor("x", &[], 0);
+    vm.constructor("x", &[]);
 
-    let returns = vm.function("z", &[], &[], 0, None);
+    let returns = vm.function("z", &[], &[], None);
 
     assert_eq!(
         returns,

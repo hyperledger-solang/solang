@@ -525,7 +525,7 @@ impl SolanaTarget {
                 dispatch_function,
                 &contract.functions,
                 None,
-                |func| func.nonpayable,
+                |_| false,
             );
 
             let function_block = binary
@@ -3314,20 +3314,9 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         binary.builder.build_return(Some(&ret));
     }
 
-    /// Value received
-    fn value_transferred<'b>(&self, binary: &Binary<'b>, _ns: &ast::Namespace) -> IntValue<'b> {
-        let parameters = self.sol_parameters(binary);
-
-        binary
-            .builder
-            .build_load(
-                binary
-                    .builder
-                    .build_struct_gep(parameters, 14, "value")
-                    .unwrap(),
-                "value",
-            )
-            .into_int_value()
+    /// Value received is not available on solana
+    fn value_transferred<'b>(&self, _binary: &Binary<'b>, _ns: &ast::Namespace) -> IntValue<'b> {
+        unreachable!();
     }
 
     /// Send value to address
@@ -3550,9 +3539,6 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                 );
 
                 binary.builder.build_load(sender_address, "sender_address")
-            }
-            codegen::Expression::Builtin(_, _, codegen::Builtin::Value, _) => {
-                self.value_transferred(binary, ns).into()
             }
             codegen::Expression::Builtin(_, _, codegen::Builtin::GetAddress, _) => {
                 let parameters = self.sol_parameters(binary);

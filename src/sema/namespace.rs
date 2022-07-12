@@ -6,7 +6,7 @@ use super::{
     expression::{expression, ExprContext, ResolveTo},
     resolve_params, resolve_returns,
     symtable::Symtable,
-    visit_bases, ArrayDimension,
+    ArrayDimension,
 };
 use crate::Target;
 use num_bigint::BigInt;
@@ -394,7 +394,7 @@ impl Namespace {
 
             // If we're in a contract, then event can be defined in current contract or its bases
             if let Some(contract_no) = contract_no {
-                for contract_no in visit_bases(contract_no, self).into_iter().rev() {
+                for contract_no in self.contract_bases(contract_no).into_iter().rev() {
                     match self.variable_symbols.get(&(
                         file_no,
                         Some(contract_no),
@@ -1283,6 +1283,26 @@ impl Namespace {
                 }
             }
         }
+    }
+
+    /// Convert expression to IdentifierPath
+    pub fn expr_to_identifier_path(&self, mut expr: &pt::Expression) -> Option<pt::IdentifierPath> {
+        let loc = expr.loc();
+        let mut identifiers = Vec::new();
+
+        while let pt::Expression::MemberAccess(_, member, name) = expr {
+            identifiers.insert(0, name.clone());
+
+            expr = member.as_ref();
+        }
+
+        if let pt::Expression::Variable(id) = expr {
+            identifiers.insert(0, id.clone());
+
+            return Some(pt::IdentifierPath { loc, identifiers });
+        }
+
+        None
     }
 
     /// Resolve an expression which defines the array length, e.g. 2**8 in "bool[2**8]"

@@ -1,22 +1,20 @@
 //! Solidity file parser
-
 use crate::pt::CodeLocation;
+use diagnostics::Diagnostic;
 use lalrpop_util::ParseError;
 
-pub use diagnostics::Diagnostic;
-
 pub mod diagnostics;
-pub mod lexer;
+mod lexer;
 pub mod pt;
 #[cfg(test)]
 mod test;
 
 #[allow(clippy::all)]
-pub mod solidity {
+mod solidity {
     include!(concat!(env!("OUT_DIR"), "/solidity.rs"));
 }
 
-/// Parse solidity file content
+/// Parse solidity file
 pub fn parse(
     src: &str,
     file_no: usize,
@@ -60,8 +58,4 @@ pub fn parse(
     } else {
         Ok((s.unwrap(), comments))
     }
-}
-
-pub fn box_option<T>(o: Option<T>) -> Option<Box<T>> {
-    o.map(Box::new)
 }

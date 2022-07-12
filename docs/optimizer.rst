@@ -186,3 +186,36 @@ Check out the example below. It contains multiple common subexpressions:
 The expression `a*b` is repeated throughout the function and will be saved to a temporary variable.
 This temporary will be placed wherever there is an expression `a*b`. You can see the pass in action when you compile
 this contract and check the CFG, using `solang --emit cfg`.
+
+.. _Array-Bound-checks-optimizations:
+
+Array Bound checks optimization
+-------------------------------
+
+Whenever an array access is done, there must be a check for ensuring we are not accessing
+beyond the end of an array. Sometimes, the array length could be known. For example:
+
+.. code-block::
+
+    contract c {
+    
+        function test() public returns (int256[]) {
+            int256[] array = new int256[](3);
+            array[1] = 1;
+            return array;
+        }
+    }
+
+In this example we access ``array`` element 1, while the array length is 3. So, no bounds
+checks are necessary and the code will more efficient if we do not emit the bounds check in
+the compiled contract.
+
+The array length is tracked in an invisible temporary variable, which is always kept up to date when, for example, a ``.pop()`` or ``.push()`` happens on the array
+or an assignment happens. Then, when the bounds check happens, rather than retrieving the array length from
+the array at runtime, bounds check becomes the constant expression `1 < 3` which is
+always true, so the check is omitted.
+
+This also means that, whenever the length of an array is accessed using '.length', it is replaced with a constant.
+
+Note that this optimization does not cover every case. When an array is passed
+as a function argument, for instance, the length is unknown.

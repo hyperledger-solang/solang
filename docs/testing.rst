@@ -38,8 +38,10 @@ These tests do the following:
 Mock contract virtual machine
 -----------------------------
 
-For Substrate, ewasm, and Solana there is a mock virtual machine which should work exactly
-like the real on-chain virtual machine. For ewasm and Substrate, this uses the
+For Substrate, ewasm, and Solana there is a mock virtual machine. System and runtime call
+implementations should semantically represent the real on-chain virtual machine as exact as
+possible. Aspects that don't matter in the context of unit testing (e.g. gas-metering) may be
+ignored in the mock virtual machine. For ewasm and Substrate, this uses the
 `wasmi crate <https://crates.io/crates/wasmi>`_ and for Solana it
 uses the `Solana RBPF crate <https://crates.io/crates/solana_rbpf>`_.
 
