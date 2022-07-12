@@ -2467,7 +2467,7 @@ pub trait TargetRuntime<'a> {
                 array.into()
             }
             Expression::AllocDynamicArray(_, ty, size, init) => {
-                if *ty == Type::Slice {
+                if matches!(ty, Type::Slice(_)) {
                     let init = init.as_ref().unwrap();
 
                     let data = bin.emit_global_string("const_string", init, true);
@@ -2484,7 +2484,7 @@ pub trait TargetRuntime<'a> {
                         .into()
                 } else {
                     let elem = match ty {
-                        Type::Slice | Type::String | Type::DynamicBytes => Type::Bytes(1),
+                        Type::Slice(_) | Type::String | Type::DynamicBytes => Type::Bytes(1),
                         _ => ty.array_elem(),
                     };
 

@@ -1532,7 +1532,7 @@ impl SolanaTarget {
 
                 let slice_alloca = binary.build_alloca(
                     function,
-                    binary.llvm_type(&ast::Type::Slice, ns),
+                    binary.llvm_type(&ast::Type::Slice(Box::new(Type::Bytes(1))), ns),
                     "slice_alloca",
                 );
                 let data_elem = binary

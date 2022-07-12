@@ -863,11 +863,10 @@ impl<'a> Binary<'a> {
                             .ptr_type(AddressSpace::Generic),
                     )
                 }
-                Type::Slice => BasicTypeEnum::StructType(
+                Type::Slice(ty) => BasicTypeEnum::StructType(
                     self.context.struct_type(
                         &[
-                            self.context
-                                .i8_type()
+                            self.llvm_type(ty, ns)
                                 .ptr_type(AddressSpace::Generic)
                                 .into(),
                             self.context

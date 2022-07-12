@@ -850,7 +850,7 @@ impl Type {
             Type::StorageRef(_, ty) => format!("{} storage", ty.to_string(ns)),
             Type::Void => "void".to_owned(),
             Type::Unreachable => "unreachable".to_owned(),
-            Type::Slice => "slice".to_owned(),
+            Type::Slice(ty) => format!("{} slice", ty.to_string(ns)),
             Type::Unresolved => "unresolved".to_owned(),
         }
     }
@@ -914,6 +914,7 @@ impl Type {
             Type::UserType(n) => ns.user_types[*n].ty.to_signature_string(say_tuple, ns),
             // TODO: should an unresolved type not match another unresolved type?
             Type::Unresolved => "unresolved".to_owned(),
+            Type::Slice(ty) => format!("{} slice", ty.to_string(ns)),
             _ => unreachable!(),
         }
     }
@@ -954,7 +955,7 @@ impl Type {
             Type::StorageRef(..) => false,
             Type::InternalFunction { .. } => false,
             Type::ExternalFunction { .. } => false,
-            Type::Slice => false,
+            Type::Slice(_) => false,
             Type::Unresolved => false,
             _ => unreachable!("{:?}", self),
         }

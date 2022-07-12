@@ -56,7 +56,7 @@ pub enum Type {
     Void,
     Unreachable,
     /// DynamicBytes and String are lowered to a vector.
-    Slice,
+    Slice(Box<Type>),
     /// We could not resolve this type
     Unresolved,
 }
