@@ -4638,7 +4638,7 @@ fn member_access(
                     });
                 }
             }
-            Type::Bytes(_) | Type::DynamicBytes => {
+            Type::Bytes(_) | Type::DynamicBytes | Type::String => {
                 if id.name == "length" {
                     let elem_ty = expr.ty().storage_array_elem().deref_into();
 
