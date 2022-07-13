@@ -89,7 +89,7 @@ impl SubstrateTarget {
             "seal_hash_blake2_128",
             "seal_hash_blake2_256",
             "seal_return",
-            "seal_println",
+            "seal_debug_message",
             "seal_instantiate",
             "seal_call",
             "seal_value_transferred",
@@ -301,8 +301,8 @@ impl SubstrateTarget {
         );
 
         binary.module.add_function(
-            "seal_println",
-            binary.context.void_type().fn_type(
+            "seal_debug_message",
+            binary.context.i32_type().fn_type(
                 &[
                     u8_ptr,  // string_ptr
                     u32_val, // string_len
@@ -3391,7 +3391,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
     fn print(&self, binary: &Binary, string_ptr: PointerValue, string_len: IntValue) {
         binary.builder.build_call(
-            binary.module.get_function("seal_println").unwrap(),
+            binary.module.get_function("seal_debug_message").unwrap(),
             &[string_ptr.into(), string_len.into()],
             "",
         );

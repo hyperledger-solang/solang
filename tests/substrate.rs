@@ -58,7 +58,7 @@ enum SubstrateExternal {
     seal_get_storage,
     seal_return,
     seal_hash_keccak_256,
-    seal_println,
+    seal_debug_message,
     seal_call,
     seal_instantiate,
     seal_value_transferred,
@@ -396,7 +396,7 @@ impl Externals for MockSubstrate {
                     _ => panic!("seal_return flag {} not valid", flags),
                 }
             }
-            Some(SubstrateExternal::seal_println) => {
+            Some(SubstrateExternal::seal_debug_message) => {
                 let data_ptr: u32 = args.nth_checked(0)?;
                 let len: u32 = args.nth_checked(1)?;
 
@@ -404,16 +404,16 @@ impl Externals for MockSubstrate {
                 buf.resize(len as usize, 0u8);
 
                 if let Err(e) = self.vm.memory.get_into(data_ptr, &mut buf) {
-                    panic!("seal_println: {}", e);
+                    panic!("seal_debug_message: {}", e);
                 }
 
-                let s = String::from_utf8_lossy(&buf);
+                let s = String::from_utf8(buf).expect("seal_debug_message: Invalid UFT8");
 
-                println!("seal_println: {}", s);
+                println!("seal_debug_message: {}", s);
 
                 self.printbuf.push_str(&s);
 
-                Ok(None)
+                Ok(Some(RuntimeValue::I32(0)))
             }
             Some(SubstrateExternal::seal_random) => {
                 let data_ptr: u32 = args.nth_checked(0)?;
@@ -740,8 +740,8 @@ impl Externals for MockSubstrate {
             }
             Some(SubstrateExternal::seal_caller) => {
                 let dest_ptr: u32 = args.nth_checked(0)?;
-                let len_ptr: u32 = args.nth_checked(1)?;
 
+                let len_ptr: u32 = args.nth_checked(1)?;
                 let scratch = self.vm.caller;
 
                 set_seal_value!("seal_caller", dest_ptr, len_ptr, &scratch);
@@ -912,7 +912,7 @@ impl ModuleImportResolver for MockSubstrate {
             "seal_hash_keccak_256" => SubstrateExternal::seal_hash_keccak_256,
             "seal_hash_blake2_128" => SubstrateExternal::seal_hash_blake2_128,
             "seal_hash_blake2_256" => SubstrateExternal::seal_hash_blake2_256,
-            "seal_println" => SubstrateExternal::seal_println,
+            "seal_debug_message" => SubstrateExternal::seal_debug_message,
             "seal_call" => SubstrateExternal::seal_call,
             "seal_instantiate" => SubstrateExternal::seal_instantiate,
             "seal_value_transferred" => SubstrateExternal::seal_value_transferred,

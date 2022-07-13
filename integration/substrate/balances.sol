@@ -14,6 +14,7 @@ contract balances {
 	function pay_me() public payable {
 		uint128 v = msg.value;
 
-		print("Thank you very much for {}".format(v));
+		// Disabled for now, see #911
+		// print("Thank you very much for {}".format(v));
 	}
 }
