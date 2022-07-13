@@ -356,7 +356,7 @@ pub fn expression(
                     .unwrap();
                     expression(&ast_expr, cfg, contract_no, func, ns, vartab, opt)
                 }
-                Type::DynamicBytes => Expression::StorageArrayLength {
+                Type::DynamicBytes | Type::String => Expression::StorageArrayLength {
                     loc: *loc,
                     ty: ty.clone(),
                     array: Box::new(array),
