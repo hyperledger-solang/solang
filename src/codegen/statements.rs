@@ -63,19 +63,54 @@ pub(crate) fn statement(
                     vartab,
                     opt,
                 };
-
                 //If we remove the assignment, we must keep expressions that have side effects
                 init.recurse(&mut params, process_side_effects_expressions);
                 return;
             }
 
-            let expr = expression(init, cfg, contract_no, Some(func), ns, vartab, opt);
+            let mut expression = expression(init, cfg, contract_no, Some(func), ns, vartab, opt);
+
+            // Let's check if the declaration is a declaration of a dynamic array
+            if let Expression::AllocDynamicArray(
+                loc_dyn_arr,
+                ty_dyn_arr @ Type::Array(..),
+                size,
+                opt,
+            ) = expression
+            {
+                let temp_res = vartab.temp_name("array_length", &Type::Uint(32));
+
+                cfg.add(
+                    vartab,
+                    Instr::Set {
+                        loc: *loc,
+                        res: temp_res,
+                        expr: *size,
+                    },
+                );
+                // If expression is an AllocDynamic array, replace the expression with AllocDynamicArray(_,_,tempvar,_) to avoid inserting size twice in the cfg
+                expression = Expression::AllocDynamicArray(
+                    loc_dyn_arr,
+                    ty_dyn_arr,
+                    Box::new(Expression::Variable(*loc, Type::Uint(32), temp_res)),
+                    opt,
+                );
+                cfg.array_lengths_temps.insert(*pos, temp_res);
+            } else if let Expression::Variable(_, _, res) = &expression {
+                // If declaration happens with an existing array, check if the size of the array is known.
+                // If the size of the right hand side is known (is in the array_length_map), make the left hand side track it
+                // Now, we will have two keys in the map that point to the same temporary variable
+                if let Some(to_add) = cfg.array_lengths_temps.clone().get(res) {
+                    cfg.array_lengths_temps.insert(*pos, *to_add);
+                }
+            }
+
             cfg.add(
                 vartab,
                 Instr::Set {
                     loc: *loc,
                     res: *pos,
-                    expr,
+                    expr: expression,
                 },
             );
         }
@@ -93,6 +128,22 @@ pub(crate) fn statement(
                     expr: Expression::Undefined(param.ty.clone()),
                 },
             );
+            // Handling arrays without size, defaulting the initial size with zero
+
+            if matches!(param.ty, Type::Array(..)) {
+                let num =
+                    Expression::NumberLiteral(pt::Loc::Codegen, Type::Uint(32), BigInt::zero());
+                let temp_res = vartab.temp_name("array_length", &Type::Uint(32));
+                cfg.add(
+                    vartab,
+                    Instr::Set {
+                        loc: *loc,
+                        res: temp_res,
+                        expr: num,
+                    },
+                );
+                cfg.array_lengths_temps.insert(*pos, temp_res);
+            }
         }
         Statement::Return(_, expr) => {
             if let Some(return_instr) = return_override {
@@ -120,6 +171,7 @@ pub(crate) fn statement(
                     if !reachable {
                         cfg.add(vartab, Instr::Unreachable);
                     }
+
                     return;
                 }
             }
