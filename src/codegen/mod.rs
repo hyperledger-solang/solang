@@ -1,3 +1,4 @@
+mod array_boundary;
 pub mod cfg;
 mod constant_folding;
 mod dead_storage;

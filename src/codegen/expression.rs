@@ -6,6 +6,7 @@ use super::{
     cfg::{ControlFlowGraph, Instr, InternalCallTy},
     vartable::Vartable,
 };
+use crate::codegen::array_boundary::handle_array_assign;
 use crate::codegen::unused_variable::should_remove_assignment;
 use crate::codegen::{Builtin, Expression};
 use crate::sema::ast;
@@ -237,13 +238,21 @@ pub fn expression(
         }
         ast::Expression::Assign(_, _, left, right) => {
             // If we reach this condition, the assignment is inside an expression.
+
             if let Some(function) = func {
                 if should_remove_assignment(ns, left, function, opt) {
                     return expression(right, cfg, contract_no, func, ns, vartab, opt);
                 }
             }
 
-            let cfg_right = expression(right, cfg, contract_no, func, ns, vartab, opt);
+            let mut cfg_right = expression(right, cfg, contract_no, func, ns, vartab, opt);
+
+            // If an assignment where the left hand side is an array, call a helper function that updates the temp variable.
+            if let ast::Expression::Variable(_, Type::Array(..), pos) = &**left {
+                // If cfg_right is an AllocDynamicArray(_,_,size,_), update it such that it becomes AllocDynamicArray(_,_,temp_var,_) to avoid repetitive expressions in the cfg.
+                cfg_right = handle_array_assign(cfg_right, cfg, vartab, pos);
+            }
+
             assign_single(left, cfg_right, cfg, contract_no, func, ns, vartab, opt)
         }
         ast::Expression::PreDecrement(loc, ty, unchecked, var)
@@ -619,24 +628,25 @@ pub fn expression(
             } else {
                 let address_res = vartab.temp_anonymous(&ty[0]);
 
-                let address_arr =
-                    match expression(&args[0], cfg, contract_no, func, ns, vartab, opt) {
-                        Expression::Variable(_, _, pos) => {
-                            vartab.set_dirty(pos);
+                let array_pos = match expression(&args[0], cfg, contract_no, func, ns, vartab, opt)
+                {
+                    Expression::Variable(_, _, pos) => {
+                        vartab.set_dirty(pos);
 
-                            pos
-                        }
-                        _ => unreachable!(),
-                    };
+                        pos
+                    }
+                    _ => unreachable!(),
+                };
 
                 cfg.add(
                     vartab,
                     Instr::PopMemory {
                         res: address_res,
                         ty: args[0].ty(),
-                        array: address_arr,
+                        array: array_pos,
                     },
                 );
+                cfg.modify_temp_array_length(true, array_pos, vartab);
 
                 Expression::Variable(*loc, ty[0].clone(), address_res)
             }
@@ -763,7 +773,7 @@ fn memory_array_push(
     opt: &Options,
 ) -> Expression {
     let address_res = vartab.temp_anonymous(ty);
-    let address_arr = match expression(array, cfg, contract_no, func, ns, vartab, opt) {
+    let array_pos = match expression(array, cfg, contract_no, func, ns, vartab, opt) {
         Expression::Variable(_, _, pos) => {
             vartab.set_dirty(pos);
 
@@ -776,10 +786,12 @@ fn memory_array_push(
         Instr::PushMemory {
             res: address_res,
             ty: array.ty(),
-            array: address_arr,
+            array: array_pos,
             value: Box::new(value),
         },
     );
+    cfg.modify_temp_array_length(false, array_pos, vartab);
+
     Expression::Variable(*loc, ty.clone(), address_res)
 }
 
@@ -1619,12 +1631,23 @@ fn expr_builtin(
             Expression::Builtin(*loc, tys.to_vec(), builtin.into(), vec![buf, offset])
         }
         _ => {
-            let args = args
+            let arguments: Vec<Expression> = args
                 .iter()
                 .map(|v| expression(v, cfg, contract_no, func, ns, vartab, opt))
                 .collect();
 
-            Expression::Builtin(*loc, tys.to_vec(), builtin.into(), args)
+            if !arguments.is_empty() && builtin == &ast::Builtin::ArrayLength {
+                // If an array length instruction is called
+                // Get the variable it is assigned with
+                if let Expression::Variable(_, _, num) = &arguments[0] {
+                    // Now that we have its temp in the map, retrieve the temp var res from the map
+                    if let Some(array_length_var) = cfg.array_lengths_temps.get(num) {
+                        // If it's there, replace ArrayLength with the temp var
+                        return Expression::Variable(*loc, Type::Uint(32), *array_length_var);
+                    }
+                }
+            }
+            Expression::Builtin(*loc, tys.to_vec(), builtin.into(), arguments)
         }
     }
 }
@@ -2552,12 +2575,25 @@ fn array_subscript(
                         array_length
                     }
                 } else {
-                    Expression::Builtin(
+                    // If a subscript is encountered array length will be called
+
+                    // Return array length by default
+                    let mut returned = Expression::Builtin(
                         *loc,
                         vec![Type::Uint(32)],
                         Builtin::ArrayLength,
                         vec![array.clone()],
-                    )
+                    );
+
+                    if let Expression::Variable(loc, _, num) = &array {
+                        // If the size is known (is in cfg.array_length_map), do the replacement
+
+                        if let Some(array_length_var) = cfg.array_lengths_temps.get(num) {
+                            returned =
+                                Expression::Variable(*loc, Type::Uint(32), *array_length_var);
+                        }
+                    }
+                    returned
                 }
             }
             Some(l) => {

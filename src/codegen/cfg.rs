@@ -1,9 +1,3 @@
-use indexmap::IndexMap;
-use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
-use std::str;
-use std::sync::Arc;
-use std::{fmt, fmt::Write};
-
 use super::statements::{statement, LoopScopes};
 use super::{
     constant_folding, dead_storage,
@@ -20,8 +14,17 @@ use crate::sema::ast::{CallTy, Contract, Function, Namespace, Parameter, StringL
 use crate::sema::contracts::collect_base_args;
 use crate::sema::Recurse;
 use crate::{ast, Target};
+use indexmap::IndexMap;
+use num_bigint::BigInt;
+use num_traits::One;
 use solang_parser::pt;
 use solang_parser::pt::CodeLocation;
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
+use std::str;
+use std::sync::Arc;
+use std::{fmt, fmt::Write};
+// IndexMap <ArrayVariable res , res of temp variable>
+pub type ArrayLengthVars = IndexMap<usize, usize>;
 
 #[derive(Clone)]
 #[allow(clippy::large_enum_variant)]
@@ -337,6 +340,8 @@ pub struct ControlFlowGraph {
     pub ty: pt::FunctionTy,
     pub selector: u32,
     current: usize,
+    // A mapping between the res of an array and the res of the temp var holding its length.
+    pub array_lengths_temps: ArrayLengthVars,
 }
 
 #[derive(Clone, Copy, PartialEq)]
@@ -360,6 +365,7 @@ impl ControlFlowGraph {
             ty: pt::FunctionTy::Function,
             selector: 0,
             current: 0,
+            array_lengths_temps: IndexMap::new(),
         };
 
         cfg.new_basic_block("entry".to_string());
@@ -381,6 +387,7 @@ impl ControlFlowGraph {
             ty: pt::FunctionTy::Function,
             selector: 0,
             current: 0,
+            array_lengths_temps: IndexMap::new(),
         }
     }
 
@@ -419,6 +426,62 @@ impl ControlFlowGraph {
             vartab.set_dirty(res);
         }
         self.blocks[self.current].add(ins);
+    }
+    /// Function to modify array length temp by inserting an add/sub instruction in the cfg right after a push/pop instruction.
+    /// The operands of the add/sub instruction are the temp variable, and +/- 1.
+    pub fn modify_temp_array_length(
+        &mut self,
+        minus: bool,      // If the function is called from pushMemory or popMemory
+        array_pos: usize, // The res of array that push/pop is performed on
+        vartab: &mut Vartable,
+    ) {
+        // If not empty
+        if self.array_lengths_temps.contains_key(&array_pos) {
+            let to_add = self.array_lengths_temps[&array_pos];
+            let add_expr = if minus {
+                Expression::Subtract(
+                    pt::Loc::Codegen,
+                    Type::Uint(32),
+                    false,
+                    Box::new(Expression::Variable(
+                        pt::Loc::Codegen,
+                        Type::Uint(32),
+                        to_add,
+                    )),
+                    Box::new(Expression::NumberLiteral(
+                        pt::Loc::Codegen,
+                        Type::Uint(32),
+                        BigInt::one(),
+                    )),
+                )
+            } else {
+                Expression::Add(
+                    pt::Loc::Codegen,
+                    Type::Uint(32),
+                    false,
+                    Box::new(Expression::Variable(
+                        pt::Loc::Codegen,
+                        Type::Uint(32),
+                        to_add,
+                    )),
+                    Box::new(Expression::NumberLiteral(
+                        pt::Loc::Codegen,
+                        Type::Uint(32),
+                        BigInt::one(),
+                    )),
+                )
+            };
+
+            // Add instruction to the cfg
+            self.add(
+                vartab,
+                Instr::Set {
+                    loc: pt::Loc::Codegen,
+                    res: to_add,
+                    expr: add_expr,
+                },
+            );
+        }
     }
 
     pub fn expr_to_string(&self, contract: &Contract, ns: &Namespace, expr: &Expression) -> String {
