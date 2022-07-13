@@ -2678,7 +2678,7 @@ fn array_subscript(
 
                 if ty.array_length().is_some() {
                     // fixed length array
-                    let elem_size = elem_ty.deref_any().size_of(ns);
+                    let elem_size = elem_ty.deref_any().solana_storage_size(ns);
 
                     Expression::Add(
                         *loc,

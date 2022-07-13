@@ -704,7 +704,7 @@ fn struct_offsets(ns: &mut Namespace) {
                 offsets.push(offset.clone());
 
                 if !field.recursive {
-                    offset += field.ty.size_of(ns);
+                    offset += field.ty.solana_storage_size(ns);
                 }
             }
 
@@ -993,10 +993,8 @@ impl Type {
         }
     }
 
-    /// Calculate how much memory we expect this type to use when allocated on the
-    /// stack or on the heap. Depending on the llvm implementation there might be
-    /// padding between elements which is not accounted for.
-    pub fn size_of(&self, ns: &Namespace) -> BigInt {
+    /// Returns the size a type occupies in memory
+    pub fn memory_size_of(&self, ns: &Namespace) -> BigInt {
         match self {
             Type::Enum(_) => BigInt::one(),
             Type::Bool => BigInt::one(),
@@ -1006,8 +1004,44 @@ impl Type {
             Type::Uint(n) | Type::Int(n) => BigInt::from(n / 8),
             Type::Rational => unreachable!(),
             Type::Array(ty, dims) => {
+                let pointer_size = BigInt::from(ns.target.ptr_size() / 8);
+                ty.memory_size_of(ns).mul(
+                    dims.iter()
+                        .map(|d| match d {
+                            None => &pointer_size,
+                            Some(n) => n,
+                        })
+                        .product::<BigInt>(),
+                )
+            }
+            Type::Struct(n) => ns.structs[*n]
+                .fields
+                .iter()
+                .map(|d| d.ty.memory_size_of(ns))
+                .sum::<BigInt>(),
+            Type::String
+            | Type::DynamicBytes
+            | Type::InternalFunction { .. }
+            | Type::Ref(_)
+            | Type::StorageRef(..) => BigInt::from(ns.target.ptr_size() / 8),
+            Type::ExternalFunction { .. } => {
+                // Address and selector
+                Type::Address(false).memory_size_of(ns) + Type::Uint(32).memory_size_of(ns)
+            }
+            Type::Unresolved | Type::Mapping(..) => BigInt::zero(),
+            Type::UserType(no) => ns.user_types[*no].ty.memory_size_of(ns),
+            _ => unimplemented!("sizeof on {:?}", self),
+        }
+    }
+
+    /// Calculate how much memory this type occupies in Solana's storage.
+    /// Depending on the llvm implementation there might be padding between elements
+    /// which is not accounted for.
+    pub fn solana_storage_size(&self, ns: &Namespace) -> BigInt {
+        match self {
+            Type::Array(ty, dims) => {
                 let pointer_size = BigInt::from(4);
-                ty.size_of(ns).mul(
+                ty.solana_storage_size(ns).mul(
                     dims.iter()
                         .map(|d| match d {
                             None => &pointer_size,
@@ -1022,21 +1056,16 @@ impl Type {
                 .cloned()
                 .unwrap_or_else(BigInt::zero),
             Type::String | Type::DynamicBytes => BigInt::from(4),
-            Type::InternalFunction { .. } => BigInt::from(ns.target.ptr_size()),
-            Type::ExternalFunction { .. } => {
-                // Address and selector
-                Type::Address(false).size_of(ns) + Type::Uint(32).size_of(ns)
-            }
-            Type::Unresolved | Type::Mapping(..) => BigInt::zero(),
-            Type::Ref(ty) | Type::StorageRef(_, ty) => ty.size_of(ns),
-            Type::UserType(no) => ns.user_types[*no].ty.size_of(ns),
-            _ => unimplemented!("sizeof on {:?}", self),
+            Type::Ref(ty) | Type::StorageRef(_, ty) => ty.solana_storage_size(ns),
+            Type::UserType(no) => ns.user_types[*no].ty.solana_storage_size(ns),
+            // Other types have the same size both in storage and in memory
+            _ => self.memory_size_of(ns),
         }
     }
 
     /// Does this type fit into memory
     pub fn fits_in_memory(&self, ns: &Namespace) -> bool {
-        self.size_of(ns) < BigInt::from(u16::MAX)
+        self.memory_size_of(ns) < BigInt::from(u16::MAX)
     }
 
     /// Calculate the alignment
