@@ -2263,11 +2263,9 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                         .i32_type()
                         .const_int(dim[0].as_ref().unwrap().to_u64().unwrap(), false);
                 } else {
+                    let llvm_elem_ty = binary.llvm_field_ty(elem_ty, ns);
                     let elem_size = binary.builder.build_int_truncate(
-                        binary
-                            .context
-                            .i32_type()
-                            .const_int(elem_ty.size_of(ns).to_u64().unwrap(), false),
+                        llvm_elem_ty.size_of().unwrap(),
                         binary.context.i32_type(),
                         "size_of",
                     );
