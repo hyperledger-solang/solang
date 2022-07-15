@@ -27,9 +27,10 @@ strict digraph "tests/contract_testcases/substrate/contracts/external_call_02.so
 	variable_26 [label="variable: t\nint32\ntests/contract_testcases/substrate/contracts/external_call_02.sol:18:28-29"]
 	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/contracts/external_call_02.sol:2:9-10:10"]
 	diagnostic_29 [label="'public': visibility for constructors is ignored\nlevel Warning\ntests/contract_testcases/substrate/contracts/external_call_02.sol:4:27-33"]
-	diagnostic_30 [label="duplicate argument with name 't'\nlevel Error\ntests/contract_testcases/substrate/contracts/external_call_02.sol:8:41-42"]
-	diagnostic_31 [label="found contract 'b'\nlevel Debug\ntests/contract_testcases/substrate/contracts/external_call_02.sol:12:9-20:10"]
-	diagnostic_32 [label="'public': visibility for constructors is ignored\nlevel Warning\ntests/contract_testcases/substrate/contracts/external_call_02.sol:14:34-40"]
+	diagnostic_30 [label="function expects 1 arguments, 2 provided\nlevel Error\ntests/contract_testcases/substrate/contracts/external_call_02.sol:8:24-52"]
+	diagnostic_31 [label="duplicate argument with name 't'\nlevel Error\ntests/contract_testcases/substrate/contracts/external_call_02.sol:8:41-42"]
+	diagnostic_32 [label="found contract 'b'\nlevel Debug\ntests/contract_testcases/substrate/contracts/external_call_02.sol:12:9-20:10"]
+	diagnostic_33 [label="'public': visibility for constructors is ignored\nlevel Warning\ntests/contract_testcases/substrate/contracts/external_call_02.sol:14:34-40"]
 	contracts -> contract
 	contract -> var [label="variable"]
 	contract -> node_3 [label="constructor"]
@@ -59,6 +60,7 @@ strict digraph "tests/contract_testcases/substrate/contracts/external_call_02.so
 	diagnostics -> diagnostic [label="Debug"]
 	diagnostics -> diagnostic_29 [label="Warning"]
 	diagnostics -> diagnostic_30 [label="Error"]
-	diagnostics -> diagnostic_31 [label="Debug"]
-	diagnostics -> diagnostic_32 [label="Warning"]
+	diagnostics -> diagnostic_31 [label="Error"]
+	diagnostics -> diagnostic_32 [label="Debug"]
+	diagnostics -> diagnostic_33 [label="Warning"]
 }

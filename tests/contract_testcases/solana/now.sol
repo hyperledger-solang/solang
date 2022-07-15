@@ -16,4 +16,9 @@ contract c {
 		int now = 5;
 		return now;
 	}
+	event LockRecord(address a,uint n,uint256 m);
+	function foo() public {
+		emit LockRecord(address(this), now, 34);
+		emit LockRecord({a: address(this), n: now, m: 34});
+	}
 }

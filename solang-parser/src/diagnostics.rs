@@ -1,7 +1,7 @@
 use crate::pt;
 use crate::pt::Loc;
 
-#[derive(Debug, Eq, Hash, PartialOrd, Ord, PartialEq)]
+#[derive(Clone, Debug, Eq, Hash, PartialOrd, Ord, PartialEq)]
 pub enum Level {
     Debug,
     Info,
@@ -20,23 +20,24 @@ impl Level {
     }
 }
 
-#[derive(Debug, Eq, Hash, PartialOrd, Ord, PartialEq)]
+#[derive(Clone, Debug, Eq, Hash, PartialOrd, Ord, PartialEq)]
 pub enum ErrorType {
     None,
     ParserError,
     SyntaxError,
     DeclarationError,
+    CastError,
     TypeError,
     Warning,
 }
 
-#[derive(Debug, Eq, Hash, PartialOrd, Ord, PartialEq)]
+#[derive(Clone, Debug, Eq, Hash, PartialOrd, Ord, PartialEq)]
 pub struct Note {
     pub loc: pt::Loc,
     pub message: String,
 }
 
-#[derive(Debug, Eq, Hash, PartialOrd, Ord, PartialEq)]
+#[derive(Clone, Debug, Eq, Hash, PartialOrd, Ord, PartialEq)]
 pub struct Diagnostic {
     pub loc: pt::Loc,
     pub level: Level,
@@ -96,10 +97,43 @@ impl Diagnostic {
         }
     }
 
+    pub fn cast_error(loc: Loc, message: String) -> Self {
+        Diagnostic {
+            level: Level::Error,
+            ty: ErrorType::CastError,
+            loc,
+            message,
+            notes: Vec::new(),
+        }
+    }
+
+    pub fn cast_error_with_note(loc: Loc, message: String, note_loc: Loc, note: String) -> Self {
+        Diagnostic {
+            level: Level::Error,
+            ty: ErrorType::CastError,
+            loc,
+            message,
+            notes: vec![Note {
+                loc: note_loc,
+                message: note,
+            }],
+        }
+    }
+
     pub fn type_error(loc: Loc, message: String) -> Self {
         Diagnostic {
             level: Level::Error,
             ty: ErrorType::TypeError,
+            loc,
+            message,
+            notes: Vec::new(),
+        }
+    }
+
+    pub fn cast_warning(loc: Loc, message: String) -> Self {
+        Diagnostic {
+            level: Level::Warning,
+            ty: ErrorType::CastError,
             loc,
             message,
             notes: Vec::new(),

@@ -3,7 +3,7 @@ use super::contracts::is_base;
 use super::expression::{
     available_functions, call_expr, constructor_named_args, expression, function_call_expr,
     function_call_pos_args, match_constructor_to_args, named_call_expr, named_function_call_expr,
-    new, ExprContext, ResolveTo,
+    new, non_casting_errors, ExprContext, ResolveTo,
 };
 use super::symtable::{LoopScopes, Symtable};
 use crate::sema::builtin;
@@ -905,40 +905,36 @@ fn emit_event(
         pt::Expression::FunctionCall(_, ty, args) => {
             let event_loc = ty.loc();
 
-            let mut temp_diagnostics = Vec::new();
+            let mut errors = Vec::new();
 
-            let event_nos = ns.resolve_event(
-                context.file_no,
-                context.contract_no,
-                ty,
-                &mut temp_diagnostics,
-            );
-
-            // check if arguments are valid expressions
-            for arg in args {
-                let _ = expression(
-                    arg,
-                    context,
-                    ns,
-                    symtable,
-                    &mut temp_diagnostics,
-                    ResolveTo::Unknown,
-                );
-            }
-
-            if !temp_diagnostics.is_empty() {
-                diagnostics.extend(temp_diagnostics);
-                return Err(());
-            }
-
-            // resolving the event type succeeded, so we can safely unwrap it
-            let event_nos = event_nos.unwrap();
+            let event_nos =
+                match ns.resolve_event(context.file_no, context.contract_no, ty, diagnostics) {
+                    Ok(nos) => nos,
+                    Err(_) => {
+                        for arg in args {
+                            if let Ok(exp) = expression(
+                                arg,
+                                context,
+                                ns,
+                                symtable,
+                                diagnostics,
+                                ResolveTo::Unknown,
+                            ) {
+                                used_variable(ns, &exp, symtable);
+                            };
+                        }
+                        return Err(());
+                    }
+                };
 
             for event_no in &event_nos {
                 let event = &mut ns.events[*event_no];
                 event.used = true;
+
+                let mut matches = true;
+
                 if args.len() != event.fields.len() {
-                    temp_diagnostics.push(Diagnostic::error(
+                    errors.push(Diagnostic::cast_error(
                         *loc,
                         format!(
                             "event type '{}' has {} fields, {} provided",
@@ -947,23 +943,24 @@ fn emit_event(
                             args.len()
                         ),
                     ));
-                    continue;
+                    matches = false;
                 }
                 let mut cast_args = Vec::new();
 
-                let mut matches = true;
                 // check if arguments can be implicitly casted
                 for (i, arg) in args.iter().enumerate() {
-                    let ty = ns.events[*event_no].fields[i].ty.clone();
+                    let ty = ns.events[*event_no]
+                        .fields
+                        .get(i)
+                        .map(|field| field.ty.clone());
 
-                    let arg = match expression(
-                        arg,
-                        context,
-                        ns,
-                        symtable,
-                        &mut temp_diagnostics,
-                        ResolveTo::Type(&ty),
-                    ) {
+                    let resolve_to = ty
+                        .as_ref()
+                        .map(ResolveTo::Type)
+                        .unwrap_or(ResolveTo::Unknown);
+
+                    let arg = match expression(arg, context, ns, symtable, &mut errors, resolve_to)
+                    {
                         Ok(e) => e,
                         Err(()) => {
                             matches = false;
@@ -972,10 +969,12 @@ fn emit_event(
                     };
                     used_variable(ns, &arg, symtable);
 
-                    match arg.cast(&arg.loc(), &ty, true, ns, &mut temp_diagnostics) {
-                        Ok(expr) => cast_args.push(expr),
-                        Err(_) => {
-                            matches = false;
+                    if let Some(ty) = &ty {
+                        match arg.cast(&arg.loc(), ty, true, ns, &mut errors) {
+                            Ok(expr) => cast_args.push(expr),
+                            Err(_) => {
+                                matches = false;
+                            }
                         }
                     }
                 }
@@ -991,11 +990,17 @@ fn emit_event(
                         event_loc,
                         args: cast_args,
                     });
+                } else if event_nos.len() > 1 {
+                    let errors = non_casting_errors(&errors);
+                    if !errors.is_empty() {
+                        diagnostics.extend(errors);
+                        return Err(());
+                    }
                 }
             }
 
             if event_nos.len() == 1 {
-                diagnostics.extend(temp_diagnostics);
+                diagnostics.extend(errors);
             } else {
                 diagnostics.push(Diagnostic::error(
                     *loc,
@@ -1007,63 +1012,79 @@ fn emit_event(
             let event_loc = ty.loc();
 
             let mut temp_diagnostics = Vec::new();
-
-            let event_nos = ns.resolve_event(
-                context.file_no,
-                context.contract_no,
-                ty,
-                &mut temp_diagnostics,
-            );
-
-            // check if arguments are valid expressions
             let mut arguments = HashMap::new();
 
             for arg in args {
                 if arguments.contains_key(arg.name.name.as_str()) {
-                    temp_diagnostics.push(Diagnostic::error(
+                    diagnostics.push(Diagnostic::error(
                         arg.name.loc,
                         format!("duplicate argument with name '{}'", arg.name.name),
                     ));
-                }
 
-                let _ = expression(
-                    &arg.expr,
-                    context,
-                    ns,
-                    symtable,
-                    &mut temp_diagnostics,
-                    ResolveTo::Unknown,
-                );
+                    let _ = expression(
+                        &arg.expr,
+                        context,
+                        ns,
+                        symtable,
+                        diagnostics,
+                        ResolveTo::Unknown,
+                    );
+
+                    continue;
+                }
 
                 arguments.insert(arg.name.name.as_str(), &arg.expr);
             }
 
-            if !temp_diagnostics.is_empty() {
-                diagnostics.extend(temp_diagnostics);
-                return Err(());
-            }
-
-            // resolving the event type succeeded, so we can safely unwrap it
-            let event_nos = event_nos.unwrap();
+            let event_nos = match ns.resolve_event(
+                context.file_no,
+                context.contract_no,
+                ty,
+                &mut temp_diagnostics,
+            ) {
+                Ok(nos) => nos,
+                Err(_) => {
+                    // check arguments for errors
+                    for (_, arg) in arguments {
+                        let _ =
+                            expression(arg, context, ns, symtable, diagnostics, ResolveTo::Unknown);
+                    }
+                    return Err(());
+                }
+            };
 
             for event_no in &event_nos {
                 let event = &mut ns.events[*event_no];
                 event.used = true;
                 let params_len = event.fields.len();
 
-                if params_len != arguments.len() {
+                let mut matches = true;
+
+                let unnamed_fields = event.fields.iter().filter(|p| p.id.is_none()).count();
+
+                if unnamed_fields > 0 {
+                    temp_diagnostics.push(Diagnostic::cast_error_with_note(
+                        *loc,
+                        format!(
+                            "event cannot be emmited with named fields as {} of its fields do not have names",
+                            unnamed_fields,
+                        ),
+                        event.loc,
+                        format!("definition of {}", event.name),
+                    ));
+                    matches = false;
+                } else if params_len != arguments.len() {
                     temp_diagnostics.push(Diagnostic::error(
                         *loc,
                         format!(
                             "event expects {} arguments, {} provided",
                             params_len,
-                            args.len()
+                            arguments.len()
                         ),
                     ));
-                    continue;
+                    matches = false;
                 }
 
-                let mut matches = true;
                 let mut cast_args = Vec::new();
 
                 // check if arguments can be implicitly casted
@@ -1071,22 +1092,14 @@ fn emit_event(
                     let param = ns.events[*event_no].fields[i].clone();
 
                     if param.id.is_none() {
-                        temp_diagnostics.push(Diagnostic::error(
-                        *loc,
-                        format!(
-                            "event '{}' cannot emitted by argument name since argument {} has no name",
-                            ns.events[*event_no].name, i,
-                        ),
-                    ));
-                        matches = false;
-                        break;
+                        continue;
                     }
 
                     let arg = match arguments.get(param.name_as_str()) {
                         Some(a) => a,
                         None => {
                             matches = false;
-                            temp_diagnostics.push(Diagnostic::error(
+                            temp_diagnostics.push(Diagnostic::cast_error(
                                 *loc,
                                 format!(
                                     "missing argument '{}' to event '{}'",
@@ -1094,7 +1107,7 @@ fn emit_event(
                                     ns.events[*event_no].name,
                                 ),
                             ));
-                            break;
+                            continue;
                         }
                     };
 
@@ -1109,7 +1122,7 @@ fn emit_event(
                         Ok(e) => e,
                         Err(()) => {
                             matches = false;
-                            break;
+                            continue;
                         }
                     };
 
@@ -1134,6 +1147,12 @@ fn emit_event(
                         event_loc,
                         args: cast_args,
                     });
+                } else if event_nos.len() > 1 {
+                    let errors = non_casting_errors(&temp_diagnostics);
+                    if !errors.is_empty() {
+                        diagnostics.extend(errors);
+                        return Err(());
+                    }
                 }
             }
 

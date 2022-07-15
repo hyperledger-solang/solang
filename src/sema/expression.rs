@@ -18,9 +18,10 @@ use base58::{FromBase58, FromBase58Error};
 use num_bigint::{BigInt, Sign};
 use num_rational::BigRational;
 use num_traits::{FromPrimitive, Num, One, Pow, ToPrimitive, Zero};
-use solang_parser::pt;
-use solang_parser::pt::CodeLocation;
-use solang_parser::pt::Loc;
+use solang_parser::{
+    diagnostics::ErrorType,
+    pt::{self, CodeLocation, Loc},
+};
 use std::{
     cmp,
     cmp::Ordering,
@@ -165,7 +166,7 @@ impl Expression {
                 if r.as_ref() == to {
                     Ok(self.clone())
                 } else {
-                    diagnostics.push(Diagnostic::type_error(
+                    diagnostics.push(Diagnostic::cast_error(
                         *loc,
                         format!(
                             "conversion from {} to {} not possible",
@@ -210,7 +211,7 @@ impl Expression {
             {
                 return if n.sign() == Sign::Minus {
                     if implicit {
-                        diagnostics.push(Diagnostic::type_error(
+                        diagnostics.push(Diagnostic::cast_error(
                             *loc,
                             format!(
                                 "implicit conversion cannot change negative number to '{}'",
@@ -231,7 +232,7 @@ impl Expression {
                         ))
                     }
                 } else if n.bits() >= to_len as u64 {
-                    diagnostics.push(Diagnostic::type_error(
+                    diagnostics.push(Diagnostic::cast_error(
                         *loc,
                         format!(
                             "implicit conversion would truncate from '{}' to '{}'",
@@ -252,7 +253,7 @@ impl Expression {
                 if p.is_primitive() =>
             {
                 return if n.bits() >= to_len as u64 {
-                    diagnostics.push(Diagnostic::type_error(
+                    diagnostics.push(Diagnostic::cast_error(
                         *loc,
                         format!(
                             "implicit conversion would truncate from '{}' to '{}'",
@@ -275,7 +276,7 @@ impl Expression {
                 // round up the number of bits to bytes
                 let bytes = (n.bits() + 7) / 8;
                 return if n.sign() == Sign::Minus {
-                    diagnostics.push(Diagnostic::type_error(
+                    diagnostics.push(Diagnostic::cast_error(
                         *loc,
                         format!(
                             "negative number cannot be converted to type '{}'",
@@ -284,7 +285,7 @@ impl Expression {
                     ));
                     Err(())
                 } else if n.sign() == Sign::Plus && bytes != to_len as u64 {
-                    diagnostics.push(Diagnostic::type_error(
+                    diagnostics.push(Diagnostic::cast_error(
                         *loc,
                         format!(
                             "number of {} bytes cannot be converted to type '{}'",
@@ -306,13 +307,13 @@ impl Expression {
             {
                 // note: negative values are allowed
                 return if implicit {
-                    diagnostics.push(Diagnostic::type_error(
+                    diagnostics.push(Diagnostic::cast_error(
                         *loc,
                         String::from("implicit conversion from int to address not allowed"),
                     ));
                     Err(())
                 } else if n.bits() > ns.address_length as u64 * 8 {
-                    diagnostics.push(Diagnostic::type_error(
+                    diagnostics.push(Diagnostic::cast_error(
                         *loc,
                         format!(
                             "number larger than possible in {} byte address",
@@ -333,7 +334,7 @@ impl Expression {
                 if p.is_primitive() =>
             {
                 return if bs.len() > to_len as usize && implicit {
-                    diagnostics.push(Diagnostic::type_error(
+                    diagnostics.push(Diagnostic::cast_error(
                         *loc,
                         format!(
                             "implicit conversion would truncate from '{}' to '{}'",
@@ -403,7 +404,7 @@ impl Expression {
             (Type::Uint(from_width), Type::Enum(enum_no))
             | (Type::Int(from_width), Type::Enum(enum_no)) => {
                 if implicit {
-                    diagnostics.push(Diagnostic::type_error(
+                    diagnostics.push(Diagnostic::cast_error(
                         *loc,
                         format!(
                             "implicit conversion from {} to {} not allowed",
@@ -428,7 +429,7 @@ impl Expression {
                         }
                     }
 
-                    diagnostics.push(Diagnostic::type_error(
+                    diagnostics.push(Diagnostic::cast_error(
                         *loc,
                         format!(
                             "enum {} has no value with ordinal {}",
@@ -459,7 +460,7 @@ impl Expression {
             (Type::Enum(enum_no), Type::Uint(to_width))
             | (Type::Enum(enum_no), Type::Int(to_width)) => {
                 if implicit {
-                    diagnostics.push(Diagnostic::type_error(
+                    diagnostics.push(Diagnostic::cast_error(
                         *loc,
                         format!(
                             "implicit conversion from {} to {} not allowed",
@@ -490,7 +491,7 @@ impl Expression {
             (Type::Uint(from_len), Type::Uint(to_len)) => match from_len.cmp(to_len) {
                 Ordering::Greater => {
                     if implicit {
-                        diagnostics.push(Diagnostic::type_error(
+                        diagnostics.push(Diagnostic::cast_error(
                             *loc,
                             format!(
                                 "implicit conversion would truncate from {} to {}",
@@ -513,7 +514,7 @@ impl Expression {
             (Type::Int(from_len), Type::Int(to_len)) => match from_len.cmp(to_len) {
                 Ordering::Greater => {
                     if implicit {
-                        diagnostics.push(Diagnostic::type_error(
+                        diagnostics.push(Diagnostic::cast_error(
                             *loc,
                             format!(
                                 "implicit conversion would truncate from {} to {}",
@@ -538,7 +539,7 @@ impl Expression {
             ),
             (Type::Int(from_len), Type::Uint(to_len)) => {
                 if implicit {
-                    diagnostics.push(Diagnostic::type_error(
+                    diagnostics.push(Diagnostic::cast_error(
                         *loc,
                         format!(
                             "implicit conversion would change sign from {} to {}",
@@ -561,7 +562,7 @@ impl Expression {
             }
             (Type::Uint(from_len), Type::Int(to_len)) => {
                 if implicit {
-                    diagnostics.push(Diagnostic::type_error(
+                    diagnostics.push(Diagnostic::cast_error(
                         *loc,
                         format!(
                             "implicit conversion would change sign from {} to {}",
@@ -590,7 +591,7 @@ impl Expression {
                 match from_len.cmp(&to_len) {
                     Ordering::Greater => {
                         if implicit {
-                            diagnostics.push(Diagnostic::type_error(
+                            diagnostics.push(Diagnostic::cast_error(
                                 *loc,
                                 format!(
                                     "implicit conversion would truncate from {} to {}",
@@ -618,7 +619,7 @@ impl Expression {
                 let to_len = *to_len as usize;
 
                 if implicit {
-                    diagnostics.push(Diagnostic::type_error(
+                    diagnostics.push(Diagnostic::cast_error(
                         *loc,
                         format!(
                             "implicit conversion would change sign from {} to {}",
@@ -646,7 +647,7 @@ impl Expression {
 
                 match from_len.cmp(&to_len) {
                     Ordering::Greater => {
-                        diagnostics.push(Diagnostic::warning(
+                        diagnostics.push(Diagnostic::cast_warning(
                             *loc,
                             format!(
                                 "conversion truncates {} to {}, as value is type {} on target {}",
@@ -676,7 +677,7 @@ impl Expression {
             // Casting int to address
             (Type::Uint(from_len), Type::Address(_)) | (Type::Int(from_len), Type::Address(_)) => {
                 if implicit {
-                    diagnostics.push(Diagnostic::type_error(
+                    diagnostics.push(Diagnostic::cast_error(
                         *loc,
                         format!(
                             "implicit conversion from {} to address not allowed",
@@ -712,7 +713,7 @@ impl Expression {
             // Casting address to int
             (Type::Address(_), Type::Uint(to_len)) | (Type::Address(_), Type::Int(to_len)) => {
                 if implicit {
-                    diagnostics.push(Diagnostic::type_error(
+                    diagnostics.push(Diagnostic::cast_error(
                         *loc,
                         format!(
                             "implicit conversion to {} from {} not allowed",
@@ -748,7 +749,7 @@ impl Expression {
             // Lengthing or shorting a fixed bytes array
             (Type::Bytes(from_len), Type::Bytes(to_len)) => {
                 if implicit {
-                    diagnostics.push(Diagnostic::type_error(
+                    diagnostics.push(Diagnostic::cast_error(
                         *loc,
                         format!(
                             "implicit conversion would truncate from {} to {}",
@@ -801,7 +802,7 @@ impl Expression {
                             return Ok(Expression::Cast(*loc, to.clone(), Box::new(self.clone())));
                         }
 
-                        diagnostics.push(Diagnostic::type_error(
+                        diagnostics.push(Diagnostic::cast_error(
                             *loc,
                             format!(
                                 "conversion to {} from {} not allowed",
@@ -829,7 +830,7 @@ impl Expression {
             (Type::Bytes(from_len), Type::Uint(to_len))
             | (Type::Bytes(from_len), Type::Int(to_len)) => {
                 if implicit {
-                    diagnostics.push(Diagnostic::type_error(
+                    diagnostics.push(Diagnostic::cast_error(
                         *loc,
                         format!(
                             "implicit conversion to {} from {} not allowed",
@@ -839,7 +840,7 @@ impl Expression {
                     ));
                     Err(())
                 } else if *from_len as u16 * 8 != *to_len {
-                    diagnostics.push(Diagnostic::type_error(
+                    diagnostics.push(Diagnostic::cast_error(
                         *loc,
                         format!(
                             "conversion to {} from {} not allowed",
@@ -857,7 +858,7 @@ impl Expression {
             (Type::Uint(from_len), Type::Bytes(to_len))
             | (Type::Int(from_len), Type::Bytes(to_len)) => {
                 if implicit {
-                    diagnostics.push(Diagnostic::type_error(
+                    diagnostics.push(Diagnostic::cast_error(
                         *loc,
                         format!(
                             "implicit conversion to {} from {} not allowed",
@@ -867,7 +868,7 @@ impl Expression {
                     ));
                     Err(())
                 } else if *to_len as u16 * 8 != *from_len {
-                    diagnostics.push(Diagnostic::type_error(
+                    diagnostics.push(Diagnostic::cast_error(
                         *loc,
                         format!(
                             "conversion to {} from {} not allowed",
@@ -884,7 +885,7 @@ impl Expression {
             // cast and if it is the same size (i.e. no conversion required)
             (Type::Bytes(from_len), Type::Address(_)) => {
                 if implicit {
-                    diagnostics.push(Diagnostic::type_error(
+                    diagnostics.push(Diagnostic::cast_error(
                         *loc,
                         format!(
                             "implicit conversion to {} from {} not allowed",
@@ -894,7 +895,7 @@ impl Expression {
                     ));
                     Err(())
                 } else if *from_len as usize != ns.address_length {
-                    diagnostics.push(Diagnostic::type_error(
+                    diagnostics.push(Diagnostic::cast_error(
                         *loc,
                         format!(
                             "conversion to {} from {} not allowed",
@@ -912,7 +913,7 @@ impl Expression {
             | (Type::Address(_), Type::Contract(_))
             | (Type::Contract(_), Type::Address(_)) => {
                 if implicit {
-                    diagnostics.push(Diagnostic::type_error(
+                    diagnostics.push(Diagnostic::cast_error(
                         *loc,
                         format!(
                             "implicit conversion to {} from {} not allowed",
@@ -928,7 +929,7 @@ impl Expression {
             // Conversion between contracts is allowed if it is a base
             (Type::Contract(contract_no_from), Type::Contract(contract_no_to)) => {
                 if implicit && !is_base(*contract_no_to, *contract_no_from, ns) {
-                    diagnostics.push(Diagnostic::type_error(
+                    diagnostics.push(Diagnostic::cast_error(
                         *loc,
                         format!(
                             "implicit conversion not allowed since {} is not a base contract of {}",
@@ -949,7 +950,7 @@ impl Expression {
             // cast and if it is the same size (i.e. no conversion required)
             (Type::Address(_), Type::Bytes(to_len)) => {
                 if implicit {
-                    diagnostics.push(Diagnostic::type_error(
+                    diagnostics.push(Diagnostic::cast_error(
                         *loc,
                         format!(
                             "implicit conversion to {} from {} not allowed",
@@ -959,7 +960,7 @@ impl Expression {
                     ));
                     Err(())
                 } else if *to_len as usize != ns.address_length {
-                    diagnostics.push(Diagnostic::type_error(
+                    diagnostics.push(Diagnostic::cast_error(
                         *loc,
                         format!(
                             "conversion to {} from {} not allowed",
@@ -998,7 +999,7 @@ impl Expression {
             }
             */
             (Type::Void, _) => {
-                diagnostics.push(Diagnostic::type_error(
+                diagnostics.push(Diagnostic::cast_error(
                     self.loc(),
                     "function or method does not return a value".to_string(),
                 ));
@@ -1029,7 +1030,7 @@ impl Expression {
                 },
             ) => {
                 if from_params != to_params {
-                    diagnostics.push(Diagnostic::type_error(
+                    diagnostics.push(Diagnostic::cast_error(
                         *loc,
                         format!(
                             "function arguments do not match in conversion from '{}' to '{}'",
@@ -1039,7 +1040,7 @@ impl Expression {
                     ));
                     Err(())
                 } else if from_returns != to_returns {
-                    diagnostics.push(Diagnostic::type_error(
+                    diagnostics.push(Diagnostic::cast_error(
                         *loc,
                         format!(
                             "function returns do not match in conversion from '{}' to '{}'",
@@ -1049,7 +1050,7 @@ impl Expression {
                     ));
                     Err(())
                 } else if !compatible_mutability(from_mutablity, to_mutablity) {
-                    diagnostics.push(Diagnostic::type_error(
+                    diagnostics.push(Diagnostic::cast_error(
                         *loc,
                         format!(
                             "function mutability not compatible in conversion from '{}' to '{}'",
@@ -1063,7 +1064,7 @@ impl Expression {
                 }
             }
             _ => {
-                diagnostics.push(Diagnostic::type_error(
+                diagnostics.push(Diagnostic::cast_error(
                     *loc,
                     format!(
                         "conversion from {} to {} not possible",
@@ -1484,7 +1485,7 @@ pub fn bigint_to_expression(
     if let ResolveTo::Type(resolve_to) = resolve_to {
         if *resolve_to != Type::Unresolved {
             if !resolve_to.is_integer() {
-                diagnostics.push(Diagnostic::error(
+                diagnostics.push(Diagnostic::cast_error(
                     *loc,
                     format!("expected '{}', found integer", resolve_to.to_string(ns)),
                 ));
@@ -1499,7 +1500,7 @@ pub fn bigint_to_expression(
 
             return if n.sign() == Sign::Minus {
                 if !resolve_to.is_signed_int() {
-                    diagnostics.push(Diagnostic::error(
+                    diagnostics.push(Diagnostic::cast_error(
                         *loc,
                         format!(
                             "negative literal {} not allowed for unsigned type '{}'",
@@ -1509,7 +1510,7 @@ pub fn bigint_to_expression(
                     ));
                     Err(())
                 } else if n.add(1u32).bits() > permitted_bits {
-                    diagnostics.push(Diagnostic::error(
+                    diagnostics.push(Diagnostic::cast_error(
                         *loc,
                         format!(
                             "literal {} is too large to fit into type '{}'",
@@ -1526,7 +1527,7 @@ pub fn bigint_to_expression(
                     ))
                 }
             } else if bits > permitted_bits {
-                diagnostics.push(Diagnostic::error(
+                diagnostics.push(Diagnostic::cast_error(
                     *loc,
                     format!(
                         "literal {} is too large to fit into type '{}'",
@@ -2295,7 +2296,7 @@ fn hex_number_literal(
         let val = BigInt::from_str_radix(&s, 16).unwrap();
 
         return if !val.is_zero() && s.len() != expected_length {
-            diagnostics.push(Diagnostic::error(
+            diagnostics.push(Diagnostic::cast_error(
                 *loc,
                 format!(
                     "hex literal {} must be {} digits for type 'bytes{}'",
@@ -3080,45 +3081,53 @@ pub fn match_constructor_to_args(
     symtable: &mut Symtable,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Result<(Option<usize>, Vec<Expression>), ()> {
-    let marker = diagnostics.len();
+    let mut errors = Vec::new();
 
     // constructor call
-    let mut constructor_count = 0;
+    let function_nos: Vec<usize> = ns.contracts[contract_no]
+        .functions
+        .iter()
+        .filter(|function_no| ns.functions[**function_no].is_constructor())
+        .copied()
+        .collect();
 
-    for function_no in ns.contracts[contract_no].functions.clone() {
-        if !ns.functions[function_no].is_constructor() {
-            continue;
-        }
+    for function_no in &function_nos {
+        let mut matches = true;
 
-        constructor_count += 1;
+        let params_len = ns.functions[*function_no].params.len();
 
-        // ideally we shouldn't be cloning, but expression() takes a mutable reference to the namespace
-        let params = ns.functions[function_no].params.clone();
-
-        if params.len() != args.len() {
-            diagnostics.push(Diagnostic::error(
+        if params_len != args.len() {
+            errors.push(Diagnostic::cast_error(
                 *loc,
                 format!(
                     "constructor expects {} arguments, {} provided",
-                    params.len(),
+                    params_len,
                     args.len()
                 ),
             ));
-            continue;
+            matches = false;
         }
 
-        let mut matches = true;
         let mut cast_args = Vec::new();
 
         // resolve arguments for this constructor
         for (i, arg) in args.iter().enumerate() {
+            let ty = ns.functions[*function_no]
+                .params
+                .get(i)
+                .map(|p| p.ty.clone());
+
             let arg = match expression(
                 arg,
                 context,
                 ns,
                 symtable,
-                diagnostics,
-                ResolveTo::Type(&params[i].ty),
+                &mut errors,
+                if let Some(ty) = &ty {
+                    ResolveTo::Type(ty)
+                } else {
+                    ResolveTo::Unknown
+                },
             ) {
                 Ok(v) => v,
                 Err(()) => {
@@ -3127,36 +3136,40 @@ pub fn match_constructor_to_args(
                 }
             };
 
-            match arg.cast(
-                &arg.loc(),
-                &ns.functions[function_no].params[i].ty.clone(),
-                true,
-                ns,
-                diagnostics,
-            ) {
-                Ok(expr) => cast_args.push(expr),
-                Err(()) => {
-                    matches = false;
-                    continue;
+            if let Some(ty) = &ty {
+                match arg.cast(&arg.loc(), ty, true, ns, &mut errors) {
+                    Ok(expr) => cast_args.push(expr),
+                    Err(()) => {
+                        matches = false;
+                    }
                 }
             }
         }
 
         if matches {
-            return Ok((Some(function_no), cast_args));
+            return Ok((Some(*function_no), cast_args));
+        } else if function_nos.len() > 1 {
+            let errors = non_casting_errors(&errors);
+            if !errors.is_empty() {
+                diagnostics.extend(errors);
+                return Err(());
+            }
         }
     }
 
-    if constructor_count == 0 && args.is_empty() {
-        return Ok((None, Vec::new()));
-    }
-
-    if constructor_count != 1 {
-        diagnostics.truncate(marker);
-        diagnostics.push(Diagnostic::error(
-            *loc,
-            "cannot find overloaded constructor which matches signature".to_string(),
-        ));
+    match function_nos.len() {
+        0 if args.is_empty() => {
+            return Ok((None, Vec::new()));
+        }
+        0 | 1 => {
+            diagnostics.extend(errors);
+        }
+        _ => {
+            diagnostics.push(Diagnostic::error(
+                *loc,
+                "cannot find overloaded constructor which matches signature".to_string(),
+            ));
+        }
     }
 
     Err(())
@@ -3263,44 +3276,67 @@ pub fn constructor_named_args(
         arguments.insert(&arg.name.name, &arg.expr);
     }
 
-    let marker = diagnostics.len();
-    let mut found_constructors = 0;
+    let mut errors = Vec::new();
 
     // constructor call
-    for function_no in ns.contracts[no].functions.clone() {
-        if !ns.functions[function_no].is_constructor() {
-            continue;
-        }
+    let function_nos: Vec<usize> = ns.contracts[no]
+        .functions
+        .iter()
+        .filter(|function_no| ns.functions[**function_no].is_constructor())
+        .copied()
+        .collect();
 
-        found_constructors += 1;
+    // constructor call
+    for function_no in &function_nos {
+        let func = &ns.functions[*function_no];
+        let params_len = func.params.len();
 
-        let params_len = ns.functions[function_no].params.len();
+        let mut matches = true;
 
-        if params_len != args.len() {
-            diagnostics.push(Diagnostic::error(
+        let unnamed_params = func.params.iter().filter(|p| p.id.is_none()).count();
+
+        if unnamed_params > 0 {
+            errors.push(Diagnostic::cast_error_with_note(
+                *loc,
+                format!(
+                    "constructor cannot be called with named arguments as {} of its parameters do not have names",
+                    unnamed_params,
+                ),
+                func.loc,
+                format!("definition of {}", func.ty),
+            ));
+            matches = false;
+        } else if params_len != args.len() {
+            errors.push(Diagnostic::cast_error_with_note(
                 *loc,
                 format!(
                     "constructor expects {} arguments, {} provided",
                     params_len,
                     args.len()
                 ),
+                func.loc,
+                "definition of constructor".to_owned(),
             ));
-            continue;
+            matches = false;
         }
 
-        let mut matches = true;
         let mut cast_args = Vec::new();
+
+        let func_loc = ns.functions[*function_no].loc;
 
         // check if arguments can be implicitly casted
         for i in 0..params_len {
-            let param = ns.functions[function_no].params[i].clone();
+            let param = ns.functions[*function_no].params[i].clone();
+
             let arg = match arguments.get(param.name_as_str()) {
                 Some(a) => a,
                 None => {
                     matches = false;
-                    diagnostics.push(Diagnostic::error(
+                    errors.push(Diagnostic::cast_error_with_note(
                         *loc,
                         format!("missing argument '{}' to constructor", param.name_as_str()),
+                        func_loc,
+                        "definition of constructor".to_owned(),
                     ));
                     break;
                 }
@@ -3311,21 +3347,20 @@ pub fn constructor_named_args(
                 context,
                 ns,
                 symtable,
-                diagnostics,
+                &mut errors,
                 ResolveTo::Type(&param.ty),
             ) {
                 Ok(e) => e,
                 Err(()) => {
                     matches = false;
-                    break;
+                    continue;
                 }
             };
 
-            match arg.cast(&arg.loc(), &param.ty, true, ns, diagnostics) {
+            match arg.cast(&arg.loc(), &param.ty, true, ns, &mut errors) {
                 Ok(expr) => cast_args.push(expr),
                 Err(()) => {
                     matches = false;
-                    break;
                 }
             }
         }
@@ -3334,24 +3369,33 @@ pub fn constructor_named_args(
             return Ok(Expression::Constructor {
                 loc: *loc,
                 contract_no: no,
-                constructor_no: Some(function_no),
+                constructor_no: Some(*function_no),
                 args: cast_args,
                 call_args,
             });
+        } else if function_nos.len() > 1 {
+            let errors = non_casting_errors(&errors);
+            if !errors.is_empty() {
+                diagnostics.extend(errors);
+                return Err(());
+            }
         }
     }
 
-    match found_constructors {
-        0 => Ok(Expression::Constructor {
+    match function_nos.len() {
+        0 if args.is_empty() => Ok(Expression::Constructor {
             loc: *loc,
             contract_no: no,
             constructor_no: None,
             args: Vec::new(),
             call_args,
         }),
-        1 => Err(()),
+        0 | 1 => {
+            diagnostics.extend(errors);
+
+            Err(())
+        }
         _ => {
-            diagnostics.truncate(marker);
             diagnostics.push(Diagnostic::error(
                 *loc,
                 "cannot find overloaded constructor which matches signature".to_string(),
@@ -5228,26 +5272,13 @@ pub fn available_super_functions(name: &str, contract_no: usize, ns: &Namespace)
     list
 }
 
-/// Test function arguments can be resolve at all (not resolved for specific type)
-/// When an argument to single
-pub fn args_sanity_check(
-    args: &[pt::Expression],
-    context: &ExprContext,
-    ns: &mut Namespace,
-    symtable: &mut Symtable,
-    diagnostics: &mut Vec<Diagnostic>,
-) -> Result<(), ()> {
-    let mut errors = false;
-
-    for arg in args {
-        errors |= expression(arg, context, ns, symtable, diagnostics, ResolveTo::Unknown).is_err();
-    }
-
-    if errors {
-        Err(())
-    } else {
-        Ok(())
-    }
+/// Filter out all the diagnostics which are not the result of casting problems
+pub fn non_casting_errors(diagnostics: &[Diagnostic]) -> Vec<Diagnostic> {
+    diagnostics
+        .iter()
+        .filter(|diag| diag.ty != ErrorType::CastError)
+        .cloned()
+        .collect()
 }
 
 /// Resolve a function call with positional arguments
@@ -5267,11 +5298,9 @@ pub fn function_call_pos_args(
     let mut name_matches = 0;
     let mut errors = Vec::new();
 
-    args_sanity_check(args, context, ns, symtable, diagnostics)?;
-
     // Try to resolve as a function call
-    for function_no in function_nos {
-        let func = &ns.functions[function_no];
+    for function_no in &function_nos {
+        let func = &ns.functions[*function_no];
 
         if func.ty != func_ty {
             continue;
@@ -5299,7 +5328,7 @@ pub fn function_call_pos_args(
 
         // check if arguments can be implicitly casted
         for (i, arg) in args.iter().enumerate() {
-            let ty = ns.functions[function_no].params[i].ty.clone();
+            let ty = ns.functions[*function_no].params[i].ty.clone();
 
             let arg = match expression(
                 arg,
@@ -5320,16 +5349,23 @@ pub fn function_call_pos_args(
                 Ok(expr) => cast_args.push(expr),
                 Err(_) => {
                     matches = false;
-                    continue;
                 }
             }
         }
 
         if !matches {
+            if function_nos.len() > 1 {
+                let errors = non_casting_errors(&errors);
+                if !errors.is_empty() {
+                    diagnostics.extend(errors);
+                    return Err(());
+                }
+            }
+
             continue;
         }
 
-        let func = &ns.functions[function_no];
+        let func = &ns.functions[*function_no];
 
         if func.contract_no != context.contract_no && func.is_private() {
             errors.push(Diagnostic::error_with_note(
@@ -5351,7 +5387,7 @@ pub fn function_call_pos_args(
             function: Box::new(Expression::InternalFunction {
                 loc: *loc,
                 ty,
-                function_no,
+                function_no: *function_no,
                 signature: if virtual_call && (func.is_virtual || func.is_override.is_some()) {
                     Some(func.signature.clone())
                 } else {
@@ -5403,56 +5439,53 @@ fn function_call_named_args(
 ) -> Result<Expression, ()> {
     let mut arguments = HashMap::new();
 
-    // check if the arguments are not garbage
-    let mut errors = false;
-
     for arg in args {
         if arguments.contains_key(arg.name.name.as_str()) {
             diagnostics.push(Diagnostic::error(
                 arg.name.loc,
                 format!("duplicate argument with name '{}'", arg.name.name),
             ));
-            errors = true;
-        }
 
-        if expression(
-            &arg.expr,
-            context,
-            ns,
-            symtable,
-            diagnostics,
-            ResolveTo::Unknown,
-        )
-        .is_err()
-        {
-            errors = true;
+            let _ = expression(
+                &arg.expr,
+                context,
+                ns,
+                symtable,
+                diagnostics,
+                ResolveTo::Unknown,
+            );
         }
 
         arguments.insert(arg.name.name.as_str(), &arg.expr);
     }
-
-    if errors {
-        return Err(());
-    }
-
     // Try to resolve as a function call
-    let mut name_matches = 0;
     let mut errors = Vec::new();
 
     // Try to resolve as a function call
-    for function_no in function_nos {
-        let func = &ns.functions[function_no];
+    for function_no in &function_nos {
+        let func = &ns.functions[*function_no];
 
-        if func.name != id.name || func.ty != pt::FunctionTy::Function {
+        if func.ty != pt::FunctionTy::Function {
             continue;
         }
 
-        name_matches += 1;
-
+        let unnamed_params = func.params.iter().filter(|p| p.id.is_none()).count();
         let params_len = func.params.len();
+        let mut matches = true;
 
-        if params_len != args.len() {
-            errors.push(Diagnostic::error(
+        if unnamed_params > 0 {
+            errors.push(Diagnostic::cast_error_with_note(
+                *loc,
+                format!(
+                    "function cannot be called with named arguments as {} of its parameters do not have names",
+                    unnamed_params,
+                ),
+                func.loc,
+                format!("definition of {}", func.name),
+            ));
+            matches = false;
+        } else if params_len != args.len() {
+            errors.push(Diagnostic::cast_error(
                 *loc,
                 format!(
                     "function expects {} arguments, {} provided",
@@ -5460,20 +5493,22 @@ fn function_call_named_args(
                     args.len()
                 ),
             ));
-            continue;
+            matches = false;
         }
 
-        let mut matches = true;
         let mut cast_args = Vec::new();
 
         // check if arguments can be implicitly casted
         for i in 0..params_len {
-            let param = &ns.functions[function_no].params[i];
+            let param = &ns.functions[*function_no].params[i];
+            if param.id.is_none() {
+                continue;
+            }
             let arg = match arguments.get(param.name_as_str()) {
                 Some(a) => a,
                 None => {
                     matches = false;
-                    diagnostics.push(Diagnostic::error(
+                    diagnostics.push(Diagnostic::cast_error(
                         *loc,
                         format!(
                             "missing argument '{}' to function '{}'",
@@ -5481,7 +5516,7 @@ fn function_call_named_args(
                             id.name,
                         ),
                     ));
-                    break;
+                    continue;
                 }
             };
 
@@ -5506,16 +5541,20 @@ fn function_call_named_args(
                 Ok(expr) => cast_args.push(expr),
                 Err(_) => {
                     matches = false;
-                    continue;
                 }
             }
         }
 
         if !matches {
+            let errors = non_casting_errors(&errors);
+            if !errors.is_empty() {
+                diagnostics.extend(errors);
+                return Err(());
+            }
             continue;
         }
 
-        let func = &ns.functions[function_no];
+        let func = &ns.functions[*function_no];
 
         if func.contract_no != context.contract_no && func.is_private() {
             errors.push(Diagnostic::error_with_note(
@@ -5537,7 +5576,7 @@ fn function_call_named_args(
             function: Box::new(Expression::InternalFunction {
                 loc: *loc,
                 ty,
-                function_no,
+                function_no: *function_no,
                 signature: if virtual_call && (func.is_virtual || func.is_override.is_some()) {
                     Some(func.signature.clone())
                 } else {
@@ -5548,7 +5587,7 @@ fn function_call_named_args(
         });
     }
 
-    match name_matches {
+    match function_nos.len() {
         0 => {
             diagnostics.push(Diagnostic::error(
                 id.loc,
@@ -6187,7 +6226,7 @@ fn method_call_pos_args(
     if let Type::Contract(ext_contract_no) = &var_ty.deref_any() {
         let call_args = parse_call_args(call_args, true, context, ns, symtable, diagnostics)?;
 
-        let marker = diagnostics.len();
+        let mut errors = Vec::new();
         let mut name_matches: Vec<usize> = Vec::new();
 
         for function_no in ns.contracts[*ext_contract_no].all_functions.keys() {
@@ -6200,13 +6239,11 @@ fn method_call_pos_args(
             name_matches.push(*function_no);
         }
 
-        args_sanity_check(args, context, ns, symtable, diagnostics)?;
-
         for function_no in &name_matches {
             let params_len = ns.functions[*function_no].params.len();
 
             if params_len != args.len() {
-                diagnostics.push(Diagnostic::error(
+                errors.push(Diagnostic::error(
                     *loc,
                     format!(
                         "function expects {} arguments, {} provided",
@@ -6216,8 +6253,10 @@ fn method_call_pos_args(
                 ));
                 continue;
             }
+
             let mut matches = true;
             let mut cast_args = Vec::new();
+
             // check if arguments can be implicitly casted
             for (i, arg) in args.iter().enumerate() {
                 let ty = ns.functions[*function_no].params[i].ty.clone();
@@ -6227,7 +6266,7 @@ fn method_call_pos_args(
                     context,
                     ns,
                     symtable,
-                    diagnostics,
+                    &mut errors,
                     ResolveTo::Type(&ty),
                 ) {
                     Ok(e) => e,
@@ -6237,7 +6276,7 @@ fn method_call_pos_args(
                     }
                 };
 
-                match arg.cast(&arg.loc(), &ty, true, ns, diagnostics) {
+                match arg.cast(&arg.loc(), &ty, true, ns, &mut errors) {
                     Ok(expr) => cast_args.push(expr),
                     Err(()) => {
                         matches = false;
@@ -6245,9 +6284,8 @@ fn method_call_pos_args(
                     }
                 }
             }
-            if matches {
-                diagnostics.truncate(marker);
 
+            if matches {
                 if !ns.functions[*function_no].is_public() {
                     diagnostics.push(Diagnostic::error(
                         *loc,
@@ -6291,6 +6329,12 @@ fn method_call_pos_args(
                     args: cast_args,
                     call_args,
                 });
+            } else if name_matches.len() > 1 {
+                let errors = non_casting_errors(&errors);
+                if !errors.is_empty() {
+                    diagnostics.extend(errors);
+                    return Err(());
+                }
             }
         }
 
@@ -6307,8 +6351,6 @@ fn method_call_pos_args(
             resolve_to,
         ) {
             Ok(Some(expr)) => {
-                diagnostics.truncate(marker);
-
                 return Ok(expr);
             }
             Ok(None) => (),
@@ -6317,8 +6359,9 @@ fn method_call_pos_args(
             }
         }
 
-        if name_matches.len() != 1 {
-            diagnostics.truncate(marker);
+        if name_matches.len() == 1 {
+            diagnostics.extend(errors);
+        } else if name_matches.len() != 1 {
             diagnostics.push(Diagnostic::error(
                 *loc,
                 "cannot find overloaded function which matches signature".to_string(),
@@ -6650,38 +6693,29 @@ fn method_call_named_args(
         let mut arguments = HashMap::new();
 
         // check if the arguments are not garbage
-        let mut errors = false;
-
         for arg in args {
             if arguments.contains_key(arg.name.name.as_str()) {
                 diagnostics.push(Diagnostic::error(
                     arg.name.loc,
                     format!("duplicate argument with name '{}'", arg.name.name),
                 ));
-                errors = true;
-            }
 
-            if expression(
-                &arg.expr,
-                context,
-                ns,
-                symtable,
-                diagnostics,
-                ResolveTo::Unknown,
-            )
-            .is_err()
-            {
-                errors = true;
+                let _ = expression(
+                    &arg.expr,
+                    context,
+                    ns,
+                    symtable,
+                    diagnostics,
+                    ResolveTo::Unknown,
+                );
+
+                continue;
             }
 
             arguments.insert(arg.name.name.as_str(), &arg.expr);
         }
 
-        if errors {
-            return Err(());
-        }
-
-        let marker = diagnostics.len();
+        let mut errors = Vec::new();
         let mut name_matches: Vec<usize> = Vec::new();
 
         // function call
@@ -6696,9 +6730,26 @@ fn method_call_named_args(
         }
 
         for function_no in &name_matches {
-            let params_len = ns.functions[*function_no].params.len();
-            if params_len != args.len() {
-                diagnostics.push(Diagnostic::error(
+            let func = &ns.functions[*function_no];
+
+            let unnamed_params = func.params.iter().filter(|p| p.id.is_none()).count();
+            let params_len = func.params.len();
+
+            let mut matches = true;
+
+            if unnamed_params > 0 {
+                errors.push(Diagnostic::cast_error_with_note(
+                    *loc,
+                    format!(
+                        "function cannot be called with named arguments as {} of its parameters do not have names",
+                        unnamed_params,
+                    ),
+                    func.loc,
+                    format!("definition of {}", func.name),
+                ));
+                matches = false;
+            } else if params_len != args.len() {
+                errors.push(Diagnostic::cast_error(
                     *loc,
                     format!(
                         "function expects {} arguments, {} provided",
@@ -6706,18 +6757,21 @@ fn method_call_named_args(
                         args.len()
                     ),
                 ));
-                continue;
+                matches = false;
             }
-            let mut matches = true;
             let mut cast_args = Vec::new();
-            // check if arguments can be implicitly casted
+
             for i in 0..params_len {
                 let param = ns.functions[*function_no].params[i].clone();
+                if param.id.is_none() {
+                    continue;
+                }
+
                 let arg = match arguments.get(param.name_as_str()) {
                     Some(a) => a,
                     None => {
                         matches = false;
-                        diagnostics.push(Diagnostic::error(
+                        diagnostics.push(Diagnostic::cast_error(
                             *loc,
                             format!(
                                 "missing argument '{}' to function '{}'",
@@ -6734,7 +6788,7 @@ fn method_call_named_args(
                     context,
                     ns,
                     symtable,
-                    diagnostics,
+                    &mut errors,
                     ResolveTo::Type(&param.ty),
                 ) {
                     Ok(e) => e,
@@ -6744,7 +6798,7 @@ fn method_call_named_args(
                     }
                 };
 
-                match arg.cast(&arg.loc(), &param.ty, true, ns, diagnostics) {
+                match arg.cast(&arg.loc(), &param.ty, true, ns, &mut errors) {
                     Ok(expr) => cast_args.push(expr),
                     Err(()) => {
                         matches = false;
@@ -6762,10 +6816,7 @@ fn method_call_named_args(
                             func_name.name
                         ),
                     ));
-                    return Err(());
-                }
-
-                if let Some(value) = &call_args.value {
+                } else if let Some(value) = &call_args.value {
                     if !value.const_zero(ns) && !ns.functions[*function_no].is_payable() {
                         diagnostics.push(Diagnostic::error(
                             *loc,
@@ -6774,7 +6825,6 @@ fn method_call_named_args(
                                 func_name.name
                             ),
                         ));
-                        return Err(());
                     }
                 }
 
@@ -6800,6 +6850,12 @@ fn method_call_named_args(
                     args: cast_args,
                     call_args,
                 });
+            } else if name_matches.len() > 1 {
+                let errors = non_casting_errors(&errors);
+                if !errors.is_empty() {
+                    diagnostics.extend(errors);
+                    return Err(());
+                }
             }
         }
 
@@ -6814,9 +6870,8 @@ fn method_call_named_args(
                     ),
                 ));
             }
-            1 => {}
+            1 => diagnostics.extend(errors),
             _ => {
-                diagnostics.truncate(marker);
                 diagnostics.push(Diagnostic::error(
                     *loc,
                     "cannot find overloaded function which matches signature".to_string(),
