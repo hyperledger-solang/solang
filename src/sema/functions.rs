@@ -2,6 +2,7 @@ use super::ast::{
     BuiltinStruct, Diagnostic, Function, Mutability, Namespace, Parameter, Symbol, Type,
 };
 use super::contracts::is_base;
+use super::diagnostics::Diagnostics;
 use super::tags::resolve_tags;
 use crate::Target;
 use solang_parser::{
@@ -179,7 +180,7 @@ pub fn contract_function(
                 }
 
                 let mut list = Vec::new();
-                let mut diagnostics = Vec::new();
+                let mut diagnostics = Diagnostics::default();
 
                 for name in bases {
                     if let Ok(no) =
@@ -293,7 +294,7 @@ pub fn contract_function(
         }
     };
 
-    let mut diagnostics = Vec::new();
+    let mut diagnostics = Diagnostics::default();
 
     let (params, params_success) = resolve_params(
         &func.params,
@@ -714,7 +715,7 @@ pub fn function(
         }
     }
 
-    let mut diagnostics = Vec::new();
+    let mut diagnostics = Diagnostics::default();
 
     let (params, params_success) =
         resolve_params(&func.params, true, file_no, None, ns, &mut diagnostics);
@@ -808,7 +809,7 @@ pub fn resolve_params(
     file_no: usize,
     contract_no: Option<usize>,
     ns: &mut Namespace,
-    diagnostics: &mut Vec<Diagnostic>,
+    diagnostics: &mut Diagnostics,
 ) -> (Vec<Parameter>, bool) {
     let mut params = Vec::new();
     let mut success = true;
@@ -914,7 +915,7 @@ pub fn resolve_returns(
     file_no: usize,
     contract_no: Option<usize>,
     ns: &mut Namespace,
-    diagnostics: &mut Vec<Diagnostic>,
+    diagnostics: &mut Diagnostics,
 ) -> (Vec<Parameter>, bool) {
     let mut resolved_returns = Vec::new();
     let mut success = true;

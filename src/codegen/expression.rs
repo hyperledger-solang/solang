@@ -9,11 +9,13 @@ use super::{
 use crate::codegen::array_boundary::handle_array_assign;
 use crate::codegen::unused_variable::should_remove_assignment;
 use crate::codegen::{Builtin, Expression};
-use crate::sema::ast;
-use crate::sema::ast::RetrieveType;
-use crate::sema::ast::{CallTy, FormatArg, Function, Namespace, Parameter, StringLocation, Type};
-use crate::sema::eval::{eval_const_number, eval_const_rational};
-use crate::sema::expression::{bigint_to_expression, ResolveTo};
+use crate::sema::{
+    ast,
+    ast::{CallTy, FormatArg, Function, Namespace, Parameter, RetrieveType, StringLocation, Type},
+    diagnostics::Diagnostics,
+    eval::{eval_const_number, eval_const_rational},
+    expression::{bigint_to_expression, ResolveTo},
+};
 use crate::Target;
 use num_bigint::BigInt;
 use num_traits::{FromPrimitive, One, ToPrimitive, Zero};
@@ -359,7 +361,7 @@ pub fn expression(
                         loc,
                         &BigInt::from_u8(length).unwrap(),
                         ns,
-                        &mut Vec::new(),
+                        &mut Diagnostics::default(),
                         ResolveTo::Type(ty),
                     )
                     .unwrap();
@@ -389,7 +391,7 @@ pub fn expression(
                             loc,
                             length,
                             ns,
-                            &mut Vec::new(),
+                            &mut Diagnostics::default(),
                             ResolveTo::Type(ty),
                         )
                         .unwrap();
@@ -2550,7 +2552,7 @@ fn array_subscript(
                 &array.loc(),
                 &BigInt::from(*n),
                 ns,
-                &mut Vec::new(),
+                &mut Diagnostics::default(),
                 ResolveTo::Unknown,
             )
             .unwrap();
@@ -2597,8 +2599,14 @@ fn array_subscript(
                 }
             }
             Some(l) => {
-                let ast_big_int =
-                    bigint_to_expression(loc, l, ns, &mut Vec::new(), ResolveTo::Unknown).unwrap();
+                let ast_big_int = bigint_to_expression(
+                    loc,
+                    l,
+                    ns,
+                    &mut Diagnostics::default(),
+                    ResolveTo::Unknown,
+                )
+                .unwrap();
                 expression(&ast_big_int, cfg, contract_no, func, ns, vartab, opt)
             }
         },

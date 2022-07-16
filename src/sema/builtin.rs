@@ -2,8 +2,9 @@ use super::ast::{
     Builtin, BuiltinStruct, Diagnostic, Expression, File, Namespace, Parameter, StructDecl, Symbol,
     Type,
 };
+use super::diagnostics::Diagnostics;
 use super::eval::eval_const_number;
-use super::expression::{expression, non_casting_errors, ExprContext, ResolveTo};
+use super::expression::{expression, ExprContext, ResolveTo};
 use super::symtable::Symtable;
 use crate::sema::ast::RetrieveType;
 use crate::Target;
@@ -814,7 +815,7 @@ pub fn builtin_var(
     namespace: Option<&str>,
     fname: &str,
     ns: &Namespace,
-    diagnostics: &mut Vec<Diagnostic>,
+    diagnostics: &mut Diagnostics,
 ) -> Option<(Builtin, Type)> {
     if let Some(p) = BUILTIN_VARIABLE
         .iter()
@@ -881,13 +882,13 @@ pub fn resolve_call(
     context: &ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
-    diagnostics: &mut Vec<Diagnostic>,
+    diagnostics: &mut Diagnostics,
 ) -> Result<Expression, ()> {
     let funcs = BUILTIN_FUNCTIONS
         .iter()
         .filter(|p| p.name == id && p.namespace == namespace && p.method.is_none())
         .collect::<Vec<&Prototype>>();
-    let mut errors = Vec::new();
+    let mut errors: Diagnostics = Diagnostics::default();
 
     for func in &funcs {
         let mut matches = true;
@@ -948,12 +949,8 @@ pub fn resolve_call(
         }
 
         if !matches {
-            if funcs.len() > 1 {
-                let errors = non_casting_errors(&errors);
-                if !errors.is_empty() {
-                    diagnostics.extend(errors);
-                    return Err(());
-                }
+            if funcs.len() > 1 && diagnostics.extend_non_casting(&errors) {
+                return Err(());
             }
         } else {
             // tx.gasprice(1) is a bad idea, just like tx.gasprice. Warn about this
@@ -1003,7 +1000,7 @@ pub fn resolve_namespace_call(
     context: &ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
-    diagnostics: &mut Vec<Diagnostic>,
+    diagnostics: &mut Diagnostics,
 ) -> Result<Expression, ()> {
     // The abi.* functions need special handling, others do not
     if namespace != "abi" {
@@ -1305,14 +1302,14 @@ pub fn resolve_method_call(
     context: &ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
-    diagnostics: &mut Vec<Diagnostic>,
+    diagnostics: &mut Diagnostics,
 ) -> Result<Option<Expression>, ()> {
     let expr_ty = expr.ty();
     let funcs: Vec<_> = BUILTIN_METHODS
         .iter()
         .filter(|func| func.name == id.name && func.method.as_ref() == Some(&expr_ty))
         .collect();
-    let mut errors = Vec::new();
+    let mut errors = Diagnostics::default();
 
     for func in &funcs {
         let mut matches = true;
@@ -1375,12 +1372,8 @@ pub fn resolve_method_call(
         }
 
         if !matches {
-            if funcs.len() > 1 {
-                let errors = non_casting_errors(&errors);
-                if !errors.is_empty() {
-                    diagnostics.extend(errors);
-                    return Err(());
-                }
+            if funcs.len() > 1 && diagnostics.extend_non_casting(&errors) {
+                return Err(());
             }
         } else {
             cast_args.insert(0, expr.clone());

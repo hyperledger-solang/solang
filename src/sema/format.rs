@@ -1,7 +1,7 @@
-use super::ast::{Diagnostic, Expression, FormatArg, Namespace, Type};
+use super::ast::{Diagnostic, Expression, FormatArg, Namespace, RetrieveType, Type};
 use super::expression::{expression, ExprContext, ResolveTo};
 use super::symtable::Symtable;
-use crate::sema::ast::RetrieveType;
+use crate::sema::diagnostics::Diagnostics;
 use solang_parser::pt;
 use solang_parser::pt::CodeLocation;
 
@@ -20,7 +20,7 @@ pub fn string_format(
     context: &ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
-    diagnostics: &mut Vec<Diagnostic>,
+    diagnostics: &mut Diagnostics,
 ) -> Result<Expression, ()> {
     // first resolve the arguments. We can't say anything about the format string if the args are broken
     let mut resolved_args = Vec::new();
@@ -136,7 +136,7 @@ pub fn string_format(
 fn parse_format_specifier(
     loc: pt::Loc,
     format_iterator: &mut Peekable<FormatIterator>,
-    diagnostics: &mut Vec<Diagnostic>,
+    diagnostics: &mut Diagnostics,
 ) -> Result<FormatArg, ()> {
     let mut last_loc = loc;
     let arg;

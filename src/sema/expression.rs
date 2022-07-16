@@ -5,6 +5,7 @@ use super::ast::{
 };
 use super::builtin;
 use super::contracts::is_base;
+use super::diagnostics::Diagnostics;
 use super::eval::eval_const_number;
 use super::eval::eval_const_rational;
 use super::format::string_format;
@@ -18,10 +19,7 @@ use base58::{FromBase58, FromBase58Error};
 use num_bigint::{BigInt, Sign};
 use num_rational::BigRational;
 use num_traits::{FromPrimitive, Num, One, Pow, ToPrimitive, Zero};
-use solang_parser::{
-    diagnostics::ErrorType,
-    pt::{self, CodeLocation, Loc},
-};
+use solang_parser::pt::{self, CodeLocation, Loc};
 use std::{
     cmp,
     cmp::Ordering,
@@ -141,7 +139,7 @@ impl Expression {
         to: &Type,
         implicit: bool,
         ns: &Namespace,
-        diagnostics: &mut Vec<Diagnostic>,
+        diagnostics: &mut Diagnostics,
     ) -> Result<Expression, ()> {
         let from = self.ty();
         if &from == to {
@@ -385,7 +383,7 @@ impl Expression {
         to: &Type,
         implicit: bool,
         ns: &Namespace,
-        diagnostics: &mut Vec<Diagnostic>,
+        diagnostics: &mut Diagnostics,
     ) -> Result<Expression, ()> {
         let address_bits = ns.address_length as u16 * 8;
 
@@ -1083,7 +1081,7 @@ pub(crate) fn unescape(
     literal: &str,
     start: usize,
     file_no: usize,
-    diagnostics: &mut Vec<Diagnostic>,
+    diagnostics: &mut Diagnostics,
 ) -> Vec<u8> {
     let mut s: Vec<u8> = Vec::new();
     let mut indeces = literal.char_indices();
@@ -1187,7 +1185,7 @@ fn coerce(
     r: &Type,
     r_loc: &pt::Loc,
     ns: &Namespace,
-    diagnostics: &mut Vec<Diagnostic>,
+    diagnostics: &mut Diagnostics,
 ) -> Result<Type, ()> {
     let l = match l {
         Type::Ref(ty) => ty,
@@ -1219,7 +1217,7 @@ fn get_int_length(
     l_loc: &pt::Loc,
     allow_bytes: bool,
     ns: &Namespace,
-    diagnostics: &mut Vec<Diagnostic>,
+    diagnostics: &mut Diagnostics,
 ) -> Result<(u16, bool), ()> {
     match l {
         Type::Uint(n) => Ok((*n, false)),
@@ -1267,7 +1265,7 @@ pub fn coerce_number(
     allow_bytes: bool,
     for_compare: bool,
     ns: &Namespace,
-    diagnostics: &mut Vec<Diagnostic>,
+    diagnostics: &mut Diagnostics,
 ) -> Result<Type, ()> {
     let l = match l {
         Type::Ref(ty) => ty,
@@ -1342,7 +1340,7 @@ fn number_literal(
     exp: &str,
     ns: &Namespace,
     unit: &BigInt,
-    diagnostics: &mut Vec<Diagnostic>,
+    diagnostics: &mut Diagnostics,
     resolve_to: ResolveTo,
 ) -> Result<Expression, ()> {
     let integer = BigInt::from_str(integer).unwrap();
@@ -1390,7 +1388,7 @@ fn rational_number_literal(
     exp: &str,
     unit: &BigInt,
     ns: &Namespace,
-    diagnostics: &mut Vec<Diagnostic>,
+    diagnostics: &mut Diagnostics,
     resolve_to: ResolveTo,
 ) -> Result<Expression, ()> {
     let mut integer = integer.to_owned();
@@ -1477,7 +1475,7 @@ pub fn bigint_to_expression(
     loc: &pt::Loc,
     n: &BigInt,
     ns: &Namespace,
-    diagnostics: &mut Vec<Diagnostic>,
+    diagnostics: &mut Diagnostics,
     resolve_to: ResolveTo,
 ) -> Result<Expression, ()> {
     let bits = n.bits();
@@ -1622,7 +1620,7 @@ pub fn expression(
     context: &ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
-    diagnostics: &mut Vec<Diagnostic>,
+    diagnostics: &mut Diagnostics,
     resolve_to: ResolveTo,
 ) -> Result<Expression, ()> {
     match expr {
@@ -2183,7 +2181,7 @@ pub fn expression(
 fn string_literal(
     v: &[pt::StringLiteral],
     file_no: usize,
-    diagnostics: &mut Vec<Diagnostic>,
+    diagnostics: &mut Diagnostics,
     resolve_to: ResolveTo,
 ) -> Expression {
     // Concatenate the strings
@@ -2218,7 +2216,7 @@ fn string_literal(
     }
 }
 
-fn hex_literal(v: &[pt::HexLiteral], diagnostics: &mut Vec<Diagnostic>) -> Result<Expression, ()> {
+fn hex_literal(v: &[pt::HexLiteral], diagnostics: &mut Diagnostics) -> Result<Expression, ()> {
     let mut result = Vec::new();
     let mut loc = v[0].loc;
 
@@ -2248,7 +2246,7 @@ fn hex_number_literal(
     loc: &pt::Loc,
     n: &str,
     ns: &mut Namespace,
-    diagnostics: &mut Vec<Diagnostic>,
+    diagnostics: &mut Diagnostics,
     resolve_to: ResolveTo,
 ) -> Result<Expression, ()> {
     // ns.address_length is in bytes; double for hex and two for the leading 0x
@@ -2322,7 +2320,7 @@ fn address_literal(
     loc: &pt::Loc,
     address: &str,
     ns: &mut Namespace,
-    diagnostics: &mut Vec<Diagnostic>,
+    diagnostics: &mut Diagnostics,
 ) -> Result<Expression, ()> {
     if ns.target.is_substrate() {
         match address.from_base58() {
@@ -2437,7 +2435,7 @@ fn variable(
     context: &ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
-    diagnostics: &mut Vec<Diagnostic>,
+    diagnostics: &mut Diagnostics,
     resolve_to: ResolveTo,
 ) -> Result<Expression, ()> {
     if let Some(v) = symtable.find(&id.name) {
@@ -2579,7 +2577,7 @@ fn subtract(
     context: &ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
-    diagnostics: &mut Vec<Diagnostic>,
+    diagnostics: &mut Diagnostics,
     resolve_to: ResolveTo,
 ) -> Result<Expression, ()> {
     let left = expression(l, context, ns, symtable, diagnostics, resolve_to)?;
@@ -2626,7 +2624,7 @@ fn bitwise_or(
     context: &ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
-    diagnostics: &mut Vec<Diagnostic>,
+    diagnostics: &mut Diagnostics,
     resolve_to: ResolveTo,
 ) -> Result<Expression, ()> {
     let left = expression(l, context, ns, symtable, diagnostics, resolve_to)?;
@@ -2660,7 +2658,7 @@ fn bitwise_and(
     context: &ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
-    diagnostics: &mut Vec<Diagnostic>,
+    diagnostics: &mut Diagnostics,
     resolve_to: ResolveTo,
 ) -> Result<Expression, ()> {
     let left = expression(l, context, ns, symtable, diagnostics, resolve_to)?;
@@ -2694,7 +2692,7 @@ fn bitwise_xor(
     context: &ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
-    diagnostics: &mut Vec<Diagnostic>,
+    diagnostics: &mut Diagnostics,
     resolve_to: ResolveTo,
 ) -> Result<Expression, ()> {
     let left = expression(l, context, ns, symtable, diagnostics, resolve_to)?;
@@ -2728,7 +2726,7 @@ fn shift_left(
     context: &ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
-    diagnostics: &mut Vec<Diagnostic>,
+    diagnostics: &mut Diagnostics,
     resolve_to: ResolveTo,
 ) -> Result<Expression, ()> {
     let left = expression(l, context, ns, symtable, diagnostics, resolve_to)?;
@@ -2757,7 +2755,7 @@ fn shift_right(
     context: &ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
-    diagnostics: &mut Vec<Diagnostic>,
+    diagnostics: &mut Diagnostics,
     resolve_to: ResolveTo,
 ) -> Result<Expression, ()> {
     let left = expression(l, context, ns, symtable, diagnostics, resolve_to)?;
@@ -2787,7 +2785,7 @@ fn multiply(
     context: &ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
-    diagnostics: &mut Vec<Diagnostic>,
+    diagnostics: &mut Diagnostics,
     resolve_to: ResolveTo,
 ) -> Result<Expression, ()> {
     let left = expression(l, context, ns, symtable, diagnostics, resolve_to)?;
@@ -2863,7 +2861,7 @@ fn divide(
     context: &ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
-    diagnostics: &mut Vec<Diagnostic>,
+    diagnostics: &mut Diagnostics,
     resolve_to: ResolveTo,
 ) -> Result<Expression, ()> {
     let left = expression(l, context, ns, symtable, diagnostics, resolve_to)?;
@@ -2897,7 +2895,7 @@ fn modulo(
     context: &ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
-    diagnostics: &mut Vec<Diagnostic>,
+    diagnostics: &mut Diagnostics,
     resolve_to: ResolveTo,
 ) -> Result<Expression, ()> {
     let left = expression(l, context, ns, symtable, diagnostics, resolve_to)?;
@@ -2931,7 +2929,7 @@ fn power(
     context: &ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
-    diagnostics: &mut Vec<Diagnostic>,
+    diagnostics: &mut Diagnostics,
     resolve_to: ResolveTo,
 ) -> Result<Expression, ()> {
     let mut base = expression(b, context, ns, symtable, diagnostics, resolve_to)?;
@@ -3005,7 +3003,7 @@ fn constructor(
     context: &ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
-    diagnostics: &mut Vec<Diagnostic>,
+    diagnostics: &mut Diagnostics,
 ) -> Result<Expression, ()> {
     // The current contract cannot be constructed with new. In order to create
     // the contract, we need the code hash of the contract. Part of that code
@@ -3079,9 +3077,9 @@ pub fn match_constructor_to_args(
     context: &ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
-    diagnostics: &mut Vec<Diagnostic>,
+    diagnostics: &mut Diagnostics,
 ) -> Result<(Option<usize>, Vec<Expression>), ()> {
-    let mut errors = Vec::new();
+    let mut errors = Diagnostics::default();
 
     // constructor call
     let function_nos: Vec<usize> = ns.contracts[contract_no]
@@ -3148,12 +3146,8 @@ pub fn match_constructor_to_args(
 
         if matches {
             return Ok((Some(*function_no), cast_args));
-        } else if function_nos.len() > 1 {
-            let errors = non_casting_errors(&errors);
-            if !errors.is_empty() {
-                diagnostics.extend(errors);
-                return Err(());
-            }
+        } else if function_nos.len() > 1 && diagnostics.extend_non_casting(&errors) {
+            return Err(());
         }
     }
 
@@ -3195,7 +3189,7 @@ pub fn constructor_named_args(
     context: &ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
-    diagnostics: &mut Vec<Diagnostic>,
+    diagnostics: &mut Diagnostics,
 ) -> Result<Expression, ()> {
     let (ty, call_args, _) = collect_call_args(ty, diagnostics)?;
 
@@ -3276,7 +3270,7 @@ pub fn constructor_named_args(
         arguments.insert(&arg.name.name, &arg.expr);
     }
 
-    let mut errors = Vec::new();
+    let mut errors = Diagnostics::default();
 
     // constructor call
     let function_nos: Vec<usize> = ns.contracts[no]
@@ -3373,12 +3367,8 @@ pub fn constructor_named_args(
                 args: cast_args,
                 call_args,
             });
-        } else if function_nos.len() > 1 {
-            let errors = non_casting_errors(&errors);
-            if !errors.is_empty() {
-                diagnostics.extend(errors);
-                return Err(());
-            }
+        } else if function_nos.len() > 1 && diagnostics.extend_non_casting(&errors) {
+            return Err(());
         }
     }
 
@@ -3413,7 +3403,7 @@ pub fn type_name_expr(
     field: &pt::Identifier,
     context: &ExprContext,
     ns: &mut Namespace,
-    diagnostics: &mut Vec<Diagnostic>,
+    diagnostics: &mut Diagnostics,
     resolve_to: ResolveTo,
 ) -> Result<Expression, ()> {
     if args.is_empty() {
@@ -3547,7 +3537,7 @@ pub fn new(
     context: &ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
-    diagnostics: &mut Vec<Diagnostic>,
+    diagnostics: &mut Diagnostics,
 ) -> Result<Expression, ()> {
     let (ty, call_args, call_args_loc) = collect_call_args(ty, diagnostics)?;
 
@@ -3664,7 +3654,7 @@ fn equal(
     context: &ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
-    diagnostics: &mut Vec<Diagnostic>,
+    diagnostics: &mut Diagnostics,
 ) -> Result<Expression, ()> {
     let left = expression(l, context, ns, symtable, diagnostics, ResolveTo::Integer)?;
     let right = expression(r, context, ns, symtable, diagnostics, ResolveTo::Integer)?;
@@ -3758,7 +3748,7 @@ fn addition(
     context: &ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
-    diagnostics: &mut Vec<Diagnostic>,
+    diagnostics: &mut Diagnostics,
     resolve_to: ResolveTo,
 ) -> Result<Expression, ()> {
     let mut left = expression(l, context, ns, symtable, diagnostics, resolve_to)?;
@@ -3885,7 +3875,7 @@ fn assign_single(
     context: &ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
-    diagnostics: &mut Vec<Diagnostic>,
+    diagnostics: &mut Diagnostics,
 ) -> Result<Expression, ()> {
     let mut lcontext = context.clone();
     lcontext.lvalue = true;
@@ -4006,7 +3996,7 @@ fn assign_expr(
     context: &ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
-    diagnostics: &mut Vec<Diagnostic>,
+    diagnostics: &mut Diagnostics,
 ) -> Result<Expression, ()> {
     let mut lcontext = context.clone();
     lcontext.lvalue = true;
@@ -4038,7 +4028,7 @@ fn assign_expr(
     let op = |assign: Expression,
               ty: &Type,
               ns: &Namespace,
-              diagnostics: &mut Vec<Diagnostic>|
+              diagnostics: &mut Diagnostics|
      -> Result<Expression, ()> {
         let set = match expr {
             pt::Expression::AssignShiftLeft(..) | pt::Expression::AssignShiftRight(..) => {
@@ -4223,7 +4213,7 @@ fn incr_decr(
     context: &ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
-    diagnostics: &mut Vec<Diagnostic>,
+    diagnostics: &mut Diagnostics,
 ) -> Result<Expression, ()> {
     let op = |e: Expression, ty: Type| -> Expression {
         match expr {
@@ -4340,7 +4330,7 @@ fn enum_value(
     file_no: usize,
     contract_no: Option<usize>,
     ns: &Namespace,
-    diagnostics: &mut Vec<Diagnostic>,
+    diagnostics: &mut Diagnostics,
 ) -> Result<Option<Expression>, ()> {
     let mut namespace = Vec::new();
 
@@ -4418,7 +4408,7 @@ fn member_access(
     context: &ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
-    diagnostics: &mut Vec<Diagnostic>,
+    diagnostics: &mut Diagnostics,
     resolve_to: ResolveTo,
 ) -> Result<Expression, ()> {
     // is it a builtin special variable like "block.timestamp"
@@ -4826,7 +4816,7 @@ fn contract_constant(
     file_no: usize,
     ns: &mut Namespace,
     symtable: &mut Symtable,
-    diagnostics: &mut Vec<Diagnostic>,
+    diagnostics: &mut Diagnostics,
     resolve_to: ResolveTo,
 ) -> Result<Option<Expression>, ()> {
     let namespace = match e {
@@ -4893,7 +4883,7 @@ fn array_subscript(
     context: &ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
-    diagnostics: &mut Vec<Diagnostic>,
+    diagnostics: &mut Diagnostics,
 ) -> Result<Expression, ()> {
     let array = expression(
         array,
@@ -5016,7 +5006,7 @@ fn struct_literal(
     context: &ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
-    diagnostics: &mut Vec<Diagnostic>,
+    diagnostics: &mut Diagnostics,
 ) -> Result<Expression, ()> {
     let struct_def = ns.structs[struct_no].clone();
 
@@ -5076,7 +5066,7 @@ fn call_function_type(
     context: &ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
-    diagnostics: &mut Vec<Diagnostic>,
+    diagnostics: &mut Diagnostics,
     resolve_to: ResolveTo,
 ) -> Result<Expression, ()> {
     let mut function = expression(expr, context, ns, symtable, diagnostics, ResolveTo::Unknown)?;
@@ -5272,15 +5262,6 @@ pub fn available_super_functions(name: &str, contract_no: usize, ns: &Namespace)
     list
 }
 
-/// Filter out all the diagnostics which are not the result of casting problems
-pub fn non_casting_errors(diagnostics: &[Diagnostic]) -> Vec<Diagnostic> {
-    diagnostics
-        .iter()
-        .filter(|diag| diag.ty != ErrorType::CastError)
-        .cloned()
-        .collect()
-}
-
 /// Resolve a function call with positional arguments
 pub fn function_call_pos_args(
     loc: &pt::Loc,
@@ -5293,10 +5274,10 @@ pub fn function_call_pos_args(
     ns: &mut Namespace,
     resolve_to: ResolveTo,
     symtable: &mut Symtable,
-    diagnostics: &mut Vec<Diagnostic>,
+    diagnostics: &mut Diagnostics,
 ) -> Result<Expression, ()> {
     let mut name_matches = 0;
-    let mut errors = Vec::new();
+    let mut errors = Diagnostics::default();
 
     // Try to resolve as a function call
     for function_no in &function_nos {
@@ -5354,12 +5335,8 @@ pub fn function_call_pos_args(
         }
 
         if !matches {
-            if function_nos.len() > 1 {
-                let errors = non_casting_errors(&errors);
-                if !errors.is_empty() {
-                    diagnostics.extend(errors);
-                    return Err(());
-                }
+            if function_nos.len() > 1 && diagnostics.extend_non_casting(&errors) {
+                return Err(());
             }
 
             continue;
@@ -5435,7 +5412,7 @@ fn function_call_named_args(
     resolve_to: ResolveTo,
     ns: &mut Namespace,
     symtable: &mut Symtable,
-    diagnostics: &mut Vec<Diagnostic>,
+    diagnostics: &mut Diagnostics,
 ) -> Result<Expression, ()> {
     let mut arguments = HashMap::new();
 
@@ -5459,7 +5436,7 @@ fn function_call_named_args(
         arguments.insert(arg.name.name.as_str(), &arg.expr);
     }
     // Try to resolve as a function call
-    let mut errors = Vec::new();
+    let mut errors = Diagnostics::default();
 
     // Try to resolve as a function call
     for function_no in &function_nos {
@@ -5546,9 +5523,7 @@ fn function_call_named_args(
         }
 
         if !matches {
-            let errors = non_casting_errors(&errors);
-            if !errors.is_empty() {
-                diagnostics.extend(errors);
+            if diagnostics.extend_non_casting(&errors) {
                 return Err(());
             }
             continue;
@@ -5614,7 +5589,7 @@ fn named_struct_literal(
     context: &ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
-    diagnostics: &mut Vec<Diagnostic>,
+    diagnostics: &mut Diagnostics,
 ) -> Result<Expression, ()> {
     let struct_def = ns.structs[struct_no].clone();
     let ty = Type::Struct(struct_no);
@@ -5688,7 +5663,7 @@ fn method_call_pos_args(
     context: &ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
-    diagnostics: &mut Vec<Diagnostic>,
+    diagnostics: &mut Diagnostics,
     resolve_to: ResolveTo,
 ) -> Result<Expression, ()> {
     if let pt::Expression::Variable(namespace) = var {
@@ -5818,7 +5793,7 @@ fn method_call_pos_args(
         context.contract_no,
         false,
         var,
-        &mut Vec::new(),
+        &mut Diagnostics::default(),
     ) {
         if let Some(loc) = call_args_loc {
             diagnostics.push(Diagnostic::error(
@@ -5885,9 +5860,11 @@ fn method_call_pos_args(
     if let Some(mut path) = ns.expr_to_identifier_path(var) {
         path.identifiers.push(func.clone());
 
-        if let Ok(list) =
-            ns.resolve_free_function_with_namespace(context.file_no, &path, &mut Vec::new())
-        {
+        if let Ok(list) = ns.resolve_free_function_with_namespace(
+            context.file_no,
+            &path,
+            &mut Diagnostics::default(),
+        ) {
             if let Some(loc) = call_args_loc {
                 diagnostics.push(Diagnostic::error(
                     loc,
@@ -6226,7 +6203,7 @@ fn method_call_pos_args(
     if let Type::Contract(ext_contract_no) = &var_ty.deref_any() {
         let call_args = parse_call_args(call_args, true, context, ns, symtable, diagnostics)?;
 
-        let mut errors = Vec::new();
+        let mut errors = Diagnostics::default();
         let mut name_matches: Vec<usize> = Vec::new();
 
         for function_no in ns.contracts[*ext_contract_no].all_functions.keys() {
@@ -6329,12 +6306,8 @@ fn method_call_pos_args(
                     args: cast_args,
                     call_args,
                 });
-            } else if name_matches.len() > 1 {
-                let errors = non_casting_errors(&errors);
-                if !errors.is_empty() {
-                    diagnostics.extend(errors);
-                    return Err(());
-                }
+            } else if name_matches.len() > 1 && diagnostics.extend_non_casting(&errors) {
+                return Err(());
             }
         }
 
@@ -6555,7 +6528,7 @@ fn method_call_named_args(
     context: &ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
-    diagnostics: &mut Vec<Diagnostic>,
+    diagnostics: &mut Diagnostics,
     resolve_to: ResolveTo,
 ) -> Result<Expression, ()> {
     if let pt::Expression::Variable(namespace) = var {
@@ -6659,9 +6632,11 @@ fn method_call_named_args(
     if let Some(mut path) = ns.expr_to_identifier_path(var) {
         path.identifiers.push(func_name.clone());
 
-        if let Ok(list) =
-            ns.resolve_free_function_with_namespace(context.file_no, &path, &mut Vec::new())
-        {
+        if let Ok(list) = ns.resolve_free_function_with_namespace(
+            context.file_no,
+            &path,
+            &mut Diagnostics::default(),
+        ) {
             if let Some(loc) = call_args_loc {
                 diagnostics.push(Diagnostic::error(
                     loc,
@@ -6715,7 +6690,7 @@ fn method_call_named_args(
             arguments.insert(arg.name.name.as_str(), &arg.expr);
         }
 
-        let mut errors = Vec::new();
+        let mut errors = Diagnostics::default();
         let mut name_matches: Vec<usize> = Vec::new();
 
         // function call
@@ -6850,12 +6825,8 @@ fn method_call_named_args(
                     args: cast_args,
                     call_args,
                 });
-            } else if name_matches.len() > 1 {
-                let errors = non_casting_errors(&errors);
-                if !errors.is_empty() {
-                    diagnostics.extend(errors);
-                    return Err(());
-                }
+            } else if name_matches.len() > 1 && diagnostics.extend_non_casting(&errors) {
+                return Err(());
             }
         }
 
@@ -6921,7 +6892,7 @@ fn array_literal(
     context: &ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
-    diagnostics: &mut Vec<Diagnostic>,
+    diagnostics: &mut Diagnostics,
     resolve_to: ResolveTo,
 ) -> Result<Expression, ()> {
     let mut dims = Box::new(Vec::new());
@@ -6996,7 +6967,7 @@ fn check_subarrays<'a>(
     exprs: &'a [pt::Expression],
     dims: &mut Option<&mut Vec<u32>>,
     flatten: &mut Vec<&'a pt::Expression>,
-    diagnostics: &mut Vec<Diagnostic>,
+    diagnostics: &mut Diagnostics,
 ) -> Result<(), ()> {
     if let Some(pt::Expression::ArrayLiteral(_, first)) = exprs.get(0) {
         // ensure all elements are array literals of the same length
@@ -7048,7 +7019,7 @@ fn check_subarrays<'a>(
 /// Function call arguments
 pub fn collect_call_args<'a>(
     expr: &'a pt::Expression,
-    diagnostics: &mut Vec<Diagnostic>,
+    diagnostics: &mut Diagnostics,
 ) -> Result<
     (
         &'a pt::Expression,
@@ -7103,7 +7074,7 @@ fn parse_call_args(
     context: &ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
-    diagnostics: &mut Vec<Diagnostic>,
+    diagnostics: &mut Diagnostics,
 ) -> Result<CallArgs, ()> {
     let mut args: HashMap<&String, &pt::NamedArgument> = HashMap::new();
 
@@ -7340,10 +7311,10 @@ pub fn named_call_expr(
     context: &ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
-    diagnostics: &mut Vec<Diagnostic>,
+    diagnostics: &mut Diagnostics,
     resolve_to: ResolveTo,
 ) -> Result<Expression, ()> {
-    let mut nullsink = Vec::new();
+    let mut nullsink = Diagnostics::default();
 
     // is it a struct literal
     match ns.resolve_type(
@@ -7407,10 +7378,10 @@ pub fn call_expr(
     context: &ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
-    diagnostics: &mut Vec<Diagnostic>,
+    diagnostics: &mut Diagnostics,
     resolve_to: ResolveTo,
 ) -> Result<Expression, ()> {
-    let mut nullsink = Vec::new();
+    let mut nullsink = Diagnostics::default();
     let ty = ty.remove_parenthesis();
 
     match ns.resolve_type(
@@ -7492,7 +7463,7 @@ pub fn function_call_expr(
     context: &ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
-    diagnostics: &mut Vec<Diagnostic>,
+    diagnostics: &mut Diagnostics,
     resolve_to: ResolveTo,
 ) -> Result<Expression, ()> {
     let (ty, call_args, call_args_loc) = collect_call_args(ty, diagnostics)?;
@@ -7622,7 +7593,7 @@ pub fn named_function_call_expr(
     context: &ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
-    diagnostics: &mut Vec<Diagnostic>,
+    diagnostics: &mut Diagnostics,
     resolve_to: ResolveTo,
 ) -> Result<Expression, ()> {
     let (ty, call_args, call_args_loc) = collect_call_args(ty, diagnostics)?;
@@ -7718,7 +7689,7 @@ fn mapping_subscript(
     context: &ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
-    diagnostics: &mut Vec<Diagnostic>,
+    diagnostics: &mut Diagnostics,
 ) -> Result<Expression, ()> {
     let ty = mapping.ty();
     let elem_ty = ty.storage_array_elem();

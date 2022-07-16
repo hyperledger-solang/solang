@@ -1,9 +1,10 @@
 use super::ast::*;
 use super::contracts::is_base;
+use super::diagnostics::Diagnostics;
 use super::expression::{
     available_functions, call_expr, constructor_named_args, expression, function_call_expr,
     function_call_pos_args, match_constructor_to_args, named_call_expr, named_function_call_expr,
-    new, non_casting_errors, ExprContext, ResolveTo,
+    new, ExprContext, ResolveTo,
 };
 use super::symtable::{LoopScopes, Symtable};
 use crate::sema::builtin;
@@ -65,7 +66,7 @@ pub fn resolve_function_body(
         let contract_no = contract_no.unwrap();
         let mut resolve_bases: BTreeMap<usize, pt::Loc> = BTreeMap::new();
         let mut all_ok = true;
-        let mut diagnostics = Vec::new();
+        let mut diagnostics = Diagnostics::default();
 
         for attr in &def.attributes {
             if let pt::FunctionAttribute::BaseOrModifier(loc, base) = attr {
@@ -89,7 +90,7 @@ pub fn resolve_function_body(
                             ));
                             all_ok = false;
                         } else if let Some(args) = &base.args {
-                            let mut diagnostics = Vec::new();
+                            let mut diagnostics = Diagnostics::default();
 
                             // find constructor which matches this
                             if let Ok((Some(constructor_no), args)) = match_constructor_to_args(
@@ -156,7 +157,7 @@ pub fn resolve_function_body(
     // resolve modifiers on functions
     if def.ty == pt::FunctionTy::Function {
         let mut modifiers = Vec::new();
-        let mut diagnostics = Vec::new();
+        let mut diagnostics = Diagnostics::default();
 
         for attr in &def.attributes {
             if let pt::FunctionAttribute::BaseOrModifier(_, modifier) = attr {
@@ -246,7 +247,7 @@ pub fn resolve_function_body(
         Some(ref body) => body,
     };
 
-    let mut diagnostics = Vec::new();
+    let mut diagnostics = Diagnostics::default();
 
     let reachable = statement(
         body,
@@ -309,7 +310,7 @@ fn statement(
     symtable: &mut Symtable,
     loops: &mut LoopScopes,
     ns: &mut Namespace,
-    diagnostics: &mut Vec<Diagnostic>,
+    diagnostics: &mut Diagnostics,
 ) -> Result<bool, ()> {
     let function_no = context.function_no.unwrap();
 
@@ -897,7 +898,7 @@ fn emit_event(
     context: &ExprContext,
     symtable: &mut Symtable,
     ns: &mut Namespace,
-    diagnostics: &mut Vec<Diagnostic>,
+    diagnostics: &mut Diagnostics,
 ) -> Result<Statement, ()> {
     let function_no = context.function_no.unwrap();
 
@@ -905,7 +906,7 @@ fn emit_event(
         pt::Expression::FunctionCall(_, ty, args) => {
             let event_loc = ty.loc();
 
-            let mut errors = Vec::new();
+            let mut errors = Diagnostics::default();
 
             let event_nos =
                 match ns.resolve_event(context.file_no, context.contract_no, ty, diagnostics) {
@@ -990,12 +991,8 @@ fn emit_event(
                         event_loc,
                         args: cast_args,
                     });
-                } else if event_nos.len() > 1 {
-                    let errors = non_casting_errors(&errors);
-                    if !errors.is_empty() {
-                        diagnostics.extend(errors);
-                        return Err(());
-                    }
+                } else if event_nos.len() > 1 && diagnostics.extend_non_casting(&errors) {
+                    return Err(());
                 }
             }
 
@@ -1011,7 +1008,7 @@ fn emit_event(
         pt::Expression::NamedFunctionCall(_, ty, args) => {
             let event_loc = ty.loc();
 
-            let mut temp_diagnostics = Vec::new();
+            let mut temp_diagnostics = Diagnostics::default();
             let mut arguments = HashMap::new();
 
             for arg in args {
@@ -1147,12 +1144,8 @@ fn emit_event(
                         event_loc,
                         args: cast_args,
                     });
-                } else if event_nos.len() > 1 {
-                    let errors = non_casting_errors(&temp_diagnostics);
-                    if !errors.is_empty() {
-                        diagnostics.extend(errors);
-                        return Err(());
-                    }
+                } else if event_nos.len() > 1 && diagnostics.extend_non_casting(&temp_diagnostics) {
+                    return Err(());
                 }
             }
 
@@ -1187,7 +1180,7 @@ fn destructure(
     context: &ExprContext,
     symtable: &mut Symtable,
     ns: &mut Namespace,
-    diagnostics: &mut Vec<Diagnostic>,
+    diagnostics: &mut Diagnostics,
 ) -> Result<Statement, ()> {
     // first resolve the fields so we know the types
     let mut fields = Vec::new();
@@ -1329,7 +1322,7 @@ fn destructure_values(
     context: &ExprContext,
     symtable: &mut Symtable,
     ns: &mut Namespace,
-    diagnostics: &mut Vec<Diagnostic>,
+    diagnostics: &mut Diagnostics,
 ) -> Result<Expression, ()> {
     let expr = match expr.remove_parenthesis() {
         pt::Expression::FunctionCall(loc, ty, args) => {
@@ -1493,7 +1486,7 @@ fn resolve_var_decl_ty(
     storage: &Option<pt::StorageLocation>,
     context: &ExprContext,
     ns: &mut Namespace,
-    diagnostics: &mut Vec<Diagnostic>,
+    diagnostics: &mut Diagnostics,
 ) -> Result<(Type, pt::Loc), ()> {
     let mut loc_ty = ty.loc();
     let mut var_ty =
@@ -1546,7 +1539,7 @@ fn return_with_values(
     context: &ExprContext,
     symtable: &mut Symtable,
     ns: &mut Namespace,
-    diagnostics: &mut Vec<Diagnostic>,
+    diagnostics: &mut Diagnostics,
 ) -> Result<Expression, ()> {
     let function_no = context.function_no.unwrap();
 
@@ -1740,7 +1733,7 @@ fn return_with_values(
 /// simple expression list.
 pub fn parameter_list_to_expr_list<'a>(
     e: &'a pt::Expression,
-    diagnostics: &mut Vec<Diagnostic>,
+    diagnostics: &mut Diagnostics,
 ) -> Result<Vec<&'a pt::Expression>, ()> {
     match e {
         pt::Expression::List(_, v) => {
@@ -1800,7 +1793,7 @@ fn try_catch(
     symtable: &mut Symtable,
     loops: &mut LoopScopes,
     ns: &mut Namespace,
-    diagnostics: &mut Vec<Diagnostic>,
+    diagnostics: &mut Diagnostics,
 ) -> Result<(Statement, bool), ()> {
     let mut expr = expr.remove_parenthesis();
     let mut ok = None;

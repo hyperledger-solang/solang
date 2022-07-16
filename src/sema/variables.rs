@@ -4,6 +4,7 @@ use super::{
         Type, Variable,
     },
     contracts::is_base,
+    diagnostics::Diagnostics,
     expression::{expression, ExprContext, ResolveTo},
     symtable::Symtable,
     symtable::{VariableInitializer, VariableUsage},
@@ -123,7 +124,7 @@ pub fn variable_decl<'a>(
         }
     }
 
-    let mut diagnostics = Vec::new();
+    let mut diagnostics = Diagnostics::default();
 
     let ty = match ns.resolve_type(file_no, contract_no, false, &ty, &mut diagnostics) {
         Ok(s) => s,
@@ -171,7 +172,7 @@ pub fn variable_decl<'a>(
                 }
 
                 let mut list = Vec::new();
-                let mut diagnostics = Vec::new();
+                let mut diagnostics = Diagnostics::default();
 
                 if let Some(contract_no) = contract_no {
                     for name in bases {
@@ -320,7 +321,7 @@ pub fn variable_decl<'a>(
 
     let initializer = if constant {
         if let Some(initializer) = &def.initializer {
-            let mut diagnostics = Vec::new();
+            let mut diagnostics = Diagnostics::default();
             let context = ExprContext {
                 file_no,
                 unchecked: false,
@@ -639,7 +640,7 @@ pub fn resolve_initializers(
     ns: &mut Namespace,
 ) {
     let mut symtable = Symtable::new();
-    let mut diagnostics = Vec::new();
+    let mut diagnostics = Diagnostics::default();
 
     for DelayedResolveInitializer {
         var_no,

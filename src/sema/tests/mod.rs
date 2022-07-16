@@ -1,13 +1,14 @@
 #![cfg(test)]
 use crate::ast::{Expression, Parameter, Statement, TryCatch, Type};
+use crate::sema::diagnostics::Diagnostics;
 use crate::sema::expression::unescape;
 use crate::sema::yul::ast::InlineAssembly;
-use solang_parser::{diagnostics::Diagnostic, pt::Loc};
+use solang_parser::pt::Loc;
 
 #[test]
 fn test_unescape() {
     let s = r#"\u00f3"#;
-    let mut vec: Vec<Diagnostic> = Vec::new();
+    let mut vec = Diagnostics::default();
     let res = unescape(s, 0, 0, &mut vec);
     assert!(vec.is_empty());
     assert_eq!(res, vec![0xc3, 0xb3]);

@@ -1,4 +1,5 @@
 use crate::ast::{Namespace, Parameter, Symbol, Type};
+use crate::sema::diagnostics::Diagnostics;
 use crate::sema::expression::{unescape, ExprContext};
 use crate::sema::symtable::{Symtable, VariableUsage};
 use crate::sema::yul::ast::{YulExpression, YulSuffix};
@@ -65,10 +66,10 @@ pub(crate) fn resolve_yul_expression(
         }
 
         pt::YulExpression::StringLiteral(value, ty) => {
-            let mut diagnostics: Vec<Diagnostic> = Vec::new();
+            let mut diagnostics = Diagnostics::default();
             let unescaped_string =
                 unescape(&value.string[..], 0, value.loc.file_no(), &mut diagnostics);
-            ns.diagnostics.append(&mut diagnostics);
+            ns.diagnostics.extend(diagnostics);
             resolve_string_literal(&value.loc, unescaped_string, ty, ns)
         }
 

@@ -15,9 +15,9 @@ pub fn mutability(file_no: usize, ns: &mut Namespace) {
                 continue;
             }
 
-            let diagnostics = check_mutability(func, ns);
+            let mut diagnostics = check_mutability(func, ns);
 
-            ns.diagnostics.extend(diagnostics);
+            ns.diagnostics.append(&mut diagnostics);
         }
     }
 }
