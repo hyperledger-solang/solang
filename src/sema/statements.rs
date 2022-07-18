@@ -887,7 +887,6 @@ fn statement(
             ));
             Err(())
         }
-        pt::Statement::DocComment(..) => Ok(true),
     }
 }
 

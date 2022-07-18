@@ -52,9 +52,6 @@ fn parse_test() {
         .unwrap();
 
     let expected_parse_tree = SourceUnit(vec![
-        SourceUnitPart::DocComment(DocComment{ loc: Loc::File(0,3, 14), ty: CommentType::Line, comment: " @title Foo".to_string()}),
-        SourceUnitPart::DocComment(DocComment{ loc: Loc::File(0,34,51), ty: CommentType::Line, comment: " @description Foo".to_string()}),
-        SourceUnitPart::DocComment(DocComment{ loc: Loc::File(0,71,75), ty: CommentType::Line, comment: " Bar".to_string()}),
         SourceUnitPart::ContractDefinition(Box::new(ContractDefinition {
             loc: Loc::File(0, 92, 702),
             ty: ContractTy::Contract(Loc::File(0, 92, 100)),
@@ -64,9 +61,6 @@ fn parse_test() {
             },
             base: Vec::new(),
             parts: vec![
-                ContractPart::DocComment(DocComment{ loc: Loc::File(0,130,191), ty: CommentType::Block, comment: "\n                    @title Jurisdiction\n                    ".to_string()}),
-                ContractPart::DocComment(DocComment{ loc: Loc::File(0,217,230), ty: CommentType::Line, comment: " @author Anon".to_string()}),
-                ContractPart::DocComment(DocComment{ loc: Loc::File(0,254,389), ty: CommentType::Block, comment: "\n                    @description Data for\n                    jurisdiction\n                    @dev It's a struct\n                    ".to_string()}),
                 ContractPart::StructDefinition(Box::new(StructDefinition {
                     name: Identifier {
                         loc: Loc::File(0, 419, 431),
@@ -158,8 +152,16 @@ fn parse_test() {
                             name: "sum".to_string(),
                         })),
                         vec![
-                            Expression::NumberLiteral(Loc::File(0, 765, 766), "1".to_string(), "".to_string()),
-                            Expression::NumberLiteral(Loc::File(0, 768, 769), "1".to_string(), "".to_string()),
+                            Expression::NumberLiteral(
+                                Loc::File(0, 765, 766),
+                                "1".to_string(),
+                                "".to_string(),
+                            ),
+                            Expression::NumberLiteral(
+                                Loc::File(0, 768, 769),
+                                "1".to_string(),
+                                "".to_string(),
+                            ),
                         ],
                     ),
                     Some((
@@ -194,7 +196,8 @@ fn parse_test() {
                                         })),
                                         Box::new(Expression::NumberLiteral(
                                             Loc::File(0, 830, 831),
-                                            "2".to_string(), "".to_string(),
+                                            "2".to_string(),
+                                            "".to_string(),
                                         )),
                                     )],
                                 ),
@@ -291,6 +294,60 @@ fn parse_test() {
     ]);
 
     assert_eq!(actual_parse_tree, expected_parse_tree);
+
+    assert_eq!(
+        comments,
+        vec![
+            Comment::DocLine(
+                Loc::File(
+                    0,
+                    0,
+                    14,
+                ),
+                "/// @title Foo".to_string(),
+            ),
+            Comment::DocLine(
+                Loc::File(
+                    0,
+                    31,
+                    51,
+                ),
+                "/// @description Foo".to_string(),
+            ),
+            Comment::DocLine(
+                Loc::File(
+                    0,
+                    68,
+                    75,
+                ),
+                "/// Bar".to_string(),
+            ),
+            Comment::DocBlock(
+                Loc::File(
+                    0,
+                    127,
+                    193,
+                ),
+                "/**\n                    @title Jurisdiction\n                    */".to_string(),
+            ),
+            Comment::DocLine(
+                Loc::File(
+                    0,
+                    214,
+                    230,
+                ),
+                "/// @author Anon".to_string(),
+            ),
+            Comment::DocBlock(
+                Loc::File(
+                    0,
+                    251,
+                    391,
+                ),
+                "/**\n                    @description Data for\n                    jurisdiction\n                    @dev It's a struct\n                    */".to_string(),
+            ),
+        ]
+    );
 }
 
 #[test]
@@ -309,7 +366,7 @@ fn parse_error_test() {
         }
         "#;
 
-    let (actual_parse_tree, _) = crate::parse(src, 0).unwrap();
+    let (actual_parse_tree, comments) = crate::parse(src, 0).unwrap();
     assert_eq!(actual_parse_tree.0.len(), 2);
 
     let expected_parse_tree = SourceUnit(vec![
@@ -355,27 +412,6 @@ fn parse_error_test() {
                     },
                     fields: vec![],
                 })),
-                ContractPart::DocComment(DocComment {
-                    loc: Loc::File(0, 137, 199),
-                    ty: CommentType::Line,
-                    comment: " Insufficient balance for transfer. Needed `required` but only"
-                        .to_string(),
-                }),
-                ContractPart::DocComment(DocComment {
-                    loc: Loc::File(0, 215, 238),
-                    ty: CommentType::Line,
-                    comment: " `available` available.".to_string(),
-                }),
-                ContractPart::DocComment(DocComment {
-                    loc: Loc::File(0, 254, 290),
-                    ty: CommentType::Line,
-                    comment: " @param available balance available.".to_string(),
-                }),
-                ContractPart::DocComment(DocComment {
-                    loc: Loc::File(0, 306, 352),
-                    ty: CommentType::Line,
-                    comment: " @param required requested amount to transfer.".to_string(),
-                }),
                 ContractPart::ErrorDefinition(Box::new(ErrorDefinition {
                     loc: Loc::File(0, 365, 427),
                     name: Identifier {
@@ -406,6 +442,28 @@ fn parse_error_test() {
     ]);
 
     assert_eq!(actual_parse_tree, expected_parse_tree);
+
+    assert_eq!(
+        comments,
+        vec![
+            Comment::DocLine(
+                Loc::File(0, 134, 199,),
+                "/// Insufficient balance for transfer. Needed `required` but only".to_owned(),
+            ),
+            Comment::DocLine(
+                Loc::File(0, 212, 238,),
+                "/// `available` available.".to_owned(),
+            ),
+            Comment::DocLine(
+                Loc::File(0, 251, 290,),
+                "/// @param available balance available.".to_owned(),
+            ),
+            Comment::DocLine(
+                Loc::File(0, 303, 352,),
+                "/// @param required requested amount to transfer.".to_owned(),
+            )
+        ]
+    );
 }
 
 #[test]
@@ -1007,6 +1065,16 @@ contract C {
 		}
 	}
 }
+    "#;
+
+    let (actual_parse_tree, _) = crate::parse(src, 0).unwrap();
+    assert_eq!(actual_parse_tree.0.len(), 1);
+}
+
+#[test]
+fn parse_random_doccomment() {
+    let src = r#"
+int  /** x */ constant /** x */ y/** dev:  */ = /** x */1 /** x */ + /** x */2/** x */;
     "#;
 
     let (actual_parse_tree, _) = crate::parse(src, 0).unwrap();

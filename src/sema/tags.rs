@@ -26,11 +26,11 @@ pub struct DocCommentTag {
 }
 
 // Parse the DocComments tags from the parse tree
-pub fn parse_doccomments(lines: &[&pt::DocComment]) -> Vec<DocComment> {
+pub fn parse_doccomments(comments: &[pt::Comment], start: usize, end: usize) -> Vec<DocComment> {
     // first extract the tags
     let mut tags = Vec::new();
 
-    let lines = to_lines(lines);
+    let lines = to_lines(comments, start, end);
 
     for (ty, comment_lines) in lines {
         let mut single_tags = Vec::new();
@@ -111,26 +111,43 @@ pub fn parse_doccomments(lines: &[&pt::DocComment]) -> Vec<DocComment> {
 }
 
 /// Convert the comment to lines, stripping whitespace and leading * in block comments
-fn to_lines<'a>(comments: &'a [&pt::DocComment]) -> Vec<(pt::CommentType, Vec<(usize, &'a str)>)> {
+fn to_lines(
+    comments: &[pt::Comment],
+    start: usize,
+    end: usize,
+) -> Vec<(pt::CommentType, Vec<(usize, &str)>)> {
     let mut res = Vec::new();
 
     for comment in comments.iter() {
         let mut grouped_comments = Vec::new();
 
-        match comment.ty {
-            pt::CommentType::Line => {
-                let leading = comment
-                    .comment
+        match comment {
+            pt::Comment::DocLine(loc, comment) => {
+                if loc.start() >= end || loc.end() < start {
+                    continue;
+                }
+
+                // remove the leading ///
+                let leading = comment[3..]
                     .chars()
                     .take_while(|ch| ch.is_whitespace())
                     .count();
 
-                grouped_comments.push((comment.loc.start() + leading, comment.comment.trim()));
-            }
-            pt::CommentType::Block => {
-                let mut start = comment.loc.start();
+                grouped_comments.push((loc.start() + leading + 3, comment[3..].trim()));
 
-                for s in comment.comment.lines() {
+                res.push((pt::CommentType::Line, grouped_comments));
+            }
+            pt::Comment::DocBlock(loc, comment) => {
+                if loc.start() >= end || loc.end() < start {
+                    continue;
+                }
+
+                let mut start = loc.start() + 3;
+
+                let len = comment.len();
+
+                // remove the leading /** and tailing */
+                for s in comment[3..len - 2].lines() {
                     if let Some((i, _)) = s
                         .char_indices()
                         .find(|(_, ch)| !ch.is_whitespace() && *ch != '*')
@@ -140,10 +157,11 @@ fn to_lines<'a>(comments: &'a [&pt::DocComment]) -> Vec<(pt::CommentType, Vec<(u
 
                     start += s.len() + 1;
                 }
-            }
-        }
 
-        res.push((comment.ty, grouped_comments));
+                res.push((pt::CommentType::Block, grouped_comments));
+            }
+            _ => (),
+        }
     }
 
     res

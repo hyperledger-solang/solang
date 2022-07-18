@@ -122,19 +122,8 @@ impl Display for IdentifierPath {
 pub enum Comment {
     Line(Loc, String),
     Block(Loc, String),
-}
-
-#[derive(Copy, Clone, PartialEq, Debug)]
-pub enum CommentType {
-    Line,
-    Block,
-}
-
-#[derive(Debug, PartialEq, Clone)]
-pub struct DocComment {
-    pub loc: Loc,
-    pub ty: CommentType,
-    pub comment: String,
+    DocLine(Loc, String),
+    DocBlock(Loc, String),
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -152,9 +141,27 @@ pub enum SourceUnitPart {
     FunctionDefinition(Box<FunctionDefinition>),
     VariableDefinition(Box<VariableDefinition>),
     TypeDefinition(Box<TypeDefinition>),
-    DocComment(DocComment),
     Using(Box<Using>),
     StraySemicolon(Loc),
+}
+
+impl SourceUnitPart {
+    pub fn loc(&self) -> &Loc {
+        match self {
+            SourceUnitPart::ContractDefinition(def) => &def.loc,
+            SourceUnitPart::PragmaDirective(loc, _, _) => loc,
+            SourceUnitPart::ImportDirective(import) => import.loc(),
+            SourceUnitPart::EnumDefinition(def) => &def.loc,
+            SourceUnitPart::StructDefinition(def) => &def.loc,
+            SourceUnitPart::EventDefinition(def) => &def.loc,
+            SourceUnitPart::ErrorDefinition(def) => &def.loc,
+            SourceUnitPart::FunctionDefinition(def) => &def.loc,
+            SourceUnitPart::VariableDefinition(def) => &def.loc,
+            SourceUnitPart::TypeDefinition(def) => &def.loc,
+            SourceUnitPart::Using(def) => &def.loc,
+            SourceUnitPart::StraySemicolon(loc) => loc,
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -162,6 +169,16 @@ pub enum Import {
     Plain(StringLiteral, Loc),
     GlobalSymbol(StringLiteral, Identifier, Loc),
     Rename(StringLiteral, Vec<(Identifier, Option<Identifier>)>, Loc),
+}
+
+impl Import {
+    pub fn loc(&self) -> &Loc {
+        match self {
+            Import::Plain(_, loc) => loc,
+            Import::GlobalSymbol(_, _, loc) => loc,
+            Import::Rename(_, _, loc) => loc,
+        }
+    }
 }
 
 pub type ParameterList = Vec<(Loc, Option<Parameter>)>;
@@ -240,7 +257,23 @@ pub enum ContractPart {
     TypeDefinition(Box<TypeDefinition>),
     StraySemicolon(Loc),
     Using(Box<Using>),
-    DocComment(DocComment),
+}
+
+impl ContractPart {
+    // Return the location of the part. Note that this excluded the body of the function
+    pub fn loc(&self) -> &Loc {
+        match self {
+            ContractPart::StructDefinition(def) => &def.loc,
+            ContractPart::EventDefinition(def) => &def.loc,
+            ContractPart::EnumDefinition(def) => &def.loc,
+            ContractPart::ErrorDefinition(def) => &def.loc,
+            ContractPart::VariableDefinition(def) => &def.loc,
+            ContractPart::FunctionDefinition(def) => &def.loc,
+            ContractPart::TypeDefinition(def) => &def.loc,
+            ContractPart::StraySemicolon(loc) => loc,
+            ContractPart::Using(def) => &def.loc,
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -693,7 +726,6 @@ pub enum Statement {
         Option<(ParameterList, Box<Statement>)>,
         Vec<CatchClause>,
     ),
-    DocComment(DocComment),
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -807,7 +839,6 @@ impl CodeLocation for Statement {
             | Statement::RevertNamedArgs(loc, ..)
             | Statement::Emit(loc, ..)
             | Statement::Try(loc, ..) => *loc,
-            Statement::DocComment(comment) => comment.loc,
         }
     }
 }
