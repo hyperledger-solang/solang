@@ -142,7 +142,7 @@ pub fn resolve_typenames<'a>(
 
                 type_decl(ty, file_no, &tags, None, ns);
             }
-            _ => (),
+            _ => doccomments.clear(),
         }
     }
 
@@ -396,7 +396,7 @@ fn resolve_contract<'a>(
 
                 type_decl(ty, file_no, &tags, Some(contract_no), ns);
             }
-            _ => (),
+            _ => doccomments.clear(),
         }
     }
 
