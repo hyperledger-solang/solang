@@ -3248,6 +3248,24 @@ pub trait TargetRuntime<'a> {
                     "ptr_to_int",
                 )
                 .into()
+        } else if matches!((from, to), (Type::DynamicBytes, Type::Slice(_))) {
+            let slice = bin.build_alloca(function, bin.llvm_type(to, ns), "slice");
+
+            let data = bin.vector_bytes(val);
+
+            let data_ptr = bin.builder.build_struct_gep(slice, 0, "data").unwrap();
+
+            bin.builder.build_store(data_ptr, data);
+
+            let len =
+                bin.builder
+                    .build_int_z_extend(bin.vector_len(val), bin.context.i64_type(), "len");
+
+            let len_ptr = bin.builder.build_struct_gep(slice, 1, "len").unwrap();
+
+            bin.builder.build_store(len_ptr, len);
+
+            bin.builder.build_load(slice, "slice")
         } else {
             val
         }

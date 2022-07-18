@@ -1072,6 +1072,9 @@ impl Expression {
             {
                 Ok(self.clone())
             }
+            (Type::DynamicBytes, Type::Slice(ty)) if ty.as_ref() == &Type::Bytes(1) => {
+                Ok(Expression::Cast(*loc, to.clone(), Box::new(self.clone())))
+            }
             _ => {
                 diagnostics.push(Diagnostic::cast_error(
                     *loc,
@@ -6941,7 +6944,7 @@ fn array_literal(
 
     // We follow the solidity scheme were everthing gets implicitly converted to the
     // type of the first element
-    let first = expression(
+    let mut first = expression(
         flattened.next().unwrap(),
         context,
         ns,
@@ -6951,6 +6954,8 @@ fn array_literal(
     )?;
 
     let ty = if let ResolveTo::Type(ty) = resolve_to {
+        first = first.cast(&first.loc(), ty, true, ns, diagnostics)?;
+
         ty.clone()
     } else {
         first.ty()

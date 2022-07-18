@@ -82,12 +82,37 @@ fn pda() {
 
                 return create_program_address(["Talking", "Squirrels"], program_id);
             }
+
+            function create_pda2(bytes a, bytes b) public returns (address) {
+                address program_id = address"BPFLoaderUpgradeab1e11111111111111111111111";
+
+                return create_program_address([a, b], program_id);
+            }
         }"#,
     );
 
     vm.constructor("pda", &[]);
 
     let returns = vm.function("create_pda", &[], &[], None);
+
+    if let Token::FixedBytes(bs) = &returns[0] {
+        assert_eq!(
+            bs.to_base58(),
+            "2fnQrngrQT4SeLcdToJAD96phoEjNL2man2kfRLCASVk"
+        );
+    } else {
+        panic!("{:?} not expected", returns);
+    }
+
+    let returns = vm.function(
+        "create_pda2",
+        &[
+            Token::Bytes(b"Talking".to_vec()),
+            Token::Bytes(b"Squirrels".to_vec()),
+        ],
+        &[],
+        None,
+    );
 
     if let Token::FixedBytes(bs) = &returns[0] {
         assert_eq!(
