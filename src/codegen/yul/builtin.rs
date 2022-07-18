@@ -1,11 +1,15 @@
 use crate::ast::{Namespace, RetrieveType, Type};
-use crate::codegen::cfg::{ControlFlowGraph, Instr};
-use crate::codegen::vartable::Vartable;
-use crate::codegen::yul::expression::expression;
-use crate::codegen::{Builtin, Expression, Options};
-use crate::sema::expression::coerce_number;
-use crate::sema::yul::ast;
-use crate::sema::yul::builtin::YulBuiltInFunction;
+use crate::codegen::{
+    cfg::{ControlFlowGraph, Instr},
+    vartable::Vartable,
+    yul::expression::expression,
+    {Builtin, Expression, Options},
+};
+use crate::sema::{
+    diagnostics::Diagnostics,
+    expression::coerce_number,
+    yul::{ast, builtin::YulBuiltInFunction},
+};
 use num_bigint::BigInt;
 use num_traits::{FromPrimitive, Zero};
 use solang_parser::pt;
@@ -325,7 +329,7 @@ fn equalize_types(
     let left_ty = left.ty();
     let right_ty = right.ty();
     if left_ty != right_ty {
-        let mut vec = Vec::new();
+        let mut diagnostics = Diagnostics::default();
         let casted_type = coerce_number(
             &left_ty,
             &pt::Loc::Codegen,
@@ -334,7 +338,7 @@ fn equalize_types(
             false,
             false,
             ns,
-            &mut vec,
+            &mut diagnostics,
         )
         .unwrap();
 

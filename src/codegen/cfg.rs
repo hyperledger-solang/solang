@@ -11,8 +11,7 @@ use crate::codegen::subexpression_elimination::common_sub_expression_elimination
 use crate::codegen::{undefined_variable, Expression, LLVMName};
 use crate::sema::ast::RetrieveType;
 use crate::sema::ast::{CallTy, Contract, Function, Namespace, Parameter, StringLocation, Type};
-use crate::sema::contracts::collect_base_args;
-use crate::sema::Recurse;
+use crate::sema::{contracts::collect_base_args, diagnostics::Diagnostics, Recurse};
 use crate::{ast, Target};
 use indexmap::IndexMap;
 use num_bigint::BigInt;
@@ -1403,7 +1402,7 @@ fn function_cfg(
     // on a constructor for a superior class
     if func.ty == pt::FunctionTy::Constructor && func.contract_no == Some(contract_no) {
         let mut all_base_args = BTreeMap::new();
-        let mut diagnostics = BTreeSet::new();
+        let mut diagnostics = Diagnostics::default();
 
         // Find all the resolved arguments for base contracts. These can be attached
         // to the contract, or the constructor. Contracts can have multiple constructors

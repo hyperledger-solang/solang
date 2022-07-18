@@ -1,5 +1,6 @@
 use super::{
     ast::{Diagnostic, Expression, Namespace, Note, Type, Using, UsingList},
+    diagnostics::Diagnostics,
     expression::{expression, function_returns, function_type, ExprContext, ResolveTo},
     symtable::Symtable,
 };
@@ -14,7 +15,7 @@ pub(crate) fn using_decl(
     contract_no: Option<usize>,
     ns: &mut Namespace,
 ) -> Result<Using, ()> {
-    let mut diagnostics = Vec::new();
+    let mut diagnostics = Diagnostics::default();
 
     let ty = if let Some(expr) = &using.ty {
         match ns.resolve_type(file_no, contract_no, false, expr, &mut diagnostics) {
@@ -172,7 +173,7 @@ fn possible_functions(
     self_expr: &Expression,
     ns: &Namespace,
 ) -> HashSet<usize> {
-    let mut diagnostics = Vec::new();
+    let mut diagnostics = Diagnostics::default();
     using
         .iter()
         .filter(|using| {
@@ -211,7 +212,7 @@ pub(super) fn try_resolve_using_call(
     context: &ExprContext,
     args: &[pt::Expression],
     symtable: &mut Symtable,
-    diagnostics: &mut Vec<Diagnostic>,
+    diagnostics: &mut Diagnostics,
     ns: &mut Namespace,
     resolve_to: ResolveTo,
 ) -> Result<Option<Expression>, ()> {
@@ -232,7 +233,7 @@ pub(super) fn try_resolve_using_call(
     }
 
     let mut name_matches = 0;
-    let mut errors = Vec::new();
+    let mut errors = Diagnostics::default();
 
     for function_no in functions {
         let libfunc = &ns.functions[function_no];

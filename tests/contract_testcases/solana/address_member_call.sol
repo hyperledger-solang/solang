@@ -13,7 +13,8 @@ contract MyContract {
     function send( 
         address[] calldata _receivers,
         uint64[] calldata _amounts,
-        string calldata _payment
+        string calldata _payment,
+	uint64 value
     ) external payable {
         require(
             _receivers.length == _amounts.length,
@@ -25,13 +26,12 @@ contract MyContract {
             total += _amounts[i];
         }
         require(
-            total == msg.value,
+            total == value,
             "Total payment value does not match ether sent"
         );
 
         for (uint8 i = 0; i < _receivers.length; i++) {
-            (bool sent, ) = _receivers[i].call{value: _amounts[i]}("");
-            require(sent, "Transfer failed.");
+            payable(_receivers[i]).transfer(_amounts[i]);
         }
 
         emit Receipt(

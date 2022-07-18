@@ -310,7 +310,7 @@ impl Namespace {
         &mut self,
         file_no: usize,
         name: &pt::IdentifierPath,
-        diagnostics: &mut Vec<Diagnostic>,
+        diagnostics: &mut Diagnostics,
     ) -> Result<usize, ()> {
         let (id, namespace) = name
             .identifiers
@@ -336,7 +336,7 @@ impl Namespace {
         &mut self,
         file_no: usize,
         name: &pt::IdentifierPath,
-        diagnostics: &mut Vec<Diagnostic>,
+        diagnostics: &mut Diagnostics,
     ) -> Result<Vec<(pt::Loc, usize)>, ()> {
         let (id, namespace) = name
             .identifiers
@@ -363,7 +363,7 @@ impl Namespace {
         file_no: usize,
         contract_no: Option<usize>,
         expr: &pt::Expression,
-        diagnostics: &mut Vec<Diagnostic>,
+        diagnostics: &mut Diagnostics,
     ) -> Result<Vec<usize>, ()> {
         let (namespace, id, dimensions) =
             self.expr_to_type(file_no, contract_no, expr, diagnostics)?;
@@ -752,11 +752,11 @@ impl Namespace {
         contract_no: Option<usize>,
         casting: bool,
         id: &pt::Expression,
-        diagnostics: &mut Vec<Diagnostic>,
+        diagnostics: &mut Diagnostics,
     ) -> Result<Type, ()> {
         fn resolve_dimensions(
             ast_dimensions: &[Option<(pt::Loc, BigInt)>],
-            diagnostics: &mut Vec<Diagnostic>,
+            diagnostics: &mut Diagnostics,
         ) -> Result<Vec<Option<BigInt>>, ()> {
             let mut dimensions = Vec::new();
 
@@ -1094,7 +1094,7 @@ impl Namespace {
         file_no: usize,
         mut contract_no: Option<usize>,
         id: &pt::Identifier,
-        diagnostics: &mut Vec<Diagnostic>,
+        diagnostics: &mut Diagnostics,
     ) -> Result<Option<&Symbol>, ()> {
         // The leading part of the namespace can be import variables
         let mut import_file_no = file_no;
@@ -1225,7 +1225,7 @@ impl Namespace {
         file_no: usize,
         contract_no: Option<usize>,
         expr: &'a pt::Expression,
-        diagnostics: &mut Vec<Diagnostic>,
+        diagnostics: &mut Diagnostics,
     ) -> Result<(Vec<&'a pt::Identifier>, pt::Expression, Vec<ArrayDimension>), ()> {
         let mut expr = expr;
         let mut dimensions = vec![];
@@ -1312,7 +1312,7 @@ impl Namespace {
         contract_no: Option<usize>,
         function_no: Option<usize>,
         expr: &pt::Expression,
-        diagnostics: &mut Vec<Diagnostic>,
+        diagnostics: &mut Diagnostics,
     ) -> Result<ArrayDimension, ()> {
         let mut symtable = Symtable::new();
         let context = ExprContext {

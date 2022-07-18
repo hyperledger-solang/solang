@@ -64,8 +64,8 @@ fn sema_file(file: &ResolvedFile, resolver: &mut FileResolver, ns: &mut ast::Nam
 
     let (pt, comments) = match parse(&source_code, file_no) {
         Ok(s) => s,
-        Err(errors) => {
-            ns.diagnostics.extend(errors);
+        Err(mut errors) => {
+            ns.diagnostics.append(&mut errors);
 
             return;
         }

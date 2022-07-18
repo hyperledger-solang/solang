@@ -7,5 +7,5 @@ fn builtin_prototype() {
 
     assert_eq!(p.namespace, Some("block"));
     assert_eq!(p.name, "timestamp");
-    assert!(p.args.is_empty());
+    assert!(p.params.is_empty());
 }

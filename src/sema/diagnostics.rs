@@ -1,4 +1,4 @@
-use super::ast::{Diagnostic, Level, Namespace};
+use super::ast::{Diagnostic, ErrorType, Level, Namespace};
 use crate::file_resolver::FileResolver;
 use codespan_reporting::{diagnostic, files, term};
 use itertools::Itertools;
@@ -40,11 +40,27 @@ impl Diagnostics {
         self.contents.push(diagnostic);
     }
 
-    pub fn extend(&mut self, diagnostics: Vec<Diagnostic>) {
-        if !self.has_error {
-            self.has_error = diagnostics.iter().any(|m| m.level == Level::Error);
+    pub fn extend(&mut self, diagnostics: Diagnostics) {
+        self.has_error |= diagnostics.has_error;
+        self.contents.extend(diagnostics.contents);
+    }
+
+    /// Filter out all the diagnostics which are not the result of casting problems
+    pub fn extend_non_casting(&mut self, other: &Diagnostics) -> bool {
+        let others: Vec<_> = other
+            .iter()
+            .filter(|diag| diag.ty != ErrorType::CastError)
+            .cloned()
+            .collect();
+        if others.is_empty() {
+            false
+        } else {
+            if !self.has_error {
+                self.has_error = others.iter().any(|m| m.level == Level::Error);
+            }
+            self.contents.extend(others);
+            true
         }
-        self.contents.extend(diagnostics);
     }
 
     pub fn append(&mut self, diagnostics: &mut Vec<Diagnostic>) {

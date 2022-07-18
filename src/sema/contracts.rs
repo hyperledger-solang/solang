@@ -4,12 +4,13 @@ use solang_parser::{
     doccomment::parse_doccomments,
     pt::{self, CodeLocation, Statement},
 };
-use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::convert::TryInto;
 use tiny_keccak::{Hasher, Keccak};
 
 use super::{
     ast,
+    diagnostics::Diagnostics,
     expression::{compatible_mutability, match_constructor_to_args, ExprContext},
     functions, statements,
     symtable::Symtable,
@@ -113,7 +114,7 @@ pub fn resolve_base_contracts(
     file_no: usize,
     ns: &mut ast::Namespace,
 ) {
-    let mut diagnostics = Vec::new();
+    let mut diagnostics = Diagnostics::default();
 
     for (contract_no, def) in contracts {
         for base in &def.base {
@@ -198,7 +199,7 @@ fn resolve_base_args(
     file_no: usize,
     ns: &mut ast::Namespace,
 ) {
-    let mut diagnostics = Vec::new();
+    let mut diagnostics = Diagnostics::default();
 
     // for every contract, if we have a base which resolved successfully, resolve any constructor args
     for (contract_no, def) in contracts {
@@ -895,7 +896,7 @@ pub fn collect_base_args<'a>(
     contract_no: usize,
     constructor_no: Option<usize>,
     base_args: &mut BTreeMap<usize, BaseOrModifier<'a>>,
-    diagnostics: &mut BTreeSet<ast::Diagnostic>,
+    diagnostics: &mut Diagnostics,
     ns: &'a ast::Namespace,
 ) {
     let contract = &ns.contracts[contract_no];
@@ -905,7 +906,7 @@ pub fn collect_base_args<'a>(
 
         for (base_no, (loc, constructor_no, args)) in &constructor.bases {
             if let Some(prev_args) = base_args.get(base_no) {
-                diagnostics.insert(ast::Diagnostic::error_with_note(
+                diagnostics.push(ast::Diagnostic::error_with_note(
                     *loc,
                     format!(
                         "duplicate argument for base contract '{}'",
@@ -936,7 +937,7 @@ pub fn collect_base_args<'a>(
     for base in &contract.bases {
         if let Some((constructor_no, args)) = &base.constructor {
             if let Some(prev_args) = base_args.get(&base.contract_no) {
-                diagnostics.insert(ast::Diagnostic::error_with_note(
+                diagnostics.push(ast::Diagnostic::error_with_note(
                     base.loc,
                     format!(
                         "duplicate argument for base contract '{}'",
@@ -987,7 +988,8 @@ fn check_base_args(contract_no: usize, ns: &mut ast::Namespace) {
         return;
     }
 
-    let mut diagnostics = BTreeSet::new();
+    let mut diagnostics = Diagnostics::default();
+
     let base_args_needed = ns
         .contract_bases(contract_no)
         .into_iter()
@@ -1014,7 +1016,7 @@ fn check_base_args(contract_no: usize, ns: &mut ast::Namespace) {
 
             for base_no in &base_args_needed {
                 if !base_args.contains_key(base_no) {
-                    diagnostics.insert(ast::Diagnostic::error(
+                    diagnostics.push(ast::Diagnostic::error(
                         contract.loc,
                         format!(
                             "missing arguments to base contract '{}' constructor",
@@ -1031,7 +1033,7 @@ fn check_base_args(contract_no: usize, ns: &mut ast::Namespace) {
 
         for base_no in &base_args_needed {
             if !base_args.contains_key(base_no) {
-                diagnostics.insert(ast::Diagnostic::error(
+                diagnostics.push(ast::Diagnostic::error(
                     contract.loc,
                     format!(
                         "missing arguments to base contract '{}' constructor",
@@ -1042,7 +1044,7 @@ fn check_base_args(contract_no: usize, ns: &mut ast::Namespace) {
         }
     }
 
-    ns.diagnostics.extend(diagnostics.into_iter().collect());
+    ns.diagnostics.extend(diagnostics);
 }
 
 /// Compare two visibility levels

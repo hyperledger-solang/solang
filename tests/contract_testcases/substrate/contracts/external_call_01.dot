@@ -11,8 +11,9 @@ strict digraph "tests/contract_testcases/substrate/contracts/external_call_01.so
 	number_literal [label="int32 literal: 1\ntests/contract_testcases/substrate/contracts/external_call_01.sol:11:24-25"]
 	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/contracts/external_call_01.sol:2:9-7:10"]
 	diagnostic_13 [label="function expects 2 arguments, 1 provided\nlevel Error\ntests/contract_testcases/substrate/contracts/external_call_01.sol:5:24-43"]
-	diagnostic_14 [label="found contract 'b'\nlevel Debug\ntests/contract_testcases/substrate/contracts/external_call_01.sol:9:9-13:10"]
-	diagnostic_15 [label="declaration of 'b' shadows contract name\nlevel Warning\ntests/contract_testcases/substrate/contracts/external_call_01.sol:10:42-43"]
+	diagnostic_14 [label="missing argument 't' to function 'get_x'\nlevel Error\ntests/contract_testcases/substrate/contracts/external_call_01.sol:5:24-43"]
+	diagnostic_15 [label="found contract 'b'\nlevel Debug\ntests/contract_testcases/substrate/contracts/external_call_01.sol:9:9-13:10"]
+	diagnostic_16 [label="declaration of 'b' shadows contract name\nlevel Warning\ntests/contract_testcases/substrate/contracts/external_call_01.sol:10:42-43"]
 	note [label="previous declaration of contract name\ntests/contract_testcases/substrate/contracts/external_call_01.sol:9:9-13:10"]
 	contracts -> contract
 	contract -> var [label="variable"]
@@ -26,7 +27,8 @@ strict digraph "tests/contract_testcases/substrate/contracts/external_call_01.so
 	return -> number_literal [label="expr"]
 	diagnostics -> diagnostic [label="Debug"]
 	diagnostics -> diagnostic_13 [label="Error"]
-	diagnostics -> diagnostic_14 [label="Debug"]
-	diagnostics -> diagnostic_15 [label="Warning"]
-	diagnostic_15 -> note [label="note"]
+	diagnostics -> diagnostic_14 [label="Error"]
+	diagnostics -> diagnostic_15 [label="Debug"]
+	diagnostics -> diagnostic_16 [label="Warning"]
+	diagnostic_16 -> note [label="note"]
 }

@@ -2,8 +2,9 @@ use super::ast::{
     Builtin, BuiltinStruct, Diagnostic, Expression, File, Namespace, Parameter, StructDecl, Symbol,
     Type,
 };
+use super::diagnostics::Diagnostics;
 use super::eval::eval_const_number;
-use super::expression::{args_sanity_check, expression, ExprContext, ResolveTo};
+use super::expression::{expression, ExprContext, ResolveTo};
 use super::symtable::Symtable;
 use crate::sema::ast::RetrieveType;
 use crate::Target;
@@ -19,7 +20,7 @@ pub struct Prototype {
     pub namespace: Option<&'static str>,
     pub method: Option<Type>,
     pub name: &'static str,
-    pub args: Vec<Type>,
+    pub params: Vec<Type>,
     pub ret: Vec<Type>,
     pub target: Vec<Target>,
     pub doc: &'static str,
@@ -35,7 +36,7 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 27]> = Lazy::new(|| {
             namespace: None,
             method: None,
             name: "assert",
-            args: vec![Type::Bool],
+            params: vec![Type::Bool],
             ret: vec![Type::Void],
             target: vec![],
             doc: "Abort execution if argument evaluates to false",
@@ -46,7 +47,7 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 27]> = Lazy::new(|| {
             namespace: None,
             method: None,
             name: "print",
-            args: vec![Type::String],
+            params: vec![Type::String],
             ret: vec![Type::Void],
             target: vec![],
             doc: "log string for debugging purposes. Runs on development chain only",
@@ -57,7 +58,7 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 27]> = Lazy::new(|| {
             namespace: None,
             method: None,
             name: "require",
-            args: vec![Type::Bool],
+            params: vec![Type::Bool],
             ret: vec![Type::Void],
             target: vec![],
             doc: "Abort execution if argument evaulates to false",
@@ -68,7 +69,7 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 27]> = Lazy::new(|| {
             namespace: None,
             method: None,
             name: "require",
-            args: vec![Type::Bool, Type::String],
+            params: vec![Type::Bool, Type::String],
             ret: vec![Type::Void],
             target: vec![],
             doc: "Abort execution if argument evaulates to false. Report string when aborting",
@@ -79,7 +80,7 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 27]> = Lazy::new(|| {
             namespace: None,
             method: None,
             name: "revert",
-            args: vec![],
+            params: vec![],
             ret: vec![Type::Unreachable],
             target: vec![],
             doc: "Revert execution",
@@ -90,7 +91,7 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 27]> = Lazy::new(|| {
             namespace: None,
             method: None,
             name: "revert",
-            args: vec![Type::String],
+            params: vec![Type::String],
             ret: vec![Type::Unreachable],
             target: vec![],
             doc: "Revert execution and report string",
@@ -101,7 +102,7 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 27]> = Lazy::new(|| {
             namespace: None,
             method: None,
             name: "selfdestruct",
-            args: vec![Type::Address(true)],
+            params: vec![Type::Address(true)],
             ret: vec![Type::Unreachable],
             target: vec![Target::Ewasm, Target::default_substrate()],
             doc: "Destroys current account and deposits any remaining balance to address",
@@ -112,7 +113,7 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 27]> = Lazy::new(|| {
             namespace: None,
             method: None,
             name: "keccak256",
-            args: vec![Type::DynamicBytes],
+            params: vec![Type::DynamicBytes],
             ret: vec![Type::Bytes(32)],
             target: vec![],
             doc: "Calculates keccak256 hash",
@@ -123,7 +124,7 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 27]> = Lazy::new(|| {
             namespace: None,
             method: None,
             name: "ripemd160",
-            args: vec![Type::DynamicBytes],
+            params: vec![Type::DynamicBytes],
             ret: vec![Type::Bytes(20)],
             target: vec![],
             doc: "Calculates ripemd hash",
@@ -134,7 +135,7 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 27]> = Lazy::new(|| {
             namespace: None,
             method: None,
             name: "sha256",
-            args: vec![Type::DynamicBytes],
+            params: vec![Type::DynamicBytes],
             ret: vec![Type::Bytes(32)],
             target: vec![],
             doc: "Calculates sha256 hash",
@@ -145,7 +146,7 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 27]> = Lazy::new(|| {
             namespace: None,
             method: None,
             name: "blake2_128",
-            args: vec![Type::DynamicBytes],
+            params: vec![Type::DynamicBytes],
             ret: vec![Type::Bytes(16)],
             target: vec![Target::default_substrate()],
             doc: "Calculates blake2-128 hash",
@@ -156,7 +157,7 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 27]> = Lazy::new(|| {
             namespace: None,
             method: None,
             name: "blake2_256",
-            args: vec![Type::DynamicBytes],
+            params: vec![Type::DynamicBytes],
             ret: vec![Type::Bytes(32)],
             target: vec![Target::default_substrate()],
             doc: "Calculates blake2-256 hash",
@@ -167,7 +168,7 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 27]> = Lazy::new(|| {
             namespace: None,
             method: None,
             name: "gasleft",
-            args: vec![],
+            params: vec![],
             ret: vec![Type::Uint(64)],
             target: vec![Target::default_substrate(), Target::Ewasm],
             doc: "Return remaining gas left in current call",
@@ -178,7 +179,7 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 27]> = Lazy::new(|| {
             namespace: None,
             method: None,
             name: "blockhash",
-            args: vec![Type::Uint(64)],
+            params: vec![Type::Uint(64)],
             ret: vec![Type::Bytes(32)],
             target: vec![Target::Ewasm],
             doc: "Returns the block hash for given block number",
@@ -189,7 +190,7 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 27]> = Lazy::new(|| {
             namespace: None,
             method: None,
             name: "random",
-            args: vec![Type::DynamicBytes],
+            params: vec![Type::DynamicBytes],
             ret: vec![Type::Bytes(32)],
             target: vec![Target::default_substrate()],
             doc: "Returns deterministic random bytes",
@@ -200,7 +201,7 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 27]> = Lazy::new(|| {
             namespace: Some("abi"),
             method: None,
             name: "decode",
-            args: vec![Type::DynamicBytes],
+            params: vec![Type::DynamicBytes],
             ret: vec![],
             target: vec![],
             doc: "Abi decode byte array with the given types",
@@ -211,7 +212,7 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 27]> = Lazy::new(|| {
             namespace: Some("abi"),
             method: None,
             name: "encode",
-            args: vec![],
+            params: vec![],
             ret: vec![],
             target: vec![],
             doc: "Abi encode given arguments",
@@ -223,7 +224,7 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 27]> = Lazy::new(|| {
             namespace: Some("abi"),
             method: None,
             name: "encodePacked",
-            args: vec![],
+            params: vec![],
             ret: vec![],
             target: vec![],
             doc: "Abi encode given arguments using packed encoding",
@@ -235,7 +236,7 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 27]> = Lazy::new(|| {
             namespace: Some("abi"),
             method: None,
             name: "encodeWithSelector",
-            args: vec![Type::Bytes(4)],
+            params: vec![Type::Bytes(4)],
             ret: vec![],
             target: vec![],
             doc: "Abi encode given arguments with selector",
@@ -247,7 +248,7 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 27]> = Lazy::new(|| {
             namespace: Some("abi"),
             method: None,
             name: "encodeWithSignature",
-            args: vec![Type::String],
+            params: vec![Type::String],
             ret: vec![],
             target: vec![],
             doc: "Abi encode given arguments with function signature",
@@ -259,7 +260,7 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 27]> = Lazy::new(|| {
             namespace: Some("abi"),
             method: None,
             name: "encodeCall",
-            args: vec![],
+            params: vec![],
             ret: vec![],
             target: vec![],
             doc: "Abi encode given arguments with function signature",
@@ -271,7 +272,7 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 27]> = Lazy::new(|| {
             namespace: Some("tx"),
             method: None,
             name: "gasprice",
-            args: vec![Type::Uint(64)],
+            params: vec![Type::Uint(64)],
             ret: vec![Type::Value],
             target: vec![],
             doc: "Calculate price of given gas units",
@@ -282,7 +283,7 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 27]> = Lazy::new(|| {
             namespace: None,
             method: None,
             name: "mulmod",
-            args: vec![Type::Uint(256), Type::Uint(256), Type::Uint(256)],
+            params: vec![Type::Uint(256), Type::Uint(256), Type::Uint(256)],
             ret: vec![Type::Uint(256)],
             target: vec![],
             doc: "Multiply first two arguments, and the modulo last argument. Does not overflow",
@@ -294,7 +295,7 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 27]> = Lazy::new(|| {
             namespace: None,
             method: None,
             name: "addmod",
-            args: vec![Type::Uint(256), Type::Uint(256), Type::Uint(256)],
+            params: vec![Type::Uint(256), Type::Uint(256), Type::Uint(256)],
             ret: vec![Type::Uint(256)],
             target: vec![],
             doc: "Add first two arguments, and the modulo last argument. Does not overflow",
@@ -306,7 +307,7 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 27]> = Lazy::new(|| {
             namespace: None,
             method: None,
             name: "signatureVerify",
-            args: vec![Type::Address(false), Type::DynamicBytes, Type::DynamicBytes],
+            params: vec![Type::Address(false), Type::DynamicBytes, Type::DynamicBytes],
             ret: vec![Type::Bool],
             target: vec![Target::Solana],
             doc: "ed25519 signature verification",
@@ -317,7 +318,7 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 27]> = Lazy::new(|| {
             namespace: None,
             method: Some(Type::UserType(0)),
             name: "wrap",
-            args: vec![],
+            params: vec![],
             ret: vec![Type::UserType(0)],
             target: vec![],
             doc: "wrap type into user defined type",
@@ -328,7 +329,7 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 27]> = Lazy::new(|| {
             namespace: None,
             method: Some(Type::UserType(0)),
             name: "unwrap",
-            args: vec![Type::UserType(0)],
+            params: vec![Type::UserType(0)],
             ret: vec![],
             target: vec![],
             doc: "unwrap user defined type",
@@ -345,7 +346,7 @@ static BUILTIN_VARIABLE: Lazy<[Prototype; 15]> = Lazy::new(|| {
             namespace: Some("block"),
             method: None,
             name: "coinbase",
-            args: vec![],
+            params: vec![],
             ret: vec![Type::Address(true)],
             target: vec![Target::Ewasm],
             doc: "The address of the current block miner",
@@ -356,7 +357,7 @@ static BUILTIN_VARIABLE: Lazy<[Prototype; 15]> = Lazy::new(|| {
             namespace: Some("block"),
             method: None,
             name: "difficulty",
-            args: vec![],
+            params: vec![],
             ret: vec![Type::Uint(256)],
             target: vec![Target::Ewasm],
             doc: "The difficulty for current block",
@@ -367,7 +368,7 @@ static BUILTIN_VARIABLE: Lazy<[Prototype; 15]> = Lazy::new(|| {
             namespace: Some("block"),
             method: None,
             name: "gaslimit",
-            args: vec![],
+            params: vec![],
             ret: vec![Type::Uint(64)],
             target: vec![Target::Ewasm],
             doc: "The gas limit",
@@ -378,7 +379,7 @@ static BUILTIN_VARIABLE: Lazy<[Prototype; 15]> = Lazy::new(|| {
             namespace: Some("block"),
             method: None,
             name: "number",
-            args: vec![],
+            params: vec![],
             ret: vec![Type::Uint(64)],
             target: vec![],
             doc: "Current block number",
@@ -389,7 +390,7 @@ static BUILTIN_VARIABLE: Lazy<[Prototype; 15]> = Lazy::new(|| {
             namespace: Some("block"),
             method: None,
             name: "slot",
-            args: vec![],
+            params: vec![],
             ret: vec![Type::Uint(64)],
             target: vec![Target::Solana],
             doc: "Current slot number",
@@ -400,7 +401,7 @@ static BUILTIN_VARIABLE: Lazy<[Prototype; 15]> = Lazy::new(|| {
             namespace: Some("block"),
             method: None,
             name: "timestamp",
-            args: vec![],
+            params: vec![],
             ret: vec![Type::Uint(64)],
             target: vec![],
             doc: "Current timestamp in unix epoch (seconds since 1970)",
@@ -411,7 +412,7 @@ static BUILTIN_VARIABLE: Lazy<[Prototype; 15]> = Lazy::new(|| {
             namespace: Some("block"),
             method: None,
             name: "tombstone_deposit",
-            args: vec![],
+            params: vec![],
             ret: vec![Type::Value],
             target: vec![Target::default_substrate()],
             doc: "Deposit required for a tombstone",
@@ -422,7 +423,7 @@ static BUILTIN_VARIABLE: Lazy<[Prototype; 15]> = Lazy::new(|| {
             namespace: Some("block"),
             method: None,
             name: "minimum_balance",
-            args: vec![],
+            params: vec![],
             ret: vec![Type::Value],
             target: vec![Target::default_substrate()],
             doc: "Minimum balance required for an account",
@@ -433,7 +434,7 @@ static BUILTIN_VARIABLE: Lazy<[Prototype; 15]> = Lazy::new(|| {
             namespace: Some("msg"),
             method: None,
             name: "data",
-            args: vec![],
+            params: vec![],
             ret: vec![Type::DynamicBytes],
             target: vec![],
             doc: "Raw input bytes to current call",
@@ -444,7 +445,7 @@ static BUILTIN_VARIABLE: Lazy<[Prototype; 15]> = Lazy::new(|| {
             namespace: Some("msg"),
             method: None,
             name: "sender",
-            args: vec![],
+            params: vec![],
             ret: vec![Type::Address(true)],
             target: vec![],
             constant: false,
@@ -455,7 +456,7 @@ static BUILTIN_VARIABLE: Lazy<[Prototype; 15]> = Lazy::new(|| {
             namespace: Some("msg"),
             method: None,
             name: "sig",
-            args: vec![],
+            params: vec![],
             ret: vec![Type::Bytes(4)],
             target: vec![],
             doc: "Function selector for current call",
@@ -466,7 +467,7 @@ static BUILTIN_VARIABLE: Lazy<[Prototype; 15]> = Lazy::new(|| {
             namespace: Some("msg"),
             method: None,
             name: "value",
-            args: vec![],
+            params: vec![],
             ret: vec![Type::Value],
             target: vec![],
             doc: "Value sent with current call",
@@ -477,7 +478,7 @@ static BUILTIN_VARIABLE: Lazy<[Prototype; 15]> = Lazy::new(|| {
             namespace: Some("tx"),
             method: None,
             name: "gasprice",
-            args: vec![],
+            params: vec![],
             ret: vec![Type::Value],
             target: vec![Target::default_substrate(), Target::Ewasm],
             doc: "gas price for one gas unit",
@@ -488,7 +489,7 @@ static BUILTIN_VARIABLE: Lazy<[Prototype; 15]> = Lazy::new(|| {
             namespace: Some("tx"),
             method: None,
             name: "origin",
-            args: vec![],
+            params: vec![],
             ret: vec![Type::Address(true)],
             target: vec![Target::Ewasm],
             doc: "Original address of sender current transaction",
@@ -499,7 +500,7 @@ static BUILTIN_VARIABLE: Lazy<[Prototype; 15]> = Lazy::new(|| {
             namespace: Some("tx"),
             method: None,
             name: "accounts",
-            args: vec![],
+            params: vec![],
             ret: vec![Type::Array(Box::new(Type::Struct(0)), vec![None])],
             target: vec![Target::Solana],
             doc: "Accounts passed into transaction",
@@ -516,7 +517,7 @@ static BUILTIN_METHODS: Lazy<[Prototype; 25]> = Lazy::new(|| {
             namespace: None,
             method: Some(Type::DynamicBytes),
             name: "readInt8",
-            args: vec![Type::Uint(32)],
+            params: vec![Type::Uint(32)],
             ret: vec![Type::Int(8)],
             target: vec![],
             doc: "Reads a signed 8-bit integer from the specified offset",
@@ -527,7 +528,7 @@ static BUILTIN_METHODS: Lazy<[Prototype; 25]> = Lazy::new(|| {
             namespace: None,
             method: Some(Type::DynamicBytes),
             name: "readInt16LE",
-            args: vec![Type::Uint(32)],
+            params: vec![Type::Uint(32)],
             ret: vec![Type::Int(16)],
             target: vec![],
             doc: "Reads a signed 16-bit integer from the specified offset as little endian",
@@ -538,7 +539,7 @@ static BUILTIN_METHODS: Lazy<[Prototype; 25]> = Lazy::new(|| {
             namespace: None,
             method: Some(Type::DynamicBytes),
             name: "readInt32LE",
-            args: vec![Type::Uint(32)],
+            params: vec![Type::Uint(32)],
             ret: vec![Type::Int(32)],
             target: vec![],
             doc: "Reads a signed 32-bit integer from the specified offset as little endian",
@@ -549,7 +550,7 @@ static BUILTIN_METHODS: Lazy<[Prototype; 25]> = Lazy::new(|| {
             namespace: None,
             method: Some(Type::DynamicBytes),
             name: "readInt64LE",
-            args: vec![Type::Uint(32)],
+            params: vec![Type::Uint(32)],
             ret: vec![Type::Int(64)],
             target: vec![],
             doc: "Reads a signed 64-bit integer from the specified offset as little endian",
@@ -560,7 +561,7 @@ static BUILTIN_METHODS: Lazy<[Prototype; 25]> = Lazy::new(|| {
             namespace: None,
             method: Some(Type::DynamicBytes),
             name: "readInt128LE",
-            args: vec![Type::Uint(32)],
+            params: vec![Type::Uint(32)],
             ret: vec![Type::Int(128)],
             target: vec![],
             doc: "Reads a signed 128-bit integer from the specified offset as little endian",
@@ -571,7 +572,7 @@ static BUILTIN_METHODS: Lazy<[Prototype; 25]> = Lazy::new(|| {
             namespace: None,
             method: Some(Type::DynamicBytes),
             name: "readInt256LE",
-            args: vec![Type::Uint(32)],
+            params: vec![Type::Uint(32)],
             ret: vec![Type::Int(256)],
             target: vec![],
             doc: "Reads a signed 256-bit integer from the specified offset as little endian",
@@ -582,7 +583,7 @@ static BUILTIN_METHODS: Lazy<[Prototype; 25]> = Lazy::new(|| {
             namespace: None,
             method: Some(Type::DynamicBytes),
             name: "readUint8",
-            args: vec![Type::Uint(32)],
+            params: vec![Type::Uint(32)],
             ret: vec![Type::Uint(8)],
             target: vec![],
             doc: "Reads an unsigned 8-bit integer from the specified offset",
@@ -593,7 +594,7 @@ static BUILTIN_METHODS: Lazy<[Prototype; 25]> = Lazy::new(|| {
             namespace: None,
             method: Some(Type::DynamicBytes),
             name: "readUint16LE",
-            args: vec![Type::Uint(32)],
+            params: vec![Type::Uint(32)],
             ret: vec![Type::Uint(16)],
             target: vec![],
             doc: "Reads an unsigned 16-bit integer from the specified offset as little endian",
@@ -604,7 +605,7 @@ static BUILTIN_METHODS: Lazy<[Prototype; 25]> = Lazy::new(|| {
             namespace: None,
             method: Some(Type::DynamicBytes),
             name: "readUint32LE",
-            args: vec![Type::Uint(32)],
+            params: vec![Type::Uint(32)],
             ret: vec![Type::Uint(32)],
             target: vec![],
             doc: "Reads an unsigned 32-bit integer from the specified offset as little endian",
@@ -615,7 +616,7 @@ static BUILTIN_METHODS: Lazy<[Prototype; 25]> = Lazy::new(|| {
             namespace: None,
             method: Some(Type::DynamicBytes),
             name: "readUint64LE",
-            args: vec![Type::Uint(32)],
+            params: vec![Type::Uint(32)],
             ret: vec![Type::Uint(64)],
             target: vec![],
             doc: "Reads an unsigned 64-bit integer from the specified offset as little endian",
@@ -626,7 +627,7 @@ static BUILTIN_METHODS: Lazy<[Prototype; 25]> = Lazy::new(|| {
             namespace: None,
             method: Some(Type::DynamicBytes),
             name: "readUint128LE",
-            args: vec![Type::Uint(32)],
+            params: vec![Type::Uint(32)],
             ret: vec![Type::Uint(128)],
             target: vec![],
             doc: "Reads an unsigned 128-bit integer from the specified offset as little endian",
@@ -637,7 +638,7 @@ static BUILTIN_METHODS: Lazy<[Prototype; 25]> = Lazy::new(|| {
             namespace: None,
             method: Some(Type::DynamicBytes),
             name: "readUint256LE",
-            args: vec![Type::Uint(32)],
+            params: vec![Type::Uint(32)],
             ret: vec![Type::Uint(256)],
             target: vec![],
             doc: "Reads an unsigned 256-bit integer from the specified offset as little endian",
@@ -648,7 +649,7 @@ static BUILTIN_METHODS: Lazy<[Prototype; 25]> = Lazy::new(|| {
             namespace: None,
             method: Some(Type::DynamicBytes),
             name: "readAddress",
-            args: vec![Type::Uint(32)],
+            params: vec![Type::Uint(32)],
             ret: vec![Type::Address(false)],
             target: vec![],
             doc: "Reads an address from the specified offset",
@@ -659,7 +660,7 @@ static BUILTIN_METHODS: Lazy<[Prototype; 25]> = Lazy::new(|| {
             namespace: None,
             method: Some(Type::DynamicBytes),
             name: "writeInt8",
-            args: vec![Type::Int(8), Type::Uint(32)],
+            params: vec![Type::Int(8), Type::Uint(32)],
             ret: vec![],
             target: vec![],
             doc: "Writes a signed 8-bit integer to the specified offset",
@@ -670,7 +671,7 @@ static BUILTIN_METHODS: Lazy<[Prototype; 25]> = Lazy::new(|| {
             namespace: None,
             method: Some(Type::DynamicBytes),
             name: "writeInt16LE",
-            args: vec![Type::Int(16), Type::Uint(32)],
+            params: vec![Type::Int(16), Type::Uint(32)],
             ret: vec![],
             target: vec![],
             doc: "Writes a signed 16-bit integer to the specified offset as little endian",
@@ -681,7 +682,7 @@ static BUILTIN_METHODS: Lazy<[Prototype; 25]> = Lazy::new(|| {
             namespace: None,
             method: Some(Type::DynamicBytes),
             name: "writeInt32LE",
-            args: vec![Type::Int(32), Type::Uint(32)],
+            params: vec![Type::Int(32), Type::Uint(32)],
             ret: vec![],
             target: vec![],
             doc: "Writes a signed 32-bit integer to the specified offset as little endian",
@@ -692,7 +693,7 @@ static BUILTIN_METHODS: Lazy<[Prototype; 25]> = Lazy::new(|| {
             namespace: None,
             method: Some(Type::DynamicBytes),
             name: "writeInt64LE",
-            args: vec![Type::Int(64), Type::Uint(32)],
+            params: vec![Type::Int(64), Type::Uint(32)],
             ret: vec![],
             target: vec![],
             doc: "Writes a signed 64-bit integer to the specified offset as little endian",
@@ -703,7 +704,7 @@ static BUILTIN_METHODS: Lazy<[Prototype; 25]> = Lazy::new(|| {
             namespace: None,
             method: Some(Type::DynamicBytes),
             name: "writeInt128LE",
-            args: vec![Type::Int(128), Type::Uint(32)],
+            params: vec![Type::Int(128), Type::Uint(32)],
             ret: vec![],
             target: vec![],
             doc: "Writes a signed 128-bit integer to the specified offset as little endian",
@@ -714,7 +715,7 @@ static BUILTIN_METHODS: Lazy<[Prototype; 25]> = Lazy::new(|| {
             namespace: None,
             method: Some(Type::DynamicBytes),
             name: "writeInt256LE",
-            args: vec![Type::Int(256), Type::Uint(32)],
+            params: vec![Type::Int(256), Type::Uint(32)],
             ret: vec![],
             target: vec![],
             doc: "Writes a signed 256-bit integer to the specified offset as little endian",
@@ -725,7 +726,7 @@ static BUILTIN_METHODS: Lazy<[Prototype; 25]> = Lazy::new(|| {
             namespace: None,
             method: Some(Type::DynamicBytes),
             name: "writeUint16LE",
-            args: vec![Type::Uint(16), Type::Uint(32)],
+            params: vec![Type::Uint(16), Type::Uint(32)],
             ret: vec![],
             target: vec![],
             doc: "Writes an unsigned 16-bit integer to the specified offset as little endian",
@@ -736,7 +737,7 @@ static BUILTIN_METHODS: Lazy<[Prototype; 25]> = Lazy::new(|| {
             namespace: None,
             method: Some(Type::DynamicBytes),
             name: "writeUint32LE",
-            args: vec![Type::Uint(32), Type::Uint(32)],
+            params: vec![Type::Uint(32), Type::Uint(32)],
             ret: vec![],
             target: vec![],
             doc: "Writes an unsigned 32-bit integer to the specified offset as little endian",
@@ -747,7 +748,7 @@ static BUILTIN_METHODS: Lazy<[Prototype; 25]> = Lazy::new(|| {
             namespace: None,
             method: Some(Type::DynamicBytes),
             name: "writeUint64LE",
-            args: vec![Type::Uint(64), Type::Uint(32)],
+            params: vec![Type::Uint(64), Type::Uint(32)],
             ret: vec![],
             target: vec![],
             doc: "Writes an unsigned 64-bit integer to the specified offset as little endian",
@@ -758,7 +759,7 @@ static BUILTIN_METHODS: Lazy<[Prototype; 25]> = Lazy::new(|| {
             namespace: None,
             method: Some(Type::DynamicBytes),
             name: "writeUint128LE",
-            args: vec![Type::Uint(128), Type::Uint(32)],
+            params: vec![Type::Uint(128), Type::Uint(32)],
             ret: vec![],
             target: vec![],
             doc: "Writes an unsigned 128-bit integer to the specified offset as little endian",
@@ -769,7 +770,7 @@ static BUILTIN_METHODS: Lazy<[Prototype; 25]> = Lazy::new(|| {
             namespace: None,
             method: Some(Type::DynamicBytes),
             name: "writeUint256LE",
-            args: vec![Type::Uint(256), Type::Uint(32)],
+            params: vec![Type::Uint(256), Type::Uint(32)],
             ret: vec![],
             target: vec![],
             doc: "Writes an unsigned 256-bit integer to the specified offset as little endian",
@@ -780,7 +781,7 @@ static BUILTIN_METHODS: Lazy<[Prototype; 25]> = Lazy::new(|| {
             namespace: None,
             method: Some(Type::DynamicBytes),
             name: "writeAddress",
-            args: vec![Type::Address(false), Type::Uint(32)],
+            params: vec![Type::Address(false), Type::Uint(32)],
             ret: vec![],
             target: vec![],
             doc: "Writes an address to the specified offset",
@@ -814,7 +815,7 @@ pub fn builtin_var(
     namespace: Option<&str>,
     fname: &str,
     ns: &Namespace,
-    diagnostics: &mut Vec<Diagnostic>,
+    diagnostics: &mut Diagnostics,
 ) -> Option<(Builtin, Type)> {
     if let Some(p) = BUILTIN_VARIABLE
         .iter()
@@ -881,54 +882,54 @@ pub fn resolve_call(
     context: &ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
-    diagnostics: &mut Vec<Diagnostic>,
+    diagnostics: &mut Diagnostics,
 ) -> Result<Expression, ()> {
-    let matches = BUILTIN_FUNCTIONS
+    let funcs = BUILTIN_FUNCTIONS
         .iter()
         .filter(|p| p.name == id && p.namespace == namespace && p.method.is_none())
         .collect::<Vec<&Prototype>>();
+    let mut errors: Diagnostics = Diagnostics::default();
 
-    args_sanity_check(args, context, ns, symtable, diagnostics)?;
+    for func in &funcs {
+        let mut matches = true;
 
-    let marker = diagnostics.len();
-
-    for func in &matches {
         if context.constant && !func.constant {
-            diagnostics.push(Diagnostic::error(
+            errors.push(Diagnostic::cast_error(
                 *loc,
                 format!(
                     "cannot call function '{}' in constant expression",
                     func.name
                 ),
             ));
-            return Err(());
+            matches = false;
         }
 
-        if func.args.len() != args.len() {
-            diagnostics.push(Diagnostic::error(
+        if func.params.len() != args.len() {
+            errors.push(Diagnostic::cast_error(
                 *loc,
                 format!(
                     "builtin function '{}' expects {} arguments, {} provided",
                     func.name,
-                    func.args.len(),
+                    func.params.len(),
                     args.len()
                 ),
             ));
-            continue;
+            matches = false;
         }
 
-        let mut matches = true;
         let mut cast_args = Vec::new();
 
         // check if arguments can be implicitly casted
         for (i, arg) in args.iter().enumerate() {
+            let ty = func.params.get(i);
+
             let arg = match expression(
                 arg,
                 context,
                 ns,
                 symtable,
-                diagnostics,
-                ResolveTo::Type(&func.args[i]),
+                &mut errors,
+                ty.map(ResolveTo::Type).unwrap_or(ResolveTo::Unknown),
             ) {
                 Ok(e) => e,
                 Err(()) => {
@@ -937,18 +938,21 @@ pub fn resolve_call(
                 }
             };
 
-            match arg.cast(&arg.loc(), &func.args[i], true, ns, diagnostics) {
-                Ok(expr) => cast_args.push(expr),
-                Err(()) => {
-                    matches = false;
-                    continue;
+            if let Some(ty) = ty {
+                match arg.cast(&arg.loc(), ty, true, ns, &mut errors) {
+                    Ok(expr) => cast_args.push(expr),
+                    Err(()) => {
+                        matches = false;
+                    }
                 }
             }
         }
 
-        if matches {
-            diagnostics.truncate(marker);
-
+        if !matches {
+            if funcs.len() > 1 && diagnostics.extend_non_casting(&errors) {
+                return Err(());
+            }
+        } else {
             // tx.gasprice(1) is a bad idea, just like tx.gasprice. Warn about this
             if ns.target.is_substrate() && func.builtin == Builtin::Gasprice {
                 if let Ok((_, val)) = eval_const_number(&cast_args[0], ns) {
@@ -972,12 +976,13 @@ pub fn resolve_call(
         }
     }
 
-    if matches.len() != 1 {
-        diagnostics.truncate(marker);
+    if funcs.len() != 1 {
         diagnostics.push(Diagnostic::error(
             *loc,
             "cannot find overloaded function which matches signature".to_string(),
         ));
+    } else {
+        diagnostics.extend(errors);
     }
 
     Err(())
@@ -995,7 +1000,7 @@ pub fn resolve_namespace_call(
     context: &ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
-    diagnostics: &mut Vec<Diagnostic>,
+    diagnostics: &mut Diagnostics,
 ) -> Result<Expression, ()> {
     // The abi.* functions need special handling, others do not
     if namespace != "abi" {
@@ -1297,54 +1302,56 @@ pub fn resolve_method_call(
     context: &ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
-    diagnostics: &mut Vec<Diagnostic>,
+    diagnostics: &mut Diagnostics,
 ) -> Result<Option<Expression>, ()> {
     let expr_ty = expr.ty();
-    let matches: Vec<_> = BUILTIN_METHODS
+    let funcs: Vec<_> = BUILTIN_METHODS
         .iter()
         .filter(|func| func.name == id.name && func.method.as_ref() == Some(&expr_ty))
         .collect();
-    let marker = diagnostics.len();
+    let mut errors = Diagnostics::default();
 
-    args_sanity_check(args, context, ns, symtable, diagnostics)?;
+    for func in &funcs {
+        let mut matches = true;
 
-    for func in &matches {
         if context.constant && !func.constant {
-            diagnostics.push(Diagnostic::error(
+            diagnostics.push(Diagnostic::cast_error(
                 id.loc,
                 format!(
                     "cannot call function '{}' in constant expression",
                     func.name
                 ),
             ));
-            return Err(());
+            matches = false;
         }
 
-        if func.args.len() != args.len() {
-            diagnostics.push(Diagnostic::error(
+        if func.params.len() != args.len() {
+            errors.push(Diagnostic::cast_error(
                 id.loc,
                 format!(
                     "builtin function '{}' expects {} arguments, {} provided",
                     func.name,
-                    func.args.len(),
+                    func.params.len(),
                     args.len()
                 ),
             ));
-            continue;
+            matches = false;
         }
 
-        let mut matches = true;
         let mut cast_args = Vec::new();
 
         // check if arguments can be implicitly casted
         for (i, arg) in args.iter().enumerate() {
+            // we may have arguments that parameters
+            let ty = func.params.get(i);
+
             let arg = match expression(
                 arg,
                 context,
                 ns,
                 symtable,
-                diagnostics,
-                ResolveTo::Type(&func.args[i]),
+                &mut errors,
+                ty.map(ResolveTo::Type).unwrap_or(ResolveTo::Unknown),
             ) {
                 Ok(e) => e,
                 Err(()) => {
@@ -1353,18 +1360,22 @@ pub fn resolve_method_call(
                 }
             };
 
-            match arg.cast(&arg.loc(), &func.args[i], true, ns, diagnostics) {
-                Ok(expr) => cast_args.push(expr),
-                Err(()) => {
-                    matches = false;
-                    continue;
+            if let Some(ty) = ty {
+                match arg.cast(&arg.loc(), ty, true, ns, &mut errors) {
+                    Ok(expr) => cast_args.push(expr),
+                    Err(()) => {
+                        matches = false;
+                        continue;
+                    }
                 }
             }
         }
 
-        if matches {
-            diagnostics.truncate(marker);
-
+        if !matches {
+            if funcs.len() > 1 && diagnostics.extend_non_casting(&errors) {
+                return Err(());
+            }
+        } else {
             cast_args.insert(0, expr.clone());
 
             let returns = if func.ret.is_empty() {
@@ -1382,11 +1393,14 @@ pub fn resolve_method_call(
         }
     }
 
-    match matches.len() {
+    match funcs.len() {
         0 => Ok(None),
-        1 => Err(()),
+        1 => {
+            diagnostics.extend(errors);
+
+            Err(())
+        }
         _ => {
-            diagnostics.truncate(marker);
             diagnostics.push(Diagnostic::error(
                 id.loc,
                 "cannot find overloaded function which matches signature".to_string(),
