@@ -1,13 +1,12 @@
 use self::{
     functions::{resolve_params, resolve_returns},
     symtable::Symtable,
-    tags::parse_doccomments,
     variables::variable_decl,
 };
 use crate::file_resolver::{FileResolver, ResolvedFile};
 use crate::sema::unused_variable::{check_unused_events, check_unused_namespace_variables};
 use num_bigint::BigInt;
-use solang_parser::{parse, pt};
+use solang_parser::{doccomment::parse_doccomments, parse, pt};
 use std::ffi::OsStr;
 
 mod address;
@@ -63,7 +62,7 @@ fn sema_file(file: &ResolvedFile, resolver: &mut FileResolver, ns: &mut ast::Nam
         file_cache_no,
     ));
 
-    let (pt, _) = match parse(&source_code, file_no) {
+    let (pt, comments) = match parse(&source_code, file_no) {
         Ok(s) => s,
         Err(errors) => {
             ns.diagnostics.extend(errors);
@@ -88,7 +87,7 @@ fn sema_file(file: &ResolvedFile, resolver: &mut FileResolver, ns: &mut ast::Nam
             .collect::<Vec<(usize, &pt::ContractDefinition)>>();
 
     // first resolve all the types we can find
-    let fields = types::resolve_typenames(&pt, file_no, ns);
+    let fields = types::resolve_typenames(&pt, &comments, file_no, ns);
 
     // resolve pragmas and imports
     for part in &pt.0 {
@@ -111,27 +110,31 @@ fn sema_file(file: &ResolvedFile, resolver: &mut FileResolver, ns: &mut ast::Nam
 
     // resolve functions/constants outside of contracts
     let mut resolve_bodies = Vec::new();
-    let mut doccomments = Vec::new();
+    let mut doc_comment_start = 0;
 
     for part in &pt.0 {
         match part {
             pt::SourceUnitPart::FunctionDefinition(func) => {
-                let tags = parse_doccomments(&doccomments);
-                doccomments.clear();
+                let tags = parse_doccomments(&comments, doc_comment_start, func.loc.start());
 
                 if let Some(func_no) = functions::function(func, file_no, &tags, ns) {
                     resolve_bodies.push((func_no, func));
                 }
+
+                if let Some(pt::Statement::Block { loc, .. }) = &func.body {
+                    doc_comment_start = loc.end();
+                    continue;
+                }
             }
             pt::SourceUnitPart::VariableDefinition(var) => {
-                let tags = parse_doccomments(&doccomments);
-                doccomments.clear();
+                let tags = parse_doccomments(&comments, doc_comment_start, var.loc.start());
 
                 variable_decl(None, var, file_no, &tags, None, ns, &mut Symtable::new());
             }
-            pt::SourceUnitPart::DocComment(doccomment) => doccomments.push(doccomment),
-            _ => doccomments.clear(),
+            _ => (),
         }
+
+        doc_comment_start = part.loc().end();
     }
 
     // Now we can resolve the global using directives
@@ -144,7 +147,7 @@ fn sema_file(file: &ResolvedFile, resolver: &mut FileResolver, ns: &mut ast::Nam
     }
 
     // now resolve the contracts
-    contracts::resolve(&contracts_to_resolve, file_no, ns);
+    contracts::resolve(&contracts_to_resolve, &comments, file_no, ns);
 
     // now we can resolve the body of functions outside of contracts
     for (func_no, func) in resolve_bodies {

@@ -1,7 +1,9 @@
 use num_bigint::BigInt;
 use num_traits::Zero;
-use solang_parser::pt;
-use solang_parser::pt::CodeLocation;
+use solang_parser::{
+    doccomment::parse_doccomments,
+    pt::{self, CodeLocation, Statement},
+};
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::convert::TryInto;
 use tiny_keccak::{Hasher, Keccak};
@@ -11,7 +13,6 @@ use super::{
     expression::{compatible_mutability, match_constructor_to_args, ExprContext},
     functions, statements,
     symtable::Symtable,
-    tags::parse_doccomments,
     using, variables,
 };
 #[cfg(feature = "llvm")]
@@ -71,6 +72,7 @@ impl ast::Contract {
 /// Resolve the following contract
 pub fn resolve(
     contracts: &[(usize, &pt::ContractDefinition)],
+    comments: &[pt::Comment],
     file_no: usize,
     ns: &mut ast::Namespace,
 ) {
@@ -81,7 +83,7 @@ pub fn resolve(
     let mut delayed: ResolveLater = Default::default();
 
     for (contract_no, def) in contracts {
-        resolve_declarations(def, file_no, *contract_no, ns, &mut delayed);
+        resolve_declarations(def, comments, file_no, *contract_no, ns, &mut delayed);
     }
 
     // Resolve base contract constructor arguments on contract definition (not constructor definitions)
@@ -755,6 +757,7 @@ struct ResolveLater<'a> {
 /// This returns a list of function bodies to resolve
 fn resolve_declarations<'a>(
     def: &'a pt::ContractDefinition,
+    comments: &[pt::Comment],
     file_no: usize,
     contract_no: usize,
     ns: &mut ast::Namespace,
@@ -766,38 +769,45 @@ fn resolve_declarations<'a>(
     ));
 
     let mut function_no_bodies = Vec::new();
-    let mut doccomments = Vec::new();
 
     // resolve state variables. We may need a constant to resolve the array
     // dimension of a function argument.
-    delayed
-        .initializers
-        .extend(variables::contract_variables(def, file_no, contract_no, ns));
+    delayed.initializers.extend(variables::contract_variables(
+        def,
+        comments,
+        file_no,
+        contract_no,
+        ns,
+    ));
 
     // resolve function signatures
-    for parts in &def.parts {
-        match parts {
-            pt::ContractPart::FunctionDefinition(ref f) => {
-                let tags = parse_doccomments(&doccomments);
-                doccomments.clear();
+    let mut doc_comment_start = def.loc.start();
 
-                if let Some(function_no) =
-                    functions::contract_function(def, f, &tags, file_no, contract_no, ns)
-                {
-                    if f.body.is_some() {
-                        delayed.function_bodies.push(DelayedResolveFunction {
-                            contract_no,
-                            function_no,
-                            function: f.as_ref(),
-                        });
-                    } else {
-                        function_no_bodies.push(function_no);
-                    }
+    for part in &def.parts {
+        if let pt::ContractPart::FunctionDefinition(ref f) = part {
+            let tags = parse_doccomments(comments, doc_comment_start, f.loc.start());
+
+            if let Some(function_no) =
+                functions::contract_function(def, f, &tags, file_no, contract_no, ns)
+            {
+                if f.body.is_some() {
+                    delayed.function_bodies.push(DelayedResolveFunction {
+                        contract_no,
+                        function_no,
+                        function: f.as_ref(),
+                    });
+                } else {
+                    function_no_bodies.push(function_no);
                 }
             }
-            pt::ContractPart::DocComment(doccomment) => doccomments.push(doccomment),
-            _ => doccomments.clear(),
+
+            if let Some(Statement::Block { loc, .. }) = &f.body {
+                doc_comment_start = loc.end();
+                continue;
+            }
         }
+
+        doc_comment_start = part.loc().end();
     }
 
     if let pt::ContractTy::Contract(loc) = &def.ty {

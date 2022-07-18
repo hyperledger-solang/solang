@@ -20,9 +20,6 @@ SourceUnitPart: SourceUnitPart = {
     VariableDefinition => SourceUnitPart::VariableDefinition(<>),
     TypeDefinition => SourceUnitPart::TypeDefinition(<>),
     Using => SourceUnitPart::Using(<>),
-    <l:@L> <c:DocComment> <r:@R> => {
-        SourceUnitPart::DocComment(DocComment { loc: Loc::File(file_no, l, r), ty: c.0, comment: c.1.to_string()})
-    },
     <l:@L> ";" <r:@R> => SourceUnitPart::StraySemicolon(Loc::File(file_no, l, r)),
 }
 
@@ -166,9 +163,6 @@ ContractPart: ContractPart = {
     ModifierDefinition => ContractPart::FunctionDefinition(<>),
     ConstructorDefinition => ContractPart::FunctionDefinition(<>),
     TypeDefinition => ContractPart::TypeDefinition(<>),
-    <l:@L> <c:DocComment> <r:@R> => {
-        ContractPart::DocComment(DocComment { loc: Loc::File(file_no, l, r), ty: c.0, comment: c.1.to_string()})
-    },
     <l:@L> ";" <r:@R> => ContractPart::StraySemicolon(Loc::File(file_no, l, r)),
     Using => ContractPart::Using(<>),
 }
@@ -700,9 +694,6 @@ ClosedStatement: Statement = {
 Statement: Statement = {
     OpenStatement,
     ClosedStatement,
-    <l:@L> <c:DocComment> <r:@R> => {
-        Statement::DocComment(DocComment { loc: Loc::File(file_no, l, r), ty: c.0, comment: c.1.to_string()})
-    }
 }
 
 SimpleStatement: Statement = {
@@ -1024,7 +1015,6 @@ extern {
         "]" => Token::CloseBracket,
         "." => Token::Member,
         "," => Token::Comma,
-        DocComment => Token::DocComment(<CommentType>, <&'input str>),
         Uint => Token::Uint(<u16>),
         Int => Token::Int(<u16>),
         Bytes => Token::Bytes(<u8>),

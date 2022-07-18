@@ -5,13 +5,16 @@ use super::{
         BuiltinStruct, Contract, Diagnostic, EnumDecl, EventDecl, Namespace, Parameter, StructDecl,
         Symbol, Tag, Type, UserTypeDecl,
     },
-    tags::{parse_doccomments, DocComment},
     SOLANA_SPARSE_ARRAY_SIZE,
 };
 use crate::Target;
 use num_bigint::BigInt;
 use num_traits::{One, Zero};
-use solang_parser::{pt, pt::CodeLocation};
+use solang_parser::{
+    doccomment::{parse_doccomments, DocComment},
+    pt,
+    pt::CodeLocation,
+};
 use std::{collections::HashMap, fmt::Write, ops::Mul};
 
 /// List the types which should be resolved later
@@ -38,10 +41,10 @@ struct ResolveStructFields<'a> {
 /// structs as fields, including ones that have not been declared yet.
 pub fn resolve_typenames<'a>(
     s: &'a pt::SourceUnit,
+    comments: &[pt::Comment],
     file_no: usize,
     ns: &mut Namespace,
 ) -> ResolveFields<'a> {
-    let mut doccomments = Vec::new();
     let mut delay = ResolveFields {
         structs: Vec::new(),
         events: Vec::new(),
@@ -50,26 +53,22 @@ pub fn resolve_typenames<'a>(
     // Find all the types: contracts, enums, and structs. Either in a contract or not
     // We do not resolve the struct fields yet as we do not know all the possible types until we're
     // done
+    let mut doc_comment_start = 0;
+
     for part in &s.0 {
         match part {
-            pt::SourceUnitPart::DocComment(doccomment) => {
-                doccomments.push(doccomment);
-            }
             pt::SourceUnitPart::ContractDefinition(def) => {
-                let tags = parse_doccomments(&doccomments);
-                doccomments.clear();
+                let tags = parse_doccomments(comments, doc_comment_start, def.loc.start());
 
-                resolve_contract(def, &tags, file_no, &mut delay, ns);
+                resolve_contract(def, comments, &tags, file_no, &mut delay, ns);
             }
             pt::SourceUnitPart::EnumDefinition(def) => {
-                let tags = parse_doccomments(&doccomments);
-                doccomments.clear();
+                let tags = parse_doccomments(comments, doc_comment_start, def.loc.start());
 
                 let _ = enum_decl(def, file_no, &tags, None, ns);
             }
             pt::SourceUnitPart::StructDefinition(def) => {
-                let tags = parse_doccomments(&doccomments);
-                doccomments.clear();
+                let tags = parse_doccomments(comments, doc_comment_start, def.loc.start());
 
                 let struct_no = ns.structs.len();
 
@@ -101,8 +100,7 @@ pub fn resolve_typenames<'a>(
             pt::SourceUnitPart::EventDefinition(def) => {
                 let event_no = ns.events.len();
 
-                let tags = parse_doccomments(&doccomments);
-                doccomments.clear();
+                let tags = parse_doccomments(comments, doc_comment_start, def.loc.start());
 
                 if let Some(Symbol::Event(events)) =
                     ns.variable_symbols
@@ -137,13 +135,20 @@ pub fn resolve_typenames<'a>(
                 });
             }
             pt::SourceUnitPart::TypeDefinition(ty) => {
-                let tags = parse_doccomments(&doccomments);
-                doccomments.clear();
+                let tags = parse_doccomments(comments, doc_comment_start, ty.loc.start());
 
                 type_decl(ty, file_no, &tags, None, ns);
             }
+            pt::SourceUnitPart::FunctionDefinition(f) => {
+                if let Some(pt::Statement::Block { loc, .. }) = &f.body {
+                    doc_comment_start = loc.end();
+                    continue;
+                }
+            }
             _ => (),
         }
+
+        doc_comment_start = part.loc().end();
     }
 
     delay
@@ -265,6 +270,7 @@ pub fn resolve_fields(delay: ResolveFields, file_no: usize, ns: &mut Namespace) 
 /// Resolve all the types in a contract
 fn resolve_contract<'a>(
     def: &'a pt::ContractDefinition,
+    comments: &[pt::Comment],
     contract_tags: &[DocComment],
     file_no: usize,
     delay: &mut ResolveFields<'a>,
@@ -302,16 +308,12 @@ fn resolve_contract<'a>(
         ));
     }
 
-    let mut doccomments = Vec::new();
+    let mut doc_comment_start = def.loc.start();
 
     for parts in &def.parts {
         match parts {
-            pt::ContractPart::DocComment(doccomment) => {
-                doccomments.push(doccomment);
-            }
             pt::ContractPart::EnumDefinition(ref e) => {
-                let tags = parse_doccomments(&doccomments);
-                doccomments.clear();
+                let tags = parse_doccomments(comments, doc_comment_start, e.loc.start());
 
                 if !enum_decl(e, file_no, &tags, Some(contract_no), ns) {
                     broken = true;
@@ -320,8 +322,7 @@ fn resolve_contract<'a>(
             pt::ContractPart::StructDefinition(ref pt) => {
                 let struct_no = ns.structs.len();
 
-                let tags = parse_doccomments(&doccomments);
-                doccomments.clear();
+                let tags = parse_doccomments(comments, doc_comment_start, pt.loc.start());
 
                 if ns.add_symbol(
                     file_no,
@@ -351,8 +352,7 @@ fn resolve_contract<'a>(
                 }
             }
             pt::ContractPart::EventDefinition(ref pt) => {
-                let tags = parse_doccomments(&doccomments);
-                doccomments.clear();
+                let tags = parse_doccomments(comments, doc_comment_start, pt.loc.start());
 
                 let event_no = ns.events.len();
 
@@ -391,13 +391,20 @@ fn resolve_contract<'a>(
                 });
             }
             pt::ContractPart::TypeDefinition(ty) => {
-                let tags = parse_doccomments(&doccomments);
-                doccomments.clear();
+                let tags = parse_doccomments(comments, doc_comment_start, ty.loc.start());
 
                 type_decl(ty, file_no, &tags, Some(contract_no), ns);
             }
+            pt::ContractPart::FunctionDefinition(f) => {
+                if let Some(pt::Statement::Block { loc, .. }) = &f.body {
+                    doc_comment_start = loc.end();
+                    continue;
+                }
+            }
             _ => (),
         }
+
+        doc_comment_start = parts.loc().end();
     }
 
     broken

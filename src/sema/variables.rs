@@ -7,9 +7,12 @@ use super::{
     expression::{expression, ExprContext, ResolveTo},
     symtable::Symtable,
     symtable::{VariableInitializer, VariableUsage},
-    tags::{parse_doccomments, resolve_tags, DocComment},
+    tags::resolve_tags,
 };
-use solang_parser::pt::{self, CodeLocation, OptionalCodeLocation};
+use solang_parser::{
+    doccomment::{parse_doccomments, DocComment},
+    pt::{self, CodeLocation, OptionalCodeLocation},
+};
 
 pub struct DelayedResolveInitializer<'a> {
     var_no: usize,
@@ -19,19 +22,19 @@ pub struct DelayedResolveInitializer<'a> {
 
 pub fn contract_variables<'a>(
     def: &'a pt::ContractDefinition,
+    comments: &[pt::Comment],
     file_no: usize,
     contract_no: usize,
     ns: &mut Namespace,
 ) -> Vec<DelayedResolveInitializer<'a>> {
     let mut symtable = Symtable::new();
     let mut delayed = Vec::new();
-    let mut doccomments = Vec::new();
+    let mut doc_comment_start = def.loc.start();
 
-    for parts in &def.parts {
-        match parts {
+    for part in &def.parts {
+        match part {
             pt::ContractPart::VariableDefinition(ref s) => {
-                let tags = parse_doccomments(&doccomments);
-                doccomments.clear();
+                let tags = parse_doccomments(comments, doc_comment_start, s.loc.start());
 
                 if let Some(delay) = variable_decl(
                     Some(def),
@@ -45,9 +48,16 @@ pub fn contract_variables<'a>(
                     delayed.push(delay);
                 }
             }
-            pt::ContractPart::DocComment(doccomment) => doccomments.push(doccomment),
-            _ => doccomments.clear(),
+            pt::ContractPart::FunctionDefinition(f) => {
+                if let Some(pt::Statement::Block { loc, .. }) = &f.body {
+                    doc_comment_start = loc.end();
+                    continue;
+                }
+            }
+            _ => (),
         }
+
+        doc_comment_start = part.loc().end();
     }
 
     delayed
