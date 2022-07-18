@@ -5,13 +5,16 @@ use super::{
         BuiltinStruct, Contract, Diagnostic, EnumDecl, EventDecl, Namespace, Parameter, StructDecl,
         Symbol, Tag, Type, UserTypeDecl,
     },
-    tags::{parse_doccomments, DocComment},
     SOLANA_SPARSE_ARRAY_SIZE,
 };
 use crate::Target;
 use num_bigint::BigInt;
 use num_traits::{One, Zero};
-use solang_parser::{pt, pt::CodeLocation};
+use solang_parser::{
+    doccomment::{parse_doccomments, DocComment},
+    pt,
+    pt::CodeLocation,
+};
 use std::{collections::HashMap, fmt::Write, ops::Mul};
 
 /// List the types which should be resolved later

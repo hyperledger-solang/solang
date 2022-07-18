@@ -7,9 +7,12 @@ use super::{
     expression::{expression, ExprContext, ResolveTo},
     symtable::Symtable,
     symtable::{VariableInitializer, VariableUsage},
-    tags::{parse_doccomments, resolve_tags, DocComment},
+    tags::resolve_tags,
 };
-use solang_parser::pt::{self, CodeLocation, OptionalCodeLocation};
+use solang_parser::{
+    doccomment::{parse_doccomments, DocComment},
+    pt::{self, CodeLocation, OptionalCodeLocation},
+};
 
 pub struct DelayedResolveInitializer<'a> {
     var_no: usize,

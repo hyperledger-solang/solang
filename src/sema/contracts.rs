@@ -1,7 +1,9 @@
 use num_bigint::BigInt;
 use num_traits::Zero;
-use solang_parser::pt::CodeLocation;
-use solang_parser::pt::{self, Statement};
+use solang_parser::{
+    doccomment::parse_doccomments,
+    pt::{self, CodeLocation, Statement},
+};
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::convert::TryInto;
 use tiny_keccak::{Hasher, Keccak};
@@ -11,7 +13,6 @@ use super::{
     expression::{compatible_mutability, match_constructor_to_args, ExprContext},
     functions, statements,
     symtable::Symtable,
-    tags::parse_doccomments,
     using, variables,
 };
 #[cfg(feature = "llvm")]

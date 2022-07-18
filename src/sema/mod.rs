@@ -1,13 +1,12 @@
 use self::{
     functions::{resolve_params, resolve_returns},
     symtable::Symtable,
-    tags::parse_doccomments,
     variables::variable_decl,
 };
 use crate::file_resolver::{FileResolver, ResolvedFile};
 use crate::sema::unused_variable::{check_unused_events, check_unused_namespace_variables};
 use num_bigint::BigInt;
-use solang_parser::{parse, pt};
+use solang_parser::{doccomment::parse_doccomments, parse, pt};
 use std::ffi::OsStr;
 
 mod address;

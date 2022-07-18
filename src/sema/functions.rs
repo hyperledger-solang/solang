@@ -2,11 +2,13 @@ use super::ast::{
     BuiltinStruct, Diagnostic, Function, Mutability, Namespace, Parameter, Symbol, Type,
 };
 use super::contracts::is_base;
-use super::tags::{resolve_tags, DocComment};
+use super::tags::resolve_tags;
 use crate::Target;
-use solang_parser::pt;
-use solang_parser::pt::CodeLocation;
-use solang_parser::pt::OptionalCodeLocation;
+use solang_parser::{
+    doccomment::DocComment,
+    pt,
+    pt::{CodeLocation, OptionalCodeLocation},
+};
 
 /// Resolve function declaration in a contract
 pub fn contract_function(
