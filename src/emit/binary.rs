@@ -762,7 +762,7 @@ impl<'a> Binary<'a> {
     pub(crate) fn llvm_field_ty(&self, ty: &Type, ns: &Namespace) -> BasicTypeEnum<'a> {
         let llvm_ty = self.llvm_type(ty, ns);
         match ty.deref_memory() {
-            Type::Array(_, dim) if dim[0].is_none() => {
+            Type::Array(_, dim) if dim.last().unwrap().is_none() => {
                 llvm_ty.ptr_type(AddressSpace::Generic).as_basic_type_enum()
             }
             Type::DynamicBytes | Type::String => {
@@ -1055,7 +1055,7 @@ impl<'a> Binary<'a> {
     ) -> PointerValue<'a> {
         match array_ty {
             Type::Array(_, dim) => {
-                if dim[0].is_some() {
+                if dim.last().unwrap().is_some() {
                     // fixed size array
                     unsafe {
                         self.builder.build_gep(

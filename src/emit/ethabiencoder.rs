@@ -770,7 +770,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                     )
                 };
 
-                let array_length = if let Some(d) = &dim[0] {
+                let array_length = if let Some(d) = &dim.last().unwrap() {
                     // fixed length
                     binary
                         .context
@@ -991,7 +991,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                     arg
                 };
 
-                let dim = dim[0].as_ref().unwrap().to_u64().unwrap();
+                let dim = dim.last().unwrap().as_ref().unwrap().to_u64().unwrap();
 
                 let normal_array = binary.context.append_basic_block(function, "normal_array");
                 let null_array = binary.context.append_basic_block(function, "null_array");
@@ -1772,7 +1772,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                     arg
                 };
 
-                let array_length = if let Some(d) = &dim[0] {
+                let array_length = if let Some(d) = &dim.last().unwrap() {
                     // fixed length
                     binary
                         .context
@@ -2688,7 +2688,7 @@ impl EthAbiDecoder {
 
                 let dest;
 
-                if let Some(d) = &dim[0] {
+                if let Some(d) = &dim.last().unwrap() {
                     dest = to.unwrap_or_else(|| {
                         let new = binary
                             .builder

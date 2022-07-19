@@ -407,7 +407,7 @@ pub trait TargetRuntime<'a> {
         match ty {
             Type::Ref(ty) => self.storage_load_slot(bin, ty, slot, slot_ptr, function, ns),
             Type::Array(elem_ty, dim) => {
-                if let Some(d) = &dim[0] {
+                if let Some(d) = &dim.last().unwrap() {
                     let llvm_ty = bin.llvm_type(ty.deref_any(), ns);
                     // LLVMSizeOf() produces an i64
                     let size = bin.builder.build_int_truncate(
@@ -698,7 +698,7 @@ pub trait TargetRuntime<'a> {
     ) {
         match ty.deref_any() {
             Type::Array(elem_ty, dim) => {
-                if let Some(d) = &dim[0] {
+                if let Some(d) = &dim.last().unwrap() {
                     bin.emit_static_loop_with_int(
                         function,
                         bin.context.i64_type().const_zero(),
@@ -1009,7 +1009,7 @@ pub trait TargetRuntime<'a> {
             Type::Array(_, dim) => {
                 let ty = ty.array_deref();
 
-                if let Some(d) = &dim[0] {
+                if let Some(d) = &dim.last().unwrap() {
                     bin.emit_static_loop_with_int(
                         function,
                         bin.context.i64_type().const_zero(),

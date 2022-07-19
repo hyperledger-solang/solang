@@ -4652,7 +4652,7 @@ fn member_access(
                 if id.name == "length" {
                     let elem_ty = expr.ty().storage_array_elem().deref_into();
 
-                    if let Some(dim) = &dim[0] {
+                    if let Some(dim) = &dim.last().unwrap() {
                         // sparse array could be large than ns.storage_type() on Solana
                         if dim.bits() > ns.storage_type().bits(ns) as u64 {
                             return Ok(Expression::StorageArrayLength {

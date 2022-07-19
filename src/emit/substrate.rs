@@ -800,7 +800,7 @@ impl SubstrateTarget {
                 dest.into()
             }
             ast::Type::Array(_, dim) => {
-                if let Some(d) = &dim[0] {
+                if let Some(d) = &dim.last().unwrap() {
                     let llvm_ty = binary.llvm_type(ty.deref_any(), ns);
 
                     let size = llvm_ty
@@ -1216,7 +1216,7 @@ impl SubstrateTarget {
                 arg,
                 data,
             ),
-            ast::Type::Array(_, dim) if dim[0].is_some() => {
+            ast::Type::Array(_, dim) if dim.last().unwrap().is_some() => {
                 let arg = if load {
                     binary
                         .builder
@@ -1230,7 +1230,7 @@ impl SubstrateTarget {
                 let normal_array = binary.context.append_basic_block(function, "normal_array");
                 let done_array = binary.context.append_basic_block(function, "done_array");
 
-                let dim = dim[0].as_ref().unwrap().to_u64().unwrap();
+                let dim = dim.last().unwrap().as_ref().unwrap().to_u64().unwrap();
 
                 let elem_ty = ty.array_deref();
 
@@ -1690,11 +1690,11 @@ impl SubstrateTarget {
 
                 sum.as_basic_value().into_int_value()
             }
-            ast::Type::Array(_, dims) if dims[0].is_some() => {
-                let array_length = binary
-                    .context
-                    .i32_type()
-                    .const_int(dims[0].as_ref().unwrap().to_u64().unwrap(), false);
+            ast::Type::Array(_, dims) if dims.last().unwrap().is_some() => {
+                let array_length = binary.context.i32_type().const_int(
+                    dims.last().unwrap().as_ref().unwrap().to_u64().unwrap(),
+                    false,
+                );
 
                 let elem_ty = ty.array_deref();
 
@@ -1811,7 +1811,7 @@ impl SubstrateTarget {
                     )
                 }
             }
-            ast::Type::Array(_, dims) if dims[0].is_none() => {
+            ast::Type::Array(_, dims) if dims.last().unwrap().is_none() => {
                 let arg = if load {
                     binary.builder.build_load(arg.into_pointer_value(), "")
                 } else {
