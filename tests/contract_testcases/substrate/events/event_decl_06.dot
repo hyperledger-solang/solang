@@ -2,11 +2,11 @@ strict digraph "tests/contract_testcases/substrate/events/event_decl_06.sol" {
 	foo [label="name:foo\ncontract: 0\ntests/contract_testcases/substrate/events/event_decl_06.sol:3:19-22\nfield name:x ty:bool indexed:no\nfield name:y ty:uint32 indexed:no"]
 	contract [label="contract c\ntests/contract_testcases/substrate/events/event_decl_06.sol:2:9-4:10"]
 	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/events/event_decl_06.sol:2:9-4:10"]
-	diagnostic_7 [label="event 'foo' has duplicate field name 'x'\nlevel Error\ntests/contract_testcases/substrate/events/event_decl_06.sol:3:50-51"]
+	diagnostic_6 [label="event 'foo' has duplicate field name 'x'\nlevel Error\ntests/contract_testcases/substrate/events/event_decl_06.sol:3:50-51"]
 	note [label="location of previous declaration of 'x'\ntests/contract_testcases/substrate/events/event_decl_06.sol:3:24-30"]
 	events -> foo
 	contracts -> contract
 	diagnostics -> diagnostic [label="Debug"]
-	diagnostics -> diagnostic_7 [label="Error"]
-	diagnostic_7 -> note [label="note"]
+	diagnostics -> diagnostic_6 [label="Error"]
+	diagnostic_6 -> note [label="note"]
 }

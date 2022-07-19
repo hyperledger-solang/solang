@@ -2,9 +2,9 @@ strict digraph "tests/contract_testcases/substrate/arrays/data_locations_06.sol"
 	foo2 [label="name: foo2\ncontract: foo\ntests/contract_testcases/substrate/arrays/data_locations_06.sol:3:13-37\nvalue: bar1\nvalue: bar2"]
 	contract [label="contract foo\ntests/contract_testcases/substrate/arrays/data_locations_06.sol:2:9-6:10"]
 	diagnostic [label="found contract 'foo'\nlevel Debug\ntests/contract_testcases/substrate/arrays/data_locations_06.sol:2:9-6:10"]
-	diagnostic_7 [label="parameter of type 'storage' not allowed public or external functions\nlevel Error\ntests/contract_testcases/substrate/arrays/data_locations_06.sol:4:34-41"]
+	diagnostic_6 [label="parameter of type 'storage' not allowed public or external functions\nlevel Error\ntests/contract_testcases/substrate/arrays/data_locations_06.sol:4:34-41"]
 	enums -> foo2
 	contracts -> contract
 	diagnostics -> diagnostic [label="Debug"]
-	diagnostics -> diagnostic_7 [label="Error"]
+	diagnostics -> diagnostic_6 [label="Error"]
 }

@@ -2,21 +2,21 @@ strict digraph "tests/contract_testcases/solana/create_contract/base_contract_02
 	LogicFields [label="name:LogicFields\ncontract: Logic\ntests/contract_testcases/solana/create_contract/base_contract_02.sol:3:20-31\nfield name:logia ty:uint256"]
 	WithMath [label="name:WithMath\ncontract: IsMath\ntests/contract_testcases/solana/create_contract/base_contract_02.sol:11:20-28\nfield name:logia ty:struct Logic.LogicFields"]
 	contract [label="contract Logic\ntests/contract_testcases/solana/create_contract/base_contract_02.sol:2:9-6:10"]
-	contract_6 [label="contract Math\ntests/contract_testcases/solana/create_contract/base_contract_02.sol:7:9-8:10"]
+	contract_5 [label="contract Math\ntests/contract_testcases/solana/create_contract/base_contract_02.sol:7:9-8:10"]
 	base [label="base Logic\ntests/contract_testcases/solana/create_contract/base_contract_02.sol:7:26-31"]
-	contract_8 [label="contract IsMath\ntests/contract_testcases/solana/create_contract/base_contract_02.sol:10:9-14:10"]
-	base_9 [label="base Math\ntests/contract_testcases/solana/create_contract/base_contract_02.sol:10:28-32"]
+	contract_7 [label="contract IsMath\ntests/contract_testcases/solana/create_contract/base_contract_02.sol:10:9-14:10"]
+	base_8 [label="base Math\ntests/contract_testcases/solana/create_contract/base_contract_02.sol:10:28-32"]
 	diagnostic [label="found contract 'Logic'\nlevel Debug\ntests/contract_testcases/solana/create_contract/base_contract_02.sol:2:9-6:10"]
-	diagnostic_12 [label="found contract 'Math'\nlevel Debug\ntests/contract_testcases/solana/create_contract/base_contract_02.sol:7:9-8:10"]
-	diagnostic_13 [label="found contract 'IsMath'\nlevel Debug\ntests/contract_testcases/solana/create_contract/base_contract_02.sol:10:9-14:10"]
+	diagnostic_11 [label="found contract 'Math'\nlevel Debug\ntests/contract_testcases/solana/create_contract/base_contract_02.sol:7:9-8:10"]
+	diagnostic_12 [label="found contract 'IsMath'\nlevel Debug\ntests/contract_testcases/solana/create_contract/base_contract_02.sol:10:9-14:10"]
 	structs -> LogicFields
 	structs -> WithMath
 	contracts -> contract
-	contracts -> contract_6
-	contract_6 -> base [label="base"]
-	contracts -> contract_8
-	contract_8 -> base_9 [label="base"]
+	contracts -> contract_5
+	contract_5 -> base [label="base"]
+	contracts -> contract_7
+	contract_7 -> base_8 [label="base"]
 	diagnostics -> diagnostic [label="Debug"]
+	diagnostics -> diagnostic_11 [label="Debug"]
 	diagnostics -> diagnostic_12 [label="Debug"]
-	diagnostics -> diagnostic_13 [label="Debug"]
 }

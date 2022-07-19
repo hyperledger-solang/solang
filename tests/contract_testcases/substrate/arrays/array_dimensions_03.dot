@@ -2,9 +2,9 @@ strict digraph "tests/contract_testcases/substrate/arrays/array_dimensions_03.so
 	e [label="name: e\ncontract: foo\ntests/contract_testcases/substrate/arrays/array_dimensions_03.sol:3:13-34\nvalue: e1\nvalue: e2\nvalue: e3"]
 	contract [label="contract foo\ntests/contract_testcases/substrate/arrays/array_dimensions_03.sol:2:9-5:10"]
 	diagnostic [label="found contract 'foo'\nlevel Debug\ntests/contract_testcases/substrate/arrays/array_dimensions_03.sol:2:9-5:10"]
-	diagnostic_7 [label="divide by zero\nlevel Error\ntests/contract_testcases/substrate/arrays/array_dimensions_03.sol:4:15-20"]
+	diagnostic_6 [label="divide by zero\nlevel Error\ntests/contract_testcases/substrate/arrays/array_dimensions_03.sol:4:15-20"]
 	enums -> e
 	contracts -> contract
 	diagnostics -> diagnostic [label="Debug"]
-	diagnostics -> diagnostic_7 [label="Error"]
+	diagnostics -> diagnostic_6 [label="Error"]
 }

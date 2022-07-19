@@ -4,17 +4,17 @@ strict digraph "tests/contract_testcases/substrate/structs/parse_structs_07.sol"
 	contract [label="contract c\ntests/contract_testcases/substrate/structs/parse_structs_07.sol:2:9-4:10"]
 	var [label="variable z\nvisibility internal\ntests/contract_testcases/substrate/structs/parse_structs_07.sol:3:13-16"]
 	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/structs/parse_structs_07.sol:2:9-4:10"]
-	diagnostic_9 [label="struct 's' has infinite size\nlevel Error\ntests/contract_testcases/substrate/structs/parse_structs_07.sol:6:16-17"]
+	diagnostic_8 [label="struct 's' has infinite size\nlevel Error\ntests/contract_testcases/substrate/structs/parse_structs_07.sol:6:16-17"]
 	note [label="recursive field 'f3'\ntests/contract_testcases/substrate/structs/parse_structs_07.sol:9:13-18"]
-	diagnostic_11 [label="struct 's2' has infinite size\nlevel Error\ntests/contract_testcases/substrate/structs/parse_structs_07.sol:12:16-18"]
-	note_12 [label="recursive field 'foo'\ntests/contract_testcases/substrate/structs/parse_structs_07.sol:14:13-18"]
+	diagnostic_10 [label="struct 's2' has infinite size\nlevel Error\ntests/contract_testcases/substrate/structs/parse_structs_07.sol:12:16-18"]
+	note_11 [label="recursive field 'foo'\ntests/contract_testcases/substrate/structs/parse_structs_07.sol:14:13-18"]
 	structs -> s
 	structs -> s2
 	contracts -> contract
 	contract -> var [label="variable"]
 	diagnostics -> diagnostic [label="Debug"]
-	diagnostics -> diagnostic_9 [label="Error"]
-	diagnostic_9 -> note [label="note"]
-	diagnostics -> diagnostic_11 [label="Error"]
-	diagnostic_11 -> note_12 [label="note"]
+	diagnostics -> diagnostic_8 [label="Error"]
+	diagnostic_8 -> note [label="note"]
+	diagnostics -> diagnostic_10 [label="Error"]
+	diagnostic_10 -> note_11 [label="note"]
 }

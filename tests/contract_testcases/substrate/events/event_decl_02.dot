@@ -3,14 +3,14 @@ strict digraph "tests/contract_testcases/substrate/events/event_decl_02.sol" {
 	e_3 [label="name:e\ncontract: 0\ntests/contract_testcases/substrate/events/event_decl_02.sol:4:19-20"]
 	contract [label="contract c\ntests/contract_testcases/substrate/events/event_decl_02.sol:3:9-5:10"]
 	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/events/event_decl_02.sol:3:9-5:10"]
-	diagnostic_9 [label="e is already defined as an enum\nlevel Warning\ntests/contract_testcases/substrate/events/event_decl_02.sol:4:19-20"]
+	diagnostic_8 [label="e is already defined as an enum\nlevel Warning\ntests/contract_testcases/substrate/events/event_decl_02.sol:4:19-20"]
 	note [label="location of previous definition\ntests/contract_testcases/substrate/events/event_decl_02.sol:2:14-15"]
-	diagnostic_11 [label="event 'e' has never been emitted\nlevel Warning\ntests/contract_testcases/substrate/events/event_decl_02.sol:4:19-20"]
+	diagnostic_10 [label="event 'e' has never been emitted\nlevel Warning\ntests/contract_testcases/substrate/events/event_decl_02.sol:4:19-20"]
 	enums -> e
 	events -> e_3
 	contracts -> contract
 	diagnostics -> diagnostic [label="Debug"]
-	diagnostics -> diagnostic_9 [label="Warning"]
-	diagnostic_9 -> note [label="note"]
-	diagnostics -> diagnostic_11 [label="Warning"]
+	diagnostics -> diagnostic_8 [label="Warning"]
+	diagnostic_8 -> note [label="note"]
+	diagnostics -> diagnostic_10 [label="Warning"]
 }

@@ -2,9 +2,9 @@ strict digraph "tests/contract_testcases/substrate/events/event_decl_07.sol" {
 	foo [label="name:foo\ncontract: 0\ntests/contract_testcases/substrate/events/event_decl_07.sol:3:19-22\nfield name:f1 ty:bool indexed:yes\nfield name:f2 ty:bool indexed:yes\nfield name:f3 ty:bool indexed:yes\nfield name:f4 ty:bool indexed:yes"]
 	contract [label="contract c\ntests/contract_testcases/substrate/events/event_decl_07.sol:2:9-4:10"]
 	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/events/event_decl_07.sol:2:9-4:10"]
-	diagnostic_7 [label="event definition for 'foo' has 4 indexed fields where 3 permitted\nlevel Error\ntests/contract_testcases/substrate/events/event_decl_07.sol:3:19-22"]
+	diagnostic_6 [label="event definition for 'foo' has 4 indexed fields where 3 permitted\nlevel Error\ntests/contract_testcases/substrate/events/event_decl_07.sol:3:19-22"]
 	events -> foo
 	contracts -> contract
 	diagnostics -> diagnostic [label="Debug"]
-	diagnostics -> diagnostic_7 [label="Error"]
+	diagnostics -> diagnostic_6 [label="Error"]
 }
