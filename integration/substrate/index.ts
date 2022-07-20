@@ -1,5 +1,5 @@
 import fs, { PathLike } from 'fs';
-import { ApiPromise, WsProvider, Keyring } from '@polkadot/api';
+const { ApiPromise, WsProvider, Keyring } = require('@polkadot/api');
 import { CodePromise } from '@polkadot/api-contract';
 import type { CodecArg } from '@polkadot/types/types';
 import { SubmittableExtrinsic } from '@polkadot/api/types';

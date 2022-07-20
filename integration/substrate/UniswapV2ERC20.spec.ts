@@ -16,7 +16,7 @@ describe('Deploy UniswapV2ERC20 contract and test', () => {
     let dave: KeyringPair;
 
     beforeEach(async function () {
-        conn = await createConnection();
+        const conn = await createConnection();
 
         alice = aliceKeypair();
         dave = daveKeypair();
