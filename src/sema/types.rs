@@ -945,7 +945,7 @@ impl Type {
             Type::Bytes(_) => false,
             Type::Enum(_) => false,
             Type::Struct(_) => true,
-            Type::Array(_, dims) => dims[0].is_some(),
+            Type::Array(_, dims) => dims.last().unwrap().is_some(),
             Type::DynamicBytes => false,
             Type::String => false,
             Type::Mapping(..) => false,
@@ -1155,7 +1155,7 @@ impl Type {
                 Type::Value => BigInt::from(ns.value_length),
                 Type::Uint(n) | Type::Int(n) => BigInt::from(n / 8),
                 Type::Rational => unreachable!(),
-                Type::Array(_, dims) if dims[0].is_none() => BigInt::from(4),
+                Type::Array(_, dims) if dims.last().unwrap().is_none() => BigInt::from(4),
                 Type::Array(ty, dims) => {
                     let pointer_size = BigInt::from(4);
                     if self.is_sparse_solana(ns) {
@@ -1229,7 +1229,7 @@ impl Type {
                 Type::Value => BigInt::from(ns.value_length),
                 Type::Uint(n) | Type::Int(n) => BigInt::from(n / 8),
                 Type::Rational => unreachable!(),
-                Type::Array(_, dims) if dims[0].is_none() => BigInt::from(4),
+                Type::Array(_, dims) if dims.last().unwrap().is_none() => BigInt::from(4),
                 Type::Array(ty, _) => {
                     if self.is_sparse_solana(ns) {
                         BigInt::from(4)
@@ -1492,7 +1492,7 @@ impl Type {
     pub fn is_sparse_solana(&self, ns: &Namespace) -> bool {
         match self.deref_any() {
             Type::Mapping(..) => true,
-            Type::Array(_, dims) if dims[0].is_none() => false,
+            Type::Array(_, dims) if dims.last().unwrap().is_none() => false,
             Type::Array(ty, dims) => {
                 let pointer_size = BigInt::from(4);
                 let len = ty.storage_slots(ns).mul(

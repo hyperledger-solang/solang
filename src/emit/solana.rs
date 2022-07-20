@@ -787,7 +787,7 @@ impl SolanaTarget {
             );
 
             if elem_ty.is_dynamic(ns) || zero {
-                let length = if let Some(length) = dim[0].as_ref() {
+                let length = if let Some(length) = dim.last().unwrap().as_ref() {
                     binary
                         .context
                         .i32_type()
@@ -840,7 +840,7 @@ impl SolanaTarget {
             }
 
             // if the array was dynamic, free the array itself
-            if dim[0].is_none() {
+            if dim.last().unwrap().is_none() {
                 let slot = binary
                     .builder
                     .build_load(offset_ptr, "offset")
@@ -2233,7 +2233,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                 let length;
                 let mut slot = *slot;
 
-                if dim[0].is_some() {
+                if dim.last().unwrap().is_some() {
                     // LLVMSizeOf() produces an i64 and malloc takes i32
                     let size = binary.builder.build_int_truncate(
                         llvm_ty.size_of().unwrap(),
@@ -2258,10 +2258,10 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                         llvm_ty.ptr_type(AddressSpace::Generic),
                         "dest",
                     );
-                    length = binary
-                        .context
-                        .i32_type()
-                        .const_int(dim[0].as_ref().unwrap().to_u64().unwrap(), false);
+                    length = binary.context.i32_type().const_int(
+                        dim.last().unwrap().as_ref().unwrap().to_u64().unwrap(),
+                        false,
+                    );
                 } else {
                     let llvm_elem_ty = binary.llvm_field_ty(elem_ty, ns);
                     let elem_size = binary.builder.build_int_truncate(
@@ -2486,7 +2486,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                 "offset_ptr",
             );
 
-            let length = if let Some(length) = dim[0].as_ref() {
+            let length = if let Some(length) = dim.last().unwrap().as_ref() {
                 binary
                     .context
                     .i32_type()
@@ -2497,7 +2497,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
 
             let mut elem_slot = *slot;
 
-            if dim[0].is_none() {
+            if dim.last().unwrap().is_none() {
                 // reallocate to the right size
                 let member_size = binary
                     .context
