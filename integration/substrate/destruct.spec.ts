@@ -30,14 +30,14 @@ describe('Deploy destruct contract and test', () => {
         expect(hello.output?.toJSON()).toBe('Hello');
 
         let { data: { free: daveBalBefore } } = await conn.query.system.account(dave.address);
-        let { data: { free: contractBalBefore } } = await conn.query.system.account(deploy_contract.address);
+        let { data: { free: contractBalBefore } } = await conn.query.system.account(String(deploy_contract.address));
 
         let tx = contract.tx.selfterminate({ gasLimit }, dave.address);
 
         await transaction(tx, alice);
 
         let { data: { free: daveBalAfter } } = await conn.query.system.account(dave.address);
-        let { data: { free: contractBalAfter } } = await conn.query.system.account(deploy_contract.address);
+        let { data: { free: contractBalAfter } } = await conn.query.system.account(String(deploy_contract.address));
 
         //console.log(`bal ${daveBalBefore} and ${daveBalAfter}`);
         //console.log(`bal ${contractBalBefore} and ${contractBalAfter}`);

@@ -26,7 +26,7 @@ describe('Deploy balances contract and test', () => {
         let contract = new ContractPromise(conn, deploy_contract.abi, deploy_contract.address);
 
         let { output: contractRpcBal } = await contract.query.getBalance(alice.address, {});
-        let { data: { free: contractQueryBalBefore } } = await conn.query.system.account(deploy_contract.address);
+        let { data: { free: contractQueryBalBefore } } = await conn.query.system.account(String(deploy_contract.address));
 
         expect(contractRpcBal?.toString()).toBe(contractQueryBalBefore.toString());
 
@@ -34,7 +34,7 @@ describe('Deploy balances contract and test', () => {
 
         await transaction(tx, alice);
 
-        let { data: { free: contractQueryBalAfter } } = await conn.query.system.account(deploy_contract.address);
+        let { data: { free: contractQueryBalAfter } } = await conn.query.system.account(String(deploy_contract.address));
 
         expect(contractQueryBalAfter.toBigInt()).toEqual(contractQueryBalBefore.toBigInt() + 1000000n);
 
