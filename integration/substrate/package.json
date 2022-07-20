@@ -21,7 +21,7 @@
   },
   "dependencies": {
     "@polkadot/api": "^8.13",
-    "@polkadot/api-contract": "^4.13",
+    "@polkadot/api-contract": "^8.13",
     "@polkadot/types": "^8.13",
     "@polkadot/keyring": "^10.0",
     "@polkadot/util-crypto": "^10.0"
