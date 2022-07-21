@@ -21,7 +21,7 @@ describe('Deploy balances contract and test', () => {
         const dave = daveKeypair();
 
         // call the constructors
-        let deploy_contract = await deploy(conn, alice, 'balances.contract');
+        let deploy_contract = await deploy(conn, alice, 'balances.contract', BigInt(0));
 
         let contract = new ContractPromise(conn, deploy_contract.abi, deploy_contract.address);
 

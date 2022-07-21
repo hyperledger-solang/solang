@@ -1,26 +1,26 @@
 import expect from "expect";
-import {aliceKeypair, createConnection, deploy, gasLimit, transaction} from "./index";
-import {ContractPromise} from "@polkadot/api-contract";
-import {DecodedEvent} from "@polkadot/api-contract/types";
-import {ApiPromise} from "@polkadot/api";
+import { aliceKeypair, createConnection, deploy, gasLimit, transaction } from "./index";
+import { ContractPromise } from "@polkadot/api-contract";
+import { DecodedEvent } from "@polkadot/api-contract/types";
+import { ApiPromise } from "@polkadot/api";
 
 describe('Deploy mytoken contract and test', () => {
     let conn: ApiPromise
 
-    beforeEach(async function() {
-       conn = await createConnection();
+    beforeEach(async function () {
+        conn = await createConnection();
     });
 
     afterEach(async function () {
         await conn.disconnect();
     });
 
-    it('mytoken', async function() {
+    it('mytoken', async function () {
         this.timeout(100000);
 
         const alice = aliceKeypair();
 
-        let deployed_contract = await deploy(conn, alice, 'mytoken.contract');
+        let deployed_contract = await deploy(conn, alice, 'mytoken.contract', BigInt(0));
         let contract = new ContractPromise(conn, deployed_contract.abi, deployed_contract.address);
 
         let res = await contract.query.test(alice.address, {}, alice.address, true);
@@ -30,17 +30,17 @@ describe('Deploy mytoken contract and test', () => {
         expect(res.output?.toJSON()).toEqual(alice.address);
     });
 
-    it('mytokenEvent', async function() {
+    it('mytokenEvent', async function () {
         this.timeout(100000);
 
         const alice = aliceKeypair();
 
-        let deployed_contract = await deploy(conn, alice, 'mytokenEvent.contract');
+        let deployed_contract = await deploy(conn, alice, 'mytokenEvent.contract', BigInt(0));
         let contract = new ContractPromise(conn, deployed_contract.abi, deployed_contract.address);
         let tx = contract.tx.test({ gasLimit });
         let res0: any = await transaction(tx, alice);
 
-        let events : DecodedEvent[] = res0.contractEvents;
+        let events: DecodedEvent[] = res0.contractEvents;
 
         expect(events.length).toEqual(1);
 

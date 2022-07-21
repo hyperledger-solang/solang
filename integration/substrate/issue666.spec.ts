@@ -20,7 +20,7 @@ describe('issue666 flip and inc', () => {
         const alice = aliceKeypair();
 
         // call the constructors
-        let flipper_contract = await deploy(conn, alice, 'Flip.contract');
+        let flipper_contract = await deploy(conn, alice, 'Flip.contract', BigInt(0));
         let inc_contract = await deploy(conn, alice, 'Inc.contract', flipper_contract.address);
 
         let contract = new ContractPromise(conn, inc_contract.abi, inc_contract.address);

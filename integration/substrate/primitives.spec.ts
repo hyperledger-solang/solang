@@ -10,7 +10,7 @@ describe('Deploy primitives contract and test', () => {
         const alice = aliceKeypair();
         const dave = daveKeypair();
 
-        let deployed_contract = await deploy(conn, alice, 'primitives.contract');
+        let deployed_contract = await deploy(conn, alice, 'primitives.contract', BigInt(0));
 
         let contract = new ContractPromise(conn, deployed_contract.abi, deployed_contract.address);
 

@@ -20,15 +20,15 @@ describe('Deploy external_call contract and test', () => {
         const alice = aliceKeypair();
 
         // call the constructors
-        let caller_res = await deploy(conn, alice, 'caller.contract');
+        let caller_res = await deploy(conn, alice, 'caller.contract', BigInt(0));
 
         let caller_contract = new ContractPromise(conn, caller_res.abi, caller_res.address);
 
-        let callee_res = await deploy(conn, alice, 'callee.contract');
+        let callee_res = await deploy(conn, alice, 'callee.contract', BigInt(0));
 
         let callee_contract = new ContractPromise(conn, callee_res.abi, callee_res.address);
 
-        let callee2_res = await deploy(conn, alice, 'callee2.contract');
+        let callee2_res = await deploy(conn, alice, 'callee2.contract', BigInt(0));
 
         let callee2_contract = new ContractPromise(conn, callee2_res.abi, callee2_res.address);
 

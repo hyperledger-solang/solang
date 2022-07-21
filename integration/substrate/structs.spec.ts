@@ -19,7 +19,7 @@ describe('Deploy struct contract and test', () => {
 
         const alice = aliceKeypair();
 
-        let deployed_contract = await deploy(conn, alice, 'structs.contract');
+        let deployed_contract = await deploy(conn, alice, 'structs.contract', BigInt(0));
 
         let contract = new ContractPromise(conn, deployed_contract.abi, deployed_contract.address);
 

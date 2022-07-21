@@ -9,7 +9,7 @@ describe('Deploy flipper contract and test', () => {
         let conn = await createConnection();
         const alice = aliceKeypair();
 
-        let deployed_contract = await deploy(conn, alice, 'flipper.contract', true);
+        let deployed_contract = await deploy(conn, alice, 'flipper.contract', BigInt(0), true);
 
         let contract = new ContractPromise(conn, deployed_contract.abi, deployed_contract.address);
 

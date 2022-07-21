@@ -19,7 +19,7 @@ describe('Deploy store contract and test', () => {
 
         const alice = aliceKeypair();
 
-        let deployed_contract = await deploy(conn, alice, 'store.contract');
+        let deployed_contract = await deploy(conn, alice, 'store.contract', BigInt(0));
 
         let contract = new ContractPromise(conn, deployed_contract.abi, deployed_contract.address);
 

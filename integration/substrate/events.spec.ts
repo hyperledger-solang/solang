@@ -21,7 +21,7 @@ describe('Deploy events contract and test', () => {
         const alice = aliceKeypair();
 
         // call the constructors
-        let deploy_contract = await deploy(conn, alice, 'events.contract');
+        let deploy_contract = await deploy(conn, alice, 'events.contract', BigInt(0));
 
         let contract = new ContractPromise(conn, deploy_contract.abi, deploy_contract.address);
 
