@@ -104,6 +104,17 @@ node flipper.js
 
 ## Build for Substrate
 
+### Status
+:warning: Solang was developed against Substrate v3.0. It has been a while since the last time the Substrate target was worked on, which introduced a few known regressions. Currently, the following is known to **not** work with recent Substrate versions:
+
+* Function call arguments of type `address`
+* Function return values of type `address`
+* Cross-contract calls
+* Events with indexed fields
+
+That being said, maintenance on the Substrate target was resumed and we are working on fixing these issues.
+
+### Bulding
 Run:
 
 ```bash
