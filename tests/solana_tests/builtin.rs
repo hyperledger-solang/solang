@@ -22,6 +22,9 @@ fn builtins() {
             function sig() public returns (bytes4) {
                 return msg.sig;
             }
+            function prog() public returns (address) {
+                return tx.program_id;
+            }
         }"#,
     );
 
@@ -67,6 +70,13 @@ fn builtins() {
     assert_eq!(
         returns,
         vec![Token::FixedBytes(hex::decode("00a7029b").unwrap())]
+    );
+
+    let returns = vm.function("prog", &[], &[], None);
+
+    assert_eq!(
+        returns,
+        vec![Token::FixedBytes(vm.stack[0].program.to_vec())]
     );
 }
 

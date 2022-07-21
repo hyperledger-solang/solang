@@ -3711,6 +3711,28 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
 
                 binary.builder.build_load(value, "self_address")
             }
+            codegen::Expression::Builtin(_, _, codegen::Builtin::ProgramId, _) => {
+                let parameters = self.sol_parameters(binary);
+
+                let account_id = binary
+                    .builder
+                    .build_load(
+                        binary
+                            .builder
+                            .build_struct_gep(parameters, 7, "program_id")
+                            .unwrap(),
+                        "program_id",
+                    )
+                    .into_pointer_value();
+
+                let value = binary.builder.build_pointer_cast(
+                    account_id,
+                    binary.address_type(ns).ptr_type(AddressSpace::Generic),
+                    "",
+                );
+
+                binary.builder.build_load(value, "program_id")
+            }
             codegen::Expression::Builtin(_, _, codegen::Builtin::Calldata, _) => {
                 let sol_params = self.sol_parameters(binary);
 

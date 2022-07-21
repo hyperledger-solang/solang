@@ -1023,6 +1023,7 @@ pub enum Builtin {
     GasLimit,
     BlockNumber,
     Slot,
+    ProgramId,
     Timestamp,
     Calldata,
     Sender,
