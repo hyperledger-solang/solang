@@ -9,19 +9,20 @@ const TOTAL_SUPPLY = BigInt(10000e18);
 const TEST_AMOUNT = BigInt(10e18);
 const MAX_UINT256 = BigInt(0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff);
 
-describe('Deploy UniswapV2ERC20 contract and test', () => {
+// REGRESSION metadata #666
+describe.skip('Deploy UniswapV2ERC20 contract and test', () => {
     let conn: ApiPromise;
     let token: ContractPromise;
     let alice: KeyringPair;
     let dave: KeyringPair;
 
     beforeEach(async function () {
-        const conn = await createConnection();
+        conn = await createConnection();
 
         alice = aliceKeypair();
         dave = daveKeypair();
 
-        let deploy_contract = await deploy(conn, alice, 'ERC20.contract', TOTAL_SUPPLY);
+        let deploy_contract = await deploy(conn, alice, 'ERC20.contract', BigInt(0), TOTAL_SUPPLY);
 
         token = new ContractPromise(conn, deploy_contract.abi, deploy_contract.address);
     });

@@ -34,6 +34,7 @@ describe('Deploy builtins2 contract and test', () => {
         expect(gasLimit).toBeGreaterThan(gas);
         let previous_diff = gasLimit - gas;
 
+        // Gas metering is based on execution time:
         // Expect each call to burn between 10000..1000000 more gas than the previous iteration.
         for (let i = 1; i < 100; i++) {
             let { output: gas_left } = await contract.query.burnGas(alice.address, { gasLimit }, i);

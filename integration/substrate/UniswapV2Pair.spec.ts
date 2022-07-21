@@ -8,7 +8,8 @@ import type { Codec } from '@polkadot/types/types';
 const MINIMUM_LIQUIDITY = BigInt(1000);
 const TOTAL_SUPPLY = BigInt(10000e18);
 
-describe('UniswapV2Pair', () => {
+// REGRESSION metadata #666
+describe.skip('UniswapV2Pair', () => {
     let conn: ApiPromise;
     let factory: ContractPromise;
     let pair: ContractPromise;
