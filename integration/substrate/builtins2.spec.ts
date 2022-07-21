@@ -1,5 +1,5 @@
 import expect from 'expect';
-import { createConnection, deploy, aliceKeypair, } from './index';
+import { createConnection, deploy, aliceKeypair, gasLimit } from './index';
 import { ContractPromise } from '@polkadot/api-contract';
 
 describe('Deploy builtins2 contract and test', () => {
@@ -29,16 +29,23 @@ describe('Deploy builtins2 contract and test', () => {
 
         expect(Math.abs(contract_block_number - rpc_block_number)).toBeLessThanOrEqual(3);
 
-        for (let i = 0; i < 10; i++) {
-            let { output: gas_left } = await contract.query.burnGas(alice.address, { gasLimit: 1e8 }, i);
+        let { output: gas_left } = await contract.query.burnGas(alice.address, { gasLimit }, 0);
+        let gas = BigInt(gas_left!.toString());
+        expect(gasLimit).toBeGreaterThan(gas);
+        let previous_diff = gasLimit - gas;
 
-            let gas = Number.parseInt(gas_left!.toString());
+        // Expect each call to burn between 10000..1000000 more gas than the previous iteration.
+        for (let i = 1; i < 100; i++) {
+            let { output: gas_left } = await contract.query.burnGas(alice.address, { gasLimit }, i);
+            let gas = BigInt(gas_left!.toString());
+            expect(gasLimit).toBeGreaterThan(gas);
 
-            //console.debug(`i:${i} gas:${gas} exp:${expected}`);
+            let diff = gasLimit - gas;
+            expect(diff).toBeGreaterThan(previous_diff);
+            expect(diff - previous_diff).toBeLessThan(1e6);
+            expect(diff - previous_diff).toBeGreaterThan(1e4);
 
-            let expected = 7e7 - 25e5 * i;
-
-            expect(Math.abs(gas - expected)).toBeLessThanOrEqual(3e6);
+            previous_diff = diff;
         }
 
         conn.disconnect();
