@@ -159,7 +159,7 @@ pub enum Instr {
         offset: Expression,
         value: Expression,
     },
-    /// Copies bytes from source address to destination address
+    /// Copy bytes from source address to destination address
     MemCopy {
         source: Expression,
         destination: Expression,
@@ -787,7 +787,7 @@ impl ControlFlowGraph {
                 ..
             } => {
                 format!(
-                    "(advance ptr: {}, by {})",
+                    "(advance ptr: {}, by: {})",
                     self.expr_to_string(contract, ns, pointer),
                     self.expr_to_string(contract, ns, bytes_offset)
                 )
@@ -1890,11 +1890,19 @@ impl Namespace {
         }
     }
 
-    /// Checks if struct contains only primitive types and returns its size
-    pub fn is_primitive_type_struct(&self, struct_no: usize) -> Option<BigInt> {
+    /// Checks if struct contains only primitive types and returns its memory non-padded size
+    pub fn calculate_struct_non_padded_size(&self, struct_no: usize) -> Option<BigInt> {
         let mut size = BigInt::from(0u8);
         for field in &self.structs[struct_no].fields {
             if !field.ty.is_primitive() {
+                // If a struct contains a non-primitive type, we cannot calculate its
+                // size during compile time
+                if let Type::Struct(no) = &field.ty {
+                    if let Some(struct_size) = self.calculate_struct_non_padded_size(*no) {
+                        size.add_assign(struct_size);
+                        continue;
+                    }
+                }
                 return None;
             } else {
                 size.add_assign(field.ty.memory_size_of(self));

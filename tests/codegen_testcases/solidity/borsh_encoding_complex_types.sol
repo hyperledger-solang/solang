@@ -30,7 +30,8 @@ contract EncodingTest {
 
         // CHECK: block4: # end_for
         // CHECK: ty:bytes %abi_encoded.temp.10 = (alloc bytes len %array_bytes_size_0.temp.8)
-	    // CHECK: writebuffer buffer:%abi_encoded.temp.10 offset:uint32 0 value:(builtin ArrayLength (%temp.7))
+		// CHECK: ty:uint32 %temp.11 = uint32 0
+	    // CHECK: writebuffer buffer:%abi_encoded.temp.10 offset:%temp.11 value:(builtin ArrayLength (%temp.7))
 	    // CHECK: ty:uint32 %temp.11 = uint32 4
 	    // CHECK: ty:uint32 %for_i_0.temp.12 = uint32 0
 	    // CHECK: branch block5
@@ -45,7 +46,7 @@ contract EncodingTest {
         // CHECK: block7: # body
 	    // CHECK: ty:uint32 %temp.13 = (builtin ArrayLength ((load (subscript string[] %temp.7[%for_i_0.temp.12]))))
 	    // CHECK: writebuffer buffer:%abi_encoded.temp.10 offset:%temp.11 value:%temp.13
-	    // CHECK: memcpy src: (load (subscript string[] %temp.7[%for_i_0.temp.12])), dest: (advance ptr: %abi_encoded.temp.10, by (%temp.11 + uint32 4)), bytes_len: %temp.13
+	    // CHECK: memcpy src: (load (subscript string[] %temp.7[%for_i_0.temp.12])), dest: (advance ptr: %abi_encoded.temp.10, by: (%temp.11 + uint32 4)), bytes_len: %temp.13
 	    // CHECK: ty:uint32 %temp.11 = ((%temp.13 + uint32 4) + %temp.11)
 	    // CHECK: branch block6   
 
@@ -78,7 +79,8 @@ contract EncodingTest {
         // CHECK: block4: # end_for
 	    // CHECK: ty:bytes %abi_encoded.temp.17 = (alloc bytes len (uint32 8 + %array_bytes_size_0.temp.15))
 	    // CHECK: writebuffer buffer:%abi_encoded.temp.17 offset:uint32 0 value:(load (struct %cte field 0))
-	    // CHECK: writebuffer buffer:%abi_encoded.temp.17 offset:(uint32 0 + uint32 8) value:(builtin ArrayLength ((load (struct %cte field 1))))
+		// CHECK: ty:uint32 %temp.18 = uint32 8
+	    // CHECK: writebuffer buffer:%abi_encoded.temp.17 offset:%temp.18 value:(builtin ArrayLength ((load (struct %cte field 1))))
 	    // CHECK: ty:uint32 %temp.18 = uint32 12
 	    // CHECK: ty:uint32 %for_i_0.temp.19 = uint32 0
 	    // CHECK: branch block5
@@ -93,7 +95,7 @@ contract EncodingTest {
         // CHECK: block7: # body
 	    // CHECK: ty:uint32 %temp.20 = (builtin ArrayLength ((load (subscript string[] (load (struct %cte field 1))[%for_i_0.temp.19]))))
 	    // CHECK: writebuffer buffer:%abi_encoded.temp.17 offset:%temp.18 value:%temp.20
-	    // CHECK: memcpy src: (load (subscript string[] (load (struct %cte field 1))[%for_i_0.temp.19])), dest: (advance ptr: %abi_encoded.temp.17, by (%temp.18 + uint32 4)), bytes_len: %temp.20
+	    // CHECK: memcpy src: (load (subscript string[] (load (struct %cte field 1))[%for_i_0.temp.19])), dest: (advance ptr: %abi_encoded.temp.17, by: (%temp.18 + uint32 4)), bytes_len: %temp.20
 	    // CHECK: ty:uint32 %temp.18 = ((%temp.20 + uint32 4) + %temp.18)
 	    // CHECK: branch block6
 
@@ -127,7 +129,8 @@ contract EncodingTest {
 
         // CHECK: block4: # end_for
 	    // CHECK: ty:bytes %abi_encoded.temp.26 = (alloc bytes len %array_bytes_size_0.temp.22)
-	    // CHECK: writebuffer buffer:%abi_encoded.temp.26 offset:uint32 0 value:(builtin ArrayLength (%temp.21))
+		// CHECK: ty:uint32 %temp.27 = uint32 0
+	    // CHECK: writebuffer buffer:%abi_encoded.temp.26 offset:%temp.27 value:(builtin ArrayLength (%temp.21))
 	    // CHECK: ty:uint32 %temp.27 = uint32 4
 	    // CHECK: ty:uint32 %for_i_0.temp.28 = uint32 0	
         // CHECK: branch block9
@@ -156,8 +159,9 @@ contract EncodingTest {
 
         // CHECK: block11: # body
 	    // CHECK: writebuffer buffer:%abi_encoded.temp.26 offset:%temp.27 value:(load (struct (subscript struct EncodingTest.NonConstantStruct[] %temp.21[%for_i_0.temp.28]) field 0))
-	    // CHECK: writebuffer buffer:%abi_encoded.temp.26 offset:(%temp.27 + uint32 8) value:(builtin ArrayLength ((load (struct (subscript struct EncodingTest.NonConstantStruct[] %temp.21[%for_i_0.temp.28]) field 1))))
-	    // CHECK: ty:uint32 %temp.29 = ((%temp.27 + uint32 8) + uint32 4)
+		// CHECK: ty:uint32 %temp.29 = (%temp.27 + uint32 8)
+	    // CHECK: writebuffer buffer:%abi_encoded.temp.26 offset:%temp.29 value:(builtin ArrayLength ((load (struct (subscript struct EncodingTest.NonConstantStruct[] %temp.21[%for_i_0.temp.28]) field 1))))
+	    // CHECK: ty:uint32 %temp.29 = (%temp.29 + uint32 4)
 	    // CHECK: ty:uint32 %for_i_0.temp.30 = uint32 0
 	    // CHECK: branch block13
 
@@ -175,7 +179,7 @@ contract EncodingTest {
         // CHECK: block15: # body
 	    // CHECK: ty:uint32 %temp.31 = (builtin ArrayLength ((load (subscript string[] (load (struct (subscript struct EncodingTest.NonConstantStruct[] %temp.21[%for_i_0.temp.28]) field 1))[%for_i_0.temp.30]))))
 	    // CHECK: writebuffer buffer:%abi_encoded.temp.26 offset:%temp.29 value:%temp.31
-	    // CHECK: memcpy src: (load (subscript string[] (load (struct (subscript struct EncodingTest.NonConstantStruct[] %temp.21[%for_i_0.temp.28]) field 1))[%for_i_0.temp.30])), dest: (advance ptr: %abi_encoded.temp.26, by (%temp.29 + uint32 4)), bytes_len: %temp.31
+	    // CHECK: memcpy src: (load (subscript string[] (load (struct (subscript struct EncodingTest.NonConstantStruct[] %temp.21[%for_i_0.temp.28]) field 1))[%for_i_0.temp.30])), dest: (advance ptr: %abi_encoded.temp.26, by: (%temp.29 + uint32 4)), bytes_len: %temp.31
 	    // CHECK: ty:uint32 %temp.29 = ((%temp.31 + uint32 4) + %temp.29)
 	    // CHECK: branch block14
 

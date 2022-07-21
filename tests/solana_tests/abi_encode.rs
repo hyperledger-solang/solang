@@ -569,13 +569,13 @@ fn multi_dimensional_array() {
 
     #[derive(Debug, BorshDeserialize)]
     struct Res1 {
-        item_1: Vec<[[PaddedStruct; 3]; 2]>,
+        item_1: Vec<[[PaddedStruct; 2]; 3]>,
         item_2: u16,
     }
 
     #[derive(Debug, BorshDeserialize)]
     struct Res2 {
-        item: Vec<[[u16; 2]; 4]>,
+        item: Vec<[[u16; 4]; 2]>,
     }
 
     #[derive(Debug, BorshDeserialize)]
@@ -644,7 +644,6 @@ contract Testing {
     let mut res1_c: Vec<u8> = Vec::new();
     res1_c.resize(32, 0);
 
-    // Due to differences in indexing, the matrix in Rust is the transpose of the one created in solidity
     assert_eq!(
         decoded.item_1[0][0][0],
         PaddedStruct {
@@ -656,25 +655,17 @@ contract Testing {
     assert_eq!(
         decoded.item_1[0][0][1],
         PaddedStruct {
-            a: 89,
-            b: 4,
-            c: create_response(&mut res1_c, b"sn")
-        }
-    );
-    assert_eq!(
-        decoded.item_1[0][0][2],
-        PaddedStruct {
-            a: 23,
-            b: 78,
-            c: create_response(&mut res1_c, b"fr")
+            a: 78,
+            b: 6,
+            c: create_response(&mut res1_c, b"bc")
         }
     );
     assert_eq!(
         decoded.item_1[0][1][0],
         PaddedStruct {
-            a: 78,
-            b: 6,
-            c: create_response(&mut res1_c, b"bc")
+            a: 89,
+            b: 4,
+            c: create_response(&mut res1_c, b"sn")
         }
     );
     assert_eq!(
@@ -686,7 +677,15 @@ contract Testing {
         }
     );
     assert_eq!(
-        decoded.item_1[0][1][2],
+        decoded.item_1[0][2][0],
+        PaddedStruct {
+            a: 23,
+            b: 78,
+            c: create_response(&mut res1_c, b"fr")
+        }
+    );
+    assert_eq!(
+        decoded.item_1[0][2][1],
         PaddedStruct {
             a: 445,
             b: 46,
@@ -700,10 +699,8 @@ contract Testing {
     let decoded = Res2::try_from_slice(&encoded).unwrap();
 
     assert_eq!(decoded.item.len(), 1);
-    assert_eq!(decoded.item[0][0], [1, 5]);
-    assert_eq!(decoded.item[0][1], [2, 6]);
-    assert_eq!(decoded.item[0][2], [3, 7]);
-    assert_eq!(decoded.item[0][3], [4, 8]);
+    assert_eq!(decoded.item[0][0], [1, 2, 3, 4]);
+    assert_eq!(decoded.item[0][1], [5, 6, 7, 8]);
 
     let returns = vm.function("uniqueDim", &[], &[], None);
     let encoded = returns[0].clone().into_bytes().unwrap();
@@ -717,4 +714,105 @@ fn create_response(vec: &mut [u8], string: &[u8; 2]) -> [u8; 32] {
     vec[30] = string[1];
     vec[31] = string[0];
     <[u8; 32]>::try_from(vec.to_owned()).unwrap()
+}
+
+#[test]
+fn null_pointer() {
+    #[derive(Debug, BorshDeserialize)]
+    struct S {
+        f1: i64,
+        f2: String,
+    }
+
+    #[derive(Debug, BorshDeserialize)]
+    struct Res1 {
+        item: Vec<S>,
+    }
+
+    #[derive(Debug, BorshDeserialize)]
+    struct Res2 {
+        item: Vec<String>,
+    }
+
+    let mut vm = build_solidity(
+        r#"
+    contract Testing {
+
+        struct S {
+            int64 f1;
+            string f2;
+        }
+
+        function test1() public pure returns (bytes memory) {
+            S[] memory s = new S[](5);
+            return abi.encode(s);
+        }
+
+        function test2() public pure returns (bytes memory) {
+            string[] memory x = new string[](5);
+            return abi.encode(x);
+        }
+    }
+        "#,
+    );
+
+    vm.constructor("Testing", &[]);
+    let returns = vm.function("test1", &[], &[], None);
+    let encoded = returns[0].clone().into_bytes().unwrap();
+    let decoded = Res1::try_from_slice(&encoded).unwrap();
+
+    assert_eq!(decoded.item.len(), 5);
+    for i in 0..5 {
+        assert_eq!(decoded.item[i].f1, 0);
+        assert!(decoded.item[i].f2.is_empty())
+    }
+
+    let returns = vm.function("test2", &[], &[], None);
+    let encoded = returns[0].clone().into_bytes().unwrap();
+    let decoded = Res2::try_from_slice(&encoded).unwrap();
+
+    assert_eq!(decoded.item.len(), 5);
+
+    for i in 0..5 {
+        assert!(decoded.item[i].is_empty());
+    }
+}
+
+#[test]
+fn external_function() {
+    #[derive(Debug, BorshDeserialize)]
+    struct Res {
+        item_1: [u8; 4],
+        item_2: [u8; 32],
+    }
+
+    let mut vm = build_solidity(
+        r#"
+    contract Testing {
+        function doThis(int64 a, int64 b) public pure returns (int64) {
+            return a+b;
+        }
+
+        function doThat() public view returns (bytes4, address, bytes memory) {
+            function (int64, int64) external returns (int64) fPtr = this.doThis;
+
+            bytes memory b = abi.encode(fPtr);
+            return (fPtr.selector, fPtr.address, b);
+        }
+    }
+        "#,
+    );
+
+    vm.constructor("Testing", &[]);
+
+    let returns = vm.function("doThat", &[], &[], None);
+    let encoded = returns[2].clone().into_bytes().unwrap();
+    let decoded = Res::try_from_slice(&encoded).unwrap();
+
+    let mut selector = returns[0].clone().into_fixed_bytes().unwrap();
+    selector.reverse();
+    let address = returns[1].clone().into_fixed_bytes().unwrap();
+
+    assert_eq!(decoded.item_1, &selector[..]);
+    assert_eq!(decoded.item_2, &address[..]);
 }

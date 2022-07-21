@@ -3053,10 +3053,7 @@ pub trait TargetRuntime<'a> {
                 bytes_offset,
                 ..
             } => {
-                let pointer = if matches!(
-                    pointer.ty(),
-                    Type::DynamicBytes | Type::String | Type::Slice
-                ) {
+                let pointer = if pointer.ty().is_dynamic_memory() {
                     bin.vector_bytes(self.expression(bin, pointer, vartab, function, ns))
                 } else {
                     self.expression(bin, pointer, vartab, function, ns)
