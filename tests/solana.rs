@@ -665,6 +665,77 @@ impl SyscallObject<UserError> for SolCreateProgramAddress {
     }
 }
 
+struct SolTryFindProgramAddress();
+impl SolTryFindProgramAddress {
+    /// new
+    pub fn init<C, E>(_unused: C) -> Box<dyn SyscallObject<UserError>> {
+        Box::new(Self {})
+    }
+}
+
+impl SyscallObject<UserError> for SolTryFindProgramAddress {
+    fn call(
+        &mut self,
+        seed_ptr: u64,
+        seed_len: u64,
+        program_id: u64,
+        dest: u64,
+        bump: u64,
+        memory_mapping: &mut MemoryMapping,
+        result: &mut Result<u64, EbpfError<UserError>>,
+    ) {
+        assert!(seed_len <= 16);
+
+        let arrays = question_mark!(
+            translate_slice::<(u64, u64)>(memory_mapping, seed_ptr, seed_len),
+            result
+        );
+
+        let mut seeds = Vec::new();
+
+        for (addr, len) in arrays {
+            assert!(*len < 32);
+
+            let buf = question_mark!(translate_slice::<u8>(memory_mapping, *addr, *len), result);
+
+            println!("seed:{}", hex::encode(buf));
+
+            seeds.push(buf);
+        }
+
+        let program_id = question_mark!(
+            translate_type::<Account>(memory_mapping, program_id),
+            result
+        );
+
+        println!("program_id:{}", program_id.to_base58());
+
+        let bump_seed = [std::u8::MAX];
+        let mut seeds_with_bump = seeds.to_vec();
+        seeds_with_bump.push(&bump_seed);
+
+        let pda = create_program_address(program_id, &seeds_with_bump);
+
+        let hash_result =
+            question_mark!(translate_slice_mut::<u8>(memory_mapping, dest, 32), result);
+
+        hash_result.copy_from_slice(&pda.0);
+
+        let bump_result =
+            question_mark!(translate_slice_mut::<u8>(memory_mapping, bump, 1), result);
+
+        bump_result.copy_from_slice(&bump_seed);
+
+        println!(
+            "sol_try_find_program_address: {} {:x}",
+            pda.0.to_base58(),
+            bump_seed[0]
+        );
+
+        *result = Ok(0)
+    }
+}
+
 struct SyscallSetReturnData<'a> {
     context: SyscallContext<'a>,
 }
@@ -1360,6 +1431,14 @@ impl VirtualMachine {
                 b"sol_create_program_address",
                 SolCreateProgramAddress::init::<BpfSyscallContext, UserError>,
                 SolCreateProgramAddress::call,
+            )
+            .unwrap();
+
+        syscall_registry
+            .register_syscall_by_name(
+                b"sol_try_find_program_address",
+                SolTryFindProgramAddress::init::<BpfSyscallContext, UserError>,
+                SolTryFindProgramAddress::call,
             )
             .unwrap();
 

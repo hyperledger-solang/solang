@@ -98,6 +98,12 @@ fn pda() {
 
                 return create_program_address([a, b], program_id);
             }
+
+            function create_pda2_bump() public returns (address, bytes1) {
+                address program_id = address"BPFLoaderUpgradeab1e11111111111111111111111";
+
+                return try_find_program_address(["foo", hex"01234567"], program_id);
+            }
         }"#,
     );
 
@@ -128,6 +134,19 @@ fn pda() {
         assert_eq!(
             bs.to_base58(),
             "2fnQrngrQT4SeLcdToJAD96phoEjNL2man2kfRLCASVk"
+        );
+    } else {
+        panic!("{:?} not expected", returns);
+    }
+
+    let returns = vm.function("create_pda2_bump", &[], &[], None);
+
+    assert_eq!(returns[1], Token::FixedBytes(vec![255]));
+
+    if let Token::FixedBytes(bs) = &returns[0] {
+        assert_eq!(
+            bs.to_base58(),
+            "DZpR2BwsPVtbXxUUbMx5tK58Ln2T9RUtAshtR2ePqDcu"
         );
     } else {
         panic!("{:?} not expected", returns);

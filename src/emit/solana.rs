@@ -205,6 +205,7 @@ impl SolanaTarget {
             "sol_get_return_data",
             "sol_set_return_data",
             "sol_create_program_address",
+            "sol_try_find_program_address",
             "sol_sha256",
             "sol_keccak256",
             "sol_log_data",
@@ -321,6 +322,24 @@ impl SolanaTarget {
             "sol_create_program_address",
             u64_ty.fn_type(
                 &[seeds.into(), u64_ty.into(), address.into(), address.into()],
+                false,
+            ),
+            None,
+        );
+        function
+            .as_global_value()
+            .set_unnamed_address(UnnamedAddress::Local);
+
+        let function = binary.module.add_function(
+            "sol_try_find_program_address",
+            u64_ty.fn_type(
+                &[
+                    seeds.into(),
+                    u64_ty.into(),
+                    address.into(),
+                    address.into(),
+                    u8_ptr.into(),
+                ],
                 false,
             ),
             None,
@@ -3060,58 +3079,110 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         args: &[BasicMetadataValueEnum<'a>],
         ns: &ast::Namespace,
     ) -> BasicValueEnum<'a> {
-        // only create_program_address supported right now
-        assert_eq!(func.name, "create_program_address");
+        if func.name == "create_program_address" {
+            let func = binary
+                .module
+                .get_function("sol_create_program_address")
+                .unwrap();
 
-        let func = binary
-            .module
-            .get_function("sol_create_program_address")
-            .unwrap();
+            // first argument are the seeds
+            let seeds = binary.builder.build_pointer_cast(
+                args[0].into_pointer_value(),
+                func.get_first_param()
+                    .unwrap()
+                    .get_type()
+                    .into_pointer_type(),
+                "seeds",
+            );
 
-        // first argument are the seeds
-        let seeds = binary.builder.build_pointer_cast(
-            args[0].into_pointer_value(),
-            func.get_first_param()
+            let seed_count = binary.context.i64_type().const_int(
+                args[0]
+                    .into_pointer_value()
+                    .get_type()
+                    .get_element_type()
+                    .into_array_type()
+                    .len() as u64,
+                false,
+            );
+
+            // address
+            let address = binary
+                .builder
+                .build_alloca(binary.address_type(ns), "address");
+
+            binary
+                .builder
+                .build_store(address, args[1].into_array_value());
+
+            binary
+                .builder
+                .build_call(
+                    func,
+                    &[
+                        seeds.into(),
+                        seed_count.into(),
+                        address.into(),
+                        args[2], // return value
+                    ],
+                    "",
+                )
+                .try_as_basic_value()
+                .left()
                 .unwrap()
-                .get_type()
-                .into_pointer_type(),
-            "seeds",
-        );
+        } else if func.name == "try_find_program_address" {
+            let func = binary
+                .module
+                .get_function("sol_try_find_program_address")
+                .unwrap();
 
-        let seed_count = binary.context.i64_type().const_int(
-            args[0]
-                .into_pointer_value()
-                .get_type()
-                .get_element_type()
-                .into_array_type()
-                .len() as u64,
-            false,
-        );
+            // first argument are the seeds
+            let seeds = binary.builder.build_pointer_cast(
+                args[0].into_pointer_value(),
+                func.get_first_param()
+                    .unwrap()
+                    .get_type()
+                    .into_pointer_type(),
+                "seeds",
+            );
 
-        // address
-        let address = binary
-            .builder
-            .build_alloca(binary.address_type(ns), "address");
+            let seed_count = binary.context.i64_type().const_int(
+                args[0]
+                    .into_pointer_value()
+                    .get_type()
+                    .get_element_type()
+                    .into_array_type()
+                    .len() as u64,
+                false,
+            );
 
-        binary
-            .builder
-            .build_store(address, args[1].into_array_value());
+            // address
+            let address = binary
+                .builder
+                .build_alloca(binary.address_type(ns), "address");
 
-        binary
-            .builder
-            .build_call(
-                func,
-                &[
-                    seeds.into(),
-                    seed_count.into(),
-                    address.into(),
-                    args[2], // return value
-                ],
-                "",
-            )
-            .try_as_basic_value()
-            .left()
-            .unwrap()
+            binary
+                .builder
+                .build_store(address, args[1].into_array_value());
+
+            binary
+                .builder
+                .build_call(
+                    func,
+                    &[
+                        seeds.into(),
+                        seed_count.into(),
+                        address.into(),
+                        args[2], // return address/pubkey
+                        args[3], // return seed bump
+                    ],
+                    "",
+                )
+                .try_as_basic_value()
+                .left()
+                .unwrap()
+        } else {
+            unreachable!();
+        }
     }
 
     /// Call external binary

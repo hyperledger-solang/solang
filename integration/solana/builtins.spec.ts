@@ -27,6 +27,10 @@ describe('Deploy solang contract and test', function () {
         res = await contract.functions.pda('0x', '0x01', publicKeyToHex(addrs));
         expect(res.result).toBe(publicKeyToHex(expected));
 
+        res = await contract.functions.pda_with_bump('0x', '0x01', publicKeyToHex(addrs));
+        expect(res.result[0]).toBe("0x00c13b4820057d4d07cddf24058df4034cd3379a5f863b4e061ad2c29be62fd5");
+        expect(res.result[1]).toBe("0xfe");
+
         res = await contract.functions.mr_now([]);
 
         let now = Math.floor(+new Date() / 1000);

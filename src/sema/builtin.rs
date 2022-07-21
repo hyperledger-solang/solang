@@ -1682,5 +1682,76 @@ impl Namespace {
             &id,
             Symbol::Function(vec![(pt::Loc::Builtin, func_no)])
         ));
+
+        let mut func = Function::new(
+            pt::Loc::Builtin,
+            "try_find_program_address".to_string(),
+            None,
+            Vec::new(),
+            pt::FunctionTy::Function,
+            None,
+            pt::Visibility::Public(None),
+            vec![
+                Parameter {
+                    loc: pt::Loc::Builtin,
+                    id: None,
+                    ty: Type::Array(
+                        Box::new(Type::Slice(Box::new(Type::Bytes(1)))),
+                        vec![ArrayLength::AnyFixed],
+                    ),
+                    ty_loc: None,
+                    readonly: false,
+                    indexed: false,
+                    recursive: false,
+                },
+                Parameter {
+                    loc: pt::Loc::Builtin,
+                    id: None,
+                    ty: Type::Address(false),
+                    ty_loc: None,
+                    readonly: false,
+                    indexed: false,
+                    recursive: false,
+                },
+            ],
+            vec![
+                Parameter {
+                    loc: pt::Loc::Builtin,
+                    id: None,
+                    ty: Type::Address(false),
+                    ty_loc: None,
+                    readonly: false,
+                    indexed: false,
+                    recursive: false,
+                },
+                Parameter {
+                    loc: pt::Loc::Builtin,
+                    id: None,
+                    ty: Type::Bytes(1),
+                    ty_loc: None,
+                    readonly: false,
+                    indexed: false,
+                    recursive: false,
+                },
+            ],
+            self,
+        );
+
+        func.has_body = true;
+
+        let func_no = self.functions.len();
+        let id = Identifier {
+            name: func.name.to_owned(),
+            loc: pt::Loc::Builtin,
+        };
+
+        self.functions.push(func);
+
+        assert!(self.add_symbol(
+            file_no,
+            None,
+            &id,
+            Symbol::Function(vec![(pt::Loc::Builtin, func_no)])
+        ));
     }
 }

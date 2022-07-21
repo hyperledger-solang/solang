@@ -1654,7 +1654,7 @@ pub fn expression(
         pt::Expression::StringLiteral(v) => {
             Ok(string_literal(v, context.file_no, diagnostics, resolve_to))
         }
-        pt::Expression::HexLiteral(v) => hex_literal(v, diagnostics),
+        pt::Expression::HexLiteral(v) => hex_literal(v, diagnostics, resolve_to),
         pt::Expression::NumberLiteral(loc, integer, exp) => number_literal(
             loc,
             integer,
@@ -2241,7 +2241,11 @@ fn string_literal(
     }
 }
 
-fn hex_literal(v: &[pt::HexLiteral], diagnostics: &mut Diagnostics) -> Result<Expression, ()> {
+fn hex_literal(
+    v: &[pt::HexLiteral],
+    diagnostics: &mut Diagnostics,
+    resolve_to: ResolveTo,
+) -> Result<Expression, ()> {
     let mut result = Vec::new();
     let mut loc = v[0].loc;
 
@@ -2260,11 +2264,35 @@ fn hex_literal(v: &[pt::HexLiteral], diagnostics: &mut Diagnostics) -> Result<Ex
 
     let length = result.len();
 
-    Ok(Expression::BytesLiteral(
-        loc,
-        Type::Bytes(length as u8),
-        result,
-    ))
+    match resolve_to {
+        ResolveTo::Type(Type::Slice(ty)) if ty.as_ref() == &Type::Bytes(1) => {
+            Ok(Expression::AllocDynamicArray(
+                loc,
+                Type::Slice(ty.clone()),
+                Box::new(Expression::NumberLiteral(
+                    loc,
+                    Type::Uint(32),
+                    BigInt::from(length),
+                )),
+                Some(result),
+            ))
+        }
+        ResolveTo::Type(Type::DynamicBytes) => Ok(Expression::AllocDynamicArray(
+            loc,
+            Type::DynamicBytes,
+            Box::new(Expression::NumberLiteral(
+                loc,
+                Type::Uint(32),
+                BigInt::from(length),
+            )),
+            Some(result),
+        )),
+        _ => Ok(Expression::BytesLiteral(
+            loc,
+            Type::Bytes(length as u8),
+            result,
+        )),
+    }
 }
 
 fn hex_number_literal(

@@ -24,4 +24,8 @@ contract builtins {
 	function pda(bytes seed1, bytes seed2, address addr) public returns (address) {
 		return create_program_address([seed1, seed2], addr);
 	}
+
+	function pda_with_bump(bytes seed1, bytes seed2, address addr) public returns (address, bytes1) {
+		return try_find_program_address([seed1, seed2], addr);
+	}
 }
