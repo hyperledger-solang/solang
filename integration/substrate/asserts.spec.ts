@@ -29,7 +29,7 @@ describe('Deploy asserts contract and test', () => {
         expect(res0.output?.toJSON()).toEqual(1);
 
         let res1 = await contract.query.testAssertRpc(alice.address, {});
-        expect(res1.result.toHuman()).toEqual({ "Err": { "Module": { "error": "17", "index": "17", "message": "ContractTrapped" } } });
+        expect(res1.result.toHuman()).toEqual({ "Err": { "Module": { "error": "0x0b000000", "index": "7" } } });
 
         let tx = contract.tx.testAssert({ gasLimit });
 
@@ -37,7 +37,7 @@ describe('Deploy asserts contract and test', () => {
             throw new Error("should not succeed");
         }, (res) => res);
 
-        expect(res2.dispatchError.toHuman()).toEqual({ "Module": { "error": "17", "index": "17" } });
+        expect(res2.dispatchError.toHuman()).toEqual({ "Module": { "error": "0x0b000000", "index": "7" } });
 
         let res3 = await contract.query.var(alice.address, {});
 
