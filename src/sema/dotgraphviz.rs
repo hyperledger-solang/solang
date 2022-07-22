@@ -1194,6 +1194,9 @@ impl Dot {
         if let Some(accounts) = &call_args.accounts {
             self.add_expression(accounts, func, ns, node, String::from("accounts"));
         }
+        if let Some(seeds) = &call_args.seeds {
+            self.add_expression(seeds, func, ns, node, String::from("seeds"));
+        }
     }
 
     fn add_string_location(

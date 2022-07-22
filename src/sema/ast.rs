@@ -760,13 +760,14 @@ pub enum Expression {
     List(pt::Loc, Vec<Expression>),
 }
 
-#[derive(PartialEq, Clone, Debug)]
+#[derive(PartialEq, Clone, Default, Debug)]
 pub struct CallArgs {
     pub gas: Option<Box<Expression>>,
     pub salt: Option<Box<Expression>>,
     pub value: Option<Box<Expression>>,
     pub space: Option<Box<Expression>>,
     pub accounts: Option<Box<Expression>>,
+    pub seeds: Option<Box<Expression>>,
 }
 
 impl Recurse for CallArgs {

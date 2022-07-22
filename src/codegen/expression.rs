@@ -1213,6 +1213,7 @@ fn payable_send(
                 success: Some(success),
                 address: Some(address),
                 accounts: None,
+                seeds: None,
                 payload: Expression::AllocDynamicArray(
                     *loc,
                     Type::DynamicBytes,
@@ -1260,6 +1261,7 @@ fn payable_transfer(
             Instr::ExternalCall {
                 success: None,
                 accounts: None,
+                seeds: None,
                 address: Some(address),
                 payload: Expression::AllocDynamicArray(
                     *loc,
@@ -2170,6 +2172,11 @@ pub fn emit_function_call(
                 .as_ref()
                 .map(|expr| expression(expr, cfg, callee_contract_no, func, ns, vartab, opt));
 
+            let seeds = call_args
+                .seeds
+                .as_ref()
+                .map(|expr| expression(expr, cfg, callee_contract_no, func, ns, vartab, opt));
+
             let success = vartab.temp_name("success", &Type::Bool);
 
             let (payload, address) = if ns.target == Target::Solana && call_args.accounts.is_none()
@@ -2215,6 +2222,7 @@ pub fn emit_function_call(
                     value,
                     accounts,
                     gas,
+                    seeds,
                     callty: ty.clone(),
                 },
             );
@@ -2313,6 +2321,7 @@ pub fn emit_function_call(
                     Instr::ExternalCall {
                         success: None,
                         accounts: None,
+                        seeds: None,
                         address,
                         payload,
                         value,
@@ -2423,6 +2432,7 @@ pub fn emit_function_call(
                     Instr::ExternalCall {
                         success: None,
                         accounts: None,
+                        seeds: None,
                         address,
                         payload,
                         value,

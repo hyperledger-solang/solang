@@ -277,6 +277,7 @@ pub trait TargetRuntime<'a> {
         gas: IntValue<'b>,
         value: IntValue<'b>,
         accounts: Option<(PointerValue<'b>, IntValue<'b>)>,
+        seeds: Option<(PointerValue<'b>, IntValue<'b>)>,
         ty: CallTy,
         ns: &Namespace,
     );
@@ -4077,6 +4078,7 @@ pub trait TargetRuntime<'a> {
                         gas,
                         callty,
                         accounts,
+                        seeds,
                     } => {
                         let gas = self
                             .expression(bin, gas, &w.vars, function, ns)
@@ -4133,11 +4135,6 @@ pub trait TargetRuntime<'a> {
                             None
                         };
 
-                        let success = match success {
-                            Some(n) => Some(&mut w.vars.get_mut(n).unwrap().value),
-                            None => None,
-                        };
-
                         let (payload_ptr, payload_len) = if payload_ty == Type::DynamicBytes {
                             (bin.vector_bytes(payload), bin.vector_len(payload))
                         } else {
@@ -4152,6 +4149,84 @@ pub trait TargetRuntime<'a> {
                             (ptr, len)
                         };
 
+                        let seeds = if let Some(seeds) = seeds {
+                            let len = seeds.ty().array_length().unwrap().to_u64().unwrap();
+                            let seeds_ty = bin.llvm_type(
+                                &Type::Slice(Box::new(Type::Slice(Box::new(Type::Bytes(1))))),
+                                ns,
+                            );
+
+                            let output_seeds = bin.build_array_alloca(
+                                function,
+                                seeds_ty,
+                                bin.context.i64_type().const_int(len, false),
+                                "seeds",
+                            );
+
+                            if let Expression::ArrayLiteral(_, _, _, exprs) = seeds {
+                                for i in 0..len {
+                                    let val = self.expression(
+                                        bin,
+                                        &exprs[i as usize],
+                                        &w.vars,
+                                        function,
+                                        ns,
+                                    );
+
+                                    let seed_count = val
+                                        .get_type()
+                                        .into_pointer_type()
+                                        .get_element_type()
+                                        .into_array_type()
+                                        .len();
+
+                                    let dest = unsafe {
+                                        bin.builder.build_gep(
+                                            output_seeds,
+                                            &[
+                                                bin.context.i32_type().const_int(i, false),
+                                                bin.context.i32_type().const_zero(),
+                                            ],
+                                            "dest",
+                                        )
+                                    };
+
+                                    let val = bin.builder.build_pointer_cast(
+                                        val.into_pointer_value(),
+                                        dest.get_type().get_element_type().into_pointer_type(),
+                                        "seeds",
+                                    );
+
+                                    bin.builder.build_store(dest, val);
+
+                                    let dest = unsafe {
+                                        bin.builder.build_gep(
+                                            output_seeds,
+                                            &[
+                                                bin.context.i32_type().const_int(i, false),
+                                                bin.context.i32_type().const_int(1, false),
+                                            ],
+                                            "dest",
+                                        )
+                                    };
+
+                                    let val =
+                                        bin.context.i64_type().const_int(seed_count as u64, false);
+
+                                    bin.builder.build_store(dest, val);
+                                }
+                            }
+
+                            Some((output_seeds, bin.context.i64_type().const_int(len, false)))
+                        } else {
+                            None
+                        };
+
+                        let success = match success {
+                            Some(n) => Some(&mut w.vars.get_mut(n).unwrap().value),
+                            None => None,
+                        };
+
                         self.external_call(
                             bin,
                             function,
@@ -4162,6 +4237,7 @@ pub trait TargetRuntime<'a> {
                             gas,
                             value,
                             accounts,
+                            seeds,
                             callty.clone(),
                             ns,
                         );

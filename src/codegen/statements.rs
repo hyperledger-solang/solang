@@ -1143,6 +1143,7 @@ fn try_catch(
                         success: Some(success),
                         address: Some(address),
                         accounts: None,
+                        seeds: None,
                         payload,
                         value,
                         gas,

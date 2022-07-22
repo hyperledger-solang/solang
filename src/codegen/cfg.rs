@@ -124,6 +124,7 @@ pub enum Instr {
         success: Option<usize>,
         address: Option<Expression>,
         accounts: Option<Expression>,
+        seeds: Option<Expression>,
         payload: Expression,
         value: Expression,
         gas: Expression,
@@ -989,11 +990,12 @@ impl ControlFlowGraph {
                 payload,
                 value,
                 accounts,
+                seeds,
                 gas,
                 callty,
             } => {
                 format!(
-                    "{} = external call::{} address:{} payload:{} value:{} gas:{} accounts:{}",
+                    "{} = external call::{} address:{} payload:{} value:{} gas:{} accounts:{} seeds:{}",
                     match success {
                         Some(i) => format!("%{}", self.vars[i].id.name),
                         None => "_".to_string(),
@@ -1009,6 +1011,11 @@ impl ControlFlowGraph {
                     self.expr_to_string(contract, ns, gas),
                     if let Some(accounts) = accounts {
                         self.expr_to_string(contract, ns, accounts)
+                    } else {
+                        String::new()
+                    },
+                    if let Some(seeds) = seeds {
+                        self.expr_to_string(contract, ns, seeds)
                     } else {
                         String::new()
                     },
