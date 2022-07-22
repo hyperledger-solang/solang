@@ -112,9 +112,9 @@ node flipper.js
 * Cross-contract calls
 * Events with indexed fields
 
-That being said, maintenance on the Substrate target was resumed and we are working on fixing these issues.
+Maintenance on the Substrate target has now resumed and we are working on fixing these issues.
 
-### Bulding
+### Building
 Run:
 
 ```bash
