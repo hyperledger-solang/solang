@@ -3,7 +3,8 @@ import { gasLimit, createConnection, deploy, transaction, aliceKeypair, } from '
 import { ContractPromise } from '@polkadot/api-contract';
 import { ApiPromise } from '@polkadot/api';
 
-describe('Deploy struct contract and test', () => {
+// REGRESSION metadata #666
+describe.skip('Deploy struct contract and test', () => {
     let conn: ApiPromise;
 
     before(async function () {
@@ -19,7 +20,7 @@ describe('Deploy struct contract and test', () => {
 
         const alice = aliceKeypair();
 
-        let deployed_contract = await deploy(conn, alice, 'structs.contract');
+        let deployed_contract = await deploy(conn, alice, 'structs.contract', BigInt(0));
 
         let contract = new ContractPromise(conn, deployed_contract.abi, deployed_contract.address);
 

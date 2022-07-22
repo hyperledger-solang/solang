@@ -241,6 +241,24 @@ impl SolanaTarget {
             .set_unnamed_address(UnnamedAddress::Local);
 
         let function = binary.module.add_function(
+            "sol_log_64_",
+            void_ty.fn_type(
+                &[
+                    u64_ty.into(),
+                    u64_ty.into(),
+                    u64_ty.into(),
+                    u64_ty.into(),
+                    u64_ty.into(),
+                ],
+                false,
+            ),
+            None,
+        );
+        function
+            .as_global_value()
+            .set_unnamed_address(UnnamedAddress::Local);
+
+        let function = binary.module.add_function(
             "sol_sha256",
             void_ty.fn_type(&[sol_bytes.into(), u32_ty.into(), u8_ptr.into()], false),
             None,
@@ -786,8 +804,10 @@ impl SolanaTarget {
                 "offset_ptr",
             );
 
+            let mut free_array = None;
+
             if elem_ty.is_dynamic(ns) || zero {
-                let length = if let Some(length) = dim[0].as_ref() {
+                let length = if let Some(length) = dim.last().unwrap().as_ref() {
                     binary
                         .context
                         .i32_type()
@@ -797,6 +817,8 @@ impl SolanaTarget {
                         .builder
                         .build_load(offset_ptr, "offset")
                         .into_int_value();
+
+                    free_array = Some(elem_slot);
 
                     self.storage_array_length(binary, function, slot, elem_ty, ns)
                 };
@@ -840,22 +862,19 @@ impl SolanaTarget {
             }
 
             // if the array was dynamic, free the array itself
-            if dim[0].is_none() {
-                let slot = binary
-                    .builder
-                    .build_load(offset_ptr, "offset")
-                    .into_int_value();
-
+            if let Some(offset) = free_array {
                 binary.builder.build_call(
                     binary.module.get_function("account_data_free").unwrap(),
-                    &[data.into(), slot.into()],
+                    &[data.into(), offset.into()],
                     "",
                 );
 
-                // account_data_alloc will return 0 if the string is length 0
-                let new_offset = binary.context.i32_type().const_zero();
+                if zero {
+                    // account_data_alloc will return 0 if the string is length 0
+                    let new_offset = binary.context.i32_type().const_zero();
 
-                binary.builder.build_store(offset_ptr, new_offset);
+                    binary.builder.build_store(offset_ptr, new_offset);
+                }
             }
         } else if let ast::Type::Struct(struct_no) = ty {
             for (i, field) in ns.structs[*struct_no].fields.iter().enumerate() {
@@ -1938,7 +1957,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         );
 
         if let Some(val) = val {
-            self.storage_store(binary, ty, &mut new_offset, val, function, ns);
+            self.storage_store(binary, ty, false, &mut new_offset, val, function, ns);
         }
 
         if ty.is_reference_type(ns) {
@@ -2233,7 +2252,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                 let length;
                 let mut slot = *slot;
 
-                if dim[0].is_some() {
+                if dim.last().unwrap().is_some() {
                     // LLVMSizeOf() produces an i64 and malloc takes i32
                     let size = binary.builder.build_int_truncate(
                         llvm_ty.size_of().unwrap(),
@@ -2258,10 +2277,10 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                         llvm_ty.ptr_type(AddressSpace::Generic),
                         "dest",
                     );
-                    length = binary
-                        .context
-                        .i32_type()
-                        .const_int(dim[0].as_ref().unwrap().to_u64().unwrap(), false);
+                    length = binary.context.i32_type().const_int(
+                        dim.last().unwrap().as_ref().unwrap().to_u64().unwrap(),
+                        false,
+                    );
                 } else {
                     let llvm_elem_ty = binary.llvm_field_ty(elem_ty, ns);
                     let elem_size = binary.builder.build_int_truncate(
@@ -2349,7 +2368,8 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         &self,
         binary: &Binary<'a>,
         ty: &ast::Type,
-        slot: &mut IntValue<'a>,
+        existing: bool,
+        offset: &mut IntValue<'a>,
         val: BasicValueEnum<'a>,
         function: FunctionValue<'a>,
         ns: &ast::Namespace,
@@ -2358,7 +2378,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         let account = self.contract_storage_account(binary);
 
         // the slot is simply the offset after the magic
-        let member = unsafe { binary.builder.build_gep(data, &[*slot], "data") };
+        let member = unsafe { binary.builder.build_gep(data, &[*offset], "data") };
 
         if *ty == ast::Type::String || *ty == ast::Type::DynamicBytes {
             let offset_ptr = binary.builder.build_pointer_cast(
@@ -2367,104 +2387,149 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                 "offset_ptr",
             );
 
-            let offset = binary
-                .builder
-                .build_load(offset_ptr, "offset")
-                .into_int_value();
-
-            let existing_string_length = binary
-                .builder
-                .build_call(
-                    binary.module.get_function("account_data_len").unwrap(),
-                    &[data.into(), offset.into()],
-                    "length",
-                )
-                .try_as_basic_value()
-                .left()
-                .unwrap()
-                .into_int_value();
-
             let new_string_length = binary.vector_len(val);
 
-            let allocation_necessary = binary.builder.build_int_compare(
-                IntPredicate::NE,
-                existing_string_length,
-                new_string_length,
-                "allocation_necessary",
-            );
+            let offset = if existing {
+                let offset = binary
+                    .builder
+                    .build_load(offset_ptr, "offset")
+                    .into_int_value();
 
-            let entry = binary.builder.get_insert_block().unwrap();
+                // get the length of the existing string in storage
+                let existing_string_length = binary
+                    .builder
+                    .build_call(
+                        binary.module.get_function("account_data_len").unwrap(),
+                        &[data.into(), offset.into()],
+                        "length",
+                    )
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap()
+                    .into_int_value();
 
-            let realloc = binary.context.append_basic_block(function, "realloc");
-            let memcpy = binary.context.append_basic_block(function, "memcpy");
+                // do we need to reallocate?
+                let allocation_necessary = binary.builder.build_int_compare(
+                    IntPredicate::NE,
+                    existing_string_length,
+                    new_string_length,
+                    "allocation_necessary",
+                );
 
-            binary
-                .builder
-                .build_conditional_branch(allocation_necessary, realloc, memcpy);
+                let entry = binary.builder.get_insert_block().unwrap();
 
-            binary.builder.position_at_end(realloc);
+                let realloc = binary.context.append_basic_block(function, "realloc");
+                let memcpy = binary.context.append_basic_block(function, "memcpy");
 
-            // do not realloc since we're copying everything
-            binary.builder.build_call(
-                binary.module.get_function("account_data_free").unwrap(),
-                &[data.into(), offset.into()],
-                "free",
-            );
+                binary
+                    .builder
+                    .build_conditional_branch(allocation_necessary, realloc, memcpy);
 
-            // account_data_alloc will return offset = 0 if the string is length 0
-            let rc = binary
-                .builder
-                .build_call(
-                    binary.module.get_function("account_data_alloc").unwrap(),
-                    &[account.into(), new_string_length.into(), offset_ptr.into()],
-                    "alloc",
-                )
-                .try_as_basic_value()
-                .left()
-                .unwrap()
-                .into_int_value();
+                binary.builder.position_at_end(realloc);
 
-            let is_rc_zero = binary.builder.build_int_compare(
-                IntPredicate::EQ,
-                rc,
-                binary.context.i64_type().const_zero(),
-                "is_rc_zero",
-            );
+                // do not realloc since we're copying everything
+                binary.builder.build_call(
+                    binary.module.get_function("account_data_free").unwrap(),
+                    &[data.into(), offset.into()],
+                    "free",
+                );
 
-            let rc_not_zero = binary.context.append_basic_block(function, "rc_not_zero");
-            let rc_zero = binary.context.append_basic_block(function, "rc_zero");
+                // account_data_alloc will return offset = 0 if the string is length 0
+                let rc = binary
+                    .builder
+                    .build_call(
+                        binary.module.get_function("account_data_alloc").unwrap(),
+                        &[account.into(), new_string_length.into(), offset_ptr.into()],
+                        "alloc",
+                    )
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap()
+                    .into_int_value();
 
-            binary
-                .builder
-                .build_conditional_branch(is_rc_zero, rc_zero, rc_not_zero);
+                let is_rc_zero = binary.builder.build_int_compare(
+                    IntPredicate::EQ,
+                    rc,
+                    binary.context.i64_type().const_zero(),
+                    "is_rc_zero",
+                );
 
-            binary.builder.position_at_end(rc_not_zero);
+                let rc_not_zero = binary.context.append_basic_block(function, "rc_not_zero");
+                let rc_zero = binary.context.append_basic_block(function, "rc_zero");
 
-            self.return_code(
-                binary,
-                binary.context.i64_type().const_int(5u64 << 32, false),
-            );
+                binary
+                    .builder
+                    .build_conditional_branch(is_rc_zero, rc_zero, rc_not_zero);
 
-            binary.builder.position_at_end(rc_zero);
+                binary.builder.position_at_end(rc_not_zero);
 
-            let new_offset = binary.builder.build_load(offset_ptr, "new_offset");
+                self.return_code(
+                    binary,
+                    binary.context.i64_type().const_int(5u64 << 32, false),
+                );
 
-            binary.builder.build_unconditional_branch(memcpy);
+                binary.builder.position_at_end(rc_zero);
 
-            binary.builder.position_at_end(memcpy);
+                let new_offset = binary.builder.build_load(offset_ptr, "new_offset");
 
-            let offset_phi = binary
-                .builder
-                .build_phi(binary.context.i32_type(), "offset");
+                binary.builder.build_unconditional_branch(memcpy);
 
-            offset_phi.add_incoming(&[(&new_offset, rc_zero), (&offset, entry)]);
+                binary.builder.position_at_end(memcpy);
+
+                let offset_phi = binary
+                    .builder
+                    .build_phi(binary.context.i32_type(), "offset");
+
+                offset_phi.add_incoming(&[(&new_offset, rc_zero), (&offset, entry)]);
+
+                offset_phi.as_basic_value().into_int_value()
+            } else {
+                // account_data_alloc will return offset = 0 if the string is length 0
+                let rc = binary
+                    .builder
+                    .build_call(
+                        binary.module.get_function("account_data_alloc").unwrap(),
+                        &[account.into(), new_string_length.into(), offset_ptr.into()],
+                        "alloc",
+                    )
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap()
+                    .into_int_value();
+
+                let is_rc_zero = binary.builder.build_int_compare(
+                    IntPredicate::EQ,
+                    rc,
+                    binary.context.i64_type().const_zero(),
+                    "is_rc_zero",
+                );
+
+                let rc_not_zero = binary.context.append_basic_block(function, "rc_not_zero");
+                let rc_zero = binary.context.append_basic_block(function, "rc_zero");
+
+                binary
+                    .builder
+                    .build_conditional_branch(is_rc_zero, rc_zero, rc_not_zero);
+
+                binary.builder.position_at_end(rc_not_zero);
+
+                self.return_code(
+                    binary,
+                    binary.context.i64_type().const_int(5u64 << 32, false),
+                );
+
+                binary.builder.position_at_end(rc_zero);
+
+                binary
+                    .builder
+                    .build_load(offset_ptr, "new_offset")
+                    .into_int_value()
+            };
 
             let dest_string_data = unsafe {
-                binary.builder.build_gep(
-                    data,
-                    &[offset_phi.as_basic_value().into_int_value()],
-                    "dest_string_data",
-                )
+                binary
+                    .builder
+                    .build_gep(data, &[offset], "dest_string_data")
             };
 
             binary.builder.build_call(
@@ -2478,7 +2543,9 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             );
         } else if let ast::Type::Array(elem_ty, dim) = ty {
             // make sure any pointers are freed
-            self.storage_free(binary, ty, data, *slot, function, false, ns);
+            if existing {
+                self.storage_free(binary, ty, data, *offset, function, false, ns);
+            }
 
             let offset_ptr = binary.builder.build_pointer_cast(
                 member,
@@ -2486,7 +2553,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                 "offset_ptr",
             );
 
-            let length = if let Some(length) = dim[0].as_ref() {
+            let length = if let Some(length) = dim.last().unwrap().as_ref() {
                 binary
                     .context
                     .i32_type()
@@ -2495,9 +2562,9 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                 binary.vector_len(val)
             };
 
-            let mut elem_slot = *slot;
+            let mut elem_slot = *offset;
 
-            if dim[0].is_none() {
+            if dim.last().unwrap().is_none() {
                 // reallocate to the right size
                 let member_size = binary
                     .context
@@ -2564,7 +2631,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
 
             // we need a phi for the offset
             let offset_phi =
-                builder.add_loop_phi(binary, "offset", slot.get_type(), elem_slot.into());
+                builder.add_loop_phi(binary, "offset", offset.get_type(), elem_slot.into());
 
             let index = builder.over(binary, binary.context.i32_type().const_zero(), length);
 
@@ -2577,6 +2644,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             self.storage_store(
                 binary,
                 elem_ty.deref_any(),
+                false, // storage already freed with storage_free
                 &mut offset_val,
                 if elem_ty.deref_memory().is_fixed_reference_type() {
                     elem.into()
@@ -2603,7 +2671,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                 let field_offset = ns.structs[*struct_no].storage_offsets[i].to_u64().unwrap();
 
                 let mut offset = binary.builder.build_int_add(
-                    *slot,
+                    *offset,
                     binary.context.i32_type().const_int(field_offset, false),
                     "field_offset",
                 );
@@ -2620,11 +2688,14 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                 };
 
                 // free any existing dynamic storage
-                self.storage_free(binary, &field.ty, data, offset, function, false, ns);
+                if existing {
+                    self.storage_free(binary, &field.ty, data, offset, function, false, ns);
+                }
 
                 self.storage_store(
                     binary,
                     &field.ty,
+                    existing,
                     &mut offset,
                     if field.ty.is_fixed_reference_type() {
                         elem.into()

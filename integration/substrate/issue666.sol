@@ -1,7 +1,6 @@
 contract Flip {
     function flip () pure public {
-	// Disabled for now, see #911
-	//print("flip");
+	print("flip");
     }
 }
 

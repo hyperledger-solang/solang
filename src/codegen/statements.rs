@@ -1495,7 +1495,7 @@ impl Type {
             Type::Array(ty, dims) => {
                 ty.default(ns)?;
 
-                if dims[0].is_none() {
+                if dims.last().unwrap().is_none() {
                     Some(Expression::AllocDynamicArray(
                         pt::Loc::Codegen,
                         self.clone(),

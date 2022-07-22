@@ -9,7 +9,7 @@ describe('Deploy builtin contract and test', () => {
         let conn = await createConnection();
         const alice = aliceKeypair();
 
-        let deployed_contract = await deploy(conn, alice, 'builtins.contract');
+        let deployed_contract = await deploy(conn, alice, 'builtins.contract', BigInt(0));
 
         let contract = new ContractPromise(conn, deployed_contract.abi, deployed_contract.address);
 

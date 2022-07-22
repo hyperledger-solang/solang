@@ -1,7 +1,7 @@
+import '@polkadot/api-augment';
 import fs, { PathLike } from 'fs';
 import { ApiPromise, WsProvider, Keyring } from '@polkadot/api';
 import { CodePromise } from '@polkadot/api-contract';
-import type { CodecArg } from '@polkadot/types/types';
 import { SubmittableExtrinsic } from '@polkadot/api/types';
 import { ISubmittableResult } from '@polkadot/types/types';
 import { KeyringPair } from '@polkadot/keyring/types';
@@ -25,12 +25,12 @@ export async function createConnection(): Promise<ApiPromise> {
   return ApiPromise.create({ provider: new WsProvider(url) });
 }
 
-export async function deploy(api: ApiPromise, pair: KeyringPair, file: PathLike, ...params: CodecArg[]): Promise<any> {
+export async function deploy(api: ApiPromise, pair: KeyringPair, file: PathLike, value: bigint, ...params: unknown[]): Promise<any> {
   const contractJson = fs.readFileSync(file, { encoding: 'utf-8' });
 
   const code = new CodePromise(api, contractJson, null);
 
-  const tx = code.tx.new({ gasLimit, value: BigInt(1e18) }, ...params);
+  const tx = code.tx.new({ gasLimit, value }, ...params);
 
   return new Promise(async (resolve, reject) => {
     const unsub = await tx.signAndSend(pair, (result: any) => {
