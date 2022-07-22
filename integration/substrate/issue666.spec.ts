@@ -22,12 +22,13 @@ describe('issue666 flip and inc', () => {
         // call the constructors
         let flipper_contract = await deploy(conn, alice, 'Flip.contract', BigInt(0));
         // REGRESSION metadata #666
-        // let inc_contract = await deploy(conn, alice, 'Inc.contract', flipper_contract.address);
+        let inc_contract = await deploy(conn, alice, 'Inc.contract', BigInt(0), flipper_contract.address);
 
-        // let contract = new ContractPromise(conn, inc_contract.abi, inc_contract.address);
+        let contract = new ContractPromise(conn, inc_contract.abi, inc_contract.address);
 
-        // let tx = contract.tx.superFlip({ gasLimit });
+        let tx = contract.tx.superFlip({ gasLimit });
 
-        // await transaction(tx, alice);
+        console.log(await transaction(tx, alice));
+
     });
 });
