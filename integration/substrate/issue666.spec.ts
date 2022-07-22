@@ -21,14 +21,20 @@ describe('issue666 flip and inc', () => {
 
         // call the constructors
         let flipper_contract = await deploy(conn, alice, 'Flip.contract', BigInt(0));
-        // REGRESSION metadata #666
         let inc_contract = await deploy(conn, alice, 'Inc.contract', BigInt(0), flipper_contract.address);
+
+        try {
+            // This works for ink contracts and should work for solang compiled contracts too (issue 666):
+            let ss58_addr = flipper_contract.address.toString();
+            await deploy(conn, alice, 'Inc.contract', BigInt(0), ss58_addr);
+            expect(false).toBeTruthy();
+        }
+        catch (satan) {
+            expect(satan).toStrictEqual(Error('createType(AccountId):: Expected input with 32 bytes (256 bits), found 48 bytes'));
+        }
 
         let contract = new ContractPromise(conn, inc_contract.abi, inc_contract.address);
 
         let tx = contract.tx.superFlip({ gasLimit });
-
-        console.log(await transaction(tx, alice));
-
     });
 });
