@@ -8,7 +8,8 @@ import type { Codec } from '@polkadot/types/types';
 const MINIMUM_LIQUIDITY = BigInt(1000);
 const TOTAL_SUPPLY = BigInt(10000e18);
 
-describe('UniswapV2Pair', () => {
+// REGRESSION metadata #666
+describe.skip('UniswapV2Pair', () => {
     let conn: ApiPromise;
     let factory: ContractPromise;
     let pair: ContractPromise;
@@ -25,11 +26,11 @@ describe('UniswapV2Pair', () => {
 
         // Upload UniswapV2Pair contract code so that it can instantiated from the factory
         // there probably is a better way of doing this than deploying a contract. Patches welcome.
-        const pairTmp = await deploy(conn, alice, 'UniswapV2Pair.contract');
+        const pairTmp = await deploy(conn, alice, 'UniswapV2Pair.contract', BigInt(0));
 
         const pairAbi = pairTmp.abi;
 
-        let deploy_contract = await deploy(conn, alice, 'UniswapV2Factory.contract', alice.address);
+        let deploy_contract = await deploy(conn, alice, 'UniswapV2Factory.contract', BigInt(0), alice.address);
 
         factory = new ContractPromise(conn, deploy_contract.abi, deploy_contract.address);
 

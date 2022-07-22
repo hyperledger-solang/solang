@@ -20,10 +20,10 @@ describe('Deploy create_contract contract and test', () => {
         const alice = aliceKeypair();
 
         // call the constructors
-        let deploy_contract = await deploy(conn, alice, 'creator.contract');
+        let deploy_contract = await deploy(conn, alice, 'creator.contract', BigInt(1e16));
 
         // we need to have upload the child code
-        let _ = await deploy(conn, alice, 'child.contract');
+        let _ = await deploy(conn, alice, 'child.contract', BigInt(0));
 
         let contract = new ContractPromise(conn, deploy_contract.abi, deploy_contract.address);
 

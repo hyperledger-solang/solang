@@ -9,7 +9,7 @@ describe('Deploy array_struct_mapping_storage contract and test', () => {
         let conn = await createConnection();
         const alice = aliceKeypair();
 
-        let deployed_contract = await deploy(conn, alice, 'array_struct_mapping_storage.contract');
+        let deployed_contract = await deploy(conn, alice, 'array_struct_mapping_storage.contract', BigInt(0));
 
         let contract = new ContractPromise(conn, deployed_contract.abi, deployed_contract.address);
 

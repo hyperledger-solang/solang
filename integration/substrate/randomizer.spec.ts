@@ -21,7 +21,7 @@ describe('Deploy randomizer contract and test', () => {
         const dave = daveKeypair();
 
         // call the constructors
-        let deploy_contract = await deploy(conn, alice, 'randomizer.contract');
+        let deploy_contract = await deploy(conn, alice, 'randomizer.contract', BigInt(0));
 
         let contract = new ContractPromise(conn, deploy_contract.abi, deploy_contract.address);
 
