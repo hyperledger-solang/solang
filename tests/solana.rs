@@ -481,6 +481,41 @@ impl<'a> SyscallObject<UserError> for SolLogPubKey<'a> {
     }
 }
 
+struct SolLogU64<'a> {
+    context: SyscallContext<'a>,
+}
+impl<'a> SolLogU64<'a> {
+    /// new
+    pub fn init(context: SyscallContext<'a>) -> Box<(dyn SyscallObject<UserError> + 'a)> {
+        Box::new(Self { context })
+    }
+}
+
+impl<'a> SyscallObject<UserError> for SolLogU64<'a> {
+    fn call(
+        &mut self,
+        arg1: u64,
+        arg2: u64,
+        arg3: u64,
+        arg4: u64,
+        arg5: u64,
+        _memory_mapping: &mut MemoryMapping,
+        result: &mut Result<u64, EbpfError<UserError>>,
+    ) {
+        let message = format!(
+            "{:#x}, {:#x}, {:#x}, {:#x}, {:#x}",
+            arg1, arg2, arg3, arg4, arg5
+        );
+
+        println!("log64: {}", message);
+
+        if let Ok(mut vm) = self.context.vm.try_borrow_mut() {
+            vm.logs.push_str(&message);
+        }
+        *result = Ok(0)
+    }
+}
+
 struct SolSha256();
 impl SolSha256 {
     /// new
@@ -1244,6 +1279,10 @@ impl VirtualMachine {
             .unwrap();
 
         syscall_registry
+            .register_syscall_by_name(b"sol_log_64_", SolLogU64::init, SolLogU64::call)
+            .unwrap();
+
+        syscall_registry
             .register_syscall_by_name(
                 b"sol_sha256",
                 SolSha256::init::<BpfSyscallContext, UserError>,
@@ -1333,9 +1372,7 @@ impl VirtualMachine {
 
         deserialize_parameters(&parameter_bytes, &refs, &mut self.account_data);
 
-        let output = &self.account_data[&self.stack[0].data].data;
-
-        VirtualMachine::validate_heap(output);
+        self.validate_account_data_heap();
 
         if let Some((_, return_data)) = &self.return_data {
             println!("return: {}", hex::encode(&return_data));
@@ -1392,7 +1429,7 @@ impl VirtualMachine {
         println!("input: {}", hex::encode(&calldata));
 
         let res = self.execute(&calldata, seeds);
-        assert!(matches!(res, Ok(0)));
+        assert_eq!(res, Ok(0));
 
         if let Some((_, return_data)) = &self.return_data {
             println!("return: {}", hex::encode(&return_data));
@@ -1518,21 +1555,24 @@ impl VirtualMachine {
         (account, seed.to_vec())
     }
 
-    fn validate_heap(data: &[u8]) {
+    fn validate_account_data_heap(&self) -> usize {
+        let data = &self.account_data[&self.stack[0].data].data;
+        let mut count = 0;
+
         let mut prev_offset = 0;
         let return_len = LittleEndian::read_u32(&data[4..]) as usize;
         let return_offset = LittleEndian::read_u32(&data[8..]) as usize;
         let mut offset = LittleEndian::read_u32(&data[12..]) as usize;
 
-        // println!("data:{}", hex::encode(&data));
-        println!("returndata:{}", return_offset);
-        let real_return_len = if return_offset == 0 {
-            0
-        } else {
-            LittleEndian::read_u32(&data[return_offset - 8..]) as usize
-        };
+        // The return_offset/len fields are no longer used (we should remove them at some point)
+        assert_eq!(return_len, 0);
+        assert_eq!(return_offset, 0);
 
-        assert_eq!(real_return_len, return_len);
+        println!(
+            "static: length:{:x} {}",
+            offset - 16,
+            hex::encode(&data[16..offset])
+        );
 
         loop {
             let next = LittleEndian::read_u32(&data[offset..]) as usize;
@@ -1540,11 +1580,15 @@ impl VirtualMachine {
             let length = LittleEndian::read_u32(&data[offset + 8..]) as usize;
             let allocate = LittleEndian::read_u32(&data[offset + 12..]) as usize;
 
+            if allocate == 1 {
+                count += 1;
+            }
+
             println!(
-                "offset:{} prev:{} next:{} length:{} allocated:{} {}",
-                offset,
-                prev,
-                next,
+                "offset:{:x} prev:{:x} next:{:x} length:{} allocated:{} {}",
+                offset + 16,
+                prev + 16,
+                next + 16,
                 length,
                 allocate,
                 hex::encode(&data[offset + 16..offset + 16 + length])
@@ -1565,6 +1609,8 @@ impl VirtualMachine {
 
             offset = next;
         }
+
+        count
     }
 
     pub fn events(&self) -> Vec<RawLog> {

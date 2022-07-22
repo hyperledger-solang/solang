@@ -675,6 +675,7 @@ pub trait TargetRuntime<'a> {
         &self,
         bin: &Binary<'a>,
         ty: &Type,
+        _existing: bool,
         slot: &mut IntValue<'a>,
         dest: BasicValueEnum<'a>,
         function: FunctionValue<'a>,
@@ -3499,7 +3500,7 @@ pub trait TargetRuntime<'a> {
                             .expression(bin, storage, &w.vars, function, ns)
                             .into_int_value();
 
-                        self.storage_store(bin, ty, &mut slot, value, function, ns);
+                        self.storage_store(bin, ty, true, &mut slot, value, function, ns);
                     }
                     Instr::SetStorageBytes {
                         storage,
