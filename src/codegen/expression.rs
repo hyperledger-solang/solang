@@ -1118,14 +1118,15 @@ fn require(
     let expr = args
         .get(1)
         .map(|s| expression(s, cfg, contract_no, func, ns, vartab, opt));
-    if ns.target == Target::Solana {
-        // On Solana, print the reason, do not abi encoding it
-        if let Some(expr) = expr {
-            cfg.add(vartab, Instr::Print { expr });
+    match ns.target {
+        // On Solana and Substrate, print the reason, do not abi encoding it
+        Target::Solana | Target::Substrate { .. } => {
+            if let Some(expr) = expr {
+                cfg.add(vartab, Instr::Print { expr });
+            }
+            cfg.add(vartab, Instr::AssertFailure { expr: None });
         }
-        cfg.add(vartab, Instr::AssertFailure { expr: None });
-    } else {
-        cfg.add(vartab, Instr::AssertFailure { expr });
+        _ => cfg.add(vartab, Instr::AssertFailure { expr }),
     }
     cfg.set_basic_block(true_);
     Expression::Poison
