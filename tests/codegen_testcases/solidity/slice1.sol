@@ -3,8 +3,8 @@ contract c {
 // BEGIN-CHECK: c::function::test1
 	function test1() public pure{
 		bytes x = "foo1";
-		// x is not being used, so it can be a slice
-// CHECK: alloc slice uint32 4 "foo1"
+		// x is not being used, so it can be a bytes1 slice
+// CHECK: alloc bytes1 slice uint32 4 "foo1"
 	bytes y = x;
 	}
 
@@ -27,7 +27,7 @@ contract c {
 		bytes x = "foo3";
 
 		foo(x);
-		// no slices for function arguments yet, so it must be a vector
+		// no bytes1 slices for function arguments yet, so it must be a vector
 // CHECK: alloc bytes uint32 4 "foo3"
 	}
 
@@ -44,7 +44,7 @@ contract c {
 		string y = x + "if";
 
 		print(x);
-// CHECK: alloc slice uint32 4 "foo4"
+// CHECK: alloc bytes1 slice uint32 4 "foo4"
 	}
 
 // BEGIN-CHECK: c::function::test5

@@ -1,6 +1,6 @@
 use super::ast::{
-    Builtin, BuiltinStruct, Diagnostic, Expression, File, Namespace, Parameter, StructDecl, Symbol,
-    Type,
+    ArrayLength, Builtin, BuiltinStruct, Diagnostic, Expression, File, Function, Namespace,
+    Parameter, StructDecl, Symbol, Type,
 };
 use super::diagnostics::Diagnostics;
 use super::eval::eval_const_number;
@@ -11,8 +11,8 @@ use crate::Target;
 use num_bigint::BigInt;
 use num_traits::One;
 use once_cell::sync::Lazy;
-use solang_parser::pt;
 use solang_parser::pt::CodeLocation;
+use solang_parser::pt::{self, Identifier};
 use std::path::PathBuf;
 
 pub struct Prototype {
@@ -339,7 +339,7 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 27]> = Lazy::new(|| {
 });
 
 // A list of all Solidity builtins variables
-static BUILTIN_VARIABLE: Lazy<[Prototype; 15]> = Lazy::new(|| {
+static BUILTIN_VARIABLE: Lazy<[Prototype; 16]> = Lazy::new(|| {
     [
         Prototype {
             builtin: Builtin::BlockCoinbase,
@@ -394,6 +394,17 @@ static BUILTIN_VARIABLE: Lazy<[Prototype; 15]> = Lazy::new(|| {
             ret: vec![Type::Uint(64)],
             target: vec![Target::Solana],
             doc: "Current slot number",
+            constant: false,
+        },
+        Prototype {
+            builtin: Builtin::ProgramId,
+            namespace: Some("tx"),
+            method: None,
+            name: "program_id",
+            params: vec![],
+            ret: vec![Type::Address(false)],
+            target: vec![Target::Solana],
+            doc: "Program ID of currently executing program",
             constant: false,
         },
         Prototype {
@@ -501,7 +512,10 @@ static BUILTIN_VARIABLE: Lazy<[Prototype; 15]> = Lazy::new(|| {
             method: None,
             name: "accounts",
             params: vec![],
-            ret: vec![Type::Array(Box::new(Type::Struct(0)), vec![None])],
+            ret: vec![Type::Array(
+                Box::new(Type::Struct(0)),
+                vec![ArrayLength::Dynamic],
+            )],
             target: vec![Target::Solana],
             doc: "Accounts passed into transaction",
             constant: false,
@@ -1607,6 +1621,137 @@ impl Namespace {
             None,
             &id,
             Symbol::Struct(pt::Loc::Builtin, account_meta_no)
+        ));
+
+        let mut func = Function::new(
+            pt::Loc::Builtin,
+            "create_program_address".to_string(),
+            None,
+            Vec::new(),
+            pt::FunctionTy::Function,
+            None,
+            pt::Visibility::Public(None),
+            vec![
+                Parameter {
+                    loc: pt::Loc::Builtin,
+                    id: None,
+                    ty: Type::Array(
+                        Box::new(Type::Slice(Box::new(Type::Bytes(1)))),
+                        vec![ArrayLength::AnyFixed],
+                    ),
+                    ty_loc: None,
+                    readonly: false,
+                    indexed: false,
+                    recursive: false,
+                },
+                Parameter {
+                    loc: pt::Loc::Builtin,
+                    id: None,
+                    ty: Type::Address(false),
+                    ty_loc: None,
+                    readonly: false,
+                    indexed: false,
+                    recursive: false,
+                },
+            ],
+            vec![Parameter {
+                loc: pt::Loc::Builtin,
+                id: None,
+                ty: Type::Address(false),
+                ty_loc: None,
+                readonly: false,
+                indexed: false,
+                recursive: false,
+            }],
+            self,
+        );
+
+        func.has_body = true;
+
+        let func_no = self.functions.len();
+        let id = Identifier {
+            name: func.name.to_owned(),
+            loc: pt::Loc::Builtin,
+        };
+
+        self.functions.push(func);
+
+        assert!(self.add_symbol(
+            file_no,
+            None,
+            &id,
+            Symbol::Function(vec![(pt::Loc::Builtin, func_no)])
+        ));
+
+        let mut func = Function::new(
+            pt::Loc::Builtin,
+            "try_find_program_address".to_string(),
+            None,
+            Vec::new(),
+            pt::FunctionTy::Function,
+            None,
+            pt::Visibility::Public(None),
+            vec![
+                Parameter {
+                    loc: pt::Loc::Builtin,
+                    id: None,
+                    ty: Type::Array(
+                        Box::new(Type::Slice(Box::new(Type::Bytes(1)))),
+                        vec![ArrayLength::AnyFixed],
+                    ),
+                    ty_loc: None,
+                    readonly: false,
+                    indexed: false,
+                    recursive: false,
+                },
+                Parameter {
+                    loc: pt::Loc::Builtin,
+                    id: None,
+                    ty: Type::Address(false),
+                    ty_loc: None,
+                    readonly: false,
+                    indexed: false,
+                    recursive: false,
+                },
+            ],
+            vec![
+                Parameter {
+                    loc: pt::Loc::Builtin,
+                    id: None,
+                    ty: Type::Address(false),
+                    ty_loc: None,
+                    readonly: false,
+                    indexed: false,
+                    recursive: false,
+                },
+                Parameter {
+                    loc: pt::Loc::Builtin,
+                    id: None,
+                    ty: Type::Bytes(1),
+                    ty_loc: None,
+                    readonly: false,
+                    indexed: false,
+                    recursive: false,
+                },
+            ],
+            self,
+        );
+
+        func.has_body = true;
+
+        let func_no = self.functions.len();
+        let id = Identifier {
+            name: func.name.to_owned(),
+            loc: pt::Loc::Builtin,
+        };
+
+        self.functions.push(func);
+
+        assert!(self.add_symbol(
+            file_no,
+            None,
+            &id,
+            Symbol::Function(vec![(pt::Loc::Builtin, func_no)])
         ));
     }
 }

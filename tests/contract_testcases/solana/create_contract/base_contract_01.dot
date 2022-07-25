@@ -3,22 +3,22 @@ strict digraph "tests/contract_testcases/solana/create_contract/base_contract_01
 	MathError [label="name: MathError\ncontract: Math\ntests/contract_testcases/solana/create_contract/base_contract_01.sol:8:13-10:14\nvalue: NO_ERROR"]
 	WithMath [label="name:WithMath\ncontract: IsMath\ntests/contract_testcases/solana/create_contract/base_contract_01.sol:14:20-28\nfield name:math ty:enum Math.MathError\nfield name:logic ty:enum Logic.LogicError"]
 	contract [label="contract Logic\ntests/contract_testcases/solana/create_contract/base_contract_01.sol:2:9-6:10"]
-	contract_8 [label="contract Math\ntests/contract_testcases/solana/create_contract/base_contract_01.sol:7:9-11:10"]
+	contract_7 [label="contract Math\ntests/contract_testcases/solana/create_contract/base_contract_01.sol:7:9-11:10"]
 	base [label="base Logic\ntests/contract_testcases/solana/create_contract/base_contract_01.sol:7:26-31"]
-	contract_10 [label="contract IsMath\ntests/contract_testcases/solana/create_contract/base_contract_01.sol:13:9-18:10"]
-	base_11 [label="base Math\ntests/contract_testcases/solana/create_contract/base_contract_01.sol:13:28-32"]
+	contract_9 [label="contract IsMath\ntests/contract_testcases/solana/create_contract/base_contract_01.sol:13:9-18:10"]
+	base_10 [label="base Math\ntests/contract_testcases/solana/create_contract/base_contract_01.sol:13:28-32"]
 	diagnostic [label="found contract 'Logic'\nlevel Debug\ntests/contract_testcases/solana/create_contract/base_contract_01.sol:2:9-6:10"]
-	diagnostic_14 [label="found contract 'Math'\nlevel Debug\ntests/contract_testcases/solana/create_contract/base_contract_01.sol:7:9-11:10"]
-	diagnostic_15 [label="found contract 'IsMath'\nlevel Debug\ntests/contract_testcases/solana/create_contract/base_contract_01.sol:13:9-18:10"]
+	diagnostic_13 [label="found contract 'Math'\nlevel Debug\ntests/contract_testcases/solana/create_contract/base_contract_01.sol:7:9-11:10"]
+	diagnostic_14 [label="found contract 'IsMath'\nlevel Debug\ntests/contract_testcases/solana/create_contract/base_contract_01.sol:13:9-18:10"]
 	enums -> LogicError
 	enums -> MathError
 	structs -> WithMath
 	contracts -> contract
-	contracts -> contract_8
-	contract_8 -> base [label="base"]
-	contracts -> contract_10
-	contract_10 -> base_11 [label="base"]
+	contracts -> contract_7
+	contract_7 -> base [label="base"]
+	contracts -> contract_9
+	contract_9 -> base_10 [label="base"]
 	diagnostics -> diagnostic [label="Debug"]
+	diagnostics -> diagnostic_13 [label="Debug"]
 	diagnostics -> diagnostic_14 [label="Debug"]
-	diagnostics -> diagnostic_15 [label="Debug"]
 }

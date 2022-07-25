@@ -11,7 +11,10 @@ use crate::codegen::unused_variable::should_remove_assignment;
 use crate::codegen::{Builtin, Expression};
 use crate::sema::{
     ast,
-    ast::{CallTy, FormatArg, Function, Namespace, Parameter, RetrieveType, StringLocation, Type},
+    ast::{
+        ArrayLength, CallTy, FormatArg, Function, Namespace, Parameter, RetrieveType,
+        StringLocation, Type,
+    },
     diagnostics::Diagnostics,
     eval::{eval_const_number, eval_const_rational},
     expression::{bigint_to_expression, ResolveTo},
@@ -374,7 +377,7 @@ pub fn expression(
                     elem_ty: elem_ty.clone(),
                 },
                 Type::Array(_, dim) => match dim.last().unwrap() {
-                    None => {
+                    ArrayLength::Dynamic => {
                         if ns.target == Target::Solana {
                             Expression::StorageArrayLength {
                                 loc: *loc,
@@ -386,7 +389,7 @@ pub fn expression(
                             load_storage(loc, &ns.storage_type(), array, cfg, vartab)
                         }
                     }
-                    Some(length) => {
+                    ArrayLength::Fixed(length) => {
                         let ast_expr = bigint_to_expression(
                             loc,
                             length,
@@ -397,6 +400,7 @@ pub fn expression(
                         .unwrap();
                         expression(&ast_expr, cfg, contract_no, func, ns, vartab, opt)
                     }
+                    _ => unreachable!(),
                 },
                 _ => unreachable!(),
             }
@@ -2008,14 +2012,22 @@ pub fn emit_function_call(
                     .collect();
 
                 let function_no = if let Some(signature) = signature {
-                    &ns.contracts[callee_contract_no].virtual_functions[signature]
+                    ns.contracts[callee_contract_no].virtual_functions[signature]
                 } else {
-                    function_no
+                    *function_no
                 };
 
-                let cfg_no = ns.contracts[callee_contract_no].all_functions[function_no];
+                let ftype = &ns.functions[function_no];
 
-                let ftype = &ns.functions[*function_no];
+                let call = if ns.functions[function_no].loc == pt::Loc::Builtin {
+                    InternalCallTy::Builtin {
+                        ast_func_no: function_no,
+                    }
+                } else {
+                    InternalCallTy::Static {
+                        cfg_no: ns.contracts[callee_contract_no].all_functions[&function_no],
+                    }
+                };
 
                 if !ftype.returns.is_empty() {
                     let mut res = Vec::new();
@@ -2038,7 +2050,7 @@ pub fn emit_function_call(
                         vartab,
                         Instr::Call {
                             res,
-                            call: InternalCallTy::Static(cfg_no),
+                            call,
                             args,
                             return_tys,
                         },
@@ -2051,7 +2063,7 @@ pub fn emit_function_call(
                         Instr::Call {
                             res: Vec::new(),
                             return_tys: Vec::new(),
-                            call: InternalCallTy::Static(cfg_no),
+                            call,
                             args,
                         },
                     );
@@ -2806,13 +2818,6 @@ fn array_subscript(
                     )),
                 )
             }
-            Type::Array(_, dim) if dim.last().unwrap().is_some() => Expression::Subscript(
-                *loc,
-                elem_ty.clone(),
-                array_ty.clone(),
-                Box::new(array),
-                Box::new(Expression::Variable(index_loc, coerced_ty, pos)),
-            ),
             Type::DynamicBytes | Type::Array(..) => Expression::Subscript(
                 *loc,
                 elem_ty.clone(),

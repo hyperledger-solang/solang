@@ -1,8 +1,8 @@
 strict digraph "tests/contract_testcases/substrate/arrays/array_dimensions_01.sol" {
 	contract [label="contract foo\ntests/contract_testcases/substrate/arrays/array_dimensions_01.sol:2:9-4:10"]
 	diagnostic [label="found contract 'foo'\nlevel Debug\ntests/contract_testcases/substrate/arrays/array_dimensions_01.sol:2:9-4:10"]
-	diagnostic_5 [label="negative literal -10 not allowed for unsigned type 'uint256'\nlevel Error\ntests/contract_testcases/substrate/arrays/array_dimensions_01.sol:3:18-21"]
+	diagnostic_4 [label="negative literal -10 not allowed for unsigned type 'uint256'\nlevel Error\ntests/contract_testcases/substrate/arrays/array_dimensions_01.sol:3:18-21"]
 	contracts -> contract
 	diagnostics -> diagnostic [label="Debug"]
-	diagnostics -> diagnostic_5 [label="Error"]
+	diagnostics -> diagnostic_4 [label="Error"]
 }

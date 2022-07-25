@@ -1,7 +1,7 @@
 use super::address::to_hexstr_eip55;
 use super::ast::{
-    Builtin, BuiltinStruct, CallArgs, CallTy, Diagnostic, Expression, Function, Mutability,
-    Namespace, StringLocation, Symbol, Type,
+    ArrayLength, Builtin, BuiltinStruct, CallArgs, CallTy, Diagnostic, Expression, Function,
+    Mutability, Namespace, StringLocation, Symbol, Type,
 };
 use super::builtin;
 use super::contracts::is_base;
@@ -1061,6 +1061,20 @@ impl Expression {
                     Ok(Expression::Cast(*loc, to.clone(), Box::new(self.clone())))
                 }
             }
+            // Match any array with ArrayLength::AnyFixed if is it fixed for that dimension, and the
+            // element type and other dimensions also match
+            (Type::Array(from_elem, from_dim), Type::Array(to_elem, to_dim))
+                if from_elem == to_elem
+                    && from_dim.len() == to_dim.len()
+                    && from_dim.iter().zip(to_dim.iter()).all(|(f, t)| {
+                        f == t || matches!((f, t), (ArrayLength::Fixed(_), ArrayLength::AnyFixed))
+                    }) =>
+            {
+                Ok(self.clone())
+            }
+            (Type::DynamicBytes, Type::Slice(ty)) if ty.as_ref() == &Type::Bytes(1) => {
+                Ok(Expression::Cast(*loc, to.clone(), Box::new(self.clone())))
+            }
             _ => {
                 diagnostics.push(Diagnostic::cast_error(
                     *loc,
@@ -1640,7 +1654,7 @@ pub fn expression(
         pt::Expression::StringLiteral(v) => {
             Ok(string_literal(v, context.file_no, diagnostics, resolve_to))
         }
-        pt::Expression::HexLiteral(v) => hex_literal(v, diagnostics),
+        pt::Expression::HexLiteral(v) => hex_literal(v, diagnostics, resolve_to),
         pt::Expression::NumberLiteral(loc, integer, exp) => number_literal(
             loc,
             integer,
@@ -2200,8 +2214,8 @@ fn string_literal(
 
     let length = result.len();
 
-    if let ResolveTo::Type(Type::String) = resolve_to {
-        Expression::AllocDynamicArray(
+    match resolve_to {
+        ResolveTo::Type(Type::String) => Expression::AllocDynamicArray(
             loc,
             Type::String,
             Box::new(Expression::NumberLiteral(
@@ -2210,13 +2224,28 @@ fn string_literal(
                 BigInt::from(length),
             )),
             Some(result),
-        )
-    } else {
-        Expression::BytesLiteral(loc, Type::Bytes(length as u8), result)
+        ),
+        ResolveTo::Type(Type::Slice(ty)) if ty.as_ref() == &Type::Bytes(1) => {
+            Expression::AllocDynamicArray(
+                loc,
+                Type::Slice(ty.clone()),
+                Box::new(Expression::NumberLiteral(
+                    loc,
+                    Type::Uint(32),
+                    BigInt::from(length),
+                )),
+                Some(result),
+            )
+        }
+        _ => Expression::BytesLiteral(loc, Type::Bytes(length as u8), result),
     }
 }
 
-fn hex_literal(v: &[pt::HexLiteral], diagnostics: &mut Diagnostics) -> Result<Expression, ()> {
+fn hex_literal(
+    v: &[pt::HexLiteral],
+    diagnostics: &mut Diagnostics,
+    resolve_to: ResolveTo,
+) -> Result<Expression, ()> {
     let mut result = Vec::new();
     let mut loc = v[0].loc;
 
@@ -2235,11 +2264,35 @@ fn hex_literal(v: &[pt::HexLiteral], diagnostics: &mut Diagnostics) -> Result<Ex
 
     let length = result.len();
 
-    Ok(Expression::BytesLiteral(
-        loc,
-        Type::Bytes(length as u8),
-        result,
-    ))
+    match resolve_to {
+        ResolveTo::Type(Type::Slice(ty)) if ty.as_ref() == &Type::Bytes(1) => {
+            Ok(Expression::AllocDynamicArray(
+                loc,
+                Type::Slice(ty.clone()),
+                Box::new(Expression::NumberLiteral(
+                    loc,
+                    Type::Uint(32),
+                    BigInt::from(length),
+                )),
+                Some(result),
+            ))
+        }
+        ResolveTo::Type(Type::DynamicBytes) => Ok(Expression::AllocDynamicArray(
+            loc,
+            Type::DynamicBytes,
+            Box::new(Expression::NumberLiteral(
+                loc,
+                Type::Uint(32),
+                BigInt::from(length),
+            )),
+            Some(result),
+        )),
+        _ => Ok(Expression::BytesLiteral(
+            loc,
+            Type::Bytes(length as u8),
+            result,
+        )),
+    }
 }
 
 fn hex_number_literal(
@@ -3551,7 +3604,7 @@ pub fn new(
 
     match &ty {
         Type::Array(ty, dim) => {
-            if dim.last().unwrap().is_some() {
+            if matches!(dim.last(), Some(ArrayLength::Fixed(_))) {
                 diagnostics.push(Diagnostic::error(
                     *loc,
                     format!(
@@ -4591,13 +4644,13 @@ fn member_access(
         Type::Array(_, dim) => {
             if id.name == "length" {
                 return match dim.last().unwrap() {
-                    None => Ok(Expression::Builtin(
+                    ArrayLength::Dynamic => Ok(Expression::Builtin(
                         *loc,
                         vec![Type::Uint(32)],
                         Builtin::ArrayLength,
                         vec![expr],
                     )),
-                    Some(d) => {
+                    ArrayLength::Fixed(d) => {
                         //We should not eliminate an array from the code when 'length' is called
                         //So the variable is also assigned a value to be read from 'length'
                         assigned_variable(ns, &expr, symtable);
@@ -4610,6 +4663,7 @@ fn member_access(
                             ResolveTo::Type(&Type::Uint(32)),
                         )
                     }
+                    ArrayLength::AnyFixed => unreachable!(),
                 };
             }
         }
@@ -4652,7 +4706,7 @@ fn member_access(
                 if id.name == "length" {
                     let elem_ty = expr.ty().storage_array_elem().deref_into();
 
-                    if let Some(dim) = &dim.last().unwrap() {
+                    if let Some(ArrayLength::Fixed(dim)) = dim.last() {
                         // sparse array could be large than ns.storage_type() on Solana
                         if dim.bits() > ns.storage_type().bits(ns) as u64 {
                             return Ok(Expression::StorageArrayLength {
@@ -5943,7 +5997,7 @@ fn method_call_pos_args(
                 }
 
                 if func.name == "push" {
-                    if dim.last().unwrap().is_some() {
+                    if matches!(dim.last(), Some(ArrayLength::Fixed(_))) {
                         diagnostics.push(Diagnostic::error(
                             func.loc,
                             "method 'push()' not allowed on fixed length array".to_string(),
@@ -5999,7 +6053,7 @@ fn method_call_pos_args(
                     ));
                 }
                 if func.name == "pop" {
-                    if dim.last().unwrap().is_some() {
+                    if matches!(dim.last(), Some(ArrayLength::Fixed(_))) {
                         diagnostics.push(Diagnostic::error(
                             func.loc,
                             "method 'pop()' not allowed on fixed length array".to_string(),
@@ -6918,7 +6972,7 @@ fn array_literal(
 
     // We follow the solidity scheme were everthing gets implicitly converted to the
     // type of the first element
-    let first = expression(
+    let mut first = expression(
         flattened.next().unwrap(),
         context,
         ns,
@@ -6928,6 +6982,8 @@ fn array_literal(
     )?;
 
     let ty = if let ResolveTo::Type(ty) = resolve_to {
+        first = first.cast(&first.loc(), ty, true, ns, diagnostics)?;
+
         ty.clone()
     } else {
         first.ty()
@@ -6950,8 +7006,8 @@ fn array_literal(
     let aty = Type::Array(
         Box::new(ty),
         dims.iter()
-            .map(|n| Some(BigInt::from_u32(*n).unwrap()))
-            .collect::<Vec<Option<BigInt>>>(),
+            .map(|n| ArrayLength::Fixed(BigInt::from_u32(*n).unwrap()))
+            .collect::<Vec<ArrayLength>>(),
     );
 
     if context.constant {

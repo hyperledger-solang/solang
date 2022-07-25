@@ -27,7 +27,7 @@ pub enum Type {
     Bytes(u8),
     DynamicBytes,
     String,
-    Array(Box<Type>, Vec<Option<BigInt>>),
+    Array(Box<Type>, Vec<ArrayLength>),
     /// The usize is an index into enums in the namespace
     Enum(usize),
     /// The usize is an index into contracts in the namespace
@@ -56,9 +56,32 @@ pub enum Type {
     Void,
     Unreachable,
     /// DynamicBytes and String are lowered to a vector.
-    Slice,
+    Slice(Box<Type>),
     /// We could not resolve this type
     Unresolved,
+}
+
+#[derive(PartialEq, Clone, Eq, Hash, Debug)]
+pub enum ArrayLength {
+    Fixed(BigInt),
+    Dynamic,
+    /// Fixed length arrays, any length permitted. This is useful for when we
+    /// do not want dynamic length, but want to permit any length. For example
+    /// the create_program_address() call takes any number of seeds as its
+    /// first argument, and we don't want to allocate a dynamic array for
+    /// this parameter as this would be wasteful to allocate a vector for
+    /// this argument.
+    AnyFixed,
+}
+
+impl ArrayLength {
+    /// Get the length, if fixed
+    pub fn array_length(&self) -> Option<&BigInt> {
+        match self {
+            ArrayLength::Fixed(len) => Some(len),
+            _ => None,
+        }
+    }
 }
 
 pub trait RetrieveType {
@@ -1000,6 +1023,7 @@ pub enum Builtin {
     GasLimit,
     BlockNumber,
     Slot,
+    ProgramId,
     Timestamp,
     Calldata,
     Sender,

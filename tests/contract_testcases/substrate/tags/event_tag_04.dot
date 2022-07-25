@@ -3,10 +3,10 @@ strict digraph "tests/contract_testcases/substrate/tags/event_tag_04.sol" {
 	tags [label="title: foo bar\nauthor: mr foo\nparam: asdad"]
 	contract [label="contract c\ntests/contract_testcases/substrate/tags/event_tag_04.sol:2:9-10:10"]
 	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/tags/event_tag_04.sol:2:9-10:10"]
-	diagnostic_8 [label="event 'x' has never been emitted\nlevel Warning\ntests/contract_testcases/substrate/tags/event_tag_04.sol:6:19-20"]
+	diagnostic_7 [label="event 'x' has never been emitted\nlevel Warning\ntests/contract_testcases/substrate/tags/event_tag_04.sol:6:19-20"]
 	events -> x
 	x -> tags [label="tags"]
 	contracts -> contract
 	diagnostics -> diagnostic [label="Debug"]
-	diagnostics -> diagnostic_8 [label="Warning"]
+	diagnostics -> diagnostic_7 [label="Warning"]
 }

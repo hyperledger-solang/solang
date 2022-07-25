@@ -532,7 +532,7 @@ fn ty_to_abi(ty: &ast::Type, ns: &ast::Namespace, registry: &mut Abi) -> ParamTy
             let mut param_ty = ty_to_abi(ty, ns, registry);
 
             for d in dims {
-                if let Some(d) = d {
+                if let ast::ArrayLength::Fixed(d) = d {
                     param_ty = ParamType {
                         ty: registry.builtin_array_type(param_ty.ty, d.to_usize().unwrap()),
                         display_name: vec![],

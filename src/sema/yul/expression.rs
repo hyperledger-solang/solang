@@ -1,4 +1,4 @@
-use crate::ast::{Namespace, Parameter, Symbol, Type};
+use crate::ast::{ArrayLength, Namespace, Parameter, Symbol, Type};
 use crate::sema::diagnostics::Diagnostics;
 use crate::sema::expression::{unescape, ExprContext};
 use crate::sema::symtable::{Symtable, VariableUsage};
@@ -562,13 +562,16 @@ fn resolve_suffix_access(
             Some(StorageLocation::Calldata(_)),
             _,
         ) => {
-            if dims.last().unwrap().is_none() && id.name != "offset" && id.name != "length" {
+            if dims.last() == Some(&ArrayLength::Dynamic)
+                && id.name != "offset"
+                && id.name != "length"
+            {
                 ns.diagnostics.push(Diagnostic::error(
                     resolved_expr.loc(),
                     "calldata variables only support '.offset' and '.length'".to_string(),
                 ));
                 return Err(());
-            } else if dims.last().unwrap().is_some() {
+            } else if matches!(dims.last(), Some(ArrayLength::Fixed(_))) {
                 ns.diagnostics.push(Diagnostic::error(
                     resolved_expr.loc(),
                     format!(
@@ -769,7 +772,7 @@ pub(crate) fn check_type(
             Some(StorageLocation::Calldata(_)),
             ..,
         ) => {
-            if dims.last().unwrap().is_none() {
+            if dims.last() == Some(&ArrayLength::Dynamic) {
                 return Some(Diagnostic::error(
                     expr.loc(),
                     "Calldata arrays must be accessed with '.offset', '.length' and the 'calldatacopy' function".to_string()

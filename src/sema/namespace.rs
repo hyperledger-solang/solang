@@ -1,5 +1,7 @@
 use super::{
-    ast::{Diagnostic, Mutability, Namespace, Note, Parameter, RetrieveType, Symbol, Type},
+    ast::{
+        ArrayLength, Diagnostic, Mutability, Namespace, Note, Parameter, RetrieveType, Symbol, Type,
+    },
     builtin,
     diagnostics::Diagnostics,
     eval::eval_const_number,
@@ -757,7 +759,7 @@ impl Namespace {
         fn resolve_dimensions(
             ast_dimensions: &[Option<(pt::Loc, BigInt)>],
             diagnostics: &mut Diagnostics,
-        ) -> Result<Vec<Option<BigInt>>, ()> {
+        ) -> Result<Vec<ArrayLength>, ()> {
             let mut dimensions = Vec::new();
 
             for d in ast_dimensions.iter().rev() {
@@ -775,9 +777,9 @@ impl Namespace {
                         ));
                         return Err(());
                     }
-                    dimensions.push(Some(n.clone()));
+                    dimensions.push(ArrayLength::Fixed(n.clone()));
                 } else {
-                    dimensions.push(None);
+                    dimensions.push(ArrayLength::Dynamic);
                 }
             }
 

@@ -1,7 +1,8 @@
 use crate::codegen::{Builtin, Expression};
 use crate::sema::ast::RetrieveType;
 use crate::sema::ast::{
-    BuiltinStruct, CallTy, Contract, FormatArg, Namespace, Parameter, StringLocation, Type,
+    ArrayLength, BuiltinStruct, CallTy, Contract, FormatArg, Function, Namespace, Parameter,
+    StringLocation, Type,
 };
 use solang_parser::pt;
 use std::convert::TryFrom;
@@ -235,6 +236,16 @@ pub trait TargetRuntime<'a> {
     /// Return failure without any result
     fn assert_failure<'b>(&self, bin: &'b Binary, data: PointerValue, length: IntValue);
 
+    fn builtin_function(
+        &self,
+        _binary: &Binary<'a>,
+        _func: &Function,
+        _args: &[BasicMetadataValueEnum<'a>],
+        _ns: &Namespace,
+    ) -> BasicValueEnum<'a> {
+        unimplemented!();
+    }
+
     /// Calls constructor
     fn create_contract<'b>(
         &mut self,
@@ -407,7 +418,7 @@ pub trait TargetRuntime<'a> {
         match ty {
             Type::Ref(ty) => self.storage_load_slot(bin, ty, slot, slot_ptr, function, ns),
             Type::Array(elem_ty, dim) => {
-                if let Some(d) = &dim.last().unwrap() {
+                if let Some(ArrayLength::Fixed(d)) = dim.last() {
                     let llvm_ty = bin.llvm_type(ty.deref_any(), ns);
                     // LLVMSizeOf() produces an i64
                     let size = bin.builder.build_int_truncate(
@@ -699,7 +710,7 @@ pub trait TargetRuntime<'a> {
     ) {
         match ty.deref_any() {
             Type::Array(elem_ty, dim) => {
-                if let Some(d) = &dim.last().unwrap() {
+                if let Some(ArrayLength::Fixed(d)) = dim.last() {
                     bin.emit_static_loop_with_int(
                         function,
                         bin.context.i64_type().const_zero(),
@@ -1010,7 +1021,7 @@ pub trait TargetRuntime<'a> {
             Type::Array(_, dim) => {
                 let ty = ty.array_deref();
 
-                if let Some(d) = &dim.last().unwrap() {
+                if let Some(ArrayLength::Fixed(d)) = dim.last() {
                     bin.emit_static_loop_with_int(
                         function,
                         bin.context.i64_type().const_zero(),
@@ -2466,7 +2477,7 @@ pub trait TargetRuntime<'a> {
                 array.into()
             }
             Expression::AllocDynamicArray(_, ty, size, init) => {
-                if *ty == Type::Slice {
+                if matches!(ty, Type::Slice(_)) {
                     let init = init.as_ref().unwrap();
 
                     let data = bin.emit_global_string("const_string", init, true);
@@ -2476,14 +2487,14 @@ pub trait TargetRuntime<'a> {
                         .const_named_struct(&[
                             data.into(),
                             bin.context
-                                .i32_type()
+                                .custom_width_int_type(ns.target.ptr_size().into())
                                 .const_int(init.len() as u64, false)
                                 .into(),
                         ])
                         .into()
                 } else {
                     let elem = match ty {
-                        Type::Slice | Type::String | Type::DynamicBytes => Type::Bytes(1),
+                        Type::Slice(_) | Type::String | Type::DynamicBytes => Type::Bytes(1),
                         _ => ty.array_elem(),
                     };
 
@@ -3237,6 +3248,24 @@ pub trait TargetRuntime<'a> {
                     "ptr_to_int",
                 )
                 .into()
+        } else if matches!((from, to), (Type::DynamicBytes, Type::Slice(_))) {
+            let slice = bin.build_alloca(function, bin.llvm_type(to, ns), "slice");
+
+            let data = bin.vector_bytes(val);
+
+            let data_ptr = bin.builder.build_struct_gep(slice, 0, "data").unwrap();
+
+            bin.builder.build_store(data_ptr, data);
+
+            let len =
+                bin.builder
+                    .build_int_z_extend(bin.vector_len(val), bin.context.i64_type(), "len");
+
+            let len_ptr = bin.builder.build_struct_gep(slice, 1, "len").unwrap();
+
+            bin.builder.build_store(len_ptr, len);
+
+            bin.builder.build_load(slice, "slice")
         } else {
             val
         }
@@ -3854,7 +3883,7 @@ pub trait TargetRuntime<'a> {
                     }
                     Instr::Call {
                         res,
-                        call: InternalCallTy::Static(cfg_no),
+                        call: InternalCallTy::Static { cfg_no },
                         args,
                         ..
                     } => {
@@ -3912,6 +3941,75 @@ pub trait TargetRuntime<'a> {
 
                         if !res.is_empty() {
                             for (i, v) in f.returns.iter().enumerate() {
+                                let val = bin.builder.build_load(
+                                    parms[args.len() + i].into_pointer_value(),
+                                    v.name_as_str(),
+                                );
+
+                                let dest = w.vars[&res[i]].value;
+
+                                if dest.is_pointer_value()
+                                    && !(v.ty.is_reference_type(ns)
+                                        || matches!(v.ty, Type::ExternalFunction { .. }))
+                                {
+                                    bin.builder.build_store(dest.into_pointer_value(), val);
+                                } else {
+                                    w.vars.get_mut(&res[i]).unwrap().value = val;
+                                }
+                            }
+                        }
+                    }
+                    Instr::Call {
+                        res,
+                        call: InternalCallTy::Builtin { ast_func_no },
+                        args,
+                        ..
+                    } => {
+                        let mut parms = args
+                            .iter()
+                            .map(|p| self.expression(bin, p, &w.vars, function, ns).into())
+                            .collect::<Vec<BasicMetadataValueEnum>>();
+
+                        let func = &ns.functions[*ast_func_no];
+
+                        if !res.is_empty() {
+                            for v in func.returns.iter() {
+                                parms.push(if ns.target == Target::Solana {
+                                    bin.build_alloca(
+                                        function,
+                                        bin.llvm_var_ty(&v.ty, ns),
+                                        v.name_as_str(),
+                                    )
+                                    .into()
+                                } else {
+                                    bin.builder
+                                        .build_alloca(bin.llvm_var_ty(&v.ty, ns), v.name_as_str())
+                                        .into()
+                                });
+                            }
+                        }
+
+                        let ret = self.builtin_function(bin, func, &parms, ns);
+
+                        let success = bin.builder.build_int_compare(
+                            IntPredicate::EQ,
+                            ret.into_int_value(),
+                            bin.return_values[&ReturnCode::Success],
+                            "success",
+                        );
+
+                        let success_block = bin.context.append_basic_block(function, "success");
+                        let bail_block = bin.context.append_basic_block(function, "bail");
+                        bin.builder
+                            .build_conditional_branch(success, success_block, bail_block);
+
+                        bin.builder.position_at_end(bail_block);
+
+                        bin.builder.build_return(Some(&ret));
+                        bin.builder.position_at_end(success_block);
+
+                        if !res.is_empty() {
+                            for (i, v) in func.returns.iter().enumerate() {
                                 let val = bin.builder.build_load(
                                     parms[args.len() + i].into_pointer_value(),
                                     v.name_as_str(),

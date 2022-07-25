@@ -143,6 +143,10 @@ AccountInfo[] ``tx.accounts``
         }
     }
 
+address ``tx.program_id``
+    The address or account of the currently executing program. Only available on
+    Solana.
+
 ``block`` properties
 ++++++++++++++++++++++
 

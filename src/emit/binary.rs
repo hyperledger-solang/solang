@@ -1,4 +1,4 @@
-use crate::sema::ast::{BuiltinStruct, Contract, Namespace, Type};
+use crate::sema::ast::{ArrayLength, BuiltinStruct, Contract, Namespace, Type};
 use std::cell::RefCell;
 use std::ffi::CStr;
 use std::path::Path;
@@ -762,7 +762,7 @@ impl<'a> Binary<'a> {
     pub(crate) fn llvm_field_ty(&self, ty: &Type, ns: &Namespace) -> BasicTypeEnum<'a> {
         let llvm_ty = self.llvm_type(ty, ns);
         match ty.deref_memory() {
-            Type::Array(_, dim) if dim.last().unwrap().is_none() => {
+            Type::Array(_, dim) if dim.last() == Some(&ArrayLength::Dynamic) => {
                 llvm_ty.ptr_type(AddressSpace::Generic).as_basic_type_enum()
             }
             Type::DynamicBytes | Type::String => {
@@ -806,17 +806,23 @@ impl<'a> Binary<'a> {
                     let mut dims = dims.iter();
 
                     let mut aty = match dims.next().unwrap() {
-                        Some(d) => ty.array_type(d.to_u32().unwrap()),
-                        None => {
+                        ArrayLength::Fixed(d) => ty.array_type(d.to_u32().unwrap()),
+                        ArrayLength::Dynamic => {
                             return self.module.get_struct_type("struct.vector").unwrap().into()
+                        }
+                        ArrayLength::AnyFixed => {
+                            unreachable!()
                         }
                     };
 
                     for dim in dims {
                         match dim {
-                            Some(d) => aty = aty.array_type(d.to_u32().unwrap()),
-                            None => {
+                            ArrayLength::Fixed(d) => aty = aty.array_type(d.to_u32().unwrap()),
+                            ArrayLength::Dynamic => {
                                 return self.module.get_struct_type("struct.vector").unwrap().into()
+                            }
+                            ArrayLength::AnyFixed => {
+                                unreachable!()
                             }
                         }
                     }
@@ -857,14 +863,15 @@ impl<'a> Binary<'a> {
                             .ptr_type(AddressSpace::Generic),
                     )
                 }
-                Type::Slice => BasicTypeEnum::StructType(
+                Type::Slice(ty) => BasicTypeEnum::StructType(
                     self.context.struct_type(
                         &[
-                            self.context
-                                .i8_type()
+                            self.llvm_type(ty, ns)
                                 .ptr_type(AddressSpace::Generic)
                                 .into(),
-                            self.context.i32_type().into(),
+                            self.context
+                                .custom_width_int_type(ns.target.ptr_size().into())
+                                .into(),
                         ],
                         false,
                     ),
@@ -946,10 +953,14 @@ impl<'a> Binary<'a> {
             // slice
             let slice = vector.into_struct_value();
 
-            self.builder
-                .build_extract_value(slice, 1, "slice_len")
-                .unwrap()
-                .into_int_value()
+            self.builder.build_int_truncate(
+                self.builder
+                    .build_extract_value(slice, 1, "slice_len")
+                    .unwrap()
+                    .into_int_value(),
+                self.context.i32_type(),
+                "len",
+            )
         } else {
             let struct_ty = vector
                 .into_pointer_value()
@@ -1055,7 +1066,7 @@ impl<'a> Binary<'a> {
     ) -> PointerValue<'a> {
         match array_ty {
             Type::Array(_, dim) => {
-                if dim.last().unwrap().is_some() {
+                if matches!(dim.last(), Some(ArrayLength::Fixed(_))) {
                     // fixed size array
                     unsafe {
                         self.builder.build_gep(

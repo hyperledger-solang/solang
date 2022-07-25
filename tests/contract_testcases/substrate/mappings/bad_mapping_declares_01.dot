@@ -1,8 +1,8 @@
 strict digraph "tests/contract_testcases/substrate/mappings/bad_mapping_declares_01.sol" {
 	contract [label="contract c\ntests/contract_testcases/substrate/mappings/bad_mapping_declares_01.sol:2:9-4:10"]
 	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/mappings/bad_mapping_declares_01.sol:2:9-4:10"]
-	diagnostic_5 [label="key of mapping cannot be array type\nlevel Error\ntests/contract_testcases/substrate/mappings/bad_mapping_declares_01.sol:3:21-27"]
+	diagnostic_4 [label="key of mapping cannot be array type\nlevel Error\ntests/contract_testcases/substrate/mappings/bad_mapping_declares_01.sol:3:21-27"]
 	contracts -> contract
 	diagnostics -> diagnostic [label="Debug"]
-	diagnostics -> diagnostic_5 [label="Error"]
+	diagnostics -> diagnostic_4 [label="Error"]
 }

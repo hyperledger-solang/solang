@@ -1,5 +1,7 @@
 import expect from 'expect';
 import { loadContract } from './setup';
+import { publicKeyToHex } from '@solana/solidity';
+import { PublicKey } from '@solana/web3.js';
 
 describe('Deploy solang contract and test', function () {
     this.timeout(500000);
@@ -19,6 +21,15 @@ describe('Deploy solang contract and test', function () {
         res = await contract.functions.hash_kecccak256('0x' + Buffer.from('Call me Ishmael.', 'utf8').toString('hex'));
 
         expect(res.result).toBe("0x823ad8e1757b879aac338f9a18542928c668e479b37e4a56f024016215c5928c");
+
+        let addrs = new PublicKey("BPFLoaderUpgradeab1e11111111111111111111111");
+        let expected = new PublicKey("BwqrghZA2htAcqq8dzP1WDAhTXYTYWj7CHxF5j7TDBAe");
+        res = await contract.functions.pda('0x', '0x01', publicKeyToHex(addrs));
+        expect(res.result).toBe(publicKeyToHex(expected));
+
+        res = await contract.functions.pda_with_bump('0x', '0x01', publicKeyToHex(addrs));
+        expect(res.result[0]).toBe("0x00c13b4820057d4d07cddf24058df4034cd3379a5f863b4e061ad2c29be62fd5");
+        expect(res.result[1]).toBe("0xfe");
 
         res = await contract.functions.mr_now([]);
 

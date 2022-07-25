@@ -194,11 +194,12 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                 let sum = binary.context.i32_type().const_zero();
 
                 let len = match dims.last().unwrap() {
-                    None => binary.vector_len(arg),
-                    Some(d) => binary
+                    ast::ArrayLength::Dynamic => binary.vector_len(arg),
+                    ast::ArrayLength::Fixed(d) => binary
                         .context
                         .i32_type()
                         .const_int(d.to_u64().unwrap(), false),
+                    _ => unreachable!(),
                 };
 
                 let normal_array = binary.context.append_basic_block(function, "normal_array");
@@ -286,11 +287,12 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                 };
 
                 let len = match dims.last().unwrap() {
-                    None => binary.vector_len(arg),
-                    Some(d) => binary
+                    ast::ArrayLength::Dynamic => binary.vector_len(arg),
+                    ast::ArrayLength::Fixed(d) => binary
                         .context
                         .i32_type()
                         .const_int(d.to_u64().unwrap(), false),
+                    _ => unreachable!(),
                 };
 
                 // plus fixed size elements
@@ -449,7 +451,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                 let mut sum = binary.context.i32_type().const_zero();
 
                 let len = match dims.last().unwrap() {
-                    None => {
+                    ast::ArrayLength::Dynamic => {
                         let array_len = binary.vector_len(arg);
 
                         // A dynamic array will store its own length
@@ -461,10 +463,11 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
 
                         array_len
                     }
-                    Some(d) => binary
+                    ast::ArrayLength::Fixed(d) => binary
                         .context
                         .i32_type()
                         .const_int(d.to_u64().unwrap(), false),
+                    _ => unreachable!(),
                 };
 
                 // plus fixed size elements
@@ -614,7 +617,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                 // The array must be fixed, dynamic arrays are handled above
                 let product: u64 = dims
                     .iter()
-                    .map(|d| d.as_ref().unwrap().to_u64().unwrap())
+                    .map(|d| d.array_length().unwrap().to_u64().unwrap())
                     .product();
 
                 product * EncoderBuilder::encoded_fixed_length(ty, ns)
@@ -770,7 +773,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                     )
                 };
 
-                let array_length = if let Some(d) = &dim.last().unwrap() {
+                let array_length = if let Some(ast::ArrayLength::Fixed(d)) = dim.last() {
                     // fixed length
                     binary
                         .context
@@ -991,7 +994,13 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                     arg
                 };
 
-                let dim = dim.last().unwrap().as_ref().unwrap().to_u64().unwrap();
+                let dim = dim
+                    .last()
+                    .unwrap()
+                    .array_length()
+                    .unwrap()
+                    .to_u64()
+                    .unwrap();
 
                 let normal_array = binary.context.append_basic_block(function, "normal_array");
                 let null_array = binary.context.append_basic_block(function, "null_array");
@@ -1772,7 +1781,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                     arg
                 };
 
-                let array_length = if let Some(d) = &dim.last().unwrap() {
+                let array_length = if let Some(ast::ArrayLength::Fixed(d)) = dim.last() {
                     // fixed length
                     binary
                         .context
@@ -2688,7 +2697,7 @@ impl EthAbiDecoder {
 
                 let dest;
 
-                if let Some(d) = &dim.last().unwrap() {
+                if let Some(ast::ArrayLength::Fixed(d)) = dim.last() {
                     dest = to.unwrap_or_else(|| {
                         let new = binary
                             .builder

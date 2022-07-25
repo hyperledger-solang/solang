@@ -2166,11 +2166,15 @@ impl Namespace {
         }
 
         // free functions
-        if !self.functions.iter().any(|func| func.contract_no.is_some()) {
+        if self
+            .functions
+            .iter()
+            .any(|func| func.contract_no.is_none() && func.loc != pt::Loc::Builtin)
+        {
             let functions = dot.add_node(Node::new("free_functions", Vec::new()), None, None);
 
             for func in &self.functions {
-                if func.contract_no.is_none() {
+                if func.contract_no.is_none() && func.loc != pt::Loc::Builtin {
                     dot.add_function(func, self, functions);
                 }
             }

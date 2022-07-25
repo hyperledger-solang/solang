@@ -214,7 +214,7 @@ fn update_vectors_to_slice(
                 res,
                 expr: Expression::AllocDynamicArray(
                     *loc,
-                    Type::Slice,
+                    Type::Slice(Box::new(Type::Bytes(1))),
                     len.clone(),
                     Some(bs.clone()),
                 ),

@@ -15,7 +15,8 @@ use crate::codegen::yul::inline_assembly_cfg;
 use crate::codegen::{Builtin, Expression};
 use crate::sema::ast::RetrieveType;
 use crate::sema::ast::{
-    CallTy, DestructureField, Function, Namespace, Parameter, Statement, TryCatch, Type,
+    ArrayLength, CallTy, DestructureField, Function, Namespace, Parameter, Statement, TryCatch,
+    Type,
 };
 use crate::sema::Recurse;
 use num_traits::Zero;
@@ -1495,7 +1496,7 @@ impl Type {
             Type::Array(ty, dims) => {
                 ty.default(ns)?;
 
-                if dims.last().unwrap().is_none() {
+                if dims.last() == Some(&ArrayLength::Dynamic) {
                     Some(Expression::AllocDynamicArray(
                         pt::Loc::Codegen,
                         self.clone(),

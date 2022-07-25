@@ -246,6 +246,7 @@ fn read_expression(expr: &Expression, state: &mut StateCheck) -> bool {
         Expression::Builtin(loc, _, Builtin::GetAddress, _)
         | Expression::Builtin(loc, _, Builtin::BlockNumber, _)
         | Expression::Builtin(loc, _, Builtin::Timestamp, _)
+        | Expression::Builtin(loc, _, Builtin::ProgramId, _)
         | Expression::Builtin(loc, _, Builtin::BlockCoinbase, _)
         | Expression::Builtin(loc, _, Builtin::BlockDifficulty, _)
         | Expression::Builtin(loc, _, Builtin::BlockHash, _)
