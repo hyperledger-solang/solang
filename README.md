@@ -139,29 +139,31 @@ Here is a brief description of what we envision for the next versions.
 
 ### V0.2
 
-| Milestone | Status      |
-| --------- |-------------|
-| Specify values as "1 sol" and "1e9 lamports" | In progress |
-| Solana SPL tokens compatibility | Completed |
+| Milestone                                  | Status      |
+|--------------------------------------------|-------------|
+| Solana SPL tokens compatibility            | Completed   |
+| Parse and resolve inline assembly          | Completed   |
+| Generate code for inline assembly          | Completed   |
+| Support Solana's Program Derived Addresses | In Progress |
+
 
 ### V0.3
 
-| Milestone | Status      |
-| --------- |-------------|
-| Call Rust contracts from Solidity | Not started |
-| Parse and resolve inline assembly | Completed   |
-| Improvements in overflow checking | Not started |
+| Milestone                                  | Status      |
+|--------------------------------------------|-------------|
+| Call Solana's Rust contracts from Solidity | In progress |
+| Improvements in overflow checking          | In progress |
+| Call Solidity from Solana's Rust contracts | Not started |
+| Improve parser resilience                  | Not started |
 
 
 ### V0.4
 
-| Milestone                         | Status      |
-|-----------------------------------|-------------|
-| Call Solidity from Rust           | Not started |
-| Generate code for inline assembly | Completed   |
-| Improve management over optimization passes | Not Started |
-| Dead code elimination | Not started |
-| ewasm target | Not started |
+| Milestone                                          | Status      |
+|----------------------------------------------------|-------------|
+| Improve management over optimization passes        | Not started |
+| Specify values as "1 sol" and "1e9 lamports"       | In progress |
+| Adopt single static assignment for code generation | Not started |
 
 
 
