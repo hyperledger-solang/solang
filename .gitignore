@@ -3,3 +3,6 @@ Cargo.lock
 /target
 **/*.rs.bk
 bundle.ll
+build/*
+solang
+*/*.ll
