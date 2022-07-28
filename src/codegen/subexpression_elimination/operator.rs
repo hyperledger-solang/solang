@@ -31,6 +31,7 @@ pub enum Operator {
     NotEqual,
     StringConcat,
     StringCompare,
+    AdvancePointer,
     //Unary operations
     Not,
     ZeroExt(Type),
@@ -78,6 +79,7 @@ impl Expression {
             Expression::Complement(..) => Operator::Complement,
             Expression::StringCompare(..) => Operator::StringCompare,
             Expression::StringConcat(..) => Operator::StringConcat,
+            Expression::AdvancePointer { .. } => Operator::AdvancePointer,
             _ => {
                 unreachable!("Expression does not represent an operator.")
             }

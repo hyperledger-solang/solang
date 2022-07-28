@@ -7,6 +7,8 @@ use super::{
     vartable::Vartable,
 };
 use crate::codegen::array_boundary::handle_array_assign;
+use crate::codegen::encoding::create_encoder;
+use crate::codegen::encoding::AbiEncoding;
 use crate::codegen::unused_variable::should_remove_assignment;
 use crate::codegen::{Builtin, Expression};
 use crate::sema::{
@@ -1283,7 +1285,13 @@ fn abi_encode(
     let args = args
         .iter()
         .map(|v| expression(v, cfg, contract_no, func, ns, vartab, opt))
-        .collect();
+        .collect::<Vec<Expression>>();
+
+    if ns.target == Target::Solana {
+        let mut encoder = create_encoder(ns);
+        return encoder.abi_encode(loc, &args, ns, vartab, cfg);
+    }
+
     let res = vartab.temp(
         &pt::Identifier {
             loc: *loc,
