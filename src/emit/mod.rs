@@ -3285,6 +3285,7 @@ pub trait TargetRuntime<'a> {
         ns: &Namespace,
     ) {
         // add debug information
+        println!("function: {}", function.get_name().to_str().unwrap());
         let dibuilder = &bin.dibuilder;
         let compile_unit = &bin.compile_unit;
         let file = compile_unit.get_file();
@@ -3450,17 +3451,6 @@ pub trait TargetRuntime<'a> {
 
         work.push_back(Work { block_no: 0, vars });
 
-        // let debug_loc = dibuilder.create_debug_location(
-        //     &bin.context,
-        //     /* line */ 3,
-        //     /* column */ 4,
-        //     /* current_scope */
-        //     di_func_scope.unwrap().as_debug_info_scope(),
-        //     /* inlined_at */ None,
-        // );
-        // bin.builder
-        //     .set_current_debug_location(&bin.context, debug_loc);
-
         while let Some(mut w) = work.pop_front() {
             let bb = blocks.get(&w.block_no).unwrap();
 
@@ -3471,6 +3461,49 @@ pub trait TargetRuntime<'a> {
             }
 
             for ins in &cfg.blocks[w.block_no].instr {
+                let debug_loc_opt = match ins {
+                    Instr::Set { expr, .. } => Some(expr.loc()),
+                    Instr::Call { args, .. } if args.is_empty() => None,
+                    Instr::Call { args, .. } => Some(args[0].loc()),
+                    Instr::Return { value } if value.is_empty() => None,
+                    Instr::Return { value } => Some(value[0].loc()),
+                    Instr::BranchCond { cond, .. } => Some(cond.loc()),
+                    Instr::Store { dest, .. } => Some(dest.loc()),
+                    Instr::LoadStorage { storage, .. } => Some(storage.loc()),
+                    Instr::ClearStorage { storage, .. } => Some(storage.loc()),
+                    Instr::SetStorage { storage, .. } => Some(storage.loc()),
+                    Instr::SetStorageBytes { storage, .. } => Some(storage.loc()),
+                    Instr::PushStorage { storage, .. } => Some(storage.loc()),
+                    Instr::PopStorage { storage, .. } => Some(storage.loc()),
+                    Instr::PushMemory { value, .. } => Some(value.loc()),
+                    Instr::Constructor { gas, .. } => Some(gas.loc()),
+                    Instr::ExternalCall { value, .. } => Some(value.loc()),
+                    Instr::ValueTransfer { address, .. } => Some(address.loc()),
+                    Instr::AbiDecode { data, .. } => Some(data.loc()),
+                    Instr::SelfDestruct { recipient } => Some(recipient.loc()),
+                    Instr::EmitEvent { data, .. } if data.is_empty() => None,
+                    Instr::EmitEvent { data, .. } => Some(data[0].loc()),
+                    Instr::WriteBuffer { buf, .. } => Some(buf.loc()),
+                    _ => None,
+                };
+                if let Some(debug_loc) = debug_loc_opt {
+                    match debug_loc {
+                        Loc::File(file_offset, offset, _) => {
+                            let (line, col) = ns.files[file_offset].offset_to_line_column(offset);
+                            let store_loc = dibuilder.create_debug_location(
+                                &bin.context,
+                                line as u32,
+                                col as u32,
+                                /* current_scope */
+                                di_func_scope.unwrap().as_debug_info_scope(),
+                                /* inlined_at */ None,
+                            );
+                            bin.builder
+                                .set_current_debug_location(&bin.context, store_loc);
+                        }
+                        _ => {}
+                    }
+                }
                 match ins {
                     Instr::Nop => (),
                     Instr::Return { value } if value.is_empty() => {
@@ -3480,38 +3513,13 @@ pub trait TargetRuntime<'a> {
                     Instr::Return { value } => {
                         let returns_offset = cfg.params.len();
                         for (i, val) in value.iter().enumerate() {
-                            let loc = val.loc();
                             let arg = function.get_nth_param((returns_offset + i) as u32).unwrap();
                             let retval = self.expression(bin, val, &w.vars, function, ns);
-                            println!("function: {:?}", function.get_name().to_str().unwrap());
-                            match loc {
-                                Loc::File(file_offset, offset, _) => {
-                                    let (line, col) =
-                                        ns.files[file_offset].offset_to_line_column(offset);
-                                    let store_loc = dibuilder.create_debug_location(
-                                        &bin.context,
-                                        line as u32,
-                                        col as u32,
-                                        /* current_scope */
-                                        di_func_scope.unwrap().as_debug_info_scope(),
-                                        /* inlined_at */ None,
-                                    );
-                                    bin.builder
-                                        .set_current_debug_location(&bin.context, store_loc);
-                                    println!(
-                                        "(line, col): ({:?}, {:?})",
-                                        line,
-                                        store_loc.get_scope()
-                                    );
-                                }
-                                _ => {}
-                            }
                             bin.builder.build_store(arg.into_pointer_value(), retval);
                         }
 
                         bin.builder
                             .build_return(Some(&bin.return_values[&ReturnCode::Success]));
-                        bin.builder.unset_current_debug_location();
                     }
                     Instr::Set { res, expr, .. } => {
                         if let Expression::Undefined(expr_type) = expr {
@@ -3552,51 +3560,14 @@ pub trait TargetRuntime<'a> {
                             .expression(bin, dest, &w.vars, function, ns)
                             .into_pointer_value();
 
-                        let loc = dest.loc();
-                        match loc {
-                            Loc::File(file_offset, offset, _) => {
-                                let (line, col) =
-                                    ns.files[file_offset].offset_to_line_column(offset);
-                                let loc = dibuilder.create_debug_location(
-                                    &bin.context,
-                                    /* line */ line as u32,
-                                    /* column */ col as u32,
-                                    /* current_scope */
-                                    di_func_scope.unwrap().as_debug_info_scope(),
-                                    /* inlined_at */ None,
-                                );
-                                bin.builder.set_current_debug_location(&bin.context, loc);
-                            }
-                            _ => {}
-                        }
                         bin.builder.build_store(dest_ref, value_ref);
-                        bin.builder.unset_current_debug_location();
                     }
                     Instr::BranchCond {
                         cond,
                         true_block: true_,
                         false_block: false_,
                     } => {
-                        let loc = cond.loc();
-                        match loc {
-                            Loc::File(file_offset, offset, _) => {
-                                let (line, col) =
-                                    ns.files[file_offset].offset_to_line_column(offset);
-                                let store_loc = dibuilder.create_debug_location(
-                                    &bin.context,
-                                    line as u32,
-                                    col as u32,
-                                    /* current_scope */
-                                    di_func_scope.unwrap().as_debug_info_scope(),
-                                    /* inlined_at */ None,
-                                );
-                                bin.builder
-                                    .set_current_debug_location(&bin.context, store_loc);
-                            }
-                            _ => {}
-                        }
                         let cond = self.expression(bin, cond, &w.vars, function, ns);
-                        bin.builder.unset_current_debug_location();
 
                         let pos = bin.builder.get_insert_block().unwrap();
 
@@ -4604,6 +4575,7 @@ pub trait TargetRuntime<'a> {
                         bin.builder.build_store(start, value);
                     }
                 }
+                bin.builder.unset_current_debug_location();
             }
         }
     }
