@@ -24,7 +24,7 @@ use std::{ffi::OsStr, fmt};
 pub enum Target {
     /// Solana, see <https://solana.com/>
     Solana,
-    /// Parity Substrate, see <https://substrate.dev/>
+    /// Parity Substrate, see <https://substrate.io/>
     Substrate {
         address_length: usize,
         value_length: usize,
