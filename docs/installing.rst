@@ -3,6 +3,17 @@ Installing Solang
 
 The Solang compiler is a single binary. It can be installed in different ways.
 
+
+Download from Brew
+------------------
+
+Solang is available on Brew via a private tap. Currently, this works only for MacOS systems, both Intel and Apple Silicon.
+To install Solang via Brew, run the following command:
+
+.. code-block:: text
+
+    brew install hyperledger-labs/solang/solang
+
 Download release binaries
 -------------------------
 
