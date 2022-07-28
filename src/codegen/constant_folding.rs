@@ -79,10 +79,11 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
                         };
                     }
                 }
-                Instr::Store { dest, pos } => {
+                Instr::Store { dest, data } => {
                     let (dest, _) = expression(dest, Some(&vars), cfg, ns);
+                    let (data, _) = expression(data, Some(&vars), cfg, ns);
 
-                    cfg.blocks[block_no].instr[instr_no] = Instr::Store { dest, pos: *pos };
+                    cfg.blocks[block_no].instr[instr_no] = Instr::Store { dest, data };
                 }
                 Instr::AssertFailure { expr: Some(expr) } => {
                     let (expr, _) = expression(expr, Some(&vars), cfg, ns);

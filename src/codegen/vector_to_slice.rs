@@ -73,9 +73,11 @@ fn find_writable_vectors(
 
                 apply_transfers(&block.transfers[instr_no], vars, writable);
             }
-            Instr::Store { pos, .. } => {
-                if let Some(entry) = vars.get_mut(pos) {
-                    writable.extend(entry.keys());
+            Instr::Store { data, .. } => {
+                if let Expression::Variable(_, _, var_no) = data {
+                    if let Some(entry) = vars.get_mut(var_no) {
+                        writable.extend(entry.keys());
+                    }
                 }
 
                 apply_transfers(&block.transfers[instr_no], vars, writable);
