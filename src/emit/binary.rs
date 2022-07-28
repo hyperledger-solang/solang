@@ -266,11 +266,12 @@ impl<'a> Binary<'a> {
             inkwell::module::FlagBehavior::Warning,
             debug_metadata_version,
         );
+
         let builder = context.create_builder();
         let (dibuilder, compile_unit) = module.create_debug_info_builder(
             /* allow_unresolved */ true,
             /* language */ inkwell::debug_info::DWARFSourceLanguage::C,
-            /* filename */ name,
+            /* filename */ filename,
             /* directory */ ".",
             /* producer */ "Solang",
             /* is_optimized */ false,

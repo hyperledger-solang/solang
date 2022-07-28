@@ -27,6 +27,7 @@ use inkwell::values::{
 };
 use inkwell::AddressSpace;
 use inkwell::IntPredicate;
+use solang_parser::pt::{CodeLocation, Loc};
 
 pub mod binary;
 mod ethabiencoder;
@@ -3287,6 +3288,7 @@ pub trait TargetRuntime<'a> {
         let dibuilder = &bin.dibuilder;
         let compile_unit = &bin.compile_unit;
         let file = compile_unit.get_file();
+        let mut di_func_scope: Option<DISubprogram<'_>> = None;
 
         let return_type = function.get_type().get_return_type();
         match return_type {
@@ -3326,7 +3328,7 @@ pub trait TargetRuntime<'a> {
                     di_param_types.as_slice(),
                     inkwell::debug_info::DIFlagsConstants::PUBLIC,
                 );
-                let di_func_scope: DISubprogram<'_> = dibuilder.create_function(
+                di_func_scope = Some(dibuilder.create_function(
                     compile_unit.as_debug_info_scope(),
                     function.get_name().to_str().unwrap(),
                     None,
@@ -3338,8 +3340,8 @@ pub trait TargetRuntime<'a> {
                     /* scope line */ 0, // TODO: rectify scope line
                     inkwell::debug_info::DIFlagsConstants::PUBLIC,
                     false,
-                );
-                function.set_subprogram(di_func_scope);
+                ));
+                function.set_subprogram(di_func_scope.unwrap());
             }
         }
 
@@ -3448,6 +3450,17 @@ pub trait TargetRuntime<'a> {
 
         work.push_back(Work { block_no: 0, vars });
 
+        // let debug_loc = dibuilder.create_debug_location(
+        //     &bin.context,
+        //     /* line */ 3,
+        //     /* column */ 4,
+        //     /* current_scope */
+        //     di_func_scope.unwrap().as_debug_info_scope(),
+        //     /* inlined_at */ None,
+        // );
+        // bin.builder
+        //     .set_current_debug_location(&bin.context, debug_loc);
+
         while let Some(mut w) = work.pop_front() {
             let bb = blocks.get(&w.block_no).unwrap();
 
@@ -3467,10 +3480,45 @@ pub trait TargetRuntime<'a> {
                     Instr::Return { value } => {
                         let returns_offset = cfg.params.len();
                         for (i, val) in value.iter().enumerate() {
+                            let loc = val.loc();
                             let arg = function.get_nth_param((returns_offset + i) as u32).unwrap();
                             let retval = self.expression(bin, val, &w.vars, function, ns);
-
-                            bin.builder.build_store(arg.into_pointer_value(), retval);
+                            println!("function: {:?}", function.get_name().to_str().unwrap());
+                            match loc {
+                                Loc::File(file_offset, offset, _) => {
+                                    let (line, col) =
+                                        ns.files[file_offset].offset_to_line_column(offset);
+                                    // let lexical_block = dibuilder.create_lexical_block(
+                                    //     /* scope */
+                                    //     di_func_scope.unwrap().as_debug_info_scope(),
+                                    //     /* file */ compile_unit.get_file(),
+                                    //     /* line_no */ line as u32,
+                                    //     /* column_no */ col as u32,
+                                    // );
+                                    let store_loc = dibuilder.create_debug_location(
+                                        &bin.context,
+                                        line as u32,
+                                        col as u32,
+                                        /* current_scope */
+                                        di_func_scope.unwrap().as_debug_info_scope(),
+                                        /* inlined_at */ None,
+                                    );
+                                    bin.builder
+                                        .set_current_debug_location(&bin.context, store_loc);
+                                    println!(
+                                        "(line, col): ({:?}, {:?})",
+                                        line,
+                                        store_loc.get_scope()
+                                    );
+                                    // let block_num = blocks.get(&w.block_no).unwrap().bb;
+                                    // bin.builder.position_at_end(block_num);
+                                }
+                                _ => {}
+                            }
+                            let store_inst =
+                                bin.builder.build_store(arg.into_pointer_value(), retval);
+                            bin.builder.unset_current_debug_location();
+                            println!("store: {:?}", store_inst);
                         }
 
                         bin.builder
@@ -3510,11 +3558,32 @@ pub trait TargetRuntime<'a> {
                         bin.builder.build_unconditional_branch(bb.bb);
                     }
                     Instr::Store { dest, pos } => {
+                        println!("inst::store");
                         let value_ref = w.vars[pos].value;
                         let dest_ref = self
                             .expression(bin, dest, &w.vars, function, ns)
                             .into_pointer_value();
 
+                        let loc = dest.loc();
+                        match loc {
+                            Loc::File(file_offset, offset, _) => {
+                                let (line, col) =
+                                    ns.files[file_offset].offset_to_line_column(offset);
+                                let loc = dibuilder.create_debug_location(
+                                    &bin.context,
+                                    /* line */ line as u32,
+                                    /* column */ col as u32,
+                                    /* current_scope */
+                                    di_func_scope.unwrap().as_debug_info_scope(),
+                                    /* inlined_at */ None,
+                                );
+                                // let block_num = blocks.get(&w.block_no).unwrap().bb;
+                                // bin.builder.position_at_end(block_num);
+                                // bin.builder.set_current_debug_location(&bin.context, loc);
+                                println!("loc: {:?}", loc.get_line());
+                            }
+                            _ => {}
+                        }
                         bin.builder.build_store(dest_ref, value_ref);
                     }
                     Instr::BranchCond {
