@@ -16,3 +16,5 @@
 - `cargo publish`
 - Release new version of vscode plugin if needed
 - Mention release in Discord (Solana, Hyperledger) and Hyperledger /dev/weekly
+- Update the version number and the MacOS binaries' sha256 hash in `Casks/solang.rb` under
+  the repository `hyperledger-labs/homebrew-solang`.
