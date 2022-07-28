@@ -14,10 +14,20 @@ some caveats due to differences in the underlying blockchain.
 Solang is under active development right now, and has
 [extensive documentation](https://solang.readthedocs.io/en/latest/).
 
+
+## Installation
+
+Solang is available as a Brew cask for MacOS, with the following command:
+
+```
+brew install hyperledger-labs/solang/solang
+```
+
+For other operating systems, please check the [installation guide](https://solang.readthedocs.io/en/latest/installing.html).
+
 ## Simple example
 
-First build [Solang](https://solang.readthedocs.io/en/latest/installing.html)
-or use the container, then write the following to flipper.sol:
+After installing the compiler, write the following to flipper.sol:
 
 ```solidity
 contract flipper {
