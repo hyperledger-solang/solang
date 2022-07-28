@@ -3048,6 +3048,25 @@ pub trait TargetRuntime<'a> {
                 self.format_string(bin, args, vartab, function, ns)
             }
 
+            Expression::AdvancePointer {
+                pointer,
+                bytes_offset,
+                ..
+            } => {
+                let pointer = if pointer.ty().is_dynamic_memory() {
+                    bin.vector_bytes(self.expression(bin, pointer, vartab, function, ns))
+                } else {
+                    self.expression(bin, pointer, vartab, function, ns)
+                        .into_pointer_value()
+                };
+                let offset = self
+                    .expression(bin, bytes_offset, vartab, function, ns)
+                    .into_int_value();
+                let advanced = unsafe { bin.builder.build_gep(pointer, &[offset], "adv_pointer") };
+
+                advanced.into()
+            }
+
             Expression::RationalNumberLiteral(..)
             | Expression::List(..)
             | Expression::Undefined(..)
@@ -4465,6 +4484,37 @@ pub trait TargetRuntime<'a> {
                         );
 
                         bin.builder.build_store(start, value);
+                    }
+                    Instr::MemCopy {
+                        source: from,
+                        destination: to,
+                        bytes,
+                    } => {
+                        let src = if from.ty().is_dynamic_memory() {
+                            bin.vector_bytes(self.expression(bin, from, &w.vars, function, ns))
+                        } else {
+                            self.expression(bin, from, &w.vars, function, ns)
+                                .into_pointer_value()
+                        };
+
+                        let dest = self.expression(bin, to, &w.vars, function, ns);
+                        let size = self.expression(bin, bytes, &w.vars, function, ns);
+
+                        if matches!(bytes, Expression::NumberLiteral(..)) {
+                            let _ = bin.builder.build_memcpy(
+                                dest.into_pointer_value(),
+                                1,
+                                src,
+                                1,
+                                size.into_int_value(),
+                            );
+                        } else {
+                            bin.builder.build_call(
+                                bin.module.get_function("__memcpy").unwrap(),
+                                &[dest.into(), src.into(), size.into()],
+                                "",
+                            );
+                        }
                     }
                 }
             }

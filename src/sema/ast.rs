@@ -59,6 +59,10 @@ pub enum Type {
     Slice(Box<Type>),
     /// We could not resolve this type
     Unresolved,
+    /// When we advance a pointer, it cannot be any of the previous types.
+    /// e.g. Type::Bytes is a pointer to struct.vector. When we advance it, it is a pointer
+    /// to latter's data region
+    BufferPointer,
 }
 
 #[derive(PartialEq, Clone, Eq, Hash, Debug)]
@@ -96,6 +100,14 @@ impl Type {
             Type::Int(n) | Type::Uint(n) => *n,
             Type::Bool => 1,
             _ => unimplemented!("size of type not known"),
+        }
+    }
+
+    pub fn unwrap_user_type(self, ns: &Namespace) -> Type {
+        if let Type::UserType(type_no) = self {
+            ns.user_types[type_no].ty.clone()
+        } else {
+            self
         }
     }
 }

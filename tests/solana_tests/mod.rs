@@ -1,4 +1,5 @@
 mod abi;
+mod abi_encode;
 mod accessor;
 mod account_info;
 mod arrays;

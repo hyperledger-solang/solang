@@ -95,13 +95,19 @@ contract c1 {
         x = a+b-54;
         int d = x*(a+b);
         int p = x+d;
-        // CHECK: ty:int256 %2.cse_temp = (%x + %d)
-        // CHECK:branchcond (signed more %2.cse_temp > int256 0), block2, block3
+        // CHECK: ty:int256 %2.cse_temp = ((arg #0) + (arg #1))
+        // CHECK: ty:int256 %1.cse_temp = (%2.cse_temp - int256 54)
+        // CHECK: ty:int256 %x = %1.cse_temp
+	    // CHECK: ty:int256 %d = (%1.cse_temp * %2.cse_temp)
+	    // CHECK: ty:int256 %p = (%1.cse_temp + %d)
+
+        // CHECK: ty:int256 %3.cse_temp = (%x + %d)
+        // CHECK: branchcond (signed more %3.cse_temp > int256 0), block2, block3
         while (x+d > 0) {
             // CHECK: ty:int256 %t = ((arg #0) - (arg #1))
             int t = a-b;
             bool e1 = t > 3;
-            // CHECK: ty:int256 %x = %2.cse_temp
+            // CHECK: ty:int256 %x = %3.cse_temp
 			x = x+d;
         }
 
@@ -118,7 +124,7 @@ contract c1 {
        	for(int i=0; i<10; i++) {
             // CHECK: ty:int256 %t = ((arg #0) - (arg #1))
 			int t = a-b;
-            // CHECK: ty:int256 %i = (%temp.186 + int256 1)
+            // CHECK: ty:int256 %i = (%temp.187 + int256 1)
 			bool e1 = t > 3;
 		}
 
@@ -201,9 +207,11 @@ contract c1 {
         int r2= int(p2+9) -9;
         // CHECK: ty:int256 %r2 = (%2.cse_temp - int256 9)
 
+        // CHECK: ty:int256 %3.cse_temp = -%r1
+        // CHECK: ty:int256 %ret = %3.cse_temp
         ret = -r1;
 
-        // CHECK: ty:int256 %ret = (%ret + %r2)
+        // CHECK: ty:int256 %ret = (%3.cse_temp + %r2)
         ret = -r1 + r2;
     }
 
@@ -439,15 +447,18 @@ contract c1 {
     function test15(uint a, uint b) public pure returns (uint) {
         uint c = a << b;
         bool b1 = c > 0;
-        // CHECK: ty:bool %1.cse_temp = !%b1
-        // CHECK: branchcond %1.cse_temp, block1, block2
+        // CHECK: ty:uint256 %1.cse_temp = ((arg #0) << (arg #1))
+	    // CHECK: ty:uint256 %c = %1.cse_temp
+	    // CHECK: ty:bool %b1 = (unsigned more %1.cse_temp > uint256 0)
+	    // CHECK: ty:bool %2.cse_temp = !%b1
+	    // CHECK: branchcond %2.cse_temp, block1, block2
         if (!b1) {
-            // CHECK: return (%c + uint256 1)
+            // CHECK: return (%1.cse_temp + uint256 1)
             return (a << b) + 1;
         }
 
-        // CHECK: ty:uint256 %2.cse_temp = ((arg #0) & (arg #1))
-        // CHECK: branchcond %1.cse_temp, block4, block3
+        // CHECK: ty:uint256 %3.cse_temp = ((arg #0) & (arg #1))
+        // CHECK: branchcond %2.cse_temp, block4, block3
         if(!b1 || c > 0) {
             // CHECK: = %b1
             // CHECK: return ((arg #0) << ((arg #1) + uint256 1))
@@ -459,12 +470,12 @@ contract c1 {
             c++;
         }
 
-        // CHECK: branchcond (%2.cse_temp == uint256 0), block13, block14
+        // CHECK: branchcond (%3.cse_temp == uint256 0), block13, block14
         if (a & b == 0) {
             return c--;
         }
 
-        // CHECK: branchcond (unsigned more %2.cse_temp > uint256 1), block15, block16
+        // CHECK: branchcond (unsigned more %3.cse_temp > uint256 1), block15, block16
         if (a & b > 1) {
             return a;
         }

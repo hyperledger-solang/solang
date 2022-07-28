@@ -357,6 +357,24 @@ fn expression(
                 )
             }
         }
+        Expression::AdvancePointer {
+            loc,
+            ty,
+            pointer,
+            bytes_offset: offset,
+        } => {
+            // Only the offset can be simplified
+            let offset = expression(offset, vars, cfg, ns);
+            (
+                Expression::AdvancePointer {
+                    loc: *loc,
+                    ty: ty.clone(),
+                    pointer: pointer.clone(),
+                    bytes_offset: Box::new(offset.0),
+                },
+                offset.1,
+            )
+        }
         Expression::Multiply(loc, ty, unchecked, left, right) => {
             let left = expression(left, vars, cfg, ns);
             let right = expression(right, vars, cfg, ns);
