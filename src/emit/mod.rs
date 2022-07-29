@@ -2518,23 +2518,7 @@ pub trait TargetRuntime<'a> {
 
                 bin.vector_len(array).into()
             }
-            Expression::Builtin(
-                _,
-                returns,
-                Builtin::ReadInt8
-                | Builtin::ReadInt16LE
-                | Builtin::ReadInt32LE
-                | Builtin::ReadInt64LE
-                | Builtin::ReadInt128LE
-                | Builtin::ReadInt256LE
-                | Builtin::ReadAddress
-                | Builtin::ReadUint16LE
-                | Builtin::ReadUint32LE
-                | Builtin::ReadUint64LE
-                | Builtin::ReadUint128LE
-                | Builtin::ReadUint256LE,
-                args,
-            ) => {
+            Expression::Builtin(_, returns, Builtin::ReadFromBuffer, args) => {
                 let v = self.expression(bin, &args[0], vartab, function, ns);
                 let offset = self
                     .expression(bin, &args[1], vartab, function, ns)
