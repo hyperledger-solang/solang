@@ -3384,6 +3384,34 @@ pub trait TargetRuntime<'a> {
             BasicBlock { bb, phis }
         }
 
+        fn get_ins_loc<'a>(ins: &Instr) -> Option<pt::Loc> {
+            match ins {
+                Instr::Set { expr, .. } => Some(expr.loc()),
+                Instr::Call { args, .. } if args.is_empty() => None,
+                Instr::Call { args, .. } => Some(args[0].loc()),
+                Instr::Return { value } if value.is_empty() => None,
+                Instr::Return { value } => Some(value[0].loc()),
+                Instr::BranchCond { cond, .. } => Some(cond.loc()),
+                Instr::Store { dest, .. } => Some(dest.loc()),
+                Instr::LoadStorage { storage, .. } => Some(storage.loc()),
+                Instr::ClearStorage { storage, .. } => Some(storage.loc()),
+                Instr::SetStorage { value, .. } => Some(value.loc()),
+                Instr::SetStorageBytes { storage, .. } => Some(storage.loc()),
+                Instr::PushStorage { storage, .. } => Some(storage.loc()),
+                Instr::PopStorage { storage, .. } => Some(storage.loc()),
+                Instr::PushMemory { value, .. } => Some(value.loc()),
+                Instr::Constructor { gas, .. } => Some(gas.loc()),
+                Instr::ExternalCall { value, .. } => Some(value.loc()),
+                Instr::ValueTransfer { address, .. } => Some(address.loc()),
+                Instr::AbiDecode { data, .. } => Some(data.loc()),
+                Instr::SelfDestruct { recipient } => Some(recipient.loc()),
+                Instr::EmitEvent { data, .. } if data.is_empty() => None,
+                Instr::EmitEvent { data, .. } => Some(data[0].loc()),
+                Instr::WriteBuffer { buf, .. } => Some(buf.loc()),
+                _ => None,
+            }
+        }
+
         let mut work = VecDeque::new();
 
         blocks.insert(0, create_block(0, bin, cfg, function, ns));
@@ -3461,36 +3489,12 @@ pub trait TargetRuntime<'a> {
             }
 
             for ins in &cfg.blocks[w.block_no].instr {
-                let debug_loc_opt = match ins {
-                    Instr::Set { expr, .. } => Some(expr.loc()),
-                    Instr::Call { args, .. } if args.is_empty() => None,
-                    Instr::Call { args, .. } => Some(args[0].loc()),
-                    Instr::Return { value } if value.is_empty() => None,
-                    Instr::Return { value } => Some(value[0].loc()),
-                    Instr::BranchCond { cond, .. } => Some(cond.loc()),
-                    Instr::Store { dest, .. } => Some(dest.loc()),
-                    Instr::LoadStorage { storage, .. } => Some(storage.loc()),
-                    Instr::ClearStorage { storage, .. } => Some(storage.loc()),
-                    Instr::SetStorage { storage, .. } => Some(storage.loc()),
-                    Instr::SetStorageBytes { storage, .. } => Some(storage.loc()),
-                    Instr::PushStorage { storage, .. } => Some(storage.loc()),
-                    Instr::PopStorage { storage, .. } => Some(storage.loc()),
-                    Instr::PushMemory { value, .. } => Some(value.loc()),
-                    Instr::Constructor { gas, .. } => Some(gas.loc()),
-                    Instr::ExternalCall { value, .. } => Some(value.loc()),
-                    Instr::ValueTransfer { address, .. } => Some(address.loc()),
-                    Instr::AbiDecode { data, .. } => Some(data.loc()),
-                    Instr::SelfDestruct { recipient } => Some(recipient.loc()),
-                    Instr::EmitEvent { data, .. } if data.is_empty() => None,
-                    Instr::EmitEvent { data, .. } => Some(data[0].loc()),
-                    Instr::WriteBuffer { buf, .. } => Some(buf.loc()),
-                    _ => None,
-                };
+                let debug_loc_opt = get_ins_loc(ins);
                 if let Some(debug_loc) = debug_loc_opt {
                     match debug_loc {
                         Loc::File(file_offset, offset, _) => {
                             let (line, col) = ns.files[file_offset].offset_to_line_column(offset);
-                            let store_loc = dibuilder.create_debug_location(
+                            let debug_loc = dibuilder.create_debug_location(
                                 &bin.context,
                                 line as u32,
                                 col as u32,
@@ -3499,9 +3503,11 @@ pub trait TargetRuntime<'a> {
                                 /* inlined_at */ None,
                             );
                             bin.builder
-                                .set_current_debug_location(&bin.context, store_loc);
+                                .set_current_debug_location(&bin.context, debug_loc);
                         }
-                        _ => {}
+                        _ => {
+                            println!("instr: {:?} - {:?}", ins, debug_loc);
+                        }
                     }
                 }
                 match ins {
@@ -4227,6 +4233,7 @@ pub trait TargetRuntime<'a> {
                         salt,
                         space,
                     } => {
+                        println!("Instr::Constructor");
                         let args = &args
                             .iter()
                             .map(|a| self.expression(bin, a, &w.vars, function, ns))

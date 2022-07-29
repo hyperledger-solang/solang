@@ -25,7 +25,7 @@ use std::{fmt, fmt::Write};
 // IndexMap <ArrayVariable res , res of temp variable>
 pub type ArrayLengthVars = IndexMap<usize, usize>;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 #[allow(clippy::large_enum_variant)]
 pub enum Instr {
     /// Set variable
