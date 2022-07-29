@@ -53,7 +53,7 @@ pub enum Instr {
         false_block: usize,
     },
     /// Set array element in memory
-    Store { dest: Expression, pos: usize },
+    Store { dest: Expression, data: Expression },
     /// Abort execution
     AssertFailure { expr: Option<Expression> },
     /// Print to log message
@@ -177,7 +177,6 @@ impl Instr {
     ) {
         match self {
             Instr::BranchCond { cond: expr, .. }
-            | Instr::Store { dest: expr, .. }
             | Instr::LoadStorage { storage: expr, .. }
             | Instr::ClearStorage { storage: expr, .. }
             | Instr::Print { expr }
@@ -193,9 +192,17 @@ impl Instr {
                 expr.recurse(cx, f);
             }
 
-            Instr::SetStorage { value, storage, .. } => {
-                value.recurse(cx, f);
-                storage.recurse(cx, f);
+            Instr::SetStorage {
+                value: item_1,
+                storage: item_2,
+                ..
+            }
+            | Instr::Store {
+                dest: item_1,
+                data: item_2,
+            } => {
+                item_1.recurse(cx, f);
+                item_2.recurse(cx, f);
             }
             Instr::PushStorage { value, storage, .. } => {
                 if let Some(value) = value {
@@ -1048,10 +1055,10 @@ impl ControlFlowGraph {
                     .join(", "),
             ),
 
-            Instr::Store { dest, pos } => format!(
+            Instr::Store { dest, data } => format!(
                 "store {}, {}",
                 self.expr_to_string(contract, ns, dest),
-                self.vars[pos].id.name
+                self.expr_to_string(contract, ns, data),
             ),
             Instr::Print { expr } => format!("print {}", self.expr_to_string(contract, ns, expr)),
             Instr::Constructor {

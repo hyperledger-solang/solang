@@ -25,7 +25,7 @@ use crate::Target;
 use num_bigint::BigInt;
 use num_traits::{FromPrimitive, One, ToPrimitive, Zero};
 use solang_parser::pt;
-use solang_parser::pt::CodeLocation;
+use solang_parser::pt::{CodeLocation, Loc};
 use std::ops::Mul;
 
 pub fn expression(
@@ -556,6 +556,12 @@ pub fn expression(
                 )
             }
         }
+        ast::Expression::Cast(loc, ty @ Type::Array(..), e)
+            if matches!(**e, ast::Expression::ArrayLiteral(..)) =>
+        {
+            let codegen_expr = expression(e, cfg, contract_no, func, ns, vartab, opt);
+            array_literal_to_memory_array(loc, &codegen_expr, ty, cfg, vartab)
+        }
         ast::Expression::Cast(loc, ty, e) => {
             if e.ty() == Type::Rational {
                 let (_, n) = eval_const_rational(e, ns).unwrap();
@@ -884,7 +890,13 @@ fn post_incdec(
                     );
                 }
                 Type::Ref(_) => {
-                    cfg.add(vartab, Instr::Store { pos: res, dest });
+                    cfg.add(
+                        vartab,
+                        Instr::Store {
+                            dest,
+                            data: Expression::Variable(Loc::Codegen, ty.clone(), res),
+                        },
+                    );
                 }
                 _ => unreachable!(),
             }
@@ -957,7 +969,13 @@ fn pre_incdec(
                     );
                 }
                 Type::Ref(_) => {
-                    cfg.add(vartab, Instr::Store { pos: res, dest });
+                    cfg.add(
+                        vartab,
+                        Instr::Store {
+                            dest,
+                            data: Expression::Variable(Loc::Codegen, ty.clone(), res),
+                        },
+                    );
                 }
                 _ => unreachable!(),
             }
@@ -1986,7 +2004,13 @@ pub fn assign_single(
                     );
                 }
                 Type::Ref(_) => {
-                    cfg.add(vartab, Instr::Store { pos, dest });
+                    cfg.add(
+                        vartab,
+                        Instr::Store {
+                            dest,
+                            data: Expression::Variable(Loc::Codegen, ty.clone(), pos),
+                        },
+                    );
                 }
                 _ => unreachable!(),
             }
@@ -2884,4 +2908,71 @@ pub fn load_storage(
     );
 
     Expression::Variable(*loc, ty.clone(), res)
+}
+
+fn array_literal_to_memory_array(
+    loc: &pt::Loc,
+    expr: &Expression,
+    ty: &Type,
+    cfg: &mut ControlFlowGraph,
+    vartab: &mut Vartable,
+) -> Expression {
+    let memory_array = vartab.temp_anonymous(ty);
+    let elem_ty = ty.array_elem();
+    let dims = expr.ty().array_length().unwrap().clone();
+    let array_size = Expression::NumberLiteral(*loc, Type::Uint(32), dims);
+
+    cfg.add(
+        vartab,
+        Instr::Set {
+            loc: *loc,
+            res: memory_array,
+            expr: Expression::AllocDynamicArray(
+                *loc,
+                ty.clone(),
+                Box::new(array_size.clone()),
+                None,
+            ),
+        },
+    );
+
+    let elements = if let Expression::ArrayLiteral(_, _, _, items) = expr {
+        items
+    } else {
+        unreachable!()
+    };
+
+    for (item_no, item) in elements.iter().enumerate() {
+        cfg.add(
+            vartab,
+            Instr::Store {
+                dest: Expression::Subscript(
+                    *loc,
+                    Type::Ref(Box::new(elem_ty.clone())),
+                    ty.clone(),
+                    Box::new(Expression::Variable(*loc, ty.clone(), memory_array)),
+                    Box::new(Expression::NumberLiteral(
+                        *loc,
+                        Type::Uint(32),
+                        BigInt::from(item_no),
+                    )),
+                ),
+                data: item.clone(),
+            },
+        );
+    }
+
+    let temp_res = vartab.temp_name("array_length", &Type::Uint(32));
+    cfg.add(
+        vartab,
+        Instr::Set {
+            loc: Loc::Codegen,
+            res: temp_res,
+            expr: array_size,
+        },
+    );
+
+    cfg.array_lengths_temps.insert(memory_array, temp_res);
+
+    Expression::Variable(*loc, ty.clone(), memory_array)
 }

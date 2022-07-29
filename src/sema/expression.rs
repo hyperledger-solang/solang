@@ -370,6 +370,21 @@ impl Expression {
                     BigRational::from(n.clone()),
                 ));
             }
+
+            (
+                &Expression::ArrayLiteral(..),
+                Type::Array(from_ty, from_dims),
+                Type::Array(to_ty, to_dims),
+            ) => {
+                if from_ty == to_ty
+                    && from_dims.len() == to_dims.len()
+                    && from_dims.len() == 1
+                    && matches!(to_dims.last().unwrap(), ArrayLength::Dynamic)
+                {
+                    return Ok(Expression::Cast(*loc, to.clone(), Box::new(self.clone())));
+                }
+            }
+
             _ => (),
         };
 

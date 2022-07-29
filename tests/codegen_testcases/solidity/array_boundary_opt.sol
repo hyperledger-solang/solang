@@ -8,25 +8,25 @@ contract Array_bound_Test {
         uint32 size32
     ) public pure returns (uint256) {
         // CHECK: ty:uint32 %1.cse_temp = (trunc uint32 (arg #1))
-	    // CHECK: ty:uint32 %array_length.temp.23 = %1.cse_temp
+	    // CHECK: ty:uint32 %array_length.temp.32 = %1.cse_temp
         uint256[] a = new uint256[](size);
 
-        // CHECK: ty:uint32 %array_length.temp.24 = (arg #2)
+        // CHECK: ty:uint32 %array_length.temp.33 = (arg #2)
         uint256[] c = new uint256[](size32);
 
-        // CHECK: ty:uint32 %array_length.temp.25 = uint32 20
+        // CHECK: ty:uint32 %array_length.temp.34 = uint32 20
         uint256[] d = new uint256[](20);
 
-        // CHECK: ty:uint32 %array_length.temp.23 = (%1.cse_temp + uint32 1)
+        // CHECK: ty:uint32 %array_length.temp.32 = (%1.cse_temp + uint32 1)
         a.push();
 
-        // CHECK: ty:uint32 %array_length.temp.24 = ((arg #2) - uint32 1)
+        // CHECK: ty:uint32 %array_length.temp.33 = ((arg #2) - uint32 1)
         c.pop();
 
-        // CHECK: ty:uint32 %array_length.temp.25 = uint32 21
+        // CHECK: ty:uint32 %array_length.temp.34 = uint32 21
         d.push();
 
-        // CHECK: return (zext uint256 (((%array_length.temp.23 + (builtin ArrayLength ((arg #0)))) + ((arg #2) - uint32 1)) + uint32 21))
+        // CHECK: return (zext uint256 (((%array_length.temp.32 + (builtin ArrayLength ((arg #0)))) + ((arg #2) - uint32 1)) + uint32 21))
         return a.length + b.length + c.length + d.length;
     }
 
@@ -35,11 +35,11 @@ contract Array_bound_Test {
         bool[] b = new bool[](210);
 
         if (cond) {
-            // CHECK: ty:uint32 %array_length.temp.30 = uint32 211
+            // CHECK: ty:uint32 %array_length.temp.39 = uint32 211
             b.push(true);
         }
 
-        // CHECK: return %array_length.temp.30
+        // CHECK: return %array_length.temp.39
         return b.length;
     }
 
@@ -79,15 +79,45 @@ contract Array_bound_Test {
         int256[] vec = new int256[](10);
 
         for (int256 i = 0; i < 5; i++) {
-            // CHECK: branchcond (unsigned more %array_length.temp.40 > uint32 20), block5, block6
+            // CHECK: branchcond (unsigned more %array_length.temp.49 > uint32 20), block5, block6
             if (vec.length > 20) {
                 break;
             }
             vec.push(3);
         }
 
-        // CHECK: branchcond (%array_length.temp.40 == uint32 15), block7, block8
+        // CHECK: branchcond (%array_length.temp.49 == uint32 15), block7, block8
         assert(vec.length == 15);
+    }
+
+    // BEGIN-CHECK: Array_bound_Test::Array_bound_Test::function::getVec__int32_int32
+    function getVec(int32 a, int32 b) public pure returns (uint32) {
+        int32[] memory vec;
+        vec = [a, b];
+        // CHECK: ty:int32[] %vec = undef
+	    // CHECK: ty:uint32 %array_length.temp.52 = uint32 0
+	    // CHECK: ty:int32[] %temp.53 = (alloc int32[] len uint32 2)
+        // CHECK: ty:uint32 %array_length.temp.54 = uint32 2
+	    // CHECK: ty:int32[] %vec = %temp.53
+
+
+        vec.push(5);
+        // CHECK: ty:uint32 %array_length.temp.54 = uint32 3
+        // CHECK: return uint32 3
+        return vec.length;
+    }
+
+    // BEGIN-CHECK: Array_bound_Test::Array_bound_Test::function::testVec__uint32_uint32_uint32
+    function testVec(uint32 a, uint32 b, uint32 c) public pure returns (uint32) {
+        // CHECK: ty:uint32[] %temp.56 = (alloc uint32[] len uint32 3)
+        // CHECK: ty:uint32 %array_length.temp.57 = uint32 3
+        uint32[] memory vec = [a, b, b];
+        // CHECK: ty:uint32[] %vec = %temp.56
+
+        vec.pop();
+        // CHECK: ty:uint32 %array_length.temp.57 = uint32 2
+        // CHECK: return uint32 2
+        return vec.length;
     }
 
 

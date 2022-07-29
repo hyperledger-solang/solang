@@ -116,8 +116,9 @@ fn block_reduce(
                     .map(|e| expression_reduce(e, &vars, ns))
                     .collect();
             }
-            Instr::Store { dest, .. } => {
+            Instr::Store { dest, data } => {
                 *dest = expression_reduce(dest, &vars, ns);
+                *data = expression_reduce(data, &vars, ns);
             }
             Instr::AssertFailure { expr: Some(expr) } => {
                 *expr = expression_reduce(expr, &vars, ns);
