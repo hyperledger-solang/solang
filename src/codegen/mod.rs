@@ -1225,18 +1225,7 @@ pub enum Builtin {
     Keccak256,
     Origin,
     Random,
-    ReadAddress,
-    ReadInt8,
-    ReadInt16LE,
-    ReadInt32LE,
-    ReadInt64LE,
-    ReadInt128LE,
-    ReadInt256LE,
-    ReadUint16LE,
-    ReadUint32LE,
-    ReadUint64LE,
-    ReadUint128LE,
-    ReadUint256LE,
+    ReadFromBuffer,
     Ripemd160,
     Sender,
     Slot,
@@ -1286,18 +1275,18 @@ impl From<&ast::Builtin> for Builtin {
             ast::Builtin::Keccak256 => Builtin::Keccak256,
             ast::Builtin::Origin => Builtin::Origin,
             ast::Builtin::Random => Builtin::Random,
-            ast::Builtin::ReadAddress => Builtin::ReadAddress,
-            ast::Builtin::ReadInt8 => Builtin::ReadInt8,
-            ast::Builtin::ReadInt16LE => Builtin::ReadInt16LE,
-            ast::Builtin::ReadInt32LE => Builtin::ReadInt32LE,
-            ast::Builtin::ReadInt64LE => Builtin::ReadInt64LE,
-            ast::Builtin::ReadInt128LE => Builtin::ReadInt128LE,
-            ast::Builtin::ReadInt256LE => Builtin::ReadInt256LE,
-            ast::Builtin::ReadUint16LE => Builtin::ReadUint16LE,
-            ast::Builtin::ReadUint32LE => Builtin::ReadUint32LE,
-            ast::Builtin::ReadUint64LE => Builtin::ReadUint64LE,
-            ast::Builtin::ReadUint128LE => Builtin::ReadUint128LE,
-            ast::Builtin::ReadUint256LE => Builtin::ReadUint256LE,
+            ast::Builtin::ReadAddress
+            | ast::Builtin::ReadInt8
+            | ast::Builtin::ReadInt16LE
+            | ast::Builtin::ReadInt32LE
+            | ast::Builtin::ReadInt64LE
+            | ast::Builtin::ReadInt128LE
+            | ast::Builtin::ReadInt256LE
+            | ast::Builtin::ReadUint16LE
+            | ast::Builtin::ReadUint32LE
+            | ast::Builtin::ReadUint64LE
+            | ast::Builtin::ReadUint128LE
+            | ast::Builtin::ReadUint256LE => Builtin::ReadFromBuffer,
             ast::Builtin::Ripemd160 => Builtin::Ripemd160,
             ast::Builtin::Sender => Builtin::Sender,
             ast::Builtin::Slot => Builtin::Slot,
