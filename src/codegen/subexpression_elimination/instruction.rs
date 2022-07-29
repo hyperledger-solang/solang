@@ -14,7 +14,6 @@ impl AvailableExpressionSet {
     ) {
         match instr {
             Instr::BranchCond { cond: expr, .. }
-            | Instr::Store { dest: expr, .. }
             | Instr::LoadStorage { storage: expr, .. }
             | Instr::ClearStorage { storage: expr, .. }
             | Instr::Print { expr }
@@ -45,9 +44,17 @@ impl AvailableExpressionSet {
                 let _ = self.gen_expression(expr, ave, cst);
             }
 
-            Instr::SetStorage { value, storage, .. } => {
-                let _ = self.gen_expression(value, ave, cst);
-                let _ = self.gen_expression(storage, ave, cst);
+            Instr::SetStorage {
+                value: item_1,
+                storage: item_2,
+                ..
+            }
+            | Instr::Store {
+                dest: item_1,
+                data: item_2,
+            } => {
+                let _ = self.gen_expression(item_1, ave, cst);
+                let _ = self.gen_expression(item_2, ave, cst);
             }
             Instr::PushStorage { value, storage, .. } => {
                 if let Some(value) = value {
@@ -204,9 +211,9 @@ impl AvailableExpressionSet {
                 false_block: *false_block,
             },
 
-            Instr::Store { dest, pos } => Instr::Store {
+            Instr::Store { dest, data } => Instr::Store {
                 dest: self.regenerate_expression(dest, ave, cst).1,
-                pos: *pos,
+                data: self.regenerate_expression(data, ave, cst).1,
             },
 
             Instr::AssertFailure { expr: Some(exp) } => Instr::AssertFailure {

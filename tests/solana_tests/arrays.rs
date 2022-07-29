@@ -1,5 +1,5 @@
 use crate::build_solidity;
-use ethabi::{ethereum_types::U256, Token};
+use ethabi::{ethereum_types::U256, FixedBytes, Token, Uint};
 
 #[test]
 fn fixed_array() {
@@ -959,4 +959,66 @@ fn storage_pop_push() {
 
     // make sure every thing has been freed
     assert_eq!(vm.validate_account_data_heap(), 0);
+}
+
+#[test]
+fn initialization_with_literal() {
+    let mut vm = build_solidity(
+        r#"
+        contract Testing {
+            address[] splitAddresses;
+
+            function split(address addr1, address addr2) public {
+                splitAddresses = [addr1, addr2];
+            }
+
+            function getIdx(uint32 idx) public view returns (address) {
+                return splitAddresses[idx];
+            }
+
+            function getVec(uint32 a, uint32 b) public pure returns (uint32[] memory) {
+                uint32[] memory vec;
+                vec = [a, b];
+                return vec;
+            }
+        }
+        "#,
+    );
+
+    vm.constructor("Testing", &[]);
+
+    let mut addr1: Vec<u8> = Vec::new();
+    addr1.resize(32, 0);
+    addr1[0] = 1;
+    let mut addr2: Vec<u8> = Vec::new();
+    addr2.resize(32, 0);
+    addr2[0] = 2;
+    let _ = vm.function(
+        "split",
+        &[
+            Token::FixedBytes(FixedBytes::from(&addr1[..])),
+            Token::FixedBytes(FixedBytes::from(&addr2[..])),
+        ],
+        &[],
+        None,
+    );
+    let returns = vm.function("getIdx", &[Token::Uint(Uint::from(0))], &[], None);
+    let returned_addr1 = returns[0].clone().into_fixed_bytes().unwrap();
+    assert_eq!(addr1, returned_addr1);
+
+    let returns = vm.function("getIdx", &[Token::Uint(Uint::from(1))], &[], None);
+    let returned_addr2 = returns[0].clone().into_fixed_bytes().unwrap();
+    assert_eq!(addr2, returned_addr2);
+
+    let returns = vm.function(
+        "getVec",
+        &[Token::Uint(Uint::from(563)), Token::Uint(Uint::from(895))],
+        &[],
+        None,
+    );
+    let array = returns[0].clone().into_array().unwrap();
+    assert_eq!(
+        array,
+        vec![Token::Uint(Uint::from(563)), Token::Uint(Uint::from(895))]
+    );
 }

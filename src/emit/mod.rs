@@ -3449,8 +3449,8 @@ pub trait TargetRuntime<'a> {
                         bin.builder.position_at_end(pos);
                         bin.builder.build_unconditional_branch(bb.bb);
                     }
-                    Instr::Store { dest, pos } => {
-                        let value_ref = w.vars[pos].value;
+                    Instr::Store { dest, data } => {
+                        let value_ref = self.expression(bin, data, &w.vars, function, ns);
                         let dest_ref = self
                             .expression(bin, dest, &w.vars, function, ns)
                             .into_pointer_value();
@@ -3592,7 +3592,6 @@ pub trait TargetRuntime<'a> {
                         let arr = w.vars[array].value;
 
                         let llvm_ty = bin.llvm_type(ty, ns);
-
                         let elem_ty = ty.array_elem();
 
                         // Calculate total size for reallocation
