@@ -3502,6 +3502,15 @@ pub trait TargetRuntime<'a> {
                     );
                     bin.builder
                         .set_current_debug_location(&bin.context, debug_loc);
+                } else if let Instr::Branch { block: _ } = ins {
+                } else {
+                    // To remove this statement when submitting PR.
+                    println!(
+                        "instr without debug location: {:?} - {:?} at {}",
+                        ins,
+                        debug_loc_opt,
+                        function.get_name().to_str().unwrap()
+                    );
                 }
 
                 match ins {
