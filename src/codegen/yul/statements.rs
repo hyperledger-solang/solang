@@ -254,12 +254,34 @@ fn cfg_single_assigment(
 
                     _ => unreachable!(),
                 },
-                ast::YulExpression::SolidityLocalVariable(_, Type::ExternalFunction { .. }, ..) => {
-                    if matches!(suffix, YulSuffix::Address | YulSuffix::Selector) {
-                        unimplemented!(
-                            "Assignment to a function's address/selector is no implemented."
-                        )
-                    }
+                ast::YulExpression::SolidityLocalVariable(
+                    _,
+                    ty @ Type::ExternalFunction { .. },
+                    _,
+                    var_no,
+                ) => {
+                    let (member_no, casted_expr, member_ty) = match suffix {
+                        YulSuffix::Address => {
+                            (0, rhs.cast(&Type::Address(false), ns), Type::Address(false))
+                        }
+                        YulSuffix::Selector => (1, rhs.cast(&Type::Uint(32), ns), Type::Uint(32)),
+                        _ => unreachable!(),
+                    };
+
+                    let ptr = Expression::StructMember(
+                        *loc,
+                        Type::Ref(Box::new(member_ty)),
+                        Box::new(Expression::Variable(*loc, ty.clone(), *var_no)),
+                        member_no,
+                    );
+
+                    cfg.add(
+                        vartab,
+                        Instr::Store {
+                            dest: ptr,
+                            data: casted_expr,
+                        },
+                    );
                 }
 
                 ast::YulExpression::SolidityLocalVariable(
