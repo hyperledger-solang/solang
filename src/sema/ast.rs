@@ -6,6 +6,7 @@ use crate::sema::Recurse;
 use crate::{codegen, Target};
 use num_bigint::BigInt;
 use num_rational::BigRational;
+// use ripemd::digest::block_buffer::Block;
 pub use solang_parser::diagnostics::*;
 use solang_parser::pt;
 use solang_parser::pt::{CodeLocation, OptionalCodeLocation};
@@ -969,6 +970,29 @@ impl CodeLocation for Expression {
             | Expression::FormatString(loc, _)
             | Expression::InterfaceId(loc, ..)
             | Expression::And(loc, ..) => *loc,
+        }
+    }
+}
+
+impl CodeLocation for Statement {
+    fn loc(&self) -> pt::Loc {
+        match self {
+            Statement::Block { loc, .. }
+            | Statement::VariableDecl(loc, ..)
+            | Statement::If(loc, ..)
+            | Statement::While(loc, ..)
+            | Statement::For { loc, .. }
+            | Statement::DoWhile(loc, ..)
+            | Statement::Expression(loc, ..)
+            | Statement::Delete(loc, ..)
+            | Statement::Destructure(loc, ..)
+            | Statement::Continue(loc, ..)
+            | Statement::Break(loc, ..)
+            | Statement::Return(loc, ..)
+            | Statement::Emit { loc, .. }
+            | Statement::TryCatch(loc, ..)
+            | Statement::Underscore(loc, ..) => *loc,
+            Statement::Assembly(..) => pt::Loc::Codegen,
         }
     }
 }

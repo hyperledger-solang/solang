@@ -652,7 +652,7 @@ pub fn expression(
                         array: array_pos,
                     },
                 );
-                cfg.modify_temp_array_length(true, array_pos, vartab);
+                cfg.modify_temp_array_length(*loc, true, array_pos, vartab);
 
                 Expression::Variable(*loc, ty[0].clone(), address_res)
             }
@@ -796,7 +796,7 @@ fn memory_array_push(
             value: Box::new(value),
         },
     );
-    cfg.modify_temp_array_length(false, array_pos, vartab);
+    cfg.modify_temp_array_length(*loc, false, array_pos, vartab);
 
     Expression::Variable(*loc, ty.clone(), address_res)
 }

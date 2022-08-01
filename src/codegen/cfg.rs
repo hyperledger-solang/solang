@@ -431,6 +431,7 @@ impl ControlFlowGraph {
     /// The operands of the add/sub instruction are the temp variable, and +/- 1.
     pub fn modify_temp_array_length(
         &mut self,
+        loc: pt::Loc,
         minus: bool,      // If the function is called from pushMemory or popMemory
         array_pos: usize, // The res of array that push/pop is performed on
         vartab: &mut Vartable,
@@ -440,32 +441,24 @@ impl ControlFlowGraph {
             let to_add = self.array_lengths_temps[&array_pos];
             let add_expr = if minus {
                 Expression::Subtract(
-                    pt::Loc::Codegen,
+                    loc,
                     Type::Uint(32),
                     false,
-                    Box::new(Expression::Variable(
-                        pt::Loc::Codegen,
-                        Type::Uint(32),
-                        to_add,
-                    )),
+                    Box::new(Expression::Variable(loc, Type::Uint(32), to_add)),
                     Box::new(Expression::NumberLiteral(
-                        pt::Loc::Codegen,
+                        loc,
                         Type::Uint(32),
                         BigInt::one(),
                     )),
                 )
             } else {
                 Expression::Add(
-                    pt::Loc::Codegen,
+                    loc,
                     Type::Uint(32),
                     false,
-                    Box::new(Expression::Variable(
-                        pt::Loc::Codegen,
-                        Type::Uint(32),
-                        to_add,
-                    )),
+                    Box::new(Expression::Variable(loc, Type::Uint(32), to_add)),
                     Box::new(Expression::NumberLiteral(
-                        pt::Loc::Codegen,
+                        loc,
                         Type::Uint(32),
                         BigInt::one(),
                     )),
@@ -476,7 +469,7 @@ impl ControlFlowGraph {
             self.add(
                 vartab,
                 Instr::Set {
-                    loc: pt::Loc::Codegen,
+                    loc,
                     res: to_add,
                     expr: add_expr,
                 },
@@ -1554,6 +1547,7 @@ fn function_cfg(
         .map(|stmt| stmt.reachable())
         .unwrap_or(true)
     {
+        let loc = func.body.last().unwrap().loc();
         // add implicit return
         cfg.add(
             &mut vartab,
@@ -1562,13 +1556,7 @@ fn function_cfg(
                     .symtable
                     .returns
                     .iter()
-                    .map(|pos| {
-                        Expression::Variable(
-                            pt::Loc::Codegen,
-                            func.symtable.vars[pos].ty.clone(),
-                            *pos,
-                        )
-                    })
+                    .map(|pos| Expression::Variable(loc, func.symtable.vars[pos].ty.clone(), *pos))
                     .collect::<Vec<_>>(),
             },
         );
