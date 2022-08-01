@@ -102,8 +102,9 @@ fn process_suffix_access(
 ) -> Expression {
     match suffix {
         YulSuffix::Slot => match expr {
-            ast::YulExpression::StorageVariable(_, _, contract_no, var_no) => {
+            ast::YulExpression::StorageVariable(loc, _, contract_no, var_no) => {
                 return ns.contracts[*contract_no].get_storage_slot(
+                    *loc,
                     *contract_no,
                     *var_no,
                     ns,

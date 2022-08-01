@@ -1651,7 +1651,7 @@ pub fn generate_modifier_dispatch(
             cfg.add(
                 &mut vartab,
                 Instr::Set {
-                    loc: pt::Loc::Codegen,
+                    loc: var.id.loc,
                     res: *pos,
                     expr: Expression::FunctionArg(var.id.loc, var.ty.clone(), i),
                 },
@@ -1674,7 +1674,7 @@ pub fn generate_modifier_dispatch(
             cfg.add(
                 &mut vartab,
                 Instr::Set {
-                    loc: pt::Loc::Codegen,
+                    loc: expr.loc(),
                     res: *pos,
                     expr,
                 },
@@ -1732,6 +1732,7 @@ pub fn generate_modifier_dispatch(
         .map(|stmt| stmt.reachable())
         .unwrap_or(true)
     {
+        let loc = func.body.last().unwrap().loc();
         // add implicit return
         cfg.add(
             &mut vartab,
@@ -1740,13 +1741,7 @@ pub fn generate_modifier_dispatch(
                     .symtable
                     .returns
                     .iter()
-                    .map(|pos| {
-                        Expression::Variable(
-                            pt::Loc::Codegen,
-                            func.symtable.vars[pos].ty.clone(),
-                            *pos,
-                        )
-                    })
+                    .map(|pos| Expression::Variable(loc, func.symtable.vars[pos].ty.clone(), *pos))
                     .collect::<Vec<_>>(),
             },
         );
@@ -1807,6 +1802,7 @@ impl Contract {
     /// Get the storage slot for a variable, possibly from base contract
     pub fn get_storage_slot(
         &self,
+        loc: pt::Loc,
         var_contract_no: usize,
         var_no: usize,
         ns: &Namespace,
@@ -1818,7 +1814,7 @@ impl Contract {
             .find(|l| l.contract_no == var_contract_no && l.var_no == var_no)
         {
             Expression::NumberLiteral(
-                pt::Loc::Codegen,
+                loc,
                 ty.unwrap_or_else(|| ns.storage_type()),
                 layout.slot.clone(),
             )
