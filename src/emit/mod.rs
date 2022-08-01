@@ -2961,42 +2961,6 @@ pub trait TargetRuntime<'a> {
 
                 ef.into()
             }
-            Expression::Builtin(_, _, Builtin::FunctionSelector, args) => {
-                let ef = self
-                    .expression(bin, &args[0], vartab, function, ns)
-                    .into_pointer_value();
-
-                let selector_member = unsafe {
-                    bin.builder.build_gep(
-                        ef,
-                        &[
-                            bin.context.i32_type().const_zero(),
-                            bin.context.i32_type().const_int(1, false),
-                        ],
-                        "selector",
-                    )
-                };
-
-                bin.builder.build_load(selector_member, "selector")
-            }
-            Expression::Builtin(_, _, Builtin::ExternalFunctionAddress, args) => {
-                let ef = self
-                    .expression(bin, &args[0], vartab, function, ns)
-                    .into_pointer_value();
-
-                let selector_member = unsafe {
-                    bin.builder.build_gep(
-                        ef,
-                        &[
-                            bin.context.i32_type().const_zero(),
-                            bin.context.i32_type().const_zero(),
-                        ],
-                        "address",
-                    )
-                };
-
-                bin.builder.build_load(selector_member, "address")
-            }
             Expression::Builtin(_, _, hash @ Builtin::Ripemd160, args)
             | Expression::Builtin(_, _, hash @ Builtin::Keccak256, args)
             | Expression::Builtin(_, _, hash @ Builtin::Blake2_128, args)

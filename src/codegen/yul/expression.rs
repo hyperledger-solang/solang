@@ -173,12 +173,8 @@ fn process_suffix_access(
             if let ast::YulExpression::SolidityLocalVariable(_, Type::ExternalFunction { .. }, ..) =
                 expr
             {
-                return Expression::Builtin(
-                    *loc,
-                    vec![Type::Address(false)],
-                    Builtin::ExternalFunctionAddress,
-                    vec![expression(expr, contract_no, ns, vartab, cfg, opt)],
-                );
+                let func_expr = expression(expr, contract_no, ns, vartab, cfg, opt);
+                return func_expr.external_function_address();
             }
         }
 
@@ -186,12 +182,8 @@ fn process_suffix_access(
             if let ast::YulExpression::SolidityLocalVariable(_, Type::ExternalFunction { .. }, ..) =
                 expr
             {
-                return Expression::Builtin(
-                    *loc,
-                    vec![Type::Uint(32)],
-                    Builtin::FunctionSelector,
-                    vec![expression(expr, contract_no, ns, vartab, cfg, opt)],
-                );
+                let func_expr = expression(expr, contract_no, ns, vartab, cfg, opt);
+                return func_expr.external_function_selector();
             }
         }
     }
