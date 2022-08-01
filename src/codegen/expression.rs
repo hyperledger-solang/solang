@@ -848,11 +848,11 @@ fn post_incdec(
         _ => unreachable!(),
     };
     match var {
-        ast::Expression::Variable(loc, _, pos) => {
+        ast::Expression::Variable(_, _, pos) => {
             cfg.add(
                 vartab,
                 Instr::Set {
-                    loc: *loc,
+                    loc: expr.loc(),
                     res: *pos,
                     expr,
                 },

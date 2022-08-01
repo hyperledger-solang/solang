@@ -3284,8 +3284,6 @@ pub trait TargetRuntime<'a> {
         function: FunctionValue<'a>,
         ns: &Namespace,
     ) {
-        // add debug information
-        println!("function: {}", function.get_name().to_str().unwrap());
         let dibuilder = &bin.dibuilder;
         let compile_unit = &bin.compile_unit;
         let file = compile_unit.get_file();
@@ -3386,7 +3384,10 @@ pub trait TargetRuntime<'a> {
 
         fn get_ins_loc<'a>(ins: &Instr) -> Option<pt::Loc> {
             match ins {
-                Instr::Set { expr, .. } => Some(expr.loc()),
+                Instr::Set { loc, expr, .. } => match loc {
+                    pt::Loc::File(_, _, _) => Some(*loc),
+                    _ => Some(expr.loc()),
+                },
                 Instr::Call { args, .. } if args.is_empty() => None,
                 Instr::Call { args, .. } => Some(args[0].loc()),
                 Instr::Return { value } if value.is_empty() => None,
@@ -3490,26 +3491,19 @@ pub trait TargetRuntime<'a> {
 
             for ins in &cfg.blocks[w.block_no].instr {
                 let debug_loc_opt = get_ins_loc(ins);
-                if let Some(debug_loc) = debug_loc_opt {
-                    match debug_loc {
-                        Loc::File(file_offset, offset, _) => {
-                            let (line, col) = ns.files[file_offset].offset_to_line_column(offset);
-                            let debug_loc = dibuilder.create_debug_location(
-                                &bin.context,
-                                line as u32,
-                                col as u32,
-                                /* current_scope */
-                                di_func_scope.unwrap().as_debug_info_scope(),
-                                /* inlined_at */ None,
-                            );
-                            bin.builder
-                                .set_current_debug_location(&bin.context, debug_loc);
-                        }
-                        _ => {
-                            println!("instr: {:?} - {:?}", ins, debug_loc);
-                        }
-                    }
+                if let Some(Loc::File(file_offset, offset, _)) = debug_loc_opt {
+                    let (line, col) = ns.files[file_offset].offset_to_line_column(offset);
+                    let debug_loc = dibuilder.create_debug_location(
+                        &bin.context,
+                        line as u32,
+                        col as u32,
+                        di_func_scope.unwrap().as_debug_info_scope(),
+                        None,
+                    );
+                    bin.builder
+                        .set_current_debug_location(&bin.context, debug_loc);
                 }
+
                 match ins {
                     Instr::Nop => (),
                     Instr::Return { value } if value.is_empty() => {
@@ -4233,7 +4227,6 @@ pub trait TargetRuntime<'a> {
                         salt,
                         space,
                     } => {
-                        println!("Instr::Constructor");
                         let args = &args
                             .iter()
                             .map(|a| self.expression(bin, a, &w.vars, function, ns))
