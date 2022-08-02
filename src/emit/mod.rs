@@ -3294,13 +3294,9 @@ pub trait TargetRuntime<'a> {
             None => {}
             Some(return_type) => {
                 let return_type_size = return_type.size_of().unwrap();
-                // print!(
-                //     "+ Bitwidth: {:?}\n",
-                //     return_type_size.get_type().get_bit_width()
-                // );
                 let di_return_type = dibuilder
                     .create_basic_type(
-                        "tname",
+                        "ret-type", // TODO: other name?
                         return_type_size.get_type().get_bit_width() as u64,
                         0x00,
                         inkwell::debug_info::DIFlagsConstants::PUBLIC,
@@ -3312,7 +3308,7 @@ pub trait TargetRuntime<'a> {
                     .map(|typ| {
                         dibuilder
                             .create_basic_type(
-                                "basict",
+                                "basic-type", // TODO: other name?
                                 typ.size_of().unwrap().get_type().get_bit_width() as u64,
                                 0x00,
                                 inkwell::debug_info::DIFlagsConstants::PUBLIC,
@@ -3502,15 +3498,6 @@ pub trait TargetRuntime<'a> {
                     );
                     bin.builder
                         .set_current_debug_location(&bin.context, debug_loc);
-                } else if let Instr::Branch { block: _ } = ins {
-                } else {
-                    // To remove this statement when submitting PR.
-                    println!(
-                        "instr without debug location: {:?} - {:?} at {}",
-                        ins,
-                        debug_loc_opt,
-                        function.get_name().to_str().unwrap()
-                    );
                 }
 
                 match ins {
