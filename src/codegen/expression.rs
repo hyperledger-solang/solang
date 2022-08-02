@@ -407,26 +407,16 @@ pub fn expression(
                 _ => unreachable!(),
             }
         }
-        ast::Expression::Builtin(
-            loc,
-            returns,
-            ast::Builtin::ExternalFunctionAddress,
-            func_expr,
-        ) => {
+        ast::Expression::Builtin(_, _, ast::Builtin::ExternalFunctionAddress, func_expr) => {
             if let ast::Expression::ExternalFunction { address, .. } = &func_expr[0] {
                 expression(address, cfg, contract_no, func, ns, vartab, opt)
             } else {
                 let func_expr = expression(&func_expr[0], cfg, contract_no, func, ns, vartab, opt);
 
-                Expression::Builtin(
-                    *loc,
-                    returns.clone(),
-                    Builtin::ExternalFunctionAddress,
-                    vec![func_expr],
-                )
+                func_expr.external_function_address()
             }
         }
-        ast::Expression::Builtin(loc, returns, ast::Builtin::FunctionSelector, func_expr) => {
+        ast::Expression::Builtin(loc, _, ast::Builtin::FunctionSelector, func_expr) => {
             match &func_expr[0] {
                 ast::Expression::ExternalFunction { function_no, .. }
                 | ast::Expression::InternalFunction { function_no, .. } => {
@@ -437,12 +427,7 @@ pub fn expression(
                     let func_expr =
                         expression(&func_expr[0], cfg, contract_no, func, ns, vartab, opt);
 
-                    Expression::Builtin(
-                        *loc,
-                        returns.clone(),
-                        Builtin::FunctionSelector,
-                        vec![func_expr],
-                    )
+                    func_expr.external_function_selector()
                 }
             }
         }
@@ -2382,18 +2367,8 @@ pub fn emit_function_call(
                     Expression::NumberLiteral(pt::Loc::Codegen, Type::Value, BigInt::zero())
                 };
 
-                let selector = Expression::Builtin(
-                    *loc,
-                    vec![Type::Bytes(4)],
-                    Builtin::FunctionSelector,
-                    vec![function.clone()],
-                );
-                let address = Expression::Builtin(
-                    *loc,
-                    vec![Type::Address(false)],
-                    Builtin::ExternalFunctionAddress,
-                    vec![function],
-                );
+                let selector = function.external_function_selector();
+                let address = function.external_function_address();
 
                 let (payload, address) = if ns.target == Target::Solana {
                     tys.insert(0, Type::Address(false));

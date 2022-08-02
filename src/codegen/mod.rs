@@ -908,9 +908,22 @@ impl Expression {
                 Box::new(self.clone()),
             ),
 
-            (Type::Bytes(_), Type::Uint(_))
-            | (Type::Bytes(_), Type::Int(_))
-            | (Type::Uint(_), Type::Bytes(_))
+            (Type::Bytes(n), Type::Uint(bits) | Type::Int(bits)) => {
+                let num_bytes = (bits / 8) as u8;
+                match n.cmp(&num_bytes) {
+                    Ordering::Greater => {
+                        Expression::Trunc(self.loc(), to.clone(), Box::new(self.clone()))
+                    }
+                    Ordering::Less => {
+                        Expression::ZeroExt(self.loc(), to.clone(), Box::new(self.clone()))
+                    }
+                    Ordering::Equal => {
+                        Expression::Cast(self.loc(), to.clone(), Box::new(self.clone()))
+                    }
+                }
+            }
+
+            (Type::Uint(_), Type::Bytes(_))
             | (Type::Int(_), Type::Bytes(_))
             | (Type::Bytes(_), Type::Address(_))
             | (Type::Address(false), Type::Address(true))
@@ -1198,6 +1211,36 @@ impl Expression {
             ctx,
         )
     }
+
+    fn external_function_address(&self) -> Expression {
+        debug_assert!(
+            matches!(self.ty(), Type::ExternalFunction { .. }),
+            "This is not an external function"
+        );
+        let loc = self.loc();
+        let struct_member = Expression::StructMember(
+            loc,
+            Type::Ref(Box::new(Type::Address(false))),
+            Box::new(self.clone()),
+            0,
+        );
+        Expression::Load(loc, Type::Address(false), Box::new(struct_member))
+    }
+
+    fn external_function_selector(&self) -> Expression {
+        debug_assert!(
+            matches!(self.ty(), Type::ExternalFunction { .. }),
+            "This is not an external function"
+        );
+        let loc = self.loc();
+        let struct_member = Expression::StructMember(
+            loc,
+            Type::Ref(Box::new(Type::Bytes(4))),
+            Box::new(self.clone()),
+            1,
+        );
+        Expression::Load(loc, Type::Bytes(4), Box::new(struct_member))
+    }
 }
 
 #[derive(PartialEq, Debug, Clone, Copy)]
@@ -1213,8 +1256,6 @@ pub enum Builtin {
     BlockHash,
     BlockNumber,
     Calldata,
-    ExternalFunctionAddress,
-    FunctionSelector,
     Gasleft,
     GasLimit,
     Gasprice,
@@ -1264,8 +1305,6 @@ impl From<&ast::Builtin> for Builtin {
             ast::Builtin::BlockHash => Builtin::BlockHash,
             ast::Builtin::BlockNumber => Builtin::BlockNumber,
             ast::Builtin::Calldata => Builtin::Calldata,
-            ast::Builtin::ExternalFunctionAddress => Builtin::ExternalFunctionAddress,
-            ast::Builtin::FunctionSelector => Builtin::FunctionSelector,
             ast::Builtin::Gasleft => Builtin::Gasleft,
             ast::Builtin::GasLimit => Builtin::GasLimit,
             ast::Builtin::Gasprice => Builtin::Gasprice,
