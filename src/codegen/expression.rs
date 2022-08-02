@@ -468,11 +468,11 @@ pub fn expression(
             opt,
         ),
         ast::Expression::StructMember(loc, ty, var, field_no) if ty.is_contract_storage() => {
-            if let Type::Struct(struct_no) = var.ty().deref_any() {
+            if let Type::Struct(struct_ty) = var.ty().deref_any() {
                 let offset = if ns.target == Target::Solana {
-                    ns.structs[*struct_no].storage_offsets[*field_no].clone()
+                    struct_ty.get_definition(ns).storage_offsets[*field_no].clone()
                 } else {
-                    ns.structs[*struct_no].fields[..*field_no]
+                    struct_ty.get_definition(ns).fields[..*field_no]
                         .iter()
                         .map(|field| field.ty.storage_slots(ns))
                         .sum()

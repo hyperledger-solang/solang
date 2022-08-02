@@ -1,5 +1,5 @@
 use super::ast::{
-    BuiltinStruct, Diagnostic, Function, Mutability, Namespace, Parameter, Symbol, Type,
+    Diagnostic, Function, Mutability, Namespace, Parameter, StructType, Symbol, Type,
 };
 use super::contracts::is_base;
 use super::diagnostics::Diagnostics;
@@ -837,7 +837,7 @@ pub fn resolve_params(
                         success = false;
                     }
 
-                    if let Some(ty) = ty.contains_builtins(ns, BuiltinStruct::AccountInfo) {
+                    if let Some(ty) = ty.contains_builtins(ns, &StructType::AccountInfo) {
                         let message = format!(
                             "parameter of type '{}' not alowed in public or external functions",
                             ty.to_string(ns)
@@ -944,7 +944,7 @@ pub fn resolve_returns(
                         success = false;
                     }
 
-                    if let Some(ty) = ty.contains_builtins(ns, BuiltinStruct::AccountInfo) {
+                    if let Some(ty) = ty.contains_builtins(ns, &StructType::AccountInfo) {
                         let message = format!(
                             "return type '{}' not allowed in public or external functions",
                             ty.to_string(ns)

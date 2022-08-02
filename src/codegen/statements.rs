@@ -1444,9 +1444,9 @@ impl Type {
                 Some(Expression::BytesLiteral(pt::Loc::Codegen, self.clone(), l))
             }
             Type::Enum(e) => ns.enums[*e].ty.default(ns),
-            Type::Struct(struct_no) => {
+            Type::Struct(struct_ty) => {
                 // make sure all our fields have default values
-                for field in &ns.structs[*struct_no].fields {
+                for field in &struct_ty.get_definition(ns).fields {
                     field.ty.default(ns)?;
                 }
 

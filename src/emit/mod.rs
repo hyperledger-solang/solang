@@ -1,8 +1,8 @@
 use crate::codegen::{Builtin, Expression};
 use crate::sema::ast::RetrieveType;
 use crate::sema::ast::{
-    ArrayLength, BuiltinStruct, CallTy, Contract, FormatArg, Function, Namespace, Parameter,
-    StringLocation, Type,
+    ArrayLength, CallTy, Contract, FormatArg, Function, Namespace, Parameter, StringLocation,
+    StructType, Type,
 };
 use solang_parser::pt;
 use std::convert::TryFrom;
@@ -551,7 +551,7 @@ pub trait TargetRuntime<'a> {
                     dest.into()
                 }
             }
-            Type::Struct(n) => {
+            Type::Struct(str_ty) => {
                 let llvm_ty = bin.llvm_type(ty.deref_any(), ns);
                 // LLVMSizeOf() produces an i64
                 let size = bin.builder.build_int_truncate(
@@ -578,7 +578,7 @@ pub trait TargetRuntime<'a> {
                     "dest",
                 );
 
-                for (i, field) in ns.structs[*n].fields.iter().enumerate() {
+                for (i, field) in str_ty.get_definition(ns).fields.iter().enumerate() {
                     let val = self.storage_load_slot(bin, &field.ty, slot, slot_ptr, function, ns);
 
                     let elem = unsafe {
@@ -877,8 +877,8 @@ pub trait TargetRuntime<'a> {
                     );
                 }
             }
-            Type::Struct(n) => {
-                for (i, field) in ns.structs[*n].fields.iter().enumerate() {
+            Type::Struct(str_ty) => {
+                for (i, field) in str_ty.get_definition(ns).fields.iter().enumerate() {
                     let mut elem = unsafe {
                         bin.builder.build_gep(
                             dest.into_pointer_value(),
@@ -1087,8 +1087,8 @@ pub trait TargetRuntime<'a> {
                     self.storage_delete_slot(bin, &Type::Uint(256), slot, slot_ptr, function, ns);
                 }
             }
-            Type::Struct(n) => {
-                for (_, field) in ns.structs[*n].fields.iter().enumerate() {
+            Type::Struct(str_ty) => {
+                for (_, field) in str_ty.get_definition(ns).fields.iter().enumerate() {
                     self.storage_delete_slot(bin, &field.ty, slot, slot_ptr, function, ns);
 
                     if !field.ty.is_reference_type(ns)
@@ -2295,7 +2295,7 @@ pub trait TargetRuntime<'a> {
 
                     self.storage_subscript(bin, function, ty, array, index, ns)
                         .into()
-                } else if elem_ty.builtin_struct(ns) == BuiltinStruct::AccountInfo {
+                } else if elem_ty.builtin_struct(ns) == StructType::AccountInfo {
                     let array = self
                         .expression(bin, a, vartab, function, ns)
                         .into_pointer_value();
@@ -2364,7 +2364,7 @@ pub trait TargetRuntime<'a> {
                 }
             }
             Expression::StructMember(_, _, a, _)
-                if a.ty().builtin_struct(ns) == BuiltinStruct::AccountInfo =>
+                if a.ty().builtin_struct(ns) == StructType::AccountInfo =>
             {
                 self.builtin(bin, e, vartab, function, ns)
             }
@@ -2512,7 +2512,7 @@ pub trait TargetRuntime<'a> {
                 }
             }
             Expression::Builtin(_, _, Builtin::ArrayLength, args)
-                if args[0].ty().array_deref().builtin_struct(ns) == BuiltinStruct::None =>
+                if args[0].ty().array_deref().builtin_struct(ns) == StructType::None =>
             {
                 let array = self.expression(bin, &args[0], vartab, function, ns);
 

@@ -1,6 +1,6 @@
 use super::ast::{
-    ArrayLength, Builtin, BuiltinStruct, Diagnostic, Expression, File, Function, Namespace,
-    Parameter, StructDecl, Symbol, Type,
+    ArrayLength, Builtin, Diagnostic, Expression, File, Function, Namespace, Parameter, StructDecl,
+    StructType, Symbol, Type,
 };
 use super::diagnostics::Diagnostics;
 use super::eval::eval_const_number;
@@ -513,7 +513,7 @@ static BUILTIN_VARIABLE: Lazy<[Prototype; 16]> = Lazy::new(|| {
             name: "accounts",
             params: vec![],
             ret: vec![Type::Array(
-                Box::new(Type::Struct(0)),
+                Box::new(Type::Struct(StructType::UserDefined(0))), // TODO: This needs to change! to AccountMeta
                 vec![ArrayLength::Dynamic],
             )],
             target: vec![Target::Solana],
@@ -1539,7 +1539,7 @@ impl Namespace {
         self.structs.push(StructDecl {
             tags: Vec::new(),
             loc: pt::Loc::Builtin,
-            builtin: BuiltinStruct::AccountInfo,
+            builtin: StructType::AccountInfo,
             contract: None,
             name: String::from("AccountInfo"),
             fields,
@@ -1556,7 +1556,7 @@ impl Namespace {
             file_no,
             None,
             &id,
-            Symbol::Struct(pt::Loc::Builtin, account_info_no)
+            Symbol::Struct(pt::Loc::Builtin, StructType::UserDefined(account_info_no)) // TODO: This needs to change
         ));
 
         let account_meta_no = self.structs.len();
@@ -1603,7 +1603,7 @@ impl Namespace {
         self.structs.push(StructDecl {
             tags: Vec::new(),
             loc: pt::Loc::Builtin,
-            builtin: BuiltinStruct::AccountMeta,
+            builtin: StructType::AccountMeta,
             contract: None,
             name: String::from("AccountMeta"),
             fields,
@@ -1620,7 +1620,7 @@ impl Namespace {
             file_no,
             None,
             &id,
-            Symbol::Struct(pt::Loc::Builtin, account_meta_no)
+            Symbol::Struct(pt::Loc::Builtin, StructType::UserDefined(account_meta_no)) // TODO: This needs to change
         ));
 
         let mut func = Function::new(

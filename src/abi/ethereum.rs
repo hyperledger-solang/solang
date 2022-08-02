@@ -1,4 +1,5 @@
 // ethereum style ABIs
+use crate::ast::StructType;
 use crate::sema::ast::{Namespace, Parameter, Type};
 use serde::Serialize;
 use solang_parser::pt;
@@ -44,7 +45,7 @@ impl Type {
     /// Is this type a struct, or an array of structs?
     fn is_struct_or_array_of_struct(&self) -> Option<usize> {
         match self {
-            Type::Struct(n) => Some(*n),
+            Type::Struct(StructType::UserDefined(n)) => Some(*n),
             Type::Array(ty, _) => ty.is_struct_or_array_of_struct(),
             _ => None,
         }

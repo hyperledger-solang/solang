@@ -31,7 +31,7 @@ pub enum Type {
     /// The usize is an index into enums in the namespace
     Enum(usize),
     /// The usize is an index into contracts in the namespace
-    Struct(usize),
+    Struct(StructType),
     Mapping(Box<Type>, Box<Type>),
     /// The usize is an index into contracts in the namespace
     Contract(usize),
@@ -112,11 +112,13 @@ impl Type {
     }
 }
 
-#[derive(PartialEq, Clone, Debug, Copy)]
-pub enum BuiltinStruct {
-    None,
+#[derive(PartialEq, Eq, Clone, Debug, Copy, Hash)]
+pub enum StructType {
+    UserDefined(usize),
     AccountInfo,
     AccountMeta,
+    ExternalFunction,
+    None,
 }
 
 #[derive(PartialEq, Clone, Debug)]
@@ -124,7 +126,7 @@ pub struct StructDecl {
     pub tags: Vec<Tag>,
     pub name: String,
     pub loc: pt::Loc,
-    pub builtin: BuiltinStruct,
+    pub builtin: StructType,
     pub contract: Option<String>,
     pub fields: Vec<Parameter>,
     // List of offsets of the fields, last entry is the offset for the struct overall size
@@ -443,7 +445,7 @@ pub enum Symbol {
     Enum(pt::Loc, usize),
     Function(Vec<(pt::Loc, usize)>),
     Variable(pt::Loc, Option<usize>, usize),
-    Struct(pt::Loc, usize),
+    Struct(pt::Loc, StructType),
     Event(Vec<(pt::Loc, usize)>),
     Contract(pt::Loc, usize),
     Import(pt::Loc, usize),

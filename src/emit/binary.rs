@@ -1,4 +1,4 @@
-use crate::sema::ast::{ArrayLength, BuiltinStruct, Contract, Namespace, Type};
+use crate::sema::ast::{ArrayLength, Contract, Namespace, StructType, Type};
 use std::cell::RefCell;
 use std::ffi::CStr;
 use std::path::Path;
@@ -774,7 +774,7 @@ impl<'a> Binary<'a> {
 
     /// Return the llvm type for the resolved type.
     pub(crate) fn llvm_type(&self, ty: &Type, ns: &Namespace) -> BasicTypeEnum<'a> {
-        if ty.builtin_struct(ns) == BuiltinStruct::AccountInfo {
+        if ty.builtin_struct(ns) == StructType::AccountInfo {
             return self
                 .module
                 .get_struct_type("struct.SolAccountInfo")
@@ -829,10 +829,11 @@ impl<'a> Binary<'a> {
 
                     BasicTypeEnum::ArrayType(aty)
                 }
-                Type::Struct(n) => self
+                Type::Struct(str_ty) => self
                     .context
                     .struct_type(
-                        &ns.structs[*n]
+                        &str_ty
+                            .get_definition(ns)
                             .fields
                             .iter()
                             .map(|f| self.llvm_field_ty(&f.ty, ns))

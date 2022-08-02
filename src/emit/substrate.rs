@@ -746,7 +746,7 @@ impl SubstrateTarget {
             ast::Type::UserType(n) => {
                 self.decode_ty(binary, function, &ns.user_types[*n].ty, data, end, ns)
             }
-            ast::Type::Struct(n) => {
+            ast::Type::Struct(str_ty) => {
                 let llvm_ty = binary.llvm_type(ty.deref_any(), ns);
 
                 let size = llvm_ty
@@ -772,7 +772,7 @@ impl SubstrateTarget {
                     "dest",
                 );
 
-                for (i, field) in ns.structs[*n].fields.iter().enumerate() {
+                for (i, field) in str_ty.get_definition(ns).fields.iter().enumerate() {
                     let elem = unsafe {
                         binary.builder.build_gep(
                             dest,
@@ -1362,13 +1362,13 @@ impl SubstrateTarget {
                     },
                 );
             }
-            ast::Type::Struct(n) => {
+            ast::Type::Struct(str_ty) => {
                 let arg = if load {
                     binary
                         .builder
                         .build_load(
                             arg.into_pointer_value(),
-                            &format!("encode_{}", ns.structs[*n].name),
+                            &format!("encode_{}", str_ty.get_definition(ns).name),
                         )
                         .into_pointer_value()
                 } else {
@@ -1388,7 +1388,7 @@ impl SubstrateTarget {
                 binary.builder.position_at_end(normal_struct);
 
                 let mut normal_data = *data;
-                for (i, field) in ns.structs[*n].fields.iter().enumerate() {
+                for (i, field) in str_ty.get_definition(ns).fields.iter().enumerate() {
                     let elem = unsafe {
                         binary.builder.build_gep(
                             arg,
@@ -1420,7 +1420,7 @@ impl SubstrateTarget {
 
                 let mut null_data = *data;
 
-                for field in &ns.structs[*n].fields {
+                for field in &str_ty.get_definition(ns).fields {
                     let elem = binary.default_value(&field.ty, ns);
 
                     self.encode_ty(
@@ -1599,13 +1599,13 @@ impl SubstrateTarget {
             ast::Type::Enum(n) => {
                 self.encoded_length(arg, load, packed, &ns.enums[*n].ty, function, binary, ns)
             }
-            ast::Type::Struct(n) => {
+            ast::Type::Struct(str_ty) => {
                 let arg = if load {
                     binary
                         .builder
                         .build_load(
                             arg.into_pointer_value(),
-                            &format!("encoded_length_struct_{}", ns.structs[*n].name),
+                            &format!("encoded_length_struct_{}", str_ty.get_definition(ns).name),
                         )
                         .into_pointer_value()
                 } else {
@@ -1627,7 +1627,7 @@ impl SubstrateTarget {
                 let mut normal_sum = binary.context.i32_type().const_zero();
 
                 // avoid generating load instructions for structs with only fixed fields
-                for (i, field) in ns.structs[*n].fields.iter().enumerate() {
+                for (i, field) in str_ty.get_definition(ns).fields.iter().enumerate() {
                     let elem = unsafe {
                         binary.builder.build_gep(
                             arg,
@@ -1662,7 +1662,7 @@ impl SubstrateTarget {
 
                 let mut null_sum = binary.context.i32_type().const_zero();
 
-                for field in &ns.structs[*n].fields {
+                for field in &str_ty.get_definition(ns).fields {
                     null_sum = binary.builder.build_int_add(
                         null_sum,
                         self.encoded_length(

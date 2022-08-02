@@ -6,7 +6,7 @@ use super::{
     vartable::{Vars, Vartable},
     vector_to_slice, Options,
 };
-use crate::ast::FunctionAttributes;
+use crate::ast::{FunctionAttributes, StructType};
 use crate::codegen::subexpression_elimination::common_sub_expression_elimination;
 use crate::codegen::{undefined_variable, Expression, LLVMName};
 use crate::sema::ast::RetrieveType;
@@ -1898,14 +1898,14 @@ impl Namespace {
     }
 
     /// Checks if struct contains only primitive types and returns its memory non-padded size
-    pub fn calculate_struct_non_padded_size(&self, struct_no: usize) -> Option<BigInt> {
+    pub fn calculate_struct_non_padded_size(&self, struct_type: &StructType) -> Option<BigInt> {
         let mut size = BigInt::from(0u8);
-        for field in &self.structs[struct_no].fields {
+        for field in &struct_type.get_definition(self).fields {
             if !field.ty.is_primitive() {
                 // If a struct contains a non-primitive type, we cannot calculate its
                 // size during compile time
-                if let Type::Struct(no) = &field.ty {
-                    if let Some(struct_size) = self.calculate_struct_non_padded_size(*no) {
+                if let Type::Struct(struct_ty) = &field.ty {
+                    if let Some(struct_size) = self.calculate_struct_non_padded_size(struct_ty) {
                         size.add_assign(struct_size);
                         continue;
                     }
