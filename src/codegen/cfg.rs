@@ -727,15 +727,6 @@ impl ControlFlowGraph {
                     .collect::<Vec<String>>()
                     .join(", ")
             ),
-            Expression::ExternalFunction {
-                address,
-                function_no,
-                ..
-            } => format!(
-                "external {} address {}",
-                self.expr_to_string(contract, ns, address),
-                ns.functions[*function_no].print_name(ns)
-            ),
             Expression::InternalFunctionCfg(cfg_no) => {
                 format!("function {}", contract.cfg[*cfg_no].name)
             }

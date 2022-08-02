@@ -6,6 +6,7 @@ use super::{
     cfg::{ControlFlowGraph, Instr, InternalCallTy},
     vartable::Vartable,
 };
+use crate::ast::StructType;
 use crate::codegen::array_boundary::handle_array_assign;
 use crate::codegen::encoding::create_encoder;
 use crate::codegen::encoding::AbiEncoding;
@@ -446,13 +447,17 @@ pub fn expression(
             function_no,
         } => {
             let address = expression(address, cfg, contract_no, func, ns, vartab, opt);
-
-            Expression::ExternalFunction {
-                loc: *loc,
-                ty: ty.clone(),
-                address: Box::new(address),
-                function_no: *function_no,
-            }
+            let selector = Expression::NumberLiteral(
+                *loc,
+                Type::Uint(32),
+                BigInt::from(ns.functions[*function_no].selector()),
+            );
+            let struct_literal = Expression::StructLiteral(
+                *loc,
+                Type::Struct(StructType::ExternalFunction),
+                vec![address, selector],
+            );
+            Expression::Cast(*loc, ty.clone(), Box::new(struct_literal))
         }
         ast::Expression::Subscript(loc, elem_ty, array_ty, array, index) => array_subscript(
             loc,
