@@ -273,19 +273,9 @@ impl BorshEncoding {
             }
 
             Type::ExternalFunction { .. } => {
-                let selector = Expression::Builtin(
-                    Loc::Codegen,
-                    vec![Type::Uint(32)],
-                    Builtin::FunctionSelector,
-                    vec![expr.clone()],
-                );
+                let selector = expr.external_function_selector();
 
-                let address = Expression::Builtin(
-                    Loc::Codegen,
-                    vec![Type::Address(false)],
-                    Builtin::ExternalFunctionAddress,
-                    vec![expr.clone()],
-                );
+                let address = expr.external_function_address();
 
                 cfg.add(
                     vartab,

@@ -61,7 +61,7 @@ pub enum Type {
     Unresolved,
     /// When we advance a pointer, it cannot be any of the previous types.
     /// e.g. Type::Bytes is a pointer to struct.vector. When we advance it, it is a pointer
-    /// to latter's data region
+    /// to latter's data region.
     BufferPointer,
 }
 

@@ -1413,11 +1413,7 @@ contract C {
     "#;
 
     let ns = parse(file);
-    assert_eq!(ns.diagnostics.len(), 2);
-    assert!(ns
-        .diagnostics
-        .contains_message("assignment to selector and address is not implemented. If there is need for these features, please file a GitHub issue at https://github.com/hyperledger-labs/solang/issues"));
-
+    assert_eq!(ns.diagnostics.len(), 1);
     assert!(ns.diagnostics.contains_message("found contract 'C'"));
 }
 
