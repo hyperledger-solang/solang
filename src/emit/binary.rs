@@ -774,7 +774,7 @@ impl<'a> Binary<'a> {
 
     /// Return the llvm type for the resolved type.
     pub(crate) fn llvm_type(&self, ty: &Type, ns: &Namespace) -> BasicTypeEnum<'a> {
-        if ty.builtin_struct(ns) == StructType::AccountInfo {
+        if ty.is_builtin_struct() == Some(StructType::AccountInfo) {
             return self
                 .module
                 .get_struct_type("struct.SolAccountInfo")

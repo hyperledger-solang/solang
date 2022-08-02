@@ -83,7 +83,6 @@ pub fn resolve_typenames<'a>(
                     ns.structs.push(StructDecl {
                         tags: Vec::new(),
                         name: def.name.name.to_owned(),
-                        builtin: StructType::None,
                         loc: def.name.loc,
                         contract: None,
                         fields: Vec::new(),
@@ -335,7 +334,6 @@ fn resolve_contract<'a>(
                     ns.structs.push(StructDecl {
                         tags: Vec::new(),
                         name: pt.name.name.to_owned(),
-                        builtin: StructType::None,
                         loc: pt.name.loc,
                         contract: Some(def.name.name.to_owned()),
                         fields: Vec::new(),
@@ -1430,12 +1428,17 @@ impl Type {
     }
 
     /// Is this structure a builtin
-    pub fn builtin_struct(&self, ns: &Namespace) -> StructType {
-        // TODO: This needs to change
+    pub fn is_builtin_struct(&self) -> Option<StructType> {
         match self {
-            Type::Struct(n) => n.get_definition(ns).builtin,
-            Type::StorageRef(_, r) | Type::Ref(r) => r.builtin_struct(ns),
-            _ => StructType::None,
+            Type::Struct(str_ty) => {
+                if matches!(str_ty, StructType::UserDefined(_)) {
+                    None
+                } else {
+                    Some(*str_ty)
+                }
+            }
+            Type::StorageRef(_, r) | Type::Ref(r) => r.is_builtin_struct(),
+            _ => None,
         }
     }
 
@@ -1450,7 +1453,7 @@ impl Type {
             Type::Mapping(key, value) => key
                 .contains_builtins(ns, builtin)
                 .or_else(|| value.contains_builtins(ns, builtin)),
-            Type::Struct(str_ty) if &str_ty.get_definition(ns).builtin == builtin => Some(self), // TODO: This needs to change
+            Type::Struct(str_ty) if str_ty == builtin => Some(self),
             Type::Struct(str_ty) => str_ty.get_definition(ns).fields.iter().find_map(|f| {
                 if f.recursive {
                     None

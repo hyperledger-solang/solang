@@ -118,7 +118,6 @@ pub enum StructType {
     AccountInfo,
     AccountMeta,
     ExternalFunction,
-    None,
 }
 
 #[derive(PartialEq, Clone, Debug)]
@@ -126,7 +125,6 @@ pub struct StructDecl {
     pub tags: Vec<Tag>,
     pub name: String,
     pub loc: pt::Loc,
-    pub builtin: StructType,
     pub contract: Option<String>,
     pub fields: Vec<Parameter>,
     // List of offsets of the fields, last entry is the offset for the struct overall size

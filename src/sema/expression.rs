@@ -7342,7 +7342,9 @@ fn parse_call_args(
 
                 // if let chains would really help here
                 if let Type::Array(elem_ty, dims) = expr_ty.deref_memory() {
-                    if elem_ty.builtin_struct(ns) == StructType::AccountMeta && dims.len() == 1 {
+                    if elem_ty.is_builtin_struct() == Some(StructType::AccountMeta)
+                        && dims.len() == 1
+                    {
                         correct_ty = true;
                     }
                 }

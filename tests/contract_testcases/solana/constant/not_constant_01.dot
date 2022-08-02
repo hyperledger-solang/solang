@@ -7,12 +7,12 @@ strict digraph "tests/contract_testcases/solana/constant/not_constant_01.sol" {
 	return [label="return\nimplicit"]
 	storage_load [label="storage load uint256\nimplicit"]
 	storage_var [label="storage variable\nC.NOT_CONSTANT\nuint256 storage\nimplicit"]
-	contract_10 [label="contract foo\ntests/contract_testcases/solana/constant/not_constant_01.sol:6:9-11:10"]
+	contract_9 [label="contract foo\ntests/contract_testcases/solana/constant/not_constant_01.sol:6:9-11:10"]
 	f [label="function f\ncontract: foo\ntests/contract_testcases/solana/constant/not_constant_01.sol:7:13-47\nsignature f()\nvisibility public\nmutability nonpayable"]
-	returns_12 [label="returns\nuint256 "]
+	returns_11 [label="returns\nuint256 "]
 	diagnostic [label="found contract 'C'\nlevel Debug\ntests/contract_testcases/solana/constant/not_constant_01.sol:2:9-4:10"]
-	diagnostic_15 [label="found contract 'foo'\nlevel Debug\ntests/contract_testcases/solana/constant/not_constant_01.sol:6:9-11:10"]
-	diagnostic_16 [label="need instance of contract 'C' to get variable value 'NOT_CONSTANT'\nlevel Error\ntests/contract_testcases/solana/constant/not_constant_01.sol:8:26-40"]
+	diagnostic_14 [label="found contract 'foo'\nlevel Debug\ntests/contract_testcases/solana/constant/not_constant_01.sol:6:9-11:10"]
+	diagnostic_15 [label="need instance of contract 'C' to get variable value 'NOT_CONSTANT'\nlevel Error\ntests/contract_testcases/solana/constant/not_constant_01.sol:8:26-40"]
 	contracts -> contract
 	contract -> var [label="variable"]
 	var -> number_literal [label="initializer"]
@@ -21,10 +21,10 @@ strict digraph "tests/contract_testcases/solana/constant/not_constant_01.sol" {
 	NOT_CONSTANT -> return [label="body"]
 	return -> storage_load [label="expr"]
 	storage_load -> storage_var [label="expr"]
-	contracts -> contract_10
-	contract_10 -> f [label="function"]
-	f -> returns_12 [label="returns"]
+	contracts -> contract_9
+	contract_9 -> f [label="function"]
+	f -> returns_11 [label="returns"]
 	diagnostics -> diagnostic [label="Debug"]
-	diagnostics -> diagnostic_15 [label="Debug"]
-	diagnostics -> diagnostic_16 [label="Error"]
+	diagnostics -> diagnostic_14 [label="Debug"]
+	diagnostics -> diagnostic_15 [label="Error"]
 }

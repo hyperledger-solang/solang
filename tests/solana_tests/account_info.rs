@@ -98,6 +98,7 @@ fn data() {
     vm.constructor("c", &[]);
 
     for i in 0..10 {
+        std::println!("At index {}", i);
         let returns = vm.function("test", &[Token::Uint(U256::from(i))], &[], None);
 
         let this = &vm.stack[0].data;

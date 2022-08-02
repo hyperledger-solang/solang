@@ -2295,7 +2295,7 @@ pub trait TargetRuntime<'a> {
 
                     self.storage_subscript(bin, function, ty, array, index, ns)
                         .into()
-                } else if elem_ty.builtin_struct(ns) == StructType::AccountInfo {
+                } else if elem_ty.is_builtin_struct() == Some(StructType::AccountInfo) {
                     let array = self
                         .expression(bin, a, vartab, function, ns)
                         .into_pointer_value();
@@ -2364,7 +2364,7 @@ pub trait TargetRuntime<'a> {
                 }
             }
             Expression::StructMember(_, _, a, _)
-                if a.ty().builtin_struct(ns) == StructType::AccountInfo =>
+                if a.ty().is_builtin_struct() == Some(StructType::AccountInfo) =>
             {
                 self.builtin(bin, e, vartab, function, ns)
             }
@@ -2512,7 +2512,7 @@ pub trait TargetRuntime<'a> {
                 }
             }
             Expression::Builtin(_, _, Builtin::ArrayLength, args)
-                if args[0].ty().array_deref().builtin_struct(ns) == StructType::None =>
+                if args[0].ty().array_deref().is_builtin_struct().is_none() =>
             {
                 let array = self.expression(bin, &args[0], vartab, function, ns);
 
