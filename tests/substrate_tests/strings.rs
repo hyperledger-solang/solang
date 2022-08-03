@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use parity_scale_codec::{Decode, Encode};
 use rand::Rng;
 

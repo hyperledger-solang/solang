@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // Use the llvm lld linker to create our solana shared object
 // This requires an lld with the solana bpf patches.
 

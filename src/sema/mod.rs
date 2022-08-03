@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use self::{
     functions::{resolve_params, resolve_returns},
     symtable::Symtable,

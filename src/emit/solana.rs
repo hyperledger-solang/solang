@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::codegen::cfg::HashTy;
 use crate::sema::ast;
 use crate::{codegen, Target};

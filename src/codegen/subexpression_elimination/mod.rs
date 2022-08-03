@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::codegen::cfg::{BasicBlock, ControlFlowGraph, Instr};
 use crate::codegen::reaching_definitions::block_edges;
 use crate::codegen::subexpression_elimination::available_variable::AvailableVariable;

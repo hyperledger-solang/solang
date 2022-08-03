@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::pt::CodeLocation;
 use crate::sema::ast::{Namespace, Type};
 use crate::sema::yul::ast::YulExpression;

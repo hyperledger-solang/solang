@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 mod array_boundary;
 pub mod cfg;
 mod constant_folding;

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::build_solidity;
 use ethabi::ethereum_types::{Address, U256};
 use num_bigint::{BigInt, BigUint};

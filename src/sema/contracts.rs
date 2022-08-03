@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use num_bigint::BigInt;
 use num_traits::Zero;
 use solang_parser::{

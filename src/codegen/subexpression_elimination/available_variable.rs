@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use solang_parser::pt::Loc;
 use solang_parser::pt::OptionalCodeLocation;
 

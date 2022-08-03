@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use handlebars::Handlebars;
 use serde::Serialize;
 use std::fs::File;

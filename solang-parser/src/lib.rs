@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 //! Solidity file parser
 use crate::pt::CodeLocation;
 use diagnostics::Diagnostic;

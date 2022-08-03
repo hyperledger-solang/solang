@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::sema::{ast::Type, symtable::Symtable};
 use indexmap::IndexMap;
 use num_bigint::BigInt;

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // Create WASM virtual machine like substrate
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;

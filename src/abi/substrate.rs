@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // Parity Substrate style ABIs/Abi
 use crate::sema::ast;
 use crate::sema::tags::render;

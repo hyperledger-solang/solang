@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use super::address::to_hexstr_eip55;
 use super::ast::{
     ArrayLength, Builtin, CallArgs, CallTy, Diagnostic, Expression, Function, Mutability,

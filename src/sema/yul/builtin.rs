@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::Target;
 use phf::{phf_map, phf_set};
 

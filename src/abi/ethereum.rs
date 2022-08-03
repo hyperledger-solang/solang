@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // ethereum style ABIs
 use crate::sema::ast::{Namespace, Parameter, StructType, Type};
 use serde::Serialize;
