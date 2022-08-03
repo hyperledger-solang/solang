@@ -3351,37 +3351,6 @@ pub trait TargetRuntime<'a> {
             BasicBlock { bb, phis }
         }
 
-        fn get_ins_loc(ins: &Instr) -> Option<pt::Loc> {
-            match ins {
-                Instr::Set { loc, expr, .. } => match loc {
-                    pt::Loc::File(_, _, _) => Some(*loc),
-                    _ => Some(expr.loc()),
-                },
-                Instr::Call { args, .. } if args.is_empty() => None,
-                Instr::Call { args, .. } => Some(args[0].loc()),
-                Instr::Return { value } if value.is_empty() => None,
-                Instr::Return { value } => Some(value[0].loc()),
-                Instr::BranchCond { cond, .. } => Some(cond.loc()),
-                Instr::Store { dest, .. } => Some(dest.loc()),
-                Instr::LoadStorage { storage, .. } => Some(storage.loc()),
-                Instr::ClearStorage { storage, .. } => Some(storage.loc()),
-                Instr::SetStorage { value, .. } => Some(value.loc()),
-                Instr::SetStorageBytes { storage, .. } => Some(storage.loc()),
-                Instr::PushStorage { storage, .. } => Some(storage.loc()),
-                Instr::PopStorage { storage, .. } => Some(storage.loc()),
-                Instr::PushMemory { value, .. } => Some(value.loc()),
-                Instr::Constructor { gas, .. } => Some(gas.loc()),
-                Instr::ExternalCall { value, .. } => Some(value.loc()),
-                Instr::ValueTransfer { address, .. } => Some(address.loc()),
-                Instr::AbiDecode { data, .. } => Some(data.loc()),
-                Instr::SelfDestruct { recipient } => Some(recipient.loc()),
-                Instr::EmitEvent { data, .. } if data.is_empty() => None,
-                Instr::EmitEvent { data, .. } => Some(data[0].loc()),
-                Instr::WriteBuffer { buf, .. } => Some(buf.loc()),
-                _ => None,
-            }
-        }
-
         let mut work = VecDeque::new();
 
         blocks.insert(0, create_block(0, bin, cfg, function, ns));
@@ -3459,8 +3428,8 @@ pub trait TargetRuntime<'a> {
             }
 
             for ins in &cfg.blocks[w.block_no].instr {
-                let debug_loc_opt = get_ins_loc(ins);
-                if let Some(Loc::File(file_offset, offset, _)) = debug_loc_opt {
+                let debug_loc_opt = ins.loc();
+                if let Loc::File(file_offset, offset, _) = debug_loc_opt {
                     let (line, col) = ns.files[file_offset].offset_to_line_column(offset);
                     let debug_loc = dibuilder.create_debug_location(
                         bin.context,
