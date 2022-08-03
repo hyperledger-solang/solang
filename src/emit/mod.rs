@@ -3294,10 +3294,13 @@ pub trait TargetRuntime<'a> {
             None => {}
             Some(return_type) => {
                 let return_type_size = return_type.size_of().unwrap();
+                let size = return_type_size.get_type().get_bit_width();
+                let mut type_name = "size_".to_owned();
+                type_name.push_str(&size.to_string());
                 let di_return_type = dibuilder
                     .create_basic_type(
-                        "ret-type", // TODO: other name?
-                        return_type_size.get_type().get_bit_width() as u64,
+                        &type_name,
+                        size as u64,
                         0x00,
                         inkwell::debug_info::DIFlagsConstants::PUBLIC,
                     )
@@ -3306,10 +3309,13 @@ pub trait TargetRuntime<'a> {
                 let di_param_types: Vec<DIType<'_>> = param_types
                     .iter()
                     .map(|typ| {
+                        let mut param_tname = "size_".to_owned();
+                        let param_size = typ.size_of().unwrap().get_type().get_bit_width();
+                        param_tname.push_str(&size.to_string());
                         dibuilder
                             .create_basic_type(
-                                "basic-type", // TODO: other name?
-                                typ.size_of().unwrap().get_type().get_bit_width() as u64,
+                                &param_tname,
+                                param_size as u64,
                                 0x00,
                                 inkwell::debug_info::DIFlagsConstants::PUBLIC,
                             )
@@ -3511,6 +3517,7 @@ pub trait TargetRuntime<'a> {
                         for (i, val) in value.iter().enumerate() {
                             let arg = function.get_nth_param((returns_offset + i) as u32).unwrap();
                             let retval = self.expression(bin, val, &w.vars, function, ns);
+
                             bin.builder.build_store(arg.into_pointer_value(), retval);
                         }
 

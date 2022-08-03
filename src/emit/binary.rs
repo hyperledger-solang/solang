@@ -269,21 +269,21 @@ impl<'a> Binary<'a> {
 
         let builder = context.create_builder();
         let (dibuilder, compile_unit) = module.create_debug_info_builder(
-            /* allow_unresolved */ true,
-            /* language */ inkwell::debug_info::DWARFSourceLanguage::C,
-            /* filename */ filename,
-            /* directory */ ".",
-            /* producer */ "Solang",
-            /* is_optimized */ false,
-            /* compiler command line flags */ "",
-            /* runtime_ver */ 0,
-            /* split_name */ "",
-            /* kind */ inkwell::debug_info::DWARFEmissionKind::Full,
-            /* dwo_id */ 0,
-            /* split_debug_inling */ false,
-            /* debug_info_for_profiling */ false,
-            /* sysroot */ "",
-            /* sdk */ "",
+            true,
+            inkwell::debug_info::DWARFSourceLanguage::C,
+            filename,
+            ".",
+            "Solang",
+            false,
+            "",
+            0,
+            "",
+            inkwell::debug_info::DWARFEmissionKind::Full,
+            0,
+            false,
+            false,
+            "",
+            "",
         );
 
         module.set_triple(&triple);
