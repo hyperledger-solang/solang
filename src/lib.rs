@@ -14,7 +14,6 @@ mod linker;
 pub mod sema;
 
 use file_resolver::FileResolver;
-use sema::ast;
 use sema::diagnostics;
 use solang_parser::pt;
 use std::{ffi::OsStr, fmt};
@@ -115,7 +114,7 @@ pub fn compile(
     opt_level: inkwell::OptimizationLevel,
     target: Target,
     math_overflow_check: bool,
-) -> (Vec<(Vec<u8>, String)>, ast::Namespace) {
+) -> (Vec<(Vec<u8>, String)>, sema::ast::Namespace) {
     let mut ns = parse_and_resolve(filename, resolver, target);
 
     if ns.diagnostics.any_errors() {
@@ -152,7 +151,7 @@ pub fn compile(
 #[cfg(feature = "llvm")]
 pub fn compile_many<'a>(
     context: &'a inkwell::context::Context,
-    namespaces: &'a [&ast::Namespace],
+    namespaces: &'a [&sema::ast::Namespace],
     filename: &str,
     opt: inkwell::OptimizationLevel,
     math_overflow_check: bool,
@@ -169,14 +168,14 @@ pub fn parse_and_resolve(
     filename: &OsStr,
     resolver: &mut FileResolver,
     target: Target,
-) -> ast::Namespace {
-    let mut ns = ast::Namespace::new(target);
+) -> sema::ast::Namespace {
+    let mut ns = sema::ast::Namespace::new(target);
 
     match resolver.resolve_file(None, filename) {
         Err(message) => {
-            ns.diagnostics.push(ast::Diagnostic {
-                ty: ast::ErrorType::ParserError,
-                level: ast::Level::Error,
+            ns.diagnostics.push(sema::ast::Diagnostic {
+                ty: sema::ast::ErrorType::ParserError,
+                level: sema::ast::Level::Error,
                 message,
                 loc: pt::Loc::CommandLine,
                 notes: Vec::new(),

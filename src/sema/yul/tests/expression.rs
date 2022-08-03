@@ -1,7 +1,7 @@
 #![cfg(test)]
 
-use crate::ast::{ArrayLength, Namespace, Parameter, Symbol, Type, Variable};
 use crate::diagnostics::Diagnostics;
+use crate::sema::ast::{ArrayLength, Namespace, Parameter, Symbol, Type, Variable};
 use crate::sema::expression::ExprContext;
 use crate::sema::symtable::{Symtable, VariableInitializer, VariableUsage};
 use crate::sema::yul::ast::{YulExpression, YulSuffix};
@@ -9,7 +9,7 @@ use crate::sema::yul::builtin::YulBuiltInFunction;
 use crate::sema::yul::expression::{check_type, resolve_yul_expression};
 use crate::sema::yul::functions::FunctionsTable;
 use crate::sema::yul::tests::parse;
-use crate::{ast, parse_and_resolve, FileResolver, Target};
+use crate::{parse_and_resolve, sema::ast, FileResolver, Target};
 use num_bigint::BigInt;
 use solang_parser::pt;
 use solang_parser::pt::{

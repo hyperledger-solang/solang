@@ -788,7 +788,7 @@ impl Type {
             Type::String => "string".to_string(),
             Type::DynamicBytes => "bytes".to_string(),
             Type::Enum(n) => format!("enum {}", ns.enums[*n]),
-            Type::Struct(str_ty) => format!("struct {}", str_ty.get_definition(ns)),
+            Type::Struct(str_ty) => format!("struct {}", str_ty.definition(ns)),
             Type::Array(ty, len) => format!(
                 "{}{}",
                 ty.to_string(ns),
@@ -903,7 +903,7 @@ impl Type {
                 format!(
                     "({})",
                     struct_type
-                        .get_definition(ns)
+                        .definition(ns)
                         .fields
                         .iter()
                         .map(|f| f.ty.to_signature_string(say_tuple, ns))
@@ -1034,7 +1034,7 @@ impl Type {
                 )
             }
             Type::Struct(str_ty) => str_ty
-                .get_definition(ns)
+                .definition(ns)
                 .fields
                 .iter()
                 .map(|d| d.ty.memory_size_of(ns))
@@ -1072,7 +1072,7 @@ impl Type {
                 )
             }
             Type::Struct(str_ty) => str_ty
-                .get_definition(ns)
+                .definition(ns)
                 .offsets
                 .last()
                 .cloned()
@@ -1098,7 +1098,7 @@ impl Type {
             Type::Uint(n) | Type::Int(n) if *n <= 32 => 4,
             Type::Uint(_) | Type::Int(_) => 8,
             Type::Struct(str_ty) => str_ty
-                .get_definition(ns)
+                .definition(ns)
                 .fields
                 .iter()
                 .map(|f| if f.recursive { 1 } else { f.ty.align_of(ns) })
@@ -1192,7 +1192,7 @@ impl Type {
                     }
                 }
                 Type::Struct(str_ty) => str_ty
-                    .get_definition(ns)
+                    .definition(ns)
                     .storage_offsets
                     .last()
                     .cloned()
@@ -1212,7 +1212,7 @@ impl Type {
             match self {
                 Type::StorageRef(_, r) | Type::Ref(r) => r.storage_slots(ns),
                 Type::Struct(str_ty) => str_ty
-                    .get_definition(ns)
+                    .definition(ns)
                     .fields
                     .iter()
                     .map(|f| {
@@ -1265,7 +1265,7 @@ impl Type {
                     }
                 }
                 Type::Struct(str_ty) => str_ty
-                    .get_definition(ns)
+                    .definition(ns)
                     .fields
                     .iter()
                     .map(|field| {
@@ -1334,7 +1334,7 @@ impl Type {
                 ty.is_dynamic(ns)
             }
             Type::Struct(str_ty) => str_ty
-                .get_definition(ns)
+                .definition(ns)
                 .fields
                 .iter()
                 .any(|f| f.ty.is_dynamic(ns)),
@@ -1403,7 +1403,7 @@ impl Type {
             Type::Mapping(..) => true,
             Type::Array(ty, _) => ty.contains_mapping(ns),
             Type::Struct(str_ty) => str_ty
-                .get_definition(ns)
+                .definition(ns)
                 .fields
                 .iter()
                 .any(|f| !f.recursive && f.ty.contains_mapping(ns)),
@@ -1418,7 +1418,7 @@ impl Type {
             Type::InternalFunction { .. } => true,
             Type::Array(ty, _) => ty.contains_internal_function(ns),
             Type::Struct(str_ty) => str_ty
-                .get_definition(ns)
+                .definition(ns)
                 .fields
                 .iter()
                 .any(|f| !f.recursive && f.ty.contains_internal_function(ns)),
@@ -1454,7 +1454,7 @@ impl Type {
                 .contains_builtins(ns, builtin)
                 .or_else(|| value.contains_builtins(ns, builtin)),
             Type::Struct(str_ty) if str_ty == builtin => Some(self),
-            Type::Struct(str_ty) => str_ty.get_definition(ns).fields.iter().find_map(|f| {
+            Type::Struct(str_ty) => str_ty.definition(ns).fields.iter().find_map(|f| {
                 if f.recursive {
                     None
                 } else {
@@ -1504,7 +1504,7 @@ impl Type {
             Type::DynamicBytes => "bytes".to_string(),
             Type::String => "string".to_string(),
             Type::Enum(i) => format!("{}", ns.enums[*i]),
-            Type::Struct(str_ty) => format!("{}", str_ty.get_definition(ns)),
+            Type::Struct(str_ty) => format!("{}", str_ty.definition(ns)),
             Type::Array(ty, len) => format!(
                 "{}{}",
                 ty.to_llvm_string(ns),

@@ -240,8 +240,8 @@ contract EncodingTest {
         uint64 pr = 9234;
 
         // CHECK: ty:bytes %abi_encoded.temp.106 = (alloc bytes len (uint32 36 + uint32 8))
-        // CHECK: writebuffer buffer:%abi_encoded.temp.106 offset:uint32 0 value:(load (struct %fPtr field 1))
-        // CHECK: writebuffer buffer:%abi_encoded.temp.106 offset:(uint32 0 + uint32 4) value:(load (struct %fPtr field 0))
+        // CHECK: writebuffer buffer:%abi_encoded.temp.106 offset:uint32 0 value:(load (struct %fPtr field 0))
+        // CHECK: writebuffer buffer:%abi_encoded.temp.106 offset:(uint32 0 + uint32 4) value:(load (struct %fPtr field 1))
         // CHECK: writebuffer buffer:%abi_encoded.temp.106 offset:(uint32 0 + uint32 36) value:%pr
 
         bytes memory b = abi.encode(fPtr, pr);

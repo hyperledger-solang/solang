@@ -833,7 +833,7 @@ impl<'a> Binary<'a> {
                     .context
                     .struct_type(
                         &str_ty
-                            .get_definition(ns)
+                            .definition(ns)
                             .fields
                             .iter()
                             .map(|f| self.llvm_field_ty(&f.ty, ns))
@@ -860,7 +860,7 @@ impl<'a> Binary<'a> {
 
                     BasicTypeEnum::PointerType(
                         self.context
-                            .struct_type(&[address, selector], false)
+                            .struct_type(&[selector, address], false)
                             .ptr_type(AddressSpace::Generic),
                     )
                 }

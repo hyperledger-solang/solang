@@ -1,5 +1,5 @@
-use crate::ast::{Namespace, Type};
 use crate::pt::CodeLocation;
+use crate::sema::ast::{Namespace, Type};
 use crate::sema::yul::ast::YulExpression;
 use crate::sema::yul::functions::FunctionsTable;
 use solang_parser::diagnostics::Diagnostic;

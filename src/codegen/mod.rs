@@ -24,12 +24,12 @@ use self::{
 };
 #[cfg(feature = "llvm")]
 use crate::emit::Generate;
-use crate::sema::ast::{Layout, Namespace};
-use crate::{ast, Target};
+use crate::sema::ast::{
+    FormatArg, Function, Layout, Namespace, RetrieveType, StringLocation, Type,
+};
+use crate::{sema::ast, Target};
 use std::cmp::Ordering;
 
-use crate::ast::Function;
-use crate::ast::{FormatArg, RetrieveType, StringLocation, Type};
 use crate::codegen::cfg::ASTFunction;
 use crate::codegen::yul::generate_yul_function_cfg;
 use crate::sema::Recurse;
@@ -1191,21 +1191,6 @@ impl Expression {
         )
     }
 
-    fn external_function_address(&self) -> Expression {
-        debug_assert!(
-            matches!(self.ty(), Type::ExternalFunction { .. }),
-            "This is not an external function"
-        );
-        let loc = self.loc();
-        let struct_member = Expression::StructMember(
-            loc,
-            Type::Ref(Box::new(Type::Address(false))),
-            Box::new(self.clone()),
-            0,
-        );
-        Expression::Load(loc, Type::Address(false), Box::new(struct_member))
-    }
-
     fn external_function_selector(&self) -> Expression {
         debug_assert!(
             matches!(self.ty(), Type::ExternalFunction { .. }),
@@ -1216,9 +1201,24 @@ impl Expression {
             loc,
             Type::Ref(Box::new(Type::Bytes(4))),
             Box::new(self.clone()),
-            1,
+            0,
         );
         Expression::Load(loc, Type::Bytes(4), Box::new(struct_member))
+    }
+
+    fn external_function_address(&self) -> Expression {
+        debug_assert!(
+            matches!(self.ty(), Type::ExternalFunction { .. }),
+            "This is not an external function"
+        );
+        let loc = self.loc();
+        let struct_member = Expression::StructMember(
+            loc,
+            Type::Ref(Box::new(Type::Address(false))),
+            Box::new(self.clone()),
+            1,
+        );
+        Expression::Load(loc, Type::Address(false), Box::new(struct_member))
     }
 }
 

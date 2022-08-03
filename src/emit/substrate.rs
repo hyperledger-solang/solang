@@ -772,7 +772,7 @@ impl SubstrateTarget {
                     "dest",
                 );
 
-                for (i, field) in str_ty.get_definition(ns).fields.iter().enumerate() {
+                for (i, field) in str_ty.definition(ns).fields.iter().enumerate() {
                     let elem = unsafe {
                         binary.builder.build_gep(
                             dest,
@@ -1005,7 +1005,7 @@ impl SubstrateTarget {
                         ef,
                         &[
                             binary.context.i32_type().const_zero(),
-                            binary.context.i32_type().const_zero(),
+                            binary.context.i32_type().const_int(1, false),
                         ],
                         "address",
                     )
@@ -1018,7 +1018,7 @@ impl SubstrateTarget {
                         ef,
                         &[
                             binary.context.i32_type().const_zero(),
-                            binary.context.i32_type().const_int(1, false),
+                            binary.context.i32_type().const_zero(),
                         ],
                         "selector",
                     )
@@ -1368,7 +1368,7 @@ impl SubstrateTarget {
                         .builder
                         .build_load(
                             arg.into_pointer_value(),
-                            &format!("encode_{}", str_ty.get_definition(ns).name),
+                            &format!("encode_{}", str_ty.definition(ns).name),
                         )
                         .into_pointer_value()
                 } else {
@@ -1388,7 +1388,7 @@ impl SubstrateTarget {
                 binary.builder.position_at_end(normal_struct);
 
                 let mut normal_data = *data;
-                for (i, field) in str_ty.get_definition(ns).fields.iter().enumerate() {
+                for (i, field) in str_ty.definition(ns).fields.iter().enumerate() {
                     let elem = unsafe {
                         binary.builder.build_gep(
                             arg,
@@ -1420,7 +1420,7 @@ impl SubstrateTarget {
 
                 let mut null_data = *data;
 
-                for field in &str_ty.get_definition(ns).fields {
+                for field in &str_ty.definition(ns).fields {
                     let elem = binary.default_value(&field.ty, ns);
 
                     self.encode_ty(
@@ -1521,7 +1521,7 @@ impl SubstrateTarget {
                         arg.into_pointer_value(),
                         &[
                             binary.context.i32_type().const_zero(),
-                            binary.context.i32_type().const_zero(),
+                            binary.context.i32_type().const_int(1, false),
                         ],
                         "address",
                     )
@@ -1545,7 +1545,7 @@ impl SubstrateTarget {
                         arg.into_pointer_value(),
                         &[
                             binary.context.i32_type().const_zero(),
-                            binary.context.i32_type().const_int(1, false),
+                            binary.context.i32_type().const_zero(),
                         ],
                         "selector",
                     )
@@ -1605,7 +1605,7 @@ impl SubstrateTarget {
                         .builder
                         .build_load(
                             arg.into_pointer_value(),
-                            &format!("encoded_length_struct_{}", str_ty.get_definition(ns).name),
+                            &format!("encoded_length_struct_{}", str_ty.definition(ns).name),
                         )
                         .into_pointer_value()
                 } else {
@@ -1627,7 +1627,7 @@ impl SubstrateTarget {
                 let mut normal_sum = binary.context.i32_type().const_zero();
 
                 // avoid generating load instructions for structs with only fixed fields
-                for (i, field) in str_ty.get_definition(ns).fields.iter().enumerate() {
+                for (i, field) in str_ty.definition(ns).fields.iter().enumerate() {
                     let elem = unsafe {
                         binary.builder.build_gep(
                             arg,
@@ -1662,7 +1662,7 @@ impl SubstrateTarget {
 
                 let mut null_sum = binary.context.i32_type().const_zero();
 
-                for field in &str_ty.get_definition(ns).fields {
+                for field in &str_ty.definition(ns).fields {
                     null_sum = binary.builder.build_int_add(
                         null_sum,
                         self.encoded_length(

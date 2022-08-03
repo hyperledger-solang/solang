@@ -1,5 +1,5 @@
 #[cfg(test)]
-use crate::{ast, codegen};
+use crate::{codegen, sema::ast};
 
 #[test]
 fn test_builtin_conversion() {

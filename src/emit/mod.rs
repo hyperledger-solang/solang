@@ -578,7 +578,7 @@ pub trait TargetRuntime<'a> {
                     "dest",
                 );
 
-                for (i, field) in str_ty.get_definition(ns).fields.iter().enumerate() {
+                for (i, field) in str_ty.definition(ns).fields.iter().enumerate() {
                     let val = self.storage_load_slot(bin, &field.ty, slot, slot_ptr, function, ns);
 
                     let elem = unsafe {
@@ -878,7 +878,7 @@ pub trait TargetRuntime<'a> {
                 }
             }
             Type::Struct(str_ty) => {
-                for (i, field) in str_ty.get_definition(ns).fields.iter().enumerate() {
+                for (i, field) in str_ty.definition(ns).fields.iter().enumerate() {
                     let mut elem = unsafe {
                         bin.builder.build_gep(
                             dest.into_pointer_value(),
@@ -1088,7 +1088,7 @@ pub trait TargetRuntime<'a> {
                 }
             }
             Type::Struct(str_ty) => {
-                for (_, field) in str_ty.get_definition(ns).fields.iter().enumerate() {
+                for (_, field) in str_ty.definition(ns).fields.iter().enumerate() {
                     self.storage_delete_slot(bin, &field.ty, slot, slot_ptr, function, ns);
 
                     if !field.ty.is_reference_type(ns)

@@ -1,9 +1,9 @@
-use crate::ast::{ArrayLength, Namespace, Type};
 use crate::codegen;
 use crate::codegen::cfg::{ControlFlowGraph, Instr, InternalCallTy};
 use crate::codegen::vartable::Vartable;
 use crate::codegen::yul::builtin::process_builtin;
 use crate::codegen::{Builtin, Expression, Options};
+use crate::sema::ast::{ArrayLength, Namespace, Type};
 use crate::sema::yul::ast;
 use crate::sema::yul::ast::YulSuffix;
 use num_bigint::{BigInt, Sign};

@@ -1,11 +1,11 @@
 mod borsh_encoding;
 
-use crate::ast::{ArrayLength, Namespace, RetrieveType, StructType, Type};
 use crate::codegen::cfg::{ControlFlowGraph, Instr};
 use crate::codegen::encoding::borsh_encoding::BorshEncoding;
 use crate::codegen::expression::load_storage;
 use crate::codegen::vartable::Vartable;
 use crate::codegen::{Builtin, Expression};
+use crate::sema::ast::{ArrayLength, Namespace, RetrieveType, StructType, Type};
 use crate::Target;
 use num_bigint::BigInt;
 use solang_parser::pt::Loc;
@@ -362,11 +362,11 @@ fn calculate_struct_size<T: AbiEncoding>(
         return Expression::NumberLiteral(Loc::Codegen, Type::Uint(32), struct_size);
     }
 
-    let first_type = struct_ty.get_definition(ns).fields[0].ty.clone();
+    let first_type = struct_ty.definition(ns).fields[0].ty.clone();
     let first_field = load_struct_member(first_type, expr.clone(), 0);
     let mut size = get_expr_size(encoder, arg_no, &first_field, ns, vartab, cfg);
-    for i in 1..struct_ty.get_definition(ns).fields.len() {
-        let ty = struct_ty.get_definition(ns).fields[i].ty.clone();
+    for i in 1..struct_ty.definition(ns).fields.len() {
+        let ty = struct_ty.definition(ns).fields[i].ty.clone();
         let field = load_struct_member(ty.clone(), expr.clone(), i);
         size = Expression::Add(
             Loc::Codegen,

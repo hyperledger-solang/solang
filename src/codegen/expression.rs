@@ -6,7 +6,6 @@ use super::{
     cfg::{ControlFlowGraph, Instr, InternalCallTy},
     vartable::Vartable,
 };
-use crate::ast::StructType;
 use crate::codegen::array_boundary::handle_array_assign;
 use crate::codegen::encoding::create_encoder;
 use crate::codegen::encoding::AbiEncoding;
@@ -16,7 +15,7 @@ use crate::sema::{
     ast,
     ast::{
         ArrayLength, CallTy, FormatArg, Function, Namespace, Parameter, RetrieveType,
-        StringLocation, Type,
+        StringLocation, StructType, Type,
     },
     diagnostics::Diagnostics,
     eval::{eval_const_number, eval_const_rational},
@@ -455,7 +454,7 @@ pub fn expression(
             let struct_literal = Expression::StructLiteral(
                 *loc,
                 Type::Struct(StructType::ExternalFunction),
-                vec![address, selector],
+                vec![selector, address],
             );
             Expression::Cast(*loc, ty.clone(), Box::new(struct_literal))
         }
@@ -475,9 +474,9 @@ pub fn expression(
         ast::Expression::StructMember(loc, ty, var, field_no) if ty.is_contract_storage() => {
             if let Type::Struct(struct_ty) = var.ty().deref_any() {
                 let offset = if ns.target == Target::Solana {
-                    struct_ty.get_definition(ns).storage_offsets[*field_no].clone()
+                    struct_ty.definition(ns).storage_offsets[*field_no].clone()
                 } else {
-                    struct_ty.get_definition(ns).fields[..*field_no]
+                    struct_ty.definition(ns).fields[..*field_no]
                         .iter()
                         .map(|field| field.ty.storage_slots(ns))
                         .sum()

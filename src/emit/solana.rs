@@ -5,7 +5,7 @@ use solang_parser::pt;
 use std::collections::HashMap;
 use std::str;
 
-use crate::ast::Type;
+use crate::sema::ast::Type;
 use inkwell::module::{Linkage, Module};
 use inkwell::types::{BasicType, IntType};
 use inkwell::values::{
@@ -915,8 +915,8 @@ impl SolanaTarget {
                 }
             }
         } else if let ast::Type::Struct(struct_ty) = ty {
-            for (i, field) in struct_ty.get_definition(ns).fields.iter().enumerate() {
-                let field_offset = struct_ty.get_definition(ns).storage_offsets[i]
+            for (i, field) in struct_ty.definition(ns).fields.iter().enumerate() {
+                let field_offset = struct_ty.definition(ns).storage_offsets[i]
                     .to_u64()
                     .unwrap();
 
@@ -2248,8 +2248,8 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                     "dest",
                 );
 
-                for (i, field) in struct_ty.get_definition(ns).fields.iter().enumerate() {
-                    let field_offset = struct_ty.get_definition(ns).storage_offsets[i]
+                for (i, field) in struct_ty.definition(ns).fields.iter().enumerate() {
+                    let field_offset = struct_ty.definition(ns).storage_offsets[i]
                         .to_u64()
                         .unwrap();
 
@@ -2709,8 +2709,8 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             // done
             builder.finish(binary);
         } else if let ast::Type::Struct(struct_ty) = ty {
-            for (i, field) in struct_ty.get_definition(ns).fields.iter().enumerate() {
-                let field_offset = struct_ty.get_definition(ns).storage_offsets[i]
+            for (i, field) in struct_ty.definition(ns).fields.iter().enumerate() {
+                let field_offset = struct_ty.definition(ns).storage_offsets[i]
                     .to_u64()
                     .unwrap();
 

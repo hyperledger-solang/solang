@@ -578,13 +578,13 @@ fn ty_to_abi(ty: &ast::Type, ns: &ast::Namespace, registry: &mut Abi) -> ParamTy
             }
         }
         ast::Type::Struct(struct_type) => {
-            let mut display_name = vec![struct_type.get_definition(ns).name.to_owned()];
+            let mut display_name = vec![struct_type.definition(ns).name.to_owned()];
 
-            if let Some(contract_name) = &struct_type.get_definition(ns).contract {
+            if let Some(contract_name) = &struct_type.definition(ns).contract {
                 display_name.insert(0, contract_name.to_owned());
             }
 
-            let def = struct_type.get_definition(ns);
+            let def = struct_type.definition(ns);
             let fields = def
                 .fields
                 .iter()

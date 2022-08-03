@@ -1,4 +1,4 @@
-use crate::ast::Namespace;
+use crate::sema::ast::Namespace;
 use crate::sema::symtable::Symtable;
 use crate::sema::yul::ast::YulExpression;
 

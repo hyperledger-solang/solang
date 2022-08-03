@@ -1038,7 +1038,7 @@ impl SolangServer {
             ast::Type::Ref(ty) => SolangServer::expanded_ty(ty, ns),
             ast::Type::StorageRef(_, ty) => SolangServer::expanded_ty(ty, ns),
             ast::Type::Struct(struct_type) => {
-                let strct = struct_type.get_definition(ns);
+                let strct = struct_type.definition(ns);
 
                 let mut msg = render(&strct.tags);
 

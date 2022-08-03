@@ -1,10 +1,10 @@
-use crate::ast::{Namespace, RetrieveType, Type};
 use crate::codegen::{
     cfg::{ControlFlowGraph, Instr},
     vartable::Vartable,
     yul::expression::expression,
     {Builtin, Expression, Options},
 };
+use crate::sema::ast::{Namespace, RetrieveType, Type};
 use crate::sema::{
     diagnostics::Diagnostics,
     expression::coerce_number,

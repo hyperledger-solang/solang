@@ -1,4 +1,3 @@
-use crate::ast::{ArrayLength, Namespace, RetrieveType, StructType, Type};
 use crate::codegen::cfg::{ControlFlowGraph, Instr};
 use crate::codegen::encoding::{
     calculate_size_args, finish_array_loop, increment_four, load_array_item, load_struct_member,
@@ -6,6 +5,7 @@ use crate::codegen::encoding::{
 };
 use crate::codegen::vartable::Vartable;
 use crate::codegen::{Builtin, Expression};
+use crate::sema::ast::{ArrayLength, Namespace, RetrieveType, StructType, Type};
 use num_bigint::BigInt;
 use num_traits::{One, Zero};
 use solang_parser::pt::Loc;
@@ -657,14 +657,14 @@ impl BorshEncoding {
             None
         };
 
-        let qty = struct_ty.get_definition(ns).fields.len();
-        let first_ty = struct_ty.get_definition(ns).fields[0].ty.clone();
+        let qty = struct_ty.definition(ns).fields.len();
+        let first_ty = struct_ty.definition(ns).fields[0].ty.clone();
         let loaded = load_struct_member(first_ty, expr.clone(), 0);
 
         let mut advance = self.encode(&loaded, buffer, &offset, arg_no, ns, vartab, cfg);
         let mut runtime_size = advance.clone();
         for i in 1..qty {
-            let ith_type = struct_ty.get_definition(ns).fields[i].ty.clone();
+            let ith_type = struct_ty.definition(ns).fields[i].ty.clone();
             offset = Expression::Add(
                 Loc::Codegen,
                 Type::Uint(32),

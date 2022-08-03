@@ -1,6 +1,5 @@
 // ethereum style ABIs
-use crate::ast::StructType;
-use crate::sema::ast::{Namespace, Parameter, Type};
+use crate::sema::ast::{Namespace, Parameter, StructType, Type};
 use serde::Serialize;
 use solang_parser::pt;
 

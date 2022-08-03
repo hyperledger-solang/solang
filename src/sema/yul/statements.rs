@@ -1,4 +1,4 @@
-use crate::ast::{Namespace, Type};
+use crate::sema::ast::{Namespace, Type};
 use crate::sema::expression::ExprContext;
 use crate::sema::symtable::{LoopScopes, Symtable, VariableInitializer, VariableUsage};
 use crate::sema::yul::ast::{YulExpression, YulStatement};
