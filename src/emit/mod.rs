@@ -3384,7 +3384,7 @@ pub trait TargetRuntime<'a> {
             BasicBlock { bb, phis }
         }
 
-        fn get_ins_loc<'a>(ins: &Instr) -> Option<pt::Loc> {
+        fn get_ins_loc(ins: &Instr) -> Option<pt::Loc> {
             match ins {
                 Instr::Set { loc, expr, .. } => match loc {
                     pt::Loc::File(_, _, _) => Some(*loc),
@@ -3496,14 +3496,14 @@ pub trait TargetRuntime<'a> {
                 if let Some(Loc::File(file_offset, offset, _)) = debug_loc_opt {
                     let (line, col) = ns.files[file_offset].offset_to_line_column(offset);
                     let debug_loc = dibuilder.create_debug_location(
-                        &bin.context,
+                        bin.context,
                         line as u32,
                         col as u32,
                         di_func_scope.unwrap().as_debug_info_scope(),
                         None,
                     );
                     bin.builder
-                        .set_current_debug_location(&bin.context, debug_loc);
+                        .set_current_debug_location(bin.context, debug_loc);
                 }
 
                 match ins {
