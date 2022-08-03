@@ -3296,6 +3296,11 @@ pub trait TargetRuntime<'a> {
                     di_param_types.as_slice(),
                     inkwell::debug_info::DIFlagsConstants::PUBLIC,
                 );
+                let di_flags = if cfg.public {
+                    inkwell::debug_info::DIFlagsConstants::PUBLIC
+                } else {
+                    inkwell::debug_info::DIFlagsConstants::PRIVATE
+                };
                 di_func_scope = Some(dibuilder.create_function(
                     compile_unit.as_debug_info_scope(),
                     function.get_name().to_str().unwrap(),
@@ -3306,7 +3311,7 @@ pub trait TargetRuntime<'a> {
                     true,
                     true,
                     /* scope line */ 0, // TODO: rectify scope line
-                    inkwell::debug_info::DIFlagsConstants::PUBLIC,
+                    di_flags,
                     false,
                 ));
                 function.set_subprogram(di_func_scope.unwrap());
