@@ -6,7 +6,6 @@ use crate::sema::Recurse;
 use crate::{codegen, Target};
 use num_bigint::BigInt;
 use num_rational::BigRational;
-// use ripemd::digest::block_buffer::Block;
 pub use solang_parser::diagnostics::*;
 use solang_parser::pt;
 use solang_parser::pt::{CodeLocation, OptionalCodeLocation};
