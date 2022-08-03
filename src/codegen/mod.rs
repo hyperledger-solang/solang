@@ -24,12 +24,12 @@ use self::{
 };
 #[cfg(feature = "llvm")]
 use crate::emit::Generate;
-use crate::sema::ast::{Layout, Namespace};
-use crate::{ast, Target};
+use crate::sema::ast::{
+    FormatArg, Function, Layout, Namespace, RetrieveType, StringLocation, Type,
+};
+use crate::{sema::ast, Target};
 use std::cmp::Ordering;
 
-use crate::ast::Function;
-use crate::ast::{FormatArg, RetrieveType, StringLocation, Type};
 use crate::codegen::cfg::ASTFunction;
 use crate::codegen::yul::generate_yul_function_cfg;
 use crate::sema::Recurse;
@@ -368,12 +368,6 @@ pub enum Expression {
     UnsignedDivide(pt::Loc, Type, Box<Expression>, Box<Expression>),
     SignedDivide(pt::Loc, Type, Box<Expression>, Box<Expression>),
     Equal(pt::Loc, Box<Expression>, Box<Expression>),
-    ExternalFunction {
-        loc: pt::Loc,
-        ty: Type,
-        address: Box<Expression>,
-        function_no: usize,
-    },
     FormatString(pt::Loc, Vec<(FormatArg, Expression)>),
     FunctionArg(pt::Loc, Type, usize),
     GetRef(pt::Loc, Type, Box<Expression>),
@@ -439,7 +433,6 @@ impl CodeLocation for Expression {
         match self {
             Expression::AbiEncode { loc, .. }
             | Expression::StorageArrayLength { loc, .. }
-            | Expression::ExternalFunction { loc, .. }
             | Expression::Builtin(loc, ..)
             | Expression::Cast(loc, ..)
             | Expression::NumberLiteral(loc, ..)
@@ -555,7 +548,6 @@ impl Recurse for Expression {
             | Expression::ZeroExt(_, _, exp)
             | Expression::SignExt(_, _, exp)
             | Expression::Complement(_, _, exp)
-            | Expression::ExternalFunction { address: exp, .. }
             | Expression::Load(_, _, exp)
             | Expression::StorageArrayLength { array: exp, .. }
             | Expression::StructMember(_, _, exp, _)
@@ -635,7 +627,6 @@ impl RetrieveType for Expression {
             | Expression::StructLiteral(_, ty, ..)
             | Expression::ArrayLiteral(_, ty, ..)
             | Expression::ConstArrayLiteral(_, ty, ..)
-            | Expression::ExternalFunction { ty, .. }
             | Expression::StructMember(_, ty, ..)
             | Expression::StringConcat(_, ty, ..)
             | Expression::FunctionArg(_, ty, ..)
@@ -1184,17 +1175,6 @@ impl Expression {
                         }
                     },
                 ),
-                Expression::ExternalFunction {
-                    loc,
-                    ty,
-                    address,
-                    function_no,
-                } => Expression::ExternalFunction {
-                    loc: *loc,
-                    ty: ty.clone(),
-                    address: Box::new(filter(address, ctx)),
-                    function_no: *function_no,
-                },
                 Expression::FormatString(loc, args) => {
                     let args = args.iter().map(|(f, e)| (*f, filter(e, ctx))).collect();
 
@@ -1211,21 +1191,6 @@ impl Expression {
         )
     }
 
-    fn external_function_address(&self) -> Expression {
-        debug_assert!(
-            matches!(self.ty(), Type::ExternalFunction { .. }),
-            "This is not an external function"
-        );
-        let loc = self.loc();
-        let struct_member = Expression::StructMember(
-            loc,
-            Type::Ref(Box::new(Type::Address(false))),
-            Box::new(self.clone()),
-            0,
-        );
-        Expression::Load(loc, Type::Address(false), Box::new(struct_member))
-    }
-
     fn external_function_selector(&self) -> Expression {
         debug_assert!(
             matches!(self.ty(), Type::ExternalFunction { .. }),
@@ -1236,9 +1201,24 @@ impl Expression {
             loc,
             Type::Ref(Box::new(Type::Bytes(4))),
             Box::new(self.clone()),
-            1,
+            0,
         );
         Expression::Load(loc, Type::Bytes(4), Box::new(struct_member))
+    }
+
+    fn external_function_address(&self) -> Expression {
+        debug_assert!(
+            matches!(self.ty(), Type::ExternalFunction { .. }),
+            "This is not an external function"
+        );
+        let loc = self.loc();
+        let struct_member = Expression::StructMember(
+            loc,
+            Type::Ref(Box::new(Type::Address(false))),
+            Box::new(self.clone()),
+            1,
+        );
+        Expression::Load(loc, Type::Address(false), Box::new(struct_member))
     }
 }
 

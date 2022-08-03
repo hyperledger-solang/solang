@@ -1,8 +1,7 @@
-use crate::ast::Type;
 use crate::codegen::cfg::{ASTFunction, ControlFlowGraph, Instr};
 use crate::codegen::reaching_definitions::{apply_transfers, VarDefs};
 use crate::codegen::{Builtin, Expression};
-use crate::sema::ast::{Diagnostic, ErrorType, Level, Namespace, Note};
+use crate::sema::ast::{Diagnostic, ErrorType, Level, Namespace, Note, Type};
 use crate::sema::symtable;
 use solang_parser::pt::CodeLocation;
 use solang_parser::pt::{Loc, StorageLocation};

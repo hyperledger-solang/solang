@@ -2,9 +2,9 @@ strict digraph "tests/contract_testcases/solana/call/calltys_02.sol" {
 	contract [label="contract main\ntests/contract_testcases/solana/call/calltys_02.sol:2:9-8:10"]
 	test [label="function test\ncontract: main\ntests/contract_testcases/solana/call/calltys_02.sol:3:13-35\nsignature test()\nvisibility public\nmutability nonpayable"]
 	diagnostic [label="found contract 'main'\nlevel Debug\ntests/contract_testcases/solana/call/calltys_02.sol:2:9-8:10"]
-	diagnostic_6 [label="'gas' not permitted for external calls or constructors on solana\nlevel Error\ntests/contract_testcases/solana/call/calltys_02.sol:6:51-57"]
+	diagnostic_5 [label="'gas' not permitted for external calls or constructors on solana\nlevel Error\ntests/contract_testcases/solana/call/calltys_02.sol:6:51-57"]
 	contracts -> contract
 	contract -> test [label="function"]
 	diagnostics -> diagnostic [label="Debug"]
-	diagnostics -> diagnostic_6 [label="Error"]
+	diagnostics -> diagnostic_5 [label="Error"]
 }

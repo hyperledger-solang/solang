@@ -1,10 +1,10 @@
-use crate::ast::{Namespace, RetrieveType, Type};
 use crate::codegen::cfg::{ControlFlowGraph, Instr};
 use crate::codegen::statements::LoopScopes;
 use crate::codegen::vartable::Vartable;
 use crate::codegen::yul::builtin::process_builtin;
 use crate::codegen::yul::expression::{expression, process_function_call};
 use crate::codegen::{Expression, Options};
+use crate::sema::ast::{Namespace, RetrieveType, Type};
 use crate::sema::yul::ast;
 use crate::sema::yul::ast::{YulStatement, YulSuffix};
 use num_bigint::BigInt;
@@ -261,10 +261,10 @@ fn cfg_single_assigment(
                     var_no,
                 ) => {
                     let (member_no, casted_expr, member_ty) = match suffix {
+                        YulSuffix::Selector => (0, rhs.cast(&Type::Uint(32), ns), Type::Uint(32)),
                         YulSuffix::Address => {
-                            (0, rhs.cast(&Type::Address(false), ns), Type::Address(false))
+                            (1, rhs.cast(&Type::Address(false), ns), Type::Address(false))
                         }
-                        YulSuffix::Selector => (1, rhs.cast(&Type::Uint(32), ns), Type::Uint(32)),
                         _ => unreachable!(),
                     };
 

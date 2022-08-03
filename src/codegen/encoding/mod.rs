@@ -1,11 +1,11 @@
 mod borsh_encoding;
 
-use crate::ast::{ArrayLength, Namespace, RetrieveType, Type};
 use crate::codegen::cfg::{ControlFlowGraph, Instr};
 use crate::codegen::encoding::borsh_encoding::BorshEncoding;
 use crate::codegen::expression::load_storage;
 use crate::codegen::vartable::Vartable;
 use crate::codegen::{Builtin, Expression};
+use crate::sema::ast::{ArrayLength, Namespace, RetrieveType, StructType, Type};
 use crate::Target;
 use num_bigint::BigInt;
 use solang_parser::pt::Loc;
@@ -82,8 +82,8 @@ fn get_expr_size<T: AbiEncoding>(
             Expression::NumberLiteral(Loc::Codegen, Type::Uint(32), BigInt::from(ns.value_length))
         }
 
-        Type::Struct(struct_no) => {
-            calculate_struct_size(encoder, arg_no, expr, *struct_no, ns, vartab, cfg)
+        Type::Struct(struct_ty) => {
+            calculate_struct_size(encoder, arg_no, expr, struct_ty, ns, vartab, cfg)
         }
 
         Type::Array(ty, dims) => {
@@ -112,8 +112,8 @@ fn get_expr_size<T: AbiEncoding>(
         | Type::Mapping(..) => unreachable!("This type cannot be encoded"),
 
         Type::Ref(r) => {
-            if let Type::Struct(struct_no) = &**r {
-                return calculate_struct_size(encoder, arg_no, expr, *struct_no, ns, vartab, cfg);
+            if let Type::Struct(struct_ty) = &**r {
+                return calculate_struct_size(encoder, arg_no, expr, struct_ty, ns, vartab, cfg);
             }
             let loaded = Expression::Load(Loc::Codegen, *r.clone(), Box::new(expr.clone()));
             get_expr_size(encoder, arg_no, &loaded, ns, vartab, cfg)
@@ -153,9 +153,9 @@ fn calculate_array_size<T: AbiEncoding>(
     // Check if the array contains only fixed sized elements
     let primitive_size = if elem_ty.is_primitive() && direct_assessment {
         Some(elem_ty.memory_size_of(ns))
-    } else if let Type::Struct(struct_no) = elem_ty {
+    } else if let Type::Struct(struct_ty) = elem_ty {
         if direct_assessment {
-            ns.calculate_struct_non_padded_size(*struct_no)
+            ns.calculate_struct_non_padded_size(struct_ty)
         } else {
             None
         }
@@ -353,20 +353,20 @@ fn calculate_struct_size<T: AbiEncoding>(
     encoder: &mut T,
     arg_no: usize,
     expr: &Expression,
-    struct_no: usize,
+    struct_ty: &StructType,
     ns: &Namespace,
     vartab: &mut Vartable,
     cfg: &mut ControlFlowGraph,
 ) -> Expression {
-    if let Some(struct_size) = ns.calculate_struct_non_padded_size(struct_no) {
+    if let Some(struct_size) = ns.calculate_struct_non_padded_size(struct_ty) {
         return Expression::NumberLiteral(Loc::Codegen, Type::Uint(32), struct_size);
     }
 
-    let first_type = ns.structs[struct_no].fields[0].ty.clone();
+    let first_type = struct_ty.definition(ns).fields[0].ty.clone();
     let first_field = load_struct_member(first_type, expr.clone(), 0);
     let mut size = get_expr_size(encoder, arg_no, &first_field, ns, vartab, cfg);
-    for i in 1..ns.structs[struct_no].fields.len() {
-        let ty = ns.structs[struct_no].fields[i].ty.clone();
+    for i in 1..struct_ty.definition(ns).fields.len() {
+        let ty = struct_ty.definition(ns).fields[i].ty.clone();
         let field = load_struct_member(ty.clone(), expr.clone(), i);
         size = Expression::Add(
             Loc::Codegen,

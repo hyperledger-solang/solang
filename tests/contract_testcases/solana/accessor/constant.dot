@@ -6,7 +6,7 @@ strict digraph "tests/contract_testcases/solana/accessor/constant.sol" {
 	return [label="return\nimplicit"]
 	constant [label="constant variable\nx.z\nbytes32\nimplicit"]
 	diagnostic [label="found contract 'x'\nlevel Debug\ntests/contract_testcases/solana/accessor/constant.sol:2:9-4:10"]
-	diagnostic_10 [label="cannot call function in constant expression\nlevel Error\ntests/contract_testcases/solana/accessor/constant.sol:3:41-53"]
+	diagnostic_9 [label="cannot call function in constant expression\nlevel Error\ntests/contract_testcases/solana/accessor/constant.sol:3:41-53"]
 	contracts -> contract
 	contract -> var [label="variable"]
 	contract -> z [label="function"]
@@ -14,5 +14,5 @@ strict digraph "tests/contract_testcases/solana/accessor/constant.sol" {
 	z -> return [label="body"]
 	return -> constant [label="expr"]
 	diagnostics -> diagnostic [label="Debug"]
-	diagnostics -> diagnostic_10 [label="Error"]
+	diagnostics -> diagnostic_9 [label="Error"]
 }

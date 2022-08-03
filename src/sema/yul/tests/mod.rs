@@ -1,6 +1,6 @@
 #![cfg(test)]
 
-use crate::{ast, parse_and_resolve, FileResolver, Target};
+use crate::{parse_and_resolve, sema::ast, FileResolver, Target};
 use std::ffi::OsStr;
 
 mod block;

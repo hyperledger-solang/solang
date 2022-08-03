@@ -102,7 +102,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
         ns: &ast::Namespace,
     ) -> IntValue<'c> {
         match ty {
-            ast::Type::Struct(n) => {
+            ast::Type::Struct(str_ty) => {
                 let arg = if load {
                     binary.builder.build_load(arg.into_pointer_value(), "")
                 } else {
@@ -125,7 +125,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
 
                 let mut normal_sum = binary.context.i32_type().const_zero();
 
-                for (i, field) in ns.structs[*n].fields.iter().enumerate() {
+                for (i, field) in str_ty.definition(ns).fields.iter().enumerate() {
                     let elem = unsafe {
                         binary.builder.build_gep(
                             arg.into_pointer_value(),
@@ -157,7 +157,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
 
                 let mut null_sum = binary.context.i32_type().const_zero();
 
-                for field in &ns.structs[*n].fields {
+                for field in &str_ty.definition(ns).fields {
                     null_sum = binary.builder.build_int_add(
                         null_sum,
                         EncoderBuilder::encoded_packed_length(
@@ -339,7 +339,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
         ns: &ast::Namespace,
     ) -> IntValue<'c> {
         match ty {
-            ast::Type::Struct(n) if ty.is_dynamic(ns) => {
+            ast::Type::Struct(str_ty) if ty.is_dynamic(ns) => {
                 let arg = if load {
                     binary.builder.build_load(arg.into_pointer_value(), "")
                 } else {
@@ -362,7 +362,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
 
                 let mut normal_sum = binary.context.i32_type().const_zero();
 
-                for (i, field) in ns.structs[*n].fields.iter().enumerate() {
+                for (i, field) in str_ty.definition(ns).fields.iter().enumerate() {
                     // a struct with dynamic fields gets stored in the dynamic part
                     normal_sum = binary.builder.build_int_add(
                         normal_sum,
@@ -404,7 +404,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
 
                 let mut null_sum = binary.context.i32_type().const_zero();
 
-                for field in &ns.structs[*n].fields {
+                for field in &str_ty.definition(ns).fields {
                     // a struct with dynamic fields gets stored in the dynamic part
                     null_sum = binary.builder.build_int_add(
                         null_sum,
@@ -608,7 +608,8 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                 32
             }
             ast::Type::Enum(_) => 32,
-            ast::Type::Struct(n) => ns.structs[*n]
+            ast::Type::Struct(str_ty) => str_ty
+                .definition(ns)
                 .fields
                 .iter()
                 .map(|f| EncoderBuilder::encoded_fixed_length(&f.ty, ns))
@@ -1185,7 +1186,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
 
                 *dynamic = dynamic_phi.as_basic_value().into_pointer_value();
             }
-            ast::Type::Struct(n) if ty.is_dynamic(ns) => {
+            ast::Type::Struct(str_ty) if ty.is_dynamic(ns) => {
                 let arg = if load {
                     binary.builder.build_load(arg.into_pointer_value(), "")
                 } else {
@@ -1215,7 +1216,8 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                 let mut null_fields_dynamic = *dynamic;
 
                 // add size of fixed fields to dynamic
-                let fixed_field_length = ns.structs[*n]
+                let fixed_field_length = str_ty
+                    .definition(ns)
                     .fields
                     .iter()
                     .map(|f| EncoderBuilder::encoded_fixed_length(&f.ty, ns))
@@ -1256,7 +1258,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                     .i32_type()
                     .const_int(fixed_field_length, false);
 
-                for (i, field) in ns.structs[*n].fields.iter().enumerate() {
+                for (i, field) in str_ty.definition(ns).fields.iter().enumerate() {
                     let elem = unsafe {
                         binary.builder.build_gep(
                             arg.into_pointer_value(),
@@ -1294,7 +1296,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                     .i32_type()
                     .const_int(fixed_field_length, false);
 
-                for field in &ns.structs[*n].fields {
+                for field in &str_ty.definition(ns).fields {
                     let elem = binary.default_value(&field.ty, ns);
 
                     self.encode_ty(
@@ -1339,7 +1341,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
 
                 *offset = offset_phi.as_basic_value().into_int_value();
             }
-            ast::Type::Struct(n) => {
+            ast::Type::Struct(str_ty) => {
                 let arg = if load {
                     binary
                         .builder
@@ -1365,7 +1367,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                 let mut normal_offset = *offset;
                 let mut normal_dynamic = *dynamic;
 
-                for (i, field) in ns.structs[*n].fields.iter().enumerate() {
+                for (i, field) in str_ty.definition(ns).fields.iter().enumerate() {
                     let elem = unsafe {
                         binary.builder.build_gep(
                             arg,
@@ -1401,7 +1403,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                 let mut null_dynamic = *dynamic;
 
                 // FIXME: abi encoding fixed length fields with default values. This should always be 0
-                for field in &ns.structs[*n].fields {
+                for field in &str_ty.definition(ns).fields {
                     let elem = binary.default_value(&field.ty, ns);
 
                     self.encode_ty(
@@ -1892,7 +1894,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
 
                 *output = output_phi.as_basic_value().into_pointer_value();
             }
-            ast::Type::Struct(n) => {
+            ast::Type::Struct(str_ty) => {
                 let arg = if load {
                     binary
                         .builder
@@ -1916,7 +1918,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
 
                 let mut normal_output = *output;
 
-                for (i, field) in ns.structs[*n].fields.iter().enumerate() {
+                for (i, field) in str_ty.definition(ns).fields.iter().enumerate() {
                     let elem = unsafe {
                         binary.builder.build_gep(
                             arg,
@@ -1948,7 +1950,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                 let mut null_output = *output;
 
                 // FIXME: abi encoding fixed length fields with default values. This should always be 0
-                for field in &ns.structs[*n].fields {
+                for field in &str_ty.definition(ns).fields {
                     let elem = binary.default_value(&field.ty, ns);
 
                     self.encode_packed_ty(
@@ -2906,7 +2908,7 @@ impl EthAbiDecoder {
 
                 dest.into()
             }
-            ast::Type::Struct(n) => {
+            ast::Type::Struct(str_ty) => {
                 let llvm_ty = binary.llvm_type(ty.deref_any(), ns);
 
                 let size = llvm_ty
@@ -2930,7 +2932,7 @@ impl EthAbiDecoder {
                     binary.builder.build_pointer_cast(
                         new,
                         llvm_ty.ptr_type(AddressSpace::Generic),
-                        &ns.structs[*n].name,
+                        &str_ty.definition(ns).name,
                     )
                 });
 
@@ -2968,7 +2970,7 @@ impl EthAbiDecoder {
                     base_offset
                 };
 
-                for (i, field) in ns.structs[*n].fields.iter().enumerate() {
+                for (i, field) in str_ty.definition(ns).fields.iter().enumerate() {
                     let elem = unsafe {
                         binary.builder.build_gep(
                             struct_pointer,

@@ -1,4 +1,4 @@
-use crate::ast::{ArrayLength, Namespace, Parameter, Symbol, Type};
+use crate::sema::ast::{ArrayLength, Namespace, Parameter, Symbol, Type};
 use crate::sema::diagnostics::Diagnostics;
 use crate::sema::expression::{unescape, ExprContext};
 use crate::sema::symtable::{Symtable, VariableUsage};

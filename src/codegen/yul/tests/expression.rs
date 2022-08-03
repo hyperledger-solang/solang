@@ -1,11 +1,11 @@
 #![cfg(test)]
 
-use crate::ast::{Contract, Layout, Mutability, Namespace, Type, Variable};
 use crate::codegen::cfg::ControlFlowGraph;
 use crate::codegen::vartable::Vartable;
 use crate::codegen::yul::expression::expression;
 use crate::codegen::{Builtin, Expression, Options};
 use crate::sema::ast::ArrayLength;
+use crate::sema::ast::{Contract, Layout, Mutability, Namespace, Type, Variable};
 use crate::sema::yul::ast;
 use crate::sema::yul::ast::YulSuffix;
 use crate::{sema, Target};
@@ -557,7 +557,7 @@ fn selector_suffix() {
                     },
                     4
                 )),
-                1
+                0
             ))
         )
     );
@@ -626,7 +626,7 @@ fn address_suffix() {
                     },
                     4
                 )),
-                0
+                1
             ))
         )
     );

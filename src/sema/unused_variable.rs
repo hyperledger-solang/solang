@@ -1,5 +1,4 @@
-use crate::ast::EventDecl;
-use crate::sema::ast::{Builtin, CallArgs, Diagnostic, Expression, Namespace};
+use crate::sema::ast::{Builtin, CallArgs, Diagnostic, EventDecl, Expression, Namespace};
 use crate::sema::symtable::{Symtable, VariableUsage};
 use crate::sema::{ast, symtable};
 use solang_parser::pt::{ContractTy, Loc};
