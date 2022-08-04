@@ -1061,24 +1061,6 @@ fn expression(
                 false,
             )
         }
-        Expression::ExternalFunction {
-            loc,
-            ty,
-            address,
-            function_no,
-        } => {
-            let address = expression(address, vars, cfg, ns);
-
-            (
-                Expression::ExternalFunction {
-                    loc: *loc,
-                    ty: ty.clone(),
-                    address: Box::new(address.0),
-                    function_no: *function_no,
-                },
-                address.1,
-            )
-        }
         Expression::AbiEncode {
             loc,
             tys,

@@ -3,10 +3,10 @@ strict digraph "tests/contract_testcases/solana/expressions/bytes32_0_01.sol" {
 	b32 [label="function b32\ncontract: foo\ntests/contract_testcases/solana/expressions/bytes32_0_01.sol:3:13-59\nsignature b32()\nvisibility public\nmutability pure"]
 	returns [label="returns\nbytes32 r"]
 	diagnostic [label="found contract 'foo'\nlevel Debug\ntests/contract_testcases/solana/expressions/bytes32_0_01.sol:2:9-6:10"]
-	diagnostic_7 [label="number of 2 bytes cannot be converted to type 'bytes32'\nlevel Error\ntests/contract_testcases/solana/expressions/bytes32_0_01.sol:4:21-36"]
+	diagnostic_6 [label="number of 2 bytes cannot be converted to type 'bytes32'\nlevel Error\ntests/contract_testcases/solana/expressions/bytes32_0_01.sol:4:21-36"]
 	contracts -> contract
 	contract -> b32 [label="function"]
 	b32 -> returns [label="returns"]
 	diagnostics -> diagnostic [label="Debug"]
-	diagnostics -> diagnostic_7 [label="Error"]
+	diagnostics -> diagnostic_6 [label="Error"]
 }

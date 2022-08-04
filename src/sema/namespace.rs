@@ -1047,9 +1047,9 @@ impl Namespace {
                 Box::new(Type::Enum(*n)),
                 resolve_dimensions(&dimensions, diagnostics)?,
             )),
-            Some(Symbol::Struct(_, n)) if dimensions.is_empty() => Ok(Type::Struct(*n)),
-            Some(Symbol::Struct(_, n)) => Ok(Type::Array(
-                Box::new(Type::Struct(*n)),
+            Some(Symbol::Struct(_, str_ty)) if dimensions.is_empty() => Ok(Type::Struct(*str_ty)),
+            Some(Symbol::Struct(_, str_ty)) => Ok(Type::Array(
+                Box::new(Type::Struct(*str_ty)),
                 resolve_dimensions(&dimensions, diagnostics)?,
             )),
             Some(Symbol::Contract(_, n)) if dimensions.is_empty() => Ok(Type::Contract(*n)),

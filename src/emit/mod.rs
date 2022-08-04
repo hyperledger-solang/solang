@@ -1,8 +1,8 @@
 use crate::codegen::{Builtin, Expression};
 use crate::sema::ast::RetrieveType;
 use crate::sema::ast::{
-    ArrayLength, BuiltinStruct, CallTy, Contract, FormatArg, Function, Namespace, Parameter,
-    StringLocation, Type,
+    ArrayLength, CallTy, Contract, FormatArg, Function, Namespace, Parameter, StringLocation,
+    StructType, Type,
 };
 use solang_parser::pt;
 use std::convert::TryFrom;
@@ -555,7 +555,7 @@ pub trait TargetRuntime<'a> {
                     dest.into()
                 }
             }
-            Type::Struct(n) => {
+            Type::Struct(str_ty) => {
                 let llvm_ty = bin.llvm_type(ty.deref_any(), ns);
                 // LLVMSizeOf() produces an i64
                 let size = bin.builder.build_int_truncate(
@@ -582,7 +582,7 @@ pub trait TargetRuntime<'a> {
                     "dest",
                 );
 
-                for (i, field) in ns.structs[*n].fields.iter().enumerate() {
+                for (i, field) in str_ty.definition(ns).fields.iter().enumerate() {
                     let val = self.storage_load_slot(bin, &field.ty, slot, slot_ptr, function, ns);
 
                     let elem = unsafe {
@@ -881,8 +881,8 @@ pub trait TargetRuntime<'a> {
                     );
                 }
             }
-            Type::Struct(n) => {
-                for (i, field) in ns.structs[*n].fields.iter().enumerate() {
+            Type::Struct(str_ty) => {
+                for (i, field) in str_ty.definition(ns).fields.iter().enumerate() {
                     let mut elem = unsafe {
                         bin.builder.build_gep(
                             dest.into_pointer_value(),
@@ -1091,8 +1091,8 @@ pub trait TargetRuntime<'a> {
                     self.storage_delete_slot(bin, &Type::Uint(256), slot, slot_ptr, function, ns);
                 }
             }
-            Type::Struct(n) => {
-                for (_, field) in ns.structs[*n].fields.iter().enumerate() {
+            Type::Struct(str_ty) => {
+                for (_, field) in str_ty.definition(ns).fields.iter().enumerate() {
                     self.storage_delete_slot(bin, &field.ty, slot, slot_ptr, function, ns);
 
                     if !field.ty.is_reference_type(ns)
@@ -2299,7 +2299,7 @@ pub trait TargetRuntime<'a> {
 
                     self.storage_subscript(bin, function, ty, array, index, ns)
                         .into()
-                } else if elem_ty.builtin_struct(ns) == BuiltinStruct::AccountInfo {
+                } else if elem_ty.is_builtin_struct() == Some(StructType::AccountInfo) {
                     let array = self
                         .expression(bin, a, vartab, function, ns)
                         .into_pointer_value();
@@ -2368,7 +2368,7 @@ pub trait TargetRuntime<'a> {
                 }
             }
             Expression::StructMember(_, _, a, _)
-                if a.ty().builtin_struct(ns) == BuiltinStruct::AccountInfo =>
+                if a.ty().is_builtin_struct() == Some(StructType::AccountInfo) =>
             {
                 self.builtin(bin, e, vartab, function, ns)
             }
@@ -2516,7 +2516,7 @@ pub trait TargetRuntime<'a> {
                 }
             }
             Expression::Builtin(_, _, Builtin::ArrayLength, args)
-                if args[0].ty().array_deref().builtin_struct(ns) == BuiltinStruct::None =>
+                if args[0].ty().array_deref().is_builtin_struct().is_none() =>
             {
                 let array = self.expression(bin, &args[0], vartab, function, ns);
 
@@ -2896,74 +2896,6 @@ pub trait TargetRuntime<'a> {
                 bin.builder
                     .build_int_truncate(quotient, res_ty, "quotient")
                     .into()
-            }
-            Expression::ExternalFunction {
-                ty,
-                address,
-                function_no,
-                ..
-            } => {
-                let address = self
-                    .expression(bin, address, vartab, function, ns)
-                    .into_array_value();
-
-                let selector = ns.functions[*function_no].selector();
-
-                assert!(matches!(ty, Type::ExternalFunction { .. }));
-
-                let ty = bin.llvm_type(ty, ns);
-
-                let ef = bin
-                    .builder
-                    .build_call(
-                        bin.module.get_function("__malloc").unwrap(),
-                        &[ty.into_pointer_type()
-                            .get_element_type()
-                            .size_of()
-                            .unwrap()
-                            .const_cast(bin.context.i32_type(), false)
-                            .into()],
-                        "",
-                    )
-                    .try_as_basic_value()
-                    .left()
-                    .unwrap()
-                    .into_pointer_value();
-
-                let ef =
-                    bin.builder
-                        .build_pointer_cast(ef, ty.into_pointer_type(), "function_type");
-
-                let address_member = unsafe {
-                    bin.builder.build_gep(
-                        ef,
-                        &[
-                            bin.context.i32_type().const_zero(),
-                            bin.context.i32_type().const_zero(),
-                        ],
-                        "address",
-                    )
-                };
-
-                bin.builder.build_store(address_member, address);
-
-                let selector_member = unsafe {
-                    bin.builder.build_gep(
-                        ef,
-                        &[
-                            bin.context.i32_type().const_zero(),
-                            bin.context.i32_type().const_int(1, false),
-                        ],
-                        "selector",
-                    )
-                };
-
-                bin.builder.build_store(
-                    selector_member,
-                    bin.context.i32_type().const_int(selector as u64, false),
-                );
-
-                ef.into()
             }
             Expression::Builtin(_, _, hash @ Builtin::Ripemd160, args)
             | Expression::Builtin(_, _, hash @ Builtin::Keccak256, args)

@@ -1,5 +1,5 @@
-use crate::ast::Type;
 use crate::codegen::Expression;
+use crate::sema::ast::Type;
 
 /// This enum defines operator types for the graph
 #[derive(PartialEq, Eq, Hash, Clone, Debug)]

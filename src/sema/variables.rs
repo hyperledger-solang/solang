@@ -1,6 +1,6 @@
 use super::{
     ast::{
-        BuiltinStruct, Diagnostic, Expression, Function, Namespace, Parameter, Statement, Symbol,
+        Diagnostic, Expression, Function, Namespace, Parameter, Statement, StructType, Symbol,
         Type, Variable,
     },
     contracts::is_base,
@@ -307,12 +307,12 @@ pub fn variable_decl<'a>(
             ),
         ));
         return None;
-    } else if let Some(ty) = ty.contains_builtins(ns, BuiltinStruct::AccountInfo) {
+    } else if let Some(ty) = ty.contains_builtins(ns, &StructType::AccountInfo) {
         let message = format!("variable cannot be of builtin type '{}'", ty.to_string(ns));
         ns.diagnostics
             .push(Diagnostic::error(def.ty.loc(), message));
         return None;
-    } else if let Some(ty) = ty.contains_builtins(ns, BuiltinStruct::AccountMeta) {
+    } else if let Some(ty) = ty.contains_builtins(ns, &StructType::AccountMeta) {
         let message = format!("variable cannot be of builtin type '{}'", ty.to_string(ns));
         ns.diagnostics
             .push(Diagnostic::error(def.ty.loc(), message));

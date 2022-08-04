@@ -7,12 +7,12 @@ use super::{
     cfg::{ControlFlowGraph, Instr},
     vartable::Vartable,
 };
-use crate::ast;
 use crate::codegen::unused_variable::{
     should_remove_assignment, should_remove_variable, SideEffectsCheckParameters,
 };
 use crate::codegen::yul::inline_assembly_cfg;
 use crate::codegen::Expression;
+use crate::sema::ast;
 use crate::sema::ast::RetrieveType;
 use crate::sema::ast::{
     ArrayLength, CallTy, DestructureField, Function, Namespace, Parameter, Statement, TryCatch,
@@ -1444,9 +1444,9 @@ impl Type {
                 Some(Expression::BytesLiteral(pt::Loc::Codegen, self.clone(), l))
             }
             Type::Enum(e) => ns.enums[*e].ty.default(ns),
-            Type::Struct(struct_no) => {
+            Type::Struct(struct_ty) => {
                 // make sure all our fields have default values
-                for field in &ns.structs[*struct_no].fields {
+                for field in &struct_ty.definition(ns).fields {
                     field.ty.default(ns)?;
                 }
 

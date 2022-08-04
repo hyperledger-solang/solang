@@ -1,11 +1,11 @@
 #![cfg(test)]
 
-use crate::ast::{Contract, Layout, Mutability, Namespace, Type, Variable};
 use crate::codegen::cfg::ControlFlowGraph;
 use crate::codegen::vartable::Vartable;
 use crate::codegen::yul::expression::expression;
 use crate::codegen::{Builtin, Expression, Options};
 use crate::sema::ast::ArrayLength;
+use crate::sema::ast::{Contract, Layout, Mutability, Namespace, Type, Variable};
 use crate::sema::yul::ast;
 use crate::sema::yul::ast::YulSuffix;
 use crate::{sema, Target};
@@ -557,7 +557,7 @@ fn selector_suffix() {
                     },
                     4
                 )),
-                1
+                0
             ))
         )
     );
@@ -610,26 +610,30 @@ fn address_suffix() {
     let res = expression(&expr, 0, &ns, &mut vartab, &mut cfg, &opt);
 
     assert_eq!(
-        res,
-        Expression::Load(
-            loc,
-            Type::Address(false),
-            Box::new(Expression::StructMember(
+            res,
+            Expression::Load(
                 loc,
-                Type::Ref(Box::new(Type::Address(false))),
-                Box::new(Expression::Variable(
+                Type::Address(false),
+                Box::new(Expression::StructMember(
                     loc,
-                    Type::ExternalFunction {
-                        mutability: Mutability::Pure(loc),
-                        params: vec![],
-                        returns: vec![]
-                    },
-                    4
-                )),
-                0
-            ))
-        )
-    );
+                    Type::Ref(Box::new(Type::Address(false))),
+                    Box::new(Expression::Variable(
+                        loc,
+                        Type::ExternalFunction {
+                            mutability: Mutability::Pure(loc),
+                            params: vec![],
+                            returns: vec![]
+                        },
+                        4
+                    )),
+    <<<<<<< HEAD
+                    0
+    =======
+                    1
+    >>>>>>> upstream/main
+                ))
+            )
+        );
 }
 
 #[test]

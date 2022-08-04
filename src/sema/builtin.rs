@@ -1,6 +1,6 @@
 use super::ast::{
-    ArrayLength, Builtin, BuiltinStruct, Diagnostic, Expression, File, Function, Namespace,
-    Parameter, StructDecl, Symbol, Type,
+    ArrayLength, Builtin, Diagnostic, Expression, File, Function, Namespace, Parameter, StructType,
+    Symbol, Type,
 };
 use super::diagnostics::Diagnostics;
 use super::eval::eval_const_number;
@@ -513,7 +513,7 @@ static BUILTIN_VARIABLE: Lazy<[Prototype; 16]> = Lazy::new(|| {
             name: "accounts",
             params: vec![],
             ret: vec![Type::Array(
-                Box::new(Type::Struct(0)),
+                Box::new(Type::Struct(StructType::AccountInfo)),
                 vec![ArrayLength::Dynamic],
             )],
             target: vec![Target::Solana],
@@ -1435,118 +1435,6 @@ impl Namespace {
             cache_no: None,
         });
 
-        let account_info_no = self.structs.len();
-
-        let fields = vec![
-            Parameter {
-                loc: pt::Loc::Builtin,
-                id: Some(pt::Identifier {
-                    name: String::from("key"),
-                    loc: pt::Loc::Builtin,
-                }),
-                ty: Type::Address(false),
-                ty_loc: None,
-                indexed: false,
-                readonly: true,
-                recursive: false,
-            },
-            Parameter {
-                loc: pt::Loc::Builtin,
-                id: Some(pt::Identifier {
-                    name: String::from("lamports"),
-                    loc: pt::Loc::Builtin,
-                }),
-                ty: Type::Uint(64),
-                ty_loc: None,
-                indexed: false,
-                readonly: false,
-                recursive: false,
-            },
-            Parameter {
-                loc: pt::Loc::Builtin,
-                id: Some(pt::Identifier {
-                    name: String::from("data"),
-                    loc: pt::Loc::Builtin,
-                }),
-                ty: Type::DynamicBytes,
-                ty_loc: None,
-                indexed: false,
-                readonly: true,
-                recursive: false,
-            },
-            Parameter {
-                loc: pt::Loc::Builtin,
-                id: Some(pt::Identifier {
-                    name: String::from("owner"),
-                    loc: pt::Loc::Builtin,
-                }),
-                ty: Type::Address(false),
-                ty_loc: None,
-                indexed: false,
-                readonly: true,
-                recursive: false,
-            },
-            Parameter {
-                loc: pt::Loc::Builtin,
-                id: Some(pt::Identifier {
-                    name: String::from("rent_epoch"),
-                    loc: pt::Loc::Builtin,
-                }),
-                ty: Type::Uint(64),
-                ty_loc: None,
-                indexed: false,
-                readonly: true,
-                recursive: false,
-            },
-            Parameter {
-                loc: pt::Loc::Builtin,
-                id: Some(pt::Identifier {
-                    name: String::from("is_signer"),
-                    loc: pt::Loc::Builtin,
-                }),
-                ty: Type::Bool,
-                ty_loc: None,
-                indexed: false,
-                readonly: true,
-                recursive: false,
-            },
-            Parameter {
-                loc: pt::Loc::Builtin,
-                id: Some(pt::Identifier {
-                    name: String::from("is_writable"),
-                    loc: pt::Loc::Builtin,
-                }),
-                ty: Type::Bool,
-                ty_loc: None,
-                indexed: false,
-                readonly: true,
-                recursive: false,
-            },
-            Parameter {
-                loc: pt::Loc::Builtin,
-                id: Some(pt::Identifier {
-                    name: String::from("executable"),
-                    loc: pt::Loc::Builtin,
-                }),
-                ty: Type::Bool,
-                ty_loc: None,
-                indexed: false,
-                readonly: true,
-                recursive: false,
-            },
-        ];
-
-        self.structs.push(StructDecl {
-            tags: Vec::new(),
-            loc: pt::Loc::Builtin,
-            builtin: BuiltinStruct::AccountInfo,
-            contract: None,
-            name: String::from("AccountInfo"),
-            fields,
-            offsets: Vec::new(),
-            storage_offsets: Vec::new(),
-        });
-
         let id = pt::Identifier {
             loc: pt::Loc::Builtin,
             name: String::from("AccountInfo"),
@@ -1556,61 +1444,9 @@ impl Namespace {
             file_no,
             None,
             &id,
-            Symbol::Struct(pt::Loc::Builtin, account_info_no)
+            Symbol::Struct(pt::Loc::Builtin, StructType::AccountInfo)
         ));
 
-        let account_meta_no = self.structs.len();
-
-        let fields = vec![
-            Parameter {
-                loc: pt::Loc::Builtin,
-                id: Some(pt::Identifier {
-                    name: String::from("pubkey"),
-                    loc: pt::Loc::Builtin,
-                }),
-                ty: Type::Ref(Box::new(Type::Address(false))),
-                ty_loc: None,
-                indexed: false,
-                readonly: false,
-                recursive: false,
-            },
-            Parameter {
-                loc: pt::Loc::Builtin,
-                id: Some(pt::Identifier {
-                    name: String::from("is_writable"),
-                    loc: pt::Loc::Builtin,
-                }),
-                ty: Type::Bool,
-                ty_loc: None,
-                indexed: false,
-                readonly: false,
-                recursive: false,
-            },
-            Parameter {
-                loc: pt::Loc::Builtin,
-                id: Some(pt::Identifier {
-                    name: String::from("is_signer"),
-                    loc: pt::Loc::Builtin,
-                }),
-                ty: Type::Bool,
-                ty_loc: None,
-                indexed: false,
-                readonly: false,
-                recursive: false,
-            },
-        ];
-
-        self.structs.push(StructDecl {
-            tags: Vec::new(),
-            loc: pt::Loc::Builtin,
-            builtin: BuiltinStruct::AccountMeta,
-            contract: None,
-            name: String::from("AccountMeta"),
-            fields,
-            offsets: Vec::new(),
-            storage_offsets: Vec::new(),
-        });
-
         let id = pt::Identifier {
             loc: pt::Loc::Builtin,
             name: String::from("AccountMeta"),
@@ -1620,7 +1456,7 @@ impl Namespace {
             file_no,
             None,
             &id,
-            Symbol::Struct(pt::Loc::Builtin, account_meta_no)
+            Symbol::Struct(pt::Loc::Builtin, StructType::AccountMeta)
         ));
 
         let mut func = Function::new(

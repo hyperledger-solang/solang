@@ -1,9 +1,9 @@
 #![cfg(test)]
 use super::expression_values::expression_values;
 use super::{highest_set_bit, Variables};
-use crate::ast::{Namespace, Type};
 use crate::codegen::strength_reduce::value::Value;
 use crate::codegen::Expression;
+use crate::sema::ast::{Namespace, Type};
 use bitvec::prelude::BitArray;
 use num_bigint::BigInt;
 use std::collections::{HashMap, HashSet};
