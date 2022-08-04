@@ -271,7 +271,7 @@ fn slot_suffix() {
     let res = expression(&expr, 0, &ns, &mut vartab, &mut cfg, &opt);
     assert_eq!(
         res,
-        Expression::NumberLiteral(Loc::Codegen, Type::Uint(256), BigInt::from(2))
+        Expression::NumberLiteral(Loc::File(1, 2, 3), Type::Uint(256), BigInt::from(2))
     );
 
     let expr = ast::YulExpression::SuffixAccess(
