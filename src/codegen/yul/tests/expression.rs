@@ -610,30 +610,26 @@ fn address_suffix() {
     let res = expression(&expr, 0, &ns, &mut vartab, &mut cfg, &opt);
 
     assert_eq!(
-            res,
-            Expression::Load(
+        res,
+        Expression::Load(
+            loc,
+            Type::Address(false),
+            Box::new(Expression::StructMember(
                 loc,
-                Type::Address(false),
-                Box::new(Expression::StructMember(
+                Type::Ref(Box::new(Type::Address(false))),
+                Box::new(Expression::Variable(
                     loc,
-                    Type::Ref(Box::new(Type::Address(false))),
-                    Box::new(Expression::Variable(
-                        loc,
-                        Type::ExternalFunction {
-                            mutability: Mutability::Pure(loc),
-                            params: vec![],
-                            returns: vec![]
-                        },
-                        4
-                    )),
-    <<<<<<< HEAD
-                    0
-    =======
-                    1
-    >>>>>>> upstream/main
-                ))
-            )
-        );
+                    Type::ExternalFunction {
+                        mutability: Mutability::Pure(loc),
+                        params: vec![],
+                        returns: vec![]
+                    },
+                    4
+                )),
+                1
+            ))
+        )
+    );
 }
 
 #[test]
