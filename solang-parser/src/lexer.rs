@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 //
 // Solidity custom lexer. Solidity needs a custom lexer for two reasons:
 //  - comments and doc comments

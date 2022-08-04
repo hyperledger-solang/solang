@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use super::ast::{
     Diagnostic, Function, Mutability, Namespace, Parameter, StructType, Symbol, Type,
 };

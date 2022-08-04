@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use ethabi::{decode, ethereum_types, RawLog, Token};
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;

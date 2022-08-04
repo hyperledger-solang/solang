@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::codegen::{Builtin, Expression};
 use crate::sema::ast::RetrieveType;
 use crate::sema::ast::{

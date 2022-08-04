@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use assert_cmd::Command;
 use std::ffi::OsString;
 use std::fs::File;

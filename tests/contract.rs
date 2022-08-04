@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use path_slash::PathExt;
 use solang::{codegen, file_resolver::FileResolver, parse_and_resolve, Target};
 use std::{

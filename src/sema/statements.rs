@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use super::ast::*;
 use super::contracts::is_base;
 use super::diagnostics::Diagnostics;

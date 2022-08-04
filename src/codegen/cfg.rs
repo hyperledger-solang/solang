@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use super::statements::{statement, LoopScopes};
 use super::{
     constant_folding, dead_storage,

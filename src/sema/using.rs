@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use super::{
     ast::{Diagnostic, Expression, Namespace, Note, Type, Using, UsingList},
     diagnostics::Diagnostics,

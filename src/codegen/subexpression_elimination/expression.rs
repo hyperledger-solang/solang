@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::codegen::subexpression_elimination::{ConstantType, ExpressionType};
 use crate::codegen::Expression;
 use crate::sema::ast::StringLocation;

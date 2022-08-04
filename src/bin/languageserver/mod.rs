@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use clap::ArgMatches;
 use rust_lapper::{Interval, Lapper};
 use serde_json::Value;

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::codegen::cfg::{ControlFlowGraph, Instr};
 use crate::codegen::encoding::{
     calculate_size_args, finish_array_loop, increment_four, load_array_item, load_struct_member,

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 mod solana_helpers;
 
 use base58::{FromBase58, ToBase58};

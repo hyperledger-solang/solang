@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::codegen::cfg::{ASTFunction, ControlFlowGraph, Instr};
 use crate::codegen::reaching_definitions::{apply_transfers, VarDefs};
 use crate::codegen::{Builtin, Expression};

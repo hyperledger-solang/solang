@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 #![cfg(test)]
 use super::expression_values::expression_values;
 use super::{highest_set_bit, Variables};

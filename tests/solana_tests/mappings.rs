@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::{account_new, build_solidity};
 use ethabi::{ethereum_types::U256, Token};
 

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::build_solidity;
 use parity_scale_codec::{Decode, Encode};
 
@@ -21,11 +23,11 @@ fn array_boundary_check() {
                 } else {
                     a.push(1);
                 }
-        
+
                 for (uint256 i = 0; i < a.length; i++) {
                     sesa = sesa + a[10];
                 }
-        
+
                 assert(sesa == 11);
             }
         }
@@ -41,7 +43,7 @@ fn array_boundary_check() {
                 uint256[] c = new uint256[](size32);
                 uint256[] d = new uint256[](20);
                 uint32 sesa = c.length + d.length;
-        
+
                 assert(sesa == 31);
             }
         }
@@ -58,19 +60,19 @@ fn array_boundary_check() {
                 if (cond) {
                     b.push(true);
                 }
-        
+
                 assert(b.length == 101);
-        
+
                 if (cond) {
                     b.pop();
                     b.pop();
                 }
-        
+
                 assert(b.length == 99);
                 return b.length;
             }
         }
-        
+
     "#,
     );
 
@@ -83,15 +85,15 @@ fn array_boundary_check() {
                 uint256[] a = new uint256[](20);
                 a.push(1);
                 uint256 sesa = 0;
-        
+
                 for (uint256 i = 0; i < a.length; i++) {
                     sesa = sesa + a[20];
                 }
-        
+
                 assert(sesa == 21);
             }
         }
-        
+
     "#,
     );
 
@@ -102,19 +104,19 @@ fn array_boundary_check() {
         contract c {
             function test_loop_2() public  {
                 int256[] vec = new int256[](10);
-                
+
                 for (int256 i = 0; i < 5; i++) {
                     if (vec.length > 20) {
                         break;
                     }
                     vec.push(3);
                 }
-        
+
                 assert (vec.length == 15);
-            
+
             }
         }
-        
+
     "#,
     );
 
@@ -127,13 +129,13 @@ fn array_boundary_check() {
                 int256[] a = new int256[](3);
                 // copy by reference/pointer
                 int256[] b = a;
-        
+
                 b = new int256[](6);
-        
+
                 assert(a.length == 3);
                 assert(b.length == 6);
             }
-        
+
             function fool2() public {
                 int256[] a = new int256[](3);
                 // copy by reference/pointer
@@ -145,7 +147,7 @@ fn array_boundary_check() {
                 // now both a and b have length 2.
             }
         }
-        
+
     "#,
     );
 
@@ -161,35 +163,35 @@ fn array_boundary_check() {
                 a.pop();
                 assert(a.length == 3);
             }
-        
+
             function edgy() public pure {
                 uint256[] a;
                 uint256[] b;
                 uint256[] c = new uint256[](30);
-        
+
                 a = b = c = new uint256[](40);
                 a.pop();
-        
+
                 assert(a.length == b.length);
                 assert(b.length == c.length);
                 assert(c.length == 39);
             }
-        
+
             function edgy_2() public pure {
                 uint256[] a;
                 uint256[] b;
                 uint256[] c = new uint256[](30);
-        
+
                 a = b = c;
                 a.pop();
-        
+
                 assert(a.length == b.length);
                 assert(b.length == c.length);
                 assert(c.length == 29);
             }
         }
-        
-        
+
+
     "#,
     );
 

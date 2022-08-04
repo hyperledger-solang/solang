@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use super::symtable::Symtable;
 use crate::codegen::cfg::ControlFlowGraph;
 use crate::diagnostics::Diagnostics;

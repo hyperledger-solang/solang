@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::codegen::Expression;
 use crate::sema::ast;
 use num_bigint::BigInt;

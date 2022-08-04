@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use super::Bits;
 use bitvec::prelude::BitArray;
 use bitvec::prelude::Lsb0;

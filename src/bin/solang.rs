@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use clap::{
     builder::{ArgAction, ValueParser},
     value_parser, Arg, ArgMatches, Command, ValueSource,

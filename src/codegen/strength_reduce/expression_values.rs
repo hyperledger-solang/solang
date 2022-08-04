@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use super::value::Value;
 use super::{bigint_to_bitarr, highest_set_bit, track, Variables};
 use crate::codegen::Expression;
