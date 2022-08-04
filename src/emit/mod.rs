@@ -3264,13 +3264,14 @@ pub trait TargetRuntime<'a> {
                 let size = return_type_size.get_type().get_bit_width();
                 let mut type_name = "size_".to_owned();
                 type_name.push_str(&size.to_string());
+                let di_flags = if cfg.public {
+                    inkwell::debug_info::DIFlagsConstants::PUBLIC
+                } else {
+                    inkwell::debug_info::DIFlagsConstants::PRIVATE
+                };
+
                 let di_return_type = dibuilder
-                    .create_basic_type(
-                        &type_name,
-                        size as u64,
-                        0x00,
-                        inkwell::debug_info::DIFlagsConstants::PUBLIC,
-                    )
+                    .create_basic_type(&type_name, size as u64, 0x00, di_flags)
                     .unwrap();
                 let param_types = function.get_type().get_param_types();
                 let di_param_types: Vec<DIType<'_>> = param_types
@@ -3280,12 +3281,7 @@ pub trait TargetRuntime<'a> {
                         let param_size = typ.size_of().unwrap().get_type().get_bit_width();
                         param_tname.push_str(&size.to_string());
                         dibuilder
-                            .create_basic_type(
-                                &param_tname,
-                                param_size as u64,
-                                0x00,
-                                inkwell::debug_info::DIFlagsConstants::PUBLIC,
-                            )
+                            .create_basic_type(&param_tname, param_size as u64, 0x00, di_flags)
                             .unwrap()
                             .as_type()
                     })
@@ -3294,23 +3290,27 @@ pub trait TargetRuntime<'a> {
                     file,
                     Some(di_return_type.as_type()),
                     di_param_types.as_slice(),
-                    inkwell::debug_info::DIFlagsConstants::PUBLIC,
+                    di_flags,
                 );
-                let di_flags = if cfg.public {
-                    inkwell::debug_info::DIFlagsConstants::PUBLIC
+
+                let func_loc = cfg.blocks[0].instr.first().unwrap().loc();
+                let line_num = if let Loc::File(file_offset, offset, _) = func_loc {
+                    let (line, _) = ns.files[file_offset].offset_to_line_column(offset);
+                    line
                 } else {
-                    inkwell::debug_info::DIFlagsConstants::PRIVATE
+                    0
                 };
+
                 di_func_scope = Some(dibuilder.create_function(
                     compile_unit.as_debug_info_scope(),
                     function.get_name().to_str().unwrap(),
                     None,
                     file,
-                    /* line no*/ 0, // TODO: rectify line name
+                    line_num as u32,
                     di_func_type,
                     true,
                     true,
-                    /* scope line */ 0, // TODO: rectify scope line
+                    line_num as u32,
                     di_flags,
                     false,
                 ));
@@ -3433,8 +3433,8 @@ pub trait TargetRuntime<'a> {
             }
 
             for ins in &cfg.blocks[w.block_no].instr {
-                let debug_loc_opt = ins.loc();
-                if let Loc::File(file_offset, offset, _) = debug_loc_opt {
+                let debug_loc = ins.loc();
+                if let Loc::File(file_offset, offset, _) = debug_loc {
                     let (line, col) = ns.files[file_offset].offset_to_line_column(offset);
                     let debug_loc = dibuilder.create_debug_location(
                         bin.context,
