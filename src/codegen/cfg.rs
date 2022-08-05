@@ -1586,7 +1586,10 @@ fn function_cfg(
         .map(|stmt| stmt.reachable())
         .unwrap_or(true)
     {
-        let loc = func.body.last().unwrap().loc();
+        let loc = match func.body.last() {
+            Some(ins) => ins.loc(),
+            None => pt::Loc::Codegen,
+        };
         // add implicit return
         cfg.add(
             &mut vartab,
@@ -1771,7 +1774,10 @@ pub fn generate_modifier_dispatch(
         .map(|stmt| stmt.reachable())
         .unwrap_or(true)
     {
-        let loc = func.body.last().unwrap().loc();
+        let loc = match func.body.last() {
+            Some(ins) => ins.loc(),
+            None => pt::Loc::Codegen,
+        };
         // add implicit return
         cfg.add(
             &mut vartab,
