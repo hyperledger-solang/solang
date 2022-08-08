@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 mod borsh_encoding;
+mod buffer_validator;
 
 use crate::codegen::cfg::{ControlFlowGraph, Instr};
 use crate::codegen::encoding::borsh_encoding::BorshEncoding;
@@ -10,8 +11,9 @@ use crate::codegen::{Builtin, Expression};
 use crate::sema::ast::{ArrayLength, Namespace, RetrieveType, StructType, Type};
 use crate::Target;
 use num_bigint::BigInt;
+use num_traits::One;
 use solang_parser::pt::Loc;
-use std::ops::AddAssign;
+use std::ops::{AddAssign, MulAssign};
 
 /// This trait should be implemented by all encoding methods (ethabi, Scale and Borsh), so that
 /// we have the same interface for creating encode and decode functions.
@@ -25,6 +27,16 @@ pub(super) trait AbiEncoding {
         vartab: &mut Vartable,
         cfg: &mut ControlFlowGraph,
     ) -> Expression;
+
+    fn abi_decode(
+        &self,
+        loc: &Loc,
+        buffer: &Expression,
+        types: &[Type],
+        ns: &Namespace,
+        vartab: &mut Vartable,
+        cfg: &mut ControlFlowGraph,
+    ) -> Vec<Expression>;
 
     /// Cache items loaded from storage to reuse them later, so we avoid the expensive operation
     /// of loading from storage twice. We need the data in two different passes: first to
@@ -86,6 +98,11 @@ fn get_expr_size<T: AbiEncoding>(
 
         Type::Struct(struct_ty) => {
             calculate_struct_size(encoder, arg_no, expr, struct_ty, ns, vartab, cfg)
+        }
+
+        Type::Slice(ty) => {
+            let dims = vec![ArrayLength::Dynamic];
+            calculate_array_size(encoder, expr, ty, &dims, arg_no, ns, vartab, cfg)
         }
 
         Type::Array(ty, dims) => {
@@ -580,4 +597,50 @@ fn increment_four(expr: Expression) -> Expression {
             BigInt::from(4u8),
         )),
     )
+}
+
+/// Check if we can MemCpy elements of an array to/from a buffer
+fn allow_direct_copy(
+    array_ty: &Type,
+    elem_ty: &Type,
+    dims: &[ArrayLength],
+    ns: &Namespace,
+) -> bool {
+    let type_direct_copy: bool = if let Type::Struct(struct_ty) = elem_ty {
+        if let Some(no_padded_size) = ns.calculate_struct_non_padded_size(struct_ty) {
+            no_padded_size.eq(&elem_ty.solana_storage_size(ns)) && ns.target == Target::Solana
+        } else {
+            false
+        }
+    } else if let Type::Bytes(n) = elem_ty {
+        *n < 2
+    } else {
+        elem_ty.is_primitive()
+    };
+
+    if array_ty.is_dynamic(ns) {
+        // If this is a dynamic array, we can only MemCpy if its elements are of
+        // any primitive type and we don't need to index it.
+        dims.len() == 1 && type_direct_copy
+    } else {
+        // If the array is not dynamic, we can MemCpy elements if their are primitive.
+        type_direct_copy
+    }
+}
+
+/// Calculate the number of bytes needed to memcpy an entire vector
+fn calculate_direct_copy_bytes_size(
+    dims: &[ArrayLength],
+    elem_ty: &Type,
+    ns: &Namespace,
+) -> BigInt {
+    let mut elem_no = BigInt::one();
+    for item in dims {
+        debug_assert!(matches!(item, &ArrayLength::Fixed(_)));
+        elem_no.mul_assign(item.array_length().unwrap());
+    }
+    let bytes = elem_ty.memory_size_of(ns);
+    elem_no.mul_assign(bytes);
+
+    elem_no
 }

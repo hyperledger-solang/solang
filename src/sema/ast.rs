@@ -1126,6 +1126,9 @@ pub enum Builtin {
     MinimumBalance,
     TombstoneDeposit,
     AbiDecode,
+    // TODO: AbiBorshDecode is temporary and should be removed once Brosh encoding is fully
+    // wired for Solana
+    AbiBorshDecode,
     AbiEncode,
     AbiEncodePacked,
     AbiEncodeWithSelector,

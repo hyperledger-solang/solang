@@ -1341,6 +1341,7 @@ impl Type {
                 .iter()
                 .any(|f| f.ty.is_dynamic(ns)),
             Type::StorageRef(_, r) => r.is_dynamic(ns),
+            Type::Slice(_) => true,
             _ => false,
         }
     }

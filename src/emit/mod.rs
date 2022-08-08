@@ -3443,7 +3443,6 @@ pub trait TargetRuntime<'a> {
                         let dest_ref = self
                             .expression(bin, dest, &w.vars, function, ns)
                             .into_pointer_value();
-
                         bin.builder.build_store(dest_ref, value_ref);
                     }
                     Instr::BranchCond {
@@ -4584,17 +4583,19 @@ pub trait TargetRuntime<'a> {
                                 .into_pointer_value()
                         };
 
-                        let dest = self.expression(bin, to, &w.vars, function, ns);
+                        let dest = if to.ty().is_dynamic_memory() {
+                            bin.vector_bytes(self.expression(bin, to, &w.vars, function, ns))
+                        } else {
+                            self.expression(bin, to, &w.vars, function, ns)
+                                .into_pointer_value()
+                        };
+
                         let size = self.expression(bin, bytes, &w.vars, function, ns);
 
                         if matches!(bytes, Expression::NumberLiteral(..)) {
-                            let _ = bin.builder.build_memcpy(
-                                dest.into_pointer_value(),
-                                1,
-                                src,
-                                1,
-                                size.into_int_value(),
-                            );
+                            let _ =
+                                bin.builder
+                                    .build_memcpy(dest, 1, src, 1, size.into_int_value());
                         } else {
                             bin.builder.build_call(
                                 bin.module.get_function("__memcpy").unwrap(),

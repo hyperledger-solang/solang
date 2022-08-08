@@ -301,6 +301,20 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
                         topic_tys: topic_tys.clone(),
                     }
                 }
+                Instr::MemCopy {
+                    source,
+                    destination,
+                    bytes,
+                } => {
+                    let bytes = expression(bytes, Some(&vars), cfg, ns);
+                    let source = expression(source, Some(&vars), cfg, ns);
+                    let destination = expression(destination, Some(&vars), cfg, ns);
+                    cfg.blocks[block_no].instr[instr_no] = Instr::MemCopy {
+                        source: source.0,
+                        destination: destination.0,
+                        bytes: bytes.0,
+                    };
+                }
                 _ => (),
             }
 
@@ -373,15 +387,21 @@ fn expression(
         } => {
             // Only the offset can be simplified
             let offset = expression(offset, vars, cfg, ns);
-            (
-                Expression::AdvancePointer {
-                    loc: *loc,
-                    ty: ty.clone(),
-                    pointer: pointer.clone(),
-                    bytes_offset: Box::new(offset.0),
-                },
-                offset.1,
-            )
+
+            match &offset.0 {
+                // There is no reason to advance the pointer by a zero offset
+                Expression::NumberLiteral(_, _, num) if num.is_zero() => (*pointer.clone(), false),
+
+                _ => (
+                    Expression::AdvancePointer {
+                        loc: *loc,
+                        ty: ty.clone(),
+                        pointer: pointer.clone(),
+                        bytes_offset: Box::new(offset.0),
+                    },
+                    offset.1,
+                ),
+            }
         }
         Expression::Multiply(loc, ty, unchecked, left, right) => {
             let left = expression(left, vars, cfg, ns);
