@@ -3634,6 +3634,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         gas: IntValue<'b>,
         value: IntValue<'b>,
         _accounts: Option<(PointerValue<'b>, IntValue<'b>)>,
+        _seeds: Option<(PointerValue<'b>, IntValue<'b>)>,
         _ty: ast::CallTy,
         ns: &ast::Namespace,
     ) {

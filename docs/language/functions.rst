@@ -180,6 +180,50 @@ see the section on :ref:`account_meta`.
 
 If ``{accounts}`` is not specified, then all account are passed.
 
+Passing seeds with external calls on Solana
+___________________________________________
+
+The Solana runtime allows you to specify the seeds to be passed for an
+external call. This is used for program derived addresses: the seeds are
+hashed with the calling program id to create program derived addresses.
+They will automatically have the signer bit set, which allows a contract to
+sign without using any private keys.
+
+.. code-block:: solidity
+
+    import 'solana';
+
+    contract c {
+        address constant program_id = address"mv3ekLzLbnVPNxjSKvqBpU3ZeZXPQdEC3bp5MDEBG68";
+
+        function test(address addr, address addr2, bytes seed) public {
+            bytes instr = new bytes(1);
+
+            instr[0] = 1;
+
+            AccountMeta[2] metas = [
+                AccountMeta({pubkey: addr, is_writable: true, is_signer: true}),
+                AccountMeta({pubkey: addr2, is_writable: true, is_signer: true})
+            ];
+
+            token.call{accounts: metas, seeds: [ [ "test", seed ], [ "foo", "bar "] ]}(instr);
+        }
+    }
+
+Now if the program derived address for the running program id and the seeds match the address
+``addr`` and ``addr2``, then then the called program will run with signer and writable bits
+set for ``addr`` and ``addr2``. If they do not match, the Solana runtime will detect that
+the ``is_signer`` is set without the correct signature being provided.
+
+The seeds can provided in any other, which will be used to sign for multiple accounts. In the example
+above, the seed ``"test"`` is concatenated with the value of ``seed``, and that produces
+one account signature. In adition, ``"foo"`` is concatenated with ``"bar"`` to produce ``"foobar"``
+and then used to sign for another account.
+
+The ``seeds:`` call parameter is a slice of bytes slices; this means the literal can contain any
+number of elements, including 0 elements. The values can be ``bytes`` or anything that can be
+cast to ``bytes``.
+
 .. _passing_value_gas:
 
 Passing value and gas with external calls
