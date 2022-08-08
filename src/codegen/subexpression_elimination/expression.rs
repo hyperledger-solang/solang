@@ -8,7 +8,7 @@ impl Expression {
     /// Rebuild a binary expression given the new left and right subexpressions
     #[must_use]
     pub fn rebuild_binary_expression(&self, left: &Expression, right: &Expression) -> Expression {
-        let expr = match self {
+        match self {
             Expression::Add(loc, expr_type, check, ..) => Expression::Add(
                 *loc,
                 expr_type.clone(),
@@ -174,9 +174,7 @@ impl Expression {
             }
 
             _ => unreachable!("Cannot rebuild this expression"),
-        };
-
-        expr
+        }
     }
 
     /// Rebuild a unary expression give the new operand expression
