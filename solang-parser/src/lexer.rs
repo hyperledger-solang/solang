@@ -643,7 +643,7 @@ impl<'input> Lexer<'input> {
                     is_rational = true;
                     self.chars.next(); // advance over '.'
                     while let Some((i, ch)) = self.chars.peek() {
-                        if !ch.is_ascii_digit() {
+                        if !ch.is_ascii_digit() && *ch != '_' {
                             break;
                         }
                         rational_end = *i;
@@ -1284,6 +1284,14 @@ fn lexertest() {
             Ok((24, Token::RationalNumber("", "0008", ""), 29)),
             Ok((30, Token::RationalNumber("0", "9", "-2"), 36))
         )
+    );
+
+    let tokens = Lexer::new("1.2_3e2", 0, &mut comments)
+        .collect::<Vec<Result<(usize, Token, usize), LexicalError>>>();
+
+    assert_eq!(
+        tokens,
+        vec!(Ok((0, Token::RationalNumber("1", "2_3", "2"), 7)))
     );
 
     let tokens = Lexer::new("\"foo\"", 0, &mut comments)
