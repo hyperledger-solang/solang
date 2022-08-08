@@ -261,7 +261,7 @@ ABI encoding and decoding
 _________________________
 
 The ABI encoding depends on the target being compiled for. Substrate uses the
-`SCALE Codec <https://substrate.dev/docs/en/knowledgebase/advanced/codec>`_ and ewasm uses
+`SCALE Codec <https://docs.substrate.io/reference/scale-codec/>`_ and ewasm uses
 `Ethereum ABI encoding <https://docs.soliditylang.org/en/v0.7.6/abi-spec.html>`_.
 
 abi.decode(bytes, (*type-list*))

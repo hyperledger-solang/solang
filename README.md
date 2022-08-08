@@ -137,7 +137,7 @@ Alternatively if you want to use the solang container, run:
 docker run --rm -it -v $(pwd):/sources ghcr.io/hyperledger-labs/solang -v -o /sources --target substrate /sources/flipper.sol
 ```
 You will have a file called flipper.contract. You can use this directly in
-the [Polkadot UI](https://substrate.dev/substrate-contracts-workshop/#/0/deploy-contract),
+the [Contracts UI](https://contracts-ui.substrate.io/),
 as if your smart contract was written using ink!.
 
 ## Tentative roadmap

@@ -8,7 +8,7 @@ file (also known as the abi).
 
 The following targets are supported right now:
 `Solana <https://www.solana.com/>`_,
-`Parity Substrate <https://substrate.dev/>`_, and
+`Parity Substrate <https://substrate.io/>`_, and
 `Ethereum ewasm <https://github.com/ewasm/design>`_.
 
 

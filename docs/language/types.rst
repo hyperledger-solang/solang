@@ -450,7 +450,7 @@ be reflected in the current function. For example:
   32 bytes. However, since ``bytes32`` is a primitive in itself, this will only be 32
   bytes when ABI encoded.
 
-  In Substrate, the `SCALE <https://substrate.dev/docs/en/knowledgebase/advanced/codec>`_
+  In Substrate, the `SCALE <https://docs.substrate.io/reference/scale-codec/>`_
   encoding uses 32 bytes for both types.
 
 Dynamic Length Arrays
