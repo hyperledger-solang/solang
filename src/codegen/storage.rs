@@ -1,5 +1,7 @@
-use crate::ast;
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::codegen::Expression;
+use crate::sema::ast;
 use num_bigint::BigInt;
 use num_traits::FromPrimitive;
 use num_traits::One;
@@ -11,8 +13,7 @@ use super::{
     cfg::{ControlFlowGraph, Instr},
     vartable::Vartable,
 };
-use crate::sema::ast::RetrieveType;
-use crate::sema::ast::{Function, Namespace, Type};
+use crate::sema::ast::{Function, Namespace, RetrieveType, Type};
 use solang_parser::pt;
 
 /// Given a storage slot which is the start of the array, calculate the

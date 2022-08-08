@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::Target;
 use parity_wasm::builder;
 use parity_wasm::elements::{InitExpr, Instruction, Module};

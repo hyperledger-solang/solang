@@ -1,4 +1,5 @@
-use crate::ast::Namespace;
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::codegen::cfg::{
     optimize_and_check_cfg, populate_arguments, populate_named_returns, ASTFunction,
     ControlFlowGraph, Instr,
@@ -7,6 +8,7 @@ use crate::codegen::statements::LoopScopes;
 use crate::codegen::vartable::Vartable;
 use crate::codegen::yul::statements::statement;
 use crate::codegen::{Expression, Options};
+use crate::sema::ast::Namespace;
 use crate::sema::yul::ast::InlineAssembly;
 use solang_parser::pt;
 use solang_parser::pt::FunctionTy;

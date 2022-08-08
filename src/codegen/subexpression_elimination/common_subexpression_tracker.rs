@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::codegen::subexpression_elimination::{BasicExpression, ExpressionType};
 use crate::codegen::{
     vartable::{Storage, Variable},
@@ -39,6 +41,8 @@ pub struct CommonSubExpressionTracker {
     cur_block: usize,
     new_cfg_instr: Vec<Instr>,
     parent_block_instr: Vec<(usize, Instr)>,
+    /// Map from variable number to common subexpression
+    mapped_variables: HashMap<usize, usize>,
     /// The CFG is a cyclic graph. In order properly find the lowest common block,
     /// we transformed it in a DAG, removing cycles from loops.
     cfg_dag: Vec<Vec<usize>>,
@@ -75,7 +79,7 @@ impl CommonSubExpressionTracker {
 
         self.inserted_subexpressions
             .insert(expr_type.clone(), self.len);
-        self.len += 1;
+
         self.common_subexpressions.push(CommonSubexpression {
             in_cfg: node.available_variable.is_available(),
             var_no: node.available_variable.get_var_number(),
@@ -89,6 +93,22 @@ impl CommonSubExpressionTracker {
                 None
             },
         });
+
+        if let Some(var_no) = node.available_variable.get_var_number() {
+            // If we encounter an expression like 'x = y+2', we can map 'x' to 'y+2', whenever possible.
+            self.mapped_variables.insert(var_no, self.len);
+        }
+
+        self.len += 1;
+    }
+
+    /// Invalidate a mapped variable
+    pub fn invalidate_mapped_variable(&mut self, var_no: &usize) {
+        if let Some(expr_id) = self.mapped_variables.remove(var_no) {
+            self.common_subexpressions[expr_id].var_loc = None;
+            self.common_subexpressions[expr_id].in_cfg = false;
+            self.common_subexpressions[expr_id].var_no = None;
+        }
     }
 
     /// Create variables in the CFG

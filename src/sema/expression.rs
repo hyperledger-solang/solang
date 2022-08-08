@@ -1,7 +1,9 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use super::address::to_hexstr_eip55;
 use super::ast::{
-    ArrayLength, Builtin, BuiltinStruct, CallArgs, CallTy, Diagnostic, Expression, Function,
-    Mutability, Namespace, StringLocation, Symbol, Type,
+    ArrayLength, Builtin, CallArgs, CallTy, Diagnostic, Expression, Function, Mutability,
+    Namespace, RetrieveType, StringLocation, StructType, Symbol, Type,
 };
 use super::builtin;
 use super::contracts::is_base;
@@ -10,7 +12,6 @@ use super::eval::eval_const_number;
 use super::eval::eval_const_rational;
 use super::format::string_format;
 use super::{symtable::Symtable, using};
-use crate::ast::RetrieveType;
 use crate::sema::unused_variable::{
     assigned_variable, check_function_call, check_var_usage_expression, used_variable,
 };
@@ -370,6 +371,21 @@ impl Expression {
                     BigRational::from(n.clone()),
                 ));
             }
+
+            (
+                &Expression::ArrayLiteral(..),
+                Type::Array(from_ty, from_dims),
+                Type::Array(to_ty, to_dims),
+            ) => {
+                if from_ty == to_ty
+                    && from_dims.len() == to_dims.len()
+                    && from_dims.len() == 1
+                    && matches!(to_dims.last().unwrap(), ArrayLength::Dynamic)
+                {
+                    return Ok(Expression::Cast(*loc, to.clone(), Box::new(self.clone())));
+                }
+            }
+
             _ => (),
         };
 
@@ -1245,10 +1261,10 @@ fn get_int_length(
             ));
             Err(())
         }
-        Type::Struct(n) => {
+        Type::Struct(str_ty) => {
             diagnostics.push(Diagnostic::error(
                 *l_loc,
-                format!("type struct {} not allowed", ns.structs[*n]),
+                format!("type struct {} not allowed", str_ty.definition(ns)),
             ));
             Err(())
         }
@@ -4573,8 +4589,9 @@ fn member_access(
     let expr = expression(e, context, ns, symtable, diagnostics, resolve_to)?;
     let expr_ty = expr.ty();
 
-    if let Type::Struct(struct_no) = expr_ty.deref_memory() {
-        if let Some((i, f)) = ns.structs[*struct_no]
+    if let Type::Struct(struct_ty) = expr_ty.deref_memory() {
+        if let Some((i, f)) = struct_ty
+            .definition(ns)
             .fields
             .iter()
             .enumerate()
@@ -4585,7 +4602,8 @@ fn member_access(
                     id.loc,
                     format!(
                         "struct '{}' field '{}' is readonly",
-                        ns.structs[*struct_no], id.name
+                        struct_ty.definition(ns),
+                        id.name
                     ),
                 ));
                 Err(())
@@ -4610,7 +4628,8 @@ fn member_access(
                 id.loc,
                 format!(
                     "struct '{}' does not have a field called '{}'",
-                    ns.structs[*struct_no], id.name
+                    struct_ty.definition(ns),
+                    id.name
                 ),
             ));
             return Err(());
@@ -4678,8 +4697,9 @@ fn member_access(
             }
         }
         Type::StorageRef(immutable, r) => match *r {
-            Type::Struct(n) => {
-                return if let Some((field_no, field)) = ns.structs[n]
+            Type::Struct(str_ty) => {
+                return if let Some((field_no, field)) = str_ty
+                    .definition(ns)
                     .fields
                     .iter()
                     .enumerate()
@@ -4696,7 +4716,8 @@ fn member_access(
                         id.loc,
                         format!(
                             "struct '{}' does not have a field called '{}'",
-                            ns.structs[n].name, id.name
+                            str_ty.definition(ns).name,
+                            id.name
                         ),
                     ));
                     Err(())
@@ -5055,21 +5076,18 @@ fn array_subscript(
 /// Resolve a function call with positional arguments
 fn struct_literal(
     loc: &pt::Loc,
-    struct_no: usize,
+    struct_ty: &StructType,
     args: &[pt::Expression],
     context: &ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Diagnostics,
 ) -> Result<Expression, ()> {
-    let struct_def = ns.structs[struct_no].clone();
+    let struct_def = struct_ty.definition(ns).clone();
 
-    let ty = Type::Struct(struct_no);
+    let ty = Type::Struct(*struct_ty);
 
-    if ty
-        .contains_builtins(ns, BuiltinStruct::AccountInfo)
-        .is_some()
-    {
+    if ty.contains_builtins(ns, &StructType::AccountInfo).is_some() {
         diagnostics.push(Diagnostic::error(
             *loc,
             format!(
@@ -5638,20 +5656,17 @@ fn function_call_named_args(
 /// Resolve a struct literal with named fields
 fn named_struct_literal(
     loc: &pt::Loc,
-    struct_no: usize,
+    str_ty: &StructType,
     args: &[pt::NamedArgument],
     context: &ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Diagnostics,
 ) -> Result<Expression, ()> {
-    let struct_def = ns.structs[struct_no].clone();
-    let ty = Type::Struct(struct_no);
+    let struct_def = str_ty.definition(ns).clone();
+    let ty = Type::Struct(*str_ty);
 
-    if ty
-        .contains_builtins(ns, BuiltinStruct::AccountInfo)
-        .is_some()
-    {
+    if ty.contains_builtins(ns, &StructType::AccountInfo).is_some() {
         diagnostics.push(Diagnostic::error(
             *loc,
             format!(
@@ -7328,7 +7343,9 @@ fn parse_call_args(
 
                 // if let chains would really help here
                 if let Type::Array(elem_ty, dims) = expr_ty.deref_memory() {
-                    if elem_ty.builtin_struct(ns) == BuiltinStruct::AccountMeta && dims.len() == 1 {
+                    if elem_ty.is_builtin_struct() == Some(StructType::AccountMeta)
+                        && dims.len() == 1
+                    {
                         correct_ty = true;
                     }
                 }
@@ -7380,8 +7397,8 @@ pub fn named_call_expr(
         ty,
         &mut nullsink,
     ) {
-        Ok(Type::Struct(n)) => {
-            return named_struct_literal(loc, n, args, context, ns, symtable, diagnostics);
+        Ok(Type::Struct(str_ty)) => {
+            return named_struct_literal(loc, &str_ty, args, context, ns, symtable, diagnostics);
         }
         Ok(_) => {
             diagnostics.push(Diagnostic::error(
@@ -7447,8 +7464,8 @@ pub fn call_expr(
         ty,
         &mut nullsink,
     ) {
-        Ok(Type::Struct(n)) => {
-            return struct_literal(loc, n, args, context, ns, symtable, diagnostics);
+        Ok(Type::Struct(str_ty)) => {
+            return struct_literal(loc, &str_ty, args, context, ns, symtable, diagnostics);
         }
         Ok(to) => {
             // Cast

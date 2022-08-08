@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use super::cfg::{ControlFlowGraph, Instr};
 use super::reaching_definitions;
 use crate::codegen::{Builtin, Expression};
@@ -79,10 +81,11 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
                         };
                     }
                 }
-                Instr::Store { dest, pos } => {
+                Instr::Store { dest, data } => {
                     let (dest, _) = expression(dest, Some(&vars), cfg, ns);
+                    let (data, _) = expression(data, Some(&vars), cfg, ns);
 
-                    cfg.blocks[block_no].instr[instr_no] = Instr::Store { dest, pos: *pos };
+                    cfg.blocks[block_no].instr[instr_no] = Instr::Store { dest, data };
                 }
                 Instr::AssertFailure { expr: Some(expr) } => {
                     let (expr, _) = expression(expr, Some(&vars), cfg, ns);
@@ -356,6 +359,24 @@ fn expression(
                     left.1 && right.1,
                 )
             }
+        }
+        Expression::AdvancePointer {
+            loc,
+            ty,
+            pointer,
+            bytes_offset: offset,
+        } => {
+            // Only the offset can be simplified
+            let offset = expression(offset, vars, cfg, ns);
+            (
+                Expression::AdvancePointer {
+                    loc: *loc,
+                    ty: ty.clone(),
+                    pointer: pointer.clone(),
+                    bytes_offset: Box::new(offset.0),
+                },
+                offset.1,
+            )
         }
         Expression::Multiply(loc, ty, unchecked, left, right) => {
             let left = expression(left, vars, cfg, ns);
@@ -1040,24 +1061,6 @@ fn expression(
             (
                 Expression::Builtin(*loc, tys.clone(), *builtin, args),
                 false,
-            )
-        }
-        Expression::ExternalFunction {
-            loc,
-            ty,
-            address,
-            function_no,
-        } => {
-            let address = expression(address, vars, cfg, ns);
-
-            (
-                Expression::ExternalFunction {
-                    loc: *loc,
-                    ty: ty.clone(),
-                    address: Box::new(address.0),
-                    function_no: *function_no,
-                },
-                address.1,
             )
         }
         Expression::AbiEncode {

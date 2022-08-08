@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use solang::codegen::{codegen, OptimizationLevel, Options};
 use solang::file_resolver::FileResolver;
 use solang::sema::ast::Diagnostic;

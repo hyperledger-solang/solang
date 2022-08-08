@@ -1,5 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::build_solidity;
-use ethabi::{ethereum_types::U256, Token, Uint};
+use ethabi::{ethereum_types::U256, FixedBytes, Token, Uint};
 
 #[test]
 fn suffixes_access() {
@@ -247,4 +249,47 @@ contract c {
         returns,
         vec![Token::Uint(U256::from(0)), Token::Uint(U256::from(0))]
     );
+}
+
+#[test]
+fn external_function() {
+    let mut vm = build_solidity(
+        r#"
+    contract C {
+
+        function myFun() public {
+
+        }
+
+        function test(uint256 newAddress, bytes4 newSelector) public view returns (bytes4, address) {
+            function() external fun = this.myFun;
+            address myAddr = address(newAddress);
+            assembly {
+                fun.selector := newSelector
+                fun.address  := myAddr
+            }
+
+            return (fun.selector, fun.address);
+        }
+    }
+        "#,
+    );
+
+    vm.constructor("C", &[]);
+    let mut addr: Vec<u8> = vec![0; 32];
+    addr[5] = 90;
+    let returns = vm.function(
+        "test",
+        &[
+            Token::Uint(U256::from_little_endian(&addr[..])),
+            Token::FixedBytes(FixedBytes::from([1, 2, 3, 4])),
+        ],
+        &[],
+        None,
+    );
+
+    let selector = returns[0].clone().into_fixed_bytes().unwrap();
+    assert_eq!(selector, vec![1, 2, 3, 4]);
+    let addr = returns[1].clone().into_fixed_bytes().unwrap();
+    assert_eq!(addr[26], 90);
 }

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use super::cfg::{BasicBlock, ControlFlowGraph, Instr};
 use super::reaching_definitions::{Def, Transfer};
 use crate::codegen::cfg::ASTFunction;
@@ -73,14 +75,19 @@ fn find_writable_vectors(
 
                 apply_transfers(&block.transfers[instr_no], vars, writable);
             }
-            Instr::Store { pos, .. } => {
-                if let Some(entry) = vars.get_mut(pos) {
-                    writable.extend(entry.keys());
+            Instr::Store { data, .. } => {
+                if let Expression::Variable(_, _, var_no) = data {
+                    if let Some(entry) = vars.get_mut(var_no) {
+                        writable.extend(entry.keys());
+                    }
                 }
 
                 apply_transfers(&block.transfers[instr_no], vars, writable);
             }
-            Instr::WriteBuffer { buf, .. } => {
+            Instr::MemCopy {
+                destination: buf, ..
+            }
+            | Instr::WriteBuffer { buf, .. } => {
                 if let Expression::Variable(_, _, var_no) = buf {
                     if let Some(entry) = vars.get_mut(var_no) {
                         writable.extend(entry.keys());

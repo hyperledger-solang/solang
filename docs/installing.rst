@@ -1,10 +1,30 @@
 Installing Solang
 =================
 
-The Solang compiler is a single binary. It can be installed in different ways.
+The Solang compiler is a single binary. It can be installed in different ways, listed below.
 
-Download release binaries
--------------------------
+1. :ref:`Download from Homebrew <download-brew>` (MacOS only)
+2. :ref:`Download pre-compiled binaries <download-binaries>`
+3. :ref:`Download from a Docker container <download-docker>`
+4. :ref:`Build using Dockerfile <build-dockerfile>`
+5. :ref:`Build from source <build-source>`
+
+.. _download-brew:
+
+Option 1: Download from Brew
+----------------------------
+
+Solang is available on Brew via a private tap. Currently, this works only for MacOS systems, both Intel and Apple Silicon.
+To install Solang via Brew, run the following command:
+
+.. code-block:: text
+
+    brew install hyperledger-labs/solang/solang
+
+.. _download-binaries:
+
+Option 2: Download release binaries
+-----------------------------------
 
 There are binaries available on github releases:
 
@@ -26,9 +46,10 @@ If you are using an Intel based Mac, please, exchange ``solang-mac-arm`` by ``so
 On Linux, permission to execute the binary is also necessary, so, please, run ``chmod +x solang-linux-x86-64``. If you
 are using an Arm based Linux, the command is the following: ``chmod +x solang-linux-arm64``.
 
+.. _download-docker:
 
-Using ghcr.io/hyperledger-labs/solang containers
-------------------------------------------------
+Option 3: Use ghcr.io/hyperledger-labs/solang containers
+--------------------------------------------------------
 
 New images are automatically made available on
 `solang containers <https://github.com/hyperledger-labs/solang/pkgs/container/solang>`_.
@@ -41,8 +62,10 @@ There is a release `v0.1.12` tag and a `latest` tag:
 The Solang binary is stored at ``/usr/bin/solang`` in this image. The `latest` tag
 gets updated each time there is a commit to the main branch of the Solang git repository.
 
-Build Solang using Dockerfile
------------------------------
+.. _build-dockerfile:
+
+Option 4: Build Solang using Dockerfile
+---------------------------------------
 
 First clone the git repo using:
 
@@ -56,32 +79,45 @@ Then you can build the image using:
 
 	docker image build .
 
-Building Solang from source
----------------------------
+.. _build-source:
+
+Option 5: Build Solang from source
+----------------------------------
 
 In order to build Solang from source, you will need rust 1.59.0 or higher,
-and a build of llvm based on the Solana llvm tree. There are a few patches which are not upstream yet.
-First, follow the steps below for installing llvm and then proceed from there.
+and a build of LLVM based on the Solana LLVM tree. There are a few patches which are not upstream yet.
+First, follow the steps below for installing LLVM and then proceed from there.
 
 If you do not have the correct version of rust installed, go to `rustup <https://rustup.rs/>`_.
 
-Installing the LLVM Libraries
------------------------------
+To install Solang from sources, do the following:
+
+1. :ref:`Install LLVM <install-llvm>` from Solana's LLVM fork.
+2. :ref:`Build Solang <build-from-source>` from its source files.
+
+
+Solang is also available on `crates.io`, so after completing step #1 from above, it is possible to :ref:`build it using the
+release <build-from-crates>` on crates.
+
+.. _install-llvm:
+
+Step 1: Install the LLVM Libraries
+_____________________________________
 
 Solang needs a build of
-`llvm with some extra patches <https://github.com/solana-labs/llvm-project/>`_.
+`LLVM with some extra patches <https://github.com/solana-labs/llvm-project/>`_.
 These patches make it possible to generate code for Solana, and fixes some
 concurrency issues in the lld linker.
 
 You can either download the pre-built libraries from
 `github <https://github.com/hyperledger-labs/solang/releases/tag/v0.1.12>`_
-or build your own from source. After that, you need to add the `bin` directory to your
-path, so that the build system of Solang can find the correct version of llvm to use.
+or :ref:`build your own from source <llvm-from-source>`. After that, you need to add the ``bin`` directory to your
+path, so that the build system of Solang can find the correct version of LLVM to use.
 
-Installing LLVM on Linux
-________________________
+Linux
+~~~~~
 
-A pre-built version of llvm, specifically configured for Solang, is available at
+A pre-built version of LLVM, specifically configured for Solang, is available at
 `<https://github.com/hyperledger-labs/solang/releases/download/v0.1.12/llvm13.0-linux-x86-64.tar.xz>`_.
 After downloading, untar the file in a terminal and add it to your path.
 
@@ -90,10 +126,10 @@ After downloading, untar the file in a terminal and add it to your path.
 	tar Jxf llvm13.0-linux-x86-64.tar.xz
 	export PATH=$(pwd)/llvm13.0/bin:$PATH
 
-Installing LLVM on Windows
-__________________________
+Windows
+~~~~~~~
 
-A pre-built version of llvm, specifically configured for Solang, is available at
+A pre-built version of LLVM, specifically configured for Solang, is available at
 `<https://github.com/hyperledger-labs/solang/releases/download/v0.1.12/llvm13.0-win.zip>`_.
 
 After unzipping the file, add the bin directory to your path.
@@ -102,10 +138,10 @@ After unzipping the file, add the bin directory to your path.
 
 	set PATH=%PATH%;C:\llvm13.0\bin
 
-Installing LLVM on Mac
-______________________
+Mac
+~~~
 
-A pre-built version of llvm for intel macs, is available at
+A pre-built version of LLVM for intel macs, is available at
 `<https://github.com/hyperledger-labs/solang/releases/download/v0.1.12/llvm13.0-mac-intel.tar.xz>`_ and for arm macs there is
 `<https://github.com/hyperledger-labs/solang/releases/download/v0.1.12/llvm13.0-mac-arm.tar.xz>`_. After downloading,
 untar the file in a terminal and add it to your path like so:
@@ -119,17 +155,17 @@ untar the file in a terminal and add it to your path like so:
 .. _llvm-from-source:
 
 Building LLVM from source
-___________________________
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The llvm project itself has a guide to `installing from source <http://www.llvm.org/docs/CMake.html>`_ which
-you may need to consult. First if all clone our llvm repository:
+The LLVM project itself has a guide to `installing from source <http://www.llvm.org/docs/CMake.html>`_ which
+you may need to consult. First if all clone our LLVM repository:
 
 .. code-block:: bash
 
 	git clone --depth 1 --branch solana-rustc/13.0-2021-08-08 https://github.com/solana-labs/llvm-project
 	cd llvm-project
 
-Now run cmake to create the makefiles. Replace the *installdir* argument to ``CMAKE_INSTALL_PREFIX`` with with a directory where you would like to have llvm installed, and then run the build:
+Now run cmake to create the makefiles. Replace the *installdir* argument to ``CMAKE_INSTALL_PREFIX`` with with a directory where you would like to have LLVM installed, and then run the build:
 
 .. code-block:: bash
 
@@ -151,20 +187,12 @@ And on Windows, assuming *installdir* was ``C:\Users\User\solang-llvm``:
 
 	set PATH=%PATH%;C:\Users\User\solang-llvm\bin
 
-Building Solang from crates.io
-------------------------------
+.. _build-from-source:
 
-The latest Solang release is  on `crates.io <https://crates.io/crates/solang>`_. Once you have the
-correct llvm version in your path, simply run:
+Step 2: Build Solang
+____________________
 
-.. code-block:: bash
-
-	cargo install solang
-
-Building Solang from git
-------------------------
-
-Once you have the correct llvm version in your path, simply run:
+Once you have the correct LLVM version in your path, simply run:
 
 .. code-block:: bash
 
@@ -173,3 +201,15 @@ Once you have the correct llvm version in your path, simply run:
 	cargo build --release
 
 The executable will be in ``target/release/solang``.
+
+.. _build-from-crates:
+
+Alternative step 2: Build Solang from crates.io
+_______________________________________________
+
+The latest Solang release is  on `crates.io <https://crates.io/crates/solang>`_. Once you have the
+correct LLVM version in your path, simply run:
+
+.. code-block:: bash
+
+	cargo install solang

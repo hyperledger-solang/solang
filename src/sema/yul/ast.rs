@@ -1,4 +1,6 @@
-use crate::ast::{FunctionAttributes, Parameter, RetrieveType, Type};
+// SPDX-License-Identifier: Apache-2.0
+
+use crate::sema::ast::{FunctionAttributes, Parameter, RetrieveType, Type};
 use crate::sema::symtable::Symtable;
 use crate::sema::yul::builtin::YulBuiltInFunction;
 use crate::sema::Recurse;

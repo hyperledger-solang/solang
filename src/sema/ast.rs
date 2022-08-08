@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use super::symtable::Symtable;
 use crate::codegen::cfg::ControlFlowGraph;
 use crate::diagnostics::Diagnostics;
@@ -31,7 +33,7 @@ pub enum Type {
     /// The usize is an index into enums in the namespace
     Enum(usize),
     /// The usize is an index into contracts in the namespace
-    Struct(usize),
+    Struct(StructType),
     Mapping(Box<Type>, Box<Type>),
     /// The usize is an index into contracts in the namespace
     Contract(usize),
@@ -59,6 +61,10 @@ pub enum Type {
     Slice(Box<Type>),
     /// We could not resolve this type
     Unresolved,
+    /// When we advance a pointer, it cannot be any of the previous types.
+    /// e.g. Type::Bytes is a pointer to struct.vector. When we advance it, it is a pointer
+    /// to latter's data region.
+    BufferPointer,
 }
 
 #[derive(PartialEq, Clone, Eq, Hash, Debug)]
@@ -98,13 +104,22 @@ impl Type {
             _ => unimplemented!("size of type not known"),
         }
     }
+
+    pub fn unwrap_user_type(self, ns: &Namespace) -> Type {
+        if let Type::UserType(type_no) = self {
+            ns.user_types[type_no].ty.clone()
+        } else {
+            self
+        }
+    }
 }
 
-#[derive(PartialEq, Clone, Debug, Copy)]
-pub enum BuiltinStruct {
-    None,
+#[derive(PartialEq, Eq, Clone, Debug, Copy, Hash)]
+pub enum StructType {
+    UserDefined(usize),
     AccountInfo,
     AccountMeta,
+    ExternalFunction,
 }
 
 #[derive(PartialEq, Clone, Debug)]
@@ -112,7 +127,6 @@ pub struct StructDecl {
     pub tags: Vec<Tag>,
     pub name: String,
     pub loc: pt::Loc,
-    pub builtin: BuiltinStruct,
     pub contract: Option<String>,
     pub fields: Vec<Parameter>,
     // List of offsets of the fields, last entry is the offset for the struct overall size
@@ -431,7 +445,7 @@ pub enum Symbol {
     Enum(pt::Loc, usize),
     Function(Vec<(pt::Loc, usize)>),
     Variable(pt::Loc, Option<usize>, usize),
-    Struct(pt::Loc, usize),
+    Struct(pt::Loc, StructType),
     Event(Vec<(pt::Loc, usize)>),
     Contract(pt::Loc, usize),
     Import(pt::Loc, usize),

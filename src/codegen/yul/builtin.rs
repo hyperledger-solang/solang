@@ -1,10 +1,12 @@
-use crate::ast::{Namespace, RetrieveType, Type};
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::codegen::{
     cfg::{ControlFlowGraph, Instr},
     vartable::Vartable,
     yul::expression::expression,
     {Builtin, Expression, Options},
 };
+use crate::sema::ast::{Namespace, RetrieveType, Type};
 use crate::sema::{
     diagnostics::Diagnostics,
     expression::coerce_number,

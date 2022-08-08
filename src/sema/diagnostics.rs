@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use super::ast::{Diagnostic, ErrorType, Level, Namespace};
 use crate::file_resolver::FileResolver;
 use codespan_reporting::{diagnostic, files, term};

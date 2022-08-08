@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use solang::file_resolver::FileResolver;
 use solang::sema::ast;
 use solang::{parse_and_resolve, Target};

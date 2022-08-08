@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use super::ast::{Diagnostic, Namespace, Parameter, Tag};
 use solang_parser::{doccomment::DocComment, pt};
 use std::fmt::Write;

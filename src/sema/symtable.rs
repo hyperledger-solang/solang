@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use indexmap::IndexMap;
 use solang_parser::diagnostics::{ErrorType, Level, Note};
 use std::collections::{HashMap, HashSet, LinkedList};

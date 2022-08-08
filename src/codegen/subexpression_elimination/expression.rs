@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::codegen::subexpression_elimination::{ConstantType, ExpressionType};
 use crate::codegen::Expression;
 use crate::sema::ast::StringLocation;
@@ -133,6 +135,13 @@ impl Expression {
                 Expression::LessEqual(*loc, Box::new(left.clone()), Box::new(right.clone()))
             }
 
+            Expression::AdvancePointer { loc, ty, .. } => Expression::AdvancePointer {
+                loc: *loc,
+                ty: ty.clone(),
+                pointer: Box::new(left.clone()),
+                bytes_offset: Box::new(right.clone()),
+            },
+
             Expression::StringCompare(loc, left_exp, right_exp) => {
                 if !matches!(
                     (left_exp, right_exp),
@@ -242,6 +251,11 @@ impl Expression {
             | Expression::SignedLess(_, left, right)
             | Expression::UnsignedLess(_, left, right)
             | Expression::MoreEqual(_, left, right)
+            | Expression::AdvancePointer {
+                pointer: left,
+                bytes_offset: right,
+                ..
+            }
             | Expression::LessEqual(_, left, right) => Some((left, right)),
 
             _ => None,

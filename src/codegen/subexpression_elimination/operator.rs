@@ -1,5 +1,7 @@
-use crate::ast::Type;
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::codegen::Expression;
+use crate::sema::ast::Type;
 
 /// This enum defines operator types for the graph
 #[derive(PartialEq, Eq, Hash, Clone, Debug)]
@@ -31,6 +33,7 @@ pub enum Operator {
     NotEqual,
     StringConcat,
     StringCompare,
+    AdvancePointer,
     //Unary operations
     Not,
     ZeroExt(Type),
@@ -78,6 +81,7 @@ impl Expression {
             Expression::Complement(..) => Operator::Complement,
             Expression::StringCompare(..) => Operator::StringCompare,
             Expression::StringConcat(..) => Operator::StringConcat,
+            Expression::AdvancePointer { .. } => Operator::AdvancePointer,
             _ => {
                 unreachable!("Expression does not represent an operator.")
             }

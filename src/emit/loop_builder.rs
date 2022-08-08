@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use super::Binary;
 use inkwell::basic_block::BasicBlock;
 use inkwell::types::BasicType;

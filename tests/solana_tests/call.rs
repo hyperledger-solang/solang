@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::{build_solidity, Instruction, Pubkey};
 use base58::FromBase58;
 use ethabi::{ethereum_types::U256, Token};

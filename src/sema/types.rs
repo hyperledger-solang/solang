@@ -1,9 +1,11 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use super::tags::resolve_tags;
 use super::SOLANA_BUCKET_SIZE;
 use super::{
     ast::{
-        ArrayLength, BuiltinStruct, Contract, Diagnostic, EnumDecl, EventDecl, Namespace,
-        Parameter, StructDecl, Symbol, Tag, Type, UserTypeDecl,
+        ArrayLength, Contract, Diagnostic, EnumDecl, EventDecl, Namespace, Parameter, StructDecl,
+        StructType, Symbol, Tag, Type, UserTypeDecl,
     },
     diagnostics::Diagnostics,
     SOLANA_SPARSE_ARRAY_SIZE,
@@ -16,6 +18,7 @@ use solang_parser::{
     pt,
     pt::CodeLocation,
 };
+use std::collections::HashSet;
 use std::{collections::HashMap, fmt::Write, ops::Mul};
 
 /// List the types which should be resolved later
@@ -77,12 +80,11 @@ pub fn resolve_typenames<'a>(
                     file_no,
                     None,
                     &def.name,
-                    Symbol::Struct(def.name.loc, struct_no),
+                    Symbol::Struct(def.name.loc, StructType::UserDefined(struct_no)),
                 ) {
                     ns.structs.push(StructDecl {
                         tags: Vec::new(),
                         name: def.name.name.to_owned(),
-                        builtin: BuiltinStruct::None,
                         loc: def.name.loc,
                         contract: None,
                         fields: Vec::new(),
@@ -211,15 +213,15 @@ fn type_decl(
 /// check if a struct contains itself. This function calls itself recursively
 fn find_struct_recursion(struct_no: usize, structs_visited: &mut Vec<usize>, ns: &mut Namespace) {
     let def = ns.structs[struct_no].clone();
-    let mut types_seen = Vec::new();
+    let mut types_seen: HashSet<usize> = HashSet::new();
 
     for (field_no, field) in def.fields.iter().enumerate() {
-        if let Type::Struct(field_struct_no) = field.ty {
+        if let Type::Struct(StructType::UserDefined(field_struct_no)) = field.ty {
             if types_seen.contains(&field_struct_no) {
                 continue;
             }
 
-            types_seen.push(field_struct_no);
+            types_seen.insert(field_struct_no);
 
             if structs_visited.contains(&field_struct_no) {
                 ns.diagnostics.push(Diagnostic::error_with_note(
@@ -329,12 +331,11 @@ fn resolve_contract<'a>(
                     file_no,
                     Some(contract_no),
                     &pt.name,
-                    Symbol::Struct(pt.name.loc, struct_no),
+                    Symbol::Struct(pt.name.loc, StructType::UserDefined(struct_no)),
                 ) {
                     ns.structs.push(StructDecl {
                         tags: Vec::new(),
                         name: pt.name.name.to_owned(),
-                        builtin: BuiltinStruct::None,
                         loc: pt.name.loc,
                         contract: Some(def.name.name.to_owned()),
                         fields: Vec::new(),
@@ -789,7 +790,7 @@ impl Type {
             Type::String => "string".to_string(),
             Type::DynamicBytes => "bytes".to_string(),
             Type::Enum(n) => format!("enum {}", ns.enums[*n]),
-            Type::Struct(n) => format!("struct {}", ns.structs[*n]),
+            Type::Struct(str_ty) => format!("struct {}", str_ty.definition(ns)),
             Type::Array(ty, len) => format!(
                 "{}{}",
                 ty.to_string(ns),
@@ -852,6 +853,7 @@ impl Type {
             Type::Unreachable => "unreachable".to_owned(),
             Type::Slice(ty) => format!("{} slice", ty.to_string(ns)),
             Type::Unresolved => "unresolved".to_owned(),
+            Type::BufferPointer => "buffer_pointer".to_owned(),
         }
     }
 
@@ -899,10 +901,11 @@ impl Type {
             Type::Ref(r) => r.to_string(ns),
             Type::StorageRef(_, r) => r.to_string(ns),
             Type::Struct(_) if say_tuple => "tuple".to_string(),
-            Type::Struct(struct_no) => {
+            Type::Struct(struct_type) => {
                 format!(
                     "({})",
-                    ns.structs[*struct_no]
+                    struct_type
+                        .definition(ns)
                         .fields
                         .iter()
                         .map(|f| f.ty.to_signature_string(say_tuple, ns))
@@ -932,6 +935,14 @@ impl Type {
             Type::Array(ty, dim) if dim.len() == 1 => Type::Ref(ty.clone()),
             Type::Bytes(_) => Type::Bytes(1),
             _ => panic!("deref on non-array"),
+        }
+    }
+
+    /// Fetch the type of an array element
+    pub fn elem_ty(&self) -> Self {
+        match self {
+            Type::Array(ty, _) => *ty.clone(),
+            _ => unreachable!("Type is not an array"),
         }
     }
 
@@ -1024,7 +1035,8 @@ impl Type {
                         .product::<BigInt>(),
                 )
             }
-            Type::Struct(n) => ns.structs[*n]
+            Type::Struct(str_ty) => str_ty
+                .definition(ns)
                 .fields
                 .iter()
                 .map(|d| d.ty.memory_size_of(ns))
@@ -1061,7 +1073,8 @@ impl Type {
                         .product::<BigInt>(),
                 )
             }
-            Type::Struct(n) => ns.structs[*n]
+            Type::Struct(str_ty) => str_ty
+                .definition(ns)
                 .offsets
                 .last()
                 .cloned()
@@ -1086,7 +1099,8 @@ impl Type {
             Type::Uint(n) | Type::Int(n) if *n <= 16 => 2,
             Type::Uint(n) | Type::Int(n) if *n <= 32 => 4,
             Type::Uint(_) | Type::Int(_) => 8,
-            Type::Struct(n) => ns.structs[*n]
+            Type::Struct(str_ty) => str_ty
+                .definition(ns)
                 .fields
                 .iter()
                 .map(|f| if f.recursive { 1 } else { f.ty.align_of(ns) })
@@ -1179,7 +1193,8 @@ impl Type {
                         )
                     }
                 }
-                Type::Struct(n) => ns.structs[*n]
+                Type::Struct(str_ty) => str_ty
+                    .definition(ns)
                     .storage_offsets
                     .last()
                     .cloned()
@@ -1198,7 +1213,8 @@ impl Type {
         } else {
             match self {
                 Type::StorageRef(_, r) | Type::Ref(r) => r.storage_slots(ns),
-                Type::Struct(n) => ns.structs[*n]
+                Type::Struct(str_ty) => str_ty
+                    .definition(ns)
                     .fields
                     .iter()
                     .map(|f| {
@@ -1250,7 +1266,8 @@ impl Type {
                         ty.storage_align(ns)
                     }
                 }
-                Type::Struct(n) => ns.structs[*n]
+                Type::Struct(str_ty) => str_ty
+                    .definition(ns)
                     .fields
                     .iter()
                     .map(|field| {
@@ -1318,7 +1335,11 @@ impl Type {
 
                 ty.is_dynamic(ns)
             }
-            Type::Struct(n) => ns.structs[*n].fields.iter().any(|f| f.ty.is_dynamic(ns)),
+            Type::Struct(str_ty) => str_ty
+                .definition(ns)
+                .fields
+                .iter()
+                .any(|f| f.ty.is_dynamic(ns)),
             Type::StorageRef(_, r) => r.is_dynamic(ns),
             _ => false,
         }
@@ -1346,7 +1367,7 @@ impl Type {
     /// Is this a reference to dynamic memory (arrays, strings)
     pub fn is_dynamic_memory(&self) -> bool {
         match self {
-            Type::String | Type::DynamicBytes => true,
+            Type::String | Type::DynamicBytes | Type::Slice(_) => true,
             Type::Array(_, dim) if dim.last() == Some(&ArrayLength::Dynamic) => true,
             Type::Ref(ty) => ty.is_dynamic_memory(),
             _ => false,
@@ -1383,7 +1404,8 @@ impl Type {
         match self {
             Type::Mapping(..) => true,
             Type::Array(ty, _) => ty.contains_mapping(ns),
-            Type::Struct(n) => ns.structs[*n]
+            Type::Struct(str_ty) => str_ty
+                .definition(ns)
                 .fields
                 .iter()
                 .any(|f| !f.recursive && f.ty.contains_mapping(ns)),
@@ -1397,7 +1419,8 @@ impl Type {
         match self {
             Type::InternalFunction { .. } => true,
             Type::Array(ty, _) => ty.contains_internal_function(ns),
-            Type::Struct(n) => ns.structs[*n]
+            Type::Struct(str_ty) => str_ty
+                .definition(ns)
                 .fields
                 .iter()
                 .any(|f| !f.recursive && f.ty.contains_internal_function(ns)),
@@ -1407,11 +1430,17 @@ impl Type {
     }
 
     /// Is this structure a builtin
-    pub fn builtin_struct(&self, ns: &Namespace) -> BuiltinStruct {
+    pub fn is_builtin_struct(&self) -> Option<StructType> {
         match self {
-            Type::Struct(n) => ns.structs[*n].builtin,
-            Type::StorageRef(_, r) | Type::Ref(r) => r.builtin_struct(ns),
-            _ => BuiltinStruct::None,
+            Type::Struct(str_ty) => {
+                if matches!(str_ty, StructType::UserDefined(_)) {
+                    None
+                } else {
+                    Some(*str_ty)
+                }
+            }
+            Type::StorageRef(_, r) | Type::Ref(r) => r.is_builtin_struct(),
+            _ => None,
         }
     }
 
@@ -1419,15 +1448,15 @@ impl Type {
     pub fn contains_builtins<'a>(
         &'a self,
         ns: &'a Namespace,
-        builtin: BuiltinStruct,
+        builtin: &StructType,
     ) -> Option<&'a Type> {
         match self {
             Type::Array(ty, _) => ty.contains_builtins(ns, builtin),
             Type::Mapping(key, value) => key
                 .contains_builtins(ns, builtin)
                 .or_else(|| value.contains_builtins(ns, builtin)),
-            Type::Struct(n) if ns.structs[*n].builtin == builtin => Some(self),
-            Type::Struct(n) => ns.structs[*n].fields.iter().find_map(|f| {
+            Type::Struct(str_ty) if str_ty == builtin => Some(self),
+            Type::Struct(str_ty) => str_ty.definition(ns).fields.iter().find_map(|f| {
                 if f.recursive {
                     None
                 } else {
@@ -1477,7 +1506,7 @@ impl Type {
             Type::DynamicBytes => "bytes".to_string(),
             Type::String => "string".to_string(),
             Type::Enum(i) => format!("{}", ns.enums[*i]),
-            Type::Struct(i) => format!("{}", ns.structs[*i]),
+            Type::Struct(str_ty) => format!("{}", str_ty.definition(ns)),
             Type::Array(ty, len) => format!(
                 "{}{}",
                 ty.to_llvm_string(ns),

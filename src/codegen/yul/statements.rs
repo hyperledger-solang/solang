@@ -1,10 +1,12 @@
-use crate::ast::{Namespace, RetrieveType, Type};
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::codegen::cfg::{ControlFlowGraph, Instr};
 use crate::codegen::statements::LoopScopes;
 use crate::codegen::vartable::Vartable;
 use crate::codegen::yul::builtin::process_builtin;
 use crate::codegen::yul::expression::{expression, process_function_call};
 use crate::codegen::{Expression, Options};
+use crate::sema::ast::{Namespace, RetrieveType, Type};
 use crate::sema::yul::ast;
 use crate::sema::yul::ast::{YulStatement, YulSuffix};
 use num_bigint::BigInt;
@@ -254,12 +256,34 @@ fn cfg_single_assigment(
 
                     _ => unreachable!(),
                 },
-                ast::YulExpression::SolidityLocalVariable(_, Type::ExternalFunction { .. }, ..) => {
-                    if matches!(suffix, YulSuffix::Address | YulSuffix::Selector) {
-                        unimplemented!(
-                            "Assignment to a function's address/selector is no implemented."
-                        )
-                    }
+                ast::YulExpression::SolidityLocalVariable(
+                    _,
+                    ty @ Type::ExternalFunction { .. },
+                    _,
+                    var_no,
+                ) => {
+                    let (member_no, casted_expr, member_ty) = match suffix {
+                        YulSuffix::Selector => (0, rhs.cast(&Type::Uint(32), ns), Type::Uint(32)),
+                        YulSuffix::Address => {
+                            (1, rhs.cast(&Type::Address(false), ns), Type::Address(false))
+                        }
+                        _ => unreachable!(),
+                    };
+
+                    let ptr = Expression::StructMember(
+                        *loc,
+                        Type::Ref(Box::new(member_ty)),
+                        Box::new(Expression::Variable(*loc, ty.clone(), *var_no)),
+                        member_no,
+                    );
+
+                    cfg.add(
+                        vartab,
+                        Instr::Store {
+                            dest: ptr,
+                            data: casted_expr,
+                        },
+                    );
                 }
 
                 ast::YulExpression::SolidityLocalVariable(

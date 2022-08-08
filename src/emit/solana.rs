@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::codegen::cfg::HashTy;
 use crate::sema::ast;
 use crate::{codegen, Target};
@@ -5,7 +7,7 @@ use solang_parser::pt;
 use std::collections::HashMap;
 use std::str;
 
-use crate::ast::Type;
+use crate::sema::ast::Type;
 use inkwell::module::{Linkage, Module};
 use inkwell::types::{BasicType, IntType};
 use inkwell::values::{
@@ -914,9 +916,11 @@ impl SolanaTarget {
                     binary.builder.build_store(offset_ptr, new_offset);
                 }
             }
-        } else if let ast::Type::Struct(struct_no) = ty {
-            for (i, field) in ns.structs[*struct_no].fields.iter().enumerate() {
-                let field_offset = ns.structs[*struct_no].storage_offsets[i].to_u64().unwrap();
+        } else if let ast::Type::Struct(struct_ty) = ty {
+            for (i, field) in struct_ty.definition(ns).fields.iter().enumerate() {
+                let field_offset = struct_ty.definition(ns).storage_offsets[i]
+                    .to_u64()
+                    .unwrap();
 
                 let offset = binary.builder.build_int_add(
                     slot,
@@ -2219,7 +2223,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                     .left()
                     .unwrap()
             }
-            ast::Type::Struct(struct_no) => {
+            ast::Type::Struct(struct_ty) => {
                 let llvm_ty = binary.llvm_type(ty.deref_any(), ns);
                 // LLVMSizeOf() produces an i64
                 let size = binary.builder.build_int_truncate(
@@ -2246,8 +2250,10 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                     "dest",
                 );
 
-                for (i, field) in ns.structs[*struct_no].fields.iter().enumerate() {
-                    let field_offset = ns.structs[*struct_no].storage_offsets[i].to_u64().unwrap();
+                for (i, field) in struct_ty.definition(ns).fields.iter().enumerate() {
+                    let field_offset = struct_ty.definition(ns).storage_offsets[i]
+                        .to_u64()
+                        .unwrap();
 
                     let mut offset = binary.builder.build_int_add(
                         *slot,
@@ -2704,9 +2710,11 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
 
             // done
             builder.finish(binary);
-        } else if let ast::Type::Struct(struct_no) = ty {
-            for (i, field) in ns.structs[*struct_no].fields.iter().enumerate() {
-                let field_offset = ns.structs[*struct_no].storage_offsets[i].to_u64().unwrap();
+        } else if let ast::Type::Struct(struct_ty) = ty {
+            for (i, field) in struct_ty.definition(ns).fields.iter().enumerate() {
+                let field_offset = struct_ty.definition(ns).storage_offsets[i]
+                    .to_u64()
+                    .unwrap();
 
                 let mut offset = binary.builder.build_int_add(
                     *offset,

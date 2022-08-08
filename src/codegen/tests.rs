@@ -1,5 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
+
 #[cfg(test)]
-use crate::{ast, codegen};
+use crate::{codegen, sema::ast};
 
 #[test]
 fn test_builtin_conversion() {
@@ -15,8 +17,6 @@ fn test_builtin_conversion() {
         ast::Builtin::BlockHash,
         ast::Builtin::BlockNumber,
         ast::Builtin::Calldata,
-        ast::Builtin::ExternalFunctionAddress,
-        ast::Builtin::FunctionSelector,
         ast::Builtin::Gasleft,
         ast::Builtin::GasLimit,
         ast::Builtin::Gasprice,
@@ -73,8 +73,6 @@ fn test_builtin_conversion() {
         codegen::Builtin::BlockHash,
         codegen::Builtin::BlockNumber,
         codegen::Builtin::Calldata,
-        codegen::Builtin::ExternalFunctionAddress,
-        codegen::Builtin::FunctionSelector,
         codegen::Builtin::Gasleft,
         codegen::Builtin::GasLimit,
         codegen::Builtin::Gasprice,
@@ -84,18 +82,18 @@ fn test_builtin_conversion() {
         codegen::Builtin::Keccak256,
         codegen::Builtin::Origin,
         codegen::Builtin::Random,
-        codegen::Builtin::ReadAddress,
-        codegen::Builtin::ReadInt8,
-        codegen::Builtin::ReadInt16LE,
-        codegen::Builtin::ReadInt32LE,
-        codegen::Builtin::ReadInt64LE,
-        codegen::Builtin::ReadInt128LE,
-        codegen::Builtin::ReadInt256LE,
-        codegen::Builtin::ReadUint16LE,
-        codegen::Builtin::ReadUint32LE,
-        codegen::Builtin::ReadUint64LE,
-        codegen::Builtin::ReadUint128LE,
-        codegen::Builtin::ReadUint256LE,
+        codegen::Builtin::ReadFromBuffer,
+        codegen::Builtin::ReadFromBuffer,
+        codegen::Builtin::ReadFromBuffer,
+        codegen::Builtin::ReadFromBuffer,
+        codegen::Builtin::ReadFromBuffer,
+        codegen::Builtin::ReadFromBuffer,
+        codegen::Builtin::ReadFromBuffer,
+        codegen::Builtin::ReadFromBuffer,
+        codegen::Builtin::ReadFromBuffer,
+        codegen::Builtin::ReadFromBuffer,
+        codegen::Builtin::ReadFromBuffer,
+        codegen::Builtin::ReadFromBuffer,
         codegen::Builtin::Ripemd160,
         codegen::Builtin::Sender,
         codegen::Builtin::Slot,

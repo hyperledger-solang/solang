@@ -1,11 +1,13 @@
+// SPDX-License-Identifier: Apache-2.0
+
 #![cfg(test)]
 
-use crate::ast::{Contract, Layout, Mutability, Namespace, Type, Variable};
 use crate::codegen::cfg::ControlFlowGraph;
 use crate::codegen::vartable::Vartable;
 use crate::codegen::yul::expression::expression;
 use crate::codegen::{Builtin, Expression, Options};
 use crate::sema::ast::ArrayLength;
+use crate::sema::ast::{Contract, Layout, Mutability, Namespace, Type, Variable};
 use crate::sema::yul::ast;
 use crate::sema::yul::ast::YulSuffix;
 use crate::{sema, Target};
@@ -542,20 +544,24 @@ fn selector_suffix() {
 
     assert_eq!(
         res,
-        Expression::Builtin(
+        Expression::Load(
             loc,
-            vec![Type::Uint(32)],
-            Builtin::FunctionSelector,
-            vec![Expression::Variable(
+            Type::Bytes(4),
+            Box::new(Expression::StructMember(
                 loc,
-                Type::ExternalFunction {
-                    mutability: Mutability::Pure(loc),
-                    params: vec![],
-                    returns: vec![]
-                },
-                4
-            )],
-        ),
+                Type::Ref(Box::new(Type::Bytes(4))),
+                Box::new(Expression::Variable(
+                    loc,
+                    Type::ExternalFunction {
+                        mutability: Mutability::Pure(loc),
+                        params: vec![],
+                        returns: vec![],
+                    },
+                    4
+                )),
+                0
+            ))
+        )
     );
 }
 
@@ -607,20 +613,24 @@ fn address_suffix() {
 
     assert_eq!(
         res,
-        Expression::Builtin(
+        Expression::Load(
             loc,
-            vec![Type::Address(false)],
-            Builtin::ExternalFunctionAddress,
-            vec![Expression::Variable(
+            Type::Address(false),
+            Box::new(Expression::StructMember(
                 loc,
-                Type::ExternalFunction {
-                    mutability: Mutability::Pure(loc),
-                    params: vec![],
-                    returns: vec![]
-                },
-                4
-            )],
-        ),
+                Type::Ref(Box::new(Type::Address(false))),
+                Box::new(Expression::Variable(
+                    loc,
+                    Type::ExternalFunction {
+                        mutability: Mutability::Pure(loc),
+                        params: vec![],
+                        returns: vec![]
+                    },
+                    4
+                )),
+                1
+            ))
+        )
     );
 }
 

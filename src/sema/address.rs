@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use tiny_keccak::{Hasher, Keccak};
 
 /// Returns an address in https://github.com/ethereum/EIPs/blob/master/EIPS/eip-55.md format

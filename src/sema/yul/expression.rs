@@ -1,4 +1,6 @@
-use crate::ast::{ArrayLength, Namespace, Parameter, Symbol, Type};
+// SPDX-License-Identifier: Apache-2.0
+
+use crate::sema::ast::{ArrayLength, Namespace, Parameter, Symbol, Type};
 use crate::sema::diagnostics::Diagnostics;
 use crate::sema::expression::{unescape, ExprContext};
 use crate::sema::symtable::{Symtable, VariableUsage};
@@ -732,23 +734,6 @@ pub(crate) fn check_type(
                     ));
                 }
             }
-
-            YulExpression::SuffixAccess(_, exp, YulSuffix::Address)
-            | YulExpression::SuffixAccess(_, exp, YulSuffix::Selector) => {
-                if matches!(
-                    **exp,
-                    YulExpression::SolidityLocalVariable(_, Type::ExternalFunction { .. }, _, _)
-                ) {
-                    return Some(Diagnostic::error(
-                        expr.loc(),
-                        "assignment to selector and address is not implemented. \
-                        If there is need for these features, please file a GitHub issue at \
-                        https://github.com/hyperledger-labs/solang/issues"
-                            .to_string(),
-                    ));
-                }
-            }
-
             _ => (),
         }
 

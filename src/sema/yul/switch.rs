@@ -1,4 +1,6 @@
-use crate::ast::Namespace;
+// SPDX-License-Identifier: Apache-2.0
+
+use crate::sema::ast::Namespace;
 use crate::sema::expression::ExprContext;
 use crate::sema::symtable::{LoopScopes, Symtable};
 use crate::sema::yul::ast::{CaseBlock, YulBlock, YulExpression, YulStatement};

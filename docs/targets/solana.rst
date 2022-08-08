@@ -57,7 +57,7 @@ Now run the following javascript by saving it to `flipper.js` and running it wit
 
         console.log('Program deployment finished, deploying the flipper contract ...');
 
-        await contract.deploy('flipper', [true], program, storage, 17);
+        await contract.deploy('flipper', [true], storage, 17);
 
         const res = await contract.functions.get();
         console.log('state: ' + res.result);

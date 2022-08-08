@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::{build_solidity, Account, AccountState};
 use base58::FromBase58;
 use ed25519_dalek::{Keypair, Signature, Signer};

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use super::storage::{
     array_offset, array_pop, array_push, storage_slots_array_pop, storage_slots_array_push,
 };
@@ -7,13 +9,15 @@ use super::{
     vartable::Vartable,
 };
 use crate::codegen::array_boundary::handle_array_assign;
+use crate::codegen::encoding::create_encoder;
+use crate::codegen::encoding::AbiEncoding;
 use crate::codegen::unused_variable::should_remove_assignment;
 use crate::codegen::{Builtin, Expression};
 use crate::sema::{
     ast,
     ast::{
         ArrayLength, CallTy, FormatArg, Function, Namespace, Parameter, RetrieveType,
-        StringLocation, Type,
+        StringLocation, StructType, Type,
     },
     diagnostics::Diagnostics,
     eval::{eval_const_number, eval_const_rational},
@@ -23,7 +27,7 @@ use crate::Target;
 use num_bigint::BigInt;
 use num_traits::{FromPrimitive, One, ToPrimitive, Zero};
 use solang_parser::pt;
-use solang_parser::pt::CodeLocation;
+use solang_parser::pt::{CodeLocation, Loc};
 use std::ops::Mul;
 
 pub fn expression(
@@ -405,26 +409,16 @@ pub fn expression(
                 _ => unreachable!(),
             }
         }
-        ast::Expression::Builtin(
-            loc,
-            returns,
-            ast::Builtin::ExternalFunctionAddress,
-            func_expr,
-        ) => {
+        ast::Expression::Builtin(_, _, ast::Builtin::ExternalFunctionAddress, func_expr) => {
             if let ast::Expression::ExternalFunction { address, .. } = &func_expr[0] {
                 expression(address, cfg, contract_no, func, ns, vartab, opt)
             } else {
                 let func_expr = expression(&func_expr[0], cfg, contract_no, func, ns, vartab, opt);
 
-                Expression::Builtin(
-                    *loc,
-                    returns.clone(),
-                    Builtin::ExternalFunctionAddress,
-                    vec![func_expr],
-                )
+                func_expr.external_function_address()
             }
         }
-        ast::Expression::Builtin(loc, returns, ast::Builtin::FunctionSelector, func_expr) => {
+        ast::Expression::Builtin(loc, _, ast::Builtin::FunctionSelector, func_expr) => {
             match &func_expr[0] {
                 ast::Expression::ExternalFunction { function_no, .. }
                 | ast::Expression::InternalFunction { function_no, .. } => {
@@ -435,12 +429,7 @@ pub fn expression(
                     let func_expr =
                         expression(&func_expr[0], cfg, contract_no, func, ns, vartab, opt);
 
-                    Expression::Builtin(
-                        *loc,
-                        returns.clone(),
-                        Builtin::FunctionSelector,
-                        vec![func_expr],
-                    )
+                    func_expr.external_function_selector()
                 }
             }
         }
@@ -459,13 +448,17 @@ pub fn expression(
             function_no,
         } => {
             let address = expression(address, cfg, contract_no, func, ns, vartab, opt);
-
-            Expression::ExternalFunction {
-                loc: *loc,
-                ty: ty.clone(),
-                address: Box::new(address),
-                function_no: *function_no,
-            }
+            let selector = Expression::NumberLiteral(
+                *loc,
+                Type::Uint(32),
+                BigInt::from(ns.functions[*function_no].selector()),
+            );
+            let struct_literal = Expression::StructLiteral(
+                *loc,
+                Type::Struct(StructType::ExternalFunction),
+                vec![selector, address],
+            );
+            Expression::Cast(*loc, ty.clone(), Box::new(struct_literal))
         }
         ast::Expression::Subscript(loc, elem_ty, array_ty, array, index) => array_subscript(
             loc,
@@ -481,11 +474,11 @@ pub fn expression(
             opt,
         ),
         ast::Expression::StructMember(loc, ty, var, field_no) if ty.is_contract_storage() => {
-            if let Type::Struct(struct_no) = var.ty().deref_any() {
+            if let Type::Struct(struct_ty) = var.ty().deref_any() {
                 let offset = if ns.target == Target::Solana {
-                    ns.structs[*struct_no].storage_offsets[*field_no].clone()
+                    struct_ty.definition(ns).storage_offsets[*field_no].clone()
                 } else {
-                    ns.structs[*struct_no].fields[..*field_no]
+                    struct_ty.definition(ns).fields[..*field_no]
                         .iter()
                         .map(|field| field.ty.storage_slots(ns))
                         .sum()
@@ -553,6 +546,12 @@ pub fn expression(
                     Box::new(expression(e, cfg, contract_no, func, ns, vartab, opt)),
                 )
             }
+        }
+        ast::Expression::Cast(loc, ty @ Type::Array(..), e)
+            if matches!(**e, ast::Expression::ArrayLiteral(..)) =>
+        {
+            let codegen_expr = expression(e, cfg, contract_no, func, ns, vartab, opt);
+            array_literal_to_memory_array(loc, &codegen_expr, ty, cfg, vartab)
         }
         ast::Expression::Cast(loc, ty, e) => {
             if e.ty() == Type::Rational {
@@ -882,7 +881,13 @@ fn post_incdec(
                     );
                 }
                 Type::Ref(_) => {
-                    cfg.add(vartab, Instr::Store { pos: res, dest });
+                    cfg.add(
+                        vartab,
+                        Instr::Store {
+                            dest,
+                            data: Expression::Variable(Loc::Codegen, ty.clone(), res),
+                        },
+                    );
                 }
                 _ => unreachable!(),
             }
@@ -955,7 +960,13 @@ fn pre_incdec(
                     );
                 }
                 Type::Ref(_) => {
-                    cfg.add(vartab, Instr::Store { pos: res, dest });
+                    cfg.add(
+                        vartab,
+                        Instr::Store {
+                            dest,
+                            data: Expression::Variable(Loc::Codegen, ty.clone(), res),
+                        },
+                    );
                 }
                 _ => unreachable!(),
             }
@@ -1283,7 +1294,13 @@ fn abi_encode(
     let args = args
         .iter()
         .map(|v| expression(v, cfg, contract_no, func, ns, vartab, opt))
-        .collect();
+        .collect::<Vec<Expression>>();
+
+    if ns.target == Target::Solana {
+        let mut encoder = create_encoder(ns);
+        return encoder.abi_encode(loc, &args, ns, vartab, cfg);
+    }
+
     let res = vartab.temp(
         &pt::Identifier {
             loc: *loc,
@@ -1978,7 +1995,13 @@ pub fn assign_single(
                     );
                 }
                 Type::Ref(_) => {
-                    cfg.add(vartab, Instr::Store { pos, dest });
+                    cfg.add(
+                        vartab,
+                        Instr::Store {
+                            dest,
+                            data: Expression::Variable(Loc::Codegen, ty.clone(), pos),
+                        },
+                    );
                 }
                 _ => unreachable!(),
             }
@@ -2350,18 +2373,8 @@ pub fn emit_function_call(
                     Expression::NumberLiteral(pt::Loc::Codegen, Type::Value, BigInt::zero())
                 };
 
-                let selector = Expression::Builtin(
-                    *loc,
-                    vec![Type::Bytes(4)],
-                    Builtin::FunctionSelector,
-                    vec![function.clone()],
-                );
-                let address = Expression::Builtin(
-                    *loc,
-                    vec![Type::Address(false)],
-                    Builtin::ExternalFunctionAddress,
-                    vec![function],
-                );
+                let selector = function.external_function_selector();
+                let address = function.external_function_address();
 
                 let (payload, address) = if ns.target == Target::Solana {
                     tys.insert(0, Type::Address(false));
@@ -2875,4 +2888,71 @@ pub fn load_storage(
     );
 
     Expression::Variable(*loc, ty.clone(), res)
+}
+
+fn array_literal_to_memory_array(
+    loc: &pt::Loc,
+    expr: &Expression,
+    ty: &Type,
+    cfg: &mut ControlFlowGraph,
+    vartab: &mut Vartable,
+) -> Expression {
+    let memory_array = vartab.temp_anonymous(ty);
+    let elem_ty = ty.array_elem();
+    let dims = expr.ty().array_length().unwrap().clone();
+    let array_size = Expression::NumberLiteral(*loc, Type::Uint(32), dims);
+
+    cfg.add(
+        vartab,
+        Instr::Set {
+            loc: *loc,
+            res: memory_array,
+            expr: Expression::AllocDynamicArray(
+                *loc,
+                ty.clone(),
+                Box::new(array_size.clone()),
+                None,
+            ),
+        },
+    );
+
+    let elements = if let Expression::ArrayLiteral(_, _, _, items) = expr {
+        items
+    } else {
+        unreachable!()
+    };
+
+    for (item_no, item) in elements.iter().enumerate() {
+        cfg.add(
+            vartab,
+            Instr::Store {
+                dest: Expression::Subscript(
+                    *loc,
+                    Type::Ref(Box::new(elem_ty.clone())),
+                    ty.clone(),
+                    Box::new(Expression::Variable(*loc, ty.clone(), memory_array)),
+                    Box::new(Expression::NumberLiteral(
+                        *loc,
+                        Type::Uint(32),
+                        BigInt::from(item_no),
+                    )),
+                ),
+                data: item.clone(),
+            },
+        );
+    }
+
+    let temp_res = vartab.temp_name("array_length", &Type::Uint(32));
+    cfg.add(
+        vartab,
+        Instr::Set {
+            loc: Loc::Codegen,
+            res: temp_res,
+            expr: array_size,
+        },
+    );
+
+    cfg.array_lengths_temps.insert(memory_array, temp_res);
+
+    Expression::Variable(*loc, ty.clone(), memory_array)
 }

@@ -1,7 +1,10 @@
+// SPDX-License-Identifier: Apache-2.0
+
 mod array_boundary;
 pub mod cfg;
 mod constant_folding;
 mod dead_storage;
+mod encoding;
 mod expression;
 mod external_functions;
 mod reaching_definitions;
@@ -23,12 +26,12 @@ use self::{
 };
 #[cfg(feature = "llvm")]
 use crate::emit::Generate;
-use crate::sema::ast::{Layout, Namespace};
-use crate::{ast, Target};
+use crate::sema::ast::{
+    FormatArg, Function, Layout, Namespace, RetrieveType, StringLocation, Type,
+};
+use crate::{sema::ast, Target};
 use std::cmp::Ordering;
 
-use crate::ast::Function;
-use crate::ast::{FormatArg, RetrieveType, StringLocation, Type};
 use crate::codegen::cfg::ASTFunction;
 use crate::codegen::yul::generate_yul_function_cfg;
 use crate::sema::Recurse;
@@ -36,7 +39,7 @@ use num_bigint::{BigInt, Sign};
 use num_rational::BigRational;
 use num_traits::{FromPrimitive, Zero};
 use solang_parser::pt;
-use solang_parser::pt::{CodeLocation, Loc};
+use solang_parser::pt::CodeLocation;
 
 // The sizeof(struct account_data_header)
 pub const SOLANA_FIRST_OFFSET: u64 = 16;
@@ -367,12 +370,6 @@ pub enum Expression {
     UnsignedDivide(pt::Loc, Type, Box<Expression>, Box<Expression>),
     SignedDivide(pt::Loc, Type, Box<Expression>, Box<Expression>),
     Equal(pt::Loc, Box<Expression>, Box<Expression>),
-    ExternalFunction {
-        loc: pt::Loc,
-        ty: Type,
-        address: Box<Expression>,
-        function_no: usize,
-    },
     FormatString(pt::Loc, Vec<(FormatArg, Expression)>),
     FunctionArg(pt::Loc, Type, usize),
     GetRef(pt::Loc, Type, Box<Expression>),
@@ -425,14 +422,19 @@ pub enum Expression {
     Undefined(Type),
     Variable(pt::Loc, Type, usize),
     ZeroExt(pt::Loc, Type, Box<Expression>),
+    AdvancePointer {
+        loc: pt::Loc,
+        ty: Type,
+        pointer: Box<Expression>,
+        bytes_offset: Box<Expression>,
+    },
 }
 
 impl CodeLocation for Expression {
-    fn loc(&self) -> Loc {
+    fn loc(&self) -> pt::Loc {
         match self {
             Expression::AbiEncode { loc, .. }
             | Expression::StorageArrayLength { loc, .. }
-            | Expression::ExternalFunction { loc, .. }
             | Expression::Builtin(loc, ..)
             | Expression::Cast(loc, ..)
             | Expression::NumberLiteral(loc, ..)
@@ -483,7 +485,8 @@ impl CodeLocation for Expression {
             | Expression::BytesCast(loc, ..)
             | Expression::SignedMore(loc, ..)
             | Expression::UnsignedMore(loc, ..)
-            | Expression::ZeroExt(loc, ..) => *loc,
+            | Expression::ZeroExt(loc, ..)
+            | Expression::AdvancePointer { loc, .. } => *loc,
 
             Expression::InternalFunctionCfg(_) | Expression::Poison | Expression::Undefined(_) => {
                 pt::Loc::Codegen
@@ -528,6 +531,11 @@ impl Recurse for Expression {
             | Expression::Power(_, _, _, left, right)
             | Expression::Subscript(_, _, _, left, right)
             | Expression::Subtract(_, _, _, left, right)
+            | Expression::AdvancePointer {
+                pointer: left,
+                bytes_offset: right,
+                ..
+            }
             | Expression::Add(_, _, _, left, right) => {
                 left.recurse(cx, f);
                 right.recurse(cx, f);
@@ -542,7 +550,6 @@ impl Recurse for Expression {
             | Expression::ZeroExt(_, _, exp)
             | Expression::SignExt(_, _, exp)
             | Expression::Complement(_, _, exp)
-            | Expression::ExternalFunction { address: exp, .. }
             | Expression::Load(_, _, exp)
             | Expression::StorageArrayLength { array: exp, .. }
             | Expression::StructMember(_, _, exp, _)
@@ -622,14 +629,14 @@ impl RetrieveType for Expression {
             | Expression::StructLiteral(_, ty, ..)
             | Expression::ArrayLiteral(_, ty, ..)
             | Expression::ConstArrayLiteral(_, ty, ..)
-            | Expression::ExternalFunction { ty, .. }
             | Expression::StructMember(_, ty, ..)
             | Expression::StringConcat(_, ty, ..)
             | Expression::FunctionArg(_, ty, ..)
             | Expression::AllocDynamicArray(_, ty, ..)
             | Expression::BytesCast(_, ty, ..)
             | Expression::RationalNumberLiteral(_, ty, ..)
-            | Expression::Subscript(_, ty, ..) => ty.clone(),
+            | Expression::Subscript(_, ty, ..)
+            | Expression::AdvancePointer { ty, .. } => ty.clone(),
 
             Expression::BoolLiteral(..)
             | Expression::MoreEqual(..)
@@ -893,9 +900,22 @@ impl Expression {
                 Box::new(self.clone()),
             ),
 
-            (Type::Bytes(_), Type::Uint(_))
-            | (Type::Bytes(_), Type::Int(_))
-            | (Type::Uint(_), Type::Bytes(_))
+            (Type::Bytes(n), Type::Uint(bits) | Type::Int(bits)) => {
+                let num_bytes = (bits / 8) as u8;
+                match n.cmp(&num_bytes) {
+                    Ordering::Greater => {
+                        Expression::Trunc(self.loc(), to.clone(), Box::new(self.clone()))
+                    }
+                    Ordering::Less => {
+                        Expression::ZeroExt(self.loc(), to.clone(), Box::new(self.clone()))
+                    }
+                    Ordering::Equal => {
+                        Expression::Cast(self.loc(), to.clone(), Box::new(self.clone()))
+                    }
+                }
+            }
+
+            (Type::Uint(_), Type::Bytes(_))
             | (Type::Int(_), Type::Bytes(_))
             | (Type::Bytes(_), Type::Address(_))
             | (Type::Address(false), Type::Address(true))
@@ -1077,6 +1097,17 @@ impl Expression {
                     Box::new(filter(left, ctx)),
                     Box::new(filter(right, ctx)),
                 ),
+                Expression::AdvancePointer {
+                    loc,
+                    ty,
+                    pointer,
+                    bytes_offset: offset,
+                } => Expression::AdvancePointer {
+                    loc: *loc,
+                    ty: ty.clone(),
+                    pointer: Box::new(filter(pointer, ctx)),
+                    bytes_offset: Box::new(filter(offset, ctx)),
+                },
                 Expression::Not(loc, expr) => Expression::Not(*loc, Box::new(filter(expr, ctx))),
                 Expression::Complement(loc, ty, expr) => {
                     Expression::Complement(*loc, ty.clone(), Box::new(filter(expr, ctx)))
@@ -1146,17 +1177,6 @@ impl Expression {
                         }
                     },
                 ),
-                Expression::ExternalFunction {
-                    loc,
-                    ty,
-                    address,
-                    function_no,
-                } => Expression::ExternalFunction {
-                    loc: *loc,
-                    ty: ty.clone(),
-                    address: Box::new(filter(address, ctx)),
-                    function_no: *function_no,
-                },
                 Expression::FormatString(loc, args) => {
                     let args = args.iter().map(|(f, e)| (*f, filter(e, ctx))).collect();
 
@@ -1171,6 +1191,36 @@ impl Expression {
             },
             ctx,
         )
+    }
+
+    fn external_function_selector(&self) -> Expression {
+        debug_assert!(
+            matches!(self.ty(), Type::ExternalFunction { .. }),
+            "This is not an external function"
+        );
+        let loc = self.loc();
+        let struct_member = Expression::StructMember(
+            loc,
+            Type::Ref(Box::new(Type::Bytes(4))),
+            Box::new(self.clone()),
+            0,
+        );
+        Expression::Load(loc, Type::Bytes(4), Box::new(struct_member))
+    }
+
+    fn external_function_address(&self) -> Expression {
+        debug_assert!(
+            matches!(self.ty(), Type::ExternalFunction { .. }),
+            "This is not an external function"
+        );
+        let loc = self.loc();
+        let struct_member = Expression::StructMember(
+            loc,
+            Type::Ref(Box::new(Type::Address(false))),
+            Box::new(self.clone()),
+            1,
+        );
+        Expression::Load(loc, Type::Address(false), Box::new(struct_member))
     }
 }
 
@@ -1187,8 +1237,6 @@ pub enum Builtin {
     BlockHash,
     BlockNumber,
     Calldata,
-    ExternalFunctionAddress,
-    FunctionSelector,
     Gasleft,
     GasLimit,
     Gasprice,
@@ -1199,18 +1247,7 @@ pub enum Builtin {
     Keccak256,
     Origin,
     Random,
-    ReadAddress,
-    ReadInt8,
-    ReadInt16LE,
-    ReadInt32LE,
-    ReadInt64LE,
-    ReadInt128LE,
-    ReadInt256LE,
-    ReadUint16LE,
-    ReadUint32LE,
-    ReadUint64LE,
-    ReadUint128LE,
-    ReadUint256LE,
+    ReadFromBuffer,
     Ripemd160,
     Sender,
     Slot,
@@ -1249,8 +1286,6 @@ impl From<&ast::Builtin> for Builtin {
             ast::Builtin::BlockHash => Builtin::BlockHash,
             ast::Builtin::BlockNumber => Builtin::BlockNumber,
             ast::Builtin::Calldata => Builtin::Calldata,
-            ast::Builtin::ExternalFunctionAddress => Builtin::ExternalFunctionAddress,
-            ast::Builtin::FunctionSelector => Builtin::FunctionSelector,
             ast::Builtin::Gasleft => Builtin::Gasleft,
             ast::Builtin::GasLimit => Builtin::GasLimit,
             ast::Builtin::Gasprice => Builtin::Gasprice,
@@ -1260,18 +1295,18 @@ impl From<&ast::Builtin> for Builtin {
             ast::Builtin::Keccak256 => Builtin::Keccak256,
             ast::Builtin::Origin => Builtin::Origin,
             ast::Builtin::Random => Builtin::Random,
-            ast::Builtin::ReadAddress => Builtin::ReadAddress,
-            ast::Builtin::ReadInt8 => Builtin::ReadInt8,
-            ast::Builtin::ReadInt16LE => Builtin::ReadInt16LE,
-            ast::Builtin::ReadInt32LE => Builtin::ReadInt32LE,
-            ast::Builtin::ReadInt64LE => Builtin::ReadInt64LE,
-            ast::Builtin::ReadInt128LE => Builtin::ReadInt128LE,
-            ast::Builtin::ReadInt256LE => Builtin::ReadInt256LE,
-            ast::Builtin::ReadUint16LE => Builtin::ReadUint16LE,
-            ast::Builtin::ReadUint32LE => Builtin::ReadUint32LE,
-            ast::Builtin::ReadUint64LE => Builtin::ReadUint64LE,
-            ast::Builtin::ReadUint128LE => Builtin::ReadUint128LE,
-            ast::Builtin::ReadUint256LE => Builtin::ReadUint256LE,
+            ast::Builtin::ReadAddress
+            | ast::Builtin::ReadInt8
+            | ast::Builtin::ReadInt16LE
+            | ast::Builtin::ReadInt32LE
+            | ast::Builtin::ReadInt64LE
+            | ast::Builtin::ReadInt128LE
+            | ast::Builtin::ReadInt256LE
+            | ast::Builtin::ReadUint16LE
+            | ast::Builtin::ReadUint32LE
+            | ast::Builtin::ReadUint64LE
+            | ast::Builtin::ReadUint128LE
+            | ast::Builtin::ReadUint256LE => Builtin::ReadFromBuffer,
             ast::Builtin::Ripemd160 => Builtin::Ripemd160,
             ast::Builtin::Sender => Builtin::Sender,
             ast::Builtin::Slot => Builtin::Slot,

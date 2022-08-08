@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use num_bigint::BigInt;
 use std::collections::LinkedList;
 
@@ -7,12 +9,12 @@ use super::{
     cfg::{ControlFlowGraph, Instr},
     vartable::Vartable,
 };
-use crate::ast;
 use crate::codegen::unused_variable::{
     should_remove_assignment, should_remove_variable, SideEffectsCheckParameters,
 };
 use crate::codegen::yul::inline_assembly_cfg;
-use crate::codegen::{Builtin, Expression};
+use crate::codegen::Expression;
+use crate::sema::ast;
 use crate::sema::ast::RetrieveType;
 use crate::sema::ast::{
     ArrayLength, CallTy, DestructureField, Function, Namespace, Parameter, Statement, TryCatch,
@@ -1124,19 +1126,9 @@ fn try_catch(
                     .map(|a| expression(a, cfg, callee_contract_no, Some(func), ns, vartab, opt))
                     .collect();
 
-                let selector = Expression::Builtin(
-                    *loc,
-                    vec![Type::Bytes(4)],
-                    Builtin::FunctionSelector,
-                    vec![function.clone()],
-                );
+                let selector = function.external_function_selector();
 
-                let address = Expression::Builtin(
-                    *loc,
-                    vec![Type::Address(false)],
-                    Builtin::ExternalFunctionAddress,
-                    vec![function],
-                );
+                let address = function.external_function_address();
 
                 let payload = Expression::AbiEncode {
                     loc: *loc,
@@ -1454,9 +1446,9 @@ impl Type {
                 Some(Expression::BytesLiteral(pt::Loc::Codegen, self.clone(), l))
             }
             Type::Enum(e) => ns.enums[*e].ty.default(ns),
-            Type::Struct(struct_no) => {
+            Type::Struct(struct_ty) => {
                 // make sure all our fields have default values
-                for field in &ns.structs[*struct_no].fields {
+                for field in &struct_ty.definition(ns).fields {
                     field.ty.default(ns)?;
                 }
 

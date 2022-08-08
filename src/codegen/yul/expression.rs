@@ -1,9 +1,11 @@
-use crate::ast::{ArrayLength, Namespace, Type};
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::codegen;
 use crate::codegen::cfg::{ControlFlowGraph, Instr, InternalCallTy};
 use crate::codegen::vartable::Vartable;
 use crate::codegen::yul::builtin::process_builtin;
 use crate::codegen::{Builtin, Expression, Options};
+use crate::sema::ast::{ArrayLength, Namespace, Type};
 use crate::sema::yul::ast;
 use crate::sema::yul::ast::YulSuffix;
 use num_bigint::{BigInt, Sign};
@@ -173,12 +175,8 @@ fn process_suffix_access(
             if let ast::YulExpression::SolidityLocalVariable(_, Type::ExternalFunction { .. }, ..) =
                 expr
             {
-                return Expression::Builtin(
-                    *loc,
-                    vec![Type::Address(false)],
-                    Builtin::ExternalFunctionAddress,
-                    vec![expression(expr, contract_no, ns, vartab, cfg, opt)],
-                );
+                let func_expr = expression(expr, contract_no, ns, vartab, cfg, opt);
+                return func_expr.external_function_address();
             }
         }
 
@@ -186,12 +184,8 @@ fn process_suffix_access(
             if let ast::YulExpression::SolidityLocalVariable(_, Type::ExternalFunction { .. }, ..) =
                 expr
             {
-                return Expression::Builtin(
-                    *loc,
-                    vec![Type::Uint(32)],
-                    Builtin::FunctionSelector,
-                    vec![expression(expr, contract_no, ns, vartab, cfg, opt)],
-                );
+                let func_expr = expression(expr, contract_no, ns, vartab, cfg, opt);
+                return func_expr.external_function_selector();
             }
         }
     }
