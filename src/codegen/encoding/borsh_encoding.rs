@@ -847,7 +847,7 @@ impl BorshEncoding {
                         res: allocated_array,
                         expr: Expression::AllocDynamicArray(
                             Loc::Codegen,
-                            Type::String,
+                            ty.clone(),
                             Box::new(Expression::Variable(
                                 Loc::Codegen,
                                 Type::Uint(32),
@@ -1214,7 +1214,6 @@ impl BorshEncoding {
             let offset_to_validate = increment_four(offset_expr.clone());
             validator.validate_offset(offset_to_validate, vartab, cfg);
             let array_length = vartab.temp_anonymous(&Type::Uint(32));
-            let array_length_var = Expression::Variable(Loc::Codegen, Type::Uint(32), offset_var);
             cfg.add(
                 vartab,
                 Instr::Set {
@@ -1224,7 +1223,7 @@ impl BorshEncoding {
                         Loc::Codegen,
                         vec![Type::Uint(32)],
                         Builtin::ReadFromBuffer,
-                        vec![buffer.clone(), array_length_var.clone()],
+                        vec![buffer.clone(), offset_expr.clone()],
                     ),
                 },
             );
@@ -1246,7 +1245,11 @@ impl BorshEncoding {
                     expr: Expression::AllocDynamicArray(
                         Loc::Codegen,
                         new_ty.clone(),
-                        Box::new(array_length_var),
+                        Box::new(Expression::Variable(
+                            Loc::Codegen,
+                            Type::Uint(32),
+                            array_length,
+                        )),
                         None,
                     ),
                 },
