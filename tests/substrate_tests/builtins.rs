@@ -448,9 +448,9 @@ fn functions() {
 
 #[test]
 fn data() {
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Uint32(u32);
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct String(Vec<u8>);
 
     let mut runtime = build_solidity(
@@ -681,7 +681,7 @@ fn mulmod() {
 
 #[test]
 fn my_token() {
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct TokenTest([u8; 32], bool);
     let mut runtime = build_solidity(
         "

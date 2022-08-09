@@ -6,7 +6,7 @@ use crate::build_solidity;
 
 #[test]
 fn constructors() {
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Val(u64);
 
     // parse
@@ -87,7 +87,7 @@ fn constructor_wrong_selector() {
 
 #[test]
 fn fallback() {
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Val(u64);
 
     // parse
@@ -140,7 +140,7 @@ fn function_wrong_selector() {
 #[test]
 #[should_panic]
 fn nofallback() {
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Val(u64);
 
     // parse
@@ -193,7 +193,7 @@ fn test_overloading() {
 
 #[test]
 fn shadowing() {
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Val(u64);
 
     let src = "
@@ -290,13 +290,13 @@ fn test_loops() {
 
 #[test]
 fn test_example() {
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Val32(i32);
 
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Val64(i64);
 
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct ValBool(bool);
 
     // parse
@@ -343,7 +343,7 @@ fn test_large_vals() {
 
 #[test]
 fn args_and_returns() {
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Val32(i32);
 
     let mut runtime = build_solidity(

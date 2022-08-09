@@ -3,7 +3,7 @@
 use crate::pt;
 use crate::pt::Loc;
 
-#[derive(Clone, Debug, Eq, Hash, PartialOrd, Ord, PartialEq)]
+#[derive(Clone, Debug, Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub enum Level {
     Debug,
     Info,
@@ -22,7 +22,7 @@ impl Level {
     }
 }
 
-#[derive(Clone, Debug, Eq, Hash, PartialOrd, Ord, PartialEq)]
+#[derive(Clone, Debug, Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub enum ErrorType {
     None,
     ParserError,
@@ -33,13 +33,13 @@ pub enum ErrorType {
     Warning,
 }
 
-#[derive(Clone, Debug, Eq, Hash, PartialOrd, Ord, PartialEq)]
+#[derive(Clone, Debug, Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub struct Note {
     pub loc: pt::Loc,
     pub message: String,
 }
 
-#[derive(Clone, Debug, Eq, Hash, PartialOrd, Ord, PartialEq)]
+#[derive(Clone, Debug, Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub struct Diagnostic {
     pub loc: pt::Loc,
     pub level: Level,

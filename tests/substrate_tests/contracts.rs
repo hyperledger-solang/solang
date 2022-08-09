@@ -3,12 +3,12 @@
 use crate::build_solidity;
 use parity_scale_codec::{Decode, Encode};
 
-#[derive(Debug, PartialEq, Encode, Decode)]
+#[derive(Debug, PartialEq, Eq, Encode, Decode)]
 struct RevertReturn(u32, String);
 
 #[test]
 fn external_call() {
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Ret(u32);
 
     let mut runtime = build_solidity(
@@ -107,7 +107,7 @@ fn revert_constructor() {
 
 #[test]
 fn external_datatypes() {
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Ret(u64);
 
     let mut runtime = build_solidity(
@@ -191,7 +191,7 @@ fn creation_code() {
 
     runtime.function("test", Vec::new());
 
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Ret(Vec<u8>);
 
     // return value should be the code for the second contract

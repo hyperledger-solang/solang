@@ -9,7 +9,7 @@ use num_traits::Zero;
 use std::collections::HashSet;
 use std::fmt;
 
-#[derive(Eq, Hash, Debug, Clone, PartialEq)]
+#[derive(Hash, Debug, Clone, PartialEq, Eq)]
 pub(super) struct Value {
     // which bits are known
     pub(super) known_bits: BitArray<Lsb0, [u8; 32]>,

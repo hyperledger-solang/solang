@@ -5,7 +5,7 @@ use parity_scale_codec::{Decode, Encode};
 
 #[test]
 fn simple() {
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Val(u64);
 
     let mut runtime = build_solidity(
@@ -45,7 +45,7 @@ fn simple() {
 
 #[test]
 fn using() {
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Val(u64);
 
     let mut runtime = build_solidity(

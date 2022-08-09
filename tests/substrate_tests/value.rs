@@ -304,7 +304,7 @@ fn this_address() {
 
     assert_eq!(runtime.vm.output, runtime.vm.account);
 
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Ret(u32);
 
     let mut runtime = build_solidity(

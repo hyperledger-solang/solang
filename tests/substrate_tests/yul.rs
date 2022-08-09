@@ -4,7 +4,7 @@ use crate::build_solidity;
 use ethabi::ethereum_types::U256;
 use parity_scale_codec::{Decode, Encode};
 
-#[derive(Debug, PartialEq, Encode, Decode)]
+#[derive(Debug, PartialEq, Eq, Encode, Decode)]
 struct Val256(U256);
 
 #[test]

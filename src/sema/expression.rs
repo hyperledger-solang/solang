@@ -1617,7 +1617,7 @@ pub fn compatible_mutability(left: &Mutability, right: &Mutability) -> bool {
 }
 
 /// When resolving an expression, what type are we looking for
-#[derive(PartialEq, Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum ResolveTo<'a> {
     Unknown,        // We don't know what we're looking for, best effort
     Integer,        // Try to resolve to an integer type value (signed or unsigned, any bit width)

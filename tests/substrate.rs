@@ -29,7 +29,7 @@ fn account_new() -> Account {
     a
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct HostCodeTerminate {}
 
 impl HostError for HostCodeTerminate {}
@@ -40,7 +40,7 @@ impl fmt::Display for HostCodeTerminate {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct HostCodeReturn(i32);
 
 impl fmt::Display for HostCodeReturn {

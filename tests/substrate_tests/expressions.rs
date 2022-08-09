@@ -8,7 +8,7 @@ use rand::Rng;
 
 #[test]
 fn celcius_and_fahrenheit() {
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Val(u32);
 
     // parse
@@ -38,9 +38,9 @@ fn celcius_and_fahrenheit() {
 
 #[test]
 fn digits() {
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Val32(u32);
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Val64(u64);
 
     // parse
@@ -83,9 +83,9 @@ fn digits() {
 
 #[test]
 fn large_loops() {
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Val32(u32);
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Val64(u64);
 
     // parse
@@ -127,9 +127,9 @@ fn large_loops() {
 
 #[test]
 fn expressions() {
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Val16(u16);
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Val8(u8);
 
     // parse
@@ -308,10 +308,10 @@ fn divisions64() {
 
 #[test]
 fn divisions128() {
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Args(i128, i128);
 
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Rets(i128);
 
     // parse
@@ -801,7 +801,7 @@ fn short_circuit_and() {
 
 #[test]
 fn power() {
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Val(u64);
 
     // parse
@@ -869,7 +869,7 @@ fn power() {
 
 #[test]
 fn large_power() {
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Val(u128);
 
     // parse
@@ -1003,11 +1003,11 @@ fn multiply() {
 
 #[test]
 fn bytes_bitwise() {
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Bytes3([u8; 3]);
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Bytes5([u8; 5]);
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct BytesArray([u8; 7], u32);
 
     // parse
@@ -1130,7 +1130,7 @@ fn bytes_bitwise() {
 #[test]
 #[should_panic]
 fn bytesn_underflow_index_acccess() {
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct BytesArray([u8; 7], i32);
 
     // parse
@@ -1149,7 +1149,7 @@ fn bytesn_underflow_index_acccess() {
 #[test]
 #[should_panic]
 fn bytesn_overflow_index_acccess() {
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct BytesArray([u8; 7], i32);
 
     // parse
@@ -1444,7 +1444,7 @@ fn unchecked_multiplication_overflow() {
 
 #[test]
 fn address_compare() {
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Args([u8; 32], [u8; 32]);
 
     let mut runtime = build_solidity(
