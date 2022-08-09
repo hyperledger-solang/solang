@@ -8,6 +8,7 @@ license = "Apache-2.0"
 build = "build.rs"
 description = "Solang Solidity Compiler"
 keywords = [ "solidity", "compiler", "solana", "substrate", "ewasm" ]
+rust-version = "1.56.1"
 edition = "2021"
 
 [build-dependencies]
