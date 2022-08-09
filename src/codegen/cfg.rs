@@ -318,7 +318,7 @@ pub enum InternalCallTy {
     Builtin { ast_func_no: usize },
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Eq)]
 pub enum HashTy {
     Keccak256,
     Ripemd160,
@@ -372,7 +372,7 @@ pub struct ControlFlowGraph {
     pub array_lengths_temps: ArrayLengthVars,
 }
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub enum ASTFunction {
     SolidityFunction(usize),
     YulFunction(usize),

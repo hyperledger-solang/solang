@@ -25,7 +25,7 @@ fn emit() {
     assert_eq!(event.topics.len(), 0);
     assert_eq!(event.data, (0u8, true).encode());
 
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Foo(u8, bool, u32);
 
     let mut runtime = build_solidity(

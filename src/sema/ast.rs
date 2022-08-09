@@ -19,7 +19,7 @@ use std::{
 };
 use tiny_keccak::{Hasher, Keccak};
 
-#[derive(PartialEq, Clone, Eq, Hash, Debug)]
+#[derive(PartialEq, Eq, Clone, Hash, Debug)]
 pub enum Type {
     Address(bool),
     Bool,
@@ -67,7 +67,7 @@ pub enum Type {
     BufferPointer,
 }
 
-#[derive(PartialEq, Clone, Eq, Hash, Debug)]
+#[derive(PartialEq, Eq, Clone, Hash, Debug)]
 pub enum ArrayLength {
     Fixed(BigInt),
     Dynamic,
@@ -122,7 +122,7 @@ pub enum StructType {
     ExternalFunction,
 }
 
-#[derive(PartialEq, Clone, Debug)]
+#[derive(PartialEq, Eq, Clone, Debug)]
 pub struct StructDecl {
     pub tags: Vec<Tag>,
     pub name: String,
@@ -135,7 +135,7 @@ pub struct StructDecl {
     pub storage_offsets: Vec<BigInt>,
 }
 
-#[derive(PartialEq, Clone, Debug)]
+#[derive(PartialEq, Eq, Clone, Debug)]
 pub struct EventDecl {
     pub tags: Vec<Tag>,
     pub name: String,
@@ -187,7 +187,7 @@ impl fmt::Display for EnumDecl {
     }
 }
 
-#[derive(PartialEq, Clone, Debug)]
+#[derive(PartialEq, Eq, Clone, Debug)]
 pub struct Parameter {
     pub loc: pt::Loc,
     /// The name can empty (e.g. in an event field or unnamed parameter/return)
@@ -407,7 +407,7 @@ impl From<&pt::Type> for Type {
     }
 }
 
-#[derive(PartialEq, Clone, Debug)]
+#[derive(PartialEq, Eq, Clone, Debug)]
 pub struct UserTypeDecl {
     pub tags: Vec<Tag>,
     pub loc: pt::Loc,
@@ -440,7 +440,7 @@ pub struct Variable {
     pub read: bool,
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Eq)]
 pub enum Symbol {
     Enum(pt::Loc, usize),
     Function(Vec<(pt::Loc, usize)>),
@@ -633,7 +633,7 @@ impl Contract {
     }
 }
 
-#[derive(PartialEq, Clone, Debug)]
+#[derive(PartialEq, Eq, Clone, Debug)]
 pub enum Expression {
     BoolLiteral(pt::Loc, bool),
     BytesLiteral(pt::Loc, Type, Vec<u8>),
@@ -760,7 +760,7 @@ pub enum Expression {
     List(pt::Loc, Vec<Expression>),
 }
 
-#[derive(PartialEq, Clone, Default, Debug)]
+#[derive(PartialEq, Eq, Clone, Default, Debug)]
 pub struct CallArgs {
     pub gas: Option<Box<Expression>>,
     pub salt: Option<Box<Expression>>,
@@ -988,7 +988,7 @@ impl CodeLocation for Expression {
     }
 }
 
-#[derive(PartialEq, Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum FormatArg {
     StringLiteral,
     Default,
@@ -1007,13 +1007,13 @@ impl fmt::Display for FormatArg {
     }
 }
 
-#[derive(PartialEq, Clone, Debug)]
+#[derive(PartialEq, Eq, Clone, Debug)]
 pub enum StringLocation<T> {
     CompileTime(Vec<u8>),
     RunTime(Box<T>),
 }
 
-#[derive(PartialEq, Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum Builtin {
     GetAddress,
     Balance,
@@ -1092,7 +1092,7 @@ pub enum Builtin {
     UserTypeUnwrap,
 }
 
-#[derive(PartialEq, Clone, Debug)]
+#[derive(PartialEq, Eq, Clone, Debug)]
 pub enum CallTy {
     Regular,
     Delegate,
@@ -1268,7 +1268,7 @@ impl Statement {
     }
 }
 
-#[derive(PartialEq, Clone, Debug)]
+#[derive(PartialEq, Eq, Clone, Debug)]
 pub struct Tag {
     pub tag: String,
     pub no: usize,

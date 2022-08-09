@@ -13,7 +13,7 @@ pub struct Def {
     pub assignment_no: usize,
 }
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub enum Transfer {
     Gen { def: Def, var_no: usize },
     Mod { var_no: usize },

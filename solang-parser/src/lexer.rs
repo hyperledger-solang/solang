@@ -14,7 +14,7 @@ use crate::pt::{CodeLocation, Comment, Loc};
 
 pub type Spanned<Token, Loc, Error> = Result<(Loc, Token, Loc), Error>;
 
-#[derive(Copy, Clone, PartialEq, Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum Token<'input> {
     Identifier(&'input str),
     StringLiteral(bool, &'input str),
@@ -336,7 +336,7 @@ pub struct Lexer<'input> {
     last_tokens: [Option<Token<'input>>; 2],
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum LexicalError {
     EndOfFileInComment(Loc),
     EndOfFileInString(Loc),

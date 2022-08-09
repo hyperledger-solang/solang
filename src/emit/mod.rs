@@ -5656,7 +5656,7 @@ pub(crate) enum ReturnCode {
     AbiEncodingInvalid,
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Eq)]
 pub enum Generate {
     Object,
     Assembly,

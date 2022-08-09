@@ -5,10 +5,10 @@ use rand::Rng;
 
 use crate::build_solidity;
 
-#[derive(Debug, PartialEq, Encode, Decode)]
+#[derive(Debug, PartialEq, Eq, Encode, Decode)]
 struct Val32(u32);
 
-#[derive(Debug, PartialEq, Encode, Decode)]
+#[derive(Debug, PartialEq, Eq, Encode, Decode)]
 struct Val8(u8);
 
 #[test]
@@ -31,7 +31,7 @@ fn const_array_array() {
 
 #[test]
 fn votes() {
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Votes([bool; 11]);
 
     let mut runtime = build_solidity(
@@ -76,7 +76,7 @@ fn votes() {
 
 #[test]
 fn return_array() {
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Res([u64; 4]);
 
     let mut runtime = build_solidity(
@@ -95,11 +95,11 @@ fn return_array() {
 
 #[test]
 fn storage_arrays() {
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Val(i32);
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct SetArg(u64, i32);
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct GetArg(u64);
 
     let mut runtime = build_solidity(
@@ -141,7 +141,7 @@ fn storage_arrays() {
 fn enum_arrays() {
     #[derive(Encode, Decode)]
     struct Arg([u8; 100]);
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Ret(u32);
 
     let mut runtime = build_solidity(
@@ -276,7 +276,7 @@ fn storage_ref_returns() {
 
 #[test]
 fn storage_to_memory() {
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Ret([u32; 10]);
 
     let mut runtime = build_solidity(
@@ -304,7 +304,7 @@ fn storage_to_memory() {
 
 #[test]
 fn memory_to_storage() {
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Ret([u32; 10]);
 
     let mut runtime = build_solidity(
@@ -347,7 +347,7 @@ fn array_dimensions() {
 
 #[test]
 fn array_in_struct() {
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Ret([u32; 10]);
 
     let mut runtime = build_solidity(
@@ -375,7 +375,7 @@ fn array_in_struct() {
 
 #[test]
 fn struct_in_array() {
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct S(u64, bool);
 
     let mut runtime = build_solidity(
@@ -409,7 +409,7 @@ fn struct_in_array() {
 
 #[test]
 fn struct_in_fixed_array() {
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct S(u64, bool);
 
     let mut runtime = build_solidity(
@@ -472,13 +472,13 @@ fn struct_array_struct() {
 
 #[test]
 fn struct_array_struct_abi() {
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Foo {
         f1: u32,
         f2: bool,
     }
 
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Bar {
         bars: [Foo; 10],
     }
@@ -1241,7 +1241,7 @@ fn storage_dynamic_copy() {
 
 #[test]
 fn abi_encode_dynamic_array() {
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Int32Array(Vec<i32>);
 
     let mut runtime = build_solidity(
@@ -1271,7 +1271,7 @@ fn abi_encode_dynamic_array() {
 
 #[test]
 fn abi_decode_dynamic_array() {
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Int32Array(Vec<i32>);
 
     let mut runtime = build_solidity(
@@ -1303,7 +1303,7 @@ fn abi_decode_dynamic_array() {
 
 #[test]
 fn abi_encode_dynamic_array2() {
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Array(Vec<(bool, u32)>);
 
     let mut runtime = build_solidity(
@@ -1338,7 +1338,7 @@ fn abi_encode_dynamic_array2() {
 
 #[test]
 fn abi_encode_dynamic_array3() {
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Array(Vec<(bool, u32, String)>);
 
     let mut runtime = build_solidity(
@@ -1379,7 +1379,7 @@ fn abi_encode_dynamic_array3() {
 
 #[test]
 fn abi_encode_dynamic_array4() {
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Array([(bool, u32, String); 3]);
 
     let mut runtime = build_solidity(

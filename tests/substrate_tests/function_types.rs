@@ -5,7 +5,7 @@ use parity_scale_codec::{Decode, Encode};
 
 #[test]
 fn simple_test() {
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Args(bool, u32, u32);
 
     let mut runtime = build_solidity(
@@ -40,7 +40,7 @@ fn simple_test() {
 
 #[test]
 fn internal_function_type_in_contract_storage() {
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Args(u32, u32);
 
     let mut runtime = build_solidity(
@@ -80,7 +80,7 @@ fn internal_function_type_in_contract_storage() {
 #[test]
 #[should_panic]
 fn internal_function_not_init_called() {
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Args(u32, u32);
 
     let mut runtime = build_solidity(
@@ -117,7 +117,7 @@ fn internal_function_not_init_called() {
 
 #[test]
 fn base_contract_function() {
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Args(bool, u32, u32);
 
     let mut runtime = build_solidity(
@@ -155,7 +155,7 @@ fn base_contract_function() {
 
 #[test]
 fn virtual_contract_function() {
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Args(bool, u32, u32);
 
     let mut runtime = build_solidity(
