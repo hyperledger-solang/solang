@@ -1004,7 +1004,7 @@ pub struct Instruction {
     pub data: Vec<u8>,
 }
 
-#[derive(Debug, PartialEq, Hash, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct Pubkey([u8; 32]);
 
 impl Pubkey {
@@ -1013,7 +1013,7 @@ impl Pubkey {
     }
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct AccountMeta {
     /// An account's public key
     pub pubkey: Pubkey,

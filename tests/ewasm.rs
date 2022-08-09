@@ -92,7 +92,7 @@ pub enum Extern {
     log,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct HostCodeFinish {}
 
 impl HostError for HostCodeFinish {}
@@ -103,7 +103,7 @@ impl fmt::Display for HostCodeFinish {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct HostCodeRevert {}
 
 impl fmt::Display for HostCodeRevert {

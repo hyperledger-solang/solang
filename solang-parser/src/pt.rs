@@ -2,7 +2,7 @@
 
 use std::fmt::{self, Display};
 
-#[derive(Debug, PartialEq, PartialOrd, Ord, Eq, Hash, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
 /// file no, start offset, end offset (in bytes)
 pub enum Loc {
     Builtin,
@@ -87,7 +87,7 @@ impl Loc {
     }
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Identifier {
     pub loc: Loc,
     pub name: String,
@@ -99,7 +99,7 @@ impl Display for Identifier {
     }
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct IdentifierPath {
     pub loc: Loc,
     pub identifiers: Vec<Identifier>,
@@ -120,7 +120,7 @@ impl Display for IdentifierPath {
     }
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Comment {
     Line(Loc, String),
     Block(Loc, String),
@@ -128,10 +128,10 @@ pub enum Comment {
     DocBlock(Loc, String),
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct SourceUnit(pub Vec<SourceUnitPart>);
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum SourceUnitPart {
     ContractDefinition(Box<ContractDefinition>),
     PragmaDirective(Loc, Identifier, StringLiteral),
@@ -166,7 +166,7 @@ impl SourceUnitPart {
     }
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Import {
     Plain(StringLiteral, Loc),
     GlobalSymbol(StringLiteral, Identifier, Loc),
@@ -185,7 +185,7 @@ impl Import {
 
 pub type ParameterList = Vec<(Loc, Option<Parameter>)>;
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Type {
     Address,
     AddressPayable,
@@ -205,7 +205,7 @@ pub enum Type {
     },
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum StorageLocation {
     Memory(Loc),
     Storage(Loc),
@@ -232,7 +232,7 @@ impl fmt::Display for StorageLocation {
     }
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct VariableDeclaration {
     pub loc: Loc,
     pub ty: Expression,
@@ -240,7 +240,7 @@ pub struct VariableDeclaration {
     pub name: Identifier,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 #[allow(clippy::vec_box)]
 pub struct StructDefinition {
     pub loc: Loc,
@@ -248,7 +248,7 @@ pub struct StructDefinition {
     pub fields: Vec<VariableDeclaration>,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum ContractPart {
     StructDefinition(Box<StructDefinition>),
     EventDefinition(Box<EventDefinition>),
@@ -278,13 +278,13 @@ impl ContractPart {
     }
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum UsingList {
     Library(IdentifierPath),
     Functions(Vec<IdentifierPath>),
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Using {
     pub loc: Loc,
     pub list: UsingList,
@@ -292,7 +292,7 @@ pub struct Using {
     pub global: Option<Identifier>,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum ContractTy {
     Abstract(Loc),
     Contract(Loc),
@@ -311,14 +311,14 @@ impl fmt::Display for ContractTy {
     }
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Base {
     pub loc: Loc,
     pub name: IdentifierPath,
     pub args: Option<Vec<Expression>>,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct ContractDefinition {
     pub loc: Loc,
     pub ty: ContractTy,
@@ -327,7 +327,7 @@ pub struct ContractDefinition {
     pub parts: Vec<ContractPart>,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct EventParameter {
     pub ty: Expression,
     pub loc: Loc,
@@ -335,7 +335,7 @@ pub struct EventParameter {
     pub name: Option<Identifier>,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct EventDefinition {
     pub loc: Loc,
     pub name: Identifier,
@@ -343,28 +343,28 @@ pub struct EventDefinition {
     pub anonymous: bool,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct ErrorParameter {
     pub ty: Expression,
     pub loc: Loc,
     pub name: Option<Identifier>,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct ErrorDefinition {
     pub loc: Loc,
     pub name: Identifier,
     pub fields: Vec<ErrorParameter>,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct EnumDefinition {
     pub loc: Loc,
     pub name: Identifier,
     pub values: Vec<Identifier>,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum VariableAttribute {
     Visibility(Visibility),
     Constant(Loc),
@@ -372,7 +372,7 @@ pub enum VariableAttribute {
     Override(Loc, Vec<IdentifierPath>),
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct VariableDefinition {
     pub loc: Loc,
     pub ty: Expression,
@@ -381,34 +381,34 @@ pub struct VariableDefinition {
     pub initializer: Option<Expression>,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct TypeDefinition {
     pub loc: Loc,
     pub name: Identifier,
     pub ty: Expression,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct StringLiteral {
     pub loc: Loc,
     pub unicode: bool,
     pub string: String,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct HexLiteral {
     pub loc: Loc,
     pub hex: String,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct NamedArgument {
     pub loc: Loc,
     pub name: Identifier,
     pub expr: Expression,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Unit {
     Seconds(Loc),
     Minutes(Loc),
@@ -420,7 +420,7 @@ pub enum Unit {
     Ether(Loc),
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Expression {
     PostIncrement(Loc, Box<Expression>),
     PostDecrement(Loc, Box<Expression>),
@@ -578,7 +578,7 @@ impl Expression {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Parameter {
     pub loc: Loc,
     pub ty: Expression,
@@ -586,7 +586,7 @@ pub struct Parameter {
     pub name: Option<Identifier>,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Mutability {
     Pure(Loc),
     View(Loc),
@@ -615,7 +615,7 @@ impl CodeLocation for Mutability {
     }
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Visibility {
     External(Option<Loc>),
     Public(Option<Loc>),
@@ -645,7 +645,7 @@ impl OptionalCodeLocation for Visibility {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum FunctionAttribute {
     Mutability(Mutability),
     Visibility(Visibility),
@@ -655,7 +655,7 @@ pub enum FunctionAttribute {
     BaseOrModifier(Loc, Base),
 }
 
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum FunctionTy {
     Constructor,
     Function,
@@ -676,7 +676,7 @@ impl fmt::Display for FunctionTy {
     }
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct FunctionDefinition {
     pub loc: Loc,
     pub ty: FunctionTy,
@@ -689,7 +689,7 @@ pub struct FunctionDefinition {
     pub body: Option<Statement>,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 #[allow(clippy::large_enum_variant, clippy::type_complexity)]
 pub enum Statement {
     Block {
@@ -730,13 +730,13 @@ pub enum Statement {
     ),
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum CatchClause {
     Simple(Loc, Option<Parameter>, Statement),
     Named(Loc, Identifier, Parameter, Statement),
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum YulStatement {
     Assign(Loc, Vec<YulExpression>, YulExpression),
     VariableDeclaration(Loc, Vec<YulTypedIdentifier>, Option<YulExpression>),
@@ -750,7 +750,7 @@ pub enum YulStatement {
     FunctionDefinition(Box<YulFunctionDefinition>),
     FunctionCall(Box<YulFunctionCall>),
 }
-#[derive(PartialEq, Clone, Debug)]
+#[derive(PartialEq, Eq, Clone, Debug)]
 pub struct YulSwitch {
     pub loc: Loc,
     pub condition: YulExpression,
@@ -758,7 +758,7 @@ pub struct YulSwitch {
     pub default: Option<YulSwitchOptions>,
 }
 
-#[derive(PartialEq, Clone, Debug)]
+#[derive(PartialEq, Eq, Clone, Debug)]
 pub struct YulFor {
     pub loc: Loc,
     pub init_block: YulBlock,
@@ -767,13 +767,13 @@ pub struct YulFor {
     pub execution_block: YulBlock,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct YulBlock {
     pub loc: Loc,
     pub statements: Vec<YulStatement>,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum YulExpression {
     BoolLiteral(Loc, bool, Option<Identifier>),
     NumberLiteral(Loc, String, String, Option<Identifier>),
@@ -785,14 +785,14 @@ pub enum YulExpression {
     SuffixAccess(Loc, Box<YulExpression>, Identifier),
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct YulTypedIdentifier {
     pub loc: Loc,
     pub id: Identifier,
     pub ty: Option<Identifier>,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct YulFunctionDefinition {
     pub loc: Loc,
     pub id: Identifier,
@@ -801,14 +801,14 @@ pub struct YulFunctionDefinition {
     pub body: YulBlock,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct YulFunctionCall {
     pub loc: Loc,
     pub id: Identifier,
     pub arguments: Vec<YulExpression>,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum YulSwitchOptions {
     Case(Loc, YulExpression, YulBlock),
     Default(Loc, YulBlock),

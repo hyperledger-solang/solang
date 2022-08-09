@@ -31,7 +31,7 @@ impl YulBlock {
     }
 }
 
-#[derive(PartialEq, Debug, Clone)]
+#[derive(PartialEq, Eq, Debug, Clone)]
 pub enum YulExpression {
     BoolLiteral(pt::Loc, bool, Type),
     NumberLiteral(pt::Loc, BigInt, Type),
@@ -78,7 +78,7 @@ impl RetrieveType for YulExpression {
     }
 }
 
-#[derive(PartialEq, Debug, Clone)]
+#[derive(PartialEq, Eq, Debug, Clone)]
 pub enum YulSuffix {
     Offset,
     Slot,

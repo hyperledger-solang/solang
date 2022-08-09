@@ -25,7 +25,7 @@ impl YulBuiltinPrototype {
 }
 
 // The enums declaration order should match that of the static vector containing the builtins
-#[derive(Clone, Debug, PartialEq, Copy)]
+#[derive(Clone, Debug, PartialEq, Eq, Copy)]
 #[repr(u8)]
 pub enum YulBuiltInFunction {
     Stop = 0,

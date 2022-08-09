@@ -6,7 +6,7 @@ use ethabi::Token;
 
 #[test]
 fn integers_bool_enum() {
-    #[derive(BorshDeserialize, PartialEq, Debug)]
+    #[derive(BorshDeserialize, PartialEq, Eq, Debug)]
     enum WeekDay {
         Sunday,
         Monday,
@@ -360,7 +360,7 @@ contract Testing {
 
 #[test]
 fn struct_in_array() {
-    #[derive(Debug, BorshDeserialize, PartialEq, Copy, Default, Clone)]
+    #[derive(Debug, BorshDeserialize, PartialEq, Eq, Copy, Default, Clone)]
     struct NoPadStruct {
         a: u32,
         b: u32,
@@ -562,7 +562,7 @@ fn arrays() {
 
 #[test]
 fn multi_dimensional_array() {
-    #[derive(Debug, BorshDeserialize, Default, Copy, Clone, PartialEq)]
+    #[derive(Debug, BorshDeserialize, Default, Copy, Clone, PartialEq, Eq)]
     struct PaddedStruct {
         a: u128,
         b: u8,

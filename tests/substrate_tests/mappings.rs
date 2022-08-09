@@ -62,11 +62,11 @@ fn basic() {
 
 #[test]
 fn test_uint64() {
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Val(i32);
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct SetArg(u64, i32);
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct GetArg(u64);
 
     let mut runtime = build_solidity(
@@ -106,11 +106,11 @@ fn test_uint64() {
 
 #[test]
 fn test_enum() {
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Val(i32);
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct SetArg(u8, i32);
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct GetArg(u8);
 
     let mut runtime = build_solidity(
@@ -151,11 +151,11 @@ fn test_enum() {
 
 #[test]
 fn test_string() {
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Val(i64);
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct SetArg(Vec<u8>, i64);
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct GetArg(Vec<u8>);
 
     let mut runtime = build_solidity(
@@ -198,11 +198,11 @@ fn test_string() {
 
 #[test]
 fn test_user() {
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct AddArg(Vec<u8>, [u8; 32]);
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct GetArg(Vec<u8>);
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct GetRet(bool, [u8; 32]);
 
     let mut runtime = build_solidity(
@@ -285,11 +285,11 @@ fn test_user() {
 
 #[test]
 fn test_string_map() {
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct AddArg([u8; 32], Vec<u8>);
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct GetArg([u8; 32]);
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct GetRet(Vec<u8>);
 
     let mut runtime = build_solidity(
@@ -357,11 +357,11 @@ fn test_string_map() {
 fn test_address() {
     type Address = [u8; 32];
 
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Val(i64);
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct SetArg(Address, i64);
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct GetArg(Address);
 
     let mut runtime = build_solidity(

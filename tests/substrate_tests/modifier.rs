@@ -283,7 +283,7 @@ fn return_values() {
 
     runtime.function("test", Vec::new());
 
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Val(u64);
 
     assert_eq!(runtime.vm.output, Val(5).encode());
@@ -316,7 +316,7 @@ fn return_values() {
 
     runtime.function("test", Vec::new());
 
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct StructS(bool, u64, String);
 
     assert_eq!(
