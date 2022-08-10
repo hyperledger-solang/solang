@@ -412,7 +412,6 @@ impl BorshEncoding {
         vartab: &mut Vartable,
         cfg: &mut ControlFlowGraph,
     ) -> Expression {
-
         let size = if dims.is_empty() {
             // Array has no dimension
             cfg.add(
@@ -749,6 +748,7 @@ impl BorshEncoding {
         vartab: &mut Vartable,
         cfg: &mut ControlFlowGraph,
     ) -> (Expression, Expression) {
+        // TODO: This can be simplified: are temporaries necessary?
         match ty {
             Type::Uint(_)
             | Type::Int(_)

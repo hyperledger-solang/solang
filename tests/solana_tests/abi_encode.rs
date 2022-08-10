@@ -730,7 +730,7 @@ contract Testing {
     assert_eq!(decoded.item, vec![9, 3, 4, 90, 834]);
 }
 
-fn create_response(vec: &mut [u8], string: &[u8; 2]) -> [u8; 32] {
+pub(super) fn create_response(vec: &mut [u8], string: &[u8; 2]) -> [u8; 32] {
     vec[0] = string[0];
     vec[1] = string[1];
     <[u8; 32]>::try_from(vec.to_owned()).unwrap()

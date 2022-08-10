@@ -2537,14 +2537,44 @@ pub trait TargetRuntime<'a> {
 
                 let start = unsafe { bin.builder.build_gep(data, &[offset], "start") };
 
-                let start = bin.builder.build_pointer_cast(
-                    start,
-                    bin.llvm_type(&returns[0], ns)
-                        .ptr_type(AddressSpace::Generic),
-                    "start",
-                );
+                if let Type::Bytes(n) = &returns[0] {
+                    let store = bin.build_alloca(
+                        function,
+                        bin.context.custom_width_int_type(*n as u32 * 8),
+                        "stack",
+                    );
+                    bin.builder.build_call(
+                        bin.module.get_function("__beNtoleN").unwrap(),
+                        &[
+                            bin.builder
+                                .build_pointer_cast(
+                                    start,
+                                    bin.context.i8_type().ptr_type(AddressSpace::Generic),
+                                    "",
+                                )
+                                .into(),
+                            bin.builder
+                                .build_pointer_cast(
+                                    store,
+                                    bin.context.i8_type().ptr_type(AddressSpace::Generic),
+                                    "",
+                                )
+                                .into(),
+                            bin.context.i32_type().const_int(*n as u64, false).into(),
+                        ],
+                        "",
+                    );
+                    bin.builder.build_load(store, &format!("bytes{}", *n))
+                } else {
+                    let start = bin.builder.build_pointer_cast(
+                        start,
+                        bin.llvm_type(&returns[0], ns)
+                            .ptr_type(AddressSpace::Generic),
+                        "start",
+                    );
 
-                bin.builder.build_load(start, "value")
+                    bin.builder.build_load(start, "value")
+                }
             }
             Expression::Keccak256(_, _, exprs) => {
                 let mut length = bin.context.i32_type().const_zero();
