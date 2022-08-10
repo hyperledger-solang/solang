@@ -26,12 +26,28 @@ type HoverEntry = Interval<usize, String>;
 pub struct SolangServer {
     client: Client,
     target: Target,
-    matches: ArgMatches,
+    importpaths: Vec<PathBuf>,
+    importmaps: Vec<String>,
     files: Mutex<HashMap<PathBuf, Hovers>>,
 }
 
 #[tokio::main(flavor = "current_thread")]
-pub async fn start_server(target: Target, matches: ArgMatches) -> ! {
+pub async fn start_server(target: Target, matches: &ArgMatches) -> ! {
+    let mut importpaths = Vec::new();
+    let mut importmaps = Vec::new();
+
+    if let Some(paths) = matches.get_many::<PathBuf>("IMPORTPATH") {
+        for path in paths {
+            importpaths.push(path.to_path_buf());
+        }
+    }
+
+    if let Some(maps) = matches.get_many::<String>("IMPORTMAP") {
+        for map in maps {
+            importmaps.push(map.to_string());
+        }
+    }
+
     let stdin = tokio::io::stdin();
     let stdout = tokio::io::stdout();
 
@@ -39,7 +55,8 @@ pub async fn start_server(target: Target, matches: ArgMatches) -> ! {
         client,
         target,
         files: Mutex::new(HashMap::new()),
-        matches,
+        importpaths,
+        importmaps,
     });
 
     Server::new(stdin, stdout, socket).serve(service).await;
@@ -59,37 +76,33 @@ impl SolangServer {
 
             let mut diags = Vec::new();
 
-            if let Some(paths) = self.matches.get_many::<PathBuf>("IMPORTPATH") {
-                for path in paths {
-                    if let Err(e) = resolver.add_import_path(path) {
-                        diags.push(Diagnostic {
-                            message: format!("import path '{}': {}", path.to_string_lossy(), e),
-                            severity: Some(DiagnosticSeverity::ERROR),
-                            ..Default::default()
-                        });
-                    }
+            for path in &self.importpaths {
+                if let Err(e) = resolver.add_import_path(path) {
+                    diags.push(Diagnostic {
+                        message: format!("import path '{}': {}", path.to_string_lossy(), e),
+                        severity: Some(DiagnosticSeverity::ERROR),
+                        ..Default::default()
+                    });
                 }
             }
 
-            if let Some(maps) = self.matches.get_many::<String>("IMPORTMAP") {
-                for p in maps {
-                    if let Some((map, path)) = p.split_once('=') {
-                        if let Err(e) =
-                            resolver.add_import_map(OsString::from(map), PathBuf::from(path))
-                        {
-                            diags.push(Diagnostic {
-                                message: format!("error: import path '{}': {}", path, e),
-                                severity: Some(DiagnosticSeverity::ERROR),
-                                ..Default::default()
-                            });
-                        }
-                    } else {
+            for p in &self.importmaps {
+                if let Some((map, path)) = p.split_once('=') {
+                    if let Err(e) =
+                        resolver.add_import_map(OsString::from(map), PathBuf::from(path))
+                    {
                         diags.push(Diagnostic {
-                            message: format!("error: import map '{}': contains no '='", p),
+                            message: format!("error: import path '{}': {}", path, e),
                             severity: Some(DiagnosticSeverity::ERROR),
                             ..Default::default()
                         });
                     }
+                } else {
+                    diags.push(Diagnostic {
+                        message: format!("error: import map '{}': contains no '='", p),
+                        severity: Some(DiagnosticSeverity::ERROR),
+                        ..Default::default()
+                    });
                 }
             }
 

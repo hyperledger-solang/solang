@@ -17,7 +17,7 @@ This is how to build your Solidity for Solana:
 
 .. code-block:: bash
 
-  solang --target solana flipper.sol -v
+  solang compile --target solana flipper.sol -v
 
 This will produce two files called `flipper.abi` and `bundle.so`. The first is an ethereum style abi file and the latter being
 the ELF BPF shared object which can be deployed on Solana. For each contract, an abi file will be created; a single `bundle.so`

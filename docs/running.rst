@@ -12,14 +12,12 @@ The following targets are supported right now:
 `Ethereum ewasm <https://github.com/ewasm/design>`_.
 
 
-Usage
------
+Compiler Usage
+______________
 
-Usage:
+  solang compile [OPTIONS]... [SOLIDITY SOURCE FILE]...
 
-  solang [OPTIONS]... [SOLIDITY SOURCE FILE]...
-
-This means that the command line is ``solang`` followed by any options described below,
+This means that the command line is ``solang compile`` followed by any options described below,
 followed by one or more solidity source filenames.
 
 Options:
@@ -40,11 +38,6 @@ Options:
 \\-\\-value\\-length *length-in-bytes*
   Change the default value length on Substrate. By default, Substate uses an value type of 16 bytes. This option
   is ignored for any other target.
-
-\\-\\-doc
-  Generate documentation for the given Solidity files as a single html page. This uses the
-  doccomment tags. The result is saved in ``soldoc.html``. See :ref:`tags` for
-  further information.
 
 -o, \\-\\-output *directory*
   This option takes one argument, which is the directory where output should
@@ -114,6 +107,45 @@ Options:
 \\-\\-no\\-cse
    Disable the :ref:`common-subexpression-elimination` optimization
 
+Generating Documentation Usage
+______________________________
+
+Generate documentation for the given Solidity files as a single html page. This uses the
+doccomment tags. The result is saved in ``soldoc.html``. See :ref:`tags` for
+further information.
+
+  solang doc [OPTIONS]... [SOLIDITY SOURCE FILE]...
+
+This means that the command line is ``solang doc`` followed by any options described below,
+followed by one or more solidity source filenames.
+
+Options:
+
+\\-\\-target *target*
+  This takes one argument, which can either be ``solana``, ``substrate``, or ``ewasm``. The target
+  must be specified.
+
+\\-\\-address\\-length *length-in-bytes*
+  Change the default address length on Substrate. By default, Substate uses an address type of 32 bytes. This option
+  is ignored for any other target.
+
+\\-\\-value\\-length *length-in-bytes*
+  Change the default value length on Substrate. By default, Substate uses an value type of 16 bytes. This option
+  is ignored for any other target.
+
+\\-\\-importpath *directory*
+  When resolving ``import`` directives, search this directory. By default ``import``
+  will only search the current directory. This option can be specified multiple times
+  and the directories will be searched in the order specified.
+
+\\-\\-importmap *map=directory*
+  When resolving ``import`` directives, if the first part of the path matches *map*,
+  search the directory provided for the file. This option can be specified multiple times
+  with different values for map.
+
+\\-\\-help, -h
+  This displays a short description of all the options
+
 Running Solang using container
 ______________________________
 
@@ -149,10 +181,10 @@ to your solidity files:
 
 .. code-block:: bash
 
-	  docker run --rm -it -v /local/path:/sources ghcr.io/hyperledger-labs/solang -o /sources /sources/flipper.sol
+	  docker run --rm -it -v /local/path:/sources ghcr.io/hyperledger-labs/solang compile -o /sources /sources/flipper.sol
 
 On Windows, you need to specify absolute paths:
 
 .. code-block:: text
 
-	docker run --rm -it -v C:\Users\User:/sources ghcr.io/hyperledger-labs/solang -o /sources /sources/flipper.sol
+	 docker run --rm -it -v C:\Users\User:/sources ghcr.io/hyperledger-labs/solang compile -o /sources /sources/flipper.sol

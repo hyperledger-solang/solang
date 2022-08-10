@@ -20,7 +20,7 @@ directory. Write this to flipper.sol and run:
 
 .. code-block:: bash
 
-  solang --target substrate flipper.sol
+  solang compile --target substrate flipper.sol
 
 Now you should have a file called ``flipper.contract``. The file contains both the ABI and contract wasm.
 It can be used directly in the
