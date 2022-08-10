@@ -4,7 +4,7 @@
   "description": "Integration tests with Solang and Hyperledger Burrow",
   "scripts": {
     "test": "tsc; ts-mocha *.spec.ts",
-    "build": "solang *.sol --target ewasm -v"
+    "build": "solang compile *.sol --target ewasm -v"
   },
   "author": "Sean Young <sean@mess.org>",
   "license": "MIT",

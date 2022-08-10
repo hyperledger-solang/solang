@@ -72,6 +72,7 @@ fn testcase(path: PathBuf) {
 
     let mut cmd = Command::cargo_bin("solang").unwrap();
     let assert = cmd
+        .arg("compile")
         .args(args.split_whitespace())
         .arg(format!("{}", path.canonicalize().unwrap().display()))
         .assert();
