@@ -4430,17 +4430,57 @@ pub trait TargetRuntime<'a> {
                         let offset = self
                             .expression(bin, offset, &w.vars, function, ns)
                             .into_int_value();
-                        let value = self.expression(bin, value, &w.vars, function, ns);
+                        let emit_value = self.expression(bin, value, &w.vars, function, ns);
 
                         let start = unsafe { bin.builder.build_gep(data, &[offset], "start") };
 
-                        let start = bin.builder.build_pointer_cast(
-                            start,
-                            value.get_type().ptr_type(AddressSpace::Generic),
-                            "start",
-                        );
+                        let is_bytes = if let Type::Bytes(n) = value.ty() {
+                            n
+                        } else {
+                            0
+                        };
 
-                        bin.builder.build_store(start, value);
+                        if is_bytes > 1 {
+                            let value_ptr = bin.build_alloca(
+                                function,
+                                emit_value.into_int_value().get_type(),
+                                &format!("bytes{}", is_bytes),
+                            );
+                            bin.builder
+                                .build_store(value_ptr, emit_value.into_int_value());
+                            bin.builder.build_call(
+                                bin.module.get_function("__leNtobeN").unwrap(),
+                                &[
+                                    bin.builder
+                                        .build_pointer_cast(
+                                            value_ptr,
+                                            bin.context.i8_type().ptr_type(AddressSpace::Generic),
+                                            "store",
+                                        )
+                                        .into(),
+                                    bin.builder
+                                        .build_pointer_cast(
+                                            start,
+                                            bin.context.i8_type().ptr_type(AddressSpace::Generic),
+                                            "dest",
+                                        )
+                                        .into(),
+                                    bin.context
+                                        .i32_type()
+                                        .const_int(is_bytes as u64, false)
+                                        .into(),
+                                ],
+                                "",
+                            );
+                        } else {
+                            let start = bin.builder.build_pointer_cast(
+                                start,
+                                emit_value.get_type().ptr_type(AddressSpace::Generic),
+                                "start",
+                            );
+
+                            bin.builder.build_store(start, emit_value);
+                        }
                     }
                     Instr::MemCopy {
                         source: from,

@@ -202,9 +202,8 @@ fn primitive_structs() {
     let decoded = PaddedStruct::try_from_slice(&encoded).unwrap();
     assert_eq!(decoded.a, 12998);
     assert_eq!(decoded.b, 240);
-    let mut b: [u8; 11] = b"tea_is_good".to_owned();
-    b.reverse();
-    assert_eq!(&decoded.c[21..32], b);
+    let b: [u8; 11] = b"tea_is_good".to_owned();
+    assert_eq!(&decoded.c[0..11], b);
 }
 
 #[test]
@@ -353,9 +352,8 @@ contract Testing {
     assert_eq!(decoded.no_pad.b, 12354);
     assert_eq!(decoded.pad.a, 988834);
     assert_eq!(decoded.pad.b, 129);
-    let mut b: [u8; 11] = b"tea_is_good".to_owned();
-    b.reverse();
-    assert_eq!(&decoded.pad.c[21..32], b);
+    let b: [u8; 11] = b"tea_is_good".to_owned();
+    assert_eq!(&decoded.pad.c[0..11], b);
 }
 
 #[test]
@@ -441,9 +439,8 @@ fn struct_in_array() {
     assert_eq!(decoded.item_1.b, 7453);
     assert_eq!(decoded.item_2.a, 1);
     assert_eq!(decoded.item_2.b, 3);
-    let mut b: [u8; 21] = b"there_is_padding_here".to_owned();
-    b.reverse();
-    assert_eq!(&decoded.item_2.c[11..32], b);
+    let b: [u8; 21] = b"there_is_padding_here".to_owned();
+    assert_eq!(&decoded.item_2.c[0..21], b);
 
     let returns = vm.function("primitiveStruct", &[], &[], None);
     let encoded = returns[0].clone().into_bytes().unwrap();
@@ -713,8 +710,8 @@ contract Testing {
 }
 
 fn create_response(vec: &mut [u8], string: &[u8; 2]) -> [u8; 32] {
-    vec[30] = string[1];
-    vec[31] = string[0];
+    vec[0] = string[0];
+    vec[1] = string[1];
     <[u8; 32]>::try_from(vec.to_owned()).unwrap()
 }
 
@@ -811,10 +808,43 @@ fn external_function() {
     let encoded = returns[2].clone().into_bytes().unwrap();
     let decoded = Res::try_from_slice(&encoded).unwrap();
 
-    let mut selector = returns[0].clone().into_fixed_bytes().unwrap();
-    selector.reverse();
+    let selector = returns[0].clone().into_fixed_bytes().unwrap();
     let address = returns[1].clone().into_fixed_bytes().unwrap();
 
     assert_eq!(decoded.item_1, &selector[..]);
     assert_eq!(decoded.item_2, &address[..]);
+}
+
+#[test]
+fn bytes_arrays() {
+    #[derive(Debug, BorshDeserialize)]
+    struct Res {
+        item_1: [[u8; 4]; 2],
+        item_2: Vec<[u8; 5]>,
+    }
+
+    let mut vm = build_solidity(
+        r#"
+    contract Testing {
+        function testBytesArray() public pure returns (bytes memory) {
+            bytes4[2] memory arr = ["abcd", "efgh"];
+            bytes5[] memory vec = new bytes5[](2);
+            vec[0] = "12345";
+            vec[1] = "67890";
+            bytes memory b = abi.encode(arr, vec);
+            return b;
+        }
+    }
+        "#,
+    );
+    vm.constructor("Testing", &[]);
+    let returns = vm.function("testBytesArray", &[], &[], None);
+    let encoded = returns[0].clone().into_bytes().unwrap();
+    let decoded = Res::try_from_slice(&encoded).unwrap();
+
+    assert_eq!(&decoded.item_1[0], b"abcd");
+    assert_eq!(&decoded.item_1[1], b"efgh");
+    assert_eq!(decoded.item_2.len(), 2);
+    assert_eq!(&decoded.item_2[0], b"12345");
+    assert_eq!(&decoded.item_2[1], b"67890");
 }
