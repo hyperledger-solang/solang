@@ -155,6 +155,7 @@ Here is a brief description of what we envision for the next versions.
 | Parse and resolve inline assembly          | Completed   |
 | Generate code for inline assembly          | Completed   |
 | Support Solana's Program Derived Addresses | In Progress |
+| Support latest Substrate production target | In Progress |
 
 
 ### V0.3
@@ -165,6 +166,8 @@ Here is a brief description of what we envision for the next versions.
 | Improvements in overflow checking          | In progress |
 | Call Solidity from Solana's Rust contracts | Not started |
 | Improve parser resilience                  | Not started |
+| Improve developer experience for Substrate | Not started |
+| Tooling for calls between ink! <> solidity | Not started |
 
 
 ### V0.4
@@ -174,6 +177,8 @@ Here is a brief description of what we envision for the next versions.
 | Improve management over optimization passes        | Not started |
 | Specify values as "1 sol" and "1e9 lamports"       | In progress |
 | Adopt single static assignment for code generation | Not started |
+| Support openzeppelin on Substrate target           | Not started |
+| Provide Solidity -> Substrate porting guide        | Not started |
 
 
 
