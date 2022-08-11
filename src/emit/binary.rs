@@ -41,6 +41,7 @@ pub struct Binary<'a> {
     pub(crate) function_abort_value_transfers: bool,
     pub(crate) constructor_abort_value_transfers: bool,
     pub(crate) math_overflow_check: bool,
+    pub(crate) generate_debug_info: bool,
     pub builder: Builder<'a>,
     pub dibuilder: DebugInfoBuilder<'a>,
     pub compile_unit: DICompileUnit<'a>,
@@ -67,6 +68,7 @@ impl<'a> Binary<'a> {
         filename: &'a str,
         opt: OptimizationLevel,
         math_overflow_check: bool,
+        generate_debug_info: bool,
     ) -> Self {
         let std_lib = load_stdlib(context, &ns.target);
         match ns.target {
@@ -78,6 +80,7 @@ impl<'a> Binary<'a> {
                 filename,
                 opt,
                 math_overflow_check,
+                generate_debug_info,
             ),
             Target::Ewasm => ewasm::EwasmTarget::build(
                 context,
@@ -87,6 +90,7 @@ impl<'a> Binary<'a> {
                 filename,
                 opt,
                 math_overflow_check,
+                generate_debug_info,
             ),
             Target::Solana => solana::SolanaTarget::build(
                 context,
@@ -96,6 +100,7 @@ impl<'a> Binary<'a> {
                 filename,
                 opt,
                 math_overflow_check,
+                generate_debug_info,
             ),
         }
     }
@@ -107,6 +112,7 @@ impl<'a> Binary<'a> {
         filename: &str,
         opt: OptimizationLevel,
         math_overflow_check: bool,
+        generate_debug_info: bool,
     ) -> Self {
         assert!(namespaces.iter().all(|ns| ns.target == Target::Solana));
 
@@ -118,6 +124,7 @@ impl<'a> Binary<'a> {
             filename,
             opt,
             math_overflow_check,
+            generate_debug_info,
         )
     }
 
@@ -253,6 +260,7 @@ impl<'a> Binary<'a> {
         math_overflow_check: bool,
         std_lib: &Module<'a>,
         runtime: Option<Box<Binary<'a>>>,
+        generate_debug_info: bool,
     ) -> Self {
         LLVM_INIT.get_or_init(|| {
             inkwell::targets::Target::initialize_webassembly(&Default::default());
@@ -338,6 +346,7 @@ impl<'a> Binary<'a> {
             function_abort_value_transfers: false,
             constructor_abort_value_transfers: false,
             math_overflow_check,
+            generate_debug_info,
             builder,
             dibuilder,
             compile_unit,

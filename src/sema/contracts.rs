@@ -57,8 +57,17 @@ impl ast::Contract {
         filename: &'a str,
         opt: inkwell::OptimizationLevel,
         math_overflow_check: bool,
+        generate_debug_info: bool,
     ) -> emit::binary::Binary {
-        emit::binary::Binary::build(context, self, ns, filename, opt, math_overflow_check)
+        emit::binary::Binary::build(
+            context,
+            self,
+            ns,
+            filename,
+            opt,
+            math_overflow_check,
+            generate_debug_info,
+        )
     }
 
     /// Selector for this contract. This is used by Solana contract bundle

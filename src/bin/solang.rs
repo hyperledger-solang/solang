@@ -180,6 +180,13 @@ fn main() {
                         .help("Enable math overflow checking")
                         .long("math-overflow")
                         .display_order(6),
+                )
+                .arg(
+                    Arg::new("GENERATEDEBUGINFORMATION")
+                        .help("Enable generating debug information for LLVM IR")
+                        .short('g')
+                        .long("generate-debug-info")
+                        .display_order(5),
                 ),
         )
         .subcommand(
@@ -345,6 +352,8 @@ fn compile(matches: &ArgMatches) {
 
     let math_overflow_check = matches.contains_id("MATHOVERFLOW");
 
+    let generate_debug_info = matches.contains_id("GENERATEDEBUGINFORMATION");
+
     let mut resolver = imports_arg(matches);
 
     let opt_level = match matches.get_one::<String>("OPT").unwrap().as_str() {
@@ -361,6 +370,7 @@ fn compile(matches: &ArgMatches) {
         strength_reduce: *matches.get_one::<bool>("STRENGTHREDUCE").unwrap(),
         vector_to_slice: *matches.get_one::<bool>("VECTORTOSLICE").unwrap(),
         math_overflow_check,
+        generate_debug_information: generate_debug_info,
         common_subexpression_elimination: *matches
             .get_one::<bool>("COMMONSUBEXPRESSIONELIMINATION")
             .unwrap(),
@@ -405,6 +415,7 @@ fn compile(matches: &ArgMatches) {
             "bundle.sol",
             opt_level.into(),
             math_overflow_check,
+            generate_debug_info,
         );
 
         if !save_intermediates(&binary, matches) {
@@ -586,6 +597,7 @@ fn process_file(
             &filename_string,
             opt.opt_level.into(),
             opt.math_overflow_check,
+            opt.generate_debug_information,
         );
 
         if save_intermediates(&binary, matches) {

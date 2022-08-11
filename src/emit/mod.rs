@@ -7,6 +7,7 @@ use crate::sema::ast::{
     StructType, Type,
 };
 use solang_parser::pt;
+// use solang_parser::pt::Loc;
 use std::convert::TryFrom;
 use std::fmt;
 use std::str;
@@ -1237,6 +1238,7 @@ pub trait TargetRuntime<'a> {
                     "",
                     bin.opt,
                     bin.math_overflow_check,
+                    bin.generate_debug_info,
                 );
 
                 let code = if *runtime && target_bin.runtime.is_some() {
@@ -3191,65 +3193,67 @@ pub trait TargetRuntime<'a> {
         let file = compile_unit.get_file();
         let mut di_func_scope: Option<DISubprogram<'_>> = None;
 
-        let return_type = function.get_type().get_return_type();
-        match return_type {
-            None => {}
-            Some(return_type) => {
-                let return_type_size = return_type.size_of().unwrap();
-                let size = return_type_size.get_type().get_bit_width();
-                let mut type_name = "size_".to_owned();
-                type_name.push_str(&size.to_string());
-                let di_flags = if cfg.public {
-                    inkwell::debug_info::DIFlagsConstants::PUBLIC
-                } else {
-                    inkwell::debug_info::DIFlagsConstants::PRIVATE
-                };
+        if bin.generate_debug_info {
+            let return_type = function.get_type().get_return_type();
+            match return_type {
+                None => {}
+                Some(return_type) => {
+                    let return_type_size = return_type.size_of().unwrap();
+                    let size = return_type_size.get_type().get_bit_width();
+                    let mut type_name = "size_".to_owned();
+                    type_name.push_str(&size.to_string());
+                    let di_flags = if cfg.public {
+                        inkwell::debug_info::DIFlagsConstants::PUBLIC
+                    } else {
+                        inkwell::debug_info::DIFlagsConstants::PRIVATE
+                    };
 
-                let di_return_type = dibuilder
-                    .create_basic_type(&type_name, size as u64, 0x00, di_flags)
-                    .unwrap();
-                let param_types = function.get_type().get_param_types();
-                let di_param_types: Vec<DIType<'_>> = param_types
-                    .iter()
-                    .map(|typ| {
-                        let mut param_tname = "size_".to_owned();
-                        let param_size = typ.size_of().unwrap().get_type().get_bit_width();
-                        param_tname.push_str(&size.to_string());
-                        dibuilder
-                            .create_basic_type(&param_tname, param_size as u64, 0x00, di_flags)
-                            .unwrap()
-                            .as_type()
-                    })
-                    .collect();
-                let di_func_type = dibuilder.create_subroutine_type(
-                    file,
-                    Some(di_return_type.as_type()),
-                    di_param_types.as_slice(),
-                    di_flags,
-                );
+                    let di_return_type = dibuilder
+                        .create_basic_type(&type_name, size as u64, 0x00, di_flags)
+                        .unwrap();
+                    let param_types = function.get_type().get_param_types();
+                    let di_param_types: Vec<DIType<'_>> = param_types
+                        .iter()
+                        .map(|typ| {
+                            let mut param_tname = "size_".to_owned();
+                            let param_size = typ.size_of().unwrap().get_type().get_bit_width();
+                            param_tname.push_str(&size.to_string());
+                            dibuilder
+                                .create_basic_type(&param_tname, param_size as u64, 0x00, di_flags)
+                                .unwrap()
+                                .as_type()
+                        })
+                        .collect();
+                    let di_func_type = dibuilder.create_subroutine_type(
+                        file,
+                        Some(di_return_type.as_type()),
+                        di_param_types.as_slice(),
+                        di_flags,
+                    );
 
-                let func_loc = cfg.blocks[0].instr.first().unwrap().loc();
-                let line_num = if let Loc::File(file_offset, offset, _) = func_loc {
-                    let (line, _) = ns.files[file_offset].offset_to_line_column(offset);
-                    line
-                } else {
-                    0
-                };
+                    // let func_loc = cfg.blocks[0].instr.first().unwrap().loc();
+                    // let line_num = if let Loc::File(file_offset, offset, _) = func_loc {
+                    //     let (line, _) = ns.files[file_offset].offset_to_line_column(offset);
+                    //     line
+                    // } else {
+                    //     0
+                    // };
 
-                di_func_scope = Some(dibuilder.create_function(
-                    compile_unit.as_debug_info_scope(),
-                    function.get_name().to_str().unwrap(),
-                    None,
-                    file,
-                    line_num as u32,
-                    di_func_type,
-                    true,
-                    true,
-                    line_num as u32,
-                    di_flags,
-                    false,
-                ));
-                function.set_subprogram(di_func_scope.unwrap());
+                    di_func_scope = Some(dibuilder.create_function(
+                        compile_unit.as_debug_info_scope(),
+                        function.get_name().to_str().unwrap(),
+                        None,
+                        file,
+                        0,
+                        di_func_type,
+                        true,
+                        true,
+                        0,
+                        di_flags,
+                        false,
+                    ));
+                    function.set_subprogram(di_func_scope.unwrap());
+                }
             }
         }
 
@@ -3368,20 +3372,21 @@ pub trait TargetRuntime<'a> {
             }
 
             for ins in &cfg.blocks[w.block_no].instr {
-                let debug_loc = ins.loc();
-                if let Loc::File(file_offset, offset, _) = debug_loc {
-                    let (line, col) = ns.files[file_offset].offset_to_line_column(offset);
-                    let debug_loc = dibuilder.create_debug_location(
-                        bin.context,
-                        line as u32,
-                        col as u32,
-                        di_func_scope.unwrap().as_debug_info_scope(),
-                        None,
-                    );
-                    bin.builder
-                        .set_current_debug_location(bin.context, debug_loc);
+                if bin.generate_debug_info {
+                    let debug_loc = ins.loc();
+                    if let Loc::File(file_offset, offset, _) = debug_loc {
+                        let (line, col) = ns.files[file_offset].offset_to_line_column(offset);
+                        let debug_loc = dibuilder.create_debug_location(
+                            bin.context,
+                            line as u32,
+                            col as u32,
+                            di_func_scope.unwrap().as_debug_info_scope(),
+                            None,
+                        );
+                        bin.builder
+                            .set_current_debug_location(bin.context, debug_loc);
+                    }
                 }
-
                 match ins {
                     Instr::Nop => (),
                     Instr::Return { value } if value.is_empty() => {

@@ -86,6 +86,7 @@ fn parse_file(path: PathBuf, target: Target) -> io::Result<()> {
                 &filename,
                 Default::default(),
                 false,
+                false,
             );
         } else {
             for contract in &ns.contracts {
@@ -96,6 +97,7 @@ fn parse_file(path: PathBuf, target: Target) -> io::Result<()> {
                         &ns,
                         &filename,
                         Default::default(),
+                        false,
                         false,
                     );
                 }
