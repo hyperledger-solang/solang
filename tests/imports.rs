@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use assert_cmd::Command;
 
 #[test]
@@ -5,6 +7,7 @@ fn import_map_dup() {
     let mut cmd = Command::cargo_bin("solang").unwrap();
     let dup = cmd
         .args(&[
+            "compile",
             "--target",
             "solana",
             "--importmap",
@@ -32,6 +35,7 @@ fn import_map_badpath() {
     let mut cmd = Command::cargo_bin("solang").unwrap();
     let badpath = cmd
         .args(&[
+            "compile",
             "--target",
             "solana",
             "--importmap",
@@ -54,6 +58,7 @@ fn import_map() {
     let mut cmd = Command::cargo_bin("solang").unwrap();
     let assert = cmd
         .args(&[
+            "compile",
             "--target",
             "solana",
             "--importmap",
@@ -69,7 +74,7 @@ fn import_map() {
 
     let mut cmd = Command::cargo_bin("solang").unwrap();
     let badpath = cmd
-        .args(&["import_map.sol", "--target", "solana"])
+        .args(&["compile", "import_map.sol", "--target", "solana"])
         .current_dir("tests/imports_testcases")
         .assert();
 
@@ -86,6 +91,7 @@ fn import() {
     let mut cmd = Command::cargo_bin("solang").unwrap();
     let assert = cmd
         .args(&[
+            "compile",
             "--target",
             "solana",
             "--importpath",
@@ -101,7 +107,7 @@ fn import() {
 
     let mut cmd = Command::cargo_bin("solang").unwrap();
     let badpath = cmd
-        .args(&["--target", "solana", "import.sol"])
+        .args(&["compile", "--target", "solana", "import.sol"])
         .current_dir("tests/imports_testcases")
         .assert();
 

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 #![cfg(test)]
 
 use crate::sema::yul::tests::parse;

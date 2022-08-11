@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use super::cfg::{ControlFlowGraph, Instr};
 use super::reaching_definitions;
 use crate::codegen::{Builtin, Expression};
@@ -225,6 +227,7 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
                     value,
                     gas,
                     accounts,
+                    seeds,
                     callty,
                 } => {
                     let value = expression(value, Some(&vars), cfg, ns).0;
@@ -236,11 +239,15 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
                     let accounts = accounts
                         .as_ref()
                         .map(|expr| expression(expr, Some(&vars), cfg, ns).0);
+                    let seeds = seeds
+                        .as_ref()
+                        .map(|expr| expression(expr, Some(&vars), cfg, ns).0);
 
                     cfg.blocks[block_no].instr[instr_no] = Instr::ExternalCall {
                         success: *success,
                         address,
                         accounts,
+                        seeds,
                         payload,
                         value,
                         gas,

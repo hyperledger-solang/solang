@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::codegen::cfg::{ControlFlowGraph, Instr};
 use crate::codegen::encoding::{
     calculate_size_args, finish_array_loop, increment_four, load_array_item, load_struct_member,
@@ -346,14 +348,19 @@ impl BorshEncoding {
         vartab: &mut Vartable,
         cfg: &mut ControlFlowGraph,
     ) -> Expression {
+        // Checks if the elements are of Type::Bytes
+        let bytes_length = if let Type::Bytes(n) = elem_ty { *n } else { 0 };
+
         // Check if we can MemCpy elements into the buffer
         let direct_encoding = if array_ty.is_dynamic(ns) {
             // If this is a dynamic array, we can only MemCpy if its elements are of
             // any primitive type and we don't need to index it.
-            dims.len() == 1 && elem_ty.is_primitive()
+            // Elements whose type is Bytes cannot be directly encoded, because we must
+            // reverse the bytes order.
+            dims.len() == 1 && elem_ty.is_primitive() && bytes_length < 2
         } else {
             // If the array is not dynamic, we can MemCpy elements if their are primitive.
-            elem_ty.is_primitive()
+            elem_ty.is_primitive() && bytes_length < 2
         };
 
         let size = if dims.is_empty() {

@@ -1,10 +1,12 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use parity_scale_codec::{Decode, Encode};
 
 use crate::build_solidity;
 
 #[test]
 fn simple_solidiy_compile_and_run() {
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct FooReturn {
         value: u32,
     }
@@ -49,7 +51,7 @@ fn flipper() {
         ",
     );
 
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct GetReturn(bool);
 
     runtime.function("get", Vec::new());
@@ -67,7 +69,7 @@ fn flipper() {
 
 #[test]
 fn contract_storage_initializers() {
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct FooReturn {
         value: u32,
     }
@@ -100,7 +102,7 @@ fn contract_storage_initializers() {
 
 #[test]
 fn contract_constants() {
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct FooReturn {
         value: u32,
     }
@@ -129,7 +131,7 @@ fn contract_constants() {
 
 #[test]
 fn large_contract_variables() {
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct ValBool(u8);
 
     // parse

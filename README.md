@@ -52,13 +52,13 @@ contract flipper {
 Run:
 
 ```bash
-solang --target solana flipper.sol
+solang compile --target solana flipper.sol
 ```
 
 Alternatively if you want to use the solang container, run:
 
 ```
-docker run --rm -it -v $(pwd):/sources ghcr.io/hyperledger-labs/solang -v -o /sources --target solana /sources/flipper.sol
+docker run --rm -it -v $(pwd):/sources ghcr.io/hyperledger-labs/solang compile -v -o /sources --target solana /sources/flipper.sol
 ```
 
 A file called `flipper.abi` and `bundle.so`. Now install `@solana/solidity`:
@@ -128,7 +128,7 @@ Maintenance on the Substrate target has now resumed and we are working on fixing
 Run:
 
 ```bash
-solang --target substrate flipper.sol
+solang compile --target substrate flipper.sol
 ```
 
 Alternatively if you want to use the solang container, run:
@@ -137,7 +137,7 @@ Alternatively if you want to use the solang container, run:
 docker run --rm -it -v $(pwd):/sources ghcr.io/hyperledger-labs/solang -v -o /sources --target substrate /sources/flipper.sol
 ```
 You will have a file called flipper.contract. You can use this directly in
-the [Polkadot UI](https://substrate.dev/substrate-contracts-workshop/#/0/deploy-contract),
+the [Contracts UI](https://contracts-ui.substrate.io/),
 as if your smart contract was written using ink!.
 
 ## Tentative roadmap

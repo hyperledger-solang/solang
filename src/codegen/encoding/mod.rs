@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 mod borsh_encoding;
 
 use crate::codegen::cfg::{ControlFlowGraph, Instr};

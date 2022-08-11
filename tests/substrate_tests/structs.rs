@@ -1,12 +1,14 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use parity_scale_codec::{Decode, Encode};
 use serde_derive::Deserialize;
 
 use crate::build_solidity;
 
-#[derive(Debug, PartialEq, Encode, Decode)]
+#[derive(Debug, PartialEq, Eq, Encode, Decode)]
 struct Val32(u32);
 
-#[derive(Debug, PartialEq, Encode, Decode)]
+#[derive(Debug, PartialEq, Eq, Encode, Decode)]
 struct Val8(u8);
 
 #[test]
@@ -90,7 +92,7 @@ fn structs_as_ref_args() {
 
 #[test]
 fn structs_encode() {
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Foo {
         f1: [u8; 3],
         f2: bool,
@@ -123,7 +125,7 @@ fn structs_encode() {
 
 #[test]
 fn structs_decode() {
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Foo {
         f1: [u8; 3],
         f2: i32,
@@ -204,7 +206,7 @@ fn structs_decode() {
         .encode(),
     );
 
-    #[derive(Debug, PartialEq, Encode, Decode, Deserialize)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode, Deserialize)]
     struct Foo2 {
         f1: [u8; 3],
         f2: i32,
@@ -294,12 +296,12 @@ fn struct_in_struct() {
 
 #[test]
 fn structs_in_structs_decode() {
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Foo {
         f1: [u8; 3],
         f2: i32,
     }
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Bar {
         a: bool,
         b: Foo,
@@ -349,12 +351,12 @@ fn structs_in_structs_decode() {
 
 #[test]
 fn structs_in_structs_encode() {
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Foo {
         f1: [u8; 3],
         f2: i32,
     }
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Bar {
         a: bool,
         b: Foo,
@@ -433,7 +435,7 @@ fn struct_storage_to_memory() {
 
 #[test]
 fn return_from_struct_storage() {
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Foo {
         f1: [u8; 3],
         f2: u32,
@@ -475,13 +477,13 @@ fn return_from_struct_storage() {
 
 #[test]
 fn struct_in_init_return() {
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Card {
         value: u8,
         suit: u8,
     }
 
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Hand {
         card1: Card,
         card2: Card,
@@ -527,13 +529,13 @@ fn struct_in_init_return() {
 
 #[test]
 fn struct_struct_in_init_and_return() {
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Card {
         v: u8,
         s: u8,
     }
 
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Hand {
         card1: Card,
         card2: Card,

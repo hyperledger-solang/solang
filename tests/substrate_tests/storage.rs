@@ -1,9 +1,11 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::build_solidity;
 use parity_scale_codec::{Decode, Encode};
 
 #[test]
 fn storage_load_on_return() {
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct SStruct {
         f1: i32,
     }

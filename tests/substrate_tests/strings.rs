@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use parity_scale_codec::{Decode, Encode};
 use rand::Rng;
 
@@ -169,13 +171,13 @@ fn string_concat() {
 
 #[test]
 fn string_abi_encode() {
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Val(String);
 
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Ret3([i8; 4], String, bool);
 
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct RetStringArray(Vec<String>);
 
     let mut runtime = build_solidity(
@@ -255,10 +257,10 @@ fn string_abi_encode() {
 
 #[test]
 fn string_abi_decode() {
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Val(String);
 
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct ValB(Vec<u8>);
 
     // we should try lengths: 0 to 63, 64 to 0x800
@@ -315,7 +317,7 @@ fn string_abi_decode() {
 
 #[test]
 fn string_storage() {
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Val(String);
 
     let mut runtime = build_solidity(
@@ -348,16 +350,16 @@ fn string_storage() {
 
 #[test]
 fn bytes_storage() {
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Val(Vec<u8>);
 
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Ret(u8);
 
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Arg(u32);
 
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Arg64(u64);
 
     let mut runtime = build_solidity(
@@ -436,7 +438,7 @@ fn bytes_storage() {
 
 #[test]
 fn bytes_storage_subscript() {
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Arg(u32, u8);
 
     let mut runtime = build_solidity(
@@ -512,10 +514,10 @@ fn bytes_storage_subscript() {
 
 #[test]
 fn bytes_memory_subscript() {
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Arg(u32, u8);
 
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Ret(Vec<u8>);
 
     let mut runtime = build_solidity(

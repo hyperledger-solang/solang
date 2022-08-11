@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use super::cfg::{BasicBlock, ControlFlowGraph, Instr};
 use crate::codegen::Expression;
 use indexmap::IndexMap;
@@ -11,7 +13,7 @@ pub struct Def {
     pub assignment_no: usize,
 }
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub enum Transfer {
     Gen { def: Def, var_no: usize },
     Mod { var_no: usize },

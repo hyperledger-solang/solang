@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // Parity Substrate style ABIs/Abi
 use crate::sema::ast;
 use crate::sema::tags::render;
@@ -22,30 +24,30 @@ impl Abi {
     }
 }
 
-#[derive(Deserialize, Serialize, PartialEq)]
+#[derive(Deserialize, Serialize, PartialEq, Eq)]
 pub struct ArrayDef {
     array: Array,
 }
 
-#[derive(Deserialize, Serialize, PartialEq)]
+#[derive(Deserialize, Serialize, PartialEq, Eq)]
 pub struct Array {
     len: usize,
     #[serde(rename = "type")]
     ty: usize,
 }
 
-#[derive(Deserialize, Serialize, PartialEq)]
+#[derive(Deserialize, Serialize, PartialEq, Eq)]
 pub struct SequenceDef {
     sequence: Sequence,
 }
 
-#[derive(Deserialize, Serialize, PartialEq)]
+#[derive(Deserialize, Serialize, PartialEq, Eq)]
 pub struct Sequence {
     #[serde(rename = "type")]
     ty: usize,
 }
 
-#[derive(Deserialize, Serialize, PartialEq)]
+#[derive(Deserialize, Serialize, PartialEq, Eq)]
 #[serde(untagged)]
 enum Type {
     Builtin { def: PrimitiveDef },
@@ -55,44 +57,44 @@ enum Type {
     Enum { path: Vec<String>, def: EnumDef },
 }
 
-#[derive(Deserialize, Serialize, PartialEq)]
+#[derive(Deserialize, Serialize, PartialEq, Eq)]
 struct BuiltinType {
     id: String,
     def: String,
 }
 
-#[derive(Deserialize, Serialize, PartialEq)]
+#[derive(Deserialize, Serialize, PartialEq, Eq)]
 struct EnumVariant {
     name: String,
     discriminant: usize,
 }
 
-#[derive(Deserialize, Serialize, PartialEq)]
+#[derive(Deserialize, Serialize, PartialEq, Eq)]
 struct EnumDef {
     variant: Enum,
 }
 
-#[derive(Deserialize, Serialize, PartialEq)]
+#[derive(Deserialize, Serialize, PartialEq, Eq)]
 struct Enum {
     variants: Vec<EnumVariant>,
 }
 
-#[derive(Deserialize, Serialize, PartialEq)]
+#[derive(Deserialize, Serialize, PartialEq, Eq)]
 struct Composite {
     composite: StructFields,
 }
 
-#[derive(Deserialize, Serialize, PartialEq)]
+#[derive(Deserialize, Serialize, PartialEq, Eq)]
 struct StructFields {
     fields: Vec<StructField>,
 }
 
-#[derive(Deserialize, Serialize, PartialEq)]
+#[derive(Deserialize, Serialize, PartialEq, Eq)]
 struct PrimitiveDef {
     primitive: String,
 }
 
-#[derive(Deserialize, Serialize, PartialEq)]
+#[derive(Deserialize, Serialize, PartialEq, Eq)]
 struct StructField {
     #[serde(skip_serializing_if = "Option::is_none")]
     name: Option<String>,

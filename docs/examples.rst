@@ -6,7 +6,7 @@ Here are two examples of Solidity contracts.
 Flipper
 -------
 
-This is the `ink! flipper example <https://substrate.dev/substrate-contracts-workshop/#/0/creating-an-ink-project>`_
+This is the `ink! flipper example <https://github.com/paritytech/ink/blob/v3.3.0/examples/flipper/lib.rs>`_
 written in Solidity:
 
 .. include:: ../examples/flipper.sol

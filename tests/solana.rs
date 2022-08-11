@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 mod solana_helpers;
 
 use base58::{FromBase58, ToBase58};
@@ -61,6 +63,10 @@ struct AccountState {
     lamports: u64,
 }
 
+/// We have a special callback function which tests that the correct
+/// parameters are passed in during CPI.
+type CallParametersCheck = fn(vm: &VirtualMachine, instr: &Instruction, pda: &[Pubkey]);
+
 struct VirtualMachine {
     account_data: HashMap<Account, AccountState>,
     origin: Account,
@@ -69,7 +75,7 @@ struct VirtualMachine {
     logs: String,
     events: Vec<Vec<Vec<u8>>>,
     return_data: Option<(Account, Vec<u8>)>,
-    call_test: HashMap<Pubkey, fn(instr: &Instruction)>,
+    call_params_check: HashMap<Pubkey, CallParametersCheck>,
 }
 
 #[derive(Clone)]
@@ -231,7 +237,7 @@ fn build_solidity(src: &str) -> VirtualMachine {
         logs: String::new(),
         events: Vec::new(),
         return_data: None,
-        call_test: HashMap::new(),
+        call_params_check: HashMap::new(),
     }
 }
 
@@ -998,7 +1004,7 @@ pub struct Instruction {
     pub data: Vec<u8>,
 }
 
-#[derive(Debug, PartialEq, Hash, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct Pubkey([u8; 32]);
 
 impl Pubkey {
@@ -1007,7 +1013,7 @@ impl Pubkey {
     }
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct AccountMeta {
     /// An account's public key
     pub pubkey: Pubkey,
@@ -1208,8 +1214,8 @@ impl<'a> SyscallObject<UserError> for SyscallInvokeSignedC<'a> {
 
             vm.return_data = None;
 
-            if let Some(handle) = vm.call_test.get(&instruction.program_id) {
-                handle(&instruction);
+            if let Some(handle) = vm.call_params_check.get(&instruction.program_id) {
+                handle(&vm, &instruction, &signers);
             } else if instruction.program_id.is_system_instruction() {
                 match bincode::deserialize::<u32>(&instruction.data).unwrap() {
                     0 => {

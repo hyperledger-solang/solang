@@ -1,10 +1,12 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use parity_scale_codec::{Decode, Encode};
 
 use crate::build_solidity;
 
 #[test]
 fn weekdays() {
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Val(u8);
 
     // parse
@@ -53,7 +55,7 @@ fn weekdays() {
 
 #[test]
 fn enums_other_contracts() {
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Val(u8);
 
     // parse

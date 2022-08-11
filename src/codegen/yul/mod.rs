@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::codegen::cfg::{
     optimize_and_check_cfg, populate_arguments, populate_named_returns, ASTFunction,
     ControlFlowGraph, Instr,

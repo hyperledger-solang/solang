@@ -1,7 +1,9 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::build_solidity;
 use parity_scale_codec::{Decode, Encode};
 
-#[derive(Debug, PartialEq, Encode, Decode)]
+#[derive(Debug, PartialEq, Eq, Encode, Decode)]
 struct RevertReturn(u32, String);
 
 #[test]
@@ -266,7 +268,7 @@ fn try_catch_external_calls() {
 
     runtime.function_expect_failure("test", Vec::new());
 
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Ret(u32);
 
     let mut runtime = build_solidity(
@@ -509,7 +511,7 @@ fn payable_functions() {
     runtime.function("test", Vec::new());
 
     // test fallback and receive
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Ret(u32);
 
     let mut runtime = build_solidity(

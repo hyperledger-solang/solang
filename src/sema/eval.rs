@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use num_bigint::BigInt;
 use num_bigint::Sign;
 use num_rational::BigRational;

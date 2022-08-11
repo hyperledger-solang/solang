@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::codegen::cfg::{BasicBlock, ControlFlowGraph, Instr};
 use crate::codegen::reaching_definitions::block_edges;
 use crate::codegen::subexpression_elimination::available_variable::AvailableVariable;
@@ -57,7 +59,7 @@ pub struct BasicExpression {
 }
 
 /// Type of constant to streamline the use of a hashmap
-#[derive(Eq, PartialEq, Hash, Clone, Debug)]
+#[derive(PartialEq, Eq, Hash, Clone, Debug)]
 pub enum ConstantType {
     Bool(bool),
     Bytes(Vec<u8>),
@@ -65,7 +67,7 @@ pub enum ConstantType {
 }
 
 /// The type of expression that a node represents
-#[derive(Clone, PartialEq, Hash, Eq, Debug)]
+#[derive(Clone, PartialEq, Eq, Hash, Debug)]
 pub enum ExpressionType {
     BinaryOperation(NodeId, NodeId, Operator),
     UnaryOperation(NodeId, Operator),

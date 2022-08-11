@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 mod array_boundary;
 pub mod cfg;
 mod constant_folding;
@@ -344,7 +346,7 @@ impl LLVMName for Function {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Expression {
     AbiEncode {
         loc: pt::Loc,
@@ -1223,7 +1225,7 @@ impl Expression {
     }
 }
 
-#[derive(PartialEq, Debug, Clone, Copy)]
+#[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub enum Builtin {
     Accounts,
     AddMod,

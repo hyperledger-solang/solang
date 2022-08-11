@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // Create WASM virtual machine like substrate
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
@@ -27,7 +29,7 @@ fn account_new() -> Account {
     a
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct HostCodeTerminate {}
 
 impl HostError for HostCodeTerminate {}
@@ -38,7 +40,7 @@ impl fmt::Display for HostCodeTerminate {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct HostCodeReturn(i32);
 
 impl fmt::Display for HostCodeReturn {

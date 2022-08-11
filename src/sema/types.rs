@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use super::tags::resolve_tags;
 use super::SOLANA_BUCKET_SIZE;
 use super::{

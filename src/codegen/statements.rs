@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use num_bigint::BigInt;
 use std::collections::LinkedList;
 
@@ -1141,6 +1143,7 @@ fn try_catch(
                         success: Some(success),
                         address: Some(address),
                         accounts: None,
+                        seeds: None,
                         payload,
                         value,
                         gas,

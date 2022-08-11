@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::Target;
 use phf::{phf_map, phf_set};
 
@@ -23,7 +25,7 @@ impl YulBuiltinPrototype {
 }
 
 // The enums declaration order should match that of the static vector containing the builtins
-#[derive(Clone, Debug, PartialEq, Copy)]
+#[derive(Clone, Debug, PartialEq, Eq, Copy)]
 #[repr(u8)]
 pub enum YulBuiltInFunction {
     Stop = 0,

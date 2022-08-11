@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use super::ast::{File, Namespace};
 use solang_parser::pt::Loc;
 use std::{fmt, path};

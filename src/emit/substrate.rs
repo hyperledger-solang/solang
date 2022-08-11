@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::codegen;
 use crate::codegen::cfg::HashTy;
 use crate::sema::ast;
@@ -3632,6 +3634,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         gas: IntValue<'b>,
         value: IntValue<'b>,
         _accounts: Option<(PointerValue<'b>, IntValue<'b>)>,
+        _seeds: Option<(PointerValue<'b>, IntValue<'b>)>,
         _ty: ast::CallTy,
         ns: &ast::Namespace,
     ) {

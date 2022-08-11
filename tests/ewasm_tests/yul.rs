@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::build_solidity;
 use byte_slice_cast::AsByteSlice;
 use ethabi::{Token, Uint};

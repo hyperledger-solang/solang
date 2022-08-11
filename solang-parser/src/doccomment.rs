@@ -1,6 +1,8 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::pt::Comment;
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum DocComment {
     Line { comment: DocCommentTag },
     Block { comments: Vec<DocCommentTag> },
@@ -15,7 +17,7 @@ impl DocComment {
     }
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct DocCommentTag {
     pub tag: String,
     pub tag_offset: usize,

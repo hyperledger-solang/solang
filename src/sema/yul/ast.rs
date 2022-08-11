@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::sema::ast::{FunctionAttributes, Parameter, RetrieveType, Type};
 use crate::sema::symtable::Symtable;
 use crate::sema::yul::builtin::YulBuiltInFunction;
@@ -29,7 +31,7 @@ impl YulBlock {
     }
 }
 
-#[derive(PartialEq, Debug, Clone)]
+#[derive(PartialEq, Eq, Debug, Clone)]
 pub enum YulExpression {
     BoolLiteral(pt::Loc, bool, Type),
     NumberLiteral(pt::Loc, BigInt, Type),
@@ -76,7 +78,7 @@ impl RetrieveType for YulExpression {
     }
 }
 
-#[derive(PartialEq, Debug, Clone)]
+#[derive(PartialEq, Eq, Debug, Clone)]
 pub enum YulSuffix {
     Offset,
     Slot,

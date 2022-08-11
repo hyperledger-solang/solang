@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use super::address::to_hexstr_eip55;
 use super::ast::{
     ArrayLength, Builtin, CallArgs, CallTy, Diagnostic, Expression, Function, Mutability,
@@ -1615,7 +1617,7 @@ pub fn compatible_mutability(left: &Mutability, right: &Mutability) -> bool {
 }
 
 /// When resolving an expression, what type are we looking for
-#[derive(PartialEq, Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum ResolveTo<'a> {
     Unknown,        // We don't know what we're looking for, best effort
     Integer,        // Try to resolve to an integer type value (signed or unsigned, any bit width)
@@ -6965,6 +6967,77 @@ fn array_literal(
     let mut dims = Box::new(Vec::new());
     let mut flattened = Vec::new();
 
+    let resolve_to = match resolve_to {
+        ResolveTo::Type(Type::Array(elem_ty, _)) => ResolveTo::Type(elem_ty),
+        // Solana seeds are a slice of slice of bytes, e.g. [ [ "fo", "o" ], [ "b", "a", "r"]]. In this
+        // case we want to resolve
+        ResolveTo::Type(Type::Slice(slice)) if matches!(slice.as_ref(), Type::Slice(_)) => {
+            let mut res = Vec::new();
+            let mut has_errors = false;
+
+            for expr in exprs {
+                let expr = match expression(
+                    expr,
+                    context,
+                    ns,
+                    symtable,
+                    diagnostics,
+                    ResolveTo::Type(&Type::Array(slice.clone(), vec![ArrayLength::Dynamic])),
+                ) {
+                    Ok(expr) => expr,
+                    Err(_) => {
+                        has_errors = true;
+                        continue;
+                    }
+                };
+
+                let ty = expr.ty();
+
+                if let Type::Array(elem, dims) = &ty {
+                    if elem != slice || dims.len() != 1 {
+                        diagnostics.push(Diagnostic::error(
+                            expr.loc(),
+                            format!(
+                                "type {} found where array {} expected",
+                                elem.to_string(ns),
+                                slice.to_string(ns)
+                            ),
+                        ));
+                        has_errors = true;
+                    }
+                } else {
+                    diagnostics.push(Diagnostic::error(
+                        expr.loc(),
+                        format!(
+                            "type {} found where array of slices expected",
+                            ty.to_string(ns)
+                        ),
+                    ));
+                    has_errors = true;
+                }
+
+                res.push(expr);
+            }
+
+            return if has_errors {
+                Err(())
+            } else {
+                let aty = Type::Array(
+                    slice.clone(),
+                    vec![ArrayLength::Fixed(BigInt::from(exprs.len()))],
+                );
+
+                Ok(Expression::ArrayLiteral(
+                    *loc,
+                    aty,
+                    vec![exprs.len() as u32],
+                    res,
+                ))
+            };
+        }
+        _ => resolve_to,
+    };
+
     check_subarrays(exprs, &mut Some(&mut dims), &mut flattened, diagnostics)?;
 
     if flattened.is_empty() {
@@ -6976,12 +7049,6 @@ fn array_literal(
     }
 
     let mut flattened = flattened.iter();
-
-    let resolve_to = if let ResolveTo::Type(Type::Array(elem_ty, _)) = resolve_to {
-        ResolveTo::Type(elem_ty)
-    } else {
-        resolve_to
-    };
 
     // We follow the solidity scheme were everthing gets implicitly converted to the
     // type of the first element
@@ -7161,13 +7228,7 @@ fn parse_call_args(
         args.insert(&arg.name.name, arg);
     }
 
-    let mut res = CallArgs {
-        gas: None,
-        value: None,
-        salt: None,
-        space: None,
-        accounts: None,
-    };
+    let mut res = CallArgs::default();
 
     for arg in args.values() {
         match arg.name.name.as_str() {
@@ -7360,6 +7421,31 @@ fn parse_call_args(
                 }
 
                 res.accounts = Some(Box::new(expr));
+            }
+            "seeds" => {
+                if ns.target != Target::Solana {
+                    diagnostics.push(Diagnostic::error(
+                        arg.loc,
+                        format!(
+                            "'seeds' not permitted for external calls or constructors on {}",
+                            ns.target
+                        ),
+                    ));
+                    return Err(());
+                }
+
+                let ty = Type::Slice(Box::new(Type::Slice(Box::new(Type::Bytes(1)))));
+
+                let expr = expression(
+                    &arg.expr,
+                    context,
+                    ns,
+                    symtable,
+                    diagnostics,
+                    ResolveTo::Type(&ty),
+                )?;
+
+                res.seeds = Some(Box::new(expr));
             }
             _ => {
                 diagnostics.push(Diagnostic::error(

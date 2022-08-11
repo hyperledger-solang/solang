@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use path_slash::PathExt;
 use solang::{codegen, file_resolver::FileResolver, parse_and_resolve, Target};
 use std::{
@@ -68,7 +70,7 @@ fn parse_file(path: PathBuf, target: Target) -> io::Result<()> {
     #[cfg(windows)]
     {
         for file in &mut ns.files {
-            let filename = file.path.to_slash_lossy();
+            let filename = file.path.to_slash_lossy().to_string();
             file.path = PathBuf::from(filename);
         }
     }
@@ -155,5 +157,5 @@ fn add_file(cache: &mut FileResolver, path: &Path, target: Target) -> io::Result
         }
     }
 
-    Ok(filename)
+    Ok(filename.to_string())
 }

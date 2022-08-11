@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use super::cfg::{BasicBlock, ControlFlowGraph, Instr};
 use crate::codegen::Expression;
 use crate::sema::ast::{Namespace, RetrieveType, Type};
@@ -33,7 +35,7 @@ impl fmt::Display for Definition {
 }
 
 #[allow(clippy::large_enum_variant)]
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Eq)]
 enum Transfer {
     Gen {
         def: Definition,
@@ -71,7 +73,7 @@ impl fmt::Display for Transfer {
     }
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Eq)]
 struct ReachingDefs {
     vars: HashMap<usize, HashMap<Definition, Option<Expression>>>,
     stores: Vec<(Definition, Expression)>,
@@ -701,7 +703,7 @@ fn get_vars_at(def: &Definition, block_vars: &BlockVars) -> ReachingDefs {
     }
 }
 
-#[derive(PartialEq, Copy, Clone, Debug)]
+#[derive(PartialEq, Eq, Copy, Clone, Debug)]
 enum ExpressionCmp {
     Equal,
     NotEqual,

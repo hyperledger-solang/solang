@@ -1,11 +1,13 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::build_solidity;
 use parity_scale_codec::{Decode, Encode};
 
 #[test]
 fn various_constants() {
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct FooReturn(u32);
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Foo64Return(i64);
 
     // parse
@@ -84,15 +86,15 @@ fn various_constants() {
 
 #[test]
 fn bytes() {
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Bytes3([u8; 3]);
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Bytes4([u8; 4]);
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Bytes7([u8; 7]);
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Bytes32([u8; 32]);
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Test4args(u32, [u8; 4]);
 
     // parse
@@ -169,7 +171,7 @@ fn bytes() {
 
 #[test]
 fn address() {
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Address([u8; 32]);
 
     // parse

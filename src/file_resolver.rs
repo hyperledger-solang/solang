@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::sema::ast;
 use solang_parser::pt::Loc;
 use std::collections::HashMap;

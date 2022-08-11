@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use super::ast::{Diagnostic, Expression, FormatArg, Namespace, RetrieveType, Type};
 use super::expression::{expression, ExprContext, ResolveTo};
 use super::symtable::Symtable;

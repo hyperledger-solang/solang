@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use super::statements::{statement, LoopScopes};
 use super::{
     constant_folding, dead_storage,
@@ -122,6 +124,7 @@ pub enum Instr {
         success: Option<usize>,
         address: Option<Expression>,
         accounts: Option<Expression>,
+        seeds: Option<Expression>,
         payload: Expression,
         value: Expression,
         gas: Expression,
@@ -315,7 +318,7 @@ pub enum InternalCallTy {
     Builtin { ast_func_no: usize },
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Eq)]
 pub enum HashTy {
     Keccak256,
     Ripemd160,
@@ -369,7 +372,7 @@ pub struct ControlFlowGraph {
     pub array_lengths_temps: ArrayLengthVars,
 }
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub enum ASTFunction {
     SolidityFunction(usize),
     YulFunction(usize),
@@ -980,11 +983,12 @@ impl ControlFlowGraph {
                 payload,
                 value,
                 accounts,
+                seeds,
                 gas,
                 callty,
             } => {
                 format!(
-                    "{} = external call::{} address:{} payload:{} value:{} gas:{} accounts:{}",
+                    "{} = external call::{} address:{} payload:{} value:{} gas:{} accounts:{} seeds:{}",
                     match success {
                         Some(i) => format!("%{}", self.vars[i].id.name),
                         None => "_".to_string(),
@@ -1000,6 +1004,11 @@ impl ControlFlowGraph {
                     self.expr_to_string(contract, ns, gas),
                     if let Some(accounts) = accounts {
                         self.expr_to_string(contract, ns, accounts)
+                    } else {
+                        String::new()
+                    },
+                    if let Some(seeds) = seeds {
+                        self.expr_to_string(contract, ns, seeds)
                     } else {
                         String::new()
                     },

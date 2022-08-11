@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::codegen::cfg::HashTy;
 use crate::sema::ast;
 use crate::{codegen, Target};
@@ -3203,6 +3205,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         _gas: IntValue<'b>,
         _value: IntValue<'b>,
         accounts: Option<(PointerValue<'b>, IntValue<'b>)>,
+        seeds: Option<(PointerValue<'b>, IntValue<'b>)>,
         _ty: ast::CallTy,
         _ns: &ast::Namespace,
     ) {
@@ -3318,8 +3321,29 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
 
             let external_call = binary.module.get_function("sol_invoke_signed_c").unwrap();
 
-            let signer_seeds = external_call.get_type().get_param_types()[3].const_zero();
-            let signer_seeds_len = external_call.get_type().get_param_types()[4].const_zero();
+            let (signer_seeds, signer_seeds_len) = if let Some((seeds, len)) = seeds {
+                (
+                    binary.builder.build_pointer_cast(
+                        seeds,
+                        external_call.get_type().get_param_types()[3].into_pointer_type(),
+                        "seeds",
+                    ),
+                    binary.builder.build_int_cast(
+                        len,
+                        external_call.get_type().get_param_types()[4].into_int_type(),
+                        "len",
+                    ),
+                )
+            } else {
+                (
+                    external_call.get_type().get_param_types()[3]
+                        .const_zero()
+                        .into_pointer_value(),
+                    external_call.get_type().get_param_types()[4]
+                        .const_zero()
+                        .into_int_value(),
+                )
+            };
 
             binary
                 .builder

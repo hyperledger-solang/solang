@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::codegen::cfg::Instr;
 use crate::codegen::subexpression_elimination::common_subexpression_tracker::CommonSubExpressionTracker;
 use crate::codegen::subexpression_elimination::AvailableExpression;
@@ -110,9 +112,18 @@ impl AvailableExpressionSet {
                 payload,
                 value,
                 gas,
-                ..
+                accounts,
+                seeds,
+                callty: _,
+                success: _,
             } => {
                 if let Some(expr) = address {
+                    let _ = self.gen_expression(expr, ave, cst);
+                }
+                if let Some(expr) = accounts {
+                    let _ = self.gen_expression(expr, ave, cst);
+                }
+                if let Some(expr) = seeds {
                     let _ = self.gen_expression(expr, ave, cst);
                 }
                 let _ = self.gen_expression(payload, ave, cst);
@@ -326,6 +337,7 @@ impl AvailableExpressionSet {
                 success,
                 address,
                 accounts,
+                seeds,
                 payload,
                 value,
                 gas,
@@ -339,10 +351,15 @@ impl AvailableExpressionSet {
                     .as_ref()
                     .map(|expr| self.regenerate_expression(expr, ave, cst).1);
 
+                let new_seeds = seeds
+                    .as_ref()
+                    .map(|expr| self.regenerate_expression(expr, ave, cst).1);
+
                 Instr::ExternalCall {
                     success: *success,
                     address: new_address,
                     accounts: new_accounts,
+                    seeds: new_seeds,
                     payload: self.regenerate_expression(payload, ave, cst).1,
                     value: self.regenerate_expression(value, ave, cst).1,
                     gas: self.regenerate_expression(gas, ave, cst).1,

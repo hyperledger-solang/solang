@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use assert_cmd::Command;
 use std::ffi::OsString;
 use std::fs::File;
@@ -70,6 +72,7 @@ fn testcase(path: PathBuf) {
 
     let mut cmd = Command::cargo_bin("solang").unwrap();
     let assert = cmd
+        .arg("compile")
         .args(args.split_whitespace())
         .arg(format!("{}", path.canonicalize().unwrap().display()))
         .assert();

@@ -44,7 +44,7 @@ async function bootstrapExtension(context: vscode.ExtensionContext, serverpath: 
 
   const sop: Executable = {
     command: expandPathResolving(serverpath),
-    args: ['--language-server', '--target', target],
+    args: ['language-server', '--target', target],
   };
 
   const serverOptions: ServerOptions = sop;

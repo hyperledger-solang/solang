@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use assert_cmd::Command;
 use std::fs::File;
 
@@ -6,6 +8,7 @@ fn create_output_dir() {
     let mut cmd = Command::cargo_bin("solang").unwrap();
 
     cmd.args(&[
+        "compile",
         "examples/flipper.sol",
         "--target",
         "solana",
@@ -20,6 +23,7 @@ fn create_output_dir() {
     let mut cmd = Command::cargo_bin("solang").unwrap();
 
     cmd.args(&[
+        "compile",
         "examples/flipper.sol",
         "--target",
         "solana",

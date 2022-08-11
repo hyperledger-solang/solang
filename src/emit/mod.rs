@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::codegen::{Builtin, Expression};
 use crate::sema::ast::RetrieveType;
 use crate::sema::ast::{
@@ -279,6 +281,7 @@ pub trait TargetRuntime<'a> {
         gas: IntValue<'b>,
         value: IntValue<'b>,
         accounts: Option<(PointerValue<'b>, IntValue<'b>)>,
+        seeds: Option<(PointerValue<'b>, IntValue<'b>)>,
         ty: CallTy,
         ns: &Namespace,
     );
@@ -4160,6 +4163,7 @@ pub trait TargetRuntime<'a> {
                         gas,
                         callty,
                         accounts,
+                        seeds,
                     } => {
                         let gas = self
                             .expression(bin, gas, &w.vars, function, ns)
@@ -4216,11 +4220,6 @@ pub trait TargetRuntime<'a> {
                             None
                         };
 
-                        let success = match success {
-                            Some(n) => Some(&mut w.vars.get_mut(n).unwrap().value),
-                            None => None,
-                        };
-
                         let (payload_ptr, payload_len) = if payload_ty == Type::DynamicBytes {
                             (bin.vector_bytes(payload), bin.vector_len(payload))
                         } else {
@@ -4235,6 +4234,84 @@ pub trait TargetRuntime<'a> {
                             (ptr, len)
                         };
 
+                        let seeds = if let Some(seeds) = seeds {
+                            let len = seeds.ty().array_length().unwrap().to_u64().unwrap();
+                            let seeds_ty = bin.llvm_type(
+                                &Type::Slice(Box::new(Type::Slice(Box::new(Type::Bytes(1))))),
+                                ns,
+                            );
+
+                            let output_seeds = bin.build_array_alloca(
+                                function,
+                                seeds_ty,
+                                bin.context.i64_type().const_int(len, false),
+                                "seeds",
+                            );
+
+                            if let Expression::ArrayLiteral(_, _, _, exprs) = seeds {
+                                for i in 0..len {
+                                    let val = self.expression(
+                                        bin,
+                                        &exprs[i as usize],
+                                        &w.vars,
+                                        function,
+                                        ns,
+                                    );
+
+                                    let seed_count = val
+                                        .get_type()
+                                        .into_pointer_type()
+                                        .get_element_type()
+                                        .into_array_type()
+                                        .len();
+
+                                    let dest = unsafe {
+                                        bin.builder.build_gep(
+                                            output_seeds,
+                                            &[
+                                                bin.context.i32_type().const_int(i, false),
+                                                bin.context.i32_type().const_zero(),
+                                            ],
+                                            "dest",
+                                        )
+                                    };
+
+                                    let val = bin.builder.build_pointer_cast(
+                                        val.into_pointer_value(),
+                                        dest.get_type().get_element_type().into_pointer_type(),
+                                        "seeds",
+                                    );
+
+                                    bin.builder.build_store(dest, val);
+
+                                    let dest = unsafe {
+                                        bin.builder.build_gep(
+                                            output_seeds,
+                                            &[
+                                                bin.context.i32_type().const_int(i, false),
+                                                bin.context.i32_type().const_int(1, false),
+                                            ],
+                                            "dest",
+                                        )
+                                    };
+
+                                    let val =
+                                        bin.context.i64_type().const_int(seed_count as u64, false);
+
+                                    bin.builder.build_store(dest, val);
+                                }
+                            }
+
+                            Some((output_seeds, bin.context.i64_type().const_int(len, false)))
+                        } else {
+                            None
+                        };
+
+                        let success = match success {
+                            Some(n) => Some(&mut w.vars.get_mut(n).unwrap().value),
+                            None => None,
+                        };
+
                         self.external_call(
                             bin,
                             function,
@@ -4245,6 +4322,7 @@ pub trait TargetRuntime<'a> {
                             gas,
                             value,
                             accounts,
+                            seeds,
                             callty.clone(),
                             ns,
                         );
@@ -4437,17 +4515,57 @@ pub trait TargetRuntime<'a> {
                         let offset = self
                             .expression(bin, offset, &w.vars, function, ns)
                             .into_int_value();
-                        let value = self.expression(bin, value, &w.vars, function, ns);
+                        let emit_value = self.expression(bin, value, &w.vars, function, ns);
 
                         let start = unsafe { bin.builder.build_gep(data, &[offset], "start") };
 
-                        let start = bin.builder.build_pointer_cast(
-                            start,
-                            value.get_type().ptr_type(AddressSpace::Generic),
-                            "start",
-                        );
+                        let is_bytes = if let Type::Bytes(n) = value.ty() {
+                            n
+                        } else {
+                            0
+                        };
 
-                        bin.builder.build_store(start, value);
+                        if is_bytes > 1 {
+                            let value_ptr = bin.build_alloca(
+                                function,
+                                emit_value.into_int_value().get_type(),
+                                &format!("bytes{}", is_bytes),
+                            );
+                            bin.builder
+                                .build_store(value_ptr, emit_value.into_int_value());
+                            bin.builder.build_call(
+                                bin.module.get_function("__leNtobeN").unwrap(),
+                                &[
+                                    bin.builder
+                                        .build_pointer_cast(
+                                            value_ptr,
+                                            bin.context.i8_type().ptr_type(AddressSpace::Generic),
+                                            "store",
+                                        )
+                                        .into(),
+                                    bin.builder
+                                        .build_pointer_cast(
+                                            start,
+                                            bin.context.i8_type().ptr_type(AddressSpace::Generic),
+                                            "dest",
+                                        )
+                                        .into(),
+                                    bin.context
+                                        .i32_type()
+                                        .const_int(is_bytes as u64, false)
+                                        .into(),
+                                ],
+                                "",
+                            );
+                        } else {
+                            let start = bin.builder.build_pointer_cast(
+                                start,
+                                emit_value.get_type().ptr_type(AddressSpace::Generic),
+                                "start",
+                            );
+
+                            bin.builder.build_store(start, emit_value);
+                        }
                     }
                     Instr::MemCopy {
                         source: from,
@@ -5664,7 +5782,7 @@ pub(crate) enum ReturnCode {
     AbiEncodingInvalid,
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Eq)]
 pub enum Generate {
     Object,
     Assembly,

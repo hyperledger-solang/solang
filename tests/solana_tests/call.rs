@@ -1,4 +1,6 @@
-use crate::{build_solidity, Instruction, Pubkey};
+// SPDX-License-Identifier: Apache-2.0
+
+use crate::{build_solidity, create_program_address, Instruction, Pubkey, VirtualMachine};
 use base58::FromBase58;
 use ethabi::{ethereum_types::U256, Token};
 
@@ -400,7 +402,7 @@ fn raw_call_accounts() {
             .unwrap(),
     );
 
-    let test_args = |instr: &Instruction| {
+    let test_args = |_vm: &VirtualMachine, instr: &Instruction, _signers: &[Pubkey]| {
         let sysvar_rent = Pubkey(
             "SysvarRent111111111111111111111111111111111"
                 .from_base58()
@@ -434,7 +436,7 @@ fn raw_call_accounts() {
         assert_eq!(instr.accounts[1].pubkey, sysvar_rent);
     };
 
-    vm.call_test.insert(token, test_args);
+    vm.call_params_check.insert(token, test_args);
 
     vm.function(
         "create_mint_with_freezeauthority",
@@ -446,4 +448,52 @@ fn raw_call_accounts() {
         &[],
         None,
     );
+}
+
+#[test]
+fn pda() {
+    let mut vm = build_solidity(
+        r#"
+        import {AccountMeta} from 'solana';
+
+        contract pda {
+            address constant tokenProgramId = address"TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
+            address constant SYSVAR_RENT_PUBKEY = address"SysvarRent111111111111111111111111111111111";
+
+            function test() public {
+                bytes instr = new bytes(1);
+
+                AccountMeta[1] metas = [
+                    AccountMeta({pubkey: SYSVAR_RENT_PUBKEY, is_writable: false, is_signer: false})
+                ];
+
+                tokenProgramId.call{seeds: [ ["foo"], ["b", "a", "r"] ], accounts: metas}(instr);
+            }
+        }"#,
+    );
+
+    vm.constructor("pda", &[]);
+
+    let test_args = |vm: &VirtualMachine, _instr: &Instruction, signers: &[Pubkey]| {
+        assert_eq!(
+            signers[0],
+            create_program_address(&vm.stack[0].program, &[b"foo"])
+        );
+        assert_eq!(
+            signers[1],
+            create_program_address(&vm.stack[0].program, &[b"bar"])
+        );
+    };
+
+    let token = Pubkey(
+        "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+            .from_base58()
+            .unwrap()
+            .try_into()
+            .unwrap(),
+    );
+
+    vm.call_params_check.insert(token, test_args);
+
+    vm.function("test", &[], &[], None);
 }

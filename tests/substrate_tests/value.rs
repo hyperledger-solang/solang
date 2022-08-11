@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use parity_scale_codec::{Decode, Encode};
 
 use crate::build_solidity;
@@ -302,7 +304,7 @@ fn this_address() {
 
     assert_eq!(runtime.vm.output, runtime.vm.account);
 
-    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Ret(u32);
 
     let mut runtime = build_solidity(
