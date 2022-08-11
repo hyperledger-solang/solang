@@ -138,6 +138,7 @@ fn main() {
                         .short('m')
                         .long("importmap")
                         .takes_value(true)
+                        .value_parser(ValueParser::new(parse_import_map))
                         .action(ArgAction::Append),
                 )
                 .arg(
@@ -238,6 +239,7 @@ fn main() {
                         .short('m')
                         .long("importmap")
                         .takes_value(true)
+                        .value_parser(ValueParser::new(parse_import_map))
                         .action(ArgAction::Append),
                 ),
         )
@@ -283,6 +285,7 @@ fn main() {
                         .short('m')
                         .long("importmap")
                         .takes_value(true)
+                        .value_parser(ValueParser::new(parse_import_map))
                         .action(ArgAction::Append),
                 ),
         )
@@ -878,19 +881,22 @@ fn imports_arg(matches: &ArgMatches) -> FileResolver {
         }
     }
 
-    if let Some(maps) = matches.get_many::<String>("IMPORTMAP") {
-        for p in maps {
-            if let Some((map, path)) = p.split_once('=') {
-                if let Err(e) = resolver.add_import_map(OsString::from(map), PathBuf::from(path)) {
-                    eprintln!("error: import path '{}': {}", path, e);
-                    std::process::exit(1);
-                }
-            } else {
-                eprintln!("error: import map '{}': contains no '='", p);
+    if let Some(maps) = matches.get_many::<(String, String)>("IMPORTMAP") {
+        for (map, path) in maps {
+            if let Err(e) = resolver.add_import_map(OsString::from(map), PathBuf::from(path)) {
+                eprintln!("error: import path '{}': {}", path, e);
                 std::process::exit(1);
             }
         }
     }
 
     resolver
+}
+
+fn parse_import_map(map: &str) -> Result<(String, String), String> {
+    if let Some((var, value)) = map.split_once('=') {
+        Ok((var.to_owned(), value.to_owned()))
+    } else {
+        Err("contains no '='".to_owned())
+    }
 }
