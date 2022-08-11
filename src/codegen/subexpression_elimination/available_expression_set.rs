@@ -273,7 +273,7 @@ impl AvailableExpressionSet {
 
     /// Remove from the set all children from a node
     fn kill_child(&mut self, child_node: &Rc<RefCell<BasicExpression>>, parent_id: &NodeId) {
-        self.kill_recursive(&*child_node.borrow(), parent_id);
+        self.kill_recursive(&child_node.borrow(), parent_id);
         child_node.borrow_mut().children.clear();
     }
 

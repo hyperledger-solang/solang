@@ -10,7 +10,7 @@ pub(crate) fn assigned_variable(ns: &mut Namespace, exp: &YulExpression, symtabl
         YulExpression::SolidityLocalVariable(_, _, _, var_no)
         | YulExpression::YulLocalVariable(_, _, var_no) => {
             let var = symtable.vars.get_mut(var_no).unwrap();
-            (*var).assigned = true;
+            var.assigned = true;
         }
 
         YulExpression::StorageVariable(_, _, contract_no, var_no) => {
@@ -30,7 +30,7 @@ pub(crate) fn used_variable(ns: &mut Namespace, exp: &YulExpression, symtable: &
         YulExpression::SolidityLocalVariable(_, _, _, var_no)
         | YulExpression::YulLocalVariable(_, _, var_no) => {
             let var = symtable.vars.get_mut(var_no).unwrap();
-            (*var).read = true;
+            var.read = true;
         }
 
         YulExpression::StorageVariable(_, _, contract_no, var_no) => {

@@ -15,7 +15,7 @@ pub fn assigned_variable(ns: &mut Namespace, exp: &Expression, symtable: &mut Sy
 
         Expression::Variable(_, _, offset) => {
             let var = symtable.vars.get_mut(offset).unwrap();
-            (*var).assigned = true;
+            var.assigned = true;
         }
 
         Expression::StructMember(_, _, str, _) => {
@@ -51,7 +51,7 @@ pub fn used_variable(ns: &mut Namespace, exp: &Expression, symtable: &mut Symtab
 
         Expression::Variable(_, _, offset) => {
             let var = symtable.vars.get_mut(offset).unwrap();
-            (*var).read = true;
+            var.read = true;
         }
 
         Expression::ConstantVariable(_, _, Some(contract_no), offset) => {

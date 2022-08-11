@@ -702,7 +702,7 @@ fn statement(
 
             for offset in symtable.returns.iter() {
                 let elem = symtable.vars.get_mut(offset).unwrap();
-                (*elem).assigned = true;
+                elem.assigned = true;
             }
 
             res.push(Statement::Return(*loc, Some(expr)));

@@ -1043,7 +1043,7 @@ fn cast_and_try_load(
             return casted_expr;
         }
 
-        let anonymous_no = vartab.temp_anonymous(&*ty);
+        let anonymous_no = vartab.temp_anonymous(&ty);
         cfg.add(
             vartab,
             Instr::LoadStorage {

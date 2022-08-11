@@ -282,11 +282,11 @@ impl FunctionAttributes for Function {
     }
 
     fn get_parameters(&self) -> &Vec<Parameter> {
-        &*self.params
+        &self.params
     }
 
     fn get_returns(&self) -> &Vec<Parameter> {
-        &*self.returns
+        &self.returns
     }
 }
 
@@ -1056,7 +1056,7 @@ impl CodeLocation for Instr {
     }
 }
 
-#[derive(PartialEq, Clone, Copy, Debug)]
+#[derive(PartialEq, Clone, Copy, Debug, Eq)]
 pub enum FormatArg {
     StringLiteral,
     Default,

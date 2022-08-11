@@ -138,11 +138,11 @@ impl FunctionAttributes for YulFunction {
     }
 
     fn get_parameters(&self) -> &Vec<Parameter> {
-        &*self.params
+        &self.params
     }
 
     fn get_returns(&self) -> &Vec<Parameter> {
-        &*self.returns
+        &self.returns
     }
 }
 
