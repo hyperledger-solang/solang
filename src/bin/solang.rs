@@ -22,9 +22,11 @@ use std::{
     fs::{create_dir_all, File},
     io::prelude::*,
     path::{Path, PathBuf},
+    process::exit,
 };
 
 mod doc;
+mod idl;
 mod languageserver;
 
 fn main() {
@@ -273,6 +275,24 @@ fn main() {
                     ),
             )
             .subcommand(
+                Command::new("idl")
+                    .about("Generate Solidity interface files from Anchor IDL files")
+                    .arg(
+                        Arg::new("INPUT")
+                            .help("Convert IDL files")
+                            .required(true)
+                            .value_parser(ValueParser::os_string())
+                            .multiple_values(true),
+                    )
+                    .arg(
+                        Arg::new("OUTPUT")
+                            .help("output file")
+                            .short('o')
+                            .long("output")
+                            .takes_value(true),
+                    ),
+            )
+            .subcommand(
                 Command::new("shell-complete")
                     .about("Print shell completion for various shells to STDOUT")
                     .arg(
@@ -293,6 +313,7 @@ fn main() {
         }
         Some(("compile", matches)) => compile(matches),
         Some(("doc", matches)) => doc(matches),
+        Some(("idl", matches)) => idl::idl(matches),
         Some(("shell-complete", matches)) => shell_complete(app(), matches),
         _ => unreachable!(),
     }
@@ -391,16 +412,16 @@ fn compile(matches: &ArgMatches) {
     let namespaces = namespaces.iter().collect::<Vec<_>>();
 
     if let Some("ast-dot") = matches.get_one::<String>("EMIT").map(|v| v.as_str()) {
-        std::process::exit(0);
+        exit(0);
     }
 
     if errors {
         if matches.contains_id("STD-JSON") {
             println!("{}", serde_json::to_string(&json).unwrap());
-            std::process::exit(0);
+            exit(0);
         } else {
             eprintln!("error: not all contracts are valid");
-            std::process::exit(1);
+            exit(1);
         }
     }
 
@@ -543,7 +564,7 @@ fn process_file(
 
         if let Err(err) = file.write_all(dot.as_bytes()) {
             eprintln!("{}: error: {}", dot_filename.display(), err);
-            std::process::exit(1);
+            exit(1);
         }
 
         return Ok(ns);
@@ -700,7 +721,7 @@ fn save_intermediates(binary: &solang::emit::binary::Binary, matches: &ArgMatche
                 Ok(o) => o,
                 Err(s) => {
                     println!("error: {}", s);
-                    std::process::exit(1);
+                    exit(1);
                 }
             };
 
@@ -723,7 +744,7 @@ fn save_intermediates(binary: &solang::emit::binary::Binary, matches: &ArgMatche
                 Ok(o) => o,
                 Err(s) => {
                     println!("error: {}", s);
-                    std::process::exit(1);
+                    exit(1);
                 }
             };
 
@@ -755,7 +776,7 @@ fn create_file(path: &Path) -> File {
                 parent.display(),
                 err
             );
-            std::process::exit(1);
+            exit(1);
         }
     }
 
@@ -763,7 +784,7 @@ fn create_file(path: &Path) -> File {
         Ok(file) => file,
         Err(err) => {
             eprintln!("error: cannot create file '{}': {}", path.display(), err,);
-            std::process::exit(1);
+            exit(1);
         }
     }
 }
@@ -790,7 +811,7 @@ fn target_arg(matches: &ArgMatches) -> Target {
             "error: address length cannot be modified for target '{}'",
             target
         );
-        std::process::exit(1);
+        exit(1);
     }
 
     if !target.is_substrate()
@@ -800,7 +821,7 @@ fn target_arg(matches: &ArgMatches) -> Target {
             "error: value length cannot be modified for target '{}'",
             target
         );
-        std::process::exit(1);
+        exit(1);
     }
 
     target
@@ -817,14 +838,14 @@ fn imports_arg(matches: &ArgMatches) -> FileResolver {
 
     if let Err(e) = resolver.add_import_path(&PathBuf::from(".")) {
         eprintln!("error: cannot add current directory to import path: {}", e);
-        std::process::exit(1);
+        exit(1);
     }
 
     if let Some(paths) = matches.get_many::<PathBuf>("IMPORTPATH") {
         for path in paths {
             if let Err(e) = resolver.add_import_path(path) {
                 eprintln!("error: import path '{}': {}", path.to_string_lossy(), e);
-                std::process::exit(1);
+                exit(1);
             }
         }
     }
@@ -833,7 +854,7 @@ fn imports_arg(matches: &ArgMatches) -> FileResolver {
         for (map, path) in maps {
             if let Err(e) = resolver.add_import_map(OsString::from(map), path.clone()) {
                 eprintln!("error: import path '{}': {}", path.display(), e);
-                std::process::exit(1);
+                exit(1);
             }
         }
     }
