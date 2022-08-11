@@ -3231,24 +3231,24 @@ pub trait TargetRuntime<'a> {
                         di_flags,
                     );
 
-                    // let func_loc = cfg.blocks[0].instr.first().unwrap().loc();
-                    // let line_num = if let Loc::File(file_offset, offset, _) = func_loc {
-                    //     let (line, _) = ns.files[file_offset].offset_to_line_column(offset);
-                    //     line
-                    // } else {
-                    //     0
-                    // };
+                    let func_loc = cfg.blocks[0].instr.first().unwrap().loc();
+                    let line_num = if let Loc::File(file_offset, offset, _) = func_loc {
+                        let (line, _) = ns.files[file_offset].offset_to_line_column(offset);
+                        line
+                    } else {
+                        0
+                    };
 
                     di_func_scope = Some(dibuilder.create_function(
                         compile_unit.as_debug_info_scope(),
                         function.get_name().to_str().unwrap(),
                         None,
                         file,
-                        0,
+                        line_num.try_into().unwrap(),
                         di_func_type,
                         true,
                         true,
-                        0,
+                        line_num.try_into().unwrap(),
                         di_flags,
                         false,
                     ));
