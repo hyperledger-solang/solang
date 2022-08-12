@@ -187,7 +187,7 @@ fn main() {
                         .help("Enable generating debug information for LLVM IR")
                         .short('g')
                         .long("generate-debug-info")
-                        .display_order(5),
+                        .hidden(true),
                 ),
         )
         .subcommand(
@@ -881,10 +881,10 @@ fn imports_arg(matches: &ArgMatches) -> FileResolver {
         }
     }
 
-    if let Some(maps) = matches.get_many::<(String, String)>("IMPORTMAP") {
+    if let Some(maps) = matches.get_many::<(String, PathBuf)>("IMPORTMAP") {
         for (map, path) in maps {
-            if let Err(e) = resolver.add_import_map(OsString::from(map), PathBuf::from(path)) {
-                eprintln!("error: import path '{}': {}", path, e);
+            if let Err(e) = resolver.add_import_map(OsString::from(map), path.clone()) {
+                eprintln!("error: import path '{}': {}", path.display(), e);
                 std::process::exit(1);
             }
         }
@@ -893,9 +893,12 @@ fn imports_arg(matches: &ArgMatches) -> FileResolver {
     resolver
 }
 
-fn parse_import_map(map: &str) -> Result<(String, String), String> {
+// Parse the import map argument. This takes the form
+/// --import-map openzeppelin=/opt/openzeppelin-contracts/contract,
+/// and returns the name of the map and the path.
+fn parse_import_map(map: &str) -> Result<(String, PathBuf), String> {
     if let Some((var, value)) = map.split_once('=') {
-        Ok((var.to_owned(), value.to_owned()))
+        Ok((var.to_owned(), PathBuf::from(value)))
     } else {
         Err("contains no '='".to_owned())
     }
