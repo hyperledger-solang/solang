@@ -57,14 +57,58 @@ impl BufferValidator<'_> {
         self.current_arg as i32 > self.verified_until
     }
 
-    pub(super) fn validate_array_offset(
+    pub(super) fn validate_array(&mut self) {
+        self.verified_until = self.current_arg as i32;
+    }
+
+    pub(super) fn increment_and_validate(
         &mut self,
-        offset: Expression,
+        offset: &Expression,
+        size: &Expression,
         vartab: &mut Vartable,
         cfg: &mut ControlFlowGraph,
     ) {
-        self.build_branch(offset, vartab, cfg);
-        self.verified_until = self.current_arg as i32;
+        if self.validation_necessary() {
+            let offset_to_validate = Expression::Add(
+                Loc::Codegen,
+                Type::Uint(32),
+                false,
+                Box::new(offset.clone()),
+                Box::new(size.clone()),
+            );
+            self.validate_offset(offset_to_validate, vartab, cfg);
+        }
+    }
+
+    pub(super) fn validate_all_bytes_read(
+        &self,
+        end_offset: Expression,
+        vartab: &mut Vartable,
+        cfg: &mut ControlFlowGraph,
+    ) {
+        let cond = Expression::UnsignedLess(
+            Loc::Codegen,
+            Box::new(end_offset),
+            Box::new(self.buffer_length.clone()),
+        );
+
+        let invalid = cfg.new_basic_block("not_all_bytes_read".to_string());
+        let valid = cfg.new_basic_block("buffer_read".to_string());
+        cfg.add(
+            vartab,
+            Instr::BranchCond {
+                cond,
+                true_block: invalid,
+                false_block: valid,
+            },
+        );
+
+        cfg.set_basic_block(invalid);
+
+        // TODO: This needs a proper error message
+        cfg.add(vartab, Instr::AssertFailure { expr: None });
+
+        cfg.set_basic_block(valid);
     }
 
     fn _verify_buffer(

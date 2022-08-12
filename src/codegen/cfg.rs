@@ -779,7 +779,6 @@ impl ControlFlowGraph {
             Expression::AdvancePointer {
                 pointer,
                 bytes_offset,
-                ..
             } => {
                 format!(
                     "(advance ptr: {}, by: {})",

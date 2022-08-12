@@ -858,4 +858,181 @@ fn bytes_arrays() {
     let _ = vm.function("testByteArrays", &[Token::Bytes(encoded)], &[], None);
 }
 
-// TODO: Add invalid data tests
+#[test]
+#[should_panic]
+fn different_types() {
+    #[derive(Debug, BorshSerialize)]
+    struct Input1 {
+        a: i32,
+        b: u64,
+    }
+
+    let mut vm = build_solidity(
+        r#"
+    contract Testing {
+        function testByteArrays(bytes memory buffer) public view {
+            (bytes4[2] memory arr, bytes5[] memory vec) = abi.borshDecode(buffer, (bytes4[2], bytes5[]));
+
+            assert(arr[0] == "abcd");
+            assert(arr[1] == "efgh");
+
+            assert(vec.length == 2);
+            assert(vec[0] == "12345");
+            assert(vec[1] == "67890");
+        }
+    }
+        "#,
+    );
+
+    vm.constructor("Testing", &[]);
+    let input = Input1 { a: -789, b: 14234 };
+    let encoded = input.try_to_vec().unwrap();
+    let _ = vm.function("testByteArrays", &[Token::Bytes(encoded)], &[], None);
+}
+
+#[test]
+#[should_panic]
+fn more_elements() {
+    #[derive(Debug, BorshSerialize)]
+    struct Input {
+        vec: [i64; 4],
+    }
+
+    let mut vm = build_solidity(
+        r#"
+        contract Testing {
+            function wrongNumber(bytes memory buffer) public view {
+               int64[5] memory vec = abi.borshDecode(buffer, (int64[5]));
+
+               assert(vec[1] == 0);
+            }
+        }
+        "#,
+    );
+
+    vm.constructor("Testing", &[]);
+
+    let input = Input { vec: [1, 4, 5, 6] };
+    let encoded = input.try_to_vec().unwrap();
+    let _ = vm.function("wrongNumber", &[Token::Bytes(encoded)], &[], None);
+}
+
+#[test]
+#[should_panic]
+fn extra_element() {
+    #[derive(Debug, BorshSerialize)]
+    struct Input {
+        vec: Vec<i64>,
+    }
+
+    let mut vm = build_solidity(
+        r#"
+        contract Testing {
+            function extraElement(bytes memory buffer) public pure {
+               (int64[] memory vec, int32 g) = abi.borshDecode(buffer, (int64[], int32));
+
+               assert(vec[1] == 0);
+               assert(g == 3);
+            }
+        }
+        "#,
+    );
+
+    vm.constructor("Testing", &[]);
+    let input = Input {
+        vec: vec![-90, 89, -2341],
+    };
+
+    let encoded = input.try_to_vec().unwrap();
+    let _ = vm.function("extraElement", &[Token::Bytes(encoded)], &[], None);
+}
+
+#[test]
+#[should_panic]
+fn invalid_type() {
+    #[derive(Debug, BorshSerialize)]
+    struct Input {
+        item: u64,
+    }
+
+    let mut vm = build_solidity(
+        r#"
+    contract Testing {
+        function invalidType(bytes memory buffer) public pure {
+           int64[] memory vec = abi.borshDecode(buffer, (int64[]));
+
+           assert(vec[1] == 0);
+        }
+    }
+    "#,
+    );
+
+    vm.constructor("Testing", &[]);
+
+    let input = Input { item: 5 };
+    let encoded = input.try_to_vec().unwrap();
+    let _ = vm.function("invalidType", &[Token::Bytes(encoded)], &[], None);
+}
+
+#[test]
+#[should_panic]
+fn longer_buffer() {
+    #[derive(Debug, BorshSerialize)]
+    struct Input {
+        item_1: u64,
+        item_2: u64,
+    }
+
+    let mut vm = build_solidity(
+        r#"
+    contract Testing {
+        function testLongerBuffer(bytes memory buffer) public view {
+            uint64 a = abi.borshDecode(buffer, (uint64));
+
+            assert(a == 4);
+        }
+    }
+        "#,
+    );
+
+    vm.constructor("Testing", &[]);
+
+    let input = Input {
+        item_1: 4,
+        item_2: 5,
+    };
+    let encoded = input.try_to_vec().unwrap();
+    let _ = vm.function("testLongerBuffer", &[Token::Bytes(encoded)], &[], None);
+}
+
+#[test]
+#[should_panic]
+fn longer_buffer_array() {
+    #[derive(Debug, BorshSerialize)]
+    struct Input {
+        item_1: u64,
+        item_2: [u32; 4],
+    }
+
+    let mut vm = build_solidity(
+        r#"
+        contract Testing {
+            function testLongerBuffer(bytes memory buffer) public view {
+                (uint64 a, uint32[3] memory b) = abi.borshDecode(buffer, (uint64, uint32[3]));
+
+                assert(a == 4);
+                assert(b[0] == 1);
+                assert(b[1] == 2);
+                assert(b[2] == 3);
+            }
+        }        "#,
+    );
+    vm.constructor("Testing", &[]);
+
+    let input = Input {
+        item_1: 23434,
+        item_2: [1, 2, 3, 4],
+    };
+    let encoded = input.try_to_vec().unwrap();
+    let _ = vm.function("testLongerBuffer", &[Token::Bytes(encoded)], &[], None);
+}

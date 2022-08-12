@@ -3,8 +3,9 @@
 use crate::codegen::cfg::{ControlFlowGraph, Instr};
 use crate::codegen::encoding::buffer_validator::BufferValidator;
 use crate::codegen::encoding::{
-    allow_direct_copy, calculate_direct_copy_bytes_size, calculate_size_args, finish_array_loop,
-    increment_four, load_array_item, load_struct_member, load_sub_array, set_array_loop,
+    allocate_array, allow_direct_copy, calculate_array_bytes_size,
+    calculate_direct_copy_bytes_size, calculate_size_args, finish_array_loop, increment_four,
+    load_array_item, load_struct_member, load_sub_array, retrieve_array_length, set_array_loop,
     AbiEncoding,
 };
 use crate::codegen::vartable::Vartable;
@@ -121,6 +122,8 @@ impl AbiEncoding for BorshEncoding {
                 Box::new(advance),
             );
         }
+
+        validator.validate_all_bytes_read(offset, vartab, cfg);
 
         read_items
     }
@@ -280,8 +283,6 @@ impl BorshEncoding {
 
                 // ptr + offset + size_of_integer
                 let dest_address = Expression::AdvancePointer {
-                    loc: Loc::Codegen,
-                    ty: Type::BufferPointer,
                     pointer: Box::new(buffer.clone()),
                     bytes_offset: Box::new(increment_four(offset.clone())),
                 };
@@ -463,29 +464,13 @@ impl BorshEncoding {
                     },
                 );
 
-                let size = Expression::Multiply(
-                    Loc::Codegen,
-                    Type::Uint(32),
-                    false,
-                    Box::new(Expression::Variable(
-                        Loc::Codegen,
-                        Type::Uint(32),
-                        size_temp,
-                    )),
-                    Box::new(Expression::NumberLiteral(
-                        Loc::Codegen,
-                        Type::Uint(32),
-                        elem_ty.memory_size_of(ns),
-                    )),
-                );
+                let size = calculate_array_bytes_size(size_temp, elem_ty, ns);
 
                 (size, increment_four(offset.clone()))
             };
 
             let dest_address = Expression::AdvancePointer {
-                loc: Loc::Codegen,
                 pointer: Box::new(buffer.clone()),
-                ty: Type::BufferPointer,
                 bytes_offset: Box::new(offset),
             };
 
@@ -679,8 +664,6 @@ impl BorshEncoding {
             if padded_size.eq(&no_padding_size) {
                 let size = Expression::NumberLiteral(Loc::Codegen, Type::Uint(32), no_padding_size);
                 let dest_address = Expression::AdvancePointer {
-                    loc: Loc::Codegen,
-                    ty: Type::BufferPointer,
                     pointer: Box::new(buffer.clone()),
                     bytes_offset: Box::new(offset),
                 };
@@ -748,7 +731,6 @@ impl BorshEncoding {
         vartab: &mut Vartable,
         cfg: &mut ControlFlowGraph,
     ) -> (Expression, Expression) {
-        // TODO: This can be simplified: are temporaries necessary?
         match ty {
             Type::Uint(_)
             | Type::Int(_)
@@ -758,8 +740,6 @@ impl BorshEncoding {
             | Type::Enum(_)
             | Type::Value
             | Type::Bytes(_) => {
-                let read_item = vartab.temp_anonymous(ty);
-
                 let read_bytes = match ty {
                     Type::Uint(bits) | Type::Int(bits) => BigInt::from(bits / 8),
 
@@ -775,35 +755,16 @@ impl BorshEncoding {
                 };
 
                 let size = Expression::NumberLiteral(Loc::Codegen, Type::Uint(32), read_bytes);
-                if validator.validation_necessary() {
-                    let offset_to_validate = Expression::Add(
-                        Loc::Codegen,
-                        Type::Uint(32),
-                        false,
-                        Box::new(offset.clone()),
-                        Box::new(size.clone()),
-                    );
-                    validator.validate_offset(offset_to_validate, vartab, cfg);
-                }
+                validator.increment_and_validate(offset, &size, vartab, cfg);
 
-                cfg.add(
-                    vartab,
-                    Instr::Set {
-                        loc: Loc::Codegen,
-                        res: read_item,
-                        expr: Expression::Builtin(
-                            Loc::Codegen,
-                            vec![ty.clone()],
-                            Builtin::ReadFromBuffer,
-                            vec![buffer.clone(), offset.clone()],
-                        ),
-                    },
+                let read_value = Expression::Builtin(
+                    Loc::Codegen,
+                    vec![ty.clone()],
+                    Builtin::ReadFromBuffer,
+                    vec![buffer.clone(), offset.clone()],
                 );
 
-                (
-                    Expression::Variable(Loc::Codegen, ty.clone(), read_item),
-                    size,
-                )
+                (read_value, size)
             }
 
             Type::DynamicBytes | Type::String => {
@@ -811,19 +772,7 @@ impl BorshEncoding {
 
                 validator.validate_offset(increment_four(offset.clone()), vartab, cfg);
 
-                cfg.add(
-                    vartab,
-                    Instr::Set {
-                        loc: Loc::Codegen,
-                        res: array_length,
-                        expr: Expression::Builtin(
-                            Loc::Codegen,
-                            vec![Type::Uint(32)],
-                            Builtin::ReadFromBuffer,
-                            vec![buffer.clone(), offset.clone()],
-                        ),
-                    },
-                );
+                retrieve_array_length(array_length, buffer, offset, vartab, cfg);
 
                 let size = increment_four(Expression::Variable(
                     Loc::Codegen,
@@ -840,27 +789,9 @@ impl BorshEncoding {
 
                 validator.validate_offset(offset_to_validate, vartab, cfg);
                 let allocated_array = vartab.temp_anonymous(ty);
-                cfg.add(
-                    vartab,
-                    Instr::Set {
-                        loc: Loc::Codegen,
-                        res: allocated_array,
-                        expr: Expression::AllocDynamicArray(
-                            Loc::Codegen,
-                            ty.clone(),
-                            Box::new(Expression::Variable(
-                                Loc::Codegen,
-                                Type::Uint(32),
-                                array_length,
-                            )),
-                            None,
-                        ),
-                    },
-                );
+                allocate_array(allocated_array, ty, array_length, vartab, cfg);
 
                 let advanced_pointer = Expression::AdvancePointer {
-                    loc: Loc::Codegen,
-                    ty: Type::BufferPointer,
                     pointer: Box::new(buffer.clone()),
                     bytes_offset: Box::new(increment_four(offset.clone())),
                 };
@@ -895,46 +826,21 @@ impl BorshEncoding {
                     Type::Uint(32),
                     BigInt::from(ns.address_length + 4),
                 );
-                if validator.validation_necessary() {
-                    let offset_to_validate = Expression::Add(
-                        Loc::Codegen,
-                        Type::Uint(32),
-                        false,
-                        Box::new(offset.clone()),
-                        Box::new(size.clone()),
-                    );
-                    validator.validate_offset(offset_to_validate, vartab, cfg);
-                }
 
-                let selector = vartab.temp_anonymous(&Type::Bytes(4));
-                let address = vartab.temp_anonymous(&Type::Address(false));
+                validator.increment_and_validate(offset, &size, vartab, cfg);
 
-                cfg.add(
-                    vartab,
-                    Instr::Set {
-                        loc: Loc::Codegen,
-                        res: selector,
-                        expr: Expression::Builtin(
-                            Loc::Codegen,
-                            vec![Type::Bytes(4)],
-                            Builtin::ReadFromBuffer,
-                            vec![buffer.clone(), offset.clone()],
-                        ),
-                    },
+                let selector = Expression::Builtin(
+                    Loc::Codegen,
+                    vec![Type::Bytes(4)],
+                    Builtin::ReadFromBuffer,
+                    vec![buffer.clone(), offset.clone()],
                 );
 
-                cfg.add(
-                    vartab,
-                    Instr::Set {
-                        loc: Loc::Codegen,
-                        res: address,
-                        expr: Expression::Builtin(
-                            Loc::Codegen,
-                            vec![Type::Address(false)],
-                            Builtin::ReadFromBuffer,
-                            vec![buffer.clone(), increment_four(offset.clone())],
-                        ),
-                    },
+                let address = Expression::Builtin(
+                    Loc::Codegen,
+                    vec![Type::Address(false)],
+                    Builtin::ReadFromBuffer,
+                    vec![buffer.clone(), increment_four(offset.clone())],
                 );
 
                 let external_func = Expression::Cast(
@@ -943,10 +849,7 @@ impl BorshEncoding {
                     Box::new(Expression::StructLiteral(
                         Loc::Codegen,
                         Type::Struct(StructType::ExternalFunction),
-                        vec![
-                            Expression::Variable(Loc::Codegen, Type::Bytes(4), selector),
-                            Expression::Variable(Loc::Codegen, Type::Address(false), address),
-                        ],
+                        vec![selector, address],
                     )),
                 );
 
@@ -1005,8 +908,6 @@ impl BorshEncoding {
                 if matches!(dims.last(), Some(&ArrayLength::Fixed(_))) {
                     let elem_no = calculate_direct_copy_bytes_size(dims, elem_ty, ns);
                     let allocated_vector = vartab.temp_anonymous(array_ty);
-                    // TODO: Is this necessary?
-                    // let alloc_dims = dims.iter().map(|d| d.array_length().unwrap().to_u32().unwrap()).collect::<Vec<u32>>();
                     cfg.add(
                         vartab,
                         Instr::Set {
@@ -1029,19 +930,7 @@ impl BorshEncoding {
                 } else {
                     validator.validate_offset(increment_four(offset.clone()), vartab, cfg);
                     let array_length = vartab.temp_anonymous(&Type::Uint(32));
-                    cfg.add(
-                        vartab,
-                        Instr::Set {
-                            loc: Loc::Codegen,
-                            res: array_length,
-                            expr: Expression::Builtin(
-                                Loc::Codegen,
-                                vec![Type::Uint(32)],
-                                Builtin::ReadFromBuffer,
-                                vec![buffer.clone(), offset.clone()],
-                            ),
-                        },
-                    );
+                    retrieve_array_length(array_length, buffer, offset, vartab, cfg);
 
                     let allocated_array = vartab.temp_anonymous(array_ty);
                     let array_dim =
@@ -1060,39 +949,14 @@ impl BorshEncoding {
                         },
                     );
 
-                    let size = Expression::Multiply(
-                        Loc::Codegen,
-                        Type::Uint(32),
-                        false,
-                        Box::new(Expression::Variable(
-                            Loc::Codegen,
-                            Type::Uint(32),
-                            array_length,
-                        )),
-                        Box::new(Expression::NumberLiteral(
-                            Loc::Codegen,
-                            Type::Uint(32),
-                            elem_ty.memory_size_of(ns),
-                        )),
-                    );
+                    let size = calculate_array_bytes_size(array_length, elem_ty, ns);
                     (size, increment_four(offset.clone()), allocated_array)
                 };
 
-            if validator.validation_necessary() {
-                let offset_to_validate = Expression::Add(
-                    Loc::Codegen,
-                    Type::Uint(32),
-                    false,
-                    Box::new(bytes_size.clone()),
-                    Box::new(offset.clone()),
-                );
-                validator.validate_offset(offset_to_validate, vartab, cfg);
-            }
+            validator.increment_and_validate(&offset, &bytes_size, vartab, cfg);
 
             let source_address = Expression::AdvancePointer {
-                loc: Loc::Codegen,
                 pointer: Box::new(buffer.clone()),
-                ty: Type::BufferPointer,
                 bytes_offset: Box::new(offset),
             };
 
@@ -1105,6 +969,12 @@ impl BorshEncoding {
                     bytes: bytes_size.clone(),
                 },
             );
+
+            let bytes_size = if matches!(dims.last(), Some(ArrayLength::Dynamic)) {
+                increment_four(bytes_size)
+            } else {
+                bytes_size
+            };
 
             (array_expr, bytes_size)
         } else {
@@ -1196,37 +1066,16 @@ impl BorshEncoding {
                 elems.mul_assign(item.array_length().unwrap());
             }
             elems.mul_assign(elem_ty.memory_size_of(ns));
-            let offset_to_validate = Expression::Add(
-                Loc::Codegen,
-                Type::Uint(32),
-                false,
-                Box::new(offset_expr.clone()),
-                Box::new(Expression::NumberLiteral(
-                    Loc::Codegen,
-                    Type::Uint(32),
-                    elems,
-                )),
-            );
-            validator.validate_array_offset(offset_to_validate, vartab, cfg);
+            let elems_size = Expression::NumberLiteral(Loc::Codegen, Type::Uint(32), elems);
+            validator.increment_and_validate(offset_expr, &elems_size, vartab, cfg);
+            validator.validate_array();
         }
 
         if dims[dimension] == ArrayLength::Dynamic {
             let offset_to_validate = increment_four(offset_expr.clone());
             validator.validate_offset(offset_to_validate, vartab, cfg);
             let array_length = vartab.temp_anonymous(&Type::Uint(32));
-            cfg.add(
-                vartab,
-                Instr::Set {
-                    loc: Loc::Codegen,
-                    res: array_length,
-                    expr: Expression::Builtin(
-                        Loc::Codegen,
-                        vec![Type::Uint(32)],
-                        Builtin::ReadFromBuffer,
-                        vec![buffer.clone(), offset_expr.clone()],
-                    ),
-                },
-            );
+            retrieve_array_length(array_length, buffer, offset_expr, vartab, cfg);
             cfg.add(
                 vartab,
                 Instr::Set {
@@ -1237,23 +1086,7 @@ impl BorshEncoding {
             );
             let new_ty = Type::Array(Box::new(elem_ty.clone()), dims[0..(dimension + 1)].to_vec());
             let allocated_array = vartab.temp_anonymous(&new_ty);
-            cfg.add(
-                vartab,
-                Instr::Set {
-                    loc: Loc::Codegen,
-                    res: allocated_array,
-                    expr: Expression::AllocDynamicArray(
-                        Loc::Codegen,
-                        new_ty.clone(),
-                        Box::new(Expression::Variable(
-                            Loc::Codegen,
-                            Type::Uint(32),
-                            array_length,
-                        )),
-                        None,
-                    ),
-                },
-            );
+            allocate_array(allocated_array, &new_ty, array_length, vartab, cfg);
 
             if indexes.is_empty() {
                 if let Expression::Variable(_, _, var_no) = array_var {
@@ -1301,6 +1134,7 @@ impl BorshEncoding {
                 vartab,
                 Instr::Store {
                     dest: ptr,
+                    // TODO: Should array be here too?
                     data: if matches!(read_expr.ty(), Type::Struct(_)) {
                         Expression::Load(Loc::Codegen, read_expr.ty(), Box::new(read_expr))
                     } else {
@@ -1360,8 +1194,6 @@ impl BorshEncoding {
             if padded_size.eq(&no_padding_size) {
                 let size = Expression::NumberLiteral(Loc::Codegen, Type::Uint(32), no_padding_size);
                 let source_address = Expression::AdvancePointer {
-                    loc: Loc::Codegen,
-                    ty: Type::BufferPointer,
                     pointer: Box::new(buffer.clone()),
                     bytes_offset: Box::new(offset),
                 };

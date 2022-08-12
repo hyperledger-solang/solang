@@ -644,3 +644,73 @@ fn calculate_direct_copy_bytes_size(
 
     elem_no
 }
+
+fn calculate_array_bytes_size(
+    length_variable: usize,
+    elem_ty: &Type,
+    ns: &Namespace,
+) -> Expression {
+    Expression::Multiply(
+        Loc::Codegen,
+        Type::Uint(32),
+        false,
+        Box::new(Expression::Variable(
+            Loc::Codegen,
+            Type::Uint(32),
+            length_variable,
+        )),
+        Box::new(Expression::NumberLiteral(
+            Loc::Codegen,
+            Type::Uint(32),
+            elem_ty.memory_size_of(ns),
+        )),
+    )
+}
+
+fn retrieve_array_length(
+    length_variable: usize,
+    buffer: &Expression,
+    offset: &Expression,
+    vartab: &mut Vartable,
+    cfg: &mut ControlFlowGraph,
+) {
+    cfg.add(
+        vartab,
+        Instr::Set {
+            loc: Loc::Codegen,
+            res: length_variable,
+            expr: Expression::Builtin(
+                Loc::Codegen,
+                vec![Type::Uint(32)],
+                Builtin::ReadFromBuffer,
+                vec![buffer.clone(), offset.clone()],
+            ),
+        },
+    );
+}
+
+fn allocate_array(
+    array_var: usize,
+    ty: &Type,
+    length_variable: usize,
+    vartab: &mut Vartable,
+    cfg: &mut ControlFlowGraph,
+) {
+    cfg.add(
+        vartab,
+        Instr::Set {
+            loc: Loc::Codegen,
+            res: array_var,
+            expr: Expression::AllocDynamicArray(
+                Loc::Codegen,
+                ty.clone(),
+                Box::new(Expression::Variable(
+                    Loc::Codegen,
+                    Type::Uint(32),
+                    length_variable,
+                )),
+                None,
+            ),
+        },
+    );
+}

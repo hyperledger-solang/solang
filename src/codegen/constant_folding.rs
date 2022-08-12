@@ -380,8 +380,6 @@ fn expression(
             }
         }
         Expression::AdvancePointer {
-            loc,
-            ty,
             pointer,
             bytes_offset: offset,
         } => {
@@ -394,8 +392,6 @@ fn expression(
 
                 _ => (
                     Expression::AdvancePointer {
-                        loc: *loc,
-                        ty: ty.clone(),
                         pointer: pointer.clone(),
                         bytes_offset: Box::new(offset.0),
                     },

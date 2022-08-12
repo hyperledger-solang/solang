@@ -2970,7 +2970,6 @@ pub trait TargetRuntime<'a> {
             Expression::AdvancePointer {
                 pointer,
                 bytes_offset,
-                ..
             } => {
                 let pointer = if pointer.ty().is_dynamic_memory() {
                     bin.vector_bytes(self.expression(bin, pointer, vartab, function, ns))
