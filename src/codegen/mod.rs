@@ -84,6 +84,7 @@ pub struct Options {
     pub vector_to_slice: bool,
     pub math_overflow_check: bool,
     pub common_subexpression_elimination: bool,
+    pub generate_debug_information: bool,
     pub opt_level: OptimizationLevel,
 }
 
@@ -96,6 +97,7 @@ impl Default for Options {
             vector_to_slice: true,
             math_overflow_check: false,
             common_subexpression_elimination: true,
+            generate_debug_information: false,
             opt_level: OptimizationLevel::Default,
         }
     }
@@ -155,6 +157,7 @@ pub fn codegen(ns: &mut Namespace, opt: &Options) {
                         &filename,
                         opt.opt_level.into(),
                         opt.math_overflow_check,
+                        opt.generate_debug_information,
                     );
 
                     let code = binary.code(Generate::Linked).expect("llvm build");
@@ -251,6 +254,7 @@ fn storage_initializer(contract_no: usize, ns: &mut Namespace, opt: &Options) ->
 
         if let Some(init) = &var.initializer {
             let storage = ns.contracts[contract_no].get_storage_slot(
+                pt::Loc::Codegen,
                 layout.contract_no,
                 layout.var_no,
                 ns,

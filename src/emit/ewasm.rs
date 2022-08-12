@@ -36,6 +36,7 @@ impl EwasmTarget {
         filename: &'a str,
         opt: OptimizationLevel,
         math_overflow_check: bool,
+        generate_debug_info: bool,
     ) -> Binary<'a> {
         // first emit runtime code
         let mut b = EwasmTarget {
@@ -50,6 +51,7 @@ impl EwasmTarget {
             math_overflow_check,
             std_lib,
             None,
+            generate_debug_info,
         );
 
         runtime_code.set_early_value_aborts(contract, ns);
@@ -80,6 +82,7 @@ impl EwasmTarget {
             math_overflow_check,
             std_lib,
             Some(Box::new(runtime_code)),
+            generate_debug_info,
         );
 
         deploy_code.set_early_value_aborts(contract, ns);
@@ -1309,6 +1312,7 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
             "",
             binary.opt,
             binary.math_overflow_check,
+            binary.generate_debug_info,
         );
 
         // wasm

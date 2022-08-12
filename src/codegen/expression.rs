@@ -40,9 +40,9 @@ pub fn expression(
     opt: &Options,
 ) -> Expression {
     match expr {
-        ast::Expression::StorageVariable(_, _, var_contract_no, var_no) => {
+        ast::Expression::StorageVariable(loc, _, var_contract_no, var_no) => {
             // base storage variables should precede contract variables, not overlap
-            ns.contracts[contract_no].get_storage_slot(*var_contract_no, *var_no, ns, None)
+            ns.contracts[contract_no].get_storage_slot(*loc, *var_contract_no, *var_no, ns, None)
         }
         ast::Expression::StorageLoad(loc, ty, expr) => {
             let storage = expression(expr, cfg, contract_no, func, ns, vartab, opt);
@@ -651,7 +651,7 @@ pub fn expression(
                         array: array_pos,
                     },
                 );
-                cfg.modify_temp_array_length(true, array_pos, vartab);
+                cfg.modify_temp_array_length(*loc, true, array_pos, vartab);
 
                 Expression::Variable(*loc, ty[0].clone(), address_res)
             }
@@ -795,7 +795,7 @@ fn memory_array_push(
             value: Box::new(value),
         },
     );
-    cfg.modify_temp_array_length(false, array_pos, vartab);
+    cfg.modify_temp_array_length(*loc, false, array_pos, vartab);
 
     Expression::Variable(*loc, ty.clone(), address_res)
 }
@@ -823,7 +823,7 @@ fn post_incdec(
     cfg.add(
         vartab,
         Instr::Set {
-            loc: pt::Loc::Codegen,
+            loc: v.loc(),
             res,
             expr: v,
         },
@@ -847,11 +847,11 @@ fn post_incdec(
         _ => unreachable!(),
     };
     match var {
-        ast::Expression::Variable(loc, _, pos) => {
+        ast::Expression::Variable(_, _, pos) => {
             cfg.add(
                 vartab,
                 Instr::Set {
-                    loc: *loc,
+                    loc: expr.loc(),
                     res: *pos,
                     expr,
                 },
@@ -863,7 +863,7 @@ fn post_incdec(
             cfg.add(
                 vartab,
                 Instr::Set {
-                    loc: pt::Loc::Codegen,
+                    loc: expr.loc(),
                     res,
                     expr,
                 },
@@ -929,7 +929,7 @@ fn pre_incdec(
     cfg.add(
         vartab,
         Instr::Set {
-            loc: pt::Loc::Codegen,
+            loc: expr.loc(),
             res,
             expr,
         },
@@ -1000,7 +1000,7 @@ fn expr_or(
     cfg.add(
         vartab,
         Instr::Set {
-            loc: pt::Loc::Codegen,
+            loc: *loc,
             res: pos,
             expr: Expression::BoolLiteral(*loc, true),
         },
@@ -1018,7 +1018,7 @@ fn expr_or(
     cfg.add(
         vartab,
         Instr::Set {
-            loc: pt::Loc::Codegen,
+            loc: r.loc(),
             res: pos,
             expr: r,
         },
@@ -1054,7 +1054,7 @@ fn and(
     cfg.add(
         vartab,
         Instr::Set {
-            loc: pt::Loc::Codegen,
+            loc: *loc,
             res: pos,
             expr: Expression::BoolLiteral(*loc, false),
         },
@@ -1072,7 +1072,7 @@ fn and(
     cfg.add(
         vartab,
         Instr::Set {
-            loc: pt::Loc::Codegen,
+            loc: r.loc(),
             res: pos,
             expr: r,
         },
@@ -1772,7 +1772,7 @@ fn checking_trunc(
     cfg.add(
         vartab,
         Instr::Set {
-            loc: pt::Loc::Codegen,
+            loc: expr.loc(),
             res: pos,
             expr,
         },
@@ -1873,7 +1873,7 @@ fn ternary(
     cfg.add(
         vartab,
         Instr::Set {
-            loc: pt::Loc::Codegen,
+            loc: expr.loc(),
             res: pos,
             expr,
         },
@@ -1888,7 +1888,7 @@ fn ternary(
     cfg.add(
         vartab,
         Instr::Set {
-            loc: pt::Loc::Codegen,
+            loc: expr.loc(),
             res: pos,
             expr,
         },
@@ -2669,12 +2669,13 @@ fn array_subscript(
         &coerced_ty,
     );
 
+    let expr = index.cast(&coerced_ty, ns);
     cfg.add(
         vartab,
         Instr::Set {
-            loc: pt::Loc::Codegen,
+            loc: expr.loc(),
             res: pos,
-            expr: index.cast(&coerced_ty, ns),
+            expr,
         },
     );
 

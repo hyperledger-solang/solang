@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::symtable::Symtable;
-use crate::codegen::cfg::ControlFlowGraph;
+use crate::codegen::cfg::{ControlFlowGraph, Instr};
 use crate::diagnostics::Diagnostics;
 use crate::sema::yul::ast::{InlineAssembly, YulFunction};
 use crate::sema::Recurse;
@@ -282,11 +282,11 @@ impl FunctionAttributes for Function {
     }
 
     fn get_parameters(&self) -> &Vec<Parameter> {
-        &*self.params
+        &self.params
     }
 
     fn get_returns(&self) -> &Vec<Parameter> {
-        &*self.returns
+        &self.returns
     }
 }
 
@@ -988,7 +988,75 @@ impl CodeLocation for Expression {
     }
 }
 
-#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+impl CodeLocation for Statement {
+    fn loc(&self) -> pt::Loc {
+        match self {
+            Statement::Block { loc, .. }
+            | Statement::VariableDecl(loc, ..)
+            | Statement::If(loc, ..)
+            | Statement::While(loc, ..)
+            | Statement::For { loc, .. }
+            | Statement::DoWhile(loc, ..)
+            | Statement::Expression(loc, ..)
+            | Statement::Delete(loc, ..)
+            | Statement::Destructure(loc, ..)
+            | Statement::Continue(loc, ..)
+            | Statement::Break(loc, ..)
+            | Statement::Return(loc, ..)
+            | Statement::Emit { loc, .. }
+            | Statement::TryCatch(loc, ..)
+            | Statement::Underscore(loc, ..) => *loc,
+            Statement::Assembly(..) => pt::Loc::Codegen,
+        }
+    }
+}
+
+impl CodeLocation for Instr {
+    fn loc(&self) -> pt::Loc {
+        match self {
+            Instr::Set { loc, expr, .. } => match loc {
+                pt::Loc::File(_, _, _) => *loc,
+                _ => expr.loc(),
+            },
+            Instr::Call { args, .. } if args.is_empty() => pt::Loc::Codegen,
+            Instr::Call { args, .. } => args[0].loc(),
+            Instr::Return { value } if value.is_empty() => pt::Loc::Codegen,
+            Instr::Return { value } => value[0].loc(),
+            Instr::EmitEvent { data, .. } if data.is_empty() => pt::Loc::Codegen,
+            Instr::EmitEvent { data, .. } => data[0].loc(),
+            Instr::BranchCond { cond, .. } => cond.loc(),
+            Instr::Store { dest, .. } => dest.loc(),
+            Instr::SetStorageBytes { storage, .. }
+            | Instr::PushStorage { storage, .. }
+            | Instr::PopStorage { storage, .. }
+            | Instr::LoadStorage { storage, .. }
+            | Instr::ClearStorage { storage, .. } => storage.loc(),
+            Instr::ExternalCall { value, .. } | Instr::SetStorage { value, .. } => value.loc(),
+            Instr::PushMemory { value, .. } => value.loc(),
+            Instr::Constructor { gas, .. } => gas.loc(),
+            Instr::ValueTransfer { address, .. } => address.loc(),
+            Instr::AbiDecode { data, .. } => data.loc(),
+            Instr::SelfDestruct { recipient } => recipient.loc(),
+            Instr::WriteBuffer { buf, .. } => buf.loc(),
+            Instr::Print { expr } => expr.loc(),
+            Instr::MemCopy {
+                source,
+                destination,
+                ..
+            } => match source.loc() {
+                pt::Loc::File(_, _, _) => source.loc(),
+                _ => destination.loc(),
+            },
+            Instr::Branch { .. }
+            | Instr::Unreachable
+            | Instr::Nop
+            | Instr::AssertFailure { .. }
+            | Instr::PopMemory { .. } => pt::Loc::Codegen,
+        }
+    }
+}
+
+#[derive(PartialEq, Clone, Copy, Debug, Eq)]
 pub enum FormatArg {
     StringLiteral,
     Default,

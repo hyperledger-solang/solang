@@ -157,8 +157,16 @@ pub fn compile_many<'a>(
     filename: &str,
     opt: inkwell::OptimizationLevel,
     math_overflow_check: bool,
+    generate_debug_info: bool,
 ) -> emit::binary::Binary<'a> {
-    emit::binary::Binary::build_bundle(context, namespaces, filename, opt, math_overflow_check)
+    emit::binary::Binary::build_bundle(
+        context,
+        namespaces,
+        filename,
+        opt,
+        math_overflow_check,
+        generate_debug_info,
+    )
 }
 
 /// Parse and resolve the Solidity source code provided in src, for the target chain as specified in target.

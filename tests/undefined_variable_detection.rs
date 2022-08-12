@@ -19,6 +19,7 @@ fn parse_and_codegen(src: &'static str) -> Namespace {
         common_subexpression_elimination: false,
         opt_level: OptimizationLevel::Default,
         math_overflow_check: false,
+        generate_debug_information: false,
     };
 
     codegen(&mut ns, &opt);

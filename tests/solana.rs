@@ -145,6 +145,7 @@ fn build_solidity(src: &str) -> VirtualMachine {
         "bundle.sol",
         inkwell::OptimizationLevel::Default,
         false,
+        false,
     );
 
     let code = binary

@@ -46,6 +46,7 @@ impl SolanaTarget {
         filename: &'a str,
         opt: OptimizationLevel,
         math_overflow_check: bool,
+        generate_debug_info: bool,
     ) -> Binary<'a> {
         let mut target = SolanaTarget {
             abi: ethabiencoder::EthAbiDecoder { bswap: true },
@@ -61,6 +62,7 @@ impl SolanaTarget {
             math_overflow_check,
             std_lib,
             None,
+            generate_debug_info,
         );
 
         binary
@@ -123,6 +125,7 @@ impl SolanaTarget {
         filename: &str,
         opt: OptimizationLevel,
         math_overflow_check: bool,
+        generate_debug_info: bool,
     ) -> Binary<'a> {
         let mut target = SolanaTarget {
             abi: ethabiencoder::EthAbiDecoder { bswap: true },
@@ -138,6 +141,7 @@ impl SolanaTarget {
             math_overflow_check,
             std_lib,
             None,
+            generate_debug_info,
         );
 
         binary

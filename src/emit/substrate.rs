@@ -35,6 +35,7 @@ impl SubstrateTarget {
         filename: &'a str,
         opt: OptimizationLevel,
         math_overflow_check: bool,
+        generate_debug_info: bool,
     ) -> Binary<'a> {
         let mut binary = Binary::new(
             context,
@@ -45,6 +46,7 @@ impl SubstrateTarget {
             math_overflow_check,
             std_lib,
             None,
+            generate_debug_info,
         );
 
         binary.set_early_value_aborts(contract, ns);
