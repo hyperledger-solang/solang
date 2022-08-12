@@ -6,13 +6,13 @@ use clap::{
 };
 use itertools::Itertools;
 use num_traits::cast::ToPrimitive;
-use serde::Serialize;
 use solang::{
     abi,
     codegen::{codegen, OptimizationLevel, Options},
     emit::Generate,
     file_resolver::FileResolver,
-    sema::{ast::Namespace, diagnostics},
+    sema::ast::Namespace,
+    standard_json::{EwasmContract, JsonContract, JsonResult},
     Target,
 };
 use std::{
@@ -25,29 +25,6 @@ use std::{
 
 mod doc;
 mod languageserver;
-
-#[derive(Serialize)]
-pub struct EwasmContract {
-    pub wasm: String,
-}
-
-#[derive(Serialize)]
-pub struct JsonContract {
-    abi: Vec<abi::ethereum::ABI>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    ewasm: Option<EwasmContract>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    minimum_space: Option<u32>,
-}
-
-#[derive(Serialize)]
-pub struct JsonResult {
-    pub errors: Vec<diagnostics::OutputJson>,
-    pub target: String,
-    #[serde(skip_serializing_if = "String::is_empty")]
-    pub program: String,
-    pub contracts: HashMap<String, HashMap<String, JsonContract>>,
-}
 
 fn main() {
     let matches = Command::new("solang")
