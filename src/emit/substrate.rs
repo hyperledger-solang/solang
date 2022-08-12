@@ -3472,12 +3472,10 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         // input
         let (input, input_len) = self.abi_encode(
             binary,
-            Some(
-                binary
-                    .context
-                    .i32_type()
-                    .const_int(constructor.selector().to_be() as u64, false),
-            ),
+            Some(binary.context.i32_type().const_int(
+                u32::from_le_bytes(constructor.selector().try_into().unwrap()) as u64,
+                false,
+            )),
             false,
             function,
             args,

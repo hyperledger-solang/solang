@@ -646,6 +646,16 @@ impl TestRuntime {
             Err(x) => panic!("{}", x),
         };
 
+        self.raw_function(calldata);
+
+        println!("RETURNDATA: {}", hex::encode(&self.vm.output));
+
+        self.abi.functions[name][0]
+            .decode_output(&self.vm.output)
+            .unwrap()
+    }
+
+    fn raw_function(&mut self, calldata: Vec<u8>) {
         let module = self.create_module(&self.accounts[&self.vm.cur].0);
 
         println!("FUNCTION CALLDATA: {}", hex::encode(&calldata));
@@ -673,12 +683,6 @@ impl TestRuntime {
             Ok(None) => panic!("fail to invoke main"),
             _ => panic!("fail to invoke main, unknown"),
         }
-
-        println!("RETURNDATA: {}", hex::encode(&self.vm.output));
-
-        self.abi.functions[name][0]
-            .decode_output(&self.vm.output)
-            .unwrap()
     }
 
     fn function_abi_fail(&mut self, name: &str, args: &[Token], patch: fn(&mut Vec<u8>)) {

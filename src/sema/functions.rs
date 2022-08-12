@@ -1,11 +1,16 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use super::ast::{
-    Diagnostic, Function, Mutability, Namespace, Parameter, StructType, Symbol, Type,
+use super::{
+    ast::{
+        Diagnostic, Expression, Function, Mutability, Namespace, Parameter, StructType, Symbol,
+        Type,
+    },
+    contracts::is_base,
+    diagnostics::Diagnostics,
+    expression::{expression, ExprContext, ResolveTo},
+    tags::resolve_tags,
+    Symtable,
 };
-use super::contracts::is_base;
-use super::diagnostics::Diagnostics;
-use super::tags::resolve_tags;
 use crate::Target;
 use solang_parser::{
     doccomment::DocComment,
@@ -107,6 +112,7 @@ pub fn contract_function(
     let mut visibility: Option<pt::Visibility> = None;
     let mut is_virtual: Option<pt::Loc> = None;
     let mut is_override: Option<(pt::Loc, Vec<usize>)> = None;
+    let mut has_selector: Option<&pt::Expression> = None;
 
     for a in &func.attributes {
         match &a {
@@ -168,6 +174,25 @@ pub fn contract_function(
                 }
 
                 is_virtual = Some(*loc);
+            }
+            pt::FunctionAttribute::NameValue(loc, name, value) => {
+                if name.name != "selector" {
+                    ns.diagnostics.push(Diagnostic::error(
+                        name.loc,
+                        format!("function attribute '{}' not supported", name.name),
+                    ));
+                    success = false;
+                } else if let Some(prev_loc) = &has_selector {
+                    ns.diagnostics.push(Diagnostic::error_with_note(
+                        *loc,
+                        "function redeclared attribute 'selector'".to_string(),
+                        prev_loc.loc(),
+                        "location of previous declaration of 'selector'".to_string(),
+                    ));
+                    success = false;
+                } else {
+                    has_selector = Some(value);
+                }
             }
             pt::FunctionAttribute::Override(loc, bases) => {
                 if let Some((prev_loc, _)) = &is_override {
@@ -297,6 +322,75 @@ pub fn contract_function(
     };
 
     let mut diagnostics = Diagnostics::default();
+
+    let selector = if let Some(selector) = has_selector {
+        if func.ty != pt::FunctionTy::Function
+            && (!ns.target.is_substrate() || func.ty != pt::FunctionTy::Constructor)
+        {
+            ns.diagnostics.push(Diagnostic::error(
+                selector.loc(),
+                format!("overriding selector not permitted on {}", func.ty),
+            ));
+
+            None
+        } else if !matches!(
+            visibility,
+            pt::Visibility::External(_) | pt::Visibility::Public(_)
+        ) {
+            ns.diagnostics.push(Diagnostic::error(
+                selector.loc(),
+                format!(
+                    "overriding selector only permitted on 'public' or 'external' function, not '{}'",
+                    visibility
+                ),
+            ));
+
+            None
+        } else {
+            let context = ExprContext {
+                file_no,
+                constant: true,
+                ..Default::default()
+            };
+
+            match expression(
+                selector,
+                &context,
+                ns,
+                &mut Symtable::new(),
+                &mut diagnostics,
+                ResolveTo::Unknown,
+            ) {
+                Ok(Expression::BytesLiteral(_, _, v)) => {
+                    // TODO: Solana uses different length discriminators
+                    if v.len() != 4 {
+                        ns.diagnostics.push(Diagnostic::error(
+                            selector.loc(),
+                            format!("selector is {} bytes, 4 bytes expected", v.len()),
+                        ));
+                        success = false;
+                        None
+                    } else {
+                        Some(v)
+                    }
+                }
+                Ok(_) => {
+                    ns.diagnostics.push(Diagnostic::error(
+                        selector.loc(),
+                        "hex literal of the form 'hex\"1234abcdef\"' expected".to_string(),
+                    ));
+                    success = false;
+                    None
+                }
+                Err(_) => {
+                    success = false;
+                    None
+                }
+            }
+        }
+    } else {
+        None
+    };
 
     let (params, params_success) = resolve_params(
         &func.params,
@@ -455,6 +549,7 @@ pub fn contract_function(
     fdecl.is_virtual = is_virtual;
     fdecl.is_override = is_override;
     fdecl.has_body = func.body.is_some();
+    fdecl.selector = selector;
 
     if func.ty == pt::FunctionTy::Constructor {
         // In the eth solidity, only one constructor is allowed
@@ -711,6 +806,13 @@ pub fn function(
                     String::from(
                         "function modifiers or base contracts are only allowed on functions in contracts",
                     ),
+                ));
+                success = false;
+            }
+            pt::FunctionAttribute::NameValue(loc, name, _) => {
+                ns.diagnostics.push(Diagnostic::error(
+                    *loc,
+                    format!("attribute '{}' not supported", name.name),
                 ));
                 success = false;
             }

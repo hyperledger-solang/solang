@@ -366,7 +366,7 @@ pub struct ControlFlowGraph {
     pub nonpayable: bool,
     pub public: bool,
     pub ty: pt::FunctionTy,
-    pub selector: u32,
+    pub selector: Vec<u8>,
     current: usize,
     // A mapping between the res of an array and the res of the temp var holding its length.
     pub array_lengths_temps: ArrayLengthVars,
@@ -391,7 +391,7 @@ impl ControlFlowGraph {
             nonpayable: false,
             public: false,
             ty: pt::FunctionTy::Function,
-            selector: 0,
+            selector: Vec::new(),
             current: 0,
             array_lengths_temps: IndexMap::new(),
         };
@@ -413,7 +413,7 @@ impl ControlFlowGraph {
             nonpayable: false,
             public: false,
             ty: pt::FunctionTy::Function,
-            selector: 0,
+            selector: Vec::new(),
             current: 0,
             array_lengths_temps: IndexMap::new(),
         }
@@ -1408,7 +1408,11 @@ fn function_cfg(
         }
         // There can be multiple constructors on Substrate, give them an unique name
         pt::FunctionTy::Constructor => {
-            format!("{}::constructor::{:08x}", contract_name, func.selector())
+            format!(
+                "{}::constructor::{}",
+                contract_name,
+                hex::encode(func.selector())
+            )
         }
         _ => format!("{}::{}", contract_name, func.ty),
     };
@@ -1819,7 +1823,7 @@ impl Contract {
                     cfg.ty,
                     cfg.name,
                     cfg.public,
-                    hex::encode(cfg.selector.to_be_bytes()),
+                    hex::encode(&cfg.selector),
                     cfg.nonpayable,
                 )
                 .unwrap();

@@ -5,7 +5,7 @@ contract testing {
         uint256 c;
         uint256 d;
         assembly {
-            // BEGIN-CHECK: # function testing::yul_function_0::early_leave public:false selector:00000000 nonpayable:true
+            // BEGIN-CHECK: # function testing::yul_function_0::early_leave public:false selector: nonpayable:true
             // CHECK: # params: uint256,uint256
             // CHECK: # returns:
             function early_leave(a, b) {
@@ -23,7 +23,7 @@ contract testing {
                 // CHECK: return
             }
 
-            // BEGIN-CHECK: function testing::yul_function_1::single_return public:false selector:00000000 nonpayable:true
+            // BEGIN-CHECK: function testing::yul_function_1::single_return public:false selector: nonpayable:true
             // CHECK: # params: uint256,int32
             // CHECK: # returns: uint256
             function single_return(a, b : s32) -> ret1 {
@@ -40,7 +40,7 @@ contract testing {
                 // CHECK: return (arg #0)
             }
 
-            // BEGIN-CHECK: function testing::yul_function_2::multiple_returns public:false selector:00000000 nonpayable:true
+            // BEGIN-CHECK: function testing::yul_function_2::multiple_returns public:false selector: nonpayable:true
             // CHECK: # params: uint256,uint256
             // CHECK: # returns: uint64,uint256
             function multiple_returns(a, b) -> ret1 : u64, ret2 {
@@ -65,7 +65,7 @@ contract testing {
             early_leave(c, d)
 
             c := single_return(c, d)
-            c, d := multiple_returns(c, d)            
+            c, d := multiple_returns(c, d)
         }
 
         return c+d;

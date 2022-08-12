@@ -4916,9 +4916,10 @@ pub trait TargetRuntime<'a> {
         self.return_code(bin, ret.into_int_value());
 
         cases.push((
-            bin.context
-                .i32_type()
-                .const_int(f.selector.to_be() as u64, false),
+            bin.context.i32_type().const_int(
+                u32::from_le_bytes(f.selector.as_slice().try_into().unwrap()) as u64,
+                false,
+            ),
             bb,
         ));
     }

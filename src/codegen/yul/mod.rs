@@ -68,7 +68,7 @@ fn yul_function_cfg(
 
     cfg.params = yul_func.params.clone();
     cfg.returns = yul_func.returns.clone();
-    cfg.selector = 0;
+    cfg.selector = Vec::new();
     cfg.public = false;
     cfg.ty = FunctionTy::Function;
     cfg.nonpayable = true;
