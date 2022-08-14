@@ -2,9 +2,9 @@
 
 use super::ast::{Diagnostic, ErrorType, Level, Namespace};
 use crate::file_resolver::FileResolver;
+use crate::standard_json::{LocJson, OutputJson};
 use codespan_reporting::{diagnostic, files, term};
 use itertools::Itertools;
-use serde::Serialize;
 use solang_parser::pt::Loc;
 use std::{
     collections::HashMap,
@@ -278,25 +278,6 @@ impl Namespace {
 
         (files, file_id)
     }
-}
-
-#[derive(Serialize)]
-pub struct LocJson {
-    pub file: String,
-    pub start: usize,
-    pub end: usize,
-}
-
-#[derive(Serialize)]
-#[allow(non_snake_case)]
-pub struct OutputJson {
-    pub sourceLocation: Option<LocJson>,
-    #[serde(rename = "type")]
-    pub ty: String,
-    pub component: String,
-    pub severity: String,
-    pub message: String,
-    pub formattedMessage: String,
 }
 
 pub struct RawBuffer {

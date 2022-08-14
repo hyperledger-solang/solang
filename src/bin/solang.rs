@@ -6,13 +6,13 @@ use clap::{
 };
 use itertools::Itertools;
 use num_traits::cast::ToPrimitive;
-use serde::Serialize;
 use solang::{
     abi,
     codegen::{codegen, OptimizationLevel, Options},
     emit::Generate,
     file_resolver::FileResolver,
-    sema::{ast::Namespace, diagnostics},
+    sema::ast::Namespace,
+    standard_json::{EwasmContract, JsonContract, JsonResult},
     Target,
 };
 use std::{
@@ -25,29 +25,6 @@ use std::{
 
 mod doc;
 mod languageserver;
-
-#[derive(Serialize)]
-pub struct EwasmContract {
-    pub wasm: String,
-}
-
-#[derive(Serialize)]
-pub struct JsonContract {
-    abi: Vec<abi::ethereum::ABI>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    ewasm: Option<EwasmContract>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    minimum_space: Option<u32>,
-}
-
-#[derive(Serialize)]
-pub struct JsonResult {
-    pub errors: Vec<diagnostics::OutputJson>,
-    pub target: String,
-    #[serde(skip_serializing_if = "String::is_empty")]
-    pub program: String,
-    pub contracts: HashMap<String, HashMap<String, JsonContract>>,
-}
 
 fn main() {
     let matches = Command::new("solang")
@@ -138,6 +115,7 @@ fn main() {
                         .short('m')
                         .long("importmap")
                         .takes_value(true)
+                        .value_parser(ValueParser::new(parse_import_map))
                         .action(ArgAction::Append),
                 )
                 .arg(
@@ -186,7 +164,7 @@ fn main() {
                         .help("Enable generating debug information for LLVM IR")
                         .short('g')
                         .long("generate-debug-info")
-                        .display_order(5),
+                        .hidden(true),
                 ),
         )
         .subcommand(
@@ -238,6 +216,7 @@ fn main() {
                         .short('m')
                         .long("importmap")
                         .takes_value(true)
+                        .value_parser(ValueParser::new(parse_import_map))
                         .action(ArgAction::Append),
                 ),
         )
@@ -283,6 +262,7 @@ fn main() {
                         .short('m')
                         .long("importmap")
                         .takes_value(true)
+                        .value_parser(ValueParser::new(parse_import_map))
                         .action(ArgAction::Append),
                 ),
         )
@@ -878,19 +858,25 @@ fn imports_arg(matches: &ArgMatches) -> FileResolver {
         }
     }
 
-    if let Some(maps) = matches.get_many::<String>("IMPORTMAP") {
-        for p in maps {
-            if let Some((map, path)) = p.split_once('=') {
-                if let Err(e) = resolver.add_import_map(OsString::from(map), PathBuf::from(path)) {
-                    eprintln!("error: import path '{}': {}", path, e);
-                    std::process::exit(1);
-                }
-            } else {
-                eprintln!("error: import map '{}': contains no '='", p);
+    if let Some(maps) = matches.get_many::<(String, PathBuf)>("IMPORTMAP") {
+        for (map, path) in maps {
+            if let Err(e) = resolver.add_import_map(OsString::from(map), path.clone()) {
+                eprintln!("error: import path '{}': {}", path.display(), e);
                 std::process::exit(1);
             }
         }
     }
 
     resolver
+}
+
+// Parse the import map argument. This takes the form
+/// --import-map openzeppelin=/opt/openzeppelin-contracts/contract,
+/// and returns the name of the map and the path.
+fn parse_import_map(map: &str) -> Result<(String, PathBuf), String> {
+    if let Some((var, value)) = map.split_once('=') {
+        Ok((var.to_owned(), PathBuf::from(value)))
+    } else {
+        Err("contains no '='".to_owned())
+    }
 }

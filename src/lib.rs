@@ -9,6 +9,8 @@ pub mod emit;
 pub mod file_resolver;
 #[cfg(feature = "llvm")]
 mod linker;
+pub mod standard_json;
+
 // In Sema, we use result unit for returning early
 // when code-misparses. The error will be added to the namespace diagnostics, no need to have anything but unit
 // as error.
