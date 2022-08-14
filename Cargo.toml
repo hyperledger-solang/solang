@@ -20,6 +20,7 @@ num-bigint = "0.4"
 num-traits = "0.2"
 parity-wasm = "0.45"
 clap = "3.2"
+clap_complete = "3.2"
 hex = "0.4"
 tiny-keccak = { version = "2.0", features = ["keccak"] }
 serde_json = "1.0"
