@@ -11,6 +11,14 @@ The following targets are supported right now:
 `Parity Substrate <https://substrate.io/>`_, and
 `Ethereum ewasm <https://github.com/ewasm/design>`_.
 
+Solang supports auto-completion for multiple shells. Use ``solang shell-complete --help`` to 
+learn whether your favorite shell is supported. If so, evaluate the output of 
+``solang shell-complete <SHELL>`` in order to activate it. Example installation with ``bash``:
+
+.. code-block:: bash
+
+	  echo 'source <(solang shell-complete bash)' >> ~/.bashrc
+
 
 Compiler Usage
 ______________

@@ -2,8 +2,9 @@
 
 use clap::{
     builder::{ArgAction, ValueParser},
-    value_parser, Arg, ArgMatches, Command, ValueSource,
+    value_parser, App, Arg, ArgMatches, Command, ValueSource,
 };
+use clap_complete::{generate, Shell};
 use itertools::Itertools;
 use num_traits::cast::ToPrimitive;
 use solang::{
@@ -27,246 +28,261 @@ mod doc;
 mod languageserver;
 
 fn main() {
-    let matches = Command::new("solang")
-        .version(&*format!("version {}", env!("SOLANG_VERSION")))
-        .author(env!("CARGO_PKG_AUTHORS"))
-        .about(env!("CARGO_PKG_DESCRIPTION"))
-        .subcommand_required(true)
-        .subcommand(
-            Command::new("compile")
-                .about("Compile Solidity source files")
-                .arg(
-                    Arg::new("INPUT")
-                        .help("Solidity input files")
-                        .required(true)
-                        .value_parser(ValueParser::os_string())
-                        .multiple_values(true),
-                )
-                .arg(
-                    Arg::new("EMIT")
-                        .help("Emit compiler state at early stage")
-                        .long("emit")
-                        .takes_value(true)
-                        .value_parser(["ast-dot", "cfg", "llvm-ir", "llvm-bc", "object", "asm"]),
-                )
-                .arg(
-                    Arg::new("OPT")
-                        .help("Set llvm optimizer level")
-                        .short('O')
-                        .takes_value(true)
-                        .value_parser(["none", "less", "default", "aggressive"])
-                        .default_value("default"),
-                )
-                .arg(
-                    Arg::new("TARGET")
-                        .help("Target to build for")
-                        .long("target")
-                        .takes_value(true)
-                        .value_parser(["solana", "substrate", "ewasm"])
-                        .required(true),
-                )
-                .arg(
-                    Arg::new("ADDRESS_LENGTH")
-                        .help("Address length on Substrate")
-                        .long("address-length")
-                        .takes_value(true)
-                        .value_parser(value_parser!(u64).range(4..1024))
-                        .default_value("32"),
-                )
-                .arg(
-                    Arg::new("VALUE_LENGTH")
-                        .help("Value length on Substrate")
-                        .long("value-length")
-                        .value_parser(value_parser!(u64).range(4..1024))
-                        .takes_value(true)
-                        .default_value("16"),
-                )
-                .arg(
-                    Arg::new("STD-JSON")
-                        .help("mimic solidity json output on stdout")
-                        .conflicts_with_all(&["VERBOSE", "OUTPUT", "EMIT"])
-                        .long("standard-json"),
-                )
-                .arg(
-                    Arg::new("VERBOSE")
-                        .help("show debug messages")
-                        .short('v')
-                        .long("verbose"),
-                )
-                .arg(
-                    Arg::new("OUTPUT")
-                        .help("output directory")
-                        .short('o')
-                        .long("output")
-                        .takes_value(true),
-                )
-                .arg(
-                    Arg::new("IMPORTPATH")
-                        .help("Directory to search for solidity files")
-                        .short('I')
-                        .long("importpath")
-                        .takes_value(true)
-                        .value_parser(ValueParser::path_buf())
-                        .action(ArgAction::Append),
-                )
-                .arg(
-                    Arg::new("IMPORTMAP")
-                        .help("Map directory to search for solidity files [format: map=path]")
-                        .short('m')
-                        .long("importmap")
-                        .takes_value(true)
-                        .value_parser(ValueParser::new(parse_import_map))
-                        .action(ArgAction::Append),
-                )
-                .arg(
-                    Arg::new("CONSTANTFOLDING")
-                        .help("Disable constant folding codegen optimization")
-                        .long("no-constant-folding")
-                        .action(ArgAction::SetFalse)
-                        .display_order(1),
-                )
-                .arg(
-                    Arg::new("STRENGTHREDUCE")
-                        .help("Disable strength reduce codegen optimization")
-                        .long("no-strength-reduce")
-                        .action(ArgAction::SetFalse)
-                        .display_order(2),
-                )
-                .arg(
-                    Arg::new("DEADSTORAGE")
-                        .help("Disable dead storage codegen optimization")
-                        .long("no-dead-storage")
-                        .action(ArgAction::SetFalse)
-                        .display_order(3),
-                )
-                .arg(
-                    Arg::new("VECTORTOSLICE")
-                        .help("Disable vector to slice codegen optimization")
-                        .long("no-vector-to-slice")
-                        .action(ArgAction::SetFalse)
-                        .display_order(4),
-                )
-                .arg(
-                    Arg::new("COMMONSUBEXPRESSIONELIMINATION")
-                        .help("Disable common subexpression elimination")
-                        .long("no-cse")
-                        .action(ArgAction::SetFalse)
-                        .display_order(5),
-                )
-                .arg(
-                    Arg::new("MATHOVERFLOW")
-                        .help("Enable math overflow checking")
-                        .long("math-overflow")
-                        .display_order(6),
-                )
-                .arg(
-                    Arg::new("GENERATEDEBUGINFORMATION")
-                        .help("Enable generating debug information for LLVM IR")
-                        .short('g')
-                        .long("generate-debug-info")
-                        .hidden(true),
-                ),
-        )
-        .subcommand(
-            Command::new("doc")
-                .about("Generate documention for contracts using doc comments")
-                .arg(
-                    Arg::new("INPUT")
-                        .help("Solidity input files")
-                        .required(true)
-                        .value_parser(ValueParser::os_string())
-                        .multiple_values(true),
-                )
-                .arg(
-                    Arg::new("TARGET")
-                        .help("Target to build for")
-                        .long("target")
-                        .takes_value(true)
-                        .value_parser(["solana", "substrate", "ewasm"])
-                        .required(true),
-                )
-                .arg(
-                    Arg::new("ADDRESS_LENGTH")
-                        .help("Address length on Substrate")
-                        .long("address-length")
-                        .takes_value(true)
-                        .value_parser(value_parser!(u64).range(4..1024))
-                        .default_value("32"),
-                )
-                .arg(
-                    Arg::new("VALUE_LENGTH")
-                        .help("Value length on Substrate")
-                        .long("value-length")
-                        .value_parser(value_parser!(u64).range(4..1024))
-                        .takes_value(true)
-                        .default_value("16"),
-                )
-                .arg(
-                    Arg::new("IMPORTPATH")
-                        .help("Directory to search for solidity files")
-                        .short('I')
-                        .long("importpath")
-                        .takes_value(true)
-                        .value_parser(ValueParser::path_buf())
-                        .action(ArgAction::Append),
-                )
-                .arg(
-                    Arg::new("IMPORTMAP")
-                        .help("Map directory to search for solidity files [format: map=path]")
-                        .short('m')
-                        .long("importmap")
-                        .takes_value(true)
-                        .value_parser(ValueParser::new(parse_import_map))
-                        .action(ArgAction::Append),
-                ),
-        )
-        .subcommand(
-            Command::new("language-server")
-                .about("Start LSP language server on stdin/stdout")
-                .arg(
-                    Arg::new("TARGET")
-                        .help("Target to build for")
-                        .long("target")
-                        .takes_value(true)
-                        .value_parser(["solana", "substrate", "ewasm"])
-                        .required(true),
-                )
-                .arg(
-                    Arg::new("ADDRESS_LENGTH")
-                        .help("Address length on Substrate")
-                        .long("address-length")
-                        .takes_value(true)
-                        .value_parser(value_parser!(u64).range(4..1024))
-                        .default_value("32"),
-                )
-                .arg(
-                    Arg::new("VALUE_LENGTH")
-                        .help("Value length on Substrate")
-                        .long("value-length")
-                        .value_parser(value_parser!(u64).range(4..1024))
-                        .takes_value(true)
-                        .default_value("16"),
-                )
-                .arg(
-                    Arg::new("IMPORTPATH")
-                        .help("Directory to search for solidity files")
-                        .short('I')
-                        .long("importpath")
-                        .takes_value(true)
-                        .value_parser(ValueParser::path_buf())
-                        .action(ArgAction::Append),
-                )
-                .arg(
-                    Arg::new("IMPORTMAP")
-                        .help("Map directory to search for solidity files [format: map=path]")
-                        .short('m')
-                        .long("importmap")
-                        .takes_value(true)
-                        .value_parser(ValueParser::new(parse_import_map))
-                        .action(ArgAction::Append),
-                ),
-        )
-        .get_matches();
+    let version = format!("version {}", env!("SOLANG_VERSION"));
+    let app = || {
+        Command::new("solang")
+            .version(&*version)
+            .author(env!("CARGO_PKG_AUTHORS"))
+            .about(env!("CARGO_PKG_DESCRIPTION"))
+            .subcommand_required(true)
+            .subcommand(
+                Command::new("compile")
+                    .about("Compile Solidity source files")
+                    .arg(
+                        Arg::new("INPUT")
+                            .help("Solidity input files")
+                            .required(true)
+                            .value_parser(ValueParser::os_string())
+                            .multiple_values(true),
+                    )
+                    .arg(
+                        Arg::new("EMIT")
+                            .help("Emit compiler state at early stage")
+                            .long("emit")
+                            .takes_value(true)
+                            .value_parser([
+                                "ast-dot", "cfg", "llvm-ir", "llvm-bc", "object", "asm",
+                            ]),
+                    )
+                    .arg(
+                        Arg::new("OPT")
+                            .help("Set llvm optimizer level")
+                            .short('O')
+                            .takes_value(true)
+                            .value_parser(["none", "less", "default", "aggressive"])
+                            .default_value("default"),
+                    )
+                    .arg(
+                        Arg::new("TARGET")
+                            .help("Target to build for")
+                            .long("target")
+                            .takes_value(true)
+                            .value_parser(["solana", "substrate", "ewasm"])
+                            .required(true),
+                    )
+                    .arg(
+                        Arg::new("ADDRESS_LENGTH")
+                            .help("Address length on Substrate")
+                            .long("address-length")
+                            .takes_value(true)
+                            .value_parser(value_parser!(u64).range(4..1024))
+                            .default_value("32"),
+                    )
+                    .arg(
+                        Arg::new("VALUE_LENGTH")
+                            .help("Value length on Substrate")
+                            .long("value-length")
+                            .value_parser(value_parser!(u64).range(4..1024))
+                            .takes_value(true)
+                            .default_value("16"),
+                    )
+                    .arg(
+                        Arg::new("STD-JSON")
+                            .help("mimic solidity json output on stdout")
+                            .conflicts_with_all(&["VERBOSE", "OUTPUT", "EMIT"])
+                            .long("standard-json"),
+                    )
+                    .arg(
+                        Arg::new("VERBOSE")
+                            .help("show debug messages")
+                            .short('v')
+                            .long("verbose"),
+                    )
+                    .arg(
+                        Arg::new("OUTPUT")
+                            .help("output directory")
+                            .short('o')
+                            .long("output")
+                            .takes_value(true),
+                    )
+                    .arg(
+                        Arg::new("IMPORTPATH")
+                            .help("Directory to search for solidity files")
+                            .short('I')
+                            .long("importpath")
+                            .takes_value(true)
+                            .value_parser(ValueParser::path_buf())
+                            .action(ArgAction::Append),
+                    )
+                    .arg(
+                        Arg::new("IMPORTMAP")
+                            .help("Map directory to search for solidity files [format: map=path]")
+                            .short('m')
+                            .long("importmap")
+                            .takes_value(true)
+                            .value_parser(ValueParser::new(parse_import_map))
+                            .action(ArgAction::Append),
+                    )
+                    .arg(
+                        Arg::new("CONSTANTFOLDING")
+                            .help("Disable constant folding codegen optimization")
+                            .long("no-constant-folding")
+                            .action(ArgAction::SetFalse)
+                            .display_order(1),
+                    )
+                    .arg(
+                        Arg::new("STRENGTHREDUCE")
+                            .help("Disable strength reduce codegen optimization")
+                            .long("no-strength-reduce")
+                            .action(ArgAction::SetFalse)
+                            .display_order(2),
+                    )
+                    .arg(
+                        Arg::new("DEADSTORAGE")
+                            .help("Disable dead storage codegen optimization")
+                            .long("no-dead-storage")
+                            .action(ArgAction::SetFalse)
+                            .display_order(3),
+                    )
+                    .arg(
+                        Arg::new("VECTORTOSLICE")
+                            .help("Disable vector to slice codegen optimization")
+                            .long("no-vector-to-slice")
+                            .action(ArgAction::SetFalse)
+                            .display_order(4),
+                    )
+                    .arg(
+                        Arg::new("COMMONSUBEXPRESSIONELIMINATION")
+                            .help("Disable common subexpression elimination")
+                            .long("no-cse")
+                            .action(ArgAction::SetFalse)
+                            .display_order(5),
+                    )
+                    .arg(
+                        Arg::new("MATHOVERFLOW")
+                            .help("Enable math overflow checking")
+                            .long("math-overflow")
+                            .display_order(6),
+                    )
+                    .arg(
+                        Arg::new("GENERATEDEBUGINFORMATION")
+                            .help("Enable generating debug information for LLVM IR")
+                            .short('g')
+                            .long("generate-debug-info")
+                            .hidden(true),
+                    ),
+            )
+            .subcommand(
+                Command::new("doc")
+                    .about("Generate documention for contracts using doc comments")
+                    .arg(
+                        Arg::new("INPUT")
+                            .help("Solidity input files")
+                            .required(true)
+                            .value_parser(ValueParser::os_string())
+                            .multiple_values(true),
+                    )
+                    .arg(
+                        Arg::new("TARGET")
+                            .help("Target to build for")
+                            .long("target")
+                            .takes_value(true)
+                            .value_parser(["solana", "substrate", "ewasm"])
+                            .required(true),
+                    )
+                    .arg(
+                        Arg::new("ADDRESS_LENGTH")
+                            .help("Address length on Substrate")
+                            .long("address-length")
+                            .takes_value(true)
+                            .value_parser(value_parser!(u64).range(4..1024))
+                            .default_value("32"),
+                    )
+                    .arg(
+                        Arg::new("VALUE_LENGTH")
+                            .help("Value length on Substrate")
+                            .long("value-length")
+                            .value_parser(value_parser!(u64).range(4..1024))
+                            .takes_value(true)
+                            .default_value("16"),
+                    )
+                    .arg(
+                        Arg::new("IMPORTPATH")
+                            .help("Directory to search for solidity files")
+                            .short('I')
+                            .long("importpath")
+                            .takes_value(true)
+                            .value_parser(ValueParser::path_buf())
+                            .action(ArgAction::Append),
+                    )
+                    .arg(
+                        Arg::new("IMPORTMAP")
+                            .help("Map directory to search for solidity files [format: map=path]")
+                            .short('m')
+                            .long("importmap")
+                            .takes_value(true)
+                            .value_parser(ValueParser::new(parse_import_map))
+                            .action(ArgAction::Append),
+                    ),
+            )
+            .subcommand(
+                Command::new("language-server")
+                    .about("Start LSP language server on stdin/stdout")
+                    .arg(
+                        Arg::new("TARGET")
+                            .help("Target to build for")
+                            .long("target")
+                            .takes_value(true)
+                            .value_parser(["solana", "substrate", "ewasm"])
+                            .required(true),
+                    )
+                    .arg(
+                        Arg::new("ADDRESS_LENGTH")
+                            .help("Address length on Substrate")
+                            .long("address-length")
+                            .takes_value(true)
+                            .value_parser(value_parser!(u64).range(4..1024))
+                            .default_value("32"),
+                    )
+                    .arg(
+                        Arg::new("VALUE_LENGTH")
+                            .help("Value length on Substrate")
+                            .long("value-length")
+                            .value_parser(value_parser!(u64).range(4..1024))
+                            .takes_value(true)
+                            .default_value("16"),
+                    )
+                    .arg(
+                        Arg::new("IMPORTPATH")
+                            .help("Directory to search for solidity files")
+                            .short('I')
+                            .long("importpath")
+                            .takes_value(true)
+                            .value_parser(ValueParser::path_buf())
+                            .action(ArgAction::Append),
+                    )
+                    .arg(
+                        Arg::new("IMPORTMAP")
+                            .help("Map directory to search for solidity files [format: map=path]")
+                            .short('m')
+                            .long("importmap")
+                            .takes_value(true)
+                            .value_parser(ValueParser::new(parse_import_map))
+                            .action(ArgAction::Append),
+                    ),
+            )
+            .subcommand(
+                Command::new("shell-complete")
+                    .about("Print shell completion for various shells to STDOUT")
+                    .arg(
+                        Arg::new("SHELL")
+                            .help("Name of a supported shell")
+                            .required(true)
+                            .value_parser(value_parser!(Shell)),
+                    ),
+            )
+    };
+    let matches = app().get_matches();
 
     match matches.subcommand() {
         Some(("language-server", matches)) => {
@@ -276,6 +292,7 @@ fn main() {
         }
         Some(("compile", matches)) => compile(matches),
         Some(("doc", matches)) => doc(matches),
+        Some(("shell-complete", matches)) => shell_complete(app(), matches),
         _ => unreachable!(),
     }
 }
@@ -464,6 +481,15 @@ fn compile(matches: &ArgMatches) {
 
     if matches.contains_id("STD-JSON") {
         println!("{}", serde_json::to_string(&json).unwrap());
+    }
+}
+
+fn shell_complete(mut app: App, matches: &ArgMatches) {
+    if let Some(generator) = matches.get_one::<Shell>("SHELL").copied() {
+        let name = app.get_name().to_string();
+        generate(generator, &mut app, name, &mut std::io::stdout());
+    } else {
+        eprintln!("Your shell is not supported...");
     }
 }
 
