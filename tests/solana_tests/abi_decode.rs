@@ -859,7 +859,7 @@ fn bytes_arrays() {
 }
 
 #[test]
-#[should_panic]
+#[should_panic(expected = "unexpected return 0x100000000")]
 fn different_types() {
     #[derive(Debug, BorshSerialize)]
     struct Input1 {
@@ -891,7 +891,7 @@ fn different_types() {
 }
 
 #[test]
-#[should_panic]
+#[should_panic(expected = "unexpected return 0x100000000")]
 fn more_elements() {
     #[derive(Debug, BorshSerialize)]
     struct Input {
@@ -918,7 +918,7 @@ fn more_elements() {
 }
 
 #[test]
-#[should_panic]
+#[should_panic(expected = "unexpected return 0x100000000")]
 fn extra_element() {
     #[derive(Debug, BorshSerialize)]
     struct Input {
@@ -948,7 +948,7 @@ fn extra_element() {
 }
 
 #[test]
-#[should_panic]
+#[should_panic(expected = "unexpected return 0x100000000")]
 fn invalid_type() {
     #[derive(Debug, BorshSerialize)]
     struct Input {
@@ -975,7 +975,7 @@ fn invalid_type() {
 }
 
 #[test]
-#[should_panic]
+#[should_panic(expected = "unexpected return 0x100000000")]
 fn longer_buffer() {
     #[derive(Debug, BorshSerialize)]
     struct Input {
@@ -1006,7 +1006,7 @@ fn longer_buffer() {
 }
 
 #[test]
-#[should_panic]
+#[should_panic(expected = "unexpected return 0x100000000")]
 fn longer_buffer_array() {
     #[derive(Debug, BorshSerialize)]
     struct Input {
@@ -1067,4 +1067,109 @@ fn dynamic_array_of_array() {
     };
     let encoded = input.try_to_vec().unwrap();
     let _ = vm.function("testArrayAssign", &[Token::Bytes(encoded)], &[], None);
+}
+
+#[test]
+fn test_struct_validation() {
+    #[derive(Debug, BorshSerialize)]
+    struct MyStruct {
+        b: [u8; 32],
+        c: i8,
+        d: String,
+    }
+
+    #[derive(Debug, BorshSerialize)]
+    struct Input {
+        b: u128,
+        m_str: MyStruct,
+    }
+
+    let mut vm = build_solidity(
+        r#"
+    contract Testing {
+        struct myStruct {
+            bytes32 b;
+            int8 c;
+            string d;
+        }
+
+
+        function test(bytes memory buffer) public pure {
+            (uint128 b, myStruct memory m_str) = abi.borshDecode(buffer, (uint128, myStruct));
+
+            assert(m_str.b == "struct");
+            assert(m_str.c == 1);
+            assert(m_str.d == "string");
+            assert(b == 3);
+        }
+    }
+        "#,
+    );
+
+    vm.constructor("Testing", &[]);
+    let mut bytes_string = b"struct".to_vec();
+    bytes_string.append(&mut vec![0; 26]);
+
+    let input = Input {
+        b: 3,
+        m_str: MyStruct {
+            b: <[u8; 32]>::try_from(bytes_string).unwrap(),
+            c: 1,
+            d: "string".to_string(),
+        },
+    };
+    let encoded = input.try_to_vec().unwrap();
+    let _ = vm.function("test", &[Token::Bytes(encoded)], &[], None);
+}
+
+#[test]
+#[should_panic(expected = "unexpected return 0x100000000")]
+fn test_struct_validation_invalid() {
+    #[derive(Debug, BorshSerialize)]
+    struct MyStruct {
+        b: [u8; 32],
+        c: i8,
+        d: String,
+    }
+
+    #[derive(Debug, BorshSerialize)]
+    struct Input {
+        m_str: MyStruct,
+    }
+
+    let mut vm = build_solidity(
+        r#"
+    contract Testing {
+        struct myStruct {
+            bytes32 b;
+            int8 c;
+            string d;
+        }
+
+
+        function test(bytes memory buffer) public pure {
+            (uint128 b, myStruct memory m_str) = abi.borshDecode(buffer, (uint128, myStruct));
+
+            assert(m_str.b == "struct");
+            assert(m_str.c == 1);
+            assert(m_str.d == "string");
+            assert(b == 3);
+        }
+    }
+        "#,
+    );
+
+    vm.constructor("Testing", &[]);
+    let mut bytes_string = b"struct".to_vec();
+    bytes_string.append(&mut vec![0; 26]);
+
+    let input = Input {
+        m_str: MyStruct {
+            b: <[u8; 32]>::try_from(bytes_string).unwrap(),
+            c: 1,
+            d: "string".to_string(),
+        },
+    };
+    let encoded = input.try_to_vec().unwrap();
+    let _ = vm.function("test", &[Token::Bytes(encoded)], &[], None);
 }

@@ -95,12 +95,7 @@ impl AbiEncoding for BorshEncoding {
             },
         );
 
-        let mut validator = BufferValidator {
-            buffer_length: Expression::Variable(Loc::Codegen, Type::Uint(32), buffer_size),
-            types,
-            verified_until: -1,
-            current_arg: 0,
-        };
+        let mut validator = BufferValidator::new(buffer_size, types);
 
         let mut read_items: Vec<Expression> = vec![Expression::Poison; types.len()];
         let mut offset = Expression::NumberLiteral(*loc, Type::Uint(32), BigInt::zero());
@@ -315,7 +310,6 @@ impl BorshEncoding {
                 expr,
                 buffer,
                 offset.clone(),
-                &expr_ty,
                 struct_ty,
                 arg_no,
                 ns,
@@ -379,7 +373,6 @@ impl BorshEncoding {
                         expr,
                         buffer,
                         offset.clone(),
-                        &expr_ty,
                         struct_ty,
                         arg_no,
                         ns,
@@ -649,7 +642,6 @@ impl BorshEncoding {
         expr: &Expression,
         buffer: &Expression,
         mut offset: Expression,
-        expr_ty: &Type,
         struct_ty: &StructType,
         arg_no: usize,
         ns: &Namespace,
@@ -657,7 +649,7 @@ impl BorshEncoding {
         cfg: &mut ControlFlowGraph,
     ) -> Expression {
         let size = if let Some(no_padding_size) = ns.calculate_struct_non_padded_size(struct_ty) {
-            let padded_size = expr_ty.solana_storage_size(ns);
+            let padded_size = struct_ty.struct_padded_size(ns);
             // If the size without padding equals the size with padding, we
             // can memcpy this struct directly.
             if padded_size.eq(&no_padding_size) {
@@ -718,7 +710,7 @@ impl BorshEncoding {
         size.unwrap_or(runtime_size)
     }
 
-    /// Read a value of type 'ty' from the buffer at a given offset. Returns a variable
+    /// Read a value of type 'ty' from the buffer at a given offset. Returns an expression
     /// containing the read value and the number of bytes read.
     fn read_from_buffer(
         &self,
@@ -755,11 +747,10 @@ impl BorshEncoding {
             }
 
             Type::DynamicBytes | Type::String => {
-                let array_length = vartab.temp_anonymous(&Type::Uint(32));
-
+                // String and Dynamic bytes are encoded as size (uint32) + elements
                 validator.validate_offset(increment_four(offset.clone()), vartab, cfg);
 
-                retrieve_array_length(array_length, buffer, offset, vartab, cfg);
+                let array_length = retrieve_array_length(buffer, offset, vartab, cfg);
 
                 let size = increment_four(Expression::Variable(
                     Loc::Codegen,
@@ -775,8 +766,7 @@ impl BorshEncoding {
                 );
 
                 validator.validate_offset(offset_to_validate, vartab, cfg);
-                let allocated_array = vartab.temp_anonymous(ty);
-                allocate_array(allocated_array, ty, array_length, vartab, cfg);
+                let allocated_array = allocate_array(ty, array_length, vartab, cfg);
 
                 let advanced_pointer = Expression::AdvancePointer {
                     pointer: Box::new(buffer.clone()),
@@ -808,6 +798,7 @@ impl BorshEncoding {
             }
 
             Type::ExternalFunction { .. } => {
+                // Extneral function has selector + address
                 let size = Expression::NumberLiteral(
                     Loc::Codegen,
                     Type::Uint(32),
@@ -877,6 +868,8 @@ impl BorshEncoding {
         }
     }
 
+    /// Given the buffer and the offers, decode an array.
+    /// The function returns an expression containing the array and the number of bytes read.
     fn decode_array(
         &self,
         buffer: &Expression,
@@ -889,6 +882,7 @@ impl BorshEncoding {
         vartab: &mut Vartable,
         cfg: &mut ControlFlowGraph,
     ) -> (Expression, Expression) {
+        // Checks if we can memcpy the elements from the buffer directly to the allocated array
         if allow_direct_copy(array_ty, elem_ty, dims, ns) {
             // Calculate number of elements
             let (bytes_size, offset, var_no) =
@@ -916,11 +910,9 @@ impl BorshEncoding {
                     )
                 } else {
                     validator.validate_offset(increment_four(offset.clone()), vartab, cfg);
-                    let array_length = vartab.temp_anonymous(&Type::Uint(32));
-                    retrieve_array_length(array_length, buffer, offset, vartab, cfg);
+                    let array_length = retrieve_array_length(buffer, offset, vartab, cfg);
 
-                    let allocated_array = vartab.temp_anonymous(array_ty);
-                    allocate_array(allocated_array, array_ty, array_length, vartab, cfg);
+                    let allocated_array = allocate_array(array_ty, array_length, vartab, cfg);
 
                     let size = calculate_array_bytes_size(array_length, elem_ty, ns);
                     (size, increment_four(offset.clone()), allocated_array)
@@ -953,6 +945,9 @@ impl BorshEncoding {
         } else {
             let mut indexes: Vec<usize> = Vec::new();
             let array_var = vartab.temp_anonymous(array_ty);
+
+            // The function decode_complex_array assumes that, if the dimension is fixed,
+            // there is no need to allocate an array
             if matches!(dims.last(), Some(ArrayLength::Fixed(_))) {
                 cfg.add(
                     vartab,
@@ -1014,6 +1009,10 @@ impl BorshEncoding {
         }
     }
 
+    /// Decodes a complex array from a borsh encoded buffer
+    /// Complex arrays are either dynamic arrays or arrays of dynamic types, like structs.
+    /// If this is an array of structs, whose representation in memory is padded, the array is
+    /// also complex, because it cannot be memcpy'ed
     fn decode_complex_array(
         &self,
         array_var: &Expression,
@@ -1029,6 +1028,8 @@ impl BorshEncoding {
         cfg: &mut ControlFlowGraph,
         indexes: &mut Vec<usize>,
     ) {
+        // If we have a 'int[3][4][] vec', we can only validate the buffer after we have
+        // allocated the outer dimension, i.e., we are about to read a 'int[3][4]' item.
         if validator.validation_necessary()
             && !dims[0..(dimension + 1)]
                 .iter()
@@ -1044,11 +1045,11 @@ impl BorshEncoding {
             validator.validate_array();
         }
 
+        // Dynamic dimensions mean that the subarray we are processing must be allocated in memory.
         if dims[dimension] == ArrayLength::Dynamic {
             let offset_to_validate = increment_four(offset_expr.clone());
             validator.validate_offset(offset_to_validate, vartab, cfg);
-            let array_length = vartab.temp_anonymous(&Type::Uint(32));
-            retrieve_array_length(array_length, buffer, offset_expr, vartab, cfg);
+            let array_length = retrieve_array_length(buffer, offset_expr, vartab, cfg);
             cfg.add(
                 vartab,
                 Instr::Set {
@@ -1058,8 +1059,7 @@ impl BorshEncoding {
                 },
             );
             let new_ty = Type::Array(Box::new(elem_ty.clone()), dims[0..(dimension + 1)].to_vec());
-            let allocated_array = vartab.temp_anonymous(&new_ty);
-            allocate_array(allocated_array, &new_ty, array_length, vartab, cfg);
+            let allocated_array = allocate_array(&new_ty, array_length, vartab, cfg);
 
             if indexes.is_empty() {
                 if let Expression::Variable(_, _, var_no) = array_var {
@@ -1080,6 +1080,7 @@ impl BorshEncoding {
                 }
             } else {
                 // TODO: This is wired up for multidimensional dynamic arrays, but they do no work yet
+                // Check https://github.com/hyperledger-labs/solang/issues/932 for more information
                 let (sub_arr, _) = load_sub_array(
                     array_var.clone(),
                     &dims[(dimension + 1)..dims.len()],
@@ -1108,6 +1109,9 @@ impl BorshEncoding {
                 Instr::Store {
                     dest: ptr,
                     data: if matches!(read_expr.ty(), Type::Struct(_)) {
+                        // Type::Struct is a pointer to a struct. If we are dealing with a vector
+                        // of structs, we need to dereference the pointer before storing it at a
+                        // given vector index.
                         Expression::Load(Loc::Codegen, read_expr.ty(), Box::new(read_expr))
                     } else {
                         read_expr
@@ -1148,6 +1152,7 @@ impl BorshEncoding {
         finish_array_loop(&for_loop, vartab, cfg);
     }
 
+    /// Read a struct from the buffer
     fn decode_struct(
         &self,
         buffer: &Expression,
@@ -1160,7 +1165,7 @@ impl BorshEncoding {
         cfg: &mut ControlFlowGraph,
     ) -> (Expression, Expression) {
         let size = if let Some(no_padding_size) = ns.calculate_struct_non_padded_size(struct_ty) {
-            let padded_size = expr_ty.solana_storage_size(ns);
+            let padded_size = struct_ty.struct_padded_size(ns);
             // If the size without padding equals the size with padding,
             // we can memcpy this struct directly.
             if padded_size.eq(&no_padding_size) {
@@ -1210,20 +1215,9 @@ impl BorshEncoding {
             .map(|item| item.ty.clone())
             .collect::<Vec<Type>>();
 
-        let mut struct_validator = BufferValidator {
-            buffer_length: validator.buffer_length.clone(),
-            types: &struct_tys[..],
-            verified_until: if validator.validation_necessary() {
-                -1
-            } else {
-                struct_tys.len() as i32
-            },
-            current_arg: if validator.validation_necessary() {
-                0
-            } else {
-                struct_tys.len()
-            },
-        };
+        // If it was not possible to validate the struct beforehand, we validate each field
+        // during recursive calls to 'read_from_buffer'
+        let mut struct_validator = validator.create_sub_validator(&struct_tys);
 
         let qty = struct_ty.definition(ns).fields.len();
 

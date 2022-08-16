@@ -11,9 +11,10 @@ use crate::codegen::{Builtin, Expression};
 use crate::sema::ast::{ArrayLength, Namespace, RetrieveType, StructType, Type};
 use crate::Target;
 use num_bigint::BigInt;
-use num_traits::One;
+use num_integer::Integer;
+use num_traits::{One, Zero};
 use solang_parser::pt::Loc;
-use std::ops::{AddAssign, MulAssign};
+use std::ops::{AddAssign, MulAssign, Sub};
 
 /// This trait should be implemented by all encoding methods (ethabi, Scale and Borsh), so that
 /// we have the same interface for creating encode and decode functions.
@@ -608,11 +609,16 @@ fn allow_direct_copy(
 ) -> bool {
     let type_direct_copy: bool = if let Type::Struct(struct_ty) = elem_ty {
         if let Some(no_padded_size) = ns.calculate_struct_non_padded_size(struct_ty) {
-            no_padded_size.eq(&elem_ty.solana_storage_size(ns)) && ns.target == Target::Solana
+            let padded_size = struct_ty.struct_padded_size(ns);
+            // This remainder tells us if padding is needed between the elements of an array
+            let remainder = padded_size.mod_floor(&elem_ty.struct_elem_alignment(ns));
+
+            no_padded_size.eq(&padded_size) && ns.target == Target::Solana && remainder.is_zero()
         } else {
             false
         }
     } else if let Type::Bytes(n) = elem_ty {
+        // When n >=2, the bytes must be reversed
         *n < 2
     } else {
         elem_ty.is_primitive()
@@ -645,6 +651,8 @@ fn calculate_direct_copy_bytes_size(
     elem_no
 }
 
+/// Calculate the size in bytes of a dynamic array, whose dynamic dimension is the outer.
+/// It needs the variable saving the array's length.
 fn calculate_array_bytes_size(
     length_variable: usize,
     elem_ty: &Type,
@@ -667,18 +675,20 @@ fn calculate_array_bytes_size(
     )
 }
 
+/// Retrieve a dynamic array length from the encoded buffer. It returns the variable number in which
+/// the length has been stored
 fn retrieve_array_length(
-    length_variable: usize,
     buffer: &Expression,
     offset: &Expression,
     vartab: &mut Vartable,
     cfg: &mut ControlFlowGraph,
-) {
+) -> usize {
+    let array_length = vartab.temp_anonymous(&Type::Uint(32));
     cfg.add(
         vartab,
         Instr::Set {
             loc: Loc::Codegen,
-            res: length_variable,
+            res: array_length,
             expr: Expression::Builtin(
                 Loc::Codegen,
                 vec![Type::Uint(32)],
@@ -687,15 +697,19 @@ fn retrieve_array_length(
             ),
         },
     );
+
+    array_length
 }
 
+/// Allocate an array in memory and return its variable number.
 fn allocate_array(
-    array_var: usize,
     ty: &Type,
     length_variable: usize,
     vartab: &mut Vartable,
     cfg: &mut ControlFlowGraph,
-) {
+) -> usize {
+    let array_var = vartab.temp_anonymous(ty);
+
     cfg.add(
         vartab,
         Instr::Set {
@@ -713,4 +727,23 @@ fn allocate_array(
             ),
         },
     );
+
+    array_var
+}
+
+impl StructType {
+    /// Calculate a struct size in memory considering the padding, if necessary
+    fn struct_padded_size(&self, ns: &Namespace) -> BigInt {
+        let mut total = BigInt::zero();
+        for item in &self.definition(ns).fields {
+            let ty_align = item.ty.struct_elem_alignment(ns);
+            let remainder = total.mod_floor(&ty_align);
+            if !remainder.is_zero() {
+                let padding = ty_align.sub(remainder);
+                total.add_assign(padding);
+            }
+            total.add_assign(item.ty.memory_size_of(ns));
+        }
+        total
+    }
 }

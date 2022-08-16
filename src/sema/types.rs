@@ -1056,6 +1056,57 @@ impl Type {
         }
     }
 
+    /// Retrieve the alignment for each type, if it is a struct member.
+    /// Arrays are always reference types when declared as local variables. Inside structs, however,
+    /// they are the object itself, if they are of fixed length.
+    pub fn struct_elem_alignment(&self, ns: &Namespace) -> BigInt {
+        match self {
+            Type::Bool
+            // Contract and address are arrays of u8, so they align with one.
+            | Type::Contract(_)
+            | Type::Address(_)
+            | Type::Enum(_) => BigInt::one(),
+
+            // Bytes are custom width type in LLVM, so they fit in the smallest integer type
+            // whose bitwidth is larger than what is needed.
+            Type::Bytes(n) => {
+                BigInt::from(n.next_power_of_two())
+            }
+
+            // The same reasoning as above applies for value
+            Type::Value => {
+                BigInt::from(ns.value_length.next_power_of_two())
+            }
+            Type::Int(n) | Type::Uint(n) => BigInt::from(n / 8),
+            Type::Rational => unreachable!(),
+            Type::Array(ty, dims) => {
+                if dims.iter().any(|d| *d == ArrayLength::Dynamic) {
+                    BigInt::from(ns.target.ptr_size() / 8)
+                } else {
+                    ty.struct_elem_alignment(ns)
+                }
+            }
+
+            Type::Struct(def) => {
+                def.definition(ns).fields.iter().map(|d| d.ty.struct_elem_alignment(ns)).max().unwrap()
+            }
+
+            Type::String
+            | Type::DynamicBytes
+            | Type::InternalFunction { .. }
+            | Type::Ref(_)
+            | Type::StorageRef(..) => BigInt::from(ns.target.ptr_size() / 8),
+
+            Type::ExternalFunction { .. } => {
+                Type::Address(false).struct_elem_alignment(ns)
+            }
+            Type::UserType(no) => ns.user_types[*no].ty.struct_elem_alignment(ns),
+
+            _ => unreachable!("Type should not appear on a struct"),
+
+        }
+    }
+
     /// Calculate how much memory this type occupies in Solana's storage.
     /// Depending on the llvm implementation there might be padding between elements
     /// which is not accounted for.

@@ -1580,7 +1580,11 @@ impl VirtualMachine {
         println!("input: {}", hex::encode(&calldata));
 
         let res = self.execute(&calldata, seeds);
-        assert_eq!(res, Ok(0));
+        match res {
+            Ok(0) => (),
+            Ok(error_code) => panic!("unexpected return {:#x}", error_code),
+            Err(e) => panic!("error: {:?}", e),
+        };
 
         if let Some((_, return_data)) = &self.return_data {
             println!("return: {}", hex::encode(&return_data));
