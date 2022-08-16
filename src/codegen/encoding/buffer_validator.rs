@@ -61,7 +61,7 @@ impl BufferValidator<'_> {
         self.verified_until = self.current_arg as i32;
     }
 
-    pub(super) fn increment_and_validate(
+    pub(super) fn validate_offset_plus_size(
         &mut self,
         offset: &Expression,
         size: &Expression,

@@ -1036,3 +1036,35 @@ fn longer_buffer_array() {
     let encoded = input.try_to_vec().unwrap();
     let _ = vm.function("testLongerBuffer", &[Token::Bytes(encoded)], &[], None);
 }
+
+#[test]
+fn dynamic_array_of_array() {
+    #[derive(Debug, BorshSerialize)]
+    struct Input {
+        vec: Vec<[i32; 2]>,
+    }
+
+    let mut vm = build_solidity(
+        r#"
+        contract Testing {
+            function testArrayAssign(bytes memory buffer) public pure {
+                int32[2][] memory vec = abi.borshDecode(buffer, (int32[2][]));
+
+                assert(vec.length == 2);
+
+                assert(vec[0][0] == 0);
+                assert(vec[0][1] == 1);
+                assert(vec[1][0] == 2);
+                assert(vec[1][1] == -3);
+            }
+        }
+        "#,
+    );
+
+    vm.constructor("Testing", &[]);
+    let input = Input {
+        vec: vec![[0, 1], [2, -3]],
+    };
+    let encoded = input.try_to_vec().unwrap();
+    let _ = vm.function("testArrayAssign", &[Token::Bytes(encoded)], &[], None);
+}

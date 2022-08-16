@@ -71,7 +71,6 @@ impl AbiEncoding for BorshEncoding {
         buffer
     }
 
-    #[allow(dead_code)]
     fn abi_decode(
         &self,
         loc: &Loc,
@@ -740,22 +739,10 @@ impl BorshEncoding {
             | Type::Enum(_)
             | Type::Value
             | Type::Bytes(_) => {
-                let read_bytes = match ty {
-                    Type::Uint(bits) | Type::Int(bits) => BigInt::from(bits / 8),
-
-                    Type::Bytes(bytes) => BigInt::from(*bytes),
-
-                    Type::Bool | Type::Enum(_) => BigInt::one(),
-
-                    Type::Address(_) | Type::Contract(_) => BigInt::from(ns.address_length),
-
-                    Type::Value => BigInt::from(ns.value_length),
-
-                    _ => unreachable!(),
-                };
+                let read_bytes = ty.memory_size_of(ns);
 
                 let size = Expression::NumberLiteral(Loc::Codegen, Type::Uint(32), read_bytes);
-                validator.increment_and_validate(offset, &size, vartab, cfg);
+                validator.validate_offset_plus_size(offset, &size, vartab, cfg);
 
                 let read_value = Expression::Builtin(
                     Loc::Codegen,
@@ -827,7 +814,7 @@ impl BorshEncoding {
                     BigInt::from(ns.address_length + 4),
                 );
 
-                validator.increment_and_validate(offset, &size, vartab, cfg);
+                validator.validate_offset_plus_size(offset, &size, vartab, cfg);
 
                 let selector = Expression::Builtin(
                     Loc::Codegen,
@@ -933,27 +920,13 @@ impl BorshEncoding {
                     retrieve_array_length(array_length, buffer, offset, vartab, cfg);
 
                     let allocated_array = vartab.temp_anonymous(array_ty);
-                    let array_dim =
-                        Expression::Variable(Loc::Codegen, Type::Uint(32), array_length);
-                    cfg.add(
-                        vartab,
-                        Instr::Set {
-                            loc: Loc::Codegen,
-                            res: allocated_array,
-                            expr: Expression::AllocDynamicArray(
-                                Loc::Codegen,
-                                array_ty.clone(),
-                                Box::new(array_dim),
-                                None,
-                            ),
-                        },
-                    );
+                    allocate_array(allocated_array, array_ty, array_length, vartab, cfg);
 
                     let size = calculate_array_bytes_size(array_length, elem_ty, ns);
                     (size, increment_four(offset.clone()), allocated_array)
                 };
 
-            validator.increment_and_validate(&offset, &bytes_size, vartab, cfg);
+            validator.validate_offset_plus_size(&offset, &bytes_size, vartab, cfg);
 
             let source_address = Expression::AdvancePointer {
                 pointer: Box::new(buffer.clone()),
@@ -1067,7 +1040,7 @@ impl BorshEncoding {
             }
             elems.mul_assign(elem_ty.memory_size_of(ns));
             let elems_size = Expression::NumberLiteral(Loc::Codegen, Type::Uint(32), elems);
-            validator.increment_and_validate(offset_expr, &elems_size, vartab, cfg);
+            validator.validate_offset_plus_size(offset_expr, &elems_size, vartab, cfg);
             validator.validate_array();
         }
 
@@ -1134,7 +1107,6 @@ impl BorshEncoding {
                 vartab,
                 Instr::Store {
                     dest: ptr,
-                    // TODO: Should array be here too?
                     data: if matches!(read_expr.ty(), Type::Struct(_)) {
                         Expression::Load(Loc::Codegen, read_expr.ty(), Box::new(read_expr))
                     } else {
@@ -1190,9 +1162,10 @@ impl BorshEncoding {
         let size = if let Some(no_padding_size) = ns.calculate_struct_non_padded_size(struct_ty) {
             let padded_size = expr_ty.solana_storage_size(ns);
             // If the size without padding equals the size with padding,
-            // we can memcpy this struct direclty.
+            // we can memcpy this struct directly.
             if padded_size.eq(&no_padding_size) {
                 let size = Expression::NumberLiteral(Loc::Codegen, Type::Uint(32), no_padding_size);
+                validator.validate_offset_plus_size(&offset, &size, vartab, cfg);
                 let source_address = Expression::AdvancePointer {
                     pointer: Box::new(buffer.clone()),
                     bytes_offset: Box::new(offset),
