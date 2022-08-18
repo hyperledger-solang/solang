@@ -66,7 +66,7 @@ contract c {
         x = 102 + t*y/(t+5*y) + g + test3() - vec.push(2) + ct.sum(1, 2);
 		return 2;
 // CHECK: push array ty:int32[] value:int32 2
-// CHECK: _ = external call::regular address:%ct payload:(abiencode packed:bytes4 2438430579 non-packed:int32 1, int32 2) value:uint128 0 gas:uint64 0
+// CHECK: _ = external call::regular address:%ct payload:(abiencode packed:hex"91577f73" non-packed:int32 1, int32 2) value:uint128 0 gas:uint64 0
 	}
 }
 

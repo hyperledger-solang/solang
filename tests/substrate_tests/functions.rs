@@ -86,6 +86,68 @@ fn constructor_wrong_selector() {
 }
 
 #[test]
+fn constructor_override_selector() {
+    let mut runtime = build_solidity(
+        r#"
+        contract test {
+            uint64 result;
+
+            constructor() {
+                result = 1;
+            }
+
+            constructor(uint64 x) selector=hex"01020304" {
+                result = x;
+            }
+
+            function get() public returns (uint64) {
+                return result;
+            }
+        }"#,
+    );
+
+    runtime.constructor(0, Vec::new());
+
+    let mut input: Vec<u8> = vec![1, 2, 3, 4];
+    input.extend(0xaa_bb_cc_ddu64.encode());
+    runtime.raw_constructor(input);
+
+    runtime.function("get", Vec::new());
+
+    assert_eq!(runtime.vm.output, 0xaa_bb_cc_ddu64.encode());
+}
+
+#[test]
+fn function_override_selector() {
+    let mut runtime = build_solidity(
+        r#"
+        contract test {
+            uint64 result;
+
+            constructor() {
+                result = 1;
+            }
+
+            function set(uint64 x) selector=hex"01020304" public {
+                result = x;
+            }
+
+            function get() public returns (uint64) {
+                return result;
+            }
+        }"#,
+    );
+
+    let mut input: Vec<u8> = vec![1, 2, 3, 4];
+    input.extend(0xaa_bb_cc_ddu64.encode());
+
+    runtime.raw_function(input);
+    runtime.function("get", Vec::new());
+
+    assert_eq!(runtime.vm.output, 0xaa_bb_cc_ddu64.encode());
+}
+
+#[test]
 fn fallback() {
     #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Val(u64);

@@ -649,7 +649,7 @@ fn parameter_to_abi(param: &ast::Parameter, ns: &ast::Namespace, registry: &mut 
 
 /// Given an u32 selector, generate a byte string like: 0xF81E7E1A
 fn render_selector(f: &ast::Function) -> String {
-    format!("0x{}", hex::encode(f.selector().to_be_bytes()))
+    format!("0x{}", hex::encode(f.selector()))
 }
 
 /// Given a selector like "0xF81E7E1A", parse the bytes. This function

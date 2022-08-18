@@ -417,6 +417,27 @@ NoFunctionTyPrecedence0: Expression = {
         Expression::MemberAccess(Loc::File(file_no, a, b), Box::new(e),
             Identifier { loc: Loc::File(file_no, al, b), name: "address".to_string() })
     },
+    <l:@L> <ty:NoFunctionType> <r:@R> => Expression::Type(Loc::File(file_no, l, r), ty),
+    <a:@L> "[" <v:CommaOne<Expression>> "]" <b:@R> => {
+        Expression::ArrayLiteral(Loc::File(file_no, a, b), v)
+    },
+    <SolNoErrorIdentifier> => Expression::Variable(<>),
+    <l:@L> <e:Precedence0> <u:Unit> <r:@R> => Expression::Unit(Loc::File(file_no, l, r), Box::new(e), u),
+    <l:@L> <a:ParameterList> <r:@R> => {
+        if a.len() == 1 {
+            if let Some(Parameter{ ty, storage: None, name: None, .. }) = &a[0].1 {
+                // this means "(" Expression ")"
+                return Expression::Parenthesis(ty.loc(), Box::new(ty.clone()));
+            }
+        }
+
+        Expression::List(Loc::File(file_no, l, r), a)
+    },
+    <@L> "this" <@R> => Expression::This(Loc::File(file_no, <>)),
+    LiteralExpression
+}
+
+LiteralExpression: Expression = {
     <a:@L> "true" <b:@R> => Expression::BoolLiteral(Loc::File(file_no, a, b), true),
     <a:@L> "false" <b:@R> => Expression::BoolLiteral(Loc::File(file_no, a, b), false),
     <StringLiteral+> => Expression::StringLiteral(<>),
@@ -425,14 +446,8 @@ NoFunctionTyPrecedence0: Expression = {
         let v = a.to_string();
         let address_len = a.len() - 9;
 
-        Expression::AddressLiteral(Loc::File(file_no, l, r), a.chars().skip(8).filter(|c|  *c != '"' && *c != '\'').collect() )
+        Expression::AddressLiteral(Loc::File(file_no, l, r), a.chars().skip(8).filter(|c|  *c != '"' && *c != '\'').collect())
     },
-    <l:@L> <ty:NoFunctionType> <r:@R> => Expression::Type(Loc::File(file_no, l, r), ty),
-    <a:@L> "[" <v:CommaOne<Expression>> "]" <b:@R> => {
-        Expression::ArrayLiteral(Loc::File(file_no, a, b), v)
-    },
-    <SolNoErrorIdentifier> => Expression::Variable(<>),
-    <l:@L> <e:Precedence0> <u:Unit> <r:@R> => Expression::Unit(Loc::File(file_no, l, r), Box::new(e), u),
     <l:@L> <n:number> <r:@R> => {
         let integer: String = n.0.chars().filter(|v| *v != '_').collect();
         let exp: String = n.1.chars().filter(|v| *v != '_').collect();
@@ -448,18 +463,7 @@ NoFunctionTyPrecedence0: Expression = {
     },
     <l:@L> <n:hexnumber> <r:@R> => {
         Expression::HexNumberLiteral(Loc::File(file_no, l, r), n.to_owned())
-    },
-    <l:@L> <a:ParameterList> <r:@R> => {
-        if a.len() == 1 {
-            if let Some(Parameter{ ty, storage: None, name: None, .. }) = &a[0].1 {
-                // this means "(" Expression ")"
-                return Expression::Parenthesis(ty.loc(), Box::new(ty.clone()));
-            }
-        }
-
-        Expression::List(Loc::File(file_no, l, r), a)
-    },
-    <@L> "this" <@R> => Expression::This(Loc::File(file_no, <>)),
+    }
 }
 
 Unit: Unit = {
@@ -526,6 +530,9 @@ FunctionAttribute: FunctionAttribute = {
         FunctionAttribute::Override(Loc::File(file_no, l, r), list)
     },
     <l:@L> <base:Base> <r:@R> => FunctionAttribute::BaseOrModifier(Loc::File(file_no, l, r), base),
+    <l:@L> <name:SolIdentifier> "=" <value:LiteralExpression> <r:@R> => {
+        FunctionAttribute::NameValue(Loc::File(file_no, l, r), name, value)
+    }
 }
 
 // Modifier and function have special case

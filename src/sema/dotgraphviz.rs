@@ -157,6 +157,10 @@ impl Dot {
             }
         }
 
+        if let Some(selector) = &func.selector {
+            labels.push(format!("selector {}", hex::encode(selector)));
+        }
+
         let func_node = self.add_node(
             Node::new(&func.name, labels),
             Some(parent),

@@ -297,6 +297,7 @@ fn check_inheritance(contract_no: usize, ns: &mut ast::Namespace) {
     let mut function_syms: HashMap<String, ast::Symbol> = HashMap::new();
     let mut variable_syms: HashMap<String, ast::Symbol> = HashMap::new();
     let mut override_needed: BTreeMap<String, Vec<(usize, usize)>> = BTreeMap::new();
+    let mut diagnostics = Diagnostics::default();
 
     for base_contract_no in ns.contract_bases(contract_no) {
         // find file number where contract is defined
@@ -328,7 +329,7 @@ fn check_inheritance(contract_no: usize, ns: &mut ast::Namespace) {
                         || sym.has_accessor(ns)
                         || prev.is_event() && sym.is_event())
                     {
-                        ns.diagnostics.push(ast::Diagnostic::error_with_note(
+                        diagnostics.push(ast::Diagnostic::error_with_note(
                             sym.loc(),
                             format!("already defined '{}'", name),
                             prev.loc(),
@@ -374,7 +375,7 @@ fn check_inheritance(contract_no: usize, ns: &mut ast::Namespace) {
                     .collect::<Vec<ast::Note>>();
 
                 if !non_virtual.is_empty() {
-                    ns.diagnostics.push(ast::Diagnostic::error_with_notes(
+                    diagnostics.push(ast::Diagnostic::error_with_notes(
                         cur.loc,
                         format!(
                             "function '{}' overrides functions which are not 'virtual'",
@@ -392,7 +393,7 @@ fn check_inheritance(contract_no: usize, ns: &mut ast::Namespace) {
 
                 if let Some((loc, override_specified)) = &cur.is_override {
                     if override_specified.is_empty() && entry.len() > 1 {
-                        ns.diagnostics.push(ast::Diagnostic::error(
+                        diagnostics.push(ast::Diagnostic::error(
                             *loc,
                             format!(
                                 "function '{}' should specify override list 'override({})'",
@@ -412,7 +413,7 @@ fn check_inheritance(contract_no: usize, ns: &mut ast::Namespace) {
                             .collect();
 
                         if !missing.is_empty() && override_needed.len() >= 2 {
-                            ns.diagnostics.push(ast::Diagnostic::error(
+                            diagnostics.push(ast::Diagnostic::error(
                                 *loc,
                                 format!(
                                     "function '{}' missing overrides '{}', specify 'override({})'",
@@ -430,7 +431,7 @@ fn check_inheritance(contract_no: usize, ns: &mut ast::Namespace) {
                             .collect();
 
                         if !extra.is_empty() {
-                            ns.diagnostics.push(ast::Diagnostic::error(
+                            diagnostics.push(ast::Diagnostic::error(
                                 *loc,
                                 format!(
                                     "function '{}' includes extraneous overrides '{}', specify 'override({})'",
@@ -445,26 +446,7 @@ fn check_inheritance(contract_no: usize, ns: &mut ast::Namespace) {
                     for (_, function_no) in entry {
                         let func = &ns.functions[*function_no];
 
-                        if !func.is_accessor
-                            && !cur.is_accessor
-                            && !compatible_mutability(&cur.mutability, &func.mutability)
-                        {
-                            ns.diagnostics.push(ast::Diagnostic::error_with_note(
-                                cur.loc,
-                                format!("mutability '{}' of function '{}' is not compatible with mutability '{}'", cur.mutability, cur.name, func.mutability),
-                                func.loc,
-                                String::from("location of base function")
-                            ));
-                        }
-
-                        if !compatible_visibility(&cur.visibility, &func.visibility) {
-                            ns.diagnostics.push(ast::Diagnostic::error_with_note(
-                                cur.loc,
-                                format!("visibility '{}' of function '{}' is not compatible with visibility '{}'", cur.visibility, cur.name, func.visibility),
-                                func.loc,
-                                String::from("location of base function")
-                            ));
-                        }
+                        base_function_compatible(func, cur, &mut diagnostics);
                     }
 
                     override_needed.remove(&signature);
@@ -475,7 +457,7 @@ fn check_inheritance(contract_no: usize, ns: &mut ast::Namespace) {
                     // not specify override for implementing interfaces. As a compromise, only require override when
                     // not implementing an interface
                     if !ns.contracts[base_contract_no].is_interface() {
-                        ns.diagnostics.push(ast::Diagnostic::error(
+                        diagnostics.push(ast::Diagnostic::error(
                             cur.loc,
                             format!("function '{}' should specify 'override'", cur.name),
                         ));
@@ -483,30 +465,11 @@ fn check_inheritance(contract_no: usize, ns: &mut ast::Namespace) {
 
                     let func = &ns.functions[function_no];
 
-                    if !func.is_accessor
-                        && !cur.is_accessor
-                        && !compatible_mutability(&cur.mutability, &func.mutability)
-                    {
-                        ns.diagnostics.push(ast::Diagnostic::error_with_note(
-                            cur.loc,
-                            format!("mutability '{}' of function '{}' is not compatible with mutability '{}'", cur.mutability, cur.name, func.mutability),
-                            func.loc,
-                            String::from("location of base function")
-                        ));
-                    }
-
-                    if !compatible_visibility(&cur.visibility, &func.visibility) {
-                        ns.diagnostics.push(ast::Diagnostic::error_with_note(
-                            cur.loc,
-                            format!("visibility '{}' of function '{}' is not compatible with visibility '{}'", cur.visibility, cur.name, func.visibility),
-                            func.loc,
-                            String::from("location of base function")
-                        ));
-                    }
+                    base_function_compatible(func, cur, &mut diagnostics);
 
                     override_needed.remove(&signature);
                 } else {
-                    ns.diagnostics.push(ast::Diagnostic::error(
+                    diagnostics.push(ast::Diagnostic::error(
                         cur.loc,
                         format!(
                             "function '{}' should specify override list 'override({})'",
@@ -527,7 +490,7 @@ fn check_inheritance(contract_no: usize, ns: &mut ast::Namespace) {
                     .collect::<Vec<usize>>();
 
                 if previous_defs.is_empty() && cur.is_override.is_some() {
-                    ns.diagnostics.push(ast::Diagnostic::error(
+                    diagnostics.push(ast::Diagnostic::error(
                         cur.loc,
                         format!("'{}' does not override anything", cur.name),
                     ));
@@ -548,7 +511,7 @@ fn check_inheritance(contract_no: usize, ns: &mut ast::Namespace) {
                     let func_prev = &ns.functions[prev];
 
                     if Some(base_contract_no) == func_prev.contract_no {
-                        ns.diagnostics.push(ast::Diagnostic::error_with_note(
+                        diagnostics.push(ast::Diagnostic::error_with_note(
                             cur.loc,
                             format!(
                                 "function '{}' overrides function in same contract",
@@ -562,7 +525,7 @@ fn check_inheritance(contract_no: usize, ns: &mut ast::Namespace) {
                     }
 
                     if func_prev.ty != cur.ty {
-                        ns.diagnostics.push(ast::Diagnostic::error_with_note(
+                        diagnostics.push(ast::Diagnostic::error_with_note(
                             cur.loc,
                             format!("{} '{}' overrides {}", cur.ty, cur.name, func_prev.ty,),
                             func_prev.loc,
@@ -578,7 +541,7 @@ fn check_inheritance(contract_no: usize, ns: &mut ast::Namespace) {
                         .zip(cur.params.iter())
                         .any(|(a, b)| a.ty != b.ty)
                     {
-                        ns.diagnostics.push(ast::Diagnostic::error_with_note(
+                        diagnostics.push(ast::Diagnostic::error_with_note(
                             cur.loc,
                             format!(
                                 "{} '{}' overrides {} with different argument types",
@@ -597,7 +560,7 @@ fn check_inheritance(contract_no: usize, ns: &mut ast::Namespace) {
                         .zip(cur.returns.iter())
                         .any(|(a, b)| a.ty != b.ty)
                     {
-                        ns.diagnostics.push(ast::Diagnostic::error_with_note(
+                        diagnostics.push(ast::Diagnostic::error_with_note(
                             cur.loc,
                             format!(
                                 "{} '{}' overrides {} with different return types",
@@ -610,33 +573,14 @@ fn check_inheritance(contract_no: usize, ns: &mut ast::Namespace) {
                         continue;
                     }
 
-                    if !func_prev.is_accessor
-                        && !cur.is_accessor
-                        && !compatible_mutability(&cur.mutability, &func_prev.mutability)
-                    {
-                        ns.diagnostics.push(ast::Diagnostic::error_with_note(
-                            cur.loc,
-                            format!("mutability '{}' of function '{}' is not compatible with mutability '{}'", cur.mutability, cur.name, func_prev.mutability),
-                            func_prev.loc,
-                            String::from("location of base function")
-                        ));
-                    }
-
-                    if !compatible_visibility(&cur.visibility, &func_prev.visibility) {
-                        ns.diagnostics.push(ast::Diagnostic::error_with_note(
-                            cur.loc,
-                            format!("visibility '{}' of function '{}' is not compatible with visibility '{}'", cur.visibility, cur.name, func_prev.visibility),
-                            func_prev.loc,
-                            String::from("location of base function")
-                        ));
-                    }
+                    base_function_compatible(func_prev, cur, &mut diagnostics);
 
                     // if a function needs an override, it was defined in a contract, not outside
                     let prev_contract_no = func_prev.contract_no.unwrap();
 
                     if let Some((loc, override_list)) = &cur.is_override {
                         if !func_prev.is_virtual {
-                            ns.diagnostics.push(ast::Diagnostic::error_with_note(
+                            diagnostics.push(ast::Diagnostic::error_with_note(
                                 cur.loc,
                                 format!(
                                     "function '{}' overrides function which is not virtual",
@@ -650,7 +594,7 @@ fn check_inheritance(contract_no: usize, ns: &mut ast::Namespace) {
                         }
 
                         if !override_list.is_empty() && !override_list.contains(&prev_contract_no) {
-                            ns.diagnostics.push(ast::Diagnostic::error_with_note(
+                            diagnostics.push(ast::Diagnostic::error_with_note(
                                 *loc,
                                 format!(
                                     "function '{}' override list does not contain '{}'",
@@ -700,7 +644,7 @@ fn check_inheritance(contract_no: usize, ns: &mut ast::Namespace) {
             let loc = ns.contracts[contract_no].loc;
             match func.ty {
                 pt::FunctionTy::Fallback | pt::FunctionTy::Receive => {
-                    ns.diagnostics.push(ast::Diagnostic::error_with_note(
+                    diagnostics.push(ast::Diagnostic::error_with_note(
                         loc,
                         format!(
                             "contract '{}' missing override for '{}' function",
@@ -710,7 +654,7 @@ fn check_inheritance(contract_no: usize, ns: &mut ast::Namespace) {
                         format!("declaration of '{}' function", func.ty),
                     ));
                 }
-                _ => ns.diagnostics.push(ast::Diagnostic::error_with_note(
+                _ => diagnostics.push(ast::Diagnostic::error_with_note(
                     loc,
                     format!(
                         "contract '{}' missing override for function '{}'",
@@ -737,7 +681,7 @@ fn check_inheritance(contract_no: usize, ns: &mut ast::Namespace) {
             })
             .collect();
 
-        ns.diagnostics.push(ast::Diagnostic::error_with_notes(
+        diagnostics.push(ast::Diagnostic::error_with_notes(
             func.loc,
             format!(
                 "function '{}' with this signature already defined",
@@ -745,6 +689,85 @@ fn check_inheritance(contract_no: usize, ns: &mut ast::Namespace) {
             ),
             notes,
         ));
+    }
+
+    ns.diagnostics.extend(diagnostics);
+}
+
+/// Generate diagnostics if function attributes are not compatible with base function
+fn base_function_compatible(
+    base: &ast::Function,
+    func: &ast::Function,
+    diagnostics: &mut Diagnostics,
+) {
+    if !base.is_accessor
+        && !func.is_accessor
+        && !compatible_mutability(&func.mutability, &base.mutability)
+    {
+        diagnostics.push(ast::Diagnostic::error_with_note(
+            func.loc,
+            format!(
+                "mutability '{}' of function '{}' is not compatible with mutability '{}'",
+                func.mutability, func.name, base.mutability
+            ),
+            base.loc,
+            String::from("location of base function"),
+        ));
+    }
+
+    if !compatible_visibility(&func.visibility, &base.visibility) {
+        diagnostics.push(ast::Diagnostic::error_with_note(
+            func.loc,
+            format!(
+                "visibility '{}' of function '{}' is not compatible with visibility '{}'",
+                func.visibility, func.name, base.visibility
+            ),
+            base.loc,
+            String::from("location of base function"),
+        ));
+    }
+
+    match (&func.selector, &base.selector) {
+        (cur, func) if cur == func => (),
+        (Some(cur_selector), Some(func_selector)) => {
+            diagnostics.push(ast::Diagnostic::error_with_note(
+                func.loc,
+                format!(
+                    "selector '{}' of function '{}' different from base selector '{}'",
+                    hex::encode(cur_selector),
+                    func.name,
+                    hex::encode(func_selector)
+                ),
+                base.loc,
+                String::from("location of base function"),
+            ));
+        }
+        (None, Some(func_selector)) => {
+            diagnostics.push(ast::Diagnostic::error_with_note(
+                func.loc,
+                format!(
+                    "selector of function '{}' must match base selector '{}'",
+                    func.name,
+                    hex::encode(func_selector)
+                ),
+                base.loc,
+                String::from("location of base function"),
+            ));
+        }
+        (Some(cur_selector), None) => {
+            diagnostics.push(ast::Diagnostic::error_with_note(
+                func.loc,
+                format!(
+                    "base function needs same selector as selector '{}' of function '{}'",
+                    hex::encode(cur_selector),
+                    func.name,
+                ),
+                base.loc,
+                String::from("location of base function"),
+            ));
+        }
+        // rust compile wants this, already handled in first arm
+        (None, None) => (),
     }
 }
 

@@ -423,7 +423,7 @@ pub fn expression(
                 ast::Expression::ExternalFunction { function_no, .. }
                 | ast::Expression::InternalFunction { function_no, .. } => {
                     let selector = ns.functions[*function_no].selector();
-                    Expression::NumberLiteral(*loc, Type::Bytes(4), BigInt::from(selector))
+                    Expression::BytesLiteral(*loc, Type::Bytes(selector.len() as u8), selector)
                 }
                 _ => {
                     let func_expr =
@@ -448,10 +448,10 @@ pub fn expression(
             function_no,
         } => {
             let address = expression(address, cfg, contract_no, func, ns, vartab, opt);
-            let selector = Expression::NumberLiteral(
+            let selector = Expression::BytesLiteral(
                 *loc,
                 Type::Uint(32),
-                BigInt::from(ns.functions[*function_no].selector()),
+                ns.functions[*function_no].selector(),
             );
             let struct_literal = Expression::StructLiteral(
                 *loc,
@@ -1904,15 +1904,20 @@ fn ternary(
 }
 
 fn interfaceid(ns: &Namespace, contract_no: &usize, loc: &pt::Loc) -> Expression {
-    let mut id: u32 = 0;
+    let mut id = vec![0u8; 4];
     for func_no in &ns.contracts[*contract_no].functions {
         let func = &ns.functions[*func_no];
 
         if func.ty == pt::FunctionTy::Function {
-            id ^= func.selector();
+            let selector = func.selector();
+            debug_assert_eq!(id.len(), selector.len());
+
+            for (i, e) in id.iter_mut().enumerate() {
+                *e ^= selector[i];
+            }
         }
     }
-    Expression::NumberLiteral(*loc, Type::Bytes(4), BigInt::from(id))
+    Expression::BytesLiteral(*loc, Type::Bytes(4), id.to_vec())
 }
 
 pub fn assign_single(
@@ -2290,10 +2295,10 @@ pub fn emit_function_call(
                                 value.clone(),
                                 Expression::NumberLiteral(*loc, Type::Bytes(4), BigInt::zero()),
                                 Expression::NumberLiteral(*loc, Type::Bytes(1), BigInt::zero()),
-                                Expression::NumberLiteral(
+                                Expression::BytesLiteral(
                                     *loc,
                                     Type::Bytes(4),
-                                    BigInt::from(dest_func.selector()),
+                                    dest_func.selector(),
                                 ),
                             ],
                             args,
@@ -2305,10 +2310,10 @@ pub fn emit_function_call(
                         Expression::AbiEncode {
                             loc: *loc,
                             tys,
-                            packed: vec![Expression::NumberLiteral(
+                            packed: vec![Expression::BytesLiteral(
                                 *loc,
                                 Type::Bytes(4),
-                                BigInt::from(dest_func.selector()),
+                                dest_func.selector(),
                             )],
                             args,
                         },

@@ -1625,7 +1625,7 @@ pub enum ResolveTo<'a> {
     Type(&'a Type), // We will be wanting this type please, e.g. `int64 x = 1;`
 }
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct ExprContext {
     /// What source file are we in
     pub file_no: usize,

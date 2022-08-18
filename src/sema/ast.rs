@@ -259,6 +259,8 @@ pub struct Function {
     /// Is this function an acccesor function created by a public variable
     pub is_accessor: bool,
     pub is_override: Option<(pt::Loc, Vec<usize>)>,
+    /// The selector (known as discriminator on Solana/Anchor)
+    pub selector: Option<Vec<u8>>,
     /// Was the function declared with a body
     pub has_body: bool,
     /// The resolved body (if any)
@@ -330,6 +332,7 @@ impl Function {
             returns: Arc::new(returns),
             bases: BTreeMap::new(),
             modifiers: Vec::new(),
+            selector: None,
             is_virtual: false,
             is_accessor: false,
             has_body: false,
@@ -341,14 +344,18 @@ impl Function {
     }
 
     /// Generate selector for this function
-    pub fn selector(&self) -> u32 {
-        let mut res = [0u8; 32];
+    pub fn selector(&self) -> Vec<u8> {
+        if let Some(selector) = &self.selector {
+            selector.clone()
+        } else {
+            let mut res = [0u8; 32];
 
-        let mut hasher = Keccak::v256();
-        hasher.update(self.signature.as_bytes());
-        hasher.finalize(&mut res);
+            let mut hasher = Keccak::v256();
+            hasher.update(self.signature.as_bytes());
+            hasher.finalize(&mut res);
 
-        u32::from_be_bytes([res[0], res[1], res[2], res[3]])
+            res[..4].to_vec()
+        }
     }
 
     /// Is this a constructor

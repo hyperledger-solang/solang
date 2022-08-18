@@ -22,7 +22,7 @@ a contract.
 
         /// Clamp a value within a bound.
         /// The bound can be set with set_bound().
-        function get_with_bound(uint value) view public return (uint) {
+        function get_with_bound(uint value) view public returns (uint) {
             if (value < bound) {
                 return value;
             } else {
@@ -278,6 +278,39 @@ constructor.
     ``payable`` on constructors is not enforced on Parity Substrate. Funds are needed
     for storage rent and there is a minimum deposit needed for the contract. As a result,
     constructors always receive value on Parity Substrate.
+
+Overriding function selector
+____________________________
+
+When a function is called, the function selector and the arguments are serialized
+(also known as abi encoded) and passed to the program. The function selector is
+what the runtime program uses to determine what function was called. Usually the
+function selector is generated using a deterministic hash value of the function
+name and the arguments types.
+
+The selector value can be overriden with the ``selector=hex"deadbea1"`` syntax,
+for example:
+
+.. code-block:: solidity
+
+    contract foo {
+        function get_foo() selector=hex"01020304" public returns (int) {
+            return 102;
+        }
+    }
+
+Only ``public`` and ``external`` functions have a selector, and can have their
+selector overriden. On Substrate, constructors have selectors too, so they
+can also have their selector overriden. If a function overrides another one in a
+base contract, then the selector of both must match.
+
+.. warning::
+    On ewasm and Solana, changing the selector may result in a mismatch between
+    the contract metadata and the actual contract code, because the metadata does
+    not explicitly store the selector.
+
+    Use this feature carefully, as it may either break a contract or cause
+    undefined behavior.
 
 Function overloading
 ____________________
