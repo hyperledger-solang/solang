@@ -4605,6 +4605,7 @@ pub trait TargetRuntime<'a> {
                     }
                 }
                 bin.builder.unset_current_debug_location();
+                dibuilder.finalize();
             }
         }
     }

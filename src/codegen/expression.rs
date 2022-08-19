@@ -1751,7 +1751,7 @@ fn checking_trunc(
 ) -> Expression {
     let bits = match ty {
         Type::Uint(bits) => *bits as u32,
-        Type::Value => (ns.value_length as u32 * 8),
+        Type::Value => ns.value_length as u32 * 8,
         _ => unreachable!(),
     };
 
