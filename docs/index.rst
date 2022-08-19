@@ -3,9 +3,8 @@ Solang Solidity Compiler
 
 Welcome to the Solang Solidity Compiler. Using Solang, you can compile smart contracts written in
 `Solidity <https://en.wikipedia.org/wiki/Solidity>`_ for
-`Solana <https://www.solana.com/>`_,
-`Parity Substrate <https://substrate.io/>`_, and
-`Ethereum ewasm <https://github.com/ewasm/design>`_. It uses the
+`Solana <https://www.solana.com/>`_ and
+`Parity Substrate <https://substrate.io/>`_. It uses the
 `llvm <https://www.llvm.org/>`_ compiler framework to produce WebAssembly
 (wasm) or BPF contract code. As result, the output is highly optimized, which saves you in gas costs.
 
@@ -33,7 +32,6 @@ Contents
 
    targets/solana.rst
    targets/substrate.rst
-   targets/burrow.rst
 
 .. toctree::
    :maxdepth: 3

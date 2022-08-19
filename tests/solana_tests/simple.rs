@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::build_solidity;
-use ethabi::ethereum_types::U256;
+use ethabi::{ethereum_types::U256, Token};
 use solang::{file_resolver::FileResolver, Target};
 use std::ffi::OsStr;
 
@@ -73,10 +73,7 @@ fn parameters() {
 
     vm.function(
         "test",
-        &[
-            ethabi::Token::Uint(U256::from(10)),
-            ethabi::Token::Uint(U256::from(10)),
-        ],
+        &[Token::Uint(U256::from(10)), Token::Uint(U256::from(10))],
         &[],
         None,
     );
@@ -87,10 +84,7 @@ fn parameters() {
 
     vm.function(
         "test",
-        &[
-            ethabi::Token::Uint(U256::from(99)),
-            ethabi::Token::Uint(U256::from(102)),
-        ],
+        &[Token::Uint(U256::from(99)), Token::Uint(U256::from(102))],
         &[],
         None,
     );
@@ -111,9 +105,9 @@ fn returns() {
 
     vm.constructor("foo", &[]);
 
-    let returns = vm.function("test", &[ethabi::Token::Uint(U256::from(10))], &[], None);
+    let returns = vm.function("test", &[Token::Uint(U256::from(10))], &[], None);
 
-    assert_eq!(returns, vec![ethabi::Token::Uint(U256::from(100))]);
+    assert_eq!(returns, vec![Token::Uint(U256::from(100))]);
 
     let mut vm = build_solidity(
         r#"
@@ -126,18 +120,13 @@ fn returns() {
 
     vm.constructor("foo", &[]);
 
-    let returns = vm.function(
-        "test",
-        &[ethabi::Token::Uint(U256::from(982451653))],
-        &[],
-        None,
-    );
+    let returns = vm.function("test", &[Token::Uint(U256::from(982451653))], &[], None);
 
     assert_eq!(
         returns,
         vec![
-            ethabi::Token::Bool(true),
-            ethabi::Token::Uint(U256::from(961748941u64 * 982451653u64))
+            Token::Bool(true),
+            Token::Uint(U256::from(961748941u64 * 982451653u64))
         ]
     );
 }
@@ -168,7 +157,7 @@ fn flipper() {
         }"#,
     );
 
-    vm.constructor("flipper", &[ethabi::Token::Bool(true)]);
+    vm.constructor("flipper", &[Token::Bool(true)]);
 
     assert_eq!(
         vm.data()[0..17].to_vec(),
@@ -177,7 +166,7 @@ fn flipper() {
 
     let returns = vm.function("get", &[], &[], None);
 
-    assert_eq!(returns, vec![ethabi::Token::Bool(true)]);
+    assert_eq!(returns, vec![Token::Bool(true)]);
 
     vm.function("flip", &[], &[], None);
 
@@ -188,7 +177,7 @@ fn flipper() {
 
     let returns = vm.function("get", &[], &[], None);
 
-    assert_eq!(returns, vec![ethabi::Token::Bool(false)]);
+    assert_eq!(returns, vec![Token::Bool(false)]);
 }
 
 #[test]
@@ -222,17 +211,17 @@ fn incrementer() {
         }"#,
     );
 
-    vm.constructor("incrementer", &[ethabi::Token::Uint(U256::from(5))]);
+    vm.constructor("incrementer", &[Token::Uint(U256::from(5))]);
 
     let returns = vm.function("get", &[], &[], None);
 
-    assert_eq!(returns, vec![ethabi::Token::Uint(U256::from(5))]);
+    assert_eq!(returns, vec![Token::Uint(U256::from(5))]);
 
-    vm.function("inc", &[ethabi::Token::Uint(U256::from(7))], &[], None);
+    vm.function("inc", &[Token::Uint(U256::from(7))], &[], None);
 
     let returns = vm.function("get", &[], &[], None);
 
-    assert_eq!(returns, vec![ethabi::Token::Uint(U256::from(12))]);
+    assert_eq!(returns, vec![Token::Uint(U256::from(12))]);
 }
 
 #[test]
@@ -306,5 +295,108 @@ fn dead_storage_bug() {
 
     let returns = vm.function("v", &[], &[], None);
 
-    assert_eq!(returns, vec![ethabi::Token::Uint(U256::from(9991))]);
+    assert_eq!(returns, vec![Token::Uint(U256::from(9991))]);
+}
+
+#[test]
+fn simple_loops() {
+    let mut runtime = build_solidity(
+        r##"
+contract test3 {
+	function foo(uint32 a) public returns (uint32) {
+		uint32 b = 50 - a;
+		uint32 c;
+		c = 100 * b;
+		c += 5;
+		return a * 1000 + c;
+	}
+
+	function bar(uint32 b, bool x) public returns (uint32) {
+		uint32 i = 1;
+		if (x) {
+			do {
+				i += 10;
+			}
+			while (b-- > 0);
+		} else {
+			uint32 j;
+			for (j=2; j<10; j++) {
+				i *= 3;
+			}
+		}
+		return i;
+	}
+
+	function baz(uint32 x) public returns (uint32) {
+		for (uint32 i = 0; i<100; i++) {
+			x *= 7;
+
+			if (x > 200) {
+				break;
+			}
+
+			x++;
+		}
+
+		return x;
+	}
+}"##,
+    );
+
+    // call constructor
+    runtime.constructor("test3", &[]);
+
+    for i in 0..=50 {
+        let res = ((50 - i) * 100 + 5) + i * 1000;
+
+        let returns = runtime.function("foo", &[Token::Uint(U256::from(i))], &[], None);
+
+        assert_eq!(returns, vec![Token::Uint(U256::from(res))]);
+    }
+
+    for i in 0..=50 {
+        let res = (i + 1) * 10 + 1;
+
+        let returns = runtime.function(
+            "bar",
+            &[Token::Uint(U256::from(i)), Token::Bool(true)],
+            &[],
+            None,
+        );
+
+        assert_eq!(returns, vec![Token::Uint(U256::from(res))]);
+    }
+
+    for i in 0..=50 {
+        let mut res = 1;
+
+        for _ in 2..10 {
+            res *= 3;
+        }
+
+        let returns = runtime.function(
+            "bar",
+            &[Token::Uint(U256::from(i)), Token::Bool(false)],
+            &[],
+            None,
+        );
+
+        assert_eq!(returns, vec![Token::Uint(U256::from(res))]);
+    }
+
+    for i in 1..=50 {
+        let mut res = i;
+
+        for _ in 0..100 {
+            res *= 7;
+            if res > 200 {
+                break;
+            }
+            res += 1;
+        }
+
+        let returns = runtime.function("baz", &[Token::Uint(U256::from(i))], &[], None);
+
+        assert_eq!(returns, vec![Token::Uint(U256::from(res))]);
+    }
 }

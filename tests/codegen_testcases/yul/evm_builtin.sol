@@ -1,4 +1,4 @@
-// RUN: --target ewasm --emit cfg -Onone --no-cse
+// RUN: --target evm --emit cfg -Onone --no-cse
 
 contract Testing {
 

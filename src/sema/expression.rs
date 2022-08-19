@@ -2137,7 +2137,7 @@ pub fn expression(
         pt::Expression::Unit(loc, expr, unit) => {
             match unit {
                 pt::Unit::Wei(loc) | pt::Unit::Gwei(loc) | pt::Unit::Ether(loc)
-                    if ns.target != crate::Target::Ewasm =>
+                    if ns.target != crate::Target::EVM =>
                 {
                     diagnostics.push(Diagnostic::warning(
                         *loc,
@@ -2322,7 +2322,7 @@ fn hex_number_literal(
     if n.starts_with("0x") && !n.chars().any(|c| c == '_') && n.len() == 42 {
         let address = to_hexstr_eip55(n);
 
-        if ns.target == Target::Ewasm {
+        if ns.target == Target::EVM {
             return if address == *n {
                 let s: String = address.chars().skip(2).collect();
 
@@ -6483,8 +6483,8 @@ fn method_call_pos_args(
     if let Type::Address(payable) = &var_ty.deref_any() {
         let ty = match func.name.as_str() {
             "call" => Some(CallTy::Regular),
-            "delegatecall" if ns.target == Target::Ewasm => Some(CallTy::Delegate),
-            "staticcall" if ns.target == Target::Ewasm => Some(CallTy::Static),
+            "delegatecall" if ns.target == Target::EVM => Some(CallTy::Delegate),
+            "staticcall" if ns.target == Target::EVM => Some(CallTy::Static),
             _ => None,
         };
 

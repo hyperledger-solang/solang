@@ -4,7 +4,7 @@ The Solang Solidity Compiler compiles Solidity for the following blockchains:
 
 - Parity Substrate
 - Solana
-- ewasm
+- evm (enough for the extension)
 
 This extension provides syntax highlighting, diagnostics  (i.e. compiler warnings and errors), and information on types and functions when hovering.
 

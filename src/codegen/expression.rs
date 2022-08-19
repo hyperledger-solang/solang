@@ -698,9 +698,9 @@ pub fn expression(
         }
         // The Substrate gas price builtin takes an argument; the others do not
         ast::Expression::Builtin(loc, _, ast::Builtin::Gasprice, expr)
-            if expr.len() == 1 && ns.target == Target::Ewasm =>
+            if expr.len() == 1 && ns.target == Target::EVM =>
         {
-            builtin_ewasm_gasprice(loc, expr, cfg, contract_no, func, ns, vartab, opt)
+            builtin_evm_gasprice(loc, expr, cfg, contract_no, func, ns, vartab, opt)
         }
         ast::Expression::Builtin(loc, tys, builtin, args) => expr_builtin(
             args,
@@ -1196,7 +1196,7 @@ fn payable_send(
         },
         &Type::Bool,
     );
-    if ns.target != Target::Ewasm {
+    if ns.target != Target::EVM {
         cfg.add(
             vartab,
             Instr::ValueTransfer {
@@ -1245,7 +1245,7 @@ fn payable_transfer(
 ) -> Expression {
     let address = expression(&args[0], cfg, contract_no, func, ns, vartab, opt);
     let value = expression(&args[1], cfg, contract_no, func, ns, vartab, opt);
-    if ns.target != Target::Ewasm {
+    if ns.target != Target::EVM {
         cfg.add(
             vartab,
             Instr::ValueTransfer {
@@ -1512,7 +1512,7 @@ fn abi_encode_call(
     Expression::Variable(*loc, Type::DynamicBytes, res)
 }
 
-fn builtin_ewasm_gasprice(
+fn builtin_evm_gasprice(
     loc: &pt::Loc,
     expr: &[ast::Expression],
     cfg: &mut ControlFlowGraph,
@@ -2531,7 +2531,7 @@ pub fn default_gas(ns: &Namespace) -> Expression {
         pt::Loc::Codegen,
         Type::Uint(64),
         // See EIP150
-        if ns.target == Target::Ewasm {
+        if ns.target == Target::EVM {
             BigInt::from(i64::MAX)
         } else {
             BigInt::zero()

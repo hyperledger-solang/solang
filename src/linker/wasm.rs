@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::Target;
 use parity_wasm::builder;
 use parity_wasm::elements::{InitExpr, Instruction, Module};
 use std::ffi::CString;
@@ -9,7 +8,7 @@ use std::io::Read;
 use std::io::Write;
 use tempfile::tempdir;
 
-pub fn link(input: &[u8], name: &str, target: Target) -> Vec<u8> {
+pub fn link(input: &[u8], name: &str) -> Vec<u8> {
     let dir = tempdir().expect("failed to create temp directory for linking");
 
     let object_filename = dir.path().join(&format!("{}.o", name));
@@ -30,23 +29,14 @@ pub fn link(input: &[u8], name: &str, target: Target) -> Vec<u8> {
         CString::new("--global-base=0").unwrap(),
     ];
 
-    match target {
-        Target::Ewasm => {
-            command_line.push(CString::new("--export").unwrap());
-            command_line.push(CString::new("main").unwrap());
-        }
-        Target::Substrate { .. } => {
-            command_line.push(CString::new("--export").unwrap());
-            command_line.push(CString::new("deploy").unwrap());
-            command_line.push(CString::new("--export").unwrap());
-            command_line.push(CString::new("call").unwrap());
+    command_line.push(CString::new("--export").unwrap());
+    command_line.push(CString::new("deploy").unwrap());
+    command_line.push(CString::new("--export").unwrap());
+    command_line.push(CString::new("call").unwrap());
 
-            command_line.push(CString::new("--import-memory").unwrap());
-            command_line.push(CString::new("--initial-memory=1048576").unwrap());
-            command_line.push(CString::new("--max-memory=1048576").unwrap());
-        }
-        _ => (),
-    }
+    command_line.push(CString::new("--import-memory").unwrap());
+    command_line.push(CString::new("--initial-memory=1048576").unwrap());
+    command_line.push(CString::new("--max-memory=1048576").unwrap());
 
     command_line.push(
         CString::new(
@@ -78,22 +68,8 @@ pub fn link(input: &[u8], name: &str, target: Target) -> Vec<u8> {
         let mut ind = 0;
 
         while ind < imports.len() {
-            match target {
-                Target::Ewasm => {
-                    let module_name = if imports[ind].field().starts_with("print") {
-                        "debug"
-                    } else {
-                        "ethereum"
-                    };
-
-                    *imports[ind].module_mut() = module_name.to_owned();
-                }
-                Target::Substrate { .. } => {
-                    if imports[ind].field().starts_with("seal") {
-                        *imports[ind].module_mut() = "seal0".to_owned();
-                    }
-                }
-                _ => (),
+            if imports[ind].field().starts_with("seal") {
+                *imports[ind].module_mut() = "seal0".to_owned();
             }
 
             ind += 1;

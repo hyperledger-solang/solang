@@ -1,4 +1,4 @@
-# solang - Solidity Compiler for Solana, Substrate, and ewasm
+# solang - Solidity Compiler for Solana and Substrate
 
 [![Discord](https://img.shields.io/discord/905194001349627914?logo=Hyperledger&style=plastic)](https://discord.gg/jhn4rkqNsT)
 [![CI](https://github.com/hyperledger-labs/solang/workflows/test/badge.svg)](https://github.com/hyperledger-labs/solang/actions)
@@ -7,8 +7,8 @@
 [![LoC](https://tokei.rs/b1/github/hyperledger-labs/solang?category=lines)](https://github.com/hyperledger-labs/solang)
 
 Welcome to Solang, a new Solidity compiler written in rust which uses
-llvm as the compiler backend. Solang can compile Solidity for Solana,
-Substrate, and ewasm. Solang is source compatible with Solidity 0.8, with
+llvm as the compiler backend. Solang can compile Solidity for Solana and
+Substrate. Solang is source compatible with Solidity 0.8, with
 some caveats due to differences in the underlying blockchain.
 
 Solang is under active development right now, and has

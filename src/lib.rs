@@ -32,8 +32,8 @@ pub enum Target {
         address_length: usize,
         value_length: usize,
     },
-    /// Ethereum ewasm, see <https://github.com/ewasm/design>
-    Ewasm,
+    /// Ethereum EVM, see <https://ethereum.org/en/developers/docs/evm/>
+    EVM,
 }
 
 impl fmt::Display for Target {
@@ -41,7 +41,7 @@ impl fmt::Display for Target {
         match self {
             Target::Solana => write!(f, "solana"),
             Target::Substrate { .. } => write!(f, "substrate"),
-            Target::Ewasm => write!(f, "ewasm"),
+            Target::EVM => write!(f, "evm"),
         }
     }
 }
@@ -53,7 +53,7 @@ impl PartialEq for Target {
         match self {
             Target::Solana => matches!(other, Target::Solana),
             Target::Substrate { .. } => matches!(other, Target::Substrate { .. }),
-            Target::Ewasm => matches!(other, Target::Ewasm),
+            Target::EVM => matches!(other, Target::EVM),
         }
     }
 }
@@ -77,7 +77,7 @@ impl Target {
         match name {
             "solana" => Some(Target::Solana),
             "substrate" => Some(Target::default_substrate()),
-            "ewasm" => Some(Target::Ewasm),
+            "evm" => Some(Target::EVM),
             _ => None,
         }
     }

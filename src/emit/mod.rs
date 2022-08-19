@@ -34,7 +34,6 @@ use solang_parser::pt::{CodeLocation, Loc};
 
 pub mod binary;
 mod ethabiencoder;
-pub mod ewasm;
 mod loop_builder;
 pub mod solana;
 pub mod substrate;

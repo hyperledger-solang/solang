@@ -141,8 +141,8 @@ pub fn codegen(ns: &mut Namespace, opt: &Options) {
                 return;
             }
 
-            // Solana creates a single bundle
-            if ns.target != Target::Solana {
+            // Solana creates a single bundle, EVM has no emitter implemented yet
+            if ns.target != Target::Solana && ns.target != Target::EVM {
                 #[cfg(not(feature = "llvm"))]
                 panic!("LLVM feature is not enabled");
                 #[cfg(feature = "llvm")]

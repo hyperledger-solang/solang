@@ -7,7 +7,7 @@ documentation = "https://solang.readthedocs.io/"
 license = "Apache-2.0"
 build = "build.rs"
 description = "Solang Solidity Compiler"
-keywords = [ "solidity", "compiler", "solana", "substrate", "ewasm" ]
+keywords = [ "solidity", "compiler", "solana", "substrate" ]
 rust-version = "1.56.1"
 edition = "2021"
 

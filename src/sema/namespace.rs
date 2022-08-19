@@ -26,7 +26,7 @@ impl Namespace {
     /// Create a namespace and populate with the parameters for the target
     pub fn new(target: Target) -> Self {
         let (address_length, value_length) = match target {
-            Target::Ewasm => (20, 16),
+            Target::EVM => (20, 16),
             Target::Substrate {
                 address_length,
                 value_length,
