@@ -139,7 +139,7 @@ jobs:
         fetch-depth: 0
         submodules: recursive
     - name: Get LLVM
-      run: ${{ github.workspace }}/.github/workflows/llvm-cache.sh llvm13.0-mac-arm.tar.xz
+      run: curl -L --output llvm13.0-mac-arm.tar.xz https://github.com/hyperledger-labs/solang/releases/download/v0.1.12/llvm13.0-mac-arm.tar.xz
     - name: Extract LLVM
       run: tar Jxf llvm13.0-mac-arm.tar.xz
     - name: Add LLVM to Path
@@ -164,7 +164,7 @@ jobs:
         fetch-depth: 0
         submodules: recursive
     - name: Get LLVM
-      run: ${{ github.workspace }}/.github/workflows/llvm-cache.sh llvm13.0-mac-intel.tar.xz
+      run: wget -q -O llvm13.0-mac-intel.tar.xz https://github.com/hyperledger-labs/solang/releases/download/v0.1.11/llvm13.0-mac-intel.tar.xz
     - name: Extract LLVM
       run: tar Jxf llvm13.0-mac-intel.tar.xz
     - name: Add LLVM to Path

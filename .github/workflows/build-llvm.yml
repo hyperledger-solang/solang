@@ -91,8 +91,6 @@ jobs:
     - run: cmake --build . --target install
       working-directory: ./llvm-project/
     - run: tar Jcf ./llvm13.0-mac-arm.tar.xz ./llvm13.0/
-    - name: Cache LLVM
-      run: ${{ github.workspace }}/.github/workflows/llvm-cache.sh llvm13.0-mac-arm.tar.xz
     - name: Upload Release Asset
       id: upload-release-asset
       uses: actions/upload-release-asset@v1
@@ -121,8 +119,6 @@ jobs:
     - run: cmake --build . --target install
       working-directory: ./llvm-project/
     - run: tar Jcf ./llvm13.0-mac-intel.tar.xz ./llvm13.0/
-    - name: Cache LLVM
-      run: ${{ github.workspace }}/.github/workflows/llvm-cache.sh llvm13.0-mac-intel.tar.xz
     - name: Upload Release Asset
       id: upload-release-asset
       uses: actions/upload-release-asset@v1
