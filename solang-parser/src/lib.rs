@@ -7,7 +7,7 @@ use lalrpop_util::ParseError;
 
 pub mod diagnostics;
 pub mod doccomment;
-mod lexer;
+pub mod lexer;
 pub mod pt;
 #[cfg(test)]
 mod test;
