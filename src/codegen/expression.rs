@@ -436,7 +436,8 @@ pub fn expression(
         ast::Expression::InternalFunctionCall { .. }
         | ast::Expression::ExternalFunctionCall { .. }
         | ast::Expression::ExternalFunctionCallRaw { .. }
-        | ast::Expression::Builtin(_, _, ast::Builtin::AbiDecode, _) => {
+        | ast::Expression::Builtin(_, _, ast::Builtin::AbiDecode, _)
+        | ast::Expression::Builtin(_, _, ast::Builtin::AbiBorshDecode, _) => {
             let mut returns = emit_function_call(expr, contract_no, cfg, func, ns, vartab, opt);
 
             returns.remove(0)
@@ -2485,6 +2486,11 @@ pub fn emit_function_call(
             } else {
                 unreachable!();
             }
+        }
+        ast::Expression::Builtin(loc, tys, ast::Builtin::AbiBorshDecode, args) => {
+            let data = expression(&args[0], cfg, callee_contract_no, func, ns, vartab, opt);
+            let encoder = create_encoder(ns);
+            encoder.abi_decode(loc, &data, tys, ns, vartab, cfg)
         }
         ast::Expression::Builtin(loc, tys, ast::Builtin::AbiDecode, args) => {
             let data = expression(&args[0], cfg, callee_contract_no, func, ns, vartab, opt);

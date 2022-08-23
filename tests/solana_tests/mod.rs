@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 mod abi;
+mod abi_decode;
 mod abi_encode;
 mod accessor;
 mod account_info;

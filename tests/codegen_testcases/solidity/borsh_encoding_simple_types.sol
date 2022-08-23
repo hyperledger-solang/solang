@@ -118,7 +118,7 @@ contract EncodingTest {
         // CHECK: ty:bytes %abi_encoded.temp.83 = (alloc bytes len (((builtin ArrayLength (%a)) + uint32 4) + ((builtin ArrayLength (%b)) + uint32 4)))
         // CHECK: ty:uint32 %temp.84 = (builtin ArrayLength (%a))
         // CHECK: writebuffer buffer:%abi_encoded.temp.83 offset:uint32 0 value:%temp.84
-        // CHECK: memcpy src: %a, dest: (advance ptr: %abi_encoded.temp.83, by: (uint32 0 + uint32 4)), bytes_len: %temp.84
+        // CHECK: memcpy src: %a, dest: (advance ptr: %abi_encoded.temp.83, by: uint32 4), bytes_len: %temp.84
         // CHECK: ty:uint32 %temp.85 = (builtin ArrayLength (%b))
         // CHECK: ty:uint32 %1.cse_temp = (uint32 0 + (%temp.84 + uint32 4))
         // CHECK: writebuffer buffer:%abi_encoded.temp.83 offset:%1.cse_temp value:%temp.85
@@ -163,7 +163,7 @@ contract EncodingTest {
         bytes memory b = abi.encode(test_vec_1[2], ss);
         // CHECK: %temp.91 = load storage slot((subscript struct EncodingTest.noPadStruct[] storage uint32 16[uint32 2])) ty:struct EncodingTest.noPadStruct
         // CHECK: ty:bytes %abi_encoded.temp.92 = (alloc bytes len (uint32 8 + uint32 49))
-        // CHECK: memcpy src: %temp.91, dest: (advance ptr: %abi_encoded.temp.92, by: uint32 0), bytes_len: uint32 8
+        // CHECK: memcpy src: %temp.91, dest: %abi_encoded.temp.92, bytes_len: uint32 8
         // CHECK: ty:uint32 %1.cse_temp = (uint32 0 + uint32 8)
         // CHECK: writebuffer buffer:%abi_encoded.temp.92 offset:%1.cse_temp value:(load (struct %ss field 0))
         // CHECK: ty:uint32 %2.cse_temp = (%1.cse_temp + uint32 16)
@@ -184,49 +184,13 @@ contract EncodingTest {
 	    // CHECK: ty:uint32 %temp.97 = uint32 16
 	    // CHECK: ty:uint32 %temp.98 = uint32 16
 	    // CHECK: ty:bytes %abi_encoded.temp.99 = (alloc bytes len ((%temp.96 + %temp.97) + %temp.98))
-        // CHECK: ty:uint32 %temp.100 = uint32 0
-        // CHECK: writebuffer buffer:%abi_encoded.temp.99 offset:%temp.100 value:(builtin ArrayLength (%temp.95))
-
-        // CHECK: ty:uint32 %temp.100 = uint32 4
-        // CHECK: ty:uint32 %for_i_0.temp.101 = uint32 0
-        // CHECK: branch block1
-
-        // CHECK: block1: # cond
-        // CHECK: branchcond (unsigned less %for_i_0.temp.101 < (builtin ArrayLength (%temp.95))), block3, block4
-
-        // CHECK: block2: # next
-        // CHECK: ty:uint32 %for_i_0.temp.101 = (%for_i_0.temp.101 + uint32 1)
-        // CHECK: branch block1
-
-        // CHECK: block3: # body
-        // CHECK: memcpy src: (subscript struct EncodingTest.noPadStruct[] %temp.95[%for_i_0.temp.101]), dest: (advance ptr: %abi_encoded.temp.99, by: %temp.100), bytes_len: uint32 8
-        // CHECK: ty:uint32 %temp.100 = (uint32 8 + %temp.100)
-        // CHECK: branch block2
+        // CHECK: ty:uint32 %temp.100 = (builtin ArrayLength (%temp.95))
+        // CHECK: memcpy src: %temp.95, dest: (advance ptr: %abi_encoded.temp.99, by: uint32 4), bytes_len: (%temp.100 * uint32 8)
         
-        // CHECK: block4: # end_for
-        // CHECK: ty:uint32 %temp.100 = (%temp.100 - uint32 0)
-        // CHECK: memcpy src: %mem_vec, dest: (advance ptr: %abi_encoded.temp.99, by: (uint32 0 + %temp.100)), bytes_len: uint32 16
-        // CHECK: ty:uint32 %2.cse_temp = ((uint32 0 + %temp.100) + uint32 16)
-        // CHECK: ty:uint32 %temp.102 = %2.cse_temp
-        // CHECK: ty:uint32 %for_i_0.temp.103 = uint32 0
-        // CHECK: branch block5
-
-        // CHECK: block5: # cond
-        // CHECK: branchcond (unsigned less %for_i_0.temp.103 < uint32 2), block7, block8
-
-        // CHECK: block6: # next
-        // CHECK: ty:uint32 %for_i_0.temp.103 = (%for_i_0.temp.103 + uint32 1)
-        // CHECK: branch block5
-
-        // CHECK: block7: # body
-        // CHECK: memcpy src: (subscript struct EncodingTest.noPadStruct[2] %str_vec[%for_i_0.temp.103]), dest: (advance ptr: %abi_encoded.temp.99, by: %temp.102), bytes_len: uint32 8
-        // CHECK: ty:uint32 %temp.102 = (uint32 8 + %temp.102)
-        // CHECK: branch block6
-
-        // CHECK: block8: # end_for
-        // CHECK: ty:uint32 %temp.102 = (%temp.102 - %2.cse_temp)
-        // CHECK: ty:bytes %b1 = %abi_encoded.temp.99
-        // CHECK: return %b1
+        // CHECK: memcpy src: %mem_vec, dest: (advance ptr: %abi_encoded.temp.99, by: (uint32 0 + ((%temp.100 * uint32 8) + uint32 4))), bytes_len: uint32 16
+        // CHECK: memcpy src: %str_vec, dest: (advance ptr: %abi_encoded.temp.99, by: ((uint32 0 + ((%temp.100 * uint32 8) + uint32 4)) + uint32 16)), bytes_len: uint32 16
+	    // CHECK: ty:bytes %b1 = %abi_encoded.temp.99
+	    // CHECK: return %b1
         return b1;
     }
 
@@ -239,10 +203,10 @@ contract EncodingTest {
         function (int64, int64) external returns (int64) fPtr = this.doThis;
         uint64 pr = 9234;
 
-        // CHECK: ty:bytes %abi_encoded.temp.106 = (alloc bytes len (uint32 36 + uint32 8))
-        // CHECK: writebuffer buffer:%abi_encoded.temp.106 offset:uint32 0 value:(load (struct %fPtr field 0))
-        // CHECK: writebuffer buffer:%abi_encoded.temp.106 offset:(uint32 0 + uint32 4) value:(load (struct %fPtr field 1))
-        // CHECK: writebuffer buffer:%abi_encoded.temp.106 offset:(uint32 0 + uint32 36) value:%pr
+        // CHECK: ty:bytes %abi_encoded.temp.103 = (alloc bytes len (uint32 36 + uint32 8))
+        // CHECK: writebuffer buffer:%abi_encoded.temp.103 offset:uint32 0 value:(load (struct %fPtr field 0))
+        // CHECK: writebuffer buffer:%abi_encoded.temp.103 offset:(uint32 0 + uint32 4) value:(load (struct %fPtr field 1))
+        // CHECK: writebuffer buffer:%abi_encoded.temp.103 offset:(uint32 0 + uint32 36) value:%pr
 
         bytes memory b = abi.encode(fPtr, pr);
         return b;

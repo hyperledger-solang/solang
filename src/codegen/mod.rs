@@ -427,8 +427,6 @@ pub enum Expression {
     Variable(pt::Loc, Type, usize),
     ZeroExt(pt::Loc, Type, Box<Expression>),
     AdvancePointer {
-        loc: pt::Loc,
-        ty: Type,
         pointer: Box<Expression>,
         bytes_offset: Box<Expression>,
     },
@@ -489,12 +487,12 @@ impl CodeLocation for Expression {
             | Expression::BytesCast(loc, ..)
             | Expression::SignedMore(loc, ..)
             | Expression::UnsignedMore(loc, ..)
-            | Expression::ZeroExt(loc, ..)
-            | Expression::AdvancePointer { loc, .. } => *loc,
+            | Expression::ZeroExt(loc, ..) => *loc,
 
-            Expression::InternalFunctionCfg(_) | Expression::Poison | Expression::Undefined(_) => {
-                pt::Loc::Codegen
-            }
+            Expression::InternalFunctionCfg(_)
+            | Expression::Poison
+            | Expression::Undefined(_)
+            | Expression::AdvancePointer { .. } => pt::Loc::Codegen,
         }
     }
 }
@@ -639,8 +637,7 @@ impl RetrieveType for Expression {
             | Expression::AllocDynamicArray(_, ty, ..)
             | Expression::BytesCast(_, ty, ..)
             | Expression::RationalNumberLiteral(_, ty, ..)
-            | Expression::Subscript(_, ty, ..)
-            | Expression::AdvancePointer { ty, .. } => ty.clone(),
+            | Expression::Subscript(_, ty, ..) => ty.clone(),
 
             Expression::BoolLiteral(..)
             | Expression::MoreEqual(..)
@@ -660,6 +657,7 @@ impl RetrieveType for Expression {
                 list[0].ty()
             }
 
+            Expression::AdvancePointer { .. } => Type::BufferPointer,
             Expression::FormatString(..) => Type::String,
             Expression::InternalFunctionCfg(_) => Type::Unreachable,
             Expression::Poison => unreachable!("Expression does not have a type"),
@@ -1102,13 +1100,9 @@ impl Expression {
                     Box::new(filter(right, ctx)),
                 ),
                 Expression::AdvancePointer {
-                    loc,
-                    ty,
                     pointer,
                     bytes_offset: offset,
                 } => Expression::AdvancePointer {
-                    loc: *loc,
-                    ty: ty.clone(),
                     pointer: Box::new(filter(pointer, ctx)),
                     bytes_offset: Box::new(filter(offset, ctx)),
                 },
