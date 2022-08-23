@@ -7,12 +7,11 @@ wasm or bpf file which is ready for deployment on a chain, and an metadata
 file (also known as the abi).
 
 The following targets are supported right now:
-`Solana <https://www.solana.com/>`_,
-`Parity Substrate <https://substrate.io/>`_, and
-`Ethereum ewasm <https://github.com/ewasm/design>`_.
+`Solana <https://www.solana.com/>`_ and
+`Parity Substrate <https://substrate.io/>`_.
 
-Solang supports auto-completion for multiple shells. Use ``solang shell-complete --help`` to 
-learn whether your favorite shell is supported. If so, evaluate the output of 
+Solang supports auto-completion for multiple shells. Use ``solang shell-complete --help`` to
+learn whether your favorite shell is supported. If so, evaluate the output of
 ``solang shell-complete <SHELL>`` in order to activate it. Example installation with ``bash``:
 
 .. code-block:: bash
@@ -36,7 +35,7 @@ Options:
   will be silent if there are no errors or warnings.
 
 \\-\\-target *target*
-  This takes one argument, which can either be ``solana``, ``substrate``, or ``ewasm``. The target
+  This takes one argument, which can either be ``solana`` or ``substrate``. The target
   must be specified.
 
 \\-\\-address\\-length *length-in-bytes*
@@ -72,8 +71,6 @@ Options:
   This option causes Solang to emulate the behaviour of Solidity
   `standard json output <https://solidity.readthedocs.io/en/v0.5.13/using-the-compiler.html#output-description>`_. No output files are written, all the
   output will be in json on stdout.
-
-  This feature is used by `Hyperledger Burrow's deploy tool <https://hyperledger.github.io/burrow/#/tutorials/3-contracts?id=deploy-artifacts>`_.
 
 \\-\\-emit *phase*
   This option is can be used for debugging Solang itself. This is used to
@@ -130,7 +127,7 @@ followed by one or more solidity source filenames.
 Options:
 
 \\-\\-target *target*
-  This takes one argument, which can either be ``solana``, ``substrate``, or ``ewasm``. The target
+  This takes one argument, which can either be ``solana`` or ``substrate``. The target
   must be specified.
 
 \\-\\-address\\-length *length-in-bytes*

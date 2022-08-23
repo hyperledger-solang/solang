@@ -23,8 +23,8 @@ fn substrate_contracts() -> io::Result<()> {
 }
 
 #[test]
-fn ewasm_contracts() -> io::Result<()> {
-    contract_tests("tests/contract_testcases/ewasm", Target::Ewasm)
+fn evm_contracts() -> io::Result<()> {
+    contract_tests("tests/contract_testcases/evm", Target::EVM)
 }
 
 fn contract_tests(file_path: &str, target: Target) -> io::Result<()> {
@@ -79,28 +79,34 @@ fn parse_file(path: PathBuf, target: Target) -> io::Result<()> {
         let context = inkwell::context::Context::create();
 
         // let's try and emit
-        if ns.target == Target::Solana {
-            solang::emit::binary::Binary::build_bundle(
-                &context,
-                &[&ns],
-                &filename,
-                Default::default(),
-                false,
-                false,
-            );
-        } else {
-            for contract in &ns.contracts {
-                if contract.is_concrete() {
-                    solang::emit::binary::Binary::build(
-                        &context,
-                        contract,
-                        &ns,
-                        &filename,
-                        Default::default(),
-                        false,
-                        false,
-                    );
+        match ns.target {
+            Target::Solana => {
+                solang::emit::binary::Binary::build_bundle(
+                    &context,
+                    &[&ns],
+                    &filename,
+                    Default::default(),
+                    false,
+                    false,
+                );
+            }
+            Target::Substrate { .. } => {
+                for contract in &ns.contracts {
+                    if contract.is_concrete() {
+                        solang::emit::binary::Binary::build(
+                            &context,
+                            contract,
+                            &ns,
+                            &filename,
+                            Default::default(),
+                            false,
+                            false,
+                        );
+                    }
                 }
+            }
+            Target::EVM => {
+                // not implemented yet
             }
         }
     }

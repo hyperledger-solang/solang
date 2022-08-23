@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::build_solidity;
+use crate::{account_new, build_solidity};
+use byte_slice_cast::AsByteSlice;
 use ethabi::{ethereum_types::U256, FixedBytes, Token, Uint};
 
 #[test]
@@ -292,4 +293,66 @@ fn external_function() {
     assert_eq!(selector, vec![1, 2, 3, 4]);
     let addr = returns[1].clone().into_fixed_bytes().unwrap();
     assert_eq!(addr[26], 90);
+}
+
+#[test]
+fn eth_builtins() {
+    let mut runtime = build_solidity(
+        r#"
+contract testing  {
+    function test_address() public view returns (uint256 ret) {
+        assembly {
+            let a := address()
+            ret := a
+        }
+    }
+
+    function test_balance() public view returns (uint256 ret) {
+        assembly {
+            let a := address()
+            ret := balance(a)
+        }
+    }
+
+    function test_selfbalance() public view returns (uint256 ret) {
+        assembly {
+            let a := selfbalance()
+            ret := a
+        }
+    }
+
+    function test_caller() public view returns (uint256 ret) {
+        assembly {
+            let a := caller()
+            ret := a
+        }
+    }
+}"#,
+    );
+
+    runtime.constructor("testing", &[]);
+    let returns = runtime.function("test_address", &[], &[], None);
+    let addr = returns[0].clone().into_uint().unwrap();
+    let mut b_vec = addr.as_byte_slice().to_vec();
+    b_vec.reverse();
+    assert_eq!(&b_vec, runtime.stack[0].data.as_ref());
+
+    runtime
+        .account_data
+        .get_mut(&runtime.stack[0].data)
+        .unwrap()
+        .lamports = 102;
+    let returns = runtime.function("test_balance", &[], &[], None);
+    assert_eq!(returns, vec![Token::Uint(U256::from(102))]);
+
+    let returns = runtime.function("test_selfbalance", &[], &[], None);
+    assert_eq!(returns, vec![Token::Uint(U256::from(102))]);
+
+    let sender = account_new();
+
+    let returns = runtime.function("test_caller", &[], &[], Some(&sender));
+    let addr = returns[0].clone().into_uint().unwrap().0;
+    let mut b_vec = addr.as_byte_slice().to_vec();
+    b_vec.reverse();
+    assert_eq!(b_vec, sender.to_vec());
 }

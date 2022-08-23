@@ -11,7 +11,7 @@ use num_traits::ToPrimitive;
 use std::collections::HashMap;
 
 use crate::emit::substrate;
-use crate::emit::{ewasm, solana, BinaryOp, Generate, ReturnCode};
+use crate::emit::{solana, BinaryOp, Generate, ReturnCode};
 use crate::linker::link;
 use crate::Target;
 use inkwell::builder::Builder;
@@ -49,9 +49,7 @@ pub struct Binary<'a> {
     pub(crate) functions: HashMap<usize, FunctionValue<'a>>,
     code: RefCell<Vec<u8>>,
     pub(crate) opt: OptimizationLevel,
-    pub(crate) code_size: RefCell<Option<IntValue<'a>>>,
     pub(crate) selector: GlobalValue<'a>,
-    pub(crate) calldata_data: GlobalValue<'a>,
     pub(crate) calldata_len: GlobalValue<'a>,
     pub(crate) scratch_len: Option<GlobalValue<'a>>,
     pub(crate) scratch: Option<GlobalValue<'a>>,
@@ -82,16 +80,6 @@ impl<'a> Binary<'a> {
                 math_overflow_check,
                 generate_debug_info,
             ),
-            Target::Ewasm => ewasm::EwasmTarget::build(
-                context,
-                &std_lib,
-                contract,
-                ns,
-                filename,
-                opt,
-                math_overflow_check,
-                generate_debug_info,
-            ),
             Target::Solana => solana::SolanaTarget::build(
                 context,
                 &std_lib,
@@ -102,6 +90,7 @@ impl<'a> Binary<'a> {
                 math_overflow_check,
                 generate_debug_info,
             ),
+            Target::EVM => unimplemented!(),
         }
     }
 
@@ -165,40 +154,26 @@ impl<'a> Binary<'a> {
             )
             .unwrap();
 
-        loop {
-            // we need to loop here to support ewasm deployer. It needs to know the size
-            // of itself. Note that in webassembly, the constants are LEB128 encoded so
-            // patching the length might actually change the length. So we need to loop
-            // until it is right.
+        match target_machine.write_to_memory_buffer(
+            &self.module,
+            if generate == Generate::Assembly {
+                FileType::Assembly
+            } else {
+                FileType::Object
+            },
+        ) {
+            Ok(out) => {
+                let slice = out.as_slice();
 
-            // The correct solution is to make ewasm less insane.
-            match target_machine.write_to_memory_buffer(
-                &self.module,
-                if generate == Generate::Assembly {
-                    FileType::Assembly
+                if generate == Generate::Linked {
+                    let bs = link(slice, &self.name, self.target);
+
+                    Ok(bs.to_vec())
                 } else {
-                    FileType::Object
-                },
-            ) {
-                Ok(out) => {
-                    let slice = out.as_slice();
-
-                    if generate == Generate::Linked {
-                        let bs = link(slice, &self.name, self.target);
-
-                        if !self.patch_code_size(bs.len() as u64) {
-                            self.code.replace(bs.to_vec());
-
-                            return Ok(bs.to_vec());
-                        }
-                    } else {
-                        return Ok(slice.to_vec());
-                    }
-                }
-                Err(s) => {
-                    return Err(s.to_string());
+                    Ok(slice.to_vec())
                 }
             }
+            Err(s) => Err(s.to_string()),
         }
     }
 
@@ -314,19 +289,6 @@ impl<'a> Binary<'a> {
         calldata_len.set_linkage(Linkage::Internal);
         calldata_len.set_initializer(&context.i32_type().const_zero());
 
-        let calldata_data = module.add_global(
-            context.i8_type().ptr_type(AddressSpace::Generic),
-            Some(AddressSpace::Generic),
-            "calldata_data",
-        );
-        calldata_data.set_linkage(Linkage::Internal);
-        calldata_data.set_initializer(
-            &context
-                .i8_type()
-                .ptr_type(AddressSpace::Generic)
-                .const_zero(),
-        );
-
         let mut return_values = HashMap::new();
 
         return_values.insert(ReturnCode::Success, context.i32_type().const_zero());
@@ -355,9 +317,7 @@ impl<'a> Binary<'a> {
             functions: HashMap::new(),
             code: RefCell::new(Vec::new()),
             opt,
-            code_size: RefCell::new(None),
             selector,
-            calldata_data,
             calldata_len,
             scratch: None,
             scratch_len: None,
@@ -924,32 +884,6 @@ impl<'a> Binary<'a> {
                 _ => unreachable!(),
             }
         }
-    }
-
-    /// ewasm deployer needs to know what its own code size is, so we compile once to
-    /// get the size, patch in the value and then recompile.
-    fn patch_code_size(&self, code_size: u64) -> bool {
-        let current_size = {
-            let current_size_opt = self.code_size.borrow();
-
-            if let Some(current_size) = *current_size_opt {
-                if code_size == current_size.get_zero_extended_constant().unwrap() {
-                    return false;
-                }
-
-                current_size
-            } else {
-                return false;
-            }
-        };
-
-        let new_size = self.context.i32_type().const_int(code_size, false);
-
-        current_size.replace_all_uses_with(new_size);
-
-        self.code_size.replace(Some(new_size));
-
-        true
     }
 
     /// Allocate vector

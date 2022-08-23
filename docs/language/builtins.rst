@@ -80,9 +80,8 @@ address ``msg.sender``
 .. _gasprice:
 
 uint128 ``tx.gasprice``
-    The price of one unit of gas, only available with the ewasm target.
-    This field cannot be used on Parity Substrate, the explanation
-    is in the warning box below.
+    The price of one unit of gas. This field cannot be used on Parity Substrate,
+    see the warning box below.
 
 .. note::
     ``tx.gasprice`` is not available on Solana.
@@ -261,8 +260,7 @@ ABI encoding and decoding
 _________________________
 
 The ABI encoding depends on the target being compiled for. Substrate uses the
-`SCALE Codec <https://docs.substrate.io/reference/scale-codec/>`_ and ewasm uses
-`Ethereum ABI encoding <https://docs.soliditylang.org/en/v0.7.6/abi-spec.html>`_.
+`SCALE Codec <https://docs.substrate.io/reference/scale-codec/>`_.
 
 abi.decode(bytes, (*type-list*))
 ++++++++++++++++++++++++++++++++
@@ -579,9 +577,6 @@ print() takes a string argument.
 
   When using Substrate, this function is only available on development chains.
   If you use this function on a production chain, the contract will fail to load.
-
-  When using ewasm, the function is only available on hera when compiled with
-  debugging.
 
 .. _selfdestruct:
 

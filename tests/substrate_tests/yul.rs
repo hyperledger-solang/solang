@@ -108,3 +108,87 @@ contract testing  {
     runtime.function("storage_struct", Val256(U256::from(17)).encode());
     assert_eq!(runtime.vm.output, Val256(U256::from(24)).encode());
 }
+
+#[test]
+fn eth_builtins() {
+    let mut runtime = build_solidity(
+        r#"
+contract testing  {
+    function test_address() public view returns (uint256 ret) {
+        assembly {
+            let a := address()
+            ret := a
+        }
+    }
+
+    function test_balance() public view returns (uint256 ret) {
+        assembly {
+            let a := address()
+            ret := balance(a)
+        }
+    }
+
+    function test_selfbalance() public view returns (uint256 ret) {
+        assembly {
+            let a := selfbalance()
+            ret := a
+        }
+    }
+
+    function test_caller() public view returns (uint256 ret) {
+        assembly {
+            let a := caller()
+            ret := a
+        }
+    }
+
+    function test_callvalue() public payable returns (uint256 ret) {
+        assembly {
+            let a := callvalue()
+            ret := a
+        }
+    }
+}"#,
+    );
+
+    runtime.constructor(0, Vec::new());
+    runtime.function("test_address", Vec::new());
+    let mut b_vec = runtime.vm.output.to_vec();
+    b_vec.reverse();
+    assert_eq!(b_vec, runtime.vm.account.to_vec());
+
+    runtime.function("test_balance", Vec::new());
+    assert_eq!(
+        runtime.vm.output[..16].to_vec(),
+        runtime
+            .accounts
+            .get_mut(&runtime.vm.account)
+            .unwrap()
+            .1
+            .encode(),
+    );
+
+    runtime.function("test_selfbalance", Vec::new());
+    assert_eq!(
+        runtime.vm.output[..16].to_vec(),
+        runtime
+            .accounts
+            .get_mut(&runtime.vm.account)
+            .unwrap()
+            .1
+            .encode(),
+    );
+
+    runtime.function("test_caller", Vec::new());
+    let mut b_vec = runtime.vm.output.to_vec();
+    b_vec.reverse();
+    assert_eq!(b_vec, runtime.vm.caller.to_vec());
+
+    runtime.vm.value = 0xdeadcafeu128;
+    runtime.function("test_callvalue", Vec::new());
+
+    let mut expected = 0xdeadcafeu32.to_le_bytes().to_vec();
+    expected.resize(32, 0);
+
+    assert_eq!(runtime.vm.output, expected);
+}

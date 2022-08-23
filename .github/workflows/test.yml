@@ -216,7 +216,7 @@ jobs:
           ${{steps.push.outputs.push}} \
           -t ghcr.io/${GITHUB_REPOSITORY}:latest \
           --platform linux/arm64,linux/amd64 \
-          --label org.opencontainers.image.description="Solidity Compiler for Solana, Substrate, and ewasm version $(git describe --tags)"
+          --label org.opencontainers.image.description="Solidity Compiler for Solana and Substrate version $(git describe --tags)"
 
   solana:
     name: Solana Integration test
@@ -282,40 +282,6 @@ jobs:
     - name: Deploy and test contracts
       run: npm run test
       working-directory: ./integration/substrate
-
-  burrow:
-    name: Burrow Integration test
-    runs-on: ubuntu-20.04
-    container: ubuntu:20.04
-    needs: linux-x86-64
-    services:
-      burrow:
-        image: hyperledger/burrow:0.34.4
-        ports:
-          - 10997
-    steps:
-    - name: Checkout sources
-      uses: actions/checkout@v2
-    - uses: actions/setup-node@v1
-      with:
-        node-version: '14'
-    - uses: actions/download-artifact@master
-      with:
-        name: solang-linux-x86-64
-        path: bin
-    - run: |
-        chmod 755 ./bin/solang
-        echo "$(pwd)/bin" >> $GITHUB_PATH
-    - run: npm install
-      working-directory: ./integration/burrow
-    - name: Build Solang contract
-      run: npm run build
-      working-directory: ./integration/burrow
-    - name: Set github env
-      run: echo "RPC_URL=burrow:10997" >> $GITHUB_ENV
-    - name: Deploy and test contract
-      run: npm run test
-      working-directory: ./integration/burrow
 
   vscode:
     name: Visual Code Extension

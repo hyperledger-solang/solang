@@ -305,7 +305,7 @@ can also have their selector overriden. If a function overrides another one in a
 base contract, then the selector of both must match.
 
 .. warning::
-    On ewasm and Solana, changing the selector may result in a mismatch between
+    On Solana, changing the selector may result in a mismatch between
     the contract metadata and the actual contract code, because the metadata does
     not explicitly store the selector.
 
@@ -514,11 +514,6 @@ calling.
     function test(address foo, bytes rawcalldata) public {
         (bool success, bytes rawresult) = foo.call{value: 102, gas: 1000}(rawcalldata);
     }
-
-.. note::
-
-    ewasm also supports ``staticcall()`` and ``delegatecall()`` on the address type. These
-    call types are not supported on Parity Substrate.
 
 .. _fallback_receive:
 

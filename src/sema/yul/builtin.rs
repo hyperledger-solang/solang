@@ -17,7 +17,7 @@ impl YulBuiltinPrototype {
     /// Checks if a certain Yul builtin is available for the given target
     pub fn is_available(&self, target: &Target) -> bool {
         match target {
-            Target::Ewasm => self.availability[0],
+            Target::EVM => self.availability[0],
             Target::Substrate { .. } => self.availability[1],
             Target::Solana => self.availability[2],
         }
@@ -272,7 +272,7 @@ static YUL_BUILTIN: [YulBuiltinPrototype; 76] =
             doc: "Stop execution",
             ty: YulBuiltInFunction::Stop,
             stops_execution: true,
-            availability: [false, false, false],
+            availability: [true, false, false],
         },
         YulBuiltinPrototype {
             name: "add",
@@ -497,7 +497,7 @@ static YUL_BUILTIN: [YulBuiltinPrototype; 76] =
             doc: "signextend(i, x) sign extends from (i*8+7)th bit counting from least significant",
             ty: YulBuiltInFunction::SignExtend,
             stops_execution: false,
-            availability: [false, false, false],
+            availability: [true, false, false],
         },
         YulBuiltinPrototype {
             name: "keccak256",
@@ -506,7 +506,7 @@ static YUL_BUILTIN: [YulBuiltinPrototype; 76] =
             doc: "keccak256(p, n) performs keccak(mem[p...(p+n)])",
             ty: YulBuiltInFunction::Keccak256,
             stops_execution: false,
-            availability: [false, false, false],
+            availability: [true, false, false],
         },
         YulBuiltinPrototype {
             name: "pc",
@@ -515,7 +515,7 @@ static YUL_BUILTIN: [YulBuiltinPrototype; 76] =
             doc: "Returns the current position in code, i.e. the program counter",
             ty: YulBuiltInFunction::Pc,
             stops_execution: false,
-            availability: [false, false, false],
+            availability: [true, false, false],
         },
         YulBuiltinPrototype {
             name: "pop",
@@ -524,7 +524,7 @@ static YUL_BUILTIN: [YulBuiltinPrototype; 76] =
             doc: "pop(x) discard value x",
             ty: YulBuiltInFunction::Pop,
             stops_execution: false,
-            availability: [false, false, false],
+            availability: [true, false, false],
         },
         YulBuiltinPrototype {
             name: "mload",
@@ -533,7 +533,7 @@ static YUL_BUILTIN: [YulBuiltinPrototype; 76] =
             doc: "mload(p) returns mem[p...(p+32)]",
             ty: YulBuiltInFunction::MLoad,
             stops_execution: false,
-            availability: [false, false, false],
+            availability: [true, false, false],
         },
         YulBuiltinPrototype {
             name: "mstore",
@@ -542,7 +542,7 @@ static YUL_BUILTIN: [YulBuiltinPrototype; 76] =
             doc: "mstore(p, v) stores v into mem[p...(p+32)]",
             ty: YulBuiltInFunction::MStore,
             stops_execution: false,
-            availability: [false, false, false],
+            availability: [true, false, false],
         },
         YulBuiltinPrototype {
             name: "mstore8",
@@ -551,7 +551,7 @@ static YUL_BUILTIN: [YulBuiltinPrototype; 76] =
             doc: "mstore8(p, v) stores (v & 0xff) into mem[p] (modified a single byte of v)",
             ty: YulBuiltInFunction::MStore8,
             stops_execution: false,
-            availability: [false, false, false],
+            availability: [true, false, false],
         },
         YulBuiltinPrototype {
             name: "sload",
@@ -560,7 +560,7 @@ static YUL_BUILTIN: [YulBuiltinPrototype; 76] =
             doc: "sload(p) returns storage[p], i.e. memory on contract's storage",
             ty: YulBuiltInFunction::SLoad,
             stops_execution: false,
-            availability: [false, false, false],
+            availability: [true, false, false],
         },
         YulBuiltinPrototype {
             name: "sstore",
@@ -569,7 +569,7 @@ static YUL_BUILTIN: [YulBuiltinPrototype; 76] =
             doc: "sstore(p) stores v into storage[p]",
             ty: YulBuiltInFunction::SStore,
             stops_execution: false,
-            availability: [false, false, false],
+            availability: [true, false, false],
         },
         YulBuiltinPrototype {
             name: "msize",
@@ -578,7 +578,7 @@ static YUL_BUILTIN: [YulBuiltinPrototype; 76] =
             doc: "Returns the size of memory, i.e largest accessed memory index",
             ty: YulBuiltInFunction::MSize,
             stops_execution: false,
-            availability: [false, false, false],
+            availability: [true, false, false],
         },
         YulBuiltinPrototype {
             name: "gas",
@@ -632,7 +632,7 @@ static YUL_BUILTIN: [YulBuiltinPrototype; 76] =
             doc: "Returns the wei sent together with the current call",
             ty: YulBuiltInFunction::CallValue,
             stops_execution: false,
-            availability: [true, true, true],
+            availability: [true, true, false],
         },
         YulBuiltinPrototype {
             name: "calldataload",
@@ -641,7 +641,7 @@ static YUL_BUILTIN: [YulBuiltinPrototype; 76] =
             doc: "calldataload(p) returns call data starting from position p (32 bytes)",
             ty: YulBuiltInFunction::CallDataLoad,
             stops_execution: false,
-            availability: [false, false, false],
+            availability: [true, false, false],
         },
         YulBuiltinPrototype {
             name: "calldatasize",
@@ -650,7 +650,7 @@ static YUL_BUILTIN: [YulBuiltinPrototype; 76] =
             doc: "Returns the size of call data in bytes",
             ty: YulBuiltInFunction::CallDataSize,
             stops_execution: false,
-            availability: [false, false, false],
+            availability: [true, false, false],
         },
         YulBuiltinPrototype {
             name: "calldatacopy",
@@ -659,7 +659,7 @@ static YUL_BUILTIN: [YulBuiltinPrototype; 76] =
             doc: "calldatacopy(t, f, s) copies s bytes from calldata at position f to mem at position t",
             ty: YulBuiltInFunction::CallDataCopy,
             stops_execution: false,
-            availability: [false, false, false],
+            availability: [true, false, false],
         },
         YulBuiltinPrototype {
             name: "codesize",
@@ -668,7 +668,7 @@ static YUL_BUILTIN: [YulBuiltinPrototype; 76] =
             doc: "Returns the size of the current contract / execution context",
             ty: YulBuiltInFunction::CodeSize,
             stops_execution: false,
-            availability: [false, false, false],
+            availability: [true, false, false],
         },
         YulBuiltinPrototype {
             name: "codecopy",
@@ -677,7 +677,7 @@ static YUL_BUILTIN: [YulBuiltinPrototype; 76] =
             doc: "codecopy(t, f, s) copies s bytes from code at position f to mem at position t",
             ty: YulBuiltInFunction::CodeCopy,
             stops_execution: false,
-            availability: [false, false, false],
+            availability: [true, false, false],
         },
         YulBuiltinPrototype {
             name: "extcodesize",
@@ -695,7 +695,7 @@ static YUL_BUILTIN: [YulBuiltinPrototype; 76] =
             doc: "extcodecopy(a, t, f, s) copies s bytes from code located at address a at position f to mem at position t",
             ty: YulBuiltInFunction::ExtCodeCopy,
             stops_execution: false,
-            availability: [false, false, false],
+            availability: [true, false, false],
         },
         YulBuiltinPrototype {
             name: "returndatasize",
@@ -704,7 +704,7 @@ static YUL_BUILTIN: [YulBuiltinPrototype; 76] =
             doc: "Returns the size of the last returndata",
             ty: YulBuiltInFunction::ReturnDataSize,
             stops_execution: false,
-            availability: [false, false, false],
+            availability: [true, false, false],
         },
         YulBuiltinPrototype {
             name: "returndatacopy",
@@ -713,7 +713,7 @@ static YUL_BUILTIN: [YulBuiltinPrototype; 76] =
             doc: "returndatacopy(t, f, s) copy s bytes from return data at position f to mem at position t",
             ty: YulBuiltInFunction::ReturnDataCopy,
             stops_execution: false,
-            availability: [false, false, false],
+            availability: [true, false, false],
         },
         YulBuiltinPrototype {
             name: "extcodehash",
@@ -722,7 +722,7 @@ static YUL_BUILTIN: [YulBuiltinPrototype; 76] =
             doc: "extcodehash(a) returns the code hash of address a",
             ty: YulBuiltInFunction::ExtCodeHash,
             stops_execution: false,
-            availability: [false, false, false],
+            availability: [true, false, false],
         },
         YulBuiltinPrototype {
             name: "create",
@@ -731,7 +731,7 @@ static YUL_BUILTIN: [YulBuiltinPrototype; 76] =
             doc: "create(v, p, n) creates new contract with code mem[p..(p+n)] and sends v wei. It returns the new address or 0 on error",
             ty: YulBuiltInFunction::Create,
             stops_execution: false,
-            availability: [false, false, false],
+            availability: [true, false, false],
         },
         YulBuiltinPrototype {
             name: "create2",
@@ -740,7 +740,7 @@ static YUL_BUILTIN: [YulBuiltinPrototype; 76] =
             doc: "create2(v, p, n, s) new contract with code mem[p...(p+n)] at address keccak256(0xff . this . s . keccak256(mem[p...(p+n)]) and sends v wei.\n 0xff is a 1 byte value, 'this' is the current contract's address as a 20 byte value and 's' is a big endian 256-bit value. it returns 0 on error.",
             ty: YulBuiltInFunction::Create2,
             stops_execution: false,
-            availability: [false, false, false],
+            availability: [true, false, false],
         },
         YulBuiltinPrototype {
             name: "call",
@@ -749,7 +749,7 @@ static YUL_BUILTIN: [YulBuiltinPrototype; 76] =
             doc: "call(g, a, v, in, insize, out, outsize) calls contract at address a with input mem[in...(in+insize)] providing f cas and v wei and outputs area mem[out...(out+outsize)]. It returns 0 on error and 1 on success",
             ty: YulBuiltInFunction::Call,
             stops_execution: false,
-            availability: [false, false, false],
+            availability: [true, false, false],
         },
         YulBuiltinPrototype {
             name: "callcode",
@@ -758,7 +758,7 @@ static YUL_BUILTIN: [YulBuiltinPrototype; 76] =
             doc: "Identical to call(g, a, v, in, insize, out, outsize), but only use the code from a and stay in the context of the current contract otherwise",
             ty: YulBuiltInFunction::CallCode,
             stops_execution: false,
-            availability: [false, false, false],
+            availability: [true, false, false],
         },
         YulBuiltinPrototype {
             name: "delegatecall",
@@ -767,7 +767,7 @@ static YUL_BUILTIN: [YulBuiltinPrototype; 76] =
             doc: "Identical to 'callcode' but also keep caller and callvalue",
             ty: YulBuiltInFunction::DelegateCall,
             stops_execution: false,
-            availability: [false, false, false],
+            availability: [true, false, false],
         },
         YulBuiltinPrototype {
             name: "staticcall",
@@ -776,7 +776,7 @@ static YUL_BUILTIN: [YulBuiltinPrototype; 76] =
             doc: "Identical to call(g, a, 0, in, insize, out, outsize), but do not allow state modifications",
             ty: YulBuiltInFunction::StaticCall,
             stops_execution: false,
-            availability: [false, false, false],
+            availability: [true, false, false],
         },
         YulBuiltinPrototype {
             name: "return",
@@ -785,7 +785,7 @@ static YUL_BUILTIN: [YulBuiltinPrototype; 76] =
             doc: "return(p, s) ends execution and returns data mem[p...(p+s)]",
             ty: YulBuiltInFunction::Return,
             stops_execution: true,
-            availability: [false, false, false],
+            availability: [true, false, false],
         },
         YulBuiltinPrototype {
             name: "revert",
@@ -794,7 +794,7 @@ static YUL_BUILTIN: [YulBuiltinPrototype; 76] =
             doc: "revert(p, s) ends execution, reverts state changes and returns data mem[p...(p+s)]",
             ty: YulBuiltInFunction::Revert,
             stops_execution: true,
-            availability: [false, false, false],
+            availability: [true, false, false],
         },
         YulBuiltinPrototype {
             name: "selfdestruct",
@@ -821,7 +821,7 @@ static YUL_BUILTIN: [YulBuiltinPrototype; 76] =
             doc: "log(p, s): log without topics and data mem[p...(p+s)]",
             ty: YulBuiltInFunction::Log0,
             stops_execution: false,
-            availability: [false, false, false],
+            availability: [true, false, false],
         },
         YulBuiltinPrototype {
             name: "log1",
@@ -830,7 +830,7 @@ static YUL_BUILTIN: [YulBuiltinPrototype; 76] =
             doc: "log1(p, s, t1): log with topic t1 and data mem[p...(p+s)]",
             ty: YulBuiltInFunction::Log1,
             stops_execution: false,
-            availability: [false, false, false],
+            availability: [true, false, false],
         },
         YulBuiltinPrototype {
             name: "log2",
@@ -839,7 +839,7 @@ static YUL_BUILTIN: [YulBuiltinPrototype; 76] =
             doc: "log2(p, s, t1, t2): log with topics t1, t2 and data mem[p...(p+s)]",
             ty: YulBuiltInFunction::Log2,
             stops_execution: false,
-            availability: [false, false, false],
+            availability: [true, false, false],
         },
         YulBuiltinPrototype {
             name: "log3",
@@ -848,7 +848,7 @@ static YUL_BUILTIN: [YulBuiltinPrototype; 76] =
             doc: "log3(p, s, t1, t2, t3): log with topics t1, t2, t3 and data mem[p...(p+s)]",
             ty: YulBuiltInFunction::Log3,
             stops_execution: false,
-            availability: [false, false, false],
+            availability: [true, false, false],
         },
         YulBuiltinPrototype {
             name: "log4",
@@ -857,7 +857,7 @@ static YUL_BUILTIN: [YulBuiltinPrototype; 76] =
             doc: "log4(p, s, t1, t2, t3, t4): log with topics t1, t2, t3, t4 with data mem[p...(p+s)]",
             ty: YulBuiltInFunction::Log4,
             stops_execution: false,
-            availability: [false, false, false],
+            availability: [true, false, false],
         },
         YulBuiltinPrototype {
             name: "chainid",

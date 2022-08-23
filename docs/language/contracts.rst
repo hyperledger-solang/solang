@@ -26,7 +26,7 @@ If a contract is expected to hold receive value on instantiation, the constructo
 .. note::
 
   Parity Substrate allows multiple constructors to be defined, which is not true for
-  ewasm. So, when building for Substrate, multiple constructors can be
+  Solana. So, when building for Substrate, multiple constructors can be
   defined as long as their argument list is different (i.e. overloaded).
 
   When the contract is deployed in the Polkadot UI, the user can select the constructor to be used.
@@ -90,11 +90,6 @@ The constructor should be declared ``payable`` for this to work.
 
 Setting the salt, gas, and space for the new contract
 _____________________________________________________
-
-.. note::
-    `ewasm <https://github.com/ewasm/design/blob/master/eth_interface.md>`_ does not
-    yet provide a method for setting the salt or gas for the new contract, so
-    these values are ignored.
 
 .. note::
     The gas or salt cannot be set on Solana. However, when creating a contract
