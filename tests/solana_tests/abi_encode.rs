@@ -384,6 +384,11 @@ fn struct_in_array() {
         item_3: [NoPadStruct; 2],
     }
 
+    #[derive(Debug, BorshDeserialize)]
+    struct Res3 {
+        item_1: Vec<NoPadStruct>,
+    }
+
     let mut vm = build_solidity(
         r#"
     contract Testing {
@@ -425,6 +430,14 @@ fn struct_in_array() {
             bytes memory b1 = abi.encode(test_vec_1, mem_vec, str_vec);
             return b1;
         }
+
+        function primitiveDynamicArray() public view returns (bytes memory) {
+            noPadStruct[] memory str_vec = new noPadStruct[](2);
+            str_vec[0] = noPadStruct(5, 6);
+            str_vec[1] = noPadStruct(7, 8);
+            bytes memory b2 = abi.encode(str_vec);
+            return b2;
+        }
     }
         "#,
     );
@@ -453,6 +466,14 @@ fn struct_in_array() {
     assert_eq!(decoded.item_2, [1, -298, 3, -434]);
     assert_eq!(decoded.item_3[0], NoPadStruct { a: 1, b: 2 });
     assert_eq!(decoded.item_3[1], NoPadStruct { a: 3, b: 4 });
+
+    let returns = vm.function("primitiveDynamicArray", &[], &[], None);
+    let encoded = returns[0].clone().into_bytes().unwrap();
+    let decoded = Res3::try_from_slice(&encoded).unwrap();
+
+    assert_eq!(decoded.item_1.len(), 2);
+    assert_eq!(decoded.item_1[0], NoPadStruct { a: 5, b: 6 });
+    assert_eq!(decoded.item_1[1], NoPadStruct { a: 7, b: 8 });
 }
 
 #[test]
@@ -709,7 +730,7 @@ contract Testing {
     assert_eq!(decoded.item, vec![9, 3, 4, 90, 834]);
 }
 
-fn create_response(vec: &mut [u8], string: &[u8; 2]) -> [u8; 32] {
+pub(super) fn create_response(vec: &mut [u8], string: &[u8; 2]) -> [u8; 32] {
     vec[0] = string[0];
     vec[1] = string[1];
     <[u8; 32]>::try_from(vec.to_owned()).unwrap()

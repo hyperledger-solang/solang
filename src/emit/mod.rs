@@ -2537,14 +2537,44 @@ pub trait TargetRuntime<'a> {
 
                 let start = unsafe { bin.builder.build_gep(data, &[offset], "start") };
 
-                let start = bin.builder.build_pointer_cast(
-                    start,
-                    bin.llvm_type(&returns[0], ns)
-                        .ptr_type(AddressSpace::Generic),
-                    "start",
-                );
+                if let Type::Bytes(n) = &returns[0] {
+                    let store = bin.build_alloca(
+                        function,
+                        bin.context.custom_width_int_type(*n as u32 * 8),
+                        "stack",
+                    );
+                    bin.builder.build_call(
+                        bin.module.get_function("__beNtoleN").unwrap(),
+                        &[
+                            bin.builder
+                                .build_pointer_cast(
+                                    start,
+                                    bin.context.i8_type().ptr_type(AddressSpace::Generic),
+                                    "",
+                                )
+                                .into(),
+                            bin.builder
+                                .build_pointer_cast(
+                                    store,
+                                    bin.context.i8_type().ptr_type(AddressSpace::Generic),
+                                    "",
+                                )
+                                .into(),
+                            bin.context.i32_type().const_int(*n as u64, false).into(),
+                        ],
+                        "",
+                    );
+                    bin.builder.build_load(store, &format!("bytes{}", *n))
+                } else {
+                    let start = bin.builder.build_pointer_cast(
+                        start,
+                        bin.llvm_type(&returns[0], ns)
+                            .ptr_type(AddressSpace::Generic),
+                        "start",
+                    );
 
-                bin.builder.build_load(start, "value")
+                    bin.builder.build_load(start, "value")
+                }
             }
             Expression::Keccak256(_, _, exprs) => {
                 let mut length = bin.context.i32_type().const_zero();
@@ -2940,7 +2970,6 @@ pub trait TargetRuntime<'a> {
             Expression::AdvancePointer {
                 pointer,
                 bytes_offset,
-                ..
             } => {
                 let pointer = if pointer.ty().is_dynamic_memory() {
                     bin.vector_bytes(self.expression(bin, pointer, vartab, function, ns))
@@ -3443,7 +3472,6 @@ pub trait TargetRuntime<'a> {
                         let dest_ref = self
                             .expression(bin, dest, &w.vars, function, ns)
                             .into_pointer_value();
-
                         bin.builder.build_store(dest_ref, value_ref);
                     }
                     Instr::BranchCond {
@@ -4584,17 +4612,19 @@ pub trait TargetRuntime<'a> {
                                 .into_pointer_value()
                         };
 
-                        let dest = self.expression(bin, to, &w.vars, function, ns);
+                        let dest = if to.ty().is_dynamic_memory() {
+                            bin.vector_bytes(self.expression(bin, to, &w.vars, function, ns))
+                        } else {
+                            self.expression(bin, to, &w.vars, function, ns)
+                                .into_pointer_value()
+                        };
+
                         let size = self.expression(bin, bytes, &w.vars, function, ns);
 
                         if matches!(bytes, Expression::NumberLiteral(..)) {
-                            let _ = bin.builder.build_memcpy(
-                                dest.into_pointer_value(),
-                                1,
-                                src,
-                                1,
-                                size.into_int_value(),
-                            );
+                            let _ =
+                                bin.builder
+                                    .build_memcpy(dest, 1, src, 1, size.into_int_value());
                         } else {
                             bin.builder.build_call(
                                 bin.module.get_function("__memcpy").unwrap(),

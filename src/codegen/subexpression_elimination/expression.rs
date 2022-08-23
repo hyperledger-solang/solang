@@ -135,9 +135,7 @@ impl Expression {
                 Expression::LessEqual(*loc, Box::new(left.clone()), Box::new(right.clone()))
             }
 
-            Expression::AdvancePointer { loc, ty, .. } => Expression::AdvancePointer {
-                loc: *loc,
-                ty: ty.clone(),
+            Expression::AdvancePointer { .. } => Expression::AdvancePointer {
                 pointer: Box::new(left.clone()),
                 bytes_offset: Box::new(right.clone()),
             },
@@ -252,7 +250,6 @@ impl Expression {
             | Expression::AdvancePointer {
                 pointer: left,
                 bytes_offset: right,
-                ..
             }
             | Expression::LessEqual(_, left, right) => Some((left, right)),
 
