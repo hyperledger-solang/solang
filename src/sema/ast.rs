@@ -1165,6 +1165,8 @@ pub enum Builtin {
     WriteUint128LE,
     WriteUint256LE,
     WriteAddress,
+    WriteString,
+    WriteBytes,
     Accounts,
     UserTypeWrap,
     UserTypeUnwrap,

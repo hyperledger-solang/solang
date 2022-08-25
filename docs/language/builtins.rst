@@ -555,6 +555,19 @@ writeAddress(address value, uint32 offset)
 
 Write an ``address`` to the specified offset.
 
+writeString(string value, uint32 offset)
+++++++++++++++++++++++++++++++++++++++++++++
+
+Write the characters of a ``string`` to the specified offset. This function does not
+write the length of the string to the buffer.
+
+writeBytes(bytes value, uint32 offset)
+++++++++++++++++++++++++++++++++++++++++++
+
+Write the bytes of a Solidity dynamic bytes type ``bytes`` to the specified offset.
+This function does not write the length of the byte array to the buffer.
+
+
 Miscellaneous
 _____________
 
