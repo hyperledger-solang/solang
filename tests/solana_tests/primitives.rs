@@ -2,7 +2,8 @@
 
 use crate::build_solidity;
 use ethabi::ethereum_types::U256;
-use num_bigint::{BigInt, BigUint};
+use num_bigint::{BigInt, BigUint, RandBigInt, Sign};
+use rand::seq::SliceRandom;
 use rand::Rng;
 use std::ops::Add;
 use std::ops::BitAnd;
@@ -349,7 +350,9 @@ fn uint() {
             }
 
             function mul(uintN a, uintN b) public returns (uintN) {
+                unchecked {
                 return a * b;
+                }
             }
 
             function div(uintN a, uintN b) public returns (uintN) {
@@ -361,7 +364,9 @@ fn uint() {
             }
 
             function pow(uintN a, uintN b) public returns (uintN) {
+                unchecked {
                 return a ** b;
+                }
             }
 
             function or(uintN a, uintN b) public returns (uintN) {
@@ -600,6 +605,196 @@ fn truncate_uint(n: &mut U256, width: usize) {
 }
 
 #[test]
+
+fn test_mul_within_range_signed() {
+    let mut rng = rand::thread_rng();
+    for width in (72..=256).step_by(8) {
+        let src = r#"
+        contract test {
+         
+            function mul(intN a, intN b) public returns (intN) {
+                return a * b;
+            }
+        }"#
+        .replace("intN", &format!("int{}", width));
+
+        let mut contract = build_solidity(&src);
+
+        // Signed N bits will fit rthe range: 2^(N-1) -1 +/-. Here we generate a random number within this range and multiply it by -1, 1 or 0.
+        let first_operand_rand = rng.gen_bigint(width - 1).sub(1_u32);
+
+        let side = vec![-1, 0, 1];
+        // -1,1 or 0
+        let second_op = BigInt::from(*side.choose(&mut rng).unwrap() as i32);
+
+        contract.constructor("test", &[]);
+        let return_value = contract.function(
+            "mul",
+            &[
+                ethabi::Token::Int(bigint_to_eth(
+                    &first_operand_rand,
+                    width.try_into().unwrap(),
+                )),
+                ethabi::Token::Int(bigint_to_eth(&second_op, width.try_into().unwrap())),
+            ],
+            &[],
+            None,
+        );
+
+        let res = first_operand_rand.mul(second_op);
+        assert_eq!(
+            return_value,
+            vec![ethabi::Token::Int(bigint_to_eth(
+                &res,
+                width.try_into().unwrap(),
+            ))]
+        );
+    }
+}
+
+#[test]
+
+fn test_mul_within_range() {
+    let mut rng = rand::thread_rng();
+    for width in (72..=256).step_by(8) {
+        let src = r#"
+        contract test {
+            function mul(uintN a, uintN b) public returns (uintN) { 
+                return a * b;
+            }
+        }"#
+        .replace("intN", &format!("int{}", width));
+
+        let mut contract = build_solidity(&src);
+        contract.constructor("test", &[]);
+        for _ in 0..10 {
+            // Max number to fit unsigned N bits is 0..(2^N)-1
+            let limit = BigUint::from(2_u32).pow(width).sub(1_u32);
+
+            // Generate a random number within the the range 0..2^N -1
+            let first_operand_rand = rng.gen_biguint(width.into());
+
+            // Calculate a number that when multiplied by first_operand_rand, the result will not overflow N bits .(The result of this division will cast the float result to int result, therefore lowering the result. The result of multiplication will never overflow)
+            let second_operand_rand = limit.div(&first_operand_rand);
+
+            let return_value = contract.function(
+                "mul",
+                &[
+                    ethabi::Token::Uint(U256::from_big_endian(&first_operand_rand.to_bytes_be())),
+                    ethabi::Token::Uint(U256::from_big_endian(&second_operand_rand.to_bytes_be())),
+                ],
+                &[],
+                None,
+            );
+            let res = first_operand_rand * second_operand_rand;
+
+            assert_eq!(
+                return_value,
+                vec![ethabi::Token::Uint(U256::from_big_endian(
+                    &res.to_bytes_be()
+                ))]
+            );
+        }
+    }
+}
+
+#[test]
+
+fn test_overflow_detect_signed() {
+    let mut rng = rand::thread_rng();
+    // For bit sizes from 8..64, LLVM has intrinsic functions for multiplication with overflwo. Testing starts from int types of 72 and up, there is no need to test intrinsic LLVM functions.
+    for width in (72..=256).step_by(8) {
+        let src = r#"
+        contract test {
+         
+            function mul(intN a, intN b) public returns (intN) {
+                return a * b;
+            }
+        }"#
+        .replace("intN", &format!("int{}", width));
+        let mut contract = build_solidity(&src);
+
+        contract.constructor("test", &[]);
+
+        // The max value held in signed N bits is 2^(N-1) -1 +/- .Generate a value that will overflow this range:
+        let limit = BigInt::from(2_u32).pow(width - 1).add(1_u32);
+
+        // Divide Limit by a random number
+        let first_operand_rand = rng.gen_bigint((width - 1).into()).sub(1_u32);
+
+        // Calculate a number that when multiplied by first_operand_rand, the result will overflow N bits
+        let mut second_operand_rand = limit / &first_operand_rand;
+
+        if let Sign::Minus = second_operand_rand.sign() {
+            // Decrease by 1 if negative, this is to make sure the result will overflow
+            second_operand_rand = second_operand_rand.sub(1);
+        } else {
+            // Increase by 1 if psotive
+            second_operand_rand = second_operand_rand.add(1);
+        }
+
+        let res = contract.function_must_fail(
+            "mul",
+            &[
+                ethabi::Token::Int(bigint_to_eth(
+                    &first_operand_rand,
+                    width.try_into().unwrap(),
+                )),
+                ethabi::Token::Int(bigint_to_eth(
+                    &second_operand_rand,
+                    width.try_into().unwrap(),
+                )),
+            ],
+            &[],
+            None,
+        );
+
+        assert_ne!(res, Ok(0));
+    }
+}
+
+#[test]
+
+fn test_overflow_detect_unsigned() {
+    let mut rng = rand::thread_rng();
+    for width in (72..=256).step_by(8) {
+        let src = r#"
+        contract test {
+         
+            function mul(uintN a, uintN b) public returns (uintN) {
+                return a * b;
+            }
+        }"#
+        .replace("intN", &format!("int{}", width));
+        let mut contract = build_solidity(&src);
+
+        contract.constructor("test", &[]);
+
+        for _ in 0..10 {
+            // N bits can hold the range 0..(2^N)-1 . Generate a value that overflows N bits
+            let limit = BigUint::from(2_u32).pow(width);
+
+            // Generate a random number within the the range 0..2^N
+            let first_operand_rand = rng.gen_biguint(width.into());
+
+            // Calculate a number that when multiplied by first_operand_rand, the result will overflow N bits
+            let second_operand_rand = limit.div(&first_operand_rand).add(1_usize);
+
+            let res = contract.function_must_fail(
+                "mul",
+                &[
+                    ethabi::Token::Uint(U256::from_big_endian(&first_operand_rand.to_bytes_be())),
+                    ethabi::Token::Uint(U256::from_big_endian(&second_operand_rand.to_bytes_be())),
+                ],
+                &[],
+                None,
+            );
+            assert_ne!(res, Ok(0));
+        }
+    }
+}
+
+#[test]
 fn int() {
     let mut rng = rand::thread_rng();
 
@@ -615,7 +810,9 @@ fn int() {
             }
 
             function mul(intN a, intN b) public returns (intN) {
+                unchecked {
                 return a * b;
+                }
             }
 
             function div(intN a, intN b) public returns (intN) {

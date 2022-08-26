@@ -950,7 +950,9 @@ fn multiply() {
         "
         contract c {
             function multiply(uint a, uint b) public returns (uint) {
+                unchecked {
                 return a * b;
+                }
             }
 
             function multiply_with_cast() public returns (uint64) {

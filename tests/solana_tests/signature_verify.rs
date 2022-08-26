@@ -46,7 +46,7 @@ fn verify() {
 
     vm.constructor("foo", &[]);
 
-    let mut csprng = rand::thread_rng();
+    let mut csprng = rand_07::thread_rng();
     let keypair: Keypair = Keypair::generate(&mut csprng);
 
     let message: &[u8] =

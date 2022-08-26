@@ -5534,6 +5534,198 @@ pub trait TargetRuntime<'a> {
         vector.into()
     }
 
+    fn signed_ovf_detect(
+        &self,
+        bin: &Binary<'a>,
+        l: PointerValue<'a>,
+        r: PointerValue<'a>,
+        o: PointerValue<'a>,
+        mul_bits: u32,
+        left: IntValue<'a>,
+        right: IntValue<'a>,
+        bits: u32,
+        function: FunctionValue,
+    ) -> IntValue<'a> {
+        // We check for overflow based on the facts:
+        //  - * - = +
+        //  + * + = +
+        //  - * + = - (if op1 or op2 != 0)
+        // if one of the operands is zero, discard the last rule.
+        bin.builder.build_call(
+            bin.module.get_function("__mul32").unwrap(),
+            &[
+                bin.builder
+                    .build_pointer_cast(
+                        l,
+                        bin.context.i32_type().ptr_type(AddressSpace::Generic),
+                        "left",
+                    )
+                    .into(),
+                bin.builder
+                    .build_pointer_cast(
+                        r,
+                        bin.context.i32_type().ptr_type(AddressSpace::Generic),
+                        "right",
+                    )
+                    .into(),
+                bin.builder
+                    .build_pointer_cast(
+                        o,
+                        bin.context.i32_type().ptr_type(AddressSpace::Generic),
+                        "output",
+                    )
+                    .into(),
+                bin.context
+                    .i32_type()
+                    .const_int(mul_bits as u64 / 32, false)
+                    .into(),
+            ],
+            "",
+        );
+
+        let res = bin.builder.build_load(o, "mul");
+
+        let error_block = bin.context.append_basic_block(function, "error");
+        let return_block = bin.context.append_basic_block(function, "return_block");
+
+        // Extract sign bit of the operands and the result
+        let left_sign_bit = self.extract_sign_bit(bin, left, left.get_type());
+        let right_sign_bit = self.extract_sign_bit(bin, right, right.get_type());
+        let res_sign_bit = if mul_bits == bits {
+            // If no extension took place, get the leftmost bit(sign bit).
+            self.extract_sign_bit(bin, res.into_int_value(), res.into_int_value().get_type())
+        } else {
+            // If extension took place, truncate the result to the type of the operands then extract the leftmost bit(sign bit).
+            self.extract_sign_bit(
+                bin,
+                bin.builder
+                    .build_int_truncate(res.into_int_value(), left.get_type(), ""),
+                left.get_type(),
+            )
+        };
+
+        // If the operands sign is the same
+        let same_signs =
+            bin.builder
+                .build_int_compare(IntPredicate::EQ, left_sign_bit, right_sign_bit, "");
+
+        // If operands sign is the same and the result is positive
+        let same_operands_and_positive_res =
+            bin.builder
+                .build_and(same_signs, bin.builder.build_not(res_sign_bit, ""), "");
+
+        // If operands are not the same and the result is negative
+        let diff_operands_and_neg_res =
+            bin.builder
+                .build_and(bin.builder.build_not(same_signs, ""), res_sign_bit, "");
+        let left_is_zero =
+            bin.builder
+                .build_int_compare(IntPredicate::EQ, left, left.get_type().const_zero(), "");
+        let right_is_zero = bin.builder.build_int_compare(
+            IntPredicate::EQ,
+            right,
+            right.get_type().const_zero(),
+            "",
+        );
+
+        // If one of the operands is zero
+        let mul_by_zero = bin.builder.build_or(left_is_zero, right_is_zero, "");
+
+        let ok_operation = bin.builder.build_or(
+            same_operands_and_positive_res,
+            diff_operands_and_neg_res,
+            "",
+        );
+
+        // Here, we disregard the last rule mentioned above by oring with mul_by_zero
+        bin.builder.build_conditional_branch(
+            bin.builder.build_or(ok_operation, mul_by_zero, ""),
+            //  bin.context.bool_type().const_all_ones(),
+            return_block,
+            error_block,
+        );
+
+        bin.builder.position_at_end(error_block);
+
+        self.assert_failure(
+            bin,
+            bin.context
+                .i8_type()
+                .ptr_type(AddressSpace::Generic)
+                .const_null(),
+            bin.context.i32_type().const_zero(),
+        );
+
+        bin.builder.position_at_end(return_block);
+
+        bin.builder
+            .build_int_truncate(res.into_int_value(), left.get_type(), "")
+    }
+
+    // Call void __mul32 and return the result.
+    fn call_mul32_without_ovf(
+        &self,
+        bin: &Binary<'a>,
+        l: PointerValue<'a>,
+        r: PointerValue<'a>,
+        o: PointerValue<'a>,
+        mul_bits: u32,
+        mul_type: IntType<'a>,
+    ) -> IntValue<'a> {
+        bin.builder.build_call(
+            bin.module.get_function("__mul32").unwrap(),
+            &[
+                bin.builder
+                    .build_pointer_cast(
+                        l,
+                        bin.context.i32_type().ptr_type(AddressSpace::Generic),
+                        "left",
+                    )
+                    .into(),
+                bin.builder
+                    .build_pointer_cast(
+                        r,
+                        bin.context.i32_type().ptr_type(AddressSpace::Generic),
+                        "right",
+                    )
+                    .into(),
+                bin.builder
+                    .build_pointer_cast(
+                        o,
+                        bin.context.i32_type().ptr_type(AddressSpace::Generic),
+                        "output",
+                    )
+                    .into(),
+                bin.context
+                    .i32_type()
+                    .const_int(mul_bits as u64 / 32, false)
+                    .into(),
+            ],
+            "",
+        );
+
+        let res = bin.builder.build_load(o, "mul");
+
+        bin.builder
+            .build_int_truncate(res.into_int_value(), mul_type, "")
+    }
+
+    // Utility function to extract the sign bit of an IntValue
+    fn extract_sign_bit(
+        &self,
+        bin: &Binary<'a>,
+        operand: IntValue<'a>,
+        int_type: IntType<'a>,
+    ) -> IntValue<'a> {
+        let n_bits_to_shift = int_type.get_bit_width() - 1;
+        let val_to_shift = int_type.const_int(n_bits_to_shift as u64, false);
+        let shifted = bin
+            .builder
+            .build_right_shift(operand, val_to_shift, false, "");
+        bin.builder
+            .build_int_truncate(shifted, bin.context.bool_type(), "")
+    }
+
     // emit a multiply for any width with or without overflow checking
     fn mul(
         &self,
@@ -5547,11 +5739,11 @@ pub trait TargetRuntime<'a> {
         let bits = left.get_type().get_bit_width();
 
         if bits > 64 {
-            // round up the number of bits to the next 32
+            // Round up the number of bits to the next 32
             let mul_bits = (bits + 31) & !31;
             let mul_ty = bin.context.custom_width_int_type(mul_bits);
 
-            // round up bits
+            // Round up bits
             let l = bin.build_alloca(function, mul_ty, "");
             let r = bin.build_alloca(function, mul_ty, "");
             let o = bin.build_alloca(function, mul_ty, "");
@@ -5559,20 +5751,29 @@ pub trait TargetRuntime<'a> {
             if mul_bits == bits {
                 bin.builder.build_store(l, left);
                 bin.builder.build_store(r, right);
-            } else if signed {
-                bin.builder
-                    .build_store(l, bin.builder.build_int_s_extend(left, mul_ty, ""));
-                bin.builder
-                    .build_store(r, bin.builder.build_int_s_extend(right, mul_ty, ""));
-            } else {
+            }
+            // Zext the operands to the nearest 32 bits. zext is called instead of sext because we need to do unsigned multiplication by default.
+            // It will not matter in terms of mul without overflow, because we always truncate the result to the bit size of the operands.
+            // In mul with overflow however, it is needed so that overflow can be detected if the most significant bits of the result are not Zeros.
+            else {
                 bin.builder
                     .build_store(l, bin.builder.build_int_z_extend(left, mul_ty, ""));
                 bin.builder
                     .build_store(r, bin.builder.build_int_z_extend(right, mul_ty, ""));
             }
 
-            bin.builder.build_call(
-                bin.module.get_function("__mul32").unwrap(),
+            // If unchecked, and no overflow flag in CL.
+            if unchecked && !bin.math_overflow_check {
+                return self.call_mul32_without_ovf(bin, l, r, o, mul_bits, left.get_type());
+            }
+
+            if signed {
+                return self.signed_ovf_detect(bin, l, r, o, mul_bits, left, right, bits, function);
+            }
+
+            // Check for unsigned ovf.
+            let return_val = bin.builder.build_call(
+                bin.module.get_function("__mul32_with_builtin_ovf").unwrap(),
                 &[
                     bin.builder
                         .build_pointer_cast(
@@ -5600,17 +5801,71 @@ pub trait TargetRuntime<'a> {
                         .const_int(mul_bits as u64 / 32, false)
                         .into(),
                 ],
-                "",
+                "ovf",
             );
 
             let res = bin.builder.build_load(o, "mul");
 
-            if mul_bits == bits {
-                res.into_int_value()
+            let error_block = bin.context.append_basic_block(function, "error");
+            let return_block = bin.context.append_basic_block(function, "return_block");
+
+            // If the operands were extended to nearest 32 bit size, check the most significant N bits, where N = bits after extension - original bits.
+            let ovf_any_type = if mul_bits != bits {
+                // If there are any set bits, then there is an overflow.
+                let check_ovf = bin.builder.build_right_shift(
+                    res.into_int_value(),
+                    mul_ty.const_int((bits).into(), false),
+                    false,
+                    "",
+                );
+                bin.builder.build_int_compare(
+                    IntPredicate::NE,
+                    check_ovf,
+                    check_ovf.get_type().const_zero(),
+                    "",
+                )
             } else {
-                bin.builder
-                    .build_int_truncate(res.into_int_value(), left.get_type(), "")
-            }
+                // If no size extension took place, there is no overflow in most significant N bits
+                bin.context.bool_type().const_zero()
+            };
+
+            // Untill this point, we only checked the extended bits for ovf. But mul ovf can take place any where from bit size to double bit size.
+            // For example: If we have uint72, it will be extended to uint96. we only checked the most significant 24 bits for overflow, which can happen up to 72*2=144 bits.
+            // bool __mul32_with_builtin_ovf takes care of overflowing bits beyond 96.
+            // What is left now is to or these two ovf flags, and check if any one of them is set. If so, an overflow occured.
+            let lowbit = bin.builder.build_int_truncate(
+                bin.builder.build_or(
+                    ovf_any_type,
+                    return_val
+                        .try_as_basic_value()
+                        .left()
+                        .unwrap()
+                        .into_int_value(),
+                    "",
+                ),
+                bin.context.bool_type(),
+                "bit",
+            );
+
+            // If ovf, raise and error, else return the result.
+            bin.builder
+                .build_conditional_branch(lowbit, error_block, return_block);
+
+            bin.builder.position_at_end(error_block);
+
+            self.assert_failure(
+                bin,
+                bin.context
+                    .i8_type()
+                    .ptr_type(AddressSpace::Generic)
+                    .const_null(),
+                bin.context.i32_type().const_zero(),
+            );
+
+            bin.builder.position_at_end(return_block);
+
+            bin.builder
+                .build_int_truncate(res.into_int_value(), left.get_type(), "")
         } else if bin.math_overflow_check && !unchecked {
             self.build_binary_op_with_overflow_check(
                 bin,
@@ -5645,7 +5900,6 @@ pub trait TargetRuntime<'a> {
                         break;
                     base *= base;
                 }
-
                 return result;
             }
         */
@@ -5709,6 +5963,8 @@ pub trait TargetRuntime<'a> {
             signed,
         );
 
+        let multiply = bin.builder.get_insert_block().unwrap();
+
         bin.builder.build_unconditional_branch(nomultiply);
         bin.builder.position_at_end(nomultiply);
 
@@ -5741,6 +5997,8 @@ pub trait TargetRuntime<'a> {
             signed,
         );
 
+        let notdone = bin.builder.get_insert_block().unwrap();
+
         base.add_incoming(&[(&base2, notdone)]);
         result.add_incoming(&[(&result3.as_basic_value(), notdone)]);
         exp.add_incoming(&[(&exp2, notdone)]);
@@ -5751,7 +6009,6 @@ pub trait TargetRuntime<'a> {
 
         function
     }
-
     /// Convenience function for generating binary operations with overflow checking.
     fn build_binary_op_with_overflow_check(
         &self,
