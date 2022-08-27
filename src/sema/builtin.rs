@@ -537,7 +537,7 @@ static BUILTIN_VARIABLE: Lazy<[Prototype; 16]> = Lazy::new(|| {
 });
 
 // A list of all Solidity builtins methods
-static BUILTIN_METHODS: Lazy<[Prototype; 25]> = Lazy::new(|| {
+static BUILTIN_METHODS: Lazy<[Prototype; 27]> = Lazy::new(|| {
     [
         Prototype {
             builtin: Builtin::ReadInt8,
@@ -812,6 +812,28 @@ static BUILTIN_METHODS: Lazy<[Prototype; 25]> = Lazy::new(|| {
             ret: vec![],
             target: vec![],
             doc: "Writes an address to the specified offset",
+            constant: false,
+        },
+        Prototype {
+            builtin: Builtin::WriteString,
+            namespace: None,
+            method: Some(Type::DynamicBytes),
+            name: "writeString",
+            params: vec![Type::String, Type::Uint(32)],
+            ret: vec![],
+            target: vec![],
+            doc: "Write the contents of a string (without its length) to the specified offset",
+            constant: false,
+        },
+        Prototype {
+            builtin: Builtin::WriteBytes,
+            namespace: None,
+            method: Some(Type::DynamicBytes),
+            name: "writeBytes",
+            params: vec![Type::DynamicBytes, Type::Uint(32)],
+            ret: vec![],
+            target: vec![],
+            doc: "Write the contents of a bytes array (without its length) to the specified offset",
             constant: false,
         },
     ]

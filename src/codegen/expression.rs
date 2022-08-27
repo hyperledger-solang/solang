@@ -1601,6 +1601,66 @@ fn expr_builtin(
 
             Expression::Undefined(tys[0].clone())
         }
+        ast::Builtin::WriteBytes | ast::Builtin::WriteString => {
+            let buffer = expression(&args[0], cfg, contract_no, func, ns, vartab, opt);
+            let data = expression(&args[1], cfg, contract_no, func, ns, vartab, opt);
+            let offset = expression(&args[2], cfg, contract_no, func, ns, vartab, opt);
+
+            let size = Expression::Builtin(
+                *loc,
+                vec![Type::Uint(32)],
+                Builtin::ArrayLength,
+                vec![data.clone()],
+            );
+
+            let cond = Expression::LessEqual(
+                *loc,
+                Box::new(Expression::Add(
+                    *loc,
+                    Type::Uint(32),
+                    false,
+                    Box::new(offset.clone()),
+                    Box::new(size.clone()),
+                )),
+                Box::new(Expression::Builtin(
+                    *loc,
+                    vec![Type::Uint(32)],
+                    Builtin::ArrayLength,
+                    vec![buffer.clone()],
+                )),
+            );
+
+            let in_bounds = cfg.new_basic_block("in_bounds".to_string());
+            let out_ouf_bounds = cfg.new_basic_block("out_of_bounds".to_string());
+
+            cfg.add(
+                vartab,
+                Instr::BranchCond {
+                    cond,
+                    true_block: in_bounds,
+                    false_block: out_ouf_bounds,
+                },
+            );
+
+            cfg.set_basic_block(out_ouf_bounds);
+            cfg.add(vartab, Instr::AssertFailure { expr: None });
+
+            cfg.set_basic_block(in_bounds);
+            let advanced_ptr = Expression::AdvancePointer {
+                pointer: Box::new(buffer),
+                bytes_offset: Box::new(offset),
+            };
+
+            cfg.add(
+                vartab,
+                Instr::MemCopy {
+                    source: data,
+                    destination: advanced_ptr,
+                    bytes: size,
+                },
+            );
+            Expression::Undefined(tys[0].clone())
+        }
         ast::Builtin::ReadInt8
         | ast::Builtin::ReadInt16LE
         | ast::Builtin::ReadInt32LE

@@ -1268,6 +1268,7 @@ pub enum Builtin {
     WriteUint64LE,
     WriteUint128LE,
     WriteUint256LE,
+    WriteBytes,
 }
 
 impl From<&ast::Builtin> for Builtin {
@@ -1327,6 +1328,7 @@ impl From<&ast::Builtin> for Builtin {
             ast::Builtin::WriteUint64LE => Builtin::WriteUint64LE,
             ast::Builtin::WriteUint128LE => Builtin::WriteUint128LE,
             ast::Builtin::WriteUint256LE => Builtin::WriteUint256LE,
+            ast::Builtin::WriteBytes | ast::Builtin::WriteString => Builtin::WriteBytes,
             _ => panic!("Builtin should not be in the cfg"),
         }
     }

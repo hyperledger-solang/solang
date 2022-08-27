@@ -154,3 +154,68 @@ fn pda() {
         panic!("{:?} not expected", returns);
     }
 }
+
+#[test]
+fn test_string_bytes_buffer_write() {
+    let mut vm = build_solidity(
+        r#"
+    contract Testing {
+        function testStringAndBytes() public pure returns (bytes memory) {
+            string str = "coffee";
+            bytes memory b = new bytes(9);
+            b.writeString(str, 0);
+            bytes memory g = "tea";
+            b.writeBytes(g, 6);
+            return b;
+        }
+    }
+        "#,
+    );
+    vm.constructor("Testing", &[]);
+    let returns = vm.function("testStringAndBytes", &[], &[], None);
+    let bytes = returns[0].clone().into_bytes().unwrap();
+
+    assert_eq!(bytes.len(), 9);
+    assert_eq!(&bytes[0..6], b"coffee");
+    assert_eq!(&bytes[6..9], b"tea");
+}
+
+#[test]
+#[should_panic(expected = "unexpected return 0x100000000")]
+fn out_of_bounds_bytes_write() {
+    let mut vm = build_solidity(
+        r#"
+    contract Testing {
+        function testBytesOut() public pure returns (bytes memory) {
+            bytes memory b = new bytes(9);
+            bytes memory g = "tea";
+            b.writeBytes(g, 30);
+            return b;
+        }
+    }
+        "#,
+    );
+
+    vm.constructor("Testing", &[]);
+    let _ = vm.function("testBytesOut", &[], &[], None);
+}
+
+#[test]
+#[should_panic(expected = "unexpected return 0x100000000")]
+fn out_of_bounds_string_write() {
+    let mut vm = build_solidity(
+        r#"
+    contract Testing {
+        function testStringOut() public pure returns (bytes memory) {
+            bytes memory b = new bytes(4);
+            string memory str = "cappuccino";
+            b.writeString(str, 0);
+            return b;
+        }
+    }
+        "#,
+    );
+
+    vm.constructor("Testing", &[]);
+    let _ = vm.function("testStringOut", &[], &[], None);
+}
