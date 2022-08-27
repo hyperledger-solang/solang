@@ -597,6 +597,7 @@ pub fn load(s: &str) -> InkProject {
     let bundle = serde_json::from_str::<ContractMetadata>(s).unwrap();
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     serde_json::from_value::<InkProject>(serde_json::to_value(bundle.abi).unwrap()).unwrap()
 =======
     let fields = ns.contracts[contract_no]
@@ -895,4 +896,7 @@ fn render_selector(f: &ast::Function) -> String {
 fn parse_selector(selector: &str) -> Vec<u8> {
     hex::decode(&selector[2..]).unwrap()
 >>>>>>> main
+=======
+    serde_json::from_value::<InkProject>(serde_json::to_value(bundle.abi).unwrap()).unwrap()
+>>>>>>> a017a83c (feat(squashed-commit-for-ink-metadata): introduce ink-metdata v3, fixed tests)
 }
