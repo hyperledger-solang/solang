@@ -19,7 +19,7 @@ jobs:
   lints:
     name: Lints
     runs-on: ubuntu-20.04
-    container: ghcr.io/hyperledger-labs/solang:ci
+    container: ghcr.io/hyperledger/solang:ci
     steps:
       - name: Checkout sources
         uses: actions/checkout@v2
@@ -51,7 +51,7 @@ jobs:
   linux-x86-64:
     name: Linux x86-64
     runs-on: ubuntu-20.04
-    container: ghcr.io/hyperledger-labs/solang:ci
+    container: ghcr.io/hyperledger/solang:ci
     steps:
     - name: Checkout sources
       # Make sure "git describe --tags" works for solang --version
@@ -73,8 +73,8 @@ jobs:
   linux-arm:
     name: Linux Arm
     runs-on: linux-arm64
-    if: ${{ github.repository_owner == 'hyperledger-labs' }}
-    container: ghcr.io/hyperledger-labs/solang:ci
+    if: ${{ github.repository_owner == 'hyperledger' }}
+    container: ghcr.io/hyperledger/solang:ci
     steps:
     - name: Checkout sources
       # Make sure "git describe --tags" works for solang --version
@@ -104,7 +104,7 @@ jobs:
         fetch-depth: 0
         submodules: recursive
     - name: Download LLVM
-      run: curl -sSL -o c:\llvm.zip https://github.com/hyperledger-labs/solang/releases/download/v0.1.11/llvm13.0-win.zip
+      run: curl -sSL -o c:\llvm.zip https://github.com/hyperledger/solang/releases/download/v0.1.12/llvm13.0-win.zip
     - name: Extract LLVM
       run: unzip c:\llvm.zip -d c:/
     - name: Add LLVM to Path
@@ -130,7 +130,7 @@ jobs:
   mac-arm:
     name: Mac Arm
     runs-on: macos-arm
-    if: ${{ github.repository_owner == 'hyperledger-labs' }}
+    if: ${{ github.repository_owner == 'hyperledger' }}
     steps:
     - name: Checkout sources
       uses: actions/checkout@v3
@@ -139,7 +139,7 @@ jobs:
         fetch-depth: 0
         submodules: recursive
     - name: Get LLVM
-      run: curl -L --output llvm13.0-mac-arm.tar.xz https://github.com/hyperledger-labs/solang/releases/download/v0.1.12/llvm13.0-mac-arm.tar.xz
+      run: curl -L --output llvm13.0-mac-arm.tar.xz https://github.com/hyperledger/solang/releases/download/v0.1.12/llvm13.0-mac-arm.tar.xz
     - name: Extract LLVM
       run: tar Jxf llvm13.0-mac-arm.tar.xz
     - name: Add LLVM to Path
@@ -164,7 +164,7 @@ jobs:
         fetch-depth: 0
         submodules: recursive
     - name: Get LLVM
-      run: wget -q -O llvm13.0-mac-intel.tar.xz https://github.com/hyperledger-labs/solang/releases/download/v0.1.11/llvm13.0-mac-intel.tar.xz
+      run: wget -q -O llvm13.0-mac-intel.tar.xz https://github.com/hyperledger/solang/releases/download/v0.1.12/llvm13.0-mac-intel.tar.xz
     - name: Extract LLVM
       run: tar Jxf llvm13.0-mac-intel.tar.xz
     - name: Add LLVM to Path
@@ -200,7 +200,7 @@ jobs:
   image-multiarch:
     name: Multiarch Container Image
     runs-on: linux-arm64
-    if: ${{ github.repository_owner == 'hyperledger-labs' }}
+    if: ${{ github.repository_owner == 'hyperledger' }}
     steps:
     - name: Checkout sources
       uses: actions/checkout@v3

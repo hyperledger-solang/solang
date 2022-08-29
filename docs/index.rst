@@ -10,7 +10,7 @@ Welcome to the Solang Solidity Compiler. Using Solang, you can compile smart con
 
 Solang aims for source file compatibility with the Ethereum EVM Solidity compiler,
 version 0.8. Where differences exists, this is noted in the language documentation.
-The source code repository can be found on `github <https://github.com/hyperledger-labs/solang>`_
+The source code repository can be found on `github <https://github.com/hyperledger/solang>`_
 and we have a `channel #solang on Hyperledger Discord <https://discord.gg/jhn4rkqNsT>`_, and
 a `channel #solang-solidity-compiler on Solana Discord <https://discord.gg/TmE2Ek5ZbW>`_.
 

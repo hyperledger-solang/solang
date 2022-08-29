@@ -34,23 +34,23 @@ Development
 -----------
 
 The code is spread over two parts. The first part the vscode extension client code,
-`written in TypeScript <https://github.com/hyperledger-labs/solang/tree/main/vscode>`_.
+`written in TypeScript <https://github.com/hyperledger/solang/tree/main/vscode>`_.
 This part deals with syntax highlighting, and calling out to the Solang language server when
 needed. The client needs `npm and node installed <https://docs.npmjs.com/downloading-and-installing-node-js-and-npm>`_.
 The client implementation is present in
-`src/client <https://github.com/hyperledger-labs/solang/tree/main/vscode/src/client>`_.
+`src/client <https://github.com/hyperledger/solang/tree/main/vscode/src/client>`_.
 The extension client code is in
-`src/client/extension.ts <https://github.com/hyperledger-labs/solang/tree/main/vscode/src/client/extension.ts>`_.
+`src/client/extension.ts <https://github.com/hyperledger/solang/tree/main/vscode/src/client/extension.ts>`_.
 
 Secondly, there is the language server which is written in Rust.
 The Solang binary has an option ``--language-server``, which start the
-`built-in language server <https://github.com/hyperledger-labs/solang/blob/main/src/bin/languageserver/mod.rs>`_.
+`built-in language server <https://github.com/hyperledger/solang/blob/main/src/bin/languageserver/mod.rs>`_.
 
 Once you have node and npm installed, you can build the extension like so:
 
 .. code-block:: bash
 
-    git clone https://github.com/hyperledger-labs/solang
+    git clone https://github.com/hyperledger/solang
     cd solang/vscode
     npm install
     npm install -g vsce

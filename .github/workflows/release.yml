@@ -52,7 +52,7 @@ jobs:
   linux-arm64:
     name: Linux arm64
     runs-on: linux-arm64
-    if: ${{ github.repository_owner == 'hyperledger-labs' }}
+    if: ${{ github.repository_owner == 'hyperledger' }}
     steps:
     - name: Checkout sources
       uses: actions/checkout@v2
@@ -141,7 +141,7 @@ jobs:
   mac-arm:
     name: Mac Arm
     runs-on: macos-arm
-    if: ${{ github.repository_owner == 'hyperledger-labs' }}
+    if: ${{ github.repository_owner == 'hyperledger' }}
     steps:
     - name: Checkout sources
       uses: actions/checkout@v3
@@ -230,8 +230,8 @@ jobs:
     needs: [mac-arm, mac-intel]
     steps:
     - run: |
-        curl -L --output solang-mac-intel https://github.com/hyperledger-labs/solang/releases/download/${GITHUB_REF/refs\/tags\//}/solang-mac-intel
-        curl -L --output solang-mac-arm https://github.com/hyperledger-labs/solang/releases/download/${GITHUB_REF/refs\/tags\//}/solang-mac-arm
+        curl -L --output solang-mac-intel https://github.com/hyperledger/solang/releases/download/${GITHUB_REF/refs\/tags\//}/solang-mac-intel
+        curl -L --output solang-mac-arm https://github.com/hyperledger/solang/releases/download/${GITHUB_REF/refs\/tags\//}/solang-mac-arm
         lipo -create -output solang-mac solang-mac-intel solang-mac-arm
     - name: Upload binary
       uses: svenstaro/upload-release-action@v2
@@ -244,7 +244,7 @@ jobs:
   container:
     name: Container Image
     runs-on: ubuntu-20.04
-    if: ${{ github.repository_owner != 'hyperledger-labs' }}
+    if: ${{ github.repository_owner != 'hyperledger' }}
     steps:
     - name: Checkout sources
       uses: actions/checkout@v2
@@ -258,7 +258,7 @@ jobs:
   container-multiarch:
     name: Multiarch Container Image
     runs-on: linux-arm64
-    if: ${{ github.repository_owner == 'hyperledger-labs' }}
+    if: ${{ github.repository_owner == 'hyperledger' }}
     steps:
     - name: Checkout sources
       uses: actions/checkout@v3

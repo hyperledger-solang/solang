@@ -1,5 +1,5 @@
 # Changelog
-All notable changes to [Solang](https://github.com/hyperledger-labs/solang/)
+All notable changes to [Solang](https://github.com/hyperledger/solang/)
 will be documented here.
 
 ## v0.1.12 Cairo
@@ -40,7 +40,7 @@ will be documented here.
 - On Solana, the accounts that were passed into the transactions are listed in
   the `tx.accounts` builtin. There is also a builtin struct `AccountInfo`
 - A new common subexpression elimination pass was added, thanks to
-  [LucasSte](https://github.com/hyperledger-labs/solang/pull/550)
+  [LucasSte](https://github.com/hyperledger/solang/pull/550)
 - A graphviz dot file can be generated from the ast, using `--emit ast-dot`
 - Many improvements to the solidity parser, and the parser has been spun out
   in it's own create `solang-parser`.
@@ -71,7 +71,7 @@ will be documented here.
 - On the solang command line, the target must be specified.
 - The Solana instruction now includes a 64 bit value field
 - Many fixes to the parser and resolver, so solidity compatibility is much
-  improved, thanks to [sushi-shi](https://github.com/hyperledger-labs/solang/pulls?q=is%3Apr+author%3Asushi-shi+is%3Aclosed).
+  improved, thanks to [sushi-shi](https://github.com/hyperledger/solang/pulls?q=is%3Apr+author%3Asushi-shi+is%3Aclosed).
 
 ### Removed
 - The Sawtooth Sabre target has been removed.
@@ -93,14 +93,14 @@ will be documented here.
 - The Solana target now compiles all contracts to a single `bundle.so` BPF
   program.
 - Any unused variables, events, or contract variables are now detected and
-  warnings are given, thanks to [LucasSte](https://github.com/hyperledger-labs/solang/pull/429)
+  warnings are given, thanks to [LucasSte](https://github.com/hyperledger/solang/pull/429)
 - The `immutable` attribute on contract storage variables is now supported.
 - The `override` attribute on public contract storage variables is now supported.
 - The `unchecked {}` code block is now parsed and supported. Math overflow still
   is unsupported for types larger than 64 bit.
 - `assembly {}` blocks are now parsed and give a friendly error message.
 - Any variable use before it is given a value is now detected and results in
-  a undefined variable diagnostic, thanks to [LucasSte](https://github.com/hyperledger-labs/solang/pull/468)
+  a undefined variable diagnostic, thanks to [LucasSte](https://github.com/hyperledger/solang/pull/468)
 
 ### Changed
 - Solang now uses LLVM 12.0, based on the [Solana LLVM tree](https://github.com/solana-labs/llvm-project/)

@@ -1,10 +1,10 @@
 # solang - Solidity Compiler for Solana and Substrate
 
 [![Discord](https://img.shields.io/discord/905194001349627914?logo=Hyperledger&style=plastic)](https://discord.gg/jhn4rkqNsT)
-[![CI](https://github.com/hyperledger-labs/solang/workflows/test/badge.svg)](https://github.com/hyperledger-labs/solang/actions)
+[![CI](https://github.com/hyperledger/solang/workflows/test/badge.svg)](https://github.com/hyperledger/solang/actions)
 [![Documentation Status](https://readthedocs.org/projects/solang/badge/?version=latest)](https://solang.readthedocs.io/en/latest/?badge=latest)
-[![license](https://img.shields.io/github/license/hyperledger-labs/solang.svg)](LICENSE)
-[![LoC](https://tokei.rs/b1/github/hyperledger-labs/solang?category=lines)](https://github.com/hyperledger-labs/solang)
+[![license](https://img.shields.io/github/license/hyperledger/solang.svg)](LICENSE)
+[![LoC](https://tokei.rs/b1/github/hyperledger/solang?category=lines)](https://github.com/hyperledger/solang)
 
 Welcome to Solang, a new Solidity compiler written in rust which uses
 llvm as the compiler backend. Solang can compile Solidity for Solana and
@@ -20,7 +20,7 @@ Solang is under active development right now, and has
 Solang is available as a Brew cask for MacOS, with the following command:
 
 ```
-brew install hyperledger-labs/solang/solang
+brew install hyperledger/solang/solang
 ```
 
 For other operating systems, please check the [installation guide](https://solang.readthedocs.io/en/latest/installing.html).
@@ -58,7 +58,7 @@ solang compile --target solana flipper.sol
 Alternatively if you want to use the solang container, run:
 
 ```
-docker run --rm -it -v $(pwd):/sources ghcr.io/hyperledger-labs/solang compile -v -o /sources --target solana /sources/flipper.sol
+docker run --rm -it -v $(pwd):/sources ghcr.io/hyperledger/solang compile -v -o /sources --target solana /sources/flipper.sol
 ```
 
 A file called `flipper.abi` and `bundle.so`. Now install `@solana/solidity`:
@@ -134,7 +134,7 @@ solang compile --target substrate flipper.sol
 Alternatively if you want to use the solang container, run:
 
 ```
-docker run --rm -it -v $(pwd):/sources ghcr.io/hyperledger-labs/solang -v -o /sources --target substrate /sources/flipper.sol
+docker run --rm -it -v $(pwd):/sources ghcr.io/hyperledger/solang -v -o /sources --target substrate /sources/flipper.sol
 ```
 You will have a file called flipper.contract. You can use this directly in
 the [Contracts UI](https://contracts-ui.substrate.io/),

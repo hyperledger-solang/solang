@@ -2,13 +2,13 @@ Solang Test Suite
 =================
 
 Solang has a few test suites. These are all run on each pull request via
-`github actions <https://github.com/hyperledger-labs/solang/actions>`_.
+`github actions <https://github.com/hyperledger/solang/actions>`_.
 
 
 Solidity parser and semantics tests
 -----------------------------------
 
-In the `tests <https://github.com/hyperledger-labs/solang/tree/main/tests>`_ directory, there are
+In the `tests <https://github.com/hyperledger/solang/tree/main/tests>`_ directory, there are
 a lot of tests which call `fn parse_and_resolve()`. This function parses Solidity, and returns
 the *namespace*: all the resolved contracts, types, functions, etc (as much as could be resolved),
 and all the compiler diagnositics, i.e. compiler warnings and errors. These tests check that
@@ -25,7 +25,7 @@ Codegen tests
 The stage after semantic analysis is codegen. Codegen generates an IR which is a CFG, so it is
 simply called CFG. The codegen tests ensure that the CFG matches what should be created. These
 tests are inspired by LLVM lit tests. The tests can found in
-`codegen_testcases <https://github.com/hyperledger-labs/solang/tree/main/tests/codegen_testcases>`_.
+`codegen_testcases <https://github.com/hyperledger/solang/tree/main/tests/codegen_testcases>`_.
 
 These tests do the following:
 
@@ -56,6 +56,6 @@ of the contract working memory to ensure there are no corruptions.
 Deploy contract on dev chain
 ----------------------------
 
-There are some tests in `integration <https://github.com/hyperledger-labs/solang/tree/main/integration/>`_
+There are some tests in `integration <https://github.com/hyperledger/solang/tree/main/integration/>`_
 which are written in node. These tests start an actual real chain via containers,
 and then deploying some tests contracts to them and interacting with them.
