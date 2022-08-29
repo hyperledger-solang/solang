@@ -737,6 +737,42 @@ fn test_overflow_boundaries() {
         );
 
         assert_ne!(res, Ok(0));
+
+        let res = contract.function_must_fail(
+            "mul",
+            &[
+                ethabi::Token::Int(bigint_to_eth(&upper_boundary, width.try_into().unwrap())),
+                ethabi::Token::Int(bigint_to_eth(&upper_boundary, width.try_into().unwrap())),
+            ],
+            &[],
+            None,
+        );
+
+        assert_ne!(res, Ok(0));
+
+        let res = contract.function_must_fail(
+            "mul",
+            &[
+                ethabi::Token::Int(bigint_to_eth(&lower_boundary, width.try_into().unwrap())),
+                ethabi::Token::Int(bigint_to_eth(&lower_boundary, width.try_into().unwrap())),
+            ],
+            &[],
+            None,
+        );
+
+        assert_ne!(res, Ok(0));
+
+        let res = contract.function_must_fail(
+            "mul",
+            &[
+                ethabi::Token::Int(bigint_to_eth(&upper_boundary, width.try_into().unwrap())),
+                ethabi::Token::Int(bigint_to_eth(&lower_boundary, width.try_into().unwrap())),
+            ],
+            &[],
+            None,
+        );
+
+        assert_ne!(res, Ok(0));
     }
 }
 
@@ -756,10 +792,12 @@ fn test_mul_within_range_signed() {
 
         // Signed N bits will fit the range: 2^(N-1) -1 +/-. Here we generate a random number within this range and multiply it by -1, 1 or 0.
         let first_operand_rand = rng.gen_bigint(width - 1).sub(1_u32);
+        println!("First op : {:?}", first_operand_rand);
 
         let side = vec![-1, 0, 1];
         // -1, 1 or 0
         let second_op = BigInt::from(*side.choose(&mut rng).unwrap() as i32);
+        println!("second op : {:?}", second_op);
 
         contract.constructor("test", &[]);
         let return_value = contract.function(

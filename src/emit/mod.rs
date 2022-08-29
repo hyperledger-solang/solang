@@ -5573,25 +5573,70 @@ pub trait TargetRuntime<'a> {
         vector.into()
     }
 
+    // Signed overflow detection is handled by the following steps:
+    // 1- Do an unsigned multiplication first, that step will check if the generated value will fit in N bits. (unsigned overflow)
+    // 2- Get the result, and negate it if needed.
+    // 3- Check for signed overflow, by checking for an unexpected change in the sign of the result.
     fn signed_ovf_detect(
         &self,
         bin: &Binary<'a>,
-        l: PointerValue<'a>,
-        r: PointerValue<'a>,
-        o: PointerValue<'a>,
+        mul_ty: IntType<'a>,
         mul_bits: u32,
         left: IntValue<'a>,
         right: IntValue<'a>,
         bits: u32,
-        function: FunctionValue,
+        function: FunctionValue<'a>,
     ) -> IntValue<'a> {
-        // We check for overflow based on the facts:
+        // We check for signed overflow based on the facts:
         //  - * - = +
         //  + * + = +
         //  - * + = - (if op1 and op2 != 0)
         // if one of the operands is zero, discard the last rule.
-        bin.builder.build_call(
-            bin.module.get_function("__mul32").unwrap(),
+        let left_negative = bin.builder.build_int_compare(
+            IntPredicate::SLT,
+            left,
+            left.get_type().const_zero(),
+            "left_negative",
+        );
+
+        let left_abs = bin
+            .builder
+            .build_select(
+                left_negative,
+                bin.builder.build_int_neg(left, "signed_left"),
+                left,
+                "left_abs",
+            )
+            .into_int_value();
+
+        let right_negative = bin.builder.build_int_compare(
+            IntPredicate::SLT,
+            right,
+            right.get_type().const_zero(),
+            "right_negative",
+        );
+
+        let right_abs = bin
+            .builder
+            .build_select(
+                right_negative,
+                bin.builder.build_int_neg(right, "signed_right"),
+                right,
+                "right_abs",
+            )
+            .into_int_value();
+
+        let l = bin.build_alloca(function, mul_ty, "");
+        let r = bin.build_alloca(function, mul_ty, "");
+        let o = bin.build_alloca(function, mul_ty, "");
+
+        bin.builder
+            .build_store(l, bin.builder.build_int_z_extend(left_abs, mul_ty, ""));
+        bin.builder
+            .build_store(r, bin.builder.build_int_z_extend(right_abs, mul_ty, ""));
+
+        let return_val = bin.builder.build_call(
+            bin.module.get_function("__mul32_with_builtin_ovf").unwrap(),
             &[
                 bin.builder
                     .build_pointer_cast(
@@ -5623,6 +5668,17 @@ pub trait TargetRuntime<'a> {
         );
 
         let res = bin.builder.build_load(o, "mul");
+        let negate_result = bin
+            .builder
+            .build_xor(left_negative, right_negative, "negate_result");
+
+        let res = bin.builder.build_select(
+            negate_result,
+            bin.builder
+                .build_int_neg(res.into_int_value(), "unsigned_res"),
+            res.into_int_value(),
+            "res",
+        );
 
         let error_block = bin.context.append_basic_block(function, "error");
         let return_block = bin.context.append_basic_block(function, "return_block");
@@ -5653,6 +5709,15 @@ pub trait TargetRuntime<'a> {
             bin.builder
                 .build_and(same_signs, bin.builder.build_not(res_sign_bit, ""), "");
 
+        let value_fits_n_bits = bin.builder.build_not(
+            return_val
+                .try_as_basic_value()
+                .left()
+                .unwrap()
+                .into_int_value(),
+            "",
+        );
+
         // If operands' sign are not the same and the result is negative
         let diff_operands_and_neg_res =
             bin.builder
@@ -5678,7 +5743,11 @@ pub trait TargetRuntime<'a> {
 
         // Here, we disregard the last rule mentioned above by oring with mul_by_zero
         bin.builder.build_conditional_branch(
-            bin.builder.build_or(ok_operation, mul_by_zero, ""),
+            bin.builder.build_and(
+                bin.builder.build_or(ok_operation, mul_by_zero, ""),
+                value_fits_n_bits,
+                "",
+            ),
             return_block,
             error_block,
         );
@@ -5764,7 +5833,7 @@ pub trait TargetRuntime<'a> {
             .build_int_truncate(shifted, bin.context.bool_type(), "")
     }
 
-    // emit a multiply for any width with or without overflow checking
+    // Emit a multiply for any width with or without overflow checking
     fn mul(
         &self,
         bin: &Binary<'a>,
@@ -5790,7 +5859,10 @@ pub trait TargetRuntime<'a> {
                 bin.builder.build_store(l, left);
                 bin.builder.build_store(r, right);
             }
-            // Zext the operands to the nearest 32 bits. zext is called instead of sext because we need to do unsigned multiplication by default.
+            // LLVM-IR can handle multiplication of sizes up to 64 bits. If the size is larger, we need to implement our own mutliplication function.
+            // We divide the operands into sizes of 32 bits(check __mul32 in stdlib/bigint.c documentation).
+            // If the size is not divisble by 32, we extend it to the next 32 bits. For example, int72 will be extended to int96.
+            // Here, We Zext the operands to the nearest 32 bits. zext is called instead of sext because we need to do unsigned multiplication by default.
             // It will not matter in terms of mul without overflow, because we always truncate the result to the bit size of the operands.
             // In mul with overflow however, it is needed so that overflow can be detected if the most significant bits of the result are not Zeros.
             else {
@@ -5806,10 +5878,14 @@ pub trait TargetRuntime<'a> {
             }
 
             if signed {
-                return self.signed_ovf_detect(bin, l, r, o, mul_bits, left, right, bits, function);
+                return self.signed_ovf_detect(bin, mul_ty, mul_bits, left, right, bits, function);
             }
 
-            // Check for unsigned ovf.
+            // Unsigned overflow detection Approach:
+            // If the size is a multiple of 32, we call __mul32_with_builtin_ovf and it returns an overflow flag(check __mul32_with_builtin_ovf in stdlib/bigint.c documentation)
+            // If that is not the case, some extra work has to be done. We have to check the extended bits for any set bits. If there is any, an overflow occured.
+            // For example, if we have uint72, it will be extended to uint96. __mul32 with ovf will raise an ovf flag if the result overflows 96 bits, not 72.
+            // We account for that by checking the extended leftmost bits. In the example mentioned, they will be 96-72=24 bits.
             let return_val = bin.builder.build_call(
                 bin.module.get_function("__mul32_with_builtin_ovf").unwrap(),
                 &[
