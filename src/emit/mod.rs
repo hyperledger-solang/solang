@@ -1827,14 +1827,53 @@ pub trait TargetRuntime<'a> {
                 let right = self.expression(bin, r, vartab, function, ns);
 
                 let bits = left.into_int_value().get_type().get_bit_width();
+                let o = bin.build_alloca(function, left.get_type(), "");
+                let f = self.power(bin, *unchecked, bits, res_ty.is_signed_int(), o);
 
-                let f = self.power(bin, *unchecked, bits, res_ty.is_signed_int());
-
-                bin.builder
-                    .build_call(f, &[left.into(), right.into()], "power")
+                // If the function returns zero, then the operation was successful.
+                let error_return = bin
+                    .builder
+                    .build_call(f, &[left.into(), right.into(), o.into()], "power")
                     .try_as_basic_value()
                     .left()
-                    .unwrap()
+                    .unwrap();
+
+                // Load the result pointer
+                let res = bin.builder.build_load(o, "");
+
+                if *unchecked || ns.target != Target::Solana {
+                    // If target is Substrate, we don't neet to check on the return of function for ovf.
+                    // If ovf happens in Substrate target, execution will hit an unreachable instruction.
+                    res
+                } else {
+                    // In Solana, a return other than zero will abort execution. We need to check if power() returned a zero or not.
+                    let error_block = bin.context.append_basic_block(function, "error");
+                    let return_block = bin.context.append_basic_block(function, "return_block");
+
+                    let error_ret = bin.builder.build_int_compare(
+                        IntPredicate::NE,
+                        error_return.into_int_value(),
+                        error_return.get_type().const_zero().into_int_value(),
+                        "",
+                    );
+
+                    bin.builder
+                        .build_conditional_branch(error_ret, error_block, return_block);
+                    bin.builder.position_at_end(error_block);
+
+                    self.assert_failure(
+                        bin,
+                        bin.context
+                            .i8_type()
+                            .ptr_type(AddressSpace::Generic)
+                            .const_null(),
+                        bin.context.i32_type().const_zero(),
+                    );
+
+                    bin.builder.position_at_end(return_block);
+
+                    res
+                }
             }
             Expression::Equal(_, l, r) => {
                 if l.ty().is_address() {
@@ -5549,7 +5588,7 @@ pub trait TargetRuntime<'a> {
         // We check for overflow based on the facts:
         //  - * - = +
         //  + * + = +
-        //  - * + = - (if op1 or op2 != 0)
+        //  - * + = - (if op1 and op2 != 0)
         // if one of the operands is zero, discard the last rule.
         bin.builder.build_call(
             bin.module.get_function("__mul32").unwrap(),
@@ -5604,17 +5643,17 @@ pub trait TargetRuntime<'a> {
             )
         };
 
-        // If the operands sign is the same
+        // If the operands' sign is the same
         let same_signs =
             bin.builder
                 .build_int_compare(IntPredicate::EQ, left_sign_bit, right_sign_bit, "");
 
-        // If operands sign is the same and the result is positive
+        // If operands' sign is the same and the result is positive
         let same_operands_and_positive_res =
             bin.builder
                 .build_and(same_signs, bin.builder.build_not(res_sign_bit, ""), "");
 
-        // If operands are not the same and the result is negative
+        // If operands' sign are not the same and the result is negative
         let diff_operands_and_neg_res =
             bin.builder
                 .build_and(bin.builder.build_not(same_signs, ""), res_sign_bit, "");
@@ -5640,7 +5679,6 @@ pub trait TargetRuntime<'a> {
         // Here, we disregard the last rule mentioned above by oring with mul_by_zero
         bin.builder.build_conditional_branch(
             bin.builder.build_or(ok_operation, mul_by_zero, ""),
-            //  bin.context.bool_type().const_all_ones(),
             return_block,
             error_block,
         );
@@ -5809,7 +5847,7 @@ pub trait TargetRuntime<'a> {
             let error_block = bin.context.append_basic_block(function, "error");
             let return_block = bin.context.append_basic_block(function, "return_block");
 
-            // If the operands were extended to nearest 32 bit size, check the most significant N bits, where N = bits after extension - original bits.
+            // If the operands were extended to nearest 32 bit size, check the most significant N bits, where N equals bit width after extension minus original bit width.
             let ovf_any_type = if mul_bits != bits {
                 // If there are any set bits, then there is an overflow.
                 let check_ovf = bin.builder.build_right_shift(
@@ -5829,8 +5867,8 @@ pub trait TargetRuntime<'a> {
                 bin.context.bool_type().const_zero()
             };
 
-            // Untill this point, we only checked the extended bits for ovf. But mul ovf can take place any where from bit size to double bit size.
-            // For example: If we have uint72, it will be extended to uint96. we only checked the most significant 24 bits for overflow, which can happen up to 72*2=144 bits.
+            // Until this point, we only checked the extended bits for ovf. But mul ovf can take place any where from bit size to double bit size.
+            // For example: If we have uint72, it will be extended to uint96. We only checked the most significant 24 bits for overflow, which can happen up to 72*2=144 bits.
             // bool __mul32_with_builtin_ovf takes care of overflowing bits beyond 96.
             // What is left now is to or these two ovf flags, and check if any one of them is set. If so, an overflow occured.
             let lowbit = bin.builder.build_int_truncate(
@@ -5847,7 +5885,7 @@ pub trait TargetRuntime<'a> {
                 "bit",
             );
 
-            // If ovf, raise and error, else return the result.
+            // If ovf, raise an error, else return the result.
             bin.builder
                 .build_conditional_branch(lowbit, error_block, return_block);
 
@@ -5886,6 +5924,7 @@ pub trait TargetRuntime<'a> {
         unchecked: bool,
         bits: u32,
         signed: bool,
+        o: PointerValue<'a>,
     ) -> FunctionValue<'a> {
         /*
             int ipow(int base, int exp)
@@ -5918,9 +5957,11 @@ pub trait TargetRuntime<'a> {
         let pos = bin.builder.get_insert_block().unwrap();
 
         // __upower(base, exp)
-        let function =
-            bin.module
-                .add_function(&name, ty.fn_type(&[ty.into(), ty.into()], false), None);
+        let function = bin.module.add_function(
+            &name,
+            ty.fn_type(&[ty.into(), ty.into(), o.get_type().into()], false),
+            None,
+        );
 
         let entry = bin.context.append_basic_block(function, "entry");
         let loop_block = bin.context.append_basic_block(function, "loop");
@@ -5984,7 +6025,13 @@ pub trait TargetRuntime<'a> {
         bin.builder.build_conditional_branch(zero, done, notdone);
         bin.builder.position_at_end(done);
 
-        bin.builder.build_return(Some(&result3.as_basic_value()));
+        // If successful operation, load the result in the output pointer then return zero.
+        bin.builder.build_store(
+            function.get_nth_param(2).unwrap().into_pointer_value(),
+            result3.as_basic_value(),
+        );
+        bin.builder
+            .build_return(Some(&bin.context.i64_type().const_zero()));
 
         bin.builder.position_at_end(notdone);
 

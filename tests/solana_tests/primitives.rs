@@ -605,13 +605,147 @@ fn truncate_uint(n: &mut U256, width: usize) {
 }
 
 #[test]
-
-fn test_mul_within_range_signed() {
-    let mut rng = rand::thread_rng();
+fn test_power_overflow_boundaries() {
     for width in (72..=256).step_by(8) {
         let src = r#"
         contract test {
-         
+            function pow(uintN a, uintN b) public returns (uintN) { 
+                return a ** b;
+            }
+        }"#
+        .replace("intN", &format!("int{}", width));
+
+        let mut contract = build_solidity(&src);
+        contract.constructor("test", &[]);
+
+        let return_value = contract.function(
+            "pow",
+            &[
+                ethabi::Token::Uint(U256::from(2)),
+                ethabi::Token::Uint(U256::from(width - 1)),
+            ],
+            &[],
+            None,
+        );
+
+        let res = BigUint::from(2_u32).pow((width - 1) as u32);
+
+        assert_eq!(
+            return_value,
+            vec![ethabi::Token::Uint(U256::from_big_endian(
+                &res.to_bytes_be()
+            ))]
+        );
+
+        let sesa = contract.function_must_fail(
+            "pow",
+            &[
+                ethabi::Token::Uint(U256::from(2)),
+                ethabi::Token::Uint(U256::from(width)),
+            ],
+            &[],
+            None,
+        );
+
+        assert_ne!(sesa, Ok(0));
+    }
+}
+
+#[test]
+fn test_overflow_boundaries() {
+    // For bit sizes from 8..64, LLVM has intrinsic functions for multiplication with overflow. Testing starts from int types of 72 and up. There is no need to test intrinsic LLVM functions.
+    for width in (72..=256).step_by(8) {
+        let src = r#"
+        contract test {
+            function mul(intN a, intN b) public returns (intN) {
+                return a * b;
+            }
+        }"#
+        .replace("intN", &format!("int{}", width));
+        let mut contract = build_solidity(&src);
+
+        // The max value held in signed N bits is - 2^(N-1)..2^(N-1)-1 .We generate theses boundaries:
+        let upper_boundary = BigInt::from(2_u32).pow(width - 1).sub(1);
+        let lower_boundary = BigInt::from(2_u32).pow(width - 1).mul(-1);
+        let second_op = BigInt::from(1_u32);
+
+        // Multiply the boundaries by 1.
+        contract.constructor("test", &[]);
+        let return_value = contract.function(
+            "mul",
+            &[
+                ethabi::Token::Int(bigint_to_eth(&upper_boundary, width.try_into().unwrap())),
+                ethabi::Token::Int(bigint_to_eth(&second_op, width.try_into().unwrap())),
+            ],
+            &[],
+            None,
+        );
+        assert_eq!(
+            return_value,
+            vec![ethabi::Token::Int(bigint_to_eth(
+                &upper_boundary,
+                width.try_into().unwrap(),
+            ))]
+        );
+
+        let return_value = contract.function(
+            "mul",
+            &[
+                ethabi::Token::Int(bigint_to_eth(&lower_boundary, width.try_into().unwrap())),
+                ethabi::Token::Int(bigint_to_eth(&second_op, width.try_into().unwrap())),
+            ],
+            &[],
+            None,
+        );
+        assert_eq!(
+            return_value,
+            vec![ethabi::Token::Int(bigint_to_eth(
+                &lower_boundary,
+                width.try_into().unwrap(),
+            ))]
+        );
+
+        let upper_boundary_plus_one = BigInt::from(2_u32).pow(width - 1);
+
+        // We subtract 2 instead of one to make the number even, so that no rounding occurs when we divide by 2 later on.
+        let lower_boundary_minus_two = BigInt::from(2_u32).pow(width - 1).mul(-1_i32).sub(2_i32);
+
+        let upper_second_op = upper_boundary_plus_one.div(2);
+
+        let lower_second_op = lower_boundary_minus_two.div(2);
+
+        let res = contract.function_must_fail(
+            "mul",
+            &[
+                ethabi::Token::Int(bigint_to_eth(&upper_second_op, width.try_into().unwrap())),
+                ethabi::Token::Int(bigint_to_eth(&BigInt::from(2), width.try_into().unwrap())),
+            ],
+            &[],
+            None,
+        );
+
+        assert_ne!(res, Ok(0));
+
+        let res = contract.function_must_fail(
+            "mul",
+            &[
+                ethabi::Token::Int(bigint_to_eth(&lower_second_op, width.try_into().unwrap())),
+                ethabi::Token::Int(bigint_to_eth(&BigInt::from(2), width.try_into().unwrap())),
+            ],
+            &[],
+            None,
+        );
+
+        assert_ne!(res, Ok(0));
+    }
+}
+
+#[test]
+fn test_mul_within_range_signed() {
+    let mut rng = rand::thread_rng();
+    for width in (8..=256).step_by(8) {
+        let src = r#"
+        contract test {
             function mul(intN a, intN b) public returns (intN) {
                 return a * b;
             }
@@ -620,11 +754,11 @@ fn test_mul_within_range_signed() {
 
         let mut contract = build_solidity(&src);
 
-        // Signed N bits will fit rthe range: 2^(N-1) -1 +/-. Here we generate a random number within this range and multiply it by -1, 1 or 0.
+        // Signed N bits will fit the range: 2^(N-1) -1 +/-. Here we generate a random number within this range and multiply it by -1, 1 or 0.
         let first_operand_rand = rng.gen_bigint(width - 1).sub(1_u32);
 
         let side = vec![-1, 0, 1];
-        // -1,1 or 0
+        // -1, 1 or 0
         let second_op = BigInt::from(*side.choose(&mut rng).unwrap() as i32);
 
         contract.constructor("test", &[]);
@@ -653,10 +787,9 @@ fn test_mul_within_range_signed() {
 }
 
 #[test]
-
 fn test_mul_within_range() {
     let mut rng = rand::thread_rng();
-    for width in (72..=256).step_by(8) {
+    for width in (8..=256).step_by(8) {
         let src = r#"
         contract test {
             function mul(uintN a, uintN b) public returns (uintN) { 
@@ -674,7 +807,7 @@ fn test_mul_within_range() {
             // Generate a random number within the the range 0..2^N -1
             let first_operand_rand = rng.gen_biguint(width.into());
 
-            // Calculate a number that when multiplied by first_operand_rand, the result will not overflow N bits .(The result of this division will cast the float result to int result, therefore lowering the result. The result of multiplication will never overflow)
+            // Calculate a number that when multiplied by first_operand_rand, the result will not overflow N bits (the result of this division will cast the float result to int result, therefore lowering it. The result of multiplication will never overflow).
             let second_operand_rand = limit.div(&first_operand_rand);
 
             let return_value = contract.function(
@@ -699,14 +832,12 @@ fn test_mul_within_range() {
 }
 
 #[test]
-
 fn test_overflow_detect_signed() {
     let mut rng = rand::thread_rng();
-    // For bit sizes from 8..64, LLVM has intrinsic functions for multiplication with overflwo. Testing starts from int types of 72 and up, there is no need to test intrinsic LLVM functions.
+    // For bit sizes from 8..64, LLVM has intrinsic functions for multiplication with overflow. Testing starts from int types of 72 and up. There is no need to test intrinsic LLVM functions.
     for width in (72..=256).step_by(8) {
         let src = r#"
         contract test {
-         
             function mul(intN a, intN b) public returns (intN) {
                 return a * b;
             }
@@ -716,7 +847,7 @@ fn test_overflow_detect_signed() {
 
         contract.constructor("test", &[]);
 
-        // The max value held in signed N bits is 2^(N-1) -1 +/- .Generate a value that will overflow this range:
+        // The max value held in signed N bits is - 2^(N-1)..2^(N-1)-1 .Generate a value that will overflow this range:
         let limit = BigInt::from(2_u32).pow(width - 1).add(1_u32);
 
         // Divide Limit by a random number
@@ -754,13 +885,11 @@ fn test_overflow_detect_signed() {
 }
 
 #[test]
-
 fn test_overflow_detect_unsigned() {
     let mut rng = rand::thread_rng();
     for width in (72..=256).step_by(8) {
         let src = r#"
         contract test {
-         
             function mul(uintN a, uintN b) public returns (uintN) {
                 return a * b;
             }

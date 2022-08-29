@@ -97,7 +97,6 @@ bool __mul32_with_builtin_ovf(uint32_t left[], uint32_t right[], uint32_t out[],
         // If the loop is within the operand bit size, just do the assignment
         if (l < len / 2)
         {
-
             out[l] = val1;
         }
 
