@@ -1,5 +1,5 @@
 strict digraph "tests/contract_testcases/substrate/arrays/multi_dim.sol" {
-	contract [label="contract c\ntests/contract_testcases/substrate/arrays/multi_dim.sol:1:57-8:2"]
+	contract [label="contract c\ntests/contract_testcases/substrate/arrays/multi_dim.sol:1:52-8:2"]
 	test [label="function test\ncontract: c\ntests/contract_testcases/substrate/arrays/multi_dim.sol:3:2-52\nsignature test()\nvisibility public\nmutability pure"]
 	returns [label="returns\nuint256 ret1"]
 	var_decl [label="variable decl uint256[3][] vec\ntests/contract_testcases/substrate/arrays/multi_dim.sol:4:3-19"]
@@ -17,7 +17,7 @@ strict digraph "tests/contract_testcases/substrate/arrays/multi_dim.sol" {
 	variable_16 [label="variable: vec\nuint256[3][]\ntests/contract_testcases/substrate/arrays/multi_dim.sol:6:10-13"]
 	number_literal_17 [label="uint32 literal: 1\ntests/contract_testcases/substrate/arrays/multi_dim.sol:6:14-15"]
 	number_literal_18 [label="uint32 literal: 1\ntests/contract_testcases/substrate/arrays/multi_dim.sol:6:17-18"]
-	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/arrays/multi_dim.sol:1:57-8:2"]
+	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/arrays/multi_dim.sol:1:52-8:2"]
 	contracts -> contract
 	contract -> test [label="function"]
 	test -> returns [label="returns"]

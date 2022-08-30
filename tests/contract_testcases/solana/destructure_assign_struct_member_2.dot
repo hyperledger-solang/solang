@@ -29,7 +29,7 @@ strict digraph "tests/contract_testcases/solana/destructure_assign_struct_member
 	subscript_29 [label="subscript address[]\ntests/contract_testcases/solana/destructure_assign_struct_member_2.sol:22:58-68"]
 	variable_30 [label="variable: _tokens\naddress[]\ntests/contract_testcases/solana/destructure_assign_struct_member_2.sol:22:58-65"]
 	number_literal_31 [label="uint32 literal: 0\ntests/contract_testcases/solana/destructure_assign_struct_member_2.sol:22:66-67"]
-	diagnostic [label="pragma 'solidity' is ignored\nlevel Debug\ntests/contract_testcases/solana/destructure_assign_struct_member_2.sol:1:57-2:23"]
+	diagnostic [label="pragma 'solidity' is ignored\nlevel Debug\ntests/contract_testcases/solana/destructure_assign_struct_member_2.sol:1:52-2:23"]
 	diagnostic_34 [label="found interface 'IUniswapV2Pair'\nlevel Debug\ntests/contract_testcases/solana/destructure_assign_struct_member_2.sol:3:1-6:2"]
 	diagnostic_35 [label="found contract 'Contract'\nlevel Debug\ntests/contract_testcases/solana/destructure_assign_struct_member_2.sol:8:1-25:2"]
 	diagnostic_36 [label="local variable 'struct_1' has been assigned, but never read\nlevel Warning\ntests/contract_testcases/solana/destructure_assign_struct_member_2.sol:20:26-34"]

@@ -5,7 +5,7 @@
 	"publisher": "solang",
 	"author": "Shivam Balikondwar <shivambalikondwar@icloud.com>",
 	"version": "0.3.0",
-	"repository": "github.com/hyperledger-labs/solang",
+	"repository": "github.com/hyperledger/solang",
 	"engines": {
 		"vscode": "^1.43.0"
 	},

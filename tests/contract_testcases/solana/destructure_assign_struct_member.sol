@@ -1,4 +1,4 @@
-// https://github.com/hyperledger-labs/solang/issues/731
+// https://github.com/hyperledger/solang/issues/731
 contract TestContract {
     struct Data {
         bytes32 a1;

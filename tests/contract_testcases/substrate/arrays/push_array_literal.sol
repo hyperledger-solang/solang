@@ -1,4 +1,4 @@
-// https://github.com/hyperledger-labs/solang/issues/859
+// https://github.com/hyperledger/solang/issues/859
 contract c {
 	uint256[3][] s_vec;
 	function test() public returns (uint256 ret1) {

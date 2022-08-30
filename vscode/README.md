@@ -16,7 +16,7 @@ For more information on Solang itself and the extension, please go to the [docum
 ## Dependencies
 
 The solang compiler executable needs to be installed, which can be downloaded from
-the [Solang Releases Page](https://github.com/hyperledger-labs/solang/releases). Then
+the [Solang Releases Page](https://github.com/hyperledger/solang/releases). Then
 you have to configure the path to the solang executable extension settings, and also
 which target you wish to compile file.
 

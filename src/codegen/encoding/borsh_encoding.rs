@@ -563,7 +563,7 @@ impl BorshEncoding {
         if dims[dimension] == ArrayLength::Dynamic {
             // TODO: This is wired up for the support of dynamic multidimensional arrays, like
             // TODO: 'int[3][][4] vec', but it needs testing, as soon as Solang works with them.
-            // TODO: A discussion about this is under way here: https://github.com/hyperledger-labs/solang/issues/932
+            // TODO: A discussion about this is under way here: https://github.com/hyperledger/solang/issues/932
             // We only support dynamic arrays whose non-constant length is the outer one.
             let (sub_array, _) = load_sub_array(
                 arr.clone(),
@@ -1080,7 +1080,7 @@ impl BorshEncoding {
                 }
             } else {
                 // TODO: This is wired up for multidimensional dynamic arrays, but they do no work yet
-                // Check https://github.com/hyperledger-labs/solang/issues/932 for more information
+                // Check https://github.com/hyperledger/solang/issues/932 for more information
                 let (sub_arr, _) = load_sub_array(
                     array_var.clone(),
                     &dims[(dimension + 1)..dims.len()],

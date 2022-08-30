@@ -2,7 +2,7 @@
 name = "solang"
 version = "0.1.12"
 authors = ["Sean Young <sean@mess.org>"]
-homepage = "https://github.com/hyperledger-labs/solang"
+homepage = "https://github.com/hyperledger/solang"
 documentation = "https://solang.readthedocs.io/"
 license = "Apache-2.0"
 build = "build.rs"

@@ -9,14 +9,14 @@ Target Specific
 
 Solang supports Substrate and Solana. These targets need testing
 via integration tests. New targets like
-`Fabric <https://github.com/hyperledger-labs/fabric-chaincode-wasm>`_ need to be
+`Fabric <https://github.com/hyperledger/fabric-chaincode-wasm>`_ need to be
 added, and tests added.
 
 How to report issues
 --------------------
 
 Please report issues to
-`github issues <https://github.com/hyperledger-labs/solang/issues>`_.
+`github issues <https://github.com/hyperledger/solang/issues>`_.
 
 Debugging issues with LLVM
 --------------------------

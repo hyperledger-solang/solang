@@ -4,7 +4,7 @@ strict digraph "tests/contract_testcases/solana/yul/return_in_asm.sol" {
 	inline_assembly [label="inline assembly\ntests/contract_testcases/solana/yul/return_in_asm.sol:3:9-5:10"]
 	diagnostic [label="found contract 'Contract'\nlevel Debug\ntests/contract_testcases/solana/yul/return_in_asm.sol:1:1-7:2"]
 	diagnostic_6 [label="flag 'memory-safe' not supported\nlevel Error\ntests/contract_testcases/solana/yul/return_in_asm.sol:3:19-32"]
-	diagnostic_7 [label="builtin 'return' is not available for target solana. Please, open a GitHub issue at https://github.com/hyperledger-labs/solang/issues if there is need to support this function\nlevel Error\ntests/contract_testcases/solana/yul/return_in_asm.sol:4:13-25"]
+	diagnostic_7 [label="builtin 'return' is not available for target solana. Please, open a GitHub issue at https://github.com/hyperledger/solang/issues if there is need to support this function\nlevel Error\ntests/contract_testcases/solana/yul/return_in_asm.sol:4:13-25"]
 	contracts -> contract
 	contract -> node_2 [label="constructor"]
 	node_2 -> inline_assembly [label="body"]

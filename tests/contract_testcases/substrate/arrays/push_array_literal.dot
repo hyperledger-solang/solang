@@ -1,5 +1,5 @@
 strict digraph "tests/contract_testcases/substrate/arrays/push_array_literal.sol" {
-	contract [label="contract c\ntests/contract_testcases/substrate/arrays/push_array_literal.sol:1:57-8:2"]
+	contract [label="contract c\ntests/contract_testcases/substrate/arrays/push_array_literal.sol:1:52-8:2"]
 	var [label="variable s_vec\nvisibility internal\ntests/contract_testcases/substrate/arrays/push_array_literal.sol:3:2-20"]
 	test [label="function test\ncontract: c\ntests/contract_testcases/substrate/arrays/push_array_literal.sol:4:2-47\nsignature test()\nvisibility public\nmutability nonpayable"]
 	returns [label="returns\nuint256 ret1"]
@@ -17,7 +17,7 @@ strict digraph "tests/contract_testcases/substrate/arrays/push_array_literal.sol
 	storage_var_16 [label="storage variable\nc.s_vec\nuint256[3][] storage\ntests/contract_testcases/substrate/arrays/push_array_literal.sol:6:10-15"]
 	number_literal_17 [label="uint256 literal: 1\ntests/contract_testcases/substrate/arrays/push_array_literal.sol:6:16-17"]
 	number_literal_18 [label="uint256 literal: 1\ntests/contract_testcases/substrate/arrays/push_array_literal.sol:6:19-20"]
-	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/arrays/push_array_literal.sol:1:57-8:2"]
+	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/arrays/push_array_literal.sol:1:52-8:2"]
 	contracts -> contract
 	contract -> var [label="variable"]
 	contract -> test [label="function"]

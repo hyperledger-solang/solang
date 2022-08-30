@@ -155,29 +155,29 @@ Running Solang using container
 ______________________________
 
 First pull the last Solang container from
-`solang containers <https://github.com/hyperledger-labs/solang/pkgs/container/solang>`_:
+`solang containers <https://github.com/hyperledger/solang/pkgs/container/solang>`_:
 
 .. code-block:: bash
 
-    docker pull ghcr.io/hyperledger-labs/solang
+    docker pull ghcr.io/hyperledger/solang
 
 And if you are using podman:
 
 .. code-block:: bash
 
-    podman image pull ghcr.io/hyperledger-labs/solang
+    podman image pull ghcr.io/hyperledger/solang
 
 Now you can run Solang like so:
 
 .. code-block:: bash
 
-	  docker run --rm -it ghcr.io/hyperledger-labs/solang --version
+	  docker run --rm -it ghcr.io/hyperledger/solang --version
 
 Or podman:
 
 .. code-block:: bash
 
-	  podman container run --rm -it ghcr.io/hyperledger-labs/solang --version
+	  podman container run --rm -it ghcr.io/hyperledger/solang --version
 
 If you want to compile some solidity files, the source file needs to be
 available inside the container. You can do this via the -v command line.
@@ -186,10 +186,10 @@ to your solidity files:
 
 .. code-block:: bash
 
-	  docker run --rm -it -v /local/path:/sources ghcr.io/hyperledger-labs/solang compile -o /sources /sources/flipper.sol
+	  docker run --rm -it -v /local/path:/sources ghcr.io/hyperledger/solang compile -o /sources /sources/flipper.sol
 
 On Windows, you need to specify absolute paths:
 
 .. code-block:: text
 
-	 docker run --rm -it -v C:\Users\User:/sources ghcr.io/hyperledger-labs/solang compile -o /sources /sources/flipper.sol
+	 docker run --rm -it -v C:\Users\User:/sources ghcr.io/hyperledger/solang compile -o /sources /sources/flipper.sol

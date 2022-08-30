@@ -187,7 +187,7 @@ fn incrementer() {
         contract foo {
             // make sure incrementer has a base contract with an empty constructor
             // is to check that the correct constructor is selected at emit time
-            // https://github.com/hyperledger-labs/solang/issues/487
+            // https://github.com/hyperledger/solang/issues/487
             constructor() {}
         }
 
