@@ -129,7 +129,7 @@ jobs:
 
   mac-arm:
     name: Mac Arm
-    runs-on: macos-arm
+    runs-on: [self-hosted, macOS, ARM64, MacStadium]
     if: ${{ github.repository_owner == 'hyperledger' }}
     steps:
     - name: Checkout sources
