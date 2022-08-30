@@ -664,7 +664,7 @@ fn test_overflow_boundaries() {
         .replace("intN", &format!("int{}", width));
         let mut contract = build_solidity(&src);
 
-        // The max value held in signed N bits is - 2^(N-1)..2^(N-1)-1 .We generate theses boundaries:
+        // The range of values that can be held in signed N bits is [-2^(N-1), 2^(N-1)-1]. We generate these boundaries:
         let upper_boundary = BigInt::from(2_u32).pow(width - 1).sub(1);
         let lower_boundary = BigInt::from(2_u32).pow(width - 1).mul(-1);
         let second_op = BigInt::from(1_u32);
@@ -790,7 +790,7 @@ fn test_mul_within_range_signed() {
 
         let mut contract = build_solidity(&src);
 
-        // Signed N bits will fit the range: 2^(N-1) -1 +/-. Here we generate a random number within this range and multiply it by -1, 1 or 0.
+        // The range of values that can be held in signed N bits is [-2^(N-1), 2^(N-1)-1]. Here we generate a random number within this range and multiply it by -1, 1 or 0.
         let first_operand_rand = rng.gen_bigint(width - 1).sub(1_u32);
         println!("First op : {:?}", first_operand_rand);
 
@@ -885,7 +885,7 @@ fn test_overflow_detect_signed() {
 
         contract.constructor("test", &[]);
 
-        // The max value held in signed N bits is - 2^(N-1)..2^(N-1)-1 .Generate a value that will overflow this range:
+        // The range of values that can be held in signed N bits is [-2^(N-1), 2^(N-1)-1] .Generate a value that will overflow this range:
         let limit = BigInt::from(2_u32).pow(width - 1).add(1_u32);
 
         // Divide Limit by a random number
@@ -938,10 +938,10 @@ fn test_overflow_detect_unsigned() {
         contract.constructor("test", &[]);
 
         for _ in 0..10 {
-            // N bits can hold the range 0..(2^N)-1 . Generate a value that overflows N bits
+            // N bits can hold the range [0, (2^N)-1]. Generate a value that overflows N bits
             let limit = BigUint::from(2_u32).pow(width);
 
-            // Generate a random number within the the range 0..2^N
+            // Generate a random number within the the range [0, 2^N -1]
             let first_operand_rand = rng.gen_biguint(width.into());
 
             // Calculate a number that when multiplied by first_operand_rand, the result will overflow N bits

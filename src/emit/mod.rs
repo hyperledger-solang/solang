@@ -5574,7 +5574,7 @@ pub trait TargetRuntime<'a> {
     }
 
     // Signed overflow detection is handled by the following steps:
-    // 1- Do an unsigned multiplication first, that step will check if the generated value will fit in N bits. (unsigned overflow)
+    // 1- Do an unsigned multiplication first, This step will check if the generated value will fit in N bits. (unsigned overflow)
     // 2- Get the result, and negate it if needed.
     // 3- Check for signed overflow, by checking for an unexpected change in the sign of the result.
     fn signed_ovf_detect(
@@ -5718,16 +5718,6 @@ pub trait TargetRuntime<'a> {
             )
         };
 
-        // If the operands' sign is the same
-        let same_signs =
-            bin.builder
-                .build_int_compare(IntPredicate::EQ, left_sign_bit, right_sign_bit, "");
-
-        // If operands' sign is the same and the result is positive
-        let same_operands_and_positive_res =
-            bin.builder
-                .build_and(same_signs, bin.builder.build_not(res_sign_bit, ""), "");
-
         let value_fits_n_bits = bin.builder.build_not(
             bin.builder.build_or(
                 return_val
@@ -5741,10 +5731,6 @@ pub trait TargetRuntime<'a> {
             "",
         );
 
-        // If operands' sign are not the same and the result is negative
-        let diff_operands_and_neg_res =
-            bin.builder
-                .build_and(bin.builder.build_not(same_signs, ""), res_sign_bit, "");
         let left_is_zero =
             bin.builder
                 .build_int_compare(IntPredicate::EQ, left, left.get_type().const_zero(), "");
@@ -5758,16 +5744,17 @@ pub trait TargetRuntime<'a> {
         // If one of the operands is zero
         let mul_by_zero = bin.builder.build_or(left_is_zero, right_is_zero, "");
 
-        let ok_operation = bin.builder.build_or(
-            same_operands_and_positive_res,
-            diff_operands_and_neg_res,
-            "",
-        );
+        // Will resolve to one if signs are differnet
+        let different_signs = bin.builder.build_xor(left_sign_bit, right_sign_bit, "");
+
+        let not_ok_operation = bin
+            .builder
+            .build_not(bin.builder.build_xor(different_signs, res_sign_bit, ""), "");
 
         // Here, we disregard the last rule mentioned above by oring with mul_by_zero
         bin.builder.build_conditional_branch(
             bin.builder.build_and(
-                bin.builder.build_or(ok_operation, mul_by_zero, ""),
+                bin.builder.build_or(not_ok_operation, mul_by_zero, ""),
                 value_fits_n_bits,
                 "",
             ),
@@ -5883,11 +5870,11 @@ pub trait TargetRuntime<'a> {
                 bin.builder.build_store(r, right);
             }
             // LLVM-IR can handle multiplication of sizes up to 64 bits. If the size is larger, we need to implement our own mutliplication function.
-            // We divide the operands into sizes of 32 bits(check __mul32 in stdlib/bigint.c documentation).
+            // We divide the operands into sizes of 32 bits (check __mul32 in stdlib/bigint.c documentation).
             // If the size is not divisble by 32, we extend it to the next 32 bits. For example, int72 will be extended to int96.
-            // Here, We Zext the operands to the nearest 32 bits. zext is called instead of sext because we need to do unsigned multiplication by default.
+            // Here, We zext the operands to the nearest 32 bits. zext is called instead of sext because we need to do unsigned multiplication by default.
             // It will not matter in terms of mul without overflow, because we always truncate the result to the bit size of the operands.
-            // In mul with overflow however, it is needed so that overflow can be detected if the most significant bits of the result are not Zeros.
+            // In mul with overflow however, it is needed so that overflow can be detected if the most significant bits of the result are not zeros.
             else {
                 bin.builder
                     .build_store(l, bin.builder.build_int_z_extend(left, mul_ty, ""));
@@ -5895,7 +5882,7 @@ pub trait TargetRuntime<'a> {
                     .build_store(r, bin.builder.build_int_z_extend(right, mul_ty, ""));
             }
 
-            // If unchecked, and no overflow flag in CL.
+            // If unchecked, and no overflow flag in command line arguments.
             if unchecked && !bin.math_overflow_check {
                 return self.call_mul32_without_ovf(bin, l, r, o, mul_bits, left.get_type());
             }
@@ -5905,7 +5892,7 @@ pub trait TargetRuntime<'a> {
             }
 
             // Unsigned overflow detection Approach:
-            // If the size is a multiple of 32, we call __mul32_with_builtin_ovf and it returns an overflow flag(check __mul32_with_builtin_ovf in stdlib/bigint.c documentation)
+            // If the size is a multiple of 32, we call __mul32_with_builtin_ovf and it returns an overflow flag (check __mul32_with_builtin_ovf in stdlib/bigint.c documentation)
             // If that is not the case, some extra work has to be done. We have to check the extended bits for any set bits. If there is any, an overflow occured.
             // For example, if we have uint72, it will be extended to uint96. __mul32 with ovf will raise an ovf flag if the result overflows 96 bits, not 72.
             // We account for that by checking the extended leftmost bits. In the example mentioned, they will be 96-72=24 bits.
