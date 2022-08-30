@@ -76,7 +76,7 @@ jobs:
   mac-arm:
     name: Mac Arm
     needs: create
-    runs-on: macos-arm
+    runs-on: [self-hosted, macOS, ARM64, MacStadium]
     if: ${{ github.repository_owner == 'hyperledger' }}
     steps:
     - run: git clone --depth 1 --branch solana-rustc/13.0-2021-08-08 https://github.com/solana-labs/llvm-project.git
