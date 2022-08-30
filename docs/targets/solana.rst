@@ -71,7 +71,7 @@ Now run the following javascript by saving it to `flipper.js` and running it wit
 The contract can be used via the `@solana/solidity <https://www.npmjs.com/package/@solana/solidity>`_  npm package. This
 package has `documentation <https://solana-labs.github.io/solana-solidity.js/>`_ and there
 are `some examples <https://solana-labs.github.io/solana-solidity.js/>`_. There is also
-`solang's integration tests <https://github.com/hyperledger-labs/solang/tree/main/integration/solana>`_.
+`solang's integration tests <https://github.com/hyperledger/solang/tree/main/integration/solana>`_.
 
 .. _value_transfer:
 
@@ -225,10 +225,10 @@ transfering token. This is the Solana equivalent of
 `ERC-20 <https://ethereum.org/en/developers/docs/standards/tokens/erc-20/>`_ and
 `ERC-721 <https://ethereum.org/en/developers/docs/standards/tokens/erc-721/>`_. We have created a library ``SplToken`` to use
 spl-token from Solidity. The file
-`spl_token.sol <https://github.com/hyperledger-labs/solang/blob/main/examples/spl_token.sol>`_  should be copied into
+`spl_token.sol <https://github.com/hyperledger/solang/blob/main/examples/spl_token.sol>`_  should be copied into
 your source tree, and then imported in your solidity files where it is required. The ``SplToken`` library has doc
 comments explaining how it should be used.
 
 There is an example in our integration tests of how this should be used, see
-`token.sol <https://github.com/hyperledger-labs/solang/blob/main/integration/solana/token.sol>`_ and
-`token.spec.ts <https://github.com/hyperledger-labs/solang/blob/main/integration/solana/token.spec.ts>`_.
+`token.sol <https://github.com/hyperledger/solang/blob/main/integration/solana/token.sol>`_ and
+`token.spec.ts <https://github.com/hyperledger/solang/blob/main/integration/solana/token.spec.ts>`_.

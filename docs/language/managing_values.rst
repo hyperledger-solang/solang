@@ -10,7 +10,7 @@ Value in Solidity is represented by ``uint128``.
 
     Parity Substrate can be compiled with a different type for ``T::Balance``. If you
     need support for a different type, please raise an
-    `issue <https://github.com/hyperledger-labs/solang/issues>`_.
+    `issue <https://github.com/hyperledger/solang/issues>`_.
 
 Checking your balance
 _____________________

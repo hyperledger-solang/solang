@@ -2,7 +2,7 @@ name: Build and push ci image
 on: [workflow_dispatch]
 jobs:
   build-push-ci-image:
-    runs-on: macos-arm
+    runs-on: linux-arm64
     steps:
     - name: Checkout sources
       uses: actions/checkout@v1

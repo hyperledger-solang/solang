@@ -96,7 +96,7 @@ pub(super) fn reaching_values(
 
 /// Update the Variable's map based on the incoming set of values. Returns true if there was any
 /// changes in the set.
-/// There is a discussion to improve this function: https://github.com/hyperledger-labs/solang/issues/934
+/// There is a discussion to improve this function: https://github.com/hyperledger/solang/issues/934
 fn update_map(var_no: &usize, set: &HashSet<Value>, map: &mut Variables) -> bool {
     return if let Some(existing) = map.get_mut(var_no) {
         if existing.iter().next().map_or(false, |v| v.all_unknown()) {
