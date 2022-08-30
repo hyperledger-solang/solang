@@ -5668,6 +5668,25 @@ pub trait TargetRuntime<'a> {
         );
 
         let res = bin.builder.build_load(o, "mul");
+        let ovf_any_type = if mul_bits != bits {
+            // If there are any set bits, then there is an overflow.
+            let check_ovf = bin.builder.build_right_shift(
+                res.into_int_value(),
+                mul_ty.const_int((bits).into(), false),
+                false,
+                "",
+            );
+            bin.builder.build_int_compare(
+                IntPredicate::NE,
+                check_ovf,
+                check_ovf.get_type().const_zero(),
+                "",
+            )
+        } else {
+            // If no size extension took place, there is no overflow in most significant N bits
+            bin.context.bool_type().const_zero()
+        };
+
         let negate_result = bin
             .builder
             .build_xor(left_negative, right_negative, "negate_result");
@@ -5710,11 +5729,15 @@ pub trait TargetRuntime<'a> {
                 .build_and(same_signs, bin.builder.build_not(res_sign_bit, ""), "");
 
         let value_fits_n_bits = bin.builder.build_not(
-            return_val
-                .try_as_basic_value()
-                .left()
-                .unwrap()
-                .into_int_value(),
+            bin.builder.build_or(
+                return_val
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap()
+                    .into_int_value(),
+                ovf_any_type,
+                "",
+            ),
             "",
         );
 
