@@ -79,7 +79,7 @@ contract testing  {
     assert_eq!(
         returns,
         vec![
-            Token::Uint(U256::from(12884901888u64)),
+            Token::Uint(U256::from(12884901920u64)),
             Token::Uint(U256::from(4))
         ]
     );

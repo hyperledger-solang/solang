@@ -1,8 +1,11 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
-
 #include "stdlib.h"
+
+#ifndef __wasm__
+#include "solana_sdk.h"
+#endif
 
 /*
   There are many tradeoffs in heaps. I think for Solidity, we want:
@@ -20,14 +23,28 @@ struct chunk
     size_t allocated;
 };
 
+#ifdef __wasm__
+#define HEAP_START ((struct chunk *)0x10000)
+
 void __init_heap()
 {
-    struct chunk *first = (struct chunk *)0x10000;
+    struct chunk *first = HEAP_START;
     first->next = first->prev = NULL;
     first->allocated = false;
     first->length = (size_t)(__builtin_wasm_memory_size(0) * 0x10000 -
                              (size_t)first - sizeof(struct chunk));
 }
+#else
+#define HEAP_START ((struct chunk *)0x300000000)
+
+void __init_heap()
+{
+    struct chunk *first = HEAP_START;
+    first->next = first->prev = NULL;
+    first->allocated = false;
+    first->length = (32 * 1024) - sizeof(struct chunk);
+}
+#endif
 
 void __attribute__((noinline)) __free(void *m)
 {
@@ -79,7 +96,7 @@ static void shrink_chunk(struct chunk *cur, size_t size)
 
 void *__attribute__((noinline)) __malloc(uint32_t size)
 {
-    struct chunk *cur = (struct chunk *)0x10000;
+    struct chunk *cur = HEAP_START;
 
     while (cur && (cur->allocated || size > cur->length))
         cur = cur->next;
@@ -93,7 +110,13 @@ void *__attribute__((noinline)) __malloc(uint32_t size)
     else
     {
         // go bang
+#ifdef __wasm__
         __builtin_unreachable();
+#else
+        sol_log("out of heap memory");
+        sol_panic();
+#endif
+        return NULL;
     }
 }
 

@@ -1139,12 +1139,13 @@ fn load_stdlib<'a>(context: &'a Context, target: &Target) -> Module<'a> {
     module
 }
 
-static BPF_IR: [&[u8]; 5] = [
+static BPF_IR: [&[u8]; 6] = [
     include_bytes!("../../stdlib/bpf/stdlib.bc"),
     include_bytes!("../../stdlib/bpf/bigint.bc"),
     include_bytes!("../../stdlib/bpf/format.bc"),
     include_bytes!("../../stdlib/bpf/solana.bc"),
     include_bytes!("../../stdlib/bpf/ripemd160.bc"),
+    include_bytes!("../../stdlib/bpf/wasmheap.bc"),
 ];
 
 static WASM_IR: [&[u8]; 4] = [
