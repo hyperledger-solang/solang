@@ -16,6 +16,7 @@ use super::{Binary, ReturnCode};
 /// 3) EncoderBuilder::finish() generates the code which encodes the data to the pointer provided. The
 ///    called should ensure there is enough space.
 pub struct EncoderBuilder<'a, 'b> {
+    packed_length: IntValue<'a>,
     length: IntValue<'a>,
     offset: IntValue<'a>,
     load_args: bool,
@@ -62,6 +63,8 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
             );
         }
 
+        let packed_length = length;
+
         // now add the dynamic lengths
         for (i, arg) in args.iter().enumerate() {
             length = binary.builder.build_int_add(
@@ -79,6 +82,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
         }
 
         EncoderBuilder {
+            packed_length,
             length,
             offset,
             load_args,
@@ -654,40 +658,46 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
         // We use a little trick here. The length might or might not include the selector.
         // The length will be a multiple of 32 plus the selector (4). So by dividing by 8,
         // we lose the selector.
-        binary.builder.build_call(
-            binary.module.get_function("__bzero8").unwrap(),
-            &[
-                output.into(),
-                binary
-                    .builder
-                    .build_int_unsigned_div(
-                        self.length,
-                        binary.context.i32_type().const_int(8, false),
-                        "",
-                    )
-                    .into(),
-            ],
-            "",
-        );
-
-        let mut output = output;
-        let mut offset = self.offset;
-        let mut dynamic = unsafe { binary.builder.build_gep(output, &[self.offset], "") };
-
-        for arg in self.args.iter() {
-            let ty = ty_iter.next().unwrap();
-
-            self.encode_ty(
-                binary,
-                ns,
-                self.load_args,
-                function,
-                ty,
-                *arg,
-                &mut output,
-                &mut offset,
-                &mut dynamic,
+        if !self.args.is_empty() {
+            binary.builder.build_call(
+                binary.module.get_function("__bzero8").unwrap(),
+                &[
+                    output.into(),
+                    binary
+                        .builder
+                        .build_int_unsigned_div(
+                            binary.builder.build_int_sub(
+                                self.length,
+                                self.packed_length,
+                                "dyn_len",
+                            ),
+                            binary.context.i32_type().const_int(8, false),
+                            "",
+                        )
+                        .into(),
+                ],
+                "",
             );
+
+            let mut output = output;
+            let mut offset = self.offset;
+            let mut dynamic = unsafe { binary.builder.build_gep(output, &[self.offset], "") };
+
+            for arg in self.args.iter() {
+                let ty = ty_iter.next().unwrap();
+
+                self.encode_ty(
+                    binary,
+                    ns,
+                    self.load_args,
+                    function,
+                    ty,
+                    *arg,
+                    &mut output,
+                    &mut offset,
+                    &mut dynamic,
+                );
+            }
         }
     }
 
