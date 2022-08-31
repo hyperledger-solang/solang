@@ -1,4 +1,4 @@
-import '../../examples/spl_token.sol';
+import '../../solana-library/spl_token.sol';
 
 contract Token {
     address mint;

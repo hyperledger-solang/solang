@@ -225,7 +225,7 @@ transfering token. This is the Solana equivalent of
 `ERC-20 <https://ethereum.org/en/developers/docs/standards/tokens/erc-20/>`_ and
 `ERC-721 <https://ethereum.org/en/developers/docs/standards/tokens/erc-721/>`_. We have created a library ``SplToken`` to use
 spl-token from Solidity. The file
-`spl_token.sol <https://github.com/hyperledger/solang/blob/main/examples/spl_token.sol>`_  should be copied into
+`spl_token.sol <https://github.com/hyperledger/solang/blob/main/solana-library/spl_token.sol>`_  should be copied into
 your source tree, and then imported in your solidity files where it is required. The ``SplToken`` library has doc
 comments explaining how it should be used.
 
