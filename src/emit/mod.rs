@@ -5062,10 +5062,10 @@ pub trait TargetRuntime<'a> {
                         bin.builder.build_int_add(len, len, "hex_len")
                     }
                     Type::Uint(bits) if *spec == FormatArg::Hex => {
-                        bin.context.i32_type().const_int(bits as u64 / 8 + 2, false)
+                        bin.context.i32_type().const_int(bits as u64 / 4 + 2, false)
                     }
                     Type::Int(bits) if *spec == FormatArg::Hex => {
-                        bin.context.i32_type().const_int(bits as u64 / 8 + 3, false)
+                        bin.context.i32_type().const_int(bits as u64 / 4 + 3, false)
                     }
                     Type::Uint(bits) if *spec == FormatArg::Binary => {
                         bin.context.i32_type().const_int(bits as u64 + 2, false)
@@ -5073,12 +5073,12 @@ pub trait TargetRuntime<'a> {
                     Type::Int(bits) if *spec == FormatArg::Binary => {
                         bin.context.i32_type().const_int(bits as u64 + 3, false)
                     }
-                    // bits / 3 is a rough over-estimate of how many decimals we need
+                    // bits / 2 is a rough over-estimate of how many decimals we need
                     Type::Uint(bits) if *spec == FormatArg::Default => {
-                        bin.context.i32_type().const_int(bits as u64 / 3, false)
+                        bin.context.i32_type().const_int(bits as u64 / 2, false)
                     }
                     Type::Int(bits) if *spec == FormatArg::Default => {
-                        bin.context.i32_type().const_int(bits as u64 / 3 + 1, false)
+                        bin.context.i32_type().const_int(bits as u64 / 2 + 1, false)
                     }
                     Type::Enum(enum_no) => bin
                         .context
