@@ -132,7 +132,8 @@ void *__realloc(void *m, size_t size)
     {
         // merge with next
         cur->next = next->next;
-        cur->next->prev = cur;
+        if (cur->next)
+            cur->next->prev = cur;
         cur->length += next->length + sizeof(struct chunk);
         // resplit ..
         shrink_chunk(cur, size);

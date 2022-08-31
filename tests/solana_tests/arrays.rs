@@ -1024,3 +1024,337 @@ fn initialization_with_literal() {
         vec![Token::Uint(Uint::from(563)), Token::Uint(Uint::from(895))]
     );
 }
+
+#[test]
+fn dynamic_array_push() {
+    let mut runtime = build_solidity(
+        r#"
+        pragma solidity 0;
+
+        contract foo {
+            function test() public {
+                int[] bar = (new int[])(1);
+
+                bar[0] = 128;
+                bar.push(64);
+
+                assert(bar.length == 2);
+                assert(bar[1] == 64);
+            }
+        }
+        "#,
+    );
+
+    runtime.constructor("foo", &[]);
+    runtime.function("test", &[], &[], None);
+
+    let mut runtime = build_solidity(
+        r#"
+        pragma solidity 0;
+
+        contract foo {
+            function test() public {
+                bytes bar = (new bytes)(1);
+
+                bar[0] = 128;
+                bar.push(64);
+
+                assert(bar.length == 2);
+                assert(bar[1] == 64);
+            }
+        }
+        "#,
+    );
+
+    runtime.constructor("foo", &[]);
+    runtime.function("test", &[], &[], None);
+
+    let mut runtime = build_solidity(
+        r#"
+        pragma solidity 0;
+
+        contract foo {
+            struct s {
+                int32 f1;
+                bool f2;
+            }
+            function test() public {
+                s[] bar = new s[](1);
+
+                bar[0] = s({f1: 0, f2: false});
+                bar.push(s({f1: 1, f2: true}));
+
+                assert(bar.length == 2);
+                assert(bar[1].f1 == 1);
+                assert(bar[1].f2 == true);
+            }
+        }
+        "#,
+    );
+
+    runtime.constructor("foo", &[]);
+    runtime.function("test", &[], &[], None);
+
+    let mut runtime = build_solidity(
+        r#"
+        pragma solidity 0;
+
+        contract foo {
+            enum enum1 { val1, val2, val3 }
+            function test() public {
+                enum1[] bar = new enum1[](1);
+
+                bar[0] = enum1.val1;
+                bar.push(enum1.val2);
+
+                assert(bar.length == 2);
+                assert(bar[1] == enum1.val2);
+            }
+        }
+        "#,
+    );
+
+    runtime.constructor("foo", &[]);
+    runtime.function("test", &[], &[], None);
+
+    // push() returns a reference to the thing
+    let mut runtime = build_solidity(
+        r#"
+        pragma solidity 0;
+
+        contract foo {
+            struct s {
+                int32 f1;
+                bool f2;
+            }
+
+            function test() public {
+                s[] bar = new s[](0);
+                s memory n = bar.push();
+                n.f1 = 102;
+                n.f2 = true;
+
+                assert(bar[0].f1 == 102);
+                assert(bar[0].f2 == true);
+            }
+        }"#,
+    );
+
+    runtime.constructor("foo", &[]);
+    runtime.function("test", &[], &[], None);
+}
+
+#[test]
+fn dynamic_array_pop() {
+    let mut runtime = build_solidity(
+        r#"
+        pragma solidity 0;
+
+        contract foo {
+            function test() public {
+                int[] bar = new int[](1);
+
+                bar[0] = 128;
+
+                assert(bar.length == 1);
+                assert(128 == bar.pop());
+                assert(bar.length == 0);
+            }
+        }
+        "#,
+    );
+
+    runtime.constructor("foo", &[]);
+    runtime.function("test", &[], &[], None);
+
+    let mut runtime = build_solidity(
+        r#"
+        pragma solidity 0;
+
+        contract foo {
+            function test() public {
+                bytes bar = new bytes(1);
+
+                bar[0] = 128;
+
+                assert(bar.length == 1);
+                assert(128 == bar.pop());
+                assert(bar.length == 0);
+            }
+        }
+        "#,
+    );
+
+    runtime.constructor("foo", &[]);
+    runtime.function("test", &[], &[], None);
+
+    let mut runtime = build_solidity(
+        r#"
+        pragma solidity 0;
+
+        contract foo {
+            struct s {
+                int32 f1;
+                bool f2;
+            }
+            function test() public {
+                s[] bar = new s[](1);
+
+                bar[0] = s(128, true);
+
+                assert(bar.length == 1);
+
+                s baz = bar.pop();
+                assert(baz.f1 == 128);
+                assert(baz.f2 == true);
+                assert(bar.length == 0);
+            }
+        }
+        "#,
+    );
+
+    runtime.constructor("foo", &[]);
+    runtime.function("test", &[], &[], None);
+
+    let mut runtime = build_solidity(
+        r#"
+        pragma solidity 0;
+
+        contract foo {
+            enum enum1 { val1, val2, val3 }
+            function test() public {
+                enum1[] bar = new enum1[](1);
+
+                bar[0] = enum1.val2;
+
+                assert(bar.length == 1);
+                assert(enum1.val2 == bar.pop());
+                assert(bar.length == 0);
+            }
+        }
+        "#,
+    );
+
+    runtime.constructor("foo", &[]);
+    runtime.function("test", &[], &[], None);
+}
+
+#[test]
+#[should_panic]
+fn dynamic_array_pop_empty_array() {
+    let mut runtime = build_solidity(
+        r#"
+        pragma solidity 0;
+
+        contract foo {
+            function test() public {
+                int[] bar = new int[](0);
+                bar.pop();
+            }
+        }"#,
+    );
+
+    runtime.constructor("foo", &[]);
+    runtime.function("test", &[], &[], None);
+}
+
+#[test]
+#[should_panic]
+fn dynamic_array_pop_bounds() {
+    let mut runtime = build_solidity(
+        r#"
+        pragma solidity 0;
+
+        contract foo {
+            function test() public {
+                int[] bar = new int[](1);
+                bar[0] = 12;
+                bar.pop();
+
+                assert(bar[0] == 12);
+            }
+        }"#,
+    );
+
+    runtime.constructor("foo", &[]);
+    runtime.function("test", &[], &[], None);
+}
+
+#[test]
+fn dynamic_array_push_pop_loop() {
+    let mut runtime = build_solidity(
+        r#"
+        contract foo {
+            function test() public {
+                uint32[] bar1 = new uint32[](0);
+                uint32[] bar2 = new uint32[](0);
+
+                // each time we call a system call, the heap is checked
+                // for consistency. So do a print() after each operation
+                for (uint64 i = 1; i < 160; i++) {
+                    if ((i % 10) == 0) {
+                        bar1.pop();
+                        print("bar1.pop");
+                        bar2.pop();
+                        print("bar2.pop");
+                    } else {
+                        uint32 v = bar1.length;
+                        bar1.push(v);
+                        print("bar1.push");
+                        bar2.push(v);
+                        print("bar2.push");
+                    }
+                }
+
+                assert(bar1.length == bar2.length);
+
+                for (uint32 i = 0; i < bar1.length; i++) {
+                    assert(bar1[i] == i);
+                    assert(bar2[i] == i);
+                }
+            }
+        }"#,
+    );
+
+    runtime.constructor("foo", &[]);
+    runtime.function("test", &[], &[], None);
+
+    let mut runtime = build_solidity(
+        r#"
+        contract foo {
+            function test() public {
+                bytes bar1 = new bytes(0);
+                bytes bar2 = new bytes(0);
+
+                // each time we call a system call, the heap is checked
+                // for consistency. So do a print() after each operation
+                for (uint64 i = 1; i < 160; i++) {
+                    if ((i % 10) == 0) {
+                        bar1.pop();
+                        print("bar1.pop");
+                        bar2.pop();
+                        print("bar2.pop");
+                    } else {
+                        uint8 v = uint8(bar1.length);
+                        bar1.push(v);
+                        print("bar1.push");
+                        bar2.push(v);
+                        print("bar2.push");
+                    }
+                }
+
+                assert(bar1.length == bar2.length);
+
+                for (uint32 i = 0; i < bar1.length; i++) {
+                    uint8 v = uint8(i);
+                    print("{}.{}.{}".format(v, bar1[i], bar2[i]));
+                    assert(bar1[i] == v);
+                    assert(bar2[i] == v);
+                }
+            }
+        }"#,
+    );
+
+    runtime.constructor("foo", &[]);
+    runtime.function("test", &[], &[], None);
+}

@@ -643,10 +643,9 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
         self,
         binary: &Binary<'a>,
         function: FunctionValue<'a>,
-        output: PointerValue<'a>,
+        mut output: PointerValue<'a>,
         ns: &ast::Namespace,
     ) {
-        let mut output = output;
         let mut ty_iter = self.tys.iter();
 
         for arg in self.packed.iter() {
@@ -679,7 +678,6 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                 "",
             );
 
-            let mut output = output;
             let mut offset = self.offset;
             let mut dynamic = unsafe { binary.builder.build_gep(output, &[self.offset], "") };
 

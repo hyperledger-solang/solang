@@ -2,6 +2,13 @@
 All notable changes to [Solang](https://github.com/hyperledger/solang/)
 will be documented here.
 
+## Unreleased
+
+### Added
+- On Solana, programs now use a custom heap implementation, just like on
+  Substrate. As result, it is now possible to `.push()` and `.pop()` on
+  dynamic arrays in memory.
+
 ## v0.1.12 Cairo
 
 ### Added

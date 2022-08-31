@@ -3632,6 +3632,13 @@ pub trait TargetRuntime<'a> {
                         let size = bin.builder.build_int_mul(elem_size, new_len, "");
                         let size = bin.builder.build_int_add(size, vec_size, "");
 
+                        let realloc_size = if ns.target == Target::Solana {
+                            bin.builder
+                                .build_int_z_extend(size, bin.context.i64_type(), "")
+                        } else {
+                            size
+                        };
+
                         // Reallocate and reassign the array pointer
                         let new = bin
                             .builder
@@ -3645,7 +3652,7 @@ pub trait TargetRuntime<'a> {
                                             "a",
                                         )
                                         .into(),
-                                    size.into(),
+                                    realloc_size.into(),
                                 ],
                                 "",
                             )
@@ -3814,11 +3821,19 @@ pub trait TargetRuntime<'a> {
                             bin.context.i8_type().ptr_type(AddressSpace::Generic),
                             "a",
                         );
+
+                        let realloc_size = if ns.target == Target::Solana {
+                            bin.builder
+                                .build_int_z_extend(size, bin.context.i64_type(), "")
+                        } else {
+                            size
+                        };
+
                         let new = bin
                             .builder
                             .build_call(
                                 bin.module.get_function("__realloc").unwrap(),
-                                &[a.into(), size.into()],
+                                &[a.into(), realloc_size.into()],
                                 "",
                             )
                             .try_as_basic_value()
