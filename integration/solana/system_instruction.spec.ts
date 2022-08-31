@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 import {loadContract} from "./setup";
 import {Keypair, LAMPORTS_PER_SOL, PublicKey} from "@solana/web3.js";
 import {publicKeyToHex} from "@solana/solidity";

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 import '../../solana-library/system_instruction.sol';
 
 contract TestingInstruction {

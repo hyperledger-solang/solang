@@ -217,18 +217,42 @@ the provided seeds, along with a seed bump. See the Solana documentation on
         }
     }
 
-Using spl-token
-_______________
 
-`spl-token <https://spl.solana.com/token>`_ is the solana native way of creating tokens, minting, burning and
-transfering token. This is the Solana equivalent of
+
+Solana Library
+______________
+
+In Solang's Github repository, there is a directory called ``solana-library``. It contains libraries for Solidity contracts
+to interact with Solana specific instructions. Currently, there are two libraries there: one for SPL tokens and another
+for Solana's system instructions. In order to use those functionalities, copy the correspondent library
+file to your project and import it.
+
+SPL-token
++++++++++
+
+`spl-token <https://spl.solana.com/token>`_ is the Solana native way of creating tokens, minting, burning and
+transferring token. This is the Solana equivalent of
 `ERC-20 <https://ethereum.org/en/developers/docs/standards/tokens/erc-20/>`_ and
-`ERC-721 <https://ethereum.org/en/developers/docs/standards/tokens/erc-721/>`_. We have created a library ``SplToken`` to use
-spl-token from Solidity. The file
+`ERC-721 <https://ethereum.org/en/developers/docs/standards/tokens/erc-721/>`_. Solang's repository contains
+a library ``SplToken`` to use spl-token from Solidity. The file
 `spl_token.sol <https://github.com/hyperledger/solang/blob/main/solana-library/spl_token.sol>`_  should be copied into
 your source tree, and then imported in your solidity files where it is required. The ``SplToken`` library has doc
 comments explaining how it should be used.
 
-There is an example in our integration tests of how this should be used, see
+There is an example in our integration tests of how this should be used. See
 `token.sol <https://github.com/hyperledger/solang/blob/main/integration/solana/token.sol>`_ and
 `token.spec.ts <https://github.com/hyperledger/solang/blob/main/integration/solana/token.spec.ts>`_.
+
+System Instructions
++++++++++++++++++++
+
+Solana's system instructions enables developers to interact with Solana's System Program. There are functions to
+create new accounts, allocate account data, assign accounts to owning programs, transfer lamports from System Program
+owned accounts and pay transaction fees. More information about the functions offered can be found both on
+`Solana documentation <https://docs.rs/solana-program/1.11.10/solana_program/system_instruction/enum.SystemInstruction.html>`_
+and on Solang's `system_instruction.sol <https://github.com/hyperledger/solang/blob/main/solana-library/system_instruction.sol>`_ file.
+
+The usage of system instructions needs the correct setting of writable and signer accounts when interacting with Solidity
+contracts on chain. Examples are available on Solang's integration tests.
+See `system_instruction_example.sol <https://github.com/hyperledger/solang/blob/main/integration/solana/system_instruction_example.sol>`_
+and `system_instruction.spec.ts <https://github.com/hyperledger/solang/blob/main/integration/solana/system_instruction.spec.ts>`_

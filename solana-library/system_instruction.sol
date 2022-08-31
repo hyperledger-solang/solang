@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 import 'solana';
 
 library SystemInstruction {
@@ -265,7 +267,7 @@ library SystemInstruction {
         systemAddress.call{accounts: metas}(bincode);
     }
 
-    /// Change th entity authorized to execute nonce instructions on the account
+    /// Change the entity authorized to execute nonce instructions on the account
     ///
     /// @param nonce_pubkey the public key for the nonce account
     /// @param authorized_pubkey the public key for the entity authorized to execute instructins on the account
