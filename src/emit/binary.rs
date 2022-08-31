@@ -1145,12 +1145,12 @@ static BPF_IR: [&[u8]; 6] = [
     include_bytes!("../../stdlib/bpf/format.bc"),
     include_bytes!("../../stdlib/bpf/solana.bc"),
     include_bytes!("../../stdlib/bpf/ripemd160.bc"),
-    include_bytes!("../../stdlib/bpf/wasmheap.bc"),
+    include_bytes!("../../stdlib/bpf/heap.bc"),
 ];
 
 static WASM_IR: [&[u8]; 4] = [
     include_bytes!("../../stdlib/wasm/stdlib.bc"),
-    include_bytes!("../../stdlib/wasm/wasmheap.bc"),
+    include_bytes!("../../stdlib/wasm/heap.bc"),
     include_bytes!("../../stdlib/wasm/bigint.bc"),
     include_bytes!("../../stdlib/wasm/format.bc"),
 ];
