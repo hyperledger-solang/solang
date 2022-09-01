@@ -1,10 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{build_solidity, build_solidity_with_overflow_check};
-use num_bigint::BigInt;
-use num_bigint::Sign;
+use num_bigint::{BigInt, BigUint, RandBigInt, Sign};
 use parity_scale_codec::{Decode, Encode};
+use rand::seq::SliceRandom;
 use rand::Rng;
+use std::ops::Add;
+use std::ops::Div;
+use std::ops::Mul;
+use std::ops::Sub;
 
 #[test]
 fn celcius_and_fahrenheit() {
@@ -942,6 +946,58 @@ fn large_power() {
 }
 
 #[test]
+fn test_power_overflow_boundaries() {
+    // We test that 2^N-1 will not overflow N bits, while 2^N will overflow N bits.
+    for width in (72..=256).step_by(8) {
+        let src = r#"
+        contract test {
+            function pow(uintN a, uintN b) public returns (uintN) { 
+                return a ** b;
+            }
+        }"#
+        .replace("intN", &format!("int{}", width));
+
+        let mut contract = build_solidity(&src);
+
+        let base = BigUint::from(2_u32);
+        let mut base_data = base.to_bytes_le();
+
+        let exp = BigUint::from(width - 1);
+        let mut exp_data = exp.to_bytes_le();
+
+        let width_rounded = next_2n(width / 8);
+
+        base_data.resize((width_rounded) as usize, 0);
+        exp_data.resize((width_rounded) as usize, 0);
+
+        contract.function(
+            "pow",
+            base_data
+                .clone()
+                .into_iter()
+                .chain(exp_data.into_iter())
+                .collect(),
+        );
+
+        let res = BigUint::from(2_usize).pow((width - 1).try_into().unwrap());
+        let mut res_data = res.to_bytes_le();
+        res_data.resize(width / 8, 0);
+        contract.vm.output.truncate((width / 8) as usize);
+
+        assert_eq!(contract.vm.output, res_data);
+
+        let exp = exp.add(1_usize);
+        let mut exp_data = exp.to_bytes_le();
+        exp_data.resize((width_rounded) as usize, 0);
+
+        contract.function_expect_failure(
+            "pow",
+            base_data.into_iter().chain(exp_data.into_iter()).collect(),
+        );
+    }
+}
+
+#[test]
 fn multiply() {
     let mut rng = rand::thread_rng();
     let size = 32;
@@ -1000,6 +1056,313 @@ fn multiply() {
         res.resize(size, 0);
 
         assert_eq!(res, runtime.vm.output);
+    }
+}
+
+#[test]
+fn test_mul_within_range_signed() {
+    // We generate a random value that fits N bits. Then, we multiply that value by 1, -1 or 0.
+    let mut rng = rand::thread_rng();
+    for width in (8..=256).step_by(8) {
+        let src = r#"
+        contract test {
+            function mul(intN a, intN b) public returns (intN) {
+                return a * b;
+            }
+        }"#
+        .replace("intN", &format!("int{}", width));
+
+        let width_rounded = next_2n(width / 8);
+
+        let mut runtime = build_solidity(&src);
+
+        let a = rng.gen_bigint((width - 1).try_into().unwrap()).sub(1_u32);
+        let a_sign = a.sign();
+        let mut a_data = a.to_signed_bytes_le();
+
+        let side = vec![-1, 0, 1];
+        let b = BigInt::from(*side.choose(&mut rng).unwrap() as i32);
+        let b_sign = b.sign();
+        let mut b_data = b.to_signed_bytes_le();
+
+        a_data.resize((width_rounded) as usize, sign_extend(a_sign));
+        b_data.resize((width_rounded) as usize, sign_extend(b_sign));
+
+        runtime.function(
+            "mul",
+            a_data.into_iter().chain(b_data.into_iter()).collect(),
+        );
+
+        runtime.vm.output.truncate((width / 8) as usize);
+
+        let value = a * b;
+        let value_sign = value.sign();
+
+        let mut value_data = value.to_signed_bytes_le();
+        value_data.resize((width / 8) as usize, sign_extend(value_sign));
+
+        assert_eq!(value_data, runtime.vm.output);
+    }
+}
+
+#[test]
+fn test_mul_within_range() {
+    let mut rng = rand::thread_rng();
+    for width in (8..=256).step_by(8) {
+        let src = r#"
+        contract test {
+            function mul(uintN a, uintN b) public returns (uintN) {
+                return a * b;
+            }
+        }"#
+        .replace("intN", &format!("int{}", width));
+
+        let width_rounded = next_2n(width / 8);
+        let mut runtime = build_solidity(&src);
+
+        // The range of values that can be held in signed N bits is [-2^(N-1), 2^(N-1)-1]. Here we generate a random number within this range and multiply it by 1
+        let a = rng.gen_biguint((width).try_into().unwrap()).sub(1_u32);
+
+        let mut a_data = a.to_bytes_le();
+
+        let b = BigUint::from(1_u32);
+
+        let mut b_data = b.to_bytes_le();
+        a_data.resize((width_rounded) as usize, 0);
+        b_data.resize((width_rounded) as usize, 0);
+
+        runtime.function(
+            "mul",
+            a_data.into_iter().chain(b_data.into_iter()).collect(),
+        );
+
+        runtime.vm.output.truncate((width / 8) as usize);
+
+        let value = a * b;
+
+        let mut value_data = value.to_bytes_le();
+        value_data.resize((width / 8) as usize, 0);
+
+        assert_eq!(value_data, runtime.vm.output);
+    }
+}
+
+#[test]
+fn test_overflow_boundaries() {
+    // For bit sizes from 8..64, LLVM has intrinsic functions for multiplication with overflow. Testing starts from int types of 72 and up. There is no need to test intrinsic LLVM functions.
+    for width in (72..=256).step_by(8) {
+        let src = r#"
+        contract test {
+            function mul(intN a, intN b) public returns (intN) {
+                return a * b;
+            }
+        }"#
+        .replace("intN", &format!("int{}", width));
+        let mut contract = build_solidity(&src);
+
+        // The range of values that can be held in signed N bits is [-2^(N-1), 2^(N-1)-1]. We generate these boundaries:
+        let upper_boundary = BigInt::from(2_u32).pow(width - 1).sub(1_u32);
+        let mut up_data = upper_boundary.to_signed_bytes_le();
+
+        let lower_boundary = BigInt::from(2_u32).pow(width - 1).mul(-1_i32);
+        let mut low_data = lower_boundary.to_signed_bytes_le();
+
+        let second_op = BigInt::from(1_u32);
+        let mut sec_data = second_op.to_signed_bytes_le();
+
+        let width_rounded = next_2n((width as usize) / 8);
+
+        up_data.resize((width_rounded) as usize, 0);
+        low_data.resize((width_rounded) as usize, 255);
+        sec_data.resize((width_rounded) as usize, 0);
+
+        // Multiply the boundaries by 1.
+        contract.function(
+            "mul",
+            up_data
+                .clone()
+                .into_iter()
+                .chain(sec_data.clone().into_iter())
+                .collect(),
+        );
+
+        let res = upper_boundary.clone().mul(1_u32);
+        let mut res_data = res.to_signed_bytes_le();
+        res_data.resize((width / 8) as usize, 0);
+        contract.vm.output.truncate((width / 8) as usize);
+
+        assert_eq!(res_data, contract.vm.output);
+
+        contract.function(
+            "mul",
+            low_data
+                .clone()
+                .into_iter()
+                .chain(sec_data.clone().into_iter())
+                .collect(),
+        );
+
+        let res = lower_boundary.clone().mul(1_u32);
+        let mut res_data = res.to_signed_bytes_le();
+        res_data.resize((width / 8) as usize, 0);
+        contract.vm.output.truncate((width / 8) as usize);
+
+        assert_eq!(res_data, contract.vm.output);
+
+        let upper_boundary_plus_one = BigInt::from(2_u32).pow(width - 1);
+
+        // We subtract 2 instead of one to make the number even, so that no rounding occurs when we divide by 2 later on.
+        let lower_boundary_minus_two = BigInt::from(2_u32).pow(width - 1).mul(-1_i32).sub(2_i32);
+
+        let upper_second_op = upper_boundary_plus_one.div(2_u32);
+        let mut upper_second_op_data = upper_second_op.to_signed_bytes_le();
+
+        let lower_second_op = lower_boundary_minus_two.div(2_u32);
+        let mut lower_second_op_data = lower_second_op.to_signed_bytes_le();
+
+        let mut two_data = BigInt::from(2_u32).to_signed_bytes_le();
+
+        upper_second_op_data.resize((width_rounded) as usize, 0);
+        two_data.resize((width_rounded) as usize, 0);
+        lower_second_op_data.resize((width_rounded) as usize, 255);
+
+        // This will generate a value more than the upper boundary.
+        contract.function_expect_failure(
+            "mul",
+            upper_second_op_data
+                .clone()
+                .into_iter()
+                .chain(two_data.clone().into_iter())
+                .collect(),
+        );
+
+        // Generate a value less than the lower boundary
+        contract.function_expect_failure(
+            "mul",
+            lower_second_op_data
+                .clone()
+                .into_iter()
+                .chain(two_data.clone().into_iter())
+                .collect(),
+        );
+
+        // Upper boundary * Upper boundary
+        contract.function_expect_failure(
+            "mul",
+            up_data
+                .clone()
+                .into_iter()
+                .chain(up_data.clone().into_iter())
+                .collect(),
+        );
+
+        // Lower boundary * Lower boundary
+        contract.function_expect_failure(
+            "mul",
+            low_data
+                .clone()
+                .into_iter()
+                .chain(low_data.clone().into_iter())
+                .collect(),
+        );
+
+        // Lower boundary * Upper boundary
+        contract.function_expect_failure(
+            "mul",
+            low_data
+                .clone()
+                .into_iter()
+                .chain(up_data.clone().into_iter())
+                .collect(),
+        );
+    }
+}
+
+#[test]
+fn test_overflow_detect_signed() {
+    let mut rng = rand::thread_rng();
+    // For bit sizes from 8..64, LLVM has intrinsic functions for multiplication with overflow. Testing starts from int types of 72 and up. There is no need to test intrinsic LLVM functions.
+    for width in (72..=256).step_by(8) {
+        let src = r#"
+        contract test {
+            function mul(intN a, intN b) public returns (intN) {
+                return a * b;
+            }
+        }"#
+        .replace("intN", &format!("int{}", width));
+        let mut contract = build_solidity(&src);
+
+        // The range of values that can be held in signed N bits is [-2^(N-1), 2^(N-1)-1] .Generate a value that will overflow this range:
+        let limit = BigInt::from(2_u32).pow(width - 1).add(1_u32);
+
+        let first_operand_rand = rng.gen_bigint((width - 1).into()).sub(1_u32);
+        let first_op_sign = first_operand_rand.sign();
+        let mut first_op_data = first_operand_rand.to_signed_bytes_le();
+
+        let width_rounded = next_2n((width as usize) / 8);
+        first_op_data.resize((width_rounded) as usize, sign_extend(first_op_sign));
+
+        // Calculate a number that when multiplied by first_operand_rand, the result will overflow N bits
+        let mut second_operand_rand = limit / &first_operand_rand;
+
+        if let Sign::Minus = second_operand_rand.sign() {
+            // Decrease by 1 if negative, this is to make sure the result will overflow
+            second_operand_rand = second_operand_rand.sub(1);
+        } else {
+            // Increase by 1 if psotive
+            second_operand_rand = second_operand_rand.add(1);
+        }
+
+        let second_op_sign = second_operand_rand.sign();
+        let mut second_op_data = second_operand_rand.to_signed_bytes_le();
+        second_op_data.resize((width_rounded) as usize, sign_extend(second_op_sign));
+
+        contract.function_expect_failure(
+            "mul",
+            first_op_data
+                .into_iter()
+                .chain(second_op_data.into_iter())
+                .collect(),
+        );
+    }
+}
+
+#[test]
+fn test_overflow_detect_unsigned() {
+    let mut rng = rand::thread_rng();
+    // For bit sizes from 8..64, LLVM has intrinsic functions for multiplication with overflow. Testing starts from int types of 72 and up. There is no need to test intrinsic LLVM functions.
+    for width in (72..=256).step_by(8) {
+        let src = r#"
+        contract test {
+            function mul(uintN a, uintN b) public returns (uintN) {
+                return a * b;
+            }
+        }"#
+        .replace("intN", &format!("int{}", width));
+        let mut contract = build_solidity(&src);
+
+        // The range of values that can be held in signed N bits is [-2^(N-1), 2^(N-1)-1] .Generate a value that will overflow this range:
+        let limit = BigUint::from(2_u32).pow(width).add(1_u32);
+
+        let first_operand_rand = rng.gen_biguint((width).into()).sub(1_u32);
+        let mut first_op_data = first_operand_rand.to_bytes_le();
+
+        let width_rounded = next_2n((width as usize) / 8);
+        first_op_data.resize((width_rounded) as usize, 0);
+
+        // Calculate a number that when multiplied by first_operand_rand, the result will overflow N bits
+        let second_operand_rand = (limit / &first_operand_rand).add(1_u32);
+
+        let mut second_op_data = second_operand_rand.to_bytes_le();
+        second_op_data.resize((width_rounded) as usize, 0);
+
+        contract.function_expect_failure(
+            "mul",
+            first_op_data
+                .into_iter()
+                .chain(second_op_data.into_iter())
+                .collect(),
+        );
     }
 }
 
@@ -1510,4 +1873,23 @@ fn address_pass_by_value() {
     );
 
     runtime.function("bar", Vec::new());
+}
+
+fn sign_extend(sign: Sign) -> u8 {
+    if sign == Sign::Minus {
+        255
+    } else {
+        0
+    }
+}
+
+fn next_2n(mut v: usize) -> usize {
+    v -= 1;
+    v |= v >> 1;
+    v |= v >> 2;
+    v |= v >> 4;
+    v |= v >> 8;
+    v |= v >> 16;
+    v += 1;
+    v
 }

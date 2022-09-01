@@ -57,6 +57,7 @@ num-derive = "0.3"
 parity-scale-codec = "3.1"
 ethabi = "17.0"
 wasmi = "0.11"
+# rand version 0.7 is needed for ed25519_dalek::keypair::generate, used in solana_tests/signature_verify.rs
 rand_07 = { package = "rand", version = "0.7" }
 sha2 = "0.10"
 # solana_rbpf makes api changes in patch versions

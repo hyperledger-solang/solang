@@ -1195,7 +1195,7 @@ impl MockSubstrate {
     }
 }
 
-pub fn build_solidity(src: &'static str) -> MockSubstrate {
+pub fn build_solidity(src: &str) -> MockSubstrate {
     let mut cache = FileResolver::new();
 
     cache.set_file_contents("test.sol", src.to_string());

@@ -1842,8 +1842,7 @@ pub trait TargetRuntime<'a> {
                 let res = bin.builder.build_load(o, "");
 
                 if *unchecked || ns.target != Target::Solana {
-                    // If target is Substrate, we don't neet to check on the return of function for ovf.
-                    // If ovf happens in Substrate target, execution will hit an unreachable instruction.
+                    // In Substrate, overflow case will hit an unreachable expression, so no additional checks are needed.
                     res
                 } else {
                     // In Solana, a return other than zero will abort execution. We need to check if power() returned a zero or not.
