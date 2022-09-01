@@ -843,7 +843,7 @@ fn test_mul_within_range() {
             let limit = BigUint::from(2_u32).pow(width).sub(1_u32);
 
             // Generate a random number within the the range 0..2^N -1
-            let first_operand_rand = rng.gen_biguint(width.into());
+            let first_operand_rand = rng.gen_biguint(width.into()).add(1_u32);
 
             // Calculate a number that when multiplied by first_operand_rand, the result will not overflow N bits (the result of this division will cast the float result to int result, therefore lowering it. The result of multiplication will never overflow).
             let second_operand_rand = limit.div(&first_operand_rand);
