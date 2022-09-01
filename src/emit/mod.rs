@@ -5750,7 +5750,7 @@ pub trait TargetRuntime<'a> {
             .builder
             .build_not(bin.builder.build_xor(different_signs, res_sign_bit, ""), "");
 
-        // Here, we disregard the last rule mentioned above by oring with mul_by_zero
+        // Here, we disregard the last rule mentioned above if there is a multiplication by zero.
         bin.builder.build_conditional_branch(
             bin.builder.build_and(
                 bin.builder.build_or(not_ok_operation, mul_by_zero, ""),
@@ -5871,7 +5871,7 @@ pub trait TargetRuntime<'a> {
             // LLVM-IR can handle multiplication of sizes up to 64 bits. If the size is larger, we need to implement our own mutliplication function.
             // We divide the operands into sizes of 32 bits (check __mul32 in stdlib/bigint.c documentation).
             // If the size is not divisble by 32, we extend it to the next 32 bits. For example, int72 will be extended to int96.
-            // Here, We zext the operands to the nearest 32 bits. zext is called instead of sext because we need to do unsigned multiplication by default.
+            // Here, we zext the operands to the nearest 32 bits. zext is called instead of sext because we need to do unsigned multiplication by default.
             // It will not matter in terms of mul without overflow, because we always truncate the result to the bit size of the operands.
             // In mul with overflow however, it is needed so that overflow can be detected if the most significant bits of the result are not zeros.
             else {
@@ -6141,6 +6141,7 @@ pub trait TargetRuntime<'a> {
 
         function
     }
+
     /// Convenience function for generating binary operations with overflow checking.
     fn build_binary_op_with_overflow_check(
         &self,
