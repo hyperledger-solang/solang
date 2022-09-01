@@ -45,7 +45,7 @@ impl ast::Contract {
             default_constructor: None,
             cfg: Vec::new(),
             code: Vec::new(),
-            has_callable_function: false,
+            instantiable: false,
         }
     }
 
@@ -114,7 +114,7 @@ pub fn resolve(
         let contract = &ns.contracts[*n];
         if ns.target.is_substrate()
             && contract.is_concrete()
-            && !contract.has_callable_function
+            && !contract.instantiable
             && !ns.diagnostics.any_errors()
         {
             ns.diagnostics.push(ast::Diagnostic::error(
@@ -649,7 +649,7 @@ fn check_inheritance(contract_no: usize, ns: &mut ast::Namespace) {
                 pt::FunctionTy::Fallback | pt::FunctionTy::Receive => true,
                 _ => false,
             } {
-                ns.contracts[contract_no].has_callable_function = true
+                ns.contracts[contract_no].instantiable = true
             }
         }
     }
