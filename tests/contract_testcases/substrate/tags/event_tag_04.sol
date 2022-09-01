@@ -1,5 +1,5 @@
 
-        contract c {
+        abstract contract c {
             /// @title foo bar
             /// @author mr foo
             /// @param f1 asdad

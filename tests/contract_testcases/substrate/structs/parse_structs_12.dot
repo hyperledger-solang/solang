@@ -1,7 +1,7 @@
 strict digraph "tests/contract_testcases/substrate/structs/parse_structs_12.sol" {
 	Foo [label="name:Foo\ncontract: test_struct_parsing\ntests/contract_testcases/substrate/structs/parse_structs_12.sol:3:20-23\nfield name:x ty:bool\nfield name:y ty:int32"]
 	contract [label="contract test_struct_parsing\ntests/contract_testcases/substrate/structs/parse_structs_12.sol:2:9-11:10"]
-	f [label="function f\ncontract: test_struct_parsing\ntests/contract_testcases/substrate/structs/parse_structs_12.sol:8:13-33\nsignature f()\nvisibility private\nmutability nonpayable"]
+	f [label="function f\ncontract: test_struct_parsing\ntests/contract_testcases/substrate/structs/parse_structs_12.sol:8:13-32\nsignature f()\nvisibility public\nmutability nonpayable"]
 	diagnostic [label="found contract 'test_struct_parsing'\nlevel Debug\ntests/contract_testcases/substrate/structs/parse_structs_12.sol:2:9-11:10"]
 	diagnostic_7 [label="struct 'Foo' has 2 fields, not 3\nlevel Error\ntests/contract_testcases/substrate/structs/parse_structs_12.sol:9:25-46"]
 	structs -> Foo

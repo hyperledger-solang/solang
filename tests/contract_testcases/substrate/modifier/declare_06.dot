@@ -7,7 +7,7 @@ strict digraph "tests/contract_testcases/substrate/modifier/declare_06.sol" {
 	while [label="while\ntests/contract_testcases/substrate/modifier/declare_06.sol:5:21-7:22"]
 	variable [label="variable: x\nbool\ntests/contract_testcases/substrate/modifier/declare_06.sol:5:28-29"]
 	underscore [label="undersore\ntests/contract_testcases/substrate/modifier/declare_06.sol:6:25-26"]
-	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/modifier/declare_06.sol:2:9-10:10"]
+	diagnostic [label="found abstract contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/modifier/declare_06.sol:2:9-10:10"]
 	contracts -> contract
 	contract -> foo [label="modifier"]
 	foo -> parameters [label="parameters"]

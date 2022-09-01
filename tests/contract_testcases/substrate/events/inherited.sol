@@ -1,5 +1,5 @@
 
-        contract base {
+        abstract contract base {
             event foo(bool a, int b);
         }
 
@@ -7,4 +7,6 @@
             function f() public {
                 emit foo(true, 1);
             }
+
+            function _ext() public pure {}
         }

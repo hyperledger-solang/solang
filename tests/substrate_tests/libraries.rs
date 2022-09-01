@@ -138,7 +138,7 @@ fn using_in_base() {
                 }
         }
 
-        contract base {
+        abstract contract base {
                 using Lib for *;
                 bool x;
 

@@ -1,3 +1,3 @@
-contract test {
+abstract contract test {
             struct test { bool a; }
         }

@@ -13,7 +13,7 @@ fn enum_import() {
         r#"
         import "b.sol";
 
-        contract foo {
+        abstract contract foo {
             enum_b bar;
         }
         "#
@@ -40,7 +40,7 @@ fn enum_import() {
         r#"
         import { enum_b } from "b.sol";
 
-        contract foo {
+        abstract contract foo {
             enum_b bar;
         }
         "#
@@ -67,7 +67,7 @@ fn enum_import() {
         r#"
         import { enum_b as foobar } from "b.sol";
 
-        contract foo {
+        abstract contract foo {
             foobar bar;
         }
         "#
@@ -594,7 +594,7 @@ fn enum_import_chain() {
     cache.set_file_contents(
         "d.sol",
         r#"
-        contract d {
+        abstract contract d {
             enum enum_d { d1, d2, d3 }
         }
         "#
@@ -642,7 +642,7 @@ fn enum_import_chain() {
     cache.set_file_contents(
         "d.sol",
         r#"
-        contract d {
+        abstract contract d {
             enum enum_d { d1, d2, d3 }
         }
         "#

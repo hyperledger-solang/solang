@@ -1,5 +1,5 @@
 
-        contract apex {
+        abstract contract apex {
             constructor() public apex {
 
             }

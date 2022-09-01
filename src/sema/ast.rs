@@ -597,6 +597,13 @@ pub struct Contract {
     pub default_constructor: Option<(Function, usize)>,
     pub cfg: Vec<ControlFlowGraph>,
     pub code: Vec<u8>,
+    // This contract can be instantiated and called or receive funds.
+    // It implies that it has at least one of:
+    // * public messages
+    // * public storage (results in public getters)
+    // * fallback or receive function
+    // alternative names I came up: has_code, extrinsic, is_public, exterior, has_surface
+    pub has_callable_function: bool,
 }
 
 impl Contract {

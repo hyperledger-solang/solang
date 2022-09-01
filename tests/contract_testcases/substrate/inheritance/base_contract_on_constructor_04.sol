@@ -1,5 +1,5 @@
 
-        contract base {
+        abstract contract base {
             constructor(bool x) {}
         }
 

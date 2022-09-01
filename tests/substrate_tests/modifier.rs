@@ -185,7 +185,7 @@ fn inherit_modifier() {
             }
         }
 
-        contract base {
+        abstract contract base {
                 bool private s1;
                 int32 internal s2;
 
@@ -227,7 +227,7 @@ fn inherit_modifier() {
             }
         }
 
-        contract base {
+        abstract contract base {
             bool private s1;
             int32 internal s2;
 

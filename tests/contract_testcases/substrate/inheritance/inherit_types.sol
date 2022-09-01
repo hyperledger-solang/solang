@@ -5,7 +5,7 @@
             }
         }
 
-        contract b {
+        abstract contract b {
             enum enum_x { x1, x2 }
         }
         

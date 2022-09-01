@@ -88,7 +88,7 @@ fn inherit_variables() {
             uint16 public foo = 65535;
         }
 
-        contract a {
+        abstract contract a {
             uint16 private foo = 102;
         }"##,
     );
@@ -487,13 +487,13 @@ fn call_base_function_via_basename() {
             }
         }
 
-        contract b is a {
+        abstract contract b is a {
             function foo() internal override returns (uint64) {
                 return 2;
             }
         }
 
-        contract a {
+        abstract contract a {
             function foo() internal virtual returns (uint64) {
                 return 1;
             }
@@ -514,14 +514,14 @@ fn call_base_function_via_basename() {
             }
         }
 
-        contract b is a {
+        abstract contract b is a {
             uint64 constant private C = 300;
             function foo(uint64 x) internal override returns (uint64) {
                 return 2;
             }
         }
 
-        contract a {
+        abstract contract a {
             uint64 constant private C = 200;
             function foo(uint64 x) internal virtual returns (uint64) {
                 return 1 + x;
@@ -572,7 +572,7 @@ fn test_super() {
             }
         }
 
-        contract a {
+        abstract contract a {
             uint64 var;
 
             function foo() internal virtual {
@@ -600,7 +600,7 @@ fn test_super() {
             }
         }
 
-        contract a {
+        abstract contract a {
             uint64 var;
 
             function foo(uint64 x) internal virtual {

@@ -1,5 +1,5 @@
 
-        contract test_struct_parsing {
+        abstract contract test_struct_parsing {
             struct Foo {
                 bool a;
                 uint a;

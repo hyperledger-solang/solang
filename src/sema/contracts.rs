@@ -45,6 +45,7 @@ impl ast::Contract {
             default_constructor: None,
             cfg: Vec::new(),
             code: Vec::new(),
+            has_callable_function: false,
         }
     }
 
@@ -108,6 +109,20 @@ pub fn resolve(
 
     // Now we can resolve the initializers
     variables::resolve_initializers(&delayed.initializers, file_no, ns);
+
+    for (n, _) in contracts {
+        let contract = &ns.contracts[*n];
+        if ns.target.is_substrate()
+            && contract.is_concrete()
+            && !contract.has_callable_function
+            && !ns.diagnostics.any_errors()
+        {
+            ns.diagnostics.push(ast::Diagnostic::error(
+            contract.loc,
+            "contracts without public storage or functions are not allowed on Substrate, considering declaring it abstract".into(),
+        ))
+        }
+    }
 
     // Now we can resolve the bodies
     if !resolve_bodies(delayed.function_bodies, file_no, ns) {
@@ -628,6 +643,14 @@ fn check_inheritance(contract_no: usize, ns: &mut ast::Namespace) {
             ns.contracts[contract_no]
                 .all_functions
                 .insert(function_no, usize::MAX);
+
+            if match cur.ty {
+                pt::FunctionTy::Function => cur.is_public(),
+                pt::FunctionTy::Fallback | pt::FunctionTy::Receive => true,
+                _ => false,
+            } {
+                ns.contracts[contract_no].has_callable_function = true
+            }
         }
     }
 

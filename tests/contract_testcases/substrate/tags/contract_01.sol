@@ -6,4 +6,4 @@
         /// @author Mr Foo
         /// @dev this is
         ///  a contract
-        contract test {}
+        abstract contract test {}

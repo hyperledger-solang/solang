@@ -9,11 +9,11 @@
             }
         }
 
-        contract b is c {
+        abstract contract b is c {
             enum enum_y { y1, y2 }
         }
 
-        contract c {
+        abstract contract c {
             enum enum_x { x1, x2 }
         }
         

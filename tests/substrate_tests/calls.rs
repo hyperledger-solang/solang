@@ -400,6 +400,8 @@ fn try_catch_constructor() {
             constructor(bool foo) public {
                 revert("foo");
             }
+
+            function _ext() public {}
         }
         "##,
     );

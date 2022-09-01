@@ -1,4 +1,4 @@
 
-        contract c {
+        abstract contract c {
             event foo ();
         }
