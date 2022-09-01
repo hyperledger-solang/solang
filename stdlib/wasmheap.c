@@ -117,8 +117,19 @@ void *__realloc(void *m, size_t size)
     }
     else
     {
+        // allocate new area and copy old data
+        uint32_t len = cur->length;
+
+        // if new size is smaller than the old data, only copy remaining data
+        if (size < len)
+            len = size;
+
         void *n = __malloc(size);
-        __memcpy8(n, m, size / 8);
+
+        // __memcpy8() copies 8 bytes at once; round up to the nearest 8 bytes
+        // this is permitted because allocations are always aligned on 8 byte
+        // boundaries anyway.
+        __memcpy8(n, m, (len + 7) / 8);
         __free(m);
         return n;
     }
