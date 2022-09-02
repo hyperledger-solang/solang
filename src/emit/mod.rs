@@ -1841,7 +1841,7 @@ pub trait TargetRuntime<'a> {
                 // Load the result pointer
                 let res = bin.builder.build_load(o, "");
 
-                if *unchecked || ns.target != Target::Solana {
+                if !bin.math_overflow_check || *unchecked || ns.target != Target::Solana {
                     // In Substrate, overflow case will hit an unreachable expression, so no additional checks are needed.
                     res
                 } else {
@@ -5854,7 +5854,8 @@ pub trait TargetRuntime<'a> {
     ) -> IntValue<'a> {
         let bits = left.get_type().get_bit_width();
 
-        if bits > 64 {
+        // Mul with overflow is not supported beyond this bit range, so we implement our own function
+        if bits > 32 {
             // Round up the number of bits to the next 32
             let mul_bits = (bits + 31) & !31;
             let mul_ty = bin.context.custom_width_int_type(mul_bits);
@@ -5881,114 +5882,114 @@ pub trait TargetRuntime<'a> {
                     .build_store(r, bin.builder.build_int_z_extend(right, mul_ty, ""));
             }
 
-            // If unchecked, and no overflow flag in command line arguments.
-            if unchecked && !bin.math_overflow_check {
+            if bin.math_overflow_check && !unchecked {
+                if signed {
+                    return self
+                        .signed_ovf_detect(bin, mul_ty, mul_bits, left, right, bits, function);
+                }
+
+                // Unsigned overflow detection Approach:
+                // If the size is a multiple of 32, we call __mul32_with_builtin_ovf and it returns an overflow flag (check __mul32_with_builtin_ovf in stdlib/bigint.c documentation)
+                // If that is not the case, some extra work has to be done. We have to check the extended bits for any set bits. If there is any, an overflow occured.
+                // For example, if we have uint72, it will be extended to uint96. __mul32 with ovf will raise an ovf flag if the result overflows 96 bits, not 72.
+                // We account for that by checking the extended leftmost bits. In the example mentioned, they will be 96-72=24 bits.
+                let return_val = bin.builder.build_call(
+                    bin.module.get_function("__mul32_with_builtin_ovf").unwrap(),
+                    &[
+                        bin.builder
+                            .build_pointer_cast(
+                                l,
+                                bin.context.i32_type().ptr_type(AddressSpace::Generic),
+                                "left",
+                            )
+                            .into(),
+                        bin.builder
+                            .build_pointer_cast(
+                                r,
+                                bin.context.i32_type().ptr_type(AddressSpace::Generic),
+                                "right",
+                            )
+                            .into(),
+                        bin.builder
+                            .build_pointer_cast(
+                                o,
+                                bin.context.i32_type().ptr_type(AddressSpace::Generic),
+                                "output",
+                            )
+                            .into(),
+                        bin.context
+                            .i32_type()
+                            .const_int(mul_bits as u64 / 32, false)
+                            .into(),
+                    ],
+                    "ovf",
+                );
+
+                let res = bin.builder.build_load(o, "mul");
+
+                let error_block = bin.context.append_basic_block(function, "error");
+                let return_block = bin.context.append_basic_block(function, "return_block");
+
+                // If the operands were extended to nearest 32 bit size, check the most significant N bits, where N equals bit width after extension minus original bit width.
+                let ovf_any_type = if mul_bits != bits {
+                    // If there are any set bits, then there is an overflow.
+                    let check_ovf = bin.builder.build_right_shift(
+                        res.into_int_value(),
+                        mul_ty.const_int((bits).into(), false),
+                        false,
+                        "",
+                    );
+                    bin.builder.build_int_compare(
+                        IntPredicate::NE,
+                        check_ovf,
+                        check_ovf.get_type().const_zero(),
+                        "",
+                    )
+                } else {
+                    // If no size extension took place, there is no overflow in most significant N bits
+                    bin.context.bool_type().const_zero()
+                };
+
+                // Until this point, we only checked the extended bits for ovf. But mul ovf can take place any where from bit size to double bit size.
+                // For example: If we have uint72, it will be extended to uint96. We only checked the most significant 24 bits for overflow, which can happen up to 72*2=144 bits.
+                // bool __mul32_with_builtin_ovf takes care of overflowing bits beyond 96.
+                // What is left now is to or these two ovf flags, and check if any one of them is set. If so, an overflow occured.
+                let lowbit = bin.builder.build_int_truncate(
+                    bin.builder.build_or(
+                        ovf_any_type,
+                        return_val
+                            .try_as_basic_value()
+                            .left()
+                            .unwrap()
+                            .into_int_value(),
+                        "",
+                    ),
+                    bin.context.bool_type(),
+                    "bit",
+                );
+
+                // If ovf, raise an error, else return the result.
+                bin.builder
+                    .build_conditional_branch(lowbit, error_block, return_block);
+
+                bin.builder.position_at_end(error_block);
+
+                self.assert_failure(
+                    bin,
+                    bin.context
+                        .i8_type()
+                        .ptr_type(AddressSpace::Generic)
+                        .const_null(),
+                    bin.context.i32_type().const_zero(),
+                );
+
+                bin.builder.position_at_end(return_block);
+
+                bin.builder
+                    .build_int_truncate(res.into_int_value(), left.get_type(), "")
+            } else {
                 return self.call_mul32_without_ovf(bin, l, r, o, mul_bits, left.get_type());
             }
-
-            if signed {
-                return self.signed_ovf_detect(bin, mul_ty, mul_bits, left, right, bits, function);
-            }
-
-            // Unsigned overflow detection Approach:
-            // If the size is a multiple of 32, we call __mul32_with_builtin_ovf and it returns an overflow flag (check __mul32_with_builtin_ovf in stdlib/bigint.c documentation)
-            // If that is not the case, some extra work has to be done. We have to check the extended bits for any set bits. If there is any, an overflow occured.
-            // For example, if we have uint72, it will be extended to uint96. __mul32 with ovf will raise an ovf flag if the result overflows 96 bits, not 72.
-            // We account for that by checking the extended leftmost bits. In the example mentioned, they will be 96-72=24 bits.
-            let return_val = bin.builder.build_call(
-                bin.module.get_function("__mul32_with_builtin_ovf").unwrap(),
-                &[
-                    bin.builder
-                        .build_pointer_cast(
-                            l,
-                            bin.context.i32_type().ptr_type(AddressSpace::Generic),
-                            "left",
-                        )
-                        .into(),
-                    bin.builder
-                        .build_pointer_cast(
-                            r,
-                            bin.context.i32_type().ptr_type(AddressSpace::Generic),
-                            "right",
-                        )
-                        .into(),
-                    bin.builder
-                        .build_pointer_cast(
-                            o,
-                            bin.context.i32_type().ptr_type(AddressSpace::Generic),
-                            "output",
-                        )
-                        .into(),
-                    bin.context
-                        .i32_type()
-                        .const_int(mul_bits as u64 / 32, false)
-                        .into(),
-                ],
-                "ovf",
-            );
-
-            let res = bin.builder.build_load(o, "mul");
-
-            let error_block = bin.context.append_basic_block(function, "error");
-            let return_block = bin.context.append_basic_block(function, "return_block");
-
-            // If the operands were extended to nearest 32 bit size, check the most significant N bits, where N equals bit width after extension minus original bit width.
-            let ovf_any_type = if mul_bits != bits {
-                // If there are any set bits, then there is an overflow.
-                let check_ovf = bin.builder.build_right_shift(
-                    res.into_int_value(),
-                    mul_ty.const_int((bits).into(), false),
-                    false,
-                    "",
-                );
-                bin.builder.build_int_compare(
-                    IntPredicate::NE,
-                    check_ovf,
-                    check_ovf.get_type().const_zero(),
-                    "",
-                )
-            } else {
-                // If no size extension took place, there is no overflow in most significant N bits
-                bin.context.bool_type().const_zero()
-            };
-
-            // Until this point, we only checked the extended bits for ovf. But mul ovf can take place any where from bit size to double bit size.
-            // For example: If we have uint72, it will be extended to uint96. We only checked the most significant 24 bits for overflow, which can happen up to 72*2=144 bits.
-            // bool __mul32_with_builtin_ovf takes care of overflowing bits beyond 96.
-            // What is left now is to or these two ovf flags, and check if any one of them is set. If so, an overflow occured.
-            let lowbit = bin.builder.build_int_truncate(
-                bin.builder.build_or(
-                    ovf_any_type,
-                    return_val
-                        .try_as_basic_value()
-                        .left()
-                        .unwrap()
-                        .into_int_value(),
-                    "",
-                ),
-                bin.context.bool_type(),
-                "bit",
-            );
-
-            // If ovf, raise an error, else return the result.
-            bin.builder
-                .build_conditional_branch(lowbit, error_block, return_block);
-
-            bin.builder.position_at_end(error_block);
-
-            self.assert_failure(
-                bin,
-                bin.context
-                    .i8_type()
-                    .ptr_type(AddressSpace::Generic)
-                    .const_null(),
-                bin.context.i32_type().const_zero(),
-            );
-
-            bin.builder.position_at_end(return_block);
-
-            bin.builder
-                .build_int_truncate(res.into_int_value(), left.get_type(), "")
         } else if bin.math_overflow_check && !unchecked {
             self.build_binary_op_with_overflow_check(
                 bin,
@@ -6044,7 +6045,9 @@ pub trait TargetRuntime<'a> {
         // __upower(base, exp)
         let function = bin.module.add_function(
             &name,
-            ty.fn_type(&[ty.into(), ty.into(), o.get_type().into()], false),
+            bin.context
+                .i64_type()
+                .fn_type(&[ty.into(), ty.into(), o.get_type().into()], false),
             None,
         );
 

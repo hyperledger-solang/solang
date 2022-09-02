@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::build_solidity;
+use crate::build_solidity_with_overflow_check;
 use ethabi::ethereum_types::U256;
 use num_bigint::{BigInt, BigUint, RandBigInt, Sign};
 use rand::seq::SliceRandom;
@@ -606,7 +607,7 @@ fn truncate_uint(n: &mut U256, width: usize) {
 
 #[test]
 fn test_power_overflow_boundaries() {
-    for width in (72..=256).step_by(8) {
+    for width in (8..=256).step_by(8) {
         let src = r#"
         contract test {
             function pow(uintN a, uintN b) public returns (uintN) { 
@@ -615,7 +616,7 @@ fn test_power_overflow_boundaries() {
         }"#
         .replace("intN", &format!("int{}", width));
 
-        let mut contract = build_solidity(&src);
+        let mut contract = build_solidity_with_overflow_check(&src, true);
         contract.constructor("test", &[]);
 
         let return_value = contract.function(
@@ -641,7 +642,7 @@ fn test_power_overflow_boundaries() {
             "pow",
             &[
                 ethabi::Token::Uint(U256::from(2)),
-                ethabi::Token::Uint(U256::from(width)),
+                ethabi::Token::Uint(U256::from(width + 1)),
             ],
             &[],
             None,
@@ -654,7 +655,7 @@ fn test_power_overflow_boundaries() {
 #[test]
 fn test_overflow_boundaries() {
     // For bit sizes from 8..64, LLVM has intrinsic functions for multiplication with overflow. Testing starts from int types of 72 and up. There is no need to test intrinsic LLVM functions.
-    for width in (72..=256).step_by(8) {
+    for width in (8..=256).step_by(8) {
         let src = r#"
         contract test {
             function mul(intN a, intN b) public returns (intN) {
@@ -662,7 +663,7 @@ fn test_overflow_boundaries() {
             }
         }"#
         .replace("intN", &format!("int{}", width));
-        let mut contract = build_solidity(&src);
+        let mut contract = build_solidity_with_overflow_check(&src, true);
 
         // The range of values that can be held in signed N bits is [-2^(N-1), 2^(N-1)-1]. We generate these boundaries:
         let upper_boundary = BigInt::from(2_u32).pow(width - 1).sub(1);
@@ -836,7 +837,7 @@ fn test_mul_within_range() {
         }"#
         .replace("intN", &format!("int{}", width));
 
-        let mut contract = build_solidity(&src);
+        let mut contract = build_solidity_with_overflow_check(&src, true);
         contract.constructor("test", &[]);
         for _ in 0..10 {
             // Max number to fit unsigned N bits is (2^N)-1
@@ -872,8 +873,7 @@ fn test_mul_within_range() {
 #[test]
 fn test_overflow_detect_signed() {
     let mut rng = rand::thread_rng();
-    // For bit sizes from 8..64, LLVM has intrinsic functions for multiplication with overflow. Testing starts from int types of 72 and up. There is no need to test intrinsic LLVM functions.
-    for width in (72..=256).step_by(8) {
+    for width in (8..=256).step_by(8) {
         let src = r#"
         contract test {
             function mul(intN a, intN b) public returns (intN) {
@@ -881,7 +881,7 @@ fn test_overflow_detect_signed() {
             }
         }"#
         .replace("intN", &format!("int{}", width));
-        let mut contract = build_solidity(&src);
+        let mut contract = build_solidity_with_overflow_check(&src, true);
 
         contract.constructor("test", &[]);
 
@@ -925,7 +925,7 @@ fn test_overflow_detect_signed() {
 #[test]
 fn test_overflow_detect_unsigned() {
     let mut rng = rand::thread_rng();
-    for width in (72..=256).step_by(8) {
+    for width in (8..=256).step_by(8) {
         let src = r#"
         contract test {
             function mul(uintN a, uintN b) public returns (uintN) {
@@ -933,7 +933,7 @@ fn test_overflow_detect_unsigned() {
             }
         }"#
         .replace("intN", &format!("int{}", width));
-        let mut contract = build_solidity(&src);
+        let mut contract = build_solidity_with_overflow_check(&src, true);
 
         contract.constructor("test", &[]);
 
@@ -942,7 +942,7 @@ fn test_overflow_detect_unsigned() {
             let limit = BigUint::from(2_u32).pow(width);
 
             // Generate a random number within the the range [0, 2^N -1]
-            let first_operand_rand = rng.gen_biguint(width.into());
+            let first_operand_rand = rng.gen_biguint(width.into()).add(1_u32);
 
             // Calculate a number that when multiplied by first_operand_rand, the result will overflow N bits
             let second_operand_rand = limit.div(&first_operand_rand).add(1_usize);

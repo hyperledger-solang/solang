@@ -947,8 +947,7 @@ fn large_power() {
 
 #[test]
 fn test_power_overflow_boundaries() {
-    // We test that 2^N-1 will not overflow N bits, while 2^N will overflow N bits.
-    for width in (72..=256).step_by(8) {
+    for width in (8..=256).step_by(8) {
         let src = r#"
         contract test {
             function pow(uintN a, uintN b) public returns (uintN) { 
@@ -957,7 +956,7 @@ fn test_power_overflow_boundaries() {
         }"#
         .replace("intN", &format!("int{}", width));
 
-        let mut contract = build_solidity(&src);
+        let mut contract = build_solidity_with_overflow_check(&src, true);
 
         let base = BigUint::from(2_u32);
         let mut base_data = base.to_bytes_le();
@@ -965,7 +964,7 @@ fn test_power_overflow_boundaries() {
         let exp = BigUint::from(width - 1);
         let mut exp_data = exp.to_bytes_le();
 
-        let width_rounded = next_2n(width / 8);
+        let width_rounded = (width as usize / 8).next_power_of_two();
 
         base_data.resize((width_rounded) as usize, 0);
         exp_data.resize((width_rounded) as usize, 0);
@@ -1072,7 +1071,7 @@ fn test_mul_within_range_signed() {
         }"#
         .replace("intN", &format!("int{}", width));
 
-        let width_rounded = next_2n(width / 8);
+        let width_rounded = (width / 8 as usize).next_power_of_two();
 
         let mut runtime = build_solidity(&src);
 
@@ -1117,7 +1116,7 @@ fn test_mul_within_range() {
         }"#
         .replace("intN", &format!("int{}", width));
 
-        let width_rounded = next_2n(width / 8);
+        let width_rounded = (width as usize / 8).next_power_of_two();
         let mut runtime = build_solidity(&src);
 
         // The range of values that can be held in signed N bits is [-2^(N-1), 2^(N-1)-1]. Here we generate a random number within this range and multiply it by 1
@@ -1149,8 +1148,7 @@ fn test_mul_within_range() {
 
 #[test]
 fn test_overflow_boundaries() {
-    // For bit sizes from 8..64, LLVM has intrinsic functions for multiplication with overflow. Testing starts from int types of 72 and up. There is no need to test intrinsic LLVM functions.
-    for width in (72..=256).step_by(8) {
+    for width in (8..=256).step_by(8) {
         let src = r#"
         contract test {
             function mul(intN a, intN b) public returns (intN) {
@@ -1158,7 +1156,7 @@ fn test_overflow_boundaries() {
             }
         }"#
         .replace("intN", &format!("int{}", width));
-        let mut contract = build_solidity(&src);
+        let mut contract = build_solidity_with_overflow_check(&src, true);
 
         // The range of values that can be held in signed N bits is [-2^(N-1), 2^(N-1)-1]. We generate these boundaries:
         let upper_boundary = BigInt::from(2_u32).pow(width - 1).sub(1_u32);
@@ -1170,7 +1168,7 @@ fn test_overflow_boundaries() {
         let second_op = BigInt::from(1_u32);
         let mut sec_data = second_op.to_signed_bytes_le();
 
-        let width_rounded = next_2n((width as usize) / 8);
+        let width_rounded = (width as usize / 8).next_power_of_two();
 
         up_data.resize((width_rounded) as usize, 0);
         low_data.resize((width_rounded) as usize, 255);
@@ -1281,8 +1279,7 @@ fn test_overflow_boundaries() {
 #[test]
 fn test_overflow_detect_signed() {
     let mut rng = rand::thread_rng();
-    // For bit sizes from 8..64, LLVM has intrinsic functions for multiplication with overflow. Testing starts from int types of 72 and up. There is no need to test intrinsic LLVM functions.
-    for width in (72..=256).step_by(8) {
+    for width in (8..=256).step_by(8) {
         let src = r#"
         contract test {
             function mul(intN a, intN b) public returns (intN) {
@@ -1290,7 +1287,7 @@ fn test_overflow_detect_signed() {
             }
         }"#
         .replace("intN", &format!("int{}", width));
-        let mut contract = build_solidity(&src);
+        let mut contract = build_solidity_with_overflow_check(&src, true);
 
         // The range of values that can be held in signed N bits is [-2^(N-1), 2^(N-1)-1] .Generate a value that will overflow this range:
         let limit = BigInt::from(2_u32).pow(width - 1).add(1_u32);
@@ -1299,7 +1296,7 @@ fn test_overflow_detect_signed() {
         let first_op_sign = first_operand_rand.sign();
         let mut first_op_data = first_operand_rand.to_signed_bytes_le();
 
-        let width_rounded = next_2n((width as usize) / 8);
+        let width_rounded = (width as usize / 8).next_power_of_two();
         first_op_data.resize((width_rounded) as usize, sign_extend(first_op_sign));
 
         // Calculate a number that when multiplied by first_operand_rand, the result will overflow N bits
@@ -1330,8 +1327,7 @@ fn test_overflow_detect_signed() {
 #[test]
 fn test_overflow_detect_unsigned() {
     let mut rng = rand::thread_rng();
-    // For bit sizes from 8..64, LLVM has intrinsic functions for multiplication with overflow. Testing starts from int types of 72 and up. There is no need to test intrinsic LLVM functions.
-    for width in (72..=256).step_by(8) {
+    for width in (8..=256).step_by(8) {
         let src = r#"
         contract test {
             function mul(uintN a, uintN b) public returns (uintN) {
@@ -1339,7 +1335,7 @@ fn test_overflow_detect_unsigned() {
             }
         }"#
         .replace("intN", &format!("int{}", width));
-        let mut contract = build_solidity(&src);
+        let mut contract = build_solidity_with_overflow_check(&src, true);
 
         // The range of values that can be held in signed N bits is [-2^(N-1), 2^(N-1)-1] .Generate a value that will overflow this range:
         let limit = BigUint::from(2_u32).pow(width).add(1_u32);
@@ -1347,7 +1343,7 @@ fn test_overflow_detect_unsigned() {
         let first_operand_rand = rng.gen_biguint((width).into()).sub(1_u32);
         let mut first_op_data = first_operand_rand.to_bytes_le();
 
-        let width_rounded = next_2n((width as usize) / 8);
+        let width_rounded = (width as usize / 8).next_power_of_two();
         first_op_data.resize((width_rounded) as usize, 0);
 
         // Calculate a number that when multiplied by first_operand_rand, the result will overflow N bits
@@ -1694,6 +1690,7 @@ fn addition_overflow() {
             }
         }
         "#,
+        true,
     );
 
     runtime.function("bar", Vec::new());
@@ -1716,6 +1713,7 @@ fn unchecked_addition_overflow() {
             }
         }
         "#,
+        true,
     );
 
     runtime.function("bar", Vec::new());
@@ -1737,6 +1735,7 @@ fn subtraction_underflow() {
             }
         }
         "#,
+        true,
     );
 
     runtime.function("bar", Vec::new());
@@ -1759,6 +1758,7 @@ fn unchecked_subtraction_underflow() {
             }
         }
         "#,
+        true,
     );
 
     runtime.function("bar", Vec::new());
@@ -1780,6 +1780,7 @@ fn multiplication_overflow() {
             }
         }
         "#,
+        true,
     );
 
     runtime.function("bar", Vec::new());
@@ -1802,6 +1803,7 @@ fn unchecked_multiplication_overflow() {
             }
         }
         "#,
+        true,
     );
 
     runtime.function("bar", Vec::new());
@@ -1881,15 +1883,4 @@ fn sign_extend(sign: Sign) -> u8 {
     } else {
         0
     }
-}
-
-fn next_2n(mut v: usize) -> usize {
-    v -= 1;
-    v |= v >> 1;
-    v |= v >> 2;
-    v |= v >> 4;
-    v |= v >> 8;
-    v |= v >> 16;
-    v += 1;
-    v
 }

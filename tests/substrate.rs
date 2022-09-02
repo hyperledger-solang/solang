@@ -1196,52 +1196,9 @@ impl MockSubstrate {
 }
 
 pub fn build_solidity(src: &str) -> MockSubstrate {
-    let mut cache = FileResolver::new();
-
-    cache.set_file_contents("test.sol", src.to_string());
-
-    let (res, ns) = compile(
-        OsStr::new("test.sol"),
-        &mut cache,
-        inkwell::OptimizationLevel::Default,
-        Target::default_substrate(),
-        false,
-    );
-
-    ns.print_diagnostics_in_plain(&cache, false);
-
-    assert!(!ns.diagnostics.any_errors());
-
-    assert!(!res.is_empty());
-
-    let programs: Vec<Program> = res
-        .iter()
-        .map(|res| Program {
-            code: res.0.clone(),
-            abi: abi::substrate::load(&res.1).unwrap(),
-        })
-        .collect();
-
-    let mut accounts = HashMap::new();
-
-    let account = account_new();
-
-    accounts.insert(account, (programs[0].code.clone(), 0));
-
-    let vm = VirtualMachine::new(account, account_new(), 0);
-
-    MockSubstrate {
-        accounts,
-        printbuf: String::new(),
-        store: HashMap::new(),
-        programs,
-        vm,
-        current_program: 0,
-        events: Vec::new(),
-    }
+    build_solidity_with_overflow_check(src, false)
 }
-
-pub fn build_solidity_with_overflow_check(src: &'static str) -> MockSubstrate {
+pub fn build_solidity_with_overflow_check(src: &str, math_overflow_flag: bool) -> MockSubstrate {
     let mut cache = FileResolver::new();
 
     cache.set_file_contents("test.sol", src.to_string());
@@ -1251,7 +1208,7 @@ pub fn build_solidity_with_overflow_check(src: &'static str) -> MockSubstrate {
         &mut cache,
         inkwell::OptimizationLevel::Default,
         Target::default_substrate(),
-        true,
+        math_overflow_flag,
     );
 
     ns.print_diagnostics_in_plain(&cache, false);
