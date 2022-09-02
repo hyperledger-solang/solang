@@ -1,4 +1,4 @@
-abstract contract c {
+contract c {
 	AccountInfo ai;
 
 	function pub(AccountInfo) public returns (AccountInfo) {}

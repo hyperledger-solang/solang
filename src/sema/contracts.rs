@@ -715,7 +715,7 @@ fn substrate_requires_public_functions(contract_no: usize, ns: &mut ast::Namespa
             }
         })
     {
-        let message = format!("contracts without public storage or functions are not allowed on Substrate. Consider declaring this contract 'abstract contract {}'", contract.name);
+        let message = format!("contracts without public storage or functions are not allowed on Substrate. Consider declaring this contract abstract: 'abstract contract {}'", contract.name);
         contract.instantiable = false;
 
         ns.diagnostics
