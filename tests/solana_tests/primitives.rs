@@ -654,7 +654,6 @@ fn test_power_overflow_boundaries() {
 
 #[test]
 fn test_overflow_boundaries() {
-    // For bit sizes from 8..64, LLVM has intrinsic functions for multiplication with overflow. Testing starts from int types of 72 and up. There is no need to test intrinsic LLVM functions.
     for width in (8..=256).step_by(8) {
         let src = r#"
         contract test {
