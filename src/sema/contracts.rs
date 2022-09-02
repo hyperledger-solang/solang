@@ -25,6 +25,7 @@ use crate::sema::unused_variable::emit_warning_local_variable;
 impl ast::Contract {
     /// Create a new contract, abstract contract, interface or library
     pub fn new(name: &str, ty: pt::ContractTy, tags: Vec<ast::Tag>, loc: pt::Loc) -> Self {
+        let instantiable = matches!(ty, pt::ContractTy::Contract(_));
         ast::Contract {
             name: name.to_owned(),
             loc,
@@ -45,7 +46,7 @@ impl ast::Contract {
             default_constructor: None,
             cfg: Vec::new(),
             code: Vec::new(),
-            instantiable: false,
+            instantiable,
         }
     }
 
@@ -105,24 +106,12 @@ pub fn resolve(
     // Now we have all the declarations, we can handle base contracts
     for (contract_no, _) in contracts {
         check_inheritance(*contract_no, ns);
+
+        substrate_requires_public_functions(*contract_no, ns);
     }
 
     // Now we can resolve the initializers
     variables::resolve_initializers(&delayed.initializers, file_no, ns);
-
-    for (n, _) in contracts {
-        let contract = &ns.contracts[*n];
-        if ns.target.is_substrate()
-            && contract.is_concrete()
-            && !contract.instantiable
-            && !ns.diagnostics.any_errors()
-        {
-            ns.diagnostics.push(ast::Diagnostic::error(
-            contract.loc,
-            "contracts without public storage or functions are not allowed on Substrate, considering declaring it abstract".into(),
-        ))
-        }
-    }
 
     // Now we can resolve the bodies
     if !resolve_bodies(delayed.function_bodies, file_no, ns) {
@@ -643,14 +632,6 @@ fn check_inheritance(contract_no: usize, ns: &mut ast::Namespace) {
             ns.contracts[contract_no]
                 .all_functions
                 .insert(function_no, usize::MAX);
-
-            if match cur.ty {
-                pt::FunctionTy::Function => cur.is_public(),
-                pt::FunctionTy::Fallback | pt::FunctionTy::Receive => true,
-                _ => false,
-            } {
-                ns.contracts[contract_no].instantiable = true
-            }
         }
     }
 
@@ -715,6 +696,31 @@ fn check_inheritance(contract_no: usize, ns: &mut ast::Namespace) {
     }
 
     ns.diagnostics.extend(diagnostics);
+}
+
+/// A contract on substrate requires at least one public message
+fn substrate_requires_public_functions(contract_no: usize, ns: &mut ast::Namespace) {
+    let contract = &mut ns.contracts[contract_no];
+
+    if ns.target.is_substrate()
+        && !ns.diagnostics.any_errors()
+        && contract.is_concrete()
+        && !contract.all_functions.keys().any(|func_no| {
+            let func = &ns.functions[*func_no];
+
+            match func.ty {
+                pt::FunctionTy::Function => func.is_public(),
+                pt::FunctionTy::Fallback | pt::FunctionTy::Receive => true,
+                _ => false,
+            }
+        })
+    {
+        let message = format!("contracts without public storage or functions are not allowed on Substrate, considering declaring this contract 'abstract contract {}'", contract.name);
+        contract.instantiable = false;
+
+        ns.diagnostics
+            .push(ast::Diagnostic::error(contract.loc, message));
+    }
 }
 
 /// Generate diagnostics if function attributes are not compatible with base function

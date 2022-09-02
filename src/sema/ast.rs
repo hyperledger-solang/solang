@@ -597,11 +597,7 @@ pub struct Contract {
     pub default_constructor: Option<(Function, usize)>,
     pub cfg: Vec<ControlFlowGraph>,
     pub code: Vec<u8>,
-    // Flag imnplying that the contract has at least one of:
-    // * public message
-    // * public storage (results in public getters)
-    // * fallback or receive function
-    // Therefore the contract is considered instantiable.
+    // Can the contract be instantiated, i.e. not abstract, no errors, etc.
     pub instantiable: bool,
 }
 

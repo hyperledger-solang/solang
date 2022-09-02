@@ -121,7 +121,7 @@ pub fn codegen(ns: &mut Namespace, opt: &Options) {
                 continue;
             }
 
-            if !ns.contracts[contract_no].is_concrete() {
+            if !ns.contracts[contract_no].instantiable {
                 contracts_done[contract_no] = true;
                 continue;
             }
@@ -174,7 +174,7 @@ pub fn codegen(ns: &mut Namespace, opt: &Options) {
 }
 
 fn contract(contract_no: usize, ns: &mut Namespace, opt: &Options) {
-    if !ns.diagnostics.any_errors() && ns.contracts[contract_no].is_concrete() {
+    if !ns.diagnostics.any_errors() && ns.contracts[contract_no].instantiable {
         layout(contract_no, ns);
 
         let mut cfg_no = 0;

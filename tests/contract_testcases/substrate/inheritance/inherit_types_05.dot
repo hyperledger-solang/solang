@@ -9,10 +9,11 @@ strict digraph "tests/contract_testcases/substrate/inheritance/inherit_types_05.
 	test [label="function test\ncontract: a\ntests/contract_testcases/substrate/inheritance/inherit_types_05.sol:14:13-40\nsignature test((uint32,uint32))\nvisibility public\nmutability nonpayable"]
 	parameters [label="parameters\nstruct b.foo x"]
 	diagnostic [label="found contract 'b'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/inherit_types_05.sol:2:9-7:10"]
-	diagnostic_14 [label="already defined 'foo'\nlevel Error\ntests/contract_testcases/substrate/inheritance/inherit_types_05.sol:3:20-23"]
+	diagnostic_14 [label="contracts without public storage or functions are not allowed on Substrate, considering declaring this contract 'abstract contract b'\nlevel Error\ntests/contract_testcases/substrate/inheritance/inherit_types_05.sol:2:9-7:10"]
+	diagnostic_15 [label="already defined 'foo'\nlevel Error\ntests/contract_testcases/substrate/inheritance/inherit_types_05.sol:3:20-23"]
 	note [label="previous definition of 'foo'\ntests/contract_testcases/substrate/inheritance/inherit_types_05.sol:10:18-21"]
-	diagnostic_16 [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/inherit_types_05.sol:9:9-11:10"]
-	diagnostic_17 [label="found contract 'a'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/inherit_types_05.sol:13:9-16:10"]
+	diagnostic_17 [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/inherit_types_05.sol:9:9-11:10"]
+	diagnostic_18 [label="found contract 'a'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/inherit_types_05.sol:13:9-16:10"]
 	enums -> foo
 	structs -> foo_3
 	contracts -> contract
@@ -24,7 +25,8 @@ strict digraph "tests/contract_testcases/substrate/inheritance/inherit_types_05.
 	test -> parameters [label="parameters"]
 	diagnostics -> diagnostic [label="Debug"]
 	diagnostics -> diagnostic_14 [label="Error"]
-	diagnostic_14 -> note [label="note"]
-	diagnostics -> diagnostic_16 [label="Debug"]
+	diagnostics -> diagnostic_15 [label="Error"]
+	diagnostic_15 -> note [label="note"]
 	diagnostics -> diagnostic_17 [label="Debug"]
+	diagnostics -> diagnostic_18 [label="Debug"]
 }

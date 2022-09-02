@@ -427,7 +427,7 @@ fn compile(matches: &ArgMatches) {
                         .iter()
                         .flat_map(|ns| {
                             ns.contracts.iter().filter_map(|contract| {
-                                if contract.is_concrete() {
+                                if contract.instantiable {
                                     Some(contract.name.as_str())
                                 } else {
                                     None
@@ -455,7 +455,7 @@ fn compile(matches: &ArgMatches) {
                     for contract_no in 0..ns.contracts.len() {
                         let contract = &ns.contracts[contract_no];
 
-                        if !contract.is_concrete() {
+                        if !contract.instantiable {
                             continue;
                         }
 
@@ -557,7 +557,7 @@ fn process_file(
     for contract_no in 0..ns.contracts.len() {
         let resolved_contract = &ns.contracts[contract_no];
 
-        if !resolved_contract.is_concrete() {
+        if !resolved_contract.instantiable {
             continue;
         }
 
