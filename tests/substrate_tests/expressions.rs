@@ -1071,7 +1071,7 @@ fn test_mul_within_range_signed() {
         }"#
         .replace("intN", &format!("int{}", width));
 
-        let width_rounded = (width / 8 as usize).next_power_of_two();
+        let width_rounded = (width / 8_usize).next_power_of_two();
 
         let mut runtime = build_solidity(&src);
 
