@@ -5,6 +5,7 @@
 #include "solana_sdk.h"
 
 extern uint64_t solang_dispatch(const SolParameters *param);
+extern void __init_heap();
 
 // The address 'SysvarC1ock11111111111111111111111111111111' base58 decoded
 static const SolPubkey clock_address = {0x06, 0xa7, 0xd5, 0x17, 0x18, 0xc7, 0x74, 0xc9, 0x28, 0x56, 0x63, 0x98, 0x69, 0x1d, 0x5e, 0xb6, 0x8b, 0x5e, 0xb8, 0xa3, 0x9b, 0x4b, 0x6d, 0x5c, 0x73, 0x55, 0x5b, 0x21, 0x00, 0x00, 0x00, 0x00};
@@ -55,12 +56,9 @@ entrypoint(const uint8_t *input)
         return ERROR_INVALID_INSTRUCTION_DATA;
     }
 
-    return solang_dispatch(&params);
-}
+    __init_heap();
 
-void *__malloc(uint32_t size)
-{
-    return sol_alloc_free_(size, NULL);
+    return solang_dispatch(&params);
 }
 
 uint64_t sol_invoke_signed_c(
@@ -902,19 +900,6 @@ int main()
 void sol_panic_(const char *s, uint64_t len, uint64_t line, uint64_t column)
 {
     printf("panic: %s line %lld", s, line);
-}
-
-void *sol_alloc_free_(uint64_t size, void *ptr)
-{
-    if (size)
-    {
-        return realloc(ptr, size);
-    }
-    else
-    {
-        free(ptr);
-        return NULL;
-    }
 }
 
 int solang_dispatch(const uint8_t *input, uint64_t input_len, SolAccountInfo *ka) {}

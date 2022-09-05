@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
 
-mod solana_helpers;
-
 use base58::{FromBase58, ToBase58};
 use byteorder::{ByteOrder, LittleEndian, WriteBytesExt};
 use ethabi::{ethereum_types::H256, RawLog, Token};
@@ -9,7 +7,6 @@ use libc::c_char;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use solana_helpers::allocator_bump::Allocator;
 use solana_rbpf::{
     ebpf,
     elf::Executable,
@@ -32,13 +29,7 @@ use solang::{
     Target,
 };
 use std::{
-    alloc::Layout,
-    cell::RefCell,
-    collections::HashMap,
-    convert::TryInto,
-    ffi::OsStr,
-    io::Write,
-    mem::{align_of, size_of},
+    cell::RefCell, collections::HashMap, convert::TryInto, ffi::OsStr, io::Write, mem::size_of,
     rc::Rc,
 };
 use tiny_keccak::{Hasher, Keccak};
@@ -383,7 +374,93 @@ struct SyscallContext<'a> {
     vm: Rc<RefCell<&'a mut VirtualMachine>>,
     input: &'a [u8],
     refs: Rc<RefCell<&'a mut Vec<AccountRef>>>,
-    allocator: Rc<RefCell<&'a mut Allocator>>,
+    heap: *const u8,
+}
+
+impl<'a> SyscallContext<'a> {
+    pub fn heap_verify(&self) {
+        const VERBOSE: bool = false;
+
+        let heap: &[u8] = unsafe { std::slice::from_raw_parts(self.heap, DEFAULT_HEAP_SIZE) };
+
+        const HEAP_START: u64 = 0x3_0000_0000;
+        let mut current_elem = HEAP_START;
+        let mut last_elem = 0;
+
+        let read_u64 = |offset: u64| {
+            let offset = (offset - HEAP_START) as usize;
+            u64::from_le_bytes(heap[offset..offset + 8].try_into().unwrap())
+        };
+
+        if VERBOSE {
+            println!("heap verify:");
+        }
+
+        loop {
+            let next: u64 = read_u64(current_elem);
+            let prev: u64 = read_u64(current_elem + 8);
+            let length: u64 = read_u64(current_elem + 16);
+            let allocated: u64 = read_u64(current_elem + 24);
+
+            if VERBOSE {
+                println!(
+                    "next:{:08x} prev:{:08x} length:{} allocated:{}",
+                    next, prev, length, allocated
+                );
+            }
+
+            let start = (current_elem + 8 * 4 - HEAP_START) as usize;
+
+            let buf = &heap[start..start + length as usize];
+
+            if allocated == 0 {
+                if VERBOSE {
+                    println!("{:08x} {} not allocated", current_elem + 32, length);
+                }
+            } else {
+                if VERBOSE {
+                    println!("{:08x} {} allocated", current_elem + 32, length);
+                }
+
+                assert_eq!(allocated & 0xffff, 1);
+
+                for offset in (0..buf.len()).step_by(16) {
+                    use std::fmt::Write;
+
+                    let mut hex = "\t".to_string();
+                    let mut chars = "\t".to_string();
+                    for i in 0..16 {
+                        if offset + i >= buf.len() {
+                            break;
+                        }
+                        let b = buf[offset + i];
+                        write!(hex, " {:02x}", b).unwrap();
+                        if b.is_ascii() && !b.is_ascii_control() {
+                            write!(chars, "  {}", b as char).unwrap();
+                        } else {
+                            chars.push_str("   ");
+                        }
+                    }
+                    if VERBOSE {
+                        println!("{}\n{}", hex, chars);
+                    }
+                }
+            }
+
+            assert_eq!(last_elem, prev);
+
+            if next == 0 {
+                break;
+            }
+
+            last_elem = current_elem;
+            current_elem = next;
+        }
+
+        if VERBOSE {
+            println!("heap verify done");
+        }
+    }
 }
 
 struct SolPanic();
@@ -431,6 +508,8 @@ impl<'a> SyscallObject<UserError> for SolLog<'a> {
         memory_mapping: &mut MemoryMapping,
         result: &mut Result<u64, EbpfError<UserError>>,
     ) {
+        self.context.heap_verify();
+
         let host_addr = question_mark!(memory_mapping.map(AccessType::Load, vm_addr, len), result);
         let c_buf: *const c_char = host_addr as *const c_char;
         unsafe {
@@ -475,6 +554,8 @@ impl<'a> SyscallObject<UserError> for SolLogPubKey<'a> {
         memory_mapping: &mut MemoryMapping,
         result: &mut Result<u64, EbpfError<UserError>>,
     ) {
+        self.context.heap_verify();
+
         let account = question_mark!(
             translate_slice::<Account>(memory_mapping, pubkey_addr, 1),
             result
@@ -516,6 +597,8 @@ impl<'a> SyscallObject<UserError> for SolLogU64<'a> {
 
         println!("log64: {}", message);
 
+        self.context.heap_verify();
+
         if let Ok(mut vm) = self.context.vm.try_borrow_mut() {
             vm.logs.push_str(&message);
         }
@@ -523,15 +606,17 @@ impl<'a> SyscallObject<UserError> for SolLogU64<'a> {
     }
 }
 
-struct SolSha256();
-impl SolSha256 {
+struct SolSha256<'a> {
+    context: SyscallContext<'a>,
+}
+impl<'a> SolSha256<'a> {
     /// new
-    pub fn init<C, E>(_unused: C) -> Box<dyn SyscallObject<UserError>> {
-        Box::new(Self {})
+    pub fn init(context: SyscallContext<'a>) -> Box<(dyn SyscallObject<UserError> + 'a)> {
+        Box::new(Self { context })
     }
 }
 
-impl SyscallObject<UserError> for SolSha256 {
+impl<'a> SyscallObject<UserError> for SolSha256<'a> {
     fn call(
         &mut self,
         src: u64,
@@ -542,6 +627,8 @@ impl SyscallObject<UserError> for SolSha256 {
         memory_mapping: &mut MemoryMapping,
         result: &mut Result<u64, EbpfError<UserError>>,
     ) {
+        self.context.heap_verify();
+
         let arrays = question_mark!(
             translate_slice::<(u64, u64)>(memory_mapping, src, len),
             result
@@ -569,15 +656,17 @@ impl SyscallObject<UserError> for SolSha256 {
     }
 }
 
-struct SolKeccak256();
-impl SolKeccak256 {
+struct SolKeccak256<'a> {
+    context: SyscallContext<'a>,
+}
+impl<'a> SolKeccak256<'a> {
     /// new
-    pub fn init<C, E>(_unused: C) -> Box<dyn SyscallObject<UserError>> {
-        Box::new(Self {})
+    pub fn init(context: SyscallContext<'a>) -> Box<(dyn SyscallObject<UserError> + 'a)> {
+        Box::new(Self { context })
     }
 }
 
-impl SyscallObject<UserError> for SolKeccak256 {
+impl<'a> SyscallObject<UserError> for SolKeccak256<'a> {
     fn call(
         &mut self,
         src: u64,
@@ -588,6 +677,8 @@ impl SyscallObject<UserError> for SolKeccak256 {
         memory_mapping: &mut MemoryMapping,
         result: &mut Result<u64, EbpfError<UserError>>,
     ) {
+        self.context.heap_verify();
+
         let arrays = question_mark!(
             translate_slice::<(u64, u64)>(memory_mapping, src, len),
             result
@@ -764,6 +855,8 @@ impl<'a> SyscallObject<UserError> for SyscallSetReturnData<'a> {
         memory_mapping: &mut MemoryMapping,
         result: &mut Result<u64, EbpfError<UserError>>,
     ) {
+        self.context.heap_verify();
+
         assert!(len <= 1024, "sol_set_return_data: length is {}", len);
 
         let buf = question_mark!(translate_slice::<u8>(memory_mapping, addr, len), result);
@@ -803,6 +896,8 @@ impl<'a> SyscallObject<UserError> for SyscallGetReturnData<'a> {
         memory_mapping: &mut MemoryMapping,
         result: &mut Result<u64, EbpfError<UserError>>,
     ) {
+        self.context.heap_verify();
+
         if let Ok(vm) = self.context.vm.try_borrow() {
             if let Some((program_id, return_data)) = &vm.return_data {
                 let length = std::cmp::min(len, return_data.len() as u64);
@@ -854,7 +949,10 @@ impl<'a> SyscallObject<UserError> for SyscallLogData<'a> {
         memory_mapping: &mut MemoryMapping,
         result: &mut Result<u64, EbpfError<UserError>>,
     ) {
+        self.context.heap_verify();
+
         if let Ok(mut vm) = self.context.vm.try_borrow_mut() {
+            print!("sol_log_data");
             let untranslated_events =
                 question_mark!(translate_slice::<&[u8]>(memory_mapping, addr, len), result);
 
@@ -870,8 +968,12 @@ impl<'a> SyscallObject<UserError> for SyscallLogData<'a> {
                     result
                 );
 
+                print!(" {}", hex::encode(&event));
+
                 events.push(event.to_vec());
             }
+
+            println!();
 
             vm.events.push(events.to_vec());
 
@@ -910,58 +1012,7 @@ impl From<Ed25519SigCheckError> for u64 {
     }
 }
 
-// Shamelessly stolen from solana source
-
-/// Dynamic memory allocation syscall called when the BPF program calls
-/// `sol_alloc_free_()`.  The allocator is expected to allocate/free
-/// from/to a given chunk of memory and enforce size restrictions.  The
-/// memory chunk is given to the allocator during allocator creation and
-/// information about that memory (start address and size) is passed
-/// to the VM to use for enforcement.
-struct SyscallAllocFree<'a> {
-    context: SyscallContext<'a>,
-}
-impl<'a> SyscallAllocFree<'a> {
-    /// new
-    pub fn init(context: SyscallContext<'a>) -> Box<(dyn SyscallObject<UserError> + 'a)> {
-        Box::new(Self { context })
-    }
-}
-
 const DEFAULT_HEAP_SIZE: usize = 32 * 1024;
-/// Start of the input buffers in the memory map
-
-impl<'a> SyscallObject<UserError> for SyscallAllocFree<'a> {
-    fn call(
-        &mut self,
-        size: u64,
-        free_addr: u64,
-        _arg3: u64,
-        _arg4: u64,
-        _arg5: u64,
-        _memory_mapping: &mut MemoryMapping,
-        result: &mut Result<u64, EbpfError<UserError>>,
-    ) {
-        if let Ok(mut allocator) = self.context.allocator.try_borrow_mut() {
-            let align = align_of::<u128>();
-            let layout = match Layout::from_size_align(size as usize, align) {
-                Ok(layout) => layout,
-                Err(_) => {
-                    *result = Ok(0);
-                    return;
-                }
-            };
-            *result = if free_addr == 0 {
-                Ok(allocator.alloc(layout))
-            } else {
-                allocator.dealloc(free_addr, layout);
-                Ok(0)
-            }
-        } else {
-            panic!();
-        }
-    }
-}
 
 /// Rust representation of C's SolInstruction
 #[derive(Debug)]
@@ -1418,19 +1469,11 @@ impl VirtualMachine {
             .unwrap();
 
         syscall_registry
-            .register_syscall_by_name(
-                b"sol_sha256",
-                SolSha256::init::<BpfSyscallContext, UserError>,
-                SolSha256::call,
-            )
+            .register_syscall_by_name(b"sol_sha256", SolSha256::init, SolSha256::call)
             .unwrap();
 
         syscall_registry
-            .register_syscall_by_name(
-                b"sol_keccak256",
-                SolKeccak256::init::<BpfSyscallContext, UserError>,
-                SolKeccak256::call,
-            )
+            .register_syscall_by_name(b"sol_keccak256", SolKeccak256::init, SolKeccak256::call)
             .unwrap();
 
         syscall_registry
@@ -1454,14 +1497,6 @@ impl VirtualMachine {
                 b"sol_invoke_signed_c",
                 SyscallInvokeSignedC::init,
                 SyscallInvokeSignedC::call,
-            )
-            .unwrap();
-
-        syscall_registry
-            .register_syscall_by_name(
-                b"sol_alloc_free_",
-                SyscallAllocFree::init,
-                SyscallAllocFree::call,
             )
             .unwrap();
 
@@ -1508,13 +1543,11 @@ impl VirtualMachine {
         )
         .unwrap();
 
-        let mut allocator = Allocator::new(DEFAULT_HEAP_SIZE as u64, ebpf::MM_HEAP_START);
-
         let context = SyscallContext {
             vm: Rc::new(RefCell::new(self)),
-            allocator: Rc::new(RefCell::new(&mut allocator)),
             input: &parameter_bytes,
             refs: Rc::new(RefCell::new(&mut refs)),
+            heap: heap.as_ptr(),
         };
 
         vm.bind_syscall_context_objects(context).unwrap();

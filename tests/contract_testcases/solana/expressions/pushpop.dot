@@ -1,10 +1,20 @@
 strict digraph "tests/contract_testcases/solana/expressions/pushpop.sol" {
 	contract [label="contract foo\ntests/contract_testcases/solana/expressions/pushpop.sol:2:9-8:10"]
 	test [label="function test\ncontract: foo\ntests/contract_testcases/solana/expressions/pushpop.sol:3:13-35\nsignature test()\nvisibility public\nmutability nonpayable"]
+	var_decl [label="variable decl bytes x\ntests/contract_testcases/solana/expressions/pushpop.sol:4:17-24"]
+	expr [label="expression\ntests/contract_testcases/solana/expressions/pushpop.sol:6:17-25"]
+	builtins [label="builtin ArrayPush\ntests/contract_testcases/solana/expressions/pushpop.sol:6:17-25"]
+	variable [label="variable: x\nbytes\ntests/contract_testcases/solana/expressions/pushpop.sol:6:17-18"]
 	diagnostic [label="found contract 'foo'\nlevel Debug\ntests/contract_testcases/solana/expressions/pushpop.sol:2:9-8:10"]
-	diagnostic_5 [label="'push()' not supported on 'bytes' on target solana\nlevel Error\ntests/contract_testcases/solana/expressions/pushpop.sol:6:19-23"]
+	diagnostic_9 [label="function can be declared 'pure'\nlevel Warning\ntests/contract_testcases/solana/expressions/pushpop.sol:3:13-35"]
+	diagnostic_10 [label="local variable 'x' has been assigned, but never read\nlevel Warning\ntests/contract_testcases/solana/expressions/pushpop.sol:4:23-24"]
 	contracts -> contract
 	contract -> test [label="function"]
+	test -> var_decl [label="body"]
+	var_decl -> expr [label="next"]
+	expr -> builtins [label="expr"]
+	builtins -> variable [label="arg #0"]
 	diagnostics -> diagnostic [label="Debug"]
-	diagnostics -> diagnostic_5 [label="Error"]
+	diagnostics -> diagnostic_9 [label="Warning"]
+	diagnostics -> diagnostic_10 [label="Warning"]
 }

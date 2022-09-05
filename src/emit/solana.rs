@@ -106,13 +106,7 @@ impl SolanaTarget {
             }],
         );
 
-        binary.internalize(&[
-            "entrypoint",
-            "sol_log_",
-            "sol_alloc_free_",
-            // This entry is produced by llvm due to merging of stdlib.bc with solidity llvm ir
-            "sol_alloc_free_.1",
-        ]);
+        binary.internalize(&["entrypoint", "sol_log_"]);
 
         binary
     }
@@ -207,7 +201,6 @@ impl SolanaTarget {
             "sol_log_pubkey",
             "sol_invoke_signed_c",
             "sol_panic_",
-            "sol_alloc_free_",
             "sol_get_return_data",
             "sol_set_return_data",
             "sol_create_program_address",
@@ -235,15 +228,6 @@ impl SolanaTarget {
             .context
             .struct_type(&[u8_ptr.into(), u64_ty.into()], false)
             .ptr_type(AddressSpace::Generic);
-
-        let function = binary.module.add_function(
-            "sol_alloc_free_",
-            u8_ptr.fn_type(&[u8_ptr.into(), u64_ty.into()], false),
-            None,
-        );
-        function
-            .as_global_value()
-            .set_unnamed_address(UnnamedAddress::Local);
 
         let function = binary.module.add_function(
             "sol_log_",

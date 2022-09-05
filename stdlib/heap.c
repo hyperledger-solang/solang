@@ -1,8 +1,11 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
-
 #include "stdlib.h"
+
+#ifndef __wasm__
+#include "solana_sdk.h"
+#endif
 
 /*
   There are many tradeoffs in heaps. I think for Solidity, we want:
@@ -20,14 +23,28 @@ struct chunk
     size_t allocated;
 };
 
+#ifdef __wasm__
+#define HEAP_START ((struct chunk *)0x10000)
+
 void __init_heap()
 {
-    struct chunk *first = (struct chunk *)0x10000;
+    struct chunk *first = HEAP_START;
     first->next = first->prev = NULL;
     first->allocated = false;
     first->length = (size_t)(__builtin_wasm_memory_size(0) * 0x10000 -
                              (size_t)first - sizeof(struct chunk));
 }
+#else
+#define HEAP_START ((struct chunk *)0x300000000)
+
+void __init_heap()
+{
+    struct chunk *first = HEAP_START;
+    first->next = first->prev = NULL;
+    first->allocated = false;
+    first->length = (32 * 1024) - sizeof(struct chunk);
+}
+#endif
 
 void __attribute__((noinline)) __free(void *m)
 {
@@ -79,7 +96,7 @@ static void shrink_chunk(struct chunk *cur, size_t size)
 
 void *__attribute__((noinline)) __malloc(uint32_t size)
 {
-    struct chunk *cur = (struct chunk *)0x10000;
+    struct chunk *cur = HEAP_START;
 
     while (cur && (cur->allocated || size > cur->length))
         cur = cur->next;
@@ -93,7 +110,13 @@ void *__attribute__((noinline)) __malloc(uint32_t size)
     else
     {
         // go bang
+#ifdef __wasm__
         __builtin_unreachable();
+#else
+        sol_log("out of heap memory");
+        sol_panic();
+#endif
+        return NULL;
     }
 }
 
@@ -109,7 +132,8 @@ void *__realloc(void *m, size_t size)
     {
         // merge with next
         cur->next = next->next;
-        cur->next->prev = cur;
+        if (cur->next)
+            cur->next->prev = cur;
         cur->length += next->length + sizeof(struct chunk);
         // resplit ..
         shrink_chunk(cur, size);
@@ -117,8 +141,19 @@ void *__realloc(void *m, size_t size)
     }
     else
     {
+        // allocate new area and copy old data
+        uint32_t len = cur->length;
+
+        // if new size is smaller than the old data, only copy remaining data
+        if (size < len)
+            len = size;
+
         void *n = __malloc(size);
-        __memcpy8(n, m, size / 8);
+
+        // __memcpy8() copies 8 bytes at once; round up to the nearest 8 bytes
+        // this is permitted because allocations are always aligned on 8 byte
+        // boundaries anyway.
+        __memcpy8(n, m, (len + 7) / 8);
         __free(m);
         return n;
     }
