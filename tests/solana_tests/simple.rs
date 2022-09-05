@@ -259,8 +259,10 @@ fn two_arrays() {
 
             constructor() {
                 for(uint i = 0; i < 10; i++) {
+                    unchecked {
                     array1.push((i*uint(sha256("i"))));
                     array2.push(((i+1)*uint(sha256("i"))));
+                    }
                }
             }
         }"#,
