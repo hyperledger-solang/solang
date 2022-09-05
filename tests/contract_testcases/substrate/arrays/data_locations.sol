@@ -1,5 +1,5 @@
 
-        contract foo {
+        abstract contract foo {
             function bar(uint storage) public returns () {
             }
         }

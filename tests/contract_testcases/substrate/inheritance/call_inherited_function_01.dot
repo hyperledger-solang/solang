@@ -11,7 +11,7 @@ strict digraph "tests/contract_testcases/substrate/inheritance/call_inherited_fu
 	base [label="base base\ntests/contract_testcases/substrate/inheritance/call_inherited_function_01.sol:8:26-30"]
 	bar [label="function bar\ncontract: apex\ntests/contract_testcases/substrate/inheritance/call_inherited_function_01.sol:9:13-51\nsignature bar()\nvisibility public\nmutability nonpayable"]
 	returns_12 [label="returns\nuint64 "]
-	diagnostic [label="found contract 'base'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/call_inherited_function_01.sol:2:9-6:10"]
+	diagnostic [label="found abstract contract 'base'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/call_inherited_function_01.sol:2:9-6:10"]
 	diagnostic_15 [label="found contract 'apex'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/call_inherited_function_01.sol:8:9-12:10"]
 	diagnostic_16 [label="cannot call private function\nlevel Error\ntests/contract_testcases/substrate/inheritance/call_inherited_function_01.sol:10:24-35"]
 	note [label="declaration of function 'foo'\ntests/contract_testcases/substrate/inheritance/call_inherited_function_01.sol:3:13-60"]

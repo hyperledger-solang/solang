@@ -1,5 +1,5 @@
 
-        contract base {
+        abstract contract base {
             function foo() private returns (uint64) {
                 return 102;
             }

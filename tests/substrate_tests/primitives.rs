@@ -226,7 +226,7 @@ fn type_name() {
             }
         }
 
-        contract foobar {
+        abstract contract foobar {
             int32 a;
         }"##,
     );

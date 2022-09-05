@@ -176,27 +176,6 @@ static size_t sol_strlen(const char *s)
 #define SOL_ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 
 /**
- * Internal memory alloc/free function
- */
-void *sol_alloc_free_(uint64_t size, void *ptr);
-
-/**
- * Alloc zero-initialized memory
- */
-static void *sol_calloc(size_t nitems, size_t size)
-{
-  return sol_alloc_free_(nitems * size, 0);
-}
-
-/**
- * Deallocates the memory previously allocated by sol_calloc
- */
-static void sol_free(void *ptr)
-{
-  (void)sol_alloc_free_(0, ptr);
-}
-
-/**
  * Panics
  *
  * Prints the line number where the panic occurred and then causes

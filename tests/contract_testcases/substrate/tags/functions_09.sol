@@ -6,4 +6,4 @@
             function foo(int x) public pure returns (int a, bool k) {}
         }
 
-        contract b {}
+        abstract contract b {}

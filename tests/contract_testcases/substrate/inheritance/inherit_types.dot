@@ -9,7 +9,7 @@ strict digraph "tests/contract_testcases/substrate/inheritance/inherit_types.sol
 	contract_9 [label="contract b\ntests/contract_testcases/substrate/inheritance/inherit_types.sol:8:9-10:10"]
 	diagnostic [label="found contract 'a'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/inherit_types.sol:2:9-6:10"]
 	diagnostic_12 [label="function can be declared 'pure'\nlevel Warning\ntests/contract_testcases/substrate/inheritance/inherit_types.sol:3:13-52"]
-	diagnostic_13 [label="found contract 'b'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/inherit_types.sol:8:9-10:10"]
+	diagnostic_13 [label="found abstract contract 'b'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/inherit_types.sol:8:9-10:10"]
 	enums -> enum_x
 	contracts -> contract
 	contract -> base [label="base"]

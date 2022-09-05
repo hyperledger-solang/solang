@@ -76,10 +76,12 @@ contract testing  {
         &[],
         None,
     );
+
     assert_eq!(
         returns,
         vec![
-            Token::Uint(U256::from(12884901888u64)),
+            // the heap is 0x300000000. The header 32 bytes (sizeof(chunk) in heap.c)
+            Token::Uint(U256::from(0x300000020u64)),
             Token::Uint(U256::from(4))
         ]
     );

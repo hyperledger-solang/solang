@@ -10,7 +10,7 @@ strict digraph "tests/contract_testcases/substrate/inheritance/inherit_types_04.
 	storage_var [label="storage variable\na.var1\nstruct b.foo storage\nimplicit"]
 	contract_11 [label="contract b\ntests/contract_testcases/substrate/inheritance/inherit_types_04.sol:6:9-11:10"]
 	diagnostic [label="found contract 'a'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/inherit_types_04.sol:2:9-4:10"]
-	diagnostic_14 [label="found contract 'b'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/inherit_types_04.sol:6:9-11:10"]
+	diagnostic_14 [label="found abstract contract 'b'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/inherit_types_04.sol:6:9-11:10"]
 	structs -> foo
 	contracts -> contract
 	contract -> base [label="base"]

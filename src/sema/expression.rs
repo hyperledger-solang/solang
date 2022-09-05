@@ -3098,7 +3098,7 @@ fn constructor(
         }
     };
 
-    if !ns.contracts[no].is_concrete() {
+    if !ns.contracts[no].instantiable {
         diagnostics.push(Diagnostic::error(
             *loc,
             format!(
@@ -3296,7 +3296,7 @@ pub fn constructor_named_args(
         }
     };
 
-    if !ns.contracts[no].is_concrete() {
+    if !ns.contracts[no].instantiable {
         diagnostics.push(Diagnostic::error(
             *loc,
             format!(
@@ -6190,14 +6190,6 @@ fn method_call_pos_args(
 
     if matches!(var_ty, Type::Array(..) | Type::DynamicBytes) {
         if func.name == "push" {
-            if ns.target == Target::Solana {
-                diagnostics.push(Diagnostic::error(
-                    func.loc,
-                    format!("'push()' not supported on 'bytes' on target {}", ns.target),
-                ));
-                return Err(());
-            }
-
             let elem_ty = var_ty.array_elem();
 
             let val = match args.len() {
@@ -6238,14 +6230,6 @@ fn method_call_pos_args(
             ));
         }
         if func.name == "pop" {
-            if ns.target == Target::Solana {
-                diagnostics.push(Diagnostic::error(
-                    func.loc,
-                    format!("'pop()' not supported on 'bytes' on target {}", ns.target),
-                ));
-                return Err(());
-            }
-
             if !args.is_empty() {
                 diagnostics.push(Diagnostic::error(
                     func.loc,

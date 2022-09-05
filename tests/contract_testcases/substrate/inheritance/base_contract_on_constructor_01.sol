@@ -1,13 +1,13 @@
 
-        contract base {
+        abstract contract base {
             struct s { uint32 f1; }
         }
 
-        contract b {
+        abstract contract b {
             struct s { uint32 f1; }
         }
 
-        contract apex is base {
+        abstract contract apex is base {
             constructor() public b {
 
             }

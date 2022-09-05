@@ -229,7 +229,7 @@ fn test_overloading() {
     let mut runtime = build_solidity(
         "
         contract test {
-            uint32 result = 1;
+            uint32 public result = 1;
 
             constructor() public {
                 foo(true);
@@ -299,7 +299,7 @@ fn test_loops() {
     let mut runtime = build_solidity(
         "
         contract test {
-            uint32 result = 1;
+            uint32 public result = 1;
 
             constructor() public {
                 uint32 n = 0;

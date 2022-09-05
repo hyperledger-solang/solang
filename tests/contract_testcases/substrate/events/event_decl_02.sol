@@ -1,5 +1,5 @@
 
         enum e { a1 }
-        contract c {
+        abstract contract c {
             event e();
         }

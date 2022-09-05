@@ -136,7 +136,7 @@ pub fn compile(
     );
 
     let results = (0..ns.contracts.len())
-        .filter(|c| ns.contracts[*c].is_concrete())
+        .filter(|c| ns.contracts[*c].instantiable)
         .map(|c| {
             // codegen has already happened
             assert!(!ns.contracts[c].code.is_empty());

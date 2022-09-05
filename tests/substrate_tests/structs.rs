@@ -377,7 +377,7 @@ fn structs_in_structs_encode() {
             }
         }
 
-        contract other {
+        abstract contract other {
             struct bar {
                 bool a;
                 test_struct_parsing.foo b;

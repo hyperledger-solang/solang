@@ -8,7 +8,7 @@ strict digraph "tests/contract_testcases/substrate/functions/mutability_04.sol" 
 	variable [label="variable: foo\nint256[] storage\ntests/contract_testcases/substrate/functions/mutability_04.sol:3:17-20"]
 	number_literal [label="uint256 literal: 0\ntests/contract_testcases/substrate/functions/mutability_04.sol:3:21-22"]
 	number_literal_9 [label="int256 literal: 102\ntests/contract_testcases/substrate/functions/mutability_04.sol:3:26-29"]
-	diagnostic [label="found contract 'test'\nlevel Debug\ntests/contract_testcases/substrate/functions/mutability_04.sol:1:1-5:10"]
+	diagnostic [label="found abstract contract 'test'\nlevel Debug\ntests/contract_testcases/substrate/functions/mutability_04.sol:1:1-5:10"]
 	diagnostic_12 [label="function parameter 'foo' has never been read\nlevel Warning\ntests/contract_testcases/substrate/functions/mutability_04.sol:2:40-43"]
 	diagnostic_13 [label="function declared 'view' but this expression writes to state\nlevel Error\ntests/contract_testcases/substrate/functions/mutability_04.sol:3:17-23"]
 	contracts -> contract

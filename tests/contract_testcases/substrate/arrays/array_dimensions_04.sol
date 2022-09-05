@@ -1,5 +1,5 @@
 
-        contract foo {
+        abstract contract foo {
             struct bar {
                 int32 x;
             }

@@ -133,7 +133,7 @@ pub fn resolve_function_body(
             }
         }
 
-        if all_ok && ns.contracts[contract_no].is_concrete() {
+        if all_ok && ns.contracts[contract_no].instantiable {
             for base in &ns.contracts[contract_no].bases {
                 // do we have constructor arguments
                 if base.constructor.is_some() || resolve_bases.contains_key(&base.contract_no) {
