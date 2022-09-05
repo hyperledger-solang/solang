@@ -44,11 +44,7 @@ async function newAccountWithLamports(connection: Connection): Promise<Keypair> 
     const account = Keypair.generate();
 
     console.log('Airdropping SOL to a new wallet ...');
-    let signature = await connection.requestAirdrop(account.publicKey, LAMPORTS_PER_SOL);
-    await connection.confirmTransaction(signature, 'confirmed');
-    signature = await connection.requestAirdrop(account.publicKey, LAMPORTS_PER_SOL);
-    await connection.confirmTransaction(signature, 'confirmed');
-    signature = await connection.requestAirdrop(account.publicKey, LAMPORTS_PER_SOL);
+    let signature = await connection.requestAirdrop(account.publicKey, 16*LAMPORTS_PER_SOL);
     await connection.confirmTransaction(signature, 'confirmed');
 
     return account;
@@ -56,7 +52,11 @@ async function newAccountWithLamports(connection: Connection): Promise<Keypair> 
 
 
 async function setup() {
-    const connection = new Connection(endpoint, 'confirmed');
+
+    const connection = new Connection(endpoint, {
+        commitment: "confirmed",
+        confirmTransactionInitialTimeout: 100000,
+    });
     const payer = await newAccountWithLamports(connection);
 
     const program = Keypair.generate();
