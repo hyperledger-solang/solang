@@ -1,6 +1,6 @@
 strict digraph "tests/contract_testcases/substrate/arrays/array_dimensions.sol" {
 	contract [label="contract foo\ntests/contract_testcases/substrate/arrays/array_dimensions.sol:2:9-4:10"]
-	diagnostic [label="found contract 'foo'\nlevel Debug\ntests/contract_testcases/substrate/arrays/array_dimensions.sol:2:9-4:10"]
+	diagnostic [label="found abstract contract 'foo'\nlevel Debug\ntests/contract_testcases/substrate/arrays/array_dimensions.sol:2:9-4:10"]
 	diagnostic_4 [label="zero size array not permitted\nlevel Error\ntests/contract_testcases/substrate/arrays/array_dimensions.sol:3:18-25"]
 	contracts -> contract
 	diagnostics -> diagnostic [label="Debug"]

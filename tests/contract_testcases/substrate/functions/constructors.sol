@@ -1,4 +1,4 @@
 
-        contract test {
+        abstract contract test {
             constructor() internal {}
         }

@@ -1,7 +1,7 @@
 strict digraph "tests/contract_testcases/substrate/tags/contract.sol" {
-	contract [label="contract test\ntests/contract_testcases/substrate/tags/contract.sol:3:9-25"]
+	contract [label="contract test\ntests/contract_testcases/substrate/tags/contract.sol:3:9-34"]
 	diagnostic [label="tag '@barf' is not valid for contract\nlevel Error\ntests/contract_testcases/substrate/tags/contract.sol:2:14-18"]
-	diagnostic_4 [label="found contract 'test'\nlevel Debug\ntests/contract_testcases/substrate/tags/contract.sol:3:9-25"]
+	diagnostic_4 [label="found abstract contract 'test'\nlevel Debug\ntests/contract_testcases/substrate/tags/contract.sol:3:9-34"]
 	contracts -> contract
 	diagnostics -> diagnostic [label="Error"]
 	diagnostics -> diagnostic_4 [label="Debug"]

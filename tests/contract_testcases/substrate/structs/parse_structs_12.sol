@@ -5,7 +5,7 @@
                 int32 y;
             }
 
-            function f() private {
+            function f() public {
                 Foo a = Foo(true, true, true);
             }
         }

@@ -597,6 +597,8 @@ pub struct Contract {
     pub default_constructor: Option<(Function, usize)>,
     pub cfg: Vec<ControlFlowGraph>,
     pub code: Vec<u8>,
+    // Can the contract be instantiated, i.e. not abstract, no errors, etc.
+    pub instantiable: bool,
 }
 
 impl Contract {

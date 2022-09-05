@@ -1,3 +1,3 @@
 
         /// @barf
-        contract test {}
+        abstract contract test {}

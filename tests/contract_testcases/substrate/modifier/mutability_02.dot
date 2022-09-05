@@ -6,8 +6,9 @@ strict digraph "tests/contract_testcases/substrate/modifier/mutability_02.sol" {
 	base [label="base base\ntests/contract_testcases/substrate/modifier/mutability_02.sol:8:26-30"]
 	foo_6 [label="function foo\ncontract: apex\ntests/contract_testcases/substrate/modifier/mutability_02.sol:9:13-43\nsignature foo()\nvisibility public\nmutability nonpayable\noverride"]
 	diagnostic [label="found contract 'base'\nlevel Debug\ntests/contract_testcases/substrate/modifier/mutability_02.sol:2:9-6:10"]
-	diagnostic_9 [label="found contract 'apex'\nlevel Debug\ntests/contract_testcases/substrate/modifier/mutability_02.sol:8:9-10:10"]
-	diagnostic_10 [label="function 'foo' overrides modifier\nlevel Error\ntests/contract_testcases/substrate/modifier/mutability_02.sol:9:13-43"]
+	diagnostic_9 [label="contracts without public storage or functions are not allowed on Substrate. Consider declaring this contract abstract: 'abstract contract base'\nlevel Error\ntests/contract_testcases/substrate/modifier/mutability_02.sol:2:9-6:10"]
+	diagnostic_10 [label="found contract 'apex'\nlevel Debug\ntests/contract_testcases/substrate/modifier/mutability_02.sol:8:9-10:10"]
+	diagnostic_11 [label="function 'foo' overrides modifier\nlevel Error\ntests/contract_testcases/substrate/modifier/mutability_02.sol:9:13-43"]
 	note [label="previous definition of 'foo'\ntests/contract_testcases/substrate/modifier/mutability_02.sol:3:13-35"]
 	contracts -> contract
 	contract -> foo [label="modifier"]
@@ -16,7 +17,8 @@ strict digraph "tests/contract_testcases/substrate/modifier/mutability_02.sol" {
 	contract_4 -> base [label="base"]
 	contract_4 -> foo_6 [label="function"]
 	diagnostics -> diagnostic [label="Debug"]
-	diagnostics -> diagnostic_9 [label="Debug"]
-	diagnostics -> diagnostic_10 [label="Error"]
-	diagnostic_10 -> note [label="note"]
+	diagnostics -> diagnostic_9 [label="Error"]
+	diagnostics -> diagnostic_10 [label="Debug"]
+	diagnostics -> diagnostic_11 [label="Error"]
+	diagnostic_11 -> note [label="note"]
 }

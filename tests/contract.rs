@@ -92,7 +92,7 @@ fn parse_file(path: PathBuf, target: Target) -> io::Result<()> {
             }
             Target::Substrate { .. } => {
                 for contract in &ns.contracts {
-                    if contract.is_concrete() {
+                    if contract.instantiable {
                         solang::emit::binary::Binary::build(
                             &context,
                             contract,

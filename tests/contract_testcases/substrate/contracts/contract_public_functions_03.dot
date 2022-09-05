@@ -1,0 +1,32 @@
+strict digraph "tests/contract_testcases/substrate/contracts/contract_public_functions_03.sol" {
+	contract [label="contract a\ntests/contract_testcases/substrate/contracts/contract_public_functions_03.sol:1:1-3:2"]
+	var [label="variable foo\nvisibility private\ntests/contract_testcases/substrate/contracts/contract_public_functions_03.sol:2:5-24"]
+	contract_3 [label="contract b\ntests/contract_testcases/substrate/contracts/contract_public_functions_03.sol:4:1-7:2"]
+	var_4 [label="variable foo\nvisibility public\ntests/contract_testcases/substrate/contracts/contract_public_functions_03.sol:6:5-23"]
+	foo [label="function foo\ncontract: b\ntests/contract_testcases/substrate/contracts/contract_public_functions_03.sol:6:20-23\nsignature foo()\nvisibility public\nmutability view"]
+	returns [label="returns\nuint256 "]
+	return [label="return\nimplicit"]
+	storage_load [label="storage load uint256\nimplicit"]
+	storage_var [label="storage variable\nb.foo\nuint256 storage\nimplicit"]
+	contract_10 [label="contract c\ntests/contract_testcases/substrate/contracts/contract_public_functions_03.sol:8:1-11:2"]
+	var_11 [label="variable foo\nvisibility private\ntests/contract_testcases/substrate/contracts/contract_public_functions_03.sol:10:5-24"]
+	diagnostic [label="found abstract contract 'a'\nlevel Debug\ntests/contract_testcases/substrate/contracts/contract_public_functions_03.sol:1:1-3:2"]
+	diagnostic_14 [label="found contract 'b'\nlevel Debug\ntests/contract_testcases/substrate/contracts/contract_public_functions_03.sol:4:1-7:2"]
+	diagnostic_15 [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/contracts/contract_public_functions_03.sol:8:1-11:2"]
+	diagnostic_16 [label="contracts without public storage or functions are not allowed on Substrate. Consider declaring this contract abstract: 'abstract contract c'\nlevel Error\ntests/contract_testcases/substrate/contracts/contract_public_functions_03.sol:8:1-11:2"]
+	contracts -> contract
+	contract -> var [label="variable"]
+	contracts -> contract_3
+	contract_3 -> var_4 [label="variable"]
+	contract_3 -> foo [label="function"]
+	foo -> returns [label="returns"]
+	foo -> return [label="body"]
+	return -> storage_load [label="expr"]
+	storage_load -> storage_var [label="expr"]
+	contracts -> contract_10
+	contract_10 -> var_11 [label="variable"]
+	diagnostics -> diagnostic [label="Debug"]
+	diagnostics -> diagnostic_14 [label="Debug"]
+	diagnostics -> diagnostic_15 [label="Debug"]
+	diagnostics -> diagnostic_16 [label="Error"]
+}

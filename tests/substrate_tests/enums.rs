@@ -74,7 +74,7 @@ fn enums_other_contracts() {
             }
         }
 
-        contract c {
+        abstract contract c {
             enum foo { bar, bar2, bar3 }
         }
         ",

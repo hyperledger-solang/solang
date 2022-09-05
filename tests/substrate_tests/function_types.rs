@@ -136,7 +136,7 @@ fn base_contract_function() {
             }
         }
 
-        contract Arith {
+        abstract contract Arith {
             function mul(int32 a, int32 b) internal returns (int32) {
                 return a * b;
             }

@@ -156,7 +156,7 @@ fn build_solidity(src: &str) -> VirtualMachine {
     let mut programs = Vec::new();
 
     for contract_no in 0..ns.contracts.len() {
-        if !ns.contracts[contract_no].is_concrete() {
+        if !ns.contracts[contract_no].instantiable {
             continue;
         }
 

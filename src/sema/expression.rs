@@ -3098,7 +3098,7 @@ fn constructor(
         }
     };
 
-    if !ns.contracts[no].is_concrete() {
+    if !ns.contracts[no].instantiable {
         diagnostics.push(Diagnostic::error(
             *loc,
             format!(
@@ -3296,7 +3296,7 @@ pub fn constructor_named_args(
         }
     };
 
-    if !ns.contracts[no].is_concrete() {
+    if !ns.contracts[no].instantiable {
         diagnostics.push(Diagnostic::error(
             *loc,
             format!(

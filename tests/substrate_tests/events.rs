@@ -111,7 +111,7 @@ fn event_imported() {
     cache.set_file_contents(
         "b.sol",
         r#"
-        contract baz {
+        abstract contract baz {
             event bar (uint32 indexed f1, bool x);
         }
         "#
@@ -142,7 +142,7 @@ fn event_imported() {
     cache.set_file_contents(
         "b.sol",
         r#"
-        contract baz {
+        abstract contract baz {
             event bar (uint32 indexed f1, bool x);
         }
         "#

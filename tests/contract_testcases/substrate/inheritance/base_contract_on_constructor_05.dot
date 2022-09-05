@@ -8,7 +8,7 @@ strict digraph "tests/contract_testcases/substrate/inheritance/base_contract_on_
 	base_7 [label="base"]
 	bool_literal [label="bool literal: true\ntests/contract_testcases/substrate/inheritance/base_contract_on_constructor_05.sol:7:32-36"]
 	foo [label="function foo\ncontract: apex\ntests/contract_testcases/substrate/inheritance/base_contract_on_constructor_05.sol:8:13-39\nsignature foo()\nvisibility public\nmutability pure"]
-	diagnostic [label="found contract 'base'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/base_contract_on_constructor_05.sol:2:9-4:10"]
+	diagnostic [label="found abstract contract 'base'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/base_contract_on_constructor_05.sol:2:9-4:10"]
 	diagnostic_12 [label="function parameter 'x' has never been read\nlevel Warning\ntests/contract_testcases/substrate/inheritance/base_contract_on_constructor_05.sol:3:30-31"]
 	diagnostic_13 [label="found contract 'apex'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/base_contract_on_constructor_05.sol:6:9-9:10"]
 	diagnostic_14 [label="duplicate base contract 'base'\nlevel Error\ntests/contract_testcases/substrate/inheritance/base_contract_on_constructor_05.sol:7:38-49"]

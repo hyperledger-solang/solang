@@ -1,9 +1,9 @@
 
-        contract a {
+        abstract contract a {
             int private foo;
         }
 
-        contract b is a {
+        abstract contract b is a {
             int public foo;
         }
 

@@ -180,7 +180,7 @@ fn creation_code() {
         }
 
         contract b {
-            int x;
+            int public x;
             constructor(int a) public {
                 x = a;
             }

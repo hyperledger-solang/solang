@@ -1,5 +1,5 @@
 
-        contract b {
+        abstract contract b {
             int foo;
         }
 
