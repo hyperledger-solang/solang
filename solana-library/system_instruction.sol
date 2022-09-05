@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
+// Disclaimer: This library provides a bridge for Solidity to interact with Solana's system instructions. Although it is production ready,
+// it has not been audited for security, so use it at your own risk.
+
 import 'solana';
 
 library SystemInstruction {

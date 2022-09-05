@@ -1,3 +1,8 @@
+// SPDX-License-Identifier: Apache-2.0
+
+// Disclaimer: This library provides a way for Solidity to interact with Solana's SPL-Token. Although it is production ready,
+// it has not been audited for security, so use it at your own risk.
+
 import 'solana';
 
 library SplToken {
