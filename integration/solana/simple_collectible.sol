@@ -6,93 +6,102 @@
 import '../../solana-library/spl_token.sol';
 
 contract SimpleCollectible {
-    // tokenCounter creates a unique ID for each new minted NFT
-    uint32 private tokenCounter;
-    // The authority responsible for managing mints.
-    address private mintAuthority;
+    // On Solana, the mintAccount represents the type of token created. It saves how many tokens exist in circulation.
+    address private mintAccount;
+    // The public key for the authority that should sign every change to the NFT's URI
+    address private metadataAuthority;
+    // A resource identifier to access the NFT. It could be any other data to be saved on the blockchain
+    string private uri;
 
-    struct NFTOwner {
-        bool exists;
-        address owner;
-        address ownerTokenAccount;
-        address mintAccount;
+    // These events log on the blockchain transactions made with this NFT
+    event NFTMinted(address owner, address mintAccount);
+    event NFTSold(address from, address to);
+
+    // The mint account will identify the NFT in this example
+    constructor (address _mintAccount, address _metadataAuthority) {
+        mintAccount = _mintAccount;
+        metadataAuthority = _metadataAuthority;
     }
 
-    struct NFTData {
-        NFTOwner ownerData;
-        string uri;
-    }
-
-    event NFTMinted(address owner, address mintAccount, uint32 nftId);
-    event NFTSold(address from, address to, uint32 nftId);
-
-    mapping(uint32 => NFTData) private nftInfo;
-
-    constructor (address _mintAuthority) {
-        tokenCounter = 0;
-        // For every mint on Solana, a mint authority is needed to sign it
-        mintAuthority = _mintAuthority;
-    }
-
-    /// Create a new NFT and associated it to a URI
+    /// Create a new NFT and associate it to an URI
     ///
     /// @param tokenURI a URI that leads to the NFT resource
-    /// @param mintAccount an account that saves the total supply of a token
-    /// @param owner the account that is going to own the newly minted NFT
-    /// @param ownerTokenAccount the associated token account for the @param owner and the @param mintAccount
-    ///
-    /// return: an unique identifier to the minted NFT
-    function createCollectible(string memory tokenURI, address mintAccount, address owner, address ownerTokenAccount) public returns (uint32) {
-        uint32 new_item_id = tokenCounter;
-        tokenCounter++;
+    /// @param mintAuthority an account that signs each new mint
+    /// @param ownerTokenAccount the owner associated token account
+    function createCollectible(string memory tokenURI, address mintAuthority, address ownerTokenAccount) public {
+        SplToken.TokenAccountData token_data = SplToken.get_token_account_data(ownerTokenAccount);
+
+        // The mint will only work if the associated token account points to the mint account in this contract
+        // This assert is not necessary. The transaction will fail if this does not hold true.
+        assert(mintAccount == token_data.mintAccount);
+        SplToken.MintAccountData mint_data = SplToken.get_mint_account_data(token_data.mintAccount);
+        // Ensure the supply is zero. Otherwise, this is not an NFT.
+        assert(mint_data.supply == 0);
+        
         // An NFT on Solana is a SPL-Token with only one minted token.
-        // The mintAccount saves information about the token (e.g. quantity of tokens avaialble)
-        SplToken.mint_to(mintAccount, ownerTokenAccount, mintAuthority, 1);
+        // The token account saves the owner of the tokens minted with the mint account, the respective mint account and the number
+        // of tokens the owner account owns
+        SplToken.mint_to(token_data.mintAccount, ownerTokenAccount, mintAuthority, 1);
+        updateNftUri(tokenURI);
 
-        NFTOwner ownerData = NFTOwner(true, owner, ownerTokenAccount, mintAccount);
-        nftInfo[new_item_id] = NFTData(ownerData, tokenURI);
+        // Set the mint authority to null. This prevents that any other new tokens be minted, ensuring we have an NFT.
+        SplToken.remove_mint_authority(mintAccount, mintAuthority);
 
-        // Save on blockchain records information about the created token
-        emit NFTMinted(owner, mintAccount, new_item_id);
-        return new_item_id;
+        // Log on blockchain records information about the created token
+        emit NFTMinted(token_data.owner, token_data.mintAccount);
     }
 
-    /// Transfer ownership of an NFT from one account to another
+    /// Transfer ownership of this NFT from one account to another
+    /// This function only wraps the innate SPL transfer, which can be used outside this contract.
+    /// However, the difference here is the event 'NFTSold' exclusive to this function
     ///
-    /// @param tokenId the NFT's unique identifer generated when it was minted
-    /// @param newOwner the account for the new NFT owner
-    /// @param newOwnerTokenAccount the associated token account for the @param newOwner
-    function transferOwnership(uint32 tokenId, address newOwner, address newOwnerTokenAccount) public {
-        NFTData storage data = nftInfo[tokenId];
-        if(!data.ownerData.exists) {
-            return;
-        }
-        
+    /// @param oldTokenAccount the token account for the current owner
+    /// @param newTokenAccount the token account for the new owner
+    function transferOwnership(address oldTokenAccount, address newTokenAccount) public {
+        // The current owner does not need to be the caller of this functions, but they need to sign the transaction
+        // with their private key.
+        SplToken.TokenAccountData old_data = SplToken.get_token_account_data(oldTokenAccount);
+        SplToken.TokenAccountData new_data = SplToken.get_token_account_data(newTokenAccount);
+
         // To transfer the ownership of a token, we need the current owner and the new owner. The payer account is the account used to derive
         // the correspondent token account in TypeScript.
-        SplToken.transfer(data.ownerData.ownerTokenAccount, newOwnerTokenAccount, data.ownerData.owner, 1);
-        data.ownerData.owner = newOwner;
-        data.ownerData.ownerTokenAccount = newOwnerTokenAccount;
-
-        emit NFTSold(data.ownerData.ownerTokenAccount, newOwnerTokenAccount, tokenId);
+        SplToken.transfer(oldTokenAccount, newTokenAccount, old_data.owner, 1);
+        emit NFTSold(old_data.owner, new_data.owner);
     }
 
-    // Returns the URI of an NFT
-    //
-    // @param nftId the unique identifier generated when the NFT was minted
-    function getNftUri(uint32 nftId) public view returns (string memory) {
-        if (nftInfo[nftId].ownerData.exists) {
-            return nftInfo[nftId].uri;
+    /// Return the URI of this NFT
+    function getNftUri() public view returns (string memory) {
+        return uri;
+    }
+
+    /// Check if an NFT is owned by @param owner
+    ///
+    /// @param owner the account whose ownership we want to verify
+    /// @param tokenAccount the owner's associated token account
+    function isOwner(address owner, address tokenAccount) public returns (bool) {
+        SplToken.TokenAccountData data = SplToken.get_token_account_data(tokenAccount);
+
+        return owner == data.owner && mintAccount == data.mintAccount && data.balance == 1;
+    }
+
+    /// Updates the NFT URI
+    /// The metadata authority must sign the transaction so that the update can succeed.
+    ///
+    /// @param newUri a new URI for the NFT
+    function updateNftUri(string newUri) public {
+        requireMetadataSigner();
+        uri = newUri;
+    }
+
+    /// Requires the signature of the metadata authority.
+    function requireMetadataSigner() private {
+        for(uint32 i=0; i < tx.accounts.length; i++) {
+            if (tx.accounts[i].key == metadataAuthority) {
+                require(tx.accounts[i].is_signer, "the metadata authority must sign the transaction");
+                return;
+            }
         }
 
-        return "";
-    }
-
-
-    // Returns the owner, the token account and the mint account of an NFT
-    //
-    // @param nftID the unique identified generated when the NFT was minted
-    function getNftOwner(uint32 nftId) public view returns (NFTOwner) {
-        return nftInfo[nftId].ownerData;
+        revert("The metadata authority is missing");
     }
 }

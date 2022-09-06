@@ -176,4 +176,111 @@ library SplToken {
 
 		revert("account missing");
 	}
+
+	/// This enum represents the state of a token account
+	enum AccountState {
+		Uninitialized,
+		Initialized,
+		Frozen
+	}
+
+	/// This struct is the return of 'get_token_account_data'
+	struct TokenAccountData {
+		address mintAccount;
+		address owner;
+		uint64 balance;
+		bool delegate_present;
+		address delegate;
+		AccountState state;
+		bool is_native_present;
+		uint64 is_native;
+		uint64 delegated_amount;
+		bool close_authority_present;
+		address close_authority;
+	}
+
+	/// Fetch the owner, mint account and balance for an associated token account.
+	///
+	/// @param tokenAccount The token account
+	/// @return struct TokenAccountData
+	function get_token_account_data(address tokenAccount) public view returns (TokenAccountData) {
+		AccountInfo ai = get_account_info(tokenAccount);
+
+		TokenAccountData data = TokenAccountData(
+			{
+				mintAccount: ai.data.readAddress(0), 
+				owner: ai.data.readAddress(32),
+			 	balance: ai.data.readUint64LE(64),
+				delegate_present: ai.data.readUint32LE(72) > 0,
+				delegate: ai.data.readAddress(76),
+				state: AccountState(ai.data[108]),
+				is_native_present: ai.data.readUint32LE(109) > 0,
+				is_native: ai.data.readUint64LE(113),
+				delegated_amount: ai.data.readUint64LE(121),
+				close_authority_present: ai.data.readUint32LE(129) > 10,
+				close_authority: ai.data.readAddress(133)
+			}
+		);
+
+		return data;
+	}
+
+	// This struct is the return of 'get_mint_account_data'
+	struct MintAccountData {
+		bool authority_present;
+		address mint_authority;
+		uint64 supply;
+		uint8 decimals;
+		bool is_initialized;
+		bool freeze_authority_present;
+		address freeze_authority;
+	}
+
+	/// Retrieve the information saved in a mint account
+	///
+	/// @param mintAccount the account whose information we want to retrive
+	/// @return the MintAccountData struct
+	function get_mint_account_data(address mintAccount) public view returns (MintAccountData) {
+		AccountInfo ai = get_account_info(mintAccount);
+
+		uint32 authority_present = ai.data.readUint32LE(0);
+		uint32 freeze_authority_present = ai.data.readUint32LE(46);
+		MintAccountData data = MintAccountData( {
+			authority_present: authority_present > 0,
+			mint_authority: ai.data.readAddress(4),
+			supply: ai.data.readUint64LE(36),
+			decimals: uint8(ai.data[44]),
+			is_initialized: ai.data[45] > 0,
+			freeze_authority_present: freeze_authority_present > 0,
+			freeze_authority: ai.data.readAddress(50)
+		});
+
+		return data;
+	}
+
+	// A mint account has an authority, whose type is one of the members of this struct.
+	enum AuthorityType {
+		MintTokens,
+		FreezeAccount,
+		AccountOwner,
+		CloseAccount
+	}
+
+	/// Remove the mint authority from a mint account
+	///
+	/// @param mintAccount the public key for the mint account
+	/// @param mintAuthority the public for the mint authority
+	function remove_mint_authority(address mintAccount, address mintAuthority) public {
+		AccountMeta[2] metas = [
+			AccountMeta({pubkey: mintAccount, is_signer: false, is_writable: true}),
+			AccountMeta({pubkey: mintAuthority, is_signer: true, is_writable: false})
+		];
+
+		bytes data = new bytes(9);
+		data[0] = uint8(TokenInstruction.SetAuthority);
+		data[1] = uint8(AuthorityType.MintTokens);
+		data[3] = 0;
+		
+		tokenProgramId.call{accounts: metas}(data);
+	}
 }
