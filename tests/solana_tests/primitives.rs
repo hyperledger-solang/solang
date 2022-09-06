@@ -843,7 +843,10 @@ fn test_mul_within_range() {
             let limit = BigUint::from(2_u32).pow(width).sub(1_u32);
 
             // Generate a random number within the the range [0, 2^N -1]
-            let first_operand_rand = rng.gen_biguint(width.into()).add(1_u32);
+            let mut first_operand_rand = rng.gen_biguint(width.into());
+            if first_operand_rand == BigUint::from(0_u32) {
+                first_operand_rand = BigUint::from(1_u32);
+            }
 
             // Calculate a number that when multiplied by first_operand_rand, the result will not overflow N bits (the result of this division will cast the float result to int result, therefore lowering it. The result of multiplication will never overflow).
             let second_operand_rand = limit.div(&first_operand_rand);
@@ -888,7 +891,11 @@ fn test_overflow_detect_signed() {
         let limit = BigInt::from(2_u32).pow(width - 1).add(1_u32);
 
         // Divide Limit by a random number
-        let first_operand_rand = rng.gen_bigint((width - 1).into()).sub(1_u32);
+        let mut first_operand_rand = rng.gen_bigint((width - 1).into());
+
+        if first_operand_rand == BigInt::from(0_u32) {
+            first_operand_rand = BigInt::from(1_u32);
+        }
 
         // Calculate a number that when multiplied by first_operand_rand, the result will overflow N bits
         let mut second_operand_rand = limit / &first_operand_rand;
@@ -941,10 +948,14 @@ fn test_overflow_detect_unsigned() {
             let limit = BigUint::from(2_u32).pow(width);
 
             // Generate a random number within the the range [0, 2^N -1]
-            let first_operand_rand = rng.gen_biguint(width.into()).add(1_u32);
+            let mut first_operand_rand = rng.gen_biguint(width.into());
+
+            if first_operand_rand == BigUint::from(0_u32) {
+                first_operand_rand = BigUint::from(1_u32);
+            }
 
             // Calculate a number that when multiplied by first_operand_rand, the result will overflow N bits
-            let second_operand_rand = limit.div(&first_operand_rand).add(1_usize);
+            let second_operand_rand = limit.div(&first_operand_rand).add(2_usize);
 
             let res = contract.function_must_fail(
                 "mul",

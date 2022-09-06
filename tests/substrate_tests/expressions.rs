@@ -1292,7 +1292,10 @@ fn test_overflow_detect_signed() {
         // The range of values that can be held in signed N bits is [-2^(N-1), 2^(N-1)-1] .Generate a value that will overflow this range:
         let limit = BigInt::from(2_u32).pow(width - 1).add(1_u32);
 
-        let first_operand_rand = rng.gen_bigint((width - 1).into()).sub(1_u32);
+        let mut first_operand_rand = rng.gen_bigint((width - 1).into()).sub(1_u32);
+        if first_operand_rand == BigInt::from(0_u32) {
+            first_operand_rand = BigInt::from(1_u32);
+        }
         let first_op_sign = first_operand_rand.sign();
         let mut first_op_data = first_operand_rand.to_signed_bytes_le();
 
@@ -1340,7 +1343,10 @@ fn test_overflow_detect_unsigned() {
         // The range of values that can be held in signed N bits is [-2^(N-1), 2^(N-1)-1] .Generate a value that will overflow this range:
         let limit = BigUint::from(2_u32).pow(width).add(1_u32);
 
-        let first_operand_rand = rng.gen_biguint((width).into()).sub(1_u32);
+        let mut first_operand_rand = rng.gen_biguint((width).into());
+        if first_operand_rand == BigUint::from(0_u32) {
+            first_operand_rand = BigUint::from(1_u32);
+        }
         let mut first_op_data = first_operand_rand.to_bytes_le();
 
         let width_rounded = (width as usize / 8).next_power_of_two();
