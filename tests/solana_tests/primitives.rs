@@ -3,7 +3,7 @@
 use crate::build_solidity;
 use crate::build_solidity_with_overflow_check;
 use ethabi::ethereum_types::U256;
-use num_bigint::{BigInt, BigUint, RandBigInt, Sign};
+use num_bigint::{BigInt, BigUint, RandBigInt};
 use rand::seq::SliceRandom;
 use rand::Rng;
 use std::ops::Add;
