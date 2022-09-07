@@ -911,6 +911,31 @@ fn test_overflow_detect_signed() {
         );
 
         assert_ne!(res, Ok(0));
+
+        // The range of values that can be held in signed N bits is [-2^(N-1), 2^(N-1)-1] .
+        let lower_limit = BigInt::from(2_u32).pow(width - 1).sub(1usize).mul(-1_i32);
+
+        // Generate a random number within the the range [-(2^N-1), -(2^N-1)/2]
+        let first_operand_rand =
+            rng.gen_bigint_range(&lower_limit, &(lower_limit.clone().div(2usize)).add(1usize));
+
+        let res = contract.function_must_fail(
+            "mul",
+            &[
+                ethabi::Token::Int(bigint_to_eth(
+                    &first_operand_rand,
+                    width.try_into().unwrap(),
+                )),
+                ethabi::Token::Int(bigint_to_eth(
+                    &second_operand_rand,
+                    width.try_into().unwrap(),
+                )),
+            ],
+            &[],
+            None,
+        );
+
+        assert_ne!(res, Ok(0));
     }
 }
 

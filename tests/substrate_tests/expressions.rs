@@ -1313,6 +1313,25 @@ fn test_overflow_detect_signed() {
             "mul",
             first_op_data
                 .into_iter()
+                .chain(second_op_data.clone().into_iter())
+                .collect(),
+        );
+
+        // The range of values that can be held in signed N bits is [-2^(N-1), 2^(N-1)-1] .
+        let lower_limit = BigInt::from(2_u32).pow(width - 1).sub(1usize).mul(-1_i32);
+
+        // Generate a random number within the the range [-(2^N-1), -(2^N-1)/2]
+        let first_operand_rand =
+            rng.gen_bigint_range(&lower_limit, &(lower_limit.clone().div(2usize)).add(1usize));
+
+        let first_op_sign = first_operand_rand.sign();
+        let mut first_op_data = first_operand_rand.to_signed_bytes_le();
+        first_op_data.resize((width_rounded) as usize, sign_extend(first_op_sign));
+
+        contract.function_expect_failure(
+            "mul",
+            first_op_data
+                .into_iter()
                 .chain(second_op_data.into_iter())
                 .collect(),
         );
