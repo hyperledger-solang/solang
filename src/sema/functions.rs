@@ -58,7 +58,7 @@ pub fn contract_function(
                 ));
                 return None;
             }
-            if func.name.is_some() {
+            if func.name.is_some() && !ns.target.is_substrate() {
                 ns.diagnostics.push(Diagnostic::error(
                     func.loc,
                     "constructor cannot have a name".to_string(),
