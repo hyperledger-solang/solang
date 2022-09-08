@@ -13,7 +13,6 @@ pub struct ABIParam {
     pub internal_ty: String,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub components: Vec<ABIParam>,
-    #[serde(skip_serializing_if = "is_false")]
     pub indexed: bool,
 }
 
