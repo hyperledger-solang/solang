@@ -1,18 +1,24 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::build_solidity;
-use ethabi::{ethereum_types::U256, Token};
-use tiny_keccak::{Hasher, Keccak};
+use borsh::BorshDeserialize;
+use sha2::{Digest, Sha256};
 
 #[test]
 fn simple_event() {
+    #[derive(BorshDeserialize, PartialEq, Eq, Debug)]
+    struct MyEvent {
+        a: i32,
+        b: i32,
+    }
+
     let mut vm = build_solidity(
         r#"
         contract c {
-            event e(int indexed a, int b);
+            event myevent(int32 indexed a, int32 b);
 
             function go() public {
-                emit e(1, 2);
+                emit myevent(1, -2);
             }
         }"#,
     );
@@ -24,28 +30,35 @@ fn simple_event() {
     let log = vm.events();
 
     assert_eq!(log.len(), 1);
+    assert_eq!(log[0].topics.len(), 0);
 
-    let program = &vm.stack[0];
+    let encoded = log[0].data.clone();
 
-    let abi = program.abi.as_ref().unwrap();
+    let discriminator = calculate_discriminator("myevent");
 
-    let event = &abi.events_by_name("e").unwrap()[0];
+    assert_eq!(&encoded[..8], &discriminator[..]);
 
-    assert_eq!(log[0].topics[0], event.signature());
-
-    let decoded = event.parse_log(log[0].clone()).unwrap();
-
-    for log in &decoded.params {
-        match log.name.as_str() {
-            "a" => assert_eq!(log.value, Token::Int(U256::from(1))),
-            "b" => assert_eq!(log.value, Token::Int(U256::from(2))),
-            _ => panic!("unexpected field {}", log.name),
-        }
-    }
+    let decoded = MyEvent::try_from_slice(&encoded[8..]).unwrap();
+    assert_eq!(decoded.a, 1);
+    assert_eq!(decoded.b, -2);
 }
 
 #[test]
 fn less_simple_event() {
+    #[derive(BorshDeserialize, PartialEq, Eq, Debug)]
+    struct S {
+        f1: i64,
+        f2: bool,
+    }
+
+    #[derive(BorshDeserialize, PartialEq, Eq, Debug)]
+    struct MyOtherEvent {
+        a: i16,
+        b: String,
+        c: [i128; 2],
+        d: S,
+    }
+
     let mut vm = build_solidity(
         r#"
         contract c {
@@ -54,14 +67,14 @@ fn less_simple_event() {
                 bool f2;
             }
 
-            event e(
-                int indexed a,
+            event MyOtherEvent(
+                int16 indexed a,
                 string indexed b,
-                int[2] indexed c,
+                uint128[2] indexed c,
                 S d);
 
             function go() public {
-                emit e(-102, "foobar", [1, 2], S({ f1: 102, f2: true}));
+                emit MyOtherEvent(-102, "foobar", [55431, 7452], S({ f1: 102, f2: true}));
             }
         }"#,
     );
@@ -71,50 +84,25 @@ fn less_simple_event() {
     vm.function("go", &[], &[], None);
 
     let log = vm.events();
-
     assert_eq!(log.len(), 1);
+    assert_eq!(log[0].topics.len(), 0);
 
-    let program = &vm.stack[0];
+    let encoded = log[0].data.clone();
+    let discriminator = calculate_discriminator("MyOtherEvent");
+    assert_eq!(&encoded[..8], &discriminator[..]);
 
-    let abi = program.abi.as_ref().unwrap();
+    let decoded = MyOtherEvent::try_from_slice(&encoded[8..]).unwrap();
 
-    let event = &abi.events_by_name("e").unwrap()[0];
+    assert_eq!(decoded.a, -102);
+    assert_eq!(decoded.b, "foobar");
+    assert_eq!(decoded.c, [55431, 7452]);
+    assert_eq!(decoded.d, S { f1: 102, f2: true });
+}
 
-    assert_eq!(log[0].topics[0], event.signature());
-
-    let decoded = event.parse_log(log[0].clone()).unwrap();
-
-    for log in &decoded.params {
-        match log.name.as_str() {
-            "a" => assert_eq!(
-                log.value,
-                Token::Int(U256::from_dec_str("115792089237316195423570985008687907853269984665640564039457584007913129639834").unwrap())
-            ),
-            "b" => {
-                let mut hasher = Keccak::v256();
-                hasher.update(b"foobar");
-                let mut hash = [0u8; 32];
-                hasher.finalize(&mut hash);
-
-                assert_eq!(log.value, Token::FixedBytes(hash.to_vec()));
-            }
-            "c" => {
-                let mut hasher = Keccak::v256();
-                let mut v = [0u8; 32];
-                v[31] = 1;
-                hasher.update(&v);
-                v[31] = 2;
-                hasher.update(&v);
-                let mut hash = [0u8; 32];
-                hasher.finalize(&mut hash);
-
-                assert_eq!(log.value, Token::FixedBytes(hash.to_vec()));
-            }
-            "d" => {
-                assert_eq!(log.value, Token::Tuple(vec![Token::Int(U256::from(102)), Token::Bool(true)]));
-            }
-
-            _ => panic!("unexpected field {}", log.name),
-        }
-    }
+fn calculate_discriminator(event_name: &str) -> Vec<u8> {
+    let image = format!("event:{}", event_name);
+    let mut hasher = Sha256::new();
+    hasher.update(image.as_bytes());
+    let finalized = hasher.finalize();
+    finalized[..8].to_vec()
 }
