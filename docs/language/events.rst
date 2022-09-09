@@ -23,10 +23,9 @@ functions, they can be overloaded as long as the fields are of different types, 
 a different number of arguments.
 
 .. warning::
-    On Solana, writing ``indexed`` besides an event field has no impact when emitting events. The ``indexed``
-    keyword serves only to generate metadata information for IDL files. All event attributes will be encoded as data to
-    be passed for Solana's ``sol_log_data`` system call, regardless of the ``indexed`` keyword being present. This
-    behavior follows what Solana's Anchor framework does.
+    On Solana, the ``indexed`` event field attribute has no effect. All event attributes will be encoded as data to
+    be passed for Solana's ``sol_log_data`` system call, regardless if the ``indexed`` keyword is present or not.
+    This behavior follows what Solana's Anchor framework does.
 
 In Parity Substrate, the topic fields are always the hash of the value of the field. Ethereum only hashes fields
 which do not fit in the 32 bytes. Since a cryptographic hash is used, it is only possible to compare the topic against a

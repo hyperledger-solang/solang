@@ -14,7 +14,9 @@ use solang_parser::pt;
 /// This traits delineates the common behavior of event emission. As each target uses a different
 /// encoding scheme, there must be an implementation of this trait for each.
 pub(super) trait EventEmitter {
-    /// Generate the CFG instructions for emitting an event
+    /// Generate the CFG instructions for emitting an event.
+    /// All necessary code analysis should have been done during parsing and 'sema';
+    /// If code generation does not work here, there is a bug in the compiler.
     fn emit(
         &self,
         contract_no: usize,
