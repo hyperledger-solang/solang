@@ -23,6 +23,7 @@ pub struct ABI {
     pub name: String,
     #[serde(rename = "type")]
     pub ty: String,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
     pub inputs: Vec<ABIParam>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub outputs: Option<Vec<ABIParam>>,
