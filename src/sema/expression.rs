@@ -5852,6 +5852,12 @@ fn method_call_pos_args(
                         symtable,
                         diagnostics,
                     );
+                } else {
+                    diagnostics.push(Diagnostic::error(
+                        *loc,
+                        "function calls via contract name are only valid for base contracts"
+                            .to_string(),
+                    ));
                 }
             }
         }
