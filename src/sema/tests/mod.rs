@@ -5,7 +5,18 @@ use crate::sema::ast::{Expression, Parameter, Statement, TryCatch, Type};
 use crate::sema::diagnostics::Diagnostics;
 use crate::sema::expression::unescape;
 use crate::sema::yul::ast::InlineAssembly;
+use crate::{parse_and_resolve, sema::ast, FileResolver, Target};
 use solang_parser::pt::Loc;
+use std::ffi::OsStr;
+
+pub(crate) fn parse(src: &'static str) -> ast::Namespace {
+    let mut cache = FileResolver::new();
+    cache.set_file_contents("test.sol", src.to_string());
+
+    let ns = parse_and_resolve(OsStr::new("test.sol"), &mut cache, Target::EVM);
+    ns.print_diagnostics_in_plain(&cache, false);
+    ns
+}
 
 #[test]
 fn test_unescape() {
@@ -128,3 +139,20 @@ fn test_statement_reachable() {
         assert_eq!(test_case.reachable(), expected);
     }
 }
+
+#[test]
+fn constant_overflow() {
+    let file = r#"
+        contract test_contract {
+            function test() public returns (int8) {
+                int8 sesa_ovf = 127 + 6;
+                int8 sesa_ovf
+                return 1;
+            }
+        }
+    
+        "#;
+    let ns = parse(file);
+    assert!(ns.diagnostics.contains_message("Type int_const 133 is not implicitly convertible to expected type Int(8). Literal is too large to fit in Int(8)."));
+}
+// Add more test cases here

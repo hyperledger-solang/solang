@@ -10,6 +10,7 @@ use super::contracts::is_base;
 use super::diagnostics::Diagnostics;
 use super::eval::eval_const_number;
 use super::eval::eval_const_rational;
+use super::eval::eval_constants_in_expression;
 use super::format::string_format;
 use super::{symtable::Symtable, using};
 use crate::sema::unused_variable::{
@@ -3968,6 +3969,7 @@ fn assign_single(
         diagnostics,
         ResolveTo::Type(var_ty.deref_any()),
     )?;
+    let _ = eval_constants_in_expression(&val, ns);
     used_variable(ns, &val, symtable);
     match &var {
         Expression::ConstantVariable(loc, _, Some(contract_no), var_no) => {

@@ -3,6 +3,7 @@
 use super::ast::*;
 use super::contracts::is_base;
 use super::diagnostics::Diagnostics;
+use super::eval::eval_constants_in_expression;
 use super::expression::{
     available_functions, call_expr, constructor_named_args, expression, function_call_expr,
     function_call_pos_args, match_constructor_to_args, named_call_expr, named_function_call_expr,
@@ -330,6 +331,8 @@ fn statement(
                     diagnostics,
                     ResolveTo::Type(&var_ty),
                 )?;
+
+                let _ = eval_constants_in_expression(&expr, ns);
 
                 used_variable(ns, &expr, symtable);
 
@@ -699,6 +702,7 @@ fn statement(
         }
         pt::Statement::Return(loc, Some(returns)) => {
             let expr = return_with_values(returns, loc, context, symtable, ns, diagnostics)?;
+            let _ = eval_constants_in_expression(&expr, ns);
 
             for offset in symtable.returns.iter() {
                 let elem = symtable.vars.get_mut(offset).unwrap();
@@ -750,28 +754,60 @@ fn statement(
                         Err(())
                     };
                 }
-                pt::Expression::FunctionCall(loc, ty, args) => call_expr(
-                    loc,
-                    ty,
-                    args,
-                    true,
-                    context,
-                    ns,
-                    symtable,
-                    diagnostics,
-                    ResolveTo::Discard,
-                )?,
-                pt::Expression::NamedFunctionCall(loc, ty, args) => named_call_expr(
-                    loc,
-                    ty,
-                    args,
-                    true,
-                    context,
-                    ns,
-                    symtable,
-                    diagnostics,
-                    ResolveTo::Discard,
-                )?,
+                pt::Expression::FunctionCall(loc, ty, args) => {
+                    let ret = call_expr(
+                        loc,
+                        ty,
+                        args,
+                        true,
+                        context,
+                        ns,
+                        symtable,
+                        diagnostics,
+                        ResolveTo::Discard,
+                    )?;
+
+                    if let Expression::InternalFunctionCall {
+                        loc: _,
+                        returns: _,
+                        function: _,
+                        args,
+                    } = ret.clone()
+                    {
+                        for i in 0..args.len() {
+                            let _ = eval_constants_in_expression(&args[i], ns);
+                        }
+                    }
+
+                    ret
+                }
+                pt::Expression::NamedFunctionCall(loc, ty, args) => {
+                    let ret = named_call_expr(
+                        loc,
+                        ty,
+                        args,
+                        true,
+                        context,
+                        ns,
+                        symtable,
+                        diagnostics,
+                        ResolveTo::Discard,
+                    )?;
+
+                    if let Expression::InternalFunctionCall {
+                        loc: _,
+                        returns: _,
+                        function: _,
+                        args,
+                    } = ret.clone()
+                    {
+                        for i in 0..args.len() {
+                            let _ = eval_constants_in_expression(&args[i], ns);
+                        }
+                    }
+
+                    ret
+                }
                 _ => {
                     // is it a destructure statement
                     if let pt::Expression::Assign(_, var, expr) = expr {
