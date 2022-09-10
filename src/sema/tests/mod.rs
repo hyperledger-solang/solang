@@ -144,9 +144,9 @@ fn test_statement_reachable() {
 fn constant_overflow() {
     let file = r#"
         contract test_contract {
-            function test() public returns (int8) {
-                int8 sesa_ovf = 127 + 6;
-                int8 sesa_ovf
+            function test(int8 input) public returns (int8) {
+                int8 add_ovf = 127 + 6;
+                uint8 negative = 3-4; 
                 return 1;
             }
         }
@@ -154,5 +154,6 @@ fn constant_overflow() {
         "#;
     let ns = parse(file);
     assert!(ns.diagnostics.contains_message("Type int_const 133 is not implicitly convertible to expected type Int(8). Literal is too large to fit in Int(8)."));
+    assert!(ns.diagnostics.contains_message("Type int_const -1 is not implicitly convertible to expected type Uint(8). Cannot implicitly convert signed literal to unsigned type."));
 }
 // Add more test cases here

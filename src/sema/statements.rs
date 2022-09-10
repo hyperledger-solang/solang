@@ -774,8 +774,8 @@ fn statement(
                         args,
                     } = ret.clone()
                     {
-                        for i in 0..args.len() {
-                            let _ = eval_constants_in_expression(&args[i], ns);
+                        for args_iter in &args {
+                            let _ = eval_constants_in_expression(args_iter, ns);
                         }
                     }
 
@@ -801,8 +801,8 @@ fn statement(
                         args,
                     } = ret.clone()
                     {
-                        for i in 0..args.len() {
-                            let _ = eval_constants_in_expression(&args[i], ns);
+                        for args_iter in &args {
+                            let _ = eval_constants_in_expression(args_iter, ns);
                         }
                     }
 
