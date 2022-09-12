@@ -27,7 +27,7 @@ fn constant_in_library() {
 }
 
 #[test]
-#[should_panic]
+#[should_panic(expected = "called `Option::unwrap()` on a `None` value")]
 fn constant_in_contract() {
     build_solidity(
         r#"
