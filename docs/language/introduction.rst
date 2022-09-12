@@ -1,3 +1,5 @@
+.. _language-status:
+
 Brief Language status
 =====================
 

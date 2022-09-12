@@ -3,15 +3,16 @@ Visual Studio Code Extension
 ============================
 
 Solang has
-`language server <https://en.wikipedia.org/wiki/Language_Server_Protocol>`_ built
-into the executable, which can be used by the Visual Studio Code extension. This
+a `language server <https://en.wikipedia.org/wiki/Language_Server_Protocol>`_ built
+into the executable, which can be used by the Visual Studio Code extension, or by
+any editor that can use a lsp language server. The Visual Studio Code
 extension provides the following:
 
-1. Syntax highlighting
-2. Compiler warnings and errors are displayed in the problems tab and marked
-   with squiqqly lines, this is also known as `diagnostics`.
-3. Hovering over variables, types, functions etc and more will give information,
-   For example this will give the struct fields when hovering over a variable
+1. Syntax highlighting.
+2. Compiler warnings and errors displayed in the problems tab and marked
+   with squiggly lines.
+3. Additional information when hovering over variables, types, functions, etc.
+   For example, this will give the struct fields when hovering over a variable
    which is a reference to a struct.
 
 .. image:: extension-screenshot.png
@@ -19,14 +20,43 @@ extension provides the following:
 Both the Visual Studio Code extension code and the language server were developed under a
 `Hyperledger Mentorship programme <https://wiki.hyperledger.org/display/INTERN/Create+a+new+Solidity+Language+Server+%28SLS%29+using+Solang+Compiler>`_.
 
+Solidity Language flavour
+-------------------------
+
+The Solidity language flavour depends on what target you are compiling for. For
+example:
+
+* Ethereum style address literals like ``0xE0f5206BBD039e7b0592d8918820024e2a7437b9`` are
+  not supported on Substrate or Solana, but are supported for EVM.
+* On Substrate and Solana, base58 style encoded address literals like
+  ``address"5GBWmgdFAMqm8ZgAHGobqDqX6tjLxJhv53ygjNtaaAn3sjeZ"`` are supported, but
+  not with EVM.
+* On Solana, there is special builtin import file called ``'solana'`` available.
+* Different blockchains offer different builtins. See the :ref:`builtins documentation <builtins>`.
+* See :ref:`language-status` for compatiblity with Ethereum Solidity (solc)
+* There are many more differences, which are noted throughout the documentation.
+
+You can choose the between the following targets:
+
+solana
+   Solidity for Solana
+
+substrate
+   Solidity for Substrate (Polkadot)
+
+evm
+   Solidity for any EVM based chain like Ethereum
+
+Note that the language server has support for EVM, but Hyperledger Solang does
+not support compiling for EVM (yet).
+
 Using the extension
 -------------------
 
 The extension can be found on the `Visual Studio Marketplace <https://marketplace.visualstudio.com/items?itemName=solang.solang>`_.
 
-On first start, the extension will ask to download the Solang binary. Once this is done, it should just automatically work.
-However, you should set the blockchain target in the extension settings. The Solidity language differs in subtle ways depending on which target you are
-building for. Different blockchains offer different builtins, for example. See the :ref:`builtins documentation <builtins>` for more information.
+When started for the first time, the extension will download the Solang binary. Once this is done, it should just automatically work.
+Updates are downloaded when made available. However, you should set the blockchain target in the extension settings.
 
 .. image:: extension-config.png
 
@@ -43,7 +73,7 @@ The extension client code is in
 `src/client/extension.ts <https://github.com/hyperledger/solang/tree/main/vscode/src/client/extension.ts>`_.
 
 Secondly, there is the language server which is written in Rust.
-The Solang binary has an option ``--language-server``, which start the
+The Solang binary has a subcommand ``language-server``, which starts the
 `built-in language server <https://github.com/hyperledger/solang/blob/main/src/bin/languageserver/mod.rs>`_.
 
 Once you have node and npm installed, you can build the extension like so:
@@ -57,7 +87,7 @@ Once you have node and npm installed, you can build the extension like so:
     vsce package
 
 You should now have an extension file called solang-0.3.0.vsix which can be
-installed using `code --install-extension solang-0.3.0.vsix`.
+installed using ``code --install-extension solang-0.3.0.vsix``.
 
 Alternatively, the extension be run from vscode itself.
 
