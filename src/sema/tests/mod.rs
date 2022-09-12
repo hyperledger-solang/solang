@@ -141,19 +141,66 @@ fn test_statement_reachable() {
 }
 
 #[test]
-fn constant_overflow() {
+fn constant_overflow_checks() {
     let file = r#"
-        contract test_contract {
-            function test(int8 input) public returns (int8) {
-                int8 add_ovf = 127 + 6;
-                uint8 negative = 3-4; 
-                return 1;
-            }
+    contract test_contract {
+        function test_params(uint8 usesa, int8 sesa) public {}
+    
+        function test_add(int8 input) public returns (uint8) {
+            // Type int_const 133 is not implicitly convertible to expected type Int(8). Literal is too large to fit in Int(8).
+            int8 add_ovf = 127 + 6;
+    
+            // Type int_const -1 is not implicitly convertible to expected type Uint(8). Cannot implicitly convert signed literal to unsigned type.
+            uint8 negative = 3 - 4;
+    
+            // Type int_const 133 is not implicitly convertible to expected type Int(8). Literal is too large to fit in Int(8).
+            int8 mixed = 126 + 7 + input;
+    
+            // Type int_const -1 is not implicitly convertible to expected type Uint(8). Cannot implicitly convert signed literal to unsigned type.
+            return 1 - 2;
         }
+    
+        function test_mul(int8 input) public {
+            // Type int_const 762 is not implicitly convertible to expected type Int(8). Literal is too large to fit in Int(8).
+            int8 mul_ovf = 127 * 6;
+    
+            // Type int_const 882 is not implicitly convertible to expected type Int(8). Literal is too large to fit in Int(8).
+            int8 mixed = 126 * 7 * input;
+        }
+    
+        function test_shift(int8 input) public {
+            // Type int_const 128 is not implicitly convertible to expected type Int(8). Literal is too large to fit in Int(8).
+            int8 mul_ovf = 1 << 7;
+    
+            // Type int_const 128 is not implicitly convertible to expected type Int(8). Literal is too large to fit in Int(8).
+            int8 mixed = (1 << 7) + input;
+        }
+    
+        function test_call() public {
+            // Type int_const -1 is not implicitly convertible to expected type Uint(8). Cannot implicitly convert signed literal to unsigned type.
+            // Type int_const 129 is not implicitly convertible to expected type Int(8). Literal is too large to fit in Int(8).
+            test_params(1 - 2, 127 + 2);
+    
+            // Type int_const -1 is not implicitly convertible to expected type Uint(8). Cannot implicitly convert signed literal to unsigned type.
+            // Type int_const 129 is not implicitly convertible to expected type Int(8). Literal is too large to fit in Int(8).
+            test_params({usesa: 1 - 2, sesa: 127 + 2});
+        }
+    }
     
         "#;
     let ns = parse(file);
-    assert!(ns.diagnostics.contains_message("Type int_const 133 is not implicitly convertible to expected type Int(8). Literal is too large to fit in Int(8)."));
-    assert!(ns.diagnostics.contains_message("Type int_const -1 is not implicitly convertible to expected type Uint(8). Cannot implicitly convert signed literal to unsigned type."));
+    let errors = ns.diagnostics.errors();
+
+    assert_eq!(errors[0].message,"Type int_const 133 is not implicitly convertible to expected type Int(8). Literal is too large to fit in Int(8).");
+    assert_eq!(errors[1].message,"Type int_const -1 is not implicitly convertible to expected type Uint(8). Cannot implicitly convert signed literal to unsigned type.");
+    assert_eq!(errors[2].message,"Type int_const 133 is not implicitly convertible to expected type Int(8). Literal is too large to fit in Int(8).");
+    assert_eq!(errors[3].message,"Type int_const -1 is not implicitly convertible to expected type Uint(8). Cannot implicitly convert signed literal to unsigned type.");
+    assert_eq!(errors[4].message,"Type int_const 762 is not implicitly convertible to expected type Int(8). Literal is too large to fit in Int(8).");
+    assert_eq!(errors[5].message,"Type int_const 882 is not implicitly convertible to expected type Int(8). Literal is too large to fit in Int(8).");
+    assert_eq!(errors[6].message,"Type int_const 128 is not implicitly convertible to expected type Int(8). Literal is too large to fit in Int(8).");
+    assert_eq!(errors[7].message,"Type int_const 128 is not implicitly convertible to expected type Int(8). Literal is too large to fit in Int(8).");
+    assert_eq!(errors[8].message,"Type int_const -1 is not implicitly convertible to expected type Uint(8). Cannot implicitly convert signed literal to unsigned type.");
+    assert_eq!(errors[9].message,"Type int_const 129 is not implicitly convertible to expected type Int(8). Literal is too large to fit in Int(8).");
+    assert_eq!(errors[10].message,"Type int_const -1 is not implicitly convertible to expected type Uint(8). Cannot implicitly convert signed literal to unsigned type.");
+    assert_eq!(errors[11].message,"Type int_const 129 is not implicitly convertible to expected type Int(8). Literal is too large to fit in Int(8).");
 }
-// Add more test cases here
