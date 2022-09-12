@@ -4,7 +4,7 @@ use crate::build_solidity;
 use ethabi::{ethereum_types::U256, Token};
 
 #[test]
-fn constant() {
+fn constant_in_library() {
     let mut vm = build_solidity(
         r#"
         library Library {
@@ -24,8 +24,12 @@ fn constant() {
 
     let returns = vm.function("f", &[], &[], None);
     assert_eq!(returns, vec![Token::Uint(U256::from(42))]);
+}
 
-    let mut vm = build_solidity(
+#[test]
+#[should_panic]
+fn constant_in_contract() {
+    build_solidity(
         r#"
         contract C {
             uint256 public constant STATIC = 42;
@@ -39,9 +43,4 @@ fn constant() {
         }
         "#,
     );
-
-    vm.constructor("foo", &[]);
-
-    let returns = vm.function("f", &[], &[], None);
-    assert_eq!(returns, vec![Token::Uint(U256::from(42))]);
 }
