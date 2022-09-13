@@ -2,7 +2,7 @@
 
 use base58::{FromBase58, ToBase58};
 use byteorder::{ByteOrder, LittleEndian, WriteBytesExt};
-use ethabi::{ethereum_types::H256, RawLog, Token};
+use ethabi::{RawLog, Token};
 use libc::c_char;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
@@ -1809,22 +1809,11 @@ impl VirtualMachine {
         self.events
             .iter()
             .map(|fields| {
-                assert_eq!(fields.len(), 2);
-
-                assert_eq!(fields[0].len() % 32, 0);
-                assert!(fields[0].len() <= 4 * 32);
-
-                let topics = fields[0]
-                    .chunks_exact(32)
-                    .map(|topic| {
-                        let topic: [u8; 32] = topic.try_into().unwrap();
-
-                        H256::from(topic)
-                    })
-                    .collect();
-                let data = fields[1].clone();
-
-                RawLog { topics, data }
+                assert_eq!(fields.len(), 1);
+                RawLog {
+                    topics: vec![],
+                    data: fields[0].clone(),
+                }
             })
             .collect()
     }

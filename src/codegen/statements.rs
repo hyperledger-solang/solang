@@ -9,6 +9,7 @@ use super::{
     cfg::{ControlFlowGraph, Instr},
     vartable::Vartable,
 };
+use crate::codegen::events::new_event_emitter;
 use crate::codegen::unused_variable::{
     should_remove_assignment, should_remove_variable, SideEffectsCheckParameters,
 };
@@ -24,7 +25,6 @@ use crate::sema::Recurse;
 use num_traits::Zero;
 use solang_parser::pt;
 use solang_parser::pt::CodeLocation;
-use tiny_keccak::{Hasher, Keccak};
 
 /// Resolve a statement, which might be a block of statements or an entire body of a function
 pub(crate) fn statement(
@@ -572,101 +572,14 @@ pub(crate) fn statement(
             return_override,
             opt,
         ),
-        Statement::Emit { event_no, args, .. } => {
-            let event = &ns.events[*event_no];
-            let mut data = Vec::new();
-            let mut data_tys = Vec::new();
-            let mut topics = Vec::new();
-            let mut topic_tys = Vec::new();
-
-            if !event.anonymous && !ns.target.is_substrate() {
-                let mut hasher = Keccak::v256();
-                hasher.update(event.signature.as_bytes());
-                let mut hash = [0u8; 32];
-                hasher.finalize(&mut hash);
-
-                topic_tys.push(Type::Bytes(32));
-                topics.push(Expression::BytesLiteral(
-                    pt::Loc::Codegen,
-                    Type::Bytes(32),
-                    hash.to_vec(),
-                ));
-            }
-
-            for (i, arg) in args.iter().enumerate() {
-                if event.fields[i].indexed {
-                    let ty = arg.ty();
-
-                    match ty {
-                        Type::String | Type::DynamicBytes => {
-                            let e = expression(
-                                &ast::Expression::Builtin(
-                                    pt::Loc::Codegen,
-                                    vec![Type::Bytes(32)],
-                                    ast::Builtin::Keccak256,
-                                    vec![arg.clone()],
-                                ),
-                                cfg,
-                                contract_no,
-                                Some(func),
-                                ns,
-                                vartab,
-                                opt,
-                            );
-
-                            topics.push(e);
-                            topic_tys.push(Type::Bytes(32));
-                        }
-                        Type::Struct(_) | Type::Array(..) => {
-                            // We should have an AbiEncodePackedPad
-                            let e = expression(
-                                &ast::Expression::Builtin(
-                                    pt::Loc::Codegen,
-                                    vec![Type::Bytes(32)],
-                                    ast::Builtin::Keccak256,
-                                    vec![ast::Expression::Builtin(
-                                        pt::Loc::Codegen,
-                                        vec![Type::DynamicBytes],
-                                        ast::Builtin::AbiEncodePacked,
-                                        vec![arg.clone()],
-                                    )],
-                                ),
-                                cfg,
-                                contract_no,
-                                Some(func),
-                                ns,
-                                vartab,
-                                opt,
-                            );
-
-                            topics.push(e);
-                            topic_tys.push(Type::Bytes(32));
-                        }
-                        _ => {
-                            let e = expression(arg, cfg, contract_no, Some(func), ns, vartab, opt);
-
-                            topics.push(e);
-                            topic_tys.push(ty);
-                        }
-                    }
-                } else {
-                    let e = expression(arg, cfg, contract_no, Some(func), ns, vartab, opt);
-
-                    data.push(e);
-                    data_tys.push(arg.ty());
-                }
-            }
-
-            cfg.add(
-                vartab,
-                Instr::EmitEvent {
-                    event_no: *event_no,
-                    data,
-                    data_tys,
-                    topics,
-                    topic_tys,
-                },
-            );
+        Statement::Emit {
+            loc,
+            event_no,
+            args,
+            ..
+        } => {
+            let emitter = new_event_emitter(loc, *event_no, args, ns);
+            emitter.emit(contract_no, func, cfg, vartab, opt);
         }
         Statement::Underscore(_) => {
             // ensure we get phi nodes for the return values

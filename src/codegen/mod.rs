@@ -5,6 +5,7 @@ pub mod cfg;
 mod constant_folding;
 mod dead_storage;
 mod encoding;
+mod events;
 mod expression;
 mod external_functions;
 mod reaching_definitions;
