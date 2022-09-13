@@ -343,15 +343,24 @@ impl fmt::Display for HashTy {
 pub struct BasicBlock {
     pub phis: Option<BTreeSet<usize>>,
     pub name: String,
-    pub instr: Vec<Instr>,
+    pub instr: Vec<(InstrOrigin, Instr)>,
     pub defs: reaching_definitions::VarDefs,
     pub loop_reaching_variables: HashSet<usize>,
     pub transfers: Vec<Vec<reaching_definitions::Transfer>>,
 }
 
+/// This enum saves information about the origin of each instruction. They can originate from
+/// Solidity code, Yul code or during code generation.
+#[derive(Clone)]
+pub enum InstrOrigin {
+    Solidity,
+    Yul,
+    Codegen,
+}
+
 impl BasicBlock {
-    fn add(&mut self, ins: Instr) {
-        self.instr.push(ins);
+    fn add(&mut self, instr_origin: InstrOrigin, ins: Instr) {
+        self.instr.push((instr_origin, ins));
     }
 }
 
@@ -449,12 +458,22 @@ impl ControlFlowGraph {
         self.current = pos;
     }
 
+    /// Add an instruction from Solidity to the CFG
     pub fn add(&mut self, vartab: &mut Vartable, ins: Instr) {
         if let Instr::Set { res, .. } = ins {
             vartab.set_dirty(res);
         }
-        self.blocks[self.current].add(ins);
+        self.blocks[self.current].add(InstrOrigin::Solidity, ins);
     }
+
+    /// Add an instruction from Yul to the CFG
+    pub fn add_yul(&mut self, vartab: &mut Vartable, ins: Instr) {
+        if let Instr::Set { res, .. } = ins {
+            vartab.set_dirty(res);
+        }
+        self.blocks[self.current].add(InstrOrigin::Yul, ins);
+    }
+
     /// Function to modify array length temp by inserting an add/sub instruction in the cfg right after a push/pop instruction.
     /// The operands of the add/sub instruction are the temp variable, and +/- 1.
     pub fn modify_temp_array_length(
@@ -1179,7 +1198,7 @@ impl ControlFlowGraph {
             .unwrap();
         }
 
-        for ins in &self.blocks[pos].instr {
+        for (_, ins) in &self.blocks[pos].instr {
             writeln!(s, "\t{}", self.instr_to_string(contract, ns, ins)).unwrap();
         }
 

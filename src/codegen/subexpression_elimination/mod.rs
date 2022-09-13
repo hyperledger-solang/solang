@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::codegen::cfg::{BasicBlock, ControlFlowGraph, Instr};
+use crate::codegen::cfg::{BasicBlock, ControlFlowGraph, Instr, InstrOrigin};
 use crate::codegen::reaching_definitions::block_edges;
 use crate::codegen::subexpression_elimination::available_variable::AvailableVariable;
 use crate::codegen::subexpression_elimination::common_subexpression_tracker::CommonSubExpressionTracker;
@@ -103,7 +103,7 @@ pub fn common_sub_expression_elimination(cfg: &mut ControlFlowGraph, ns: &mut Na
         cst.set_cur_block(*block_no);
         let mut cur_set = sets.remove(block_no).unwrap();
         kill_loop_variables(cur_block, &mut cur_set, *cycle);
-        for instr in cur_block.instr.iter() {
+        for (_, instr) in cur_block.instr.iter() {
             cur_set.process_instruction(instr, &mut ave, &mut cst);
         }
 
@@ -122,12 +122,12 @@ pub fn common_sub_expression_elimination(cfg: &mut ControlFlowGraph, ns: &mut Na
         let mut cur_block = &mut cfg.blocks[*block_no];
         ave.set_cur_block(*block_no);
         cst.set_cur_block(*block_no);
-        let mut new_instructions: Vec<Instr> = Vec::new();
+        let mut new_instructions: Vec<(InstrOrigin, Instr)> = Vec::new();
         kill_loop_variables(cur_block, &mut cur_set, *cycle);
-        for instr in cur_block.instr.iter() {
+        for (origin, instr) in cur_block.instr.iter() {
             let instr = cur_set.regenerate_instruction(instr, &mut ave, &mut cst);
             cst.add_new_instructions(&mut new_instructions);
-            new_instructions.push(instr);
+            new_instructions.push((origin.clone(), instr));
         }
 
         cur_block.instr = new_instructions;
