@@ -4522,21 +4522,6 @@ fn member_access(
         diagnostics,
         resolve_to,
     )? {
-        // Acccessing constant values on contract names is only valid for base or library contracts
-        if let pt::Expression::Variable(namespace) = e {
-            if symtable.find(&namespace.name).is_none() {
-                if let (Some(base), Some(contract)) = (
-                    ns.resolve_contract(context.file_no, namespace),
-                    context.contract_no,
-                ) {
-                    if !is_base(base, contract, ns) && !ns.contracts[base].is_library() {
-                        diagnostics
-                            .push(Diagnostic::error(e.loc(), "member access for constant values via contract name is only valid for base contracts".into()));
-                        return Err(());
-                    }
-                }
-            }
-        }
         return Ok(expr);
     }
 
@@ -6697,6 +6682,11 @@ fn method_call_named_args(
                         symtable,
                         diagnostics,
                     );
+                } else {
+                    diagnostics.push(Diagnostic::error(
+                        *loc,
+                        "function calls via contract name are only valid for base contracts".into(),
+                    ));
                 }
             }
         }
