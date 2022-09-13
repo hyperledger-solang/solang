@@ -950,7 +950,7 @@ fn test_power_overflow_boundaries() {
     for width in (8..=256).step_by(8) {
         let src = r#"
         contract test {
-            function pow(uintN a, uintN b) public returns (uintN) { 
+            function pow(uintN a, uintN b) public returns (uintN) {
                 return a ** b;
             }
         }"#
@@ -1119,8 +1119,8 @@ fn test_mul_within_range() {
         let width_rounded = (width as usize / 8).next_power_of_two();
         let mut runtime = build_solidity(&src);
 
-        // The range of values that can be held in signed N bits is [-2^(N-1), 2^(N-1)-1]. Here we generate a random number within this range and multiply it by 1
-        let a = rng.gen_biguint((width).try_into().unwrap()).sub(1_u32);
+        // The range of values that can be held in unsigned N bits is [0, 2^N-1]. Here we generate a random number within this range and multiply it by 1
+        let a = rng.gen_biguint((width).try_into().unwrap());
 
         let mut a_data = a.to_bytes_le();
 
