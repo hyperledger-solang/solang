@@ -96,14 +96,14 @@ pub(crate) fn statement(
 
         YulStatement::Leave(..) => {
             if let Some(early_leave) = early_return {
-                cfg.add(vartab, early_leave.clone());
+                cfg.add_yul(vartab, early_leave.clone());
             } else {
-                cfg.add(vartab, Instr::Return { value: vec![] });
+                cfg.add_yul(vartab, Instr::Return { value: vec![] });
             }
         }
 
         YulStatement::Break(..) => {
-            cfg.add(
+            cfg.add_yul(
                 vartab,
                 Instr::Branch {
                     block: loops.do_break(),
@@ -112,7 +112,7 @@ pub(crate) fn statement(
         }
 
         YulStatement::Continue(..) => {
-            cfg.add(
+            cfg.add_yul(
                 vartab,
                 Instr::Branch {
                     block: loops.do_continue(),
@@ -149,7 +149,7 @@ fn process_variable_declaration(
     };
 
     for (var_index, item) in vars.iter().enumerate() {
-        cfg.add(
+        cfg.add_yul(
             vartab,
             Instr::Set {
                 loc: *loc,
@@ -203,7 +203,7 @@ fn cfg_single_assigment(
         | ast::YulExpression::SolidityLocalVariable(_, ty, None, var_no) => {
             // Ensure both types are compatible
             let rhs = rhs.cast(ty, ns);
-            cfg.add(
+            cfg.add_yul(
                 vartab,
                 Instr::Set {
                     loc: *loc,
@@ -221,7 +221,7 @@ fn cfg_single_assigment(
         ) => {
             // This is an assignment to a pointer, so we make sure the rhs has a compatible size
             let rhs = rhs.cast(ty, ns);
-            cfg.add(
+            cfg.add_yul(
                 vartab,
                 Instr::Set {
                     loc: *loc,
@@ -241,7 +241,7 @@ fn cfg_single_assigment(
                 ) => match suffix {
                     YulSuffix::Offset => {
                         let rhs = rhs.cast(&lhs.ty(), ns);
-                        cfg.add(
+                        cfg.add_yul(
                             vartab,
                             Instr::Set {
                                 loc: *loc,
@@ -277,7 +277,7 @@ fn cfg_single_assigment(
                         member_no,
                     );
 
-                    cfg.add(
+                    cfg.add_yul(
                         vartab,
                         Instr::Store {
                             dest: ptr,
@@ -295,7 +295,7 @@ fn cfg_single_assigment(
                     // This assignment changes the value of a pointer to storage
                     if matches!(suffix, YulSuffix::Slot) {
                         let rhs = rhs.cast(&lhs.ty(), ns);
-                        cfg.add(
+                        cfg.add_yul(
                             vartab,
                             Instr::Set {
                                 loc: *loc,
@@ -354,7 +354,7 @@ fn process_if_block(
     let then = cfg.new_basic_block("then".to_string());
     let endif = cfg.new_basic_block("endif".to_string());
 
-    cfg.add(
+    cfg.add_yul(
         vartab,
         Instr::BranchCond {
             cond: bool_cond,
@@ -371,7 +371,7 @@ fn process_if_block(
     }
 
     if block.is_next_reachable() {
-        cfg.add(vartab, Instr::Branch { block: endif });
+        cfg.add_yul(vartab, Instr::Branch { block: endif });
     }
 
     cfg.set_phis(endif, vartab.pop_dirty_tracker());
@@ -407,7 +407,7 @@ fn process_for_block(
     let body_block = cfg.new_basic_block("body".to_string());
     let end_block = cfg.new_basic_block("end_for".to_string());
 
-    cfg.add(vartab, Instr::Branch { block: cond_block });
+    cfg.add_yul(vartab, Instr::Branch { block: cond_block });
     cfg.set_basic_block(cond_block);
 
     let cond_expr = expression(condition, contract_no, ns, vartab, cfg, opt);
@@ -426,7 +426,7 @@ fn process_for_block(
         )
     };
 
-    cfg.add(
+    cfg.add_yul(
         vartab,
         Instr::BranchCond {
             cond: cond_expr,
@@ -444,7 +444,7 @@ fn process_for_block(
     }
 
     if execution_block.is_next_reachable() {
-        cfg.add(vartab, Instr::Branch { block: next_block });
+        cfg.add_yul(vartab, Instr::Branch { block: next_block });
     }
 
     loops.leave_scope();
@@ -456,7 +456,7 @@ fn process_for_block(
     }
 
     if post_block.is_next_reachable() {
-        cfg.add(vartab, Instr::Branch { block: cond_block });
+        cfg.add_yul(vartab, Instr::Branch { block: cond_block });
     }
 
     cfg.set_basic_block(end_block);

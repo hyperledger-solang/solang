@@ -3602,21 +3602,18 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         function: FunctionValue<'b>,
         _event_no: usize,
         data: &[BasicValueEnum<'b>],
-        data_tys: &[ast::Type],
-        topics: &[BasicValueEnum<'b>],
-        topic_tys: &[ast::Type],
-        ns: &ast::Namespace,
+        _data_tys: &[ast::Type],
+        _topics: &[BasicValueEnum<'b>],
+        _topic_tys: &[ast::Type],
+        _ns: &ast::Namespace,
     ) {
         let fields = binary.build_array_alloca(
             function,
             binary.module.get_struct_type("SolLogDataField").unwrap(),
-            binary.context.i32_type().const_int(2, false),
+            binary.context.i32_type().const_int(1, false),
             "fields",
         );
 
-        let (topic_ptr, topic_len) =
-            self.abi_encode(binary, None, false, function, topics, topic_tys, ns);
-
         let field_data = unsafe {
             binary.builder.build_gep(
                 fields,
@@ -3628,7 +3625,8 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             )
         };
 
-        binary.builder.build_store(field_data, topic_ptr);
+        let bytes_pointer = binary.vector_bytes(data[0]);
+        binary.builder.build_store(field_data, bytes_pointer);
 
         let field_len = unsafe {
             binary.builder.build_gep(
@@ -3637,56 +3635,24 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                     binary.context.i32_type().const_zero(),
                     binary.context.i32_type().const_int(1, false),
                 ],
-                "field_len",
+                "data_len",
             )
         };
 
         binary.builder.build_store(
             field_len,
-            binary
-                .builder
-                .build_int_z_extend(topic_len, binary.context.i64_type(), "topic_len64"),
-        );
-
-        let (data_ptr, data_len) =
-            self.abi_encode(binary, None, false, function, data, data_tys, ns);
-
-        let field_data = unsafe {
-            binary.builder.build_gep(
-                fields,
-                &[
-                    binary.context.i32_type().const_int(1, false),
-                    binary.context.i32_type().const_zero(),
-                ],
-                "field_data",
-            )
-        };
-
-        binary.builder.build_store(field_data, data_ptr);
-
-        let field_len = unsafe {
-            binary.builder.build_gep(
-                fields,
-                &[
-                    binary.context.i32_type().const_int(1, false),
-                    binary.context.i32_type().const_int(1, false),
-                ],
-                "field_len",
-            )
-        };
-
-        binary.builder.build_store(
-            field_len,
-            binary
-                .builder
-                .build_int_z_extend(data_len, binary.context.i64_type(), "data_len64"),
+            binary.builder.build_int_z_extend(
+                data[1].into_int_value(),
+                binary.context.i64_type(),
+                "data_len64",
+            ),
         );
 
         binary.builder.build_call(
             binary.module.get_function("sol_log_data").unwrap(),
             &[
                 fields.into(),
-                binary.context.i64_type().const_int(2, false).into(),
+                binary.context.i64_type().const_int(1, false).into(),
             ],
             "",
         );

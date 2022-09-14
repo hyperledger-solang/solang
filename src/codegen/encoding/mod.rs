@@ -19,7 +19,7 @@ use std::ops::{AddAssign, MulAssign, Sub};
 /// This trait should be implemented by all encoding methods (ethabi, Scale and Borsh), so that
 /// we have the same interface for creating encode and decode functions.
 pub(super) trait AbiEncoding {
-    /// Receive the arguments and returns the variable containing a byte array
+    /// Receive the arguments and returns the variable containing a byte array and its size
     fn abi_encode(
         &mut self,
         loc: &Loc,
@@ -27,7 +27,7 @@ pub(super) trait AbiEncoding {
         ns: &Namespace,
         vartab: &mut Vartable,
         cfg: &mut ControlFlowGraph,
-    ) -> Expression;
+    ) -> (Expression, Expression);
 
     fn abi_decode(
         &self,

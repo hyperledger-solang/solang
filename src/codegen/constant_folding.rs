@@ -22,7 +22,7 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
         let mut vars = cfg.blocks[block_no].defs.clone();
 
         for instr_no in 0..cfg.blocks[block_no].instr.len() {
-            match &cfg.blocks[block_no].instr[instr_no] {
+            match &cfg.blocks[block_no].instr[instr_no].1 {
                 Instr::Set { loc, res, expr, .. } => {
                     let (expr, expr_constant) = expression(expr, Some(&vars), cfg, ns);
 
@@ -30,7 +30,7 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
                         ns.var_constants.insert(*loc, expr.clone());
                     }
 
-                    cfg.blocks[block_no].instr[instr_no] = Instr::Set {
+                    cfg.blocks[block_no].instr[instr_no].1 = Instr::Set {
                         loc: *loc,
                         res: *res,
                         expr,
@@ -47,7 +47,7 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
                         .map(|e| expression(e, Some(&vars), cfg, ns).0)
                         .collect();
 
-                    cfg.blocks[block_no].instr[instr_no] = Instr::Call {
+                    cfg.blocks[block_no].instr[instr_no].1 = Instr::Call {
                         res: res.clone(),
                         call: call.clone(),
                         args,
@@ -60,7 +60,7 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
                         .map(|e| expression(e, Some(&vars), cfg, ns).0)
                         .collect();
 
-                    cfg.blocks[block_no].instr[instr_no] = Instr::Return { value };
+                    cfg.blocks[block_no].instr[instr_no].1 = Instr::Return { value };
                 }
                 Instr::BranchCond {
                     cond,
@@ -70,11 +70,11 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
                     let (cond, _) = expression(cond, Some(&vars), cfg, ns);
 
                     if let Expression::BoolLiteral(_, cond) = cond {
-                        cfg.blocks[block_no].instr[instr_no] = Instr::Branch {
+                        cfg.blocks[block_no].instr[instr_no].1 = Instr::Branch {
                             block: if cond { *true_block } else { *false_block },
                         };
                     } else {
-                        cfg.blocks[block_no].instr[instr_no] = Instr::BranchCond {
+                        cfg.blocks[block_no].instr[instr_no].1 = Instr::BranchCond {
                             cond,
                             true_block: *true_block,
                             false_block: *false_block,
@@ -85,23 +85,23 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
                     let (dest, _) = expression(dest, Some(&vars), cfg, ns);
                     let (data, _) = expression(data, Some(&vars), cfg, ns);
 
-                    cfg.blocks[block_no].instr[instr_no] = Instr::Store { dest, data };
+                    cfg.blocks[block_no].instr[instr_no].1 = Instr::Store { dest, data };
                 }
                 Instr::AssertFailure { expr: Some(expr) } => {
                     let (expr, _) = expression(expr, Some(&vars), cfg, ns);
 
-                    cfg.blocks[block_no].instr[instr_no] =
+                    cfg.blocks[block_no].instr[instr_no].1 =
                         Instr::AssertFailure { expr: Some(expr) };
                 }
                 Instr::Print { expr } => {
                     let (expr, _) = expression(expr, Some(&vars), cfg, ns);
 
-                    cfg.blocks[block_no].instr[instr_no] = Instr::Print { expr };
+                    cfg.blocks[block_no].instr[instr_no].1 = Instr::Print { expr };
                 }
                 Instr::ClearStorage { ty, storage } => {
                     let (storage, _) = expression(storage, Some(&vars), cfg, ns);
 
-                    cfg.blocks[block_no].instr[instr_no] = Instr::ClearStorage {
+                    cfg.blocks[block_no].instr[instr_no].1 = Instr::ClearStorage {
                         ty: ty.clone(),
                         storage,
                     };
@@ -110,7 +110,7 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
                     let (storage, _) = expression(storage, Some(&vars), cfg, ns);
                     let (value, _) = expression(value, Some(&vars), cfg, ns);
 
-                    cfg.blocks[block_no].instr[instr_no] = Instr::SetStorage {
+                    cfg.blocks[block_no].instr[instr_no].1 = Instr::SetStorage {
                         ty: ty.clone(),
                         storage,
                         value,
@@ -119,7 +119,7 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
                 Instr::LoadStorage { ty, storage, res } => {
                     let (storage, _) = expression(storage, Some(&vars), cfg, ns);
 
-                    cfg.blocks[block_no].instr[instr_no] = Instr::LoadStorage {
+                    cfg.blocks[block_no].instr[instr_no].1 = Instr::LoadStorage {
                         ty: ty.clone(),
                         storage,
                         res: *res,
@@ -134,7 +134,7 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
                     let (value, _) = expression(value, Some(&vars), cfg, ns);
                     let (offset, _) = expression(offset, Some(&vars), cfg, ns);
 
-                    cfg.blocks[block_no].instr[instr_no] = Instr::SetStorageBytes {
+                    cfg.blocks[block_no].instr[instr_no].1 = Instr::SetStorageBytes {
                         storage,
                         value,
                         offset,
@@ -151,7 +151,7 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
                         .as_ref()
                         .map(|expr| expression(expr, Some(&vars), cfg, ns).0);
 
-                    cfg.blocks[block_no].instr[instr_no] = Instr::PushStorage {
+                    cfg.blocks[block_no].instr[instr_no].1 = Instr::PushStorage {
                         res: *res,
                         ty: ty.clone(),
                         storage,
@@ -161,7 +161,7 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
                 Instr::PopStorage { res, ty, storage } => {
                     let (storage, _) = expression(storage, Some(&vars), cfg, ns);
 
-                    cfg.blocks[block_no].instr[instr_no] = Instr::PopStorage {
+                    cfg.blocks[block_no].instr[instr_no].1 = Instr::PopStorage {
                         res: *res,
                         ty: ty.clone(),
                         storage,
@@ -175,7 +175,7 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
                 } => {
                     let (value, _) = expression(value, Some(&vars), cfg, ns);
 
-                    cfg.blocks[block_no].instr[instr_no] = Instr::PushMemory {
+                    cfg.blocks[block_no].instr[instr_no].1 = Instr::PushMemory {
                         res: *res,
                         ty: ty.clone(),
                         array: *array,
@@ -208,7 +208,7 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
                         .as_ref()
                         .map(|expr| expression(expr, Some(&vars), cfg, ns).0);
 
-                    cfg.blocks[block_no].instr[instr_no] = Instr::Constructor {
+                    cfg.blocks[block_no].instr[instr_no].1 = Instr::Constructor {
                         success: *success,
                         res: *res,
                         contract_no: *contract_no,
@@ -243,7 +243,7 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
                         .as_ref()
                         .map(|expr| expression(expr, Some(&vars), cfg, ns).0);
 
-                    cfg.blocks[block_no].instr[instr_no] = Instr::ExternalCall {
+                    cfg.blocks[block_no].instr[instr_no].1 = Instr::ExternalCall {
                         success: *success,
                         address,
                         accounts,
@@ -263,7 +263,7 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
                 } => {
                     let (data, _) = expression(data, Some(&vars), cfg, ns);
 
-                    cfg.blocks[block_no].instr[instr_no] = Instr::AbiDecode {
+                    cfg.blocks[block_no].instr[instr_no].1 = Instr::AbiDecode {
                         res: res.clone(),
                         selector: *selector,
                         exception_block: *exception_block,
@@ -274,7 +274,7 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
                 Instr::SelfDestruct { recipient } => {
                     let (recipient, _) = expression(recipient, Some(&vars), cfg, ns);
 
-                    cfg.blocks[block_no].instr[instr_no] = Instr::SelfDestruct { recipient };
+                    cfg.blocks[block_no].instr[instr_no].1 = Instr::SelfDestruct { recipient };
                 }
                 Instr::EmitEvent {
                     event_no,
@@ -293,7 +293,7 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
                         .map(|e| expression(e, Some(&vars), cfg, ns).0)
                         .collect();
 
-                    cfg.blocks[block_no].instr[instr_no] = Instr::EmitEvent {
+                    cfg.blocks[block_no].instr[instr_no].1 = Instr::EmitEvent {
                         event_no: *event_no,
                         data,
                         data_tys: data_tys.clone(),
@@ -309,7 +309,7 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
                     let bytes = expression(bytes, Some(&vars), cfg, ns);
                     let source = expression(source, Some(&vars), cfg, ns);
                     let destination = expression(destination, Some(&vars), cfg, ns);
-                    cfg.blocks[block_no].instr[instr_no] = Instr::MemCopy {
+                    cfg.blocks[block_no].instr[instr_no].1 = Instr::MemCopy {
                         source: source.0,
                         destination: destination.0,
                         bytes: bytes.0,
@@ -1159,7 +1159,7 @@ fn get_definition<'a>(
     def: &reaching_definitions::Def,
     cfg: &'a ControlFlowGraph,
 ) -> Option<&'a Expression> {
-    if let Instr::Set { expr, .. } = &cfg.blocks[def.block_no].instr[def.instr_no] {
+    if let Instr::Set { expr, .. } = &cfg.blocks[def.block_no].instr[def.instr_no].1 {
         Some(expr)
     } else {
         None
