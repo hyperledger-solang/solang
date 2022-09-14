@@ -4555,7 +4555,7 @@ fn member_access(
                         diagnostics.push(Diagnostic::error(
                             e.loc(),
                             format!(
-                                "contract '{}' does not have a function called '{}'",
+                                "contract '{}' does not have a member called '{}'",
                                 ns.contracts[call_contract_no].name, id.name,
                             ),
                         ));
@@ -5852,6 +5852,11 @@ fn method_call_pos_args(
                         symtable,
                         diagnostics,
                     );
+                } else {
+                    diagnostics.push(Diagnostic::error(
+                        *loc,
+                        "function calls via contract name are only valid for base contracts".into(),
+                    ));
                 }
             }
         }
@@ -6677,6 +6682,11 @@ fn method_call_named_args(
                         symtable,
                         diagnostics,
                     );
+                } else {
+                    diagnostics.push(Diagnostic::error(
+                        *loc,
+                        "function calls via contract name are only valid for base contracts".into(),
+                    ));
                 }
             }
         }
