@@ -1301,7 +1301,7 @@ fn abi_encode(
 
     if ns.target == Target::Solana {
         let mut encoder = create_encoder(ns);
-        return encoder.abi_encode(loc, &args, ns, vartab, cfg);
+        return encoder.abi_encode(loc, &args, ns, vartab, cfg).0;
     }
 
     let res = vartab.temp(

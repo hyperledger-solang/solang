@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::codegen::cfg::InstrOrigin;
 use crate::codegen::subexpression_elimination::{BasicExpression, ExpressionType};
 use crate::codegen::{
     vartable::{Storage, Variable},
@@ -39,7 +40,7 @@ pub struct CommonSubExpressionTracker {
     len: usize,
     name_cnt: usize,
     cur_block: usize,
-    new_cfg_instr: Vec<Instr>,
+    new_cfg_instr: Vec<(InstrOrigin, Instr)>,
     parent_block_instr: Vec<(usize, Instr)>,
     /// Map from variable number to common subexpression
     mapped_variables: HashMap<usize, usize>,
@@ -195,7 +196,7 @@ impl CommonSubExpressionTracker {
             };
 
             if common_expression.on_parent_block.is_none() {
-                self.new_cfg_instr.push(new_instr);
+                self.new_cfg_instr.push((InstrOrigin::Codegen, new_instr));
             } else {
                 self.parent_block_instr
                     .push((common_expression.on_parent_block.unwrap(), new_instr));
@@ -216,7 +217,7 @@ impl CommonSubExpressionTracker {
     }
 
     /// Add new instructions to the instruction vector
-    pub fn add_new_instructions(&mut self, instr_vec: &mut Vec<Instr>) {
+    pub fn add_new_instructions(&mut self, instr_vec: &mut Vec<(InstrOrigin, Instr)>) {
         instr_vec.append(&mut self.new_cfg_instr);
     }
 
@@ -225,7 +226,9 @@ impl CommonSubExpressionTracker {
     pub fn add_parent_block_instructions(&self, cfg: &mut ControlFlowGraph) {
         for (block_no, instr) in &self.parent_block_instr {
             let index = cfg.blocks[*block_no].instr.len() - 1;
-            cfg.blocks[*block_no].instr.insert(index, instr.to_owned());
+            cfg.blocks[*block_no]
+                .instr
+                .insert(index, (InstrOrigin::Codegen, instr.to_owned()));
         }
     }
 

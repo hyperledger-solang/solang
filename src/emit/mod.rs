@@ -3297,7 +3297,7 @@ pub trait TargetRuntime<'a> {
                         di_flags,
                     );
 
-                    let func_loc = cfg.blocks[0].instr.first().unwrap().loc();
+                    let func_loc = cfg.blocks[0].instr.first().unwrap().1.loc();
                     let line_num = if let Loc::File(file_offset, offset, _) = func_loc {
                         let (line, _) = ns.files[file_offset].offset_to_line_column(offset);
                         line
@@ -3437,7 +3437,7 @@ pub trait TargetRuntime<'a> {
                 w.vars.get_mut(v).unwrap().value = (*phi).as_basic_value();
             }
 
-            for ins in &cfg.blocks[w.block_no].instr {
+            for (_, ins) in &cfg.blocks[w.block_no].instr {
                 if bin.generate_debug_info {
                     let debug_loc = ins.loc();
                     if let Loc::File(file_offset, offset, _) = debug_loc {

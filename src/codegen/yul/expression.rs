@@ -214,7 +214,7 @@ pub(crate) fn process_function_call(
     let cfg_no = ns.yul_functions[function_no].cfg_no;
 
     if ns.yul_functions[function_no].returns.is_empty() {
-        cfg.add(
+        cfg.add_yul(
             vartab,
             Instr::Call {
                 res: Vec::new(),
@@ -243,7 +243,7 @@ pub(crate) fn process_function_call(
         returns.push(Expression::Variable(id.loc, ret.ty.clone(), temp_pos));
     }
 
-    cfg.add(
+    cfg.add_yul(
         vartab,
         Instr::Call {
             res,

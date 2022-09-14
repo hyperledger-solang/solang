@@ -41,7 +41,7 @@ impl AbiEncoding for BorshEncoding {
         ns: &Namespace,
         vartab: &mut Vartable,
         cfg: &mut ControlFlowGraph,
-    ) -> Expression {
+    ) -> (Expression, Expression) {
         let size = calculate_size_args(self, args, ns, vartab, cfg);
 
         let encoded_bytes = vartab.temp_name("abi_encoded", &Type::DynamicBytes);
@@ -50,7 +50,12 @@ impl AbiEncoding for BorshEncoding {
             Instr::Set {
                 loc: *loc,
                 res: encoded_bytes,
-                expr: Expression::AllocDynamicArray(*loc, Type::DynamicBytes, Box::new(size), None),
+                expr: Expression::AllocDynamicArray(
+                    *loc,
+                    Type::DynamicBytes,
+                    Box::new(size.clone()),
+                    None,
+                ),
             },
         );
 
@@ -68,7 +73,7 @@ impl AbiEncoding for BorshEncoding {
             );
         }
 
-        buffer
+        (buffer, size)
     }
 
     fn abi_decode(

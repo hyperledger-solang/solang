@@ -1,19 +1,19 @@
 
 event First(
-	int indexed a,
+	uint32 indexed a,
 	bool b,
 	string c
 );
 
 event Second(
-	int indexed a,
-	bytes4 b,
-	bytes c
+	uint32 indexed a,
+	string b,
+	string c
 );
 
-contract events {
+contract MyContractEvents {
 	function test() public {
 		emit First(102, true, "foobar");
-		emit Second(500332, "ABCD", hex"CAFE0123");
+		emit Second(500332, "ABCD", "CAFE0123");
 	}
 }

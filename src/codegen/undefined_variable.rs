@@ -29,7 +29,7 @@ pub fn find_undefined_variables(
     let mut diagnostics: HashMap<usize, Diagnostic> = HashMap::new();
     for block in &cfg.blocks {
         let mut var_defs: VarDefs = block.defs.clone();
-        for (instr_no, instruction) in block.instr.iter().enumerate() {
+        for (instr_no, (_, instruction)) in block.instr.iter().enumerate() {
             check_variables_in_expression(
                 func_no,
                 instruction,
@@ -94,7 +94,7 @@ pub fn find_undefined_variables_in_expression(
                 for (def, modified) in def_map {
                     if let Instr::Set {
                         expr: instr_expr, ..
-                    } = &ctx.cfg.blocks[def.block_no].instr[def.instr_no]
+                    } = &ctx.cfg.blocks[def.block_no].instr[def.instr_no].1
                     {
                         // If an undefined definition reaches this read and the variable
                         // has not been modified since its definition, it is undefined
