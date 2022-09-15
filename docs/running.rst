@@ -151,6 +151,23 @@ Options:
 \\-\\-help, -h
   This displays a short description of all the options
 
+.. _idl_command:
+
+Using the idl command
+_____________________
+
+This command converts Anchor IDL into Solidity import files in order to call
+Anchor Programs from Solidity.
+
+  solang idl [--output DIR] [IDLFILE]...
+
+For each idl file provided, a Solidity file is written. See :ref:`call_anchor`
+for an example of how to use this.
+
+.. note::
+
+  There is only support for Solana at this time.
+
 Running Solang using container
 ______________________________
 
