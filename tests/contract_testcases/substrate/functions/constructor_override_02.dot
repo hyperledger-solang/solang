@@ -1,0 +1,12 @@
+strict digraph "tests/contract_testcases/substrate/functions/constructor_override_02.sol" {
+	contract [label="contract C\ntests/contract_testcases/substrate/functions/constructor_override_02.sol:1:1-5:2"]
+	bar [label="constructor bar\ncontract: C\ntests/contract_testcases/substrate/functions/constructor_override_02.sol:2:5-23\nsignature bar()\nvisibility public\nmutability nonpayable"]
+	diagnostic [label="found abstract contract 'C'\nlevel Debug\ntests/contract_testcases/substrate/functions/constructor_override_02.sol:1:1-5:2"]
+	diagnostic_5 [label="constructor already defined\nlevel Error\ntests/contract_testcases/substrate/functions/constructor_override_02.sol:4:5-34"]
+	note [label="location of previous definition\ntests/contract_testcases/substrate/functions/constructor_override_02.sol:2:5-23"]
+	contracts -> contract
+	contract -> bar [label="constructor"]
+	diagnostics -> diagnostic [label="Debug"]
+	diagnostics -> diagnostic_5 [label="Error"]
+	diagnostic_5 -> note [label="note"]
+}

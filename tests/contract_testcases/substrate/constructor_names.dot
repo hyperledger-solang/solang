@@ -1,12 +1,10 @@
 strict digraph "tests/contract_testcases/substrate/constructor_names.sol" {
-	contract [label="contract C\ntests/contract_testcases/substrate/constructor_names.sol:1:1-6:2"]
-	node_2 [label="constructor \ncontract: C\ntests/contract_testcases/substrate/constructor_names.sol:2:2-17\nsignature ()\nvisibility public\nmutability nonpayable"]
-	other_constructor [label="constructor other_constructor\ncontract: C\ntests/contract_testcases/substrate/constructor_names.sol:3:2-35\nsignature other_constructor()\nvisibility public\nmutability nonpayable"]
-	foo [label="function foo\ncontract: C\ntests/contract_testcases/substrate/constructor_names.sol:5:2-28\nsignature foo()\nvisibility public\nmutability pure"]
-	diagnostic [label="found contract 'C'\nlevel Debug\ntests/contract_testcases/substrate/constructor_names.sol:1:1-6:2"]
+	contract [label="contract C\ntests/contract_testcases/substrate/constructor_names.sol:1:1-5:2"]
+	my_constructor [label="constructor my_constructor\ncontract: C\ntests/contract_testcases/substrate/constructor_names.sol:2:2-32\nsignature my_constructor()\nvisibility public\nmutability nonpayable"]
+	foo [label="function foo\ncontract: C\ntests/contract_testcases/substrate/constructor_names.sol:4:2-28\nsignature foo()\nvisibility public\nmutability pure"]
+	diagnostic [label="found contract 'C'\nlevel Debug\ntests/contract_testcases/substrate/constructor_names.sol:1:1-5:2"]
 	contracts -> contract
-	contract -> node_2 [label="constructor"]
-	contract -> other_constructor [label="constructor"]
+	contract -> my_constructor [label="constructor"]
 	contract -> foo [label="function"]
 	diagnostics -> diagnostic [label="Debug"]
 }

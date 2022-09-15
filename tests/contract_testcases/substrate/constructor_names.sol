@@ -1,6 +1,5 @@
 contract C {
-	constructor () {}
-	constructor other_constructor () {}
+	constructor my_constructor () {}
 
 	function foo() public pure {}
 }

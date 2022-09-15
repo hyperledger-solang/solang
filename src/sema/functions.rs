@@ -552,8 +552,11 @@ pub fn contract_function(
     fdecl.selector = selector;
 
     if func.ty == pt::FunctionTy::Constructor {
-        // In the eth solidity, only one constructor is allowed
-        if ns.target == Target::EVM {
+        // In the eth solidity and Substrate, only one constructor is allowed
+        //
+        // The Substrate runtime supports multiple constructors, but they also need to have a name.
+        // Currently, we only support either naming the constructors or overloading them, but not both.
+        if matches!(ns.target, Target::EVM | Target::Substrate { .. }) {
             if let Some(prev_func_no) = ns.contracts[contract_no]
                 .functions
                 .iter()
@@ -569,24 +572,24 @@ pub fn contract_function(
                 ));
                 return None;
             }
-        } else {
-            let payable = fdecl.is_payable();
+        }
 
-            if let Some(prev_func_no) = ns.contracts[contract_no].functions.iter().find(|func_no| {
-                let f = &ns.functions[**func_no];
+        let payable = fdecl.is_payable();
 
-                f.is_constructor() && f.is_payable() != payable
-            }) {
-                let prev_loc = ns.functions[*prev_func_no].loc;
+        if let Some(prev_func_no) = ns.contracts[contract_no].functions.iter().find(|func_no| {
+            let f = &ns.functions[**func_no];
 
-                ns.diagnostics.push(Diagnostic::error_with_note(
-                    func.loc,
-                    "all constructors should be defined 'payable' or not".to_string(),
-                    prev_loc,
-                    "location of previous definition".to_string(),
-                ));
-                return None;
-            }
+            f.is_constructor() && f.is_payable() != payable
+        }) {
+            let prev_loc = ns.functions[*prev_func_no].loc;
+
+            ns.diagnostics.push(Diagnostic::error_with_note(
+                func.loc,
+                "all constructors should be defined 'payable' or not".to_string(),
+                prev_loc,
+                "location of previous definition".to_string(),
+            ));
+            return None;
         }
 
         match fdecl.mutability {
