@@ -1,5 +1,5 @@
 import expect from 'expect';
-import { loadContract, load2ndContract } from './setup';
+import { loadContract, loadContractWithExistingConnectionAndPayer } from './setup';
 
 describe('Deploy solang contract and test', function () {
     this.timeout(100000);
@@ -7,10 +7,10 @@ describe('Deploy solang contract and test', function () {
     it('external_call', async function () {
         const { contract: caller, connection, payer, program } = await loadContract('caller', 'caller.abi');
 
-        const callee = await load2ndContract(connection, program, payer, 'callee', 'callee.abi');
+        const callee = await loadContractWithExistingConnectionAndPayer(connection, program, payer, 'callee', 'callee.abi');
 
 
-        const callee2 = await load2ndContract(connection, program, payer, 'callee2', 'callee2.abi');
+        const callee2 = await loadContractWithExistingConnectionAndPayer(connection, program, payer, 'callee2', 'callee2.abi');
 
         await callee.functions.set_x(102);
 

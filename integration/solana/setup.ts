@@ -22,7 +22,14 @@ export async function loadContract(name: string, abifile: string, args: any[] = 
     return { contract, connection, payer: payerAccount, program, storage };
 }
 
-export async function load2ndContract(connection: Connection, program: Keypair, payerAccount: Keypair, name: string, abifile: string, args: any[] = [], space: number = 8192): Promise<Contract> {
+export function newConnectionAndAccounts() : [Connection, Keypair, Keypair] {
+    const connection = new Connection(endpoint, 'confirmed');
+    const payerAccount = load_key('payer.key');
+    const program = load_key('program.key');
+    return [connection, payerAccount, program];
+}
+
+export async function loadContractWithExistingConnectionAndPayer(connection: Connection, program: Keypair, payerAccount: Keypair, name: string, abifile: string, args: any[] = [], space: number = 8192): Promise<Contract> {
     const abi = JSON.parse(fs.readFileSync(abifile, 'utf8'));
 
     const storage = Keypair.generate();
